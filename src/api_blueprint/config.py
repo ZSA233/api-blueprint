@@ -6,7 +6,7 @@ import typing
 import sys
 
 if sys.version_info >= (3, 11):
-    import tomlib as toml
+    import tomllib as toml
 else:
     import tomli as toml
 

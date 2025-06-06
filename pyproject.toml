@@ -57,7 +57,7 @@ api-gen-react   = "api_blueprint.cli.apigen:gen_react"
 # Tools settings -------------------------------------------------------------------------------------------------------
 [tool.setuptools]
 packages = { find = { where = ["src"], include = ["api_blueprint", "api_blueprint.*"] } }
-package-data = { "api_blueprint" = ["writer/templates/*.j2", "hub/templates/**", "hub/static/**" ] }
+package-data = { "api_blueprint" = ["writer/templates/**/*.j2", "hub/templates/**", "hub/static/**" ] }
 
 [tool.setuptools.dynamic]
 version = { attr = "api_blueprint.__version__" }
