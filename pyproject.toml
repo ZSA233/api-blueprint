@@ -1,0 +1,63 @@
+
+[build-system]
+requires = ["setuptools>=70.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+
+# Project settings -----------------------------------------------------------------------------------------------------
+[project]
+name = "api-blueprint"
+dynamic = ["version"]
+description = "API 蓝图"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+keywords = ["api", "blueprint"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+authors = [
+    { name = "zsa233", email = "zzsaim@163.com" }
+]
+maintainers = [
+    { name = "zsa233", email = "zsaim@163.com" }
+]
+
+
+# Required dependencies ------------------------------------------------------------------------------------------------
+dependencies = [
+    "click",
+    "fastapi",
+    "httpx",
+    "pydantic",
+    "uvicorn",
+    "jinja2",
+]
+
+
+# Optional dependencies ------------------------------------------------------------------------------------------------
+[project.optional-dependencies]
+
+
+[project.urls]
+"Homepage" = "https://github.com/zsa233/api-blueprint"
+"Source" = "https://github.com/zsa233/api-blueprint"
+"Documentation" = "https://github.com/zsa233/api-blueprint"
+"Bug Reports" = "https://github.com/zsa233/api-blueprint/issues"
+"Changelog" = "https://github.com/zsa233/api-blueprint/releases"
+
+
+[project.scripts]
+api-doc-server  = "api_blueprint.cli.apidoc:apidoc_server"
+api-gen-golang  = "api_blueprint.cli.apigen:gen_golang"
+api-gen-react   = "api_blueprint.cli.apigen:gen_react"
+
+# Tools settings -------------------------------------------------------------------------------------------------------
+[tool.setuptools]
+packages = { find = { where = ["src"], include = ["api_blueprint", "api_blueprint.*"] } }
+package-data = { "api_blueprint" = ["writer/templates/*.j2", "hub/templates/**", "hub/static/**" ] }
+
+[tool.setuptools.dynamic]
+version = { attr = "api_blueprint.__version__" }

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>应用导航</title>
+
+    <link href="static/bootstrap.min.css" rel="stylesheet"
+        crossorigin="anonymous" />
+
+    <link href="static/all.min.css" rel="stylesheet"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <style>
+        body {
+            background-color: #f0f2f5;
+            color: #343a40;
+        }
+
+        .container {
+            margin-top: 4rem;
+            margin-bottom: 4rem;
+        }
+
+        .page-title {
+            font-size: 2.5rem;
+            font-weight: 500;
+            margin-bottom: 2rem;
+            text-align: center;
+            color: #495057;
+        }
+
+        .nav-card {
+            border: none;
+            border-radius: 0.75rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            background-color: #ffffff;
+            overflow: hidden;
+        }
+
+        .nav-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-card .card-body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1.5rem;
+        }
+
+        .nav-icon {
+            font-size: 3rem;
+            color: #007bff;
+            margin-bottom: 1rem;
+        }
+
+        .nav-name {
+            font-size: 1.25rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            text-align: center;
+            color: #343a40;
+        }
+
+        .nav-button {
+            margin-top: auto;
+            width: 100%;
+        }
+
+        .nav-button .btn {
+            width: 100%;
+            border-radius: 2rem;
+            font-weight: 500;
+        }
+
+        @media (min-width: 992px) {
+            .row-cols-lg-3>* {
+                flex: 0 0 auto;
+                width: 33.333333%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="page-title">应用导航中心</h1>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            {% for item in nav_items %}
+            <div class="col">
+                <div class="card nav-card h-100">
+                    <div class="card-body">
+                        <i class="fa-solid {{ item.icon }} nav-icon"></i>
+                        <div class="nav-name">{{ item.name }}</div>
+                        <div class="nav-button">
+                            <a href="{{ item.url }}" class="btn btn-primary btn-lg" target="_blank" rel="noopener">
+                                访问
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script src="static/bootstrap.bundle.min.js"
+        crossorigin="anonymous"></script>
+</body>
+
+</html>

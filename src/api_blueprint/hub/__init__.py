@@ -1,0 +1,1 @@
+from api_blueprint.hub.app import app, add_nav_items

@@ -1,0 +1,11 @@
+[blueprint]
+docs_server = '0.0.0.0:2332'
+docs_domain = ''
+entrypoints = [
+    'blueprints.app:*',
+]
+
+[golang]
+codegen_output = 'golang'
+upstream = 'http://localhost:2333'
+

@@ -1,0 +1,72 @@
+package provider
+
+import (
+	errors "demo/errors"
+	"encoding/xml"
+	"fmt"
+	"net/http"
+)
+
+type RspContext struct{}
+
+func (prov *RspProvider[Q, F, J, P]) NewContext(ctx *Context[Q, F, J, P]) *RspContext {
+	return &RspContext{}
+}
+
+func (prov *RspProvider[Q, F, J, P]) Handle(anyCtx ContextInterface) {
+	ctx := AdaptContext[Q, F, J, P](anyCtx)
+	handled := ctx.Handle
+	if handled == nil {
+		err := fmt.Errorf("[RspProvider] fail to get Handle")
+		_ = ctx.Gin.AbortWithError(-1, err)
+		return
+	}
+	switch prov.Type {
+	case "json":
+		ctx.Gin.JSON(NewRSP_JSON(prov, handled.Response, handled.Error))
+	case "xml":
+		ctx.Gin.XML(NewRSP_XML(prov, handled.Response, handled.Error))
+	}
+	ctx.Gin.Next()
+}
+
+func unwrapError(err error) (code int, message string) {
+	switch e := err.(type) {
+	case errors.CodeErrInterface:
+		code = e.Code()
+		message = e.Message()
+	case nil:
+	default:
+		message = fmt.Sprintf("%v", e)
+		code = -1
+	}
+	return
+}
+
+func marshalXML[P any](enc *xml.Encoder, start xml.StartElement, xmlName xml.Name, inner *P) error {
+	if xmlName.Local == "" {
+		return enc.Encode(inner)
+	}
+	start.Name = xmlName
+	return enc.EncodeElement(inner, start)
+}
+
+func ensureValidStatusCode(code int, rsp any, err error) (int, any) {
+	if code != 0 && (code < 100 || code > 599) {
+		code = http.StatusBadRequest
+		if err != nil {
+			rsp = fmt.Sprintf("%v", err)
+		}
+	}
+	return code, rsp
+}
+
+func NewRSP_JSON[Q, F, J, P any](prov *RspProvider[Q, F, J, P], data *P, err error) (code int, rsp any) {
+	code, rsp = NewRSP_JSON_Entry(prov, data, err)
+	return ensureValidStatusCode(code, rsp, err)
+}
+
+func NewRSP_XML[Q, F, J, P any](prov *RspProvider[Q, F, J, P], data *P, err error) (code int, rsp any) {
+	code, rsp = NewRSP_XML_Entry(prov, data, err)
+	return ensureValidStatusCode(code, rsp, err)
+}
