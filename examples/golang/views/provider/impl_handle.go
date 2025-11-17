@@ -5,13 +5,13 @@ import (
 	"net/http"
 )
 
-type HandleContext[Q, F, J, P any] struct {
+type HandleContext[Q, B, P any] struct {
 	Response *P
 	Error    error
 }
 
-func (prov *HandleProvider[Q, F, J, P]) Handle(anyCtx ContextInterface) {
-	ctx := AdaptContext[Q, F, J, P](anyCtx)
+func (prov *HandleProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
+	ctx := AdaptContext[Q, B, P](anyCtx)
 	var err error
 
 	if ctx.Req == nil {
@@ -29,7 +29,7 @@ func (prov *HandleProvider[Q, F, J, P]) Handle(anyCtx ContextInterface) {
 
 	var rsp *P
 	rsp, err = prov.Handler(ctx, req)
-	ctx.Handle = &HandleContext[Q, F, J, P]{
+	ctx.Handle = &HandleContext[Q, B, P]{
 		Response: rsp,
 		Error:    err,
 	}

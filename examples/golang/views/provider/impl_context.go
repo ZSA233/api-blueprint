@@ -2,6 +2,7 @@ package provider
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,33 +15,54 @@ type ContextInterface interface {
 	GetGin() *gin.Context
 }
 
-type Context[Q, F, J, P any] struct {
+type Context[Q, B, P any] struct {
+	Indexer  *Indexer[Q, B, P]
 	Gin      *gin.Context
-	Req      *ReqContext[Q, F, J, P]
-	Auth     *AuthContext[Q, F, J, P]
-	Handle   *HandleContext[Q, F, J, P]
-	WsHandle *WsHandleContext[Q, F, J, P]
+	Req      *ReqContext[Q, B, P]
+	Auth     *AuthContext[Q, B, P]
+	Handle   *HandleContext[Q, B, P]
+	WsHandle *WsHandleContext[Q, B, P]
 }
 
-func (ctx *Context[Q, F, J, P]) GetGin() *gin.Context {
+func (ctx *Context[Q, B, P]) GetGin() *gin.Context {
 	return ctx.Gin
 }
 
-func AdaptContext[Q, F, J, P any](anyCtx any) *Context[Q, F, J, P] {
-	ctx, ok := anyCtx.(*Context[Q, F, J, P])
+func (ctx *Context[Q, B, P]) Deadline() (deadline time.Time, ok bool) {
+	return ctx.Gin.Deadline()
+}
+
+func (ctx *Context[Q, B, P]) Done() <-chan struct{} {
+	return ctx.Gin.Done()
+}
+
+func (ctx *Context[Q, B, P]) Err() error {
+	return ctx.Gin.Err()
+}
+
+func (ctx *Context[Q, B, P]) Value(key any) any {
+	return ctx.Gin.Value(key)
+}
+
+func AdaptContext[Q, B, P any](anyCtx any) *Context[Q, B, P] {
+	ctx, ok := anyCtx.(*Context[Q, B, P])
 	if !ok {
-		panic(fmt.Sprintf("[AdaptContext] anyCtx[%T] fail to adapt [%T].", anyCtx, new(Context[Q, F, J, P])))
+		panic(fmt.Sprintf("[AdaptContext] anyCtx[%T] fail to adapt [%T].", anyCtx, new(Context[Q, B, P])))
 	}
 	return ctx
 }
 
-func NewContext[Q, F, J, P any](ctx *gin.Context) *Context[Q, F, J, P] {
+func NewContext[Q, B, P any](
+	ctx *gin.Context,
+	indexer *Indexer[Q, B, P],
+) *Context[Q, B, P] {
 	provCtx, found := ctx.Get(PROV_CONTEXT)
 	if !found {
-		provCtx = &Context[Q, F, J, P]{
-			Gin: ctx,
+		provCtx = &Context[Q, B, P]{
+			Indexer: indexer,
+			Gin:     ctx,
 		}
 		ctx.Set(PROV_CONTEXT, provCtx)
 	}
-	return provCtx.(*Context[Q, F, J, P])
+	return provCtx.(*Context[Q, B, P])
 }

@@ -1,9 +1,13 @@
 package {{ writer.provider_package }}
 
+type Indexer[Q, B, P any] struct {
+	Req *ReqProvider[Q, B, P]
+	Rsp *RspProvider[Q, B, P]
+}
 
-func Select[Q, F, J, P any](
+func Select[Q, B, P any](
 	key string, value string,
-	handler func(c *Context[Q, F, J, P], req *REQ[Q, F, J]) (rsp *P, err error),
+	handler func(c *Context[Q, B, P], req *REQ[Q, B]) (rsp *P, err error),
 ) Provider {
 	var prov Provider = nil
 	switch key {

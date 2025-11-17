@@ -5,7 +5,7 @@ from typing import (
     List, Generic, TypeVar, Generator, Any, Dict, overload, Union,
     Optional, Type, TYPE_CHECKING
 )
-from api_blueprint.engine.provider import Provider
+from api_blueprint.engine.provider import Provider, Handle, WsHandle
 from api_blueprint.engine.wrapper import ResponseWrapper
 from api_blueprint.engine.model import HeaderModel
 from types import TracebackType
@@ -74,6 +74,7 @@ class RouterGroup(Generic[T]):
         self,
         path: str = '',
         *,
+        handle_data: str = None,
         providers: Optional[List[Provider]] = None,
         headers: Optional[Union[HeaderModel, Type[HeaderModel]]] = None,
         response_wrapper: Optional[ResponseWrapper] = None,
@@ -94,8 +95,8 @@ class RouterGroup(Generic[T]):
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Router: ...
-    def POST(self, path: str = '', **kwargs: Dict[str, Any]):
-        router =  Router(self, ['POST'], path, **kwargs)
+    def POST(self, path: str = '', *, handle_data: str = None, **kwargs: Dict[str, Any]):
+        router =  Router(self, ['POST'], path, handle=Handle(handle_data), **kwargs)
         self.pending_routers.append(router)
         return router
 
@@ -104,6 +105,7 @@ class RouterGroup(Generic[T]):
         self,
         path: str = '',
         *,
+        handle_data: str = None,
         providers: Optional[List[Provider]] = None,
         headers: Optional[Union[HeaderModel, Type[HeaderModel]]] = None,
         response_wrapper: Optional[ResponseWrapper] = None,
@@ -124,8 +126,8 @@ class RouterGroup(Generic[T]):
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Router: ...
-    def GET(self, path: str = '', **kwargs: Dict[str, Any]):
-        router = Router(self, ['GET'], path, **kwargs)
+    def GET(self, path: str = '', *, handle_data: str = None, **kwargs: Dict[str, Any]):
+        router = Router(self, ['GET'], path, handle=Handle(handle_data), **kwargs)
         self.pending_routers.append(router)
         return router
 
@@ -134,6 +136,7 @@ class RouterGroup(Generic[T]):
         self,
         path: str = '',
         *,
+        handle_data: str = None,
         providers: Optional[List[Provider]] = None,
         headers: Optional[Union[HeaderModel, Type[HeaderModel]]] = None,
         response_wrapper: Optional[ResponseWrapper] = None,
@@ -154,8 +157,8 @@ class RouterGroup(Generic[T]):
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Router: ...
-    def PUT(self, path: str = '', **kwargs: Dict[str, Any]):
-        router = Router(self, ['PUT'], path, **kwargs)
+    def PUT(self, path: str = '', *, handle_data: str = None, **kwargs: Dict[str, Any]):
+        router = Router(self, ['PUT'], path, handle=Handle(handle_data), **kwargs)
         self.pending_routers.append(router)
         return router
     
@@ -164,6 +167,7 @@ class RouterGroup(Generic[T]):
         self,
         path: str = '',
         *,
+        handle_data: str = None,
         providers: Optional[List[Provider]] = None,
         headers: Optional[Union[HeaderModel, Type[HeaderModel]]] = None,
         response_wrapper: Optional[ResponseWrapper] = None,
@@ -184,8 +188,8 @@ class RouterGroup(Generic[T]):
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Router: ...
-    def DELETE(self, path: str = '', **kwargs: Dict[str, Any]):
-        router = Router(self, ['DELETE'], path, **kwargs)
+    def DELETE(self, path: str = '', *, handle_data: str = None, **kwargs: Dict[str, Any]):
+        router = Router(self, ['DELETE'], path, handle=Handle(handle_data), **kwargs)
         self.pending_routers.append(router)
         return router
 
@@ -195,6 +199,7 @@ class RouterGroup(Generic[T]):
         self,
         path: str = '',
         *,
+        handle_data: List[str] = [],
         providers: Optional[List[Provider]] = None,
         headers: Optional[Union[HeaderModel, Type[HeaderModel]]] = None,
         response_wrapper: Optional[ResponseWrapper] = None,
@@ -215,7 +220,7 @@ class RouterGroup(Generic[T]):
         include_in_schema: bool = True,
         openapi_extra: Optional[Dict[str, Any]] = None,
     ) -> Router: ...
-    def WS(self, path: str = '', **kwargs: Dict[str, Any]):
-        router = Router(self, ['WS'], path, **kwargs)
+    def WS(self, path: str = '', *, handle_data: List[str] = [], **kwargs: Dict[str, Any]):
+        router = Router(self, ['WS'], path, handle=WsHandle(handle_data), **kwargs)
         self.pending_routers.append(router)
         return router

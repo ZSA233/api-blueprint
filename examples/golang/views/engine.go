@@ -7,9 +7,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func makeProviders[Q, F, J, P any](
+func makeProviders[Q, B, P any](
 	provSeq string,
-	handler func(c *provider.Context[Q, F, J, P], req *provider.REQ[Q, F, J]) (rsp *P, err error),
+	handler func(c *provider.Context[Q, B, P], req *provider.REQ[Q, B]) (rsp *P, err error),
 ) []provider.Provider {
 	values := strings.Split(provSeq, "|")
 	providers := make([]provider.Provider, len(values))
@@ -38,66 +38,74 @@ func makeProviders[Q, F, J, P any](
 	return providers
 }
 
-func makeHandlers[Q, F, J, P any](
-	handler func(c *provider.Context[Q, F, J, P], req *provider.REQ[Q, F, J]) (rsp *P, err error),
+func makeHandlers[Q, B, P any](
+	handler func(c *provider.Context[Q, B, P], req *provider.REQ[Q, B]) (rsp *P, err error),
 	provSeq string,
 ) []gin.HandlerFunc {
-	providers := makeProviders(provSeq, handler)
+	providers := makeProviders[Q, B, P](provSeq, handler)
 	var handlers = make([]gin.HandlerFunc, len(providers))
+	indexer := new(provider.Indexer[Q, B, P])
 	for i, v := range providers {
 		handlers[i] = func(ctx *gin.Context) {
-			v.Handle(provider.NewContext[Q, F, J, P](ctx))
+			v.Handle(provider.NewContext(ctx, indexer))
+		}
+
+		switch v.GetName() {
+		case provider.PROV_REQ:
+			indexer.Req = v.(*provider.ReqProvider[Q, B, P])
+		case provider.PROV_RSP:
+			indexer.Rsp = v.(*provider.RspProvider[Q, B, P])
 		}
 	}
 	return handlers
 }
 
-func GET[Q, F, J, P any](
+func GET[Q, B, P any](
 	relativePath string,
-	handler func(c *provider.Context[Q, F, J, P], req *provider.REQ[Q, F, J]) (rsp *P, err error),
+	handler func(c *provider.Context[Q, B, P], req *provider.REQ[Q, B]) (rsp *P, err error),
 	engine *gin.Engine,
 	provSeq string,
 ) {
-	handlers := makeHandlers(handler, provSeq)
+	handlers := makeHandlers[Q, B, P](handler, provSeq)
 	engine.GET(relativePath, handlers...)
 }
 
-func POST[Q, F, J, P any](
+func POST[Q, B, P any](
 	relativePath string,
-	handler func(c *provider.Context[Q, F, J, P], req *provider.REQ[Q, F, J]) (rsp *P, err error),
+	handler func(c *provider.Context[Q, B, P], req *provider.REQ[Q, B]) (rsp *P, err error),
 	engine *gin.Engine,
 	provSeq string,
 ) {
-	handlers := makeHandlers(handler, provSeq)
+	handlers := makeHandlers[Q, B, P](handler, provSeq)
 	engine.POST(relativePath, handlers...)
 }
 
-func PUT[Q, F, J, P any](
+func PUT[Q, B, P any](
 	relativePath string,
-	handler func(c *provider.Context[Q, F, J, P], req *provider.REQ[Q, F, J]) (rsp *P, err error),
+	handler func(c *provider.Context[Q, B, P], req *provider.REQ[Q, B]) (rsp *P, err error),
 	engine *gin.Engine,
 	provSeq string,
 ) {
-	handlers := makeHandlers(handler, provSeq)
+	handlers := makeHandlers[Q, B, P](handler, provSeq)
 	engine.PUT(relativePath, handlers...)
 }
 
-func DELETE[Q, F, J, P any](
+func DELETE[Q, B, P any](
 	relativePath string,
-	handler func(c *provider.Context[Q, F, J, P], req *provider.REQ[Q, F, J]) (rsp *P, err error),
+	handler func(c *provider.Context[Q, B, P], req *provider.REQ[Q, B]) (rsp *P, err error),
 	engine *gin.Engine,
 	provSeq string,
 ) {
-	handlers := makeHandlers(handler, provSeq)
+	handlers := makeHandlers[Q, B, P](handler, provSeq)
 	engine.DELETE(relativePath, handlers...)
 }
 
-func WS[Q, F, J, P any](
+func WS[Q, B, P any](
 	relativePath string,
-	handler func(c *provider.Context[Q, F, J, P], req *provider.REQ[Q, F, J]) (rsp *P, err error),
+	handler func(c *provider.Context[Q, B, P], req *provider.REQ[Q, B]) (rsp *P, err error),
 	engine *gin.Engine,
 	provSeq string,
 ) {
-	handlers := makeHandlers(handler, provSeq)
+	handlers := makeHandlers[Q, B, P](handler, provSeq)
 	engine.GET(relativePath, handlers...)
 }

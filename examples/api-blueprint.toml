@@ -8,4 +8,9 @@ entrypoints = [
 [golang]
 codegen_output = 'golang'
 upstream = 'http://localhost:2333'
+module = ''
 
+[typescript]
+codegen_output = 'typescript'
+upstream = 'http://localhost:2333'
+base_url = '"http://localhost:2333"'

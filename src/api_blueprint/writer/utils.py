@@ -40,4 +40,3 @@ class SafeFmtter(str):
         except KeyError:
             return str(self)
             
-    

@@ -1,5 +1,5 @@
 from api_blueprint.config import Config
-from api_blueprint.writer import golang
+from api_blueprint.writer import golang, typescript
 from api_blueprint.helper import load_entrypoints
 from api_blueprint.cli.apidoc import run_apidoc_server
 from pathlib import Path
@@ -36,6 +36,48 @@ def gen_golang(config: typing.Optional[str] = './api-blueprint.toml', doc: bool 
 
     writer = golang.GolangWriter(
         output,
+        module=goconf.module,
+    )
+    writer.register(*entrypoints)
+    writer.gen()
+
+    if doc:
+        run_apidoc_server(conf, entrypoints)
+
+
+@click.command()
+@click.option('-c', '--config', default='./api-blueprint.toml', help='配置文件')
+@click.option('-d', '--doc', default=False, is_flag=True, help='是否同时运行docs服务')
+def gen_typescript(config: typing.Optional[str] = './api-blueprint.toml', doc: bool = False):
+    c = Path(config).resolve()
+    if c.is_dir():
+        c /= 'api-blueprint.toml'
+    if not c.exists():
+        raise FileNotFoundError(f'[gen_typescript] --config 配置文件[{c}]不存在')
+    conf = Config.load(c)
+    tsconf = conf.typescript
+    if tsconf is None:
+        raise ValueError('[gen_typescript] 配置中未找到typescript段落')
+
+    relative_path: Path = c.parent
+    output = Path(tsconf.codegen_output or 'typescript')
+    if not output.is_absolute():
+        output = (c.parent / output).resolve()
+
+    if not output.exists():
+        raise FileNotFoundError(f'[gen_typescript] --output 输出路径[{output}]不存在')
+
+    entrypoints = load_entrypoints(conf.blueprint.entrypoints, relative_path)
+    if not entrypoints:
+        raise ModuleNotFoundError(f'[gen_typescript] 未指定蓝图entrypoints')
+
+    for ep in entrypoints:
+        ep.build()
+
+    base_url = tsconf.base_url or tsconf.upstream or ''
+    writer = typescript.TypeScriptWriter(
+        output,
+        base_url=base_url,
     )
     writer.register(*entrypoints)
     writer.gen()

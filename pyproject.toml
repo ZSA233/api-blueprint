@@ -52,7 +52,7 @@ dependencies = [
 [project.scripts]
 api-doc-server  = "api_blueprint.cli.apidoc:apidoc_server"
 api-gen-golang  = "api_blueprint.cli.apigen:gen_golang"
-api-gen-react   = "api_blueprint.cli.apigen:gen_react"
+api-gen-typescript = "api_blueprint.cli.apigen:gen_typescript"
 
 # Tools settings -------------------------------------------------------------------------------------------------------
 [tool.setuptools]

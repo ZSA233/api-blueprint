@@ -4,7 +4,9 @@ import (
 	"fmt"
 )
 
-type Router struct{}
+type Router struct {
+	_GenRouter
+}
 
 func NewRouter() *Router {
 	return &Router{}
@@ -22,9 +24,9 @@ func (impl *Router) TestPost(
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (impl *Router) F1put(
-	ctx *CTX_F1put, req *REQ_F1put,
-) (rsp *RSP_F1put, err error) {
+func (impl *Router) Z1put(
+	ctx *CTX_Z1put, req *REQ_Z1put,
+) (rsp *RSP_Z1put, err error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
@@ -43,5 +45,17 @@ func (impl *Router) Ws(
 func (impl *Router) PostDeprecated(
 	ctx *CTX_PostDeprecated, req *REQ_PostDeprecated,
 ) (rsp *RSP_PostDeprecated, err error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (impl *Router) Raw(
+	ctx *CTX_Raw, req *REQ_Raw,
+) (rsp *RSP_Raw, err error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (impl *Router) MapModel(
+	ctx *CTX_MapModel, req *REQ_MapModel,
+) (rsp *RSP_MapModel, err error) {
 	return nil, fmt.Errorf("not implemented")
 }

@@ -1,15 +1,18 @@
 from fastapi import FastAPI, APIRouter, Response, Request, status
 from api_blueprint.engine.response import XMLResponse
 from api_blueprint.engine.model import (
-    Field, Model, Error, Map, MapModel, HeaderModel, model_to_pydantic, 
-    dict_to_pyd_model, unwrap_errors, create_map_model,
+    Field, Model, Error, Map, Array, HeaderModel, model_to_pydantic, 
+    unwrap_errors, create_field_wrapped_model,
     create_model, iter_field_model_type, iter_model_vars,
 )
 from collections import defaultdict
 from api_blueprint.engine.utils import snake_to_pascal_case
 from api_blueprint.engine.wrapper import ResponseWrapper
 from api_blueprint.engine.endpoint import make_endpoint
-from api_blueprint.engine.provider import Provider, ellipsis_replaces
+from api_blueprint.engine.provider import (
+    Provider, ellipsis_replaces, ProviderName, 
+    Handle, WsHandle,
+)
 from fastapi.responses import JSONResponse, Response
 from fastapi import params as fa_params
 from fastapi.security import api_key as fa_apikey
@@ -17,7 +20,7 @@ import fastapi
 from typing import (
     List, Dict, Optional, Any, overload,
     TypeVar, Literal, Union, Sequence, Type, DefaultDict,
-    TYPE_CHECKING
+    TYPE_CHECKING, Self,
 )
 from pathlib import Path
 import httpx
@@ -47,14 +50,19 @@ class Router:
 
     req_query: Optional[Model]
     req_form: Optional[Model]
+    req_bin: Optional[Model]
     req_json: Optional[Model]
 
     rsp_model: Optional[Model]
     rsp_wrapper: Optional[ResponseWrapper]
     
+    recvs: List[Model]
+    sends: List[Model]
+
     errors: DefaultDict[int, List[Error]]
     extra: Dict[str, Any]
 
+    _handle: Provider = Handle
     _providers: Optional[List[Provider]]
     _tags: Optional[List[str]] = None
     is_deprecated: bool = False
@@ -68,6 +76,8 @@ class Router:
         headers: Optional[Union[HeaderModel, Type[HeaderModel]]] = None,
         providers: Optional[List[Provider]] = None,
         tags: Optional[List[str]] = None,
+        *,
+        handle: Provider = Handle,
         **kwargs: Dict[str, Any],
     ):
         self.group = group
@@ -78,17 +88,23 @@ class Router:
         self.req_query = None
         self.req_form = None
         self.req_json = None
+        self.req_bin = None
         self.rsp_model = None
 
         self.rsp_wrapper = response_wrapper
         self._headers = headers
+        
+        self._handle = handle
         self._providers = providers
         self._tags = tags
 
         self.is_deprecated = False
-        self.media_type = 'application/json'
+        self.rsp_media_type = 'application/json'
 
         self.errors = defaultdict(list)
+
+        self.recvs = []
+        self.sends = []
 
     def __str__(self):
         return f'<Router {self.methods} - {self.url} >'
@@ -111,9 +127,18 @@ class Router:
 
     @property
     def providers(self) -> List[Provider]:
-        if self._providers is not None:
-            return ellipsis_replaces(self.bp.providers, self._providers)
-        return self.bp.providers
+        provs = self._providers
+        if provs is not None:
+            provs = ellipsis_replaces(self.bp.providers, self._providers)
+        else:
+            provs = self.bp.providers
+        
+        remap_provs = []
+        for prov in provs:
+            if prov.name == ProviderName.HANDLE.value:
+                prov = self._handle
+            remap_provs.append(prov)
+        return remap_provs
 
     @property
     def headers(self) -> Optional[HeaderModel]:
@@ -136,96 +161,115 @@ class Router:
         return list(tags)
 
 
-    def ARGS(self, model: Optional[Model] = None, **kwargs: Dict[str, ModelOrField]) -> 'Router':
-        if model is None:
-            model = create_model(
+    def ARGS(self, __model: Optional[Model] = None, **kwargs: Dict[str, ModelOrField]) -> Self:
+        if __model is None:
+            __model = create_model(
                 f'REQ_{self.name}_QUERY',
                 kwargs,
             )
         
-        if isinstance(model, Model):
-            model = model.__class__
-        elif isinstance(model, Map):
-            model = create_map_model(
+        if isinstance(__model, Model):
+            __model = __model.__class__
+        elif isinstance(__model, Field):
+            __model = create_field_wrapped_model(
                 f'REQ_{self.name}_QUERY',
-                model,
+                __model,
             )
-        self.req_query = model
+        self.req_query = __model
         return self
 
 
-    def REQ_JSON(self, model: Optional[Model] = None, **kwargs: Dict[str, ModelOrField]) -> 'Router':
-        if model is None:
-            model = create_model(
+    def REQ_JSON(self, __model: Optional[Model] = None, **kwargs: Dict[str, ModelOrField]) -> Self:
+        if __model is None:
+            __model = create_model(
                 f'REQ_{self.name}_JSON',
                 kwargs,
             )
         
-        if isinstance(model, Model):
-            model = model.__class__
-        elif isinstance(model, Map):
-            model = create_map_model(
+        if isinstance(__model, Model):
+            __model = __model.__class__
+        elif isinstance(__model, Field):
+            __model = create_field_wrapped_model(
                 f'REQ_{self.name}_JSON',
-                model,
+                __model,
             )
-        self.req_json = model
+        self.req_json = __model
         return self
 
-    def REQ(self, model: Optional[Model] = None, **kwargs: Dict[str, ModelOrField]) -> 'Router':
-        return self.REQ_JSON(model, **kwargs)
+    def REQ(self, __model: Optional[Model] = None, **kwargs: Dict[str, ModelOrField]) -> Self:
+        return self.REQ_JSON(__model, **kwargs)
 
-    def REQ_FORM(self, model: Optional[Model] = None, **kwargs: Dict[str, ModelOrField]) -> 'Router':
-        if model is None:
-            model = create_model(
+    def REQ_FORM(self, __model: Optional[Model] = None, **kwargs: Dict[str, ModelOrField]) -> Self:
+        if __model is None:
+            __model = create_model(
                 f'REQ_{self.name}_FORM',
                 kwargs,
             )
         
-        if isinstance(model, Model):
-            model = model.__class__
-        elif isinstance(model, Map):
-            model = create_map_model(
+        if isinstance(__model, Model):
+            __model = __model.__class__
+        elif isinstance(__model, Field):
+            __model = create_field_wrapped_model(
                 f'REQ_{self.name}_FORM',
-                model,
+                __model,
             )
-        self.req_form = model
+        self.req_form = __model
+        return self
+    
+    def REQ_BIN(self, __model: Optional[Model] = None, **kwargs: Dict[str, ModelOrField]) -> Self:
+        """ 目前仅用于描述，需要手动实现解析逻辑 """
+        if __model is None:
+            __model = create_model(
+                f'REQ_{self.name}_BIN',
+                kwargs,
+            )
+        
+        if isinstance(__model, Model):
+            __model = __model.__class__
+        elif isinstance(__model, Field):
+            __model = create_field_wrapped_model(
+                f'REQ_{self.name}_BIN',
+                __model,
+            )
+        self.req_bin = __model
         return self
 
-    def _RSP_AS_MODEL(self, model: Optional[Model] = None, **kwargs: Dict[str, ModelOrField]) -> Optional[Model]:
-        if model is None:
-            model = create_model(
+    def _RSP_AS_MODEL(self, __model: Optional[Model] = None, **kwargs: Dict[str, ModelOrField]) -> Optional[Model]:
+        if __model is None:
+            __model = create_model(
                 f'RSP_{self.name}',
                 kwargs,
             )
         
-        if isinstance(model, Model):
-            model = model.__class__
-        elif isinstance(model, Map):
-            model = create_map_model(
+        if isinstance(__model, Model):
+            __model = __model.__class__
+        elif isinstance(__model, Field):
+            __model = create_field_wrapped_model(
                 f'RSP_{self.name}',
-                model,
+                __model,
             )
-        return model
+        return __model
 
-    def RSP_JSON(self, model: Optional[Model] = None, **kwargs: Dict[str, ModelOrField]) -> 'Router':
-        self.rsp_model = self._RSP_AS_MODEL(model, **kwargs)
-        self.media_type = 'application/json'
+    def RSP_JSON(self, __model: Optional[Model] = None, **kwargs: Dict[str, ModelOrField]) -> Self:
+        self.rsp_model = self._RSP_AS_MODEL(__model, **kwargs)
+        self.rsp_media_type = 'application/json'
         return self
 
-    def RSP(self, model: Optional[Model] = None, **kwargs: Dict[str, ModelOrField]) -> 'Router':
-        return self.RSP_JSON(model, **kwargs)
+    def RSP(self, __model: Optional[Model] = None, **kwargs: Dict[str, ModelOrField]) -> Self:
+        return self.RSP_JSON(__model, **kwargs)
 
-    def RSP_XML(self, model: Optional[Model] = None, **kwargs: Dict[str, ModelOrField]) -> 'Router':
-        self.rsp_model = self._RSP_AS_MODEL(model, **kwargs)
-        self.media_type = 'application/xml'
+    def RSP_XML(self, __model: Optional[Model] = None, **kwargs: Dict[str, ModelOrField]) -> Self:
+        self.rsp_model = self._RSP_AS_MODEL(__model, **kwargs)
+        self.rsp_media_type = 'application/xml'
         return self
 
-    def ERR(self, *errors: Union[Error, Model]) -> 'Router':
+    def ERR(self, *errors: Union[Error, Model]) -> Self:
         self.errors = unwrap_errors(errors)
         return self
     
-    def DEPRECATED(self):
+    def DEPRECATED(self) -> Self:
         self.is_deprecated = True
+        return self
 
     async def upstream_handler(self, request: Request, **kwargs):
         UPSTREAM_URL = self.bp.upstream
@@ -320,19 +364,19 @@ class Router:
         
         endpoint = make_endpoint(
             self.upstream_handler, 
-            model_to_pydantic(self.req_query) if self.req_query else None,
-            model_to_pydantic(self.req_form) if self.req_form else None,
-            model_to_pydantic(self.req_json) if self.req_json else None,
+            model_to_pydantic(self.req_query, router=self) if self.req_query else None,
+            model_to_pydantic(self.req_form, router=self) if self.req_form else None,
+            model_to_pydantic(self.req_json, router=self) if self.req_json else None,
             self.headers,
         )
         rsp_model: Optional[Type] = None
         rsp_class: Response = JSONResponse
         response_wrapper = self.response_wrapper
-        if self.media_type == 'application/xml':
+        if self.rsp_media_type == 'application/xml':
             rsp_class = XMLResponse
         
-        if self.rsp_model:
-            rsp_model = model_to_pydantic(response_wrapper.create(self.rsp_model))
+        if self.rsp_model is not None:
+            rsp_model = model_to_pydantic(response_wrapper.create(self.rsp_model), router=self)
 
         responses: Dict[int, Dict[str, Any]] = {}
         for code, errs in (self.bp.errors | self.errors).items():
@@ -350,7 +394,7 @@ class Router:
             responses[code] = {
                 'description': description,
                 'content': {
-                    self.media_type: {
+                    self.rsp_media_type: {
                         'examples': examples
                     }
                 }
@@ -377,3 +421,11 @@ class Router:
                 **copy_extra
             )
 
+
+    def RECV(self, *models: List[Model]) -> Self:
+        self.recvs.extend(models)
+        return self
+
+    def SEND(self, *models: List[Model]) -> Self:
+        self.sends.extend(models)
+        return self

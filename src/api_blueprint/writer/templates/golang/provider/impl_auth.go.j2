@@ -1,12 +1,12 @@
 package {{ writer.provider_package }}
 
-type AuthContext[Q, F, J, P any] struct{}
+type AuthContext[Q, B, P any] struct{}
 
-func (prov *AuthProvider[Q, F, J, P]) Handle(anyCtx ContextInterface) {
-	ctx := AdaptContext[Q, F, J, P](anyCtx)
+func (prov *AuthProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
+	ctx := AdaptContext[Q, B, P](anyCtx)
 
 	// TODO
-	ctx.Auth = &AuthContext[Q, F, J, P]{}
+	ctx.Auth = &AuthContext[Q, B, P]{}
 
 	ctx.Gin.Next()
 }

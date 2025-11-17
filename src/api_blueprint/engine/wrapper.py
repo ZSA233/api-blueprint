@@ -1,11 +1,11 @@
 from typing import Type, Generic, TypeVar, Dict, Any, Tuple
-from api_blueprint.engine.model import Field, Model, Int, String, Error
+from api_blueprint.engine.model import Field, Model, Int, String, Error, ModelMeta
 from abc import ABC, abstractmethod
 
 TM = TypeVar('TypeModel', bound=Model)
 
 
-class ResponseWrapper(ABC):
+class ResponseWrapper(Model):
     __xml_options__: Dict[str, Any] = {
         'root_label': None
     }

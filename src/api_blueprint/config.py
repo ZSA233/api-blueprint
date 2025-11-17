@@ -1,6 +1,7 @@
 
 
 from pydantic import BaseModel, Field
+from typing import Optional
 from pathlib import Path
 import typing
 import sys
@@ -16,6 +17,7 @@ class Config(BaseModel):
     blueprint: 'BlueprintConfig'
 
     golang: 'GolangConfig'
+    typescript: typing.Optional['TypeScriptConfig'] = None
 
     @classmethod
     def load(cls, path: typing.Optional[typing.Union[str, Path]]) -> 'Config':
@@ -33,7 +35,11 @@ class UpstreamConfig(BaseModel):
 
 
 class GolangConfig(CodegenConfig, UpstreamConfig):
-    pass
+    module: Optional[str] = None
+
+
+class TypeScriptConfig(CodegenConfig, UpstreamConfig):
+    base_url: Optional[str] = None
 
 
 class BlueprintConfig(BaseModel):

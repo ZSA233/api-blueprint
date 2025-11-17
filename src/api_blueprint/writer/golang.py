@@ -1,31 +1,36 @@
 from api_blueprint.writer import BaseBlueprint, BaseWriter, utils
 from typing import (
     List, Optional, Dict, Any, Set, Generator, Union, Literal, TypeVar,
-    Generic, Tuple, Type, IO
+    Generic, Tuple, Type, IO, get_origin, get_args, ForwardRef,
 )
 from dataclasses import dataclass
 from contextlib import contextmanager
 from pathlib import Path
 from api_blueprint.engine import Blueprint
 from api_blueprint.engine.model import (
-    Field, Model, Array, Null, Map, MapModel, Error,
+    Field, Model, Array, Null, Map, FieldWrappedModel, Error, Enum, AnonKV, 
     create_model, model_to_pydantic, iter_model_vars,
     Proto, iter_field_model_type, AnyModel, iter_error_models,
+    get_forward_ref_type, iter_enum_classes, BASIC_FIELD_TYPES,
 )
 from api_blueprint.engine.wrapper import ResponseWrapper
 from api_blueprint.engine.router import Router
 from api_blueprint.engine.group import RouterGroup
 from api_blueprint.engine.provider import ProviderName
 from api_blueprint.engine.utils import (
-    snake_to_pascal_case, pascal_to_snake_case, inc_to_letters, join_path_imports,
+    snake_to_pascal_case, pascal_to_snake_case, 
+    inc_to_letters, join_path_imports, is_parametrized,
 )
+from itertools import chain
 from api_blueprint.writer import templates
 from api_blueprint.writer.utils import SafeFmtter
-from fastapi.responses import Response
 import logging
 from pydantic.fields import FieldInfo
 import subprocess
-from enum import Enum
+import enum
+import re
+import json
+import shutil
 
 
 logging.basicConfig(
@@ -37,9 +42,11 @@ logging.basicConfig(
 logger = logging.getLogger('GolangWriter')
 logger.setLevel(logging.INFO)
 
+LANG: str = 'golang'
 
-class PackageName(str, Enum):
+class PackageName(str, enum.Enum):
     COM_PROTOS = 'protos'
+    COM_ENUMS  = 'enums'
     PROVIDER   = 'provider'
     ERROR      = 'errors'
     VIEWS      = 'views'
@@ -48,53 +55,403 @@ class PackageName(str, Enum):
 PROTO_STRUCT_TYPE = Literal['struct', 'generic', 'alias']
 
 
+type_reg = re.compile(r'\{(\w+)_((imports|package)\$?)\}')
 
-class GolangProtoHelper:
-    parent: str
+class GolangType(SafeFmtter):
+    parents: Optional[str] = None
+
+    def __init__(self, v):
+        super().__init__()
+
+        ps = set()
+        for res in type_reg.findall(str(v)):
+            parent = res[0]
+            ps.add(parent)
+
+        self.parents = list(ps)
+
+    def render(self, formatters: Optional[Dict[str, str]] = None) -> str:
+        formatters = formatters or {}
+
+        def repl(match: re.Match) -> str:
+            key = f"{match.group(1)}_{match.group(2)}"
+            return formatters.get(key, '')
+
+        return type_reg.sub(repl, str(self))
+
+
+class GolangTypeResolver:
+
+    SIMPLE_TYPE_MAPPING = {
+        'string': 'string',
+        'str': 'string',
+        'int': 'int',
+        'int64': 'int64',
+        'int32': 'int32',
+        'int16': 'int16',
+        'int8': 'int8',
+        'uint': 'uint',
+        'uint64': 'uint64',
+        'uint32': 'uint32',
+        'uint16': 'uint16',
+        'uint8': 'uint8',
+        'float': 'float64',
+        'float64': 'float64',
+        'float32': 'float32',
+        'boolean': 'bool',
+        'bool': 'bool',
+        'byte': 'byte',
+        'error': 'error',
+        'null': 'nil',
+    }
+
+    def resolve(self, field: Union[Field, Model, Type[Any], Any], *, pointer_allowed: bool = True) -> str:
+        kind = self._infer_kind(field)
+        if kind in self.SIMPLE_TYPE_MAPPING:
+            return self.SIMPLE_TYPE_MAPPING[kind]
+
+        resolver = {
+            'array': self._resolve_array,
+            'enum': self._resolve_enum,
+            'map': self._resolve_map,
+            'anonkv': self._resolve_anon_kv,
+            'object': self._resolve_object,
+        }.get(kind)
+
+        if resolver is not None:
+            return resolver(field, pointer_allowed=pointer_allowed)
+
+        if self._is_model(field):
+            return self._resolve_object(field, pointer_allowed=pointer_allowed)
+
+        return 'any'
+
+    def _infer_kind(self, field: Union[Field, Model, Type[Any], Any]) -> str:
+        if isinstance(field, AnonKV):
+            return 'anonkv'
+
+        candidate = field
+        if isinstance(field, (Field, Model)):
+            candidate = field
+        elif isinstance(field, type):
+            candidate = field
+
+        type_name = getattr(candidate, '__type__', None)
+        if type_name:
+            return type_name.lower()
+
+        if isinstance(candidate, type):
+            return candidate.__name__.lower()
+
+        origin = get_origin(candidate)
+        if origin:
+            return self._infer_kind(origin)
+
+        return candidate.__class__.__name__.lower()
+
+    def _resolve_array(self, field: Union[Field, Type[Field], Any], *, pointer_allowed: bool) -> str:
+        array_field = self._ensure_instance(field, Array)
+        if not isinstance(array_field, Array):
+            return '[]any'
+        elem = array_field.elem_type()
+        if self._is_generic(elem):
+            elem = elem()
+        elem_type = self.resolve(elem, pointer_allowed=False)
+        if self._is_model(elem):
+            return f'[]*{elem_type}'
+        return f'[]{elem_type}'
+
+    def _resolve_enum(self, field: Enum, *, pointer_allowed: bool) -> str:
+        if is_parametrized(field):
+            field = field()
+        base_type = field.enum_base_type()
+        return self.resolve(base_type, pointer_allowed=pointer_allowed)
+
+    def _resolve_map(self, field: Union[Map, Type[Map]], *, pointer_allowed: bool) -> str:
+        map_field = self._ensure_instance(field, Map)
+        if not isinstance(map_field, Map):
+            return 'map[string]any'
+        key_type = map_field.key_type()
+        value_type = map_field.value_type()
+
+        resolved_key = self.resolve(key_type, pointer_allowed=False)
+        resolved_value = self.resolve(value_type, pointer_allowed=False)
+
+        if self._is_model(value_type):
+            resolved_value = f'*{resolved_value}'
+
+        return f'map[{resolved_key}]{resolved_value}'
+
+    def _resolve_anon_kv(self, field: AnonKV, *, pointer_allowed: bool) -> str:
+        return self.resolve(field.get_obj(), pointer_allowed=pointer_allowed)
+
+    def _resolve_object(self, field: Union[Model, Type[Model]], *, pointer_allowed: bool) -> str:
+        model_cls = field if isinstance(field, type) else field.__class__
+        pointer = '*' if pointer_allowed else ''
+        return GolangType(f'{pointer}{{protos_package$}}{model_cls.__name__}')
+
+    def _ensure_instance(self, field: Any, expected: Type[Any]) -> Any:
+        if isinstance(field, expected):
+            return field
+        if isinstance(field, type) and issubclass(field, expected):
+            return field()
+        if self._is_generic(field):
+            return field()
+        return field
+
+    def _is_model(self, field: Any) -> bool:
+        if isinstance(field, Model):
+            return True
+        if isinstance(field, type) and issubclass(field, Model):
+            return True
+        origin = get_origin(field)
+        if origin:
+            return self._is_model(origin)
+        return False
+
+    def _is_generic(self, field: Any) -> bool:
+        return get_origin(field) is not None
+
+class GolangTagBuilder:
+
+    DEFAULT_TAG_FIELDS = ('json', 'xml', 'form')
+
+    @staticmethod
+    def binding(field_info: FieldInfo, omitempty: bool = False) -> str:
+        parts: List[str] = []
+        if omitempty:
+            parts.append("omitempty")
+        elif field_info.is_required():
+            parts.append("required")
+
+        annotation = field_info.annotation
+        if isinstance(annotation, type) and issubclass(annotation, enum.Enum):
+            enum_values = " ".join(str(e.value) for e in list(annotation))
+            parts.append(f'oneof={enum_values}')
+
+        for meta in field_info.metadata:
+            if getattr(meta, 'gt', None) is not None:
+                parts.append(f"gt={meta.gt}")
+            if getattr(meta, 'ge', None) is not None:
+                parts.append(f"gte={meta.ge}")
+            if getattr(meta, 'lt', None) is not None:
+                parts.append(f"lt={meta.lt}")
+            if getattr(meta, 'le', None) is not None:
+                parts.append(f"lte={meta.le}")
+            if getattr(meta, 'min_length', None) is not None:
+                parts.append(f"min={meta.min_length}")
+            if getattr(meta, 'max_length', None) is not None:
+                parts.append(f"max={meta.max_length}")
+            if getattr(meta, 'regex', None) is not None:
+                parts.append(f"regexp={meta.regex.pattern}")
+
+        return ",".join(filter(None, parts))
+
+    @classmethod
+    def build(cls, name: str, field: Union[Field, Model], field_info: FieldInfo) -> str:
+        extra = getattr(field, '__extra__', {}) or {}
+        alias = extra.get('alias')
+        omitempty = extra.get('omitempty', False)
+        field_name = alias or name
+        normal_val = field_name if not omitempty else f'{name},omitempty'
+
+        tags: List[Tuple[str, str]] = [(tag, normal_val) for tag in cls.DEFAULT_TAG_FIELDS]
+
+        binding = cls.binding(field_info, omitempty)
+        if binding:
+            tags.append(('binding', binding))
+
+        return ' '.join(f'{tag}:"{value}"' for tag, value in tags)
+
+
+@dataclass(frozen=True)
+class GolangProtoField:
+    name: str
+    field: str
+    type: GolangType
+    tags: str
+
+    def render(self, formatters: Dict[str, str]) -> 'GolangProtoFieldView':
+        return GolangProtoFieldView(
+            name=self.name,
+            field=self.field,
+            type=self.type.render(formatters),
+            tags=self.tags,
+        )
+    
+    def import_specs(self, formatters: Dict[str, str]) -> List[str]:
+        parents = getattr(self.type, 'parents', [])
+        imps = []
+        for parent in parents:
+            package = formatters.get(f'{parent}_package', '')
+            imports = formatters.get(f'{parent}_imports', '')
+            if not package or not imports:
+                continue
+            imps.append(f'{package} "{imports}"')
+        return imps
+
+
+@dataclass(frozen=True)
+class GolangProtoFieldView:
+    name: str
+    field: str
+    type: str
+    tags: str
+
+
+@dataclass(frozen=True)
+class GolangEnumMember:
+    name: str
+    value: Any
 
     @property
-    def package(self) -> str:
-        if not self.parent:
-            return ''
-        return f'{{{self.parent}_package}}'
+    def go_value_literal(self) -> str:
+        return _go_literal(self.value)
 
-    def format_package(self, **kwargs) -> str:
-        return self.package.format(**kwargs)
 
-    def format_package_with_dot(self, **kwargs) -> str:
-        if not self.parent:
-            return ''
-        return f'{{{self.parent}_package$}}'.format(**kwargs)
+@dataclass(frozen=True)
+class GolangEnum:
+    name: str
+    base_type: str
+    members: List[GolangEnumMember]
+
+    @classmethod
+    def from_enum(cls, enum_cls: Type[enum.Enum]) -> Optional['GolangEnum']:
+        members = [GolangEnumMember(name=member.name, value=member.value) for member in enum_cls]
+        if not members:
+            return None
+        base_type = _detect_go_base_type(type(members[0].value))
+        return cls(name=enum_cls.__name__, base_type=base_type, members=members)
+
+
+def _detect_go_base_type(value_type: Type[Any]) -> str:
+    candidates: Tuple[Tuple[Type[Any], str], ...] = (
+        (bool, 'bool'),
+        (int, 'int'),
+        (float, 'float64'),
+        (str, 'string'),
+    )
+    for py_type, go_type in candidates:
+        try:
+            if issubclass(value_type, py_type):
+                return go_type
+        except TypeError:
+            continue
+    return 'string'
+
+
+def _go_literal(value: Any) -> str:
+    if isinstance(value, str):
+        return json.dumps(value)
+    if isinstance(value, bool):
+        return 'true' if value else 'false'
+    if isinstance(value, (int, float)):
+        return str(value)
+    return json.dumps(value, default=str)
+
+
+
+@dataclass(frozen=True)
+class GolangPackageLayout:
+    module_import: str
+    views_package: str
+    provider_package: str
+    errors_package: str
 
     @property
-    def imports(self) -> str:
-        if not self.parent:
-            return ''
-        return f'{{{self.parent}_imports}}'
+    def views_imports(self) -> str:
+        return join_path_imports(self.module_import, self.views_package)
 
-    def format_imports(self, **kwargs) -> str:
-        return self.imports.format(**kwargs)
+    @property
+    def provider_imports(self) -> str:
+        return join_path_imports(self.views_imports, self.provider_package)
+
+    @property
+    def errors_imports(self) -> str:
+        return join_path_imports(self.module_import, self.errors_package)
+
+    def formatters(self, update: Optional[Dict[str, str]] = None) -> Dict[str, str]:
+        fmts = {
+            'views_package': self.views_package,
+            'views_imports': self.views_imports,
+            'provider_package': self.provider_package,
+            'provider_imports': self.provider_imports,
+            'errors_package': self.errors_package,
+            'errors_imports': self.errors_imports,
+        }
+        fmts.update({k + '$': v + '.' for k, v in fmts.items() if k.endswith('_package')})
+        if update:
+            fmts.update(update)
+        return fmts
 
 
 @dataclass
-class GolangProtoGeneric(GolangProtoHelper):
-    parent: str
-    name: str
-    types: List[Union['GolangProto', str]]
+class GolangProtoStruct:
+    _resolver = GolangTypeResolver()
+
+    @staticmethod
+    def get_field_type(field: Union[Field, Model, Type[Any], Any], is_sub: bool = False) -> str:
+        pointer_allowed = not is_sub
+        return GolangProtoStruct._resolver.resolve(field, pointer_allowed=pointer_allowed)
+
+    @staticmethod
+    def get_binding_tag(field: FieldInfo, omitempty: bool = False) -> str:
+        return GolangTagBuilder.binding(field, omitempty)
+
+    @staticmethod
+    def get_field_tags(name: str, field: Union[Field, Model], field_info: FieldInfo) -> str:
+        return GolangTagBuilder.build(name, field, field_info)
 
 
 @dataclass
-class GolangProtoAlias(GolangProtoHelper):
-    name: str
-    parent: Optional[str] = None
+class GolangProtoGeneric:
+    name: GolangType
+    types: List[Union['GolangProto', GolangType]]
+
+    def type_reference(self, formatters: Dict[str, str]) -> str:
+        return self.name.render(formatters)
+
+    def import_specs(self, formatters: Dict[str, str]) -> List[str]:
+        parents = self.name.parents
+        for t in self.types:
+            if isinstance(t, GolangProto):
+                parents += t.import_specs(formatters)
+        imps = []
+        for parent in parents:
+            package = formatters.get(f'{parent}_package', '')
+            imports = formatters.get(f'{parent}_imports', '')
+            if not package or not imports:
+                continue
+            imps.append(f'{package} "{imports}"')
+        return imps
+
+@dataclass
+class GolangProtoAlias:
+    name: GolangType
     proto: Optional['GolangProto'] = None
     new_type: bool = False
-    
 
-class GolangMapModel(MapModel):
+    def type_reference(self, formatters: Dict[str, str]) -> str:
+        return self.name.render(formatters)
+
+    def import_specs(self, formatters: Dict[str, str]) -> List[str]:
+        parents = self.name.parents
+        if self.proto is not None:
+            parents += self.proto.import_specs(formatters)
+        imps = []
+        for parent in parents:
+            package = formatters.get(f'{parent}_package', '')
+            imports = formatters.get(f'{parent}_imports', '')
+            if not package or not imports:
+                continue
+            imps.append(f'{package} "{imports}"')
+        return imps
+
+
+class GolangFieldWrappedModel(FieldWrappedModel):
     @property
     def __name__(self) -> str:
-        return GolangProto.get_field_type(self.__map_type__)
+        return GolangProtoStruct.get_field_type(self.__field_type__)
 
     @__name__.setter
     def __name__(self, *args) -> str:
@@ -125,18 +482,21 @@ class GolangResponseWrapper:
         fields = [v for k, v in iter_model_vars(self.response_wrapper) if isinstance(v, (Model, Field))]
         
         alias: Optional[GolangProtoAlias] = None
+        struct: Optional[GolangProtoStruct] = None
         if len(fields) > 0:
             struct_type = 'struct'
+            struct = GolangProtoStruct()
         else:
             struct_type = 'alias'
             alias = GolangProtoAlias(
-                name='any',
+                name=GolangType('any'),
             )
 
         self._proto = GolangProto(
             name=self.prefix,
             model=self.response_wrapper,
             struct_type=struct_type,
+            struct=struct,
             alias=alias,
         )
         return self._proto
@@ -149,8 +509,11 @@ class GolangResponseWrapper:
     def proto_type(self) -> PROTO_STRUCT_TYPE:
         return self.proto.struct_type
 
-    def proto_fields(self) -> List[Dict[str, Any]]:
+    def proto_fields(self) -> List[GolangProtoField]:
         return self.proto.fields()
+
+    def proto_fields_for(self, formatters: Dict[str, str]) -> List[GolangProtoFieldView]:
+        return self.proto.fields_for(formatters)
 
     @property
     def class_name(self) -> str:
@@ -176,6 +539,7 @@ class GolangResponseWrapper:
 
 class GolangProto(Proto):
     struct_type: PROTO_STRUCT_TYPE
+    struct: Optional[GolangProtoStruct]
     generic: Optional[GolangProtoGeneric]
     alias: Optional[GolangProtoAlias]
 
@@ -185,11 +549,13 @@ class GolangProto(Proto):
         model: AnyModel, 
         struct_type: PROTO_STRUCT_TYPE = 'struct',
         *,
+        struct: Optional[GolangProtoStruct] = None,
         generic: Optional[GolangProtoGeneric] = None,
         alias: Optional[GolangProtoAlias] = None,
     ):
         super().__init__(name, model)
         self.struct_type = struct_type
+        self.struct = struct
         self.generic = generic
         self.alias = alias
 
@@ -206,153 +572,38 @@ class GolangProto(Proto):
 
     @classmethod
     def from_model_ref(cls, ref_model: AnyModel, name: str, **kwargs) -> 'GolangProto':
-        if ref_model.__auto__:
+        is_autocreate = ref_model.__auto__
+        is_field_ref = isinstance(ref_model, GolangFieldWrappedModel) 
+        if is_autocreate and not is_field_ref:
             proto = GolangProto(
                 name,
                 ref_model,
+                'struct',
+                struct=GolangProtoStruct(),
                 **kwargs,
             )
         else:
-            # GolangMapModel => map[?]?
-            alias_is_com = not isinstance(ref_model, GolangMapModel)
+            # field基础类型不会在com包中定义，需要排除            
+            alias_is_com = not is_field_ref
             alias_proto = GolangProto.from_model(ref_model, **kwargs)
-            alias_parent = None
+            alias_name = alias_proto.name
             if alias_is_com:
-                alias_parent = PackageName.COM_PROTOS.value
+                alias_name = f'{{protos_package}}.{alias_proto.name}'
             proto = GolangProto(
                 name,
                 ref_model,
                 'alias',
                 alias=GolangProtoAlias(
-                    parent=alias_parent,
-                    name=alias_proto.name,
+                    name=GolangType(alias_name),
                     proto=alias_proto,
                 ),
                 **kwargs,
             )
         return proto
 
-    @staticmethod
-    def get_field_type(field: Union[Field, Model], is_sub: bool = False) -> str:
-        def array():
-            arr: Array = field
-            elem = arr.elem_type()
-            if issubclass(elem, Field):
-                return f'[]{do_sub(elem)}'
-            elif issubclass(elem, Model):
-                return f'[]*{do_sub(elem)}'
-            return '[]any'
-        
-        def string():   return 'string'
-
-        def int():      return 'int'
-        def int64():    return 'int64'
-        def int32():    return 'int32'
-        def int16():    return 'int16'
-        def int8():     return 'int8'
-        def uint():     return 'uint'
-        def uint64():   return 'uint64'
-        def uint32():   return 'uint32'
-        def uint16():   return 'uint16'
-        def uint8():    return 'uint8'
-
-        def float():    return 'float64'
-        def float64():  return 'float64'
-        def float32():  return 'float32'
-
-        def boolean():  return 'bool'
-        def error():    return 'error'    
-        def null():     return 'nil'
-
-        def object():
-            cls = field if isinstance(field, type) else field.__class__
-            return f'{"*" if not is_sub else ""}{{protos_package$}}{cls.__name__}'
-
-        def map():
-            map: Map = field
-            key = map.key_type()
-            value = map.value_type()
-            if issubclass(value, Field):
-                return f'map[{do_sub(key)}]{do_sub(value)}'
-            elif issubclass(value, Model):
-                return f'map[{do_sub(key)}]*{do_sub(value)}'
-            return f'map[string]any'
-
-        def do_sub(sub_field: Union[Field, Model]):
-            return GolangProto.get_field_type(sub_field, True)
-
-        getter = {
-            'array': array,
-            'int': int,
-            'int64': int64,
-            'int32': int32,
-            'int16': int16,
-            'int8': int8,
-            'uint': uint,
-            'uint64': uint64,
-            'uint32': uint32,
-            'uint16': uint16,
-            'uint8': uint8,
-            'float': float,
-            'float64': float64,
-            'float32': float32,
-            'boolean': boolean,
-            'error': error,
-            'string': string,
-            'null': null,
-            'map': map,
-            'object': object,
-        }.get(field.__type__, lambda: 'any')
-        return getter()
-
-    @staticmethod
-    def get_binding_tag(field: FieldInfo) -> str:
-        parts = []
-        if field.is_required():
-            parts.append("required")
-
-        metadata = field.metadata
-        for meta in metadata:
-            if getattr(meta, 'gt', None) is not None:
-                parts.append(f"gt={meta.gt}")
-            if getattr(meta, 'ge', None) is not None:
-                parts.append(f"gte={meta.ge}")
-            if getattr(meta, 'lt', None) is not None:
-                parts.append(f"lt={meta.lt}")
-            if getattr(meta, 'le', None) is not None:
-                parts.append(f"lte={meta.le}")
-            if getattr(meta, 'min_length', None) is not None:
-                parts.append(f"min={meta.min_length}")
-            if getattr(meta, 'max_length', None) is not None:
-                parts.append(f"max={meta.max_length}")
-
-            if getattr(meta, 'regex', None) is not None:
-                parts.append(f"regexp={meta.regex.pattern}")
-
-        return ",".join(parts)
-
-    @staticmethod
-    def get_field_tags(name: str, field: Union[Field, Model], field_info: FieldInfo) -> str:
-        alias = field.__extra__.get('alias', None)
-        field_name = alias or name
-        normal_val = field_name if not field.__extra__.get('omitempty', False) else f'{name},omitempty'
-        tags: List[Tuple[str, str]] = [
-            ('json', normal_val),
-            ('xml', normal_val),
-            ('form', normal_val),
-        ]
-        binding = GolangProto.get_binding_tag(field_info)
-        if binding:
-            tags.append(
-                ('binding', binding)
-            )
-        
-        return ' '.join([
-            f'{tag}:"{value}"'
-            for tag, value in tags
-        ])
-
     def generic_types(self) -> Dict[TypeVar, str]:
+        if self.model_type is None:
+            return {}
         generic_types: Dict[TypeVar, str] = {}
         for name, field in iter_model_vars(self.model_type):
             if not isinstance(field, (Field, Model)):
@@ -363,58 +614,81 @@ class GolangProto(Proto):
             if type(field) is Field:
                 anno = self.model_type.__annotations__.get(name, None)
                 if isinstance(anno, TypeVar):
-                    c = inc_to_letters(len(generic_types), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+                    c = inc_to_letters(len(generic_types), 'TUVWXYZABCDEFGHIJKLMNOPQRS')
                     generic_types[anno] = c
         return generic_types
 
-    def fields(self) -> List[Dict[str, Any]]:
-        fields: List[Dict[str, Any]] = []
+    def fields(self) -> List[GolangProtoField]:
+        proto_fields: List[GolangProtoField] = []
         pydmodel = model_to_pydantic(self.model_type)
-        
         generic_types = self.generic_types()
+        annotations = getattr(self.model_type, '__annotations__', {})
 
         for name, field in iter_model_vars(self.model_type):
             if not isinstance(field, (Field, Model)):
                 continue
-            pydfield = pydmodel.model_fields[name]
+
+            model_field = pydmodel.model_fields[name]
             if field is None:
                 field = Null()
-            
-            typ: Optional[str] = None
-            if type(field) is Field:
-                anno = self.model_type.__annotations__.get(name, None)
-                if isinstance(anno, TypeVar):
-                    typ = f'*{generic_types[anno]}'
-            
-            alias = field.__extra__.get('alias', None)
 
-            if typ is None:
-                typ = self.get_field_type(field)
-            
-            field_name = alias or name
-            fields.append({
-                'name': snake_to_pascal_case(name),
-                'field': field_name, 
-                'type': SafeFmtter(typ),
-                'tags': self.get_field_tags(name, field, pydfield)
-            })
-        return fields
+            go_type = self._resolve_field_type(name, field, generic_types, annotations)
+            extra = getattr(field, '__extra__', {}) or {}
+            field_name = extra.get('alias') or name
 
-    def generics(self) -> Generator[str, None, None]:
+            proto_fields.append(GolangProtoField(
+                name=snake_to_pascal_case(name),
+                field=field_name,
+                type=GolangType(go_type),
+                tags=GolangProtoStruct.get_field_tags(name, field, model_field),
+            ))
+        return proto_fields
+
+    def fields_for(self, formatters: Dict[str, str]) -> List[GolangProtoFieldView]:
+        return [field.render(formatters) for field in self.fields()]
+
+    def _resolve_field_type(
+        self,
+        name: str,
+        field: Union[Field, Model],
+        generic_types: Dict[TypeVar, str],
+        annotations: Dict[str, Any],
+    ) -> str:
+        if type(field) is Field:
+            anno = annotations.get(name)
+            if isinstance(anno, TypeVar): # 类型注释
+                generic_name = generic_types.get(anno)
+                if generic_name:
+                    return f'*{generic_name}'
+        return GolangProtoStruct.get_field_type(field)
+
+    def generics(self, formatters: Dict[str, str]) -> Generator[str, None, None]:
         for proto in self.generic.types:
-            if isinstance(proto, str):
-                yield proto
+            if isinstance(proto, GolangType):
+                yield proto.render(formatters)
             else:
-                yield proto.name
+                yield GolangType(proto.name).render(formatters)
 
     def com_protos(self) -> Generator['GolangProto', None, None]:
         for model_type in iter_field_model_type(self.model_type):
             if model_type is self.model_type:
+                # 去掉自身
                 continue
             yield GolangProto.from_model(model_type)
-            
-        if not model_type.__auto__:
-            yield GolangProto.from_model(model_type)
+        
+        # 对于非自动生成的Model需要放到com包中(关于参数化的泛型类型不作为独立类型处理)
+        if (getattr(self.model_type, '__auto__', None) is False and 
+            not is_parametrized(self.model_type) and
+            self.model_type not in BASIC_FIELD_TYPES):
+            yield GolangProto.from_model(self.model_type)
+
+    def import_specs(self, formatters: Dict[str, str]) -> List[str]:
+        specs: List[str] = []
+        if self.generic:
+            specs += self.generic.import_specs(formatters)
+        if self.alias:
+            specs += self.alias.import_specs(formatters)
+        return list(set(specs))
 
 
     def __iter__(self) -> Generator['GolangProto', None, None]:
@@ -513,7 +787,7 @@ class GolangRouter:
             'text/html': 'html',
         }
         options = [
-            media_type_mapping[r.media_type],
+            media_type_mapping[r.rsp_media_type],
             self.router.response_wrapper.__name__,
         ]
         return '@'.join(options)
@@ -541,24 +815,18 @@ class GolangRouter:
         req_query_proto: Optional[GolangProto] = None
         req_form_proto: Optional[GolangProto] = None
         req_json_proto: Optional[GolangProto] = None
-
-        def ensure_model(model_or_map: Union[AnyModel, MapModel]) -> Union[GolangMapModel, AnyModel]:
-            if isinstance(model_or_map, MapModel) or (
-                isinstance(model_or_map, type) and MapModel is model_or_map):
-                return GolangMapModel(model_or_map.__map_type__)
-            return model_or_map
         
-        if self.router.req_query:
+        if self.router.req_query is not None:
             req_query_proto = GolangProto.from_model_ref(
                 ensure_model(self.router.req_query), f'{self.req_type}_QUERY')
             yield req_query_proto
 
-        if self.router.req_form:
+        if self.router.req_form is not None:
             req_form_proto = GolangProto.from_model_ref(
                 ensure_model(self.router.req_form), f'{self.req_type}_FORM')
             yield req_form_proto
 
-        if self.router.req_json:
+        if self.router.req_json is not None:
             req_json_proto = GolangProto.from_model_ref(
                 ensure_model(self.router.req_json), f'{self.req_type}_JSON')
             yield req_json_proto
@@ -568,23 +836,24 @@ class GolangRouter:
             self.req_type,
             create_model(self.req_type, {
                 'Q': self.router.req_query or Null(),
-                'F': self.router.req_form or Null(),
-                'J': self.router.req_json or Null(),
+                'B': self.router.req_json or self.router.req_form or Null(),
             }),
             'generic',
-            generic=GolangProtoGeneric('provider', 'REQ', [
-                req_query_proto or 'any',
-                req_form_proto or 'any',
-                req_json_proto or 'any',
-            ]),
+            generic=GolangProtoGeneric(
+                name=GolangType('{provider_package$}REQ'), 
+                types=[
+                    req_query_proto or GolangType('any'),
+                    req_json_proto or req_form_proto or GolangType('any'),
+                ]
+            ),
         )
         yield req_proto
         
         # RSP
         rsp_json_proto = None
-        if self.router.rsp_model:
+        if self.router.rsp_model is not None:
             rsp_json_proto = GolangProto.from_model_ref(
-                ensure_model(self.router.rsp_model), f'{self.rsp_type}_JSON')
+                ensure_model(self.router.rsp_model), f'{self.rsp_type}_BODY')
             yield rsp_json_proto
 
         rsp_proto = GolangProto(
@@ -592,7 +861,7 @@ class GolangRouter:
             self.router.rsp_model,
             'alias',
             alias=GolangProtoAlias(
-                name=rsp_json_proto.name if rsp_json_proto else 'any',
+                name=GolangType(rsp_json_proto.name if rsp_json_proto else 'any'),
                 proto=rsp_json_proto,
             ),
         )
@@ -603,40 +872,47 @@ class GolangRouter:
             self.ctx_type,
             create_model(self.req_type, {
                 'Q': self.router.req_query or Null(),
-                'F': self.router.req_form or Null(),
-                'J': self.router.req_json or Null(),
+                'B': self.router.req_json or self.router.req_form or Null(),
                 'P': self.router.rsp_model or Null(),
             }),
             'generic',
-            generic=GolangProtoGeneric('provider', 'Context', [
-                req_query_proto or 'any',
-                req_form_proto or 'any',
-                req_json_proto or 'any',
-                rsp_json_proto or 'any',
-            ])
+            generic=GolangProtoGeneric(
+                name=GolangType('{provider_package$}Context'), 
+                types=[
+                    req_query_proto or GolangType('any'),
+                    req_json_proto or req_form_proto or GolangType('any'),
+                    rsp_json_proto or GolangType('any'),
+                ],
+            )
         )
         yield ctx_proto
 
 
     def com_protos(self) -> Generator[GolangProto, None, None]:
-        if self.router.req_query:
+        if self.router.req_query is not None:
             yield from GolangProto.from_model(
                 self.router.req_query).com_protos()
 
-        if self.router.req_form:
+        if self.router.req_form is not None:
             yield from GolangProto.from_model(
                 self.router.req_form).com_protos()
 
-        if self.router.req_json:
+        if self.router.req_json is not None:
             yield from GolangProto.from_model(
                 self.router.req_json).com_protos()
 
-        if self.router.rsp_model:
+        if self.router.rsp_model is not None:
             yield from GolangProto.from_model(
                 self.router.rsp_model).com_protos()
 
+        for recv in self.router.recvs:
+            yield from GolangProto.from_model(
+                recv).com_protos()
+                
+        for send in self.router.sends:
+            yield from GolangProto.from_model(
+                send).com_protos()
 
-LANG: str = 'golang'
 
 class GolangRouterGroup:
     bp: 'GolangBlueprint'
@@ -722,6 +998,11 @@ class GolangRouterGroup:
                 'rsp_type': router.rsp_type,
             }
 
+def ensure_model(model_or_map: Union[AnyModel, FieldWrappedModel]) -> Union[GolangFieldWrappedModel, AnyModel]:
+    if isinstance(model_or_map, FieldWrappedModel) or (
+        isinstance(model_or_map, type) and FieldWrappedModel is model_or_map):
+        return GolangFieldWrappedModel(model_or_map.__field_type__)
+    return model_or_map
 
 
 class GolangBlueprint(BaseBlueprint['GolangWriter']):
@@ -754,12 +1035,32 @@ class GolangBlueprint(BaseBlueprint['GolangWriter']):
         return PackageName.COM_PROTOS.value
 
     @property
+    def com_proto_gen_path(self) -> str:
+        return f'gen-{self.com_proto_package}'
+    
+    @property
     def com_proto_imports(self) -> str:
-        return join_path_imports(self.imports, self.com_proto_package)
+        return join_path_imports(self.imports, self.com_proto_gen_path)
+
+
+    @property
+    def com_enum_package(self) -> str:
+        return PackageName.COM_ENUMS.value
+
+    @property
+    def com_enum_gen_path(self) -> str:
+        return f'gen-{self.com_enum_package}'
+
+    @property
+    def com_enum_imports(self) -> str:
+        return join_path_imports(self.imports, self.com_enum_gen_path)
+
 
     def formatters(self, update: Optional[Dict[str, str]] = None) -> Dict[str, str]:
         fmts = self.writer.formatters()
         fmts.update({
+            'enums_package': self.com_enum_package,
+            'enums_imports': self.com_enum_imports,
             'protos_package': self.com_proto_package,
             'protos_imports': self.com_proto_imports,
         })
@@ -769,6 +1070,14 @@ class GolangBlueprint(BaseBlueprint['GolangWriter']):
             fmts.update(update)
         return fmts
  
+    def protos(self) -> Generator[GolangProto, None, None]:
+        protos_set = set()
+        for group in self.get_router_groups():
+            for proto in group.protos():
+                if proto.name in protos_set:
+                    continue
+                protos_set.add(proto.name)
+                yield proto
 
     def com_protos(self) -> Generator[GolangProto, None, None]:
         protos_set = set()
@@ -778,49 +1087,63 @@ class GolangBlueprint(BaseBlueprint['GolangWriter']):
                     continue
                 protos_set.add(proto.name)
                 yield proto
+
+    def com_enums(self) -> Generator[GolangEnum, None, None]:
+        enums_seen: Set[Type[enum.Enum]] = set()
+        for proto in chain(self.protos(), self.com_protos()):
+            for enum_cls in iter_enum_classes(proto.model_type):
+                if enum_cls in enums_seen:
+                    continue
+                golang_enum = GolangEnum.from_enum(enum_cls)
+                if golang_enum is None:
+                    continue
+                enums_seen.add(enum_cls)
+                yield golang_enum
     
 
     def gen_views(self):
         view_dir: Path = self.writer.working_dir / self.writer.views_package / self.package
-
+        ctx = {
+            'writer': self.writer,
+            'bp': self,
+        }
         # engine
         with self.writer.write_file(self.writer.working_dir / self.writer.views_package / 'engine.go') as f:
             if f: 
-                f.write(templates.render(LANG, 'engine.go', {
-                    'writer': self.writer,
-                    'bp': self,
-                }, ''))
+                f.write(templates.render(LANG, 'engine.go', ctx, ''))
 
         # com_protos
-        with self.writer.write_file(view_dir / self.com_proto_package / 'gen_protos.go', overwrite=True) as f:
+        with self.writer.write_file(view_dir / self.com_proto_gen_path / 'protos.go', overwrite=True) as f:
             if f:
-                f.write(templates.render(LANG, 'gen_protos.go', {
-                    'writer': self.writer,
-                    'bp': self,
-                }, 'views/protos'))
+                f.write(templates.render(LANG, 'protos.go', ctx, 'views/gen-protos'))
+
+        # com_enums
+        enums_path = view_dir / self.com_enum_gen_path / 'enums.go'
+        with self.writer.write_file(enums_path, overwrite=True) as f:
+            if f:
+                f.write(templates.render(LANG, 'enums.go', ctx, 'views/gen-enums'))
+        self.writer.run_go_enum(enums_path)
+
 
         # view blueprint
         with self.writer.write_file(view_dir / 'gen_blueprint.go', overwrite=True) as f:
             if f:
-                f.write(templates.render(LANG, 'gen_blueprint.go', {
-                    'writer': self.writer,
-                    'bp': self,
-                }, 'views'))
+                f.write(templates.render(LANG, 'gen_blueprint.go', ctx, 'views'))
                 
 
         # view routers
         for group in self.get_router_groups():
             self.gen_routers(group)
 
-    
+
     def gen_routers(self, group: GolangRouterGroup):
         view_dir: Path = self.writer.working_dir / self.writer.views_package / self.package / group.package
-        
-        for name, text in templates.iter_render(LANG, {
+        ctx = {
             'writer': self.writer,
             'bp': self,
             'router_group': group
-        }, 'views/route'):
+        }
+        for name, text in templates.iter_render(LANG, ctx, 'views/route'):
             overwrite = name.startswith('gen_')
             path = view_dir / name if group.branch else view_dir.parent / name
             with self.writer.write_file(path, overwrite=overwrite) as f:
@@ -829,12 +1152,24 @@ class GolangBlueprint(BaseBlueprint['GolangWriter']):
 
 class GolangWriter(BaseWriter[GolangBlueprint]):
     gomodule: str
+    gomodpath: str = None
+
     views_package: str
     provider_package: str
+    GO_ENUM_ARGS: Tuple[str, ...] = (
+        '--names',
+        '--values',
+        '--marshal',
+        '--mustparse',
+        '--nocase',
+        '--output-suffix', '_gen',
+    )
 
     _written_files: Set[str]
     _response_wrappers: Optional[List[ResponseWrapper]]
     
+    _list_providers_cache: Optional[Set[str]] = None
+
     def __init__(
         self,         
         working_dir: str = '.', 
@@ -847,72 +1182,122 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
     ):
         super().__init__(working_dir)
 
-        if module is None:
-            module = self.read_gomodule(working_dir)
-            if module == 'command-line-arguments':
+        gmods = self.read_gomodule(working_dir)
+        if len(gmods) > 1 and not module:
+            raise ModuleNotFoundError(f'[go]路径下存在多个module，需要使用module指定其一:{[k for k, _ in gmods]}')
+        for gmod in gmods:
+            mod, mod_dir = gmod
+            if mod == 'command-line-arguments':
                 logger.error(f'[x] gomodule: {module}')
                 raise ModuleNotFoundError('[go]生成目录找不到gomodule，无法继续生成go代码')
-            logger.info(f'[*] gomodule: {module}')
+            if not module or module == mod:
+                module = mod
+                self.gomodule = mod
+                self.gomodpath = (module / Path(working_dir).absolute().relative_to(mod_dir)).as_posix()
+                logger.info(f'[*] gomodule: {module}')
+                break
 
-        self.gomodule = module
+        if self.gomodpath is None:
+            raise ModuleNotFoundError(f'[go]生成目录找不到gomodule[{module}]，无法继续生成go代码')
 
-        self.views_package = views_package
-        self.provider_package = provider_package
-        self.errors_package = errors_package
+        self.packages = GolangPackageLayout(
+            module_import=self.gomodpath,
+            views_package=views_package,
+            provider_package=provider_package,
+            errors_package=errors_package,
+        )
+
+        self.views_package = self.packages.views_package
+        self.provider_package = self.packages.provider_package
+        self.errors_package = self.packages.errors_package
 
         self._written_files = set()
         self._response_wrappers = None
     
     @property
     def views_imports(self) -> str:
-        return join_path_imports(self.gomodule, self.views_package)
+        return self.packages.views_imports
 
     @property
     def provider_imports(self) -> str:
-        return join_path_imports(self.views_imports, self.provider_package)
+        return self.packages.provider_imports
 
     @property
     def errors_imports(self) -> str:
-        return join_path_imports(self.gomodule, self.errors_package)
+        return self.packages.errors_imports
+
+    def list_providers(self) -> Set[str]:
+        provs = self._list_providers_cache
+        if provs is None:
+            provs = {
+                prov.name
+                for bp in self.bps
+                for group in bp.get_router_groups()
+                for router in group.routers
+                for prov in router.providers
+            }
+            self._list_providers_cache = provs
+        return provs
 
     @staticmethod
-    def read_gomodule(path: str) -> str:
+    def read_gomodule(path: str) -> List[Tuple[str, str]]:
         p = subprocess.run(
-            ['go', 'list', '-m'],
+            ['go', 'list', '-m', '-f', "{{.Path}} {{.Dir}}"],
             cwd=path,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             check=True,
             text=True,
         )
-        return p.stdout.strip()
+        return [line.split(' ', 2) for line in p.stdout.strip().splitlines()]
 
     @staticmethod
     def run_format(filepath: str):
-        file_or_dir = Path(filepath).absolute()
-        p = subprocess.run(
-            ['gofmt', '-s', '-w', file_or_dir],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=True,
-            text=True,
-        )
-        return p.stdout.strip()
+        file_or_dir = str(Path(filepath).absolute())
+        try:
+            p = subprocess.run(
+                ['gofmt', '-s', '-w', file_or_dir],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+                text=True,
+            )
+        except subprocess.CalledProcessError as e:
+            import sys
+            print(f'[x] gofmt: \n{e.stderr.strip()}', file=sys.stderr)
+            return e.stderr
+        else:
+            return p.stdout.strip()
+
+    def run_go_enum(self, filepath: Union[str, Path], extra_args: Optional[List[str]] = None):
+        exe = shutil.which('go-enum')
+        if exe is None:
+            logger.warning('[!] go-enum command not found, skip enum generation for %s', filepath)
+            return
+
+        file_path = Path(filepath).absolute()
+        if not file_path.exists():
+            logger.error('[x] go-enum target missing: %s', file_path)
+            return
+
+        args = list(extra_args or self.GO_ENUM_ARGS)
+        cmd = [exe, *args, f'--file={file_path.name}']
+
+        try:
+            subprocess.run(
+                cmd,
+                cwd=file_path.parent,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+                text=True,
+            )
+        except subprocess.CalledProcessError as exc:
+            output = exc.stderr.strip() or exc.stdout.strip()
+            logger.error('[x] go-enum failed for %s: %s', file_path, output)
     
     def formatters(self, update: Optional[Dict[str, str]] = None) -> Dict[str, str]:
-        fmts = {
-            'views_package': self.views_package,
-            'views_imports': self.views_imports,
-            'provider_package': self.provider_package,
-            'provider_imports': self.provider_imports,
-            'errors_package': self.errors_package,
-            'errors_imports': self.errors_imports,
-        }
-        pkg_with_dot_key = { k + '$': v + '.' for k, v in fmts.items() if k.endswith('_package') }
-        fmts.update(pkg_with_dot_key)
-        if update:
-            fmts.update(update)
-        return fmts
+        return self.packages.formatters(update)
 
     def error_vars(self) -> Generator[GolangErrorGroup, None, None]:
         for cls_name, cls in iter_error_models():
@@ -988,18 +1373,18 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
     @contextmanager
     def write_file(self, filepath: str | Path, overwrite: bool = False) -> Generator[Optional[IO], None, None]:
         filepath: str = str(filepath)
-        written: bool = False
+        wrote: bool = False
         with utils.ensure_filepath_open(filepath, 'w', overwrite=overwrite) as f:
             if f:
-                written = True
+                wrote = True
             yield f
         
-        if written:
-            state: str = '[+]'
+        if wrote:
+            state: str = '[+] Written'
             d = Path(filepath)
             if d.is_file():
                 d = d.parent
                 self._written_files.add(str(d))
         else:
-            state: str = '[.]'
-        logger.info(f'{state} Written: {filepath}')
+            state: str = '[.] Skipped'
+        logger.info(f'{state}: {filepath}')

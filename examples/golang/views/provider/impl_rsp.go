@@ -5,29 +5,44 @@ import (
 	"encoding/xml"
 	"fmt"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 type RspContext struct{}
 
-func (prov *RspProvider[Q, F, J, P]) NewContext(ctx *Context[Q, F, J, P]) *RspContext {
+func (prov *RspProvider[Q, B, P]) NewContext(ctx *Context[Q, B, P]) *RspContext {
 	return &RspContext{}
 }
 
-func (prov *RspProvider[Q, F, J, P]) Handle(anyCtx ContextInterface) {
-	ctx := AdaptContext[Q, F, J, P](anyCtx)
+func (prov *RspProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
+	ctx := AdaptContext[Q, B, P](anyCtx)
 	handled := ctx.Handle
 	if handled == nil {
 		err := fmt.Errorf("[RspProvider] fail to get Handle")
 		_ = ctx.Gin.AbortWithError(-1, err)
 		return
 	}
+
+	prov.doResponse(ctx.Gin, handled.Response, handled.Error)
+
+	ctx.Gin.Next()
+}
+
+func (prov *RspProvider[Q, B, P]) doResponse(ctx *gin.Context, data *P, err error) {
 	switch prov.Type {
 	case "json":
-		ctx.Gin.JSON(NewRSP_JSON(prov, handled.Response, handled.Error))
+		ctx.JSON(NewRSP_JSON(prov, data, err))
 	case "xml":
-		ctx.Gin.XML(NewRSP_XML(prov, handled.Response, handled.Error))
+		ctx.XML(NewRSP_XML(prov, data, err))
 	}
-	ctx.Gin.Next()
+}
+
+func (prov *RspProvider[Q, B, P]) errorResponse(ctx *gin.Context, err error) {
+	if err == nil {
+		return
+	}
+	prov.doResponse(ctx, nil, err)
 }
 
 func unwrapError(err error) (code int, message string) {
@@ -61,12 +76,12 @@ func ensureValidStatusCode(code int, rsp any, err error) (int, any) {
 	return code, rsp
 }
 
-func NewRSP_JSON[Q, F, J, P any](prov *RspProvider[Q, F, J, P], data *P, err error) (code int, rsp any) {
+func NewRSP_JSON[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (code int, rsp any) {
 	code, rsp = NewRSP_JSON_Entry(prov, data, err)
 	return ensureValidStatusCode(code, rsp, err)
 }
 
-func NewRSP_XML[Q, F, J, P any](prov *RspProvider[Q, F, J, P], data *P, err error) (code int, rsp any) {
+func NewRSP_XML[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (code int, rsp any) {
 	code, rsp = NewRSP_XML_Entry(prov, data, err)
 	return ensureValidStatusCode(code, rsp, err)
 }
