@@ -36,16 +36,43 @@ logger.setLevel(logging.INFO)
 
 LANG: str = "typescript"
 
+def _cap_token(tok: str) -> str:
+    if not tok:
+        return ""
+    if tok.isupper():
+        # REQ/RSP/JSON/QUERY/WS 等
+        return tok[:1].upper() + tok[1:].lower()
+    # 保留内部 CamelCase，仅保证首字母大写
+    return tok[:1].upper() + tok[1:]
 
-def _to_ts_name(name: str) -> str:
+def _to_ts_name(name: str, invalid_prefix: str = "Func") -> str:
     """
     Convert internal proto names (e.g. REQ_Abc_JSON) to TypeScript friendly PascalCase.
+    Examples:
+      RSP_ListMarketOrders_JSON -> RspListMarketOrdersJson
+      REQ_Ws_QUERY             -> ReqWsQuery
+      WsMessage                -> WsMessage (unchanged)
     """
     if not name:
         return "AnonType"
-    if re.match(r"^[A-Z][A-Za-z0-9]+$", name):
+
+    # 已经是 PascalCase 的，直接返回（WsMessage/GeneralWrapper/ProxyConfig 等）
+    if re.fullmatch(r"[A-Z][A-Za-z0-9]*", name):
         return name
-    return snake_to_pascal_case(name)
+
+    # 支持 path 形式（如果未来有 a/b/c 这种）
+    tokens: list[str] = []
+    for seg in name.split("/"):
+        if not seg:
+            continue
+        tokens.extend([t for t in re.split(r"[^0-9A-Za-z]+", seg) if t])
+
+    out = "".join(_cap_token(t) for t in tokens)
+    if not out:
+        return "AnonType"
+    if not out[0].isalpha():
+        out = invalid_prefix + out
+    return out
 
 
 def _to_ts_identifier(name: str) -> str:

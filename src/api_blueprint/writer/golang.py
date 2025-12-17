@@ -140,7 +140,11 @@ class GolangTypeResolver:
         if type_name:
             return type_name.lower()
 
-        if isinstance(candidate, type):
+        if isinstance(candidate, type):            
+            if issubclass(candidate, enum.Enum):
+                print(candidate)
+                return "enum"
+
             return candidate.__name__.lower()
 
         origin = get_origin(candidate)
@@ -161,10 +165,13 @@ class GolangTypeResolver:
             return f'[]*{elem_type}'
         return f'[]{elem_type}'
 
-    def _resolve_enum(self, field: Enum, *, pointer_allowed: bool) -> str:
+    def _resolve_enum(self, field: Enum | enum.Enum, *, pointer_allowed: bool) -> str:
         if is_parametrized(field):
             field = field()
-        base_type = field.enum_base_type()
+        base_type_getter = getattr(field, "enum_base_type", None)
+        if base_type_getter is None:
+            base_type_getter = Enum[field]().enum_base_type
+        base_type = base_type_getter()
         return self.resolve(base_type, pointer_allowed=pointer_allowed)
 
     def _resolve_map(self, field: Union[Map, Type[Map]], *, pointer_allowed: bool) -> str:
