@@ -25,6 +25,7 @@ from api_blueprint.application.generation import generate_golang, generate_grpc,
 
 PROTOC_GEN_GO_VERSION = "v1.36.10"
 PROTOC_GEN_GO_GRPC_VERSION = "v1.6.0"
+GO_ENUM_VERSION = "v0.9.2"
 
 BLUEPRINT_GOLANG_PRESERVED = (
     "go.mod",
@@ -74,6 +75,12 @@ def collect_missing_validation_requirements() -> tuple[str, ...]:
         (
             "go",
             "install Go and ensure `go` is available on PATH.",
+        ),
+        (
+            "go-enum",
+            "install it with `go install github.com/abice/go-enum@"
+            + GO_ENUM_VERSION
+            + "`.",
         ),
         (
             "protoc",

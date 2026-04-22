@@ -138,6 +138,7 @@ api-gen-typescript -c examples/api-blueprint.toml
 - `make example-compile-check` 允许 drift，只检查重生成结果是否仍可编译。
 - `make example-refresh` 会接受预期变化，直接刷新仓库中的 examples snapshots。
 - `make example-validation` 会包装 `scripts/example_validation.py` 的严格模式，在临时目录重生成 Blueprint 与 gRPC examples，再执行 snapshot diff、`tsc --noEmit`、`go test ./...` 和 Python gRPC import smoke。
+- Blueprint examples 的严格重生成依赖 `go-enum`；gRPC examples 依赖 `protoc`、`protoc-gen-go`、`protoc-gen-go-grpc` 与 Python `grpc_tools`。
 - `make release-preflight` 必须包含严格的 `make example-validation`，因为到发版前，预期的 snapshot 变化应已经被接受并提交。
 - `examples/api-blueprint.toml` 同时承载 Blueprint 与 gRPC 的公开示例配置，`examples/grpc/go/` 与 `examples/grpc/python/` 属于 committed examples snapshot contract。
 - `main.py` 与 `debug.py` 仅作为本地辅助脚本保留，不属于公共发布面。

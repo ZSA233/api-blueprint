@@ -156,7 +156,7 @@ make example-refresh
 
 这里要注意当前 CI 的职责边界：
 
-- `example-validation` 是专门的 examples 重生成/快照/编译校验 job，会显式安装 Go、Node、TypeScript、`protoc`、`protoc-gen-go` 与 `protoc-gen-go-grpc` 工具链。
+- `example-validation` 是专门的 examples 重生成/快照/编译校验 job，会显式安装 Go、Node、TypeScript、`go-enum`、`protoc`、`protoc-gen-go` 与 `protoc-gen-go-grpc` 工具链。
 - `python-tests` 会通过 `pytest -m "not example_validation"` 排除 `tests/integration/examples/` 里的专用外部工具链校验，避免在通用 Python matrix 中重复跑这类重型检查。
 - 因此判断 release ref 是否“CI 全绿”时，`example-validation` 必须和三个 `python-tests` matrix 一起看，不能只看 pytest matrix。
 

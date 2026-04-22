@@ -53,6 +53,7 @@
 - `main.py` 与 `debug.py` 属于本地辅助脚本，不是公共发布接口。
 - `examples/api-blueprint.toml` 是公开的共享示例配置，同时包含 Blueprint / Go / TypeScript / gRPC 示例段落；其中 `[grpc]` 指向 `examples/grpc/*`。
 - `scripts/example_validation.py` 是 examples 的官方验证入口，会同时验证 Blueprint examples 与 gRPC examples，执行“重生成 -> 快照比对 -> TypeScript 编译 -> Go 测试 -> Python gRPC import smoke”闭环。
+- Blueprint examples 的严格重生成依赖 `go-enum`；gRPC examples 依赖 `protoc`、`protoc-gen-go`、`protoc-gen-go-grpc` 与 Python `grpcio-tools`。
 - `Makefile` 暴露三类 example 目标：
   - `example-validation`：严格模式，检测 snapshot drift
   - `example-compile-check`：允许 drift，只验证重生成产物能编译
@@ -100,6 +101,7 @@
 - `grpcio-tools` 保持为开发期依赖，不进入运行时安装依赖。
 - `examples/blueprints/` 与 `examples/grpc/protos/` 是真源，`examples/golang/` / `examples/typescript/` / `examples/grpc/go/` / `examples/grpc/python/` 是生成快照。
 - `scripts/example_validation.py` 会在临时目录重生成 Blueprint 与 gRPC examples，并执行快照比对、`tsc --noEmit`、`go test ./...` 与 Python gRPC import smoke。
+- `make example-validation` / `make example-refresh` / `make example-compile-check` 依赖 `tsc`、`go`、`go-enum`、`protoc`、`protoc-gen-go`、`protoc-gen-go-grpc` 与 Python `grpc_tools`。
 - snapshot drift 本身是“生成结果发生变化”的信号，不自动等于 bug；是否错误取决于这次变更是否预期。
 - `make example-validation` 用于严格校验当前生成器与已提交 snapshots 完全一致。
 - `make example-compile-check` 用于功能开发期，只检查重生成结果是否可编译。

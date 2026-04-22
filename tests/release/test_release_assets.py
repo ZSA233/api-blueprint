@@ -36,6 +36,7 @@ def test_ci_workflow_keeps_example_validation_as_a_separate_job():
 
     assert "example-validation:" in text
     assert "protobuf-compiler" in text
+    assert "github.com/abice/go-enum@v0.9.2" in text
     assert "protoc-gen-go@v1.36.10" in text
     assert "protoc-gen-go-grpc@v1.6.0" in text
     assert "GITHUB_PATH" in text
