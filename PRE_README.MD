@@ -61,6 +61,7 @@
 
 - 默认发布路线是 direct stable。
 - 只有在用户明确要求时才走 RC。
+- stable GitHub Release workflow 的正式发布 job 绑定 `production` environment，可配合 required reviewers 做人工审核。
 - 发版前文档收束顺序固定为：
   - `PRE_README.MD`
   - `README.md`
@@ -77,4 +78,5 @@
 - `examples/blueprints/` 是真源，`examples/golang/` / `examples/typescript/` 是生成快照。
 - 共享全局 app 是默认行为。
 - GitHub-only 稳定安装入口是 `@stable`，不是固定 tag。
+- stable 正式发布会经过 GitHub `production` environment 审批闸门。
 - 发布流程和详细规范在 `docs/release-process.md`。

@@ -62,6 +62,7 @@
 ## 发布规则
 
 - 用户如果只说“发版”，AI agent 不应自行猜目标版本号；必须等用户明确给出版本号。
+- 发布工作默认在冻结分支 `release/vX.Y.Z` 上完成，而不是直接在日常开发分支上打 tag。
 - 进入正式发版准备前，必须先完成文档收束：
   - `PRE_README.MD`
   - `README.md`
@@ -70,12 +71,17 @@
   - `release-version.toml`
   - `src/api_blueprint/_version.py`
 - 不要手改版本号散落文件。
+- `make release-version-rc` / `make release-version-stable` 只负责切换版本真源与同步检查，不会自动创建 git commit 或 tag。
+- release commit、git tag、push tag 必须按顺序显式执行，不要并行，不要把 tag 打到前一个提交上。
 - 正式发布前必须先通过：
   - `make release-preflight RELEASE_TAG=...`
   - `make release-local RELEASE_TAG=...`
   - `make release-install-check RELEASE_TAG=...`
 - push tag 前必须确认当前 release ref 的 GitHub Actions `CI` 已经全绿。
+- stable `Release` workflow 的正式发布 job 必须绑定 GitHub `production` environment。
+- 如果仓库启用了 `production` environment 的 required reviewers，AI agent 必须等待人工审核通过后，才允许 workflow 继续执行正式发布。
 - stable 发布完成后，远端 `stable` 分支必须同步到对应 stable tag 的提交。
+- stable 发布完成后，`release/vX.Y.Z` 必须合并回 `main`，否则本次发布不算真正收束完成。
 
 ## 测试与验证规则
 

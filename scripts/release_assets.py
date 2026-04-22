@@ -50,6 +50,67 @@ def _run(cmd: list[str], *, cwd: Path | None = None) -> None:
     subprocess.run(cmd, cwd=cwd, check=True)
 
 
+def _run_git(repo_root: Path, args: list[str]) -> str:
+    result = subprocess.run(
+        ["git", *args],
+        cwd=repo_root,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        message = result.stderr.strip() or result.stdout.strip() or f"git {' '.join(args)} failed"
+        raise ReleaseAssetsError(message)
+    return result.stdout.strip()
+
+
+def _branch_ref(branch: str) -> str:
+    return f"refs/heads/{branch}"
+
+
+def _resolve_remote_branch_sha(repo_root: Path, *, remote: str, branch: str) -> str | None:
+    branch_ref = _branch_ref(branch)
+    output = _run_git(repo_root, ["ls-remote", "--heads", "--refs", remote, branch_ref])
+    if not output:
+        return None
+
+    lines = [line for line in output.splitlines() if line.strip()]
+    if len(lines) != 1:
+        raise ReleaseAssetsError(
+            f"expected at most one remote ref for {remote}/{branch}, found {len(lines)}"
+        )
+
+    parts = lines[0].split()
+    if len(parts) != 2:
+        raise ReleaseAssetsError(f"unexpected ls-remote output for {remote}/{branch}: {lines[0]!r}")
+
+    sha, ref = parts
+    if ref != branch_ref:
+        raise ReleaseAssetsError(
+            f"unexpected remote ref for {remote}/{branch}: expected {branch_ref}, found {ref}"
+        )
+    if not re.fullmatch(r"[0-9a-f]{40}", sha):
+        raise ReleaseAssetsError(f"unexpected remote SHA for {remote}/{branch}: {sha}")
+    return sha
+
+
+def _push_branch_ref(
+    repo_root: Path,
+    *,
+    remote: str,
+    branch: str,
+    target_commit: str,
+    expected_remote_sha: str | None,
+) -> None:
+    destination = f"{target_commit}:{_branch_ref(branch)}"
+    if expected_remote_sha is None:
+        _run_git(repo_root, ["push", remote, destination])
+        return
+
+    lease = f"--force-with-lease={_branch_ref(branch)}:{expected_remote_sha}"
+    _run_git(repo_root, ["push", lease, remote, destination])
+
+
 def _uv_path() -> str:
     uv = shutil.which("uv")
     if uv is None:
@@ -193,13 +254,22 @@ def install_check(repo_root: Path, dist_dir: Path, tag: str) -> None:
         _run([str(python_bin), "-c", smoke], cwd=repo_root)
 
 
-def sync_stable_ref(repo_root: Path, tag: str) -> None:
+def sync_stable_ref(repo_root: Path, tag: str, branch: str = "stable") -> None:
     release = parse_release_tag(tag)
     if release.is_rc:
         raise ReleaseAssetsError("stable branch can only be synced from a stable tag")
-    _run(
-        ["git", "push", "origin", f"refs/tags/{tag}:refs/heads/stable", "--force"],
-        cwd=repo_root,
+
+    target_commit = _run_git(repo_root, ["rev-list", "-n", "1", tag])
+    if not target_commit:
+        raise ReleaseAssetsError(f"could not resolve commit for tag {tag}")
+
+    remote_sha = _resolve_remote_branch_sha(repo_root, remote="origin", branch=branch)
+    _push_branch_ref(
+        repo_root,
+        remote="origin",
+        branch=branch,
+        target_commit=target_commit,
+        expected_remote_sha=remote_sha,
     )
 
 

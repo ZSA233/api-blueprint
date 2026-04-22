@@ -114,6 +114,7 @@ make build
 
 - The documentation convergence order is fixed as `PRE_README.MD -> README.md -> README_EN.md`.
 - The version source of truth is fixed as `release-version.toml` and `src/api_blueprint/_version.py`.
+- The stable release workflow is bound to the GitHub `production` environment; if that environment has required reviewers configured, publication pauses for manual approval.
 - See [`docs/release-process.md`](docs/release-process.md) for the detailed release rules.
 
 ```sh
