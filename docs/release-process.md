@@ -125,8 +125,8 @@ make example-refresh
 
 这里需要明确区分：
 
-- `example-validation` 把 snapshot drift 视为仓库尚未收敛，因此适合小改动回归检查、CI 和 release gate。
-- `example-compile-check` 不要求 snapshots 不变，只要求新生成结果仍然可编译。
+- `example-validation` 把 snapshot drift 视为仓库尚未收敛，因此适合小改动回归检查、CI 和 release gate；它会同时验证 Blueprint examples 与 `examples/grpc/` 的 Go / Python gRPC snapshots。
+- `example-compile-check` 不要求 snapshots 不变，只要求新生成结果仍然可编译或可导入。
 - `example-refresh` 用于接受预期变化；执行后应 review diff、提交 snapshots，再重新跑 `example-validation` 或 `release-preflight`。
 
 ## 远端 CI 校验
@@ -156,8 +156,9 @@ make example-refresh
 
 这里要注意当前 CI 的职责边界：
 
-- `example-validation` 是专门的 examples 重生成/快照/编译校验 job，会显式安装 Go、Node 和 TypeScript 工具链。
+- `example-validation` 会通过共享的 `.github/actions/setup-example-toolchains` 安装 Go、Node 24、TypeScript、`go-enum`、`protoc`、`protoc-gen-go` 与 `protoc-gen-go-grpc` 工具链；`setup-go` 也会显式指向 `examples/golang/go.sum` 与 `examples/grpc/go/go.sum`，避免 release / CI 出现根目录 `go.sum` 缺失告警。
 - `python-tests` 会通过 `pytest -m "not example_validation"` 排除 `tests/integration/examples/` 里的专用外部工具链校验，避免在通用 Python matrix 中重复跑这类重型检查。
+- `release.yml` / `release-rc.yml` 的 `release-bundle` 也必须复用同一套 examples toolchain setup；否则 `make release-preflight` 会比普通 CI 少掉 examples 所需依赖，出现“CI 绿、正式发布红”的分叉。
 - 因此判断 release ref 是否“CI 全绿”时，`example-validation` 必须和三个 `python-tests` matrix 一起看，不能只看 pytest matrix。
 
 CI 未通过时的固定处理原则：

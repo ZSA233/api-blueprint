@@ -14,15 +14,17 @@
 1. 用 Python 描述 `Blueprint`、路由、请求/响应模型与错误结构。
 2. 运行时构建 FastAPI 应用并暴露 OpenAPI 文档。
 3. 基于同一份蓝图生成 Go 与 TypeScript 代码快照。
+4. 基于 `api-blueprint.toml` 里的 job 配置，编译已有 `.proto` 目录树并输出 gRPC 代码。
 
 ## 支持的输出
 
 | 目标 | 状态 | 命令 | 示例目录 |
 |:---|:---:|:---|:---|
 | Go | 可用 | `api-gen-golang` | `examples/golang` |
+| gRPC | 可用 | `api-gen-grpc` | `examples/grpc/{go,python}` |
 | TypeScript | 预览 | `api-gen-typescript` | `examples/typescript` |
 
-当前不会对外暴露 Kotlin / Java / grpc 命令；这些目标只保留内部扩展位。
+当前不会对外暴露 Kotlin / Java 命令；这些目标只保留内部扩展位。
 
 ## 安装
 
@@ -35,9 +37,11 @@ uv pip install "git+https://github.com/zsa233/api-blueprint@stable"
 ## 核心工作流
 
 - 在 `examples/blueprints/` 这类目录中定义 `Blueprint` 与路由 DSL。
+- 在 `examples/grpc/` 下查看公开的 proto 树和 Go / Python gRPC 快照；对应的 `[grpc]` 示例配置与 Blueprint 示例共用 `examples/api-blueprint.toml`。
 - 通过 `api-doc-server` 构建文档服务，复用 FastAPI 的 OpenAPI 输出。
 - 通过 `api-gen-golang` 与 `api-gen-typescript` 生成语言侧快照产物。
-- 功能开发期可通过 `make example-compile-check` 做“重生成 -> TypeScript 编译 -> Go 测试”校验。
+- 通过 `api-gen-grpc` 按命名 job 编译已有 proto 树，并输出 Go / Python gRPC 产物。
+- 功能开发期可通过 `make example-compile-check` 做“Blueprint + gRPC examples 重生成 -> 编译/导入 smoke”校验。
 - 需要接受预期生成变更时使用 `make example-refresh` 刷新 examples snapshots。
 - 需要严格确认 snapshots 已收敛时使用 `make example-validation`。
 
@@ -45,21 +49,40 @@ uv pip install "git+https://github.com/zsa233/api-blueprint@stable"
 
 ```toml
 [blueprint]
-docs_server = "0.0.0.0:2332"
-docs_domain = ""
+docs_server = '0.0.0.0:2332'
+docs_domain = ''
 entrypoints = [
-    "blueprints.app:*",
+    'blueprints.app:*',
 ]
 
 [golang]
-codegen_output = "golang"
-upstream = "http://localhost:2333"
-module = ""
+codegen_output = 'golang'
+upstream = 'http://localhost:2333'
+module = ''
 
 [typescript]
-codegen_output = "typescript"
-upstream = "http://localhost:2333"
-base_url = "http://localhost:2333"
+codegen_output = 'typescript'
+upstream = 'http://localhost:2333'
+base_url = 'http://localhost:2333'
+
+[grpc]
+proto_root = 'grpc/protos'
+include_paths = []
+
+[[grpc.jobs]]
+name = 'python.greeter'
+preset = 'python'
+output = 'grpc/python'
+protos = ['**/*.proto']
+
+[[grpc.jobs]]
+name = 'go.greeter'
+preset = 'go'
+output = 'grpc/go'
+protos = [
+    'commonpb/common.proto',
+    'greeterpb/greeter.proto',
+]
 ```
 
 ## 蓝图 DSL 示例
@@ -97,19 +120,27 @@ with apibp.group("/demo") as views:
 ```sh
 api-doc-server -c examples/api-blueprint.toml
 api-gen-golang -c examples/api-blueprint.toml
+api-gen-grpc -c examples/api-blueprint.toml --list-jobs
+api-gen-grpc -c examples/api-blueprint.toml --job go.* --job python.greeter
 api-gen-typescript -c examples/api-blueprint.toml
 ```
 
 ## 生成产物与仓库约束
 
 - `examples/blueprints/` 是蓝图真源。
-- `examples/golang/` 与 `examples/typescript/` 是生成快照，不应该手改业务内容。
+- `examples/golang/` 与 `examples/typescript/` 是 Blueprint 生成快照，不应该手改业务内容。
+- `examples/grpc/protos/` 是 gRPC 示例真源，`examples/grpc/go/` 与 `examples/grpc/python/` 是对应的生成快照。
+- `api-gen-grpc` 只负责编排已有 `.proto` 树的编译，不会从 Blueprint DSL 反推出 gRPC proto/service。
+- `api-gen-grpc` 可以只依赖 `[grpc]` 段落，不要求 `[blueprint]`、`[golang]` 或 `[typescript]` 同时存在。
+- Python gRPC job 需要额外安装 `grpcio-tools`；Go gRPC job 需要 `protoc`、`protoc-gen-go` 与 `protoc-gen-go-grpc` 在 `PATH` 中可用；`grpcio-tools` 不属于运行时依赖。
 - `Blueprint(app=None)` 默认共享全局 `FastAPI` app；如果需要拆成多个独立文档应用，必须显式传入 `app`。
 - example snapshot drift 表示“当前生成器输出和已提交快照不一致”，它是变更信号，不自动等于 bug。
 - `make example-compile-check` 允许 drift，只检查重生成结果是否仍可编译。
 - `make example-refresh` 会接受预期变化，直接刷新仓库中的 examples snapshots。
-- `make example-validation` 会包装 `scripts/example_validation.py` 的严格模式，在临时目录重生成 examples，再执行 snapshot diff、`tsc --noEmit` 和 `go test ./...`。
+- `make example-validation` 会包装 `scripts/example_validation.py` 的严格模式，在临时目录重生成 Blueprint 与 gRPC examples，再执行 snapshot diff、`tsc --noEmit`、`go test ./...` 和 Python gRPC import smoke。
+- Blueprint examples 的严格重生成依赖 `go-enum`；gRPC examples 依赖 `protoc`、`protoc-gen-go`、`protoc-gen-go-grpc` 与 Python `grpc_tools`。
 - `make release-preflight` 必须包含严格的 `make example-validation`，因为到发版前，预期的 snapshot 变化应已经被接受并提交。
+- `examples/api-blueprint.toml` 同时承载 Blueprint 与 gRPC 的公开示例配置，`examples/grpc/go/` 与 `examples/grpc/python/` 属于 committed examples snapshot contract。
 - `main.py` 与 `debug.py` 仅作为本地辅助脚本保留，不属于公共发布面。
 
 ## 开发

@@ -14,7 +14,7 @@ from api_blueprint.writer.core import (
 
 ensure_default_targets()
 
-from api_blueprint.writer import golang, typescript  # noqa: E402,F401
+from api_blueprint.writer import golang, grpc, typescript  # noqa: E402,F401
 
 __all__ = (
     "BaseBlueprint",

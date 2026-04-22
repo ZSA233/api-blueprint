@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package examples.grpc.greeter.v1;
+
+import "commonpb/common.proto";
+
+option go_package = "examplegrpc/greeterpb;greeterpb";
+
+service Greeter {
+  rpc SayHello(examples.grpc.common.v1.HelloRequest) returns (examples.grpc.common.v1.HelloReply);
+}

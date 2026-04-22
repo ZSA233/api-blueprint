@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package examples.grpc.common.v1;
+
+option go_package = "examplegrpc/commonpb;commonpb";
+
+message HelloRequest {
+  string name = 1;
+  string locale = 2;
+}
+
+message HelloReply {
+  string message = 1;
+  string request_id = 2;
+}
