@@ -114,6 +114,7 @@ make build
 
 - 文档收束顺序固定为 `PRE_README.MD -> README.md -> README_EN.md`。
 - 版本真源固定为 `release-version.toml` 与 `src/api_blueprint/_version.py`。
+- stable 正式发布 workflow 绑定 GitHub `production` environment；若仓库给它配置了 required reviewers，则发布前需要人工审核。
 - 详细发布规范见 [`docs/release-process.md`](docs/release-process.md)。
 
 ```sh

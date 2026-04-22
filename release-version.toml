@@ -2,5 +2,5 @@
 # Python version: X.Y.Z / X.Y.ZrcN
 # Git tag: vX.Y.Z / vX.Y.Z-rc.N
 
-base_version = "0.0.2"
+base_version = "0.0.3"
 channel = "stable"

@@ -75,6 +75,8 @@
   - `make release-local RELEASE_TAG=...`
   - `make release-install-check RELEASE_TAG=...`
 - push tag 前必须确认当前 release ref 的 GitHub Actions `CI` 已经全绿。
+- stable `Release` workflow 的正式发布 job 必须绑定 GitHub `production` environment。
+- 如果仓库启用了 `production` environment 的 required reviewers，AI agent 必须等待人工审核通过后，才允许 workflow 继续执行正式发布。
 - stable 发布完成后，远端 `stable` 分支必须同步到对应 stable tag 的提交。
 
 ## 测试与验证规则
