@@ -6,6 +6,7 @@ from api_blueprint.config.models import (
     GrpcConfig,
     GrpcLayout,
     GrpcJobConfig,
+    GrpcTargetConfig,
     GolangConfig,
     TypeScriptConfig,
     UpstreamConfig,
@@ -14,10 +15,12 @@ from api_blueprint.config.resolved import (
     ResolvedConfig,
     ResolvedGrpcConfig,
     ResolvedGrpcJobConfig,
+    ResolvedGrpcTargetConfig,
     ResolvedTargetConfig,
     resolve_config,
     resolve_output_path,
     resolve_path_list,
+    resolve_unique_path_list,
 )
 
 __all__ = (
@@ -27,10 +30,12 @@ __all__ = (
     "GrpcConfig",
     "GrpcLayout",
     "GrpcJobConfig",
+    "GrpcTargetConfig",
     "GolangConfig",
     "ResolvedConfig",
     "ResolvedGrpcConfig",
     "ResolvedGrpcJobConfig",
+    "ResolvedGrpcTargetConfig",
     "ResolvedTargetConfig",
     "TypeScriptConfig",
     "UpstreamConfig",
@@ -40,4 +45,5 @@ __all__ = (
     "resolve_config",
     "resolve_output_path",
     "resolve_path_list",
+    "resolve_unique_path_list",
 )

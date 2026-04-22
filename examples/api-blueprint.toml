@@ -20,20 +20,20 @@ base_url = 'http://localhost:2333'
 
 # Existing proto tree -> gRPC snapshots example
 [grpc]
-proto_root = 'grpc/protos'
-include_paths = []
+source_root = 'grpc/protos'
+import_roots = []
 
-[[grpc.jobs]]
-name = 'python.greeter'
-preset = 'python'
-output = 'grpc/python'
-protos = ['**/*.proto']
+[[grpc.targets]]
+id = 'python.greeter'
+lang = 'python'
+out_dir = 'grpc/python'
+files = ['**/*.proto']
 
-[[grpc.jobs]]
-name = 'go.greeter'
-preset = 'go'
-output = 'grpc/go'
-protos = [
+[[grpc.targets]]
+id = 'go.greeter'
+lang = 'go'
+out_dir = 'grpc/go'
+files = [
     'commonpb/common.proto',
     'greeterpb/greeter.proto',
 ]

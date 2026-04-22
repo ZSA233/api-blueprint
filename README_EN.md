@@ -14,7 +14,7 @@ Its main workflow is:
 1. Describe `Blueprint`, routes, request/response models, and error structures in Python.
 2. Build a FastAPI application at runtime and expose OpenAPI documentation.
 3. Generate Go and TypeScript code snapshots from the same blueprint source.
-4. Compile existing `.proto` trees into gRPC outputs from named jobs declared in `api-blueprint.toml`.
+4. Compile existing `.proto` trees from gRPC targets declared in `api-blueprint.toml`, while still supporting legacy/raw job mode.
 
 ## Supported Outputs
 
@@ -40,7 +40,7 @@ uv pip install "git+https://github.com/zsa233/api-blueprint@stable"
 - Use `examples/grpc/` as the public proto and committed Go / Python gRPC snapshot example; its `[grpc]` settings share the same `examples/api-blueprint.toml` file as the Blueprint examples.
 - Build the documentation service with `api-doc-server`, reusing FastAPI OpenAPI output.
 - Generate language-side snapshot artifacts with `api-gen-golang` and `api-gen-typescript`.
-- Compile existing proto trees into Go / Python gRPC outputs with named jobs through `api-gen-grpc`.
+- Compile existing proto trees through `api-gen-grpc` targets; when you need older config semantics, legacy/raw jobs are still available.
 - During feature work, use `make example-compile-check` to regenerate the Blueprint and gRPC examples and verify their compile/import smoke checks still pass.
 - When the generator change is intentional, use `make example-refresh` to refresh the committed example snapshots.
 - When you need strict snapshot convergence, use `make example-validation`.
@@ -69,29 +69,48 @@ base_url = 'http://localhost:2333'
 # base_url_expr = 'import.meta.env.VITE_API_BASE_URL'
 
 [grpc]
-proto_root = 'grpc/protos'
-include_paths = []
+source_root = 'grpc/protos'
+import_roots = []
 
-[[grpc.jobs]]
-name = 'python.greeter'
-preset = 'python'
-output = 'grpc/python'
-# optional: override the per-job proto discovery / execution root
-# proto_root = 'grpc/protos/services/exampledomain/api'
-protos = ['**/*.proto']
+[[grpc.targets]]
+id = 'python.greeter'
+lang = 'python'
+out_dir = 'grpc/python'
+files = ['**/*.proto']
 
-[[grpc.jobs]]
-name = 'go.greeter'
-preset = 'go'
-output = 'grpc/go'
-# optional: write Go outputs by go_package instead of source-relative paths
-# layout = 'go_package'
-# module = 'examplemod'
-protos = [
+[[grpc.targets]]
+id = 'go.greeter'
+lang = 'go'
+out_dir = 'grpc/go'
+files = [
     'commonpb/common.proto',
     'greeterpb/greeter.proto',
 ]
 ```
+
+## gRPC Semantic Model
+
+- `id` is only used to select a target through `--target`, `--list-targets`, and `--explain-target`.
+- `source_root` only defines how `files` are resolved and where `protoc` runs.
+- `import_roots` only affects import lookup and does not participate in output path calculation.
+- `out_dir` always means the final generated directory and no longer means the Go module root.
+
+### Advanced / Legacy Mode
+
+- `[[grpc.jobs]]` is still supported, but it is kept only as legacy/raw mode and is no longer the primary README path.
+- `--job` and `--list-jobs` remain available for older configs that still depend on `proto_root`, `include_paths`, `layout`, and `module`.
+
+## Go Targets And Modules
+
+- A Go target walks upward from `out_dir`, discovers the nearest `go.mod`, and parses the module path automatically.
+- The tool derives the expected `go_package` import path prefix from `out_dir`, then validates every selected proto `option go_package`.
+- Public config no longer requires manual `module` or `layout` fields; when `go_package` and `out_dir` disagree, the error reports `out_dir`, `module_root`, `module_path`, and the expected prefix directly.
+
+## Python Source Root And Output Paths
+
+- A Python target uses `source_root` as the `grpc_tools.protoc` working root and its first `-I`.
+- Generated files still follow source-relative layout, so `source_root` directly affects the final output directory structure.
+- `import_roots` only extends import lookup and does not change where Python outputs are written.
 
 ## Blueprint DSL Example
 
@@ -128,8 +147,10 @@ with apibp.group("/demo") as views:
 ```sh
 api-doc-server -c examples/api-blueprint.toml
 api-gen-golang -c examples/api-blueprint.toml
+api-gen-grpc -c examples/api-blueprint.toml --list-targets
+api-gen-grpc -c examples/api-blueprint.toml --target go.*
+api-gen-grpc -c examples/api-blueprint.toml --explain-target go.greeter
 api-gen-grpc -c examples/api-blueprint.toml --list-jobs
-api-gen-grpc -c examples/api-blueprint.toml --job go.* --job python.greeter
 api-gen-typescript -c examples/api-blueprint.toml
 ```
 
@@ -141,12 +162,8 @@ api-gen-typescript -c examples/api-blueprint.toml
 - `api-gen-grpc` only orchestrates compilation for existing `.proto` trees; it does not derive gRPC proto/service definitions from the Blueprint DSL.
 - `api-gen-grpc` can run with only the `[grpc]` section and does not require `[blueprint]`, `[golang]`, or `[typescript]`.
 - `[typescript]` supports both literal `base_url` values and raw TypeScript `base_url_expr` expressions; they are mutually exclusive, and resolution order is fixed as `base_url_expr -> base_url -> upstream -> ""`.
-- `[[grpc.jobs]].proto_root` inherits `[grpc].proto_root` by default; it overrides proto expansion, the `protoc` working root, and the source-relative output base for that specific job.
-- Python gRPC jobs require `grpcio-tools`; Go gRPC jobs require `protoc`, `protoc-gen-go`, and `protoc-gen-go-grpc` on `PATH`; `grpcio-tools` is not a runtime dependency.
-- Go gRPC jobs default to `layout = "source_relative"`; when you need direct `go_package`-based output, set `layout = "go_package"` and pass your own module name at the module root, for example `module = "examplemod"`.
-- When a Go gRPC job sets `module`, `output` must point at the Go module root, not a leaf `pb/...` directory.
-- Python gRPC jobs do not support `layout = "go_package"` or `module`.
-- `[[grpc.jobs]].proto_root` is a per-job generation-root override, not a Python `module` or path-remap feature.
+- Python gRPC targets require `grpcio-tools`; Go gRPC targets require `protoc`, `protoc-gen-go`, and `protoc-gen-go-grpc` on `PATH`; `grpcio-tools` is not a runtime dependency.
+- legacy/raw `[[grpc.jobs]]` still resolves proto expansion from `proto_root` by default; Go legacy jobs still support `layout = "go_package"` and `module`, while Python legacy jobs still do not.
 - `Blueprint(app=None)` shares the global `FastAPI` app by default; if you need separate documentation apps, you must pass `app` explicitly.
 - Example snapshot drift means the current generator output differs from the committed snapshots; it is a change signal, not an automatic bug.
 - `make example-compile-check` allows drift and only checks whether regenerated outputs still compile.

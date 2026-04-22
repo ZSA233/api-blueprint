@@ -14,7 +14,7 @@
 1. 用 Python 描述 `Blueprint`、路由、请求/响应模型与错误结构。
 2. 运行时构建 FastAPI 应用并暴露 OpenAPI 文档。
 3. 基于同一份蓝图生成 Go 与 TypeScript 代码快照。
-4. 基于 `api-blueprint.toml` 里的 job 配置，编译已有 `.proto` 目录树并输出 gRPC 代码。
+4. 基于 `api-blueprint.toml` 里的 gRPC target 配置编译已有 `.proto` 目录树，并兼容 legacy/raw job 模式。
 
 ## 支持的输出
 
@@ -40,7 +40,7 @@ uv pip install "git+https://github.com/zsa233/api-blueprint@stable"
 - 在 `examples/grpc/` 下查看公开的 proto 树和 Go / Python gRPC 快照；对应的 `[grpc]` 示例配置与 Blueprint 示例共用 `examples/api-blueprint.toml`。
 - 通过 `api-doc-server` 构建文档服务，复用 FastAPI 的 OpenAPI 输出。
 - 通过 `api-gen-golang` 与 `api-gen-typescript` 生成语言侧快照产物。
-- 通过 `api-gen-grpc` 按命名 job 编译已有 proto 树，并输出 Go / Python gRPC 产物。
+- 通过 `api-gen-grpc` 按 target 编译已有 proto 树；如需兼容旧配置，仍可调用 legacy/raw jobs。
 - 功能开发期可通过 `make example-compile-check` 做“Blueprint + gRPC examples 重生成 -> 编译/导入 smoke”校验。
 - 需要接受预期生成变更时使用 `make example-refresh` 刷新 examples snapshots。
 - 需要严格确认 snapshots 已收敛时使用 `make example-validation`。
@@ -69,29 +69,48 @@ base_url = 'http://localhost:2333'
 # base_url_expr = 'import.meta.env.VITE_API_BASE_URL'
 
 [grpc]
-proto_root = 'grpc/protos'
-include_paths = []
+source_root = 'grpc/protos'
+import_roots = []
 
-[[grpc.jobs]]
-name = 'python.greeter'
-preset = 'python'
-output = 'grpc/python'
-# optional: override the per-job proto discovery / execution root
-# proto_root = 'grpc/protos/services/exampledomain/api'
-protos = ['**/*.proto']
+[[grpc.targets]]
+id = 'python.greeter'
+lang = 'python'
+out_dir = 'grpc/python'
+files = ['**/*.proto']
 
-[[grpc.jobs]]
-name = 'go.greeter'
-preset = 'go'
-output = 'grpc/go'
-# optional: write Go outputs by go_package instead of source-relative paths
-# layout = 'go_package'
-# module = 'examplemod'
-protos = [
+[[grpc.targets]]
+id = 'go.greeter'
+lang = 'go'
+out_dir = 'grpc/go'
+files = [
     'commonpb/common.proto',
     'greeterpb/greeter.proto',
 ]
 ```
+
+## gRPC 语义模型
+
+- `id` 只负责 target 选择，供 `--target`、`--list-targets` 与 `--explain-target` 使用。
+- `source_root` 只负责解释 `files` 的相对路径，同时也是 `protoc` 的工作根。
+- `import_roots` 只负责 import 查找，不参与输出目录计算。
+- `out_dir` 永远表示最终生成目录，不再表示 Go module 根目录。
+
+### Advanced / Legacy Mode
+
+- `[[grpc.jobs]]` 仍然可用，但它只保留为 legacy/raw mode，不再是 README 主路径。
+- `--job` 与 `--list-jobs` 继续保留，适合已经依赖 `proto_root`、`include_paths`、`layout`、`module` 的旧配置。
+
+## Go target 与 module
+
+- Go target 会从 `out_dir` 向上自动发现最近的 `go.mod`，并解析 module path。
+- 工具会根据 `out_dir` 推导期望的 `go_package` import path 前缀，再校验每个选中 proto 的 `option go_package`。
+- 公开配置不再要求手填 `module` 或 `layout`；如果 `go_package` 与 `out_dir` 不一致，会直接报出 `out_dir`、`module_root`、`module_path` 和期望前缀。
+
+## Python source_root 与输出路径
+
+- Python target 的 `source_root` 会直接作为 `grpc_tools.protoc` 的工作根和第一条 `-I`。
+- 生成文件仍按 source-relative 方式落盘，所以 `source_root` 会直接影响最终输出目录层级。
+- `import_roots` 只补充 import 查找，不改变 Python 生成文件的落盘路径。
 
 ## 蓝图 DSL 示例
 
@@ -128,8 +147,10 @@ with apibp.group("/demo") as views:
 ```sh
 api-doc-server -c examples/api-blueprint.toml
 api-gen-golang -c examples/api-blueprint.toml
+api-gen-grpc -c examples/api-blueprint.toml --list-targets
+api-gen-grpc -c examples/api-blueprint.toml --target go.*
+api-gen-grpc -c examples/api-blueprint.toml --explain-target go.greeter
 api-gen-grpc -c examples/api-blueprint.toml --list-jobs
-api-gen-grpc -c examples/api-blueprint.toml --job go.* --job python.greeter
 api-gen-typescript -c examples/api-blueprint.toml
 ```
 
@@ -141,12 +162,8 @@ api-gen-typescript -c examples/api-blueprint.toml
 - `api-gen-grpc` 只负责编排已有 `.proto` 树的编译，不会从 Blueprint DSL 反推出 gRPC proto/service。
 - `api-gen-grpc` 可以只依赖 `[grpc]` 段落，不要求 `[blueprint]`、`[golang]` 或 `[typescript]` 同时存在。
 - `[typescript]` 支持字面量 `base_url` 和原样 TypeScript 表达式 `base_url_expr`；两者互斥，解析优先级固定为 `base_url_expr -> base_url -> upstream -> ""`。
-- `[[grpc.jobs]].proto_root` 默认继承 `[grpc].proto_root`；它会覆盖该 job 的 proto 展开根目录、`protoc` 工作根目录和 source-relative 输出相对路径。
-- Python gRPC job 需要额外安装 `grpcio-tools`；Go gRPC job 需要 `protoc`、`protoc-gen-go` 与 `protoc-gen-go-grpc` 在 `PATH` 中可用；`grpcio-tools` 不属于运行时依赖。
-- Go gRPC job 默认使用 `layout = "source_relative"`；如需按 `go_package` 直接落盘，可设置 `layout = "go_package"`，并按模块根目录传入你自己的 `module` 值，例如 `module = "examplemod"`。
-- 当 Go gRPC job 设置 `module` 时，`output` 必须指向 Go 模块根目录，而不是叶子 `pb/...` 目录。
-- Python gRPC job 不支持 `layout = "go_package"` 或 `module`。
-- `[[grpc.jobs]].proto_root` 是 job 级生成根目录覆盖，不是 Python `module` 或 path remap 功能。
+- Python gRPC target 需要额外安装 `grpcio-tools`；Go gRPC target 需要 `protoc`、`protoc-gen-go` 与 `protoc-gen-go-grpc` 在 `PATH` 中可用；`grpcio-tools` 不属于运行时依赖。
+- legacy/raw `[[grpc.jobs]]` 默认仍按 `proto_root` 解释 proto 展开根目录；Go legacy job 继续支持 `layout = "go_package"` 与 `module`，Python legacy job 仍不支持它们。
 - `Blueprint(app=None)` 默认共享全局 `FastAPI` app；如果需要拆成多个独立文档应用，必须显式传入 `app`。
 - example snapshot drift 表示“当前生成器输出和已提交快照不一致”，它是变更信号，不自动等于 bug。
 - `make example-compile-check` 允许 drift，只检查重生成结果是否仍可编译。

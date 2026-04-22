@@ -9,7 +9,7 @@
 1. 用 Python DSL 定义 `Blueprint`、路由、请求模型、响应模型与错误结构。
 2. 在运行时构建 FastAPI/OpenAPI 文档服务。
 3. 基于同一份蓝图输出 Go 与 TypeScript 的代码快照。
-4. 基于配置驱动的 job 编排，编译已有 `.proto` 目录树并输出 Go / Python gRPC 产物。
+4. 基于配置驱动的 gRPC target 编排编译已有 `.proto` 目录树，并兼容 legacy/raw job 模式输出 Go / Python gRPC 产物。
 
 当前对外公开 Go、TypeScript 与 gRPC 生成器；`kotlin`、`java` 只保留内部扩展位。
 
@@ -30,7 +30,7 @@
 ## 结构事实
 
 - `src/api_blueprint/engine/`：DSL、模型、Blueprint、路由与 FastAPI/OpenAPI 语义。
-- `src/api_blueprint/writer/`：Go / TypeScript 代码生成与 gRPC job 编排执行。
+- `src/api_blueprint/writer/`：Go / TypeScript 代码生成与 gRPC target/job 规划执行。
 - `src/api_blueprint/application/`：entrypoint 加载、项目装配、docs server 启动与 generator 调度。
 - `src/api_blueprint/hub/` 与 `src/api_blueprint/static/`：文档服务 UI 资源。
 - `examples/blueprints/`：示例蓝图真源。
@@ -55,9 +55,11 @@
 - `scripts/example_validation.py` 是 examples 的官方验证入口，会同时验证 Blueprint examples 与 gRPC examples，执行“重生成 -> 快照比对 -> TypeScript 编译 -> Go 测试 -> Python gRPC import smoke”闭环。
 - Blueprint examples 的严格重生成依赖 `go-enum`；gRPC examples 依赖 `protoc`、`protoc-gen-go`、`protoc-gen-go-grpc` 与 Python `grpcio-tools`。
 - TypeScript 配置支持字面量 `base_url` 和原样表达式 `base_url_expr`；两者互斥，优先级为 `base_url_expr -> base_url -> upstream -> ""`。
-- gRPC job 支持可选 `proto_root`；默认继承 `[grpc].proto_root`，可按 job 覆盖 proto 展开根目录、`protoc` 工作根目录和 source-relative 输出相对路径。
-- gRPC Go job 默认仍是 `layout = "source_relative"`；可显式切换到 `layout = "go_package"`，并可选传入 `module` 让输出按 `go_package` 直接落到模块根目录下。
-- gRPC Python job 不支持 `layout = "go_package"` 或 `module`。
+- gRPC 公开配置面默认使用 `[grpc].source_root`、`[grpc].import_roots` 与 `[[grpc.targets]]`；`[[grpc.jobs]]` 仅保留为 legacy/raw mode。
+- `[[grpc.targets]].id` 只负责选择 target；`source_root` 只负责 files 相对根和 `protoc` 工作根；`import_roots` 只负责 import 查找；`out_dir` 只负责最终生成目录。
+- Go gRPC target 不再要求用户手填 `module` 或 `layout`；工具会从 `out_dir` 向上自动发现 `go.mod`、推导 module path，并校验选中的 proto `go_package` 与 `out_dir` 一致。
+- Python gRPC target 仍按 source-relative 规则生成，因此 `source_root` 会直接影响最终输出目录层级。
+- legacy/raw `[[grpc.jobs]]` 继续支持 `proto_root`、`include_paths`、`layout` 与 `module`，CLI 通过 `--job` / `--list-jobs` 调用。
 - `Makefile` 暴露三类 example 目标：
   - `example-validation`：严格模式，检测 snapshot drift
   - `example-compile-check`：允许 drift，只验证重生成产物能编译
@@ -71,11 +73,14 @@
 3. 安装
 4. 核心工作流
 5. 配置文件
-6. 蓝图 DSL 示例
-7. CLI 命令
-8. 生成产物与仓库约束
-9. 开发
-10. 发布
+6. gRPC 语义模型
+7. Go target 与 module
+8. Python source_root 与输出路径
+9. 蓝图 DSL 示例
+10. CLI 命令
+11. 生成产物与仓库约束
+12. 开发
+13. 发布
 
 ## 推荐发布口径
 
@@ -97,16 +102,18 @@
 
 ## README 必须覆盖的事实
 
-- 项目是“Python DSL -> FastAPI/OpenAPI -> Go/TypeScript 代码生成器”加“已有 proto 树的 gRPC job 编译器”。
+- 项目是“Python DSL -> FastAPI/OpenAPI -> Go/TypeScript 代码生成器”加“已有 proto 树的 gRPC target 编译器”，并兼容 legacy/raw gRPC jobs。
 - 当前公开 Go / TypeScript / gRPC；Kotlin / Java 仅为内部预留扩展位。
 - gRPC v1 不会从 Blueprint DSL 推导 proto；它只负责编排已有 `.proto` 目录树的编译。
 - `api-gen-grpc` 可以只依赖 `[grpc]` 配置段，不要求 `[blueprint]`。
 - TypeScript `base_url_expr` 会原样输出到生成代码；它与 `base_url` 互斥，且优先级高于 `base_url` 和 `upstream`。
-- Python gRPC job 依赖 `grpcio-tools`；Go gRPC job 依赖 `protoc`、`protoc-gen-go` 与 `protoc-gen-go-grpc`。
-- `[[grpc.jobs]].proto_root` 默认继承 `[grpc].proto_root`；它是 job 级生成根目录覆盖，不是 Python `module` 或 path remap 功能。
-- Go gRPC job 默认使用 `source_relative` 输出；如需按 `go_package` 直接落盘，可设置 `layout = "go_package"`，并在需要时补 `module`。
-- 当 Go gRPC job 设置 `module` 时，`output` 必须指向 Go 模块根目录，而不是叶子 `pb/...` 目录。
-- Python gRPC job 不支持 `layout = "go_package"` 或 `module`。
+- Python gRPC target 依赖 `grpcio-tools`；Go gRPC target 依赖 `protoc`、`protoc-gen-go` 与 `protoc-gen-go-grpc`。
+- README 主路径必须展示 `[grpc].source_root`、`[grpc].import_roots` 与 `[[grpc.targets]]`，而不是 `[[grpc.jobs]]`。
+- `id` 只负责 target 选择；`source_root` 只负责 files 相对根与工作根；`import_roots` 只负责 import 查找；`out_dir` 只负责最终生成目录。
+- Go gRPC target 会从 `out_dir` 向上自动发现 `go.mod`、推导 module path，并校验 proto `go_package` 与 `out_dir` 一致；公开配置不再要求 `module` 或 `layout`。
+- Python gRPC target 仍按 source-relative 规则生成，因此 `source_root` 会影响最终输出目录层级。
+- legacy/raw `[[grpc.jobs]]` 继续可用，并保留 `proto_root` / `include_paths` / `layout` / `module`。
+- `api-gen-grpc` 公开 CLI 新增 `--list-targets`、`--target` 与 `--explain-target`；`--job` 与 `--list-jobs` 保留为 legacy/raw mode。
 - `grpcio-tools` 保持为开发期依赖，不进入运行时安装依赖。
 - `examples/blueprints/` 与 `examples/grpc/protos/` 是真源，`examples/golang/` / `examples/typescript/` / `examples/grpc/go/` / `examples/grpc/python/` 是生成快照。
 - `scripts/example_validation.py` 会在临时目录重生成 Blueprint 与 gRPC examples，并执行快照比对、`tsc --noEmit`、`go test ./...` 与 Python gRPC import smoke。

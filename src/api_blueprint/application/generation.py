@@ -5,7 +5,15 @@ from typing import Sequence
 
 from api_blueprint.application.docs import run_docs_server
 from api_blueprint.application.project import build_entrypoints, load_project
-from api_blueprint.config import ResolvedConfig, ResolvedGrpcConfig, ResolvedGrpcJobConfig, ResolvedTargetConfig, resolve_config
+from api_blueprint.config import (
+    ResolvedConfig,
+    ResolvedGrpcConfig,
+    ResolvedGrpcJobConfig,
+    ResolvedGrpcTargetConfig,
+    ResolvedTargetConfig,
+    resolve_config,
+)
+from api_blueprint.writer.grpc.models import GrpcGenerationJob
 
 
 def _require_golang_config(resolved: ResolvedConfig) -> ResolvedTargetConfig:
@@ -90,9 +98,36 @@ def list_grpc_jobs(
     return writer.list_jobs(job_filters)
 
 
+def list_grpc_targets(
+    config_path: str | Path | None = "./api-blueprint.toml",
+    *,
+    target_filters: Sequence[str] = (),
+) -> tuple[ResolvedGrpcTargetConfig, ...]:
+    from api_blueprint.writer import grpc
+
+    resolved = resolve_config(config_path)
+    grpc_config = _require_grpc_config(resolved)
+    writer = grpc.GrpcWriter(grpc_config)
+    return writer.list_targets(target_filters)
+
+
+def explain_grpc_target(
+    config_path: str | Path | None = "./api-blueprint.toml",
+    *,
+    target_id: str,
+) -> GrpcGenerationJob:
+    from api_blueprint.writer import grpc
+
+    resolved = resolve_config(config_path)
+    grpc_config = _require_grpc_config(resolved)
+    writer = grpc.GrpcWriter(grpc_config)
+    return writer.explain_target(target_id)
+
+
 def generate_grpc(
     config_path: str | Path | None = "./api-blueprint.toml",
     *,
+    target_filters: Sequence[str] = (),
     job_filters: Sequence[str] = (),
 ) -> None:
     from api_blueprint.writer import grpc
@@ -100,4 +135,4 @@ def generate_grpc(
     resolved = resolve_config(config_path)
     grpc_config = _require_grpc_config(resolved)
     writer = grpc.GrpcWriter(grpc_config)
-    writer.gen(job_filters)
+    writer.gen(target_patterns=target_filters, job_patterns=job_filters)
