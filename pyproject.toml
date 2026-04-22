@@ -1,63 +1,92 @@
-
 [build-system]
-requires = ["setuptools>=70.0.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
 
-
-# Project settings -----------------------------------------------------------------------------------------------------
 [project]
 name = "api-blueprint"
 dynamic = ["version"]
-description = "API 蓝图"
+description = "Python DSL to define API blueprints and generate FastAPI, Go, and TypeScript contracts."
 readme = "README.md"
-requires-python = ">=3.10"
-license = { text = "MIT" }
-keywords = ["api", "blueprint"]
+requires-python = ">=3.11"
+license = "MIT"
+keywords = ["api", "blueprint", "codegen", "openapi", "fastapi"]
 classifiers = [
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 authors = [
-    { name = "zsa233", email = "zzsaim@163.com" }
+    { name = "ZSA233", email = "zzsaim233@gmail.com" },
 ]
 maintainers = [
-    { name = "zsa233", email = "zsaim@163.com" }
+    { name = "ZSA233", email = "zzsaim233@gmail.com" },
 ]
-
-
-# Required dependencies ------------------------------------------------------------------------------------------------
 dependencies = [
-    "click",
-    "fastapi",
-    "httpx",
-    "pydantic",
-    "uvicorn",
-    "jinja2",
+    "click>=8.1.8,<9",
+    "fastapi>=0.115,<1",
+    "httpx>=0.27,<1",
+    "jinja2>=3.1,<4",
+    "pydantic>=2.10,<3",
+    "uvicorn>=0.30,<1",
 ]
-
-
-# Optional dependencies ------------------------------------------------------------------------------------------------
-[project.optional-dependencies]
-
 
 [project.urls]
-"Homepage" = "https://github.com/zsa233/api-blueprint"
-"Source" = "https://github.com/zsa233/api-blueprint"
-"Documentation" = "https://github.com/zsa233/api-blueprint"
-"Bug Reports" = "https://github.com/zsa233/api-blueprint/issues"
-"Changelog" = "https://github.com/zsa233/api-blueprint/releases"
-
+Homepage = "https://github.com/ZSA233/api-blueprint"
+Source = "https://github.com/ZSA233/api-blueprint"
+Documentation = "https://github.com/ZSA233/api-blueprint"
+Bug-Reports = "https://github.com/ZSA233/api-blueprint/issues"
+Changelog = "https://github.com/ZSA233/api-blueprint/releases"
 
 [project.scripts]
-api-doc-server  = "api_blueprint.cli.apidoc:apidoc_server"
-api-gen-golang  = "api_blueprint.cli.apigen:gen_golang"
+api-doc-server = "api_blueprint.cli.apidoc:apidoc_server"
+api-gen-golang = "api_blueprint.cli.apigen:gen_golang"
 api-gen-typescript = "api_blueprint.cli.apigen:gen_typescript"
 
-# Tools settings -------------------------------------------------------------------------------------------------------
-[tool.setuptools]
-packages = { find = { where = ["src"], include = ["api_blueprint", "api_blueprint.*"] } }
-package-data = { "api_blueprint" = ["writer/templates/**/*.j2", "hub/templates/**", "hub/static/**" ] }
+[dependency-groups]
+dev = [
+    "pytest>=8.3,<9",
+]
 
-[tool.setuptools.dynamic]
-version = { attr = "api_blueprint.__version__" }
+[tool.hatch.version]
+path = "src/api_blueprint/_version.py"
+
+[tool.hatch.build]
+include = [
+    "src/api_blueprint/**/*.py",
+    "src/api_blueprint/hub/templates/**/*",
+    "src/api_blueprint/static/**/*",
+    "src/api_blueprint/writer/templates/**/*",
+    "LICENSE",
+    "README.md",
+    "README_EN.md",
+    "PRE_README.MD",
+    "AGENTS.MD",
+    "Makefile",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/api_blueprint"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/examples",
+    "/tests",
+    "/docs",
+    "/scripts",
+    "/.github",
+    "/LICENSE",
+    "/README.md",
+    "/README_EN.md",
+    "/PRE_README.MD",
+    "/AGENTS.MD",
+    "/Makefile",
+    "/pyproject.toml",
+    "/release-version.toml",
+]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]

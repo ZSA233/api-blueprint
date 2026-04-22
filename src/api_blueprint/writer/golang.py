@@ -142,7 +142,6 @@ class GolangTypeResolver:
 
         if isinstance(candidate, type):            
             if issubclass(candidate, enum.Enum):
-                print(candidate)
                 return "enum"
 
             return candidate.__name__.lower()

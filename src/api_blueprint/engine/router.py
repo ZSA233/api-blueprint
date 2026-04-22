@@ -6,7 +6,7 @@ from api_blueprint.engine.model import (
     create_model, iter_field_model_type, iter_model_vars,
 )
 from collections import defaultdict
-from api_blueprint.engine.utils import snake_to_pascal_case
+from api_blueprint.engine.utils import join_url_path, snake_to_pascal_case
 from api_blueprint.engine.wrapper import ResponseWrapper
 from api_blueprint.engine.endpoint import make_endpoint
 from api_blueprint.engine.provider import (
@@ -22,7 +22,6 @@ from typing import (
     TypeVar, Literal, Union, Sequence, Type, DefaultDict,
     TYPE_CHECKING, Self,
 )
-from pathlib import Path
 import httpx
 
 
@@ -111,7 +110,7 @@ class Router:
 
     @property
     def url(self) -> str:
-        return str(Path(self.group.prefix) / self.leaf.lstrip("/"))
+        return join_url_path(self.group.prefix, self.leaf)
 
     @property
     def root(self):

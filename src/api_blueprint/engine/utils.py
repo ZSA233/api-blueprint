@@ -56,6 +56,20 @@ def join_path_imports(p1: Union[str, Path], *pp: Union[str, Path]) -> str:
     return str(p1).strip('/')
 
 
+def join_url_path(*parts: Union[str, Path]) -> str:
+    segments: list[str] = []
+    for part in parts:
+        text = str(part).strip().replace("\\", "/")
+        if not text:
+            continue
+        segments.extend(segment for segment in text.split("/") if segment)
+
+    if not segments:
+        return "/"
+
+    return "/" + "/".join(segments)
+
+
 
 def names_by_definition_order(obj):
     cls = obj if isclass(obj) else obj.__class__

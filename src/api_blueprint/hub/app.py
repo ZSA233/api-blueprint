@@ -11,7 +11,7 @@ app = FastAPI()
 HERE = Path(__file__).resolve().parent
 
 templates = Jinja2Templates(directory=str(HERE / "templates"))
-app.mount("/static", StaticFiles(directory=str(HERE / "static")), name="static")
+app.mount("/static", StaticFiles(directory=str(HERE.parent / "static")), name="static")
 
 NAV_ITEMS = []
 

@@ -44,14 +44,14 @@ export class DemoClient extends BaseClient {
    */
   async testPost(
     request: {
-      json?: Models.ReqTestpostJson;
+      json?: Models.ReqTestPostJson;
       body?: RequestInit["body"];
       headers?: Record<string, string>;
     } = {},
     init: RequestInit = {},
     timeoutMs?: number,
-  ): Promise<Models.RspTestpost> {
-    return this.request<Models.RspTestpost>({
+  ): Promise<Models.RspTestPost> {
+    return this.request<Models.RspTestPost>({
       method: "POST",
       path: "/api/demo/test_post",
       json: request.json,
@@ -145,14 +145,14 @@ export class DemoClient extends BaseClient {
    */
   async postDeprecated(
     request: {
-      json?: Models.ReqPostdeprecatedJson;
+      json?: Models.ReqPostDeprecatedJson;
       body?: RequestInit["body"];
       headers?: Record<string, string>;
     } = {},
     init: RequestInit = {},
     timeoutMs?: number,
-  ): Promise<Models.RspPostdeprecated> {
-    return this.request<Models.RspPostdeprecated>({
+  ): Promise<Models.RspPostDeprecated> {
+    return this.request<Models.RspPostDeprecated>({
       method: "POST",
       path: "/api/demo/post_deprecated",
       json: request.json,
@@ -199,8 +199,8 @@ export class DemoClient extends BaseClient {
     } = {},
     init: RequestInit = {},
     timeoutMs?: number,
-  ): Promise<Models.RspMapmodel> {
-    return this.request<Models.RspMapmodel>({
+  ): Promise<Models.RspMapModel> {
+    return this.request<Models.RspMapModel>({
       method: "POST",
       path: "/api/demo/map_model",
       headers: request.headers,
