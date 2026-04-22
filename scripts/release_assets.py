@@ -10,7 +10,6 @@ import subprocess
 import sys
 import tempfile
 import textwrap
-import venv
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -47,14 +46,15 @@ def _venv_python_path(venv_dir: Path) -> Path:
     return venv_dir / "bin" / "python"
 
 
-def _venv_script_path(venv_dir: Path, name: str) -> Path:
-    if os.name == "nt":
-        return venv_dir / "Scripts" / f"{name}.exe"
-    return venv_dir / "bin" / name
-
-
 def _run(cmd: list[str], *, cwd: Path | None = None) -> None:
     subprocess.run(cmd, cwd=cwd, check=True)
+
+
+def _uv_path() -> str:
+    uv = shutil.which("uv")
+    if uv is None:
+        raise ReleaseAssetsError("uv executable not found in PATH")
+    return uv
 
 
 def validate_config(repo_root: Path) -> None:
@@ -148,23 +148,39 @@ def install_check(repo_root: Path, dist_dir: Path, tag: str) -> None:
     validate_release_version(repo_root, tag)
     artifacts = validate_dist_artifacts(dist_dir)
     wheel_path = artifacts.wheels[0]
+    uv = _uv_path()
 
     with tempfile.TemporaryDirectory(prefix="api-blueprint-install-check-") as tmp_dir:
         venv_dir = Path(tmp_dir) / "venv"
-        venv.EnvBuilder(with_pip=True).create(venv_dir)
+        _run([uv, "venv", str(venv_dir)], cwd=repo_root)
         python_bin = _venv_python_path(venv_dir)
 
-        _run([str(python_bin), "-m", "pip", "install", str(wheel_path)], cwd=repo_root)
-
-        for cmd in ("api-doc-server", "api-gen-golang", "api-gen-typescript"):
-            _run([str(_venv_script_path(venv_dir, cmd)), "--help"], cwd=repo_root)
+        _run([uv, "pip", "install", "--python", str(python_bin), str(wheel_path)], cwd=repo_root)
 
         smoke = textwrap.dedent(
             """
+            import importlib.metadata as metadata
             import importlib.resources as resources
+            from click.testing import CliRunner
             import api_blueprint
+            from api_blueprint.cli.apidoc import apidoc_server
+            from api_blueprint.cli.apigen import gen_golang, gen_typescript
 
             assert api_blueprint.__version__
+            expected_entrypoints = {
+                "api-doc-server": "api_blueprint.cli.apidoc:apidoc_server",
+                "api-gen-golang": "api_blueprint.cli.apigen:gen_golang",
+                "api-gen-typescript": "api_blueprint.cli.apigen:gen_typescript",
+            }
+            entrypoints = {ep.name: ep.value for ep in metadata.entry_points(group="console_scripts")}
+            for name, value in expected_entrypoints.items():
+                assert entrypoints.get(name) == value, (name, entrypoints.get(name))
+
+            runner = CliRunner()
+            for cli in (apidoc_server, gen_golang, gen_typescript):
+                result = runner.invoke(cli, ["--help"])
+                assert result.exit_code == 0, result.output
+
             static_dir = resources.files("api_blueprint") / "static"
             hub_templates_dir = resources.files("api_blueprint") / "hub" / "templates"
             writer_templates_dir = resources.files("api_blueprint") / "writer" / "templates"

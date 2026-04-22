@@ -8,8 +8,8 @@ from typing import (
 from api_blueprint.engine.provider import Provider, Handle, WsHandle
 from api_blueprint.engine.wrapper import ResponseWrapper
 from api_blueprint.engine.model import HeaderModel
+from api_blueprint.engine.utils import join_url_path
 from types import TracebackType
-from pathlib import Path
 from api_blueprint.engine.router import Router
 
 if TYPE_CHECKING:
@@ -34,7 +34,7 @@ class RouterGroup(Generic[T]):
 
     @property
     def prefix(self):
-        return str(Path(self.bp.root) / (self.branch).lstrip('/'))
+        return join_url_path(self.bp.root, self.branch)
 
     @property
     def root(self):
