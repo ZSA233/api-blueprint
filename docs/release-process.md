@@ -99,11 +99,35 @@ make release-local RELEASE_TAG=vX.Y.Z[-rc.N]
 make release-install-check RELEASE_TAG=vX.Y.Z[-rc.N]
 ```
 
+如果只想单独执行 examples 重生成校验，可直接运行：
+
+```sh
+make example-validation
+```
+
+如果当前处于功能开发期，预计 generator 会产生新快照，而你只想先确认生成结果仍可编译，可运行：
+
+```sh
+make example-compile-check
+```
+
+如果确认这些 snapshots 变化就是本次功能的一部分，需要正式接受并刷新仓库中的快照，可运行：
+
+```sh
+make example-refresh
+```
+
 它们分别负责：
 
-- `release-preflight`：版本同步、release contract、README 镜像与测试校验
+- `release-preflight`：版本同步、release contract、README 镜像、`make test` 与 `make example-validation`
 - `release-local`：构建 sdist / wheel
 - `release-install-check`：验证 wheel 资源、安装 smoke 与 CLI `--help`
+
+这里需要明确区分：
+
+- `example-validation` 把 snapshot drift 视为仓库尚未收敛，因此适合小改动回归检查、CI 和 release gate。
+- `example-compile-check` 不要求 snapshots 不变，只要求新生成结果仍然可编译。
+- `example-refresh` 用于接受预期变化；执行后应 review diff、提交 snapshots，再重新跑 `example-validation` 或 `release-preflight`。
 
 ## 远端 CI 校验
 

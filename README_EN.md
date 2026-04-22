@@ -37,7 +37,9 @@ uv pip install "git+https://github.com/zsa233/api-blueprint@stable"
 - Define `Blueprint` objects and route DSLs in directories such as `examples/blueprints/`.
 - Build the documentation service with `api-doc-server`, reusing FastAPI OpenAPI output.
 - Generate language-side snapshot artifacts with `api-gen-golang` and `api-gen-typescript`.
-- Run `uv run python scripts/example_validation.py` to regenerate examples, diff snapshots, compile TypeScript, and run Go tests in one loop.
+- During feature work, use `make example-compile-check` to regenerate examples and verify the TypeScript and Go outputs still compile.
+- When the generator change is intentional, use `make example-refresh` to refresh the committed example snapshots.
+- When you need strict snapshot convergence, use `make example-validation`.
 
 ## Configuration File
 
@@ -103,7 +105,11 @@ api-gen-typescript -c examples/api-blueprint.toml
 - `examples/blueprints/` is the blueprint source of truth.
 - `examples/golang/` and `examples/typescript/` are generated snapshots and should not be hand-edited for business logic.
 - `Blueprint(app=None)` shares the global `FastAPI` app by default; if you need separate documentation apps, you must pass `app` explicitly.
-- `scripts/example_validation.py` regenerates examples in a temporary workspace, then runs snapshot diffs, `tsc --noEmit`, and `go test ./...`.
+- Example snapshot drift means the current generator output differs from the committed snapshots; it is a change signal, not an automatic bug.
+- `make example-compile-check` allows drift and only checks whether regenerated outputs still compile.
+- `make example-refresh` accepts intentional changes and refreshes the committed example snapshots in place.
+- `make example-validation` wraps the strict mode of `scripts/example_validation.py`, regenerates examples in a temporary workspace, then runs snapshot diffs, `tsc --noEmit`, and `go test ./...`.
+- `make release-preflight` must include strict `make example-validation`, because by release time any intentional snapshot drift should already have been accepted and committed.
 - `main.py` and `debug.py` are kept only as local helper scripts and are not part of the public release surface.
 
 ## Development
@@ -111,7 +117,9 @@ api-gen-typescript -c examples/api-blueprint.toml
 ```sh
 make sync
 make test
-uv run python scripts/example_validation.py
+make example-compile-check
+make example-refresh
+make example-validation
 make build
 ```
 
@@ -119,6 +127,8 @@ make build
 
 - The documentation convergence order is fixed as `PRE_README.MD -> README.md -> README_EN.md`.
 - The version source of truth is fixed as `release-version.toml` and `src/api_blueprint/_version.py`.
+- `make release-preflight` runs the release contract checks together with `make test` and `make example-validation`.
+- If release-preflight finds intentional example drift, run `make example-refresh`, review and commit the updated snapshots, then rerun `make release-preflight`.
 - The stable release workflow is bound to the GitHub `production` environment; if that environment has required reviewers configured, publication pauses for manual approval.
 - See [`docs/release-process.md`](docs/release-process.md) for the detailed release rules.
 

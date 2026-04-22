@@ -53,6 +53,8 @@
 - 2026-04-22: confirmed `go test ./...` passes in `examples/golang` after regeneration.
 - 2026-04-22: confirmed `uv run api-doc-server --help`, `uv run api-gen-golang --help`, and `uv run api-gen-typescript --help` smoke checks pass.
 - 2026-04-22: confirmed `uv run python scripts/release_assets.py validate-config` and `validate-docs` pass after CI/docs convergence updates.
+- 2026-04-22: added `make example-validation` target and confirmed `make release-preflight RELEASE_TAG=v0.0.3` now runs both `make test` and example regeneration validation successfully.
+- 2026-04-22: split example validation workflow into strict (`make example-validation`), compile-only (`make example-compile-check`), and snapshot refresh (`make example-refresh`) modes, while keeping release-preflight on strict mode.
 
 ## Risks
 

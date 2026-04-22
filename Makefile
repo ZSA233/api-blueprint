@@ -1,4 +1,4 @@
-.PHONY: sync test build release-preflight release-local release-install-check release-version-show release-version-rc release-version-stable
+.PHONY: sync test example-validation example-compile-check example-refresh build release-preflight release-local release-install-check release-version-show release-version-rc release-version-stable
 
 RELEASE_TAG ?=
 DIST_DIR ?= dist
@@ -9,6 +9,15 @@ sync:
 test:
 	uv run pytest -q
 
+example-validation:
+	uv run python scripts/example_validation.py
+
+example-compile-check:
+	uv run python scripts/example_validation.py --mode compile
+
+example-refresh:
+	uv run python scripts/example_validation.py --mode refresh
+
 build:
 	uv build --sdist --wheel
 
@@ -18,7 +27,8 @@ release-preflight:
 	uv run python scripts/release_assets.py validate-config
 	uv run python scripts/release_assets.py validate-docs
 	uv run python scripts/release_assets.py validate-release-version --tag "$(RELEASE_TAG)"
-	uv run pytest -q
+	$(MAKE) test
+	$(MAKE) example-validation
 
 release-local:
 	@if [ -z "$(RELEASE_TAG)" ]; then echo "RELEASE_TAG is required" >&2; exit 1; fi

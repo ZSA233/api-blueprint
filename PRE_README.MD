@@ -48,6 +48,11 @@
 - 只要用户可见能力、CLI、配置、生成结果目录、安装方式或发布方式发生变化，就必须先更新本文件。
 - `main.py` 与 `debug.py` 属于本地辅助脚本，不是公共发布接口。
 - `scripts/example_validation.py` 是 examples 的官方验证入口，会执行“重生成 -> 快照比对 -> TypeScript 编译 -> Go 测试”闭环。
+- `Makefile` 暴露三类 example 目标：
+  - `example-validation`：严格模式，检测 snapshot drift
+  - `example-compile-check`：允许 drift，只验证重生成产物能编译
+  - `example-refresh`：接受预期变化，直接刷新仓库中的 snapshots
+- `release-preflight` 必须显式执行 `example-validation`，而不是宽松模式。
 
 ## 推荐 README 结构
 
@@ -72,6 +77,9 @@
   - `README.md`
   - `README_EN.md`
 - 发布前检查主线命令：
+  - `make example-compile-check`
+  - `make example-refresh`
+  - `make example-validation`
   - `make release-version-show`
   - `make release-preflight RELEASE_TAG=vX.Y.Z[-rc.N]`
   - `make release-local RELEASE_TAG=vX.Y.Z[-rc.N]`
@@ -83,6 +91,11 @@
 - 当前只公开 Go / TypeScript；Kotlin / Java / grpc 仅为内部预留扩展位。
 - `examples/blueprints/` 是真源，`examples/golang/` / `examples/typescript/` 是生成快照。
 - `scripts/example_validation.py` 会在临时目录重生成 examples，并执行快照比对、`tsc --noEmit` 与 `go test ./...`。
+- snapshot drift 本身是“生成结果发生变化”的信号，不自动等于 bug；是否错误取决于这次变更是否预期。
+- `make example-validation` 用于严格校验当前生成器与已提交 snapshots 完全一致。
+- `make example-compile-check` 用于功能开发期，只检查重生成结果是否可编译。
+- `make example-refresh` 用于接受预期变化并刷新已提交 snapshots；之后再用 `make example-validation` 确认仓库重新收敛。
+- `make release-preflight` 必须包含严格的 `make example-validation`，因为进入发版前，预期变化应当已经被刷新并提交。
 - 共享全局 app 是默认行为。
 - GitHub-only 稳定安装入口是 `@stable`，不是固定 tag。
 - stable 正式发布会经过 GitHub `production` environment 审批闸门。
