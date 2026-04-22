@@ -10,7 +10,7 @@ name = "api-blueprint"
 dynamic = ["version"]
 description = "API 蓝图"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11.11"
 license = { text = "MIT" }
 keywords = ["api", "blueprint"]
 classifiers = [

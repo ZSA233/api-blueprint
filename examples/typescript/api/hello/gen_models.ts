@@ -20,7 +20,7 @@ export interface ReqAbcQuery {
   type: WsMsgTypeEnum;
 }
 
-export interface ReqHellowayQuery {
+export interface ReqHelloWayQuery {
   /** hello-way */
   arg1?: HelloWayEnum;
 }
@@ -32,31 +32,31 @@ export type RspAbc = GeneralWrapper<RspAbcJson>;
 export type RspAbcJson = Record<string, ApiHelloMap>;
 
 
-export type RspHelloway = GeneralWrapper<void>;
+export type RspHelloWay = GeneralWrapper<void>;
 
 
-export type RspListenum = GeneralWrapper<RspListenumJson>;
+export type RspListEnum = GeneralWrapper<RspListEnumJson>;
 
 
-export type RspListenumJson = Array<MapEnum>;
+export type RspListEnumJson = Array<MapEnum>;
 
 
-export type RspMapenum = GeneralWrapper<RspMapenumJson>;
+export type RspMapEnum = GeneralWrapper<RspMapEnumJson>;
 
 
-export type RspMapenumJson = Record<string, ApiHelloMap>;
+export type RspMapEnumJson = Record<string, ApiHelloMap>;
 
 
 export type RspString = GeneralWrapper<RspStringJson>;
 
 
+export type RspStringEmun = GeneralWrapper<RspStringEmunJson>;
+
+
+export type RspStringEmunJson = MapEnum;
+
+
 export type RspStringJson = string;
-
-
-export type RspStringemun = GeneralWrapper<RspStringemunJson>;
-
-
-export type RspStringemunJson = MapEnum;
 
 
 export type RspUint64 = GeneralWrapper<RspUint64Json>;

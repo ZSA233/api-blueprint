@@ -25,14 +25,14 @@ export interface ReqDeleteQuery {
   arg2?: number;
 }
 
-export interface ReqPostdeprecatedJson {
+export interface ReqPostDeprecatedJson {
   /** req1 */
   req1: string;
   /** req2 */
   req2?: number;
 }
 
-export interface ReqTestpostJson {
+export interface ReqTestPostJson {
   /** req1 */
   req1: string;
   /** req2 */
@@ -69,15 +69,15 @@ export interface RspDeleteJson {
 }
 
 
-export type RspMapmodel = GeneralWrapper<RspMapmodelJson>;
+export type RspMapModel = GeneralWrapper<RspMapModelJson>;
 
 
-export type RspMapmodelJson = Record<number, ApiDemoMap>;
+export type RspMapModelJson = Record<number, ApiDemoMap>;
 
 
-export type RspPostdeprecated = GeneralWrapper<RspPostdeprecatedJson>;
+export type RspPostDeprecated = GeneralWrapper<RspPostDeprecatedJson>;
 
-export interface RspPostdeprecatedJson {
+export interface RspPostDeprecatedJson {
   /** list */
   list: Array<string>;
 }
@@ -93,9 +93,9 @@ export interface RspRawJson {
 }
 
 
-export type RspTestpost = GeneralWrapper<RspTestpostJson>;
+export type RspTestPost = GeneralWrapper<RspTestPostJson>;
 
-export interface RspTestpostJson {
+export interface RspTestPostJson {
   /** list */
   list: Array<string>;
   /** [str: ApiDemoMap] map */

@@ -8,7 +8,10 @@ from typing import (
 )
 from api_blueprint.engine.model import Model, Error, unwrap_errors, HeaderModel
 from api_blueprint.engine.wrapper import ResponseWrapper, NoneWrapper
+from fastapi.staticfiles import StaticFiles
+from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi import FastAPI
+from pathlib import Path
 from enum import Enum
 
 
@@ -53,7 +56,8 @@ class Blueprint:
 
         if app is None:
             if __GLOBAL_APP__ is None:
-                __GLOBAL_APP__ = FastAPI(title=root.strip('/'))
+                __GLOBAL_APP__ = _build_default_app(root.strip('/'))
+                
             app = __GLOBAL_APP__
 
         self.app = app
@@ -91,3 +95,31 @@ class Blueprint:
     def set_upstream(self, upstream: str):
         self.upstream = upstream
 
+
+def _build_default_app(title: str) -> FastAPI:
+    app = FastAPI(
+        title=title, 
+        docs_url=None, 
+        redoc_url=None,
+    )
+    HERE = Path(__file__).resolve().parent
+    app.mount("/static", StaticFiles(directory=HERE.parent / "static"), name="static")
+
+    @app.get("/redoc", include_in_schema=False)
+    def redoc():
+        return get_redoc_html(
+            openapi_url=app.openapi_url,
+            title="API Docs",
+            redoc_js_url="/static/redoc.standalone.js",
+        )
+    
+    @app.get("/docs", include_in_schema=False)
+    def docs():
+        return get_swagger_ui_html(
+            openapi_url=app.openapi_url,
+            title="API Docs",
+            swagger_js_url="/static/swagger-ui-bundle.js",
+            swagger_css_url="/static/swagger-ui.css"
+        )
+
+    return app

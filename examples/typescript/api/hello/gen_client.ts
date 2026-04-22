@@ -48,8 +48,8 @@ export class HelloClient extends BaseClient {
     } = {},
     init: RequestInit = {},
     timeoutMs?: number,
-  ): Promise<Models.RspMapenum> {
-    return this.request<Models.RspMapenum>({
+  ): Promise<Models.RspMapEnum> {
+    return this.request<Models.RspMapEnum>({
       method: "GET",
       path: "/api/hello/map-enum",
       headers: request.headers,
@@ -71,8 +71,8 @@ export class HelloClient extends BaseClient {
     } = {},
     init: RequestInit = {},
     timeoutMs?: number,
-  ): Promise<Models.RspListenum> {
-    return this.request<Models.RspListenum>({
+  ): Promise<Models.RspListEnum> {
+    return this.request<Models.RspListEnum>({
       method: "GET",
       path: "/api/hello/list-enum",
       headers: request.headers,
@@ -140,8 +140,8 @@ export class HelloClient extends BaseClient {
     } = {},
     init: RequestInit = {},
     timeoutMs?: number,
-  ): Promise<Models.RspStringemun> {
-    return this.request<Models.RspStringemun>({
+  ): Promise<Models.RspStringEmun> {
+    return this.request<Models.RspStringEmun>({
       method: "GET",
       path: "/api/hello/string-emun",
       headers: request.headers,
@@ -159,13 +159,13 @@ export class HelloClient extends BaseClient {
    */
   async helloWay(
     request: {
-      query?: Models.ReqHellowayQuery;
+      query?: Models.ReqHelloWayQuery;
       headers?: Record<string, string>;
     } = {},
     init: RequestInit = {},
     timeoutMs?: number,
-  ): Promise<Models.RspHelloway> {
-    return this.request<Models.RspHelloway>({
+  ): Promise<Models.RspHelloWay> {
+    return this.request<Models.RspHelloWay>({
       method: "GET",
       path: "/api/hello/hello-way",
       query: request.query as unknown as Record<string, unknown> | undefined,

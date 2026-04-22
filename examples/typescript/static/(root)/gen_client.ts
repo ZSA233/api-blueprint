@@ -23,8 +23,8 @@ export class StaticClient extends BaseClient {
     } = {},
     init: RequestInit = {},
     timeoutMs?: number,
-  ): Promise<Models.RspDocjson> {
-    return this.request<Models.RspDocjson>({
+  ): Promise<Models.RspDocJson> {
+    return this.request<Models.RspDocJson>({
       method: "GET",
       path: "/static/doc.json",
       headers: request.headers,

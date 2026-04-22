@@ -6,18 +6,18 @@
 // Route Contracts
 
 
+export type RspDocJson = RspDocJsonJson;
+
+export interface RspDocJsonJson {
+
+  [key: string]: never;
+}
+
+
 export type RspDochaha = RspDochahaJson;
 
 export interface RspDochahaJson {
   /** a */
   a?: string;
-}
-
-
-export type RspDocjson = RspDocjsonJson;
-
-export interface RspDocjsonJson {
-
-  [key: string]: never;
 }
 
