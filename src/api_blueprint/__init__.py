@@ -1,5 +1,4 @@
-
-__version__ = "0.0.1"
+from api_blueprint._version import __version__
 
 
 __all__ = (
