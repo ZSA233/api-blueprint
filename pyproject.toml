@@ -90,3 +90,6 @@ include = [
 [tool.pytest.ini_options]
 addopts = "-ra"
 testpaths = ["tests"]
+markers = [
+    "example_validation: integration validation that requires external Go/Node toolchains and is covered by the dedicated CI job",
+]

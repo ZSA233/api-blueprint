@@ -28,6 +28,9 @@ def ensure_filepath_open(
         yield None
         return
 
+    if encoding is None and "b" not in mode:
+        encoding = "utf-8"
+
     with open(path, mode, buffering, encoding, errors, newline, closefd, opener) as handle:
         yield handle
 

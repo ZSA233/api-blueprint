@@ -31,6 +31,13 @@ def test_makefile_exposes_example_validation_and_release_preflight_uses_it():
     assert "$(MAKE) example-validation" in preflight_block
 
 
+def test_ci_workflow_keeps_example_validation_as_a_separate_job():
+    text = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+
+    assert "example-validation:" in text
+    assert 'uv run pytest -q -m "not example_validation"' in text
+
+
 def _target_block(text: str, target: str) -> str:
     marker = f"{target}:"
     lines = text.splitlines()

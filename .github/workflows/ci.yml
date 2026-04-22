@@ -80,7 +80,7 @@ jobs:
         run: uv sync --dev
 
       - name: Run test suite
-        run: uv run pytest -q
+        run: uv run pytest -q -m "not example_validation"
 
       - name: Build package
         run: uv build --sdist --wheel

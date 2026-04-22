@@ -147,11 +147,18 @@ make example-refresh
 发版继续之前，至少要确认这些作业全部通过：
 
 - `release-contract`
+- `example-validation`
 - `python-tests (ubuntu-latest, 3.11)`
 - `python-tests (macos-latest, 3.11)`
 - `python-tests (windows-latest, 3.11)`
 
 其中 `python-tests (windows-latest, 3.11)` 最容易暴露路径、shell 和平台差异回归；如果它失败，不要继续发版。
+
+这里要注意当前 CI 的职责边界：
+
+- `example-validation` 是专门的 examples 重生成/快照/编译校验 job，会显式安装 Go、Node 和 TypeScript 工具链。
+- `python-tests` 会通过 `pytest -m "not example_validation"` 排除 `tests/integration/examples/` 里的专用外部工具链校验，避免在通用 Python matrix 中重复跑这类重型检查。
+- 因此判断 release ref 是否“CI 全绿”时，`example-validation` 必须和三个 `python-tests` matrix 一起看，不能只看 pytest matrix。
 
 CI 未通过时的固定处理原则：
 
