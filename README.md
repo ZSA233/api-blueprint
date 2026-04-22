@@ -22,6 +22,8 @@
 | Go | 可用 | `api-gen-golang` | `examples/golang` |
 | TypeScript | 预览 | `api-gen-typescript` | `examples/typescript` |
 
+当前不会对外暴露 Kotlin / Java / grpc 命令；这些目标只保留内部扩展位。
+
 ## 安装
 
 当前仓库只维护 GitHub 安装入口；稳定安装路径固定指向 `stable` 分支。
@@ -35,6 +37,7 @@ uv pip install "git+https://github.com/zsa233/api-blueprint@stable"
 - 在 `examples/blueprints/` 这类目录中定义 `Blueprint` 与路由 DSL。
 - 通过 `api-doc-server` 构建文档服务，复用 FastAPI 的 OpenAPI 输出。
 - 通过 `api-gen-golang` 与 `api-gen-typescript` 生成语言侧快照产物。
+- 通过 `uv run python scripts/example_validation.py` 执行 examples 的“重生成 -> 快照比对 -> TypeScript 编译 -> Go 测试”闭环。
 
 ## 配置文件
 
@@ -100,6 +103,7 @@ api-gen-typescript -c examples/api-blueprint.toml
 - `examples/blueprints/` 是蓝图真源。
 - `examples/golang/` 与 `examples/typescript/` 是生成快照，不应该手改业务内容。
 - `Blueprint(app=None)` 默认共享全局 `FastAPI` app；如果需要拆成多个独立文档应用，必须显式传入 `app`。
+- `scripts/example_validation.py` 会在临时目录重生成 examples，再执行 snapshot diff、`tsc --noEmit` 和 `go test ./...`。
 - `main.py` 与 `debug.py` 仅作为本地辅助脚本保留，不属于公共发布面。
 
 ## 开发
@@ -107,6 +111,7 @@ api-gen-typescript -c examples/api-blueprint.toml
 ```sh
 make sync
 make test
+uv run python scripts/example_validation.py
 make build
 ```
 

@@ -133,6 +133,7 @@ def validate_config(repo_root: Path) -> None:
         Path(".github/actions/release-bundle/action.yml"),
         Path("scripts/release_version.py"),
         Path("scripts/release_assets.py"),
+        Path("scripts/example_validation.py"),
     ]
     missing = [str(path) for path in required_paths if not (repo_root / path).exists()]
     if missing:

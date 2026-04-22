@@ -22,6 +22,8 @@ Its main workflow is:
 | Go | Available | `api-gen-golang` | `examples/golang` |
 | TypeScript | Preview | `api-gen-typescript` | `examples/typescript` |
 
+Kotlin / Java / grpc are not exposed as public commands yet; they are reserved as internal extension points only.
+
 ## Installation
 
 This repository currently maintains a GitHub-only install entrypoint; the stable install path is fixed to the `stable` branch.
@@ -35,6 +37,7 @@ uv pip install "git+https://github.com/zsa233/api-blueprint@stable"
 - Define `Blueprint` objects and route DSLs in directories such as `examples/blueprints/`.
 - Build the documentation service with `api-doc-server`, reusing FastAPI OpenAPI output.
 - Generate language-side snapshot artifacts with `api-gen-golang` and `api-gen-typescript`.
+- Run `uv run python scripts/example_validation.py` to regenerate examples, diff snapshots, compile TypeScript, and run Go tests in one loop.
 
 ## Configuration File
 
@@ -100,6 +103,7 @@ api-gen-typescript -c examples/api-blueprint.toml
 - `examples/blueprints/` is the blueprint source of truth.
 - `examples/golang/` and `examples/typescript/` are generated snapshots and should not be hand-edited for business logic.
 - `Blueprint(app=None)` shares the global `FastAPI` app by default; if you need separate documentation apps, you must pass `app` explicitly.
+- `scripts/example_validation.py` regenerates examples in a temporary workspace, then runs snapshot diffs, `tsc --noEmit`, and `go test ./...`.
 - `main.py` and `debug.py` are kept only as local helper scripts and are not part of the public release surface.
 
 ## Development
@@ -107,6 +111,7 @@ api-gen-typescript -c examples/api-blueprint.toml
 ```sh
 make sync
 make test
+uv run python scripts/example_validation.py
 make build
 ```
 
