@@ -38,31 +38,9 @@ jobs:
         with:
           python-version: "3.11"
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
       - uses: astral-sh/setup-uv@v8.1.0
 
-      - name: Install TypeScript toolchain
-        run: npm install --global typescript
-
-      - name: Install gRPC toolchains
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y protobuf-compiler
-          curl -fsSL -o /tmp/protoc-32.0-linux-x86_64.zip \
-            https://github.com/protocolbuffers/protobuf/releases/download/v32.0/protoc-32.0-linux-x86_64.zip
-          unzip -o /tmp/protoc-32.0-linux-x86_64.zip -d "$HOME/.local"
-          go install github.com/abice/go-enum@v0.9.2
-          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.10
-          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.0
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - uses: ./.github/actions/setup-example-toolchains
 
       - name: Sync Python environment
         run: uv sync --dev

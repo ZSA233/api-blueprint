@@ -31,16 +31,29 @@ def test_makefile_exposes_example_validation_and_release_preflight_uses_it():
     assert "$(MAKE) example-validation" in preflight_block
 
 
-def test_ci_workflow_keeps_example_validation_as_a_separate_job():
-    text = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+def test_ci_and_release_bundle_share_example_toolchain_setup():
+    ci_text = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    release_bundle_text = (
+        REPO_ROOT / ".github" / "actions" / "release-bundle" / "action.yml"
+    ).read_text(encoding="utf-8")
+    toolchain_text = (
+        REPO_ROOT / ".github" / "actions" / "setup-example-toolchains" / "action.yml"
+    ).read_text(encoding="utf-8")
 
-    assert "example-validation:" in text
-    assert "protobuf-compiler" in text
-    assert "github.com/abice/go-enum@v0.9.2" in text
-    assert "protoc-gen-go@v1.36.10" in text
-    assert "protoc-gen-go-grpc@v1.6.0" in text
-    assert "GITHUB_PATH" in text
-    assert 'uv run pytest -q -m "not example_validation"' in text
+    assert "example-validation:" in ci_text
+    assert "./.github/actions/setup-example-toolchains" in ci_text
+    assert "./.github/actions/setup-example-toolchains" in release_bundle_text
+    assert "actions/setup-go@v6" in toolchain_text
+    assert "actions/setup-node@v6" in toolchain_text
+    assert 'node-version: "24"' in toolchain_text
+    assert "examples/golang/go.sum" in toolchain_text
+    assert "examples/grpc/go/go.sum" in toolchain_text
+    assert "protobuf-compiler" in toolchain_text
+    assert "github.com/abice/go-enum@v0.9.2" in toolchain_text
+    assert "protoc-gen-go@v1.36.10" in toolchain_text
+    assert "protoc-gen-go-grpc@v1.6.0" in toolchain_text
+    assert "GITHUB_PATH" in toolchain_text
+    assert 'uv run pytest -q -m "not example_validation"' in ci_text
 
 
 def _target_block(text: str, target: str) -> str:
