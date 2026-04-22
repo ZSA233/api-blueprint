@@ -80,7 +80,6 @@
 - push tag 前必须确认当前 release ref 的 GitHub Actions `CI` 已经全绿。
 - stable `Release` workflow 的正式发布 job 必须绑定 GitHub `production` environment。
 - 如果仓库启用了 `production` environment 的 required reviewers，AI agent 必须等待人工审核通过后，才允许 workflow 继续执行正式发布。
-- 如果 stable 发布在进入审核前就被 GitHub 拒绝，并提示 tag 不允许部署到 `production`，优先检查 environment 的 branch/tag policy，不要先改 workflow。
 - stable 发布完成后，远端 `stable` 分支必须同步到对应 stable tag 的提交。
 - stable 发布完成后，`release/vX.Y.Z` 必须合并回 `main`，否则本次发布不算真正收束完成。
 

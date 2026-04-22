@@ -57,20 +57,6 @@
 
 如果中英 README 任一边存在漏段、漏表示例、漏限制说明，视为文档收束未完成，不允许进入 release-version / preflight / RC / stable。
 
-## 一次性准备
-
-首次启用 stable 自动发布前，先确认以下事项：
-
-1. GitHub 仓库中已经配置 `production` environment。
-   需要至少启用 `required reviewers`；如果希望更严格的人审闸门，建议同时打开 `Prevent self-review`。
-   由于 stable 发布是由 tag 触发的，如果 `production` 开启了 custom deployment branch policies，必须显式添加允许 stable tag 的规则，例如：
-   - `name = "v*"`
-   - `type = "tag"`
-2. `release-version.toml` 与 `src/api_blueprint/_version.py` 是唯一版本真源。
-   不要引入其他散落版本号。
-3. 稳定安装入口固定保持为 `git+https://github.com/zsa233/api-blueprint@stable`，不要把 README 的稳定安装示例切成某个具体 tag。
-4. 如果要使用 `gh` CLI 做 dry-run、run watch 或 release 检查，先确认 `gh auth status` 正常。
-
 ## 版本切换与本地校验
 
 版本切换统一通过 `scripts/release_version.py` 和 `Makefile` 完成，不手改版本文件。
@@ -186,23 +172,13 @@ stable `Release` workflow 的正式发布 job 绑定到 GitHub `production` envi
 
 如果仓库给 `production` 配置了 `required reviewers`，stable tag 推上去后，workflow 会在正式发布前停下来等待人工审核。
 
-没有配置 reviewer 时，workflow 仍然会引用 `production` environment，但不会自动形成真正的人审闸门。
-
-如果 workflow 在进入审核前直接失败，并出现类似：
-
-- `Tag "vX.Y.Z" is not allowed to deploy to production due to environment protection rules`
-
-先检查 `production` environment 的 branch/tag policy，而不是先改 workflow。
-如果该 environment 使用 custom deployment branch policies，应显式补一条 stable tag 规则，例如：
-
-- `name = "v*"`
-- `type = "tag"`
+是否真正形成审批停顿，取决于仓库 `production` environment 的一次性配置；这属于仓库初始化事实，不纳入每次发版的重复检查清单。
 
 stable 正式发布的远端顺序固定为：
 
 1. push stable tag
-2. `Release` workflow 完成构建并进入待审批状态
-3. 在 GitHub 上通过 `production` environment 审核
+2. `Release` workflow 启动正式发布；如果仓库已配置 reviewer，会在 `production` environment 停下来等待审批
+3. 如果进入审批，先在 GitHub 上完成 `production` environment 审核
 4. workflow 创建 GitHub Release
 5. workflow 同步远端 `stable` 分支
 
@@ -283,8 +259,8 @@ git push origin release/vX.Y.Z
 git push origin vX.Y.Z
 ```
 
-6. 确认 GitHub Actions `Release` workflow 已进入 `production` environment 审批。
-7. 由 reviewer 在 GitHub 上批准本次 `production` 部署。
+6. 如果仓库已配置 reviewer，确认 GitHub Actions `Release` workflow 停在 `production` environment 审批，并等待人工批准。
+7. 审批完成后，确认 workflow 继续执行正式发布。
 8. 确认 workflow 后续通过，并检查：
    - GitHub Release 已创建
    - 远端 `stable` 已同步到 `vX.Y.Z`
