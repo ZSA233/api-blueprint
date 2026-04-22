@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import shutil
@@ -13,6 +14,8 @@ import textwrap
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
+from urllib import error as urllib_error
+from urllib import request as urllib_request
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = PROJECT_ROOT / "src"
@@ -193,10 +196,72 @@ def install_check(repo_root: Path, dist_dir: Path, tag: str) -> None:
         _run([str(python_bin), "-c", smoke], cwd=repo_root)
 
 
+def _resolve_tag_commit(repo_root: Path, tag: str) -> str:
+    return subprocess.check_output(
+        ["git", "rev-list", "-n", "1", f"refs/tags/{tag}"],
+        cwd=repo_root,
+        text=True,
+    ).strip()
+
+
+def _github_api_request(method: str, path: str, token: str, payload: dict[str, object]) -> None:
+    data = json.dumps(payload).encode("utf-8")
+    request = urllib_request.Request(
+        f"https://api.github.com/{path}",
+        data=data,
+        method=method,
+        headers={
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+    )
+    with urllib_request.urlopen(request):
+        return
+
+
+def _sync_stable_ref_via_github_api(repo_root: Path, tag: str) -> bool:
+    repository = os.environ.get("GITHUB_REPOSITORY")
+    token = os.environ.get("GITHUB_TOKEN")
+    if not repository or not token:
+        return False
+
+    sha = _resolve_tag_commit(repo_root, tag)
+    try:
+        _github_api_request(
+            "PATCH",
+            f"repos/{repository}/git/refs/heads/stable",
+            token,
+            {"sha": sha, "force": True},
+        )
+    except urllib_error.HTTPError as exc:
+        if exc.code != 404:
+            details = exc.read().decode("utf-8", errors="replace")
+            raise ReleaseAssetsError(
+                f"failed to sync stable branch via GitHub API: {exc.code} {details}"
+            ) from exc
+        try:
+            _github_api_request(
+                "POST",
+                f"repos/{repository}/git/refs",
+                token,
+                {"ref": "refs/heads/stable", "sha": sha},
+            )
+        except urllib_error.HTTPError as create_exc:
+            details = create_exc.read().decode("utf-8", errors="replace")
+            raise ReleaseAssetsError(
+                f"failed to create stable branch via GitHub API: {create_exc.code} {details}"
+            ) from create_exc
+    return True
+
+
 def sync_stable_ref(repo_root: Path, tag: str) -> None:
     release = parse_release_tag(tag)
     if release.is_rc:
         raise ReleaseAssetsError("stable branch can only be synced from a stable tag")
+    if _sync_stable_ref_via_github_api(repo_root, tag):
+        return
     _run(
         ["git", "push", "origin", f"refs/tags/{tag}:refs/heads/stable", "--force"],
         cwd=repo_root,
