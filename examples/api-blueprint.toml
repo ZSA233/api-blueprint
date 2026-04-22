@@ -1,3 +1,4 @@
+# Blueprint docs / entrypoints example
 [blueprint]
 docs_server = '0.0.0.0:2332'
 docs_domain = ''
@@ -5,12 +6,34 @@ entrypoints = [
     'blueprints.app:*',
 ]
 
+# Blueprint -> Go snapshot example
 [golang]
 codegen_output = 'golang'
 upstream = 'http://localhost:2333'
 module = ''
 
+# Blueprint -> TypeScript snapshot example
 [typescript]
 codegen_output = 'typescript'
 upstream = 'http://localhost:2333'
 base_url = 'http://localhost:2333'
+
+# Existing proto tree -> gRPC snapshots example
+[grpc]
+proto_root = 'grpc/protos'
+include_paths = []
+
+[[grpc.jobs]]
+name = 'python.greeter'
+preset = 'python'
+output = 'grpc/python'
+protos = ['**/*.proto']
+
+[[grpc.jobs]]
+name = 'go.greeter'
+preset = 'go'
+output = 'grpc/go'
+protos = [
+    'commonpb/common.proto',
+    'greeterpb/greeter.proto',
+]

@@ -14,15 +14,17 @@ Its main workflow is:
 1. Describe `Blueprint`, routes, request/response models, and error structures in Python.
 2. Build a FastAPI application at runtime and expose OpenAPI documentation.
 3. Generate Go and TypeScript code snapshots from the same blueprint source.
+4. Compile existing `.proto` trees into gRPC outputs from named jobs declared in `api-blueprint.toml`.
 
 ## Supported Outputs
 
 | Target | Status | Command | Example Directory |
 |:---|:---:|:---|:---|
 | Go | Available | `api-gen-golang` | `examples/golang` |
+| gRPC | Available | `api-gen-grpc` | `examples/grpc/{go,python}` |
 | TypeScript | Preview | `api-gen-typescript` | `examples/typescript` |
 
-Kotlin / Java / grpc are not exposed as public commands yet; they are reserved as internal extension points only.
+Kotlin / Java are not exposed as public commands yet; they remain internal extension points only.
 
 ## Installation
 
@@ -35,9 +37,11 @@ uv pip install "git+https://github.com/zsa233/api-blueprint@stable"
 ## Core Workflow
 
 - Define `Blueprint` objects and route DSLs in directories such as `examples/blueprints/`.
+- Use `examples/grpc/` as the public proto and committed Go / Python gRPC snapshot example; its `[grpc]` settings share the same `examples/api-blueprint.toml` file as the Blueprint examples.
 - Build the documentation service with `api-doc-server`, reusing FastAPI OpenAPI output.
 - Generate language-side snapshot artifacts with `api-gen-golang` and `api-gen-typescript`.
-- During feature work, use `make example-compile-check` to regenerate examples and verify the TypeScript and Go outputs still compile.
+- Compile existing proto trees into Go / Python gRPC outputs with named jobs through `api-gen-grpc`.
+- During feature work, use `make example-compile-check` to regenerate the Blueprint and gRPC examples and verify their compile/import smoke checks still pass.
 - When the generator change is intentional, use `make example-refresh` to refresh the committed example snapshots.
 - When you need strict snapshot convergence, use `make example-validation`.
 
@@ -45,21 +49,40 @@ uv pip install "git+https://github.com/zsa233/api-blueprint@stable"
 
 ```toml
 [blueprint]
-docs_server = "0.0.0.0:2332"
-docs_domain = ""
+docs_server = '0.0.0.0:2332'
+docs_domain = ''
 entrypoints = [
-    "blueprints.app:*",
+    'blueprints.app:*',
 ]
 
 [golang]
-codegen_output = "golang"
-upstream = "http://localhost:2333"
-module = ""
+codegen_output = 'golang'
+upstream = 'http://localhost:2333'
+module = ''
 
 [typescript]
-codegen_output = "typescript"
-upstream = "http://localhost:2333"
-base_url = "http://localhost:2333"
+codegen_output = 'typescript'
+upstream = 'http://localhost:2333'
+base_url = 'http://localhost:2333'
+
+[grpc]
+proto_root = 'grpc/protos'
+include_paths = []
+
+[[grpc.jobs]]
+name = 'python.greeter'
+preset = 'python'
+output = 'grpc/python'
+protos = ['**/*.proto']
+
+[[grpc.jobs]]
+name = 'go.greeter'
+preset = 'go'
+output = 'grpc/go'
+protos = [
+    'commonpb/common.proto',
+    'greeterpb/greeter.proto',
+]
 ```
 
 ## Blueprint DSL Example
@@ -97,19 +120,26 @@ with apibp.group("/demo") as views:
 ```sh
 api-doc-server -c examples/api-blueprint.toml
 api-gen-golang -c examples/api-blueprint.toml
+api-gen-grpc -c examples/api-blueprint.toml --list-jobs
+api-gen-grpc -c examples/api-blueprint.toml --job go.* --job python.greeter
 api-gen-typescript -c examples/api-blueprint.toml
 ```
 
 ## Generated Artifacts And Repository Rules
 
 - `examples/blueprints/` is the blueprint source of truth.
-- `examples/golang/` and `examples/typescript/` are generated snapshots and should not be hand-edited for business logic.
+- `examples/golang/` and `examples/typescript/` are Blueprint snapshots and should not be hand-edited for business logic.
+- `examples/grpc/protos/` is the gRPC example source of truth, and `examples/grpc/go/` and `examples/grpc/python/` are the corresponding generated snapshots.
+- `api-gen-grpc` only orchestrates compilation for existing `.proto` trees; it does not derive gRPC proto/service definitions from the Blueprint DSL.
+- `api-gen-grpc` can run with only the `[grpc]` section and does not require `[blueprint]`, `[golang]`, or `[typescript]`.
+- Python gRPC jobs require `grpcio-tools`; Go gRPC jobs require `protoc`, `protoc-gen-go`, and `protoc-gen-go-grpc` on `PATH`; `grpcio-tools` is not a runtime dependency.
 - `Blueprint(app=None)` shares the global `FastAPI` app by default; if you need separate documentation apps, you must pass `app` explicitly.
 - Example snapshot drift means the current generator output differs from the committed snapshots; it is a change signal, not an automatic bug.
 - `make example-compile-check` allows drift and only checks whether regenerated outputs still compile.
 - `make example-refresh` accepts intentional changes and refreshes the committed example snapshots in place.
-- `make example-validation` wraps the strict mode of `scripts/example_validation.py`, regenerates examples in a temporary workspace, then runs snapshot diffs, `tsc --noEmit`, and `go test ./...`.
+- `make example-validation` wraps the strict mode of `scripts/example_validation.py`, regenerates the Blueprint and gRPC examples in a temporary workspace, then runs snapshot diffs, `tsc --noEmit`, `go test ./...`, and a Python gRPC import smoke check.
 - `make release-preflight` must include strict `make example-validation`, because by release time any intentional snapshot drift should already have been accepted and committed.
+- `examples/api-blueprint.toml` carries the public shared example config for both Blueprint and gRPC, and `examples/grpc/go/` plus `examples/grpc/python/` are part of the committed examples snapshot contract.
 - `main.py` and `debug.py` are kept only as local helper scripts and are not part of the public release surface.
 
 ## Development

@@ -3,18 +3,32 @@ from api_blueprint.config.models import (
     BlueprintConfig,
     CodegenConfig,
     Config,
+    GrpcConfig,
+    GrpcJobConfig,
     GolangConfig,
     TypeScriptConfig,
     UpstreamConfig,
 )
-from api_blueprint.config.resolved import ResolvedConfig, ResolvedTargetConfig, resolve_config, resolve_output_path
+from api_blueprint.config.resolved import (
+    ResolvedConfig,
+    ResolvedGrpcConfig,
+    ResolvedGrpcJobConfig,
+    ResolvedTargetConfig,
+    resolve_config,
+    resolve_output_path,
+    resolve_path_list,
+)
 
 __all__ = (
     "BlueprintConfig",
     "CodegenConfig",
     "Config",
+    "GrpcConfig",
+    "GrpcJobConfig",
     "GolangConfig",
     "ResolvedConfig",
+    "ResolvedGrpcConfig",
+    "ResolvedGrpcJobConfig",
     "ResolvedTargetConfig",
     "TypeScriptConfig",
     "UpstreamConfig",
@@ -23,4 +37,5 @@ __all__ = (
     "read_toml",
     "resolve_config",
     "resolve_output_path",
+    "resolve_path_list",
 )

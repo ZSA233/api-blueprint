@@ -226,12 +226,13 @@ def install_check(repo_root: Path, dist_dir: Path, tag: str) -> None:
             from click.testing import CliRunner
             import api_blueprint
             from api_blueprint.cli.apidoc import apidoc_server
-            from api_blueprint.cli.apigen import gen_golang, gen_typescript
+            from api_blueprint.cli.apigen import gen_golang, gen_grpc, gen_typescript
 
             assert api_blueprint.__version__
             expected_entrypoints = {
                 "api-doc-server": "api_blueprint.cli.apidoc:apidoc_server",
                 "api-gen-golang": "api_blueprint.cli.apigen:gen_golang",
+                "api-gen-grpc": "api_blueprint.cli.apigen:gen_grpc",
                 "api-gen-typescript": "api_blueprint.cli.apigen:gen_typescript",
             }
             entrypoints = {ep.name: ep.value for ep in metadata.entry_points(group="console_scripts")}
@@ -239,7 +240,7 @@ def install_check(repo_root: Path, dist_dir: Path, tag: str) -> None:
                 assert entrypoints.get(name) == value, (name, entrypoints.get(name))
 
             runner = CliRunner()
-            for cli in (apidoc_server, gen_golang, gen_typescript):
+            for cli in (apidoc_server, gen_golang, gen_grpc, gen_typescript):
                 result = runner.invoke(cli, ["--help"])
                 assert result.exit_code == 0, result.output
 

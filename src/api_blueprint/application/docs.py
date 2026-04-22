@@ -12,9 +12,13 @@ from api_blueprint.engine import Blueprint
 
 
 def run_docs_server(conf: Config, entrypoints: list[Blueprint]) -> None:
-    if (upstream := conf.golang.upstream) is not None:
+    upstream = conf.golang.upstream if conf.golang is not None else None
+    if upstream is not None:
         for entrypoint in entrypoints:
             entrypoint.set_upstream(upstream)
+
+    if conf.blueprint is None:
+        raise ValueError("[apidoc_server] 配置中未找到blueprint段落")
 
     docs_server = conf.blueprint.docs_server
     if not docs_server:

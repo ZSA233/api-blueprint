@@ -9,13 +9,13 @@
 
 - Preserve public Python DSL imports, CLI names/options, config keys, and generated output layout.
 - Keep `examples/blueprints/` as demo source and `examples/golang/`, `examples/typescript/` as generated snapshots.
-- Do not expose Kotlin/Java/grpc as public commands or config yet; reserve internal extension points only.
+- Do not expose Kotlin/Java as public commands or config yet; keep them as internal extension points only.
 - Treat current staged generated snapshots as replaceable intermediate state.
 
 ## Decisions
 
 - Public compatibility level: keep current public API and generated output shape.
-- Future targets: add internal generator target registry entries for `kotlin`, `java`, `grpc`, but only `golang` and `typescript` are implemented.
+- Future targets: keep internal generator target registry entries for `kotlin` and `java`; `grpc` is now implemented as a public config-driven proto compiler.
 - Example validation: regenerate into temp dirs, compare snapshots, then run Go and TypeScript compile checks.
 
 ## Phase Status
@@ -55,11 +55,12 @@
 - 2026-04-22: confirmed `uv run python scripts/release_assets.py validate-config` and `validate-docs` pass after CI/docs convergence updates.
 - 2026-04-22: added `make example-validation` target and confirmed `make release-preflight RELEASE_TAG=v0.0.3` now runs both `make test` and example regeneration validation successfully.
 - 2026-04-22: split example validation workflow into strict (`make example-validation`), compile-only (`make example-compile-check`), and snapshot refresh (`make example-refresh`) modes, while keeping release-preflight on strict mode.
+- 2026-04-22: exposed public `api-gen-grpc`, added gRPC config/selection/toolchain coverage, and confirmed `uv run pytest -q` passes with 40 tests.
 
 ## Risks
 
 - Repeated entrypoint loading can still accumulate unrelated user modules if external callers bypass `application.entrypoints.load_entrypoints`.
-- Future public generator targets (`kotlin`, `java`, `grpc`) should keep the current “internal placeholder only” rule until their validation and packaging paths are implemented.
+- Future public generator targets (`kotlin`, `java`) should keep the current “internal placeholder only” rule until their validation and packaging paths are implemented.
 
 ## Execution Notes
 
