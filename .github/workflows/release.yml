@@ -75,8 +75,8 @@ jobs:
         with:
           generate_release_notes: true
           files: |
-            release-bundle/dist/*.tar.gz
-            release-bundle/dist/*.whl
+            release-bundle/*.tar.gz
+            release-bundle/*.whl
           fail_on_unmatched_files: true
 
   sync_stable:
