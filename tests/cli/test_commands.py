@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from api_blueprint.application.project import build_entrypoints
@@ -40,6 +41,54 @@ codegen_output = "golang"
     result = CliRunner().invoke(gen_typescript, ["-c", str(config)])
     assert result.exit_code != 0
     assert isinstance(result.exception, ValueError)
+
+
+@pytest.mark.parametrize(
+    ("typescript_block", "expected_line"),
+    [
+        ('base_url = "http://localhost:2333"', 'super(config, "http://localhost:2333");'),
+        ('base_url_expr = "import.meta.env.VITE_API_BASE_URL"', "super(config, import.meta.env.VITE_API_BASE_URL);"),
+    ],
+)
+def test_gen_typescript_renders_configured_base_url(tmp_path, typescript_block: str, expected_line: str):
+    config = tmp_path / "api-blueprint.toml"
+    output_dir = tmp_path / "typescript"
+    output_dir.mkdir()
+    config.write_text(
+        f"""
+[blueprint]
+entrypoints = ["blueprints.app:bp"]
+
+[typescript]
+codegen_output = "{output_dir.name}"
+{typescript_block}
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    pkg = tmp_path / "blueprints"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text("", encoding="utf-8")
+    (pkg / "app.py").write_text(
+        """
+from api_blueprint.engine import Blueprint
+
+bp = Blueprint(root="/api")
+
+with bp.group("/demo") as views:
+    views.GET("/ping").RSP()
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(gen_typescript, ["-c", str(config)])
+
+    assert result.exit_code == 0
+    client_path = output_dir / "api" / "demo" / "gen_client.ts"
+    assert client_path.is_file()
+    assert expected_line in client_path.read_text(encoding="utf-8")
 
 
 def test_gen_golang_requires_blueprint_config(tmp_path):

@@ -14,6 +14,7 @@ class ResolvedTargetConfig:
     upstream: str | None = None
     module: str | None = None
     base_url: str | None = None
+    base_url_expr: str | None = None
 
 
 @dataclass(frozen=True)
@@ -21,8 +22,11 @@ class ResolvedGrpcJobConfig:
     name: str
     preset: Literal["go", "python"]
     output: Path
+    proto_root: Path
     protos: tuple[str, ...]
     include_paths: tuple[Path, ...]
+    layout: Literal["source_relative", "go_package"]
+    module: str | None = None
 
 
 @dataclass(frozen=True)
@@ -88,6 +92,7 @@ def resolve_config(path: str | Path | None) -> ResolvedConfig:
             output=resolve_output_path(normalized, tsconf.codegen_output or "typescript"),
             upstream=tsconf.upstream,
             base_url=tsconf.base_url,
+            base_url_expr=tsconf.base_url_expr,
         ),
         grpc=None
         if grpcconf is None
@@ -100,8 +105,13 @@ def resolve_config(path: str | Path | None) -> ResolvedConfig:
                     name=job.name,
                     preset=job.preset,
                     output=resolve_output_path(normalized, job.output) or normalized.parent.resolve(),
+                    proto_root=resolve_output_path(normalized, job.proto_root)
+                    or resolve_output_path(normalized, grpcconf.proto_root)
+                    or normalized.parent.resolve(),
                     protos=tuple(job.protos),
                     include_paths=resolve_path_list(normalized, job.include_paths),
+                    layout=job.layout,
+                    module=job.module,
                 )
                 for job in grpcconf.jobs
             ),

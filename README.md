@@ -63,7 +63,10 @@ module = ''
 [typescript]
 codegen_output = 'typescript'
 upstream = 'http://localhost:2333'
+# literal URL fallback
 base_url = 'http://localhost:2333'
+# raw runtime expression, mutually exclusive with base_url
+# base_url_expr = 'import.meta.env.VITE_API_BASE_URL'
 
 [grpc]
 proto_root = 'grpc/protos'
@@ -73,12 +76,17 @@ include_paths = []
 name = 'python.greeter'
 preset = 'python'
 output = 'grpc/python'
+# optional: override the per-job proto discovery / execution root
+# proto_root = 'grpc/protos/services/exampledomain/api'
 protos = ['**/*.proto']
 
 [[grpc.jobs]]
 name = 'go.greeter'
 preset = 'go'
 output = 'grpc/go'
+# optional: write Go outputs by go_package instead of source-relative paths
+# layout = 'go_package'
+# module = 'examplemod'
 protos = [
     'commonpb/common.proto',
     'greeterpb/greeter.proto',
@@ -132,7 +140,13 @@ api-gen-typescript -c examples/api-blueprint.toml
 - `examples/grpc/protos/` 是 gRPC 示例真源，`examples/grpc/go/` 与 `examples/grpc/python/` 是对应的生成快照。
 - `api-gen-grpc` 只负责编排已有 `.proto` 树的编译，不会从 Blueprint DSL 反推出 gRPC proto/service。
 - `api-gen-grpc` 可以只依赖 `[grpc]` 段落，不要求 `[blueprint]`、`[golang]` 或 `[typescript]` 同时存在。
+- `[typescript]` 支持字面量 `base_url` 和原样 TypeScript 表达式 `base_url_expr`；两者互斥，解析优先级固定为 `base_url_expr -> base_url -> upstream -> ""`。
+- `[[grpc.jobs]].proto_root` 默认继承 `[grpc].proto_root`；它会覆盖该 job 的 proto 展开根目录、`protoc` 工作根目录和 source-relative 输出相对路径。
 - Python gRPC job 需要额外安装 `grpcio-tools`；Go gRPC job 需要 `protoc`、`protoc-gen-go` 与 `protoc-gen-go-grpc` 在 `PATH` 中可用；`grpcio-tools` 不属于运行时依赖。
+- Go gRPC job 默认使用 `layout = "source_relative"`；如需按 `go_package` 直接落盘，可设置 `layout = "go_package"`，并按模块根目录传入你自己的 `module` 值，例如 `module = "examplemod"`。
+- 当 Go gRPC job 设置 `module` 时，`output` 必须指向 Go 模块根目录，而不是叶子 `pb/...` 目录。
+- Python gRPC job 不支持 `layout = "go_package"` 或 `module`。
+- `[[grpc.jobs]].proto_root` 是 job 级生成根目录覆盖，不是 Python `module` 或 path remap 功能。
 - `Blueprint(app=None)` 默认共享全局 `FastAPI` app；如果需要拆成多个独立文档应用，必须显式传入 `app`。
 - example snapshot drift 表示“当前生成器输出和已提交快照不一致”，它是变更信号，不自动等于 bug。
 - `make example-compile-check` 允许 drift，只检查重生成结果是否仍可编译。

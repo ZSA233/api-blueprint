@@ -32,10 +32,8 @@ class GrpcToolchain:
         return [
             "protoc",
             *self._include_args(job),
-            f"--go_out={job.output}",
-            "--go_opt=paths=source_relative",
-            f"--go-grpc_out={job.output}",
-            "--go-grpc_opt=paths=source_relative",
+            *self._go_plugin_args("go", job),
+            *self._go_plugin_args("go-grpc", job),
             *self._proto_args(job),
         ]
 
@@ -87,6 +85,19 @@ class GrpcToolchain:
             f"-I{job.proto_root}",
             *(f"-I{path}" for path in job.include_paths),
         ]
+
+    def _go_plugin_args(self, plugin: str, job: GrpcGenerationJob) -> list[str]:
+        args = [f"--{plugin}_out={job.output}", f"--{plugin}_opt=paths={self._go_paths_mode(job)}"]
+        if job.layout == "go_package" and job.module is not None:
+            args.append(f"--{plugin}_opt=module={job.module}")
+        return args
+
+    def _go_paths_mode(self, job: GrpcGenerationJob) -> str:
+        if job.layout == "source_relative":
+            return "source_relative"
+        if job.layout == "go_package":
+            return "import"
+        raise ValueError(f"[gen_grpc] 不支持的gRPC Go layout: {job.layout}")
 
     def _proto_args(self, job: GrpcGenerationJob) -> list[str]:
         return [path.as_posix() for path in job.proto_files]

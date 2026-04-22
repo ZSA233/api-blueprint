@@ -8,7 +8,7 @@ import { BaseClient, ApiClientConfig } from "../shared/client";
 
 export class {{ client_class }} extends BaseClient {
   constructor(config: ApiClientConfig = {}) {
-    super(config, {{ (writer.base_url or '') | tojson }});
+    super(config, {{ writer.rendered_base_url }});
   }
 
 {% for route in routes %}

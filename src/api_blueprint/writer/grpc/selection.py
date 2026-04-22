@@ -27,10 +27,9 @@ def select_jobs(
 def expand_job(
     job: ResolvedGrpcJobConfig,
     *,
-    proto_root: Path,
     global_include_paths: Sequence[Path] = (),
 ) -> GrpcGenerationJob:
-    proto_root = proto_root.resolve()
+    proto_root = job.proto_root.resolve()
     include_paths = _merge_include_paths(global_include_paths, job.include_paths)
     proto_files = _expand_patterns(proto_root, job.name, job.protos)
     return GrpcGenerationJob(
@@ -41,6 +40,8 @@ def expand_job(
         include_paths=include_paths,
         proto_patterns=job.protos,
         proto_files=proto_files,
+        layout=job.layout,
+        module=job.module,
     )
 
 

@@ -1,6 +1,6 @@
 from api_blueprint.writer.core.registry import GeneratorTargetSpec, register_target
 
-from .models import GrpcGenerationJob, GrpcPreset
+from .models import GrpcGenerationJob, GrpcLayout, GrpcPreset
 from .selection import expand_job, select_jobs
 from .toolchain import GrpcToolchain
 from .writer import GrpcWriter
@@ -16,6 +16,7 @@ register_target(
 
 __all__ = (
     "GrpcGenerationJob",
+    "GrpcLayout",
     "GrpcPreset",
     "GrpcToolchain",
     "GrpcWriter",

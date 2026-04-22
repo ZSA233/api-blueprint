@@ -63,7 +63,10 @@ module = ''
 [typescript]
 codegen_output = 'typescript'
 upstream = 'http://localhost:2333'
+# literal URL fallback
 base_url = 'http://localhost:2333'
+# raw runtime expression, mutually exclusive with base_url
+# base_url_expr = 'import.meta.env.VITE_API_BASE_URL'
 
 [grpc]
 proto_root = 'grpc/protos'
@@ -73,12 +76,17 @@ include_paths = []
 name = 'python.greeter'
 preset = 'python'
 output = 'grpc/python'
+# optional: override the per-job proto discovery / execution root
+# proto_root = 'grpc/protos/services/exampledomain/api'
 protos = ['**/*.proto']
 
 [[grpc.jobs]]
 name = 'go.greeter'
 preset = 'go'
 output = 'grpc/go'
+# optional: write Go outputs by go_package instead of source-relative paths
+# layout = 'go_package'
+# module = 'examplemod'
 protos = [
     'commonpb/common.proto',
     'greeterpb/greeter.proto',
@@ -132,7 +140,13 @@ api-gen-typescript -c examples/api-blueprint.toml
 - `examples/grpc/protos/` is the gRPC example source of truth, and `examples/grpc/go/` and `examples/grpc/python/` are the corresponding generated snapshots.
 - `api-gen-grpc` only orchestrates compilation for existing `.proto` trees; it does not derive gRPC proto/service definitions from the Blueprint DSL.
 - `api-gen-grpc` can run with only the `[grpc]` section and does not require `[blueprint]`, `[golang]`, or `[typescript]`.
+- `[typescript]` supports both literal `base_url` values and raw TypeScript `base_url_expr` expressions; they are mutually exclusive, and resolution order is fixed as `base_url_expr -> base_url -> upstream -> ""`.
+- `[[grpc.jobs]].proto_root` inherits `[grpc].proto_root` by default; it overrides proto expansion, the `protoc` working root, and the source-relative output base for that specific job.
 - Python gRPC jobs require `grpcio-tools`; Go gRPC jobs require `protoc`, `protoc-gen-go`, and `protoc-gen-go-grpc` on `PATH`; `grpcio-tools` is not a runtime dependency.
+- Go gRPC jobs default to `layout = "source_relative"`; when you need direct `go_package`-based output, set `layout = "go_package"` and pass your own module name at the module root, for example `module = "examplemod"`.
+- When a Go gRPC job sets `module`, `output` must point at the Go module root, not a leaf `pb/...` directory.
+- Python gRPC jobs do not support `layout = "go_package"` or `module`.
+- `[[grpc.jobs]].proto_root` is a per-job generation-root override, not a Python `module` or path-remap feature.
 - `Blueprint(app=None)` shares the global `FastAPI` app by default; if you need separate documentation apps, you must pass `app` explicitly.
 - Example snapshot drift means the current generator output differs from the committed snapshots; it is a change signal, not an automatic bug.
 - `make example-compile-check` allows drift and only checks whether regenerated outputs still compile.

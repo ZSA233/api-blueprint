@@ -26,7 +26,7 @@ class GrpcWriter:
     def plan_jobs(self, patterns: Sequence[str] = ()) -> tuple[GrpcGenerationJob, ...]:
         jobs = self.list_jobs(patterns)
         return tuple(
-            expand_job(job, proto_root=self.config.proto_root, global_include_paths=self.config.include_paths)
+            expand_job(job, global_include_paths=self.config.include_paths)
             for job in jobs
         )
 

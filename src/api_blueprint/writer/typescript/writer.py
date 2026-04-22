@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from contextlib import contextmanager
 from pathlib import Path
@@ -17,9 +18,17 @@ logger.setLevel(logging.INFO)
 
 
 class TypeScriptWriter(BaseWriter[TypeScriptBlueprint]):
-    def __init__(self, working_dir: Union[str, Path] = ".", *, base_url: str | None = None):
+    def __init__(
+        self,
+        working_dir: Union[str, Path] = ".",
+        *,
+        base_url: str | None = None,
+        base_url_expr: str | None = None,
+    ):
         super().__init__(working_dir)
         self.base_url = base_url or ""
+        self.base_url_expr = base_url_expr
+        self.rendered_base_url = base_url_expr if base_url_expr is not None else json.dumps(self.base_url)
         self._written_files: Set[str] = set()
 
     def gen(self) -> None:

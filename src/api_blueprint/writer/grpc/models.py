@@ -6,6 +6,7 @@ from typing import Literal
 
 
 GrpcPreset = Literal["go", "python"]
+GrpcLayout = Literal["source_relative", "go_package"]
 
 
 @dataclass(frozen=True)
@@ -17,3 +18,5 @@ class GrpcGenerationJob:
     include_paths: tuple[Path, ...]
     proto_patterns: tuple[str, ...]
     proto_files: tuple[Path, ...]
+    layout: GrpcLayout
+    module: str | None = None
