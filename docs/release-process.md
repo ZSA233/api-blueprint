@@ -63,6 +63,10 @@
 
 1. GitHub 仓库中已经配置 `production` environment。
    需要至少启用 `required reviewers`；如果希望更严格的人审闸门，建议同时打开 `Prevent self-review`。
+   由于 stable 发布是由 tag 触发的，`production` 不应再配置会拦截 tag 的自定义 branch policy。
+   对本仓库最稳妥的配置是：
+   - `protected_branches = false`
+   - `custom_branch_policies = false`
 2. `release-version.toml` 与 `src/api_blueprint/_version.py` 是唯一版本真源。
    不要引入其他散落版本号。
 3. 稳定安装入口固定保持为 `git+https://github.com/zsa233/api-blueprint@stable`，不要把 README 的稳定安装示例切成某个具体 tag。
@@ -184,6 +188,16 @@ stable `Release` workflow 的正式发布 job 绑定到 GitHub `production` envi
 如果仓库给 `production` 配置了 `required reviewers`，stable tag 推上去后，workflow 会在正式发布前停下来等待人工审核。
 
 没有配置 reviewer 时，workflow 仍然会引用 `production` environment，但不会自动形成真正的人审闸门。
+
+如果 workflow 在进入审核前直接失败，并出现类似：
+
+- `Tag "vX.Y.Z" is not allowed to deploy to production due to environment protection rules`
+
+先检查 `production` environment 的 branch policy，而不是先改 workflow。
+对当前仓库的 tag-triggered stable 发布，最稳妥的环境配置仍然是：
+
+- `protected_branches = false`
+- `custom_branch_policies = false`
 
 stable 正式发布的远端顺序固定为：
 
