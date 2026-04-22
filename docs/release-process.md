@@ -99,11 +99,35 @@ make release-local RELEASE_TAG=vX.Y.Z[-rc.N]
 make release-install-check RELEASE_TAG=vX.Y.Z[-rc.N]
 ```
 
+如果只想单独执行 examples 重生成校验，可直接运行：
+
+```sh
+make example-validation
+```
+
+如果当前处于功能开发期，预计 generator 会产生新快照，而你只想先确认生成结果仍可编译，可运行：
+
+```sh
+make example-compile-check
+```
+
+如果确认这些 snapshots 变化就是本次功能的一部分，需要正式接受并刷新仓库中的快照，可运行：
+
+```sh
+make example-refresh
+```
+
 它们分别负责：
 
-- `release-preflight`：版本同步、release contract、README 镜像与测试校验
+- `release-preflight`：版本同步、release contract、README 镜像、`make test` 与 `make example-validation`
 - `release-local`：构建 sdist / wheel
 - `release-install-check`：验证 wheel 资源、安装 smoke 与 CLI `--help`
+
+这里需要明确区分：
+
+- `example-validation` 把 snapshot drift 视为仓库尚未收敛，因此适合小改动回归检查、CI 和 release gate。
+- `example-compile-check` 不要求 snapshots 不变，只要求新生成结果仍然可编译。
+- `example-refresh` 用于接受预期变化；执行后应 review diff、提交 snapshots，再重新跑 `example-validation` 或 `release-preflight`。
 
 ## 远端 CI 校验
 
@@ -123,11 +147,18 @@ make release-install-check RELEASE_TAG=vX.Y.Z[-rc.N]
 发版继续之前，至少要确认这些作业全部通过：
 
 - `release-contract`
+- `example-validation`
 - `python-tests (ubuntu-latest, 3.11)`
 - `python-tests (macos-latest, 3.11)`
 - `python-tests (windows-latest, 3.11)`
 
 其中 `python-tests (windows-latest, 3.11)` 最容易暴露路径、shell 和平台差异回归；如果它失败，不要继续发版。
+
+这里要注意当前 CI 的职责边界：
+
+- `example-validation` 是专门的 examples 重生成/快照/编译校验 job，会显式安装 Go、Node 和 TypeScript 工具链。
+- `python-tests` 会通过 `pytest -m "not example_validation"` 排除 `tests/integration/examples/` 里的专用外部工具链校验，避免在通用 Python matrix 中重复跑这类重型检查。
+- 因此判断 release ref 是否“CI 全绿”时，`example-validation` 必须和三个 `python-tests` matrix 一起看，不能只看 pytest matrix。
 
 CI 未通过时的固定处理原则：
 

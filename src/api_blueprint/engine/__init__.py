@@ -1,125 +1,41 @@
-
-from api_blueprint.engine.group import RouterGroup
-from api_blueprint.engine.router import Router
-from api_blueprint.engine.provider import Provider
-from typing import (
-    List, Generator, Tuple, Final, Union, Type,
-    Dict, Optional, DefaultDict, Callable,
+from api_blueprint.engine.blueprint import Blueprint, ConflictFieldError, Router, RouterGroup
+from api_blueprint.engine.runtime import (
+    Auth,
+    GeneralWrapper,
+    Handle,
+    NoneWrapper,
+    Provider,
+    ProviderName,
+    Req,
+    ResponseWrapper,
+    Rsp,
+    WsHandle,
+    build_default_app,
+    get_shared_app,
+    reset_shared_app,
 )
-from api_blueprint.engine.model import Model, Error, unwrap_errors, HeaderModel
-from api_blueprint.engine.wrapper import ResponseWrapper, NoneWrapper
-from fastapi.staticfiles import StaticFiles
-from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
-from fastapi import FastAPI
-from pathlib import Path
-from enum import Enum
+from api_blueprint.engine.schema import Error, HeaderModel, Model, unwrap_errors
 
-
-__GLOBAL_APP__: FastAPI = None
-
-
-class Blueprint:
-    root: str
-    tags: List[str]
-    pending_groups: List[RouterGroup]
-
-    root_group: RouterGroup
-    providers: List['Provider']
-    errors: DefaultDict[int, List['Error']]
-    response_wrapper: Type[ResponseWrapper] = ResponseWrapper
-    headers: Optional[Union[HeaderModel, Type[HeaderModel]]] = None
-    app: FastAPI
-
-    is_built: bool = False
-    upstream: Optional[str] = None
-
-    def __init__(
-        self, 
-        root: str = '', 
-        tags: List[str] = None, 
-        providers: Optional[List['Provider']] = None,
-        errors: Optional[List[Union[Model, Error]]] = None,
-        response_wrapper: ResponseWrapper = NoneWrapper,
-        headers: Optional[Union[HeaderModel, Type[HeaderModel]]] = None,
-        app: FastAPI = None,
-    ):
-        global __GLOBAL_APP__
-
-        self.root = root
-        self.tags = tags or []
-        self.root_group = RouterGroup(self, '')
-        self.pending_groups = [self.root_group]
-        self.providers = providers or []
-        self.errors = unwrap_errors(errors or [])
-        self.response_wrapper = response_wrapper
-        self.headers = headers
-
-        if app is None:
-            if __GLOBAL_APP__ is None:
-                __GLOBAL_APP__ = _build_default_app(root.strip('/'))
-                
-            app = __GLOBAL_APP__
-
-        self.app = app
-
-        for method in ['POST', 'GET', 'PUT', 'DELETE', 'WS']:
-            fn = getattr(self.root_group, method)
-            setattr(self, method, fn)
-
-    def __str__(self):
-        return f'<Blueprint {self.root} groups[{len(self.pending_groups)}]>'
-
-    def iter_router(self) -> Generator[Tuple[RouterGroup, Router], None, None]:
-        for group in self.pending_groups:
-            for router in group:
-                yield (group, router)
-
-    def group(self, prefix: str, **kwargs):
-        group = RouterGroup(self, prefix, **kwargs)
-        self.pending_groups.append(group)
-        return group
-
-    def POST(self, path: str = '', *, summary: str = None, desc: str = None) -> Router: ...
-    def GET(self, path: str = '', *, summary: str = None, desc: str = None) -> Router: ...
-    def PUT(self, path: str = '', *, summary: str = None, desc: str = None) -> Router: ...
-    def DELETE(self, path: str = '', *, summary: str = None, desc: str = None) -> Router: ...
-    def WS(self, path: str = '', *, summary: str = None, desc: str = None) -> Router: ...
-
-    def build(self):
-        if self.is_built:
-            return
-        self.is_built = True
-        for group in self.pending_groups:
-            group.build(self.app)
-
-    def set_upstream(self, upstream: str):
-        self.upstream = upstream
-
-
-def _build_default_app(title: str) -> FastAPI:
-    app = FastAPI(
-        title=title, 
-        docs_url=None, 
-        redoc_url=None,
-    )
-    HERE = Path(__file__).resolve().parent
-    app.mount("/static", StaticFiles(directory=HERE.parent / "static"), name="static")
-
-    @app.get("/redoc", include_in_schema=False)
-    def redoc():
-        return get_redoc_html(
-            openapi_url=app.openapi_url,
-            title="API Docs",
-            redoc_js_url="/static/redoc.standalone.js",
-        )
-    
-    @app.get("/docs", include_in_schema=False)
-    def docs():
-        return get_swagger_ui_html(
-            openapi_url=app.openapi_url,
-            title="API Docs",
-            swagger_js_url="/static/swagger-ui-bundle.js",
-            swagger_css_url="/static/swagger-ui.css"
-        )
-
-    return app
+__all__ = (
+    "Auth",
+    "Blueprint",
+    "ConflictFieldError",
+    "Error",
+    "GeneralWrapper",
+    "Handle",
+    "HeaderModel",
+    "Model",
+    "NoneWrapper",
+    "Provider",
+    "ProviderName",
+    "Req",
+    "ResponseWrapper",
+    "Router",
+    "RouterGroup",
+    "Rsp",
+    "WsHandle",
+    "build_default_app",
+    "get_shared_app",
+    "reset_shared_app",
+    "unwrap_errors",
+)

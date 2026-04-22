@@ -22,6 +22,8 @@
 | Go | 可用 | `api-gen-golang` | `examples/golang` |
 | TypeScript | 预览 | `api-gen-typescript` | `examples/typescript` |
 
+当前不会对外暴露 Kotlin / Java / grpc 命令；这些目标只保留内部扩展位。
+
 ## 安装
 
 当前仓库只维护 GitHub 安装入口；稳定安装路径固定指向 `stable` 分支。
@@ -35,6 +37,9 @@ uv pip install "git+https://github.com/zsa233/api-blueprint@stable"
 - 在 `examples/blueprints/` 这类目录中定义 `Blueprint` 与路由 DSL。
 - 通过 `api-doc-server` 构建文档服务，复用 FastAPI 的 OpenAPI 输出。
 - 通过 `api-gen-golang` 与 `api-gen-typescript` 生成语言侧快照产物。
+- 功能开发期可通过 `make example-compile-check` 做“重生成 -> TypeScript 编译 -> Go 测试”校验。
+- 需要接受预期生成变更时使用 `make example-refresh` 刷新 examples snapshots。
+- 需要严格确认 snapshots 已收敛时使用 `make example-validation`。
 
 ## 配置文件
 
@@ -100,6 +105,11 @@ api-gen-typescript -c examples/api-blueprint.toml
 - `examples/blueprints/` 是蓝图真源。
 - `examples/golang/` 与 `examples/typescript/` 是生成快照，不应该手改业务内容。
 - `Blueprint(app=None)` 默认共享全局 `FastAPI` app；如果需要拆成多个独立文档应用，必须显式传入 `app`。
+- example snapshot drift 表示“当前生成器输出和已提交快照不一致”，它是变更信号，不自动等于 bug。
+- `make example-compile-check` 允许 drift，只检查重生成结果是否仍可编译。
+- `make example-refresh` 会接受预期变化，直接刷新仓库中的 examples snapshots。
+- `make example-validation` 会包装 `scripts/example_validation.py` 的严格模式，在临时目录重生成 examples，再执行 snapshot diff、`tsc --noEmit` 和 `go test ./...`。
+- `make release-preflight` 必须包含严格的 `make example-validation`，因为到发版前，预期的 snapshot 变化应已经被接受并提交。
 - `main.py` 与 `debug.py` 仅作为本地辅助脚本保留，不属于公共发布面。
 
 ## 开发
@@ -107,6 +117,9 @@ api-gen-typescript -c examples/api-blueprint.toml
 ```sh
 make sync
 make test
+make example-compile-check
+make example-refresh
+make example-validation
 make build
 ```
 
@@ -114,6 +127,8 @@ make build
 
 - 文档收束顺序固定为 `PRE_README.MD -> README.md -> README_EN.md`。
 - 版本真源固定为 `release-version.toml` 与 `src/api_blueprint/_version.py`。
+- `make release-preflight` 会同时执行 release contract、`make test` 与 `make example-validation`。
+- 如果 release 前发现 example drift 是预期变化，应先执行 `make example-refresh` 并提交结果，再重新运行 `make release-preflight`。
 - stable 正式发布 workflow 绑定 GitHub `production` environment；若仓库给它配置了 required reviewers，则发布前需要人工审核。
 - 详细发布规范见 [`docs/release-process.md`](docs/release-process.md)。
 

@@ -1,22 +1,14 @@
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SRC_ROOT = REPO_ROOT / "src"
-EXAMPLES_DIR = REPO_ROOT / "examples"
-EXAMPLE_CONFIG = EXAMPLES_DIR / "api-blueprint.toml"
-
-for path in (REPO_ROOT, SRC_ROOT):
-    if str(path) not in sys.path:
-        sys.path.insert(0, str(path))
+from tests.support.paths import EXAMPLE_CONFIG, EXAMPLES_DIR
 
 
 def reset_example_modules() -> None:
-    import api_blueprint.engine as engine
+    from api_blueprint.engine import reset_shared_app
 
-    engine.__GLOBAL_APP__ = None
+    reset_shared_app()
     for name in list(sys.modules):
         if name == "blueprints" or name.startswith("blueprints."):
             sys.modules.pop(name)
