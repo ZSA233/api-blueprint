@@ -25,6 +25,8 @@ class GrpcGenerationJob:
     module: str | None = None
     module_root: Path | None = None
     expected_go_package_prefix: str | None = None
+    python_package_root: str | None = None
+    python_package_root_path: Path | None = None
 
     @property
     def preset(self) -> GrpcPreset:
@@ -45,3 +47,9 @@ class GrpcGenerationJob:
     @property
     def effective_plugin_out(self) -> Path:
         return self.plugin_out or self.out_dir
+
+    def python_output_path(self, proto_file: Path) -> Path:
+        base_dir = self.out_dir
+        if self.python_package_root_path is not None:
+            base_dir = base_dir / self.python_package_root_path
+        return base_dir / proto_file.parent / f"{proto_file.stem}_pb2.py"

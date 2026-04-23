@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from api_blueprint.config.grpc_python_package import validate_python_package_root
+
 
 GrpcLayout = Literal["source_relative", "go_package"]
 
@@ -65,6 +67,16 @@ class GrpcTargetConfig(BaseModel):
     files: list[str]
     source_root: str | None = None
     import_roots: list[str] = Field(default_factory=list)
+    python_package_root: str | None = None
+
+    @model_validator(mode="after")
+    def validate_python_package_root(self) -> "GrpcTargetConfig":
+        if self.python_package_root is None:
+            return self
+        if self.lang != "python":
+            raise ValueError("grpc python_package_root is only supported for python targets")
+        validate_python_package_root(self.python_package_root)
+        return self
 
 
 class GrpcConfig(BaseModel):

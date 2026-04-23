@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-from commonpb import common_pb2 as commonpb_dot_common__pb2
+from examplegrpc_pb.commonpb import common_pb2 as examplegrpc__pb_dot_commonpb_dot_common__pb2
 
 GRPC_GENERATED_VERSION = '1.80.0'
 GRPC_VERSION = grpc.__version__
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + ' but the generated code in greeterpb/greeter_pb2_grpc.py depends on'
+        + ' but the generated code in examplegrpc_pb/greeterpb/greeter_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -36,8 +36,8 @@ class GreeterStub(object):
         """
         self.SayHello = channel.unary_unary(
                 '/examples.grpc.greeter.v1.Greeter/SayHello',
-                request_serializer=commonpb_dot_common__pb2.HelloRequest.SerializeToString,
-                response_deserializer=commonpb_dot_common__pb2.HelloReply.FromString,
+                request_serializer=examplegrpc__pb_dot_commonpb_dot_common__pb2.HelloRequest.SerializeToString,
+                response_deserializer=examplegrpc__pb_dot_commonpb_dot_common__pb2.HelloReply.FromString,
                 _registered_method=True)
 
 
@@ -55,8 +55,8 @@ def add_GreeterServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'SayHello': grpc.unary_unary_rpc_method_handler(
                     servicer.SayHello,
-                    request_deserializer=commonpb_dot_common__pb2.HelloRequest.FromString,
-                    response_serializer=commonpb_dot_common__pb2.HelloReply.SerializeToString,
+                    request_deserializer=examplegrpc__pb_dot_commonpb_dot_common__pb2.HelloRequest.FromString,
+                    response_serializer=examplegrpc__pb_dot_commonpb_dot_common__pb2.HelloReply.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -84,8 +84,8 @@ class Greeter(object):
             request,
             target,
             '/examples.grpc.greeter.v1.Greeter/SayHello',
-            commonpb_dot_common__pb2.HelloRequest.SerializeToString,
-            commonpb_dot_common__pb2.HelloReply.FromString,
+            examplegrpc__pb_dot_commonpb_dot_common__pb2.HelloRequest.SerializeToString,
+            examplegrpc__pb_dot_commonpb_dot_common__pb2.HelloReply.FromString,
             options,
             channel_credentials,
             insecure,

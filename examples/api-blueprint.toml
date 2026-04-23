@@ -28,6 +28,7 @@ id = 'python.greeter'
 lang = 'python'
 out_dir = 'grpc/python'
 files = ['**/*.proto']
+python_package_root = 'examplegrpc_pb'
 
 [[grpc.targets]]
 id = 'go.greeter'

@@ -56,9 +56,9 @@
 - Blueprint examples 的严格重生成依赖 `go-enum`；gRPC examples 依赖 `protoc`、`protoc-gen-go`、`protoc-gen-go-grpc` 与 Python `grpcio-tools`。
 - TypeScript 配置支持字面量 `base_url` 和原样表达式 `base_url_expr`；两者互斥，优先级为 `base_url_expr -> base_url -> upstream -> ""`。
 - gRPC 公开配置面默认使用 `[grpc].source_root`、`[grpc].import_roots` 与 `[[grpc.targets]]`；`[[grpc.jobs]]` 仅保留为 legacy/raw mode。
-- `[[grpc.targets]].id` 只负责选择 target；`source_root` 只负责 files 相对根和 `protoc` 工作根；`import_roots` 只负责 import 查找；`out_dir` 只负责最终生成目录。
+- `[[grpc.targets]].id` 只负责选择 target；`source_root` 只负责 files 相对根和 `protoc` 工作根；`import_roots` 只负责 import 查找；`python_package_root` 只负责 Python 输出命名空间与生成代码 import 路径；`out_dir` 只负责最终生成目录。
 - Go gRPC target 不再要求用户手填 `module` 或 `layout`；工具会从 `out_dir` 向上自动发现 `go.mod`、推导 module path，并校验选中的 proto `go_package` 与 `out_dir` 一致。
-- Python gRPC target 仍按 source-relative 规则生成，因此 `source_root` 会直接影响最终输出目录层级。
+- Python gRPC target 默认仍按 source-relative 规则生成；设置 `python_package_root` 后，产物会稳定落在 `out_dir/<package_root>/...`，且生成代码内部 import 会统一走该包根。
 - legacy/raw `[[grpc.jobs]]` 继续支持 `proto_root`、`include_paths`、`layout` 与 `module`，CLI 通过 `--job` / `--list-jobs` 调用。
 - `Makefile` 暴露三类 example 目标：
   - `example-validation`：严格模式，检测 snapshot drift
@@ -111,7 +111,7 @@
 - README 主路径必须展示 `[grpc].source_root`、`[grpc].import_roots` 与 `[[grpc.targets]]`，而不是 `[[grpc.jobs]]`。
 - `id` 只负责 target 选择；`source_root` 只负责 files 相对根与工作根；`import_roots` 只负责 import 查找；`out_dir` 只负责最终生成目录。
 - Go gRPC target 会从 `out_dir` 向上自动发现 `go.mod`、推导 module path，并校验 proto `go_package` 与 `out_dir` 一致；公开配置不再要求 `module` 或 `layout`。
-- Python gRPC target 仍按 source-relative 规则生成，因此 `source_root` 会影响最终输出目录层级。
+- Python gRPC target 默认仍按 source-relative 规则生成；设置 `python_package_root` 后，输出前缀改由包根决定。
 - legacy/raw `[[grpc.jobs]]` 继续可用，并保留 `proto_root` / `include_paths` / `layout` / `module`。
 - `api-gen-grpc` 公开 CLI 新增 `--list-targets`、`--target` 与 `--explain-target`；`--job` 与 `--list-jobs` 保留为 legacy/raw mode。
 - `grpcio-tools` 保持为开发期依赖，不进入运行时安装依赖。

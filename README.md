@@ -77,6 +77,7 @@ id = 'python.greeter'
 lang = 'python'
 out_dir = 'grpc/python'
 files = ['**/*.proto']
+python_package_root = 'examplegrpc_pb'
 
 [[grpc.targets]]
 id = 'go.greeter'
@@ -92,7 +93,8 @@ files = [
 
 - `id` 只负责 target 选择，供 `--target`、`--list-targets` 与 `--explain-target` 使用。
 - `source_root` 只负责解释 `files` 的相对路径，同时也是 `protoc` 的工作根。
-- `import_roots` 只负责 import 查找，不参与输出目录计算。
+- `import_roots` 只负责 proto import 查找。
+- `python_package_root` 只负责 Python 输出命名空间与生成代码 import 路径。
 - `out_dir` 永远表示最终生成目录，不再表示 Go module 根目录。
 
 ### Advanced / Legacy Mode
@@ -108,9 +110,9 @@ files = [
 
 ## Python source_root 与输出路径
 
-- Python target 的 `source_root` 会直接作为 `grpc_tools.protoc` 的工作根和第一条 `-I`。
-- 生成文件仍按 source-relative 方式落盘，所以 `source_root` 会直接影响最终输出目录层级。
-- `import_roots` 只补充 import 查找，不改变 Python 生成文件的落盘路径。
+- Python target 默认把 `source_root` 作为 `grpc_tools.protoc` 的工作根和第一条 `-I`，生成文件按 source-relative 方式落盘。
+- 设置 `python_package_root` 后，`api-blueprint` 会在临时 staging proto 树里重写本地 import，并通过虚拟 include 前缀让产物稳定落在 `out_dir/<package_root>/...`。
+- `import_roots` 只补充 proto 查找；它不直接决定 Python 产物 namespace。
 
 ## 蓝图 DSL 示例
 
@@ -163,6 +165,7 @@ api-gen-typescript -c examples/api-blueprint.toml
 - `api-gen-grpc` 可以只依赖 `[grpc]` 段落，不要求 `[blueprint]`、`[golang]` 或 `[typescript]` 同时存在。
 - `[typescript]` 支持字面量 `base_url` 和原样 TypeScript 表达式 `base_url_expr`；两者互斥，解析优先级固定为 `base_url_expr -> base_url -> upstream -> ""`。
 - Python gRPC target 需要额外安装 `grpcio-tools`；Go gRPC target 需要 `protoc`、`protoc-gen-go` 与 `protoc-gen-go-grpc` 在 `PATH` 中可用；`grpcio-tools` 不属于运行时依赖。
+- `[[grpc.targets]].python_package_root` 仅对 Python target 生效；设置后，Python gRPC 示例快照会生成到 `examples/grpc/python/examplegrpc_pb/...`。
 - legacy/raw `[[grpc.jobs]]` 默认仍按 `proto_root` 解释 proto 展开根目录；Go legacy job 继续支持 `layout = "go_package"` 与 `module`，Python legacy job 仍不支持它们。
 - `Blueprint(app=None)` 默认共享全局 `FastAPI` app；如果需要拆成多个独立文档应用，必须显式传入 `app`。
 - example snapshot drift 表示“当前生成器输出和已提交快照不一致”，它是变更信号，不自动等于 bug。

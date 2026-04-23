@@ -58,6 +58,8 @@ def expand_target(
             selection_kind="target",
             layout="source_relative",
             plugin_out=out_dir,
+            python_package_root=target.python_package_root,
+            python_package_root_path=target.python_package_root_path,
         )
 
     module_root, module_path = discover_go_module(out_dir, target_id=target.id)

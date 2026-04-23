@@ -19,6 +19,8 @@ def test_example_config_loads_expected_values():
     assert config.typescript.base_url_expr is None
     assert config.grpc is not None
     assert [target.id for target in config.grpc.targets] == ["python.greeter", "go.greeter"]
+    assert config.grpc.targets[0].python_package_root == "examplegrpc_pb"
+    assert config.grpc.targets[1].python_package_root is None
     assert config.grpc.jobs == []
 
 
@@ -38,6 +40,10 @@ def test_resolve_config_converts_relative_outputs_to_absolute_paths():
     assert resolved.grpc.targets[1].source_root == (EXAMPLE_CONFIG.parent / "grpc" / "protos").resolve()
     assert resolved.grpc.targets[0].import_roots == ()
     assert resolved.grpc.targets[1].import_roots == ()
+    assert resolved.grpc.targets[0].python_package_root == "examplegrpc_pb"
+    assert resolved.grpc.targets[0].python_package_root_path is not None
+    assert resolved.grpc.targets[0].python_package_root_path.as_posix() == "examplegrpc_pb"
+    assert resolved.grpc.targets[1].python_package_root is None
     assert resolved.grpc.jobs == ()
 
 
@@ -121,6 +127,38 @@ import_roots = ["job-includes"]
     assert resolved.grpc.targets[0].import_roots == ((tmp_path / "job-includes").resolve(),)
 
 
+def test_grpc_python_target_python_package_root_loads_and_resolves(tmp_path):
+    proto_root = tmp_path / "protos"
+    proto_root.mkdir()
+
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[grpc]
+source_root = "protos"
+
+[[grpc.targets]]
+id = "python.greeter"
+lang = "python"
+out_dir = "generated/python"
+files = ["**/*.proto"]
+python_package_root = "example.company_pb"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    config = Config.load(config_path)
+    assert config.grpc is not None
+    assert config.grpc.targets[0].python_package_root == "example.company_pb"
+
+    resolved = resolve_config(config_path)
+    assert resolved.grpc is not None
+    assert resolved.grpc.targets[0].python_package_root == "example.company_pb"
+    assert resolved.grpc.targets[0].python_package_root_path is not None
+    assert resolved.grpc.targets[0].python_package_root_path.as_posix() == "example/company_pb"
+
+
 def test_grpc_targets_can_override_source_root_and_append_import_roots(tmp_path):
     global_source_root = tmp_path / "protos"
     global_source_root.mkdir(parents=True)
@@ -191,6 +229,54 @@ files = ["greeter.proto"]
     assert resolved.grpc.source_root == proto_root.resolve()
     assert resolved.grpc.import_roots == ((tmp_path / "includes").resolve(),)
     assert resolved.grpc.targets[0].source_root == proto_root.resolve()
+
+
+@pytest.mark.parametrize(
+    "python_package_root",
+    ("", ".example", "example.", "example..pb", "123example", "example.class"),
+)
+def test_grpc_target_rejects_invalid_python_package_root(tmp_path, python_package_root: str):
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        f"""
+[grpc]
+source_root = "protos"
+
+[[grpc.targets]]
+id = "python.greeter"
+lang = "python"
+out_dir = "generated/python"
+files = ["**/*.proto"]
+python_package_root = "{python_package_root}"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="python_package_root"):
+        Config.load(config_path)
+
+
+def test_grpc_go_target_rejects_python_package_root(tmp_path):
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[grpc]
+source_root = "protos"
+
+[[grpc.targets]]
+id = "go.greeter"
+lang = "go"
+out_dir = "generated/go"
+files = ["greeter.proto"]
+python_package_root = "examplegrpc_pb"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="only supported for python targets"):
+        Config.load(config_path)
 
 
 def test_grpc_legacy_jobs_still_load_and_resolve_absolute_paths(tmp_path):

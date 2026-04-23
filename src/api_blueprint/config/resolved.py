@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from api_blueprint.config.grpc_python_package import python_package_root_to_path
 from api_blueprint.config.loader import normalize_config_path
 from api_blueprint.config.models import Config
 
@@ -37,6 +38,8 @@ class ResolvedGrpcTargetConfig:
     source_root: Path
     files: tuple[str, ...]
     import_roots: tuple[Path, ...]
+    python_package_root: str | None = None
+    python_package_root_path: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -171,6 +174,12 @@ def resolve_config(path: str | Path | None) -> ResolvedConfig:
                     or normalized.parent.resolve(),
                     files=tuple(target.files),
                     import_roots=resolve_path_list(normalized, target.import_roots),
+                    python_package_root=target.python_package_root,
+                    python_package_root_path=(
+                        python_package_root_to_path(target.python_package_root)
+                        if target.python_package_root is not None
+                        else None
+                    ),
                 )
                 for target in grpcconf.targets
             ),
