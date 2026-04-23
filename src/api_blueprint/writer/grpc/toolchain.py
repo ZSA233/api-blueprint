@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Generator
 
 from .models import GrpcGenerationJob
+from .python_staging import PreparedPythonProtocRun, prepare_python_protoc_run
 
 
 logger = logging.getLogger("GrpcWriter")
@@ -37,15 +38,26 @@ class GrpcToolchain:
             *self._proto_args(job),
         ]
 
-    def build_python_args(self, job: GrpcGenerationJob, *, wkt_dir: Path) -> list[str]:
+    def build_python_args(
+        self,
+        job: GrpcGenerationJob,
+        *,
+        wkt_dir: Path,
+        prepared: PreparedPythonProtocRun | None = None,
+    ) -> list[str]:
+        prepared_run = prepared or PreparedPythonProtocRun(
+            working_directory=job.source_root,
+            include_args=tuple(self._include_args(job)),
+            proto_args=tuple(self._proto_args(job)),
+        )
         return [
             "grpc_tools.protoc",
-            *self._include_args(job),
+            *prepared_run.include_args,
             f"-I{wkt_dir}",
             f"--python_out={job.out_dir}",
             f"--grpc_python_out={job.out_dir}",
             f"--pyi_out={job.out_dir}",
-            *self._proto_args(job),
+            *prepared_run.proto_args,
         ]
 
     def run_go(self, job: GrpcGenerationJob) -> None:
@@ -58,10 +70,11 @@ class GrpcToolchain:
     def run_python(self, job: GrpcGenerationJob) -> None:
         protoc, wkt_dir = self.load_grpc_tools()
         job.out_dir.mkdir(parents=True, exist_ok=True)
-        args = self.build_python_args(job, wkt_dir=wkt_dir)
         self.logger.info("[grpc][python][%s] %s -> %s", job.selection_kind, job.name, job.out_dir)
-        with working_directory(job.source_root):
-            code = protoc.main(args)
+        with prepare_python_protoc_run(job) as prepared:
+            args = self.build_python_args(job, wkt_dir=wkt_dir, prepared=prepared)
+            with working_directory(prepared.working_directory):
+                code = protoc.main(args)
         if code != 0:
             raise RuntimeError(f"[grpc][python] job[{job.name}] grpc_tools.protoc exited with status {code}")
 

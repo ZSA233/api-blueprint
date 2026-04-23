@@ -285,9 +285,9 @@ def _run_python_grpc_import_smoke(python_dir: Path) -> None:
     existing = env.get("PYTHONPATH")
     env["PYTHONPATH"] = python_path if not existing else python_path + os.pathsep + existing
     smoke = (
-        "import commonpb.common_pb2\n"
-        "import greeterpb.greeter_pb2\n"
-        "import greeterpb.greeter_pb2_grpc\n"
+        "import examplegrpc_pb.commonpb.common_pb2\n"
+        "import examplegrpc_pb.greeterpb.greeter_pb2\n"
+        "import examplegrpc_pb.greeterpb.greeter_pb2_grpc\n"
     )
     subprocess.run([sys.executable, "-c", smoke], env=env, check=True)
 

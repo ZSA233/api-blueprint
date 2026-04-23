@@ -175,6 +175,31 @@ def test_expand_target_resolves_patterns_and_merges_import_roots(tmp_path):
     assert planned.selection_kind == "target"
 
 
+def test_expand_target_keeps_python_package_root_metadata(tmp_path):
+    proto_root = tmp_path / "protos"
+    proto_root.mkdir()
+    (proto_root / "greeter.proto").write_text('syntax = "proto3";\n', encoding="utf-8")
+
+    target = ResolvedGrpcTargetConfig(
+        id="python.greeter",
+        lang="python",
+        out_dir=(tmp_path / "out").resolve(),
+        source_root=proto_root.resolve(),
+        files=("greeter.proto",),
+        import_roots=(),
+        python_package_root="example.company_pb",
+        python_package_root_path=Path("example/company_pb"),
+    )
+
+    planned = expand_target(target)
+
+    assert planned.python_package_root == "example.company_pb"
+    assert planned.python_package_root_path == Path("example/company_pb")
+    assert planned.python_output_path(Path("greeter.proto")) == (
+        (tmp_path / "out").resolve() / "example" / "company_pb" / "greeter_pb2.py"
+    )
+
+
 def test_expand_target_go_discovers_module_and_expected_prefix(tmp_path):
     source_root = tmp_path / "protos"
     source_root.mkdir()

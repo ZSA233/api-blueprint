@@ -221,8 +221,41 @@ files = ["greeter.proto"]
     assert f"lang: python" in result.output
     assert f"effective source_root: {source_root.resolve()}" in result.output
     assert f"effective out_dir: {(tmp_path / 'generated' / 'python').resolve()}" in result.output
+    assert "python_package_root: (none)" in result.output
     assert "- greeter.proto" in result.output
     assert "example output path:" in result.output
+
+
+def test_gen_grpc_explain_target_outputs_python_package_root(tmp_path):
+    source_root = tmp_path / "protos"
+    source_root.mkdir()
+    (source_root / "greeter.proto").write_text('syntax = "proto3";\n', encoding="utf-8")
+
+    config = tmp_path / "api-blueprint.toml"
+    config.write_text(
+        """
+[grpc]
+source_root = "protos"
+
+[[grpc.targets]]
+id = "python.greeter"
+lang = "python"
+out_dir = "generated/python"
+files = ["greeter.proto"]
+python_package_root = "example.company_pb"
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(gen_grpc, ["-c", str(config), "--explain-target", "python.greeter"])
+
+    assert result.exit_code == 0
+    assert "python_package_root: example.company_pb" in result.output
+    assert (
+        f"example output path: {(tmp_path / 'generated' / 'python' / 'example' / 'company_pb' / 'greeter_pb2.py').resolve().as_posix()}"
+        in result.output
+    )
 
 
 def test_gen_grpc_rejects_unknown_target_filter(tmp_path):

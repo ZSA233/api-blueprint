@@ -49,14 +49,14 @@ def gen_grpc(
             + (", ".join(path.as_posix() for path in plan.import_roots) if plan.import_roots else "(none)")
         )
         click.echo(f"effective out_dir: {plan.out_dir}")
+        click.echo(f"python_package_root: {plan.python_package_root or '(none)'}")
         click.echo("selected files:")
         for proto_file in plan.proto_files:
             click.echo(f"- {proto_file.as_posix()}")
         if plan.lang == "python":
             sample = plan.proto_files[0] if plan.proto_files else None
             if sample is not None:
-                sample_output = plan.out_dir / sample.parent / f"{sample.stem}_pb2.py"
-                click.echo(f"example output path: {sample_output.as_posix()}")
+                click.echo(f"example output path: {plan.python_output_path(sample).as_posix()}")
         else:
             click.echo(f"module_root: {plan.module_root}")
             click.echo(f"module_path: {plan.module}")
