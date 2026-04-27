@@ -1,0 +1,14 @@
+{% autoescape false %}package {{ writer.package }}
+
+import {{ writer.package }}.endpoints.*
+import {{ writer.package }}.internal.HttpExecutor
+
+public class ApiClient(
+    public val config: ApiConfig = ApiConfig(),
+) {
+    private val executor: HttpExecutor = HttpExecutor(config)
+{%- for group in bp.groups.values() %}
+    public val {{ group.property_name }}: {{ group.class_name }} = {{ group.class_name }}(executor)
+{%- endfor %}
+}
+{% endautoescape %}

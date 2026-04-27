@@ -18,6 +18,14 @@ codegen_output = 'typescript'
 upstream = 'http://localhost:2333'
 base_url = 'http://localhost:2333'
 
+# Blueprint -> Kotlin Android client snapshot example
+[kotlin]
+codegen_output = 'kotlin'
+package = 'com.example.apiblueprint'
+base_url = 'http://localhost:2333'
+include = ['tag:api']
+exclude = ['path:/static/**', 'path:/api/ws', 'path:/api/demo/ws', 'path:/api/demo/delete$']
+
 # Existing proto tree -> gRPC snapshots example
 [grpc]
 source_root = 'grpc/protos'

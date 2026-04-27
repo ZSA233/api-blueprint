@@ -1,0 +1,10 @@
+{% autoescape false %}package {{ writer.package }}
+
+import okhttp3.OkHttpClient
+
+public data class ApiConfig(
+    public val baseUrl: String = {{ writer.rendered_base_url }},
+    public val httpClient: OkHttpClient = OkHttpClient(),
+    public val defaultHeaders: suspend () -> Map<String, String> = { emptyMap() },
+)
+{% endautoescape %}

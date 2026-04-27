@@ -34,6 +34,23 @@ class TypeScriptConfig(CodegenConfig, UpstreamConfig):
         return self
 
 
+class KotlinConfig(CodegenConfig, UpstreamConfig):
+    package: str
+    base_url: str | None = None
+    base_url_expr: str | None = None
+    include: list[str] = Field(default_factory=list)
+    exclude: list[str] = Field(default_factory=list)
+    client: Literal["okhttp"] = "okhttp"
+    serialization: Literal["kotlinx"] = "kotlinx"
+    allow_empty: bool = False
+
+    @model_validator(mode="after")
+    def validate_kotlin_fields(self) -> "KotlinConfig":
+        if self.base_url is not None and self.base_url_expr is not None:
+            raise ValueError("kotlin.base_url and kotlin.base_url_expr are mutually exclusive")
+        return self
+
+
 class GrpcJobConfig(BaseModel):
     name: str
     preset: Literal["go", "python"]
@@ -133,6 +150,7 @@ class Config(BaseModel):
     blueprint: BlueprintConfig | None = None
     golang: GolangConfig | None = None
     typescript: TypeScriptConfig | None = None
+    kotlin: KotlinConfig | None = None
     grpc: GrpcConfig | None = None
 
     @classmethod

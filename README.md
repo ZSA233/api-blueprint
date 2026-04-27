@@ -13,7 +13,7 @@
 
 1. 用 Python 描述 `Blueprint`、路由、请求/响应模型与错误结构。
 2. 运行时构建 FastAPI 应用并暴露 OpenAPI 文档。
-3. 基于同一份蓝图生成 Go 与 TypeScript 代码快照。
+3. 基于同一份蓝图生成 Go、TypeScript 与 Kotlin Android 代码快照。
 4. 基于 `api-blueprint.toml` 里的 gRPC target 配置编译已有 `.proto` 目录树，并兼容 legacy/raw job 模式。
 
 ## 支持的输出
@@ -22,9 +22,10 @@
 |:---|:---:|:---|:---|
 | Go | 可用 | `api-gen-golang` | `examples/golang` |
 | gRPC | 可用 | `api-gen-grpc` | `examples/grpc/{go,python}` |
+| Kotlin Android | 预览 | `api-gen-kotlin` | `examples/kotlin` |
 | TypeScript | 预览 | `api-gen-typescript` | `examples/typescript` |
 
-当前不会对外暴露 Kotlin / Java 命令；这些目标只保留内部扩展位。
+当前不会对外暴露 Java 命令；该目标只保留内部扩展位。
 
 ## 安装
 
@@ -39,7 +40,7 @@ uv pip install "git+https://github.com/zsa233/api-blueprint@stable"
 - 在 `examples/blueprints/` 这类目录中定义 `Blueprint` 与路由 DSL。
 - 在 `examples/grpc/` 下查看公开的 proto 树和 Go / Python gRPC 快照；对应的 `[grpc]` 示例配置与 Blueprint 示例共用 `examples/api-blueprint.toml`。
 - 通过 `api-doc-server` 构建文档服务，复用 FastAPI 的 OpenAPI 输出。
-- 通过 `api-gen-golang` 与 `api-gen-typescript` 生成语言侧快照产物。
+- 通过 `api-gen-golang`、`api-gen-typescript` 与 `api-gen-kotlin` 生成语言侧快照产物。
 - 通过 `api-gen-grpc` 按 target 编译已有 proto 树；如需兼容旧配置，仍可调用 legacy/raw jobs。
 - 功能开发期可通过 `make example-compile-check` 做“Blueprint + gRPC examples 重生成 -> 编译/导入 smoke”校验。
 - 需要接受预期生成变更时使用 `make example-refresh` 刷新 examples snapshots。
@@ -67,6 +68,13 @@ upstream = 'http://localhost:2333'
 base_url = 'http://localhost:2333'
 # raw runtime expression, mutually exclusive with base_url
 # base_url_expr = 'import.meta.env.VITE_API_BASE_URL'
+
+[kotlin]
+codegen_output = 'kotlin'
+package = 'com.example.apiblueprint'
+base_url = 'http://localhost:2333'
+include = ['tag:api']
+exclude = ['path:/static/**', 'path:/api/ws', 'path:/api/demo/ws', 'path:/api/demo/delete$']
 
 [grpc]
 source_root = 'grpc/protos'
@@ -153,17 +161,19 @@ api-gen-grpc -c examples/api-blueprint.toml --list-targets
 api-gen-grpc -c examples/api-blueprint.toml --target go.*
 api-gen-grpc -c examples/api-blueprint.toml --explain-target go.greeter
 api-gen-grpc -c examples/api-blueprint.toml --list-jobs
+api-gen-kotlin -c examples/api-blueprint.toml
 api-gen-typescript -c examples/api-blueprint.toml
 ```
 
 ## 生成产物与仓库约束
 
 - `examples/blueprints/` 是蓝图真源。
-- `examples/golang/` 与 `examples/typescript/` 是 Blueprint 生成快照，不应该手改业务内容。
+- `examples/golang/`、`examples/typescript/` 与 `examples/kotlin/` 是 Blueprint 生成快照，不应该手改业务内容。
 - `examples/grpc/protos/` 是 gRPC 示例真源，`examples/grpc/go/` 与 `examples/grpc/python/` 是对应的生成快照。
 - `api-gen-grpc` 只负责编排已有 `.proto` 树的编译，不会从 Blueprint DSL 反推出 gRPC proto/service。
 - `api-gen-grpc` 可以只依赖 `[grpc]` 段落，不要求 `[blueprint]`、`[golang]` 或 `[typescript]` 同时存在。
 - `[typescript]` 支持字面量 `base_url` 和原样 TypeScript 表达式 `base_url_expr`；两者互斥，解析优先级固定为 `base_url_expr -> base_url -> upstream -> ""`。
+- `[kotlin]` 生成 OkHttp + kotlinx.serialization Android 客户端，支持 `package`、`base_url`、`base_url_expr`、`include` 与 `exclude`；第一版面向 JSON REST route，暂不支持 WebSocket、form 与 binary route。
 - Python gRPC target 需要额外安装 `grpcio-tools`；Go gRPC target 需要 `protoc`、`protoc-gen-go` 与 `protoc-gen-go-grpc` 在 `PATH` 中可用；`grpcio-tools` 不属于运行时依赖。
 - `[[grpc.targets]].python_package_root` 仅对 Python target 生效；设置后，Python gRPC 示例快照会生成到 `examples/grpc/python/examplegrpc_pb/...`。
 - legacy/raw `[[grpc.jobs]]` 默认仍按 `proto_root` 解释 proto 展开根目录；Go legacy job 继续支持 `layout = "go_package"` 与 `module`，Python legacy job 仍不支持它们。
@@ -171,7 +181,7 @@ api-gen-typescript -c examples/api-blueprint.toml
 - example snapshot drift 表示“当前生成器输出和已提交快照不一致”，它是变更信号，不自动等于 bug。
 - `make example-compile-check` 允许 drift，只检查重生成结果是否仍可编译。
 - `make example-refresh` 会接受预期变化，直接刷新仓库中的 examples snapshots。
-- `make example-validation` 会包装 `scripts/example_validation.py` 的严格模式，在临时目录重生成 Blueprint 与 gRPC examples，再执行 snapshot diff、`tsc --noEmit`、`go test ./...` 和 Python gRPC import smoke。
+- `make example-validation` 会包装 `scripts/example_validation.py` 的严格模式，在临时目录重生成 Blueprint 与 gRPC examples，再执行 snapshot diff、`tsc --noEmit`、`go test ./...`、Kotlin 生成结构 smoke 和 Python gRPC import smoke。
 - Blueprint examples 的严格重生成依赖 `go-enum`；gRPC examples 依赖 `protoc`、`protoc-gen-go`、`protoc-gen-go-grpc` 与 Python `grpc_tools`。
 - `make release-preflight` 必须包含严格的 `make example-validation`，因为到发版前，预期的 snapshot 变化应已经被接受并提交。
 - `examples/api-blueprint.toml` 同时承载 Blueprint 与 gRPC 的公开示例配置，`examples/grpc/go/` 与 `examples/grpc/python/` 属于 committed examples snapshot contract。

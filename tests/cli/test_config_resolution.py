@@ -17,6 +17,11 @@ def test_example_config_loads_expected_values():
     assert config.typescript.codegen_output == "typescript"
     assert config.typescript.base_url == "http://localhost:2333"
     assert config.typescript.base_url_expr is None
+    assert config.kotlin is not None
+    assert config.kotlin.codegen_output == "kotlin"
+    assert config.kotlin.package == "com.example.apiblueprint"
+    assert config.kotlin.base_url == "http://localhost:2333"
+    assert config.kotlin.include == ["tag:api"]
     assert config.grpc is not None
     assert [target.id for target in config.grpc.targets] == ["python.greeter", "go.greeter"]
     assert config.grpc.targets[0].python_package_root == "examplegrpc_pb"
@@ -32,6 +37,12 @@ def test_resolve_config_converts_relative_outputs_to_absolute_paths():
     assert resolved.typescript.output is not None
     assert resolved.typescript.output.is_absolute()
     assert resolved.typescript.base_url_expr is None
+    assert resolved.kotlin is not None
+    assert resolved.kotlin.output == (EXAMPLE_CONFIG.parent / "kotlin").resolve()
+    assert resolved.kotlin.package == "com.example.apiblueprint"
+    assert resolved.kotlin.base_url == "http://localhost:2333"
+    assert resolved.kotlin.include == ("tag:api",)
+    assert "path:/api/demo/ws" in resolved.kotlin.exclude
     assert resolved.grpc is not None
     assert resolved.grpc.source_root == (EXAMPLE_CONFIG.parent / "grpc" / "protos").resolve()
     assert resolved.grpc.targets[0].out_dir == (EXAMPLE_CONFIG.parent / "grpc" / "python").resolve()
@@ -78,6 +89,53 @@ def test_typescript_base_url_and_expr_are_mutually_exclusive(tmp_path):
 codegen_output = "typescript"
 base_url = "http://localhost:2333"
 base_url_expr = "import.meta.env.VITE_API_BASE_URL"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        Config.load(config_path)
+
+
+def test_kotlin_base_url_expr_loads_and_resolves(tmp_path):
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[kotlin]
+codegen_output = "kotlin"
+package = "com.example.generated"
+base_url_expr = "BuildConfig.API_BASE_URL"
+include = ["tag:mobile"]
+exclude = ["path:/internal/**"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    config = Config.load(config_path)
+    assert config.kotlin is not None
+    assert config.kotlin.base_url is None
+    assert config.kotlin.base_url_expr == "BuildConfig.API_BASE_URL"
+
+    resolved = resolve_config(config_path)
+    assert resolved.kotlin is not None
+    assert resolved.kotlin.output == (tmp_path / "kotlin").resolve()
+    assert resolved.kotlin.package == "com.example.generated"
+    assert resolved.kotlin.base_url_expr == "BuildConfig.API_BASE_URL"
+    assert resolved.kotlin.include == ("tag:mobile",)
+    assert resolved.kotlin.exclude == ("path:/internal/**",)
+
+
+def test_kotlin_base_url_and_expr_are_mutually_exclusive(tmp_path):
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[kotlin]
+codegen_output = "kotlin"
+package = "com.example.generated"
+base_url = "http://localhost:2333"
+base_url_expr = "BuildConfig.API_BASE_URL"
 """.strip()
         + "\n",
         encoding="utf-8",

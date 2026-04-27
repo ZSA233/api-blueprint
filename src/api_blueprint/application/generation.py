@@ -10,6 +10,7 @@ from api_blueprint.config import (
     ResolvedGrpcConfig,
     ResolvedGrpcJobConfig,
     ResolvedGrpcTargetConfig,
+    ResolvedKotlinConfig,
     ResolvedTargetConfig,
     resolve_config,
 )
@@ -26,6 +27,12 @@ def _require_typescript_config(resolved: ResolvedConfig) -> ResolvedTargetConfig
     if resolved.raw.typescript is None or resolved.typescript is None:
         raise ValueError("[gen_typescript] 配置中未找到typescript段落")
     return resolved.typescript
+
+
+def _require_kotlin_config(resolved: ResolvedConfig) -> ResolvedKotlinConfig:
+    if resolved.raw.kotlin is None or resolved.kotlin is None:
+        raise ValueError("[gen_kotlin] 配置中未找到kotlin段落")
+    return resolved.kotlin
 
 
 def _require_grpc_config(resolved: ResolvedConfig) -> ResolvedGrpcConfig:
@@ -77,6 +84,38 @@ def generate_typescript(config_path: str | Path | None = "./api-blueprint.toml",
         output,
         base_url=base_url,
         base_url_expr=typescript_config.base_url_expr,
+    )
+    writer.register(*project.entrypoints)
+    writer.gen()
+
+    if doc:
+        run_docs_server(project.config, project.entrypoints)
+
+
+def generate_kotlin(config_path: str | Path | None = "./api-blueprint.toml", *, doc: bool = False) -> None:
+    from api_blueprint.writer import kotlin
+
+    resolved = resolve_config(config_path)
+    kotlin_config = _require_kotlin_config(resolved)
+    output = kotlin_config.output
+    if output is None:
+        raise FileNotFoundError("[gen_kotlin] --output 输出路径[None]不存在")
+    if not output.exists():
+        raise FileNotFoundError(f"[gen_kotlin] --output 输出路径[{output}]不存在")
+
+    project = load_project(resolved.path, command="gen_kotlin")
+    if not project.entrypoints:
+        raise ModuleNotFoundError("[gen_kotlin] 未指定蓝图entrypoints")
+    build_entrypoints(project.entrypoints)
+    base_url = kotlin_config.base_url or kotlin_config.upstream or ""
+    writer = kotlin.KotlinWriter(
+        output,
+        package=kotlin_config.package,
+        base_url=base_url,
+        base_url_expr=kotlin_config.base_url_expr,
+        include=kotlin_config.include,
+        exclude=kotlin_config.exclude,
+        allow_empty=kotlin_config.allow_empty,
     )
     writer.register(*project.entrypoints)
     writer.gen()

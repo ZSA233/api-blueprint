@@ -8,12 +8,12 @@ from click.testing import CliRunner
 from api_blueprint.application.entrypoints import load_entrypoints
 from api_blueprint.application.project import build_entrypoints
 from api_blueprint.cli.apidoc import apidoc_server
-from api_blueprint.cli.apigen import gen_golang, gen_grpc, gen_typescript
+from api_blueprint.cli.apigen import gen_golang, gen_grpc, gen_kotlin, gen_typescript
 
 
 def test_cli_help_smoke():
     runner = CliRunner()
-    for cli in (apidoc_server, gen_golang, gen_grpc, gen_typescript):
+    for cli in (apidoc_server, gen_golang, gen_grpc, gen_kotlin, gen_typescript):
         result = runner.invoke(cli, ["--help"])
         assert result.exit_code == 0
 
@@ -108,6 +108,75 @@ codegen_output = "{output_dir.name}"
     assert result.exit_code != 0
     assert isinstance(result.exception, ValueError)
     assert "blueprint" in str(result.exception)
+
+
+def test_gen_kotlin_generates_filtered_client(tmp_path):
+    config = tmp_path / "api-blueprint.toml"
+    output_dir = tmp_path / "kotlin"
+    output_dir.mkdir()
+    config.write_text(
+        f"""
+[blueprint]
+entrypoints = ["blueprints.app:bp"]
+
+[kotlin]
+codegen_output = "{output_dir.name}"
+package = "com.example.generated"
+base_url = "http://localhost:2333"
+include = ["path:/api/mobile/**"]
+exclude = ["path:/api/mobile/internal"]
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    pkg = tmp_path / "blueprints"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text("", encoding="utf-8")
+    (pkg / "app.py").write_text(
+        """
+from api_blueprint.engine import Blueprint
+from api_blueprint.engine.model import String
+
+bp = Blueprint(root="/api", tags=["mobile"])
+
+with bp.group("/mobile") as views:
+    views.GET("/profile").ARGS(user_id=String(description="user id")).RSP(name=String(description="name"))
+    views.GET("/internal").RSP(secret=String(description="secret"))
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(gen_kotlin, ["-c", str(config)])
+
+    assert result.exit_code == 0, result.output
+    api_path = output_dir / "com" / "example" / "generated" / "endpoints" / "MobileApi.kt"
+    group_models_path = output_dir / "com" / "example" / "generated" / "models" / "MobileApiModels.kt"
+    assert api_path.is_file()
+    assert group_models_path.is_file()
+    api_text = api_path.read_text(encoding="utf-8")
+    assert "path = \"/api/mobile/profile\"" in api_text
+    assert "/api/mobile/internal" not in api_text
+    group_models_text = group_models_path.read_text(encoding="utf-8")
+    assert "public data class MobileProfileQuery" in group_models_text
+
+
+def test_gen_kotlin_requires_kotlin_config(tmp_path):
+    config = tmp_path / "api-blueprint.toml"
+    config.write_text(
+        """
+[blueprint]
+entrypoints = ["blueprints.app:*"]
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(gen_kotlin, ["-c", str(config)])
+    assert result.exit_code != 0
+    assert isinstance(result.exception, ValueError)
+    assert "kotlin" in str(result.exception)
 
 
 def test_gen_grpc_requires_grpc_config(tmp_path):

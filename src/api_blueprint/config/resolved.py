@@ -19,6 +19,20 @@ class ResolvedTargetConfig:
 
 
 @dataclass(frozen=True)
+class ResolvedKotlinConfig:
+    output: Path | None
+    package: str
+    upstream: str | None = None
+    base_url: str | None = None
+    base_url_expr: str | None = None
+    include: tuple[str, ...] = ()
+    exclude: tuple[str, ...] = ()
+    client: Literal["okhttp"] = "okhttp"
+    serialization: Literal["kotlinx"] = "kotlinx"
+    allow_empty: bool = False
+
+
+@dataclass(frozen=True)
 class ResolvedGrpcJobConfig:
     name: str
     preset: Literal["go", "python"]
@@ -60,6 +74,7 @@ class ResolvedConfig:
     raw: Config
     golang: ResolvedTargetConfig | None
     typescript: ResolvedTargetConfig | None
+    kotlin: ResolvedKotlinConfig | None
     grpc: ResolvedGrpcConfig | None
 
 
@@ -108,6 +123,7 @@ def resolve_config(path: str | Path | None) -> ResolvedConfig:
 
     goconf = raw.golang
     tsconf = raw.typescript
+    ktconf = raw.kotlin
     grpcconf = raw.grpc
     target_import_entries = (
         choose_path_entries(grpcconf.import_roots, grpcconf.include_paths)
@@ -158,6 +174,20 @@ def resolve_config(path: str | Path | None) -> ResolvedConfig:
             upstream=tsconf.upstream,
             base_url=tsconf.base_url,
             base_url_expr=tsconf.base_url_expr,
+        ),
+        kotlin=None
+        if ktconf is None
+        else ResolvedKotlinConfig(
+            output=resolve_output_path(normalized, ktconf.codegen_output or "kotlin"),
+            package=ktconf.package,
+            upstream=ktconf.upstream,
+            base_url=ktconf.base_url,
+            base_url_expr=ktconf.base_url_expr,
+            include=tuple(ktconf.include),
+            exclude=tuple(ktconf.exclude),
+            client=ktconf.client,
+            serialization=ktconf.serialization,
+            allow_empty=ktconf.allow_empty,
         ),
         grpc=None
         if grpcconf is None

@@ -21,7 +21,7 @@ for path in (PROJECT_ROOT, SRC_ROOT):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
-from api_blueprint.application.generation import generate_golang, generate_grpc, generate_typescript
+from api_blueprint.application.generation import generate_golang, generate_grpc, generate_kotlin, generate_typescript
 
 PROTOC_GEN_GO_VERSION = "v1.36.10"
 PROTOC_GEN_GO_GRPC_VERSION = "v1.6.0"
@@ -37,6 +37,7 @@ BLUEPRINT_TYPESCRIPT_PRESERVED = (
     "index.ts",
     "tsconfig.json",
 )
+BLUEPRINT_KOTLIN_PRESERVED = ()
 GRPC_GO_PRESERVED = ("go.mod",)
 
 
@@ -56,6 +57,7 @@ class BlueprintExampleWorkspace:
     config_path: Path
     golang_dir: Path
     typescript_dir: Path
+    kotlin_dir: Path
 
 
 @dataclass(frozen=True)
@@ -129,6 +131,7 @@ def _blueprint_workspace(root: Path) -> BlueprintExampleWorkspace:
         config_path=root / "api-blueprint.toml",
         golang_dir=root / "golang",
         typescript_dir=root / "typescript",
+        kotlin_dir=root / "kotlin",
     )
 
 
@@ -168,6 +171,10 @@ def _prepare_blueprint_outputs(*, source_root: Path, target_root: Path) -> None:
         target_root / "typescript",
         _capture_relative_files(source_root / "typescript", BLUEPRINT_TYPESCRIPT_PRESERVED),
     )
+    _prepare_output_dir(
+        target_root / "kotlin",
+        _capture_relative_files(source_root / "kotlin", BLUEPRINT_KOTLIN_PRESERVED),
+    )
 
 
 def _prepare_grpc_outputs(*, source_root: Path, target_root: Path) -> None:
@@ -201,6 +208,7 @@ def _prepare_output_dir(root: Path, preserved_files: Mapping[Path, bytes]) -> No
 def regenerate_blueprint_examples(workspace: BlueprintExampleWorkspace) -> None:
     generate_typescript(workspace.config_path)
     generate_golang(workspace.config_path)
+    generate_kotlin(workspace.config_path)
 
 
 def regenerate_grpc_examples(workspace: GrpcExampleWorkspace) -> None:
@@ -226,6 +234,7 @@ def validate_example_snapshots(repo_root: Path, workspace: BlueprintExampleWorks
         (
             (examples_root / "golang", workspace.golang_dir, "blueprint/golang"),
             (examples_root / "typescript", workspace.typescript_dir, "blueprint/typescript"),
+            (examples_root / "kotlin", workspace.kotlin_dir, "blueprint/kotlin"),
         )
     )
 
@@ -260,6 +269,7 @@ def _raise_on_snapshot_drift(pairs: Iterable[tuple[Path, Path, str]]) -> None:
 def compile_generated_examples(workspace: BlueprintExampleWorkspace) -> None:
     subprocess.run(["tsc", "-p", str(workspace.typescript_dir / "tsconfig.json"), "--noEmit"], check=True)
     subprocess.run(["go", "test", "./..."], cwd=workspace.golang_dir, check=True)
+    _validate_kotlin_sources(workspace.kotlin_dir)
 
 
 def compile_generated_grpc_examples(workspace: GrpcExampleWorkspace) -> None:
@@ -290,6 +300,43 @@ def _run_python_grpc_import_smoke(python_dir: Path) -> None:
         "import examplegrpc_pb.greeterpb.greeter_pb2_grpc\n"
     )
     subprocess.run([sys.executable, "-c", smoke], env=env, check=True)
+
+
+def _validate_kotlin_sources(kotlin_dir: Path) -> None:
+    expected = (
+        "com/example/apiblueprint/ApiClient.kt",
+        "com/example/apiblueprint/ApiConfig.kt",
+        "com/example/apiblueprint/ApiException.kt",
+        "com/example/apiblueprint/internal/HttpExecutor.kt",
+        "com/example/apiblueprint/internal/UrlBuilder.kt",
+        "com/example/apiblueprint/models/Models.kt",
+        "com/example/apiblueprint/models/DemoApiModels.kt",
+        "com/example/apiblueprint/models/HelloApiModels.kt",
+        "com/example/apiblueprint/endpoints/DemoApi.kt",
+        "com/example/apiblueprint/endpoints/HelloApi.kt",
+    )
+    missing = [path for path in expected if not (kotlin_dir / path).is_file()]
+    if missing:
+        raise ExampleValidationError("kotlin example missing generated files:\n" + "\n".join(missing))
+
+    models = (kotlin_dir / "com/example/apiblueprint/models/Models.kt").read_text(encoding="utf-8")
+    demo_models = (kotlin_dir / "com/example/apiblueprint/models/DemoApiModels.kt").read_text(encoding="utf-8")
+    hello_models = (kotlin_dir / "com/example/apiblueprint/models/HelloApiModels.kt").read_text(encoding="utf-8")
+    demo_api = (kotlin_dir / "com/example/apiblueprint/endpoints/DemoApi.kt").read_text(encoding="utf-8")
+    hello_api = (kotlin_dir / "com/example/apiblueprint/endpoints/HelloApi.kt").read_text(encoding="utf-8")
+    required_snippets = (
+        "@Serializable",
+        "public data class DemoAbcQuery",
+        "public data class ApiDemoA",
+        "public enum class ColorEnum",
+        "public suspend fun abc",
+        "path = \"/api/demo/abc\"",
+        "public suspend fun helloWay",
+    )
+    haystack = "\n".join((models, demo_api, hello_api, demo_models, hello_models))
+    missing_snippets = [snippet for snippet in required_snippets if snippet not in haystack]
+    if missing_snippets:
+        raise ExampleValidationError("kotlin example missing expected snippets:\n" + "\n".join(missing_snippets))
 
 
 def validate_examples(repo_root: Path) -> None:
