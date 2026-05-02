@@ -9,6 +9,7 @@ from api_blueprint.config.grpc_python_package import validate_python_package_roo
 
 
 GrpcLayout = Literal["source_relative", "go_package"]
+WailsVersion = Literal["v2", "v3"]
 
 
 class CodegenConfig(BaseModel):
@@ -140,6 +141,31 @@ class GrpcConfig(BaseModel):
         return self
 
 
+class WailsTargetConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    version: WailsVersion
+    go_out_dir: str
+    typescript_out_dir: str
+
+
+class WailsConfig(BaseModel):
+    targets: list[WailsTargetConfig] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_targets(self) -> "WailsConfig":
+        if not self.targets:
+            raise ValueError("wails section must define at least one wails.targets entry")
+
+        target_ids = [target.id for target in self.targets]
+        duplicate_ids = sorted({target_id for target_id in target_ids if target_ids.count(target_id) > 1})
+        if duplicate_ids:
+            raise ValueError(f"wails.targets contains duplicate ids: {', '.join(duplicate_ids)}")
+
+        return self
+
+
 class BlueprintConfig(BaseModel):
     entrypoints: list[str] | None = None
     docs_server: str | None = None
@@ -152,6 +178,7 @@ class Config(BaseModel):
     typescript: TypeScriptConfig | None = None
     kotlin: KotlinConfig | None = None
     grpc: GrpcConfig | None = None
+    wails: WailsConfig | None = None
 
     @classmethod
     def load(cls, path: str | Path | None) -> "Config":

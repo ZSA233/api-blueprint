@@ -4,7 +4,7 @@
 
 import type * as Models from "./models";
 import type * as Shared from "../shared/models";
-import { BaseClient, ApiClientConfig } from "../shared/client";
+import { ApiClientConfig, ApiSocketBridge, BaseClient } from "../shared/client";
 
 export class HelloClient extends BaseClient {
   constructor(config: ApiClientConfig = {}) {
@@ -28,6 +28,9 @@ export class HelloClient extends BaseClient {
     return this.request<Models.RspAbc>({
       method: "GET",
       path: "/api/hello/abc",
+      service: "HelloService",
+      operation: "Abc",
+      namespace: "hello",
       query: request.query as unknown as Record<string, unknown> | undefined,
       headers: request.headers,
       init,
@@ -52,6 +55,9 @@ export class HelloClient extends BaseClient {
     return this.request<Models.RspMapEnum>({
       method: "GET",
       path: "/api/hello/map-enum",
+      service: "HelloService",
+      operation: "MapEnum",
+      namespace: "hello",
       headers: request.headers,
       init,
       responseType: "json",
@@ -75,6 +81,9 @@ export class HelloClient extends BaseClient {
     return this.request<Models.RspListEnum>({
       method: "GET",
       path: "/api/hello/list-enum",
+      service: "HelloService",
+      operation: "ListEnum",
+      namespace: "hello",
       headers: request.headers,
       init,
       responseType: "json",
@@ -98,6 +107,9 @@ export class HelloClient extends BaseClient {
     return this.request<Models.RspString>({
       method: "GET",
       path: "/api/hello/string",
+      service: "HelloService",
+      operation: "String",
+      namespace: "hello",
       headers: request.headers,
       init,
       responseType: "json",
@@ -121,6 +133,9 @@ export class HelloClient extends BaseClient {
     return this.request<Models.RspUint64>({
       method: "GET",
       path: "/api/hello/uint64",
+      service: "HelloService",
+      operation: "Uint64",
+      namespace: "hello",
       headers: request.headers,
       init,
       responseType: "json",
@@ -144,6 +159,9 @@ export class HelloClient extends BaseClient {
     return this.request<Models.RspStringEmun>({
       method: "GET",
       path: "/api/hello/string-emun",
+      service: "HelloService",
+      operation: "StringEmun",
+      namespace: "hello",
       headers: request.headers,
       init,
       responseType: "json",
@@ -168,6 +186,9 @@ export class HelloClient extends BaseClient {
     return this.request<Models.RspHelloWay>({
       method: "GET",
       path: "/api/hello/hello-way",
+      service: "HelloService",
+      operation: "HelloWay",
+      namespace: "hello",
       query: request.query as unknown as Record<string, unknown> | undefined,
       headers: request.headers,
       init,

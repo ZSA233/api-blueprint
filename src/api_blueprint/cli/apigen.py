@@ -1,13 +1,16 @@
 import click
 
 from api_blueprint.application.generation import (
+    explain_wails_target,
     explain_grpc_target,
     generate_golang,
     generate_grpc,
     generate_kotlin,
     generate_typescript,
+    generate_wails,
     list_grpc_jobs,
     list_grpc_targets,
+    list_wails_targets,
 )
 
 
@@ -85,3 +88,32 @@ def gen_grpc(
         return
 
     generate_grpc(config, target_filters=targets, job_filters=jobs)
+
+
+@click.command()
+@click.option('-c', '--config', default='./api-blueprint.toml', help='配置文件')
+@click.option('--target', 'targets', multiple=True, help='仅生成匹配的 Wails target，支持 shell-style pattern')
+@click.option('--list-targets', default=False, is_flag=True, help='列出配置中的 Wails targets')
+@click.option('--explain-target', default=None, help='解释指定 Wails target 的生效配置')
+def gen_wails(
+    config: str = './api-blueprint.toml',
+    targets: tuple[str, ...] = (),
+    list_targets: bool = False,
+    explain_target: str | None = None,
+):
+    if explain_target is not None:
+        target = explain_wails_target(config, target_id=explain_target)
+        click.echo(f"id: {target.id}")
+        click.echo(f"version: {target.version}")
+        click.echo(f"go_out_dir: {target.go_out_dir}")
+        click.echo(f"typescript_out_dir: {target.typescript_out_dir}")
+        return
+
+    if list_targets:
+        for target in list_wails_targets(config, target_filters=targets):
+            click.echo(
+                f"{target.id}\t{target.version}\t{target.go_out_dir.resolve()}\t{target.typescript_out_dir.resolve()}"
+            )
+        return
+
+    generate_wails(config, target_filters=targets)

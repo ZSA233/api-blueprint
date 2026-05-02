@@ -4,7 +4,7 @@
 
 import type * as Models from "./models";
 import type * as Shared from "../shared/models";
-import { BaseClient, ApiClientConfig } from "../shared/client";
+import { ApiClientConfig, ApiSocketBridge, BaseClient } from "../shared/client";
 
 export class ApiClient extends BaseClient {
   constructor(config: ApiClientConfig = {}) {
@@ -22,12 +22,40 @@ export class ApiClient extends BaseClient {
       headers?: Record<string, string>;
     } = {},
     protocols?: string | string[],
-  ): WebSocket {
-    return this.connect(
-      "/api/ws",
-      undefined,
+  ): ApiSocketBridge<Shared.WsMessage, Shared.WsMessage> {
+    return this.connectBridge<Shared.WsMessage, Shared.WsMessage>({
+      routeId: "api.api.ws.ws",
+      path: "/api/ws",
+      service: "ApiService",
+      namespace: "api",
+      connectMethod: "ConnectWs",
+      sendMethod: "SendWs",
+      closeMethod: "CloseWs",
+      eventBase: "api_blueprint.ws.api.api.ws.ws",
+      headers: request.headers,
       protocols,
-    );
+    });
+  }
+
+
+  connectWsRaw(
+    request: {
+      headers?: Record<string, string>;
+    } = {},
+    protocols?: string | string[],
+  ): WebSocket {
+    return this.connectRaw({
+      routeId: "api.api.ws.ws",
+      path: "/api/ws",
+      service: "ApiService",
+      namespace: "api",
+      connectMethod: "ConnectWs",
+      sendMethod: "SendWs",
+      closeMethod: "CloseWs",
+      eventBase: "api_blueprint.ws.api.api.ws.ws",
+      headers: request.headers,
+      protocols,
+    });
   }
 
 }

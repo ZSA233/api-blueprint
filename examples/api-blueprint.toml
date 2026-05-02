@@ -26,6 +26,19 @@ base_url = 'http://localhost:2333'
 include = ['tag:api']
 exclude = ['path:/static/**', 'path:/api/ws', 'path:/api/demo/ws', 'path:/api/demo/delete$']
 
+# Blueprint -> Wails snapshot examples
+[[wails.targets]]
+id = 'wails.v3'
+version = 'v3'
+go_out_dir = 'wails/v3/go'
+typescript_out_dir = 'wails/v3/typescript'
+
+[[wails.targets]]
+id = 'wails.v2'
+version = 'v2'
+go_out_dir = 'wails/v2/go'
+typescript_out_dir = 'wails/v2/typescript'
+
 # Existing proto tree -> gRPC snapshots example
 [grpc]
 source_root = 'grpc/protos'

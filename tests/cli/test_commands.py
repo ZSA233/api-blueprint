@@ -8,12 +8,12 @@ from click.testing import CliRunner
 from api_blueprint.application.entrypoints import load_entrypoints
 from api_blueprint.application.project import build_entrypoints
 from api_blueprint.cli.apidoc import apidoc_server
-from api_blueprint.cli.apigen import gen_golang, gen_grpc, gen_kotlin, gen_typescript
+from api_blueprint.cli.apigen import gen_golang, gen_grpc, gen_kotlin, gen_typescript, gen_wails
 
 
 def test_cli_help_smoke():
     runner = CliRunner()
-    for cli in (apidoc_server, gen_golang, gen_grpc, gen_kotlin, gen_typescript):
+    for cli in (apidoc_server, gen_golang, gen_grpc, gen_kotlin, gen_typescript, gen_wails):
         result = runner.invoke(cli, ["--help"])
         assert result.exit_code == 0
 
@@ -194,6 +194,53 @@ entrypoints = ["blueprints.app:*"]
     assert result.exit_code != 0
     assert isinstance(result.exception, ValueError)
     assert "grpc" in str(result.exception)
+
+
+def test_gen_wails_requires_wails_config(tmp_path):
+    config = tmp_path / "api-blueprint.toml"
+    config.write_text(
+        """
+[blueprint]
+entrypoints = ["blueprints.app:*"]
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(gen_wails, ["-c", str(config)])
+    assert result.exit_code != 0
+    assert isinstance(result.exception, ValueError)
+    assert "wails" in str(result.exception)
+
+
+def test_gen_wails_list_targets_outputs_deterministic_listing(tmp_path):
+    config = tmp_path / "api-blueprint.toml"
+    config.write_text(
+        """
+[[wails.targets]]
+id = "desktop.v3"
+version = "v3"
+go_out_dir = "generated/go-v3"
+typescript_out_dir = "generated/ts-v3"
+
+[[wails.targets]]
+id = "desktop.v2"
+version = "v2"
+go_out_dir = "generated/go-v2"
+typescript_out_dir = "generated/ts-v2"
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(gen_wails, ["-c", str(config), "--list-targets"])
+
+    assert result.exit_code == 0
+    lines = [line for line in result.output.splitlines() if line.strip()]
+    assert lines == [
+        f"desktop.v3\tv3\t{(tmp_path / 'generated' / 'go-v3').resolve()}\t{(tmp_path / 'generated' / 'ts-v3').resolve()}",
+        f"desktop.v2\tv2\t{(tmp_path / 'generated' / 'go-v2').resolve()}\t{(tmp_path / 'generated' / 'ts-v2').resolve()}",
+    ]
 
 
 def test_gen_grpc_list_targets_outputs_deterministic_listing(tmp_path):

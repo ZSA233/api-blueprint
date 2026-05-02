@@ -48,22 +48,26 @@ func (prov *ReqProvider[Q, B, P]) makeReq(ctx *Context[Q, B, P]) (*REQ[Q, B], er
 	var reqB *B
 
 	var err error
+	httpCtx, err := ctx.RequireHTTP()
+	if err != nil {
+		return nil, err
+	}
 
 	if prov.BindQuery {
 		reqQ = new(Q)
-		if err = ctx.Gin.ShouldBindQuery(reqQ); err != nil {
+		if err = httpCtx.ShouldBindQuery(reqQ); err != nil {
 			return nil, err
 		}
 	}
 	
 	if prov.BindJSON {
 		reqB = new(B)
-		if err = ctx.Gin.ShouldBindJSON(reqB); err != nil {
+		if err = httpCtx.ShouldBindJSON(reqB); err != nil {
 			return nil, err
 		}
 	} else if prov.BindForm {
 		reqB = new(B)
-		if err = ctx.Gin.ShouldBind(reqB); err != nil {
+		if err = httpCtx.ShouldBind(reqB); err != nil {
 			return nil, err
 		}
 	}

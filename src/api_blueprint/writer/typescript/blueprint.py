@@ -13,6 +13,7 @@ from api_blueprint.engine.router import Router
 from api_blueprint.engine.utils import is_parametrized, snake_to_pascal_case
 from api_blueprint.engine.wrapper import NoneWrapper
 from api_blueprint.writer.core.base import BaseBlueprint
+from api_blueprint.writer.core.contracts import RouteContract, route_contract
 from api_blueprint.writer.core.templates import render
 
 from .naming import to_camel
@@ -24,21 +25,25 @@ class TypeScriptRoute:
         self.router = router
         self.registry = registry
         self.route_prefix = route_prefix
+        self.contract: RouteContract = route_contract(router)
 
-        self.func_name = self._func_name()
-        self.group_prefix = self._group_prefix()
-        self.group_slug = self._group_slug()
-        self.group_alias = self._group_alias()
-        self.group_pascal = self._group_pascal()
-        self.method_name = to_camel(self.func_name)
+        self.func_name = self.contract.func_name
+        self.group_prefix = self.contract.group_prefix
+        self.group_slug = self.contract.group_slug
+        self.group_alias = self.contract.group_alias
+        self.group_pascal = self.contract.group_pascal
+        self.method_name = self.contract.method_name
         self.url = router.url
         self.summary = router.extra.get("summary")
         self.description = router.extra.get("description")
         self.tags = router.tags
         self.deprecated = router.is_deprecated
+        self.route_id = self.contract.route_id
+        self.service_name = self.contract.service_name
+        self.namespace = self.contract.namespace
 
-        self.http_methods = [method for method in router.methods if method != "WS"]
-        self.supports_ws = any(method == "WS" for method in router.methods)
+        self.http_methods = list(self.contract.http_methods)
+        self.supports_ws = self.contract.supports_ws
 
         self.query_proto = self._ensure_model(router.req_query, "REQ", "QUERY")
         self.form_proto = self._ensure_model(router.req_form, "REQ", "FORM")
@@ -50,6 +55,8 @@ class TypeScriptRoute:
         wrapper_cls = router.response_wrapper or NoneWrapper
         self.wrapper_proto = self.registry.ensure(wrapper_cls, tag="wrapper")
         self.response_alias = self._ensure_response_alias()
+        self.ws_recv_alias = self._ensure_ws_message_alias("WS", "RECV", router.recvs)
+        self.ws_send_alias = self._ensure_ws_message_alias("WS", "SEND", router.sends)
 
     @property
     def http_method(self) -> str:
@@ -82,45 +89,6 @@ class TypeScriptRoute:
     @property
     def response_type_name(self) -> str:
         return self.response_alias.name if self.response_alias else "void"
-
-    def _func_name(self) -> str:
-        if not self.router.leaf.strip("/"):
-            return "Root"
-        return snake_to_pascal_case(self.router.leaf, "", "Z")
-
-    def _group_prefix(self) -> str:
-        branch = (self.router.group.branch or "").strip("/")
-        if branch:
-            return re.sub(r"[^0-9A-Za-z]+", "_", branch).upper()
-        root = (self.router.group.root or "").strip("/")
-        if root:
-            return re.sub(r"[^0-9A-Za-z]+", "_", root).upper()
-        return "ROOT"
-
-    def _group_slug(self) -> str:
-        branch = (self.router.group.branch or "").strip("/")
-        if branch:
-            slug = re.sub(r"[^0-9A-Za-z]+", "_", branch.lower()) or "root"
-        else:
-            root = (self.router.group.root or "").strip("/")
-            slug = "(root)" if root else "root"
-        if slug == "shared":
-            slug = "shared_group"
-        return slug
-
-    def _group_alias(self) -> str:
-        branch = (self.router.group.branch or "").strip("/")
-        if branch:
-            alias = re.sub(r"[^0-9A-Za-z]+", "_", branch.lower()) or "root"
-        else:
-            root = (self.router.group.root or "").strip("/")
-            alias = re.sub(r"[^0-9A-Za-z]+", "_", root.lower()) or "root" if root else "root"
-        if alias == "shared":
-            alias = "shared_group"
-        return alias
-
-    def _group_pascal(self) -> str:
-        return snake_to_pascal_case(self.group_slug, "", "Group")
 
     def _ensure_model(self, model: Optional[Union[Type[Model], Model]], prefix: str, suffix: str) -> Optional[TypeScriptProto]:
         if model is None:
@@ -166,6 +134,58 @@ class TypeScriptRoute:
                 deps.add(self.wrapper_proto)
             alias_type = TypeScriptResolvedType(alias_text, deps)
         return self.registry.register_alias(alias_base, alias_type, tag="route", route=self.func_name, module=self.group_slug)
+
+    @property
+    def ws_recv_type_expr(self) -> str:
+        return self._type_expr(self.ws_recv_alias) or "unknown"
+
+    @property
+    def ws_send_type_expr(self) -> str:
+        return self._type_expr(self.ws_send_alias) or "unknown"
+
+    @property
+    def connect_method_name(self) -> str:
+        if self.contract.ws is None:
+            return "connect"
+        return to_camel(self.contract.ws.connect_method)
+
+    @property
+    def connect_raw_method_name(self) -> str:
+        if self.contract.ws is None:
+            return "connectRaw"
+        return to_camel(self.contract.ws.connect_raw_method)
+
+    def _ensure_ws_message_alias(
+        self,
+        prefix: str,
+        suffix: str,
+        models: list[Union[Type[Model], Model]],
+    ) -> Optional[TypeScriptProto]:
+        if not models:
+            return None
+
+        deps: set[TypeScriptProto] = set()
+        protos: list[TypeScriptProto] = []
+        for index, model in enumerate(models, start=1):
+            explicit = self._route_model_name(prefix, suffix if len(models) == 1 else f"{suffix}{index}")
+            proto = self.registry.ensure(model, name=explicit, tag="route", route=self.func_name, module=self.group_slug)
+            if proto is None:
+                continue
+            deps.add(proto)
+            protos.append(proto)
+
+        if not protos:
+            return None
+        if len(protos) == 1:
+            return protos[0]
+
+        return self.registry.register_alias(
+            self._route_model_name(prefix, suffix),
+            TypeScriptResolvedType(" | ".join(proto.name for proto in protos), deps),
+            tag="route",
+            route=self.func_name,
+            module=self.group_slug,
+        )
 
 
 class TypeScriptRouterGroup:
@@ -308,23 +328,28 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
         for tmpl in ["gen_models.ts", "models.ts"]:
             with self.writer.write_file(shared_dir / tmpl, overwrite=tmpl.startswith("gen_")) as handle:
                 if handle:
-                    handle.write(render("typescript", tmpl, shared_context))
+                    handle.write(render(self.writer.template_lang, tmpl, shared_context))
 
-        for out_tmpl, tmpl in [("gen_client.ts", "gen_shared_client.ts"), ("client.ts", "client.ts")]:
+        for out_tmpl, tmpl in [
+            ("gen_client.ts", "gen_shared_client.ts"),
+            ("client.ts", "client.ts"),
+            ("gen_transport.ts", "gen_transport.ts"),
+            ("transport.ts", "transport.ts"),
+        ]:
             with self.writer.write_file(shared_dir / out_tmpl, overwrite=out_tmpl.startswith("gen_")) as handle:
                 if handle:
-                    handle.write(render("typescript", tmpl, {}))
+                    handle.write(render(self.writer.template_lang, tmpl, {"writer": self.writer}))
 
         for tmpl in ["gen_index.ts", "index.ts"]:
             with self.writer.write_file(shared_dir / tmpl, overwrite=True) as handle:
                 if handle:
                     handle.write(
                         render(
-                            "typescript",
+                            self.writer.template_lang,
                             tmpl,
                             {
                                 "client_class": None,
-                                "extra_exports": ['export * from "./gen_client";'],
+                                "extra_exports": ['export * from "./gen_client";', 'export * from "./gen_transport";'],
                             },
                         )
                     )
@@ -340,20 +365,20 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
             for tmpl in ["gen_models.ts", "models.ts"]:
                 with self.writer.write_file(group_dir / tmpl, overwrite=tmpl.startswith("gen_")) as handle:
                     if handle:
-                        handle.write(render("typescript", tmpl, models_context))
+                        handle.write(render(self.writer.template_lang, tmpl, models_context))
 
             client_context = {"routes": group.routes, "writer": self.writer, "client_class": group.client_class}
             for tmpl in ["gen_client.ts", "client.ts"]:
                 with self.writer.write_file(group_dir / tmpl, overwrite=tmpl.startswith("gen_")) as handle:
                     if handle:
-                        handle.write(render("typescript", tmpl, client_context))
+                        handle.write(render(self.writer.template_lang, tmpl, client_context))
 
             for tmpl in ["gen_index.ts", "index.ts"]:
                 with self.writer.write_file(group_dir / tmpl, overwrite=tmpl.startswith("gen_")) as handle:
                     if handle:
                         handle.write(
                             render(
-                                "typescript",
+                                self.writer.template_lang,
                                 tmpl,
                                 {
                                     "client_class": group.client_class,
@@ -388,9 +413,9 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
         exports = sorted(exports, key=lambda item: item["alias"])
         with self.writer.write_file(base_dir / "gen_index.ts", overwrite=True) as handle:
             if handle:
-                handle.write(render("typescript", "gen_root_index.ts", {"modules": exports}))
+                handle.write(render(self.writer.template_lang, "gen_root_index.ts", {"modules": exports}))
 
         for out_tmpl, tmpl in [("gen_index.ts", "gen_root_index.ts"), ("index.ts", "index.ts")]:
             with self.writer.write_file(base_dir / out_tmpl, overwrite=out_tmpl.startswith("gen_")) as handle:
                 if handle:
-                    handle.write(render("typescript", tmpl, {"modules": exports}))
+                    handle.write(render(self.writer.template_lang, tmpl, {"modules": exports}))

@@ -4,7 +4,7 @@
 
 import type * as Models from "./models";
 import type * as Shared from "../shared/models";
-import { BaseClient, ApiClientConfig } from "../shared/client";
+import { ApiClientConfig, ApiSocketBridge, BaseClient } from "../shared/client";
 
 export class StaticClient extends BaseClient {
   constructor(config: ApiClientConfig = {}) {
@@ -27,6 +27,9 @@ export class StaticClient extends BaseClient {
     return this.request<Models.RspDocJson>({
       method: "GET",
       path: "/static/doc.json",
+      service: "StaticService",
+      operation: "DocJson",
+      namespace: "static",
       headers: request.headers,
       init,
       responseType: "json",
@@ -50,6 +53,9 @@ export class StaticClient extends BaseClient {
     return this.request<Models.RspDochaha>({
       method: "GET",
       path: "/static/dochaha",
+      service: "StaticService",
+      operation: "Dochaha",
+      namespace: "static",
       headers: request.headers,
       init,
       responseType: "json",

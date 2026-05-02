@@ -4,7 +4,7 @@
 
 import type * as Models from "./models";
 import type * as Shared from "../shared/models";
-import { BaseClient, ApiClientConfig } from "../shared/client";
+import { ApiClientConfig, ApiSocketBridge, BaseClient } from "../shared/client";
 
 export class DemoClient extends BaseClient {
   constructor(config: ApiClientConfig = {}) {
@@ -28,6 +28,9 @@ export class DemoClient extends BaseClient {
     return this.request<Models.RspAbc>({
       method: "GET",
       path: "/api/demo/abc",
+      service: "DemoService",
+      operation: "Abc",
+      namespace: "demo",
       query: request.query as unknown as Record<string, unknown> | undefined,
       headers: request.headers,
       init,
@@ -54,6 +57,9 @@ export class DemoClient extends BaseClient {
     return this.request<Models.RspTestPost>({
       method: "POST",
       path: "/api/demo/test_post",
+      service: "DemoService",
+      operation: "TestPost",
+      namespace: "demo",
       json: request.json,
       body: request.body,
       headers: request.headers,
@@ -82,6 +88,9 @@ export class DemoClient extends BaseClient {
     return this.request<Models.RspZ1put>({
       method: "PUT",
       path: "/api/demo/1put",
+      service: "DemoService",
+      operation: "Z1put",
+      namespace: "demo",
       query: request.query as unknown as Record<string, unknown> | undefined,
       json: request.json,
       body: request.body,
@@ -109,6 +118,9 @@ export class DemoClient extends BaseClient {
     return this.request<Models.RspDelete>({
       method: "DELETE",
       path: "/api/demo/delete$",
+      service: "DemoService",
+      operation: "Delete",
+      namespace: "demo",
       query: request.query as unknown as Record<string, unknown> | undefined,
       headers: request.headers,
       init,
@@ -129,12 +141,43 @@ export class DemoClient extends BaseClient {
       headers?: Record<string, string>;
     } = {},
     protocols?: string | string[],
-  ): WebSocket {
-    return this.connect(
-      "/api/demo/ws",
-      request.query as unknown as Record<string, unknown> | undefined,
+  ): ApiSocketBridge<Models.WsWsSend, Shared.WSRecv> {
+    return this.connectBridge<Models.WsWsSend, Shared.WSRecv>({
+      routeId: "api.demo.ws.ws",
+      path: "/api/demo/ws",
+      service: "DemoService",
+      namespace: "demo",
+      connectMethod: "ConnectWs",
+      sendMethod: "SendWs",
+      closeMethod: "CloseWs",
+      eventBase: "api_blueprint.ws.api.demo.ws.ws",
+      query: request.query as unknown as Record<string, unknown> | undefined,
+      headers: request.headers,
       protocols,
-    );
+    });
+  }
+
+
+  connectWsRaw(
+    request: {
+      query?: Shared.ApiDemoSubA;
+      headers?: Record<string, string>;
+    } = {},
+    protocols?: string | string[],
+  ): WebSocket {
+    return this.connectRaw({
+      routeId: "api.demo.ws.ws",
+      path: "/api/demo/ws",
+      service: "DemoService",
+      namespace: "demo",
+      connectMethod: "ConnectWs",
+      sendMethod: "SendWs",
+      closeMethod: "CloseWs",
+      eventBase: "api_blueprint.ws.api.demo.ws.ws",
+      query: request.query as unknown as Record<string, unknown> | undefined,
+      headers: request.headers,
+      protocols,
+    });
   }
 
 
@@ -155,6 +198,9 @@ export class DemoClient extends BaseClient {
     return this.request<Models.RspPostDeprecated>({
       method: "POST",
       path: "/api/demo/post_deprecated",
+      service: "DemoService",
+      operation: "PostDeprecated",
+      namespace: "demo",
       json: request.json,
       body: request.body,
       headers: request.headers,
@@ -180,6 +226,9 @@ export class DemoClient extends BaseClient {
     return this.request<Models.RspRaw>({
       method: "POST",
       path: "/api/demo/raw",
+      service: "DemoService",
+      operation: "Raw",
+      namespace: "demo",
       headers: request.headers,
       init,
       responseType: "json",
@@ -203,6 +252,9 @@ export class DemoClient extends BaseClient {
     return this.request<Models.RspMapModel>({
       method: "POST",
       path: "/api/demo/map_model",
+      service: "DemoService",
+      operation: "MapModel",
+      namespace: "demo",
       headers: request.headers,
       init,
       responseType: "json",

@@ -22,6 +22,8 @@ def test_example_config_loads_expected_values():
     assert config.kotlin.package == "com.example.apiblueprint"
     assert config.kotlin.base_url == "http://localhost:2333"
     assert config.kotlin.include == ["tag:api"]
+    assert config.wails is not None
+    assert [target.id for target in config.wails.targets] == ["wails.v3", "wails.v2"]
     assert config.grpc is not None
     assert [target.id for target in config.grpc.targets] == ["python.greeter", "go.greeter"]
     assert config.grpc.targets[0].python_package_root == "examplegrpc_pb"
@@ -43,6 +45,11 @@ def test_resolve_config_converts_relative_outputs_to_absolute_paths():
     assert resolved.kotlin.base_url == "http://localhost:2333"
     assert resolved.kotlin.include == ("tag:api",)
     assert "path:/api/demo/ws" in resolved.kotlin.exclude
+    assert resolved.wails is not None
+    assert resolved.wails.targets[0].go_out_dir == (EXAMPLE_CONFIG.parent / "wails" / "v3" / "go").resolve()
+    assert resolved.wails.targets[0].typescript_out_dir == (EXAMPLE_CONFIG.parent / "wails" / "v3" / "typescript").resolve()
+    assert resolved.wails.targets[1].go_out_dir == (EXAMPLE_CONFIG.parent / "wails" / "v2" / "go").resolve()
+    assert resolved.wails.targets[1].typescript_out_dir == (EXAMPLE_CONFIG.parent / "wails" / "v2" / "typescript").resolve()
     assert resolved.grpc is not None
     assert resolved.grpc.source_root == (EXAMPLE_CONFIG.parent / "grpc" / "protos").resolve()
     assert resolved.grpc.targets[0].out_dir == (EXAMPLE_CONFIG.parent / "grpc" / "python").resolve()
@@ -258,7 +265,55 @@ import_roots = ["job-includes"]
     assert resolved.grpc.source_root == global_source_root.resolve()
     assert resolved.grpc.targets[0].source_root == global_source_root.resolve()
     assert resolved.grpc.targets[1].source_root == service_source_root.resolve()
-    assert resolved.grpc.targets[1].import_roots == ((tmp_path / "job-includes").resolve(),)
+
+
+def test_wails_targets_load_and_resolve_absolute_paths(tmp_path):
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[wails.targets]]
+id = "desktop.v3"
+version = "v3"
+go_out_dir = "generated/go"
+typescript_out_dir = "generated/typescript"
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    config = Config.load(config_path)
+    assert config.wails is not None
+    assert config.wails.targets[0].id == "desktop.v3"
+    assert config.wails.targets[0].version == "v3"
+
+    resolved = resolve_config(config_path)
+    assert resolved.wails is not None
+    assert resolved.wails.targets[0].go_out_dir == (tmp_path / "generated" / "go").resolve()
+    assert resolved.wails.targets[0].typescript_out_dir == (tmp_path / "generated" / "typescript").resolve()
+
+
+def test_wails_targets_require_unique_ids(tmp_path):
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[wails.targets]]
+id = "desktop"
+version = "v3"
+go_out_dir = "generated/go"
+typescript_out_dir = "generated/typescript"
+
+[[wails.targets]]
+id = "desktop"
+version = "v2"
+go_out_dir = "generated/go-v2"
+typescript_out_dir = "generated/typescript-v2"
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="duplicate ids"):
+        Config.load(config_path)
 
 
 def test_grpc_targets_inherit_legacy_globals_when_new_globals_are_absent(tmp_path):

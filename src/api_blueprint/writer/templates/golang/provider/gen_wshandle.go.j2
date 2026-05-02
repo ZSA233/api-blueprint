@@ -2,7 +2,10 @@
 
 package provider
 
-import "strings"
+import (
+	"context"
+	"strings"
+)
 
 const (
 	PROV_WS_HANDLE = "ws_handle"
@@ -12,6 +15,16 @@ type WsHandleProvider[Q, B, P any] struct {
 	Subs    []string
 	Extra   string
 	Handler func(c *Context[Q, B, P], req *REQ[Q, B]) (rsp *P, err error)
+}
+
+type SocketConnection interface {
+	Transport() TransportKind
+	SessionID() string
+	Subprotocol() string
+	Underlying() any
+	ReadJSON(context.Context, any) error
+	WriteJSON(context.Context, any) error
+	Close(code int, reason string) error
 }
 
 func (prov *WsHandleProvider[Q, B, P]) GetName() string {

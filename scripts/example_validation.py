@@ -21,7 +21,7 @@ for path in (PROJECT_ROOT, SRC_ROOT):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
-from api_blueprint.application.generation import generate_golang, generate_grpc, generate_kotlin, generate_typescript
+from api_blueprint.application.generation import generate_golang, generate_grpc, generate_kotlin, generate_typescript, generate_wails
 
 PROTOC_GEN_GO_VERSION = "v1.36.10"
 PROTOC_GEN_GO_GRPC_VERSION = "v1.6.0"
@@ -43,6 +43,11 @@ BLUEPRINT_TYPESCRIPT_PRESERVED = (
     "tsconfig.json",
 )
 BLUEPRINT_KOTLIN_PRESERVED = ()
+BLUEPRINT_WAILS_GO_PRESERVED = ("go.mod",)
+BLUEPRINT_WAILS_TYPESCRIPT_PRESERVED = (
+    "index.ts",
+    "tsconfig.json",
+)
 GRPC_GO_PRESERVED = ("go.mod",)
 
 
@@ -63,6 +68,10 @@ class BlueprintExampleWorkspace:
     golang_dir: Path
     typescript_dir: Path
     kotlin_dir: Path
+    wails_v3_go_dir: Path
+    wails_v3_typescript_dir: Path
+    wails_v2_go_dir: Path
+    wails_v2_typescript_dir: Path
 
 
 @dataclass(frozen=True)
@@ -155,6 +164,10 @@ def _blueprint_workspace(root: Path) -> BlueprintExampleWorkspace:
         golang_dir=root / "golang",
         typescript_dir=root / "typescript",
         kotlin_dir=root / "kotlin",
+        wails_v3_go_dir=root / "wails" / "v3" / "go",
+        wails_v3_typescript_dir=root / "wails" / "v3" / "typescript",
+        wails_v2_go_dir=root / "wails" / "v2" / "go",
+        wails_v2_typescript_dir=root / "wails" / "v2" / "typescript",
     )
 
 
@@ -198,6 +211,22 @@ def _prepare_blueprint_outputs(*, source_root: Path, target_root: Path) -> None:
         target_root / "kotlin",
         _capture_relative_files(source_root / "kotlin", BLUEPRINT_KOTLIN_PRESERVED),
     )
+    _prepare_output_dir(
+        target_root / "wails" / "v3" / "go",
+        _capture_relative_files(source_root / "wails" / "v3" / "go", BLUEPRINT_WAILS_GO_PRESERVED),
+    )
+    _prepare_output_dir(
+        target_root / "wails" / "v3" / "typescript",
+        _capture_relative_files(source_root / "wails" / "v3" / "typescript", BLUEPRINT_WAILS_TYPESCRIPT_PRESERVED),
+    )
+    _prepare_output_dir(
+        target_root / "wails" / "v2" / "go",
+        _capture_relative_files(source_root / "wails" / "v2" / "go", BLUEPRINT_WAILS_GO_PRESERVED),
+    )
+    _prepare_output_dir(
+        target_root / "wails" / "v2" / "typescript",
+        _capture_relative_files(source_root / "wails" / "v2" / "typescript", BLUEPRINT_WAILS_TYPESCRIPT_PRESERVED),
+    )
 
 
 def _prepare_grpc_outputs(*, source_root: Path, target_root: Path) -> None:
@@ -232,6 +261,7 @@ def regenerate_blueprint_examples(workspace: BlueprintExampleWorkspace) -> None:
     generate_typescript(workspace.config_path)
     generate_golang(workspace.config_path)
     generate_kotlin(workspace.config_path)
+    generate_wails(workspace.config_path)
 
 
 def regenerate_grpc_examples(workspace: GrpcExampleWorkspace) -> None:
@@ -258,6 +288,18 @@ def validate_example_snapshots(repo_root: Path, workspace: BlueprintExampleWorks
             (examples_root / "golang", workspace.golang_dir, "blueprint/golang"),
             (examples_root / "typescript", workspace.typescript_dir, "blueprint/typescript"),
             (examples_root / "kotlin", workspace.kotlin_dir, "blueprint/kotlin"),
+            (examples_root / "wails" / "v3" / "go", workspace.wails_v3_go_dir, "blueprint/wails/v3/go"),
+            (
+                examples_root / "wails" / "v3" / "typescript",
+                workspace.wails_v3_typescript_dir,
+                "blueprint/wails/v3/typescript",
+            ),
+            (examples_root / "wails" / "v2" / "go", workspace.wails_v2_go_dir, "blueprint/wails/v2/go"),
+            (
+                examples_root / "wails" / "v2" / "typescript",
+                workspace.wails_v2_typescript_dir,
+                "blueprint/wails/v2/typescript",
+            ),
         )
     )
 
@@ -292,6 +334,10 @@ def _raise_on_snapshot_drift(pairs: Iterable[tuple[Path, Path, str]]) -> None:
 def compile_generated_examples(workspace: BlueprintExampleWorkspace) -> None:
     subprocess.run(["tsc", "-p", str(workspace.typescript_dir / "tsconfig.json"), "--noEmit"], check=True)
     subprocess.run(["go", "test", "./..."], cwd=workspace.golang_dir, check=True)
+    subprocess.run(["go", "test", "./..."], cwd=workspace.wails_v3_go_dir, check=True)
+    subprocess.run(["go", "test", "./..."], cwd=workspace.wails_v2_go_dir, check=True)
+    subprocess.run(["tsc", "-p", str(workspace.wails_v3_typescript_dir / "tsconfig.json"), "--noEmit"], check=True)
+    subprocess.run(["tsc", "-p", str(workspace.wails_v2_typescript_dir / "tsconfig.json"), "--noEmit"], check=True)
     _validate_kotlin_sources(workspace.kotlin_dir)
 
 

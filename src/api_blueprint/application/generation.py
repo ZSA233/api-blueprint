@@ -12,9 +12,12 @@ from api_blueprint.config import (
     ResolvedGrpcTargetConfig,
     ResolvedKotlinConfig,
     ResolvedTargetConfig,
+    ResolvedWailsConfig,
+    ResolvedWailsTargetConfig,
     resolve_config,
 )
 from api_blueprint.writer.grpc.models import GrpcGenerationJob
+from api_blueprint.writer.wails.models import WailsGenerationTarget
 
 
 def _require_golang_config(resolved: ResolvedConfig) -> ResolvedTargetConfig:
@@ -39,6 +42,12 @@ def _require_grpc_config(resolved: ResolvedConfig) -> ResolvedGrpcConfig:
     if resolved.raw.grpc is None or resolved.grpc is None:
         raise ValueError("[gen_grpc] 配置中未找到grpc段落")
     return resolved.grpc
+
+
+def _require_wails_config(resolved: ResolvedConfig) -> ResolvedWailsConfig:
+    if resolved.raw.wails is None or resolved.wails is None:
+        raise ValueError("[gen_wails] 配置中未找到wails段落")
+    return resolved.wails
 
 
 def generate_golang(config_path: str | Path | None = "./api-blueprint.toml", *, doc: bool = False) -> None:
@@ -175,3 +184,46 @@ def generate_grpc(
     grpc_config = _require_grpc_config(resolved)
     writer = grpc.GrpcWriter(grpc_config)
     writer.gen(target_patterns=target_filters, job_patterns=job_filters)
+
+
+def list_wails_targets(
+    config_path: str | Path | None = "./api-blueprint.toml",
+    *,
+    target_filters: Sequence[str] = (),
+) -> tuple[ResolvedWailsTargetConfig, ...]:
+    from api_blueprint.writer import wails
+
+    resolved = resolve_config(config_path)
+    wails_config = _require_wails_config(resolved)
+    writer = wails.WailsWriter(wails_config)
+    return writer.list_targets(target_filters)
+
+
+def explain_wails_target(
+    config_path: str | Path | None = "./api-blueprint.toml",
+    *,
+    target_id: str,
+) -> WailsGenerationTarget:
+    from api_blueprint.writer import wails
+
+    resolved = resolve_config(config_path)
+    wails_config = _require_wails_config(resolved)
+    writer = wails.WailsWriter(wails_config)
+    return writer.explain_target(target_id)
+
+
+def generate_wails(
+    config_path: str | Path | None = "./api-blueprint.toml",
+    *,
+    target_filters: Sequence[str] = (),
+) -> tuple[WailsGenerationTarget, ...]:
+    from api_blueprint.writer import wails
+
+    resolved = resolve_config(config_path)
+    wails_config = _require_wails_config(resolved)
+    project = load_project(resolved.path, command="gen_wails")
+    if not project.entrypoints:
+        raise ModuleNotFoundError("[gen_wails] 未指定蓝图entrypoints")
+    build_entrypoints(project.entrypoints)
+    writer = wails.WailsWriter(wails_config)
+    return writer.gen(project.entrypoints, target_patterns=target_filters)

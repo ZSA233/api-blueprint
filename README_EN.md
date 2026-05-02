@@ -13,7 +13,7 @@ Its main workflow is:
 
 1. Describe `Blueprint`, routes, request/response models, and error structures in Python.
 2. Build a FastAPI application at runtime and expose OpenAPI documentation.
-3. Generate Go, TypeScript, and Kotlin Android code snapshots from the same blueprint source.
+3. Generate Go, TypeScript, Kotlin Android, and Wails v2/v3 code snapshots from the same blueprint source.
 4. Compile existing `.proto` trees from gRPC targets declared in `api-blueprint.toml`, while still supporting legacy/raw job mode.
 
 ## Supported Outputs
@@ -21,9 +21,11 @@ Its main workflow is:
 | Target | Status | Command | Example Directory |
 |:---|:---:|:---|:---|
 | Go | Available | `api-gen-golang` | `examples/golang` |
-| gRPC | Available | `api-gen-grpc` | `examples/grpc/{go,python}` |
-| Kotlin Android | Preview | `api-gen-kotlin` | `examples/kotlin` |
 | TypeScript | Preview | `api-gen-typescript` | `examples/typescript` |
+| Wails v3 | Experimental | `api-gen-wails` | `examples/wails/v3` |
+| Wails v2 | Preview | `api-gen-wails` | `examples/wails/v2` |
+| Kotlin Android | Preview | `api-gen-kotlin` | `examples/kotlin` |
+| gRPC | Available | `api-gen-grpc` | `examples/grpc/{go,python}` |
 
 Java is not exposed as a public command yet; it remains an internal extension point only.
 
@@ -38,9 +40,10 @@ uv pip install "git+https://github.com/zsa233/api-blueprint@stable"
 ## Core Workflow
 
 - Define `Blueprint` objects and route DSLs in directories such as `examples/blueprints/`.
+- Use `examples/wails/v3/` and `examples/wails/v2/` as the public Wails Go / TypeScript snapshot examples; their `[[wails.targets]]` share the same `examples/api-blueprint.toml` file as the other Blueprint examples.
 - Use `examples/grpc/` as the public proto and committed Go / Python gRPC snapshot example; its `[grpc]` settings share the same `examples/api-blueprint.toml` file as the Blueprint examples.
 - Build the documentation service with `api-doc-server`, reusing FastAPI OpenAPI output.
-- Generate language-side snapshot artifacts with `api-gen-golang`, `api-gen-typescript`, and `api-gen-kotlin`.
+- Generate language-side snapshot artifacts with `api-gen-golang`, `api-gen-typescript`, `api-gen-kotlin`, and `api-gen-wails`.
 - Compile existing proto trees through `api-gen-grpc` targets; when you need older config semantics, legacy/raw jobs are still available.
 - During feature work, use `make example-compile-check` to regenerate the Blueprint and gRPC examples and verify their compile/import smoke checks still pass.
 - When the generator change is intentional, use `make example-refresh` to refresh the committed example snapshots.
@@ -76,6 +79,20 @@ base_url = 'http://localhost:2333'
 include = ['tag:api']
 exclude = ['path:/static/**', 'path:/api/ws', 'path:/api/demo/ws', 'path:/api/demo/delete$']
 
+[wails]
+
+[[wails.targets]]
+id = 'wails.v3'
+version = 'v3'
+go_out_dir = 'wails/v3/go'
+typescript_out_dir = 'wails/v3/typescript'
+
+[[wails.targets]]
+id = 'wails.v2'
+version = 'v2'
+go_out_dir = 'wails/v2/go'
+typescript_out_dir = 'wails/v2/typescript'
+
 [grpc]
 source_root = 'grpc/protos'
 import_roots = []
@@ -96,6 +113,16 @@ files = [
     'greeterpb/greeter.proto',
 ]
 ```
+
+## Wails Target Semantic Model
+
+- `[[wails.targets]]` declares an explicit, versioned Wails target; `id` is used by `--target`, `--list-targets`, and `--explain-target`.
+- `version` currently supports `v3` and `v2`; README status is fixed as Wails v3 `experimental` and Wails v2 `preview`.
+- `go_out_dir` and `typescript_out_dir` both mean final generated snapshot directories.
+- On the Go side, business handler names and the `Method(ctx, req) (rsp, err)` shape stay stable, but the generated context now uses a transport-neutral runtime; HTTP-only behavior is exposed through generated escape hatches.
+- TypeScript request/response client classes and method signatures stay aligned between HTTP and Wails; the public WebSocket surface is normalized to `ApiSocketBridge<ServerMessage, ClientMessage>`.
+- HTTP TypeScript output keeps `connect<Route>Raw()` as the native `WebSocket` escape hatch; Wails TypeScript output does not expose raw `WebSocket`.
+- The Wails TypeScript generator targets documented runtime bridge APIs directly: v3 uses `window.wails.Call(...)` plus events, and v2 uses `window.go...` plus `window.runtime.EventsOn/EventsOff`; it does not depend on Wails CLI-generated JS binding directories as input.
 
 ## gRPC Semantic Model
 
@@ -163,16 +190,23 @@ api-gen-grpc -c examples/api-blueprint.toml --explain-target go.greeter
 api-gen-grpc -c examples/api-blueprint.toml --list-jobs
 api-gen-kotlin -c examples/api-blueprint.toml
 api-gen-typescript -c examples/api-blueprint.toml
+api-gen-wails -c examples/api-blueprint.toml
+api-gen-wails -c examples/api-blueprint.toml --list-targets
+api-gen-wails -c examples/api-blueprint.toml --target wails.v3
+api-gen-wails -c examples/api-blueprint.toml --explain-target wails.v2
 ```
 
 ## Generated Artifacts And Repository Rules
 
 - `examples/blueprints/` is the blueprint source of truth.
-- `examples/golang/`, `examples/typescript/`, and `examples/kotlin/` are Blueprint snapshots and should not be hand-edited for business logic.
+- `examples/golang/`, `examples/typescript/`, `examples/kotlin/`, `examples/wails/v3/`, and `examples/wails/v2/` are Blueprint snapshots and should not be hand-edited for business logic.
 - `examples/grpc/protos/` is the gRPC example source of truth, and `examples/grpc/go/` and `examples/grpc/python/` are the corresponding generated snapshots.
 - `api-gen-grpc` only orchestrates compilation for existing `.proto` trees; it does not derive gRPC proto/service definitions from the Blueprint DSL.
 - `api-gen-grpc` can run with only the `[grpc]` section and does not require `[blueprint]`, `[golang]`, or `[typescript]`.
 - `[typescript]` supports both literal `base_url` values and raw TypeScript `base_url_expr` expressions; they are mutually exclusive, and resolution order is fixed as `base_url_expr -> base_url -> upstream -> ""`.
+- `[wails]` uses `[[wails.targets]]` to declare paired Wails Go and TypeScript outputs; each target generates both directories without depending on Wails CLI-generated JS bindings ahead of time.
+- Wails v3 is currently maintained as experimental and Wails v2 as preview; see [`docs/wails/implementation-plan.md`](docs/wails/implementation-plan.md) for the phase log, validation commands, and compatibility notes.
+- The TypeScript WebSocket public surface is now standardized as `ApiSocketBridge<ServerMessage, ClientMessage>`; only HTTP output keeps `connect<Route>Raw()`.
 - `[kotlin]` generates an OkHttp + kotlinx.serialization Android client and supports `package`, `base_url`, `base_url_expr`, `include`, and `exclude`; the first version targets JSON REST routes and does not support WebSocket, form, or binary routes yet.
 - Python gRPC targets require `grpcio-tools`; Go gRPC targets require `protoc`, `protoc-gen-go`, and `protoc-gen-go-grpc` on `PATH`; `grpcio-tools` is not a runtime dependency.
 - `[[grpc.targets]].python_package_root` only applies to Python targets; when it is set, the public Python gRPC snapshots are generated under `examples/grpc/python/examplegrpc_pb/...`.
@@ -181,10 +215,10 @@ api-gen-typescript -c examples/api-blueprint.toml
 - Example snapshot drift means the current generator output differs from the committed snapshots; it is a change signal, not an automatic bug.
 - `make example-compile-check` allows drift and only checks whether regenerated outputs still compile.
 - `make example-refresh` accepts intentional changes and refreshes the committed example snapshots in place.
-- `make example-validation` wraps the strict mode of `scripts/example_validation.py`, regenerates the Blueprint and gRPC examples in a temporary workspace, then runs snapshot diffs, `tsc --noEmit`, `go test ./...`, Kotlin Gradle `compileKotlin`, and a Python gRPC import smoke check.
+- `make example-validation` wraps the strict mode of `scripts/example_validation.py`, regenerates the Blueprint, Wails, and gRPC examples in a temporary workspace, then runs snapshot diffs, `tsc --noEmit`, `go test ./...`, Kotlin Gradle `compileKotlin`, and a Python gRPC import smoke check.
 - Strict Blueprint example regeneration depends on `go-enum` and Gradle (or `API_BLUEPRINT_GRADLE_BIN`); the gRPC example flow depends on `protoc`, `protoc-gen-go`, `protoc-gen-go-grpc`, and Python `grpc_tools`.
 - `make release-preflight` must include strict `make example-validation`, because by release time any intentional snapshot drift should already have been accepted and committed.
-- `examples/api-blueprint.toml` carries the public shared example config for both Blueprint and gRPC, and `examples/grpc/go/` plus `examples/grpc/python/` are part of the committed examples snapshot contract.
+- `examples/api-blueprint.toml` carries the public shared example config for Blueprint, Wails, and gRPC, and `examples/wails/v3/`, `examples/wails/v2/`, `examples/grpc/go/`, plus `examples/grpc/python/` are part of the committed examples snapshot contract.
 - `main.py` and `debug.py` are kept only as local helper scripts and are not part of the public release surface.
 
 ## Development

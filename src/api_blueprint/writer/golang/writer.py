@@ -147,8 +147,7 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
     def gen_providers(self) -> None:
         provider_dir = self.working_dir / self.views_package / self.provider_package
         for name, text in iter_render(LANG, {"writer": self}, "provider"):
-            overwrite = name.startswith("gen_")
-            with self.write_file(provider_dir / name, overwrite=overwrite) as handle:
+            with self.write_file(provider_dir / name, overwrite=True) as handle:
                 if handle:
                     handle.write(text)
 

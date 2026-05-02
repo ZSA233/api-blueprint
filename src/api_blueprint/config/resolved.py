@@ -6,7 +6,7 @@ from typing import Literal
 
 from api_blueprint.config.grpc_python_package import python_package_root_to_path
 from api_blueprint.config.loader import normalize_config_path
-from api_blueprint.config.models import Config
+from api_blueprint.config.models import Config, WailsVersion
 
 
 @dataclass(frozen=True)
@@ -67,6 +67,19 @@ class ResolvedGrpcConfig:
 
 
 @dataclass(frozen=True)
+class ResolvedWailsTargetConfig:
+    id: str
+    version: WailsVersion
+    go_out_dir: Path
+    typescript_out_dir: Path
+
+
+@dataclass(frozen=True)
+class ResolvedWailsConfig:
+    targets: tuple[ResolvedWailsTargetConfig, ...]
+
+
+@dataclass(frozen=True)
 class ResolvedConfig:
     path: Path
     project_root: Path
@@ -76,6 +89,7 @@ class ResolvedConfig:
     typescript: ResolvedTargetConfig | None
     kotlin: ResolvedKotlinConfig | None
     grpc: ResolvedGrpcConfig | None
+    wails: ResolvedWailsConfig | None
 
 
 def resolve_output_path(config_path: Path, output: str | None) -> Path | None:
@@ -125,6 +139,7 @@ def resolve_config(path: str | Path | None) -> ResolvedConfig:
     tsconf = raw.typescript
     ktconf = raw.kotlin
     grpcconf = raw.grpc
+    wailsconf = raw.wails
     target_import_entries = (
         choose_path_entries(grpcconf.import_roots, grpcconf.include_paths)
         if grpcconf is not None
@@ -229,6 +244,21 @@ def resolve_config(path: str | Path | None) -> ResolvedConfig:
                     module=job.module,
                 )
                 for job in grpcconf.jobs
+            ),
+        ),
+        wails=None
+        if wailsconf is None
+        else ResolvedWailsConfig(
+            targets=tuple(
+                ResolvedWailsTargetConfig(
+                    id=target.id,
+                    version=target.version,
+                    go_out_dir=resolve_output_path(normalized, target.go_out_dir) or normalized.parent.resolve(),
+                    typescript_out_dir=(
+                        resolve_output_path(normalized, target.typescript_out_dir) or normalized.parent.resolve()
+                    ),
+                )
+                for target in wailsconf.targets
             ),
         ),
     )

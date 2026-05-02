@@ -8,8 +8,59 @@ import (
 	"github.com/coder/websocket/wsjson"
 )
 
+type HTTPWebSocketConnection struct {
+	conn *websocket.Conn
+}
+
+func NewHTTPWebSocketConnection(conn *websocket.Conn) *HTTPWebSocketConnection {
+	return &HTTPWebSocketConnection{conn: conn}
+}
+
+func (conn *HTTPWebSocketConnection) Transport() TransportKind {
+	return TransportHTTP
+}
+
+func (conn *HTTPWebSocketConnection) SessionID() string {
+	return ""
+}
+
+func (conn *HTTPWebSocketConnection) Subprotocol() string {
+	if conn == nil || conn.conn == nil {
+		return ""
+	}
+	return conn.conn.Subprotocol()
+}
+
+func (conn *HTTPWebSocketConnection) Underlying() any {
+	if conn == nil {
+		return nil
+	}
+	return conn.conn
+}
+
+func (conn *HTTPWebSocketConnection) ReadJSON(ctx context.Context, target any) error {
+	if conn == nil || conn.conn == nil {
+		return nil
+	}
+	return wsjson.Read(ctx, conn.conn, target)
+}
+
+func (conn *HTTPWebSocketConnection) WriteJSON(ctx context.Context, payload any) error {
+	if conn == nil || conn.conn == nil {
+		return nil
+	}
+	return wsjson.Write(ctx, conn.conn, payload)
+}
+
+func (conn *HTTPWebSocketConnection) Close(code int, reason string) error {
+	if conn == nil || conn.conn == nil {
+		return nil
+	}
+	return conn.conn.Close(websocket.StatusCode(code), reason)
+}
+
 type WsHandleContext[Q, B, P any] struct {
-	Conn     *websocket.Conn
+	Conn     SocketConnection
 	Response *P
 	Error    error
 }
@@ -17,15 +68,19 @@ type WsHandleContext[Q, B, P any] struct {
 func (prov *WsHandleProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
 	ctx := AdaptContext[Q, B, P](anyCtx)
 	var err error
+	httpCtx, httpErr := ctx.RequireHTTP()
+	if httpErr != nil {
+		return
+	}
 
 	if ctx.Req == nil {
-		_ = ctx.Gin.AbortWithError(http.StatusBadRequest, err)
+		_ = httpCtx.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
 
 	req, err := ctx.Req.Request, ctx.Req.Error
 	if err != nil {
-		_ = ctx.Gin.AbortWithError(http.StatusBadRequest, err)
+		_ = httpCtx.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
 	opts := &websocket.AcceptOptions{
@@ -35,12 +90,12 @@ func (prov *WsHandleProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
 	}
 
 	conn, err := websocket.Accept(
-		ctx.Gin.Writer,
-		ctx.Gin.Request,
+		httpCtx.Writer,
+		httpCtx.Request,
 		opts,
 	)
 	if err != nil {
-		_ = ctx.Gin.AbortWithError(http.StatusBadRequest, err)
+		_ = httpCtx.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
 	if conn.Subprotocol() == "" {
@@ -50,7 +105,7 @@ func (prov *WsHandleProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
 	defer conn.CloseNow()
 
 	ctx.WsHandle = &WsHandleContext[Q, B, P]{
-		Conn: conn,
+		Conn: NewHTTPWebSocketConnection(conn),
 	}
 
 	var rsp *P
@@ -58,14 +113,14 @@ func (prov *WsHandleProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
 	ctx.WsHandle.Response = rsp
 	ctx.WsHandle.Error = err
 	if err != nil {
-		conn.Close(websocket.StatusInternalError, err.Error())
+		ctx.WsHandle.Conn.Close(int(websocket.StatusInternalError), err.Error())
 	} else {
-		conn.Close(websocket.StatusNormalClosure, "")
+		ctx.WsHandle.Conn.Close(int(websocket.StatusNormalClosure), "")
 	}
 	// 在ws中，忽略更深层的中间件
 }
 
-func WsJSONReadLoop[MSG any](conn *websocket.Conn, fn func(msg *MSG, err error) (stopped bool), cs ...context.Context) (err error) {
+func WsJSONReadLoop[MSG any](conn SocketConnection, fn func(msg *MSG, err error) (stopped bool), cs ...context.Context) (err error) {
 	if conn == nil {
 		return nil
 	}
@@ -77,7 +132,7 @@ func WsJSONReadLoop[MSG any](conn *websocket.Conn, fn func(msg *MSG, err error) 
 	}
 	for {
 		msg := new(MSG)
-		err = wsjson.Read(c, conn, msg)
+		err = conn.ReadJSON(c, msg)
 		if fn(msg, err) {
 			break
 		}

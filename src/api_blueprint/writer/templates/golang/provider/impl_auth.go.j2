@@ -4,9 +4,13 @@ type AuthContext[Q, B, P any] struct{}
 
 func (prov *AuthProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
 	ctx := AdaptContext[Q, B, P](anyCtx)
+	httpCtx, err := ctx.RequireHTTP()
+	if err != nil {
+		return
+	}
 
 	// TODO
 	ctx.Auth = &AuthContext[Q, B, P]{}
 
-	ctx.Gin.Next()
+	httpCtx.Next()
 }

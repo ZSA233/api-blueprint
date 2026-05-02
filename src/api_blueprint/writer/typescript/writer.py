@@ -24,11 +24,17 @@ class TypeScriptWriter(BaseWriter[TypeScriptBlueprint]):
         *,
         base_url: str | None = None,
         base_url_expr: str | None = None,
+        template_lang: str = "typescript",
+        transport_kind: str = "http",
+        allow_raw_ws: bool = True,
     ):
         super().__init__(working_dir)
         self.base_url = base_url or ""
         self.base_url_expr = base_url_expr
         self.rendered_base_url = base_url_expr if base_url_expr is not None else json.dumps(self.base_url)
+        self.template_lang = template_lang
+        self.transport_kind = transport_kind
+        self.allow_raw_ws = allow_raw_ws
         self._written_files: Set[str] = set()
 
     def gen(self) -> None:

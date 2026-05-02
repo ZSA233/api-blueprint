@@ -17,23 +17,31 @@ func (prov *RspProvider[Q, B, P]) NewContext(ctx *Context[Q, B, P]) *RspContext 
 
 func (prov *RspProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
 	ctx := AdaptContext[Q, B, P](anyCtx)
+	httpCtx, httpErr := ctx.RequireHTTP()
 
 	var response *P
 	var err error
 	if handled := ctx.Handle; handled != nil {
 		response = handled.Response
 		err = handled.Error
-		prov.doResponse(ctx.Gin, response, err)
+		if httpCtx != nil {
+			prov.doResponse(httpCtx, response, err)
+		}
 	} else if handled := ctx.WsHandle; handled != nil {
 		// response = handled.Response
 		// err = handled.Error
 	} else {
 		err = fmt.Errorf("[RspProvider] fail to get Handle")
-		_ = ctx.Gin.AbortWithError(-1, err)
+		if httpCtx != nil {
+			_ = httpCtx.AbortWithError(-1, err)
+		}
+		return
+	}
+	if httpErr != nil {
 		return
 	}
 
-	ctx.Gin.Next()
+	httpCtx.Next()
 }
 
 func (prov *RspProvider[Q, B, P]) doResponse(ctx *gin.Context, data *P, err error) {

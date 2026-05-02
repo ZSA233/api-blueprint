@@ -45,6 +45,7 @@ api-gen-golang = "api_blueprint.cli.apigen:gen_golang"
 api-gen-typescript = "api_blueprint.cli.apigen:gen_typescript"
 api-gen-kotlin = "api_blueprint.cli.apigen:gen_kotlin"
 api-gen-grpc = "api_blueprint.cli.apigen:gen_grpc"
+api-gen-wails = "api_blueprint.cli.apigen:gen_wails"
 
 [dependency-groups]
 dev = [

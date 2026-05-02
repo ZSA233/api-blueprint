@@ -13,17 +13,26 @@ type HandleContext[Q, B, P any] struct {
 func (prov *HandleProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
 	ctx := AdaptContext[Q, B, P](anyCtx)
 	var err error
+	httpCtx, httpErr := ctx.RequireHTTP()
 
 	if ctx.Req == nil {
 		err = fmt.Errorf("[HandleProvider] fail to get req err[%v]", err)
-		_ = ctx.Gin.AbortWithError(http.StatusBadRequest, err)
+		if httpCtx != nil {
+			_ = httpCtx.AbortWithError(http.StatusBadRequest, err)
+		}
 		return
 	}
 
 	req, err := ctx.Req.Request, ctx.Req.Error
 	if err != nil {
 		fmt.Println(err)
-		_ = ctx.Gin.AbortWithError(http.StatusBadRequest, err)
+		if httpCtx != nil {
+			_ = httpCtx.AbortWithError(http.StatusBadRequest, err)
+		}
+		return
+	}
+	if httpErr != nil {
+		err = fmt.Errorf("[HandleProvider] transport err[%v]", httpErr)
 		return
 	}
 
@@ -34,5 +43,5 @@ func (prov *HandleProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
 		Error:    err,
 	}
 
-	ctx.Gin.Next()
+	httpCtx.Next()
 }
