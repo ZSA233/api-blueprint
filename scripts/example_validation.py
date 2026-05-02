@@ -26,6 +26,11 @@ from api_blueprint.application.generation import generate_golang, generate_grpc,
 PROTOC_GEN_GO_VERSION = "v1.36.10"
 PROTOC_GEN_GO_GRPC_VERSION = "v1.6.0"
 GO_ENUM_VERSION = "v0.9.2"
+KOTLIN_VERSION = "2.1.21"
+KOTLINX_COROUTINES_VERSION = "1.10.2"
+KOTLINX_SERIALIZATION_JSON_VERSION = "1.8.1"
+OKHTTP_VERSION = "4.12.0"
+GRADLE_BIN_ENV = "API_BLUEPRINT_GRADLE_BIN"
 
 BLUEPRINT_GOLANG_PRESERVED = (
     "go.mod",
@@ -68,6 +73,18 @@ class GrpcExampleWorkspace:
     python_dir: Path
 
 
+def resolve_gradle_bin() -> str | None:
+    configured = os.environ.get(GRADLE_BIN_ENV)
+    if configured:
+        configured_path = Path(configured).expanduser()
+        if configured_path.is_file():
+            return str(configured_path)
+        resolved = shutil.which(configured)
+        if resolved is not None:
+            return resolved
+    return shutil.which("gradle")
+
+
 def collect_missing_validation_requirements() -> tuple[str, ...]:
     requirements = (
         (
@@ -106,6 +123,12 @@ def collect_missing_validation_requirements() -> tuple[str, ...]:
     for name, guidance in requirements:
         if shutil.which(name) is None:
             missing.append(f"{name}: {guidance}")
+
+    if resolve_gradle_bin() is None:
+        missing.append(
+            "gradle: install Gradle and ensure `gradle` is available on PATH, "
+            f"or set `{GRADLE_BIN_ENV}` to an executable Gradle binary."
+        )
 
     if importlib.util.find_spec("grpc_tools") is None:
         missing.append(
@@ -329,14 +352,70 @@ def _validate_kotlin_sources(kotlin_dir: Path) -> None:
         "public data class DemoAbcQuery",
         "public data class ApiDemoA",
         "public enum class ColorEnum",
+        "public enum class ColorEnum(public val wireValue: String)",
+        "@Serializable(with = StatusEnumSerializer::class)",
         "public suspend fun abc",
         "path = \"/api/demo/abc\"",
+        "responseSerializer = GeneralResponse.serializer(MapSerializer(String.serializer(), ApiHelloMap.serializer()))",
+        '"type" to type.wireValue.toString()',
         "public suspend fun helloWay",
     )
     haystack = "\n".join((models, demo_api, hello_api, demo_models, hello_models))
     missing_snippets = [snippet for snippet in required_snippets if snippet not in haystack]
     if missing_snippets:
         raise ExampleValidationError("kotlin example missing expected snippets:\n" + "\n".join(missing_snippets))
+    _compile_kotlin_sources(kotlin_dir)
+
+
+def _compile_kotlin_sources(kotlin_dir: Path) -> None:
+    gradle_bin = resolve_gradle_bin()
+    if gradle_bin is None:
+        raise ExampleValidationError(
+            "missing Kotlin compile requirement: Gradle is required; "
+            f"install `gradle` or set `{GRADLE_BIN_ENV}`."
+        )
+
+    with tempfile.TemporaryDirectory(prefix="api-blueprint-kotlin-") as temp_dir:
+        project_dir = Path(temp_dir)
+        source_dir = project_dir / "src/main/kotlin"
+        shutil.copytree(kotlin_dir, source_dir)
+        (project_dir / "settings.gradle.kts").write_text(
+            'pluginManagement { repositories { gradlePluginPortal(); mavenCentral() } }\n'
+            "dependencyResolutionManagement { "
+            "repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); "
+            "repositories { mavenCentral() } "
+            "}\n"
+            'rootProject.name = "api-blueprint-kotlin-example"\n',
+            encoding="utf-8",
+        )
+        (project_dir / "build.gradle.kts").write_text(
+            f"""
+plugins {{
+    kotlin("jvm") version "{KOTLIN_VERSION}"
+    kotlin("plugin.serialization") version "{KOTLIN_VERSION}"
+}}
+
+dependencies {{
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:{KOTLINX_COROUTINES_VERSION}")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:{KOTLINX_SERIALIZATION_JSON_VERSION}")
+    implementation("com.squareup.okhttp3:okhttp:{OKHTTP_VERSION}")
+}}
+
+java {{
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}}
+
+kotlin {{
+    compilerOptions {{
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }}
+}}
+            """.strip()
+            + "\n",
+            encoding="utf-8",
+        )
+        subprocess.run([gradle_bin, "--no-daemon", "compileKotlin"], cwd=project_dir, check=True)
 
 
 def validate_examples(repo_root: Path) -> None:

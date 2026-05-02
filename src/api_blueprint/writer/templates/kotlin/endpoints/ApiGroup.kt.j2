@@ -2,7 +2,7 @@
 
 import {{ writer.package }}.internal.HttpExecutor
 import {{ writer.package }}.models.*
-import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.builtins.*
 
 public class {{ group.class_name }} internal constructor(
     private val executor: HttpExecutor,
@@ -37,7 +37,7 @@ public class {{ group.class_name }} internal constructor(
 
     private fun {{ route.query_type }}.toQueryMap(): Map<String, String?> = mapOf(
 {%- for field in route.query_proto.fields %}
-        "{{ field.serial_name }}" to {% if field.optional %}{{ field.name }}?.toString(){% else %}{{ field.name }}.toString(){% endif %}{% if not loop.last %},{% endif %}
+        "{{ field.serial_name }}" to {{ field.type.query_expr(field.name, optional=field.optional) }}{% if not loop.last %},{% endif %}
 {%- endfor %}
     )
 {%- endfor %}

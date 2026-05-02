@@ -125,7 +125,7 @@ make example-refresh
 
 这里需要明确区分：
 
-- `example-validation` 把 snapshot drift 视为仓库尚未收敛，因此适合小改动回归检查、CI 和 release gate；它会同时验证 Blueprint examples 与 `examples/grpc/` 的 Go / Python gRPC snapshots。
+- `example-validation` 把 snapshot drift 视为仓库尚未收敛，因此适合小改动回归检查、CI 和 release gate；它会同时验证 Blueprint examples、Kotlin `compileKotlin` 与 `examples/grpc/` 的 Go / Python gRPC snapshots。
 - `example-compile-check` 不要求 snapshots 不变，只要求新生成结果仍然可编译或可导入。
 - `example-refresh` 用于接受预期变化；执行后应 review diff、提交 snapshots，再重新跑 `example-validation` 或 `release-preflight`。
 

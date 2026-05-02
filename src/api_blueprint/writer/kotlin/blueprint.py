@@ -56,13 +56,7 @@ class KotlinRoute:
 
     @property
     def response_serializer_expr(self) -> str:
-        text = self.response_type.text
-        if text == "Unit":
-            return "Unit.serializer()"
-        if self.wrapper_proto is not None:
-            inner_name = self.response_payload_proto.name if self.response_payload_proto else "Unit"
-            return f"{self.wrapper_proto.name}.serializer({inner_name}.serializer())"
-        return f"{text}.serializer()"
+        return self.response_type.serializer_expr()
 
     def _func_name(self) -> str:
         if not self.router.leaf.strip("/"):
@@ -97,18 +91,23 @@ class KotlinRoute:
 
     def _response_type(self) -> KotlinResolvedType:
         if self.router.rsp_media_type != "application/json":
-            return KotlinResolvedType("String")
+            return KotlinResolvedType("String", serializer="String.serializer()")
         if self.response_payload_proto is None:
-            return KotlinResolvedType("Unit")
+            return KotlinResolvedType("Unit", serializer="Unit.serializer()")
 
         payload_name = self.response_payload_proto.name
         payload_deps: set[KotlinProto] = {self.response_payload_proto}
+        payload_serializer = self.response_payload_proto.serializer_expr()
 
         if self.wrapper_proto is not None:
             wrapper_name = self.wrapper_proto.name
-            return KotlinResolvedType(f"{wrapper_name}<{payload_name}>", payload_deps | {self.wrapper_proto})
+            return KotlinResolvedType(
+                f"{wrapper_name}<{payload_name}>",
+                payload_deps | {self.wrapper_proto},
+                serializer=f"{wrapper_name}.serializer({payload_serializer})",
+            )
 
-        return KotlinResolvedType(payload_name, payload_deps)
+        return KotlinResolvedType(payload_name, payload_deps, serializer=payload_serializer)
 
 
 @dataclass

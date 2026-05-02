@@ -4,6 +4,7 @@ import com.example.apiblueprint.ApiConfig
 import com.example.apiblueprint.ApiException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.json.Json
@@ -14,6 +15,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 internal class HttpExecutor(
     private val config: ApiConfig,
 ) {
+    @OptIn(ExperimentalSerializationApi::class)
     private val json = Json {
         ignoreUnknownKeys = true
         explicitNulls = false
@@ -25,7 +27,7 @@ internal class HttpExecutor(
         query: Map<String, String?> = emptyMap(),
         headers: Map<String, String> = emptyMap(),
         responseSerializer: KSerializer<T>,
-    ): T = request(method, path, query, headers, null, null, responseSerializer)
+    ): T = executeRequest(method, path, query, headers, null, null, responseSerializer)
 
     suspend fun <B, T> request(
         method: String,
@@ -35,9 +37,10 @@ internal class HttpExecutor(
         body: B,
         bodySerializer: SerializationStrategy<B>,
         responseSerializer: KSerializer<T>,
-    ): T = request(method, path, query, headers, body, bodySerializer, responseSerializer)
+    ): T = executeRequest(method, path, query, headers, body, bodySerializer, responseSerializer)
 
-    private suspend fun <B, T> request(
+    @Suppress("UNCHECKED_CAST")
+    private suspend fun <B, T> executeRequest(
         method: String,
         path: String,
         query: Map<String, String?>,
@@ -50,7 +53,6 @@ internal class HttpExecutor(
         val requestBuilder = Request.Builder().url(buildUrl(config.baseUrl, path, query))
         mergedHeaders.forEach { (key, value) -> requestBuilder.header(key, value) }
 
-        @Suppress("UNCHECKED_CAST")
         val requestBody = if (bodySerializer != null) {
             val payload = json.encodeToString(bodySerializer, body as B)
             payload.toRequestBody("application/json; charset=utf-8".toMediaType())

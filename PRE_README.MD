@@ -53,8 +53,8 @@
 - 只要用户可见能力、CLI、配置、生成结果目录、安装方式或发布方式发生变化，就必须先更新本文件。
 - `main.py` 与 `debug.py` 属于本地辅助脚本，不是公共发布接口。
 - `examples/api-blueprint.toml` 是公开的共享示例配置，同时包含 Blueprint / Go / TypeScript / Kotlin / gRPC 示例段落；其中 `[grpc]` 指向 `examples/grpc/*`。
-- `scripts/example_validation.py` 是 examples 的官方验证入口，会同时验证 Blueprint examples 与 gRPC examples，执行“重生成 -> 快照比对 -> TypeScript 编译 -> Go 测试 -> Kotlin 生成结构 smoke -> Python gRPC import smoke”闭环。
-- Blueprint examples 的严格重生成依赖 `go-enum`；gRPC examples 依赖 `protoc`、`protoc-gen-go`、`protoc-gen-go-grpc` 与 Python `grpcio-tools`。
+- `scripts/example_validation.py` 是 examples 的官方验证入口，会同时验证 Blueprint examples 与 gRPC examples，执行“重生成 -> 快照比对 -> TypeScript 编译 -> Go 测试 -> Kotlin Gradle 编译 -> Python gRPC import smoke”闭环。
+- Blueprint examples 的严格重生成依赖 `go-enum` 与 Gradle；gRPC examples 依赖 `protoc`、`protoc-gen-go`、`protoc-gen-go-grpc` 与 Python `grpcio-tools`。
 - TypeScript 配置支持字面量 `base_url` 和原样表达式 `base_url_expr`；两者互斥，优先级为 `base_url_expr -> base_url -> upstream -> ""`。
 - Kotlin 配置支持 `[kotlin]`、`package`、`base_url`、`base_url_expr`、`include` 与 `exclude`；生成目标是 OkHttp + kotlinx.serialization Android 客户端，`base_url_expr` 与 `base_url` 互斥，接口裁剪由 include/exclude 明确控制。
 - gRPC 公开配置面默认使用 `[grpc].source_root`、`[grpc].import_roots` 与 `[[grpc.targets]]`；`[[grpc.jobs]]` 仅保留为 legacy/raw mode。
@@ -119,8 +119,8 @@
 - `api-gen-grpc` 公开 CLI 新增 `--list-targets`、`--target` 与 `--explain-target`；`--job` 与 `--list-jobs` 保留为 legacy/raw mode。
 - `grpcio-tools` 保持为开发期依赖，不进入运行时安装依赖。
 - `examples/blueprints/` 与 `examples/grpc/protos/` 是真源，`examples/golang/` / `examples/typescript/` / `examples/kotlin/` / `examples/grpc/go/` / `examples/grpc/python/` 是生成快照。
-- `scripts/example_validation.py` 会在临时目录重生成 Blueprint 与 gRPC examples，并执行快照比对、`tsc --noEmit`、`go test ./...`、Kotlin 生成结构 smoke 与 Python gRPC import smoke。
-- `make example-validation` / `make example-refresh` / `make example-compile-check` 依赖 `tsc`、`go`、`go-enum`、`protoc`、`protoc-gen-go`、`protoc-gen-go-grpc` 与 Python `grpc_tools`。
+- `scripts/example_validation.py` 会在临时目录重生成 Blueprint 与 gRPC examples，并执行快照比对、`tsc --noEmit`、`go test ./...`、Kotlin Gradle `compileKotlin` 与 Python gRPC import smoke。
+- `make example-validation` / `make example-refresh` / `make example-compile-check` 依赖 `tsc`、`go`、`go-enum`、Gradle（或 `API_BLUEPRINT_GRADLE_BIN`）、`protoc`、`protoc-gen-go`、`protoc-gen-go-grpc` 与 Python `grpc_tools`。
 - snapshot drift 本身是“生成结果发生变化”的信号，不自动等于 bug；是否错误取决于这次变更是否预期。
 - `make example-validation` 用于严格校验当前生成器与已提交 snapshots 完全一致。
 - `make example-compile-check` 用于功能开发期，只检查重生成结果是否可编译。

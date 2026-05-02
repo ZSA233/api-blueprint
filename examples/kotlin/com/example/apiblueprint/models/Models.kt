@@ -1,7 +1,14 @@
 package com.example.apiblueprint.models
 
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 
 @Serializable
 public data class ApiDemoA(
@@ -35,13 +42,13 @@ public data class ApiHelloMap(
 )
 
 @Serializable
-public enum class ColorEnum {
+public enum class ColorEnum(public val wireValue: String) {
     @SerialName("red")
-    RED,
+    RED("red"),
     @SerialName("green")
-    GREEN,
+    GREEN("green"),
     @SerialName("blue")
-    BLUE
+    BLUE("blue")
 }
 
 @Serializable
@@ -52,41 +59,52 @@ public data class GeneralResponse<T>(
 )
 
 @Serializable
-public enum class HelloWayEnum {
+public enum class HelloWayEnum(public val wireValue: String) {
     @SerialName("ASD")
-    ASD
+    ASD("ASD")
 }
 
 @Serializable
-public enum class MapEnum {
+public enum class MapEnum(public val wireValue: String) {
     @SerialName("a")
-    A,
+    A("a"),
     @SerialName("b")
-    B
+    B("b")
+}
+
+@Serializable(with = StatusEnumSerializer::class)
+public enum class StatusEnum(public val wireValue: Int) {
+    PENDING(1),
+    RUNNING(2),
+    FINISHED(3)
+}
+
+public object StatusEnumSerializer : KSerializer<StatusEnum> {
+    public override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("StatusEnum", PrimitiveKind.INT)
+
+    public override fun serialize(encoder: Encoder, value: StatusEnum): Unit {
+        encoder.encodeInt(value.wireValue)
+    }
+
+    public override fun deserialize(decoder: Decoder): StatusEnum {
+        val wireValue = decoder.decodeInt()
+        return StatusEnum.values().firstOrNull { it.wireValue == wireValue }
+            ?: throw SerializationException("Unknown StatusEnum wire value: $wireValue")
+    }
 }
 
 @Serializable
-public enum class StatusEnum {
-    @SerialName("1")
-    PENDING,
-    @SerialName("2")
-    RUNNING,
-    @SerialName("3")
-    FINISHED
-}
-
-@Serializable
-public enum class WsMsgTypeEnum {
+public enum class WsMsgTypeEnum(public val wireValue: String) {
     @SerialName("ping")
-    PING,
+    PING("ping"),
     @SerialName("pong")
-    PONG,
+    PONG("pong"),
     @SerialName("join")
-    JOIN,
+    JOIN("join"),
     @SerialName("leave")
-    LEAVE,
+    LEAVE("leave"),
     @SerialName("forgeround")
-    FORGEROUND,
+    FORGEROUND("forgeround"),
     @SerialName("upgrade")
-    UPGRADE
+    UPGRADE("upgrade")
 }

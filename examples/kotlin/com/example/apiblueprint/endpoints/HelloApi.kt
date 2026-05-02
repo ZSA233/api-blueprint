@@ -2,7 +2,7 @@ package com.example.apiblueprint.endpoints
 
 import com.example.apiblueprint.internal.HttpExecutor
 import com.example.apiblueprint.models.*
-import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.builtins.*
 
 public class HelloApi internal constructor(
     private val executor: HttpExecutor,
@@ -17,7 +17,7 @@ public class HelloApi internal constructor(
             path = "/api/hello/abc",
             query = query.toQueryMap(),
             headers = headers,
-            responseSerializer = GeneralResponse.serializer(HelloAbcResponse.serializer()),
+            responseSerializer = GeneralResponse.serializer(MapSerializer(String.serializer(), ApiHelloMap.serializer())),
         )
     }
 
@@ -28,7 +28,7 @@ public class HelloApi internal constructor(
             method = "GET",
             path = "/api/hello/map-enum",
             headers = headers,
-            responseSerializer = GeneralResponse.serializer(HelloMapEnumResponse.serializer()),
+            responseSerializer = GeneralResponse.serializer(MapSerializer(String.serializer(), ApiHelloMap.serializer())),
         )
     }
 
@@ -39,7 +39,7 @@ public class HelloApi internal constructor(
             method = "GET",
             path = "/api/hello/list-enum",
             headers = headers,
-            responseSerializer = GeneralResponse.serializer(HelloListEnumResponse.serializer()),
+            responseSerializer = GeneralResponse.serializer(ListSerializer(MapEnum.serializer())),
         )
     }
 
@@ -50,7 +50,7 @@ public class HelloApi internal constructor(
             method = "GET",
             path = "/api/hello/string",
             headers = headers,
-            responseSerializer = GeneralResponse.serializer(HelloStringResponse.serializer()),
+            responseSerializer = GeneralResponse.serializer(String.serializer()),
         )
     }
 
@@ -61,7 +61,7 @@ public class HelloApi internal constructor(
             method = "GET",
             path = "/api/hello/uint64",
             headers = headers,
-            responseSerializer = GeneralResponse.serializer(HelloUint64Response.serializer()),
+            responseSerializer = GeneralResponse.serializer(Long.serializer()),
         )
     }
 
@@ -72,7 +72,7 @@ public class HelloApi internal constructor(
             method = "GET",
             path = "/api/hello/string-emun",
             headers = headers,
-            responseSerializer = GeneralResponse.serializer(HelloStringEmunResponse.serializer()),
+            responseSerializer = GeneralResponse.serializer(MapEnum.serializer()),
         )
     }
 
@@ -93,10 +93,10 @@ public class HelloApi internal constructor(
         "arg1" to arg1?.toString(),
         "arg3" to arg3?.toString(),
         "arg2" to arg2?.toString(),
-        "type" to type.toString()
+        "type" to type.wireValue.toString()
     )
 
     private fun HelloHelloWayQuery.toQueryMap(): Map<String, String?> = mapOf(
-        "arg1" to arg1?.toString()
+        "arg1" to arg1?.wireValue?.toString()
     )
 }

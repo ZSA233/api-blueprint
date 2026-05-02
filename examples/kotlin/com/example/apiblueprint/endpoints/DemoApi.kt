@@ -2,7 +2,7 @@ package com.example.apiblueprint.endpoints
 
 import com.example.apiblueprint.internal.HttpExecutor
 import com.example.apiblueprint.models.*
-import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.builtins.*
 
 public class DemoApi internal constructor(
     private val executor: HttpExecutor,
@@ -83,7 +83,7 @@ public class DemoApi internal constructor(
             method = "POST",
             path = "/api/demo/map_model",
             headers = headers,
-            responseSerializer = GeneralResponse.serializer(DemoMapModelResponse.serializer()),
+            responseSerializer = GeneralResponse.serializer(MapSerializer(Int.serializer(), ApiDemoMap.serializer())),
         )
     }
 

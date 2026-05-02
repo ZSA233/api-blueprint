@@ -19,3 +19,4 @@ __pycache__/
 .ruff_cache/
 /debug.py
 .codex
+.claude

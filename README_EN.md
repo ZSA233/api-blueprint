@@ -181,8 +181,8 @@ api-gen-typescript -c examples/api-blueprint.toml
 - Example snapshot drift means the current generator output differs from the committed snapshots; it is a change signal, not an automatic bug.
 - `make example-compile-check` allows drift and only checks whether regenerated outputs still compile.
 - `make example-refresh` accepts intentional changes and refreshes the committed example snapshots in place.
-- `make example-validation` wraps the strict mode of `scripts/example_validation.py`, regenerates the Blueprint and gRPC examples in a temporary workspace, then runs snapshot diffs, `tsc --noEmit`, `go test ./...`, a Kotlin generated-structure smoke check, and a Python gRPC import smoke check.
-- Strict Blueprint example regeneration depends on `go-enum`; the gRPC example flow depends on `protoc`, `protoc-gen-go`, `protoc-gen-go-grpc`, and Python `grpc_tools`.
+- `make example-validation` wraps the strict mode of `scripts/example_validation.py`, regenerates the Blueprint and gRPC examples in a temporary workspace, then runs snapshot diffs, `tsc --noEmit`, `go test ./...`, Kotlin Gradle `compileKotlin`, and a Python gRPC import smoke check.
+- Strict Blueprint example regeneration depends on `go-enum` and Gradle (or `API_BLUEPRINT_GRADLE_BIN`); the gRPC example flow depends on `protoc`, `protoc-gen-go`, `protoc-gen-go-grpc`, and Python `grpc_tools`.
 - `make release-preflight` must include strict `make example-validation`, because by release time any intentional snapshot drift should already have been accepted and committed.
 - `examples/api-blueprint.toml` carries the public shared example config for both Blueprint and gRPC, and `examples/grpc/go/` plus `examples/grpc/python/` are part of the committed examples snapshot contract.
 - `main.py` and `debug.py` are kept only as local helper scripts and are not part of the public release surface.

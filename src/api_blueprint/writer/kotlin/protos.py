@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import enum
+import json
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Optional, Type, Union, get_origin
@@ -35,6 +36,7 @@ from api_blueprint.engine.model import (
     model_to_pydantic,
     unwrap_model_type,
 )
+from api_blueprint.engine.runtime.wrappers import GeneralWrapper
 from api_blueprint.engine.utils import is_parametrized
 
 from .naming import to_kotlin_property_name, to_kotlin_type_name
@@ -44,6 +46,29 @@ from .naming import to_kotlin_property_name, to_kotlin_type_name
 class KotlinResolvedType:
     text: str
     deps: set["KotlinProto"] = field(default_factory=set)
+    serializer: str | None = None
+    query_value: str = "to_string"
+
+    def serializer_expr(self) -> str:
+        if self.serializer is not None:
+            return self.serializer
+        return f"{self.text}.serializer()"
+
+    def query_expr(self, receiver: str, *, optional: bool) -> str:
+        accessor = "?." if optional else "."
+        if self.query_value == "wire_value":
+            return f"{receiver}{accessor}wireValue{accessor}toString()"
+        return f"{receiver}{accessor}toString()"
+
+    def as_nullable(self) -> "KotlinResolvedType":
+        if self.text.endswith("?"):
+            return self
+        return KotlinResolvedType(
+            self.text + "?",
+            set(self.deps),
+            serializer=f"{self.serializer_expr()}.nullable",
+            query_value=self.query_value,
+        )
 
 
 @dataclass
@@ -63,6 +88,7 @@ class KotlinProto:
     module: str = "shared"
     alias_type: Optional[KotlinResolvedType] = None
     enum_members: Optional[list[tuple[str, Any]]] = None
+    enum_wire_type: str | None = None
     fields: list[KotlinProtoField] = field(default_factory=list)
     tags: set[str] = field(default_factory=set)
 
@@ -79,6 +105,18 @@ class KotlinProto:
         deps.discard(self)
         return deps
 
+    def serializer_expr(self) -> str:
+        if self.kind == "alias" and self.alias_type is not None:
+            return self.alias_type.serializer_expr()
+        return f"{self.name}.serializer()"
+
+    def enum_wire_literal(self, value: Any) -> str:
+        if self.enum_wire_type == "int":
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise ValueError(f"[gen_kotlin] Kotlin enum {self.name} 需要 int wire value")
+            return str(value)
+        return json.dumps(str(value))
+
 
 class KotlinTypeResolver:
     def __init__(self, registry: "KotlinProtoRegistry"):
@@ -92,58 +130,92 @@ class KotlinTypeResolver:
             field = field()
 
         if isinstance(field, String):
-            return KotlinResolvedType("String")
+            return KotlinResolvedType("String", serializer="String.serializer()")
         if isinstance(field, Bool):
-            return KotlinResolvedType("Boolean")
+            return KotlinResolvedType("Boolean", serializer="Boolean.serializer()")
         if isinstance(field, (Int64, Uint64)):
-            return KotlinResolvedType("Long")
+            return KotlinResolvedType("Long", serializer="Long.serializer()")
         if isinstance(field, (Int, Int32, Int16, Int8, Uint, Uint32, Uint16, Uint8, Byte)):
-            return KotlinResolvedType("Int")
+            return KotlinResolvedType("Int", serializer="Int.serializer()")
         if isinstance(field, Float64):
-            return KotlinResolvedType("Double")
+            return KotlinResolvedType("Double", serializer="Double.serializer()")
         if isinstance(field, (Float, Float32)):
-            return KotlinResolvedType("Float")
+            return KotlinResolvedType("Float", serializer="Float.serializer()")
         if isinstance(field, Null):
-            return KotlinResolvedType("kotlinx.serialization.json.JsonElement")
+            return KotlinResolvedType(
+                "kotlinx.serialization.json.JsonElement",
+                serializer="kotlinx.serialization.json.JsonElement.serializer()",
+            )
         if type(field) is Field:
-            return KotlinResolvedType("kotlinx.serialization.json.JsonElement")
+            return KotlinResolvedType(
+                "kotlinx.serialization.json.JsonElement",
+                serializer="kotlinx.serialization.json.JsonElement.serializer()",
+            )
         if isinstance(field, ModelEnum):
             enum_cls = field.enum_type()
             if isinstance(enum_cls, type) and issubclass(enum_cls, enum.Enum):
                 proto = self.registry.ensure_enum(enum_cls)
-                return KotlinResolvedType(proto.name, {proto})
-            return KotlinResolvedType("String")
+                return KotlinResolvedType(
+                    proto.name,
+                    {proto},
+                    serializer=f"{proto.name}.serializer()",
+                    query_value="wire_value",
+                )
+            return KotlinResolvedType("String", serializer="String.serializer()")
         if isinstance(field, enum.EnumMeta):
             proto = self.registry.ensure_enum(field)
-            return KotlinResolvedType(proto.name, {proto})
+            return KotlinResolvedType(
+                proto.name,
+                {proto},
+                serializer=f"{proto.name}.serializer()",
+                query_value="wire_value",
+            )
         if isinstance(field, Array):
             elem = field.elem_type()
             elem_type = self.resolve(elem)
-            return KotlinResolvedType(f"List<{elem_type.text}>", set(elem_type.deps))
+            return KotlinResolvedType(
+                f"List<{elem_type.text}>",
+                set(elem_type.deps),
+                serializer=f"ListSerializer({elem_type.serializer_expr()})",
+            )
         if isinstance(field, Map):
             key_type = self.resolve(field.key_type())
             value_type = self.resolve(field.value_type())
-            key_text = key_type.text if key_type.text in {"String", "Int", "Long"} else "String"
+            if key_type.text in {"String", "Int", "Long"}:
+                key_text = key_type.text
+                key_serializer = key_type.serializer_expr()
+            else:
+                key_text = "String"
+                key_serializer = "String.serializer()"
             deps = set(key_type.deps) | set(value_type.deps)
-            return KotlinResolvedType(f"Map<{key_text}, {value_type.text}>", deps)
+            return KotlinResolvedType(
+                f"Map<{key_text}, {value_type.text}>",
+                deps,
+                serializer=f"MapSerializer({key_serializer}, {value_type.serializer_expr()})",
+            )
         if isinstance(field, AnonKV):
             obj = field.get_obj()
             if obj is None:
-                alias_type = self.resolve(Map[String, Field]())
-                return KotlinResolvedType(alias_type.text, set(alias_type.deps))
+                return self.resolve(Map[String, Field]())
             return self.resolve(obj)
         if isinstance(field, FieldWrappedModel):
             return self.resolve(field.__field_type__)
         if isinstance(field, Model) or (isinstance(field, type) and issubclass(field, Model)):
             proto = self.registry.ensure(field, tag="shared")
             if proto is None:
-                return KotlinResolvedType("kotlinx.serialization.json.JsonElement")
-            return KotlinResolvedType(proto.name, {proto})
+                return KotlinResolvedType(
+                    "kotlinx.serialization.json.JsonElement",
+                    serializer="kotlinx.serialization.json.JsonElement.serializer()",
+                )
+            return KotlinResolvedType(proto.name, {proto}, serializer=f"{proto.name}.serializer()")
 
         origin = get_origin(field)
         if origin and isinstance(origin, type):
             return self.resolve(origin)
-        return KotlinResolvedType("kotlinx.serialization.json.JsonElement")
+        return KotlinResolvedType(
+            "kotlinx.serialization.json.JsonElement",
+            serializer="kotlinx.serialization.json.JsonElement.serializer()",
+        )
 
 
 class KotlinProtoRegistry:
@@ -245,6 +317,7 @@ class KotlinProtoRegistry:
             kind="enum",
             module=module,
             enum_members=[(member.name, member.value) for member in enum_cls],
+            enum_wire_type=detect_enum_wire_type(enum_cls),
         )
         proto.add_tag("shared")
         self._enums[enum_cls] = proto
@@ -253,16 +326,18 @@ class KotlinProtoRegistry:
     def register_wrapper(self, wrapper_cls: type[Model]) -> KotlinProto:
         """Register a response wrapper as a shared data class proto.
 
-        Returns a proto suitable for building wrapped response types. ``NoneWrapper``
-        (zero fields) produces a passthrough marker; ``GeneralWrapper`` produces a
-        proto whose ``wrapper_type_name`` field carries the Kotlin class name.
+        Kotlin currently supports the built-in ``GeneralWrapper`` shape only. Custom
+        wrapper classes can have arbitrary field semantics, so the generator fails
+        explicitly instead of emitting a misleading ``GeneralResponse`` facade.
         """
         wrapper_name = getattr(wrapper_cls, "__name__", "ResponseWrapper")
+        if wrapper_cls is not GeneralWrapper:
+            raise ValueError(f"[gen_kotlin] 暂不支持自定义 response wrapper: {wrapper_name}")
+
         proto = self._protos.get((wrapper_cls, None))
         if proto is not None:
             return proto
 
-        model_data = unwrap_model_type(wrapper_cls)()
         proto = KotlinProto(
             name="GeneralResponse",
             model=wrapper_cls,
@@ -286,7 +361,7 @@ class KotlinProtoRegistry:
             else:
                 resolved = self._resolver.resolve(model_field)
                 if optional and not resolved.text.endswith("?"):
-                    resolved = KotlinResolvedType(resolved.text + "?", set(resolved.deps))
+                    resolved = resolved.as_nullable()
 
             proto.fields.append(
                 KotlinProtoField(
@@ -317,7 +392,7 @@ class KotlinProtoRegistry:
             optional = (not field_info.is_required()) or bool(extra.get("omitempty", False))
             field_type = resolved
             if optional and not resolved.text.endswith("?"):
-                field_type = KotlinResolvedType(resolved.text + "?", set(resolved.deps))
+                field_type = resolved.as_nullable()
             proto.fields.append(
                 KotlinProtoField(
                     name=to_kotlin_property_name(serial_name),
@@ -327,3 +402,17 @@ class KotlinProtoRegistry:
                     description=field_info.description or "",
                 )
             )
+
+
+def detect_enum_wire_type(enum_cls: type[enum.Enum]) -> str:
+    values = [member.value for member in enum_cls]
+    if not values:
+        raise ValueError(f"[gen_kotlin] Kotlin enum {enum_cls.__name__} 没有可生成的成员")
+    if all(isinstance(value, str) for value in values):
+        return "string"
+    if all(isinstance(value, int) and not isinstance(value, bool) for value in values):
+        return "int"
+    value_types = ", ".join(sorted({type(value).__name__ for value in values}))
+    raise ValueError(
+        f"[gen_kotlin] Kotlin enum {enum_cls.__name__} 只支持 string/int wire value，当前类型: {value_types}"
+    )

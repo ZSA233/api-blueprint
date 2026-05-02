@@ -1,7 +1,19 @@
 from __future__ import annotations
 
-from api_blueprint.engine.model import Array, Int64, Model, String
+import enum
+
+from api_blueprint.engine.model import Array, Enum, Int64, Map, Model, String
 from api_blueprint.writer.kotlin import KotlinProtoRegistry, KotlinRouteSelection, to_kotlin_property_name, to_kotlin_type_name
+
+
+class WireEnum(enum.StrEnum):
+    FIRST = "first"
+    SECOND = "second"
+
+
+class StatusEnum(enum.IntEnum):
+    PENDING = 1
+    RUNNING = 2
 
 
 class Payload(Model):
@@ -25,6 +37,20 @@ def test_kotlin_registry_builds_serializable_model_fields():
     assert [field.name for field in proto.fields] == ["userId", "scores"]
     assert [field.serial_name for field in proto.fields] == ["user_id", "scores"]
     assert [field.type.text for field in proto.fields] == ["String", "List<Long>"]
+
+
+def test_kotlin_registry_builds_serializers_for_alias_and_enum_types():
+    registry = KotlinProtoRegistry()
+    enum_type = registry.resolver().resolve(Enum[WireEnum]())
+    map_type = registry.resolver().resolve(Map[String, Array[Enum[WireEnum]]]())
+    int_enum_proto = registry.ensure_enum(StatusEnum)
+
+    assert enum_type.serializer_expr() == "WireEnum.serializer()"
+    assert enum_type.query_expr("kind", optional=False) == "kind.wireValue.toString()"
+    assert enum_type.query_expr("kind", optional=True) == "kind?.wireValue?.toString()"
+    assert map_type.serializer_expr() == "MapSerializer(String.serializer(), ListSerializer(WireEnum.serializer()))"
+    assert int_enum_proto.enum_wire_type == "int"
+    assert int_enum_proto.enum_wire_literal(StatusEnum.PENDING.value) == "1"
 
 
 def test_kotlin_registry_filter_by_module():
@@ -55,4 +81,3 @@ def test_kotlin_selection_matches_path_tag_group_method_and_name(example_entrypo
         router,
         route_name="Abc",
     )
-
