@@ -4,7 +4,13 @@ package provider
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+
 	"strings"
+
+	"github.com/coder/websocket"
+	"github.com/coder/websocket/wsjson"
 )
 
 const (
@@ -27,6 +33,12 @@ type SocketConnection interface {
 	Close(code int, reason string) error
 }
 
+type WsHandleContext[Q, B, P any] struct {
+	Conn     SocketConnection
+	Response *P
+	Error    error
+}
+
 func (prov *WsHandleProvider[Q, B, P]) GetName() string {
 	return PROV_WS_HANDLE
 }
@@ -46,4 +58,163 @@ func NewWsHandleProvider[Q, B, P any](
 		Extra:   extra,
 		Handler: handler,
 	}
+}
+
+func (prov *WsHandleProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
+	ctx := AdaptContext[Q, B, P](anyCtx)
+	var err error
+
+	if ctx.Req == nil {
+		ctx.Abort(fmt.Errorf("[WsHandleProvider] fail to get req"))
+		return
+	}
+
+	req, err := ctx.Req.Request, ctx.Req.Error
+	if err != nil {
+		ctx.Abort(err)
+		return
+	}
+
+	switch ctx.ContextKind() {
+	case TransportHTTP:
+		prov.handleHTTP(ctx, req)
+	case TransportWails:
+		prov.handleWails(ctx, req)
+	default:
+		ctx.Abort(fmt.Errorf("[WsHandleProvider] unsupported transport[%s]", ctx.ContextKind()))
+	}
+}
+
+type HTTPWebSocketConnection struct {
+	conn *websocket.Conn
+}
+
+func NewHTTPWebSocketConnection(conn *websocket.Conn) *HTTPWebSocketConnection {
+	return &HTTPWebSocketConnection{conn: conn}
+}
+
+func (conn *HTTPWebSocketConnection) Transport() TransportKind {
+	return TransportHTTP
+}
+
+func (conn *HTTPWebSocketConnection) SessionID() string {
+	return ""
+}
+
+func (conn *HTTPWebSocketConnection) Subprotocol() string {
+	if conn == nil || conn.conn == nil {
+		return ""
+	}
+	return conn.conn.Subprotocol()
+}
+
+func (conn *HTTPWebSocketConnection) Underlying() any {
+	if conn == nil {
+		return nil
+	}
+	return conn.conn
+}
+
+func (conn *HTTPWebSocketConnection) ReadJSON(ctx context.Context, target any) error {
+	if conn == nil || conn.conn == nil {
+		return nil
+	}
+	return wsjson.Read(ctx, conn.conn, target)
+}
+
+func (conn *HTTPWebSocketConnection) WriteJSON(ctx context.Context, payload any) error {
+	if conn == nil || conn.conn == nil {
+		return nil
+	}
+	return wsjson.Write(ctx, conn.conn, payload)
+}
+
+func (conn *HTTPWebSocketConnection) Close(code int, reason string) error {
+	if conn == nil || conn.conn == nil {
+		return nil
+	}
+	return conn.conn.Close(websocket.StatusCode(code), reason)
+}
+
+func (prov *WsHandleProvider[Q, B, P]) handleHTTP(ctx *Context[Q, B, P], req *REQ[Q, B]) {
+	httpCtx, httpErr := ctx.RequireHTTP()
+	if httpErr != nil {
+		ctx.Abort(httpErr)
+		return
+	}
+
+	opts := &websocket.AcceptOptions{
+		Subprotocols:    prov.Subs,
+		CompressionMode: websocket.CompressionContextTakeover,
+		// InsecureSkipVerify: true,
+	}
+
+	conn, err := websocket.Accept(
+		httpCtx.Writer,
+		httpCtx.Request,
+		opts,
+	)
+	if err != nil {
+		ctx.Abort(err)
+		_ = httpCtx.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	if conn.Subprotocol() == "" {
+		err = fmt.Errorf("[WsHandleProvider] subprotocol required")
+		ctx.Abort(err)
+		_ = conn.Close(websocket.StatusPolicyViolation, "subprotocol required")
+		return
+	}
+	defer conn.CloseNow()
+
+	ctx.WsHandle = &WsHandleContext[Q, B, P]{
+		Conn: NewHTTPWebSocketConnection(conn),
+	}
+
+	var rsp *P
+	rsp, err = prov.Handler(ctx, req)
+	ctx.WsHandle.Response = rsp
+	ctx.WsHandle.Error = err
+	if err != nil {
+		_ = ctx.WsHandle.Conn.Close(int(websocket.StatusInternalError), err.Error())
+	} else {
+		_ = ctx.WsHandle.Conn.Close(int(websocket.StatusNormalClosure), "")
+	}
+}
+
+func (prov *WsHandleProvider[Q, B, P]) handleWails(ctx *Context[Q, B, P], req *REQ[Q, B]) {
+	if ctx.WsHandle == nil || ctx.WsHandle.Conn == nil {
+		ctx.Abort(fmt.Errorf("[WsHandleProvider] wails socket session is not ready"))
+		return
+	}
+
+	rsp, err := prov.Handler(ctx, req)
+	ctx.WsHandle.Response = rsp
+	ctx.WsHandle.Error = err
+	if err != nil {
+		_ = ctx.WsHandle.Conn.Close(1011, err.Error())
+	} else {
+		_ = ctx.WsHandle.Conn.Close(1000, "")
+	}
+}
+
+func WsJSONReadLoop[MSG any](conn SocketConnection, fn func(msg *MSG, err error) (stopped bool), cs ...context.Context) (err error) {
+	if conn == nil {
+		return nil
+	}
+	var c context.Context
+	if len(cs) > 0 {
+		c = cs[0]
+	} else {
+		c = context.Background()
+	}
+	for {
+		msg := new(MSG)
+		err = conn.ReadJSON(c, msg)
+		if fn(msg, err) {
+			break
+		}
+
+	}
+	return
 }

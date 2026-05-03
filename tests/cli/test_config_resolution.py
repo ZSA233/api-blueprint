@@ -13,6 +13,7 @@ def test_example_config_loads_expected_values():
     assert config.blueprint.entrypoints == ["blueprints.app:*"]
     assert config.blueprint.docs_server == "0.0.0.0:2332"
     assert config.golang.codegen_output == "golang"
+    assert config.golang.provider_package == "provider"
     assert config.typescript is not None
     assert config.typescript.codegen_output == "typescript"
     assert config.typescript.base_url == "http://localhost:2333"
@@ -24,6 +25,8 @@ def test_example_config_loads_expected_values():
     assert config.kotlin.include == ["tag:api"]
     assert config.wails is not None
     assert [target.id for target in config.wails.targets] == ["wails.v3", "wails.v2"]
+    assert [target.overlay_name for target in config.wails.targets] == [None, None]
+    assert [target.frontend_mode for target in config.wails.targets] == ["external", "external"]
     assert config.grpc is not None
     assert [target.id for target in config.grpc.targets] == ["python.greeter", "go.greeter"]
     assert config.grpc.targets[0].python_package_root == "examplegrpc_pb"
@@ -35,6 +38,7 @@ def test_resolve_config_converts_relative_outputs_to_absolute_paths():
     resolved = resolve_config(EXAMPLE_CONFIG)
     assert resolved.golang.output is not None
     assert resolved.golang.output.is_absolute()
+    assert resolved.golang.provider_package == "provider"
     assert resolved.typescript is not None
     assert resolved.typescript.output is not None
     assert resolved.typescript.output.is_absolute()
@@ -46,10 +50,12 @@ def test_resolve_config_converts_relative_outputs_to_absolute_paths():
     assert resolved.kotlin.include == ("tag:api",)
     assert "path:/api/demo/ws" in resolved.kotlin.exclude
     assert resolved.wails is not None
-    assert resolved.wails.targets[0].go_out_dir == (EXAMPLE_CONFIG.parent / "wails" / "v3" / "go").resolve()
-    assert resolved.wails.targets[0].typescript_out_dir == (EXAMPLE_CONFIG.parent / "wails" / "v3" / "typescript").resolve()
-    assert resolved.wails.targets[1].go_out_dir == (EXAMPLE_CONFIG.parent / "wails" / "v2" / "go").resolve()
-    assert resolved.wails.targets[1].typescript_out_dir == (EXAMPLE_CONFIG.parent / "wails" / "v2" / "typescript").resolve()
+    assert resolved.wails.targets[0].overlay_name == "wailsv3"
+    assert resolved.wails.targets[0].frontend_mode == "external"
+    assert resolved.wails.targets[0].include == ()
+    assert resolved.wails.targets[0].exclude == ()
+    assert resolved.wails.targets[1].overlay_name == "wailsv2"
+    assert resolved.wails.targets[1].frontend_mode == "external"
     assert resolved.grpc is not None
     assert resolved.grpc.source_root == (EXAMPLE_CONFIG.parent / "grpc" / "protos").resolve()
     assert resolved.grpc.targets[0].out_dir == (EXAMPLE_CONFIG.parent / "grpc" / "python").resolve()
@@ -86,6 +92,43 @@ base_url_expr = "import.meta.env.VITE_API_BASE_URL"
     assert resolved.typescript is not None
     assert resolved.typescript.base_url is None
     assert resolved.typescript.base_url_expr == "import.meta.env.VITE_API_BASE_URL"
+
+
+def test_golang_provider_package_loads_and_resolves(tmp_path):
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[golang]
+codegen_output = "golang"
+provider_package = "providers"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    config = Config.load(config_path)
+    assert config.golang is not None
+    assert config.golang.provider_package == "providers"
+
+    resolved = resolve_config(config_path)
+    assert resolved.golang is not None
+    assert resolved.golang.provider_package == "providers"
+
+
+def test_golang_provider_package_rejects_invalid_name(tmp_path):
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[golang]
+codegen_output = "golang"
+provider_package = "_providers"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="provider_package"):
+        Config.load(config_path)
 
 
 def test_typescript_base_url_and_expr_are_mutually_exclusive(tmp_path):
@@ -274,8 +317,10 @@ def test_wails_targets_load_and_resolve_absolute_paths(tmp_path):
 [[wails.targets]]
 id = "desktop.v3"
 version = "v3"
-go_out_dir = "generated/go"
-typescript_out_dir = "generated/typescript"
+overlay_name = "desktop_overlay"
+frontend_mode = "none"
+include = ["tag:desktop", "group:demo"]
+exclude = ["path:/api/internal/**"]
         """.strip()
         + "\n",
         encoding="utf-8",
@@ -285,11 +330,15 @@ typescript_out_dir = "generated/typescript"
     assert config.wails is not None
     assert config.wails.targets[0].id == "desktop.v3"
     assert config.wails.targets[0].version == "v3"
+    assert config.wails.targets[0].overlay_name == "desktop_overlay"
+    assert config.wails.targets[0].frontend_mode == "none"
 
     resolved = resolve_config(config_path)
     assert resolved.wails is not None
-    assert resolved.wails.targets[0].go_out_dir == (tmp_path / "generated" / "go").resolve()
-    assert resolved.wails.targets[0].typescript_out_dir == (tmp_path / "generated" / "typescript").resolve()
+    assert resolved.wails.targets[0].overlay_name == "desktop_overlay"
+    assert resolved.wails.targets[0].frontend_mode == "none"
+    assert resolved.wails.targets[0].include == ("tag:desktop", "group:demo")
+    assert resolved.wails.targets[0].exclude == ("path:/api/internal/**",)
 
 
 def test_wails_targets_require_unique_ids(tmp_path):
@@ -299,14 +348,12 @@ def test_wails_targets_require_unique_ids(tmp_path):
 [[wails.targets]]
 id = "desktop"
 version = "v3"
-go_out_dir = "generated/go"
-typescript_out_dir = "generated/typescript"
+overlay_name = "desktop_v3"
 
 [[wails.targets]]
 id = "desktop"
 version = "v2"
-go_out_dir = "generated/go-v2"
-typescript_out_dir = "generated/typescript-v2"
+overlay_name = "desktop_v2"
         """.strip()
         + "\n",
         encoding="utf-8",
@@ -314,6 +361,74 @@ typescript_out_dir = "generated/typescript-v2"
 
     with pytest.raises(ValueError, match="duplicate ids"):
         Config.load(config_path)
+
+
+def test_wails_targets_require_unique_overlay_names_after_defaults(tmp_path):
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[wails.targets]]
+id = "desktop.v3"
+version = "v3"
+
+[[wails.targets]]
+id = "desktop.v3.second"
+version = "v3"
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="duplicate overlay_name"):
+        Config.load(config_path)
+
+
+def test_wails_targets_reject_legacy_output_fields(tmp_path):
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[wails.targets]]
+id = "desktop.v3"
+version = "v3"
+go_out_dir = "generated/go"
+typescript_out_dir = "generated/typescript"
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="legacy output fields"):
+        Config.load(config_path)
+
+
+def test_wails_targets_validate_overlay_name_and_filter_rules(tmp_path):
+    bad_overlay = tmp_path / "bad-overlay.toml"
+    bad_overlay.write_text(
+        """
+[[wails.targets]]
+id = "desktop.v3"
+version = "v3"
+overlay_name = "DesktopOverlay"
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="overlay_name must be Go package-safe"):
+        Config.load(bad_overlay)
+
+    bad_rule = tmp_path / "bad-rule.toml"
+    bad_rule.write_text(
+        """
+[[wails.targets]]
+id = "desktop.v3"
+version = "v3"
+include = ["invalid:desktop"]
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="不支持的 include/exclude 规则"):
+        Config.load(bad_rule)
 
 
 def test_grpc_targets_inherit_legacy_globals_when_new_globals_are_absent(tmp_path):

@@ -53,6 +53,15 @@ package {{ writer.provider_package }}
 			) | safe
 		}}
 	}
+
+	func WrapRSP_JSON_{{ wrapper.class_name }}[P any](data *P, err error) {{ wrapper.type_reference('P') | safe }} {
+		_, rsp := NewRSP_JSON_{{ wrapper.class_name }}[any, any, P](nil, data, err)
+		if rsp == nil {
+			return nil
+		}
+		typed, _ := rsp.({{ wrapper.type_reference('P') | safe }})
+		return typed
+	}
 {% endfor %}
 
 

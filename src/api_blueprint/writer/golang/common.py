@@ -24,6 +24,10 @@ class PackageName(str, enum.Enum):
     VIEWS = "views"
 
 
+def internal_codegen_dir(package: PackageName) -> str:
+    return f"_gen_{package.value}"
+
+
 type_reg = re.compile(r"\{(\w+)_((imports|package)\$?)\}")
 
 

@@ -105,15 +105,26 @@ def gen_wails(
         target = explain_wails_target(config, target_id=explain_target)
         click.echo(f"id: {target.id}")
         click.echo(f"version: {target.version}")
-        click.echo(f"go_out_dir: {target.go_out_dir}")
-        click.echo(f"typescript_out_dir: {target.typescript_out_dir}")
+        click.echo(f"overlay_name: {target.overlay_name}")
+        click.echo(f"frontend_mode: {target.frontend_mode}")
+        click.echo(f"go_runtime_dir: {target.go_runtime_dir}")
+        click.echo(f"go_bindings_pattern: {target.go_bindings_pattern}")
+        click.echo(f"go_route_overlay_pattern: {target.go_route_overlay_pattern}")
+        click.echo(
+            "typescript_transport_pattern: "
+            + (target.typescript_transport_pattern or "(disabled by frontend_mode=none)")
+        )
+        click.echo(
+            "typescript_route_overlay_pattern: "
+            + (target.typescript_route_overlay_pattern or "(disabled by frontend_mode=none)")
+        )
+        click.echo(f"include: {', '.join(target.include) if target.include else '(none)'}")
+        click.echo(f"exclude: {', '.join(target.exclude) if target.exclude else '(none)'}")
         return
 
     if list_targets:
         for target in list_wails_targets(config, target_filters=targets):
-            click.echo(
-                f"{target.id}\t{target.version}\t{target.go_out_dir.resolve()}\t{target.typescript_out_dir.resolve()}"
-            )
+            click.echo(f"{target.id}\t{target.version}\t{target.overlay_name}\t{target.frontend_mode}")
         return
 
     generate_wails(config, target_filters=targets)

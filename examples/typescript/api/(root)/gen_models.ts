@@ -4,7 +4,7 @@
 
 
 
-import type { GeneralWrapper } from "../shared/models";
+import type { GeneralWrapper } from "../(shared)/models";
 
 
 // Route Contracts

@@ -24,3 +24,22 @@ func NewAuthProvider[Q, B, P any](
 func (prov *AuthProvider[Q, B, P]) GetName() string {
 	return PROV_AUTH
 }
+
+func (prov *AuthProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
+	ctx := AdaptContext[Q, B, P](anyCtx)
+	var req *REQ[Q, B]
+	if ctx.Req != nil {
+		req = ctx.Req.Request
+	}
+
+	authCtx, err := prov.BuildAuthContext(ctx, req)
+	if err != nil {
+		ctx.Abort(err)
+		if httpCtx, httpErr := ctx.RequireHTTP(); httpErr == nil {
+			_ = httpCtx.AbortWithError(-1, err)
+		}
+		return
+	}
+	ctx.Auth = authCtx
+	ctx.Next()
+}

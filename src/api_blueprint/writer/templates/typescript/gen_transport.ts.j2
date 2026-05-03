@@ -12,7 +12,7 @@ import type {
   SocketConnectOptions,
   SocketMessageHandler,
   SocketUnsubscribe,
-} from "./client";
+} from "{{ client_api_path or './client' }}";
 
 type RequestBody = RequestInit["body"];
 
@@ -139,7 +139,7 @@ class HttpSocketBridge<Recv, Send> implements ApiSocketBridge<Recv, Send> {
   }
 }
 
-export class DefaultTransport implements ApiTransport {
+export class {{ writer.transport_class_name }} implements ApiTransport {
   protected readonly baseUrl: string;
   protected readonly fetcher: typeof fetch;
   protected readonly timeoutMs?: number;
@@ -272,6 +272,19 @@ export class DefaultTransport implements ApiTransport {
 }
 {% else %}
 type WailsEventHandler = (payload?: unknown) => void;
+{% if writer.transport_kind == "wails-v3" %}
+type WailsV3EventHandler = (event?: unknown) => void;
+
+type WailsV3Runtime = {
+  Call?: {
+    ByName?: (name: string, ...args: unknown[]) => Promise<unknown>;
+  };
+  Events?: {
+    On?: (name: string, handler: WailsV3EventHandler) => void;
+    Off?: (name: string, handler?: WailsV3EventHandler) => void;
+  };
+};
+{% endif %}
 
 type WailsSocketSession = {
   id: string;
@@ -293,20 +306,125 @@ type WailsCloseEnvelope = {
 
 declare global {
   interface Window {
+    WailsInvoke?: (message: string) => void;
     go?: Record<string, Record<string, Record<string, (payload?: unknown) => Promise<unknown>>>>;
     runtime?: {
       EventsOn?: (name: string, handler: WailsEventHandler) => void;
-      EventsOff?: (name: string, ...handlers: WailsEventHandler[]) => void;
+      EventsOff?: (name: string, ...additionalEventNames: string[]) => void;
     };
-    wails?: {
-      Call?: (name: string, payload?: unknown) => Promise<unknown>;
-      Events?: {
-        On?: (name: string, handler: WailsEventHandler) => void;
-        Off?: (name: string, handler?: WailsEventHandler) => void;
-      };
-    };
+{% if writer.transport_kind == "wails-v3" %}
+    wails?: WailsV3Runtime;
+{% endif %}
   }
 }
+
+{% if writer.transport_kind == "wails-v3" %}
+const WAILS_V3_BINDINGS: Record<string, string> = {{ writer.wails_binding_manifest | tojson }};
+
+let importedWailsV3Runtime: WailsV3Runtime | null = null;
+let wailsRuntimeLoadPromise: Promise<void> | null = null;
+
+function getWailsV3Runtime(): WailsV3Runtime | undefined {
+  if (typeof window === "undefined") {
+    return importedWailsV3Runtime ?? undefined;
+  }
+  return window.wails ?? importedWailsV3Runtime ?? undefined;
+}
+
+function hasWailsRuntime(): boolean {
+  return typeof getWailsV3Runtime()?.Call?.ByName === "function";
+}
+
+async function importWailsV3Runtime(): Promise<WailsV3Runtime> {
+  const dynamicImport = new Function("specifier", "return import(specifier)") as (
+    specifier: string,
+  ) => Promise<unknown>;
+  return (await dynamicImport("/wails/runtime.js")) as WailsV3Runtime;
+}
+
+export async function ensureWailsRuntime(): Promise<void> {
+  if (hasWailsRuntime()) {
+    return;
+  }
+  if (wailsRuntimeLoadPromise == null) {
+    wailsRuntimeLoadPromise = (async () => {
+      importedWailsV3Runtime = await importWailsV3Runtime();
+      if (!hasWailsRuntime()) {
+        throw new Error("Wails v3 runtime is not available. Load /wails/runtime.js before using generated Wails clients.");
+      }
+    })();
+  }
+  await wailsRuntimeLoadPromise;
+}
+
+function resolveWailsV3BindingName(namespace: string, service: string, operation: string): string {
+  const key = `${namespace}.${service}.${operation}`;
+  const bindingName = WAILS_V3_BINDINGS[key];
+  if (!bindingName) {
+    throw new Error(`Missing Wails v3 binding manifest entry for ${key}. Regenerate the Wails target.`);
+  }
+  return bindingName;
+}
+
+function unwrapWailsV3Event(event?: unknown): unknown {
+  if (event !== null && typeof event === "object" && "data" in event) {
+    return (event as { data?: unknown }).data;
+  }
+  return event;
+}
+{% else %}
+let wailsRuntimeLoadPromise: Promise<void> | null = null;
+const wailsScriptLoads = new Map<string, Promise<void>>();
+
+function hasWailsRuntime(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.WailsInvoke === "function" &&
+    window.go != null &&
+    typeof window.runtime?.EventsOn === "function"
+  );
+}
+
+function loadWailsScript(src: string): Promise<void> {
+  if (typeof document === "undefined") {
+    return Promise.reject(new Error(`Cannot load ${src} outside a browser runtime.`));
+  }
+  const existing = document.querySelector<HTMLScriptElement>(`script[src="${src}"]`);
+  if (existing != null) {
+    return Promise.resolve();
+  }
+  const cached = wailsScriptLoads.get(src);
+  if (cached != null) {
+    return cached;
+  }
+  const promise = new Promise<void>((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = false;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error(`Failed to load ${src}.`));
+    document.head.appendChild(script);
+  });
+  wailsScriptLoads.set(src, promise);
+  return promise;
+}
+
+export async function ensureWailsRuntime(): Promise<void> {
+  if (hasWailsRuntime()) {
+    return;
+  }
+  if (wailsRuntimeLoadPromise == null) {
+    wailsRuntimeLoadPromise = (async () => {
+      await loadWailsScript("/wails/ipc.js");
+      await loadWailsScript("/wails/runtime.js");
+      if (!hasWailsRuntime()) {
+        throw new Error("Wails v2 runtime is not available. Load /wails/ipc.js and /wails/runtime.js before using generated Wails clients.");
+      }
+    })();
+  }
+  await wailsRuntimeLoadPromise;
+}
+{% endif %}
 
 class WailsSocketBridge<Recv, Send> implements ApiSocketBridge<Recv, Send> {
   readonly mode = "{{ writer.transport_kind }}";
@@ -319,7 +437,7 @@ class WailsSocketBridge<Recv, Send> implements ApiSocketBridge<Recv, Send> {
   private readonly closeHandler: WailsEventHandler;
 
   constructor(
-    private readonly runtime: DefaultTransport,
+    private readonly runtime: {{ writer.transport_class_name }},
     private readonly options: SocketConnectOptions<Recv, Send>,
   ) {
     this.routeId = options.routeId;
@@ -409,7 +527,10 @@ class WailsSocketBridge<Recv, Send> implements ApiSocketBridge<Recv, Send> {
   }
 }
 
-export class DefaultTransport implements ApiTransport {
+export class {{ writer.transport_class_name }} implements ApiTransport {
+{% if writer.transport_kind == "wails-v3" %}
+  private readonly eventHandlers = new Map<string, Map<WailsEventHandler, WailsV3EventHandler>>();
+{% endif %}
   constructor(protected readonly config: ApiClientConfig = {}, _defaultBaseUrl: string = "") {}
 
   async request<R>(options: RequestOptions<R>): Promise<R> {
@@ -447,12 +568,14 @@ export class DefaultTransport implements ApiTransport {
     operation: string,
     payload?: unknown,
   ): Promise<R> {
+    await ensureWailsRuntime();
 {% if writer.transport_kind == "wails-v3" %}
-    const call = window.wails?.Call;
-    if (typeof call !== "function") {
-      throw new Error("window.wails.Call is not available in the current runtime.");
+    const bindingName = resolveWailsV3BindingName(namespace, service, operation);
+    const callByName = getWailsV3Runtime()?.Call?.ByName;
+    if (typeof callByName !== "function") {
+      throw new Error("window.wails.Call.ByName is not available in the current runtime.");
     }
-    return await call(`${service}.${operation}`, payload) as R;
+    return await callByName(bindingName, payload) as R;
 {% else %}
     const namespaceObject = window.go?.[namespace];
     const serviceObject = namespaceObject?.[service];
@@ -466,11 +589,20 @@ export class DefaultTransport implements ApiTransport {
 
   subscribeEvent(name: string, handler: WailsEventHandler): void {
 {% if writer.transport_kind == "wails-v3" %}
-    const on = window.wails?.Events?.On;
+    const on = getWailsV3Runtime()?.Events?.On;
     if (typeof on !== "function") {
       throw new Error("window.wails.Events.On is not available in the current runtime.");
     }
-    on(name, handler);
+    const wrappedHandler: WailsV3EventHandler = (event?: unknown) => {
+      handler(unwrapWailsV3Event(event));
+    };
+    let handlers = this.eventHandlers.get(name);
+    if (handlers == null) {
+      handlers = new Map();
+      this.eventHandlers.set(name, handlers);
+    }
+    handlers.set(handler, wrappedHandler);
+    on(name, wrappedHandler);
 {% else %}
     const on = window.runtime?.EventsOn;
     if (typeof on !== "function") {
@@ -482,14 +614,22 @@ export class DefaultTransport implements ApiTransport {
 
   unsubscribeEvent(name: string, handler: WailsEventHandler): void {
 {% if writer.transport_kind == "wails-v3" %}
-    const off = window.wails?.Events?.Off;
+    const off = getWailsV3Runtime()?.Events?.Off;
     if (typeof off === "function") {
-      off(name, handler);
+      const handlers = this.eventHandlers.get(name);
+      const wrappedHandler = handlers?.get(handler);
+      off(name, wrappedHandler);
+      if (wrappedHandler != null) {
+        handlers?.delete(handler);
+      }
+      if (handlers?.size === 0) {
+        this.eventHandlers.delete(name);
+      }
     }
 {% else %}
     const off = window.runtime?.EventsOff;
     if (typeof off === "function") {
-      off(name, handler);
+      off(name);
     }
 {% endif %}
   }

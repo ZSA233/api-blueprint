@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import enum
+import warnings
 
 from api_blueprint.engine import Blueprint
 from api_blueprint.engine.model import (
@@ -46,6 +47,21 @@ def test_model_to_pydantic_marks_default_fields_optional():
     pydantic_model = model_to_pydantic(Nested)
     field = pydantic_model.model_fields["count"]
     assert not field.is_required()
+
+
+def test_model_to_pydantic_allows_basemodel_shadow_field_without_warning():
+    class SchemaPayload(Model):
+        schema = String(description="schema")
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        pydantic_model = model_to_pydantic(SchemaPayload)
+
+    warning_messages = [str(warning.message) for warning in caught]
+    assert not any("shadows an attribute in parent" in message for message in warning_messages)
+    assert "schema" in pydantic_model.model_fields
+    assert "schema" in pydantic_model.model_json_schema()["properties"]
+    assert pydantic_model.model_validate({"schema": "value"}).schema == "value"
 
 
 def test_response_wrapper_create_keeps_generic_data_field():

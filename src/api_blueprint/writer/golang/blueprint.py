@@ -15,7 +15,7 @@ from api_blueprint.engine.wrapper import ResponseWrapper
 from api_blueprint.writer.core.base import BaseBlueprint
 from api_blueprint.writer.core.templates import iter_render, render
 
-from .common import LANG, PackageName, GolangType
+from .common import LANG, PackageName, GolangType, internal_codegen_dir
 from .protos import (
     GolangEnum,
     GolangPackageLayout,
@@ -310,7 +310,7 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
 
     @property
     def com_proto_gen_path(self) -> str:
-        return f"gen-{self.com_proto_package}"
+        return internal_codegen_dir(PackageName.COM_PROTOS)
 
     @property
     def com_proto_imports(self) -> str:
@@ -322,7 +322,7 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
 
     @property
     def com_enum_gen_path(self) -> str:
-        return f"gen-{self.com_enum_package}"
+        return internal_codegen_dir(PackageName.COM_ENUMS)
 
     @property
     def com_enum_imports(self) -> str:
@@ -374,21 +374,22 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
                 yield golang_enum
 
     def gen_views(self) -> None:
+        self.validate_reserved_paths()
         view_dir = self.writer.working_dir / self.writer.views_package / self.package
         ctx = {"writer": self.writer, "bp": self}
 
-        with self.writer.write_file(self.writer.working_dir / self.writer.views_package / "engine.go") as handle:
+        with self.writer.write_file(self.writer.working_dir / self.writer.views_package / "engine.go", overwrite=True) as handle:
             if handle:
                 handle.write(render(LANG, "engine.go", ctx, ""))
 
         with self.writer.write_file(view_dir / self.com_proto_gen_path / "protos.go", overwrite=True) as handle:
             if handle:
-                handle.write(render(LANG, "protos.go", ctx, "views/gen-protos"))
+                handle.write(render(LANG, "protos.go", ctx, "views/_gen_protos"))
 
         enums_path = view_dir / self.com_enum_gen_path / "enums.go"
         with self.writer.write_file(enums_path, overwrite=True) as handle:
             if handle:
-                handle.write(render(LANG, "enums.go", ctx, "views/gen-enums"))
+                handle.write(render(LANG, "enums.go", ctx, "views/_gen_enums"))
         self.writer.toolchain.run_go_enum(enums_path)
 
         with self.writer.write_file(view_dir / "gen_blueprint.go", overwrite=True) as handle:
@@ -397,6 +398,21 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
 
         for group in self.get_router_groups():
             self.gen_routers(group)
+
+    def validate_reserved_paths(self) -> None:
+        self._validate_reserved_segments(self.package, label="blueprint root")
+        for group in self.get_router_groups():
+            if group.branch:
+                self._validate_reserved_segments(group.branch, label="router group")
+
+    def _validate_reserved_segments(self, raw_path: str, *, label: str) -> None:
+        segments = [segment for segment in raw_path.strip("/").split("/") if segment]
+        for segment in segments:
+            if segment.startswith("_"):
+                raise ValueError(
+                    f"[gen_golang] {label}[{raw_path}] 使用了生成器保留目录段[{segment}]；"
+                    "以下划线开头的 Go 目录由 api-blueprint 保留"
+                )
 
     def gen_routers(self, group: GolangRouterGroup) -> None:
         view_dir = self.writer.working_dir / self.writer.views_package / self.package / group.package

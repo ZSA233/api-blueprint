@@ -213,6 +213,25 @@ entrypoints = ["blueprints.app:*"]
     assert "wails" in str(result.exception)
 
 
+def test_gen_wails_requires_shared_golang_and_typescript_configs(tmp_path):
+    config = tmp_path / "api-blueprint.toml"
+    config.write_text(
+        """
+[[wails.targets]]
+id = "desktop.v3"
+version = "v3"
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(gen_wails, ["-c", str(config)])
+
+    assert result.exit_code != 0
+    assert isinstance(result.exception, ValueError)
+    assert "golang" in str(result.exception)
+
+
 def test_gen_wails_list_targets_outputs_deterministic_listing(tmp_path):
     config = tmp_path / "api-blueprint.toml"
     config.write_text(
@@ -220,14 +239,13 @@ def test_gen_wails_list_targets_outputs_deterministic_listing(tmp_path):
 [[wails.targets]]
 id = "desktop.v3"
 version = "v3"
-go_out_dir = "generated/go-v3"
-typescript_out_dir = "generated/ts-v3"
+frontend_mode = "external"
 
 [[wails.targets]]
 id = "desktop.v2"
 version = "v2"
-go_out_dir = "generated/go-v2"
-typescript_out_dir = "generated/ts-v2"
+overlay_name = "desktop_v2"
+frontend_mode = "none"
         """.strip()
         + "\n",
         encoding="utf-8",
@@ -238,8 +256,47 @@ typescript_out_dir = "generated/ts-v2"
     assert result.exit_code == 0
     lines = [line for line in result.output.splitlines() if line.strip()]
     assert lines == [
-        f"desktop.v3\tv3\t{(tmp_path / 'generated' / 'go-v3').resolve()}\t{(tmp_path / 'generated' / 'ts-v3').resolve()}",
-        f"desktop.v2\tv2\t{(tmp_path / 'generated' / 'go-v2').resolve()}\t{(tmp_path / 'generated' / 'ts-v2').resolve()}",
+        "desktop.v3\tv3\twailsv3\texternal",
+        "desktop.v2\tv2\tdesktop_v2\tnone",
+    ]
+
+
+def test_gen_wails_explain_target_shows_derived_overlay_layout(tmp_path):
+    config = tmp_path / "api-blueprint.toml"
+    config.write_text(
+        """
+[golang]
+codegen_output = "golang"
+
+[typescript]
+codegen_output = "typescript"
+
+[[wails.targets]]
+id = "desktop.v3"
+version = "v3"
+include = ["tag:desktop"]
+exclude = ["path:/api/internal/**"]
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(gen_wails, ["-c", str(config), "--explain-target", "desktop.v3"])
+
+    assert result.exit_code == 0
+    lines = [line for line in result.output.splitlines() if line.strip()]
+    assert lines == [
+        "id: desktop.v3",
+        "version: v3",
+        "overlay_name: wailsv3",
+        "frontend_mode: external",
+        f"go_runtime_dir: {(tmp_path / 'golang' / 'views' / '_wailsv3' / 'runtime').resolve()}",
+        f"go_bindings_pattern: {(tmp_path / 'golang' / 'views').resolve().as_posix()}/<blueprint-root>/<group...>/_wailsv3/bindings",
+        f"go_route_overlay_pattern: {(tmp_path / 'golang' / 'views').resolve().as_posix()}/<blueprint-root>/<group...>/_wailsv3",
+        f"typescript_transport_pattern: {(tmp_path / 'typescript').resolve().as_posix()}/<blueprint-root>/(shared)/(wailsv3)",
+        f"typescript_route_overlay_pattern: {(tmp_path / 'typescript').resolve().as_posix()}/<blueprint-root>/<group...>/(wailsv3)",
+        "include: tag:desktop",
+        "exclude: path:/api/internal/**",
     ]
 
 

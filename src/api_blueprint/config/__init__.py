@@ -12,8 +12,10 @@ from api_blueprint.config.models import (
     TypeScriptConfig,
     UpstreamConfig,
     WailsConfig,
+    WailsFrontendMode,
     WailsTargetConfig,
     WailsVersion,
+    default_wails_overlay_name,
 )
 from api_blueprint.config.resolved import (
     ResolvedConfig,
@@ -51,8 +53,10 @@ __all__ = (
     "TypeScriptConfig",
     "UpstreamConfig",
     "WailsConfig",
+    "WailsFrontendMode",
     "WailsTargetConfig",
     "WailsVersion",
+    "default_wails_overlay_name",
     "load_config",
     "normalize_config_path",
     "read_toml",

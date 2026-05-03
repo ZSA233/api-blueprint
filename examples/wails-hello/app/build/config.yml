@@ -1,0 +1,42 @@
+version: "3"
+
+info:
+  companyName: "api-blueprint"
+  productName: "api-blueprint Wails Hello"
+  productIdentifier: "dev.api-blueprint.wails-hello"
+  description: "Minimal api-blueprint Wails-only hello example"
+  copyright: "(c) api-blueprint contributors"
+  comments: "Repository-owned example app"
+  version: "0.1.0"
+
+dev_mode:
+  root_path: .
+  log_level: warn
+  debounce: 1000
+  ignore:
+    dir:
+      - .git
+      - node_modules
+      - frontend/dist
+      - build/bin
+    file:
+      - .DS_Store
+      - .gitignore
+      - package-lock.json
+    watched_extension:
+      - "*.go"
+    git_ignore: true
+  executes:
+    - cmd: wails3 task install:frontend:deps
+      type: once
+    - cmd: wails3 task dev:frontend
+      type: background
+    - cmd: go mod tidy
+      type: blocking
+    - cmd: wails3 task dev:build
+      type: blocking
+    - cmd: wails3 task run
+      type: primary
+
+fileAssociations: []
+other: []

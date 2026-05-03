@@ -1,0 +1,9 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "api-blueprint-wails-v2-harness",
+  "outputfilename": "api-blueprint-wails-v2-harness",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto"
+}

@@ -65,7 +65,11 @@ def generate_golang(config_path: str | Path | None = "./api-blueprint.toml", *, 
     if not project.entrypoints:
         raise ModuleNotFoundError("[gen_golang] 未指定蓝图entrypoints")
     build_entrypoints(project.entrypoints)
-    writer = golang.GolangWriter(output, module=golang_config.module)
+    writer = golang.GolangWriter(
+        output,
+        module=golang_config.module,
+        provider_package=golang_config.provider_package or "provider",
+    )
     writer.register(*project.entrypoints)
     writer.gen()
 
@@ -208,8 +212,10 @@ def explain_wails_target(
 
     resolved = resolve_config(config_path)
     wails_config = _require_wails_config(resolved)
+    golang_config = _require_golang_config(resolved)
+    typescript_config = _require_typescript_config(resolved)
     writer = wails.WailsWriter(wails_config)
-    return writer.explain_target(target_id)
+    return writer.explain_target(target_id, golang_config=golang_config, typescript_config=typescript_config)
 
 
 def generate_wails(
@@ -217,13 +223,49 @@ def generate_wails(
     *,
     target_filters: Sequence[str] = (),
 ) -> tuple[WailsGenerationTarget, ...]:
-    from api_blueprint.writer import wails
+    from api_blueprint.writer import golang, typescript, wails
 
     resolved = resolve_config(config_path)
     wails_config = _require_wails_config(resolved)
+    golang_config = _require_golang_config(resolved)
+    typescript_config = _require_typescript_config(resolved)
+    golang_output = golang_config.output
+    typescript_output = typescript_config.output
+    if golang_output is None:
+        raise FileNotFoundError("[gen_wails] 共享 Go 契约层要求 [golang].codegen_output 不能为 None")
+    if not golang_output.exists():
+        raise FileNotFoundError(f"[gen_wails] 共享 Go 契约层输出路径[{golang_output}]不存在")
+    if typescript_output is None:
+        raise FileNotFoundError("[gen_wails] 共享 TypeScript 契约层要求 [typescript].codegen_output 不能为 None")
+    if not typescript_output.exists():
+        raise FileNotFoundError(f"[gen_wails] 共享 TypeScript 契约层输出路径[{typescript_output}]不存在")
+
     project = load_project(resolved.path, command="gen_wails")
     if not project.entrypoints:
         raise ModuleNotFoundError("[gen_wails] 未指定蓝图entrypoints")
     build_entrypoints(project.entrypoints)
+
+    go_writer = golang.GolangWriter(
+        golang_output,
+        module=golang_config.module,
+        provider_package=golang_config.provider_package or "provider",
+    )
+    go_writer.register(*project.entrypoints)
+    go_writer.gen()
+
+    base_url = typescript_config.base_url or typescript_config.upstream or ""
+    ts_writer = typescript.TypeScriptWriter(
+        typescript_output,
+        base_url=base_url,
+        base_url_expr=typescript_config.base_url_expr,
+    )
+    ts_writer.register(*project.entrypoints)
+    ts_writer.gen()
+
     writer = wails.WailsWriter(wails_config)
-    return writer.gen(project.entrypoints, target_patterns=target_filters)
+    return writer.gen(
+        project.entrypoints,
+        golang_config=golang_config,
+        typescript_config=typescript_config,
+        target_patterns=target_filters,
+    )

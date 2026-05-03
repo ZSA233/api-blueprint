@@ -2,9 +2,18 @@
 
 package {{ writer.provider_package }}
 
+import (
+	"fmt"
+)
+
 const (
 	PROV_HANDLE = "handle"
 )
+
+type HandleContext[Q, B, P any] struct {
+	Response *P
+	Error    error
+}
 
 type HandleProvider[Q, B, P any] struct {
 	Data    string
@@ -23,4 +32,31 @@ func NewHandleProvider[Q, B, P any](
 		Data:    data,
 		Handler: handler,
 	}
+}
+
+func (prov *HandleProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
+	ctx := AdaptContext[Q, B, P](anyCtx)
+	var err error
+
+	if ctx.Req == nil {
+		err = fmt.Errorf("[HandleProvider] fail to get req")
+		ctx.Handle = &HandleContext[Q, B, P]{Error: err}
+		ctx.Next()
+		return
+	}
+
+	req, err := ctx.Req.Request, ctx.Req.Error
+	if err != nil {
+		ctx.Handle = &HandleContext[Q, B, P]{Error: err}
+		ctx.Next()
+		return
+	}
+
+	var rsp *P
+	rsp, err = prov.Handler(ctx, req)
+	ctx.Handle = &HandleContext[Q, B, P]{
+		Response: rsp,
+		Error:    err,
+	}
+	ctx.Next()
 }

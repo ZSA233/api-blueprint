@@ -263,6 +263,21 @@ class GolangResponseWrapper:
             return f'[{", ".join(generic_types.values())}{suffix}]'
         return ""
 
+    def generic_instantiation(self, *types: str) -> str:
+        generic_types = self.proto.generic_types()
+        if not generic_types:
+            return ""
+        values = list(types) or list(generic_types.values())
+        return f'[{" ,".join(values)}]'.replace(" ,", ", ")
+
+    def type_reference(self, *types: str, package: str = "", pointer: bool = True) -> str:
+        prefix = f"{package}." if package else ""
+        if self.proto_type == "alias":
+            target = types[0] if types else "any"
+            return f"*{target}" if pointer else target
+        target = f"{prefix}{self.proto_name}{self.generic_instantiation(*types)}"
+        return f"*{target}" if pointer else target
+
     def json_factory(self, **kwargs: Any) -> str:
         return self.response_factory("json", **kwargs)
 

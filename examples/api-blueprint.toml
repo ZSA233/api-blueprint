@@ -11,6 +11,7 @@ entrypoints = [
 codegen_output = 'golang'
 upstream = 'http://localhost:2333'
 module = ''
+# provider_package = 'provider'
 
 # Blueprint -> TypeScript snapshot example
 [typescript]
@@ -30,14 +31,12 @@ exclude = ['path:/static/**', 'path:/api/ws', 'path:/api/demo/ws', 'path:/api/de
 [[wails.targets]]
 id = 'wails.v3'
 version = 'v3'
-go_out_dir = 'wails/v3/go'
-typescript_out_dir = 'wails/v3/typescript'
+frontend_mode = 'external'
 
 [[wails.targets]]
 id = 'wails.v2'
 version = 'v2'
-go_out_dir = 'wails/v2/go'
-typescript_out_dir = 'wails/v2/typescript'
+frontend_mode = 'external'
 
 # Existing proto tree -> gRPC snapshots example
 [grpc]

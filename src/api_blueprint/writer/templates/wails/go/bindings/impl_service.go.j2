@@ -1,0 +1,9 @@
+package {{ router_group.binding_package }}
+
+import (
+	runtime "{{ writer.runtime_imports | safe }}"
+)
+
+func NewService(dispatcher runtime.EventDispatcher) *{{ router_group.service_name }} {
+	return newGenerated{{ router_group.service_name }}(dispatcher)
+}

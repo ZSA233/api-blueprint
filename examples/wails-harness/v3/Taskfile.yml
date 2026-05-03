@@ -1,0 +1,39 @@
+version: "3"
+
+tasks:
+  darwin:build:
+    deps:
+      - build:frontend
+    cmds:
+      - mkdir -p build/bin
+      - GOOS=darwin GOARCH={{.ARCH | default ARCH}} CGO_ENABLED=1 go build -o build/bin/api-blueprint-wails-v3-harness
+
+  linux:build:
+    deps:
+      - build:frontend
+    cmds:
+      - mkdir -p build/bin
+      - GOOS=linux GOARCH={{.ARCH | default ARCH}} CGO_ENABLED=1 go build -o build/bin/api-blueprint-wails-v3-harness
+
+  windows:build:
+    deps:
+      - build:frontend
+    cmds:
+      - mkdir -p build/bin
+      - GOOS=windows GOARCH={{.ARCH | default ARCH}} CGO_ENABLED=1 go build -o build/bin/api-blueprint-wails-v3-harness.exe
+
+  build:frontend:
+    dir: frontend
+    cmds:
+      - npm install
+      - npm run build
+
+  build:
+    cmds:
+      - task: "{{OS}}:build"
+
+  dev:
+    dir: frontend
+    cmds:
+      - npm install
+      - npm run dev

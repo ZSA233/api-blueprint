@@ -1,15 +1,24 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from api_blueprint.config.grpc_python_package import validate_python_package_root
+from api_blueprint.route_selection import validate_selection_rules
 
 
 GrpcLayout = Literal["source_relative", "go_package"]
 WailsVersion = Literal["v2", "v3"]
+WailsFrontendMode = Literal["external", "none"]
+GO_PACKAGE_NAME_RE = re.compile(r"^[a-z][a-z0-9_]*$")
+WAILS_OVERLAY_NAME_RE = re.compile(r"^[a-z][a-z0-9_]*$")
+
+
+def default_wails_overlay_name(version: WailsVersion) -> str:
+    return f"wails{version}"
 
 
 class CodegenConfig(BaseModel):
@@ -22,6 +31,16 @@ class UpstreamConfig(BaseModel):
 
 class GolangConfig(CodegenConfig, UpstreamConfig):
     module: str | None = None
+    provider_package: str = "provider"
+
+    @model_validator(mode="after")
+    def validate_provider_package(self) -> "GolangConfig":
+        if not GO_PACKAGE_NAME_RE.fullmatch(self.provider_package):
+            raise ValueError(
+                "golang.provider_package must be Go package-safe: "
+                "lowercase letters, digits, and underscores, and it cannot start with a digit or underscore"
+            )
+        return self
 
 
 class TypeScriptConfig(CodegenConfig, UpstreamConfig):
@@ -146,8 +165,39 @@ class WailsTargetConfig(BaseModel):
 
     id: str
     version: WailsVersion
-    go_out_dir: str
-    typescript_out_dir: str
+    overlay_name: str | None = None
+    frontend_mode: WailsFrontendMode = "external"
+    include: list[str] = Field(default_factory=list)
+    exclude: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_legacy_output_fields(cls, data: object) -> object:
+        if not isinstance(data, dict):
+            return data
+
+        legacy_fields = [name for name in ("go_out_dir", "typescript_out_dir") if name in data]
+        if not legacy_fields:
+            return data
+
+        names = ", ".join(legacy_fields)
+        raise ValueError(
+            "wails.targets no longer supports legacy output fields "
+            f"[{names}]. Use shared [golang]/[typescript] outputs plus "
+            "`overlay_name`, `frontend_mode`, `include`, and `exclude` on each Wails target."
+        )
+
+    @model_validator(mode="after")
+    def validate_overlay_contract(self) -> "WailsTargetConfig":
+        if self.overlay_name is not None and not GO_PACKAGE_NAME_RE.fullmatch(self.overlay_name):
+            raise ValueError(
+                "wails.targets overlay_name must be Go package-safe: "
+                "lowercase letters, digits, and underscores, and it cannot start with a digit"
+            )
+
+        validate_selection_rules(self.include, label="[gen_wails]")
+        validate_selection_rules(self.exclude, label="[gen_wails]")
+        return self
 
 
 class WailsConfig(BaseModel):
@@ -162,6 +212,16 @@ class WailsConfig(BaseModel):
         duplicate_ids = sorted({target_id for target_id in target_ids if target_ids.count(target_id) > 1})
         if duplicate_ids:
             raise ValueError(f"wails.targets contains duplicate ids: {', '.join(duplicate_ids)}")
+
+        overlay_names = [target.overlay_name or default_wails_overlay_name(target.version) for target in self.targets]
+        duplicate_overlay_names = sorted(
+            {name for name in overlay_names if overlay_names.count(name) > 1}
+        )
+        if duplicate_overlay_names:
+            raise ValueError(
+                "wails.targets contains duplicate overlay_name values after defaults: "
+                + ", ".join(duplicate_overlay_names)
+            )
 
         return self
 

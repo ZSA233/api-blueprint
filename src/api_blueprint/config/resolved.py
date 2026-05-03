@@ -6,7 +6,8 @@ from typing import Literal
 
 from api_blueprint.config.grpc_python_package import python_package_root_to_path
 from api_blueprint.config.loader import normalize_config_path
-from api_blueprint.config.models import Config, WailsVersion
+from api_blueprint.config.models import Config, WailsFrontendMode, WailsVersion, default_wails_overlay_name
+from api_blueprint.route_selection import normalize_selection_rules
 
 
 @dataclass(frozen=True)
@@ -14,6 +15,7 @@ class ResolvedTargetConfig:
     output: Path | None
     upstream: str | None = None
     module: str | None = None
+    provider_package: str | None = None
     base_url: str | None = None
     base_url_expr: str | None = None
 
@@ -70,8 +72,10 @@ class ResolvedGrpcConfig:
 class ResolvedWailsTargetConfig:
     id: str
     version: WailsVersion
-    go_out_dir: Path
-    typescript_out_dir: Path
+    overlay_name: str
+    frontend_mode: WailsFrontendMode
+    include: tuple[str, ...]
+    exclude: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -181,6 +185,7 @@ def resolve_config(path: str | Path | None) -> ResolvedConfig:
             output=resolve_output_path(normalized, goconf.codegen_output),
             upstream=goconf.upstream,
             module=goconf.module,
+            provider_package=goconf.provider_package,
         ),
         typescript=None
         if tsconf is None
@@ -253,10 +258,10 @@ def resolve_config(path: str | Path | None) -> ResolvedConfig:
                 ResolvedWailsTargetConfig(
                     id=target.id,
                     version=target.version,
-                    go_out_dir=resolve_output_path(normalized, target.go_out_dir) or normalized.parent.resolve(),
-                    typescript_out_dir=(
-                        resolve_output_path(normalized, target.typescript_out_dir) or normalized.parent.resolve()
-                    ),
+                    overlay_name=target.overlay_name or default_wails_overlay_name(target.version),
+                    frontend_mode=target.frontend_mode,
+                    include=normalize_selection_rules(target.include),
+                    exclude=normalize_selection_rules(target.exclude),
                 )
                 for target in wailsconf.targets
             ),

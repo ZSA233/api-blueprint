@@ -9,21 +9,12 @@ import (
 	"io"
 	"sync"
 	"sync/atomic"
-)
 
-type TransportKind string
-
-const (
-	TransportWails TransportKind = "wails"
+	sharedprovider "{{ writer.shared_provider_imports | safe }}"
 )
 
 type EventDispatcher interface {
 	Emit(name string, payload any) error
-}
-
-type REQ[Q, B any] struct {
-	Q *Q
-	B *B
 }
 
 type InvokeEnvelope[Q, B any] struct {
@@ -32,48 +23,10 @@ type InvokeEnvelope[Q, B any] struct {
 	Headers map[string]string `json:"Headers,omitempty"`
 }
 
-type ReqContext[Q, B, P any] struct {
-	Request *REQ[Q, B]
-	Error   error
-}
-
-type AuthContext[Q, B, P any] struct{}
-
-type HandleContext[Q, B, P any] struct {
-	Response *P
-	Error    error
-}
-
-type WailsRouteContext struct {
-	Service   string
-	Operation string
-	Headers   map[string]string
-	Metadata  map[string]any
-}
-
-type SocketConnection interface {
-	Transport() TransportKind
-	SessionID() string
-	Subprotocol() string
-	Underlying() any
-	ReadJSON(context.Context, any) error
-	WriteJSON(context.Context, any) error
-	Close(code int, reason string) error
-}
-
-type WsHandleContext[Q, B, P any] struct {
-	Conn     SocketConnection
-	Response *P
-	Error    error
-}
-
-type Context[Q, B, P any] struct {
-	Kind     TransportKind
-	Wails    *WailsRouteContext
-	Req      *ReqContext[Q, B, P]
-	Auth     *AuthContext[Q, B, P]
-	Handle   *HandleContext[Q, B, P]
-	WsHandle *WsHandleContext[Q, B, P]
+type ReqEnvelopeOptions struct {
+	BindQuery bool
+	BindJSON  bool
+	BindForm  bool
 }
 
 type SocketSessionDescriptor struct {
@@ -113,26 +66,41 @@ type SocketSession struct {
 	onClose      func(string)
 }
 
-func NewInvokeContext[Q, B, P any](service string, operation string, headers map[string]string) *Context[Q, B, P] {
-	return &Context[Q, B, P]{
-		Kind: TransportWails,
-		Wails: &WailsRouteContext{
-			Service:   service,
-			Operation: operation,
-			Headers:   headers,
-			Metadata:  map[string]any{},
-		},
-	}
-}
-
-func EnvelopeToReq[Q, B any](envelope *InvokeEnvelope[Q, B]) *REQ[Q, B] {
+func EnvelopeToReq[Q, B any](envelope *InvokeEnvelope[Q, B], options ReqEnvelopeOptions) (*sharedprovider.REQ[Q, B], error) {
 	if envelope == nil {
-		return &REQ[Q, B]{}
+		envelope = &InvokeEnvelope[Q, B]{}
 	}
-	return &REQ[Q, B]{
-		Q: envelope.Q,
-		B: envelope.B,
+
+	var reqQ *Q
+	if options.BindQuery {
+		reqQ = envelope.Q
+		if reqQ == nil {
+			reqQ = new(Q)
+		}
+	} else {
+		reqQ = envelope.Q
 	}
+
+	var reqB *B
+	switch {
+	case options.BindJSON:
+		if envelope.B == nil {
+			return nil, fmt.Errorf("[WailsReq] json body is required")
+		}
+		reqB = envelope.B
+	case options.BindForm:
+		reqB = envelope.B
+		if reqB == nil {
+			reqB = new(B)
+		}
+	default:
+		reqB = envelope.B
+	}
+
+	return &sharedprovider.REQ[Q, B]{
+		Q: reqQ,
+		B: reqB,
+	}, nil
 }
 
 func EnvelopeHeaders[Q, B any](envelope *InvokeEnvelope[Q, B]) map[string]string {
@@ -192,8 +160,8 @@ func (session *SocketSession) Descriptor() SocketSessionDescriptor {
 	}
 }
 
-func (session *SocketSession) Transport() TransportKind {
-	return TransportWails
+func (session *SocketSession) Transport() sharedprovider.TransportKind {
+	return sharedprovider.TransportWails
 }
 
 func (session *SocketSession) SessionID() string {
@@ -270,24 +238,4 @@ func (session *SocketSession) Close(code int, reason string) error {
 		}
 	})
 	return closeErr
-}
-
-func WsJSONReadLoop[MSG any](conn SocketConnection, fn func(msg *MSG, err error) (stopped bool), cs ...context.Context) (err error) {
-	if conn == nil {
-		return nil
-	}
-	var c context.Context
-	if len(cs) > 0 {
-		c = cs[0]
-	} else {
-		c = context.Background()
-	}
-	for {
-		msg := new(MSG)
-		err = conn.ReadJSON(c, msg)
-		if fn(msg, err) {
-			break
-		}
-	}
-	return
 }

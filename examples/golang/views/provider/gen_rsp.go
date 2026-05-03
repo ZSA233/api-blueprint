@@ -2,11 +2,21 @@
 
 package provider
 
-import "strings"
+import (
+	errors "demo/errors"
+	"encoding/xml"
+	"fmt"
+	"net/http"
+	"strings"
+
+	"github.com/gin-gonic/gin"
+)
 
 const (
 	PROV_RSP = "rsp"
 )
+
+type RspContext struct{}
 
 type RspProvider[Q, B, P any] struct {
 	Type    string
@@ -34,4 +44,109 @@ func NewRspProvider[Q, B, P any](
 
 func (prov *RspProvider[Q, B, P]) GetName() string {
 	return PROV_RSP
+}
+
+func (prov *RspProvider[Q, B, P]) NewContext(ctx *Context[Q, B, P]) *RspContext {
+	return &RspContext{}
+}
+
+func (prov *RspProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
+	ctx := AdaptContext[Q, B, P](anyCtx)
+	httpCtx, httpErr := ctx.RequireHTTP()
+
+	var response *P
+	var err error
+	if handled := ctx.Handle; handled != nil {
+		response = handled.Response
+		err = handled.Error
+		if httpCtx != nil {
+			prov.doResponse(httpCtx, response, err)
+		}
+	} else if handled := ctx.WsHandle; handled != nil {
+		response = handled.Response
+		err = handled.Error
+		_, _ = response, err
+	} else {
+		err = fmt.Errorf("[RspProvider] fail to get Handle")
+		ctx.Abort(err)
+		if httpCtx != nil {
+			_ = httpCtx.AbortWithError(-1, err)
+		}
+		return
+	}
+	if httpErr != nil {
+		ctx.Next()
+		return
+	}
+
+	ctx.Next()
+}
+
+func (prov *RspProvider[Q, B, P]) doResponse(ctx *gin.Context, data *P, err error) {
+	switch prov.Type {
+	case "json":
+		ctx.JSON(NewRSP_JSON(prov, data, err))
+	case "xml":
+		ctx.XML(NewRSP_XML(prov, data, err))
+	}
+}
+
+func (prov *RspProvider[Q, B, P]) errorResponse(ctx *gin.Context, err error) {
+	if err == nil {
+		return
+	}
+	prov.doResponse(ctx, nil, err)
+}
+
+func unwrapError(err error) (code int, message string) {
+	switch e := err.(type) {
+	case errors.CodeErrInterface:
+		code = e.Code()
+		message = e.Message()
+	case nil:
+	default:
+		message = fmt.Sprintf("%v", e)
+		code = -1
+	}
+	return
+}
+
+func marshalXML[P any](enc *xml.Encoder, start xml.StartElement, xmlName xml.Name, inner *P) error {
+	if xmlName.Local == "" {
+		return enc.Encode(inner)
+	}
+	start.Name = xmlName
+	return enc.EncodeElement(inner, start)
+}
+
+func ensureValidStatusCode(code int, rsp any, err error) (int, any) {
+	if code != 0 && (code < 100 || code > 599) {
+		code = http.StatusBadRequest
+		if err != nil {
+			rsp = fmt.Sprintf("%v", err)
+		}
+	}
+	return code, rsp
+}
+
+func NewRSP_JSON[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (code int, rsp any) {
+	code, rsp = NewRSP_JSON_Entry(prov, data, err)
+	return ensureValidStatusCode(code, rsp, err)
+}
+
+func NewRSP_XML[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (code int, rsp any) {
+	code, rsp = NewRSP_XML_Entry(prov, data, err)
+	return ensureValidStatusCode(code, rsp, err)
+}
+
+func MarshalXMLResponse[Q, B, P any](prov *RspProvider[Q, B, P], data *P) (string, error) {
+	_, rsp := NewRSP_XML(prov, data, nil)
+	if rsp == nil {
+		return "", nil
+	}
+	raw, err := xml.Marshal(rsp)
+	if err != nil {
+		return "", err
+	}
+	return string(raw), nil
 }

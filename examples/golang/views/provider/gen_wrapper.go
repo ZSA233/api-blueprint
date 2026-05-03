@@ -37,11 +37,29 @@ func NewRSP_JSON_GeneralWrapper[Q, B, P any](prov *RspProvider[Q, B, P], data *P
 	}
 }
 
+func WrapRSP_JSON_GeneralWrapper[P any](data *P, err error) *RSP_JSON_GeneralWrapper[P] {
+	_, rsp := NewRSP_JSON_GeneralWrapper[any, any, P](nil, data, err)
+	if rsp == nil {
+		return nil
+	}
+	typed, _ := rsp.(*RSP_JSON_GeneralWrapper[P])
+	return typed
+}
+
 func NewRSP_JSON_NoneWrapper[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (codeInt int, rsp any) {
 	code, message := unwrapError(err)
 	_, _ = code, message
 
 	return int(code), (RSP_JSON_NoneWrapper)(data)
+}
+
+func WrapRSP_JSON_NoneWrapper[P any](data *P, err error) *P {
+	_, rsp := NewRSP_JSON_NoneWrapper[any, any, P](nil, data, err)
+	if rsp == nil {
+		return nil
+	}
+	typed, _ := rsp.(*P)
+	return typed
 }
 
 func NewRSP_JSON_Entry[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (code int, rsp any) {

@@ -1,0 +1,16 @@
+{
+  "name": "api-blueprint-wails-hello-frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite"
+  },
+  "dependencies": {
+    "@wailsio/runtime": "^3.0.0-alpha.74"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10"
+  }
+}

@@ -113,8 +113,6 @@ def _group_slug(router: Router) -> str:
     else:
         root = (router.group.root or "").strip("/")
         slug = "(root)" if root else "root"
-    if slug == "shared":
-        slug = "shared_group"
     return slug
 
 
@@ -125,8 +123,6 @@ def _group_alias(router: Router) -> str:
     else:
         root = (router.group.root or "").strip("/")
         alias = re.sub(r"[^0-9A-Za-z]+", "_", root.lower()) or "root" if root else "root"
-    if alias == "shared":
-        alias = "shared_group"
     return alias
 
 

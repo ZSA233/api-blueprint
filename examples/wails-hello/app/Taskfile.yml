@@ -1,0 +1,75 @@
+version: "3"
+
+vars:
+  APP_NAME: "api-blueprint-wails-hello"
+  VITE_PORT: '{{.WAILS_VITE_PORT | default 9245}}'
+
+tasks:
+  darwin:build:
+    deps:
+      - build:frontend
+    cmds:
+      - mkdir -p build/bin
+      - GOOS=darwin GOARCH={{.ARCH | default ARCH}} CGO_ENABLED=1 go build -o build/bin/{{.APP_NAME}}
+
+  linux:build:
+    deps:
+      - build:frontend
+    cmds:
+      - mkdir -p build/bin
+      - GOOS=linux GOARCH={{.ARCH | default ARCH}} CGO_ENABLED=1 go build -o build/bin/{{.APP_NAME}}
+
+  windows:build:
+    deps:
+      - build:frontend
+    cmds:
+      - mkdir -p build/bin
+      - GOOS=windows GOARCH={{.ARCH | default ARCH}} CGO_ENABLED=1 go build -o build/bin/{{.APP_NAME}}.exe
+
+  darwin:dev:build:
+    cmds:
+      - mkdir -p build/bin
+      - GOOS=darwin GOARCH={{.ARCH | default ARCH}} CGO_ENABLED=1 go build -o build/bin/{{.APP_NAME}}
+
+  linux:dev:build:
+    cmds:
+      - mkdir -p build/bin
+      - GOOS=linux GOARCH={{.ARCH | default ARCH}} CGO_ENABLED=1 go build -o build/bin/{{.APP_NAME}}
+
+  windows:dev:build:
+    cmds:
+      - mkdir -p build/bin
+      - GOOS=windows GOARCH={{.ARCH | default ARCH}} CGO_ENABLED=1 go build -o build/bin/{{.APP_NAME}}.exe
+
+  build:frontend:
+    deps:
+      - install:frontend:deps
+    dir: frontend
+    cmds:
+      - npm run build
+
+  install:frontend:deps:
+    dir: frontend
+    cmds:
+      - npm install
+
+  dev:frontend:
+    dir: frontend
+    cmds:
+      - npm run dev -- --port {{.VITE_PORT}} --strictPort
+
+  dev:build:
+    cmds:
+      - task: "{{OS}}:dev:build"
+
+  build:
+    cmds:
+      - task: "{{OS}}:build"
+
+  run:
+    cmds:
+      - ./build/bin/{{.APP_NAME}}{{exeExt}}
+
+  dev:
+    cmds:
+      - wails3 dev -config ./build/config.yml -port {{.VITE_PORT}}

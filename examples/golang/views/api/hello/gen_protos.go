@@ -3,7 +3,7 @@
 package hello
 
 import (
-	protos "demo/views/api/gen-protos"
+	protos "demo/views/api/_gen_protos"
 	provider "demo/views/provider"
 )
 

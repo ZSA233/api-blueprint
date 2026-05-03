@@ -30,7 +30,7 @@ jobs:
 
   example-validation:
     needs: release-contract
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v6
 

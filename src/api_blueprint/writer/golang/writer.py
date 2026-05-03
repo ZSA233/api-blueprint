@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from contextlib import contextmanager
 from pathlib import Path
-from typing import IO, Any, Generator, Optional, Set
+from typing import IO, Any, Generator, Mapping, Optional, Set
 
 from api_blueprint.engine.model import iter_error_models, iter_model_vars
 from api_blueprint.engine.utils import join_path_imports, pascal_to_snake_case
@@ -41,24 +41,10 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
         self._response_wrappers: Optional[list[type[ResponseWrapper]]] = None
         self._list_providers_cache: Optional[set[str]] = None
 
-        gmods = self.toolchain.read_gomodule(working_dir)
-        if len(gmods) > 1 and not module:
-            raise ModuleNotFoundError(f"[go]路径下存在多个module，需要使用module指定其一:{[key for key, _ in gmods]}")
-
-        self.gomodule = None
-        self.gomodpath = None
-        for mod, mod_dir in gmods:
-            if mod == "command-line-arguments":
-                raise ModuleNotFoundError("[go]生成目录找不到gomodule，无法继续生成go代码")
-            if not module or module == mod:
-                module = mod
-                self.gomodule = mod
-                self.gomodpath = (Path(module) / Path(working_dir).absolute().relative_to(mod_dir)).as_posix()
-                logger.info("[*] gomodule: %s", module)
-                break
-
-        if self.gomodpath is None:
-            raise ModuleNotFoundError(f"[go]生成目录找不到gomodule[{module}]，无法继续生成go代码")
+        resolved_module = self.toolchain.resolve_module_import(working_dir, module=module, label="[go]")
+        self.gomodule = resolved_module.module
+        self.gomodpath = resolved_module.import_path
+        logger.info("[*] gomodule: %s", self.gomodule)
 
         self.packages = GolangPackageLayout(
             module_import=self.gomodpath,
@@ -69,6 +55,15 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
         self.views_package = self.packages.views_package
         self.provider_package = self.packages.provider_package
         self.errors_package = self.packages.errors_package
+
+    def validate_package_contract(self) -> None:
+        for bp in self.bps:
+            root_name = bp.root_name
+            if root_name and root_name == self.provider_package:
+                raise ValueError(
+                    f"[gen_golang] provider_package[{self.provider_package}] "
+                    f"与 blueprint root[{root_name}] 冲突；请调整 [golang].provider_package 或 blueprint root"
+                )
 
     @property
     def views_imports(self) -> str:
@@ -97,12 +92,31 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
         return self.packages.formatters(update)
 
     def error_vars(self) -> Generator[GolangErrorGroup, None, None]:
+        used_error_models = self._used_error_model_names()
         for cls_name, cls in iter_error_models():
+            if cls_name not in used_error_models:
+                continue
             err_pkg = pascal_to_snake_case(cls_name)
             err_imports = join_path_imports(self.errors_imports, err_pkg)
             err_dir = Path(self.working_dir / self.errors_package / err_pkg)
             errors = [field for _name, field in iter_model_vars(cls) if getattr(field, "__type__", None) == "error"]
             yield GolangErrorGroup(err_pkg, err_imports, err_dir, errors)
+
+    def _used_error_model_names(self) -> set[str]:
+        names: set[str] = set()
+        for bp in self.bps:
+            self._collect_error_model_names(names, bp.bp.errors)
+            for _group, router in bp.bp.iter_router():
+                self._collect_error_model_names(names, router.errors)
+        return names
+
+    @staticmethod
+    def _collect_error_model_names(names: set[str], errors_by_code: Mapping[int, list[Any]]) -> None:
+        for errors in errors_by_code.values():
+            for err in errors:
+                key = getattr(err, "__key__", None)
+                if key:
+                    names.add(key[0])
 
     def response_wrappers(self, *prefixes: str) -> Generator[GolangResponseWrapper, None, None]:
         if self._response_wrappers is None:
@@ -118,6 +132,7 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
                 yield GolangResponseWrapper(prefix=prefix, response_wrapper=wrapper)
 
     def gen(self) -> None:
+        self.validate_package_contract()
         for bp in self.bps:
             bp.build()
             bp.gen_views()
@@ -147,7 +162,8 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
     def gen_providers(self) -> None:
         provider_dir = self.working_dir / self.views_package / self.provider_package
         for name, text in iter_render(LANG, {"writer": self}, "provider"):
-            with self.write_file(provider_dir / name, overwrite=True) as handle:
+            overwrite = name.startswith("gen_")
+            with self.write_file(provider_dir / name, overwrite=overwrite) as handle:
                 if handle:
                     handle.write(text)
 

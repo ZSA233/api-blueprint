@@ -3,27 +3,22 @@ from __future__ import annotations
 import logging
 from contextlib import contextmanager
 from pathlib import Path
-from typing import IO, Generator, Optional, Set, Type
+from typing import IO, Generator, Optional, Set
 
 from api_blueprint.engine.group import RouterGroup
-from api_blueprint.engine.model import Null, create_model, iter_enum_classes
 from api_blueprint.engine.router import Router
 from api_blueprint.engine.utils import join_path_imports
+from api_blueprint.engine.wrapper import NoneWrapper
 from api_blueprint.writer.core.base import BaseBlueprint, BaseWriter
-from api_blueprint.writer.core.files import ensure_filepath_open
-from api_blueprint.writer.core.templates import iter_render, render
 from api_blueprint.writer.core.contracts import route_contract
+from api_blueprint.writer.core.files import ensure_filepath_open
+from api_blueprint.writer.core.templates import render
 from api_blueprint.writer.golang.blueprint import GolangRouter
-from api_blueprint.writer.golang.common import GolangType
-from api_blueprint.writer.golang.protos import (
-    GolangEnum,
-    GolangPackageLayout,
-    GolangProto,
-    GolangProtoAlias,
-    GolangProtoGeneric,
-    ensure_model,
-)
+from api_blueprint.writer.golang.common import PackageName, internal_codegen_dir
+from api_blueprint.writer.golang.protos import GolangPackageLayout, GolangProto, GolangResponseWrapper, ensure_model
 from api_blueprint.writer.golang.toolchain import GolangToolchain
+
+from .selection import WailsRouteSelection
 
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -34,10 +29,12 @@ LANG = "wails"
 
 
 class WailsRouter:
-    def __init__(self, router: Router):
+    def __init__(self, group: "WailsRouterGroup", router: Router):
+        self.group = group
         self.router = router
         self.go = GolangRouter(router)
         self.contract = route_contract(router)
+        self.json_wrapper = GolangResponseWrapper("RSP_JSON", router.response_wrapper)
 
     @property
     def func_name(self) -> str:
@@ -56,6 +53,28 @@ class WailsRouter:
         return self.go.rsp_type
 
     @property
+    def providers(self) -> str:
+        return self.go.providers
+
+    @property
+    def executor_field_name(self) -> str:
+        return f"{self.contract.method_name}Executor"
+
+    @property
+    def query_alias_name(self) -> str | None:
+        if self.router.req_query is None:
+            return None
+        return f"{self.req_type}_QUERY"
+
+    @property
+    def body_alias_name(self) -> str | None:
+        if self.router.req_json is not None:
+            return f"{self.req_type}_JSON"
+        if self.router.req_form is not None:
+            return f"{self.req_type}_FORM"
+        return None
+
+    @property
     def invoke_type(self) -> str:
         return f"INVOKE_{self.func_name}"
 
@@ -70,6 +89,18 @@ class WailsRouter:
     @property
     def ws_close_type(self) -> str:
         return f"WS_CLOSE_{self.func_name}"
+
+    @property
+    def ws_payload_alias_name(self) -> str | None:
+        if len(self.router.recvs) != 1:
+            return None
+        return f"{self.ws_send_type}_BODY"
+
+    @property
+    def ws_payload_target(self) -> str:
+        if len(self.router.recvs) != 1:
+            return "any"
+        return self.group.bp.shared_common_proto_ref(self.router.recvs[0])
 
     @property
     def service_name(self) -> str:
@@ -99,107 +130,91 @@ class WailsRouter:
     def has_ws(self) -> bool:
         return self.contract.ws is not None
 
-    def _query_proto(self) -> GolangProto | GolangType:
-        if self.router.req_query is None:
-            return GolangType("any")
-        return GolangProto.from_model_ref(ensure_model(self.router.req_query), f"{self.req_type}_QUERY")
-
-    def _body_proto(self) -> GolangProto | GolangType:
-        req_body = self.router.req_json or self.router.req_form
-        if req_body is None:
-            return GolangType("any")
-        suffix = "JSON" if self.router.req_json is not None else "FORM"
-        return GolangProto.from_model_ref(ensure_model(req_body), f"{self.req_type}_{suffix}")
-
-    def _rsp_proto(self) -> GolangProto | GolangType:
-        if self.router.rsp_model is None:
-            return GolangType("any")
-        return GolangProto.from_model_ref(ensure_model(self.router.rsp_model), f"{self.rsp_type}_BODY")
-
-    def _ws_recv_proto(self) -> GolangProto | GolangType:
-        if len(self.router.recvs) != 1:
-            return GolangType("any")
-        return GolangProto.from_model_ref(ensure_model(self.router.recvs[0]), f"{self.ws_send_type}_BODY")
-
-    @staticmethod
-    def _type_name(proto: GolangProto | GolangType) -> str:
-        if isinstance(proto, GolangProto):
-            return proto.name
-        return str(proto)
+    @property
+    def local_query_type_expr(self) -> str:
+        return self.query_alias_name or "any"
 
     @property
-    def query_type_name(self) -> str:
-        return self._type_name(self._query_proto())
+    def local_body_type_expr(self) -> str:
+        return self.body_alias_name or "any"
 
     @property
-    def body_type_name(self) -> str:
-        return self._type_name(self._body_proto())
+    def local_ws_payload_type_expr(self) -> str:
+        return self.ws_payload_alias_name or "any"
 
     @property
-    def response_body_type_name(self) -> str:
-        return self._type_name(self._rsp_proto())
+    def bind_query(self) -> bool:
+        return self.router.req_query is not None
 
     @property
-    def ws_recv_type_name(self) -> str:
-        return self._type_name(self._ws_recv_proto())
+    def bind_json(self) -> bool:
+        return self.router.req_json is not None
 
-    def protos(self) -> Generator[GolangProto, None, None]:
-        yield from self.go.protos()
+    @property
+    def bind_form(self) -> bool:
+        return self.router.req_form is not None
 
-        query_proto = self._query_proto()
-        body_proto = self._body_proto()
-        yield GolangProto(
-            self.invoke_type,
-            create_model(self.invoke_type, {}),
-            "generic",
-            generic=GolangProtoGeneric(
-                name=GolangType("{provider_package$}InvokeEnvelope"),
-                types=[query_proto, body_proto],
-            ),
-        )
+    @property
+    def executor_body_type_expr(self) -> str:
         if self.has_ws:
-            ws_recv_proto = self._ws_recv_proto()
-            if isinstance(ws_recv_proto, GolangProto):
-                yield ws_recv_proto
-            yield GolangProto(
-                self.ws_connect_type,
-                create_model(self.ws_connect_type, {}),
-                "generic",
-                generic=GolangProtoGeneric(
-                    name=GolangType("{provider_package$}InvokeEnvelope"),
-                    types=[query_proto, GolangType("any")],
-                ),
-            )
-            yield GolangProto(
-                self.ws_send_type,
-                create_model(self.ws_send_type, {}),
-                "generic",
-                generic=GolangProtoGeneric(
-                    name=GolangType("{provider_package$}SocketSendEnvelope"),
-                    types=[ws_recv_proto],
-                ),
-            )
-            yield GolangProto(
-                self.ws_close_type,
-                create_model(self.ws_close_type, {}),
-                "alias",
-                alias=GolangProtoAlias(name=GolangType("{provider_package$}SocketCloseEnvelope")),
-            )
+            return "any"
+        return self.local_body_type_expr
 
-    def com_protos(self) -> Generator[GolangProto, None, None]:
-        yield from self.go.com_protos()
+    @property
+    def executor_type_expr(self) -> str:
+        return (
+            f"*sharedprovider.RouteExecutor["
+            f"{self.local_query_type_expr}, "
+            f"{self.executor_body_type_expr}, "
+            f"{self.rsp_type}"
+            f"]"
+        )
+
+    @property
+    def is_json_response(self) -> bool:
+        return self.router.rsp_media_type == "application/json"
+
+    @property
+    def is_xml_response(self) -> bool:
+        return self.router.rsp_media_type == "application/xml"
+
+    @property
+    def is_text_response(self) -> bool:
+        return not self.is_json_response
+
+    @property
+    def uses_fmt_text_response(self) -> bool:
+        return self.is_text_response and not self.is_xml_response
+
+    @property
+    def response_wrapper_name(self) -> str:
+        return self.router.response_wrapper.__name__
+
+    @property
+    def has_wrapped_json_response(self) -> bool:
+        return self.is_json_response and self.router.response_wrapper is not NoneWrapper
+
+    @property
+    def service_response_type_expr(self) -> str:
+        if self.has_wrapped_json_response:
+            return self.json_wrapper.type_reference(self.rsp_type, package="sharedprovider")
+        if self.is_json_response:
+            return f"*{self.rsp_type}"
+        return "string"
+
+    @property
+    def shared_json_wrap_call(self) -> str:
+        return f"sharedprovider.WrapRSP_JSON_{self.response_wrapper_name}[{self.rsp_type}](response, invokeErr)"
 
 
 class WailsRouterGroup:
-    def __init__(self, bp: "WailsBlueprint", group: RouterGroup):
+    def __init__(self, bp: "WailsBlueprint", group: RouterGroup, routers: list[Router]):
         self.bp = bp
         self.group = group
-        self._routers: Optional[list[Router]] = None
+        self._routers = routers
 
     @property
     def routers(self) -> list[Router]:
-        if self._routers is None:
-            self._routers = list(self.group)
         return self._routers
 
     @property
@@ -213,29 +228,29 @@ class WailsRouterGroup:
     def branch(self) -> str:
         return self.group.branch.strip("/")
 
-    def __len__(self) -> int:
-        return len(self.routers)
+    @property
+    def shared_imports(self) -> str:
+        if not self.branch:
+            return self.bp.shared_root_imports
+        return join_path_imports(self.bp.shared_root_imports, self.package)
+
+    @property
+    def binding_package(self) -> str:
+        views = list(self.views())
+        if not views:
+            return self.package
+        return views[0].namespace
+
+    @property
+    def service_name(self) -> str:
+        views = list(self.views())
+        if not views:
+            return "Service"
+        return views[0].service_name
 
     def views(self) -> Generator[WailsRouter, None, None]:
         for router in self.routers:
-            yield WailsRouter(router)
-
-    def interfaces(self) -> Generator[dict[str, str], None, None]:
-        for route in self.views():
-            yield {
-                "func": route.func_name,
-                "ctx_type": route.ctx_type,
-                "req_type": route.req_type,
-                "rsp_type": route.rsp_type,
-            }
-
-    def protos(self) -> Generator[GolangProto, None, None]:
-        for route in self.views():
-            yield from route.protos()
-
-    def com_protos(self) -> Generator[GolangProto, None, None]:
-        for route in self.views():
-            yield from route.com_protos()
+            yield WailsRouter(self, router)
 
 
 class WailsBlueprint(BaseBlueprint["WailsGoWriter"]):
@@ -248,123 +263,63 @@ class WailsBlueprint(BaseBlueprint["WailsGoWriter"]):
         return self.bp.root.strip("/")
 
     @property
-    def imports(self) -> str:
-        return join_path_imports(self.writer.module_import, self.package)
+    def shared_root_imports(self) -> str:
+        return join_path_imports(self.writer.shared_views_imports, self.package)
 
     @property
-    def com_proto_package(self) -> str:
-        return "protos"
+    def shared_protos_imports(self) -> str:
+        return join_path_imports(self.shared_root_imports, internal_codegen_dir(PackageName.COM_PROTOS))
 
-    @property
-    def com_proto_gen_path(self) -> str:
-        return "gen-protos"
-
-    @property
-    def com_proto_imports(self) -> str:
-        return join_path_imports(self.imports, self.com_proto_gen_path)
-
-    @property
-    def com_enum_package(self) -> str:
-        return "enums"
-
-    @property
-    def com_enum_gen_path(self) -> str:
-        return "gen-enums"
-
-    @property
-    def com_enum_imports(self) -> str:
-        return join_path_imports(self.imports, self.com_enum_gen_path)
+    def shared_common_proto_ref(self, model: object) -> str:
+        proto = GolangProto.from_model(ensure_model(model))
+        return f"sharedprotos.{proto.name}"
 
     def get_router_groups(self) -> list[WailsRouterGroup]:
         if self.router_groups is None:
-            group_set: Set[RouterGroup] = set()
-            groups = []
-            for group, _router in self.iter_router():
-                if group in group_set:
+            selected_by_group: dict[RouterGroup, list[Router]] = {}
+            ordered_groups: list[RouterGroup] = []
+            groups: list[WailsRouterGroup] = []
+            selection = self.writer.route_selection
+            for group, router in self.iter_router():
+                if selection is not None and not selection.includes_route(router):
                     continue
-                group_set.add(group)
-                groups.append(WailsRouterGroup(self, group))
+                if group not in selected_by_group:
+                    selected_by_group[group] = []
+                    ordered_groups.append(group)
+                selected_by_group[group].append(router)
+            for group in ordered_groups:
+                groups.append(WailsRouterGroup(self, group, selected_by_group[group]))
             self.router_groups = groups
         return self.router_groups
 
-    def formatters(self, update: Optional[dict[str, str]] = None) -> dict[str, str]:
-        formatters = self.writer.formatters()
-        formatters.update(
-            {
-                "protos_package": self.com_proto_package,
-                "protos_imports": self.com_proto_imports,
-                "enums_package": self.com_enum_package,
-                "enums_imports": self.com_enum_imports,
-            }
-        )
-        formatters.update({key + "$": value + "." for key, value in formatters.items() if key.endswith("_package")})
-        if update:
-            formatters.update(update)
-        return formatters
-
-    def protos(self) -> Generator[GolangProto, None, None]:
-        seen: set[str] = set()
-        for group in self.get_router_groups():
-            for proto in group.protos():
-                if proto.name in seen:
-                    continue
-                seen.add(proto.name)
-                yield proto
-
-    def com_protos(self) -> Generator[GolangProto, None, None]:
-        seen: set[str] = set()
-        for group in self.get_router_groups():
-            for proto in group.com_protos():
-                if proto.name in seen:
-                    continue
-                seen.add(proto.name)
-                yield proto
-
-    def com_enums(self) -> Generator[GolangEnum, None, None]:
-        seen: set[Type[object]] = set()
-        for proto in self.com_protos():
-            for enum_cls in iter_enum_classes(proto.model_type):
-                if enum_cls in seen:
-                    continue
-                golang_enum = GolangEnum.from_enum(enum_cls)
-                if golang_enum is None:
-                    continue
-                seen.add(enum_cls)
-                yield golang_enum
-
     def gen(self) -> None:
         ctx = {"writer": self.writer, "bp": self}
-
-        runtime_dir = self.writer.working_dir / self.writer.runtime_package
-        for name, text in iter_render(LANG, ctx, "runtime"):
-            overwrite = name.startswith("gen_")
-            with self.writer.write_file(runtime_dir / name, overwrite=overwrite) as handle:
-                if handle:
-                    handle.write(text)
-
-        package_dir = self.writer.working_dir / self.package
-        with self.writer.write_file(package_dir / self.com_proto_gen_path / "protos.go", overwrite=True) as handle:
+        runtime_dir = self.writer.runtime_dir
+        with self.writer.write_file(runtime_dir / "gen_runtime.go", overwrite=True) as handle:
             if handle:
-                handle.write(render(LANG, "protos.go", ctx, "go/protos"))
-
-        enums_path = package_dir / self.com_enum_gen_path / "enums.go"
-        with self.writer.write_file(enums_path, overwrite=True) as handle:
-            if handle:
-                handle.write(render(LANG, "enums.go", ctx, "go/enums"))
-        self.writer.toolchain.run_go_enum(enums_path)
+                handle.write(render(LANG, "gen_runtime.go", ctx, "runtime"))
 
         for group in self.get_router_groups():
             self.gen_group(group)
 
     def gen_group(self, group: WailsRouterGroup) -> None:
-        base_dir = self.writer.working_dir / self.package
-        group_dir = base_dir if not group.branch else base_dir / group.package
+        group_dir = self.writer.views_dir / self.package
+        if group.branch:
+            group_dir /= group.package
+        group_dir /= self.writer.overlay_dir_name
         ctx = {"writer": self.writer, "bp": self, "router_group": group}
-        for name, text in iter_render(LANG, ctx, "go/route"):
-            overwrite = name.startswith("gen_")
-            with self.writer.write_file(group_dir / name, overwrite=overwrite) as handle:
+        for template_name in ("gen_overlay.go", "gen_service.go"):
+            with self.writer.write_file(group_dir / template_name, overwrite=True) as handle:
                 if handle:
-                    handle.write(text)
+                    handle.write(render(LANG, template_name, ctx, "go/route"))
+
+        binding_dir = group_dir / "bindings"
+        with self.writer.write_file(binding_dir / "gen_service.go", overwrite=True) as handle:
+            if handle:
+                handle.write(render(LANG, "gen_service.go", ctx, "go/bindings"))
+        with self.writer.write_file(binding_dir / "impl_service.go", overwrite=False) as handle:
+            if handle:
+                handle.write(render(LANG, "impl_service.go", ctx, "go/bindings"))
 
 
 class WailsGoWriter(BaseWriter[WailsBlueprint]):
@@ -373,47 +328,71 @@ class WailsGoWriter(BaseWriter[WailsBlueprint]):
         working_dir: str | Path = ".",
         *,
         version: str,
+        overlay_name: str,
         module: str | None = None,
+        provider_package: str = PackageName.PROVIDER.value,
         runtime_package: str = "runtime",
+        route_selection: WailsRouteSelection | None = None,
     ):
         super().__init__(working_dir)
         self.version = version
+        self.overlay_name = overlay_name
+        self.provider_package = provider_package
         self.runtime_package = runtime_package
+        self.route_selection = route_selection
         self.toolchain = GolangToolchain(logger)
         self._written_files: Set[str] = set()
 
-        gmods = self.toolchain.read_gomodule(working_dir)
-        if len(gmods) > 1 and not module:
-            raise ModuleNotFoundError(f"[wails] 路径下存在多个 module，需要使用 module 指定其一: {[key for key, _ in gmods]}")
+        shared_go_module = self.toolchain.resolve_module_import(working_dir, module=module, label="[wails]")
+        logger.info("[*] shared go gomodule: %s", shared_go_module.module)
+        self.module_import = shared_go_module.import_path
+        self.shared_packages = GolangPackageLayout(
+            module_import=shared_go_module.import_path,
+            views_package=PackageName.VIEWS.value,
+            provider_package=provider_package,
+            errors_package=PackageName.ERROR.value,
+        )
 
-        self.module_import: str | None = None
-        for mod, mod_dir in gmods:
-            if mod == "command-line-arguments":
-                raise ModuleNotFoundError("[wails] 生成目录找不到 gomodule，无法继续生成 wails go 代码")
-            if not module or module == mod:
-                module = mod
-                self.module_import = (Path(module) / Path(working_dir).absolute().relative_to(mod_dir)).as_posix()
-                logger.info("[*] gomodule: %s", module)
-                break
-
-        if self.module_import is None:
-            raise ModuleNotFoundError(f"[wails] 生成目录找不到 gomodule[{module}]，无法继续生成 wails go 代码")
+    @property
+    def overlay_dir_name(self) -> str:
+        return f"_{self.overlay_name}"
 
     @property
     def runtime_imports(self) -> str:
-        return join_path_imports(self.module_import, self.runtime_package)
+        return join_path_imports(
+            self.module_import,
+            self.shared_packages.views_package,
+            self.overlay_dir_name,
+            self.runtime_package,
+        )
 
-    def formatters(self, update: Optional[dict[str, str]] = None) -> dict[str, str]:
-        formatters = {
-            "provider_package": self.runtime_package,
-            "provider_imports": self.runtime_imports,
-        }
-        formatters.update({key + "$": value + "." for key, value in formatters.items() if key.endswith("_package")})
-        if update:
-            formatters.update(update)
-        return formatters
+    @property
+    def shared_views_imports(self) -> str:
+        return self.shared_packages.views_imports
+
+    @property
+    def shared_provider_imports(self) -> str:
+        return self.shared_packages.provider_imports
+
+    @property
+    def views_dir(self) -> Path:
+        return self.working_dir / self.shared_packages.views_package
+
+    @property
+    def runtime_dir(self) -> Path:
+        return self.views_dir / self.overlay_dir_name / self.runtime_package
+
+    def validate_package_contract(self) -> None:
+        for bp in self.bps:
+            root_name = bp.root_name
+            if root_name and root_name == self.provider_package:
+                raise ValueError(
+                    f"[gen_wails] provider_package[{self.provider_package}] "
+                    f"与 blueprint root[{root_name}] 冲突；请调整 [golang].provider_package 或 blueprint root"
+                )
 
     def gen(self) -> None:
+        self.validate_package_contract()
         for bp in self.bps:
             bp.build()
             bp.gen()

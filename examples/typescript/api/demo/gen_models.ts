@@ -4,7 +4,7 @@
 
 
 
-import type { AnonDeleteAnonList, AnonFunc1putAnonKv, ApiDemoA, ApiDemoMap, GeneralWrapper } from "../shared/models";
+import type { AnonDeleteAnonList, AnonFunc1putAnonKv, ApiDemoA, ApiDemoMap, GeneralWrapper } from "../(shared)/models";
 
 
 // Route Contracts

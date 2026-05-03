@@ -3,4 +3,5 @@
 export * as Api from "./(root)";
 export * as Demo from "./demo";
 export * as Hello from "./hello";
-export * as Shared from "./shared";
+export * as Shared from "./(shared)";
+

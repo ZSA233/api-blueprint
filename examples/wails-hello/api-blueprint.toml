@@ -1,0 +1,16 @@
+[blueprint]
+entrypoints = ["blueprints.app:bp"]
+
+[golang]
+codegen_output = "golang"
+module = "example.com/api-blueprint/wails-hello/golang"
+provider_package = "provider"
+
+[typescript]
+codegen_output = "typescript"
+
+[[wails.targets]]
+id = "hello.v3"
+version = "v3"
+overlay_name = "wailsv3"
+frontend_mode = "external"

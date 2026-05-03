@@ -4,7 +4,7 @@
 
 
 
-import type { ApiHelloMap, GeneralWrapper, HelloWayEnum, MapEnum, WsMsgTypeEnum } from "../shared/models";
+import type { ApiHelloMap, GeneralWrapper, HelloWayEnum, MapEnum, WsMsgTypeEnum } from "../(shared)/models";
 
 
 // Route Contracts

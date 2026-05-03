@@ -20,3 +20,4 @@ __pycache__/
 /debug.py
 .codex
 .claude
+.plans

@@ -3,4 +3,10 @@
 
 {%- for module in modules %}
 export * as {{ module.alias }} from "{{ module.path }}";{% endfor %}
+{% if extra_exports %}
+
+{%- for line in extra_exports %}
+{{ line }}
+{%- endfor %}
+{% endif %}
 {% endautoescape %}

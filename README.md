@@ -3,223 +3,141 @@
 [![GitHub Stars](https://img.shields.io/github/stars/zsa233/api-blueprint)](https://github.com/zsa233/api-blueprint/stargazers)
 [![License](https://img.shields.io/github/license/zsa233/api-blueprint)](LICENSE)
 
-🌍 语言: 中文 | [English](README_EN.md)
+语言: 中文 | [English](README_EN.md)
 
 ## 概述
 
-`api-blueprint` 是一个把 Python DSL、FastAPI/OpenAPI 和多语言代码生成串起来的项目。
+`api-blueprint` 用 Python DSL 定义 API 契约，并基于同一份契约生成文档服务、Go、TypeScript、Kotlin Android、Wails v2/v3 overlay，以及已有 `.proto` 树的 gRPC 产物。
 
-它的主线工作流是：
-
-1. 用 Python 描述 `Blueprint`、路由、请求/响应模型与错误结构。
-2. 运行时构建 FastAPI 应用并暴露 OpenAPI 文档。
-3. 基于同一份蓝图生成 Go、TypeScript、Kotlin Android 与 Wails v2/v3 代码快照。
-4. 基于 `api-blueprint.toml` 里的 gRPC target 配置编译已有 `.proto` 目录树，并兼容 legacy/raw job 模式。
+README 只保留上手路径。完整配置、Wails、gRPC、DSL 和 examples 验证说明见 [深入文档](#深入文档)。
 
 ## 支持的输出
 
-| 目标 | 状态 | 命令 | 示例目录 |
+| 目标 | 状态 | 命令 | 示例 |
 |:---|:---:|:---|:---|
 | Go | 可用 | `api-gen-golang` | `examples/golang` |
 | TypeScript | 预览 | `api-gen-typescript` | `examples/typescript` |
-| Wails v3 | 实验性 | `api-gen-wails` | `examples/wails/v3` |
-| Wails v2 | 预览 | `api-gen-wails` | `examples/wails/v2` |
+| Wails v3 | 实验性 | `api-gen-wails` | `examples/{golang,typescript,wails-harness/v3,wails-hello}` |
+| Wails v2 | 预览 | `api-gen-wails` | `examples/{golang,typescript,wails-harness/v2}` |
 | Kotlin Android | 预览 | `api-gen-kotlin` | `examples/kotlin` |
 | gRPC | 可用 | `api-gen-grpc` | `examples/grpc/{go,python}` |
 
-当前不会对外暴露 Java 命令；该目标只保留内部扩展位。
 
 ## 安装
 
-当前仓库只维护 GitHub 安装入口；稳定安装路径固定指向 `stable` 分支。
+稳定安装入口固定指向 GitHub `stable` 分支：
 
 ```sh
 uv pip install "git+https://github.com/zsa233/api-blueprint@stable"
 ```
 
-## 核心工作流
+## 快速开始
 
-- 在 `examples/blueprints/` 这类目录中定义 `Blueprint` 与路由 DSL。
-- 在 `examples/wails/v3/` 与 `examples/wails/v2/` 下查看公开的 Wails Go / TypeScript 快照；对应的 `[[wails.targets]]` 与其他 Blueprint 示例共用 `examples/api-blueprint.toml`。
-- 在 `examples/grpc/` 下查看公开的 proto 树和 Go / Python gRPC 快照；对应的 `[grpc]` 示例配置与 Blueprint 示例共用 `examples/api-blueprint.toml`。
-- 通过 `api-doc-server` 构建文档服务，复用 FastAPI 的 OpenAPI 输出。
-- 通过 `api-gen-golang`、`api-gen-typescript`、`api-gen-kotlin` 与 `api-gen-wails` 生成语言侧快照产物。
-- 通过 `api-gen-grpc` 按 target 编译已有 proto 树；如需兼容旧配置，仍可调用 legacy/raw jobs。
-- 功能开发期可通过 `make example-compile-check` 做“Blueprint + gRPC examples 重生成 -> 编译/导入 smoke”校验。
-- 需要接受预期生成变更时使用 `make example-refresh` 刷新 examples snapshots。
-- 需要严格确认 snapshots 已收敛时使用 `make example-validation`。
-
-## 配置文件
-
-```toml
-[blueprint]
-docs_server = '0.0.0.0:2332'
-docs_domain = ''
-entrypoints = [
-    'blueprints.app:*',
-]
-
-[golang]
-codegen_output = 'golang'
-upstream = 'http://localhost:2333'
-module = ''
-
-[typescript]
-codegen_output = 'typescript'
-upstream = 'http://localhost:2333'
-# literal URL fallback
-base_url = 'http://localhost:2333'
-# raw runtime expression, mutually exclusive with base_url
-# base_url_expr = 'import.meta.env.VITE_API_BASE_URL'
-
-[kotlin]
-codegen_output = 'kotlin'
-package = 'com.example.apiblueprint'
-base_url = 'http://localhost:2333'
-include = ['tag:api']
-exclude = ['path:/static/**', 'path:/api/ws', 'path:/api/demo/ws', 'path:/api/demo/delete$']
-
-[wails]
-
-[[wails.targets]]
-id = 'wails.v3'
-version = 'v3'
-go_out_dir = 'wails/v3/go'
-typescript_out_dir = 'wails/v3/typescript'
-
-[[wails.targets]]
-id = 'wails.v2'
-version = 'v2'
-go_out_dir = 'wails/v2/go'
-typescript_out_dir = 'wails/v2/typescript'
-
-[grpc]
-source_root = 'grpc/protos'
-import_roots = []
-
-[[grpc.targets]]
-id = 'python.greeter'
-lang = 'python'
-out_dir = 'grpc/python'
-files = ['**/*.proto']
-python_package_root = 'examplegrpc_pb'
-
-[[grpc.targets]]
-id = 'go.greeter'
-lang = 'go'
-out_dir = 'grpc/go'
-files = [
-    'commonpb/common.proto',
-    'greeterpb/greeter.proto',
-]
-```
-
-## Wails Target 语义模型
-
-- `[[wails.targets]]` 声明显式且带版本的 Wails target；`id` 供 `--target`、`--list-targets` 与 `--explain-target` 选择使用。
-- `version` 当前支持 `v3` 与 `v2`；README 状态口径固定为 Wails v3 `experimental`、Wails v2 `preview`。
-- `go_out_dir` 与 `typescript_out_dir` 都表示最终生成快照目录。
-- Go 侧保持业务 handler 名称与 `Method(ctx, req) (rsp, err)` 形态稳定，但生成上下文已经切换为 transport-neutral runtime；HTTP-only 行为通过生成的 escape hatch 暴露。
-- TypeScript request/response client class 与方法签名在 HTTP 与 Wails 之间保持一致；WebSocket 公开面统一为 `ApiSocketBridge<ServerMessage, ClientMessage>`。
-- HTTP TypeScript 生成结果保留 `connect<Route>Raw()` 作为原生 `WebSocket` escape hatch；Wails TypeScript 生成结果不暴露 raw `WebSocket`。
-- Wails TypeScript 生成器直接面向公开运行时桥接 API：v3 使用 `window.wails.Call(...)` 与 events，v2 使用 `window.go...` 与 `window.runtime.EventsOn/EventsOff`；不依赖 Wails CLI 生成的 JS bindings 目录作为输入。
-
-## gRPC 语义模型
-
-- `id` 只负责 target 选择，供 `--target`、`--list-targets` 与 `--explain-target` 使用。
-- `source_root` 只负责解释 `files` 的相对路径，同时也是 `protoc` 的工作根。
-- `import_roots` 只负责 proto import 查找。
-- `python_package_root` 只负责 Python 输出命名空间与生成代码 import 路径。
-- `out_dir` 永远表示最终生成目录，不再表示 Go module 根目录。
-
-### Advanced / Legacy Mode
-
-- `[[grpc.jobs]]` 仍然可用，但它只保留为 legacy/raw mode，不再是 README 主路径。
-- `--job` 与 `--list-jobs` 继续保留，适合已经依赖 `proto_root`、`include_paths`、`layout`、`module` 的旧配置。
-
-## Go target 与 module
-
-- Go target 会从 `out_dir` 向上自动发现最近的 `go.mod`，并解析 module path。
-- 工具会根据 `out_dir` 推导期望的 `go_package` import path 前缀，再校验每个选中 proto 的 `option go_package`。
-- 公开配置不再要求手填 `module` 或 `layout`；如果 `go_package` 与 `out_dir` 不一致，会直接报出 `out_dir`、`module_root`、`module_path` 和期望前缀。
-
-## Python source_root 与输出路径
-
-- Python target 默认把 `source_root` 作为 `grpc_tools.protoc` 的工作根和第一条 `-I`，生成文件按 source-relative 方式落盘。
-- 设置 `python_package_root` 后，`api-blueprint` 会在临时 staging proto 树里重写本地 import，并通过虚拟 include 前缀让产物稳定落在 `out_dir/<package_root>/...`。
-- `import_roots` 只补充 proto 查找；它不直接决定 Python 产物 namespace。
-
-## 蓝图 DSL 示例
+定义一份 Blueprint：
 
 ```python
 from api_blueprint.includes import *
-from blueprints.app import apibp
+
+bp = Blueprint(root="/api")
 
 
-class ApiDemoSubA(Model):
-    hello = Map[String, Int](description="hello")
+class HelloResponse(Model):
+    message = String(description="message")
 
 
-class ApiDemoA(Model):
-    bc = String(description="bc")
-    a = Int(description="a")
-    efg = Float32(description="efg")
-    hijk = Array[Uint](description="hijk")
-    lmnop = Array[ApiDemoSubA](description="lmnop", omitempty=True)
-
-
-with apibp.group("/demo") as views:
-    views.GET(
-        "/abc",
-        summary="这是 abc 的 summary",
-        description="这是 abc 的 description",
-    ).ARGS(
-        arg1=Bool(description="arg1", default=True),
-        arg2=Float(description="arg2", default=6.666),
-    ).RSP(ApiDemoA)
+with bp.group("/demo") as views:
+    views.GET("/hello").RSP(HelloResponse)
 ```
 
-## CLI 命令
+创建最小配置并生成代码：
+
+```toml
+[blueprint]
+entrypoints = ["blueprints.app:bp"]
+
+[golang]
+codegen_output = "golang"
+upstream = "http://localhost:2333"
+
+[typescript]
+codegen_output = "typescript"
+base_url = "http://localhost:2333"
+```
+
+```sh
+api-doc-server -c api-blueprint.toml
+api-gen-golang -c api-blueprint.toml
+api-gen-typescript -c api-blueprint.toml
+```
+
+## 最小配置
+
+下面是常见多目标配置骨架；完整字段见 [配置说明](docs/zh/configuration.md)。
+
+```toml
+[blueprint]
+entrypoints = ["blueprints.app:*"]
+
+[golang]
+codegen_output = "golang"
+upstream = "http://localhost:2333"
+provider_package = "provider"
+
+[typescript]
+codegen_output = "typescript"
+base_url = "http://localhost:2333"
+
+[[wails.targets]]
+id = "wails.v3"
+version = "v3"
+frontend_mode = "external"
+
+[grpc]
+source_root = "grpc/protos"
+import_roots = []
+
+[[grpc.targets]]
+id = "go.greeter"
+lang = "go"
+out_dir = "grpc/go"
+files = ["greeterpb/greeter.proto"]
+```
+
+## 常用命令
 
 ```sh
 api-doc-server -c examples/api-blueprint.toml
 api-gen-golang -c examples/api-blueprint.toml
-api-gen-grpc -c examples/api-blueprint.toml --list-targets
-api-gen-grpc -c examples/api-blueprint.toml --target go.*
-api-gen-grpc -c examples/api-blueprint.toml --explain-target go.greeter
-api-gen-grpc -c examples/api-blueprint.toml --list-jobs
-api-gen-kotlin -c examples/api-blueprint.toml
 api-gen-typescript -c examples/api-blueprint.toml
-api-gen-wails -c examples/api-blueprint.toml
+api-gen-kotlin -c examples/api-blueprint.toml
 api-gen-wails -c examples/api-blueprint.toml --list-targets
 api-gen-wails -c examples/api-blueprint.toml --target wails.v3
-api-gen-wails -c examples/api-blueprint.toml --explain-target wails.v2
+api-gen-grpc -c examples/api-blueprint.toml --list-targets
+api-gen-grpc -c examples/api-blueprint.toml --target go.*
 ```
 
-## 生成产物与仓库约束
+## 生成产物与用户文件
 
-- `examples/blueprints/` 是蓝图真源。
-- `examples/golang/`、`examples/typescript/`、`examples/kotlin/`、`examples/wails/v3/` 与 `examples/wails/v2/` 是 Blueprint 生成快照，不应该手改业务内容。
-- `examples/grpc/protos/` 是 gRPC 示例真源，`examples/grpc/go/` 与 `examples/grpc/python/` 是对应的生成快照。
-- `api-gen-grpc` 只负责编排已有 `.proto` 树的编译，不会从 Blueprint DSL 反推出 gRPC proto/service。
-- `api-gen-grpc` 可以只依赖 `[grpc]` 段落，不要求 `[blueprint]`、`[golang]` 或 `[typescript]` 同时存在。
-- `[typescript]` 支持字面量 `base_url` 和原样 TypeScript 表达式 `base_url_expr`；两者互斥，解析优先级固定为 `base_url_expr -> base_url -> upstream -> ""`。
-- `[wails]` 通过 `[[wails.targets]]` 同时声明 Wails Go 与 TypeScript 输出；一个 target 会并行生成两个目录，而不会依赖 Wails CLI 预先生成的 JS bindings。
-- Wails v3 当前按 experimental 维护，Wails v2 按 preview 维护；详细阶段记录、验证命令与兼容性备注见 [`docs/wails/implementation-plan.md`](docs/wails/implementation-plan.md)。
-- TypeScript WebSocket 公开面已经统一为 `ApiSocketBridge<ServerMessage, ClientMessage>`；只有 HTTP 生成结果保留 `connect<Route>Raw()`。
-- `[kotlin]` 生成 OkHttp + kotlinx.serialization Android 客户端，支持 `package`、`base_url`、`base_url_expr`、`include` 与 `exclude`；第一版面向 JSON REST route，暂不支持 WebSocket、form 与 binary route。
-- Python gRPC target 需要额外安装 `grpcio-tools`；Go gRPC target 需要 `protoc`、`protoc-gen-go` 与 `protoc-gen-go-grpc` 在 `PATH` 中可用；`grpcio-tools` 不属于运行时依赖。
-- `[[grpc.targets]].python_package_root` 仅对 Python target 生效；设置后，Python gRPC 示例快照会生成到 `examples/grpc/python/examplegrpc_pb/...`。
-- legacy/raw `[[grpc.jobs]]` 默认仍按 `proto_root` 解释 proto 展开根目录；Go legacy job 继续支持 `layout = "go_package"` 与 `module`，Python legacy job 仍不支持它们。
-- `Blueprint(app=None)` 默认共享全局 `FastAPI` app；如果需要拆成多个独立文档应用，必须显式传入 `app`。
-- example snapshot drift 表示“当前生成器输出和已提交快照不一致”，它是变更信号，不自动等于 bug。
-- `make example-compile-check` 允许 drift，只检查重生成结果是否仍可编译。
-- `make example-refresh` 会接受预期变化，直接刷新仓库中的 examples snapshots。
-- `make example-validation` 会包装 `scripts/example_validation.py` 的严格模式，在临时目录重生成 Blueprint / Wails / gRPC examples，再执行 snapshot diff、`tsc --noEmit`、`go test ./...`、Kotlin Gradle `compileKotlin` 和 Python gRPC import smoke。
-- Blueprint examples 的严格重生成依赖 `go-enum` 与 Gradle（或 `API_BLUEPRINT_GRADLE_BIN`）；gRPC examples 依赖 `protoc`、`protoc-gen-go`、`protoc-gen-go-grpc` 与 Python `grpc_tools`。
-- `make release-preflight` 必须包含严格的 `make example-validation`，因为到发版前，预期的 snapshot 变化应已经被接受并提交。
-- `examples/api-blueprint.toml` 同时承载 Blueprint / Wails / gRPC 的公开示例配置，`examples/wails/v3/`、`examples/wails/v2/`、`examples/grpc/go/` 与 `examples/grpc/python/` 都属于 committed examples snapshot contract。
-- `main.py` 与 `debug.py` 仅作为本地辅助脚本保留，不属于公共发布面。
+- `examples/blueprints/` 与 `examples/grpc/protos/` 是示例真源。
+- `examples/golang/`、`examples/typescript/`、`examples/kotlin/`、`examples/grpc/go/`、`examples/grpc/python/` 是生成快照。
+- `examples/wails-hello/` 是独立 Wails v3 hello world 示例，演示不启动 HTTP 服务的 GUI 闭环。
+- `gen_*` 文件由生成器拥有，重生成会覆盖。
+- `impl_*` 与非 `gen_*` passthrough 文件是用户拥有扩展点，重生成时保留。
+- Wails overlay 生成在共享 Go / TypeScript 输出树的相邻保留目录中；`api-gen-wails` 不生成完整 Wails app shell，external frontend 需先加载 Wails runtime。
+- gRPC 只编译已有 `.proto` 树，不会从 Blueprint DSL 反推 proto/service。
+
+## 深入文档
+
+| 主题 | 文档 |
+|:---|:---|
+| 快速开始 | [docs/zh/getting-started.md](docs/zh/getting-started.md) |
+| 配置字段 | [docs/zh/configuration.md](docs/zh/configuration.md) |
+| Blueprint DSL | [docs/zh/blueprint-dsl.md](docs/zh/blueprint-dsl.md) |
+| Go / TypeScript / Kotlin | [docs/zh/generators.md](docs/zh/generators.md) |
+| Wails | [docs/zh/wails.md](docs/zh/wails.md) |
+| gRPC | [docs/zh/grpc.md](docs/zh/grpc.md) |
+| Examples 验证 | [docs/zh/examples-validation.md](docs/zh/examples-validation.md) |
+| 发布流程 | [docs/release-process.md](docs/release-process.md) |
 
 ## 开发
 
@@ -229,17 +147,15 @@ make test
 make example-compile-check
 make example-refresh
 make example-validation
-make build
+make wails-hello-dev
+make wails-hello-check
 ```
+
+`example-compile-check` 适合开发期验证，`example-refresh` 用于接受预期生成变化，`example-validation` 用于严格确认 snapshots 收敛。`wails-hello-dev` 会重生成 hello overlay 并启动 Wails v3 GUI；`wails-hello-check` 只严格验证独立 hello 示例。
 
 ## 发布
 
-- 文档收束顺序固定为 `PRE_README.MD -> README.md -> README_EN.md`。
-- 版本真源固定为 `release-version.toml` 与 `src/api_blueprint/_version.py`。
-- `make release-preflight` 会同时执行 release contract、`make test` 与 `make example-validation`。
-- 如果 release 前发现 example drift 是预期变化，应先执行 `make example-refresh` 并提交结果，再重新运行 `make release-preflight`。
-- stable 正式发布 workflow 绑定 GitHub `production` environment；若仓库给它配置了 required reviewers，则发布前需要人工审核。
-- 详细发布规范见 [`docs/release-process.md`](docs/release-process.md)。
+详细发布规范见 [docs/release-process.md](docs/release-process.md)。
 
 ```sh
 make release-version-show

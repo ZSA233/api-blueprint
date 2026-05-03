@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import enum
+import warnings
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, get_origin
 
 import fastapi
@@ -46,6 +47,9 @@ if TYPE_CHECKING:
 
 
 _PYDANTIC_MODEL_CACHE: dict[type[Model] | Map, Any] = {}
+_SHADOWED_BASEMODEL_FIELD_WARNING = (
+    r'^Field name ".+" in ".+" shadows an attribute in parent "BaseModel"$'
+)
 
 
 def reset_pydantic_model_cache() -> None:
@@ -91,9 +95,21 @@ def model_to_pydantic(
     namespace["__annotations__"] = annotations
     namespace["__name__"] = cls_name
     namespace["__module__"] = "api_model"
-    pyd_cls = type(cls_name, (pyd.BaseModel,), namespace)
+    pyd_cls = _create_pydantic_model(cls_name, namespace)
     _PYDANTIC_MODEL_CACHE[cls] = pyd_cls
     return pyd_cls
+
+
+def _create_pydantic_model(cls_name: str, namespace: dict[str, Any]) -> type[pyd.BaseModel]:
+    # API fields may legitimately be named "schema" or another BaseModel method.
+    # Pydantic still builds the field correctly; the warning is noise for generated contracts.
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message=_SHADOWED_BASEMODEL_FIELD_WARNING,
+            category=UserWarning,
+        )
+        return type(cls_name, (pyd.BaseModel,), namespace)
 
 
 def resolve_field(
