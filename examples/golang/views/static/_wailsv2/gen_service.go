@@ -24,7 +24,15 @@ func NewStaticService(impl RouterInterface, dispatcher runtime.EventDispatcher) 
 }
 
 func (svc *StaticService) DocJson(envelope *INVOKE_DocJson) (rsp *RSP_DocJson, err error) {
-	req := runtime.EnvelopeToReq[any, any](envelope)
+	req, reqErr := runtime.EnvelopeToReq[any, any](envelope, runtime.ReqEnvelopeOptions{
+		BindQuery: false,
+		BindJSON:  false,
+		BindForm:  false,
+	})
+	if reqErr != nil {
+		err = reqErr
+		return
+	}
 	ctx := sharedprovider.NewWailsContext[any, any, RSP_DocJson]("StaticService", "DocJson", runtime.EnvelopeHeaders(envelope))
 	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_DocJson]{Request: req}
 	execErr := svc.docJsonExecutor.Run(ctx)
@@ -37,7 +45,15 @@ func (svc *StaticService) DocJson(envelope *INVOKE_DocJson) (rsp *RSP_DocJson, e
 }
 
 func (svc *StaticService) Dochaha(envelope *INVOKE_Dochaha) (rsp *RSP_Dochaha, err error) {
-	req := runtime.EnvelopeToReq[any, any](envelope)
+	req, reqErr := runtime.EnvelopeToReq[any, any](envelope, runtime.ReqEnvelopeOptions{
+		BindQuery: false,
+		BindJSON:  false,
+		BindForm:  false,
+	})
+	if reqErr != nil {
+		err = reqErr
+		return
+	}
 	ctx := sharedprovider.NewWailsContext[any, any, RSP_Dochaha]("StaticService", "Dochaha", runtime.EnvelopeHeaders(envelope))
 	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_Dochaha]{Request: req}
 	execErr := svc.dochahaExecutor.Run(ctx)

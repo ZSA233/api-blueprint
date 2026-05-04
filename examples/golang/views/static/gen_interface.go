@@ -2,21 +2,7 @@
 
 package static
 
-import (
-	views "demo/views"
-	"github.com/gin-gonic/gin"
-)
-
 type RouterInterface interface {
 	DocJson(ctx *CTX_DocJson, req *REQ_DocJson) (rsp *RSP_DocJson, err error)
 	Dochaha(ctx *CTX_Dochaha, req *REQ_Dochaha) (rsp *RSP_Dochaha, err error)
-}
-
-func NewImpl(eng *gin.Engine) *Router {
-	impl := NewRouter()
-
-	views.GET("/static/doc.json", impl.DocJson, eng, "req|handle|rsp=json@NoneWrapper")
-	views.GET("/static/dochaha", impl.Dochaha, eng, "req|handle|rsp=json@NoneWrapper")
-
-	return impl
 }

@@ -25,12 +25,16 @@ codegen_output = "golang"
 upstream = "http://localhost:2333"
 module = ""
 provider_package = "provider"
+transport_adapters = ["http"]
 ```
 
 - `codegen_output`：Go 生成目录。
 - `upstream`：生成 wrapper 中使用的后端地址。
 - `module`：可选 Go module 覆盖；通常留空，由工具解析。
 - `provider_package`：共享 Go runtime/provider 包名，HTTP 与 Wails 共用；默认 `provider`，不能以下划线开头。
+- `transport_adapters`：Go transport adapter 列表，默认 `["http"]`；当前支持 `http` 与声明性 `wails` marker。Wails-only 推荐设为 `["wails"]`；HTTP + Wails 推荐设为 `["http", "wails"]`；`[]` 表示只生成 Go core，不生成任何 Go transport adapter。
+
+Go core 始终生成，包含 route interface、models、provider executor 与用户 `impl.go`。HTTP adapter 会生成在 `views/_http` 与 `views/<root>/<group...>/_http` 这类保留目录中；HTTP 入口应导入 `_http.NewBlueprint(engine)`。`wails` adapter marker 不替代 `[[wails.targets]]`，后者仍负责 version、overlay、frontend 与 filter；如果写入 `wails`，必须同时配置至少一个 Wails target。
 
 ## typescript
 

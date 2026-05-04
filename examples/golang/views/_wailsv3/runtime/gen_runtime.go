@@ -23,6 +23,12 @@ type InvokeEnvelope[Q, B any] struct {
 	Headers map[string]string `json:"Headers,omitempty"`
 }
 
+type ReqEnvelopeOptions struct {
+	BindQuery bool
+	BindJSON  bool
+	BindForm  bool
+}
+
 type SocketSessionDescriptor struct {
 	ID           string `json:"id"`
 	RouteID      string `json:"route_id"`
@@ -60,14 +66,41 @@ type SocketSession struct {
 	onClose      func(string)
 }
 
-func EnvelopeToReq[Q, B any](envelope *InvokeEnvelope[Q, B]) *sharedprovider.REQ[Q, B] {
+func EnvelopeToReq[Q, B any](envelope *InvokeEnvelope[Q, B], options ReqEnvelopeOptions) (*sharedprovider.REQ[Q, B], error) {
 	if envelope == nil {
-		return &sharedprovider.REQ[Q, B]{}
+		envelope = &InvokeEnvelope[Q, B]{}
 	}
+
+	var reqQ *Q
+	if options.BindQuery {
+		reqQ = envelope.Q
+		if reqQ == nil {
+			reqQ = new(Q)
+		}
+	} else {
+		reqQ = envelope.Q
+	}
+
+	var reqB *B
+	switch {
+	case options.BindJSON:
+		if envelope.B == nil {
+			return nil, fmt.Errorf("[WailsReq] json body is required")
+		}
+		reqB = envelope.B
+	case options.BindForm:
+		reqB = envelope.B
+		if reqB == nil {
+			reqB = new(B)
+		}
+	default:
+		reqB = envelope.B
+	}
+
 	return &sharedprovider.REQ[Q, B]{
-		Q: envelope.Q,
-		B: envelope.B,
-	}
+		Q: reqQ,
+		B: reqB,
+	}, nil
 }
 
 func EnvelopeHeaders[Q, B any](envelope *InvokeEnvelope[Q, B]) map[string]string {

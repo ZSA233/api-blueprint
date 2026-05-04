@@ -82,6 +82,7 @@ entrypoints = ["blueprints.app:*"]
 codegen_output = "golang"
 upstream = "http://localhost:2333"
 provider_package = "provider"
+transport_adapters = ["http", "wails"]
 
 [typescript]
 codegen_output = "typescript"
@@ -124,6 +125,8 @@ api-gen-grpc -c examples/api-blueprint.toml --target go.*
 - `gen_*` files are generator-owned and overwritten during regeneration.
 - `impl_*` and non-`gen_*` passthrough files are user-owned extension points and are preserved during regeneration.
 - Wails overlays are generated into reserved sibling directories inside the shared Go / TypeScript output trees; `api-gen-wails` does not generate a full Wails app shell, and external frontends must load the Wails runtime first.
+- The Go HTTP adapter respects responses already written by Gin handlers, which fits small HTTP-only raw callbacks.
+- Wails-only projects should set `[golang].transport_adapters` to `["wails"]` to generate only Go core plus Wails overlays and skip the Gin HTTP adapter; `[]` remains available for advanced core-only output.
 - gRPC only compiles existing `.proto` trees and does not derive proto/service definitions from the Blueprint DSL.
 
 ## Learn More

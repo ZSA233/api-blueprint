@@ -3,10 +3,10 @@
 package provider
 
 import (
+	"context"
 	"fmt"
+	"strings"
 	"time"
-
-	"github.com/gin-gonic/gin"
 )
 
 const (
@@ -29,13 +29,14 @@ type WailsRouteContext struct {
 
 type ContextInterface interface {
 	ContextKind() TransportKind
-	GetGin() *gin.Context
 }
 
 type Context[Q, B, P any] struct {
 	Indexer  *Indexer[Q, B, P]
 	Kind     TransportKind
-	Gin      *gin.Context
+	Base     context.Context
+	Headers  map[string]string
+	Metadata map[string]any
 	Wails    *WailsRouteContext
 	Req      *ReqContext[Q, B, P]
 	Auth     *AuthContext[Q, B, P]
@@ -51,10 +52,6 @@ type Context[Q, B, P any] struct {
 
 func (ctx *Context[Q, B, P]) ContextKind() TransportKind {
 	return ctx.Kind
-}
-
-func (ctx *Context[Q, B, P]) GetGin() *gin.Context {
-	return ctx.Gin
 }
 
 func (ctx *Context[Q, B, P]) Next() {
@@ -97,59 +94,39 @@ func (ctx *Context[Q, B, P]) WsHandleResult() (*P, error) {
 	return nil, ctx.PipelineError()
 }
 
-func (ctx *Context[Q, B, P]) RequireHTTP() (*gin.Context, error) {
-	if ctx.Gin == nil {
-		return nil, fmt.Errorf("[Context] transport[%s] does not expose *gin.Context", ctx.Kind)
-	}
-	return ctx.Gin, nil
-}
-
 func (ctx *Context[Q, B, P]) Deadline() (deadline time.Time, ok bool) {
-	if ctx.Gin == nil {
+	if ctx.Base == nil {
 		return time.Time{}, false
 	}
-	return ctx.Gin.Deadline()
+	return ctx.Base.Deadline()
 }
 
 func (ctx *Context[Q, B, P]) Done() <-chan struct{} {
-	if ctx.Gin == nil {
+	if ctx.Base == nil {
 		return nil
 	}
-	return ctx.Gin.Done()
+	return ctx.Base.Done()
 }
 
 func (ctx *Context[Q, B, P]) Err() error {
-	if ctx.Gin == nil {
+	if ctx.Base == nil {
 		return nil
 	}
-	return ctx.Gin.Err()
+	return ctx.Base.Err()
 }
 
 func (ctx *Context[Q, B, P]) ensureMetadataStore() map[string]any {
-	if ctx.Wails == nil {
-		ctx.Wails = &WailsRouteContext{
-			Headers:  map[string]string{},
-			Metadata: map[string]any{},
-		}
+	if ctx.Metadata == nil {
+		ctx.Metadata = map[string]any{}
 	}
-	if ctx.Wails.Metadata == nil {
-		ctx.Wails.Metadata = map[string]any{}
-	}
-	return ctx.Wails.Metadata
+	return ctx.Metadata
 }
 
 func (ctx *Context[Q, B, P]) Set(key string, value any) {
-	if ctx.Gin != nil {
-		ctx.Gin.Set(key, value)
-		return
-	}
 	ctx.ensureMetadataStore()[key] = value
 }
 
 func (ctx *Context[Q, B, P]) Get(key string) (value any, exists bool) {
-	if ctx.Gin != nil {
-		return ctx.Gin.Get(key)
-	}
 	value, exists = ctx.ensureMetadataStore()[key]
 	return value, exists
 }
@@ -163,15 +140,24 @@ func (ctx *Context[Q, B, P]) MustGet(key string) any {
 }
 
 func (ctx *Context[Q, B, P]) Value(key any) any {
-	if ctx.Gin != nil {
-		return ctx.Gin.Value(key)
+	if keyString, ok := key.(string); ok {
+		if value, exists := ctx.Get(keyString); exists {
+			return value
+		}
 	}
-	keyString, ok := key.(string)
-	if !ok {
+	if ctx.Base == nil {
 		return nil
 	}
-	value, _ := ctx.Get(keyString)
-	return value
+	return ctx.Base.Value(key)
+}
+
+func (ctx *Context[Q, B, P]) Header(name string) string {
+	for key, value := range ctx.Headers {
+		if strings.EqualFold(key, name) {
+			return value
+		}
+	}
+	return ""
 }
 
 func AdaptContext[Q, B, P any](anyCtx any) *Context[Q, B, P] {
@@ -182,28 +168,35 @@ func AdaptContext[Q, B, P any](anyCtx any) *Context[Q, B, P] {
 	return ctx
 }
 
-func NewHTTPContext[Q, B, P any](ctx *gin.Context) *Context[Q, B, P] {
-	return NewContext[Q, B, P](ctx, nil)
+func NewHTTPContext[Q, B, P any](
+	base context.Context,
+	headers map[string]string,
+	metadata map[string]any,
+) *Context[Q, B, P] {
+	return NewContext[Q, B, P](TransportHTTP, base, headers, metadata)
 }
 
 func NewContext[Q, B, P any](
-	ctx *gin.Context,
-	indexer *Indexer[Q, B, P],
+	kind TransportKind,
+	base context.Context,
+	headers map[string]string,
+	metadata map[string]any,
 ) *Context[Q, B, P] {
-	provCtx, found := ctx.Get(PROV_CONTEXT)
-	if !found {
-		provCtx = &Context[Q, B, P]{
-			Indexer: indexer,
-			Kind:    TransportHTTP,
-			Gin:     ctx,
-		}
-		ctx.Set(PROV_CONTEXT, provCtx)
+	if base == nil {
+		base = context.Background()
 	}
-	typedCtx := provCtx.(*Context[Q, B, P])
-	if indexer != nil {
-		typedCtx.Indexer = indexer
+	if headers == nil {
+		headers = map[string]string{}
 	}
-	return typedCtx
+	if metadata == nil {
+		metadata = map[string]any{}
+	}
+	return &Context[Q, B, P]{
+		Kind:     kind,
+		Base:     base,
+		Headers:  headers,
+		Metadata: metadata,
+	}
 }
 
 func NewWailsContext[Q, B, P any](
@@ -211,13 +204,12 @@ func NewWailsContext[Q, B, P any](
 	operation string,
 	headers map[string]string,
 ) *Context[Q, B, P] {
-	return &Context[Q, B, P]{
-		Kind: TransportWails,
-		Wails: &WailsRouteContext{
-			Service:   service,
-			Operation: operation,
-			Headers:   headers,
-			Metadata:  map[string]any{},
-		},
+	ctx := NewContext[Q, B, P](TransportWails, context.Background(), headers, nil)
+	ctx.Wails = &WailsRouteContext{
+		Service:   service,
+		Operation: operation,
+		Headers:   ctx.Headers,
+		Metadata:  ctx.Metadata,
 	}
+	return ctx
 }

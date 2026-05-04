@@ -6,7 +6,13 @@ from typing import Literal
 
 from api_blueprint.config.grpc_python_package import python_package_root_to_path
 from api_blueprint.config.loader import normalize_config_path
-from api_blueprint.config.models import Config, WailsFrontendMode, WailsVersion, default_wails_overlay_name
+from api_blueprint.config.models import (
+    Config,
+    GolangTransportAdapter,
+    WailsFrontendMode,
+    WailsVersion,
+    default_wails_overlay_name,
+)
 from api_blueprint.route_selection import normalize_selection_rules
 
 
@@ -16,6 +22,7 @@ class ResolvedTargetConfig:
     upstream: str | None = None
     module: str | None = None
     provider_package: str | None = None
+    transport_adapters: tuple[GolangTransportAdapter, ...] = ("http",)
     base_url: str | None = None
     base_url_expr: str | None = None
 
@@ -186,6 +193,7 @@ def resolve_config(path: str | Path | None) -> ResolvedConfig:
             upstream=goconf.upstream,
             module=goconf.module,
             provider_package=goconf.provider_package,
+            transport_adapters=tuple(goconf.transport_adapters),
         ),
         typescript=None
         if tsconf is None

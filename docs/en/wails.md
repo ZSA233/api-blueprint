@@ -76,7 +76,9 @@ Long-term ownership boundary:
 - `impl_*` helpers: user-owned, but should not retake the provider main flow.
 - Wails runtime: generated-only, no `impl_runtime.go`.
 
-`RouteExecutor` is a reusable route-level execution plan. Request-scoped state must live in `Context` or its metadata store, and custom providers should be stateless/reentrant. HTTP-only providers should call `RequireHTTP()` explicitly.
+`RouteExecutor` is a reusable route-level execution plan. Request-scoped state must live in `Context` or its metadata store, and custom providers should be stateless/reentrant. HTTP-only providers should explicitly import `views/_http` and use adapter helpers such as `httptransport.RequireGin(ctx)` to access Gin context.
+
+HTTP behavior tests should generally live in an external test package, for example `package demo_test`, and import the route-adjacent `_http` adapter. Business handler unit tests can stay in the route package and call handlers directly with typed `ctx/req` values. Use `views/_http.RequireGin(ctx)` only when Gin APIs are actually required; doing so explicitly couples that code to the HTTP adapter.
 
 ## TypeScript Transport
 
@@ -113,7 +115,7 @@ The Wails v3 transport uses the official runtime `Call.ByName(...)` contract and
 
 ## Wails-only App
 
-`api-blueprint` can be used in a Wails app that does not start an HTTP server. `api-gen-wails` still generates the shared Go / TypeScript contract layers, but the Wails app shell only needs to register generated bindings. It does not need to call `views.NewEngine()` or start a Gin/HTTP listener.
+`api-blueprint` can be used in a Wails app that does not start an HTTP server. `api-gen-wails` still generates the shared Go / TypeScript contract layers; when `[golang].transport_adapters = ["wails"]`, it does not generate the Gin HTTP adapter. The Wails app shell only needs to register generated bindings. It does not need to import the `_http` adapter or start a Gin/HTTP listener.
 
 ```toml
 [blueprint]
@@ -122,6 +124,7 @@ entrypoints = ["blueprints.app:bp"]
 [golang]
 codegen_output = "golang"
 module = "example.com/myapp/generated"
+transport_adapters = ["wails"]
 
 [typescript]
 codegen_output = "typescript"
@@ -140,7 +143,7 @@ wails3 doctor
 wails3 build
 ```
 
-This means "no HTTP server is started", not "the generated tree has no HTTP dependency": the shared Go contract layer still contains HTTP/Gin registration code and dependencies. See `examples/wails-hello` for the complete minimal example.
+`transport_adapters = ["wails"]` marks the Go core as consumed by Wails targets but skips the Gin HTTP adapter; when the Wails app imports only generated bindings, its build graph does not need Gin. If one project needs both HTTP and Wails, use `transport_adapters = ["http", "wails"]` and configure `[[wails.targets]]`. The `wails` marker does not replace Wails targets; if it is listed, at least one target must also be configured. See `examples/wails-hello` for the complete minimal example.
 
 Shortcut for manually starting `examples/wails-hello`:
 

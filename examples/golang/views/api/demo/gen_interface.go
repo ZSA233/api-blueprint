@@ -2,11 +2,6 @@
 
 package demo
 
-import (
-	views "demo/views"
-	"github.com/gin-gonic/gin"
-)
-
 type RouterInterface interface {
 	Abc(ctx *CTX_Abc, req *REQ_Abc) (rsp *RSP_Abc, err error)
 	TestPost(ctx *CTX_TestPost, req *REQ_TestPost) (rsp *RSP_TestPost, err error)
@@ -16,19 +11,4 @@ type RouterInterface interface {
 	PostDeprecated(ctx *CTX_PostDeprecated, req *REQ_PostDeprecated) (rsp *RSP_PostDeprecated, err error)
 	Raw(ctx *CTX_Raw, req *REQ_Raw) (rsp *RSP_Raw, err error)
 	MapModel(ctx *CTX_MapModel, req *REQ_MapModel) (rsp *RSP_MapModel, err error)
-}
-
-func NewImpl(eng *gin.Engine) *Router {
-	impl := NewRouter()
-
-	views.GET("/api/demo/abc", impl.Abc, eng, "req=Q|auth|handle|rsp=json@GeneralWrapper")
-	views.POST("/api/demo/test_post", impl.TestPost, eng, "req=J|auth|handle|rsp=json@GeneralWrapper")
-	views.PUT("/api/demo/1put", impl.Z1put, eng, "req=QJ|auth|handle|rsp=json@GeneralWrapper")
-	views.DELETE("/api/demo/delete$", impl.Delete, eng, "req=Q|auth|handle|rsp=xml@GeneralWrapper")
-	views.WS("/api/demo/ws", impl.Ws, eng, "req=Q|auth|ws_handle|rsp=json@GeneralWrapper")
-	views.POST("/api/demo/post_deprecated", impl.PostDeprecated, eng, "req=J|auth|handle|rsp=json@GeneralWrapper")
-	views.POST("/api/demo/raw", impl.Raw, eng, "req|auth|handle|rsp=json@GeneralWrapper")
-	views.POST("/api/demo/map_model", impl.MapModel, eng, "req|auth|handle|rsp=json@GeneralWrapper")
-
-	return impl
 }

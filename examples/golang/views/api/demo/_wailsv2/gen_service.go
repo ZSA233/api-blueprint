@@ -36,7 +36,15 @@ func NewDemoService(impl RouterInterface, dispatcher runtime.EventDispatcher) *D
 }
 
 func (svc *DemoService) Abc(envelope *INVOKE_Abc) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_Abc], err error) {
-	req := runtime.EnvelopeToReq[REQ_Abc_QUERY, any](envelope)
+	req, reqErr := runtime.EnvelopeToReq[REQ_Abc_QUERY, any](envelope, runtime.ReqEnvelopeOptions{
+		BindQuery: true,
+		BindJSON:  false,
+		BindForm:  false,
+	})
+	if reqErr != nil {
+		err = reqErr
+		return
+	}
 	ctx := sharedprovider.NewWailsContext[REQ_Abc_QUERY, any, RSP_Abc]("DemoService", "Abc", runtime.EnvelopeHeaders(envelope))
 	ctx.Req = &sharedprovider.ReqContext[REQ_Abc_QUERY, any, RSP_Abc]{Request: req}
 	execErr := svc.abcExecutor.Run(ctx)
@@ -49,7 +57,15 @@ func (svc *DemoService) Abc(envelope *INVOKE_Abc) (rsp *sharedprovider.RSP_JSON_
 }
 
 func (svc *DemoService) TestPost(envelope *INVOKE_TestPost) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_TestPost], err error) {
-	req := runtime.EnvelopeToReq[any, REQ_TestPost_JSON](envelope)
+	req, reqErr := runtime.EnvelopeToReq[any, REQ_TestPost_JSON](envelope, runtime.ReqEnvelopeOptions{
+		BindQuery: false,
+		BindJSON:  true,
+		BindForm:  false,
+	})
+	if reqErr != nil {
+		err = reqErr
+		return
+	}
 	ctx := sharedprovider.NewWailsContext[any, REQ_TestPost_JSON, RSP_TestPost]("DemoService", "TestPost", runtime.EnvelopeHeaders(envelope))
 	ctx.Req = &sharedprovider.ReqContext[any, REQ_TestPost_JSON, RSP_TestPost]{Request: req}
 	execErr := svc.testPostExecutor.Run(ctx)
@@ -62,7 +78,15 @@ func (svc *DemoService) TestPost(envelope *INVOKE_TestPost) (rsp *sharedprovider
 }
 
 func (svc *DemoService) Z1put(envelope *INVOKE_Z1put) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_Z1put], err error) {
-	req := runtime.EnvelopeToReq[REQ_Z1put_QUERY, REQ_Z1put_JSON](envelope)
+	req, reqErr := runtime.EnvelopeToReq[REQ_Z1put_QUERY, REQ_Z1put_JSON](envelope, runtime.ReqEnvelopeOptions{
+		BindQuery: true,
+		BindJSON:  true,
+		BindForm:  false,
+	})
+	if reqErr != nil {
+		err = reqErr
+		return
+	}
 	ctx := sharedprovider.NewWailsContext[REQ_Z1put_QUERY, REQ_Z1put_JSON, RSP_Z1put]("DemoService", "Z1put", runtime.EnvelopeHeaders(envelope))
 	ctx.Req = &sharedprovider.ReqContext[REQ_Z1put_QUERY, REQ_Z1put_JSON, RSP_Z1put]{Request: req}
 	execErr := svc.z1putExecutor.Run(ctx)
@@ -75,7 +99,15 @@ func (svc *DemoService) Z1put(envelope *INVOKE_Z1put) (rsp *sharedprovider.RSP_J
 }
 
 func (svc *DemoService) Delete(envelope *INVOKE_Delete) (rsp string, err error) {
-	req := runtime.EnvelopeToReq[REQ_Delete_QUERY, any](envelope)
+	req, reqErr := runtime.EnvelopeToReq[REQ_Delete_QUERY, any](envelope, runtime.ReqEnvelopeOptions{
+		BindQuery: true,
+		BindJSON:  false,
+		BindForm:  false,
+	})
+	if reqErr != nil {
+		err = reqErr
+		return
+	}
 	ctx := sharedprovider.NewWailsContext[REQ_Delete_QUERY, any, RSP_Delete]("DemoService", "Delete", runtime.EnvelopeHeaders(envelope))
 	ctx.Req = &sharedprovider.ReqContext[REQ_Delete_QUERY, any, RSP_Delete]{Request: req}
 	execErr := svc.deleteExecutor.Run(ctx)
@@ -95,7 +127,15 @@ func (svc *DemoService) Delete(envelope *INVOKE_Delete) (rsp string, err error) 
 }
 
 func (svc *DemoService) ConnectWs(envelope *WS_CONNECT_Ws) (rsp *runtime.SocketSessionDescriptor, err error) {
-	req := runtime.EnvelopeToReq[REQ_Ws_QUERY, any](envelope)
+	req, reqErr := runtime.EnvelopeToReq[REQ_Ws_QUERY, any](envelope, runtime.ReqEnvelopeOptions{
+		BindQuery: true,
+		BindJSON:  false,
+		BindForm:  false,
+	})
+	if reqErr != nil {
+		err = reqErr
+		return
+	}
 	ctx := sharedprovider.NewWailsContext[REQ_Ws_QUERY, any, RSP_Ws]("DemoService", "ConnectWs", runtime.EnvelopeHeaders(envelope))
 	ctx.Req = &sharedprovider.ReqContext[REQ_Ws_QUERY, any, RSP_Ws]{Request: req}
 	if err := svc.wsExecutor.RunWSPreflight(ctx); err != nil {
@@ -137,7 +177,15 @@ func (svc *DemoService) CloseWs(request *WS_CLOSE_Ws) error {
 }
 
 func (svc *DemoService) PostDeprecated(envelope *INVOKE_PostDeprecated) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_PostDeprecated], err error) {
-	req := runtime.EnvelopeToReq[any, REQ_PostDeprecated_JSON](envelope)
+	req, reqErr := runtime.EnvelopeToReq[any, REQ_PostDeprecated_JSON](envelope, runtime.ReqEnvelopeOptions{
+		BindQuery: false,
+		BindJSON:  true,
+		BindForm:  false,
+	})
+	if reqErr != nil {
+		err = reqErr
+		return
+	}
 	ctx := sharedprovider.NewWailsContext[any, REQ_PostDeprecated_JSON, RSP_PostDeprecated]("DemoService", "PostDeprecated", runtime.EnvelopeHeaders(envelope))
 	ctx.Req = &sharedprovider.ReqContext[any, REQ_PostDeprecated_JSON, RSP_PostDeprecated]{Request: req}
 	execErr := svc.postDeprecatedExecutor.Run(ctx)
@@ -150,7 +198,15 @@ func (svc *DemoService) PostDeprecated(envelope *INVOKE_PostDeprecated) (rsp *sh
 }
 
 func (svc *DemoService) Raw(envelope *INVOKE_Raw) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_Raw], err error) {
-	req := runtime.EnvelopeToReq[any, any](envelope)
+	req, reqErr := runtime.EnvelopeToReq[any, any](envelope, runtime.ReqEnvelopeOptions{
+		BindQuery: false,
+		BindJSON:  false,
+		BindForm:  false,
+	})
+	if reqErr != nil {
+		err = reqErr
+		return
+	}
 	ctx := sharedprovider.NewWailsContext[any, any, RSP_Raw]("DemoService", "Raw", runtime.EnvelopeHeaders(envelope))
 	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_Raw]{Request: req}
 	execErr := svc.rawExecutor.Run(ctx)
@@ -163,7 +219,15 @@ func (svc *DemoService) Raw(envelope *INVOKE_Raw) (rsp *sharedprovider.RSP_JSON_
 }
 
 func (svc *DemoService) MapModel(envelope *INVOKE_MapModel) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_MapModel], err error) {
-	req := runtime.EnvelopeToReq[any, any](envelope)
+	req, reqErr := runtime.EnvelopeToReq[any, any](envelope, runtime.ReqEnvelopeOptions{
+		BindQuery: false,
+		BindJSON:  false,
+		BindForm:  false,
+	})
+	if reqErr != nil {
+		err = reqErr
+		return
+	}
 	ctx := sharedprovider.NewWailsContext[any, any, RSP_MapModel]("DemoService", "MapModel", runtime.EnvelopeHeaders(envelope))
 	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_MapModel]{Request: req}
 	execErr := svc.mapModelExecutor.Run(ctx)

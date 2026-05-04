@@ -34,7 +34,15 @@ func NewHelloService(impl RouterInterface, dispatcher runtime.EventDispatcher) *
 }
 
 func (svc *HelloService) Abc(envelope *INVOKE_Abc) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_Abc], err error) {
-	req := runtime.EnvelopeToReq[REQ_Abc_QUERY, any](envelope)
+	req, reqErr := runtime.EnvelopeToReq[REQ_Abc_QUERY, any](envelope, runtime.ReqEnvelopeOptions{
+		BindQuery: true,
+		BindJSON:  false,
+		BindForm:  false,
+	})
+	if reqErr != nil {
+		err = reqErr
+		return
+	}
 	ctx := sharedprovider.NewWailsContext[REQ_Abc_QUERY, any, RSP_Abc]("HelloService", "Abc", runtime.EnvelopeHeaders(envelope))
 	ctx.Req = &sharedprovider.ReqContext[REQ_Abc_QUERY, any, RSP_Abc]{Request: req}
 	execErr := svc.abcExecutor.Run(ctx)
@@ -47,7 +55,15 @@ func (svc *HelloService) Abc(envelope *INVOKE_Abc) (rsp *sharedprovider.RSP_JSON
 }
 
 func (svc *HelloService) MapEnum(envelope *INVOKE_MapEnum) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_MapEnum], err error) {
-	req := runtime.EnvelopeToReq[any, any](envelope)
+	req, reqErr := runtime.EnvelopeToReq[any, any](envelope, runtime.ReqEnvelopeOptions{
+		BindQuery: false,
+		BindJSON:  false,
+		BindForm:  false,
+	})
+	if reqErr != nil {
+		err = reqErr
+		return
+	}
 	ctx := sharedprovider.NewWailsContext[any, any, RSP_MapEnum]("HelloService", "MapEnum", runtime.EnvelopeHeaders(envelope))
 	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_MapEnum]{Request: req}
 	execErr := svc.mapEnumExecutor.Run(ctx)
@@ -60,7 +76,15 @@ func (svc *HelloService) MapEnum(envelope *INVOKE_MapEnum) (rsp *sharedprovider.
 }
 
 func (svc *HelloService) ListEnum(envelope *INVOKE_ListEnum) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_ListEnum], err error) {
-	req := runtime.EnvelopeToReq[any, any](envelope)
+	req, reqErr := runtime.EnvelopeToReq[any, any](envelope, runtime.ReqEnvelopeOptions{
+		BindQuery: false,
+		BindJSON:  false,
+		BindForm:  false,
+	})
+	if reqErr != nil {
+		err = reqErr
+		return
+	}
 	ctx := sharedprovider.NewWailsContext[any, any, RSP_ListEnum]("HelloService", "ListEnum", runtime.EnvelopeHeaders(envelope))
 	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_ListEnum]{Request: req}
 	execErr := svc.listEnumExecutor.Run(ctx)
@@ -73,7 +97,15 @@ func (svc *HelloService) ListEnum(envelope *INVOKE_ListEnum) (rsp *sharedprovide
 }
 
 func (svc *HelloService) String(envelope *INVOKE_String) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_String], err error) {
-	req := runtime.EnvelopeToReq[any, any](envelope)
+	req, reqErr := runtime.EnvelopeToReq[any, any](envelope, runtime.ReqEnvelopeOptions{
+		BindQuery: false,
+		BindJSON:  false,
+		BindForm:  false,
+	})
+	if reqErr != nil {
+		err = reqErr
+		return
+	}
 	ctx := sharedprovider.NewWailsContext[any, any, RSP_String]("HelloService", "String", runtime.EnvelopeHeaders(envelope))
 	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_String]{Request: req}
 	execErr := svc.stringExecutor.Run(ctx)
@@ -86,7 +118,15 @@ func (svc *HelloService) String(envelope *INVOKE_String) (rsp *sharedprovider.RS
 }
 
 func (svc *HelloService) Uint64(envelope *INVOKE_Uint64) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_Uint64], err error) {
-	req := runtime.EnvelopeToReq[any, any](envelope)
+	req, reqErr := runtime.EnvelopeToReq[any, any](envelope, runtime.ReqEnvelopeOptions{
+		BindQuery: false,
+		BindJSON:  false,
+		BindForm:  false,
+	})
+	if reqErr != nil {
+		err = reqErr
+		return
+	}
 	ctx := sharedprovider.NewWailsContext[any, any, RSP_Uint64]("HelloService", "Uint64", runtime.EnvelopeHeaders(envelope))
 	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_Uint64]{Request: req}
 	execErr := svc.uint64Executor.Run(ctx)
@@ -99,7 +139,15 @@ func (svc *HelloService) Uint64(envelope *INVOKE_Uint64) (rsp *sharedprovider.RS
 }
 
 func (svc *HelloService) StringEmun(envelope *INVOKE_StringEmun) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_StringEmun], err error) {
-	req := runtime.EnvelopeToReq[any, any](envelope)
+	req, reqErr := runtime.EnvelopeToReq[any, any](envelope, runtime.ReqEnvelopeOptions{
+		BindQuery: false,
+		BindJSON:  false,
+		BindForm:  false,
+	})
+	if reqErr != nil {
+		err = reqErr
+		return
+	}
 	ctx := sharedprovider.NewWailsContext[any, any, RSP_StringEmun]("HelloService", "StringEmun", runtime.EnvelopeHeaders(envelope))
 	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_StringEmun]{Request: req}
 	execErr := svc.stringEmunExecutor.Run(ctx)
@@ -112,7 +160,15 @@ func (svc *HelloService) StringEmun(envelope *INVOKE_StringEmun) (rsp *sharedpro
 }
 
 func (svc *HelloService) HelloWay(envelope *INVOKE_HelloWay) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_HelloWay], err error) {
-	req := runtime.EnvelopeToReq[REQ_HelloWay_QUERY, any](envelope)
+	req, reqErr := runtime.EnvelopeToReq[REQ_HelloWay_QUERY, any](envelope, runtime.ReqEnvelopeOptions{
+		BindQuery: true,
+		BindJSON:  false,
+		BindForm:  false,
+	})
+	if reqErr != nil {
+		err = reqErr
+		return
+	}
 	ctx := sharedprovider.NewWailsContext[REQ_HelloWay_QUERY, any, RSP_HelloWay]("HelloService", "HelloWay", runtime.EnvelopeHeaders(envelope))
 	ctx.Req = &sharedprovider.ReqContext[REQ_HelloWay_QUERY, any, RSP_HelloWay]{Request: req}
 	execErr := svc.helloWayExecutor.Run(ctx)

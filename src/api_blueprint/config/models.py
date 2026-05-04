@@ -11,6 +11,7 @@ from api_blueprint.route_selection import validate_selection_rules
 
 
 GrpcLayout = Literal["source_relative", "go_package"]
+GolangTransportAdapter = Literal["http", "wails"]
 WailsVersion = Literal["v2", "v3"]
 WailsFrontendMode = Literal["external", "none"]
 GO_PACKAGE_NAME_RE = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -32,14 +33,18 @@ class UpstreamConfig(BaseModel):
 class GolangConfig(CodegenConfig, UpstreamConfig):
     module: str | None = None
     provider_package: str = "provider"
+    transport_adapters: list[GolangTransportAdapter] = Field(default_factory=lambda: ["http"])
 
     @model_validator(mode="after")
-    def validate_provider_package(self) -> "GolangConfig":
+    def validate_golang_fields(self) -> "GolangConfig":
         if not GO_PACKAGE_NAME_RE.fullmatch(self.provider_package):
             raise ValueError(
                 "golang.provider_package must be Go package-safe: "
                 "lowercase letters, digits, and underscores, and it cannot start with a digit or underscore"
             )
+        duplicates = sorted({name for name in self.transport_adapters if self.transport_adapters.count(name) > 1})
+        if duplicates:
+            raise ValueError(f"golang.transport_adapters contains duplicate values: {', '.join(duplicates)}")
         return self
 
 
@@ -239,6 +244,15 @@ class Config(BaseModel):
     kotlin: KotlinConfig | None = None
     grpc: GrpcConfig | None = None
     wails: WailsConfig | None = None
+
+    @model_validator(mode="after")
+    def validate_cross_section_contracts(self) -> "Config":
+        if self.golang is not None and "wails" in self.golang.transport_adapters and self.wails is None:
+            raise ValueError(
+                "golang.transport_adapters includes 'wails', but no [[wails.targets]] are configured. "
+                "Add a Wails target or remove the 'wails' adapter marker."
+            )
+        return self
 
     @classmethod
     def load(cls, path: str | Path | None) -> "Config":

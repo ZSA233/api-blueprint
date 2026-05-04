@@ -5,7 +5,6 @@ package provider
 import (
 	"context"
 	"fmt"
-
 	"strings"
 )
 
@@ -58,7 +57,6 @@ func NewWsHandleProvider[Q, B, P any](
 
 func (prov *WsHandleProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
 	ctx := AdaptContext[Q, B, P](anyCtx)
-	var err error
 
 	if ctx.Req == nil {
 		ctx.Abort(fmt.Errorf("[WsHandleProvider] fail to get req"))
@@ -71,20 +69,38 @@ func (prov *WsHandleProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
 		return
 	}
 
-	switch ctx.ContextKind() {
-	case TransportHTTP:
-		prov.handleHTTP(ctx, req)
-	case TransportWails:
-		prov.handleWails(ctx, req)
-	default:
-		ctx.Abort(fmt.Errorf("[WsHandleProvider] unsupported transport[%s]", ctx.ContextKind()))
+	if ctx.WsHandle == nil || ctx.WsHandle.Conn == nil {
+		ctx.Abort(fmt.Errorf("[WsHandleProvider] socket session is not ready for transport[%s]", ctx.ContextKind()))
+		return
+	}
+
+	rsp, err := prov.Handler(ctx, req)
+	ctx.WsHandle.Response = rsp
+	ctx.WsHandle.Error = err
+	if err != nil {
+		_ = ctx.WsHandle.Conn.Close(1011, err.Error())
+	} else {
+		_ = ctx.WsHandle.Conn.Close(1000, "")
 	}
 }
 
-func (prov *WsHandleProvider[Q, B, P]) handleHTTP(ctx *Context[Q, B, P], req *REQ[Q, B]) {
-	panic("unreachable")
-}
+func WsJSONReadLoop[MSG any](conn SocketConnection, fn func(msg *MSG, err error) (stopped bool), cs ...context.Context) (err error) {
+	if conn == nil {
+		return nil
+	}
+	var c context.Context
+	if len(cs) > 0 {
+		c = cs[0]
+	} else {
+		c = context.Background()
+	}
+	for {
+		msg := new(MSG)
+		err = conn.ReadJSON(c, msg)
+		if fn(msg, err) {
+			break
+		}
 
-func (prov *WsHandleProvider[Q, B, P]) handleWails(ctx *Context[Q, B, P], req *REQ[Q, B]) {
-	panic("unreachable")
+	}
+	return
 }

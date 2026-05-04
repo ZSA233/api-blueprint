@@ -2,19 +2,6 @@
 
 package hello
 
-import (
-	views "example.com/api-blueprint/wails-hello/golang/views"
-	"github.com/gin-gonic/gin"
-)
-
 type RouterInterface interface {
 	Greet(ctx *CTX_Greet, req *REQ_Greet) (rsp *RSP_Greet, err error)
-}
-
-func NewImpl(eng *gin.Engine) *Router {
-	impl := NewRouter()
-
-	views.GET("/api/hello/greet", impl.Greet, eng, "req=Q|handle|rsp=json@NoneWrapper")
-
-	return impl
 }

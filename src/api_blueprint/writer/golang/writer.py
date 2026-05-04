@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from contextlib import contextmanager
 from pathlib import Path
-from typing import IO, Any, Generator, Mapping, Optional, Set
+from typing import IO, Any, Generator, Literal, Mapping, Optional, Sequence, Set
 
 from api_blueprint.engine.model import iter_error_models, iter_model_vars
 from api_blueprint.engine.utils import join_path_imports, pascal_to_snake_case
@@ -16,6 +16,9 @@ from .blueprint import GolangBlueprint, GolangErrorGroup
 from .common import LANG, PackageName
 from .protos import GolangPackageLayout, GolangResponseWrapper
 from .toolchain import GolangToolchain
+
+GolangTransportAdapter = Literal["http", "wails"]
+DEFAULT_TRANSPORT_ADAPTERS: tuple[GolangTransportAdapter, ...] = ("http",)
 
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -32,6 +35,7 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
         views_package: str = PackageName.VIEWS.value,
         provider_package: str = PackageName.PROVIDER.value,
         errors_package: str = PackageName.ERROR.value,
+        transport_adapters: Sequence[GolangTransportAdapter] = DEFAULT_TRANSPORT_ADAPTERS,
         **kwargs: dict[str, Any],
     ):
         super().__init__(working_dir)
@@ -55,6 +59,12 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
         self.views_package = self.packages.views_package
         self.provider_package = self.packages.provider_package
         self.errors_package = self.packages.errors_package
+        self.transport_adapters = tuple(transport_adapters)
+        unknown_adapters = sorted(set(self.transport_adapters) - {"http", "wails"})
+        if unknown_adapters:
+            raise ValueError(
+                "golang.transport_adapters contains unsupported values: " + ", ".join(unknown_adapters)
+            )
 
     def validate_package_contract(self) -> None:
         for bp in self.bps:
@@ -76,6 +86,14 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
     @property
     def errors_imports(self) -> str:
         return self.packages.errors_imports
+
+    @property
+    def http_adapter_enabled(self) -> bool:
+        return "http" in self.transport_adapters
+
+    @property
+    def http_transport_imports(self) -> str:
+        return join_path_imports(self.views_imports, "_http")
 
     def list_providers(self) -> set[str]:
         if self._list_providers_cache is None:

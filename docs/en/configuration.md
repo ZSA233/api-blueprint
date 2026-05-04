@@ -25,12 +25,16 @@ codegen_output = "golang"
 upstream = "http://localhost:2333"
 module = ""
 provider_package = "provider"
+transport_adapters = ["http"]
 ```
 
 - `codegen_output`: Go output directory.
 - `upstream`: backend address used by generated wrappers.
 - `module`: optional Go module override; usually leave it empty and let the tool resolve it.
 - `provider_package`: shared Go runtime/provider package name used by both HTTP and Wails; defaults to `provider` and cannot start with `_`.
+- `transport_adapters`: Go transport adapter list, defaulting to `["http"]`; currently supports `http` and the declarative `wails` marker. Wails-only projects should use `["wails"]`; HTTP + Wails projects should use `["http", "wails"]`; `[]` means Go core only with no Go transport adapter.
+
+Go core is always generated and contains route interfaces, models, provider executor, and user `impl.go` files. The HTTP adapter is generated under reserved directories such as `views/_http` and `views/<root>/<group...>/_http`; HTTP entrypoints should import `_http.NewBlueprint(engine)`. The `wails` adapter marker does not replace `[[wails.targets]]`, which still owns version, overlay, frontend, and filter semantics; if `wails` is listed, at least one Wails target must also be configured.
 
 ## typescript
 

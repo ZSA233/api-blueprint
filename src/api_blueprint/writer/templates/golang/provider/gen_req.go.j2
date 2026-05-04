@@ -3,6 +3,7 @@
 package {{ writer.provider_package }}
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -51,50 +52,17 @@ func (prov *ReqProvider[Q, B, P]) GetName() string {
 func (prov *ReqProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
 	ctx := AdaptContext[Q, B, P](anyCtx)
 	if ctx.Req != nil {
+		if ctx.Req.Error != nil {
+			ctx.Abort(ctx.Req.Error)
+			return
+		}
+		if ctx.Req.Request == nil {
+			ctx.Abort(fmt.Errorf("[ReqProvider] request must be pre-bound by transport adapter"))
+			return
+		}
 		ctx.Next()
 		return
 	}
 
-	req, err := prov.makeReq(ctx)
-	ctx.Req = &ReqContext[Q, B, P]{
-		Request: req,
-		Error:   err,
-	}
-	ctx.Next()
-}
-
-func (prov *ReqProvider[Q, B, P]) makeReq(ctx *Context[Q, B, P]) (*REQ[Q, B], error) {
-	var reqQ *Q
-	var reqB *B
-
-	var err error
-	httpCtx, err := ctx.RequireHTTP()
-	if err != nil {
-		return nil, err
-	}
-
-	if prov.BindQuery {
-		reqQ = new(Q)
-		if err = httpCtx.ShouldBindQuery(reqQ); err != nil {
-			return nil, err
-		}
-	}
-	
-	if prov.BindJSON {
-		reqB = new(B)
-		if err = httpCtx.ShouldBindJSON(reqB); err != nil {
-			return nil, err
-		}
-	} else if prov.BindForm {
-		reqB = new(B)
-		if err = httpCtx.ShouldBind(reqB); err != nil {
-			return nil, err
-		}
-	}
-
-	var req = &REQ[Q, B]{
-		Q: reqQ,
-		B: reqB,
-	}
-	return req, nil
+	ctx.Abort(fmt.Errorf("[ReqProvider] request must be pre-bound by transport adapter"))
 }

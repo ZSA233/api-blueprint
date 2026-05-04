@@ -524,6 +524,7 @@ def compile_wails_hello_example(workspace: WailsHelloExampleWorkspace) -> None:
     subprocess.run(["tsc", "-p", str(workspace.typescript_dir / "tsconfig.json"), "--noEmit"], check=True)
     subprocess.run(["go", "test", "./..."], cwd=workspace.golang_dir, check=True)
     subprocess.run(["go", "test", "./..."], cwd=workspace.app_dir, check=True)
+    _assert_wails_hello_has_no_http_adapter_deps(workspace.app_dir)
     _compile_wails_harness(workspace.app_dir, version="v3")
 
 
@@ -540,6 +541,22 @@ def compile_repo_grpc_examples(repo_root: Path) -> None:
 
 def _tidy_go_module(go_dir: Path) -> None:
     subprocess.run(["go", "mod", "tidy"], cwd=go_dir, check=True)
+
+
+def _assert_wails_hello_has_no_http_adapter_deps(app_dir: Path) -> None:
+    result = subprocess.run(
+        ["go", "list", "-deps", "./..."],
+        cwd=app_dir,
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+    )
+    forbidden = ("github.com/gin-gonic/gin", "github.com/coder/websocket")
+    found = [dep for dep in forbidden if dep in result.stdout.splitlines()]
+    if found:
+        raise ExampleValidationError(
+            "wails-hello app unexpectedly depends on HTTP adapter packages:\n" + "\n".join(found)
+        )
 
 
 def _compile_wails_harness(harness_dir: Path, *, version: str) -> None:

@@ -13,11 +13,16 @@ The Go generator emits:
 - Route interfaces and default `impl.go`.
 - Request / response / context structures.
 - Provider runtime and wrappers.
-- Go HTTP entrypoints corresponding to FastAPI/OpenAPI contracts.
+- Transport-neutral Go core.
+- Optional HTTP/Gin adapter.
 
 `gen_*` files are generator-owned and overwritten during regeneration. `impl_*` and non-`gen_*` files are user-owned extension points and are preserved.
 
 `[golang].provider_package` controls the shared provider/runtime package name and defaults to `provider`.
+
+`[golang].transport_adapters` controls Go transport adapters and defaults to `["http"]`. The HTTP entrypoint is generated under reserved `_http` directories, for example `views/api/_http.NewBlueprint(engine)`; Wails-only projects should use `["wails"]`, and HTTP + Wails projects should use `["http", "wails"]`. `[]` means core-only output for future adapters or advanced integrations.
+
+The HTTP adapter imports the blueprint root router only when the root has direct routes. If a handler has already written a Gin response, the adapter does not append an automatic response; otherwise routes without an `rsp` provider keep the existing behavior where the adapter writes the handler return value.
 
 ## TypeScript
 

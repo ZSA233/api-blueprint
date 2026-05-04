@@ -2,19 +2,6 @@
 
 package api
 
-import (
-	views "demo/views"
-	"github.com/gin-gonic/gin"
-)
-
 type RouterInterface interface {
 	Ws(ctx *CTX_Ws, req *REQ_Ws) (rsp *RSP_Ws, err error)
-}
-
-func NewImpl(eng *gin.Engine) *Router {
-	impl := NewRouter()
-
-	views.WS("/api/ws", impl.Ws, eng, "req|auth|ws_handle|rsp=json@GeneralWrapper")
-
-	return impl
 }

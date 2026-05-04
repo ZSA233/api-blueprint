@@ -5,8 +5,6 @@ package api
 import (
 	"demo/views/api/demo"
 	"demo/views/api/hello"
-
-	"github.com/gin-gonic/gin"
 )
 
 type Blueprint struct {
@@ -15,10 +13,10 @@ type Blueprint struct {
 	HelloRouter *hello.Router
 }
 
-func NewBlueprint(eng *gin.Engine) *Blueprint {
+func NewBlueprint() *Blueprint {
 	return &Blueprint{
-		Router:      NewImpl(eng),
-		DemoRouter:  demo.NewImpl(eng),
-		HelloRouter: hello.NewImpl(eng),
+		Router:      NewRouter(),
+		DemoRouter:  demo.NewRouter(),
+		HelloRouter: hello.NewRouter(),
 	}
 }

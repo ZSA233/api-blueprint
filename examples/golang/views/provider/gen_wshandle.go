@@ -5,12 +5,7 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/http"
-
 	"strings"
-
-	"github.com/coder/websocket"
-	"github.com/coder/websocket/wsjson"
 )
 
 const (
@@ -62,7 +57,6 @@ func NewWsHandleProvider[Q, B, P any](
 
 func (prov *WsHandleProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
 	ctx := AdaptContext[Q, B, P](anyCtx)
-	var err error
 
 	if ctx.Req == nil {
 		ctx.Abort(fmt.Errorf("[WsHandleProvider] fail to get req"))
@@ -75,116 +69,8 @@ func (prov *WsHandleProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
 		return
 	}
 
-	switch ctx.ContextKind() {
-	case TransportHTTP:
-		prov.handleHTTP(ctx, req)
-	case TransportWails:
-		prov.handleWails(ctx, req)
-	default:
-		ctx.Abort(fmt.Errorf("[WsHandleProvider] unsupported transport[%s]", ctx.ContextKind()))
-	}
-}
-
-type HTTPWebSocketConnection struct {
-	conn *websocket.Conn
-}
-
-func NewHTTPWebSocketConnection(conn *websocket.Conn) *HTTPWebSocketConnection {
-	return &HTTPWebSocketConnection{conn: conn}
-}
-
-func (conn *HTTPWebSocketConnection) Transport() TransportKind {
-	return TransportHTTP
-}
-
-func (conn *HTTPWebSocketConnection) SessionID() string {
-	return ""
-}
-
-func (conn *HTTPWebSocketConnection) Subprotocol() string {
-	if conn == nil || conn.conn == nil {
-		return ""
-	}
-	return conn.conn.Subprotocol()
-}
-
-func (conn *HTTPWebSocketConnection) Underlying() any {
-	if conn == nil {
-		return nil
-	}
-	return conn.conn
-}
-
-func (conn *HTTPWebSocketConnection) ReadJSON(ctx context.Context, target any) error {
-	if conn == nil || conn.conn == nil {
-		return nil
-	}
-	return wsjson.Read(ctx, conn.conn, target)
-}
-
-func (conn *HTTPWebSocketConnection) WriteJSON(ctx context.Context, payload any) error {
-	if conn == nil || conn.conn == nil {
-		return nil
-	}
-	return wsjson.Write(ctx, conn.conn, payload)
-}
-
-func (conn *HTTPWebSocketConnection) Close(code int, reason string) error {
-	if conn == nil || conn.conn == nil {
-		return nil
-	}
-	return conn.conn.Close(websocket.StatusCode(code), reason)
-}
-
-func (prov *WsHandleProvider[Q, B, P]) handleHTTP(ctx *Context[Q, B, P], req *REQ[Q, B]) {
-	httpCtx, httpErr := ctx.RequireHTTP()
-	if httpErr != nil {
-		ctx.Abort(httpErr)
-		return
-	}
-
-	opts := &websocket.AcceptOptions{
-		Subprotocols:    prov.Subs,
-		CompressionMode: websocket.CompressionContextTakeover,
-		// InsecureSkipVerify: true,
-	}
-
-	conn, err := websocket.Accept(
-		httpCtx.Writer,
-		httpCtx.Request,
-		opts,
-	)
-	if err != nil {
-		ctx.Abort(err)
-		_ = httpCtx.AbortWithError(http.StatusBadRequest, err)
-		return
-	}
-	if conn.Subprotocol() == "" {
-		err = fmt.Errorf("[WsHandleProvider] subprotocol required")
-		ctx.Abort(err)
-		_ = conn.Close(websocket.StatusPolicyViolation, "subprotocol required")
-		return
-	}
-	defer conn.CloseNow()
-
-	ctx.WsHandle = &WsHandleContext[Q, B, P]{
-		Conn: NewHTTPWebSocketConnection(conn),
-	}
-
-	var rsp *P
-	rsp, err = prov.Handler(ctx, req)
-	ctx.WsHandle.Response = rsp
-	ctx.WsHandle.Error = err
-	if err != nil {
-		_ = ctx.WsHandle.Conn.Close(int(websocket.StatusInternalError), err.Error())
-	} else {
-		_ = ctx.WsHandle.Conn.Close(int(websocket.StatusNormalClosure), "")
-	}
-}
-
-func (prov *WsHandleProvider[Q, B, P]) handleWails(ctx *Context[Q, B, P], req *REQ[Q, B]) {
 	if ctx.WsHandle == nil || ctx.WsHandle.Conn == nil {
-		ctx.Abort(fmt.Errorf("[WsHandleProvider] wails socket session is not ready"))
+		ctx.Abort(fmt.Errorf("[WsHandleProvider] socket session is not ready for transport[%s]", ctx.ContextKind()))
 		return
 	}
 

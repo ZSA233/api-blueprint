@@ -35,9 +35,6 @@ func (prov *AuthProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
 	authCtx, err := prov.BuildAuthContext(ctx, req)
 	if err != nil {
 		ctx.Abort(err)
-		if httpCtx, httpErr := ctx.RequireHTTP(); httpErr == nil {
-			_ = httpCtx.AbortWithError(-1, err)
-		}
 		return
 	}
 	ctx.Auth = authCtx

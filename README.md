@@ -82,6 +82,7 @@ entrypoints = ["blueprints.app:*"]
 codegen_output = "golang"
 upstream = "http://localhost:2333"
 provider_package = "provider"
+transport_adapters = ["http", "wails"]
 
 [typescript]
 codegen_output = "typescript"
@@ -124,6 +125,8 @@ api-gen-grpc -c examples/api-blueprint.toml --target go.*
 - `gen_*` 文件由生成器拥有，重生成会覆盖。
 - `impl_*` 与非 `gen_*` passthrough 文件是用户拥有扩展点，重生成时保留。
 - Wails overlay 生成在共享 Go / TypeScript 输出树的相邻保留目录中；`api-gen-wails` 不生成完整 Wails app shell，external frontend 需先加载 Wails runtime。
+- Go HTTP adapter 会尊重已由 Gin handler 写出的响应，适合少量 HTTP-only raw callback。
+- Wails-only 项目推荐将 `[golang].transport_adapters` 设为 `["wails"]`，只生成 Go core 与 Wails overlay，不生成 Gin HTTP adapter；`[]` 保留为高级 core-only 输出。
 - gRPC 只编译已有 `.proto` 树，不会从 Blueprint DSL 反推 proto/service。
 
 ## 深入文档

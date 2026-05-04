@@ -14,6 +14,7 @@ def test_example_config_loads_expected_values():
     assert config.blueprint.docs_server == "0.0.0.0:2332"
     assert config.golang.codegen_output == "golang"
     assert config.golang.provider_package == "provider"
+    assert config.golang.transport_adapters == ["http", "wails"]
     assert config.typescript is not None
     assert config.typescript.codegen_output == "typescript"
     assert config.typescript.base_url == "http://localhost:2333"
@@ -39,6 +40,7 @@ def test_resolve_config_converts_relative_outputs_to_absolute_paths():
     assert resolved.golang.output is not None
     assert resolved.golang.output.is_absolute()
     assert resolved.golang.provider_package == "provider"
+    assert resolved.golang.transport_adapters == ("http", "wails")
     assert resolved.typescript is not None
     assert resolved.typescript.output is not None
     assert resolved.typescript.output.is_absolute()
@@ -113,6 +115,87 @@ provider_package = "providers"
     resolved = resolve_config(config_path)
     assert resolved.golang is not None
     assert resolved.golang.provider_package == "providers"
+
+
+def test_golang_transport_adapters_load_and_resolve_empty_list(tmp_path):
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[golang]
+codegen_output = "golang"
+transport_adapters = []
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    config = Config.load(config_path)
+    assert config.golang is not None
+    assert config.golang.transport_adapters == []
+
+    resolved = resolve_config(config_path)
+    assert resolved.golang is not None
+    assert resolved.golang.transport_adapters == ()
+
+
+def test_golang_transport_adapters_accept_wails_marker_with_targets(tmp_path):
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[golang]
+codegen_output = "golang"
+transport_adapters = ["wails"]
+
+[[wails.targets]]
+id = "desktop.v3"
+version = "v3"
+overlay_name = "wailsv3"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    config = Config.load(config_path)
+    assert config.golang is not None
+    assert config.golang.transport_adapters == ["wails"]
+
+    resolved = resolve_config(config_path)
+    assert resolved.golang is not None
+    assert resolved.golang.transport_adapters == ("wails",)
+    assert resolved.wails is not None
+    assert resolved.wails.targets[0].id == "desktop.v3"
+
+
+def test_golang_transport_adapters_reject_wails_marker_without_targets(tmp_path):
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[golang]
+codegen_output = "golang"
+transport_adapters = ["wails"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="wails.*wails.targets"):
+        Config.load(config_path)
+
+
+def test_golang_transport_adapters_reject_unknown_value(tmp_path):
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[golang]
+codegen_output = "golang"
+transport_adapters = ["grpc"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="transport_adapters"):
+        Config.load(config_path)
 
 
 def test_golang_provider_package_rejects_invalid_name(tmp_path):

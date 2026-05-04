@@ -105,7 +105,7 @@ frontend_mode = "external"
     go_overlay_types = (shared_go / "views" / "api" / "demo" / "_wailsv3" / "gen_overlay.go").read_text(encoding="utf-8")
     go_binding_service = (shared_go / "views" / "api" / "demo" / "_wailsv3" / "bindings" / "gen_service.go").read_text(encoding="utf-8")
     go_runtime = (shared_go / "views" / "_wailsv3" / "runtime" / "gen_runtime.go").read_text(encoding="utf-8")
-    go_engine = (shared_go / "views" / "engine.go").read_text(encoding="utf-8")
+    go_http_engine = (shared_go / "views" / "_http" / "gen_engine.go").read_text(encoding="utf-8")
     go_provider_context = (shared_go / "views" / "provider" / "gen_context.go").read_text(encoding="utf-8")
     go_provider_executor = (shared_go / "views" / "provider" / "gen_executor.go").read_text(encoding="utf-8")
     ts_overlay_transport = (shared_ts / "api" / "(shared)" / "(wailsv3)" / "gen_transport.ts").read_text(encoding="utf-8")
@@ -133,7 +133,8 @@ frontend_mode = "external"
     assert "generated.NewDemoService(shared.NewRouter(), dispatcher)" in go_binding_service
     assert 'package wailsv3' in go_overlay_types
     assert 'package runtime' in go_runtime
-    assert "provider.NewRouteExecutor" in go_engine
+    assert "provider.NewRouteExecutor" in go_http_engine
+    assert not (shared_go / "views" / "engine.go").exists()
     assert "type RouteExecutor[Q, B, P any] struct" in go_provider_executor
     assert "func (executor *RouteExecutor[Q, B, P]) RunWSPreflight" in go_provider_executor
     assert "ctx.Gin.Next()" not in go_provider_context

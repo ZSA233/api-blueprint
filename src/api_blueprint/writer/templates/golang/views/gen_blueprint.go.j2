@@ -5,8 +5,6 @@ package {{ bp.package }}
 import (
 	{% for group in bp.get_router_groups() %}{% if group.branch %}
 	"{{ group.imports | safe }}"{% endif %}{% endfor %}
-
-	"github.com/gin-gonic/gin"
 )
 
 type Blueprint struct {
@@ -15,10 +13,9 @@ type Blueprint struct {
 	Router *Router{% endif %}{% endfor %}
 }
 
-func NewBlueprint(eng *gin.Engine) *Blueprint {
+func NewBlueprint() *Blueprint {
 	return &Blueprint{ {% for group in bp.get_router_groups() %}{% if group.branch %}
-		{{ group.package.capitalize() ~ "Router" | safe }}: {{ group.package ~ ".NewImpl(eng)" | safe }},{% else %}
-		Router: NewImpl(eng),{% endif %}{% endfor %}
+		{{ group.package.capitalize() ~ "Router" | safe }}: {{ group.package ~ ".NewRouter()" | safe }},{% else %}
+		Router: NewRouter(),{% endif %}{% endfor %}
 	}
 }
-

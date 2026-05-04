@@ -69,6 +69,7 @@ def generate_golang(config_path: str | Path | None = "./api-blueprint.toml", *, 
         output,
         module=golang_config.module,
         provider_package=golang_config.provider_package or "provider",
+        transport_adapters=golang_config.transport_adapters,
     )
     writer.register(*project.entrypoints)
     writer.gen()
@@ -249,6 +250,7 @@ def generate_wails(
         golang_output,
         module=golang_config.module,
         provider_package=golang_config.provider_package or "provider",
+        transport_adapters=golang_config.transport_adapters,
     )
     go_writer.register(*project.entrypoints)
     go_writer.gen()

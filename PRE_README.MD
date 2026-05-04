@@ -96,7 +96,9 @@ README 必须保持简洁。Wails 的 RouteExecutor、provider pipeline、Go/Typ
 - Wails v3 标记为 experimental，Wails v2 标记为 preview。
 - `api-gen-wails` 依赖共享 `[golang]` 与 `[typescript]` 配置，并生成共享树相邻 overlay；旧 `go_out_dir` / `typescript_out_dir` 已废弃。
 - Wails `frontend_mode = "external"` 只生成 API artifacts；外部 frontend 需要在挂载应用前加载 Wails runtime，可使用生成的 `ensureWailsRuntime()` helper。
-- Wails 可以运行在不启动 HTTP 服务的 app shell 中；当前生成的共享 Go 契约层仍包含 HTTP/Gin 注册代码和依赖，这不是完全无 HTTP 依赖的生成模式。
+- `[golang].transport_adapters` 默认 `["http"]`；Wails-only 推荐设为 `["wails"]`，HTTP + Wails 推荐设为 `["http", "wails"]`。`[]` 表示高级 core-only 输出，不生成任何 Go transport adapter。
+- Go HTTP adapter 会按实际 root routes 生成 root `_http` blueprint import，并且不会覆盖 Gin handler 已经写出的响应。
+- Wails 可以运行在不启动 HTTP 服务的 app shell 中；配合 `transport_adapters = ["wails"]`，Wails app 的 Go import graph 不需要包含 Gin HTTP adapter。
 - Wails hello 示例有独立短命令：`make wails-hello-dev` 手动启动，`make wails-hello-check` 严格验证，`make wails-hello-compile-check` 快速编译验证。
 - gRPC v1 不会从 Blueprint DSL 推导 proto；它只编排已有 `.proto` 目录树。
 - TypeScript `base_url_expr` 与 Kotlin `base_url_expr` 会原样输出到生成代码，并与 `base_url` 互斥。

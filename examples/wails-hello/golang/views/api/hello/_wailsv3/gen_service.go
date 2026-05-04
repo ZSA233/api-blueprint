@@ -22,7 +22,15 @@ func NewHelloService(impl RouterInterface, dispatcher runtime.EventDispatcher) *
 }
 
 func (svc *HelloService) Greet(envelope *INVOKE_Greet) (rsp *RSP_Greet, err error) {
-	req := runtime.EnvelopeToReq[REQ_Greet_QUERY, any](envelope)
+	req, reqErr := runtime.EnvelopeToReq[REQ_Greet_QUERY, any](envelope, runtime.ReqEnvelopeOptions{
+		BindQuery: true,
+		BindJSON:  false,
+		BindForm:  false,
+	})
+	if reqErr != nil {
+		err = reqErr
+		return
+	}
 	ctx := sharedprovider.NewWailsContext[REQ_Greet_QUERY, any, RSP_Greet]("HelloService", "Greet", runtime.EnvelopeHeaders(envelope))
 	ctx.Req = &sharedprovider.ReqContext[REQ_Greet_QUERY, any, RSP_Greet]{Request: req}
 	execErr := svc.greetExecutor.Run(ctx)

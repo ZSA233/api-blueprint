@@ -5,6 +5,7 @@ entrypoints = ["blueprints.app:bp"]
 codegen_output = "golang"
 module = "example.com/api-blueprint/wails-hello/golang"
 provider_package = "provider"
+transport_adapters = ["wails"]
 
 [typescript]
 codegen_output = "typescript"

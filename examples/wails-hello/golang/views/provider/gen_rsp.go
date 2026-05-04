@@ -6,10 +6,7 @@ import (
 	"encoding/xml"
 	errors "example.com/api-blueprint/wails-hello/golang/errors"
 	"fmt"
-	"net/http"
 	"strings"
-
-	"github.com/gin-gonic/gin"
 )
 
 const (
@@ -52,50 +49,19 @@ func (prov *RspProvider[Q, B, P]) NewContext(ctx *Context[Q, B, P]) *RspContext 
 
 func (prov *RspProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
 	ctx := AdaptContext[Q, B, P](anyCtx)
-	httpCtx, httpErr := ctx.RequireHTTP()
 
-	var response *P
 	var err error
 	if handled := ctx.Handle; handled != nil {
-		response = handled.Response
 		err = handled.Error
-		if httpCtx != nil {
-			prov.doResponse(httpCtx, response, err)
-		}
 	} else if handled := ctx.WsHandle; handled != nil {
-		response = handled.Response
 		err = handled.Error
-		_, _ = response, err
 	} else {
 		err = fmt.Errorf("[RspProvider] fail to get Handle")
 		ctx.Abort(err)
-		if httpCtx != nil {
-			_ = httpCtx.AbortWithError(-1, err)
-		}
 		return
 	}
-	if httpErr != nil {
-		ctx.Next()
-		return
-	}
-
+	_ = err
 	ctx.Next()
-}
-
-func (prov *RspProvider[Q, B, P]) doResponse(ctx *gin.Context, data *P, err error) {
-	switch prov.Type {
-	case "json":
-		ctx.JSON(NewRSP_JSON(prov, data, err))
-	case "xml":
-		ctx.XML(NewRSP_XML(prov, data, err))
-	}
-}
-
-func (prov *RspProvider[Q, B, P]) errorResponse(ctx *gin.Context, err error) {
-	if err == nil {
-		return
-	}
-	prov.doResponse(ctx, nil, err)
 }
 
 func unwrapError(err error) (code int, message string) {
@@ -121,7 +87,7 @@ func marshalXML[P any](enc *xml.Encoder, start xml.StartElement, xmlName xml.Nam
 
 func ensureValidStatusCode(code int, rsp any, err error) (int, any) {
 	if code != 0 && (code < 100 || code > 599) {
-		code = http.StatusBadRequest
+		code = 400
 		if err != nil {
 			rsp = fmt.Sprintf("%v", err)
 		}

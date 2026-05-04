@@ -2,16 +2,12 @@
 
 package static
 
-import (
-	"github.com/gin-gonic/gin"
-)
-
 type Blueprint struct {
 	Router *Router
 }
 
-func NewBlueprint(eng *gin.Engine) *Blueprint {
+func NewBlueprint() *Blueprint {
 	return &Blueprint{
-		Router: NewImpl(eng),
+		Router: NewRouter(),
 	}
 }

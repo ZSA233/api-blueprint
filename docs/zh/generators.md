@@ -13,11 +13,16 @@ Go 生成器输出：
 - route interface 与默认 `impl.go`。
 - 请求 / 响应 / 上下文结构。
 - provider runtime 与 wrapper。
-- FastAPI/OpenAPI 对应的 Go HTTP 入口。
+- transport-neutral Go core。
+- 可选 HTTP/Gin adapter。
 
 `gen_*` 文件由生成器拥有，重生成会覆盖。`impl_*` 与非 `gen_*` 文件是用户拥有扩展点，重生成时保留。
 
 `[golang].provider_package` 控制共享 provider/runtime 包名，默认 `provider`。
+
+`[golang].transport_adapters` 控制 Go transport adapter，默认 `["http"]`。HTTP 入口生成在 `_http` 保留目录中，例如 `views/api/_http.NewBlueprint(engine)`；Wails-only 推荐设为 `["wails"]`，HTTP + Wails 推荐设为 `["http", "wails"]`。`[]` 只表示 core-only 输出，适合未来 adapter 或高级集成场景。
+
+HTTP adapter 只在 blueprint root 存在直接 routes 时导入 root router。handler 如果已经通过 Gin 写出响应，adapter 不再追加自动响应；否则没有 `rsp` provider 的 route 仍保持旧行为，由 adapter 写出 handler 返回值。
 
 ## TypeScript
 

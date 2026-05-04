@@ -22,7 +22,15 @@ func NewApiService(impl RouterInterface, dispatcher runtime.EventDispatcher) *Ap
 }
 
 func (svc *ApiService) ConnectWs(envelope *WS_CONNECT_Ws) (rsp *runtime.SocketSessionDescriptor, err error) {
-	req := runtime.EnvelopeToReq[any, any](envelope)
+	req, reqErr := runtime.EnvelopeToReq[any, any](envelope, runtime.ReqEnvelopeOptions{
+		BindQuery: false,
+		BindJSON:  false,
+		BindForm:  false,
+	})
+	if reqErr != nil {
+		err = reqErr
+		return
+	}
 	ctx := sharedprovider.NewWailsContext[any, any, RSP_Ws]("ApiService", "ConnectWs", runtime.EnvelopeHeaders(envelope))
 	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_Ws]{Request: req}
 	if err := svc.wsExecutor.RunWSPreflight(ctx); err != nil {

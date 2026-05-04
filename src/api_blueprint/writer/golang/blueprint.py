@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import enum
+import shutil
 from dataclasses import dataclass
 from itertools import chain
 from pathlib import Path
@@ -11,7 +12,7 @@ from api_blueprint.engine.model import Error, Null, create_model, iter_enum_clas
 from api_blueprint.engine.provider import ProviderName
 from api_blueprint.engine.router import Router
 from api_blueprint.engine.utils import join_path_imports, pascal_to_snake_case, snake_to_pascal_case
-from api_blueprint.engine.wrapper import ResponseWrapper
+from api_blueprint.engine.wrapper import NoneWrapper, ResponseWrapper
 from api_blueprint.writer.core.base import BaseBlueprint
 from api_blueprint.writer.core.templates import iter_render, render
 
@@ -88,6 +89,66 @@ class GolangRouter:
     @property
     def rsp_type(self):
         return f"RSP_{self.func_name}"
+
+    @property
+    def query_alias_name(self) -> str | None:
+        if self.router.req_query is None:
+            return None
+        return f"{self.req_type}_QUERY"
+
+    @property
+    def body_alias_name(self) -> str | None:
+        if self.router.req_json is not None:
+            return f"{self.req_type}_JSON"
+        if self.router.req_form is not None:
+            return f"{self.req_type}_FORM"
+        return None
+
+    @property
+    def local_query_type_expr(self) -> str:
+        return self.query_alias_name or "any"
+
+    @property
+    def local_body_type_expr(self) -> str:
+        return self.body_alias_name or "any"
+
+    @property
+    def executor_body_type_expr(self) -> str:
+        if "WS" in self.methods:
+            return "any"
+        return self.local_body_type_expr
+
+    @property
+    def bind_query(self) -> bool:
+        return self.router.req_query is not None
+
+    @property
+    def bind_json(self) -> bool:
+        return self.router.req_json is not None
+
+    @property
+    def bind_form(self) -> bool:
+        return self.router.req_form is not None
+
+    @property
+    def is_json_response(self) -> bool:
+        return self.router.rsp_media_type == "application/json"
+
+    @property
+    def is_xml_response(self) -> bool:
+        return self.router.rsp_media_type == "application/xml"
+
+    @property
+    def is_text_response(self) -> bool:
+        return not self.is_json_response
+
+    @property
+    def response_wrapper_name(self) -> str:
+        return self.router.response_wrapper.__name__
+
+    @property
+    def has_wrapped_json_response(self) -> bool:
+        return self.is_json_response and self.router.response_wrapper is not NoneWrapper
 
     @property
     def req_provider(self):
@@ -227,6 +288,18 @@ class GolangRouterGroup:
         return self.branch if self.branch else self.root
 
     @property
+    def package_leaf(self) -> str:
+        return self.package.rsplit("/", 1)[-1]
+
+    @property
+    def export_name(self) -> str:
+        return snake_to_pascal_case(self.package_leaf, "", "Z")
+
+    @property
+    def http_package(self) -> str:
+        return f"{self.package_leaf}http"
+
+    @property
     def root(self) -> str:
         return self.group.bp.root.strip("/")
 
@@ -260,6 +333,12 @@ class GolangRouterGroup:
                     "method": method,
                     "api": view.url,
                     "provider": view.providers,
+                    "query_type": view.local_query_type_expr,
+                    "body_type": view.executor_body_type_expr,
+                    "rsp_type": view.rsp_type,
+                    "bind_query": view.bind_query,
+                    "bind_json": view.bind_json,
+                    "bind_form": view.bind_form,
                 }
 
     def protos(self) -> Generator[GolangProto, None, None]:
@@ -297,8 +376,23 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
         return self.router_groups
 
     @property
+    def root_router_group(self) -> GolangRouterGroup | None:
+        for group in self.get_router_groups():
+            if not group.branch:
+                return group
+        return None
+
+    @property
     def package(self) -> str:
         return self.bp.root.strip("/")
+
+    @property
+    def package_leaf(self) -> str:
+        return self.package.rsplit("/", 1)[-1]
+
+    @property
+    def http_package(self) -> str:
+        return f"{self.package_leaf}http"
 
     @property
     def imports(self) -> str:
@@ -378,9 +472,7 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
         view_dir = self.writer.working_dir / self.writer.views_package / self.package
         ctx = {"writer": self.writer, "bp": self}
 
-        with self.writer.write_file(self.writer.working_dir / self.writer.views_package / "engine.go", overwrite=True) as handle:
-            if handle:
-                handle.write(render(LANG, "engine.go", ctx, ""))
+        self.cleanup_legacy_http_files()
 
         with self.writer.write_file(view_dir / self.com_proto_gen_path / "protos.go", overwrite=True) as handle:
             if handle:
@@ -398,6 +490,37 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
 
         for group in self.get_router_groups():
             self.gen_routers(group)
+
+        if self.writer.http_adapter_enabled:
+            self.gen_http_adapter()
+
+    def cleanup_legacy_http_files(self) -> None:
+        legacy_engine = self.writer.working_dir / self.writer.views_package / "engine.go"
+        if legacy_engine.exists():
+            legacy_engine.unlink()
+        if self.writer.http_adapter_enabled:
+            return
+        views_dir = self.writer.working_dir / self.writer.views_package
+        if not views_dir.exists():
+            return
+        for http_dir in sorted(views_dir.rglob("_http"), key=lambda path: len(path.parts), reverse=True):
+            if http_dir.is_dir():
+                shutil.rmtree(http_dir)
+
+    def gen_http_adapter(self) -> None:
+        ctx = {"writer": self.writer, "bp": self}
+        http_core_dir = self.writer.working_dir / self.writer.views_package / "_http"
+        with self.writer.write_file(http_core_dir / "gen_engine.go", overwrite=True) as handle:
+            if handle:
+                handle.write(render(LANG, "gen_engine.go", ctx, "views/_http"))
+
+        view_dir = self.writer.working_dir / self.writer.views_package / self.package / "_http"
+        with self.writer.write_file(view_dir / "gen_blueprint.go", overwrite=True) as handle:
+            if handle:
+                handle.write(render(LANG, "gen_blueprint.go", ctx, "views/_http"))
+
+        for group in self.get_router_groups():
+            self.gen_http_router(group)
 
     def validate_reserved_paths(self) -> None:
         self._validate_reserved_segments(self.package, label="blueprint root")
@@ -421,5 +544,17 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
             overwrite = name.startswith("gen_")
             path = view_dir / name if group.branch else view_dir.parent / name
             with self.writer.write_file(path, overwrite=overwrite) as handle:
+                if handle:
+                    handle.write(text)
+
+    def gen_http_router(self, group: GolangRouterGroup) -> None:
+        view_dir = self.writer.working_dir / self.writer.views_package / self.package
+        if group.branch:
+            view_dir /= group.package
+        view_dir /= "_http"
+        ctx = {"writer": self.writer, "bp": self, "router_group": group}
+        for name, text in iter_render(LANG, ctx, "views/route/_http"):
+            overwrite = name.startswith("gen_")
+            with self.writer.write_file(view_dir / name, overwrite=overwrite) as handle:
                 if handle:
                     handle.write(text)

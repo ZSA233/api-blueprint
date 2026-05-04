@@ -4,16 +4,14 @@ package api
 
 import (
 	"example.com/api-blueprint/wails-hello/golang/views/api/hello"
-
-	"github.com/gin-gonic/gin"
 )
 
 type Blueprint struct {
 	HelloRouter *hello.Router
 }
 
-func NewBlueprint(eng *gin.Engine) *Blueprint {
+func NewBlueprint() *Blueprint {
 	return &Blueprint{
-		HelloRouter: hello.NewImpl(eng),
+		HelloRouter: hello.NewRouter(),
 	}
 }
