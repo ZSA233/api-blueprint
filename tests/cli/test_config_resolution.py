@@ -13,8 +13,8 @@ def test_example_config_loads_expected_values():
     assert config.blueprint.entrypoints == ["blueprints.app:*"]
     assert config.blueprint.docs_server == "0.0.0.0:2332"
     assert config.golang.codegen_output == "golang"
-    assert config.golang.provider_package == "provider"
-    assert config.golang.transport_adapters == ["http", "wails"]
+    assert config.transport is not None
+    assert [target.kind for target in config.transport.targets] == ["http", "wails", "wails"]
     assert config.typescript is not None
     assert config.typescript.codegen_output == "typescript"
     assert config.typescript.base_url == "http://localhost:2333"
@@ -24,10 +24,10 @@ def test_example_config_loads_expected_values():
     assert config.kotlin.package == "com.example.apiblueprint"
     assert config.kotlin.base_url == "http://localhost:2333"
     assert config.kotlin.include == ["tag:api"]
-    assert config.wails is not None
-    assert [target.id for target in config.wails.targets] == ["wails.v3", "wails.v2"]
-    assert [target.overlay_name for target in config.wails.targets] == [None, None]
-    assert [target.frontend_mode for target in config.wails.targets] == ["external", "external"]
+    wails_targets = [target for target in config.transport.targets if target.kind == "wails"]
+    assert [target.id for target in wails_targets] == ["wails.v3", "wails.v2"]
+    assert [target.overlay_name for target in wails_targets] == [None, None]
+    assert [target.frontend_mode for target in wails_targets] == ["external", "external"]
     assert config.grpc is not None
     assert [target.id for target in config.grpc.targets] == ["python.greeter", "go.greeter"]
     assert config.grpc.targets[0].python_package_root == "examplegrpc_pb"
@@ -39,8 +39,7 @@ def test_resolve_config_converts_relative_outputs_to_absolute_paths():
     resolved = resolve_config(EXAMPLE_CONFIG)
     assert resolved.golang.output is not None
     assert resolved.golang.output.is_absolute()
-    assert resolved.golang.provider_package == "provider"
-    assert resolved.golang.transport_adapters == ("http", "wails")
+    assert [target.kind for target in resolved.transport.targets] == ["http", "wails", "wails"]
     assert resolved.typescript is not None
     assert resolved.typescript.output is not None
     assert resolved.typescript.output.is_absolute()
@@ -96,7 +95,7 @@ base_url_expr = "import.meta.env.VITE_API_BASE_URL"
     assert resolved.typescript.base_url_expr == "import.meta.env.VITE_API_BASE_URL"
 
 
-def test_golang_provider_package_loads_and_resolves(tmp_path):
+def test_golang_provider_package_rejects_legacy_field(tmp_path):
     config_path = tmp_path / "api-blueprint.toml"
     config_path.write_text(
         """
@@ -108,46 +107,45 @@ provider_package = "providers"
         encoding="utf-8",
     )
 
-    config = Config.load(config_path)
-    assert config.golang is not None
-    assert config.golang.provider_package == "providers"
-
-    resolved = resolve_config(config_path)
-    assert resolved.golang is not None
-    assert resolved.golang.provider_package == "providers"
+    with pytest.raises(ValueError, match="provider_package has been removed"):
+        Config.load(config_path)
 
 
-def test_golang_transport_adapters_load_and_resolve_empty_list(tmp_path):
+def test_transport_targets_allow_core_only_when_no_http_target(tmp_path):
     config_path = tmp_path / "api-blueprint.toml"
     config_path.write_text(
         """
 [golang]
 codegen_output = "golang"
-transport_adapters = []
+
+[[transport.targets]]
+id = "desktop.v3"
+kind = "wails"
+version = "v3"
 """.strip()
         + "\n",
         encoding="utf-8",
     )
 
     config = Config.load(config_path)
-    assert config.golang is not None
-    assert config.golang.transport_adapters == []
+    assert config.transport is not None
+    assert [target.kind for target in config.transport.targets] == ["wails"]
 
     resolved = resolve_config(config_path)
-    assert resolved.golang is not None
-    assert resolved.golang.transport_adapters == ()
+    assert resolved.wails is not None
+    assert resolved.wails.targets[0].id == "desktop.v3"
 
 
-def test_golang_transport_adapters_accept_wails_marker_with_targets(tmp_path):
+def test_transport_targets_accept_wails_target(tmp_path):
     config_path = tmp_path / "api-blueprint.toml"
     config_path.write_text(
         """
 [golang]
 codegen_output = "golang"
-transport_adapters = ["wails"]
 
-[[wails.targets]]
+[[transport.targets]]
 id = "desktop.v3"
+kind = "wails"
 version = "v3"
 overlay_name = "wailsv3"
 """.strip()
@@ -156,17 +154,15 @@ overlay_name = "wailsv3"
     )
 
     config = Config.load(config_path)
-    assert config.golang is not None
-    assert config.golang.transport_adapters == ["wails"]
+    assert config.transport is not None
+    assert config.transport.targets[0].kind == "wails"
 
     resolved = resolve_config(config_path)
-    assert resolved.golang is not None
-    assert resolved.golang.transport_adapters == ("wails",)
     assert resolved.wails is not None
     assert resolved.wails.targets[0].id == "desktop.v3"
 
 
-def test_golang_transport_adapters_reject_wails_marker_without_targets(tmp_path):
+def test_golang_transport_adapters_reject_legacy_field(tmp_path):
     config_path = tmp_path / "api-blueprint.toml"
     config_path.write_text(
         """
@@ -178,27 +174,27 @@ transport_adapters = ["wails"]
         encoding="utf-8",
     )
 
-    with pytest.raises(ValueError, match="wails.*wails.targets"):
+    with pytest.raises(ValueError, match="transport_adapters has been replaced"):
         Config.load(config_path)
 
 
-def test_golang_transport_adapters_reject_unknown_value(tmp_path):
+def test_transport_targets_reject_unknown_kind(tmp_path):
     config_path = tmp_path / "api-blueprint.toml"
     config_path.write_text(
         """
-[golang]
-codegen_output = "golang"
-transport_adapters = ["grpc"]
+[[transport.targets]]
+id = "grpc"
+kind = "grpc"
 """.strip()
         + "\n",
         encoding="utf-8",
     )
 
-    with pytest.raises(ValueError, match="transport_adapters"):
+    with pytest.raises(ValueError, match="kind"):
         Config.load(config_path)
 
 
-def test_golang_provider_package_rejects_invalid_name(tmp_path):
+def test_golang_provider_package_rejects_legacy_invalid_name(tmp_path):
     config_path = tmp_path / "api-blueprint.toml"
     config_path.write_text(
         """
@@ -210,7 +206,7 @@ provider_package = "_providers"
         encoding="utf-8",
     )
 
-    with pytest.raises(ValueError, match="provider_package"):
+    with pytest.raises(ValueError, match="provider_package has been removed"):
         Config.load(config_path)
 
 
@@ -397,8 +393,9 @@ def test_wails_targets_load_and_resolve_absolute_paths(tmp_path):
     config_path = tmp_path / "api-blueprint.toml"
     config_path.write_text(
         """
-[[wails.targets]]
+[[transport.targets]]
 id = "desktop.v3"
+kind = "wails"
 version = "v3"
 overlay_name = "desktop_overlay"
 frontend_mode = "none"
@@ -410,11 +407,11 @@ exclude = ["path:/api/internal/**"]
     )
 
     config = Config.load(config_path)
-    assert config.wails is not None
-    assert config.wails.targets[0].id == "desktop.v3"
-    assert config.wails.targets[0].version == "v3"
-    assert config.wails.targets[0].overlay_name == "desktop_overlay"
-    assert config.wails.targets[0].frontend_mode == "none"
+    assert config.transport is not None
+    assert config.transport.targets[0].id == "desktop.v3"
+    assert config.transport.targets[0].version == "v3"
+    assert config.transport.targets[0].overlay_name == "desktop_overlay"
+    assert config.transport.targets[0].frontend_mode == "none"
 
     resolved = resolve_config(config_path)
     assert resolved.wails is not None
@@ -428,13 +425,15 @@ def test_wails_targets_require_unique_ids(tmp_path):
     config_path = tmp_path / "api-blueprint.toml"
     config_path.write_text(
         """
-[[wails.targets]]
+[[transport.targets]]
 id = "desktop"
+kind = "wails"
 version = "v3"
 overlay_name = "desktop_v3"
 
-[[wails.targets]]
+[[transport.targets]]
 id = "desktop"
+kind = "wails"
 version = "v2"
 overlay_name = "desktop_v2"
         """.strip()
@@ -450,19 +449,21 @@ def test_wails_targets_require_unique_overlay_names_after_defaults(tmp_path):
     config_path = tmp_path / "api-blueprint.toml"
     config_path.write_text(
         """
-[[wails.targets]]
+[[transport.targets]]
 id = "desktop.v3"
+kind = "wails"
 version = "v3"
 
-[[wails.targets]]
+[[transport.targets]]
 id = "desktop.v3.second"
+kind = "wails"
 version = "v3"
         """.strip()
         + "\n",
         encoding="utf-8",
     )
 
-    with pytest.raises(ValueError, match="duplicate overlay_name"):
+    with pytest.raises(ValueError, match="duplicate Wails overlay_name"):
         Config.load(config_path)
 
 
@@ -480,7 +481,7 @@ typescript_out_dir = "generated/typescript"
         encoding="utf-8",
     )
 
-    with pytest.raises(ValueError, match="legacy output fields"):
+    with pytest.raises(ValueError, match="replaced by \\[\\[transport.targets\\]\\]"):
         Config.load(config_path)
 
 
@@ -488,8 +489,9 @@ def test_wails_targets_validate_overlay_name_and_filter_rules(tmp_path):
     bad_overlay = tmp_path / "bad-overlay.toml"
     bad_overlay.write_text(
         """
-[[wails.targets]]
+[[transport.targets]]
 id = "desktop.v3"
+kind = "wails"
 version = "v3"
 overlay_name = "DesktopOverlay"
         """.strip()
@@ -502,8 +504,9 @@ overlay_name = "DesktopOverlay"
     bad_rule = tmp_path / "bad-rule.toml"
     bad_rule.write_text(
         """
-[[wails.targets]]
+[[transport.targets]]
 id = "desktop.v3"
+kind = "wails"
 version = "v3"
 include = ["invalid:desktop"]
         """.strip()

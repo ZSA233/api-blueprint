@@ -38,20 +38,18 @@ class WailsWriter:
             frontend_mode=target.frontend_mode,
             include=target.include,
             exclude=target.exclude,
-            go_runtime_dir=(go_root / "views" / f"_{overlay_name}" / "runtime").resolve(),
-            go_bindings_pattern=(
-                f"{(go_root / 'views').as_posix()}/<blueprint-root>/<group...>/_{overlay_name}/bindings"
-            ),
-            go_route_overlay_pattern=f"{(go_root / 'views').as_posix()}/<blueprint-root>/<group...>/_{overlay_name}",
+            go_transport_dir=(go_root / "views" / "transports" / overlay_name).resolve(),
+            go_service_pattern=f"{(go_root / 'views' / 'transports' / overlay_name).as_posix()}/<blueprint-root>/<group...>",
+            go_route_overlay_pattern=f"{(go_root / 'views' / 'transports' / overlay_name).as_posix()}/<blueprint-root>/<group...>",
             typescript_route_overlay_pattern=(
                 None
                 if target.frontend_mode == "none"
-                else f"{ts_root.as_posix()}/<blueprint-root>/<group...>/({overlay_name})"
+                else f"{ts_root.as_posix()}/<blueprint-root>/transports/{overlay_name}/<blueprint-root>/<group...>"
             ),
             typescript_transport_pattern=(
                 None
                 if target.frontend_mode == "none"
-                else f"{ts_root.as_posix()}/<blueprint-root>/(shared)/({overlay_name})"
+                else f"{ts_root.as_posix()}/<blueprint-root>/transports/{overlay_name}/transport.ts"
             ),
         )
 
@@ -107,10 +105,10 @@ class WailsWriter:
                 branch = group.branch.strip("/")
                 binding_import = join_path_imports(
                     go_writer.shared_views_imports,
+                    "transports",
+                    go_writer.overlay_dir_name,
                     root_package,
                     branch,
-                    go_writer.overlay_dir_name,
-                    "bindings",
                 )
 
                 def add_method(method_name: str) -> None:
@@ -155,7 +153,6 @@ class WailsWriter:
                 version=target.version,
                 overlay_name=target.overlay_name,
                 module=golang_config.module,
-                provider_package=golang_config.provider_package or "provider",
                 route_selection=selection,
             )
             go_writer.register(*entrypoints)

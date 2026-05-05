@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"reflect"
 	"sync"
 	"sync/atomic"
 
@@ -16,6 +17,8 @@ import (
 type EventDispatcher interface {
 	Emit(name string, payload any) error
 }
+
+const DefaultSocketIncomingBuffer = 32
 
 type InvokeEnvelope[Q, B any] struct {
 	Q       *Q                `json:"Q,omitempty"`
@@ -126,7 +129,7 @@ func (hub *SocketHub) Open(routeID string) *SocketSession {
 		messageEvent: fmt.Sprintf("api_blueprint.ws.%s.message.%s", routeID, sessionID),
 		closeEvent:   fmt.Sprintf("api_blueprint.ws.%s.closed.%s", routeID, sessionID),
 		dispatcher:   hub.dispatcher,
-		incoming:     make(chan any, 32),
+		incoming:     make(chan any, DefaultSocketIncomingBuffer),
 		closed:       make(chan struct{}),
 	}
 	session.onClose = func(id string) {
@@ -189,12 +192,42 @@ func (session *SocketSession) ReadJSON(ctx context.Context, target any) error {
 		if payload == nil {
 			return nil
 		}
+		return assignPayload(payload, target)
+	}
+}
+
+func assignPayload(payload any, target any) error {
+	if target == nil {
+		return nil
+	}
+	targetValue := reflect.ValueOf(target)
+	if targetValue.Kind() != reflect.Pointer || targetValue.IsNil() {
 		raw, err := json.Marshal(payload)
 		if err != nil {
 			return err
 		}
 		return json.Unmarshal(raw, target)
 	}
+
+	payloadValue := reflect.ValueOf(payload)
+	targetElem := targetValue.Elem()
+	if payloadValue.IsValid() && payloadValue.Type().AssignableTo(targetElem.Type()) {
+		targetElem.Set(payloadValue)
+		return nil
+	}
+	if payloadValue.IsValid() && payloadValue.Kind() == reflect.Pointer && !payloadValue.IsNil() {
+		payloadElem := payloadValue.Elem()
+		if payloadElem.Type().AssignableTo(targetElem.Type()) {
+			targetElem.Set(payloadElem)
+			return nil
+		}
+	}
+
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(raw, target)
 }
 
 func (session *SocketSession) WriteJSON(_ context.Context, payload any) error {

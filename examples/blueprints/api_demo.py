@@ -126,7 +126,7 @@ with apibp.group('/demo') as views:
     ).RSP(
         list    = Array[String](description='list'),
         list2   = Map[Int64, Array[ApiDemoA]](description='list2'),
-    )
+    ).HTTP_RAW_RESPONSE()
 
     views.POST(
         '/map_model', summary='这是一个raw', description='这是一个raw description', headers=NoneHeader,

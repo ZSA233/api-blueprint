@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import shutil
 from contextlib import contextmanager
 from pathlib import Path
 from typing import IO, Generator, Optional, Set
@@ -54,6 +55,10 @@ class WailsRouter:
 
     @property
     def providers(self) -> str:
+        return self.go.providers
+
+    @property
+    def provider_sequence(self) -> str:
         return self.go.providers
 
     @property
@@ -125,6 +130,22 @@ class WailsRouter:
     @property
     def route_id(self) -> str:
         return self.contract.route_id
+
+    @property
+    def root(self) -> str:
+        return self.router.group.bp.root.strip("/") or "root"
+
+    @property
+    def group_name(self) -> str:
+        return self.router.group.branch.strip("/")
+
+    @property
+    def methods(self) -> list[str]:
+        return self.go.methods
+
+    @property
+    def url(self) -> str:
+        return self.router.url
 
     @property
     def has_ws(self) -> bool:
@@ -235,6 +256,18 @@ class WailsRouterGroup:
         return join_path_imports(self.bp.shared_root_imports, self.package)
 
     @property
+    def overlay_imports(self) -> str:
+        imports = join_path_imports(
+            self.bp.writer.shared_views_imports,
+            "transports",
+            self.bp.writer.overlay_dir_name,
+            self.bp.package,
+        )
+        if self.branch:
+            imports = join_path_imports(imports, self.package)
+        return imports
+
+    @property
     def binding_package(self) -> str:
         views = list(self.views())
         if not views:
@@ -264,7 +297,7 @@ class WailsBlueprint(BaseBlueprint["WailsGoWriter"]):
 
     @property
     def shared_root_imports(self) -> str:
-        return join_path_imports(self.writer.shared_views_imports, self.package)
+        return join_path_imports(self.writer.shared_routes_imports, self.package)
 
     @property
     def shared_protos_imports(self) -> str:
@@ -294,8 +327,7 @@ class WailsBlueprint(BaseBlueprint["WailsGoWriter"]):
 
     def gen(self) -> None:
         ctx = {"writer": self.writer, "bp": self}
-        runtime_dir = self.writer.runtime_dir
-        with self.writer.write_file(runtime_dir / "gen_runtime.go", overwrite=True) as handle:
+        with self.writer.write_file(self.writer.runtime_dir / "gen_runtime.go", overwrite=True) as handle:
             if handle:
                 handle.write(render(LANG, "gen_runtime.go", ctx, "runtime"))
 
@@ -303,23 +335,14 @@ class WailsBlueprint(BaseBlueprint["WailsGoWriter"]):
             self.gen_group(group)
 
     def gen_group(self, group: WailsRouterGroup) -> None:
-        group_dir = self.writer.views_dir / self.package
+        group_dir = self.writer.views_dir / "transports" / self.writer.overlay_dir_name / self.package
         if group.branch:
             group_dir /= group.package
-        group_dir /= self.writer.overlay_dir_name
         ctx = {"writer": self.writer, "bp": self, "router_group": group}
-        for template_name in ("gen_overlay.go", "gen_service.go"):
-            with self.writer.write_file(group_dir / template_name, overwrite=True) as handle:
+        for template_name in ("gen_overlay.go", "gen_service.go", "impl_service.go"):
+            with self.writer.write_file(group_dir / template_name, overwrite=template_name.startswith("gen_")) as handle:
                 if handle:
                     handle.write(render(LANG, template_name, ctx, "go/route"))
-
-        binding_dir = group_dir / "bindings"
-        with self.writer.write_file(binding_dir / "gen_service.go", overwrite=True) as handle:
-            if handle:
-                handle.write(render(LANG, "gen_service.go", ctx, "go/bindings"))
-        with self.writer.write_file(binding_dir / "impl_service.go", overwrite=False) as handle:
-            if handle:
-                handle.write(render(LANG, "impl_service.go", ctx, "go/bindings"))
 
 
 class WailsGoWriter(BaseWriter[WailsBlueprint]):
@@ -330,14 +353,12 @@ class WailsGoWriter(BaseWriter[WailsBlueprint]):
         version: str,
         overlay_name: str,
         module: str | None = None,
-        provider_package: str = PackageName.PROVIDER.value,
-        runtime_package: str = "runtime",
+        runtime_package: str = "wailstransport",
         route_selection: WailsRouteSelection | None = None,
     ):
         super().__init__(working_dir)
         self.version = version
         self.overlay_name = overlay_name
-        self.provider_package = provider_package
         self.runtime_package = runtime_package
         self.route_selection = route_selection
         self.toolchain = GolangToolchain(logger)
@@ -349,26 +370,29 @@ class WailsGoWriter(BaseWriter[WailsBlueprint]):
         self.shared_packages = GolangPackageLayout(
             module_import=shared_go_module.import_path,
             views_package=PackageName.VIEWS.value,
-            provider_package=provider_package,
             errors_package=PackageName.ERROR.value,
         )
 
     @property
     def overlay_dir_name(self) -> str:
-        return f"_{self.overlay_name}"
+        return self.overlay_name
 
     @property
     def runtime_imports(self) -> str:
         return join_path_imports(
             self.module_import,
             self.shared_packages.views_package,
+            "transports",
             self.overlay_dir_name,
-            self.runtime_package,
         )
 
     @property
     def shared_views_imports(self) -> str:
         return self.shared_packages.views_imports
+
+    @property
+    def shared_routes_imports(self) -> str:
+        return self.shared_packages.routes_imports
 
     @property
     def shared_provider_imports(self) -> str:
@@ -380,19 +404,14 @@ class WailsGoWriter(BaseWriter[WailsBlueprint]):
 
     @property
     def runtime_dir(self) -> Path:
-        return self.views_dir / self.overlay_dir_name / self.runtime_package
+        return self.views_dir / "transports" / self.overlay_dir_name
 
     def validate_package_contract(self) -> None:
-        for bp in self.bps:
-            root_name = bp.root_name
-            if root_name and root_name == self.provider_package:
-                raise ValueError(
-                    f"[gen_wails] provider_package[{self.provider_package}] "
-                    f"与 blueprint root[{root_name}] 冲突；请调整 [golang].provider_package 或 blueprint root"
-                )
+        return None
 
     def gen(self) -> None:
         self.validate_package_contract()
+        self.cleanup_legacy_overlay_files()
         for bp in self.bps:
             bp.build()
             bp.gen()
@@ -400,6 +419,37 @@ class WailsGoWriter(BaseWriter[WailsBlueprint]):
         if self._written_files:
             for file in self._written_files:
                 self.toolchain.run_format(file)
+
+    def cleanup_legacy_overlay_files(self) -> None:
+        legacy_runtime = self.views_dir / f"_{self.overlay_name}"
+        if legacy_runtime.exists():
+            shutil.rmtree(legacy_runtime)
+        if not self.views_dir.exists():
+            return
+        for overlay_dir in sorted(self.views_dir.rglob(f"_{self.overlay_name}"), key=lambda path: len(path.parts), reverse=True):
+            if overlay_dir.is_dir():
+                shutil.rmtree(overlay_dir)
+        transport_dir = self.views_dir / "transports" / self.overlay_dir_name
+        legacy_runtime_dir = transport_dir / "runtime"
+        if legacy_runtime_dir.exists():
+            shutil.rmtree(legacy_runtime_dir)
+        if transport_dir.exists():
+            for binding_dir in sorted(transport_dir.rglob("bindings"), key=lambda path: len(path.parts), reverse=True):
+                if self._is_legacy_binding_dir(binding_dir):
+                    shutil.rmtree(binding_dir)
+
+    @staticmethod
+    def _is_legacy_binding_dir(path: Path) -> bool:
+        if not path.is_dir():
+            return False
+        generated = path / "gen_service.go"
+        if not generated.is_file():
+            return False
+        try:
+            text = generated.read_text(encoding="utf-8")
+        except OSError:
+            return False
+        return "generated.New" in text
 
     @contextmanager
     def write_file(self, filepath: str | Path, overwrite: bool = False) -> Generator[Optional[IO], None, None]:

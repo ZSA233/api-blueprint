@@ -112,7 +112,7 @@ def _group_slug(router: Router) -> str:
         slug = re.sub(r"[^0-9A-Za-z]+", "_", branch.lower()) or "root"
     else:
         root = (router.group.root or "").strip("/")
-        slug = "(root)" if root else "root"
+        slug = re.sub(r"[^0-9A-Za-z]+", "_", root.lower()) or "root" if root else "root"
     return slug
 
 

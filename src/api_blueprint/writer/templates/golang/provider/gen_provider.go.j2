@@ -2,38 +2,82 @@
 
 package {{ writer.provider_package }}
 
-
-var PROVIDERS = map[string]Provider{}
+var providerFactories = map[string]ProviderFactory{}
 
 type Provider interface {
 	GetName() string
 	Handle(anyCtx ContextInterface)
 }
 
-func RegisterProvider(name string, handler Provider) {
-	PROVIDERS[name] = handler
+type ProviderSpec struct {
+	Name    string
+	Data    string
+	Route   RouteInfo
+	Handler any
 }
 
-func GetProvider(name string) Provider {
-	return PROVIDERS[name]
+type ProviderFactory func(spec ProviderSpec) Provider
+
+type Indexer[Q, B, P any] struct {
+	Req *ReqProvider[Q, B, P]
+	Rsp *RspProvider[Q, B, P]
 }
 
-func SelectInternal[Q, B, P any](
-	key string, value string,
-	handler func(c *Context[Q, B, P], req *REQ[Q, B]) (rsp *P, err error),
+func RegisterProviderFactory(name string, factory ProviderFactory) {
+	if name == "" {
+		return
+	}
+	if factory == nil {
+		delete(providerFactories, name)
+		return
+	}
+	providerFactories[name] = factory
+}
+
+func resolveProvider[Q, B, P any](
+	spec ProviderSpec,
+	handler RouteHandler[Q, B, P],
+) Provider {
+	if spec.Handler == nil {
+		spec.Handler = handler
+	}
+	if factory := providerFactories[spec.Name]; factory != nil {
+		if prov := factory(spec); prov != nil {
+			return prov
+		}
+	}
+	if prov := SelectProvider(spec, handler); prov != nil {
+		return prov
+	}
+	return selectBuiltinProvider(spec, handler)
+}
+
+func selectBuiltinProvider[Q, B, P any](
+	spec ProviderSpec,
+	handler RouteHandler[Q, B, P],
 ) Provider {
 	var prov Provider = nil
-	switch key {
+	switch spec.Name {
 	case PROV_REQ:
-		prov = NewReqProvider(value, handler)
+		typed := NewReqProvider(spec.Data, handler)
+		typed.Route = spec.Route
+		prov = typed
 	case PROV_RSP:
-		prov = NewRspProvider(value, handler)
+		typed := NewRspProvider(spec.Data, handler)
+		typed.Route = spec.Route
+		prov = typed
 	case PROV_AUTH:
-		prov = NewAuthProvider(value, handler)
+		typed := NewAuthProvider(spec.Data, handler)
+		typed.Route = spec.Route
+		prov = typed
 	case PROV_HANDLE:
-		prov = NewHandleProvider(value, handler)
+		typed := NewHandleProvider(spec.Data, handler)
+		typed.Route = spec.Route
+		prov = typed
 	case PROV_WS_HANDLE:
-		prov = NewWsHandleProvider(value, handler)
+		typed := NewWsHandleProvider(spec.Data, handler)
+		typed.Route = spec.Route
+		prov = typed
 	}
 	return prov
 }

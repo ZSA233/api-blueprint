@@ -81,15 +81,18 @@ entrypoints = ["blueprints.app:*"]
 [golang]
 codegen_output = "golang"
 upstream = "http://localhost:2333"
-provider_package = "provider"
-transport_adapters = ["http", "wails"]
 
 [typescript]
 codegen_output = "typescript"
 base_url = "http://localhost:2333"
 
-[[wails.targets]]
+[[transport.targets]]
+id = "http"
+kind = "http"
+
+[[transport.targets]]
 id = "wails.v3"
+kind = "wails"
 version = "v3"
 frontend_mode = "external"
 
@@ -124,9 +127,11 @@ api-gen-grpc -c examples/api-blueprint.toml --target go.*
 - `examples/wails-hello/` 是独立 Wails v3 hello world 示例，演示不启动 HTTP 服务的 GUI 闭环。
 - `gen_*` 文件由生成器拥有，重生成会覆盖。
 - `impl_*` 与非 `gen_*` passthrough 文件是用户拥有扩展点，重生成时保留。
-- Wails overlay 生成在共享 Go / TypeScript 输出树的相邻保留目录中；`api-gen-wails` 不生成完整 Wails app shell，external frontend 需先加载 Wails runtime。
+- Go / TypeScript 生成物按 `core + transports/<target>` 布局输出；`api-gen-wails` 不生成完整 Wails app shell，external frontend 需先加载 Wails runtime。
+- Wails target 的 `include` / `exclude` 会裁剪 target overlay / facade；未选中 route 的 root 不生成 `transports/<overlay_name>`，共享契约层仍完整生成。
+- Go `views/providers` 是全局 runtime；按 route 选择 provider 实现可使用 route-scoped provider factory，用户自定义 hook 为 `SelectProvider(spec, handler)`，详见生成器文档。
 - Go HTTP adapter 会尊重已由 Gin handler 写出的响应，适合少量 HTTP-only raw callback。
-- Wails-only 项目推荐将 `[golang].transport_adapters` 设为 `["wails"]`，只生成 Go core 与 Wails overlay，不生成 Gin HTTP adapter；`[]` 保留为高级 core-only 输出。
+- 未声明 `[[transport.targets]]` 时默认生成 HTTP target；Wails-only 项目只声明 `kind = "wails"` target，不会生成 Gin HTTP adapter；HTTP + Wails 项目同时声明 `kind = "http"` 与 `kind = "wails"`。
 - gRPC 只编译已有 `.proto` 树，不会从 Blueprint DSL 反推 proto/service。
 
 ## 深入文档

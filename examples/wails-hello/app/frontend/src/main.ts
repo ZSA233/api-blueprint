@@ -1,5 +1,5 @@
-import { ensureWailsRuntime, WailsV3Transport } from "../../../typescript/api/(shared)/(wailsv3)/transport";
-import { createClients } from "../../../typescript/api/(wailsv3)";
+import { ensureWailsRuntime, WailsV3Transport } from "../../../typescript/api/transports/wailsv3/transport";
+import { createClients } from "../../../typescript/api/transports/wailsv3/api";
 
 function extractMessage(response: unknown): string {
   if (response !== null && typeof response === "object") {

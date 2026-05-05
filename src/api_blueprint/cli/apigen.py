@@ -107,8 +107,8 @@ def gen_wails(
         click.echo(f"version: {target.version}")
         click.echo(f"overlay_name: {target.overlay_name}")
         click.echo(f"frontend_mode: {target.frontend_mode}")
-        click.echo(f"go_runtime_dir: {target.go_runtime_dir}")
-        click.echo(f"go_bindings_pattern: {target.go_bindings_pattern}")
+        click.echo(f"go_transport_dir: {target.go_transport_dir}")
+        click.echo(f"go_service_pattern: {target.go_service_pattern}")
         click.echo(f"go_route_overlay_pattern: {target.go_route_overlay_pattern}")
         click.echo(
             "typescript_transport_pattern: "

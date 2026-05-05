@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import enum
+import re
 import shutil
 from dataclasses import dataclass
 from itertools import chain
@@ -29,6 +30,11 @@ from .protos import (
 
 if TYPE_CHECKING:
     from .writer import GolangWriter
+
+
+def _route_slug(value: str, *, default: str) -> str:
+    normalized = re.sub(r"[^0-9A-Za-z]+", "_", value.lower()).strip("_")
+    return normalized or default
 
 
 class GolangError:
@@ -71,6 +77,38 @@ class GolangRouter:
     @property
     def methods(self) -> list[str]:
         return [method.upper() for method in self.router.methods]
+
+    @property
+    def root(self) -> str:
+        return self.router.group.bp.root.strip("/") or "root"
+
+    @property
+    def group(self) -> str:
+        return self.router.group.branch.strip("/")
+
+    @property
+    def namespace(self) -> str:
+        return self._group_alias()
+
+    @property
+    def service_name(self) -> str:
+        service_name = snake_to_pascal_case(self.namespace or "root", "", "Group")
+        if not service_name.endswith("Service"):
+            service_name += "Service"
+        return service_name
+
+    @property
+    def route_id(self) -> str:
+        root_slug = _route_slug(self.router.group.bp.root.strip("/"), default="root")
+        method_slug = _route_slug(",".join(sorted(method.lower() for method in self.router.methods)), default="route")
+        route_name_slug = _route_slug(self.func_name, default="root")
+        return ".".join((root_slug, self.namespace, method_slug, route_name_slug))
+
+    def _group_alias(self) -> str:
+        branch = self.router.group.branch.strip("/")
+        if branch:
+            return _route_slug(branch, default="root")
+        return _route_slug(self.router.group.root.strip("/"), default="root")
 
     @property
     def func_name(self):
@@ -189,6 +227,10 @@ class GolangRouter:
             provider_specs.append(key)
         return "|".join(provider_specs)
 
+    @property
+    def http_raw_response(self) -> bool:
+        return bool(self.router.extra.get("http_raw_response"))
+
     def protos(self) -> Generator[GolangProto, None, None]:
         req_query_proto = None
         req_form_proto = None
@@ -296,8 +338,12 @@ class GolangRouterGroup:
         return snake_to_pascal_case(self.package_leaf, "", "Z")
 
     @property
+    def shared_alias(self) -> str:
+        return f"shared{self.export_name}"
+
+    @property
     def http_package(self) -> str:
-        return f"{self.package_leaf}http"
+        return self.package_leaf
 
     @property
     def root(self) -> str:
@@ -310,6 +356,13 @@ class GolangRouterGroup:
     @property
     def imports(self) -> str:
         return self.bp.imports if not self.branch else join_path_imports(self.bp.imports, self.package)
+
+    @property
+    def http_imports(self) -> str:
+        imports = join_path_imports(self.bp.writer.http_adapter_imports, self.root)
+        if self.branch:
+            imports = join_path_imports(imports, self.package)
+        return imports
 
     def __len__(self) -> int:
         return len(self.group)
@@ -333,9 +386,17 @@ class GolangRouterGroup:
                     "method": method,
                     "api": view.url,
                     "provider": view.providers,
+                    "root": view.root,
+                    "group": view.group,
+                    "namespace": view.namespace,
+                    "service": view.service_name,
+                    "operation": view.func_name,
+                    "route_id": view.route_id,
+                    "methods": view.methods,
                     "query_type": view.local_query_type_expr,
                     "body_type": view.executor_body_type_expr,
                     "rsp_type": view.rsp_type,
+                    "raw_response": view.http_raw_response,
                     "bind_query": view.bind_query,
                     "bind_json": view.bind_json,
                     "bind_form": view.bind_form,
@@ -392,11 +453,11 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
 
     @property
     def http_package(self) -> str:
-        return f"{self.package_leaf}http"
+        return self.package_leaf
 
     @property
     def imports(self) -> str:
-        return join_path_imports(self.writer.views_imports, self.package)
+        return join_path_imports(self.writer.routes_imports, self.package)
 
     @property
     def com_proto_package(self) -> str:
@@ -469,7 +530,7 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
 
     def gen_views(self) -> None:
         self.validate_reserved_paths()
-        view_dir = self.writer.working_dir / self.writer.views_package / self.package
+        view_dir = self.writer.working_dir / self.writer.views_package / "routes" / self.package
         ctx = {"writer": self.writer, "bp": self}
 
         self.cleanup_legacy_http_files()
@@ -498,26 +559,31 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
         legacy_engine = self.writer.working_dir / self.writer.views_package / "engine.go"
         if legacy_engine.exists():
             legacy_engine.unlink()
-        if self.writer.http_adapter_enabled:
-            return
         views_dir = self.writer.working_dir / self.writer.views_package
         if not views_dir.exists():
             return
         for http_dir in sorted(views_dir.rglob("_http"), key=lambda path: len(path.parts), reverse=True):
             if http_dir.is_dir():
                 shutil.rmtree(http_dir)
+        legacy_http_runtime = views_dir / "transports" / "http" / "runtime"
+        if legacy_http_runtime.exists():
+            shutil.rmtree(legacy_http_runtime)
+        if self.writer.http_adapter_enabled:
+            return
+        transports_http = views_dir / "transports" / "http"
+        if transports_http.exists():
+            shutil.rmtree(transports_http)
 
     def gen_http_adapter(self) -> None:
         ctx = {"writer": self.writer, "bp": self}
-        http_core_dir = self.writer.working_dir / self.writer.views_package / "_http"
-        with self.writer.write_file(http_core_dir / "gen_engine.go", overwrite=True) as handle:
+        with self.writer.write_file(self.writer.http_transport_dir / "gen_engine.go", overwrite=True) as handle:
             if handle:
-                handle.write(render(LANG, "gen_engine.go", ctx, "views/_http"))
+                handle.write(render(LANG, "gen_engine.go", ctx, "views/transports/http"))
 
-        view_dir = self.writer.working_dir / self.writer.views_package / self.package / "_http"
+        view_dir = self.writer.http_transport_dir / self.package
         with self.writer.write_file(view_dir / "gen_blueprint.go", overwrite=True) as handle:
             if handle:
-                handle.write(render(LANG, "gen_blueprint.go", ctx, "views/_http"))
+                handle.write(render(LANG, "gen_blueprint.go", ctx, "views/transports/http"))
 
         for group in self.get_router_groups():
             self.gen_http_router(group)
@@ -538,7 +604,7 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
                 )
 
     def gen_routers(self, group: GolangRouterGroup) -> None:
-        view_dir = self.writer.working_dir / self.writer.views_package / self.package / group.package
+        view_dir = self.writer.working_dir / self.writer.views_package / "routes" / self.package / group.package
         ctx = {"writer": self.writer, "bp": self, "router_group": group}
         for name, text in iter_render(LANG, ctx, "views/route"):
             overwrite = name.startswith("gen_")
@@ -548,12 +614,11 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
                     handle.write(text)
 
     def gen_http_router(self, group: GolangRouterGroup) -> None:
-        view_dir = self.writer.working_dir / self.writer.views_package / self.package
+        view_dir = self.writer.http_transport_dir / self.package
         if group.branch:
             view_dir /= group.package
-        view_dir /= "_http"
         ctx = {"writer": self.writer, "bp": self, "router_group": group}
-        for name, text in iter_render(LANG, ctx, "views/route/_http"):
+        for name, text in iter_render(LANG, ctx, "views/route/transports/http"):
             overwrite = name.startswith("gen_")
             with self.writer.write_file(view_dir / name, overwrite=overwrite) as handle:
                 if handle:

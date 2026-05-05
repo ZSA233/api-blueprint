@@ -61,15 +61,14 @@ def test_typescript_http_generation_uses_transport_bridge_and_raw_ws_escape_hatc
     writer.register(bp)
     writer.gen()
 
-    shared_transport = (output_dir / "api" / "(shared)" / "gen_transport.ts").read_text(encoding="utf-8")
-    shared_factory = (output_dir / "api" / "(shared)" / "gen_factory.ts").read_text(encoding="utf-8")
-    shared_index = (output_dir / "api" / "(shared)" / "gen_index.ts").read_text(encoding="utf-8")
-    client_text = (output_dir / "api" / "demo" / "gen_client.ts").read_text(encoding="utf-8")
-    assert "export class DefaultTransport implements ApiTransport" in shared_transport
-    assert "export interface GeneratedClients" in shared_factory
-    assert "export function createClients(config: ApiClientConfig = {}): GeneratedClients" in shared_factory
-    assert 'demoClient: new DemoClient(config),' in shared_factory
-    assert 'export * from "./factory";' in shared_index
+    http_transport = (output_dir / "api" / "transports" / "http" / "gen_transport.ts").read_text(encoding="utf-8")
+    runtime_index = (output_dir / "api" / "runtime" / "gen_index.ts").read_text(encoding="utf-8")
+    http_factory = (output_dir / "api" / "transports" / "http" / "api" / "gen_factory.ts").read_text(encoding="utf-8")
+    client_text = (output_dir / "api" / "routes" / "api" / "demo" / "gen_client.ts").read_text(encoding="utf-8")
+    assert "export class DefaultTransport implements ApiTransport" in http_transport
+    assert not (output_dir / "api" / "runtime" / "gen_factory.ts").exists()
+    assert 'demoClient: new DemoClientImpl(sharedConfig),' in http_factory
+    assert 'export * from "./factory";' not in runtime_index
     assert "connectBridge<Shared.WSSend, Shared.WSRecv>" in client_text
     assert "connectWsRaw(" in client_text
 
@@ -85,5 +84,23 @@ def test_typescript_generation_allows_real_shared_group_without_alias_rewrite(tm
     writer.register(bp)
     writer.gen()
 
-    assert (output_dir / "api" / "shared" / "gen_client.ts").is_file()
-    assert (output_dir / "api" / "(shared)" / "gen_client.ts").is_file()
+    assert (output_dir / "api" / "routes" / "api" / "shared" / "gen_client.ts").is_file()
+    assert (output_dir / "api" / "runtime" / "gen_client.ts").is_file()
+
+
+def test_typescript_root_routes_use_root_client_file_without_reserved_slug(tmp_path: Path):
+    bp = Blueprint(root="/api")
+    bp.GET("/status").RSP(message=String(description="message"))
+    with bp.group("/root") as views:
+        views.GET("/ping").RSP(message=String(description="message"))
+
+    output_dir = tmp_path / "typescript"
+    output_dir.mkdir()
+    writer = TypeScriptWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    assert (output_dir / "api" / "routes" / "api" / "client.ts").is_file()
+    assert (output_dir / "api" / "routes" / "api" / "root" / "client.ts").is_file()
+    assert not (output_dir / "api" / "routes" / "_root").exists()
+    assert not (output_dir / "api" / "transports" / "http" / "api" / "_root").exists()

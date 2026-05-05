@@ -7,8 +7,9 @@ In this repository, the Wails CLI is used to build and package handwritten harne
 ## Target Config
 
 ```toml
-[[wails.targets]]
+[[transport.targets]]
 id = "wails.v3"
+kind = "wails"
 version = "v3"
 frontend_mode = "external"
 # overlay_name = "wailsv3"
@@ -17,35 +18,36 @@ frontend_mode = "external"
 ```
 
 - `id`: used by `--target`, `--list-targets`, and `--explain-target`.
+- `kind`: Wails targets use `wails`.
 - `version`: supports `v3` and `v2`.
 - `overlay_name`: defaults to `wailsv3` / `wailsv2` and must be unique.
 - `frontend_mode`: defaults to `external`; `none` skips the Wails TypeScript overlay.
-- `include` / `exclude`: trim only the Wails overlay, not the shared Go / TypeScript contract layers.
+- `include` / `exclude`: trim the Wails target overlay / facade. Roots with no selected routes do not get `transports/<overlay_name>` output; the shared Go / TypeScript contract layers are still generated in full.
 
 ## Go Output Layout
 
-Wails Go overlays are generated next to the shared `[golang]` output tree:
+Wails Go overlays are generated under the transport target directory inside the shared `[golang]` output tree:
 
 ```text
 views/
-  _wailsv3/runtime/gen_runtime.go
-  api/
-    _wailsv3/
-      gen_overlay.go
-      gen_service.go
-      bindings/
-        gen_service.go
-        impl_service.go
-    demo/
-      _wailsv3/
-        gen_overlay.go
-        gen_service.go
-        bindings/
+  routes/
+    api/
+      demo/
+        gen_interface.go
+        impl.go
+  providers/
+    gen_context.go
+  transports/
+    wailsv3/
+      gen_runtime.go
+      api/
+        demo/
+          gen_overlay.go
           gen_service.go
           impl_service.go
 ```
 
-Every Go `_...` directory is a generator-reserved namespace. `bindings/impl_service.go` is a user-owned bootstrap constructor entry and is preserved across regeneration.
+`views/routes/<root>/<group>` is the transport-neutral core; `views/providers` is the shared provider runtime; `views/transports/<overlay_name>` is the Wails target. The route-local `impl_service.go` is a user-owned bootstrap constructor entry and is preserved across regeneration.
 
 ## TypeScript Output Layout
 
@@ -53,17 +55,24 @@ Wails TypeScript overlays are generated inside the shared `[typescript]` output 
 
 ```text
 api/
-  (shared)/
+  runtime/
     gen_client.ts
-    gen_factory.ts
-    (wailsv3)/gen_transport.ts
-  demo/
-    gen_client.ts
-    (wailsv3)/gen_client.ts
-  (wailsv3)/gen_factory.ts
+    gen_models.ts
+  routes/
+    api/
+      demo/gen_client.ts
+  transports/
+    http/
+      gen_transport.ts        # only when an HTTP target is also declared
+      api/gen_factory.ts
+    wailsv3/
+      gen_transport.ts
+      api/
+        gen_factory.ts
+        demo/gen_client.ts
 ```
 
-Every TypeScript `(...)` directory is a generator-reserved namespace. Wails route overlays expose `createClient(config)` plus the narrow `type <Group>Client`, and the root overlay exposes `createClients(config)`.
+`api/runtime` is the shared transport-neutral runtime; `api/routes/<root>` contains route core clients; `api/transports/http/<root>` and `api/transports/<overlay_name>/<root>` are scenario facades. Wails route overlays expose `createClient(config)` plus the narrow `type <Group>Client`, and the root overlay exposes `createClients(config)`.
 
 ## Provider Hooks
 
@@ -76,9 +85,9 @@ Long-term ownership boundary:
 - `impl_*` helpers: user-owned, but should not retake the provider main flow.
 - Wails runtime: generated-only, no `impl_runtime.go`.
 
-`RouteExecutor` is a reusable route-level execution plan. Request-scoped state must live in `Context` or its metadata store, and custom providers should be stateless/reentrant. HTTP-only providers should explicitly import `views/_http` and use adapter helpers such as `httptransport.RequireGin(ctx)` to access Gin context.
+`RouteExecutor` is a reusable route-level execution plan and carries `RouteInfo`. Request-scoped state must live in `Context` or its metadata store, and custom providers should be stateless/reentrant. When a provider implementation must vary by Wails / HTTP or by root/route, use `views/providers.RegisterProviderFactory` and inspect `ProviderSpec.Route`; selection happens when the executor is created and does not enter the request hot path. HTTP-only providers should explicitly import `views/transports/http` and use adapter helpers such as `httptransport.RequireGin(ctx)` to access Gin context.
 
-HTTP behavior tests should generally live in an external test package, for example `package demo_test`, and import the route-adjacent `_http` adapter. Business handler unit tests can stay in the route package and call handlers directly with typed `ctx/req` values. Use `views/_http.RequireGin(ctx)` only when Gin APIs are actually required; doing so explicitly couples that code to the HTTP adapter.
+HTTP behavior tests should generally live in an external test package, for example `package demo_test`, and import the `views/transports/http/<root>/<group>` adapter. Business handler unit tests can stay in the route package and call handlers directly with typed `ctx/req` values. Use `views/transports/http.RequireGin(ctx)` only when Gin APIs are actually required; doing so explicitly couples that code to the HTTP adapter.
 
 ## TypeScript Transport
 
@@ -87,9 +96,8 @@ The recommended mode is `frontend_mode = "external"`: an existing WebUI keeps th
 An external frontend must load the Wails runtime before mounting the app or creating clients. The generated Wails transport exports `ensureWailsRuntime()` as the minimal bootstrap helper:
 
 ```ts
-import { ensureWailsRuntime } from "./api/(shared)/(wailsv3)/transport";
-import { createClients } from "./api/(wailsv3)/factory";
-import { WailsV3Transport } from "./api/(shared)/(wailsv3)/transport";
+import { ensureWailsRuntime, WailsV3Transport } from "./api/transports/wailsv3/transport";
+import { createClients } from "./api/transports/wailsv3/api";
 
 await ensureWailsRuntime();
 
@@ -100,22 +108,22 @@ const clients = createClients({
 
 The Wails v3 helper checks and loads `/wails/runtime.js` when needed. The Wails v2 helper checks and loads `/wails/ipc.js` plus `/wails/runtime.js` when needed. The transport also performs a lazy runtime check on first use, but explicit bootstrap is recommended so the UI framework does not mount before the runtime is ready.
 
-The shared factory works for HTTP and Wails:
+The Wails facade reuses the shared core clients and injects the Wails transport by default:
 
 ```ts
-import { createClients } from "./api/(wailsv3)/factory";
-import { WailsV3Transport } from "./api/(shared)/(wailsv3)/transport";
+import { createClients } from "./api/transports/wailsv3/api";
+import { WailsV3Transport } from "./api/transports/wailsv3/transport";
 
 const clients = createClients({
     transport: new WailsV3Transport(),
 });
 ```
 
-The Wails v3 transport uses the official runtime `Call.ByName(...)` contract and a generated binding manifest; projects do not need to hand-code Go binding package paths. The Wails v2 transport continues to use the official `window.go.<package>.<service>.<method>` runtime shape.
+The Wails v3 transport uses the official runtime `Call.ByName(...)` contract and a generated binding manifest; projects do not need to hand-code Go service package paths. The Wails v2 transport continues to use the official `window.go.<package>.<service>.<method>` runtime shape.
 
 ## Wails-only App
 
-`api-blueprint` can be used in a Wails app that does not start an HTTP server. `api-gen-wails` still generates the shared Go / TypeScript contract layers; when `[golang].transport_adapters = ["wails"]`, it does not generate the Gin HTTP adapter. The Wails app shell only needs to register generated bindings. It does not need to import the `_http` adapter or start a Gin/HTTP listener.
+`api-blueprint` can be used in a Wails app that does not start an HTTP server. `api-gen-wails` still generates the shared Go / TypeScript contract layers; when only a `kind = "wails"` target is declared, it does not generate the Gin HTTP adapter. The Wails app shell only needs to register generated services. It does not need to import the HTTP adapter or start a Gin/HTTP listener.
 
 ```toml
 [blueprint]
@@ -124,13 +132,13 @@ entrypoints = ["blueprints.app:bp"]
 [golang]
 codegen_output = "golang"
 module = "example.com/myapp/generated"
-transport_adapters = ["wails"]
 
 [typescript]
 codegen_output = "typescript"
 
-[[wails.targets]]
+[[transport.targets]]
 id = "desktop.v3"
+kind = "wails"
 version = "v3"
 frontend_mode = "external"
 ```
@@ -143,7 +151,7 @@ wails3 doctor
 wails3 build
 ```
 
-`transport_adapters = ["wails"]` marks the Go core as consumed by Wails targets but skips the Gin HTTP adapter; when the Wails app imports only generated bindings, its build graph does not need Gin. If one project needs both HTTP and Wails, use `transport_adapters = ["http", "wails"]` and configure `[[wails.targets]]`. The `wails` marker does not replace Wails targets; if it is listed, at least one target must also be configured. See `examples/wails-hello` for the complete minimal example.
+When only a Wails target is declared, the Wails app imports only generated services and its build graph does not need Gin. If one project needs both HTTP and Wails, add another `[[transport.targets]]` with `kind = "http"`. See `examples/wails-hello` for the complete minimal example.
 
 Shortcut for manually starting `examples/wails-hello`:
 

@@ -24,17 +24,13 @@ entrypoints = ["blueprints.app:*"]
 codegen_output = "golang"
 upstream = "http://localhost:2333"
 module = ""
-provider_package = "provider"
-transport_adapters = ["http"]
 ```
 
 - `codegen_output`: Go output directory.
 - `upstream`: backend address used by generated wrappers.
 - `module`: optional Go module override; usually leave it empty and let the tool resolve it.
-- `provider_package`: shared Go runtime/provider package name used by both HTTP and Wails; defaults to `provider` and cannot start with `_`.
-- `transport_adapters`: Go transport adapter list, defaulting to `["http"]`; currently supports `http` and the declarative `wails` marker. Wails-only projects should use `["wails"]`; HTTP + Wails projects should use `["http", "wails"]`; `[]` means Go core only with no Go transport adapter.
 
-Go core is always generated and contains route interfaces, models, provider executor, and user `impl.go` files. The HTTP adapter is generated under reserved directories such as `views/_http` and `views/<root>/<group...>/_http`; HTTP entrypoints should import `_http.NewBlueprint(engine)`. The `wails` adapter marker does not replace `[[wails.targets]]`, which still owns version, overlay, frontend, and filter semantics; if `wails` is listed, at least one Wails target must also be configured.
+Go core is always generated under `views/routes/**` and contains route interfaces, models, and user `impl.go` files. The provider runtime is fixed under `views/providers`. Concrete HTTP / Wails outputs are controlled by `[[transport.targets]]`.
 
 ## typescript
 
@@ -68,11 +64,16 @@ Kotlin generates an OkHttp + kotlinx.serialization Android client. The current v
 
 `include` / `exclude` support `path:`, `tag:`, `group:`, `method:`, and `name:` rules.
 
-## wails
+## transport
 
 ```toml
-[[wails.targets]]
-id = "wails.v3"
+[[transport.targets]]
+id = "http"
+kind = "http"
+
+[[transport.targets]]
+id = "desktop.v3"
+kind = "wails"
 version = "v3"
 frontend_mode = "external"
 # overlay_name = "wailsv3"
@@ -80,11 +81,14 @@ frontend_mode = "external"
 # exclude = ["path:/api/internal/**"]
 ```
 
-A Wails target needs at least `id` and `version`. `version` supports `v3` and `v2`.
+When no `[[transport.targets]]` are declared, the generator emits a default HTTP target. Once targets are declared explicitly, only the listed transports are generated.
+
+- `kind = "http"`: emits the Gin HTTP adapter under `views/transports/http/<root>`, for example `views/transports/http/api.NewBlueprint(engine)`.
+- `kind = "wails"`: emits a Wails target; it needs at least `id`, `kind`, and `version`. `version` supports `v3` and `v2`.
 
 - `overlay_name`: defaults to `wailsv3` / `wailsv2` and must be unique across targets.
 - `frontend_mode`: defaults to `external`; `none` generates only the Go Wails overlay and skips the Wails TypeScript overlay.
-- `include` / `exclude`: trim only the Wails overlay, not the shared Go / TypeScript contract layers.
+- `include` / `exclude`: trim the Wails target overlay / facade; roots with no selected routes do not get `transports/<overlay_name>` output, while the shared Go / TypeScript contract layers are still generated in full.
 
 See [Wails](wails.md) for detailed layout and hooks.
 

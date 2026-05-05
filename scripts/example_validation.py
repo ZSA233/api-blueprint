@@ -49,7 +49,7 @@ GRPC_GO_PRESERVED = ("go.mod",)
 WAILS_HELLO_GOLANG_PRESERVED = (
     "go.mod",
     "go.sum",
-    "views/api/hello/impl.go",
+    "views/routes/api/hello/impl.go",
 )
 WAILS_HELLO_TYPESCRIPT_PRESERVED = ("tsconfig.json",)
 

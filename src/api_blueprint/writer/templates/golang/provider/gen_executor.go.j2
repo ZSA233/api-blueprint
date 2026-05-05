@@ -13,15 +13,43 @@ type RouteExecutor[Q, B, P any] struct {
 	Providers []Provider
 	Indexer   *Indexer[Q, B, P]
 	Handler   RouteHandler[Q, B, P]
+	Route     RouteInfo
+}
+
+func newRouteExecutorFromProviders[Q, B, P any](
+	info RouteInfo,
+	handler RouteHandler[Q, B, P],
+	providers ...Provider,
+) *RouteExecutor[Q, B, P] {
+	filtered := make([]Provider, 0, len(providers))
+	indexer := new(Indexer[Q, B, P])
+	for _, prov := range providers {
+		if prov == nil {
+			continue
+		}
+		filtered = append(filtered, prov)
+		switch typed := prov.(type) {
+		case *ReqProvider[Q, B, P]:
+			indexer.Req = typed
+		case *RspProvider[Q, B, P]:
+			indexer.Rsp = typed
+		}
+	}
+	return &RouteExecutor[Q, B, P]{
+		Providers: filtered,
+		Indexer:   indexer,
+		Handler:   handler,
+		Route:     info,
+	}
 }
 
 func NewRouteExecutor[Q, B, P any](
+	info RouteInfo,
 	provSeq string,
 	handler RouteHandler[Q, B, P],
 ) *RouteExecutor[Q, B, P] {
 	values := strings.Split(provSeq, "|")
 	providers := make([]Provider, 0, len(values))
-	indexer := new(Indexer[Q, B, P])
 	for _, raw := range values {
 		kv := strings.SplitN(raw, "=", 2)
 		key := strings.TrimSpace(kv[0])
@@ -34,31 +62,19 @@ func NewRouteExecutor[Q, B, P any](
 			value = strings.TrimSpace(kv[1])
 		}
 
-		prov := Select(key, value, handler)
-		if prov == nil {
-			prov = SelectInternal(key, value, handler)
-		}
-		if prov == nil {
-			prov = GetProvider(key)
-		}
+		prov := resolveProvider(ProviderSpec{
+			Name:    key,
+			Data:    value,
+			Route:   info,
+			Handler: handler,
+		}, handler)
 		if prov == nil {
 			continue
 		}
 
 		providers = append(providers, prov)
-		switch typed := prov.(type) {
-		case *ReqProvider[Q, B, P]:
-			indexer.Req = typed
-		case *RspProvider[Q, B, P]:
-			indexer.Rsp = typed
-		}
 	}
-
-	return &RouteExecutor[Q, B, P]{
-		Providers: providers,
-		Indexer:   indexer,
-		Handler:   handler,
-	}
+	return newRouteExecutorFromProviders(info, handler, providers...)
 }
 
 func (executor *RouteExecutor[Q, B, P]) Run(ctx *Context[Q, B, P]) error {
@@ -103,6 +119,7 @@ func (executor *RouteExecutor[Q, B, P]) runRange(ctx *Context[Q, B, P], start in
 		return fmt.Errorf("[RouteExecutor] nil context")
 	}
 	ctx.Indexer = executor.Indexer
+	ctx.Route = &executor.Route
 	ctx.executor = executor
 	ctx.pipelineNext = start
 	ctx.pipelineEnd = end

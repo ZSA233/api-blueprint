@@ -1,6 +1,7 @@
 from api_blueprint.engine.runtime.endpoint import make_endpoint
 from api_blueprint.engine.runtime.providers import (
     Auth,
+    Custom,
     Handle,
     Provider,
     ProviderName,
@@ -21,6 +22,7 @@ from api_blueprint.engine.runtime.wrappers import (
 
 __all__ = (
     "Auth",
+    "Custom",
     "GeneralWrapper",
     "Handle",
     "NoneWrapper",

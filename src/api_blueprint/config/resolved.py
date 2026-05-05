@@ -8,7 +8,7 @@ from api_blueprint.config.grpc_python_package import python_package_root_to_path
 from api_blueprint.config.loader import normalize_config_path
 from api_blueprint.config.models import (
     Config,
-    GolangTransportAdapter,
+    TransportKind,
     WailsFrontendMode,
     WailsVersion,
     default_wails_overlay_name,
@@ -21,10 +21,24 @@ class ResolvedTargetConfig:
     output: Path | None
     upstream: str | None = None
     module: str | None = None
-    provider_package: str | None = None
-    transport_adapters: tuple[GolangTransportAdapter, ...] = ("http",)
     base_url: str | None = None
     base_url_expr: str | None = None
+
+
+@dataclass(frozen=True)
+class ResolvedTransportTargetConfig:
+    id: str
+    kind: TransportKind
+    version: WailsVersion | None = None
+    overlay_name: str | None = None
+    frontend_mode: WailsFrontendMode = "external"
+    include: tuple[str, ...] = ()
+    exclude: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class ResolvedTransportConfig:
+    targets: tuple[ResolvedTransportTargetConfig, ...]
 
 
 @dataclass(frozen=True)
@@ -100,6 +114,7 @@ class ResolvedConfig:
     typescript: ResolvedTargetConfig | None
     kotlin: ResolvedKotlinConfig | None
     grpc: ResolvedGrpcConfig | None
+    transport: ResolvedTransportConfig
     wails: ResolvedWailsConfig | None
 
 
@@ -151,6 +166,7 @@ def resolve_config(path: str | Path | None) -> ResolvedConfig:
     ktconf = raw.kotlin
     grpcconf = raw.grpc
     wailsconf = raw.wails
+    transportconf = raw.transport
     target_import_entries = (
         choose_path_entries(grpcconf.import_roots, grpcconf.include_paths)
         if grpcconf is not None
@@ -192,8 +208,6 @@ def resolve_config(path: str | Path | None) -> ResolvedConfig:
             output=resolve_output_path(normalized, goconf.codegen_output),
             upstream=goconf.upstream,
             module=goconf.module,
-            provider_package=goconf.provider_package,
-            transport_adapters=tuple(goconf.transport_adapters),
         ),
         typescript=None
         if tsconf is None
@@ -259,19 +273,36 @@ def resolve_config(path: str | Path | None) -> ResolvedConfig:
                 for job in grpcconf.jobs
             ),
         ),
-        wails=None
-        if wailsconf is None
-        else ResolvedWailsConfig(
+        transport=ResolvedTransportConfig(
+            targets=tuple(
+                ResolvedTransportTargetConfig(
+                    id=target.id,
+                    kind=target.kind,
+                    version=target.version,
+                    overlay_name=(
+                        target.overlay_name or default_wails_overlay_name(target.version)
+                        if target.kind == "wails" and target.version is not None
+                        else target.overlay_name
+                    ),
+                    frontend_mode=target.frontend_mode,
+                    include=normalize_selection_rules(target.include) if target.kind == "wails" else (),
+                    exclude=normalize_selection_rules(target.exclude) if target.kind == "wails" else (),
+                )
+                for target in (transportconf.targets if transportconf is not None else [])
+            ),
+        ),
+        wails=ResolvedWailsConfig(
             targets=tuple(
                 ResolvedWailsTargetConfig(
                     id=target.id,
-                    version=target.version,
-                    overlay_name=target.overlay_name or default_wails_overlay_name(target.version),
+                    version=target.version or "v3",
+                    overlay_name=target.overlay_name or default_wails_overlay_name(target.version or "v3"),
                     frontend_mode=target.frontend_mode,
                     include=normalize_selection_rules(target.include),
                     exclude=normalize_selection_rules(target.exclude),
                 )
-                for target in wailsconf.targets
+                for target in (transportconf.targets if transportconf is not None else [])
+                if target.kind == "wails"
             ),
         ),
     )

@@ -11,7 +11,7 @@ from api_blueprint.route_selection import validate_selection_rules
 
 
 GrpcLayout = Literal["source_relative", "go_package"]
-GolangTransportAdapter = Literal["http", "wails"]
+TransportKind = Literal["http", "wails"]
 WailsVersion = Literal["v2", "v3"]
 WailsFrontendMode = Literal["external", "none"]
 GO_PACKAGE_NAME_RE = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -32,20 +32,24 @@ class UpstreamConfig(BaseModel):
 
 class GolangConfig(CodegenConfig, UpstreamConfig):
     module: str | None = None
-    provider_package: str = "provider"
-    transport_adapters: list[GolangTransportAdapter] = Field(default_factory=lambda: ["http"])
 
-    @model_validator(mode="after")
-    def validate_golang_fields(self) -> "GolangConfig":
-        if not GO_PACKAGE_NAME_RE.fullmatch(self.provider_package):
+    @model_validator(mode="before")
+    @classmethod
+    def reject_legacy_golang_fields(cls, data: object) -> object:
+        if not isinstance(data, dict):
+            return data
+        if "provider_package" in data:
             raise ValueError(
-                "golang.provider_package must be Go package-safe: "
-                "lowercase letters, digits, and underscores, and it cannot start with a digit or underscore"
+                "golang.provider_package has been removed. The shared Go provider runtime "
+                "is always generated at views/providers."
             )
-        duplicates = sorted({name for name in self.transport_adapters if self.transport_adapters.count(name) > 1})
-        if duplicates:
-            raise ValueError(f"golang.transport_adapters contains duplicate values: {', '.join(duplicates)}")
-        return self
+        if "transport_adapters" in data:
+            raise ValueError(
+                "golang.transport_adapters has been replaced by [[transport.targets]]. "
+                "Use no transport section for the default HTTP target, or add explicit "
+                "transport targets with kind = 'http' / kind = 'wails'."
+            )
+        return data
 
 
 class TypeScriptConfig(CodegenConfig, UpstreamConfig):
@@ -231,6 +235,64 @@ class WailsConfig(BaseModel):
         return self
 
 
+class TransportTargetConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    kind: TransportKind
+    version: WailsVersion | None = None
+    overlay_name: str | None = None
+    frontend_mode: WailsFrontendMode = "external"
+    include: list[str] = Field(default_factory=list)
+    exclude: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_target_contract(self) -> "TransportTargetConfig":
+        if self.kind == "http":
+            if self.version is not None:
+                raise ValueError("transport.targets with kind='http' must not set version")
+            if self.overlay_name is not None:
+                raise ValueError("transport.targets with kind='http' must not set overlay_name")
+            if self.include or self.exclude:
+                raise ValueError("transport.targets with kind='http' does not support include/exclude filters")
+            return self
+
+        if self.version is None:
+            raise ValueError("transport.targets with kind='wails' requires version = 'v2' or 'v3'")
+        if self.overlay_name is not None and not GO_PACKAGE_NAME_RE.fullmatch(self.overlay_name):
+            raise ValueError(
+                "transport.targets overlay_name must be Go package-safe: "
+                "lowercase letters, digits, and underscores, and it cannot start with a digit"
+            )
+        validate_selection_rules(self.include, label="[gen_wails]")
+        validate_selection_rules(self.exclude, label="[gen_wails]")
+        return self
+
+
+class TransportConfig(BaseModel):
+    targets: list[TransportTargetConfig] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_targets(self) -> "TransportConfig":
+        target_ids = [target.id for target in self.targets]
+        duplicate_ids = sorted({target_id for target_id in target_ids if target_ids.count(target_id) > 1})
+        if duplicate_ids:
+            raise ValueError(f"transport.targets contains duplicate ids: {', '.join(duplicate_ids)}")
+
+        overlay_names = [
+            target.overlay_name or default_wails_overlay_name(target.version)
+            for target in self.targets
+            if target.kind == "wails" and target.version is not None
+        ]
+        duplicate_overlay_names = sorted({name for name in overlay_names if overlay_names.count(name) > 1})
+        if duplicate_overlay_names:
+            raise ValueError(
+                "transport.targets contains duplicate Wails overlay_name values after defaults: "
+                + ", ".join(duplicate_overlay_names)
+            )
+        return self
+
+
 class BlueprintConfig(BaseModel):
     entrypoints: list[str] | None = None
     docs_server: str | None = None
@@ -243,14 +305,25 @@ class Config(BaseModel):
     typescript: TypeScriptConfig | None = None
     kotlin: KotlinConfig | None = None
     grpc: GrpcConfig | None = None
+    transport: TransportConfig | None = None
     wails: WailsConfig | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_legacy_wails_section(cls, data: object) -> object:
+        if isinstance(data, dict) and "wails" in data:
+            raise ValueError(
+                "[wails] / [[wails.targets]] has been replaced by [[transport.targets]] "
+                "with kind = 'wails'."
+            )
+        return data
 
     @model_validator(mode="after")
     def validate_cross_section_contracts(self) -> "Config":
-        if self.golang is not None and "wails" in self.golang.transport_adapters and self.wails is None:
+        if self.wails is not None:
             raise ValueError(
-                "golang.transport_adapters includes 'wails', but no [[wails.targets]] are configured. "
-                "Add a Wails target or remove the 'wails' adapter marker."
+                "[wails] / [[wails.targets]] has been replaced by [[transport.targets]] "
+                "with kind = 'wails'."
             )
         return self
 

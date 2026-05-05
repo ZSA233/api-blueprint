@@ -86,7 +86,7 @@ with bp.group("/demo") as views:
     result = CliRunner().invoke(gen_typescript, ["-c", str(config)])
 
     assert result.exit_code == 0
-    client_path = output_dir / "api" / "demo" / "gen_client.ts"
+    client_path = output_dir / "api" / "routes" / "api" / "demo" / "gen_client.ts"
     assert client_path.is_file()
     assert expected_line in client_path.read_text(encoding="utf-8")
 
@@ -217,7 +217,8 @@ def test_gen_wails_requires_shared_golang_and_typescript_configs(tmp_path):
     config = tmp_path / "api-blueprint.toml"
     config.write_text(
         """
-[[wails.targets]]
+[[transport.targets]]
+kind = "wails"
 id = "desktop.v3"
 version = "v3"
         """.strip()
@@ -236,12 +237,14 @@ def test_gen_wails_list_targets_outputs_deterministic_listing(tmp_path):
     config = tmp_path / "api-blueprint.toml"
     config.write_text(
         """
-[[wails.targets]]
+[[transport.targets]]
+kind = "wails"
 id = "desktop.v3"
 version = "v3"
 frontend_mode = "external"
 
-[[wails.targets]]
+[[transport.targets]]
+kind = "wails"
 id = "desktop.v2"
 version = "v2"
 overlay_name = "desktop_v2"
@@ -271,7 +274,8 @@ codegen_output = "golang"
 [typescript]
 codegen_output = "typescript"
 
-[[wails.targets]]
+[[transport.targets]]
+kind = "wails"
 id = "desktop.v3"
 version = "v3"
 include = ["tag:desktop"]
@@ -290,11 +294,11 @@ exclude = ["path:/api/internal/**"]
         "version: v3",
         "overlay_name: wailsv3",
         "frontend_mode: external",
-        f"go_runtime_dir: {(tmp_path / 'golang' / 'views' / '_wailsv3' / 'runtime').resolve()}",
-        f"go_bindings_pattern: {(tmp_path / 'golang' / 'views').resolve().as_posix()}/<blueprint-root>/<group...>/_wailsv3/bindings",
-        f"go_route_overlay_pattern: {(tmp_path / 'golang' / 'views').resolve().as_posix()}/<blueprint-root>/<group...>/_wailsv3",
-        f"typescript_transport_pattern: {(tmp_path / 'typescript').resolve().as_posix()}/<blueprint-root>/(shared)/(wailsv3)",
-        f"typescript_route_overlay_pattern: {(tmp_path / 'typescript').resolve().as_posix()}/<blueprint-root>/<group...>/(wailsv3)",
+        f"go_transport_dir: {(tmp_path / 'golang' / 'views' / 'transports' / 'wailsv3').resolve()}",
+        f"go_service_pattern: {(tmp_path / 'golang' / 'views' / 'transports' / 'wailsv3').resolve().as_posix()}/<blueprint-root>/<group...>",
+        f"go_route_overlay_pattern: {(tmp_path / 'golang' / 'views' / 'transports' / 'wailsv3').resolve().as_posix()}/<blueprint-root>/<group...>",
+        f"typescript_transport_pattern: {(tmp_path / 'typescript').resolve().as_posix()}/<blueprint-root>/transports/wailsv3/transport.ts",
+        f"typescript_route_overlay_pattern: {(tmp_path / 'typescript').resolve().as_posix()}/<blueprint-root>/transports/wailsv3/<blueprint-root>/<group...>",
         "include: tag:desktop",
         "exclude: path:/api/internal/**",
     ]

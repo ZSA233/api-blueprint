@@ -24,17 +24,13 @@ entrypoints = ["blueprints.app:*"]
 codegen_output = "golang"
 upstream = "http://localhost:2333"
 module = ""
-provider_package = "provider"
-transport_adapters = ["http"]
 ```
 
 - `codegen_output`：Go 生成目录。
 - `upstream`：生成 wrapper 中使用的后端地址。
 - `module`：可选 Go module 覆盖；通常留空，由工具解析。
-- `provider_package`：共享 Go runtime/provider 包名，HTTP 与 Wails 共用；默认 `provider`，不能以下划线开头。
-- `transport_adapters`：Go transport adapter 列表，默认 `["http"]`；当前支持 `http` 与声明性 `wails` marker。Wails-only 推荐设为 `["wails"]`；HTTP + Wails 推荐设为 `["http", "wails"]`；`[]` 表示只生成 Go core，不生成任何 Go transport adapter。
 
-Go core 始终生成，包含 route interface、models、provider executor 与用户 `impl.go`。HTTP adapter 会生成在 `views/_http` 与 `views/<root>/<group...>/_http` 这类保留目录中；HTTP 入口应导入 `_http.NewBlueprint(engine)`。`wails` adapter marker 不替代 `[[wails.targets]]`，后者仍负责 version、overlay、frontend 与 filter；如果写入 `wails`，必须同时配置至少一个 Wails target。
+Go core 始终生成在 `views/routes/**`，包含 route interface、models 与用户 `impl.go`；provider runtime 固定生成在 `views/providers`。具体 HTTP / Wails 输出由 `[[transport.targets]]` 控制。
 
 ## typescript
 
@@ -68,11 +64,16 @@ Kotlin 生成 OkHttp + kotlinx.serialization Android 客户端。当前版本面
 
 `include` / `exclude` 支持 `path:`、`tag:`、`group:`、`method:`、`name:` 规则。
 
-## wails
+## transport
 
 ```toml
-[[wails.targets]]
-id = "wails.v3"
+[[transport.targets]]
+id = "http"
+kind = "http"
+
+[[transport.targets]]
+id = "desktop.v3"
+kind = "wails"
 version = "v3"
 frontend_mode = "external"
 # overlay_name = "wailsv3"
@@ -80,11 +81,14 @@ frontend_mode = "external"
 # exclude = ["path:/api/internal/**"]
 ```
 
-Wails target 至少需要 `id` 与 `version`。`version` 支持 `v3` 和 `v2`。
+未声明任何 `[[transport.targets]]` 时默认生成一个 HTTP target。显式声明 target 后，生成器只生成列出的 transport。
+
+- `kind = "http"`：生成 Gin HTTP adapter，入口位于 `views/transports/http/<root>`，例如 `views/transports/http/api.NewBlueprint(engine)`。
+- `kind = "wails"`：生成 Wails target；至少需要 `id`、`kind` 与 `version`。`version` 支持 `v3` 和 `v2`。
 
 - `overlay_name`：默认 `wailsv3` / `wailsv2`，必须在所有 target 内唯一。
 - `frontend_mode`：默认 `external`；`none` 表示只生成 Go Wails overlay，不生成 Wails TypeScript overlay。
-- `include` / `exclude`：只裁剪 Wails overlay，不裁剪共享 Go / TypeScript 契约层。
+- `include` / `exclude`：裁剪 Wails target overlay / facade；没有 selected route 的 root 不生成 `transports/<overlay_name>`，但共享 Go / TypeScript 契约层仍完整生成。
 
 详细布局与 hook 见 [Wails 说明](wails.md)。
 

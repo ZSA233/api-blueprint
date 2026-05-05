@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import pytest
+import subprocess
 
-from api_blueprint.engine import Blueprint, Error, Model
+from api_blueprint.engine import Blueprint, Error, Model, provider
+from api_blueprint.engine.model import String
 from api_blueprint.engine.wrapper import GeneralWrapper
 from api_blueprint.writer.golang import GolangResponseWrapper
 from api_blueprint.writer.golang.writer import GolangWriter
@@ -14,7 +15,7 @@ def test_golang_response_wrapper_preserves_generic_type_parameters():
     assert wrapper.generic_types(True) == "[T any]"
 
 
-def test_golang_writer_uses_custom_provider_package(tmp_path):
+def test_golang_writer_uses_fixed_providers_package(tmp_path):
     output_dir = tmp_path / "golang"
     output_dir.mkdir()
     (tmp_path / "go.mod").write_text(
@@ -31,24 +32,47 @@ go 1.23.8
     with bp.group("/demo") as views:
         views.GET("/ping").RSP()
 
-    writer = GolangWriter(output_dir, provider_package="providers")
+    writer = GolangWriter(output_dir)
     writer.register(bp)
     writer.gen()
 
     provider_file = output_dir / "views" / "providers" / "gen_provider.go"
+    provider_impl = output_dir / "views" / "providers" / "impl_provider.go"
     provider_context = output_dir / "views" / "providers" / "gen_context.go"
     provider_executor = output_dir / "views" / "providers" / "gen_executor.go"
-    route_file = output_dir / "views" / "api" / "demo" / "gen_protos.go"
+    route_file = output_dir / "views" / "routes" / "api" / "demo" / "gen_protos.go"
     expected_provider_import = f'providers "example.com/generated/{output_dir.name}/views/providers"'
 
     assert provider_file.is_file()
     assert provider_context.is_file()
     assert provider_executor.is_file()
-    assert 'package providers' in provider_file.read_text(encoding="utf-8")
+    provider_text = provider_file.read_text(encoding="utf-8")
+    provider_impl_text = provider_impl.read_text(encoding="utf-8")
+    provider_context_text = provider_context.read_text(encoding="utf-8")
+    provider_executor_text = provider_executor.read_text(encoding="utf-8")
+    assert 'package providers' in provider_text
     assert expected_provider_import in route_file.read_text(encoding="utf-8")
-    assert "func (ctx *Context[Q, B, P]) Next()" in provider_context.read_text(encoding="utf-8")
-    assert "ctx.Gin.Next()" not in provider_context.read_text(encoding="utf-8")
-    assert "NewRouteExecutor" in provider_executor.read_text(encoding="utf-8")
+    assert "func (ctx *Context[Q, B, P]) Next()" in provider_context_text
+    assert "ctx.Gin.Next()" not in provider_context_text
+    assert "type RouteInfo struct" in provider_context_text
+    assert "Route    *RouteInfo" in provider_context_text
+    assert "type ProviderSpec struct" in provider_text
+    assert "Handler any" in provider_text
+    assert "type Indexer[Q, B, P any] struct" in provider_text
+    assert "func RegisterProviderFactory(name string, factory ProviderFactory)" in provider_text
+    assert "func SelectProvider[Q, B, P any]" in provider_impl_text
+    assert "func SelectWithSpec[Q, B, P any]" not in provider_text
+    assert "func SelectInternal[Q, B, P any]" not in provider_text
+    assert "func Select[Q, B, P any]" not in provider_impl_text
+    assert "func RegisterProvider(" not in provider_text
+    assert "func GetProvider(" not in provider_text
+    assert "func NewRouteExecutor[Q, B, P any](" in provider_executor_text
+    assert "NewRouteExecutorWithInfo" not in provider_executor_text
+    assert "NewRouteExecutorWithPlan" not in provider_executor_text
+    assert "NewRouteExecutorWithProviders" not in provider_executor_text
+    assert "type RoutePlan" not in provider_executor_text
+    assert "routePlan" not in provider_executor_text
+    assert "ctx.Route = &executor.Route" in provider_executor_text
     assert "ctx.Abort(ctx.Req.Error)" in (output_dir / "views" / "providers" / "gen_req.go").read_text(
         encoding="utf-8"
     )
@@ -78,7 +102,7 @@ go 1.23.8
     stale_engine.write_text("package views\n", encoding="utf-8")
     (stale_http / "gen_interface.go").write_text("package httptransport\n", encoding="utf-8")
 
-    writer = GolangWriter(output_dir, transport_adapters=())
+    writer = GolangWriter(output_dir, enabled_transports=())
     writer.register(bp)
     writer.gen()
 
@@ -90,18 +114,19 @@ go 1.23.8
     generated_core = "\n".join(
         path.read_text(encoding="utf-8")
         for path in (
-            output_dir / "views" / "api" / "gen_blueprint.go",
-            output_dir / "views" / "api" / "demo" / "gen_interface.go",
-            output_dir / "views" / "provider" / "gen_context.go",
-            output_dir / "views" / "provider" / "gen_req.go",
-            output_dir / "views" / "provider" / "gen_rsp.go",
+            output_dir / "views" / "routes" / "api" / "gen_blueprint.go",
+            output_dir / "views" / "routes" / "api" / "demo" / "gen_interface.go",
+            output_dir / "views" / "providers" / "gen_context.go",
+            output_dir / "views" / "providers" / "gen_req.go",
+            output_dir / "views" / "providers" / "gen_rsp.go",
         )
+        if path.is_file()
     )
     assert "github.com/gin-gonic/gin" not in generated_core
     assert "RequireHTTP" not in generated_core
 
 
-def test_golang_writer_treats_wails_adapter_marker_as_core_only(tmp_path):
+def test_golang_writer_generates_core_only_when_no_http_adapter_is_enabled(tmp_path):
     output_dir = tmp_path / "golang"
     output_dir.mkdir()
     (tmp_path / "go.mod").write_text(
@@ -118,13 +143,12 @@ go 1.23.8
     with bp.group("/demo") as views:
         views.GET("/ping").RSP()
 
-    writer = GolangWriter(output_dir, transport_adapters=("wails",))
+    writer = GolangWriter(output_dir, enabled_transports=())
     writer.register(bp)
     writer.gen()
 
-    assert (output_dir / "views" / "api" / "demo" / "gen_interface.go").is_file()
-    assert not (output_dir / "views" / "_http").exists()
-    assert not (output_dir / "views" / "api" / "demo" / "_http").exists()
+    assert (output_dir / "views" / "routes" / "api" / "demo" / "gen_interface.go").is_file()
+    assert not (output_dir / "views" / "transports" / "http").exists()
 
 
 def test_golang_writer_generates_http_adapter_separately_from_core(tmp_path):
@@ -148,24 +172,37 @@ go 1.23.8
     writer.register(bp)
     writer.gen()
 
-    root_adapter = output_dir / "views" / "api" / "_http" / "gen_blueprint.go"
-    route_adapter = output_dir / "views" / "api" / "demo" / "_http" / "gen_interface.go"
-    core_route = output_dir / "views" / "api" / "demo" / "gen_interface.go"
+    root_adapter = output_dir / "views" / "transports" / "http" / "api" / "gen_blueprint.go"
+    route_adapter = output_dir / "views" / "transports" / "http" / "api" / "demo" / "gen_interface.go"
+    core_route = output_dir / "views" / "routes" / "api" / "demo" / "gen_interface.go"
 
     assert root_adapter.is_file()
     assert route_adapter.is_file()
     root_adapter_text = root_adapter.read_text(encoding="utf-8")
     route_adapter_text = route_adapter.read_text(encoding="utf-8")
-    assert "package apihttp" in root_adapter_text
+    assert "package api" in root_adapter_text
     assert "sharedroot" not in root_adapter_text
     assert "Router *sharedroot.Router" not in root_adapter_text
-    assert "package demohttp" in route_adapter_text
+    assert "package demo" in route_adapter_text
     assert 'github.com/gin-gonic/gin' in route_adapter_text
     assert "func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router" in route_adapter_text
     assert "func NewRouter(eng *gin.Engine) *shared.Router" in route_adapter_text
     assert "func NewImpl(eng *gin.Engine) *shared.Router" in route_adapter_text
     assert "return NewRouter(eng)" in route_adapter_text
-    assert 'httpcore.GET[any, any, shared.RSP_Ping]' in route_adapter_text
+    assert 'httptransport.GET(' in route_adapter_text
+    assert "sharedprovider.NewRouteExecutor(" in route_adapter_text
+    assert 'Root:      "api"' in route_adapter_text
+    assert 'Group:     "demo"' in route_adapter_text
+    assert 'Namespace: "demo"' in route_adapter_text
+    assert 'Service:   "DemoService"' in route_adapter_text
+    assert 'Operation: "Ping"' in route_adapter_text
+    assert 'RouteID:   "api.demo.get.ping"' in route_adapter_text
+    assert 'Path:      "/api/demo/ping"' in route_adapter_text
+    assert 'Methods:   []string{"GET"}' in route_adapter_text
+    assert "Transport: sharedprovider.TransportHTTP" in route_adapter_text
+    assert "\n\t\t\t\"\",\n" in route_adapter_text
+    assert "eng,\n\n\t\tfalse," not in route_adapter_text
+    assert "NewRouteExecutorWithPlan" not in route_adapter_text
     assert 'github.com/gin-gonic/gin' not in core_route.read_text(encoding="utf-8")
     assert "func NewImpl(eng *gin.Engine)" not in core_route.read_text(encoding="utf-8")
 
@@ -185,18 +222,25 @@ go 1.23.8
 
     bp = Blueprint(root="/api")
     with bp.group("/demo") as views:
-        views.POST("/callback")
+        views.POST("/callback").HTTP_RAW_RESPONSE()
 
     writer = GolangWriter(output_dir)
     writer.register(bp)
     writer.gen()
 
-    http_runtime = (output_dir / "views" / "_http" / "gen_engine.go").read_text(encoding="utf-8")
+    route_adapter = (output_dir / "views" / "transports" / "http" / "api" / "demo" / "gen_interface.go").read_text(
+        encoding="utf-8"
+    )
+    http_runtime = (output_dir / "views" / "transports" / "http" / "gen_engine.go").read_text(encoding="utf-8")
+    assert "sharedprovider.NewRouteExecutor(" in route_adapter
+    assert 'RouteID:   "api.demo.post.callback"' in route_adapter
+    assert "\n\t\t\t\"\",\n" in route_adapter
+    assert "eng,\n\t\ttrue," in route_adapter
     assert "if ginCtx.Writer.Written() {" in http_runtime
     assert "ginCtx.JSON(http.StatusOK, response)" in http_runtime
 
 
-def test_golang_writer_rejects_provider_package_conflicting_with_blueprint_root(tmp_path):
+def test_golang_provider_custom_enters_route_executor_sequence(tmp_path):
     output_dir = tmp_path / "golang"
     output_dir.mkdir()
     (tmp_path / "go.mod").write_text(
@@ -209,15 +253,158 @@ go 1.23.8
         encoding="utf-8",
     )
 
-    bp = Blueprint(root="/provider")
+    bp = Blueprint(
+        root="/static",
+        providers=[
+            provider.Req(),
+            provider.Custom("cache", "ttl=60s"),
+            provider.Handle(),
+            provider.Rsp(),
+        ],
+    )
+    bp.GET("/doc").RSP(message=String(description="message"))
+
+    writer = GolangWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    route_adapter = (output_dir / "views" / "transports" / "http" / "static" / "gen_interface.go").read_text(
+        encoding="utf-8"
+    )
+    assert 'Root:      "static"' in route_adapter
+    assert 'RouteID:   "static.static.get.doc"' in route_adapter
+    assert '"req|cache=ttl=60s|handle|rsp=json@NoneWrapper"' in route_adapter
+
+
+def test_golang_route_aware_provider_factory_runs_at_executor_creation(tmp_path):
+    output_dir = tmp_path / "golang"
+    output_dir.mkdir()
+    (tmp_path / "go.mod").write_text(
+        """
+module example.com/generated
+
+go 1.23.8
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    bp = Blueprint(root="/api")
     with bp.group("/demo") as views:
         views.GET("/ping").RSP()
 
-    writer = GolangWriter(output_dir, provider_package="provider")
+    writer = GolangWriter(output_dir)
     writer.register(bp)
+    writer.gen()
 
-    with pytest.raises(ValueError, match="provider_package\\[provider\\].*blueprint root\\[provider\\]"):
-        writer.gen()
+    (output_dir / "views" / "providers" / "route_factory_test.go").write_text(
+        """
+package providers
+
+import (
+	"context"
+	"testing"
+)
+
+type cacheProvider struct {
+	calls *int
+}
+
+func (prov cacheProvider) GetName() string {
+	return "cache"
+}
+
+func (prov cacheProvider) Handle(anyCtx ContextInterface) {
+	*prov.calls++
+	ctx := AdaptContext[any, any, any](anyCtx)
+	if ctx.Route == nil || ctx.Route.Root != "static" {
+		ctx.Abort(nil)
+		return
+	}
+	ctx.Next()
+}
+
+func TestRouteAwareProviderFactory(t *testing.T) {
+	factoryCalls := 0
+	providerCalls := 0
+	RegisterProviderFactory("cache", func(spec ProviderSpec) Provider {
+		factoryCalls++
+		if spec.Name != "cache" || spec.Data != "ttl=60s" {
+			t.Fatalf("unexpected provider spec: %#v", spec)
+		}
+		if spec.Route.Root != "static" || spec.Route.Transport != TransportHTTP {
+			t.Fatalf("unexpected route info: %#v", spec.Route)
+		}
+		if _, ok := spec.Handler.(RouteHandler[any, any, any]); !ok {
+			t.Fatalf("handler is not route typed: %T", spec.Handler)
+		}
+		return cacheProvider{calls: &providerCalls}
+	})
+
+	executor := NewRouteExecutor(
+		RouteInfo{Root: "static", RouteID: "static.static.get.doc", Transport: TransportHTTP},
+		"cache=ttl=60s",
+		func(c *Context[any, any, any], req *REQ[any, any]) (*any, error) {
+			return nil, nil
+		},
+	)
+	if factoryCalls != 1 {
+		t.Fatalf("factory should run once at executor creation, got %d", factoryCalls)
+	}
+
+	for i := 0; i < 3; i++ {
+		ctx := NewHTTPContext[any, any, any](context.Background(), nil, nil)
+		if err := executor.Run(ctx); err != nil {
+			t.Fatalf("executor run failed: %v", err)
+		}
+		if ctx.Route == nil || ctx.Route.RouteID != "static.static.get.doc" {
+			t.Fatalf("context route not set: %#v", ctx.Route)
+		}
+	}
+	if factoryCalls != 1 {
+		t.Fatalf("factory should not run on request path, got %d", factoryCalls)
+	}
+	if providerCalls != 3 {
+		t.Fatalf("provider should run once per request, got %d", providerCalls)
+	}
+}
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        ["go", "test", "./views/providers"],
+        cwd=output_dir,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_golang_writer_allows_business_root_named_providers(tmp_path):
+    output_dir = tmp_path / "golang"
+    output_dir.mkdir()
+    (tmp_path / "go.mod").write_text(
+        """
+module example.com/generated
+
+go 1.23.8
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    bp = Blueprint(root="/providers")
+    with bp.group("/demo") as views:
+        views.GET("/ping").RSP()
+
+    writer = GolangWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    assert (output_dir / "views" / "providers" / "gen_provider.go").is_file()
+    assert (output_dir / "views" / "routes" / "providers" / "demo" / "gen_interface.go").is_file()
 
 
 def test_golang_writer_generates_only_declared_error_models(tmp_path):

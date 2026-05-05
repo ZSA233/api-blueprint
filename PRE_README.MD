@@ -53,7 +53,7 @@ README 应链接到以下用户文档：
 - `docs/zh/configuration.md` / `docs/en/configuration.md`：配置文件字段说明。
 - `docs/zh/blueprint-dsl.md` / `docs/en/blueprint-dsl.md`：Blueprint DSL 与模型写法。
 - `docs/zh/generators.md` / `docs/en/generators.md`：Go / TypeScript / Kotlin 输出说明。
-- `docs/zh/wails.md` / `docs/en/wails.md`：Wails target、overlay、bindings、provider hook、socket bridge。
+- `docs/zh/wails.md` / `docs/en/wails.md`：Wails target、overlay service、provider hook、socket bridge。
 - `docs/zh/grpc.md` / `docs/en/grpc.md`：gRPC targets、工具链、legacy jobs。
 - `docs/zh/examples-validation.md` / `docs/en/examples-validation.md`：example refresh、validation 与 drift 语义。
 - `docs/release-process.md`：发布流程。
@@ -82,8 +82,8 @@ README 必须保持简洁。Wails 的 RouteExecutor、provider pipeline、Go/Typ
 - `src/api_blueprint/application/`：entrypoint 加载、项目装配、docs server 启动与 generator 调度。
 - `src/api_blueprint/hub/` 与 `src/api_blueprint/static/`：文档服务 UI 资源。
 - `examples/blueprints/`：示例蓝图真源。
-- `examples/golang/`、`examples/typescript/` 与 `examples/kotlin/`：Blueprint 生成产物快照；Wails overlay 直接生成在共享 Go / TypeScript 树里的相邻保留子目录中。
-- `examples/wails-harness/v2/` 与 `examples/wails-harness/v3/`：repo-owned 的最小 Wails harness 示例工程；app shell 手写维护，但直接消费共享树里生成的 bind wrappers 与 TypeScript API 产物。
+- `examples/golang/`、`examples/typescript/` 与 `examples/kotlin/`：Blueprint 生成产物快照；Go / TypeScript 按 `core + transports/<target>` 布局输出，Wails overlay 生成在对应 transport target 目录中。
+- `examples/wails-harness/v2/` 与 `examples/wails-harness/v3/`：repo-owned 的最小 Wails harness 示例工程；app shell 手写维护，但直接消费共享树里生成的 Wails services 与 TypeScript API 产物。
 - `examples/wails-hello/`：独立 Wails v3 hello world 示例；包含自己的 Blueprint、生成快照和手写 Wails app shell，用于演示不开 HTTP 服务的 Wails-only GUI 闭环。
 - `examples/grpc/protos/`：gRPC 示例 proto 真源。
 - `examples/grpc/go/` 与 `examples/grpc/python/`：gRPC 生成产物快照。
@@ -94,11 +94,14 @@ README 必须保持简洁。Wails 的 RouteExecutor、provider pipeline、Go/Typ
 - 项目是“Python DSL -> FastAPI/OpenAPI -> Go/TypeScript/Kotlin/Wails 代码生成器”加“已有 proto 树的 gRPC target 编译器”。
 - 当前公开 Go / TypeScript / Kotlin Android / Wails v2/v3 / gRPC；Java 仅为内部预留扩展位。
 - Wails v3 标记为 experimental，Wails v2 标记为 preview。
-- `api-gen-wails` 依赖共享 `[golang]` 与 `[typescript]` 配置，并生成共享树相邻 overlay；旧 `go_out_dir` / `typescript_out_dir` 已废弃。
+- `api-gen-wails` 依赖共享 `[golang]` 与 `[typescript]` 配置，并通过 `[[transport.targets]] kind = "wails"` 生成 Wails target；旧 `[golang].transport_adapters`、`[[wails.targets]]`、`go_out_dir` / `typescript_out_dir` 已废弃。
 - Wails `frontend_mode = "external"` 只生成 API artifacts；外部 frontend 需要在挂载应用前加载 Wails runtime，可使用生成的 `ensureWailsRuntime()` helper。
-- `[golang].transport_adapters` 默认 `["http"]`；Wails-only 推荐设为 `["wails"]`，HTTP + Wails 推荐设为 `["http", "wails"]`。`[]` 表示高级 core-only 输出，不生成任何 Go transport adapter。
-- Go HTTP adapter 会按实际 root routes 生成 root `_http` blueprint import，并且不会覆盖 Gin handler 已经写出的响应。
-- Wails 可以运行在不启动 HTTP 服务的 app shell 中；配合 `transport_adapters = ["wails"]`，Wails app 的 Go import graph 不需要包含 Gin HTTP adapter。
+- Wails target 的 `include` / `exclude` 只裁剪 target overlay / facade；未选中 route 的 root 不生成 `transports/<overlay_name>`，但共享 Go / TypeScript 契约层仍完整生成。
+- `[[transport.targets]]` 是统一 transport target 配置；未声明 target 时默认生成 HTTP target。Wails-only 写一个 `kind = "wails"` target，HTTP + Wails 同时声明 `kind = "http"` 与 `kind = "wails"` target。
+- Go core 生成在 `views/routes/**`，provider runtime 固定在 `views/providers`，HTTP/Wails adapter 生成在 `views/transports/**`；TypeScript 输出为 `api/runtime/**`、`api/routes/**`、`api/transports/**`。
+- Go `views/providers` 是全局 transport-neutral runtime，不按 root 拆分；需要按 root/route/transport 切换同名 provider 实现时，使用 route-scoped provider factory，用户自定义 hook 为 `SelectProvider(spec, handler)`，详见 `docs/*/generators.md`。
+- Go HTTP adapter 不会覆盖 Gin handler 已经写出的响应；`HTTP_RAW_RESPONSE()` 表示 handler owns HTTP success response，只影响 HTTP adapter finalization。
+- Wails 可以运行在不启动 HTTP 服务的 app shell 中；只声明 Wails target 时，Wails app 的 Go import graph 不需要包含 Gin HTTP adapter。
 - Wails hello 示例有独立短命令：`make wails-hello-dev` 手动启动，`make wails-hello-check` 严格验证，`make wails-hello-compile-check` 快速编译验证。
 - gRPC v1 不会从 Blueprint DSL 推导 proto；它只编排已有 `.proto` 目录树。
 - TypeScript `base_url_expr` 与 Kotlin `base_url_expr` 会原样输出到生成代码，并与 `base_url` 互斥。

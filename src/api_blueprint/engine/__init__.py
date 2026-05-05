@@ -1,6 +1,7 @@
 from api_blueprint.engine.blueprint import Blueprint, ConflictFieldError, Router, RouterGroup
 from api_blueprint.engine.runtime import (
     Auth,
+    Custom,
     GeneralWrapper,
     Handle,
     NoneWrapper,
@@ -20,6 +21,7 @@ __all__ = (
     "Auth",
     "Blueprint",
     "ConflictFieldError",
+    "Custom",
     "Error",
     "GeneralWrapper",
     "Handle",

@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional, Set, Type, Union
+from typing import Any, Optional, Set, Type, Union, TYPE_CHECKING
 
 from api_blueprint.engine.group import RouterGroup
 from api_blueprint.engine.model import FieldWrappedModel, Model, iter_field_model_type, unwrap_model_type
@@ -18,14 +19,17 @@ from api_blueprint.writer.core.contracts import RouteContract, route_contract
 from api_blueprint.writer.core.templates import render
 
 from .naming import to_camel
-from .protos import TypeScriptProto, TypeScriptProtoRegistry, TypeScriptResolvedType
+from .protos import RUNTIME_MODULE, TypeScriptProto, TypeScriptProtoRegistry, TypeScriptResolvedType
+
+if TYPE_CHECKING:
+    from .writer import TypeScriptWriter
+
+SHARED_MODULE = RUNTIME_MODULE
 
 
-SHARED_MODULE = "shared"
-
-
-def _group_module_key(slug: str) -> str:
-    return f"group:{slug}"
+def _group_module_key(slug: str, *, root: bool = False) -> str:
+    prefix = "root" if root else "group"
+    return f"{prefix}:{slug}"
 
 
 class TypeScriptRoute:
@@ -34,14 +38,16 @@ class TypeScriptRoute:
         self.registry = registry
         self.route_prefix = route_prefix
         self.contract: RouteContract = route_contract(router)
+        branch = (router.group.branch or "").strip("/")
 
         self.func_name = self.contract.func_name
         self.group_prefix = self.contract.group_prefix
         self.group_slug = self.contract.group_slug
+        self.group_path = "" if not branch else self.contract.group_slug
         self.group_alias = self.contract.group_alias
         self.group_pascal = self.contract.group_pascal
         self.method_name = self.contract.method_name
-        self.group_module = _group_module_key(self.group_slug)
+        self.group_module = _group_module_key(self.group_slug, root=not branch)
         self.url = router.url
         self.summary = router.extra.get("summary")
         self.description = router.extra.get("description")
@@ -109,7 +115,7 @@ class TypeScriptRoute:
         else:
             explicit = getattr(model, "__name__", None) or self._route_model_name(prefix, suffix)
         tag = "route" if is_route_model else "shared"
-        module = self.group_slug if is_route_model else "shared"
+        module = self.group_slug if is_route_model else SHARED_MODULE
         if tag == "route":
             module = self.group_module
         return self.registry.ensure(model, name=explicit, tag=tag, route=self.func_name, module=module)
@@ -212,6 +218,7 @@ class TypeScriptRouterGroup:
 @dataclass
 class TypeScriptViewGroup:
     slug: str
+    path: str
     alias: str
     prefix: str
     module_key: str
@@ -292,6 +299,7 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
         if group is None:
             group = TypeScriptViewGroup(
                 slug=ts_route.group_slug,
+                path=ts_route.group_path,
                 alias=ts_route.group_alias,
                 prefix=ts_route.group_prefix,
                 module_key=ts_route.group_module,
@@ -307,9 +315,9 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
             for nested in iter_field_model_type(model):
                 if nested is model_cls:
                     continue
-                self.registry.ensure(nested, tag="shared")
+                self.registry.ensure(nested, tag="shared", module=SHARED_MODULE)
             if getattr(model_cls, "__auto__", None) is False and not is_parametrized(model_cls):
-                self.registry.ensure(model_cls, tag="shared")
+                self.registry.ensure(model_cls, tag="shared", module=SHARED_MODULE)
 
         collect(router.req_query)
         collect(router.req_form)
@@ -336,15 +344,19 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
             return []
         return [("Route Contracts", protos)]
 
-    def module_dirs(self, base_dir: Path) -> dict[str, Path]:
-        dirs = {SHARED_MODULE: base_dir / self.writer.shared_dir_name}
+    def module_dirs(self, root_dir: Path) -> dict[str, Path]:
+        route_root_dir = root_dir / self.writer.routes_dir_name / self.package
+        dirs = {SHARED_MODULE: root_dir / self.writer.runtime_dir_name}
         for group in self.groups.values():
-            dirs[group.module_key] = base_dir / group.slug
+            dirs[group.module_key] = route_root_dir / group.path if group.path else route_root_dir
         return dirs
 
     def _relative_import_path(self, current_dir: Path, target_file: Path) -> str:
         rel = os.path.relpath(target_file.with_suffix(""), start=current_dir)
-        return rel.replace("\\", "/")
+        rel = rel.replace("\\", "/")
+        if not rel.startswith("."):
+            rel = f"./{rel}"
+        return rel
 
     def build_imports(self, module: str, module_dirs: dict[str, Path]) -> list[dict[str, Any]]:
         current_dir = module_dirs[module]
@@ -377,6 +389,42 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
     def render_passthrough(self, target: str) -> str:
         return f'\n\nexport * from "{target}";\n'
 
+    def transport_root_exports(self, root_dir: Path, *extra_transports: str) -> list[dict[str, str]]:
+        transports_dir = root_dir / self.writer.transports_dir_name
+        names = set(extra_transports)
+        if transports_dir.exists():
+            names.update(path.name for path in transports_dir.iterdir() if path.is_dir())
+        exports: list[dict[str, str]] = []
+        for name in sorted(names):
+            exports.append({"alias": snake_to_pascal_case(name, "", "Transport"), "path": f"./{name}"})
+        return exports
+
+    def write_transports_index(self, root_dir: Path, *extra_transports: str) -> None:
+        transports_dir = root_dir / self.writer.transports_dir_name
+        transports_dir.mkdir(parents=True, exist_ok=True)
+        exports = self.transport_root_exports(root_dir, *extra_transports)
+        with self.writer.write_file(transports_dir / "gen_index.ts", overwrite=True) as handle:
+            if handle:
+                handle.write(render(self.writer.template_lang, "gen_root_index.ts", {"modules": exports, "extra_exports": []}))
+        with self.writer.write_file(transports_dir / "index.ts", overwrite=False) as handle:
+            if handle:
+                handle.write(self.render_passthrough("./gen_index"))
+
+    def write_root_index(self, root_dir: Path) -> None:
+        root_exports = [
+            {"alias": "Runtime", "path": f"./{self.writer.runtime_dir_name}"},
+            {"alias": "Routes", "path": f"./{self.writer.routes_dir_name}"},
+        ]
+        transports_dir = root_dir / self.writer.transports_dir_name
+        if transports_dir.exists() and any(path.is_dir() for path in transports_dir.iterdir()):
+            root_exports.append({"alias": "Transports", "path": f"./{self.writer.transports_dir_name}"})
+        with self.writer.write_file(root_dir / "gen_index.ts", overwrite=True) as handle:
+            if handle:
+                handle.write(render(self.writer.template_lang, "gen_root_index.ts", {"modules": root_exports, "extra_exports": []}))
+        with self.writer.write_file(root_dir / "index.ts", overwrite=False) as handle:
+            if handle:
+                handle.write(render(self.writer.template_lang, "index.ts", {"modules": root_exports}))
+
     def factory_entries(self, module_dirs: dict[str, Path]) -> list[TypeScriptClientFactoryEntry]:
         shared_dir = module_dirs[SHARED_MODULE]
         entries: list[TypeScriptClientFactoryEntry] = []
@@ -402,8 +450,38 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
             )
         return sorted(entries, key=lambda entry: entry.identifier)
 
+    def facade_factory_entries(self, module_dirs: dict[str, Path], current_dir: Path) -> list[TypeScriptClientFactoryEntry]:
+        entries: list[TypeScriptClientFactoryEntry] = []
+        seen_identifiers: set[str] = set()
+        for group in self.groups.values():
+            base_identifier = to_camel(group.client_class)
+            identifier = base_identifier
+            if identifier in seen_identifiers:
+                for index in range(1, 100):
+                    candidate = f"{base_identifier}{index}"
+                    if candidate not in seen_identifiers:
+                        identifier = candidate
+                        break
+                else:
+                    raise RuntimeError(f"Failed to generate unique client factory identifier for group {group.alias}")
+            seen_identifiers.add(identifier)
+            entries.append(
+                TypeScriptClientFactoryEntry(
+                    identifier=identifier,
+                    class_name=group.client_class,
+                    import_path=self._relative_import_path(current_dir, module_dirs[group.module_key] / "client.ts"),
+                )
+            )
+        return sorted(entries, key=lambda entry: entry.identifier)
+
     def overlay_factory_entries(self, module_dirs: dict[str, Path], overlay_dir_name: str) -> list[TypeScriptOverlayFactoryEntry]:
-        overlay_root_dir = self.writer.working_dir / self.package / overlay_dir_name
+        overlay_root_dir = (
+            self.writer.working_dir
+            / self.package
+            / self.writer.transports_dir_name
+            / overlay_dir_name
+            / self.package
+        )
         entries: list[TypeScriptOverlayFactoryEntry] = []
         seen_identifiers: set[str] = set()
         for group in self.groups.values():
@@ -418,7 +496,8 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                 else:
                     raise RuntimeError(f"Failed to generate unique overlay factory identifier for group {group.alias}")
             seen_identifiers.add(identifier)
-            overlay_client_file = module_dirs[group.module_key] / overlay_dir_name / "client.ts"
+            group_dir = overlay_root_dir / group.path if group.path else overlay_root_dir
+            overlay_client_file = group_dir / "client.ts"
             entries.append(
                 TypeScriptOverlayFactoryEntry(
                     identifier=identifier,
@@ -431,14 +510,13 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
         return sorted(entries, key=lambda entry: entry.identifier)
 
     def gen_overlay(self) -> None:
-        base_dir = self.writer.working_dir / self.package
-        base_dir.mkdir(parents=True, exist_ok=True)
-        module_dirs = self.module_dirs(base_dir)
+        root_dir = self.writer.working_dir / self.package
+        module_dirs = self.module_dirs(root_dir)
         overlay_name = self.writer.overlay_name
         if overlay_name is None:
             raise RuntimeError("overlay_name is required for TypeScript overlay generation")
 
-        transport_dir = module_dirs[SHARED_MODULE] / self.writer.overlay_dir_name
+        transport_dir = root_dir / self.writer.transports_dir_name / self.writer.overlay_dir_name
         transport_dir.mkdir(parents=True, exist_ok=True)
         with self.writer.write_file(transport_dir / "gen_transport.ts", overwrite=True) as handle:
             if handle:
@@ -446,7 +524,10 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                     render(
                         self.writer.template_lang,
                         "gen_transport.ts",
-                        {"writer": self.writer, "client_api_path": "../client"},
+                        {
+                            "writer": self.writer,
+                            "client_api_path": self._relative_import_path(transport_dir, module_dirs[SHARED_MODULE] / "client.ts"),
+                        },
                     )
                 )
         with self.writer.write_file(transport_dir / "transport.ts", overwrite=False) as handle:
@@ -459,9 +540,11 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
             if handle:
                 handle.write(self.render_passthrough("./gen_index"))
 
+        overlay_root_dir = transport_dir / self.package
+        overlay_root_dir.mkdir(parents=True, exist_ok=True)
         for group in self.groups.values():
             parent_group_dir = module_dirs[group.module_key]
-            group_dir = parent_group_dir / self.writer.overlay_dir_name
+            group_dir = overlay_root_dir / group.path if group.path else overlay_root_dir
             group_dir.mkdir(parents=True, exist_ok=True)
 
             client_context = {
@@ -486,17 +569,18 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                 if handle:
                     handle.write(self.render_passthrough("./gen_index"))
 
-        root_overlay_dir = base_dir / self.writer.overlay_dir_name
+        root_overlay_dir = overlay_root_dir
         root_overlay_dir.mkdir(parents=True, exist_ok=True)
-        exports = [{"alias": "Shared", "path": f"../{self.writer.shared_dir_name}/{self.writer.overlay_dir_name}"}]
+        exports: list[dict[str, str]] = []
         second_exports: list[tuple[str, TypeScriptViewGroup]] = []
         seen_alias = set()
         for slug, group in self.groups.items():
-            if slug != group.alias:
+            path = "." if not group.path else f"./{group.path}"
+            if group.path and slug != group.alias:
                 second_exports.append((slug, group))
                 continue
             alias = snake_to_pascal_case(group.alias, "", "Group")
-            exports.append({"alias": alias, "path": f"../{slug}/{self.writer.overlay_dir_name}"})
+            exports.append({"alias": alias, "path": path if path != "." else "./client"})
             seen_alias.add(alias)
 
         for slug, group in second_exports:
@@ -508,7 +592,7 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                         break
                 else:
                     raise RuntimeError(f"Failed to generate unique alias for group {group.alias}")
-            exports.append({"alias": alias, "path": f"../{slug}/{self.writer.overlay_dir_name}"})
+            exports.append({"alias": alias, "path": f"./{group.path}"})
             seen_alias.add(alias)
 
         exports = sorted(exports, key=lambda item: item["alias"])
@@ -521,7 +605,7 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                         "gen_overlay_factory.ts",
                         {
                             "writer": self.writer,
-                            "client_api_path": f"../{self.writer.shared_dir_name}/client",
+                            "client_api_path": self._relative_import_path(root_overlay_dir, module_dirs[SHARED_MODULE] / "client.ts"),
                             "clients": overlay_factory_entries,
                         },
                     )
@@ -531,29 +615,157 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                 handle.write(self.render_passthrough("./gen_factory"))
         with self.writer.write_file(root_overlay_dir / "gen_index.ts", overwrite=True) as handle:
             if handle:
+                extra_exports = ['export * from "./factory";']
+                if any(not group.path for group in self.groups.values()):
+                    extra_exports.insert(0, 'export * from "./client";')
                 handle.write(
                     render(
                         self.writer.template_lang,
                         "gen_root_index.ts",
-                        {"modules": exports, "extra_exports": ['export * from "./factory";']},
+                        {
+                            "modules": [
+                                export
+                                for export in exports
+                                if export["path"] != "./client"
+                            ],
+                            "extra_exports": extra_exports,
+                        },
                     )
                 )
         with self.writer.write_file(root_overlay_dir / "index.ts", overwrite=False) as handle:
             if handle:
                 handle.write(render(self.writer.template_lang, "index.ts", {"modules": exports}))
 
+        with self.writer.write_file(transport_dir / "gen_index.ts", overwrite=True) as handle:
+            if handle:
+                handle.write(
+                    render(
+                        self.writer.template_lang,
+                        "gen_root_index.ts",
+                        {
+                            "modules": [{"alias": snake_to_pascal_case(self.package, "", "Group"), "path": f"./{self.package}"}],
+                            "extra_exports": ['export * from "./transport";'],
+                        },
+                    )
+                )
+        self.write_transports_index(root_dir, self.writer.overlay_dir_name)
+        self.write_root_index(root_dir)
+
+    def cleanup_unselected_overlay(self) -> None:
+        root_dir = self.writer.working_dir / self.package
+        transports_dir = root_dir / self.writer.transports_dir_name
+        if self.writer.overlay_name is not None:
+            overlay_dir = transports_dir / self.writer.overlay_dir_name
+            if overlay_dir.exists():
+                shutil.rmtree(overlay_dir)
+        if not root_dir.exists() or not transports_dir.exists():
+            return
+        if any(path.is_dir() for path in transports_dir.iterdir()):
+            self.write_transports_index(root_dir)
+        else:
+            for index_file in ("gen_index.ts", "index.ts"):
+                stale_index = transports_dir / index_file
+                if stale_index.exists():
+                    stale_index.unlink()
+            try:
+                transports_dir.rmdir()
+            except OSError:
+                pass
+        self.write_root_index(root_dir)
+
+    def gen_http_facade(self, root_dir: Path, module_dirs: dict[str, Path]) -> None:
+        http_dir = root_dir / self.writer.transports_dir_name / "http"
+        http_dir.mkdir(parents=True, exist_ok=True)
+        with self.writer.write_file(http_dir / "gen_transport.ts", overwrite=True) as handle:
+            if handle:
+                handle.write(
+                    render(
+                        self.writer.template_lang,
+                        "gen_transport.ts",
+                        {
+                            "writer": self.writer,
+                            "client_api_path": self._relative_import_path(http_dir, module_dirs[SHARED_MODULE] / "client.ts"),
+                        },
+                    )
+                )
+        with self.writer.write_file(http_dir / "transport.ts", overwrite=False) as handle:
+            if handle:
+                handle.write(self.render_passthrough("./gen_transport"))
+
+        facade_dir = http_dir / self.package
+        facade_dir.mkdir(parents=True, exist_ok=True)
+        clients = self.facade_factory_entries(module_dirs, facade_dir)
+        with self.writer.write_file(facade_dir / "gen_factory.ts", overwrite=True) as handle:
+            if handle:
+                handle.write(
+                    render(
+                        self.writer.template_lang,
+                        "gen_http_factory.ts",
+                        {
+                            "writer": self.writer,
+                            "client_api_path": self._relative_import_path(facade_dir, module_dirs[SHARED_MODULE] / "client.ts"),
+                            "transport_path": self._relative_import_path(facade_dir, http_dir / "transport.ts"),
+                            "clients": clients,
+                        },
+                    )
+                )
+        with self.writer.write_file(facade_dir / "factory.ts", overwrite=False) as handle:
+            if handle:
+                handle.write(self.render_passthrough("./gen_factory"))
+        with self.writer.write_file(facade_dir / "gen_index.ts", overwrite=True) as handle:
+            if handle:
+                handle.write(
+                    render(
+                        self.writer.template_lang,
+                        "gen_root_index.ts",
+                        {
+                            "modules": [],
+                            "extra_exports": [
+                                'export * from "./factory";',
+                            ],
+                        },
+                    )
+                )
+        with self.writer.write_file(facade_dir / "index.ts", overwrite=False) as handle:
+            if handle:
+                handle.write(self.render_passthrough("./gen_index"))
+
+        with self.writer.write_file(http_dir / "gen_index.ts", overwrite=True) as handle:
+            if handle:
+                handle.write(
+                    render(
+                        self.writer.template_lang,
+                        "gen_root_index.ts",
+                        {
+                            "modules": [{"alias": snake_to_pascal_case(self.package, "", "Group"), "path": f"./{self.package}"}],
+                            "extra_exports": ['export * from "./transport";'],
+                        },
+                    )
+                )
+        with self.writer.write_file(http_dir / "index.ts", overwrite=False) as handle:
+            if handle:
+                handle.write(self.render_passthrough("./gen_index"))
+
     def gen(self) -> None:
         self.collect()
+        self.cleanup_legacy_root_layout()
         if self.writer.overlay_name is not None:
+            if not self.routes:
+                self.cleanup_unselected_overlay()
+                return
             self.gen_overlay()
             return
 
-        base_dir = self.writer.working_dir / self.package
-        base_dir.mkdir(parents=True, exist_ok=True)
-        module_dirs = self.module_dirs(base_dir)
+        root_dir = self.writer.working_dir / self.package
+        root_dir.mkdir(parents=True, exist_ok=True)
+        module_dirs = self.module_dirs(root_dir)
 
         shared_dir = module_dirs[SHARED_MODULE]
         shared_dir.mkdir(parents=True, exist_ok=True)
+        for stale_runtime_file in ("gen_factory.ts", "factory.ts", "gen_transport.ts", "transport.ts"):
+            stale_path = shared_dir / stale_runtime_file
+            if stale_path.exists():
+                stale_path.unlink()
         shared_sections = self.shared_sections()
         shared_imports = self.build_imports(SHARED_MODULE, module_dirs)
         shared_context = {"sections": shared_sections, "imports": shared_imports, "exports": []}
@@ -565,9 +777,6 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
         for out_tmpl, tmpl in [
             ("gen_client.ts", "gen_shared_client.ts"),
             ("client.ts", "client.ts"),
-            ("gen_factory.ts", "gen_factory.ts"),
-            ("gen_transport.ts", "gen_transport.ts"),
-            ("transport.ts", "transport.ts"),
         ]:
             with self.writer.write_file(shared_dir / out_tmpl, overwrite=out_tmpl.startswith("gen_")) as handle:
                 if handle:
@@ -577,10 +786,6 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                         "clients": self.factory_entries(module_dirs),
                     }
                     handle.write(render(self.writer.template_lang, tmpl, context))
-
-        with self.writer.write_file(shared_dir / "factory.ts", overwrite=False) as handle:
-            if handle:
-                handle.write(self.render_passthrough("./gen_factory"))
 
         for tmpl in ["gen_index.ts", "index.ts"]:
             with self.writer.write_file(shared_dir / tmpl, overwrite=True) as handle:
@@ -593,8 +798,6 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                                 "client_class": None,
                                 "extra_exports": [
                                     'export * from "./gen_client";',
-                                    'export * from "./factory";',
-                                    'export * from "./gen_transport";',
                                 ],
                             },
                         )
@@ -613,7 +816,13 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                     if handle:
                         handle.write(render(self.writer.template_lang, tmpl, models_context))
 
-            client_context = {"routes": group.routes, "writer": self.writer, "client_class": group.client_class}
+            client_context = {
+                "routes": group.routes,
+                "writer": self.writer,
+                "client_class": group.client_class,
+                "shared_models_path": self._relative_import_path(group_dir, shared_dir / "models.ts"),
+                "shared_client_path": self._relative_import_path(group_dir, shared_dir / "client.ts"),
+            }
             for tmpl in ["gen_client.ts", "client.ts"]:
                 with self.writer.write_file(group_dir / tmpl, overwrite=tmpl.startswith("gen_")) as handle:
                     if handle:
@@ -633,15 +842,16 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                             )
                         )
 
-        exports = [{"alias": "Shared", "path": f"./{self.writer.shared_dir_name}"}]
+        exports: list[dict[str, str]] = []
         second_exports: list[tuple[str, TypeScriptViewGroup]] = []
         seen_alias = set()
         for slug, group in self.groups.items():
-            if slug != group.alias:
+            path = f"./{self.package}" if not group.path else f"./{self.package}/{group.path}"
+            if group.path and slug != group.alias:
                 second_exports.append((slug, group))
                 continue
             alias = snake_to_pascal_case(group.alias, "", "Group")
-            exports.append({"alias": alias, "path": f"./{slug}"})
+            exports.append({"alias": alias, "path": path})
             seen_alias.add(alias)
 
         for slug, group in second_exports:
@@ -653,15 +863,47 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                         break
                 else:
                     raise RuntimeError(f"Failed to generate unique alias for group {group.alias}")
-            exports.append({"alias": alias, "path": f"./{slug}"})
+            exports.append({"alias": alias, "path": f"./{self.package}/{group.path}"})
             seen_alias.add(alias)
 
         exports = sorted(exports, key=lambda item: item["alias"])
-        with self.writer.write_file(base_dir / "gen_index.ts", overwrite=True) as handle:
+        routes_dir = root_dir / self.writer.routes_dir_name
+        routes_dir.mkdir(parents=True, exist_ok=True)
+        with self.writer.write_file(routes_dir / "gen_index.ts", overwrite=True) as handle:
             if handle:
                 handle.write(render(self.writer.template_lang, "gen_root_index.ts", {"modules": exports, "extra_exports": []}))
+        with self.writer.write_file(routes_dir / "index.ts", overwrite=False) as handle:
+            if handle:
+                handle.write(self.render_passthrough("./gen_index"))
 
-        for out_tmpl, tmpl in [("gen_index.ts", "gen_root_index.ts"), ("index.ts", "index.ts")]:
-            with self.writer.write_file(base_dir / out_tmpl, overwrite=out_tmpl.startswith("gen_")) as handle:
-                if handle:
-                    handle.write(render(self.writer.template_lang, tmpl, {"modules": exports}))
+        if self.writer.emit_http_facade:
+            self.gen_http_facade(root_dir, module_dirs)
+            self.write_transports_index(root_dir, "http")
+        else:
+            http_dir = root_dir / self.writer.transports_dir_name / "http"
+            if http_dir.exists():
+                shutil.rmtree(http_dir)
+
+        self.write_root_index(root_dir)
+
+    def cleanup_legacy_root_layout(self) -> None:
+        root_dir = self.writer.working_dir / self.package
+        if not root_dir.exists():
+            return
+        legacy_shared = root_dir / "(shared)"
+        if legacy_shared.exists():
+            shutil.rmtree(legacy_shared)
+        legacy_core = root_dir / "core"
+        if legacy_core.exists():
+            shutil.rmtree(legacy_core)
+        for legacy_transport in ("http", "wailsv2", "wailsv3"):
+            legacy_dir = root_dir / legacy_transport
+            if legacy_dir.exists():
+                shutil.rmtree(legacy_dir)
+        for group in self.groups.values():
+            legacy_group = root_dir / group.slug
+            if legacy_group.exists():
+                shutil.rmtree(legacy_group)
+            legacy_root_group = root_dir / self.writer.routes_dir_name / "_root"
+            if legacy_root_group.exists():
+                shutil.rmtree(legacy_root_group)

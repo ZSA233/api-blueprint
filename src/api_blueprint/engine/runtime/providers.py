@@ -47,6 +47,14 @@ class WsHandle(Provider):
     data: list[str] = []
 
 
+class Custom(Provider):
+    def __init__(self, name: str, data: Any = None):
+        super().__init__(data)
+        if not name:
+            raise ValueError("custom provider name is required")
+        self.name = name
+
+
 def ellipsis_replaces(bases: list[Provider], replaces: list[Provider]) -> list[Provider]:
     base_idx = 0
     base_name_idx = {

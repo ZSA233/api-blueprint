@@ -98,12 +98,16 @@ class GolangEnum:
 class GolangPackageLayout:
     module_import: str
     views_package: str
-    provider_package: str
     errors_package: str
+    provider_package: str = "providers"
 
     @property
     def views_imports(self) -> str:
         return join_path_imports(self.module_import, self.views_package)
+
+    @property
+    def routes_imports(self) -> str:
+        return join_path_imports(self.views_imports, "routes")
 
     @property
     def provider_imports(self) -> str:
@@ -117,6 +121,7 @@ class GolangPackageLayout:
         formatters = {
             "views_package": self.views_package,
             "views_imports": self.views_imports,
+            "routes_imports": self.routes_imports,
             "provider_package": self.provider_package,
             "provider_imports": self.provider_imports,
             "errors_package": self.errors_package,

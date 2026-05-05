@@ -27,6 +27,18 @@ type WailsRouteContext struct {
 	Metadata  map[string]any
 }
 
+type RouteInfo struct {
+	Root      string
+	Group     string
+	Namespace string
+	Service   string
+	Operation string
+	RouteID   string
+	Path      string
+	Methods   []string
+	Transport TransportKind
+}
+
 type ContextInterface interface {
 	ContextKind() TransportKind
 }
@@ -34,8 +46,10 @@ type ContextInterface interface {
 type Context[Q, B, P any] struct {
 	Indexer  *Indexer[Q, B, P]
 	Kind     TransportKind
+	Route    *RouteInfo
 	Base     context.Context
 	Headers  map[string]string
+	HeaderFn func(string) string
 	Metadata map[string]any
 	Wails    *WailsRouteContext
 	Req      *ReqContext[Q, B, P]
@@ -118,6 +132,9 @@ func (ctx *Context[Q, B, P]) Err() error {
 func (ctx *Context[Q, B, P]) ensureMetadataStore() map[string]any {
 	if ctx.Metadata == nil {
 		ctx.Metadata = map[string]any{}
+		if ctx.Wails != nil {
+			ctx.Wails.Metadata = ctx.Metadata
+		}
 	}
 	return ctx.Metadata
 }
@@ -127,7 +144,10 @@ func (ctx *Context[Q, B, P]) Set(key string, value any) {
 }
 
 func (ctx *Context[Q, B, P]) Get(key string) (value any, exists bool) {
-	value, exists = ctx.ensureMetadataStore()[key]
+	if ctx.Metadata == nil {
+		return nil, false
+	}
+	value, exists = ctx.Metadata[key]
 	return value, exists
 }
 
@@ -152,6 +172,9 @@ func (ctx *Context[Q, B, P]) Value(key any) any {
 }
 
 func (ctx *Context[Q, B, P]) Header(name string) string {
+	if ctx.HeaderFn != nil {
+		return ctx.HeaderFn(name)
+	}
 	for key, value := range ctx.Headers {
 		if strings.EqualFold(key, name) {
 			return value
@@ -176,6 +199,16 @@ func NewHTTPContext[Q, B, P any](
 	return NewContext[Q, B, P](TransportHTTP, base, headers, metadata)
 }
 
+func NewHTTPContextWithHeaderLookup[Q, B, P any](
+	base context.Context,
+	headerFn func(string) string,
+	metadata map[string]any,
+) *Context[Q, B, P] {
+	ctx := NewContext[Q, B, P](TransportHTTP, base, nil, metadata)
+	ctx.HeaderFn = headerFn
+	return ctx
+}
+
 func NewContext[Q, B, P any](
 	kind TransportKind,
 	base context.Context,
@@ -186,10 +219,10 @@ func NewContext[Q, B, P any](
 		base = context.Background()
 	}
 	if headers == nil {
-		headers = map[string]string{}
+		headers = nil
 	}
 	if metadata == nil {
-		metadata = map[string]any{}
+		metadata = nil
 	}
 	return &Context[Q, B, P]{
 		Kind:     kind,

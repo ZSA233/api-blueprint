@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
 from contextlib import contextmanager
 from pathlib import Path
 from typing import IO, Mapping, Sequence, Set, Union
@@ -19,7 +20,9 @@ logger.setLevel(logging.INFO)
 
 
 class TypeScriptWriter(BaseWriter[TypeScriptBlueprint]):
-    SHARED_DIR_NAME = "(shared)"
+    RUNTIME_DIR_NAME = "runtime"
+    ROUTES_DIR_NAME = "routes"
+    TRANSPORTS_DIR_NAME = "transports"
 
     def __init__(
         self,
@@ -31,6 +34,7 @@ class TypeScriptWriter(BaseWriter[TypeScriptBlueprint]):
         transport_kind: str = "http",
         transport_class_name: str = "DefaultTransport",
         allow_raw_ws: bool = True,
+        emit_http_facade: bool = True,
         overlay_name: str | None = None,
         frontend_mode: str = "external",
         include: Sequence[str] = (),
@@ -45,6 +49,7 @@ class TypeScriptWriter(BaseWriter[TypeScriptBlueprint]):
         self.transport_kind = transport_kind
         self.transport_class_name = transport_class_name
         self.allow_raw_ws = allow_raw_ws
+        self.emit_http_facade = emit_http_facade
         self.overlay_name = overlay_name
         self.frontend_mode = frontend_mode
         self.include = normalize_selection_rules(include)
@@ -53,19 +58,37 @@ class TypeScriptWriter(BaseWriter[TypeScriptBlueprint]):
         self._written_files: Set[str] = set()
 
     @property
-    def shared_dir_name(self) -> str:
-        return self.SHARED_DIR_NAME
+    def runtime_dir_name(self) -> str:
+        return self.RUNTIME_DIR_NAME
+
+    @property
+    def routes_dir_name(self) -> str:
+        return self.ROUTES_DIR_NAME
+
+    @property
+    def transports_dir_name(self) -> str:
+        return self.TRANSPORTS_DIR_NAME
 
     @property
     def overlay_dir_name(self) -> str:
         if self.overlay_name is None:
             raise RuntimeError("overlay_name is required for overlay directory derivation")
-        return f"({self.overlay_name})"
+        return self.overlay_name
 
     def gen(self) -> None:
+        self.cleanup_legacy_layout()
         for bp in self.bps:
             bp.build()
             bp.gen()
+
+    def cleanup_legacy_layout(self) -> None:
+        for bp in self.bps:
+            root_dir = self.working_dir / bp.package
+            if not root_dir.exists():
+                continue
+            for legacy_dir in sorted(root_dir.rglob("(*)"), key=lambda path: len(path.parts), reverse=True):
+                if legacy_dir.is_dir():
+                    shutil.rmtree(legacy_dir)
 
     @contextmanager
     def write_file(self, filepath: Union[str, Path], overwrite: bool = False):

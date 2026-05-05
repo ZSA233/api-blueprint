@@ -17,6 +17,7 @@ type HandleContext[Q, B, P any] struct {
 
 type HandleProvider[Q, B, P any] struct {
 	Data    string
+	Route   RouteInfo
 	Handler func(c *Context[Q, B, P], req *REQ[Q, B]) (rsp *P, err error)
 }
 

@@ -1,6 +1,6 @@
-import { ensureWailsRuntime } from "../../../../typescript/api/(shared)/(wailsv2)/transport";
-import { createClients as createApiClients } from "../../../../typescript/api/(wailsv2)";
-import { createClients as createStaticClients } from "../../../../typescript/static/(wailsv2)";
+import { ensureWailsRuntime } from "../../../../typescript/api/transports/wailsv2/transport";
+import { createClients as createApiClients } from "../../../../typescript/api/transports/wailsv2/api";
+import { createClients as createStaticClients } from "../../../../typescript/static/transports/wailsv2/static";
 
 async function main(): Promise<void> {
   await ensureWailsRuntime();

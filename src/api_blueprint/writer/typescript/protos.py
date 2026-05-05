@@ -24,6 +24,9 @@ from api_blueprint.engine.utils import inc_to_letters, is_parametrized
 from .naming import to_ts_identifier, to_ts_name
 
 
+RUNTIME_MODULE = "runtime"
+
+
 @dataclass
 class TypeScriptResolvedType:
     text: str
@@ -135,7 +138,7 @@ class TypeScriptTypeResolver:
 
     def _resolve_object(self, field: Union[Model, Type[Model]]) -> TypeScriptResolvedType:
         model_cls = unwrap_model_type(field)
-        proto = self.registry.ensure(model_cls, tag="shared")
+        proto = self.registry.ensure(model_cls, tag="shared", module=RUNTIME_MODULE)
         return TypeScriptResolvedType(proto.name, {proto} if proto else set())
 
     def _ensure_instance(self, field: Any, expected: Type[Any]) -> Any:
@@ -254,7 +257,7 @@ class TypeScriptProtoRegistry:
 
         if isinstance(model, FieldWrappedModel):
             ts_name = to_ts_name(name or getattr(model, "__name__", "AnonMap"))
-            alias_module = module or "shared"
+            alias_module = module or RUNTIME_MODULE
             proto = self._aliases.get((alias_module, ts_name))
             if proto:
                 proto.add_tag(self._filter_tag(tag, model))
@@ -275,7 +278,7 @@ class TypeScriptProtoRegistry:
             return proto
 
         ts_name = to_ts_name(name or getattr(cls, "__name__", "AnonModel"))
-        target_module = module or "shared"
+        target_module = module or RUNTIME_MODULE
         proto = TypeScriptProto(name=ts_name, model=cls, kind="interface", module=target_module)
         proto.add_tag(self._filter_tag(tag, cls))
         proto.add_route(route)
@@ -292,7 +295,7 @@ class TypeScriptProtoRegistry:
         route: str | None = None,
         module: str | None = None,
     ) -> TypeScriptProto:
-        alias_module = module or "shared"
+        alias_module = module or RUNTIME_MODULE
         ts_name = to_ts_name(name)
         proto = self._aliases.get((alias_module, ts_name))
         if proto:
@@ -307,7 +310,7 @@ class TypeScriptProtoRegistry:
         self._aliases[(alias_module, ts_name)] = proto
         return proto
 
-    def ensure_enum(self, enum_cls: type[enum.Enum], *, module: str = "shared") -> TypeScriptProto:
+    def ensure_enum(self, enum_cls: type[enum.Enum], *, module: str = RUNTIME_MODULE) -> TypeScriptProto:
         proto = self._enums.get(enum_cls)
         if proto:
             return proto
@@ -362,7 +365,7 @@ class TypeScriptProtoRegistry:
             )
 
             if isinstance(field_value, Model) and field_value.__class__ is not proto.model:
-                self.ensure(field_value.__class__, tag="shared")
+                self.ensure(field_value.__class__, tag="shared", module=RUNTIME_MODULE)
 
     def _collect_generic_params(self, model: type[Model], annotations: dict[str, Any]) -> "OrderedDict[Any, str]":
         generics: "OrderedDict[Any, str]" = OrderedDict()
@@ -387,8 +390,12 @@ class TypeScriptProtoRegistry:
             if annotation in generic_params:
                 return TypeScriptResolvedType(generic_params[annotation])
         if isinstance(field, Model):
-            target_module = module if getattr(field.__class__, "__auto__", False) else "shared"
-            proto = self.ensure(field.__class__, tag="shared" if target_module == "shared" else None, module=target_module)
+            target_module = module if getattr(field.__class__, "__auto__", False) else RUNTIME_MODULE
+            proto = self.ensure(
+                field.__class__,
+                tag="shared" if target_module == RUNTIME_MODULE else None,
+                module=target_module,
+            )
             if proto is None:
                 return TypeScriptResolvedType("any")
             return TypeScriptResolvedType(proto.name, {proto})

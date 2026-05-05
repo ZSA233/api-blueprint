@@ -15,6 +15,7 @@ const (
 type WsHandleProvider[Q, B, P any] struct {
 	Subs    []string
 	Extra   string
+	Route   RouteInfo
 	Handler func(c *Context[Q, B, P], req *REQ[Q, B]) (rsp *P, err error)
 }
 

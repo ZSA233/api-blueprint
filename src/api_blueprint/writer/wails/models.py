@@ -17,8 +17,8 @@ class WailsGenerationTarget:
     frontend_mode: WailsFrontendMode
     include: tuple[str, ...]
     exclude: tuple[str, ...]
-    go_runtime_dir: Path
-    go_bindings_pattern: str
+    go_transport_dir: Path
+    go_service_pattern: str
     go_route_overlay_pattern: str
     typescript_route_overlay_pattern: str | None
     typescript_transport_pattern: str | None

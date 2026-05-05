@@ -18,6 +18,7 @@ type RspContext struct{}
 type RspProvider[Q, B, P any] struct {
 	Type    string
 	Options string
+	Route   RouteInfo
 	Handler func(c *Context[Q, B, P], req *REQ[Q, B]) (rsp *P, err error)
 }
 

@@ -18,6 +18,7 @@ type ReqContext[Q, B, P any] struct {
 
 type ReqProvider[Q, B, P any] struct {
 	Data      string
+	Route     RouteInfo
 	BindQuery bool
 	BindJSON  bool
 	BindForm  bool

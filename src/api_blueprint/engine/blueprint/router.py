@@ -235,6 +235,14 @@ class Router:
         self.is_deprecated = True
         return self
 
+    def RAW_RESPONSE(self) -> Self:
+        self.extra["http_raw_response"] = True
+        return self
+
+    def HTTP_RAW_RESPONSE(self) -> Self:
+        self.extra["http_raw_response"] = True
+        return self
+
     async def upstream_handler(self, request: "Request", **kwargs: Any):
         return await proxy_upstream_request(self, request, **kwargs)
 

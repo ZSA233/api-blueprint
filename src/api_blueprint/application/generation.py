@@ -45,9 +45,21 @@ def _require_grpc_config(resolved: ResolvedConfig) -> ResolvedGrpcConfig:
 
 
 def _require_wails_config(resolved: ResolvedConfig) -> ResolvedWailsConfig:
-    if resolved.raw.wails is None or resolved.wails is None:
-        raise ValueError("[gen_wails] 配置中未找到wails段落")
+    if resolved.wails is None or not resolved.wails.targets:
+        raise ValueError("[gen_wails] 配置中未找到 kind='wails' 的 [[transport.targets]]")
     return resolved.wails
+
+
+def _golang_enabled_transports(resolved: ResolvedConfig) -> tuple[str, ...]:
+    targets = resolved.transport.targets
+    if not targets:
+        return ("http",)
+    return ("http",) if any(target.kind == "http" for target in targets) else ()
+
+
+def _emit_http_transport(resolved: ResolvedConfig) -> bool:
+    targets = resolved.transport.targets
+    return not targets or any(target.kind == "http" for target in targets)
 
 
 def generate_golang(config_path: str | Path | None = "./api-blueprint.toml", *, doc: bool = False) -> None:
@@ -68,8 +80,7 @@ def generate_golang(config_path: str | Path | None = "./api-blueprint.toml", *, 
     writer = golang.GolangWriter(
         output,
         module=golang_config.module,
-        provider_package=golang_config.provider_package or "provider",
-        transport_adapters=golang_config.transport_adapters,
+        enabled_transports=_golang_enabled_transports(resolved),
     )
     writer.register(*project.entrypoints)
     writer.gen()
@@ -98,6 +109,7 @@ def generate_typescript(config_path: str | Path | None = "./api-blueprint.toml",
         output,
         base_url=base_url,
         base_url_expr=typescript_config.base_url_expr,
+        emit_http_facade=_emit_http_transport(resolved),
     )
     writer.register(*project.entrypoints)
     writer.gen()
@@ -249,8 +261,7 @@ def generate_wails(
     go_writer = golang.GolangWriter(
         golang_output,
         module=golang_config.module,
-        provider_package=golang_config.provider_package or "provider",
-        transport_adapters=golang_config.transport_adapters,
+        enabled_transports=_golang_enabled_transports(resolved),
     )
     go_writer.register(*project.entrypoints)
     go_writer.gen()
@@ -260,6 +271,7 @@ def generate_wails(
         typescript_output,
         base_url=base_url,
         base_url_expr=typescript_config.base_url_expr,
+        emit_http_facade=_emit_http_transport(resolved),
     )
     ts_writer.register(*project.entrypoints)
     ts_writer.gen()

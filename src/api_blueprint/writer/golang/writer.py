@@ -17,8 +17,8 @@ from .common import LANG, PackageName
 from .protos import GolangPackageLayout, GolangResponseWrapper
 from .toolchain import GolangToolchain
 
-GolangTransportAdapter = Literal["http", "wails"]
-DEFAULT_TRANSPORT_ADAPTERS: tuple[GolangTransportAdapter, ...] = ("http",)
+GolangTransportKind = Literal["http"]
+DEFAULT_GOLANG_TRANSPORTS: tuple[GolangTransportKind, ...] = ("http",)
 
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -33,9 +33,8 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
         *,
         module: Optional[str] = None,
         views_package: str = PackageName.VIEWS.value,
-        provider_package: str = PackageName.PROVIDER.value,
         errors_package: str = PackageName.ERROR.value,
-        transport_adapters: Sequence[GolangTransportAdapter] = DEFAULT_TRANSPORT_ADAPTERS,
+        enabled_transports: Sequence[GolangTransportKind] = DEFAULT_GOLANG_TRANSPORTS,
         **kwargs: dict[str, Any],
     ):
         super().__init__(working_dir)
@@ -53,31 +52,29 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
         self.packages = GolangPackageLayout(
             module_import=self.gomodpath,
             views_package=views_package,
-            provider_package=provider_package,
             errors_package=errors_package,
         )
         self.views_package = self.packages.views_package
         self.provider_package = self.packages.provider_package
         self.errors_package = self.packages.errors_package
-        self.transport_adapters = tuple(transport_adapters)
-        unknown_adapters = sorted(set(self.transport_adapters) - {"http", "wails"})
-        if unknown_adapters:
+        self.enabled_transports = tuple(enabled_transports)
+        unknown_transports = sorted(set(self.enabled_transports) - {"http"})
+        if unknown_transports:
             raise ValueError(
-                "golang.transport_adapters contains unsupported values: " + ", ".join(unknown_adapters)
+                "GolangWriter enabled_transports contains unsupported values: "
+                + ", ".join(unknown_transports)
             )
 
     def validate_package_contract(self) -> None:
-        for bp in self.bps:
-            root_name = bp.root_name
-            if root_name and root_name == self.provider_package:
-                raise ValueError(
-                    f"[gen_golang] provider_package[{self.provider_package}] "
-                    f"与 blueprint root[{root_name}] 冲突；请调整 [golang].provider_package 或 blueprint root"
-                )
+        return None
 
     @property
     def views_imports(self) -> str:
         return self.packages.views_imports
+
+    @property
+    def routes_imports(self) -> str:
+        return self.packages.routes_imports
 
     @property
     def provider_imports(self) -> str:
@@ -89,11 +86,19 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
 
     @property
     def http_adapter_enabled(self) -> bool:
-        return "http" in self.transport_adapters
+        return "http" in self.enabled_transports
 
     @property
     def http_transport_imports(self) -> str:
-        return join_path_imports(self.views_imports, "_http")
+        return join_path_imports(self.views_imports, "transports", "http")
+
+    @property
+    def http_adapter_imports(self) -> str:
+        return join_path_imports(self.views_imports, "transports", "http")
+
+    @property
+    def http_transport_dir(self) -> Path:
+        return self.working_dir / self.views_package / "transports" / "http"
 
     def list_providers(self) -> set[str]:
         if self._list_providers_cache is None:

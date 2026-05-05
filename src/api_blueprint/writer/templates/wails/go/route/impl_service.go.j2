@@ -1,0 +1,10 @@
+package {{ router_group.binding_package }}
+
+import (
+	shared "{{ router_group.shared_imports | safe }}"
+	wailstransport "{{ writer.runtime_imports | safe }}"
+)
+
+func NewService(dispatcher wailstransport.EventDispatcher) *{{ router_group.service_name }} {
+	return newGenerated{{ router_group.service_name }}(shared.NewRouter(), dispatcher)
+}

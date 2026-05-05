@@ -1,10 +1,12 @@
-import { Demo } from './api';
-import { Static } from './static'
+import { createClients as createApiClients } from "./api/transports/http/api";
+import type * as ApiDemoModels from "./api/routes/api/demo/models";
+import { createClients as createStaticClients } from "./static/transports/http/static";
 
-const cli = new Demo.DemoClient();
-const v: Demo.ReqAbcQuery = {};
+const apiClients = createApiClients();
+const cli = apiClients.demoClient;
+const v: ApiDemoModels.ReqAbcQuery = {};
 
 
-
-const cli2 = new Static.StaticClient();
+const staticClients = createStaticClients();
+const cli2 = staticClients.staticClient;
 const v2 = cli2.docJson()

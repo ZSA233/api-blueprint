@@ -11,8 +11,6 @@ entrypoints = [
 codegen_output = 'golang'
 upstream = 'http://localhost:2333'
 module = ''
-# provider_package = 'provider'
-transport_adapters = ['http', 'wails']
 
 # Blueprint -> TypeScript snapshot example
 [typescript]
@@ -28,14 +26,20 @@ base_url = 'http://localhost:2333'
 include = ['tag:api']
 exclude = ['path:/static/**', 'path:/api/ws', 'path:/api/demo/ws', 'path:/api/demo/delete$']
 
-# Blueprint -> Wails snapshot examples
-[[wails.targets]]
+# Blueprint -> transport snapshot examples
+[[transport.targets]]
+id = 'http'
+kind = 'http'
+
+[[transport.targets]]
 id = 'wails.v3'
+kind = 'wails'
 version = 'v3'
 frontend_mode = 'external'
 
-[[wails.targets]]
+[[transport.targets]]
 id = 'wails.v2'
+kind = 'wails'
 version = 'v2'
 frontend_mode = 'external'
 

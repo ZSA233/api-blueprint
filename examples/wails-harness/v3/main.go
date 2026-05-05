@@ -4,10 +4,10 @@ import (
 	"embed"
 	"fmt"
 
-	bindingapi "demo/views/api/_wailsv3/bindings"
-	bindingdemo "demo/views/api/demo/_wailsv3/bindings"
-	bindinghello "demo/views/api/hello/_wailsv3/bindings"
-	bindingstatic "demo/views/static/_wailsv3/bindings"
+	bindingapi "demo/views/transports/wailsv3/api"
+	bindingdemo "demo/views/transports/wailsv3/api/demo"
+	bindinghello "demo/views/transports/wailsv3/api/hello"
+	bindingstatic "demo/views/transports/wailsv3/static"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
