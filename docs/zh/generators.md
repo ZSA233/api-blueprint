@@ -5,7 +5,7 @@
 ## Go
 
 ```sh
-api-gen-golang -c api-blueprint.toml
+api-gen generate -c api-blueprint.toml --target go.server
 ```
 
 Go 生成器输出：
@@ -18,7 +18,7 @@ Go 生成器输出：
 
 `gen_*` 文件由生成器拥有，重生成会覆盖。`impl_*` 与非 `gen_*` 文件是用户拥有扩展点，重生成时保留。
 
-`[[transport.targets]]` 控制 Go transport 输出；未声明 target 时默认生成 HTTP target。HTTP 入口生成在 `views/transports/http/<root>` 中，例如 `views/transports/http/api.NewBlueprint(engine)`；Wails-only 项目只声明 `kind = "wails"` target，HTTP + Wails 项目同时声明 `kind = "http"` 与 `kind = "wails"`。
+`go-server` 只负责 Go 服务端 core。HTTP / Wails 输出由 `http-transport` / `wails-transport` target 通过 `server = "go.server"` 显式挂接。HTTP 入口生成在 `views/transports/http/<root>` 中，例如 `views/transports/http/api.NewBlueprint(engine)`。
 
 Go route core 固定生成在 `views/routes/**`，provider runtime 固定生成在 `views/providers`。这两个目录名不再通过配置自定义，业务 root 可以安全使用 `/providers` 或 `/transports` 这类路径。
 
@@ -82,15 +82,15 @@ HTTP transport 中，`STREAM` 生成 SSE adapter，`CHANNEL` 生成 WebSocket ad
 ## TypeScript
 
 ```sh
-api-gen-typescript -c api-blueprint.toml
+api-gen generate -c api-blueprint.toml --target typescript.client
 ```
 
-TypeScript 生成器输出：
+TypeScript client target 输出：
 
 - `models.ts` / `gen_models.ts`。
 - request client class。
 - transport-neutral `ApiClientConfig`。
-- transport facade `createClients(config)` factory。
+- 由 transport target 注入的 `createClients(config)` facade。
 - user-owned passthrough 文件，例如 `client.ts`、`transport.ts`、`factory.ts`。
 
 `base_url_expr` 会原样写入生成代码，适合 Vite、Next.js 等运行时配置；它与 `base_url` 互斥。
@@ -100,18 +100,18 @@ TypeScript 生成器输出：
 ## Kotlin Android
 
 ```sh
-api-gen-kotlin -c api-blueprint.toml
+api-gen generate -c api-blueprint.toml --target kotlin.client
 ```
 
-Kotlin 生成器输出 OkHttp + kotlinx.serialization Android 客户端。
+Kotlin target 输出 OkHttp + kotlinx.serialization Android 客户端。
 
-当前版本主要覆盖 JSON REST route。`include` / `exclude` 可裁剪输出接口面。
+当前版本只覆盖 HTTP JSON RPC route。`api-gen check` 会在生成前拒绝 `STREAM` / `CHANNEL`、form、binary 与自定义 wrapper。
 
 Kotlin 目标不生成 `STREAM` / `CHANNEL` / legacy `WS` 长连接客户端；这类 route 应通过 `include` / `exclude` 排除，或使用 Go / TypeScript / Wails 目标生成。
 
-## Java
+## 预留 targets
 
-Java 目标目前不作为公共 CLI 暴露，只保留内部扩展位。
+Python server/client 与 Go client 目前只作为 target schema 预留，不生成业务代码。
 
 ## examples 快照
 

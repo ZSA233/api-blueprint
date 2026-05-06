@@ -54,13 +54,22 @@ with bp.group("/demo") as views:
 [blueprint]
 entrypoints = ["blueprints.app:bp"]
 
-[golang]
-codegen_output = "golang"
-upstream = "http://localhost:2333"
+[[targets]]
+id = "go.server"
+kind = "go-server"
+out_dir = "golang"
 
-[typescript]
-codegen_output = "typescript"
+[[targets]]
+id = "typescript.client"
+kind = "typescript-client"
+out_dir = "typescript"
 base_url = "http://localhost:2333"
+
+[[targets]]
+id = "http"
+kind = "http-transport"
+server = "go.server"
+clients = ["typescript.client"]
 ```
 
 ## 启动文档服务
@@ -74,17 +83,16 @@ api-doc-server -c api-blueprint.toml
 ## 生成代码
 
 ```sh
-api-gen-golang -c api-blueprint.toml
-api-gen-typescript -c api-blueprint.toml
+api-gen generate -c api-blueprint.toml
 ```
 
 如果使用仓库示例配置，可以直接运行：
 
 ```sh
-api-gen-golang -c examples/api-blueprint.toml
-api-gen-typescript -c examples/api-blueprint.toml
-api-gen-wails -c examples/api-blueprint.toml
-api-gen-grpc -c examples/api-blueprint.toml --list-targets
+api-gen list-targets -c examples/api-blueprint.toml
+api-gen check -c examples/api-blueprint.toml
+api-gen generate -c examples/api-blueprint.toml
+api-gen generate -c examples/api-blueprint.toml --target wails.v3
 ```
 
 ## 下一步

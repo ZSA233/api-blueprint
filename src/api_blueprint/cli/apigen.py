@@ -1,130 +1,80 @@
+from __future__ import annotations
+
+from pathlib import Path
+
 import click
 
-from api_blueprint.application.generation import (
-    explain_wails_target,
-    explain_grpc_target,
-    generate_golang,
-    generate_grpc,
-    generate_kotlin,
-    generate_typescript,
-    generate_wails,
-    list_grpc_jobs,
-    list_grpc_targets,
-    list_wails_targets,
-)
+from api_blueprint.application import vnext
 
 
-@click.command()
-@click.option('-c', '--config', default='./api-blueprint.toml', help='配置文件')
-@click.option('-d', '--doc', default=False, is_flag=True, help='是否同时运行docs服务')
-def gen_golang(config: str = './api-blueprint.toml', doc: bool = False):
-    generate_golang(config, doc=doc)
+@click.group()
+def api_gen() -> None:
+    """Unified api-blueprint vNext generator."""
 
 
-@click.command()
-@click.option('-c', '--config', default='./api-blueprint.toml', help='配置文件')
-@click.option('-d', '--doc', default=False, is_flag=True, help='是否同时运行docs服务')
-def gen_typescript(config: str = './api-blueprint.toml', doc: bool = False):
-    generate_typescript(config, doc=doc)
+@api_gen.command("list-targets")
+@click.option("-c", "--config", default="./api-blueprint.toml", help="配置文件")
+def list_targets(config: str = "./api-blueprint.toml") -> None:
+    for target in vnext.list_targets(config):
+        click.echo(f"{target.id}\t{target.kind}\t{target.out_dir or ''}")
 
 
-@click.command()
-@click.option('-c', '--config', default='./api-blueprint.toml', help='配置文件')
-@click.option('-d', '--doc', default=False, is_flag=True, help='是否同时运行docs服务')
-def gen_kotlin(config: str = './api-blueprint.toml', doc: bool = False):
-    generate_kotlin(config, doc=doc)
+@api_gen.command("explain-target")
+@click.option("-c", "--config", default="./api-blueprint.toml", help="配置文件")
+@click.option("--target", "target_id", required=True, help="target id")
+def explain_target(config: str = "./api-blueprint.toml", target_id: str = "") -> None:
+    target = vnext.explain_target(config, target_id)
+    click.echo(f"id: {target.id}")
+    click.echo(f"kind: {target.kind}")
+    click.echo(f"out_dir: {target.out_dir or '(none)'}")
+    if target.server is not None:
+        click.echo(f"server: {target.server}")
+    if target.clients:
+        click.echo(f"clients: {', '.join(target.clients)}")
+    if target.package is not None:
+        click.echo(f"package: {target.package}")
+    if target.module is not None:
+        click.echo(f"module: {target.module}")
 
 
-@click.command()
-@click.option('-c', '--config', default='./api-blueprint.toml', help='配置文件')
-@click.option('--target', 'targets', multiple=True, help='仅生成匹配的 gRPC target，支持 shell-style pattern')
-@click.option('--list-targets', default=False, is_flag=True, help='列出配置中的 gRPC targets')
-@click.option('--explain-target', default=None, help='解释指定 gRPC target 的生效配置')
-@click.option('--job', 'jobs', multiple=True, help='仅生成匹配的 legacy/raw gRPC job，支持 shell-style pattern')
-@click.option('--list-jobs', default=False, is_flag=True, help='列出配置中的 legacy/raw gRPC jobs')
-def gen_grpc(
-    config: str = './api-blueprint.toml',
-    targets: tuple[str, ...] = (),
-    list_targets: bool = False,
-    explain_target: str | None = None,
-    jobs: tuple[str, ...] = (),
-    list_jobs: bool = False,
-):
-    if explain_target is not None:
-        plan = explain_grpc_target(config, target_id=explain_target)
-        click.echo(f"id: {plan.name}")
-        click.echo(f"lang: {plan.lang}")
-        click.echo(f"effective source_root: {plan.source_root}")
-        click.echo(
-            "effective import_roots: "
-            + (", ".join(path.as_posix() for path in plan.import_roots) if plan.import_roots else "(none)")
-        )
-        click.echo(f"effective out_dir: {plan.out_dir}")
-        click.echo(f"python_package_root: {plan.python_package_root or '(none)'}")
-        click.echo("selected files:")
-        for proto_file in plan.proto_files:
-            click.echo(f"- {proto_file.as_posix()}")
-        if plan.lang == "python":
-            sample = plan.proto_files[0] if plan.proto_files else None
-            if sample is not None:
-                click.echo(f"example output path: {plan.python_output_path(sample).as_posix()}")
-        else:
-            click.echo(f"module_root: {plan.module_root}")
-            click.echo(f"module_path: {plan.module}")
-            click.echo(f"expected go_package prefix: {plan.expected_go_package_prefix}")
-        return
-
-    listed = False
-    if list_targets:
-        for target in list_grpc_targets(config, target_filters=targets):
-            click.echo(f"{target.id}\t{target.lang}\t{target.out_dir}")
-        listed = True
-    if list_jobs:
-        for job in list_grpc_jobs(config, job_filters=jobs):
-            click.echo(f"{job.name}\t{job.preset}\t{job.output}")
-        listed = True
-
-    if listed:
-        return
-
-    generate_grpc(config, target_filters=targets, job_filters=jobs)
+@api_gen.command("manifest")
+@click.option("-c", "--config", default="./api-blueprint.toml", help="配置文件")
+@click.option("--out", "out_path", required=True, type=click.Path(path_type=Path), help="manifest 输出路径")
+def manifest(config: str = "./api-blueprint.toml", out_path: Path | None = None) -> None:
+    if out_path is None:
+        raise ValueError("--out is required")
+    vnext.write_manifest(config, out_path)
 
 
-@click.command()
-@click.option('-c', '--config', default='./api-blueprint.toml', help='配置文件')
-@click.option('--target', 'targets', multiple=True, help='仅生成匹配的 Wails target，支持 shell-style pattern')
-@click.option('--list-targets', default=False, is_flag=True, help='列出配置中的 Wails targets')
-@click.option('--explain-target', default=None, help='解释指定 Wails target 的生效配置')
-def gen_wails(
-    config: str = './api-blueprint.toml',
-    targets: tuple[str, ...] = (),
-    list_targets: bool = False,
-    explain_target: str | None = None,
-):
-    if explain_target is not None:
-        target = explain_wails_target(config, target_id=explain_target)
-        click.echo(f"id: {target.id}")
-        click.echo(f"version: {target.version}")
-        click.echo(f"overlay_name: {target.overlay_name}")
-        click.echo(f"frontend_mode: {target.frontend_mode}")
-        click.echo(f"go_transport_dir: {target.go_transport_dir}")
-        click.echo(f"go_service_pattern: {target.go_service_pattern}")
-        click.echo(f"go_route_overlay_pattern: {target.go_route_overlay_pattern}")
-        click.echo(
-            "typescript_transport_pattern: "
-            + (target.typescript_transport_pattern or "(disabled by frontend_mode=none)")
-        )
-        click.echo(
-            "typescript_route_overlay_pattern: "
-            + (target.typescript_route_overlay_pattern or "(disabled by frontend_mode=none)")
-        )
-        click.echo(f"include: {', '.join(target.include) if target.include else '(none)'}")
-        click.echo(f"exclude: {', '.join(target.exclude) if target.exclude else '(none)'}")
-        return
+@api_gen.command("diff")
+@click.argument("before", type=click.Path(path_type=Path))
+@click.argument("after", type=click.Path(path_type=Path))
+def diff_command(before: Path, after: Path) -> None:
+    diff = vnext.diff_files(before, after)
+    _echo_diff(diff)
+    if diff["breaking"]:
+        raise click.exceptions.Exit(1)
 
-    if list_targets:
-        for target in list_wails_targets(config, target_filters=targets):
-            click.echo(f"{target.id}\t{target.version}\t{target.overlay_name}\t{target.frontend_mode}")
-        return
 
-    generate_wails(config, target_filters=targets)
+@api_gen.command("check")
+@click.option("-c", "--config", default="./api-blueprint.toml", help="配置文件")
+def check(config: str = "./api-blueprint.toml") -> None:
+    vnext.check(config)
+    click.echo("ok")
+
+
+@api_gen.command("generate")
+@click.option("-c", "--config", default="./api-blueprint.toml", help="配置文件")
+@click.option("--target", "target_ids", multiple=True, help="仅生成指定 target id")
+def generate(config: str = "./api-blueprint.toml", target_ids: tuple[str, ...] = ()) -> None:
+    vnext.generate(config, target_ids=target_ids)
+
+
+def _echo_diff(diff: dict[str, list[str]]) -> None:
+    for label, key in (("BREAKING", "breaking"), ("RISKY", "risky"), ("COMPATIBLE", "compatible")):
+        entries = diff.get(key, [])
+        if not entries:
+            continue
+        click.echo(label)
+        for entry in entries:
+            click.echo(f"- {entry}")

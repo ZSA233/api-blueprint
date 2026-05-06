@@ -157,7 +157,7 @@ with bp.group("/demo") as views:
     views.WS("/ws").RECV(ClientMessage).SEND(ServerMessage)
 ```
 
-`WS().RECV().SEND()` 是 legacy 写法，继续保留兼容。新蓝图优先使用 `STREAM` / `CHANNEL`，避免把多个逻辑消息误建模成多个裸 event。
+`WS().RECV().SEND()` 是 legacy 写法，不进入 vNext ContractGraph 主线。新蓝图优先使用 `STREAM` / `CHANNEL`，避免把多个逻辑消息误建模成多个裸 event。
 
 ## 文档输出
 

@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package example.api.hello;
+
+option go_package = "example.com/project/grpc/go/api;api";
+
+service HelloService {
+  rpc Abc (AbcRequest) returns (AbcResponse);
+  rpc MapEnum (MapEnumRequest) returns (MapEnumResponse);
+  rpc ListEnum (ListEnumRequest) returns (ListEnumResponse);
+  rpc String (StringRequest) returns (StringResponse);
+  rpc Uint64 (Uint64Request) returns (Uint64Response);
+  rpc StringEmun (StringEmunRequest) returns (StringEmunResponse);
+  rpc HelloWay (HelloWayRequest) returns (HelloWayResponse);
+}
+
+message AbcRequest {
+  bool arg1 = 1;
+  string arg3 = 2;
+  float arg2 = 3;
+}
+
+message AbcResponse {
+  map<string, ApiHelloMap> value = 1;
+}
+
+message ApiHelloMap {
+  int64 haha = 1;
+}
+
+message MapEnumRequest {
+}
+
+message MapEnumResponse {
+  map<string, ApiHelloMap> value = 1;
+}
+
+message ListEnumRequest {
+}
+
+message ListEnumResponse {
+  repeated MapEnum value = 1;
+}
+
+message StringRequest {
+}
+
+message StringResponse {
+  string value = 1;
+}
+
+message Uint64Request {
+}
+
+message Uint64Response {
+  uint64 value = 1;
+}
+
+message StringEmunRequest {
+}
+
+message StringEmunResponse {
+  MapEnum value = 1;
+}
+
+message HelloWayRequest {
+  HelloWayEnum arg1 = 1;
+}
+
+message HelloWayResponse {
+}
+
+enum MapEnum {
+  MAPENUM_UNSPECIFIED = 0;
+  MAPENUM_A = 1;
+  MAPENUM_B = 2;
+}
+
+enum HelloWayEnum {
+  HELLOWAYENUM_UNSPECIFIED = 0;
+  HELLOWAYENUM_ASD = 1;
+}

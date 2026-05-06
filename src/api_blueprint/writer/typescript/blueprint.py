@@ -16,7 +16,8 @@ from api_blueprint.engine.wrapper import NoneWrapper
 from api_blueprint.engine.connection import MessageContract
 from api_blueprint.route_selection import matches_selection_rule
 from api_blueprint.writer.core.base import BaseBlueprint
-from api_blueprint.writer.core.contracts import RouteContract, route_contract
+from api_blueprint.writer.core.contract_adapters import RouteProtocolContract, route_protocol_from_router
+from api_blueprint.writer.core.contracts import RouteContract
 from api_blueprint.writer.core.templates import render
 
 from .naming import to_camel
@@ -34,11 +35,20 @@ def _group_module_key(slug: str, *, root: bool = False) -> str:
 
 
 class TypeScriptRoute:
-    def __init__(self, router: Router, registry: TypeScriptProtoRegistry, *, route_prefix: str):
+    def __init__(
+        self,
+        router: Router,
+        registry: TypeScriptProtoRegistry,
+        *,
+        route_prefix: str,
+        contract: RouteContract | None = None,
+        protocol: RouteProtocolContract | None = None,
+    ):
         self.router = router
         self.registry = registry
         self.route_prefix = route_prefix
-        self.contract: RouteContract = route_contract(router)
+        self.protocol = protocol or route_protocol_from_router(router, contract=contract)
+        self.contract: RouteContract = self.protocol.route
         branch = (router.group.branch or "").strip("/")
 
         self.func_name = self.contract.func_name
@@ -63,21 +73,21 @@ class TypeScriptRoute:
         self.supports_stream = self.contract.supports_stream
         self.supports_channel = self.contract.supports_channel
 
-        self.query_proto = self._ensure_model(router.req_query, "REQ", "QUERY")
-        self.open_proto = self._ensure_model(router.open_model, "OPEN", "")
-        self.form_proto = self._ensure_model(router.req_form, "REQ", "FORM")
-        self.json_proto = self._ensure_model(router.req_json, "REQ", "JSON")
-        self.bin_proto = router.req_bin is not None
+        self.query_proto = self._ensure_model(self.protocol.request.query.model, "REQ", "QUERY")
+        self.open_proto = self._ensure_model(self.protocol.request.open.model, "OPEN", "")
+        self.form_proto = self._ensure_model(self.protocol.request.form.model, "REQ", "FORM")
+        self.json_proto = self._ensure_model(self.protocol.request.json.model, "REQ", "JSON")
+        self.bin_proto = self.protocol.request.binary.model is not None
 
-        self.response_media_type = router.rsp_media_type
-        self.response_payload_proto = self._ensure_model(router.rsp_model, "RSP", "JSON")
-        wrapper_cls = router.response_wrapper or NoneWrapper
+        self.response_media_type = self.protocol.response.media_type
+        self.response_payload_proto = self._ensure_model(self.protocol.response.model.model, "RSP", "JSON")
+        wrapper_cls = self.protocol.response.wrapper or NoneWrapper
         self.wrapper_proto = self.registry.ensure(wrapper_cls, tag="wrapper")
         self.response_alias = self._ensure_response_alias()
-        self.ws_recv_alias = self._ensure_ws_message_alias("WS", "RECV", router.recvs)
-        self.ws_send_alias = self._ensure_ws_message_alias("WS", "SEND", router.sends)
-        self.server_message_alias = self._ensure_message_contract_alias(router.server_message)
-        self.client_message_alias = self._ensure_message_contract_alias(router.client_message)
+        self.ws_recv_alias = self._ensure_ws_message_alias("WS", "RECV", list(self.protocol.recvs))
+        self.ws_send_alias = self._ensure_ws_message_alias("WS", "SEND", list(self.protocol.sends))
+        self.server_message_alias = self._ensure_message_contract_alias(self.protocol.server_message)
+        self.client_message_alias = self._ensure_message_contract_alias(self.protocol.client_message)
         self.close_proto = self._ensure_model(self.effective_close_model, "CLOSE", "")
 
     @property
@@ -185,7 +195,7 @@ class TypeScriptRoute:
 
     @property
     def effective_close_model(self) -> Optional[Union[Type[Model], Model]]:
-        return self.contract.connection_close_model
+        return self.protocol.close_model
 
     @property
     def connection_scope(self) -> str:
@@ -359,6 +369,12 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
     def package(self) -> str:
         return self.bp.root.strip("/") or "root"
 
+    def contract_for_router(self, router: Router) -> RouteContract:
+        return self.writer.route_contract_for(router)
+
+    def protocol_for_router(self, router: Router) -> RouteProtocolContract:
+        return self.writer.route_protocol_for(router)
+
     def get_router_groups(self) -> list[TypeScriptRouterGroup]:
         if self.router_groups is None:
             seen: Set[RouterGroup] = set()
@@ -377,22 +393,28 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
         for group in self.get_router_groups():
             for router in group.routers:
                 if self.writer.overlay_name is not None:
-                    route_name = route_contract(router).func_name
+                    route_name = self.protocol_for_router(router).route.func_name
                     if self.writer.include and not any(
-                        matches_selection_rule(router, rule, route_name=route_name, label="[gen_wails]")
+                        matches_selection_rule(router, rule, route_name=route_name, label="[api-gen wails-transport]")
                         for rule in self.writer.include
                     ):
                         continue
                     if any(
-                        matches_selection_rule(router, rule, route_name=route_name, label="[gen_wails]")
+                        matches_selection_rule(router, rule, route_name=route_name, label="[api-gen wails-transport]")
                         for rule in self.writer.exclude
                     ):
                         continue
                 self._register_route(router)
 
     def _register_route(self, router: Router) -> None:
-        self._register_common_models(router)
-        ts_route = TypeScriptRoute(router, self.registry, route_prefix=self.package)
+        protocol = self.protocol_for_router(router)
+        self._register_common_models(protocol)
+        ts_route = TypeScriptRoute(
+            router,
+            self.registry,
+            route_prefix=self.package,
+            protocol=protocol,
+        )
         self.routes.append(ts_route)
         group = self.groups.get(ts_route.group_slug)
         if group is None:
@@ -406,7 +428,7 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
             self.groups[ts_route.group_slug] = group
         group.routes.append(ts_route)
 
-    def _register_common_models(self, router: Router) -> None:
+    def _register_common_models(self, protocol: RouteProtocolContract) -> None:
         def collect(model: Optional[Union[Type[Model], Model]]):
             if model is None:
                 return
@@ -424,18 +446,18 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
             for variant in contract.variants:
                 collect(variant.model)
 
-        collect(router.req_query)
-        collect(router.open_model)
-        collect(router.effective_close_model)
-        collect(router.req_form)
-        collect(router.req_json)
-        collect(router.rsp_model)
-        for recv in router.recvs:
+        collect(protocol.request.query.model)
+        collect(protocol.request.open.model)
+        collect(protocol.close_model)
+        collect(protocol.request.form.model)
+        collect(protocol.request.json.model)
+        collect(protocol.response.model.model)
+        for recv in protocol.recvs:
             collect(recv)
-        for send in router.sends:
+        for send in protocol.sends:
             collect(send)
-        collect_message(router.server_message)
-        collect_message(router.client_message)
+        collect_message(protocol.server_message)
+        collect_message(protocol.client_message)
 
     def shared_sections(self) -> list[tuple[str, list[TypeScriptProto]]]:
         sections = []

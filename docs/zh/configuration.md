@@ -1,6 +1,6 @@
 # 配置说明
 
-`api-blueprint.toml` 是生成器和文档服务的主配置文件。示例配置见 [`examples/api-blueprint.toml`](../../examples/api-blueprint.toml)。
+`api-blueprint.toml` 是文档服务和统一生成器的主配置文件。vNext 主线只使用 `Blueprint -> ContractGraph -> [[targets]]`。
 
 ## blueprint
 
@@ -13,106 +13,98 @@ entrypoints = ["blueprints.app:*"]
 
 - `docs_server`：`api-doc-server` 监听地址。
 - `docs_domain`：文档服务展示域名，可留空。
-- `entrypoints`：需要加载的 Python 对象，支持模块路径加对象名。
+- `entrypoints`：需要加载的 Python 对象，支持 `module.path:attribute` 和 `module.path:*`。
 
 `Blueprint(app=None)` 默认共享全局 FastAPI app。如果需要多个独立文档应用，应显式传入 `app`。
 
-## golang
+## targets
 
 ```toml
-[golang]
-codegen_output = "golang"
-upstream = "http://localhost:2333"
-module = ""
-```
+[[targets]]
+id = "contract"
+kind = "contract"
+out_dir = "."
+formats = ["json", "markdown"]
 
-- `codegen_output`：Go 生成目录。
-- `upstream`：生成 wrapper 中使用的后端地址。
-- `module`：可选 Go module 覆盖；通常留空，由工具解析。
+[[targets]]
+id = "go.server"
+kind = "go-server"
+out_dir = "golang"
+module = "example.com/project/golang"
 
-Go core 始终生成在 `views/routes/**`，包含 route interface、models 与用户 `impl.go`；provider runtime 固定生成在 `views/providers`。具体 HTTP / Wails 输出由 `[[transport.targets]]` 控制。
-
-## typescript
-
-```toml
-[typescript]
-codegen_output = "typescript"
-upstream = "http://localhost:2333"
+[[targets]]
+id = "typescript.client"
+kind = "typescript-client"
+out_dir = "typescript"
 base_url = "http://localhost:2333"
-# base_url_expr = "import.meta.env.VITE_API_BASE_URL"
-```
 
-- `codegen_output`：TypeScript 生成目录。
-- `upstream`：兼容默认地址来源。
-- `base_url`：字面量 base URL。
-- `base_url_expr`：原样输出到 TypeScript 的表达式。
-
-`base_url_expr` 与 `base_url` 互斥，解析优先级为 `base_url_expr -> base_url -> upstream -> ""`。
-
-## kotlin
-
-```toml
-[kotlin]
-codegen_output = "kotlin"
+[[targets]]
+id = "kotlin.client"
+kind = "kotlin-client"
+out_dir = "kotlin"
 package = "com.example.apiblueprint"
-base_url = "http://localhost:2333"
-include = ["tag:api"]
-exclude = ["path:/static/**"]
-```
 
-Kotlin 生成 OkHttp + kotlinx.serialization Android 客户端。当前版本面向 JSON REST route，暂不覆盖 WebSocket、form 与 binary route。
-
-`include` / `exclude` 支持 `path:`、`tag:`、`group:`、`method:`、`name:` 规则。
-
-## transport
-
-```toml
-[[transport.targets]]
+[[targets]]
 id = "http"
-kind = "http"
+kind = "http-transport"
+server = "go.server"
+clients = ["typescript.client", "kotlin.client"]
 
-[[transport.targets]]
-id = "desktop.v3"
-kind = "wails"
+[[targets]]
+id = "wails.v3"
+kind = "wails-transport"
 version = "v3"
+server = "go.server"
+clients = ["typescript.client"]
 frontend_mode = "external"
-# overlay_name = "wailsv3"
-# include = ["group:demo"]
-# exclude = ["path:/api/internal/**"]
+
+[[targets]]
+id = "grpc.proto"
+kind = "grpc-proto"
+out_dir = "grpc/protos"
+package = "example.api"
+go_package_prefix = "example.com/project/grpc/go"
 ```
 
-未声明任何 `[[transport.targets]]` 时默认生成一个 HTTP target。显式声明 target 后，生成器只生成列出的 transport。
+公共字段：
 
-- `kind = "http"`：生成 Gin HTTP adapter，入口位于 `views/transports/http/<root>`，例如 `views/transports/http/api.NewBlueprint(engine)`。
-- `kind = "wails"`：生成 Wails target；至少需要 `id`、`kind` 与 `version`。`version` 支持 `v3` 和 `v2`。
+- `id`：target 唯一标识，供依赖和 `--target` 使用。
+- `kind`：target 类型。
+- `out_dir`：生成目录；transport target 通常不需要。
 
-- `overlay_name`：默认 `wailsv3` / `wailsv2`，必须在所有 target 内唯一。
-- `frontend_mode`：默认 `external`；`none` 表示只生成 Go Wails overlay，不生成 Wails TypeScript overlay。
-- `include` / `exclude`：裁剪 Wails target overlay / facade；没有 selected route 的 root 不生成 `transports/<overlay_name>`，但共享 Go / TypeScript 契约层仍完整生成。
+核心 target：
 
-详细布局与 hook 见 [Wails 说明](wails.md)。
+- `contract`：输出 `api-blueprint.contract.json` 和 / 或 `api-blueprint.contract.md`。
+- `go-server`：生成 Go 服务端 core；Go client 本轮只预留 `go-client` target。
+- `typescript-client`：生成只依赖 `ApiTransport` 的 TypeScript client core；`base_url` / `base_url_expr` 由 transport facade 注入。
+- `kotlin-client`：首轮只支持 HTTP JSON RPC；`STREAM` / `CHANNEL`、form、binary、自定义 wrapper 会在 `api-gen check` 阶段失败。
+- `grpc-proto`：从 ContractGraph 输出 `.proto` 和 service 定义。
 
-## grpc
+transport target：
 
-```toml
-[grpc]
-source_root = "grpc/protos"
-import_roots = []
+- `http-transport`：声明 HTTP server/client 组合。
+- `wails-transport`：声明 Wails overlay，必须设置 `version`、`server` 和 `clients`。
+- `frontend_mode = "external"` 生成外部前端使用的 Wails TypeScript facade；`none` 只生成 Go overlay。
+- `include` / `exclude` 可裁剪 Wails target overlay / facade。
 
-[[grpc.targets]]
-id = "go.greeter"
-lang = "go"
-out_dir = "grpc/go"
-files = ["commonpb/common.proto", "greeterpb/greeter.proto"]
+预留 target：
 
-[[grpc.targets]]
-id = "python.greeter"
-lang = "python"
-out_dir = "grpc/python"
-files = ["**/*.proto"]
-python_package_root = "examplegrpc_pb"
+- `python-server`
+- `python-client`
+- `go-client`
+
+这些 target 当前只进入 schema 和 capability registry，不生成业务代码。
+
+## CLI
+
+```sh
+api-gen list-targets -c api-blueprint.toml
+api-gen explain-target -c api-blueprint.toml --target go.server
+api-gen manifest -c api-blueprint.toml --out api-blueprint.contract.json
+api-gen diff old.contract.json new.contract.json
+api-gen check -c api-blueprint.toml
+api-gen generate -c api-blueprint.toml
+api-gen generate -c api-blueprint.toml --target wails.v3
 ```
 
-gRPC target 编译已有 `.proto` 树，不会从 Blueprint DSL 反推 proto/service。
-
-详细 target 行为见 [gRPC 说明](grpc.md)。
+`api-gen manifest` 输出 routes、schemas、connections、稳定 hashes、已解析 target plan 和 capability registry；`api-gen check` 会先构建 ContractGraph，再做 target dependency 和 capability 校验。生成前失败比生成半套代码更容易维护。

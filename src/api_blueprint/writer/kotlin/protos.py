@@ -113,7 +113,7 @@ class KotlinProto:
     def enum_wire_literal(self, value: Any) -> str:
         if self.enum_wire_type == "int":
             if isinstance(value, bool) or not isinstance(value, int):
-                raise ValueError(f"[gen_kotlin] Kotlin enum {self.name} 需要 int wire value")
+                raise ValueError(f"[kotlin-client] Kotlin enum {self.name} 需要 int wire value")
             return str(value)
         return json.dumps(str(value))
 
@@ -332,7 +332,7 @@ class KotlinProtoRegistry:
         """
         wrapper_name = getattr(wrapper_cls, "__name__", "ResponseWrapper")
         if wrapper_cls is not GeneralWrapper:
-            raise ValueError(f"[gen_kotlin] 暂不支持自定义 response wrapper: {wrapper_name}")
+            raise ValueError(f"[kotlin-client] 暂不支持自定义 response wrapper: {wrapper_name}")
 
         proto = self._protos.get((wrapper_cls, None))
         if proto is not None:
@@ -407,12 +407,12 @@ class KotlinProtoRegistry:
 def detect_enum_wire_type(enum_cls: type[enum.Enum]) -> str:
     values = [member.value for member in enum_cls]
     if not values:
-        raise ValueError(f"[gen_kotlin] Kotlin enum {enum_cls.__name__} 没有可生成的成员")
+        raise ValueError(f"[kotlin-client] Kotlin enum {enum_cls.__name__} 没有可生成的成员")
     if all(isinstance(value, str) for value in values):
         return "string"
     if all(isinstance(value, int) and not isinstance(value, bool) for value in values):
         return "int"
     value_types = ", ".join(sorted({type(value).__name__ for value in values}))
     raise ValueError(
-        f"[gen_kotlin] Kotlin enum {enum_cls.__name__} 只支持 string/int wire value，当前类型: {value_types}"
+        f"[kotlin-client] Kotlin enum {enum_cls.__name__} 只支持 string/int wire value，当前类型: {value_types}"
     )

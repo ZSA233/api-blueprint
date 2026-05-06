@@ -5,13 +5,19 @@ import logging
 import shutil
 from contextlib import contextmanager
 from pathlib import Path
-from typing import IO, Mapping, Sequence, Set, Union
+from typing import IO, TYPE_CHECKING, Mapping, Sequence, Set, Union
 
+from api_blueprint.engine.router import Router
 from api_blueprint.route_selection import normalize_selection_rules
 from api_blueprint.writer.core.base import BaseWriter
+from api_blueprint.writer.core.contract_adapters import RouteContractIndex, RouteProtocolContract
+from api_blueprint.writer.core.contracts import RouteContract
 from api_blueprint.writer.core.files import ensure_filepath_open
 
 from .blueprint import TypeScriptBlueprint
+
+if TYPE_CHECKING:
+    from api_blueprint.contract import ContractGraph
 
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -40,6 +46,7 @@ class TypeScriptWriter(BaseWriter[TypeScriptBlueprint]):
         include: Sequence[str] = (),
         exclude: Sequence[str] = (),
         wails_binding_manifest: Mapping[str, str] | None = None,
+        contract_graph: ContractGraph | None = None,
     ):
         super().__init__(working_dir)
         self.base_url = base_url or ""
@@ -55,6 +62,7 @@ class TypeScriptWriter(BaseWriter[TypeScriptBlueprint]):
         self.include = normalize_selection_rules(include)
         self.exclude = normalize_selection_rules(exclude)
         self.wails_binding_manifest = dict(wails_binding_manifest or {})
+        self.route_contract_index = RouteContractIndex.from_graph(contract_graph) if contract_graph is not None else None
         self._written_files: Set[str] = set()
 
     @property
@@ -80,6 +88,19 @@ class TypeScriptWriter(BaseWriter[TypeScriptBlueprint]):
         for bp in self.bps:
             bp.build()
             bp.gen()
+
+    def _ensure_route_contract_index(self) -> RouteContractIndex:
+        if self.route_contract_index is None:
+            from api_blueprint.contract import build_contract_graph
+
+            self.route_contract_index = RouteContractIndex.from_graph(build_contract_graph([bp.bp for bp in self.bps]))
+        return self.route_contract_index
+
+    def route_contract_for(self, router: Router) -> RouteContract:
+        return self._ensure_route_contract_index().protocol_for_router(router).route
+
+    def route_protocol_for(self, router: Router) -> RouteProtocolContract:
+        return self._ensure_route_contract_index().protocol_for_router(router)
 
     def cleanup_legacy_layout(self) -> None:
         for bp in self.bps:

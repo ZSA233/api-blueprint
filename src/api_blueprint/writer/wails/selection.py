@@ -28,7 +28,7 @@ class WailsRouteSelection:
         return True
 
     def _matches(self, router: Router, rule: str, *, route_name: str) -> bool:
-        return matches_selection_rule(router, rule, route_name=route_name, label="[gen_wails]")
+        return matches_selection_rule(router, rule, route_name=route_name, label="[api-gen wails-transport]")
 
 
 def select_targets(
@@ -44,7 +44,7 @@ def select_targets(
         if not any(fnmatch.fnmatchcase(target.id, pattern) for target in targets)
     ]
     if unmatched:
-        raise ValueError(f"[gen_wails] 未匹配到任何 target: {', '.join(unmatched)}")
+        raise ValueError(f"[api-gen wails-transport] 未匹配到任何 target: {', '.join(unmatched)}")
 
     return tuple(
         target

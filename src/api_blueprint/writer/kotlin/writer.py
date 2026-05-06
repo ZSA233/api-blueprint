@@ -4,9 +4,11 @@ import json
 import logging
 from contextlib import contextmanager
 from pathlib import Path
-from typing import IO, Generator, Optional, Sequence
+from typing import IO, TYPE_CHECKING, Generator, Optional, Sequence
 
+from api_blueprint.engine.router import Router
 from api_blueprint.writer.core.base import BaseWriter
+from api_blueprint.writer.core.contract_adapters import RouteContractIndex, RouteProtocolContract
 from api_blueprint.writer.core.files import ensure_filepath_open
 from api_blueprint.writer.core.templates import render
 
@@ -18,6 +20,9 @@ from .selection import normalize_rules
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger("KotlinWriter")
 logger.setLevel(logging.INFO)
+
+if TYPE_CHECKING:
+    from api_blueprint.contract import ContractGraph
 
 
 class KotlinWriter(BaseWriter[KotlinBlueprint]):
@@ -31,6 +36,7 @@ class KotlinWriter(BaseWriter[KotlinBlueprint]):
         include: Sequence[str] = (),
         exclude: Sequence[str] = (),
         allow_empty: bool = False,
+        contract_graph: ContractGraph | None = None,
     ):
         super().__init__(working_dir)
         self.package = package
@@ -41,6 +47,7 @@ class KotlinWriter(BaseWriter[KotlinBlueprint]):
         self.include = normalize_rules(include)
         self.exclude = normalize_rules(exclude)
         self.allow_empty = allow_empty
+        self.route_contract_index = RouteContractIndex.from_graph(contract_graph) if contract_graph is not None else None
 
     @property
     def package_dir(self) -> Path:
@@ -56,7 +63,17 @@ class KotlinWriter(BaseWriter[KotlinBlueprint]):
                 continue
             self._gen_blueprint(bp)
         if total_routes == 0 and not self.allow_empty:
-            raise ValueError("[gen_kotlin] Kotlin include/exclude 过滤后没有可生成的 route")
+            raise ValueError("[kotlin-client] Kotlin include/exclude 过滤后没有可生成的 route")
+
+    def _ensure_route_contract_index(self) -> RouteContractIndex:
+        if self.route_contract_index is None:
+            from api_blueprint.contract import build_contract_graph
+
+            self.route_contract_index = RouteContractIndex.from_graph(build_contract_graph([bp.bp for bp in self.bps]))
+        return self.route_contract_index
+
+    def route_protocol_for(self, router: Router) -> RouteProtocolContract:
+        return self._ensure_route_contract_index().protocol_for_router(router)
 
     def _gen_blueprint(self, bp: KotlinBlueprint) -> None:
         base_dir = self.package_dir

@@ -1,16 +1,22 @@
 [blueprint]
 entrypoints = ["blueprints.app:bp"]
 
-[golang]
-codegen_output = "golang"
+[[targets]]
+id = "go.server"
+kind = "go-server"
+out_dir = "golang"
 module = "example.com/api-blueprint/wails-hello/golang"
 
-[typescript]
-codegen_output = "typescript"
+[[targets]]
+id = "typescript.client"
+kind = "typescript-client"
+out_dir = "typescript"
 
-[[transport.targets]]
+[[targets]]
 id = "hello.v3"
-kind = "wails"
+kind = "wails-transport"
 version = "v3"
+server = "go.server"
+clients = ["typescript.client"]
 overlay_name = "wailsv3"
 frontend_mode = "external"

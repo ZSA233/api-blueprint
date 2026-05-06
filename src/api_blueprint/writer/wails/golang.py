@@ -4,14 +4,14 @@ import logging
 import shutil
 from contextlib import contextmanager
 from pathlib import Path
-from typing import IO, Generator, Optional, Set
+from typing import IO, TYPE_CHECKING, Generator, Optional, Set
 
 from api_blueprint.engine.group import RouterGroup
 from api_blueprint.engine.router import Router
 from api_blueprint.engine.utils import join_path_imports
 from api_blueprint.engine.wrapper import NoneWrapper
 from api_blueprint.writer.core.base import BaseBlueprint, BaseWriter
-from api_blueprint.writer.core.contracts import route_contract
+from api_blueprint.writer.core.contract_adapters import RouteContractIndex, RouteProtocolContract, route_protocol_from_router
 from api_blueprint.writer.core.files import ensure_filepath_open
 from api_blueprint.writer.core.templates import render
 from api_blueprint.writer.golang.blueprint import GolangRouter
@@ -28,14 +28,24 @@ logger.setLevel(logging.INFO)
 
 LANG = "wails"
 
+if TYPE_CHECKING:
+    from api_blueprint.contract import ContractGraph
+
 
 class WailsRouter:
-    def __init__(self, group: "WailsRouterGroup", router: Router):
+    def __init__(
+        self,
+        group: "WailsRouterGroup",
+        router: Router,
+        *,
+        protocol: RouteProtocolContract | None = None,
+    ):
         self.group = group
         self.router = router
-        self.go = GolangRouter(router)
-        self.contract = route_contract(router)
-        self.json_wrapper = GolangResponseWrapper("RSP_JSON", router.response_wrapper)
+        self.protocol = protocol or route_protocol_from_router(router)
+        self.go = GolangRouter(router, protocol=self.protocol)
+        self.contract = self.protocol.route
+        self.json_wrapper = GolangResponseWrapper("RSP_JSON", self.protocol.response.wrapper)
 
     @property
     def func_name(self) -> str:
@@ -71,9 +81,9 @@ class WailsRouter:
 
     @property
     def body_alias_name(self) -> str | None:
-        if self.router.req_json is not None:
+        if self.protocol.request.json.model is not None:
             return f"{self.req_type}_JSON"
-        if self.router.req_form is not None:
+        if self.protocol.request.form.model is not None:
             return f"{self.req_type}_FORM"
         return None
 
@@ -107,15 +117,15 @@ class WailsRouter:
 
     @property
     def ws_payload_alias_name(self) -> str | None:
-        if len(self.router.recvs) != 1:
+        if len(self.protocol.recvs) != 1:
             return None
         return f"{self.ws_send_type}_BODY"
 
     @property
     def ws_payload_target(self) -> str:
-        if len(self.router.recvs) != 1:
+        if len(self.protocol.recvs) != 1:
             return "any"
-        return self.group.bp.shared_common_proto_ref(self.router.recvs[0])
+        return self.group.bp.shared_common_proto_ref(self.protocol.recvs[0])
 
     @property
     def server_message_type(self) -> str:
@@ -201,7 +211,7 @@ class WailsRouter:
 
     @property
     def url(self) -> str:
-        return self.router.url
+        return self.contract.url
 
     @property
     def has_ws(self) -> bool:
@@ -237,11 +247,11 @@ class WailsRouter:
 
     @property
     def bind_json(self) -> bool:
-        return self.router.req_json is not None
+        return self.protocol.request.json.model is not None
 
     @property
     def bind_form(self) -> bool:
-        return self.router.req_form is not None
+        return self.protocol.request.form.model is not None
 
     @property
     def executor_body_type_expr(self) -> str:
@@ -261,11 +271,11 @@ class WailsRouter:
 
     @property
     def is_json_response(self) -> bool:
-        return self.router.rsp_media_type == "application/json"
+        return self.protocol.response.media_type == "application/json"
 
     @property
     def is_xml_response(self) -> bool:
-        return self.router.rsp_media_type == "application/xml"
+        return self.protocol.response.media_type == "application/xml"
 
     @property
     def is_text_response(self) -> bool:
@@ -277,11 +287,11 @@ class WailsRouter:
 
     @property
     def response_wrapper_name(self) -> str:
-        return self.router.response_wrapper.__name__
+        return self.protocol.response.wrapper.__name__
 
     @property
     def has_wrapped_json_response(self) -> bool:
-        return self.is_json_response and self.router.response_wrapper is not NoneWrapper
+        return self.is_json_response and self.protocol.response.wrapper is not NoneWrapper
 
     @property
     def service_response_type_expr(self) -> str:
@@ -351,7 +361,7 @@ class WailsRouterGroup:
 
     def views(self) -> Generator[WailsRouter, None, None]:
         for router in self.routers:
-            yield WailsRouter(self, router)
+            yield WailsRouter(self, router, protocol=self.bp.protocol_for_router(router))
 
 
 class WailsBlueprint(BaseBlueprint["WailsGoWriter"]):
@@ -374,6 +384,9 @@ class WailsBlueprint(BaseBlueprint["WailsGoWriter"]):
     def shared_common_proto_ref(self, model: object) -> str:
         proto = GolangProto.from_model(ensure_model(model))
         return f"sharedprotos.{proto.name}"
+
+    def protocol_for_router(self, router: Router) -> RouteProtocolContract:
+        return self.writer.route_protocol_for(router)
 
     def get_router_groups(self) -> list[WailsRouterGroup]:
         if self.router_groups is None:
@@ -423,12 +436,14 @@ class WailsGoWriter(BaseWriter[WailsBlueprint]):
         module: str | None = None,
         runtime_package: str = "wailstransport",
         route_selection: WailsRouteSelection | None = None,
+        contract_graph: ContractGraph | None = None,
     ):
         super().__init__(working_dir)
         self.version = version
         self.overlay_name = overlay_name
         self.runtime_package = runtime_package
         self.route_selection = route_selection
+        self.route_contract_index = RouteContractIndex.from_graph(contract_graph) if contract_graph is not None else None
         self.toolchain = GolangToolchain(logger)
         self._written_files: Set[str] = set()
 
@@ -476,6 +491,16 @@ class WailsGoWriter(BaseWriter[WailsBlueprint]):
 
     def validate_package_contract(self) -> None:
         return None
+
+    def _ensure_route_contract_index(self) -> RouteContractIndex:
+        if self.route_contract_index is None:
+            from api_blueprint.contract import build_contract_graph
+
+            self.route_contract_index = RouteContractIndex.from_graph(build_contract_graph([bp.bp for bp in self.bps]))
+        return self.route_contract_index
+
+    def route_protocol_for(self, router: Router) -> RouteProtocolContract:
+        return self._ensure_route_contract_index().protocol_for_router(router)
 
     def gen(self) -> None:
         self.validate_package_contract()

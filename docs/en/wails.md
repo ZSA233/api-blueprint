@@ -1,32 +1,36 @@
 # Wails
 
-`api-gen-wails` generates Wails API artifacts. It does not generate a full Wails scaffold and does not call the Wails CLI to generate JS bindings.
+`api-gen generate --target <wails-target>` generates Wails API artifacts. It does not generate a full Wails scaffold and does not call the Wails CLI to generate JS bindings.
 
-In this repository, the Wails CLI is used to build and package handwritten harnesses such as `examples/wails-harness/{v2,v3}`. It is not an input to `api-gen-wails`.
+In this repository, the Wails CLI is used to build and package handwritten harnesses such as `examples/wails-harness/{v2,v3}`. It is not an input to the Wails target.
 
 ## Target Config
 
 ```toml
-[[transport.targets]]
+[[targets]]
 id = "wails.v3"
-kind = "wails"
+kind = "wails-transport"
 version = "v3"
+server = "go.server"
+clients = ["typescript.client"]
 frontend_mode = "external"
 # overlay_name = "wailsv3"
 # include = ["group:demo"]
 # exclude = ["path:/api/internal/**"]
 ```
 
-- `id`: used by `--target`, `--list-targets`, and `--explain-target`.
-- `kind`: Wails targets use `wails`.
+- `id`: used by `api-gen generate --target`, `list-targets`, and `explain-target`.
+- `kind`: Wails targets use `wails-transport`.
 - `version`: supports `v3` and `v2`.
+- `server`: references a `go-server` target.
+- `clients`: references one or more client targets; the current Wails TypeScript facade uses `typescript-client`.
 - `overlay_name`: defaults to `wailsv3` / `wailsv2` and must be unique.
 - `frontend_mode`: defaults to `external`; `none` skips the Wails TypeScript overlay.
 - `include` / `exclude`: trim the Wails target overlay / facade. Roots with no selected routes do not get `transports/<overlay_name>` output; the shared Go / TypeScript contract layers are still generated in full.
 
 ## Go Output Layout
 
-Wails Go overlays are generated under the transport target directory inside the shared `[golang]` output tree:
+Wails Go overlays are generated under the transport target directory inside the Go target output tree referenced by `server`:
 
 ```text
 views/
@@ -51,7 +55,7 @@ views/
 
 ## TypeScript Output Layout
 
-Wails TypeScript overlays are generated inside the shared `[typescript]` output tree:
+Wails TypeScript overlays are generated inside the TypeScript target output tree referenced by `clients`:
 
 ```text
 api/
@@ -123,35 +127,41 @@ The Wails v3 transport uses the official runtime `Call.ByName(...)` contract and
 
 ## Wails-only App
 
-`api-blueprint` can be used in a Wails app that does not start an HTTP server. `api-gen-wails` still generates the shared Go / TypeScript contract layers; when only a `kind = "wails"` target is declared, it does not generate the Gin HTTP adapter. The Wails app shell only needs to register generated services. It does not need to import the HTTP adapter or start a Gin/HTTP listener.
+`api-blueprint` can be used in a Wails app that does not start an HTTP server. `api-gen generate --target desktop.v3` first ensures the dependent Go / TypeScript targets are generated, then writes the Wails overlay; without an `http-transport` target it does not generate the Gin HTTP adapter. The Wails app shell only needs to register generated services. It does not need to import the HTTP adapter or start a Gin/HTTP listener.
 
 ```toml
 [blueprint]
 entrypoints = ["blueprints.app:bp"]
 
-[golang]
-codegen_output = "golang"
+[[targets]]
+id = "go.server"
+kind = "go-server"
+out_dir = "golang"
 module = "example.com/myapp/generated"
 
-[typescript]
-codegen_output = "typescript"
+[[targets]]
+id = "typescript.client"
+kind = "typescript-client"
+out_dir = "typescript"
 
-[[transport.targets]]
+[[targets]]
 id = "desktop.v3"
-kind = "wails"
+kind = "wails-transport"
 version = "v3"
+server = "go.server"
+clients = ["typescript.client"]
 frontend_mode = "external"
 ```
 
 ```sh
 mkdir -p golang typescript
-uv run api-gen-wails -c api-blueprint.toml --target desktop.v3
+uv run api-gen generate -c api-blueprint.toml --target desktop.v3
 cd app
 wails3 doctor
 wails3 build
 ```
 
-When only a Wails target is declared, the Wails app imports only generated services and its build graph does not need Gin. If one project needs both HTTP and Wails, add another `[[transport.targets]]` with `kind = "http"`. See `examples/wails-hello` for the complete minimal example.
+When only a Wails target is declared, the Wails app imports only generated services and its build graph does not need Gin. If one project needs both HTTP and Wails, add another `[[targets]]` with `kind = "http-transport"`. See `examples/wails-hello` for the complete minimal example.
 
 Shortcut for manually starting `examples/wails-hello`:
 
@@ -208,7 +218,7 @@ await bridge.close(1000, "done");
 offMessage();
 ```
 
-Legacy `WS().RECV().SEND()` still generates `ApiSocketBridge<ServerMessage, ClientMessage>` for compatibility. The HTTP shared client still keeps `connect<Route>Raw()` as the native WebSocket escape hatch, but new blueprints should prefer `STREAM` / `CHANNEL`.
+Legacy `WS().RECV().SEND()` is outside the vNext ContractGraph mainline. New blueprints should use `STREAM` / `CHANNEL` so multiple logical messages are not modeled as multiple raw events.
 
 ## Harness Examples
 

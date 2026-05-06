@@ -47,11 +47,8 @@ def test_ci_and_release_bundle_share_example_toolchain_setup():
     assert "actions/setup-node@v6" in toolchain_text
     assert 'node-version: "24"' in toolchain_text
     assert "examples/golang/go.sum" in toolchain_text
-    assert "examples/grpc/go/go.sum" in toolchain_text
     assert "protobuf-compiler" in toolchain_text
     assert "github.com/abice/go-enum@v0.9.2" in toolchain_text
-    assert "protoc-gen-go@v1.36.10" in toolchain_text
-    assert "protoc-gen-go-grpc@v1.6.0" in toolchain_text
     assert "GITHUB_PATH" in toolchain_text
     assert 'uv run pytest -q -m "not example_validation"' in ci_text
 

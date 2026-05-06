@@ -7,7 +7,7 @@ Language: [中文](README.md) | English
 
 ## Overview
 
-`api-blueprint` defines API contracts with a Python DSL and generates a documentation service, Go, TypeScript, Kotlin Android, Wails v2/v3 overlays, and gRPC artifacts for existing `.proto` trees from the same contract.
+`api-blueprint` defines API contracts with a Python DSL, builds a unified `ContractGraph`, and generates a documentation service, Go server, TypeScript client, Kotlin Android client, Wails v2/v3 overlays, and gRPC proto/service definitions from the same protocol source of truth.
 
 The DSL supports transport-neutral `STREAM` / `CHANNEL` long-connection message contracts alongside RPC; HTTP can map them to SSE / WebSocket, Wails maps them to session-scoped runtime events by default, and `CLOSE(Model)` generates a typed close lifecycle payload.
 
@@ -17,12 +17,13 @@ This README keeps only the onboarding path. See [Learn More](#learn-more) for fu
 
 | Target | Status | Command | Example |
 |:---|:---:|:---|:---|
-| Go | Available | `api-gen-golang` | `examples/golang` |
-| TypeScript | Preview | `api-gen-typescript` | `examples/typescript` |
-| Wails v3 | Experimental | `api-gen-wails` | `examples/{golang,typescript,wails-harness/v3,wails-hello}` |
-| Wails v2 | Preview | `api-gen-wails` | `examples/{golang,typescript,wails-harness/v2}` |
-| Kotlin Android | Preview | `api-gen-kotlin` | `examples/kotlin` |
-| gRPC | Available | `api-gen-grpc` | `examples/grpc/{go,python}` |
+| Contract manifest | Available | `api-gen` | `api-blueprint.contract.json` |
+| Go server | Available | `api-gen` | `examples/golang` |
+| TypeScript client | Preview | `api-gen` | `examples/typescript` |
+| Wails v3 | Experimental | `api-gen` | `examples/{golang,typescript,wails-harness/v3,wails-hello}` |
+| Wails v2 | Preview | `api-gen` | `examples/{golang,typescript,wails-harness/v2}` |
+| Kotlin Android client | Preview | `api-gen` | `examples/kotlin` |
+| gRPC proto | Available | `api-gen` | `examples/grpc/protos` |
 
 
 ## Installation
@@ -57,19 +58,27 @@ Create minimal config and generate code:
 [blueprint]
 entrypoints = ["blueprints.app:bp"]
 
-[golang]
-codegen_output = "golang"
-upstream = "http://localhost:2333"
+[[targets]]
+id = "go.server"
+kind = "go-server"
+out_dir = "golang"
 
-[typescript]
-codegen_output = "typescript"
+[[targets]]
+id = "typescript.client"
+kind = "typescript-client"
+out_dir = "typescript"
 base_url = "http://localhost:2333"
+
+[[targets]]
+id = "http"
+kind = "http-transport"
+server = "go.server"
+clients = ["typescript.client"]
 ```
 
 ```sh
 api-doc-server -c api-blueprint.toml
-api-gen-golang -c api-blueprint.toml
-api-gen-typescript -c api-blueprint.toml
+api-gen generate -c api-blueprint.toml
 ```
 
 ## Minimal Configuration
@@ -80,65 +89,77 @@ The following is a common multi-target config skeleton. See [Configuration](docs
 [blueprint]
 entrypoints = ["blueprints.app:*"]
 
-[golang]
-codegen_output = "golang"
-upstream = "http://localhost:2333"
+[[targets]]
+id = "contract"
+kind = "contract"
+out_dir = "."
+formats = ["json", "markdown"]
 
-[typescript]
-codegen_output = "typescript"
+[[targets]]
+id = "go.server"
+kind = "go-server"
+out_dir = "golang"
+module = "example.com/project/golang"
+
+[[targets]]
+id = "typescript.client"
+kind = "typescript-client"
+out_dir = "typescript"
 base_url = "http://localhost:2333"
 
-[[transport.targets]]
+[[targets]]
 id = "http"
-kind = "http"
+kind = "http-transport"
+server = "go.server"
+clients = ["typescript.client"]
 
-[[transport.targets]]
+[[targets]]
 id = "wails.v3"
-kind = "wails"
+kind = "wails-transport"
 version = "v3"
+server = "go.server"
+clients = ["typescript.client"]
 frontend_mode = "external"
 
-[grpc]
-source_root = "grpc/protos"
-import_roots = []
-
-[[grpc.targets]]
-id = "go.greeter"
-lang = "go"
-out_dir = "grpc/go"
-files = ["greeterpb/greeter.proto"]
+[[targets]]
+id = "grpc.proto"
+kind = "grpc-proto"
+out_dir = "grpc/protos"
+package = "example.api"
+go_package_prefix = "example.com/project/grpc/go"
 ```
 
 ## Common Commands
 
 ```sh
 api-doc-server -c examples/api-blueprint.toml
-api-gen-golang -c examples/api-blueprint.toml
-api-gen-typescript -c examples/api-blueprint.toml
-api-gen-kotlin -c examples/api-blueprint.toml
-api-gen-wails -c examples/api-blueprint.toml --list-targets
-api-gen-wails -c examples/api-blueprint.toml --target wails.v3
-api-gen-grpc -c examples/api-blueprint.toml --list-targets
-api-gen-grpc -c examples/api-blueprint.toml --target go.*
+api-gen list-targets -c examples/api-blueprint.toml
+api-gen explain-target -c examples/api-blueprint.toml --target go.server
+api-gen manifest -c examples/api-blueprint.toml --out api-blueprint.contract.json
+api-gen check -c examples/api-blueprint.toml
+api-gen generate -c examples/api-blueprint.toml
+api-gen generate -c examples/api-blueprint.toml --target wails.v3
+api-gen diff old.contract.json new.contract.json
 ```
 
 ## Generated Artifacts And User Files
 
-- `examples/blueprints/` and `examples/grpc/protos/` are example sources of truth.
-- `examples/blueprints/api_demo.py` includes legacy `WS` plus new `STREAM` / `CHANNEL` long-connection examples.
-- `examples/golang/`, `examples/typescript/`, `examples/kotlin/`, `examples/grpc/go/`, and `examples/grpc/python/` are generated snapshots.
+- `examples/blueprints/` is the example Blueprint source of truth.
+- `examples/blueprints/api_demo.py` includes `STREAM` / `CHANNEL` long-connection examples.
+- `examples/golang/`, `examples/typescript/`, `examples/kotlin/`, and `examples/grpc/protos/` are generated snapshots.
 - `examples/wails-hello/` is a standalone Wails v3 hello world example that demonstrates a GUI loop without starting an HTTP server.
 - `gen_*` files are generator-owned and overwritten during regeneration.
 - `impl_*` and non-`gen_*` passthrough files are user-owned extension points and are preserved during regeneration.
-- Go / TypeScript artifacts use a `core + transports/<target>` layout; `api-gen-wails` does not generate a full Wails app shell, and external frontends must load the Wails runtime first.
+- Go / TypeScript artifacts use a `core + transports/<target>` layout; `api-gen generate --target wails.v3` does not generate a full Wails app shell, and external frontends must load the Wails runtime first.
 - Wails target `include` / `exclude` trims target overlays / facades; roots with no selected routes do not get `transports/<overlay_name>` output, while shared contract layers are still generated in full.
 - Go `views/providers` is a global runtime; use route-scoped provider factories when a provider implementation must vary by route. The user-owned hook is `SelectProvider(spec, handler)`. See the generator docs.
-- `STREAM` / `CHANNEL` are the new long-connection contract entrypoints; multi-message directions generate one discriminated union, while legacy `WS().RECV().SEND()` is kept only for compatibility.
+- `STREAM` / `CHANNEL` are the long-connection contract entrypoints; multi-message directions generate one discriminated union, while legacy `WS().RECV().SEND()` is outside the vNext mainline.
 - The default HTTP/Wails runtimes fully support only `ConnectionScope.SESSION`; `APP` / `TOPIC` broadcast or topic routing can be added through a custom connection hub / manager.
 - `examples/golang/views/routes/api/demo/impl.go` hand-writes a minimal `STREAM` / `CHANNEL` usage example that demonstrates `Open()`, `Send()`, `Recv()`, typed `Close()`, and exceptional `Abort()`.
 - The Go HTTP adapter respects responses already written by Gin handlers, which fits small HTTP-only raw callbacks.
-- When no `[[transport.targets]]` are declared, an HTTP target is generated by default; Wails-only projects declare only a `kind = "wails"` target and skip the Gin HTTP adapter; HTTP + Wails projects declare both `kind = "http"` and `kind = "wails"`.
-- gRPC only compiles existing `.proto` trees and does not derive proto/service definitions from the Blueprint DSL.
+- The contract manifest records routes, schemas, connections, stable hashes, the resolved target plan, and the capability registry so AI agents can understand protocol boundaries.
+- `[[targets]]` is the unified config entrypoint; transport targets use `kind = "http-transport"` / `kind = "wails-transport"` and explicitly declare `server` plus `clients`.
+- gRPC proto is emitted by the `grpc-proto` target from ContractGraph; existing `.proto` trees are no longer an independent source of truth.
 
 ## Learn More
 

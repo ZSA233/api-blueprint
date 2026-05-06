@@ -16,7 +16,8 @@ from api_blueprint.engine.router import Router
 from api_blueprint.engine.utils import join_path_imports, pascal_to_snake_case, snake_to_pascal_case
 from api_blueprint.engine.wrapper import NoneWrapper, ResponseWrapper
 from api_blueprint.writer.core.base import BaseBlueprint
-from api_blueprint.writer.core.contracts import RouteContract, route_contract
+from api_blueprint.writer.core.contract_adapters import RouteProtocolContract, route_protocol_from_router
+from api_blueprint.writer.core.contracts import RouteContract
 from api_blueprint.writer.core.templates import iter_render, render
 
 from .common import LANG, PackageName, GolangType, internal_codegen_dir
@@ -69,13 +70,19 @@ class GolangErrorGroup:
 
 
 class GolangRouter:
-    def __init__(self, router: Router):
+    def __init__(
+        self,
+        router: Router,
+        contract: RouteContract | None = None,
+        protocol: RouteProtocolContract | None = None,
+    ):
         self.router = router
-        self.contract: RouteContract = route_contract(router)
+        self.protocol = protocol or route_protocol_from_router(router, contract=contract)
+        self.contract: RouteContract = self.protocol.route
 
     @property
     def url(self):
-        return self.router.url
+        return self.contract.url
 
     @property
     def methods(self) -> list[str]:
@@ -91,14 +98,11 @@ class GolangRouter:
 
     @property
     def namespace(self) -> str:
-        return self._group_alias()
+        return self.contract.namespace
 
     @property
     def service_name(self) -> str:
-        service_name = snake_to_pascal_case(self.namespace or "root", "", "Group")
-        if not service_name.endswith("Service"):
-            service_name += "Service"
-        return service_name
+        return self.contract.service_name
 
     @property
     def route_id(self) -> str:
@@ -112,9 +116,7 @@ class GolangRouter:
 
     @property
     def func_name(self):
-        if not self.router.leaf.strip("/"):
-            return "ROOT_"
-        return snake_to_pascal_case(self.router.leaf, "", "Z")
+        return self.contract.func_name
 
     @property
     def ctx_type(self):
@@ -138,9 +140,9 @@ class GolangRouter:
 
     @property
     def body_alias_name(self) -> str | None:
-        if self.router.req_json is not None:
+        if self.protocol.request.json.model is not None:
             return f"{self.req_type}_JSON"
-        if self.router.req_form is not None:
+        if self.protocol.request.form.model is not None:
             return f"{self.req_type}_FORM"
         return None
 
@@ -164,19 +166,19 @@ class GolangRouter:
 
     @property
     def bind_json(self) -> bool:
-        return self.router.req_json is not None
+        return self.protocol.request.json.model is not None
 
     @property
     def bind_form(self) -> bool:
-        return self.router.req_form is not None
+        return self.protocol.request.form.model is not None
 
     @property
     def is_json_response(self) -> bool:
-        return self.router.rsp_media_type == "application/json"
+        return self.protocol.response.media_type == "application/json"
 
     @property
     def is_xml_response(self) -> bool:
-        return self.router.rsp_media_type == "application/xml"
+        return self.protocol.response.media_type == "application/xml"
 
     @property
     def is_text_response(self) -> bool:
@@ -184,18 +186,18 @@ class GolangRouter:
 
     @property
     def response_wrapper_name(self) -> str:
-        return self.router.response_wrapper.__name__
+        return self.protocol.response.wrapper.__name__
 
     @property
     def has_wrapped_json_response(self) -> bool:
-        return self.is_json_response and self.router.response_wrapper is not NoneWrapper
+        return self.is_json_response and self.protocol.response.wrapper is not NoneWrapper
 
     @property
     def req_provider(self):
         options = [
             ("Q", self.query_model),
-            ("F", self.router.req_form),
-            ("J", self.router.req_json),
+            ("F", self.protocol.request.form.model),
+            ("J", self.protocol.request.json.model),
         ]
         return "".join(value for value, ok in options if ok)
 
@@ -207,8 +209,8 @@ class GolangRouter:
             "text/html": "html",
         }
         return "@".join([
-            media_type_mapping[self.router.rsp_media_type],
-            self.router.response_wrapper.__name__,
+            media_type_mapping[self.protocol.response.media_type],
+            self.protocol.response.wrapper.__name__,
         ])
 
     @property
@@ -247,11 +249,17 @@ class GolangRouter:
         if self.query_model is not None:
             req_query_proto = GolangProto.from_model_ref(ensure_model(self.query_model), self.query_alias_name)
             yield req_query_proto
-        if self.router.req_form is not None:
-            req_form_proto = GolangProto.from_model_ref(ensure_model(self.router.req_form), f"{self.req_type}_FORM")
+        if self.protocol.request.form.model is not None:
+            req_form_proto = GolangProto.from_model_ref(
+                ensure_model(self.protocol.request.form.model),
+                f"{self.req_type}_FORM",
+            )
             yield req_form_proto
-        if self.router.req_json is not None:
-            req_json_proto = GolangProto.from_model_ref(ensure_model(self.router.req_json), f"{self.req_type}_JSON")
+        if self.protocol.request.json.model is not None:
+            req_json_proto = GolangProto.from_model_ref(
+                ensure_model(self.protocol.request.json.model),
+                f"{self.req_type}_JSON",
+            )
             yield req_json_proto
 
         yield GolangProto(
@@ -260,7 +268,7 @@ class GolangRouter:
                 self.req_type,
                 {
                     "Q": self.query_model,
-                    "B": self.router.req_json or self.router.req_form or Null(),
+                    "B": self.protocol.request.json.model or self.protocol.request.form.model or Null(),
                 },
             ),
             "generic",
@@ -271,13 +279,16 @@ class GolangRouter:
         )
 
         rsp_json_proto = None
-        if self.router.rsp_model is not None:
-            rsp_json_proto = GolangProto.from_model_ref(ensure_model(self.router.rsp_model), f"{self.rsp_type}_BODY")
+        if self.protocol.response.model.model is not None:
+            rsp_json_proto = GolangProto.from_model_ref(
+                ensure_model(self.protocol.response.model.model),
+                f"{self.rsp_type}_BODY",
+            )
             yield rsp_json_proto
 
         yield GolangProto(
             self.rsp_type,
-            self.router.rsp_model,
+            self.protocol.response.model.model,
             "alias",
             alias=GolangProtoAlias(
                 name=GolangType(rsp_json_proto.name if rsp_json_proto else "any"),
@@ -291,8 +302,8 @@ class GolangRouter:
                 self.req_type,
                 {
                     "Q": self.query_model or Null(),
-                    "B": self.router.req_json or self.router.req_form or Null(),
-                    "P": self.router.rsp_model or Null(),
+                    "B": self.protocol.request.json.model or self.protocol.request.form.model or Null(),
+                    "P": self.protocol.response.model.model or Null(),
                 },
             ),
             "generic",
@@ -311,15 +322,15 @@ class GolangRouter:
     def com_protos(self) -> Generator[GolangProto, None, None]:
         if self.query_model is not None:
             yield from GolangProto.from_model(self.query_model).com_protos()
-        if self.router.req_form is not None:
-            yield from GolangProto.from_model(self.router.req_form).com_protos()
-        if self.router.req_json is not None:
-            yield from GolangProto.from_model(self.router.req_json).com_protos()
-        if self.router.rsp_model is not None:
-            yield from GolangProto.from_model(self.router.rsp_model).com_protos()
-        for recv in self.router.recvs:
+        if self.protocol.request.form.model is not None:
+            yield from GolangProto.from_model(self.protocol.request.form.model).com_protos()
+        if self.protocol.request.json.model is not None:
+            yield from GolangProto.from_model(self.protocol.request.json.model).com_protos()
+        if self.protocol.response.model.model is not None:
+            yield from GolangProto.from_model(self.protocol.response.model.model).com_protos()
+        for recv in self.protocol.recvs:
             yield from GolangProto.from_model(recv).com_protos()
-        for send in self.router.sends:
+        for send in self.protocol.sends:
             yield from GolangProto.from_model(send).com_protos()
         for model in self.connection_message_models():
             yield from GolangProto.from_model(model).com_protos()
@@ -345,20 +356,20 @@ class GolangRouter:
     @property
     def query_model(self) -> ModelRef | None:
         if self.is_connection:
-            return self.router.open_model
-        return self.router.req_query
+            return self.protocol.request.open.model
+        return self.protocol.request.query.model
 
     @property
     def server_message_type(self) -> str:
-        return self._message_type_name(self.router.server_message, "SERVER")
+        return self._message_type_name(self.protocol.server_message, "SERVER")
 
     @property
     def client_message_type(self) -> str:
-        return self._message_type_name(self.router.client_message, "CLIENT")
+        return self._message_type_name(self.protocol.client_message, "CLIENT")
 
     @property
     def effective_close_model(self) -> ModelRef:
-        return self.router.effective_close_model or DefaultConnectionClose
+        return self.protocol.close_model or DefaultConnectionClose
 
     @property
     def close_message_type(self) -> str:
@@ -403,13 +414,13 @@ class GolangRouter:
         return 'return nil, fmt.Errorf("not implemented")'
 
     def message_protos(self) -> Generator[GolangProto, None, None]:
-        yield from self._message_contract_protos(self.router.server_message, "SERVER")
-        yield from self._message_contract_protos(self.router.client_message, "CLIENT")
+        yield from self._message_contract_protos(self.protocol.server_message, "SERVER")
+        yield from self._message_contract_protos(self.protocol.client_message, "CLIENT")
         if self.is_connection:
             yield GolangProto.from_model_ref(ensure_model(self.effective_close_model), self.close_message_type)
 
     def connection_message_models(self) -> Generator[ModelRef, None, None]:
-        for contract in (self.router.server_message, self.router.client_message):
+        for contract in (self.protocol.server_message, self.protocol.client_message):
             if contract is None:
                 continue
             for variant in contract.variants:
@@ -417,7 +428,7 @@ class GolangRouter:
 
     def message_unions(self) -> list[dict[str, Any]]:
         unions: list[dict[str, Any]] = []
-        for contract in (self.router.server_message, self.router.client_message):
+        for contract in (self.protocol.server_message, self.protocol.client_message):
             if contract is None or not contract.is_union:
                 continue
             variants = []
@@ -523,9 +534,12 @@ class GolangRouterGroup:
     def __len__(self) -> int:
         return len(self.group)
 
+    def _router_view(self, router: Router) -> GolangRouter:
+        return GolangRouter(router, protocol=self.bp.protocol_for_router(router))
+
     def interfaces(self) -> Generator[dict[str, Any], None, None]:
         for router in self.group:
-            view = GolangRouter(router)
+            view = self._router_view(router)
             yield {
                 "func": view.func_name,
                 "ctx_type": view.ctx_type,
@@ -538,7 +552,7 @@ class GolangRouterGroup:
 
     def registers(self) -> Generator[dict[str, Any], None, None]:
         for router in self.group:
-            view = GolangRouter(router)
+            view = self._router_view(router)
             for method in view.methods:
                 yield {
                     "func": view.func_name,
@@ -576,15 +590,15 @@ class GolangRouterGroup:
 
     def protos(self) -> Generator[GolangProto, None, None]:
         for router in self.group:
-            yield from GolangRouter(router).protos()
+            yield from self._router_view(router).protos()
 
     def com_protos(self) -> Generator[GolangProto, None, None]:
         for router in self.group:
-            yield from GolangRouter(router).com_protos()
+            yield from self._router_view(router).com_protos()
 
     def implements(self) -> Generator[dict[str, Any], None, None]:
         for router in self.group:
-            view = GolangRouter(router)
+            view = self._router_view(router)
             yield {
                 "func": view.func_name,
                 "ctx_type": view.ctx_type,
@@ -597,15 +611,21 @@ class GolangRouterGroup:
 
     def message_unions(self) -> Generator[dict[str, Any], None, None]:
         for router in self.group:
-            yield from GolangRouter(router).message_unions()
+            yield from self._router_view(router).message_unions()
 
     @property
     def uses_connection_runtime(self) -> bool:
-        return any(GolangRouter(router).is_connection for router in self.group)
+        return any(self._router_view(router).is_connection for router in self.group)
 
 
 class GolangBlueprint(BaseBlueprint["GolangWriter"]):
     router_groups: Optional[list[GolangRouterGroup]] = None
+
+    def contract_for_router(self, router: Router) -> RouteContract:
+        return self.writer.route_contract_for(router)
+
+    def protocol_for_router(self, router: Router) -> RouteProtocolContract:
+        return self.writer.route_protocol_for(router)
 
     def get_router_groups(self) -> list[GolangRouterGroup]:
         if self.router_groups is None:
@@ -782,7 +802,7 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
         for segment in segments:
             if segment.startswith("_"):
                 raise ValueError(
-                    f"[gen_golang] {label}[{raw_path}] 使用了生成器保留目录段[{segment}]；"
+                    f"[go-server] {label}[{raw_path}] 使用了生成器保留目录段[{segment}]；"
                     "以下划线开头的 Go 目录由 api-blueprint 保留"
                 )
 

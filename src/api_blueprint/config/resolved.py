@@ -2,13 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
 
-from api_blueprint.config.grpc_python_package import python_package_root_to_path
 from api_blueprint.config.loader import normalize_config_path
 from api_blueprint.config.models import (
     Config,
-    TransportKind,
+    TargetKind,
     WailsFrontendMode,
     WailsVersion,
     default_wails_overlay_name,
@@ -26,67 +24,23 @@ class ResolvedTargetConfig:
 
 
 @dataclass(frozen=True)
-class ResolvedTransportTargetConfig:
+class ResolvedApiTargetConfig:
     id: str
-    kind: TransportKind
-    version: WailsVersion | None = None
-    overlay_name: str | None = None
-    frontend_mode: WailsFrontendMode = "external"
-    include: tuple[str, ...] = ()
-    exclude: tuple[str, ...] = ()
-
-
-@dataclass(frozen=True)
-class ResolvedTransportConfig:
-    targets: tuple[ResolvedTransportTargetConfig, ...]
-
-
-@dataclass(frozen=True)
-class ResolvedKotlinConfig:
-    output: Path | None
-    package: str
-    upstream: str | None = None
+    kind: TargetKind
+    out_dir: Path | None = None
+    module: str | None = None
     base_url: str | None = None
     base_url_expr: str | None = None
+    package: str | None = None
+    formats: tuple[str, ...] = ()
+    version: WailsVersion | None = None
+    frontend_mode: WailsFrontendMode = "external"
+    overlay_name: str | None = None
+    server: str | None = None
+    clients: tuple[str, ...] = ()
+    go_package_prefix: str | None = None
     include: tuple[str, ...] = ()
     exclude: tuple[str, ...] = ()
-    client: Literal["okhttp"] = "okhttp"
-    serialization: Literal["kotlinx"] = "kotlinx"
-    allow_empty: bool = False
-
-
-@dataclass(frozen=True)
-class ResolvedGrpcJobConfig:
-    name: str
-    preset: Literal["go", "python"]
-    output: Path
-    proto_root: Path
-    protos: tuple[str, ...]
-    include_paths: tuple[Path, ...]
-    layout: Literal["source_relative", "go_package"]
-    module: str | None = None
-
-
-@dataclass(frozen=True)
-class ResolvedGrpcTargetConfig:
-    id: str
-    lang: Literal["go", "python"]
-    out_dir: Path
-    source_root: Path
-    files: tuple[str, ...]
-    import_roots: tuple[Path, ...]
-    python_package_root: str | None = None
-    python_package_root_path: Path | None = None
-
-
-@dataclass(frozen=True)
-class ResolvedGrpcConfig:
-    source_root: Path
-    import_roots: tuple[Path, ...]
-    targets: tuple[ResolvedGrpcTargetConfig, ...]
-    proto_root: Path
-    include_paths: tuple[Path, ...]
-    jobs: tuple[ResolvedGrpcJobConfig, ...]
 
 
 @dataclass(frozen=True)
@@ -110,12 +64,7 @@ class ResolvedConfig:
     project_root: Path
     entrypoint_root: Path
     raw: Config
-    golang: ResolvedTargetConfig | None
-    typescript: ResolvedTargetConfig | None
-    kotlin: ResolvedKotlinConfig | None
-    grpc: ResolvedGrpcConfig | None
-    transport: ResolvedTransportConfig
-    wails: ResolvedWailsConfig | None
+    targets: tuple[ResolvedApiTargetConfig, ...]
 
 
 def resolve_output_path(config_path: Path, output: str | None) -> Path | None:
@@ -150,159 +99,72 @@ def resolve_unique_path_list(config_path: Path, entries: list[str] | tuple[str, 
     return tuple(resolved)
 
 
-def choose_path_entries(
-    primary: list[str] | tuple[str, ...],
-    fallback: list[str] | tuple[str, ...],
-) -> list[str] | tuple[str, ...]:
-    return primary if primary else fallback
-
-
 def resolve_config(path: str | Path | None) -> ResolvedConfig:
     normalized = normalize_config_path(path)
     raw = Config.load(normalized)
-
-    goconf = raw.golang
-    tsconf = raw.typescript
-    ktconf = raw.kotlin
-    grpcconf = raw.grpc
-    wailsconf = raw.wails
-    transportconf = raw.transport
-    target_import_entries = (
-        choose_path_entries(grpcconf.import_roots, grpcconf.include_paths)
-        if grpcconf is not None
-        else ()
-    )
-    job_include_entries = (
-        choose_path_entries(grpcconf.include_paths, grpcconf.import_roots)
-        if grpcconf is not None
-        else ()
-    )
-    resolved_target_source_root = (
-        resolve_output_path(normalized, grpcconf.source_root or grpcconf.proto_root)
-        if grpcconf is not None
-        else None
-    )
-    resolved_target_import_roots = (
-        resolve_unique_path_list(normalized, target_import_entries)
-        if grpcconf is not None
-        else ()
-    )
-    resolved_job_proto_root = (
-        resolve_output_path(normalized, grpcconf.proto_root or grpcconf.source_root)
-        if grpcconf is not None
-        else None
-    )
-    resolved_job_include_paths = (
-        resolve_unique_path_list(normalized, job_include_entries)
-        if grpcconf is not None
-        else ()
-    )
     return ResolvedConfig(
         path=normalized,
         project_root=normalized.parent,
         entrypoint_root=normalized.parent,
         raw=raw,
-        golang=None
-        if goconf is None
-        else ResolvedTargetConfig(
-            output=resolve_output_path(normalized, goconf.codegen_output),
-            upstream=goconf.upstream,
-            module=goconf.module,
-        ),
-        typescript=None
-        if tsconf is None
-        else ResolvedTargetConfig(
-            output=resolve_output_path(normalized, tsconf.codegen_output or "typescript"),
-            upstream=tsconf.upstream,
-            base_url=tsconf.base_url,
-            base_url_expr=tsconf.base_url_expr,
-        ),
-        kotlin=None
-        if ktconf is None
-        else ResolvedKotlinConfig(
-            output=resolve_output_path(normalized, ktconf.codegen_output or "kotlin"),
-            package=ktconf.package,
-            upstream=ktconf.upstream,
-            base_url=ktconf.base_url,
-            base_url_expr=ktconf.base_url_expr,
-            include=tuple(ktconf.include),
-            exclude=tuple(ktconf.exclude),
-            client=ktconf.client,
-            serialization=ktconf.serialization,
-            allow_empty=ktconf.allow_empty,
-        ),
-        grpc=None
-        if grpcconf is None
-        else ResolvedGrpcConfig(
-            source_root=resolved_target_source_root or normalized.parent.resolve(),
-            import_roots=resolved_target_import_roots,
-            targets=tuple(
-                ResolvedGrpcTargetConfig(
-                    id=target.id,
-                    lang=target.lang,
-                    out_dir=resolve_output_path(normalized, target.out_dir) or normalized.parent.resolve(),
-                    source_root=resolve_output_path(normalized, target.source_root)
-                    or resolved_target_source_root
-                    or normalized.parent.resolve(),
-                    files=tuple(target.files),
-                    import_roots=resolve_path_list(normalized, target.import_roots),
-                    python_package_root=target.python_package_root,
-                    python_package_root_path=(
-                        python_package_root_to_path(target.python_package_root)
-                        if target.python_package_root is not None
-                        else None
-                    ),
-                )
-                for target in grpcconf.targets
-            ),
-            proto_root=resolved_job_proto_root or normalized.parent.resolve(),
-            include_paths=resolved_job_include_paths,
-            jobs=tuple(
-                ResolvedGrpcJobConfig(
-                    name=job.name,
-                    preset=job.preset,
-                    output=resolve_output_path(normalized, job.output) or normalized.parent.resolve(),
-                    proto_root=resolve_output_path(normalized, job.proto_root)
-                    or resolved_job_proto_root
-                    or normalized.parent.resolve(),
-                    protos=tuple(job.protos),
-                    include_paths=resolve_path_list(normalized, job.include_paths),
-                    layout=job.layout,
-                    module=job.module,
-                )
-                for job in grpcconf.jobs
-            ),
-        ),
-        transport=ResolvedTransportConfig(
-            targets=tuple(
-                ResolvedTransportTargetConfig(
-                    id=target.id,
-                    kind=target.kind,
-                    version=target.version,
-                    overlay_name=(
-                        target.overlay_name or default_wails_overlay_name(target.version)
-                        if target.kind == "wails" and target.version is not None
-                        else target.overlay_name
-                    ),
-                    frontend_mode=target.frontend_mode,
-                    include=normalize_selection_rules(target.include) if target.kind == "wails" else (),
-                    exclude=normalize_selection_rules(target.exclude) if target.kind == "wails" else (),
-                )
-                for target in (transportconf.targets if transportconf is not None else [])
-            ),
-        ),
-        wails=ResolvedWailsConfig(
-            targets=tuple(
-                ResolvedWailsTargetConfig(
-                    id=target.id,
-                    version=target.version or "v3",
-                    overlay_name=target.overlay_name or default_wails_overlay_name(target.version or "v3"),
-                    frontend_mode=target.frontend_mode,
-                    include=normalize_selection_rules(target.include),
-                    exclude=normalize_selection_rules(target.exclude),
-                )
-                for target in (transportconf.targets if transportconf is not None else [])
-                if target.kind == "wails"
-            ),
-        ),
+        targets=resolve_api_targets(normalized, raw),
     )
+
+
+def resolve_api_targets(config_path: Path, raw: Config) -> tuple[ResolvedApiTargetConfig, ...]:
+    target_map = {target.id: target for target in raw.targets}
+    resolved: list[ResolvedApiTargetConfig] = []
+    for target in raw.targets:
+        if target.kind in {"http-transport", "wails-transport"}:
+            if target.server is None:
+                raise ValueError(f"target[{target.id}] {target.kind} requires server")
+            server = target_map.get(target.server)
+            if server is None:
+                raise ValueError(f"target[{target.id}] references unknown server target: {target.server}")
+            if target.kind == "wails-transport" and server.kind != "go-server":
+                raise ValueError(f"target[{target.id}] wails-transport server must reference a go-server target")
+            if target.kind == "http-transport" and server.kind not in {"go-server", "python-server"}:
+                raise ValueError(f"target[{target.id}] http-transport server must reference a server target")
+
+            for client_id in target.clients:
+                client = target_map.get(client_id)
+                if client is None:
+                    raise ValueError(f"target[{target.id}] references unknown client target: {client_id}")
+                if target.kind == "wails-transport" and client.kind != "typescript-client":
+                    raise ValueError(
+                        f"target[{target.id}] wails-transport clients must reference typescript-client targets"
+                    )
+                if target.kind == "http-transport" and client.kind not in {
+                    "go-client",
+                    "typescript-client",
+                    "kotlin-client",
+                    "python-client",
+                }:
+                    raise ValueError(f"target[{target.id}] http-transport clients must reference client targets")
+
+        out_dir = resolve_output_path(config_path, target.out_dir)
+        overlay_name = target.overlay_name
+        if target.kind == "wails-transport":
+            overlay_name = overlay_name or default_wails_overlay_name(target.version or "v3")
+
+        resolved.append(
+            ResolvedApiTargetConfig(
+                id=target.id,
+                kind=target.kind,
+                out_dir=out_dir,
+                module=target.module,
+                base_url=target.base_url,
+                base_url_expr=target.base_url_expr,
+                package=target.package,
+                formats=tuple(target.formats),
+                version=target.version,
+                frontend_mode=target.frontend_mode,
+                overlay_name=overlay_name,
+                server=target.server,
+                clients=tuple(target.clients),
+                go_package_prefix=target.go_package_prefix,
+                include=normalize_selection_rules(target.include),
+                exclude=normalize_selection_rules(target.exclude),
+            )
+        )
+    return tuple(resolved)

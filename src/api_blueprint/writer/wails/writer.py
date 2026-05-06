@@ -1,22 +1,25 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Sequence
+from typing import TYPE_CHECKING, Sequence
 
 from api_blueprint.config import ResolvedTargetConfig, ResolvedWailsConfig, ResolvedWailsTargetConfig
 from api_blueprint.engine import Blueprint
 from api_blueprint.engine.utils import join_path_imports
-from api_blueprint.writer.core.contracts import route_contract
 from api_blueprint.writer.typescript.writer import TypeScriptWriter
 
 from .golang import WailsGoWriter
 from .models import WailsGenerationTarget
 from .selection import WailsRouteSelection, select_targets
 
+if TYPE_CHECKING:
+    from api_blueprint.contract import ContractGraph
+
 
 class WailsWriter:
-    def __init__(self, config: ResolvedWailsConfig):
+    def __init__(self, config: ResolvedWailsConfig, *, contract_graph: ContractGraph | None = None):
         self.config = config
+        self.contract_graph = contract_graph
 
     def list_targets(self, patterns: Sequence[str] = ()) -> tuple[ResolvedWailsTargetConfig, ...]:
         return select_targets(self.config.targets, patterns)
@@ -62,12 +65,14 @@ class WailsWriter:
     ) -> WailsGenerationTarget:
         matched = self.list_targets((target_id,))
         if len(matched) != 1:
-            raise ValueError(f"[gen_wails] --explain-target 需要唯一 target id，当前匹配到 {len(matched)} 个 target: {target_id}")
+            raise ValueError(
+                f"[api-gen explain-target] 需要唯一 target id，当前匹配到 {len(matched)} 个 target: {target_id}"
+            )
         target = matched[0]
         shared_go_output = golang_config.output
         shared_ts_output = typescript_config.output
         if shared_go_output is None or shared_ts_output is None:
-            raise ValueError("[gen_wails] --explain-target 需要已解析的共享 [golang] 与 [typescript] 输出路径")
+            raise ValueError("[api-gen explain-target] wails-transport 需要已解析的 server/client 输出路径")
         return self._build_plan(target, shared_go_output=shared_go_output, shared_ts_output=shared_ts_output)
 
     def _selection_for_target(self, target: ResolvedWailsTargetConfig) -> WailsRouteSelection:
@@ -101,7 +106,7 @@ class WailsWriter:
             for group, router in blueprint.iter_router():
                 if not selection.includes_route(router):
                     continue
-                contract = route_contract(router)
+                contract = go_writer.route_protocol_for(router).route
                 branch = group.branch.strip("/")
                 binding_import = join_path_imports(
                     go_writer.shared_views_imports,
@@ -142,9 +147,9 @@ class WailsWriter:
         shared_go_output = golang_config.output
         shared_ts_output = typescript_config.output
         if shared_go_output is None:
-            raise ValueError("[gen_wails] 共享 Go 契约层输出不存在")
+            raise ValueError("[api-gen wails-transport] 共享 Go 契约层输出不存在")
         if shared_ts_output is None:
-            raise ValueError("[gen_wails] 共享 TypeScript 契约层输出不存在")
+            raise ValueError("[api-gen wails-transport] 共享 TypeScript 契约层输出不存在")
 
         matched_targets = self.list_targets(target_patterns)
         planned = tuple(
@@ -153,7 +158,7 @@ class WailsWriter:
         )
         for target in matched_targets:
             if self._count_selected_routes(entrypoints, target) == 0:
-                raise ValueError(f"[gen_wails] target[{target.id}] include/exclude 过滤后没有可生成的 route")
+                raise ValueError(f"[api-gen wails-transport] target[{target.id}] include/exclude 过滤后没有可生成的 route")
 
             selection = self._selection_for_target(target)
             go_writer = WailsGoWriter(
@@ -162,6 +167,7 @@ class WailsWriter:
                 overlay_name=target.overlay_name,
                 module=golang_config.module,
                 route_selection=selection,
+                contract_graph=self.contract_graph,
             )
             go_writer.register(*entrypoints)
             go_writer.gen()
@@ -184,6 +190,7 @@ class WailsWriter:
                     include=target.include,
                     exclude=target.exclude,
                     wails_binding_manifest=binding_manifest,
+                    contract_graph=self.contract_graph,
                 )
                 ts_writer.register(*entrypoints)
                 ts_writer.gen()

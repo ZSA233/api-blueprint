@@ -36,9 +36,8 @@ def matches_rule(router: Router, rule: str, *, route_name: str) -> bool:
         return any(fnmatch.fnmatchcase(method, pattern.upper()) for method in router.methods)
     if scope == "name":
         return fnmatch.fnmatchcase(route_name, pattern)
-    raise ValueError(f"[gen_kotlin] 不支持的 include/exclude 规则: {rule}")
+    raise ValueError(f"[kotlin-client] 不支持的 include/exclude 规则: {rule}")
 
 
 def normalize_rules(rules: Sequence[str]) -> tuple[str, ...]:
     return tuple(rule.strip() for rule in rules if rule.strip())
-

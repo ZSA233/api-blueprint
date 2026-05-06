@@ -1,28 +1,16 @@
 from api_blueprint.writer.core.registry import GeneratorTargetSpec, register_target
 
-from .models import GrpcGenerationJob, GrpcLayout, GrpcPreset
-from .planner import expand_job, expand_target
-from .selection import select_jobs, select_targets
-from .toolchain import GrpcToolchain
-from .writer import GrpcWriter
+from .proto_writer import render_proto_files
 
 register_target(
     GeneratorTargetSpec(
-        name="grpc",
+        name="grpc-proto",
         implemented=True,
-        writer_factory=GrpcWriter,
-        description="Generate gRPC outputs from existing proto trees.",
+        writer_factory=render_proto_files,
+        description="Generate gRPC proto files from a ContractGraph.",
     )
 )
 
 __all__ = (
-    "GrpcGenerationJob",
-    "GrpcLayout",
-    "GrpcPreset",
-    "GrpcToolchain",
-    "GrpcWriter",
-    "expand_job",
-    "expand_target",
-    "select_jobs",
-    "select_targets",
+    "render_proto_files",
 )

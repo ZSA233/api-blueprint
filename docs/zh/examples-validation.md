@@ -8,8 +8,7 @@
 - `examples/golang/`、`examples/typescript/`、`examples/kotlin/`：Blueprint 生成快照。
 - `examples/wails-harness/v2/`、`examples/wails-harness/v3/`：手写最小 Wails harness，消费共享生成产物。
 - `examples/wails-hello/`：独立 Wails v3 hello 示例；`blueprints/` 是真源，`golang/` 与 `typescript/` 是生成快照，`app/` 是手写 Wails app shell。
-- `examples/grpc/protos/`：gRPC proto 真源。
-- `examples/grpc/go/`、`examples/grpc/python/`：gRPC 生成快照。
+- `examples/grpc/protos/`：`grpc-proto` target 从 ContractGraph 生成的 proto 快照。
 
 ## 常用命令
 
@@ -59,9 +58,6 @@ make example-validation
 - Wails v2 CLI `wails` 或 `API_BLUEPRINT_WAILS_V2_BIN`
 - Wails v3 CLI `wails3` 或 `API_BLUEPRINT_WAILS_V3_BIN`
 - `protoc`
-- `protoc-gen-go`
-- `protoc-gen-go-grpc`
-- Python `grpc_tools`
 
 ## 发布前要求
 

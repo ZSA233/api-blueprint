@@ -6,21 +6,29 @@ entrypoints = [
     'blueprints.app:*',
 ]
 
-# Blueprint -> Go snapshot example
-[golang]
-codegen_output = 'golang'
-upstream = 'http://localhost:2333'
+# vNext unified targets example
+[[targets]]
+id = 'contract'
+kind = 'contract'
+out_dir = '.'
+formats = ['json', 'markdown']
+
+[[targets]]
+id = 'go.server'
+kind = 'go-server'
+out_dir = 'golang'
 module = ''
 
-# Blueprint -> TypeScript snapshot example
-[typescript]
-codegen_output = 'typescript'
-upstream = 'http://localhost:2333'
+[[targets]]
+id = 'typescript.client'
+kind = 'typescript-client'
+out_dir = 'typescript'
 base_url = 'http://localhost:2333'
 
-# Blueprint -> Kotlin Android client snapshot example
-[kotlin]
-codegen_output = 'kotlin'
+[[targets]]
+id = 'kotlin.client'
+kind = 'kotlin-client'
+out_dir = 'kotlin'
 package = 'com.example.apiblueprint'
 base_url = 'http://localhost:2333'
 include = ['tag:api']
@@ -33,40 +41,31 @@ exclude = [
     'path:/api/demo/delete$',
 ]
 
-# Blueprint -> transport snapshot examples
-[[transport.targets]]
+[[targets]]
 id = 'http'
-kind = 'http'
+kind = 'http-transport'
+server = 'go.server'
+clients = ['typescript.client', 'kotlin.client']
 
-[[transport.targets]]
+[[targets]]
 id = 'wails.v3'
-kind = 'wails'
+kind = 'wails-transport'
 version = 'v3'
+server = 'go.server'
+clients = ['typescript.client']
 frontend_mode = 'external'
 
-[[transport.targets]]
+[[targets]]
 id = 'wails.v2'
-kind = 'wails'
+kind = 'wails-transport'
 version = 'v2'
+server = 'go.server'
+clients = ['typescript.client']
 frontend_mode = 'external'
 
-# Existing proto tree -> gRPC snapshots example
-[grpc]
-source_root = 'grpc/protos'
-import_roots = []
-
-[[grpc.targets]]
-id = 'python.greeter'
-lang = 'python'
-out_dir = 'grpc/python'
-files = ['**/*.proto']
-python_package_root = 'examplegrpc_pb'
-
-[[grpc.targets]]
-id = 'go.greeter'
-lang = 'go'
-out_dir = 'grpc/go'
-files = [
-    'commonpb/common.proto',
-    'greeterpb/greeter.proto',
-]
+[[targets]]
+id = 'grpc.proto'
+kind = 'grpc-proto'
+out_dir = 'grpc/protos'
+package = 'example.api'
+go_package_prefix = 'example.com/project/grpc/go'

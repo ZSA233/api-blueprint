@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from api_blueprint.contract import build_contract_graph
 from api_blueprint.engine.model import Enum, Model, String
 from api_blueprint.engine import Blueprint
 from api_blueprint.engine.wrapper import GeneralWrapper
@@ -71,6 +72,62 @@ def test_typescript_http_generation_uses_transport_bridge_and_raw_ws_escape_hatc
     assert 'export * from "./factory";' not in runtime_index
     assert "connectBridge<Shared.WSSend, Shared.WSRecv>" in client_text
     assert "connectWsRaw(" in client_text
+
+
+def test_typescript_writer_can_use_contract_graph_route_adapter(monkeypatch, tmp_path: Path):
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.GET("/ping").ARGS(q=String(description="q")).RSP(message=String(description="message"))
+
+    graph = build_contract_graph([bp])
+
+    def reject_legacy_router_contract(_router):
+        raise AssertionError("legacy router route_contract should not be used")
+
+    monkeypatch.setattr(
+        "api_blueprint.writer.core.contract_adapters.route_contract_from_router",
+        reject_legacy_router_contract,
+    )
+
+    output_dir = tmp_path / "typescript"
+    output_dir.mkdir()
+    writer = TypeScriptWriter(output_dir, contract_graph=graph)
+    writer.register(bp)
+    writer.gen()
+
+    client_text = (output_dir / "api" / "routes" / "api" / "demo" / "gen_client.ts").read_text(encoding="utf-8")
+    assert "async ping(" in client_text
+
+
+def test_typescript_contract_graph_adapter_owns_request_and_response_models(tmp_path: Path):
+    bp = Blueprint(root="/api")
+
+    class SubmitJson(Model):
+        value = String(description="value")
+
+    class SubmitResponse(Model):
+        status = String(description="status")
+
+    with bp.group("/demo") as views:
+        router = views.POST("/submit").ARGS(q=String(description="q")).REQ(SubmitJson).RSP(SubmitResponse)
+
+    graph = build_contract_graph([bp])
+    router.req_query = None
+    router.req_json = None
+    router.rsp_model = None
+
+    output_dir = tmp_path / "typescript"
+    output_dir.mkdir()
+    writer = TypeScriptWriter(output_dir, contract_graph=graph)
+    writer.register(bp)
+    writer.gen()
+
+    client_text = (output_dir / "api" / "routes" / "api" / "demo" / "gen_client.ts").read_text(encoding="utf-8")
+    models_text = (output_dir / "api" / "routes" / "api" / "demo" / "gen_models.ts").read_text(encoding="utf-8")
+    assert "query?: Models.ReqSubmitQuery;" in client_text
+    assert "json?: Shared.SubmitJson;" in client_text
+    assert "Promise<Models.RspSubmit>" in client_text
+    assert "export type RspSubmit = SubmitResponse;" in models_text
 
 
 def test_typescript_generates_stream_and_channel_contracts(tmp_path: Path):

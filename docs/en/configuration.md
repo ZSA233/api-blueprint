@@ -1,6 +1,6 @@
 # Configuration
 
-`api-blueprint.toml` is the main config file for generators and the documentation service. See [`examples/api-blueprint.toml`](../../examples/api-blueprint.toml) for a complete example.
+`api-blueprint.toml` is the main config file for the documentation service and the unified generator. The vNext mainline uses only `Blueprint -> ContractGraph -> [[targets]]`.
 
 ## blueprint
 
@@ -13,106 +13,98 @@ entrypoints = ["blueprints.app:*"]
 
 - `docs_server`: listen address for `api-doc-server`.
 - `docs_domain`: displayed docs domain, can be empty.
-- `entrypoints`: Python objects to load, using module path plus object name.
+- `entrypoints`: Python objects to load, using `module.path:attribute` or `module.path:*`.
 
 `Blueprint(app=None)` shares the global FastAPI app by default. Pass `app` explicitly when you need separate documentation apps.
 
-## golang
+## targets
 
 ```toml
-[golang]
-codegen_output = "golang"
-upstream = "http://localhost:2333"
-module = ""
-```
+[[targets]]
+id = "contract"
+kind = "contract"
+out_dir = "."
+formats = ["json", "markdown"]
 
-- `codegen_output`: Go output directory.
-- `upstream`: backend address used by generated wrappers.
-- `module`: optional Go module override; usually leave it empty and let the tool resolve it.
+[[targets]]
+id = "go.server"
+kind = "go-server"
+out_dir = "golang"
+module = "example.com/project/golang"
 
-Go core is always generated under `views/routes/**` and contains route interfaces, models, and user `impl.go` files. The provider runtime is fixed under `views/providers`. Concrete HTTP / Wails outputs are controlled by `[[transport.targets]]`.
-
-## typescript
-
-```toml
-[typescript]
-codegen_output = "typescript"
-upstream = "http://localhost:2333"
+[[targets]]
+id = "typescript.client"
+kind = "typescript-client"
+out_dir = "typescript"
 base_url = "http://localhost:2333"
-# base_url_expr = "import.meta.env.VITE_API_BASE_URL"
-```
 
-- `codegen_output`: TypeScript output directory.
-- `upstream`: compatibility default address source.
-- `base_url`: literal base URL.
-- `base_url_expr`: expression emitted verbatim into TypeScript.
-
-`base_url_expr` and `base_url` are mutually exclusive. Resolution order is `base_url_expr -> base_url -> upstream -> ""`.
-
-## kotlin
-
-```toml
-[kotlin]
-codegen_output = "kotlin"
+[[targets]]
+id = "kotlin.client"
+kind = "kotlin-client"
+out_dir = "kotlin"
 package = "com.example.apiblueprint"
-base_url = "http://localhost:2333"
-include = ["tag:api"]
-exclude = ["path:/static/**"]
-```
 
-Kotlin generates an OkHttp + kotlinx.serialization Android client. The current version targets JSON REST routes and does not cover WebSocket, form, or binary routes yet.
-
-`include` / `exclude` support `path:`, `tag:`, `group:`, `method:`, and `name:` rules.
-
-## transport
-
-```toml
-[[transport.targets]]
+[[targets]]
 id = "http"
-kind = "http"
+kind = "http-transport"
+server = "go.server"
+clients = ["typescript.client", "kotlin.client"]
 
-[[transport.targets]]
-id = "desktop.v3"
-kind = "wails"
+[[targets]]
+id = "wails.v3"
+kind = "wails-transport"
 version = "v3"
+server = "go.server"
+clients = ["typescript.client"]
 frontend_mode = "external"
-# overlay_name = "wailsv3"
-# include = ["group:demo"]
-# exclude = ["path:/api/internal/**"]
+
+[[targets]]
+id = "grpc.proto"
+kind = "grpc-proto"
+out_dir = "grpc/protos"
+package = "example.api"
+go_package_prefix = "example.com/project/grpc/go"
 ```
 
-When no `[[transport.targets]]` are declared, the generator emits a default HTTP target. Once targets are declared explicitly, only the listed transports are generated.
+Common fields:
 
-- `kind = "http"`: emits the Gin HTTP adapter under `views/transports/http/<root>`, for example `views/transports/http/api.NewBlueprint(engine)`.
-- `kind = "wails"`: emits a Wails target; it needs at least `id`, `kind`, and `version`. `version` supports `v3` and `v2`.
+- `id`: unique target identifier used by dependencies and `--target`.
+- `kind`: target type.
+- `out_dir`: generated output directory; transport targets usually do not need one.
 
-- `overlay_name`: defaults to `wailsv3` / `wailsv2` and must be unique across targets.
-- `frontend_mode`: defaults to `external`; `none` generates only the Go Wails overlay and skips the Wails TypeScript overlay.
-- `include` / `exclude`: trim the Wails target overlay / facade; roots with no selected routes do not get `transports/<overlay_name>` output, while the shared Go / TypeScript contract layers are still generated in full.
+Core targets:
 
-See [Wails](wails.md) for detailed layout and hooks.
+- `contract`: emits `api-blueprint.contract.json` and / or `api-blueprint.contract.md`.
+- `go-server`: emits Go server core; Go client is reserved for a future `go-client` target.
+- `typescript-client`: emits TypeScript client core that depends only on `ApiTransport`; `base_url` / `base_url_expr` are injected by transport facades.
+- `kotlin-client`: initially supports only HTTP JSON RPC. `STREAM` / `CHANNEL`, form, binary, and custom wrappers fail during `api-gen check`.
+- `grpc-proto`: emits `.proto` files and service definitions from ContractGraph.
 
-## grpc
+Transport targets:
 
-```toml
-[grpc]
-source_root = "grpc/protos"
-import_roots = []
+- `http-transport`: declares an HTTP server/client combination.
+- `wails-transport`: declares a Wails overlay and must set `version`, `server`, and `clients`.
+- `frontend_mode = "external"` emits Wails TypeScript facades for external frontends; `none` emits only the Go overlay.
+- `include` / `exclude` can trim the Wails target overlay / facade.
 
-[[grpc.targets]]
-id = "go.greeter"
-lang = "go"
-out_dir = "grpc/go"
-files = ["commonpb/common.proto", "greeterpb/greeter.proto"]
+Reserved targets:
 
-[[grpc.targets]]
-id = "python.greeter"
-lang = "python"
-out_dir = "grpc/python"
-files = ["**/*.proto"]
-python_package_root = "examplegrpc_pb"
+- `python-server`
+- `python-client`
+- `go-client`
+
+These targets currently exist only in the schema and capability registry and do not generate business code.
+
+## CLI
+
+```sh
+api-gen list-targets -c api-blueprint.toml
+api-gen explain-target -c api-blueprint.toml --target go.server
+api-gen manifest -c api-blueprint.toml --out api-blueprint.contract.json
+api-gen diff old.contract.json new.contract.json
+api-gen check -c api-blueprint.toml
+api-gen generate -c api-blueprint.toml
+api-gen generate -c api-blueprint.toml --target wails.v3
 ```
 
-gRPC targets compile existing `.proto` trees. They do not derive proto/service definitions from the Blueprint DSL.
-
-See [gRPC](grpc.md) for target behavior.
+`api-gen manifest` emits routes, schemas, connections, stable hashes, the resolved target plan, and the capability registry. `api-gen check` builds ContractGraph first, then validates target dependencies and capabilities. Failing before generation is easier to maintain than writing a partial output tree.

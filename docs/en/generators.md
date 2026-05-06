@@ -5,7 +5,7 @@ This page covers the main non-Wails, non-gRPC generators. See [Wails](wails.md) 
 ## Go
 
 ```sh
-api-gen-golang -c api-blueprint.toml
+api-gen generate -c api-blueprint.toml --target go.server
 ```
 
 The Go generator emits:
@@ -18,7 +18,7 @@ The Go generator emits:
 
 `gen_*` files are generator-owned and overwritten during regeneration. `impl_*` and non-`gen_*` files are user-owned extension points and are preserved.
 
-`[[transport.targets]]` controls Go transport output; when no target is declared, a default HTTP target is generated. The HTTP entrypoint is generated under `views/transports/http/<root>`, for example `views/transports/http/api.NewBlueprint(engine)`. Wails-only projects declare only a `kind = "wails"` target, and HTTP + Wails projects declare both `kind = "http"` and `kind = "wails"`.
+`go-server` owns only the Go server core. HTTP / Wails output is attached explicitly by `http-transport` / `wails-transport` targets through `server = "go.server"`. The HTTP entrypoint is generated under `views/transports/http/<root>`, for example `views/transports/http/api.NewBlueprint(engine)`.
 
 Go route core is fixed under `views/routes/**`, and the provider runtime is fixed under `views/providers`. These directory names are no longer configurable, so business roots can safely use paths such as `/providers` or `/transports`.
 
@@ -82,15 +82,15 @@ Generated connection handlers still default to `not implemented`, so example bus
 ## TypeScript
 
 ```sh
-api-gen-typescript -c api-blueprint.toml
+api-gen generate -c api-blueprint.toml --target typescript.client
 ```
 
-The TypeScript generator emits:
+The TypeScript client target emits:
 
 - `models.ts` / `gen_models.ts`.
 - Request client classes.
 - Transport-neutral `ApiClientConfig`.
-- Transport facade `createClients(config)` factories.
+- `createClients(config)` facades injected by transport targets.
 - User-owned passthrough files such as `client.ts`, `transport.ts`, and `factory.ts`.
 
 `base_url_expr` is emitted verbatim into generated code, which fits runtime configuration in Vite, Next.js, and similar projects. It is mutually exclusive with `base_url`.
@@ -100,18 +100,18 @@ The TypeScript generator emits:
 ## Kotlin Android
 
 ```sh
-api-gen-kotlin -c api-blueprint.toml
+api-gen generate -c api-blueprint.toml --target kotlin.client
 ```
 
-The Kotlin generator emits an OkHttp + kotlinx.serialization Android client.
+The Kotlin target emits an OkHttp + kotlinx.serialization Android client.
 
-The current version mainly covers JSON REST routes. `include` / `exclude` can trim the generated API surface.
+The current version covers only HTTP JSON RPC routes. `api-gen check` rejects `STREAM` / `CHANNEL`, form, binary, and custom wrappers before generation.
 
 The Kotlin target does not generate `STREAM` / `CHANNEL` / legacy `WS` long-connection clients; exclude those routes with `include` / `exclude`, or generate them through the Go / TypeScript / Wails targets.
 
-## Java
+## Reserved Targets
 
-Java is not exposed as a public CLI target yet. It remains an internal extension point only.
+Python server/client and Go client currently exist only as reserved target schema entries and do not generate business code.
 
 ## Example Snapshots
 

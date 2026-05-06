@@ -1,0 +1,191 @@
+syntax = "proto3";
+
+package example.api.demo;
+
+option go_package = "example.com/project/grpc/go/api;api";
+
+service DemoService {
+  rpc Abc (AbcRequest) returns (AbcResponse);
+  rpc TestPost (TestPostRequest) returns (TestPostResponse);
+  rpc Z1put (Z1putRequest) returns (Z1putResponse);
+  rpc Delete (DeleteRequest) returns (DeleteResponse);
+  rpc SweepEvents (SweepEventsRequest) returns (stream SweepStreamMessage);
+  rpc AssistantSession (stream AssistantClientMessage) returns (stream AssistantServerMessage);
+  rpc PostDeprecated (PostDeprecatedRequest) returns (PostDeprecatedResponse);
+  rpc Raw (RawRequest) returns (RawResponse);
+  rpc MapModel (MapModelRequest) returns (MapModelResponse);
+}
+
+message AbcRequest {
+  bool arg1 = 1;
+  string arg3 = 2;
+  float arg2 = 3;
+}
+
+message AbcResponse {
+  string bc = 1;
+  int64 a = 2;
+  float efg = 3;
+  repeated uint64 hijk = 4;
+  repeated ApiDemoSubA lmnop = 5;
+  ColorEnum enum_color = 6;
+  StatusEnum enum_status = 7;
+  repeated StatusEnum enum_list = 8;
+}
+
+message ApiDemoSubA {
+  map<string, int64> hello = 1;
+  repeated ApiDemoMap amap = 2;
+}
+
+message ApiDemoMap {
+  int64 haha = 1;
+}
+
+message TestPostRequest {
+  string req1 = 1;
+  int64 req2 = 2;
+}
+
+message TestPostResponse {
+  repeated string list = 1;
+  map<string, ApiDemoMap> map = 2;
+}
+
+message Z1putRequest {
+  REQFunc1putQUERY query = 1;
+  REQFunc1putJSON json = 2;
+}
+
+message REQFunc1putQUERY {
+  string arg1 = 1;
+  float arg2 = 2;
+  string arg3 = 3;
+}
+
+message REQFunc1putJSON {
+  string req1 = 1;
+  int64 req2 = 2;
+}
+
+message Z1putResponse {
+  repeated string list = 1;
+  ANONFunc1putAnonKv anon_kv = 2;
+}
+
+message ANONFunc1putAnonKv {
+  uint64 kv1 = 1;
+  repeated double kv2 = 2;
+}
+
+message DeleteRequest {
+  string arg1 = 1;
+  float arg2 = 2;
+}
+
+message DeleteResponse {
+  repeated string list = 1;
+  repeated ANONDeleteAnonList anon_list = 2;
+}
+
+message ANONDeleteAnonList {
+  int64 kv1 = 1;
+  repeated string kv2 = 2;
+}
+
+message SweepEventsRequest {
+  string run_id = 1;
+  string replay_from = 2;
+}
+
+message SweepStreamMessage {
+}
+
+message SweepState {
+  string status = 1;
+}
+
+message SweepProgress {
+  uint64 current = 1;
+  uint64 total = 2;
+}
+
+message SweepLog {
+  string level = 1;
+  string message = 2;
+}
+
+message AssistantClientMessage {
+}
+
+message AssistantInput {
+  string text = 1;
+}
+
+message AssistantCancel {
+  string reason = 1;
+}
+
+message AssistantServerMessage {
+}
+
+message AssistantDelta {
+  string text = 1;
+}
+
+message AssistantDone {
+  string message_id = 1;
+}
+
+message PostDeprecatedRequest {
+  string req1 = 1;
+  int64 req2 = 2;
+}
+
+message PostDeprecatedResponse {
+  repeated string list = 1;
+}
+
+message RawRequest {
+}
+
+message RawResponse {
+  repeated string list = 1;
+  map<string, RawResponseList2Value> list2 = 2;
+}
+
+message ApiDemoA {
+  string bc = 1;
+  int64 a = 2;
+  float efg = 3;
+  repeated uint64 hijk = 4;
+  repeated ApiDemoSubA lmnop = 5;
+  ColorEnum enum_color = 6;
+  StatusEnum enum_status = 7;
+  repeated StatusEnum enum_list = 8;
+}
+
+message MapModelRequest {
+}
+
+message MapModelResponse {
+  map<string, ApiDemoMap> value = 1;
+}
+
+message RawResponseList2Value {
+  repeated ApiDemoA value = 1;
+}
+
+enum ColorEnum {
+  COLORENUM_UNSPECIFIED = 0;
+  COLORENUM_RED = 1;
+  COLORENUM_GREEN = 2;
+  COLORENUM_BLUE = 3;
+}
+
+enum StatusEnum {
+  STATUSENUM_UNSPECIFIED = 0;
+  STATUSENUM_VALUE_1 = 1;
+  STATUSENUM_VALUE_2 = 2;
+  STATUSENUM_VALUE_3 = 3;
+}

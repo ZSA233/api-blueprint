@@ -3,9 +3,62 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from click.testing import CliRunner
+from click.testing import CliRunner, Result
 
-from api_blueprint.cli.apigen import gen_wails
+from api_blueprint.cli.apigen import api_gen
+from api_blueprint.contract import build_contract_graph
+from api_blueprint.engine import Blueprint
+from api_blueprint.engine.model import Model, String
+from api_blueprint.writer.wails.golang import WailsGoWriter
+
+
+def _write_wails_vnext_config(
+    config: Path,
+    *,
+    entrypoints: str = '"blueprints.app:bp"',
+    go_out: str = "golang",
+    ts_out: str = "typescript",
+    target_id: str = "desktop.v3",
+    version: str = "v3",
+    frontend_mode: str = "external",
+    include: tuple[str, ...] = (),
+    exclude: tuple[str, ...] = (),
+) -> None:
+    include_line = f"include = {list(include)!r}\n" if include else ""
+    exclude_line = f"exclude = {list(exclude)!r}\n" if exclude else ""
+    config.write_text(
+        f"""
+[blueprint]
+entrypoints = [{entrypoints}]
+
+[[targets]]
+id = "go.server"
+kind = "go-server"
+out_dir = "{go_out}"
+module = "example.com/generated"
+
+[[targets]]
+id = "typescript.client"
+kind = "typescript-client"
+out_dir = "{ts_out}"
+base_url = "http://localhost:2333"
+
+[[targets]]
+id = "{target_id}"
+kind = "wails-transport"
+version = "{version}"
+server = "go.server"
+clients = ["typescript.client"]
+frontend_mode = "{frontend_mode}"
+{include_line}{exclude_line}
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def _invoke_wails_generate(config: Path, target_id: str = "desktop.v3") -> Result:
+    return CliRunner().invoke(api_gen, ["generate", "-c", str(config), "--target", target_id])
 
 
 def _write_blueprint_package(tmp_path: Path) -> None:
@@ -100,6 +153,50 @@ with third_bp.group("/proxy") as views:
     )
 
 
+def test_wails_go_writer_contract_graph_adapter_owns_request_and_response_models(tmp_path: Path):
+    output_dir = tmp_path / "golang"
+    output_dir.mkdir()
+    (tmp_path / "go.mod").write_text(
+        """
+module example.com/generated
+
+go 1.23.8
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    class SubmitJson(Model):
+        value = String(description="value")
+
+    class SubmitResponse(Model):
+        status = String(description="status")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        router = views.POST("/submit").ARGS(q=String(description="q")).REQ(SubmitJson).RSP(SubmitResponse)
+
+    graph = build_contract_graph([bp])
+    router.req_query = None
+    router.req_json = None
+    router.rsp_model = None
+
+    writer = WailsGoWriter(output_dir, version="v3", overlay_name="wailsv3", contract_graph=graph)
+    writer.register(bp)
+    writer.gen()
+
+    service_text = (
+        output_dir / "views" / "transports" / "wailsv3" / "api" / "demo" / "gen_service.go"
+    ).read_text(encoding="utf-8")
+    overlay_text = (
+        output_dir / "views" / "transports" / "wailsv3" / "api" / "demo" / "gen_overlay.go"
+    ).read_text(encoding="utf-8")
+    assert "submitExecutor *sharedprovider.RouteExecutor[REQ_Submit_QUERY, REQ_Submit_JSON, RSP_Submit]" in service_text
+    assert "BindJSON:  true" in service_text
+    assert "type REQ_Submit_QUERY = sharedroutes.REQ_Submit_QUERY" in overlay_text
+    assert "type REQ_Submit_JSON = sharedroutes.REQ_Submit_JSON" in overlay_text
+
+
 def test_wails_codegen_generates_shared_contracts_and_overlays(tmp_path: Path):
     config = tmp_path / "api-blueprint.toml"
     shared_go = tmp_path / "golang"
@@ -116,30 +213,10 @@ go 1.23.8
         + "\n",
         encoding="utf-8",
     )
-    config.write_text(
-        f"""
-[blueprint]
-entrypoints = ["blueprints.app:bp"]
-
-[golang]
-codegen_output = "{shared_go.name}"
-
-[typescript]
-codegen_output = "{shared_ts.name}"
-base_url = "http://localhost:2333"
-
-[[transport.targets]]
-kind = "wails"
-id = "desktop.v3"
-version = "v3"
-frontend_mode = "external"
-        """.strip()
-        + "\n",
-        encoding="utf-8",
-    )
+    _write_wails_vnext_config(config, go_out=shared_go.name, ts_out=shared_ts.name)
     _write_blueprint_package(tmp_path)
 
-    result = CliRunner().invoke(gen_wails, ["-c", str(config)])
+    result = _invoke_wails_generate(config)
     assert result.exit_code == 0, result.output
 
     shared_go_client = shared_go / "views" / "routes" / "api" / "demo" / "gen_interface.go"
@@ -296,30 +373,10 @@ go 1.23.8
         + "\n",
         encoding="utf-8",
     )
-    config.write_text(
-        f"""
-[blueprint]
-entrypoints = ["blueprints.app:bp"]
-
-[golang]
-codegen_output = "{shared_go.name}"
-
-[typescript]
-codegen_output = "{shared_ts.name}"
-base_url = "http://localhost:2333"
-
-[[transport.targets]]
-kind = "wails"
-id = "desktop.v3"
-version = "v3"
-include = ["group:demo"]
-        """.strip()
-        + "\n",
-        encoding="utf-8",
-    )
+    _write_wails_vnext_config(config, go_out=shared_go.name, ts_out=shared_ts.name, include=("group:demo",))
     _write_multi_group_blueprint_package(tmp_path)
 
-    result = CliRunner().invoke(gen_wails, ["-c", str(config)])
+    result = _invoke_wails_generate(config)
     assert result.exit_code == 0, result.output
 
     assert (shared_go / "views" / "transports" / "wailsv3" / "api" / "demo" / "gen_service.go").is_file()
@@ -349,30 +406,16 @@ go 1.23.8
         + "\n",
         encoding="utf-8",
     )
-    config.write_text(
-        f"""
-[blueprint]
-entrypoints = ["blueprints.app:api_bp", "blueprints.app:third_bp"]
-
-[golang]
-codegen_output = "{shared_go.name}"
-
-[typescript]
-codegen_output = "{shared_ts.name}"
-base_url = "http://localhost:2333"
-
-[[transport.targets]]
-kind = "wails"
-id = "desktop.v3"
-version = "v3"
-include = ["path:/api/**"]
-        """.strip()
-        + "\n",
-        encoding="utf-8",
+    _write_wails_vnext_config(
+        config,
+        entrypoints='"blueprints.app:api_bp", "blueprints.app:third_bp"',
+        go_out=shared_go.name,
+        ts_out=shared_ts.name,
+        include=("path:/api/**",),
     )
     _write_multi_root_blueprint_package(tmp_path)
 
-    result = CliRunner().invoke(gen_wails, ["-c", str(config)])
+    result = _invoke_wails_generate(config)
     assert result.exit_code == 0, result.output
 
     assert (shared_go / "views" / "routes" / "third" / "proxy" / "gen_interface.go").is_file()
@@ -399,30 +442,16 @@ go 1.23.8
         + "\n",
         encoding="utf-8",
     )
-    config.write_text(
-        f"""
-[blueprint]
-entrypoints = ["blueprints.app:bp"]
-
-[golang]
-codegen_output = "{shared_go.name}"
-
-[typescript]
-codegen_output = "{shared_ts.name}"
-base_url = "http://localhost:2333"
-
-[[transport.targets]]
-kind = "wails"
-id = "desktop.v2"
-version = "v2"
-frontend_mode = "external"
-        """.strip()
-        + "\n",
-        encoding="utf-8",
+    _write_wails_vnext_config(
+        config,
+        go_out=shared_go.name,
+        ts_out=shared_ts.name,
+        target_id="desktop.v2",
+        version="v2",
     )
     _write_blueprint_package(tmp_path)
 
-    result = CliRunner().invoke(gen_wails, ["-c", str(config)])
+    result = _invoke_wails_generate(config, target_id="desktop.v2")
     assert result.exit_code == 0, result.output
 
     ts_overlay_transport = (shared_ts / "api" / "transports" / "wailsv2" / "gen_transport.ts").read_text(
@@ -458,30 +487,15 @@ go 1.23.8
         + "\n",
         encoding="utf-8",
     )
-    config.write_text(
-        f"""
-[blueprint]
-entrypoints = ["blueprints.app:bp"]
-
-[golang]
-codegen_output = "{shared_go.name}"
-
-[typescript]
-codegen_output = "{shared_ts.name}"
-base_url = "http://localhost:2333"
-
-[[transport.targets]]
-kind = "wails"
-id = "desktop.v3"
-version = "v3"
-frontend_mode = "none"
-        """.strip()
-        + "\n",
-        encoding="utf-8",
+    _write_wails_vnext_config(
+        config,
+        go_out=shared_go.name,
+        ts_out=shared_ts.name,
+        frontend_mode="none",
     )
     _write_blueprint_package(tmp_path)
 
-    result = CliRunner().invoke(gen_wails, ["-c", str(config)])
+    result = _invoke_wails_generate(config)
     assert result.exit_code == 0, result.output
 
     assert (shared_go / "views" / "transports" / "wailsv3" / "api" / "demo" / "gen_service.go").is_file()
@@ -506,29 +520,10 @@ go 1.23.8
         + "\n",
         encoding="utf-8",
     )
-    config.write_text(
-        f"""
-[blueprint]
-entrypoints = ["blueprints.app:bp"]
-
-[golang]
-codegen_output = "{shared_go.name}"
-
-[typescript]
-codegen_output = "{shared_ts.name}"
-base_url = "http://localhost:2333"
-
-[[transport.targets]]
-kind = "wails"
-id = "desktop.v3"
-version = "v3"
-        """.strip()
-        + "\n",
-        encoding="utf-8",
-    )
+    _write_wails_vnext_config(config, go_out=shared_go.name, ts_out=shared_ts.name)
     _write_blueprint_package(tmp_path)
 
-    result = CliRunner().invoke(gen_wails, ["-c", str(config)])
+    result = _invoke_wails_generate(config)
     assert result.exit_code == 0, result.output
 
     provider_file = shared_go / "views" / "providers" / "gen_provider.go"
@@ -567,30 +562,10 @@ go 1.23.8
         + "\n",
         encoding="utf-8",
     )
-    config.write_text(
-        f"""
-[blueprint]
-entrypoints = ["blueprints.app:bp"]
-
-[golang]
-codegen_output = "{shared_go.name}"
-
-[typescript]
-codegen_output = "{shared_ts.name}"
-base_url = "http://localhost:2333"
-
-[[transport.targets]]
-kind = "wails"
-id = "desktop.v3"
-version = "v3"
-include = ["group:missing"]
-        """.strip()
-        + "\n",
-        encoding="utf-8",
-    )
+    _write_wails_vnext_config(config, go_out=shared_go.name, ts_out=shared_ts.name, include=("group:missing",))
     _write_blueprint_package(tmp_path)
 
-    result = CliRunner().invoke(gen_wails, ["-c", str(config)])
+    result = _invoke_wails_generate(config)
     assert result.exit_code != 0
     assert isinstance(result.exception, ValueError)
     assert "没有可生成的 route" in str(result.exception)
@@ -612,29 +587,10 @@ go 1.23.8
         + "\n",
         encoding="utf-8",
     )
-    config.write_text(
-        f"""
-[blueprint]
-entrypoints = ["blueprints.app:bp"]
-
-[golang]
-codegen_output = "{shared_go.name}"
-
-[typescript]
-codegen_output = "{shared_ts.name}"
-base_url = "http://localhost:2333"
-
-[[transport.targets]]
-kind = "wails"
-id = "desktop.v3"
-version = "v3"
-        """.strip()
-        + "\n",
-        encoding="utf-8",
-    )
+    _write_wails_vnext_config(config, go_out=shared_go.name, ts_out=shared_ts.name)
     _write_blueprint_package(tmp_path)
 
-    result = CliRunner().invoke(gen_wails, ["-c", str(config)])
+    result = _invoke_wails_generate(config)
     assert result.exit_code == 0, result.output
 
     impl_service = shared_go / "views" / "transports" / "wailsv3" / "api" / "demo" / "impl_service.go"
@@ -651,7 +607,7 @@ func NewService(dispatcher wailstransport.EventDispatcher) *DemoService {
     """.strip() + "\n"
     impl_service.write_text(custom_impl, encoding="utf-8")
 
-    result = CliRunner().invoke(gen_wails, ["-c", str(config)])
+    result = _invoke_wails_generate(config)
     assert result.exit_code == 0, result.output
 
     assert "custom binding hook" in impl_service.read_text(encoding="utf-8")
@@ -707,26 +663,7 @@ go 1.23.8
         + "\n",
         encoding="utf-8",
     )
-    config.write_text(
-        f"""
-[blueprint]
-entrypoints = ["blueprints.app:bp"]
-
-[golang]
-codegen_output = "{shared_go.name}"
-
-[typescript]
-codegen_output = "{shared_ts.name}"
-base_url = "http://localhost:2333"
-
-[[transport.targets]]
-kind = "wails"
-id = "desktop.v3"
-version = "v3"
-        """.strip()
-        + "\n",
-        encoding="utf-8",
-    )
+    _write_wails_vnext_config(config, go_out=shared_go.name, ts_out=shared_ts.name)
     pkg = tmp_path / "blueprints"
     pkg.mkdir()
     (pkg / "__init__.py").write_text("", encoding="utf-8")
@@ -742,7 +679,7 @@ with bp.group("/demo") as views:
         encoding="utf-8",
     )
 
-    result = CliRunner().invoke(gen_wails, ["-c", str(config)])
+    result = _invoke_wails_generate(config)
     assert result.exit_code == 0, result.output
     assert (shared_go / "views" / "providers" / "gen_provider.go").is_file()
     assert (shared_go / "views" / "routes" / "providers" / "demo" / "gen_interface.go").is_file()
@@ -764,26 +701,7 @@ go 1.23.8
         + "\n",
         encoding="utf-8",
     )
-    config.write_text(
-        f"""
-[blueprint]
-entrypoints = ["blueprints.app:bp"]
-
-[golang]
-codegen_output = "{shared_go.name}"
-
-[typescript]
-codegen_output = "{shared_ts.name}"
-base_url = "http://localhost:2333"
-
-[[transport.targets]]
-kind = "wails"
-id = "desktop.v3"
-version = "v3"
-        """.strip()
-        + "\n",
-        encoding="utf-8",
-    )
+    _write_wails_vnext_config(config, go_out=shared_go.name, ts_out=shared_ts.name)
     pkg = tmp_path / "blueprints"
     pkg.mkdir()
     (pkg / "__init__.py").write_text("", encoding="utf-8")
@@ -799,7 +717,7 @@ with bp.group("/_demo") as views:
         encoding="utf-8",
     )
 
-    result = CliRunner().invoke(gen_wails, ["-c", str(config)])
+    result = _invoke_wails_generate(config)
     assert result.exit_code != 0
     assert isinstance(result.exception, ValueError)
     assert "保留目录段[_demo]" in str(result.exception)

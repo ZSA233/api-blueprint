@@ -157,7 +157,7 @@ with bp.group("/demo") as views:
     views.WS("/ws").RECV(ClientMessage).SEND(ServerMessage)
 ```
 
-`WS().RECV().SEND()` is a legacy form kept for compatibility. New blueprints should prefer `STREAM` / `CHANNEL` so multiple logical messages are not modeled as multiple raw events.
+`WS().RECV().SEND()` is a legacy form outside the vNext ContractGraph mainline. New blueprints should prefer `STREAM` / `CHANNEL` so multiple logical messages are not modeled as multiple raw events.
 
 ## Documentation Output
 

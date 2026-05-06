@@ -3,13 +3,16 @@ from __future__ import annotations
 import logging
 from contextlib import contextmanager
 from pathlib import Path
-from typing import IO, Any, Generator, Literal, Mapping, Optional, Sequence, Set
+from typing import IO, TYPE_CHECKING, Any, Generator, Literal, Mapping, Optional, Sequence, Set
 
 from api_blueprint.engine.connection import ConnectionKind
 from api_blueprint.engine.model import iter_error_models, iter_model_vars
+from api_blueprint.engine.router import Router
 from api_blueprint.engine.utils import join_path_imports, pascal_to_snake_case
 from api_blueprint.engine.wrapper import ResponseWrapper
 from api_blueprint.writer.core.base import BaseWriter
+from api_blueprint.writer.core.contract_adapters import RouteContractIndex, RouteProtocolContract
+from api_blueprint.writer.core.contracts import RouteContract
 from api_blueprint.writer.core.files import ensure_filepath_open
 from api_blueprint.writer.core.templates import iter_render
 
@@ -17,6 +20,9 @@ from .blueprint import GolangBlueprint, GolangErrorGroup
 from .common import LANG, PackageName
 from .protos import GolangPackageLayout, GolangResponseWrapper
 from .toolchain import GolangToolchain
+
+if TYPE_CHECKING:
+    from api_blueprint.contract import ContractGraph
 
 GolangTransportKind = Literal["http"]
 DEFAULT_GOLANG_TRANSPORTS: tuple[GolangTransportKind, ...] = ("http",)
@@ -36,6 +42,7 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
         views_package: str = PackageName.VIEWS.value,
         errors_package: str = PackageName.ERROR.value,
         enabled_transports: Sequence[GolangTransportKind] = DEFAULT_GOLANG_TRANSPORTS,
+        contract_graph: ContractGraph | None = None,
         **kwargs: dict[str, Any],
     ):
         super().__init__(working_dir)
@@ -58,6 +65,7 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
         self.views_package = self.packages.views_package
         self.provider_package = self.packages.provider_package
         self.errors_package = self.packages.errors_package
+        self.route_contract_index = RouteContractIndex.from_graph(contract_graph) if contract_graph is not None else None
         self.enabled_transports = tuple(enabled_transports)
         unknown_transports = sorted(set(self.enabled_transports) - {"http"})
         if unknown_transports:
@@ -68,6 +76,19 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
 
     def validate_package_contract(self) -> None:
         return None
+
+    def _ensure_route_contract_index(self) -> RouteContractIndex:
+        if self.route_contract_index is None:
+            from api_blueprint.contract import build_contract_graph
+
+            self.route_contract_index = RouteContractIndex.from_graph(build_contract_graph([bp.bp for bp in self.bps]))
+        return self.route_contract_index
+
+    def route_contract_for(self, router: Router) -> RouteContract:
+        return self._ensure_route_contract_index().protocol_for_router(router).route
+
+    def route_protocol_for(self, router: Router) -> RouteProtocolContract:
+        return self._ensure_route_contract_index().protocol_for_router(router)
 
     @property
     def views_imports(self) -> str:

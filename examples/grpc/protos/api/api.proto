@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package example.api.api;
+
+option go_package = "example.com/project/grpc/go/api;api";
+
+service ApiService {
+}

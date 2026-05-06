@@ -19,7 +19,7 @@ example-refresh:
 	uv run python scripts/example_validation.py --mode refresh
 
 wails-hello-dev:
-	uv run api-gen-wails -c examples/wails-hello/api-blueprint.toml --target hello.v3
+	uv run api-gen generate -c examples/wails-hello/api-blueprint.toml --target hello.v3
 	cd examples/wails-hello/app && wails3 task dev
 
 wails-hello-check:

@@ -4,12 +4,12 @@ from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Optional, Type, Union
 
-from api_blueprint.engine.connection import ConnectionKind
 from api_blueprint.engine.model import FieldWrappedModel, Model, iter_field_model_type, unwrap_model_type
 from api_blueprint.engine.router import Router
 from api_blueprint.engine.utils import snake_to_pascal_case
-from api_blueprint.engine.wrapper import GeneralWrapper, NoneWrapper
+from api_blueprint.engine.wrapper import NoneWrapper, ResponseWrapper
 from api_blueprint.writer.core.base import BaseBlueprint
+from api_blueprint.writer.core.contract_adapters import RouteProtocolContract, route_protocol_from_router
 
 from .naming import to_kotlin_property_name, to_kotlin_type_name
 from .protos import KotlinProto, KotlinProtoRegistry, KotlinResolvedType
@@ -17,32 +17,40 @@ from .selection import KotlinRouteSelection
 
 
 class KotlinRoute:
-    def __init__(self, router: Router, registry: KotlinProtoRegistry):
+    def __init__(
+        self,
+        router: Router,
+        registry: KotlinProtoRegistry,
+        *,
+        protocol: RouteProtocolContract | None = None,
+    ):
         self.router = router
         self.registry = registry
+        self.protocol = protocol or route_protocol_from_router(router)
         self.func_name = self._func_name()
         self.method_name = to_kotlin_property_name(self.func_name)
-        self.group_slug = self._group_slug()
+        self.group_slug = self.protocol.route.group_slug
         self.group_class = to_kotlin_type_name(self.group_slug, fallback="Root") + "Api"
-        self.url = router.url
-        if router.connection_kind != ConnectionKind.RPC:
-            raise ValueError(f"[gen_kotlin] 暂不支持长连接 route: {self.url}")
-        self.http_methods = [method for method in router.methods if method != "WS"]
-        self.supports_ws = any(method == "WS" for method in router.methods)
+        self.url = self.protocol.route.url
+        if self.protocol.route.supports_stream or self.protocol.route.supports_channel:
+            raise ValueError(f"[kotlin-client] 暂不支持长连接 route: {self.url}")
+        self.http_methods = list(self.protocol.route.http_methods)
+        self.supports_ws = self.protocol.route.supports_ws
         if self.supports_ws:
-            raise ValueError(f"[gen_kotlin] 暂不支持 WebSocket route: {self.url}")
+            raise ValueError(f"[kotlin-client] 暂不支持 WebSocket route: {self.url}")
         if len(self.http_methods) != 1:
-            raise ValueError(f"[gen_kotlin] Kotlin 客户端要求每个 route 只有一个 HTTP method: {self.url}")
+            raise ValueError(f"[kotlin-client] Kotlin 客户端要求每个 route 只有一个 HTTP method: {self.url}")
 
-        self.query_proto = self._ensure_model(router.req_query, "Query")
-        self.form_proto = self._ensure_model(router.req_form, "Form")
-        self.json_proto = self._ensure_model(router.req_json, "Json")
-        self.bin_proto = router.req_bin is not None
+        self.query_proto = self._ensure_model(self.protocol.request.query.model, "Query")
+        self.form_proto = self._ensure_model(self.protocol.request.form.model, "Form")
+        self.json_proto = self._ensure_model(self.protocol.request.json.model, "Json")
+        self.bin_proto = self.protocol.request.binary.model is not None
         if self.form_proto is not None or self.bin_proto:
-            raise ValueError(f"[gen_kotlin] 暂不支持 form/binary body route: {self.url}")
+            raise ValueError(f"[kotlin-client] 暂不支持 form/binary body route: {self.url}")
 
-        self.response_payload_proto = self._ensure_model(router.rsp_model, "Response")
-        self.wrapper_proto = self._register_wrapper(router)
+        self.response_media_type = self.protocol.response.media_type
+        self.response_payload_proto = self._ensure_model(self.protocol.response.model.model, "Response")
+        self.wrapper_proto = self._register_wrapper(self.protocol.response.wrapper)
         self.response_type = self._response_type()
 
     @property
@@ -86,14 +94,14 @@ class KotlinRoute:
         module = self.group_slug if is_route_model else "shared"
         return self.registry.ensure(model, name=name, tag=tag, module=module)
 
-    def _register_wrapper(self, router: Router) -> Optional[KotlinProto]:
-        wrapper_cls = router.response_wrapper or NoneWrapper
+    def _register_wrapper(self, wrapper_cls: type[ResponseWrapper]) -> Optional[KotlinProto]:
+        wrapper_cls = wrapper_cls or NoneWrapper
         if wrapper_cls is NoneWrapper:
             return None
         return self.registry.register_wrapper(wrapper_cls)
 
     def _response_type(self) -> KotlinResolvedType:
-        if self.router.rsp_media_type != "application/json":
+        if self.response_media_type != "application/json":
             return KotlinResolvedType("String", serializer="String.serializer()")
         if self.response_payload_proto is None:
             return KotlinResolvedType("Unit", serializer="Unit.serializer()")
@@ -133,11 +141,12 @@ class KotlinBlueprint(BaseBlueprint["KotlinWriter"]):
         self.groups = OrderedDict()
         selection = KotlinRouteSelection(include=self.writer.include, exclude=self.writer.exclude)
         for _group, router in self.iter_router():
+            protocol = self.protocol_for_router(router)
             route_name = snake_to_pascal_case(router.leaf or "root", "", "Func")
             if not selection.includes(router, route_name=route_name):
                 continue
-            self._register_common_models(router)
-            route = KotlinRoute(router, self.registry)
+            self._register_common_models(protocol)
+            route = KotlinRoute(router, self.registry, protocol=protocol)
             self.routes.append(route)
             group = self.groups.get(route.group_slug)
             if group is None:
@@ -164,7 +173,10 @@ class KotlinBlueprint(BaseBlueprint["KotlinWriter"]):
                             proto.add_tag("route")
                             break
 
-    def _register_common_models(self, router: Router) -> None:
+    def protocol_for_router(self, router: Router) -> RouteProtocolContract:
+        return self.writer.route_protocol_for(router)
+
+    def _register_common_models(self, protocol: RouteProtocolContract) -> None:
         def collect(model: Optional[Union[Type[Model], Model]]) -> None:
             if model is None:
                 return
@@ -182,13 +194,13 @@ class KotlinBlueprint(BaseBlueprint["KotlinWriter"]):
             if not model_auto and getattr(model_cls, "__auto__", False) is False:
                 self.registry.ensure(model_cls, tag="shared")
 
-        collect(router.req_query)
-        collect(router.req_form)
-        collect(router.req_json)
-        collect(router.rsp_model)
-        for recv in router.recvs:
+        collect(protocol.request.query.model)
+        collect(protocol.request.form.model)
+        collect(protocol.request.json.model)
+        collect(protocol.response.model.model)
+        for recv in protocol.recvs:
             collect(recv)
-        for send in router.sends:
+        for send in protocol.sends:
             collect(send)
 
     def group_model_imports(self, group_slug: str) -> list[str]:

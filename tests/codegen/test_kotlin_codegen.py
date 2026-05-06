@@ -4,6 +4,7 @@ import enum
 
 import pytest
 
+from api_blueprint.contract import build_contract_graph
 from api_blueprint.engine import Blueprint
 from api_blueprint.engine.model import Array, Enum, Int64, Map, Model, String
 from api_blueprint.writer.kotlin import KotlinProtoRegistry, KotlinRouteSelection, KotlinWriter, to_kotlin_property_name, to_kotlin_type_name
@@ -99,3 +100,35 @@ def test_kotlin_writer_rejects_long_connection_routes(tmp_path):
 
     with pytest.raises(ValueError, match="暂不支持长连接 route"):
         writer.gen()
+
+
+def test_kotlin_contract_graph_adapter_owns_request_and_response_models(tmp_path):
+    class SubmitJson(Model):
+        value = String(description="value")
+
+    class SubmitResponse(Model):
+        status = String(description="status")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        router = views.POST("/submit").ARGS(q=String(description="q")).REQ(SubmitJson).RSP(SubmitResponse)
+
+    graph = build_contract_graph([bp])
+    router.req_query = None
+    router.req_json = None
+    router.rsp_model = None
+
+    writer = KotlinWriter(tmp_path / "kotlin", package="com.example.generated", contract_graph=graph)
+    writer.register(bp)
+    writer.gen()
+
+    endpoint_text = (
+        tmp_path / "kotlin" / "com" / "example" / "generated" / "endpoints" / "DemoApi.kt"
+    ).read_text(encoding="utf-8")
+    models_text = (
+        tmp_path / "kotlin" / "com" / "example" / "generated" / "models" / "DemoApiModels.kt"
+    ).read_text(encoding="utf-8")
+    assert "query: DemoSubmitQuery," in endpoint_text
+    assert "body: SubmitJson," in endpoint_text
+    assert "): SubmitResponse {" in endpoint_text
+    assert "public data class DemoSubmitQuery" in models_text

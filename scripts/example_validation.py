@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import filecmp
-import importlib.util
 import os
 import shutil
 import subprocess
@@ -21,10 +20,8 @@ for path in (PROJECT_ROOT, SRC_ROOT):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
-from api_blueprint.application.generation import generate_golang, generate_grpc, generate_kotlin, generate_typescript, generate_wails
+from api_blueprint.application import vnext
 
-PROTOC_GEN_GO_VERSION = "v1.36.10"
-PROTOC_GEN_GO_GRPC_VERSION = "v1.6.0"
 GO_ENUM_VERSION = "v0.9.2"
 KOTLIN_VERSION = "2.1.21"
 KOTLINX_COROUTINES_VERSION = "1.10.2"
@@ -46,7 +43,6 @@ BLUEPRINT_TYPESCRIPT_PRESERVED = (
     "tsconfig.json",
 )
 BLUEPRINT_KOTLIN_PRESERVED = ()
-GRPC_GO_PRESERVED = ("go.mod",)
 WAILS_HELLO_GOLANG_PRESERVED = (
     "go.mod",
     "go.sum",
@@ -87,8 +83,7 @@ class BlueprintExampleWorkspace:
 class GrpcExampleWorkspace:
     root: Path
     config_path: Path
-    go_dir: Path
-    python_dir: Path
+    protos_dir: Path
 
 
 @dataclass(frozen=True)
@@ -149,18 +144,6 @@ def collect_missing_validation_requirements(scope: ExampleValidationScope = Exam
                 "protoc",
                 "install the Protocol Buffers compiler, for example `brew install protobuf` or `apt-get install protobuf-compiler`.",
             ),
-            (
-                "protoc-gen-go",
-                "install it with `go install google.golang.org/protobuf/cmd/protoc-gen-go@"
-                + PROTOC_GEN_GO_VERSION
-                + "`.",
-            ),
-            (
-                "protoc-gen-go-grpc",
-                "install it with `go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@"
-                + PROTOC_GEN_GO_GRPC_VERSION
-                + "`.",
-            ),
         ),
         ExampleValidationScope.BLUEPRINT: (
             (
@@ -181,43 +164,11 @@ def collect_missing_validation_requirements(scope: ExampleValidationScope = Exam
                 + GO_ENUM_VERSION
                 + "`.",
             ),
-            (
-                "protoc",
-                "install the Protocol Buffers compiler, for example `brew install protobuf` or `apt-get install protobuf-compiler`.",
-            ),
-            (
-                "protoc-gen-go",
-                "install it with `go install google.golang.org/protobuf/cmd/protoc-gen-go@"
-                + PROTOC_GEN_GO_VERSION
-                + "`.",
-            ),
-            (
-                "protoc-gen-go-grpc",
-                "install it with `go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@"
-                + PROTOC_GEN_GO_GRPC_VERSION
-                + "`.",
-            ),
         ),
         ExampleValidationScope.GRPC: (
             (
-                "go",
-                "install Go and ensure `go` is available on PATH.",
-            ),
-            (
                 "protoc",
                 "install the Protocol Buffers compiler, for example `brew install protobuf` or `apt-get install protobuf-compiler`.",
-            ),
-            (
-                "protoc-gen-go",
-                "install it with `go install google.golang.org/protobuf/cmd/protoc-gen-go@"
-                + PROTOC_GEN_GO_VERSION
-                + "`.",
-            ),
-            (
-                "protoc-gen-go-grpc",
-                "install it with `go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@"
-                + PROTOC_GEN_GO_GRPC_VERSION
-                + "`.",
             ),
         ),
         ExampleValidationScope.WAILS_HELLO: (
@@ -263,11 +214,6 @@ def collect_missing_validation_requirements(scope: ExampleValidationScope = Exam
             f"or set `{WAILS_V3_BIN_ENV}` to the executable."
         )
 
-    if scope in (ExampleValidationScope.ALL, ExampleValidationScope.GRPC) and importlib.util.find_spec("grpc_tools") is None:
-        missing.append(
-            "grpc_tools: install Python dev dependencies with `uv sync --dev` or install `grpcio-tools` manually."
-        )
-
     return tuple(missing)
 
 
@@ -297,8 +243,7 @@ def _grpc_workspace(root: Path) -> GrpcExampleWorkspace:
     return GrpcExampleWorkspace(
         root=root,
         config_path=root / "api-blueprint.toml",
-        go_dir=root / "grpc" / "go",
-        python_dir=root / "grpc" / "python",
+        protos_dir=root / "grpc" / "protos",
     )
 
 
@@ -343,7 +288,7 @@ def prepare_wails_hello_workspace(repo_root: Path) -> WailsHelloExampleWorkspace
 def prepare_grpc_workspace(repo_root: Path) -> GrpcExampleWorkspace:
     examples_root = repo_root / "examples"
     workspace_root = Path(tempfile.mkdtemp(prefix="api-blueprint-grpc-examples-"))
-    shutil.copytree(examples_root / "grpc" / "protos", workspace_root / "grpc" / "protos")
+    shutil.copytree(examples_root / "blueprints", workspace_root / "blueprints")
     shutil.copy2(examples_root / "api-blueprint.toml", workspace_root / "api-blueprint.toml")
     _prepare_grpc_outputs(source_root=examples_root / "grpc", target_root=workspace_root / "grpc")
     return _grpc_workspace(workspace_root)
@@ -366,10 +311,9 @@ def _prepare_blueprint_outputs(*, source_root: Path, target_root: Path) -> None:
 
 def _prepare_grpc_outputs(*, source_root: Path, target_root: Path) -> None:
     _prepare_output_dir(
-        target_root / "go",
-        _capture_relative_files(source_root / "go", GRPC_GO_PRESERVED),
+        target_root / "protos",
+        _capture_relative_files(source_root / "protos", ()),
     )
-    _prepare_output_dir(target_root / "python", {})
 
 
 def _prepare_wails_hello_outputs(*, source_root: Path, target_root: Path) -> None:
@@ -424,20 +368,16 @@ def _prepare_output_dir(root: Path, preserved_files: Mapping[Path, bytes]) -> No
 
 
 def regenerate_blueprint_examples(workspace: BlueprintExampleWorkspace) -> None:
-    generate_typescript(workspace.config_path)
-    generate_golang(workspace.config_path)
-    generate_kotlin(workspace.config_path)
-    generate_wails(workspace.config_path)
+    vnext.generate(workspace.config_path, target_ids=("http", "wails.v2", "wails.v3"))
     _tidy_go_module(workspace.golang_dir)
 
 
 def regenerate_grpc_examples(workspace: GrpcExampleWorkspace) -> None:
-    generate_grpc(workspace.config_path)
-    _tidy_go_module(workspace.go_dir)
+    vnext.generate(workspace.config_path, target_ids=("grpc.proto",))
 
 
 def regenerate_wails_hello_example(workspace: WailsHelloExampleWorkspace) -> None:
-    generate_wails(workspace.config_path, target_filters=("hello.v3",))
+    vnext.generate(workspace.config_path, target_ids=("hello.v3",))
     _tidy_go_module(workspace.golang_dir)
     _tidy_go_module(workspace.app_dir)
 
@@ -585,8 +525,7 @@ def validate_grpc_snapshots(repo_root: Path, workspace: GrpcExampleWorkspace) ->
     example_root = repo_root / "examples" / "grpc"
     _raise_on_snapshot_drift(
         (
-            (example_root / "go", workspace.go_dir, "grpc/go"),
-            (example_root / "python", workspace.python_dir, "grpc/python"),
+            (example_root / "protos", workspace.protos_dir, "grpc/protos"),
         )
     )
 
@@ -628,8 +567,20 @@ def compile_generated_examples(workspace: BlueprintExampleWorkspace) -> None:
 
 
 def compile_generated_grpc_examples(workspace: GrpcExampleWorkspace) -> None:
-    _run_python_grpc_import_smoke(workspace.python_dir)
-    subprocess.run(["go", "test", "./..."], cwd=workspace.go_dir, check=True)
+    proto_files = sorted(path.relative_to(workspace.protos_dir).as_posix() for path in workspace.protos_dir.rglob("*.proto"))
+    if not proto_files:
+        raise ExampleValidationError(f"missing generated proto files under {workspace.protos_dir}")
+    with tempfile.NamedTemporaryFile(suffix=".pb") as descriptor:
+        subprocess.run(
+            [
+                "protoc",
+                f"--proto_path={workspace.protos_dir}",
+                f"--descriptor_set_out={descriptor.name}",
+                *proto_files,
+            ],
+            cwd=workspace.protos_dir,
+            check=True,
+        )
 
 
 def compile_wails_hello_example(workspace: WailsHelloExampleWorkspace) -> None:
@@ -685,19 +636,6 @@ def _compile_wails_harness(harness_dir: Path, *, version: str) -> None:
 
     subprocess.run([wails_bin, "doctor"], cwd=harness_dir, check=True)
     subprocess.run([wails_bin, "build"], cwd=harness_dir, check=True)
-
-
-def _run_python_grpc_import_smoke(python_dir: Path) -> None:
-    env = os.environ.copy()
-    python_path = str(python_dir)
-    existing = env.get("PYTHONPATH")
-    env["PYTHONPATH"] = python_path if not existing else python_path + os.pathsep + existing
-    smoke = (
-        "import examplegrpc_pb.commonpb.common_pb2\n"
-        "import examplegrpc_pb.greeterpb.greeter_pb2\n"
-        "import examplegrpc_pb.greeterpb.greeter_pb2_grpc\n"
-    )
-    subprocess.run([sys.executable, "-c", smoke], env=env, check=True)
 
 
 def _validate_kotlin_sources(kotlin_dir: Path) -> None:

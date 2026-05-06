@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package example.api.static.static;
+
+option go_package = "example.com/project/grpc/go/static;static";
+
+service StaticService {
+  rpc DocJson (DocJsonRequest) returns (DocJsonResponse);
+  rpc Dochaha (DochahaRequest) returns (DochahaResponse);
+}
+
+message DocJsonRequest {
+}
+
+message DocJsonResponse {
+}
+
+message DochahaRequest {
+}
+
+message DochahaResponse {
+  string a = 1;
+}

@@ -1,72 +1,36 @@
 # gRPC
 
-`api-gen-grpc` orchestrates compilation for existing `.proto` trees. It does not generate proto/service definitions from the Blueprint DSL.
+vNext gRPC no longer treats an existing `.proto` tree as an independent source of truth. The `grpc-proto` target emits `.proto` files and service definitions from ContractGraph, and ContractGraph still comes from Blueprint.
 
-## Target Mode
-
-Use `[grpc]` and `[[grpc.targets]]` as the primary mode:
+## Target
 
 ```toml
-[grpc]
-source_root = "grpc/protos"
-import_roots = []
-
-[[grpc.targets]]
-id = "go.greeter"
-lang = "go"
-out_dir = "grpc/go"
-files = ["commonpb/common.proto", "greeterpb/greeter.proto"]
-
-[[grpc.targets]]
-id = "python.greeter"
-lang = "python"
-out_dir = "grpc/python"
-files = ["**/*.proto"]
-python_package_root = "examplegrpc_pb"
+[[targets]]
+id = "grpc.proto"
+kind = "grpc-proto"
+out_dir = "grpc/protos"
+package = "example.api"
+go_package_prefix = "example.com/project/grpc/go"
 ```
 
-- `id`: used only for target selection.
-- `source_root`: resolves `files` and acts as the `protoc` working root.
-- `import_roots`: only extends proto import lookup.
-- `out_dir`: final generated directory.
-- `python_package_root`: applies only to Python targets.
+- `out_dir`: proto output directory.
+- `package`: proto package.
+- `go_package_prefix`: used to generate `option go_package`; files are split by Blueprint root/group.
+
+## RPC Mapping
+
+- Normal HTTP routes emit unary RPCs.
+- `STREAM` emits server-streaming RPCs.
+- `CHANNEL` emits bidirectional streaming RPCs.
+- Single-model or union `SERVER_MESSAGE` / `CLIENT_MESSAGE` contracts enter the proto message set.
 
 ## CLI
 
 ```sh
-api-gen-grpc -c api-blueprint.toml --list-targets
-api-gen-grpc -c api-blueprint.toml --target go.*
-api-gen-grpc -c api-blueprint.toml --explain-target go.greeter
+api-gen generate -c api-blueprint.toml --target grpc.proto
+api-gen manifest -c api-blueprint.toml --out api-blueprint.contract.json
+api-gen diff old.contract.json new.contract.json
+api-gen check -c api-blueprint.toml
 ```
 
-## Go Target
-
-A Go target walks upward from `out_dir`, discovers the nearest `go.mod`, parses the module path, and validates selected proto `option go_package` values against the output directory.
-
-Public target config no longer requires manual `module` or `layout`.
-
-## Python Target
-
-Python targets generate source-relative output by default.
-
-When `python_package_root` is set, output lands deterministically under:
-
-```text
-out_dir/<python_package_root>/...
-```
-
-Generated-code imports also use that package root.
-
-## Legacy Jobs
-
-`[[grpc.jobs]]` remains available, but only as legacy/raw mode. Older configs can still use:
-
-```sh
-api-gen-grpc -c api-blueprint.toml --list-jobs
-api-gen-grpc -c api-blueprint.toml --job legacy.name
-```
-
-## External Toolchain
-
-- Python targets require `grpcio-tools`.
-- Go targets require `protoc`, `protoc-gen-go`, and `protoc-gen-go-grpc` on `PATH`.
+Old raw proto targets/jobs are outside the vNext public mainline. When Go/Python gRPC compilation is needed, use the generated proto files as input to each language toolchain.
