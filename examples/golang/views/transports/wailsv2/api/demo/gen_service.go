@@ -8,16 +8,18 @@ import (
 )
 
 type DemoService struct {
-	impl                   RouterInterface
-	sessions               *wailstransport.SocketHub
-	abcExecutor            *sharedprovider.RouteExecutor[REQ_Abc_QUERY, any, RSP_Abc]
-	testPostExecutor       *sharedprovider.RouteExecutor[any, REQ_TestPost_JSON, RSP_TestPost]
-	z1putExecutor          *sharedprovider.RouteExecutor[REQ_Z1put_QUERY, REQ_Z1put_JSON, RSP_Z1put]
-	deleteExecutor         *sharedprovider.RouteExecutor[REQ_Delete_QUERY, any, RSP_Delete]
-	wsExecutor             *sharedprovider.RouteExecutor[REQ_Ws_QUERY, any, RSP_Ws]
-	postDeprecatedExecutor *sharedprovider.RouteExecutor[any, REQ_PostDeprecated_JSON, RSP_PostDeprecated]
-	rawExecutor            *sharedprovider.RouteExecutor[any, any, RSP_Raw]
-	mapModelExecutor       *sharedprovider.RouteExecutor[any, any, RSP_MapModel]
+	impl                     RouterInterface
+	sessions                 wailstransport.ConnectionHub
+	abcExecutor              *sharedprovider.RouteExecutor[REQ_Abc_QUERY, any, RSP_Abc]
+	testPostExecutor         *sharedprovider.RouteExecutor[any, REQ_TestPost_JSON, RSP_TestPost]
+	z1putExecutor            *sharedprovider.RouteExecutor[REQ_Z1put_QUERY, REQ_Z1put_JSON, RSP_Z1put]
+	deleteExecutor           *sharedprovider.RouteExecutor[REQ_Delete_QUERY, any, RSP_Delete]
+	wsExecutor               *sharedprovider.RouteExecutor[REQ_Ws_QUERY, any, RSP_Ws]
+	sweepEventsExecutor      *sharedprovider.RouteExecutor[OPEN_SweepEvents, any, RSP_SweepEvents]
+	assistantSessionExecutor *sharedprovider.RouteExecutor[OPEN_AssistantSession, any, RSP_AssistantSession]
+	postDeprecatedExecutor   *sharedprovider.RouteExecutor[any, REQ_PostDeprecated_JSON, RSP_PostDeprecated]
+	rawExecutor              *sharedprovider.RouteExecutor[any, any, RSP_Raw]
+	mapModelExecutor         *sharedprovider.RouteExecutor[any, any, RSP_MapModel]
 }
 
 func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.EventDispatcher) *DemoService {
@@ -35,6 +37,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Path:      "/api/demo/abc",
 				Methods:   []string{"GET"},
 				Transport: sharedprovider.TransportWails,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req=Q|auth|handle|rsp=json@GeneralWrapper",
 			impl.Abc,
@@ -50,6 +53,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Path:      "/api/demo/test_post",
 				Methods:   []string{"POST"},
 				Transport: sharedprovider.TransportWails,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req=J|auth|handle|rsp=json@GeneralWrapper",
 			impl.TestPost,
@@ -65,6 +69,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Path:      "/api/demo/1put",
 				Methods:   []string{"PUT"},
 				Transport: sharedprovider.TransportWails,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req=QJ|auth|handle|rsp=json@GeneralWrapper",
 			impl.Z1put,
@@ -80,6 +85,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Path:      "/api/demo/delete$",
 				Methods:   []string{"DELETE"},
 				Transport: sharedprovider.TransportWails,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req=Q|auth|handle|rsp=xml@GeneralWrapper",
 			impl.Delete,
@@ -95,9 +101,50 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Path:      "/api/demo/ws",
 				Methods:   []string{"WS"},
 				Transport: sharedprovider.TransportWails,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req=Q|auth|ws_handle|rsp=json@GeneralWrapper",
 			impl.Ws,
+		),
+		sweepEventsExecutor: sharedprovider.NewRouteExecutor[
+			OPEN_SweepEvents,
+			any,
+			RSP_SweepEvents,
+		](
+			sharedprovider.RouteInfo{
+				Root:      "api",
+				Group:     "demo",
+				Namespace: "demo",
+				Service:   "DemoService",
+				Operation: "SweepEvents",
+				RouteID:   "api.demo.stream.sweepevents",
+				Path:      "/api/demo/sweep-events",
+				Methods:   []string{"STREAM"},
+				Transport: sharedprovider.TransportWails,
+				Scope:     sharedprovider.ConnectionScope("session"),
+			},
+			"req=Q|auth",
+			nil,
+		),
+		assistantSessionExecutor: sharedprovider.NewRouteExecutor[
+			OPEN_AssistantSession,
+			any,
+			RSP_AssistantSession,
+		](
+			sharedprovider.RouteInfo{
+				Root:      "api",
+				Group:     "demo",
+				Namespace: "demo",
+				Service:   "DemoService",
+				Operation: "AssistantSession",
+				RouteID:   "api.demo.channel.assistantsession",
+				Path:      "/api/demo/assistant-session",
+				Methods:   []string{"CHANNEL"},
+				Transport: sharedprovider.TransportWails,
+				Scope:     sharedprovider.ConnectionScope("session"),
+			},
+			"req=Q|auth",
+			nil,
 		),
 		postDeprecatedExecutor: sharedprovider.NewRouteExecutor(
 			sharedprovider.RouteInfo{
@@ -110,6 +157,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Path:      "/api/demo/post_deprecated",
 				Methods:   []string{"POST"},
 				Transport: sharedprovider.TransportWails,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req=J|auth|handle|rsp=json@GeneralWrapper",
 			impl.PostDeprecated,
@@ -125,6 +173,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Path:      "/api/demo/raw",
 				Methods:   []string{"POST"},
 				Transport: sharedprovider.TransportWails,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req|auth|handle|rsp=json@GeneralWrapper",
 			impl.Raw,
@@ -140,6 +189,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Path:      "/api/demo/map_model",
 				Methods:   []string{"POST"},
 				Transport: sharedprovider.TransportWails,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req|auth|handle|rsp=json@GeneralWrapper",
 			impl.MapModel,
@@ -147,8 +197,17 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 	}
 }
 
-func (svc *DemoService) Abc(envelope *INVOKE_Abc) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_Abc], err error) {
-	req, reqErr := wailstransport.EnvelopeToReq[REQ_Abc_QUERY, any](envelope, wailstransport.ReqEnvelopeOptions{
+func (svc *DemoService) SetConnectionHub(hub wailstransport.ConnectionHub) {
+	if svc == nil || hub == nil {
+		return
+	}
+	svc.sessions = hub
+}
+
+func (svc *DemoService) Abc(
+	envelope *INVOKE_Abc,
+) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_Abc], err error) {
+	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
 		BindQuery: true,
 		BindJSON:  false,
 		BindForm:  false,
@@ -157,7 +216,11 @@ func (svc *DemoService) Abc(envelope *INVOKE_Abc) (rsp *sharedprovider.RSP_JSON_
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[REQ_Abc_QUERY, any, RSP_Abc]("DemoService", "Abc", wailstransport.EnvelopeHeaders(envelope))
+	ctx := sharedprovider.NewWailsContext[REQ_Abc_QUERY, any, RSP_Abc](
+		"DemoService",
+		"Abc",
+		wailstransport.EnvelopeHeaders(envelope),
+	)
 	ctx.Req = &sharedprovider.ReqContext[REQ_Abc_QUERY, any, RSP_Abc]{Request: req}
 	execErr := svc.abcExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
@@ -165,11 +228,13 @@ func (svc *DemoService) Abc(envelope *INVOKE_Abc) (rsp *sharedprovider.RSP_JSON_
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_GeneralWrapper[RSP_Abc](response, invokeErr), nil
+	return sharedprovider.WrapRSP_JSON_GeneralWrapper(response, invokeErr), nil
 }
 
-func (svc *DemoService) TestPost(envelope *INVOKE_TestPost) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_TestPost], err error) {
-	req, reqErr := wailstransport.EnvelopeToReq[any, REQ_TestPost_JSON](envelope, wailstransport.ReqEnvelopeOptions{
+func (svc *DemoService) TestPost(
+	envelope *INVOKE_TestPost,
+) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_TestPost], err error) {
+	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
 		BindQuery: false,
 		BindJSON:  true,
 		BindForm:  false,
@@ -178,7 +243,11 @@ func (svc *DemoService) TestPost(envelope *INVOKE_TestPost) (rsp *sharedprovider
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[any, REQ_TestPost_JSON, RSP_TestPost]("DemoService", "TestPost", wailstransport.EnvelopeHeaders(envelope))
+	ctx := sharedprovider.NewWailsContext[any, REQ_TestPost_JSON, RSP_TestPost](
+		"DemoService",
+		"TestPost",
+		wailstransport.EnvelopeHeaders(envelope),
+	)
 	ctx.Req = &sharedprovider.ReqContext[any, REQ_TestPost_JSON, RSP_TestPost]{Request: req}
 	execErr := svc.testPostExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
@@ -186,11 +255,13 @@ func (svc *DemoService) TestPost(envelope *INVOKE_TestPost) (rsp *sharedprovider
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_GeneralWrapper[RSP_TestPost](response, invokeErr), nil
+	return sharedprovider.WrapRSP_JSON_GeneralWrapper(response, invokeErr), nil
 }
 
-func (svc *DemoService) Z1put(envelope *INVOKE_Z1put) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_Z1put], err error) {
-	req, reqErr := wailstransport.EnvelopeToReq[REQ_Z1put_QUERY, REQ_Z1put_JSON](envelope, wailstransport.ReqEnvelopeOptions{
+func (svc *DemoService) Z1put(
+	envelope *INVOKE_Z1put,
+) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_Z1put], err error) {
+	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
 		BindQuery: true,
 		BindJSON:  true,
 		BindForm:  false,
@@ -199,7 +270,11 @@ func (svc *DemoService) Z1put(envelope *INVOKE_Z1put) (rsp *sharedprovider.RSP_J
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[REQ_Z1put_QUERY, REQ_Z1put_JSON, RSP_Z1put]("DemoService", "Z1put", wailstransport.EnvelopeHeaders(envelope))
+	ctx := sharedprovider.NewWailsContext[REQ_Z1put_QUERY, REQ_Z1put_JSON, RSP_Z1put](
+		"DemoService",
+		"Z1put",
+		wailstransport.EnvelopeHeaders(envelope),
+	)
 	ctx.Req = &sharedprovider.ReqContext[REQ_Z1put_QUERY, REQ_Z1put_JSON, RSP_Z1put]{Request: req}
 	execErr := svc.z1putExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
@@ -207,11 +282,13 @@ func (svc *DemoService) Z1put(envelope *INVOKE_Z1put) (rsp *sharedprovider.RSP_J
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_GeneralWrapper[RSP_Z1put](response, invokeErr), nil
+	return sharedprovider.WrapRSP_JSON_GeneralWrapper(response, invokeErr), nil
 }
 
-func (svc *DemoService) Delete(envelope *INVOKE_Delete) (rsp string, err error) {
-	req, reqErr := wailstransport.EnvelopeToReq[REQ_Delete_QUERY, any](envelope, wailstransport.ReqEnvelopeOptions{
+func (svc *DemoService) Delete(
+	envelope *INVOKE_Delete,
+) (rsp string, err error) {
+	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
 		BindQuery: true,
 		BindJSON:  false,
 		BindForm:  false,
@@ -220,7 +297,11 @@ func (svc *DemoService) Delete(envelope *INVOKE_Delete) (rsp string, err error) 
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[REQ_Delete_QUERY, any, RSP_Delete]("DemoService", "Delete", wailstransport.EnvelopeHeaders(envelope))
+	ctx := sharedprovider.NewWailsContext[REQ_Delete_QUERY, any, RSP_Delete](
+		"DemoService",
+		"Delete",
+		wailstransport.EnvelopeHeaders(envelope),
+	)
 	ctx.Req = &sharedprovider.ReqContext[REQ_Delete_QUERY, any, RSP_Delete]{Request: req}
 	execErr := svc.deleteExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
@@ -238,8 +319,10 @@ func (svc *DemoService) Delete(envelope *INVOKE_Delete) (rsp string, err error) 
 	return sharedprovider.MarshalXMLResponse(xmlProvider, response)
 }
 
-func (svc *DemoService) ConnectWs(envelope *WS_CONNECT_Ws) (rsp *wailstransport.SocketSessionDescriptor, err error) {
-	req, reqErr := wailstransport.EnvelopeToReq[REQ_Ws_QUERY, any](envelope, wailstransport.ReqEnvelopeOptions{
+func (svc *DemoService) ConnectWs(
+	envelope *WS_CONNECT_Ws,
+) (rsp *wailstransport.SocketSessionDescriptor, err error) {
+	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
 		BindQuery: true,
 		BindJSON:  false,
 		BindForm:  false,
@@ -248,19 +331,31 @@ func (svc *DemoService) ConnectWs(envelope *WS_CONNECT_Ws) (rsp *wailstransport.
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[REQ_Ws_QUERY, any, RSP_Ws]("DemoService", "ConnectWs", wailstransport.EnvelopeHeaders(envelope))
+	ctx := sharedprovider.NewWailsContext[REQ_Ws_QUERY, any, RSP_Ws](
+		"DemoService",
+		"ConnectWs",
+		wailstransport.EnvelopeHeaders(envelope),
+	)
 	ctx.Req = &sharedprovider.ReqContext[REQ_Ws_QUERY, any, RSP_Ws]{Request: req}
 	if err := svc.wsExecutor.RunWSPreflight(ctx); err != nil {
 		return nil, err
 	}
 
-	session := svc.sessions.Open("api.demo.ws.ws")
+	session, sessionErr := svc.sessions.Open(
+		"api.demo.ws.ws",
+		"api_blueprint.ws.api.demo.ws.ws",
+		sharedprovider.ConnectionScopeSession,
+	)
+	if sessionErr != nil {
+		err = sessionErr
+		return
+	}
 	ctx.WsHandle = &sharedprovider.WsHandleContext[REQ_Ws_QUERY, any, RSP_Ws]{Conn: session}
 
 	go func() {
 		if runErr := svc.wsExecutor.RunWSHandler(ctx); runErr != nil {
 			ctx.WsHandle.Error = runErr
-			_ = session.Close(1011, runErr.Error())
+			_ = session.Abort(1011, runErr.Error())
 		}
 	}()
 
@@ -285,11 +380,135 @@ func (svc *DemoService) CloseWs(request *WS_CLOSE_Ws) error {
 	if code == 0 {
 		code = 1000
 	}
-	return session.Close(code, request.Reason)
+	return session.Abort(code, request.Reason)
 }
 
-func (svc *DemoService) PostDeprecated(envelope *INVOKE_PostDeprecated) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_PostDeprecated], err error) {
-	req, reqErr := wailstransport.EnvelopeToReq[any, REQ_PostDeprecated_JSON](envelope, wailstransport.ReqEnvelopeOptions{
+func (svc *DemoService) SubscribeSweepEvents(
+	envelope *CONNECTION_CONNECT_SweepEvents,
+) (rsp *wailstransport.SocketSessionDescriptor, err error) {
+	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
+		BindQuery: true,
+		BindJSON:  false,
+		BindForm:  false,
+	})
+	if reqErr != nil {
+		err = reqErr
+		return
+	}
+	ctx := sharedprovider.NewWailsContext[OPEN_SweepEvents, any, RSP_SweepEvents](
+		"DemoService",
+		"SubscribeSweepEvents",
+		wailstransport.EnvelopeHeaders(envelope),
+	)
+	ctx.Req = &sharedprovider.ReqContext[OPEN_SweepEvents, any, RSP_SweepEvents]{Request: req}
+	if err := svc.sweepEventsExecutor.Run(ctx); err != nil {
+		return nil, err
+	}
+
+	session, sessionErr := svc.sessions.Open(
+		"api.demo.stream.sweepevents",
+		"api_blueprint.stream.api.demo.stream.sweepevents",
+		sharedprovider.ConnectionScope("session"),
+	)
+	if sessionErr != nil {
+		err = sessionErr
+		return
+	}
+	stream := sharedprovider.NewStreamSession[OPEN_SweepEvents, SweepStreamMessage, CLOSE_SweepEvents](
+		req.Q,
+		session,
+	)
+	go func() {
+		if runErr := svc.impl.SweepEvents(ctx, stream); runErr != nil {
+			_ = session.Abort(1011, runErr.Error())
+		}
+	}()
+
+	descriptor := session.Descriptor()
+	return &descriptor, nil
+}
+
+func (svc *DemoService) CloseSweepEvents(request *CONNECTION_CLOSE_SweepEvents) error {
+	session, err := svc.sessions.Get(request.SessionID)
+	if err != nil {
+		return err
+	}
+	code := request.Code
+	if code == 0 {
+		code = 1000
+	}
+	return session.Abort(code, request.Reason)
+}
+
+func (svc *DemoService) OpenAssistantSession(
+	envelope *CONNECTION_CONNECT_AssistantSession,
+) (rsp *wailstransport.SocketSessionDescriptor, err error) {
+	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
+		BindQuery: true,
+		BindJSON:  false,
+		BindForm:  false,
+	})
+	if reqErr != nil {
+		err = reqErr
+		return
+	}
+	ctx := sharedprovider.NewWailsContext[OPEN_AssistantSession, any, RSP_AssistantSession](
+		"DemoService",
+		"OpenAssistantSession",
+		wailstransport.EnvelopeHeaders(envelope),
+	)
+	ctx.Req = &sharedprovider.ReqContext[OPEN_AssistantSession, any, RSP_AssistantSession]{Request: req}
+	if err := svc.assistantSessionExecutor.Run(ctx); err != nil {
+		return nil, err
+	}
+
+	session, sessionErr := svc.sessions.Open(
+		"api.demo.channel.assistantsession",
+		"api_blueprint.channel.api.demo.channel.assistantsession",
+		sharedprovider.ConnectionScope("session"),
+	)
+	if sessionErr != nil {
+		err = sessionErr
+		return
+	}
+	channel := sharedprovider.NewChannelSession[OPEN_AssistantSession, AssistantServerMessage, AssistantClientMessage, CLOSE_AssistantSession](
+		req.Q,
+		session,
+	)
+	go func() {
+		if runErr := svc.impl.AssistantSession(ctx, channel); runErr != nil {
+			_ = session.Abort(1011, runErr.Error())
+		}
+	}()
+
+	descriptor := session.Descriptor()
+	return &descriptor, nil
+}
+
+func (svc *DemoService) SendAssistantSession(request *CHANNEL_SEND_AssistantSession) error {
+	session, err := svc.sessions.Get(request.SessionID)
+	if err != nil {
+		return err
+	}
+	return session.Push(request.Payload)
+}
+
+func (svc *DemoService) CloseAssistantSession(request *CONNECTION_CLOSE_AssistantSession) error {
+	session, err := svc.sessions.Get(request.SessionID)
+	if err != nil {
+		return err
+	}
+	code := request.Code
+	if code == 0 {
+		code = 1000
+	}
+	return session.Abort(code, request.Reason)
+}
+
+func (svc *DemoService) PostDeprecated(
+	envelope *INVOKE_PostDeprecated,
+) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_PostDeprecated], err error) {
+	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
 		BindQuery: false,
 		BindJSON:  true,
 		BindForm:  false,
@@ -298,7 +517,11 @@ func (svc *DemoService) PostDeprecated(envelope *INVOKE_PostDeprecated) (rsp *sh
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[any, REQ_PostDeprecated_JSON, RSP_PostDeprecated]("DemoService", "PostDeprecated", wailstransport.EnvelopeHeaders(envelope))
+	ctx := sharedprovider.NewWailsContext[any, REQ_PostDeprecated_JSON, RSP_PostDeprecated](
+		"DemoService",
+		"PostDeprecated",
+		wailstransport.EnvelopeHeaders(envelope),
+	)
 	ctx.Req = &sharedprovider.ReqContext[any, REQ_PostDeprecated_JSON, RSP_PostDeprecated]{Request: req}
 	execErr := svc.postDeprecatedExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
@@ -306,11 +529,13 @@ func (svc *DemoService) PostDeprecated(envelope *INVOKE_PostDeprecated) (rsp *sh
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_GeneralWrapper[RSP_PostDeprecated](response, invokeErr), nil
+	return sharedprovider.WrapRSP_JSON_GeneralWrapper(response, invokeErr), nil
 }
 
-func (svc *DemoService) Raw(envelope *INVOKE_Raw) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_Raw], err error) {
-	req, reqErr := wailstransport.EnvelopeToReq[any, any](envelope, wailstransport.ReqEnvelopeOptions{
+func (svc *DemoService) Raw(
+	envelope *INVOKE_Raw,
+) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_Raw], err error) {
+	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
 		BindQuery: false,
 		BindJSON:  false,
 		BindForm:  false,
@@ -319,7 +544,11 @@ func (svc *DemoService) Raw(envelope *INVOKE_Raw) (rsp *sharedprovider.RSP_JSON_
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[any, any, RSP_Raw]("DemoService", "Raw", wailstransport.EnvelopeHeaders(envelope))
+	ctx := sharedprovider.NewWailsContext[any, any, RSP_Raw](
+		"DemoService",
+		"Raw",
+		wailstransport.EnvelopeHeaders(envelope),
+	)
 	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_Raw]{Request: req}
 	execErr := svc.rawExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
@@ -327,11 +556,13 @@ func (svc *DemoService) Raw(envelope *INVOKE_Raw) (rsp *sharedprovider.RSP_JSON_
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_GeneralWrapper[RSP_Raw](response, invokeErr), nil
+	return sharedprovider.WrapRSP_JSON_GeneralWrapper(response, invokeErr), nil
 }
 
-func (svc *DemoService) MapModel(envelope *INVOKE_MapModel) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_MapModel], err error) {
-	req, reqErr := wailstransport.EnvelopeToReq[any, any](envelope, wailstransport.ReqEnvelopeOptions{
+func (svc *DemoService) MapModel(
+	envelope *INVOKE_MapModel,
+) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_MapModel], err error) {
+	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
 		BindQuery: false,
 		BindJSON:  false,
 		BindForm:  false,
@@ -340,7 +571,11 @@ func (svc *DemoService) MapModel(envelope *INVOKE_MapModel) (rsp *sharedprovider
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[any, any, RSP_MapModel]("DemoService", "MapModel", wailstransport.EnvelopeHeaders(envelope))
+	ctx := sharedprovider.NewWailsContext[any, any, RSP_MapModel](
+		"DemoService",
+		"MapModel",
+		wailstransport.EnvelopeHeaders(envelope),
+	)
 	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_MapModel]{Request: req}
 	execErr := svc.mapModelExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
@@ -348,5 +583,5 @@ func (svc *DemoService) MapModel(envelope *INVOKE_MapModel) (rsp *sharedprovider
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_GeneralWrapper[RSP_MapModel](response, invokeErr), nil
+	return sharedprovider.WrapRSP_JSON_GeneralWrapper(response, invokeErr), nil
 }

@@ -28,12 +28,14 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Path:      "/api/ws",
 				Methods:   []string{"WS"},
 				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req|auth|ws_handle|rsp=json@GeneralWrapper",
 			impl.Ws,
 		),
 		eng,
 	)
+
 	return impl
 }
 

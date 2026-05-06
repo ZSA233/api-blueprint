@@ -4,7 +4,7 @@
 
 import type * as Models from "./models";
 import type * as Shared from "../../../runtime/models";
-import { ApiClientConfig, ApiSocketBridge, BaseClient } from "../../../runtime/client";
+import { ApiChannelBridge, ApiClientConfig, ApiSocketBridge, ApiStreamBridge, BaseClient } from "../../../runtime/client";
 
 export class DemoClient extends BaseClient {
   constructor(config: ApiClientConfig = {}) {
@@ -144,6 +144,8 @@ export class DemoClient extends BaseClient {
   ): ApiSocketBridge<Models.WsWsSend, Shared.WSRecv> {
     return this.connectBridge<Models.WsWsSend, Shared.WSRecv>({
       routeId: "api.demo.ws.ws",
+      connectionKind: "legacy_ws",
+      scope: "",
       path: "/api/demo/ws",
       service: "DemoService",
       namespace: "demo",
@@ -167,6 +169,8 @@ export class DemoClient extends BaseClient {
   ): WebSocket {
     return this.connectRaw({
       routeId: "api.demo.ws.ws",
+      connectionKind: "legacy_ws",
+      scope: "",
       path: "/api/demo/ws",
       service: "DemoService",
       namespace: "demo",
@@ -175,6 +179,63 @@ export class DemoClient extends BaseClient {
       closeMethod: "CloseWs",
       eventBase: "api_blueprint.ws.api.demo.ws.ws",
       query: request.query as unknown as Record<string, unknown> | undefined,
+      headers: request.headers,
+      protocols,
+    });
+  }
+
+
+  /**
+   * Sweep event stream
+   * Transport-neutral server push stream example
+   * Tags: api
+   */
+  subscribeSweepEvents(
+    request: {
+      open?: Shared.SweepOpen;
+      headers?: Record<string, string>;
+    } = {},
+  ): ApiStreamBridge<Models.SweepStreamMessage, Shared.ConnectionClose> {
+    return this.openStream<Models.SweepStreamMessage, Shared.ConnectionClose>({
+      routeId: "api.demo.stream.sweepevents",
+      connectionKind: "stream",
+      scope: "session",
+      path: "/api/demo/sweep-events",
+      service: "DemoService",
+      namespace: "demo",
+      connectMethod: "SubscribeSweepEvents",
+      closeMethod: "CloseSweepEvents",
+      eventBase: "api_blueprint.stream.api.demo.stream.sweepevents",
+      open: request.open as unknown as Record<string, unknown> | undefined,
+      headers: request.headers,
+    });
+  }
+
+
+  /**
+   * Assistant channel
+   * Transport-neutral bidirectional channel example
+   * Tags: api
+   */
+  openAssistantSession(
+    request: {
+      open?: Shared.AssistantOpen;
+      headers?: Record<string, string>;
+    } = {},
+    protocols?: string | string[],
+  ): ApiChannelBridge<Models.AssistantServerMessage, Models.AssistantClientMessage, Shared.ConnectionClose> {
+    return this.openChannel<Models.AssistantServerMessage, Models.AssistantClientMessage, Shared.ConnectionClose>({
+      routeId: "api.demo.channel.assistantsession",
+      connectionKind: "channel",
+      scope: "session",
+      path: "/api/demo/assistant-session",
+      service: "DemoService",
+      namespace: "demo",
+      connectMethod: "OpenAssistantSession",
+      sendMethod: "SendAssistantSession",
+      closeMethod: "CloseAssistantSession",
+      eventBase: "api_blueprint.channel.api.demo.channel.assistantsession",
+      open: request.open as unknown as Record<string, unknown> | undefined,
       headers: request.headers,
       protocols,
     });

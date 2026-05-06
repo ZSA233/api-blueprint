@@ -14,4 +14,5 @@ type REQ_Greet = sharedroutes.REQ_Greet
 type RSP_Greet = sharedroutes.RSP_Greet
 type CTX_Greet = sharedroutes.CTX_Greet
 type REQ_Greet_QUERY = sharedroutes.REQ_Greet_QUERY
+
 type INVOKE_Greet = wailstransport.InvokeEnvelope[REQ_Greet_QUERY, any]

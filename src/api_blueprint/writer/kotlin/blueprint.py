@@ -4,6 +4,7 @@ from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Optional, Type, Union
 
+from api_blueprint.engine.connection import ConnectionKind
 from api_blueprint.engine.model import FieldWrappedModel, Model, iter_field_model_type, unwrap_model_type
 from api_blueprint.engine.router import Router
 from api_blueprint.engine.utils import snake_to_pascal_case
@@ -24,6 +25,8 @@ class KotlinRoute:
         self.group_slug = self._group_slug()
         self.group_class = to_kotlin_type_name(self.group_slug, fallback="Root") + "Api"
         self.url = router.url
+        if router.connection_kind != ConnectionKind.RPC:
+            raise ValueError(f"[gen_kotlin] 暂不支持长连接 route: {self.url}")
         self.http_methods = [method for method in router.methods if method != "WS"]
         self.supports_ws = any(method == "WS" for method in router.methods)
         if self.supports_ws:

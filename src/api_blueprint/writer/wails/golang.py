@@ -67,9 +67,7 @@ class WailsRouter:
 
     @property
     def query_alias_name(self) -> str | None:
-        if self.router.req_query is None:
-            return None
-        return f"{self.req_type}_QUERY"
+        return self.go.query_alias_name
 
     @property
     def body_alias_name(self) -> str | None:
@@ -96,6 +94,18 @@ class WailsRouter:
         return f"WS_CLOSE_{self.func_name}"
 
     @property
+    def connection_connect_type(self) -> str:
+        return f"CONNECTION_CONNECT_{self.func_name}"
+
+    @property
+    def channel_send_type(self) -> str:
+        return f"CHANNEL_SEND_{self.func_name}"
+
+    @property
+    def connection_close_type(self) -> str:
+        return f"CONNECTION_CLOSE_{self.func_name}"
+
+    @property
     def ws_payload_alias_name(self) -> str | None:
         if len(self.router.recvs) != 1:
             return None
@@ -106,6 +116,22 @@ class WailsRouter:
         if len(self.router.recvs) != 1:
             return "any"
         return self.group.bp.shared_common_proto_ref(self.router.recvs[0])
+
+    @property
+    def server_message_type(self) -> str:
+        return self.go.server_message_type
+
+    @property
+    def client_message_type(self) -> str:
+        return self.go.client_message_type
+
+    @property
+    def close_message_type(self) -> str:
+        return self.go.close_message_type
+
+    @property
+    def connection_scope(self) -> str:
+        return self.contract.connection_scope.value if self.contract.connection_scope else ""
 
     @property
     def service_name(self) -> str:
@@ -128,8 +154,38 @@ class WailsRouter:
         return self.contract.ws.close_method if self.contract.ws is not None else ""
 
     @property
+    def connection_connect_func(self) -> str:
+        if self.contract.stream is not None:
+            return self.contract.stream.connect_method
+        if self.contract.channel is not None:
+            return self.contract.channel.connect_method
+        return ""
+
+    @property
+    def channel_send_func(self) -> str:
+        return self.contract.channel.send_method if self.contract.channel is not None else ""
+
+    @property
+    def connection_close_func(self) -> str:
+        if self.contract.stream is not None:
+            return self.contract.stream.close_method
+        if self.contract.channel is not None:
+            return self.contract.channel.close_method
+        return ""
+
+    @property
     def route_id(self) -> str:
         return self.contract.route_id
+
+    @property
+    def event_base(self) -> str:
+        if self.contract.stream is not None:
+            return self.contract.stream.event_base
+        if self.contract.channel is not None:
+            return self.contract.channel.event_base
+        if self.contract.ws is not None:
+            return self.contract.ws.event_base
+        return ""
 
     @property
     def root(self) -> str:
@@ -152,6 +208,18 @@ class WailsRouter:
         return self.contract.ws is not None
 
     @property
+    def is_stream(self) -> bool:
+        return self.contract.stream is not None
+
+    @property
+    def is_channel(self) -> bool:
+        return self.contract.channel is not None
+
+    @property
+    def is_connection(self) -> bool:
+        return self.is_stream or self.is_channel
+
+    @property
     def local_query_type_expr(self) -> str:
         return self.query_alias_name or "any"
 
@@ -165,7 +233,7 @@ class WailsRouter:
 
     @property
     def bind_query(self) -> bool:
-        return self.router.req_query is not None
+        return self.go.bind_query
 
     @property
     def bind_json(self) -> bool:
@@ -177,7 +245,7 @@ class WailsRouter:
 
     @property
     def executor_body_type_expr(self) -> str:
-        if self.has_ws:
+        if self.has_ws or self.is_connection:
             return "any"
         return self.local_body_type_expr
 
@@ -225,7 +293,7 @@ class WailsRouter:
 
     @property
     def shared_json_wrap_call(self) -> str:
-        return f"sharedprovider.WrapRSP_JSON_{self.response_wrapper_name}[{self.rsp_type}](response, invokeErr)"
+        return f"sharedprovider.WrapRSP_JSON_{self.response_wrapper_name}(response, invokeErr)"
 
 
 class WailsRouterGroup:

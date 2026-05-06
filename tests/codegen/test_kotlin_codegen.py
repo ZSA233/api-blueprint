@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import enum
 
+import pytest
+
+from api_blueprint.engine import Blueprint
 from api_blueprint.engine.model import Array, Enum, Int64, Map, Model, String
-from api_blueprint.writer.kotlin import KotlinProtoRegistry, KotlinRouteSelection, to_kotlin_property_name, to_kotlin_type_name
+from api_blueprint.writer.kotlin import KotlinProtoRegistry, KotlinRouteSelection, KotlinWriter, to_kotlin_property_name, to_kotlin_type_name
 
 
 class WireEnum(enum.StrEnum):
@@ -81,3 +84,18 @@ def test_kotlin_selection_matches_path_tag_group_method_and_name(example_entrypo
         router,
         route_name="Abc",
     )
+
+
+def test_kotlin_writer_rejects_long_connection_routes(tmp_path):
+    class StreamMessage(Model):
+        message = String(description="message")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.STREAM("/events").SERVER_MESSAGE(StreamMessage)
+
+    writer = KotlinWriter(tmp_path / "kotlin", package="com.example.generated")
+    writer.register(bp)
+
+    with pytest.raises(ValueError, match="暂不支持长连接 route"):
+        writer.gen()

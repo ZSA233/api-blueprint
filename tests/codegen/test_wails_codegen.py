@@ -24,6 +24,18 @@ class WSRecv(Model):
 class WSSend(Model):
     message = String(description="message")
 
+class OpenInfo(Model):
+    token = String(description="token")
+
+class StreamMessage(Model):
+    message = String(description="message")
+
+class ClientMessage(Model):
+    message = String(description="message")
+
+class CloseInfo(Model):
+    reason = String(description="reason")
+
 bp = Blueprint(
     root="/api",
     response_wrapper=GeneralWrapper,
@@ -37,6 +49,8 @@ bp = Blueprint(
 with bp.group("/demo") as views:
     views.GET("/ping").ARGS(q=String(description="q")).RSP(message=String(description="message"))
     views.WS("/ws").RECV(WSRecv).SEND(WSSend)
+    views.STREAM("/events").OPEN(OpenInfo).SERVER_MESSAGE("DemoStreamMessage", event=StreamMessage).CLOSE(CloseInfo)
+    views.CHANNEL("/chat").OPEN(OpenInfo).CLIENT_MESSAGE(ClientMessage).SERVER_MESSAGE(StreamMessage).CLOSE(CloseInfo)
         """.strip()
         + "\n",
         encoding="utf-8",
@@ -140,12 +154,25 @@ frontend_mode = "external"
     go_provider_context = (shared_go / "views" / "providers" / "gen_context.go").read_text(encoding="utf-8")
     go_provider_executor = (shared_go / "views" / "providers" / "gen_executor.go").read_text(encoding="utf-8")
     ts_overlay_transport = (shared_ts / "api" / "transports" / "wailsv3" / "gen_transport.ts").read_text(encoding="utf-8")
+    ts_overlay_bindings = (shared_ts / "api" / "transports" / "wailsv3" / "gen_bindings.ts").read_text(encoding="utf-8")
     ts_overlay_client = (shared_ts / "api" / "transports" / "wailsv3" / "api" / "demo" / "gen_client.ts").read_text(encoding="utf-8")
     ts_overlay_index = (shared_ts / "api" / "transports" / "wailsv3" / "api" / "gen_index.ts").read_text(encoding="utf-8")
     ts_overlay_factory = (shared_ts / "api" / "transports" / "wailsv3" / "api" / "gen_factory.ts").read_text(encoding="utf-8")
 
     assert "WrapRSP_JSON_GeneralWrapper" in go_overlay_service
+    assert "WrapRSP_JSON_GeneralWrapper[" not in go_overlay_service
     assert "func (svc *DemoService) ConnectWs" in go_overlay_service
+    assert "func (svc *DemoService) SubscribeEvents" in go_overlay_service
+    assert "func (svc *DemoService) OpenChat" in go_overlay_service
+    assert '"api.demo.stream.events",\n\t\t"api_blueprint.stream.api.demo.stream.events",' in go_overlay_service
+    assert '"api.demo.channel.chat",\n\t\t"api_blueprint.channel.api.demo.channel.chat",' in go_overlay_service
+    assert '"api.demo.ws.ws",\n\t\t"api_blueprint.ws.api.demo.ws.ws",' in go_overlay_service
+    assert "sharedprovider.NewStreamSession[OPEN_Events, DemoStreamMessage, CLOSE_Events]" in go_overlay_service
+    assert (
+        "sharedprovider.NewChannelSession[OPEN_Chat, SERVER_Chat_MESSAGE, CLIENT_Chat_MESSAGE, CLOSE_Chat]"
+        in go_overlay_service
+    )
+    assert "SetConnectionHub(hub wailstransport.ConnectionHub)" in go_overlay_service
     assert re.search(r"\bpingExecutor\s+\*sharedprovider.RouteExecutor\[REQ_Ping_QUERY, any, RSP_Ping\]", go_overlay_service)
     assert re.search(r"\bwsExecutor\s+\*sharedprovider.RouteExecutor\[any, any, RSP_Ws\]", go_overlay_service)
     assert "sharedprovider.NewRouteExecutor(" in go_overlay_service
@@ -156,9 +183,14 @@ frontend_mode = "external"
     assert 'Service:   "DemoService"' in go_overlay_service
     assert 'RouteID:   "api.demo.get.ping"' in go_overlay_service
     assert 'RouteID:   "api.demo.ws.ws"' in go_overlay_service
+    assert 'RouteID:   "api.demo.stream.events"' in go_overlay_service
+    assert 'RouteID:   "api.demo.channel.chat"' in go_overlay_service
     assert 'Methods:   []string{"GET"}' in go_overlay_service
     assert 'Methods:   []string{"WS"}' in go_overlay_service
+    assert 'Methods:   []string{"STREAM"}' in go_overlay_service
+    assert 'Methods:   []string{"CHANNEL"}' in go_overlay_service
     assert "Transport: sharedprovider.TransportWails" in go_overlay_service
+    assert 'Scope:     sharedprovider.ConnectionScope("session")' in go_overlay_service
     assert '"req=Q|auth|handle|rsp=json@GeneralWrapper"' in go_overlay_service
     assert '"req|auth|ws_handle|rsp=json@GeneralWrapper"' in go_overlay_service
     assert "ResolveProvider[" not in go_overlay_service
@@ -184,38 +216,56 @@ frontend_mode = "external"
     assert "func (executor *RouteExecutor[Q, B, P]) RunWSPreflight" in go_provider_executor
     assert "ctx.Route = &executor.Route" in go_provider_executor
     assert "type RouteInfo struct" in go_provider_context
+    assert "Scope     ConnectionScope" in go_provider_context
     assert "Route    *RouteInfo" in go_provider_context
     assert "ctx.Gin.Next()" not in go_provider_context
     assert "type ReqEnvelopeOptions struct" in go_runtime
+    assert "type ConnectionHub interface" in go_runtime
+    assert "CloseJSON(payload any) error" in go_runtime
+    assert "connection scope[%s] is not supported by the default SocketHub" in go_runtime
     assert "if options.BindQuery" in go_runtime
     assert 'return nil, fmt.Errorf("[WailsReq] json body is required")' in go_runtime
     assert "wailstransport.ReqEnvelopeOptions{" in go_overlay_service
+    assert "wailstransport.EnvelopeToReq[" not in go_overlay_service
     assert "BindQuery: true" in go_overlay_service
     assert "export class WailsV3Transport implements ApiTransport" in ts_overlay_transport
     assert "export async function ensureWailsRuntime(): Promise<void>" in ts_overlay_transport
     assert "Call.ByName" in ts_overlay_transport
     assert "callByName(bindingName, payload)" in ts_overlay_transport
+    assert 'import { WAILS_V3_BINDINGS } from "./gen_bindings";' in ts_overlay_transport
+    assert "const WAILS_V3_BINDINGS" not in ts_overlay_transport
+    assert "export const WAILS_V3_BINDINGS" in ts_overlay_bindings
     assert "window.wails.Call is not available" not in ts_overlay_transport
     assert "(event as { data?: unknown }).data" in ts_overlay_transport
     assert (
         '"demo.DemoService.Ping": '
         '"example.com/generated/golang/views/transports/wailsv3/api/demo.DemoService.Ping"'
-        in ts_overlay_transport
+        in ts_overlay_bindings
     )
     assert (
         '"demo.DemoService.ConnectWs": '
         '"example.com/generated/golang/views/transports/wailsv3/api/demo.DemoService.ConnectWs"'
-        in ts_overlay_transport
+        in ts_overlay_bindings
     )
     assert (
         '"demo.DemoService.SendWs": '
         '"example.com/generated/golang/views/transports/wailsv3/api/demo.DemoService.SendWs"'
-        in ts_overlay_transport
+        in ts_overlay_bindings
     )
     assert (
         '"demo.DemoService.CloseWs": '
         '"example.com/generated/golang/views/transports/wailsv3/api/demo.DemoService.CloseWs"'
-        in ts_overlay_transport
+        in ts_overlay_bindings
+    )
+    assert (
+        '"demo.DemoService.SubscribeEvents": '
+        '"example.com/generated/golang/views/transports/wailsv3/api/demo.DemoService.SubscribeEvents"'
+        in ts_overlay_bindings
+    )
+    assert (
+        '"demo.DemoService.OpenChat": '
+        '"example.com/generated/golang/views/transports/wailsv3/api/demo.DemoService.OpenChat"'
+        in ts_overlay_bindings
     )
     assert "export class DemoClient" not in ts_overlay_client
     assert "export type DemoClient = Omit<SharedDemoClient, HiddenRawWebSocketMethods>;" in ts_overlay_client
@@ -389,6 +439,7 @@ frontend_mode = "external"
     assert "Call.ByName" not in ts_overlay_transport
     assert "WailsV3Runtime" not in ts_overlay_transport
     assert "window.wails" not in ts_overlay_transport
+    assert not (shared_ts / "api" / "transports" / "wailsv2" / "gen_bindings.ts").exists()
 
 
 def test_wails_codegen_frontend_mode_none_skips_typescript_overlay(tmp_path: Path):

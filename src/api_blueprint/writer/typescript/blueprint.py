@@ -13,6 +13,7 @@ from api_blueprint.engine.model import FieldWrappedModel, Model, iter_field_mode
 from api_blueprint.engine.router import Router
 from api_blueprint.engine.utils import is_parametrized, snake_to_pascal_case
 from api_blueprint.engine.wrapper import NoneWrapper
+from api_blueprint.engine.connection import MessageContract
 from api_blueprint.route_selection import matches_selection_rule
 from api_blueprint.writer.core.base import BaseBlueprint
 from api_blueprint.writer.core.contracts import RouteContract, route_contract
@@ -59,8 +60,11 @@ class TypeScriptRoute:
 
         self.http_methods = list(self.contract.http_methods)
         self.supports_ws = self.contract.supports_ws
+        self.supports_stream = self.contract.supports_stream
+        self.supports_channel = self.contract.supports_channel
 
         self.query_proto = self._ensure_model(router.req_query, "REQ", "QUERY")
+        self.open_proto = self._ensure_model(router.open_model, "OPEN", "")
         self.form_proto = self._ensure_model(router.req_form, "REQ", "FORM")
         self.json_proto = self._ensure_model(router.req_json, "REQ", "JSON")
         self.bin_proto = router.req_bin is not None
@@ -72,6 +76,9 @@ class TypeScriptRoute:
         self.response_alias = self._ensure_response_alias()
         self.ws_recv_alias = self._ensure_ws_message_alias("WS", "RECV", router.recvs)
         self.ws_send_alias = self._ensure_ws_message_alias("WS", "SEND", router.sends)
+        self.server_message_alias = self._ensure_message_contract_alias(router.server_message)
+        self.client_message_alias = self._ensure_message_contract_alias(router.client_message)
+        self.close_proto = self._ensure_model(self.effective_close_model, "CLOSE", "")
 
     @property
     def http_method(self) -> str:
@@ -88,6 +95,10 @@ class TypeScriptRoute:
     @property
     def query_type_expr(self) -> str | None:
         return self._type_expr(self.query_proto)
+
+    @property
+    def open_type_expr(self) -> str | None:
+        return self._type_expr(self.open_proto)
 
     @property
     def json_type_expr(self) -> str | None:
@@ -161,6 +172,56 @@ class TypeScriptRoute:
         return self._type_expr(self.ws_send_alias) or "unknown"
 
     @property
+    def server_message_type_expr(self) -> str:
+        return self._type_expr(self.server_message_alias) or "unknown"
+
+    @property
+    def client_message_type_expr(self) -> str:
+        return self._type_expr(self.client_message_alias) or "unknown"
+
+    @property
+    def close_type_expr(self) -> str | None:
+        return self._type_expr(self.close_proto)
+
+    @property
+    def effective_close_model(self) -> Optional[Union[Type[Model], Model]]:
+        return self.contract.connection_close_model
+
+    @property
+    def connection_scope(self) -> str:
+        if self.contract.connection_scope is None:
+            return ""
+        return self.contract.connection_scope.value
+
+    @property
+    def stream_bridge_type_expr(self) -> str:
+        return self._bridge_type_expr("ApiStreamBridge", self.server_message_type_expr)
+
+    @property
+    def channel_bridge_type_expr(self) -> str:
+        return self._bridge_type_expr("ApiChannelBridge", self.server_message_type_expr, self.client_message_type_expr)
+
+    def _bridge_type_expr(self, name: str, *args: str) -> str:
+        all_args = list(args)
+        if self.close_type_expr is not None:
+            all_args.append(self.close_type_expr)
+        return f"{name}<{', '.join(all_args)}>"
+
+    @property
+    def stream_open_type_args(self) -> str:
+        return self._transport_type_args(self.server_message_type_expr)
+
+    @property
+    def channel_open_type_args(self) -> str:
+        return self._transport_type_args(self.server_message_type_expr, self.client_message_type_expr)
+
+    def _transport_type_args(self, *args: str) -> str:
+        all_args = list(args)
+        if self.close_type_expr is not None:
+            all_args.append(self.close_type_expr)
+        return ", ".join(all_args)
+
+    @property
     def connect_method_name(self) -> str:
         if self.contract.ws is None:
             return "connect"
@@ -171,6 +232,18 @@ class TypeScriptRoute:
         if self.contract.ws is None:
             return "connectRaw"
         return to_camel(self.contract.ws.connect_raw_method)
+
+    @property
+    def subscribe_method_name(self) -> str:
+        if self.contract.stream is None:
+            return "subscribe"
+        return to_camel(self.contract.stream.connect_method)
+
+    @property
+    def open_channel_method_name(self) -> str:
+        if self.contract.channel is None:
+            return "open"
+        return to_camel(self.contract.channel.connect_method)
 
     def _ensure_ws_message_alias(
         self,
@@ -199,6 +272,32 @@ class TypeScriptRoute:
         return self.registry.register_alias(
             self._route_model_name(prefix, suffix),
             TypeScriptResolvedType(" | ".join(proto.name for proto in protos), deps),
+            tag="route",
+            route=self.func_name,
+            module=self.group_module,
+        )
+
+    def _ensure_message_contract_alias(self, contract: MessageContract | None) -> Optional[TypeScriptProto]:
+        if contract is None:
+            return None
+        if contract.single_model is not None:
+            return self._ensure_model(contract.single_model, "MESSAGE", "")
+
+        deps: set[TypeScriptProto] = set()
+        union_parts: list[str] = []
+        for variant in contract.variants:
+            proto = self._ensure_model(variant.model, "MESSAGE", variant.key.upper())
+            if proto is None:
+                continue
+            deps.add(proto)
+            union_parts.append(f'{{ type: "{variant.key}"; data: {proto.name} }}')
+
+        if not union_parts:
+            return None
+
+        return self.registry.register_alias(
+            contract.name or self._route_model_name("MESSAGE", ""),
+            TypeScriptResolvedType(" | ".join(union_parts), deps),
             tag="route",
             route=self.func_name,
             module=self.group_module,
@@ -319,7 +418,15 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
             if getattr(model_cls, "__auto__", None) is False and not is_parametrized(model_cls):
                 self.registry.ensure(model_cls, tag="shared", module=SHARED_MODULE)
 
+        def collect_message(contract: MessageContract | None) -> None:
+            if contract is None:
+                return
+            for variant in contract.variants:
+                collect(variant.model)
+
         collect(router.req_query)
+        collect(router.open_model)
+        collect(router.effective_close_model)
         collect(router.req_form)
         collect(router.req_json)
         collect(router.rsp_model)
@@ -327,6 +434,8 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
             collect(recv)
         for send in router.sends:
             collect(send)
+        collect_message(router.server_message)
+        collect_message(router.client_message)
 
     def shared_sections(self) -> list[tuple[str, list[TypeScriptProto]]]:
         sections = []
@@ -518,6 +627,13 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
 
         transport_dir = root_dir / self.writer.transports_dir_name / self.writer.overlay_dir_name
         transport_dir.mkdir(parents=True, exist_ok=True)
+        bindings_path = transport_dir / "gen_bindings.ts"
+        if self.writer.transport_kind == "wails-v3":
+            with self.writer.write_file(bindings_path, overwrite=True) as handle:
+                if handle:
+                    handle.write(render(self.writer.template_lang, "gen_bindings.ts", {"writer": self.writer}))
+        elif bindings_path.exists():
+            bindings_path.unlink()
         with self.writer.write_file(transport_dir / "gen_transport.ts", overwrite=True) as handle:
             if handle:
                 handle.write(

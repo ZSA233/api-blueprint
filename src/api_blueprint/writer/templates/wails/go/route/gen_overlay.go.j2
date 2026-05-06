@@ -18,11 +18,25 @@ type {{ route.req_type }} = sharedroutes.{{ route.req_type }}
 type {{ route.rsp_type }} = sharedroutes.{{ route.rsp_type }}
 type {{ route.ctx_type }} = sharedroutes.{{ route.ctx_type }}
 {% if route.query_alias_name %}type {{ route.query_alias_name }} = sharedroutes.{{ route.query_alias_name }}
-{% endif %}{% if route.body_alias_name %}type {{ route.body_alias_name }} = sharedroutes.{{ route.body_alias_name }}
-{% endif %}{% if route.ws_payload_alias_name %}type {{ route.ws_payload_alias_name }} = {{ route.ws_payload_target }}
+{% endif %}
+{% if route.body_alias_name %}type {{ route.body_alias_name }} = sharedroutes.{{ route.body_alias_name }}
+{% endif %}
+{% if route.ws_payload_alias_name %}type {{ route.ws_payload_alias_name }} = {{ route.ws_payload_target }}
+{% endif %}
+{% if route.is_connection and route.server_message_type != "any" %}type {{ route.server_message_type }} = sharedroutes.{{ route.server_message_type }}
+{% endif %}
+{% if route.is_connection and route.close_message_type != "any" %}type {{ route.close_message_type }} = sharedroutes.{{ route.close_message_type }}
+{% endif %}
+{% set needs_client_message_alias = route.is_channel and route.client_message_type != "any" and route.client_message_type != route.server_message_type %}
+{% if needs_client_message_alias %}type {{ route.client_message_type }} = sharedroutes.{{ route.client_message_type }}
 {% endif %}type {{ route.invoke_type }} = wailstransport.InvokeEnvelope[{{ route.local_query_type_expr }}, {{ route.local_body_type_expr }}]
 {% if route.has_ws %}type {{ route.ws_connect_type }} = wailstransport.InvokeEnvelope[{{ route.local_query_type_expr }}, any]
 type {{ route.ws_send_type }} = wailstransport.SocketSendEnvelope[{{ route.local_ws_payload_type_expr }}]
 type {{ route.ws_close_type }} = wailstransport.SocketCloseEnvelope
+{% endif %}
+{% if route.is_connection %}type {{ route.connection_connect_type }} = wailstransport.InvokeEnvelope[{{ route.local_query_type_expr }}, any]
+type {{ route.connection_close_type }} = wailstransport.SocketCloseEnvelope
+{% endif %}
+{% if route.is_channel %}type {{ route.channel_send_type }} = wailstransport.SocketSendEnvelope[{{ route.client_message_type }}]
 {% endif %}
 {% endfor %}

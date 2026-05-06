@@ -2,6 +2,8 @@ package {{ router_group.package }}
 
 import (
 	"fmt"
+	{% if router_group.uses_connection_runtime %}providers "{{ bp.writer.provider_imports | safe }}"
+	{% endif %}
 )
 
 type Router struct{
@@ -13,9 +15,7 @@ func NewRouter() *Router {
 }
 
 {% for impl in router_group.implements() %}
-func (impl *Router) {{ impl.func }}(
-	ctx *{{ impl.ctx_type }}, req *{{ impl.req_type }},
-) (rsp *{{ impl.rsp_type }}, err error) {
-	return nil, fmt.Errorf("not implemented")
+func (impl *Router) {{ impl.signature | safe }} {
+	{{ impl.default_body | safe }}
 }
 {% endfor %}

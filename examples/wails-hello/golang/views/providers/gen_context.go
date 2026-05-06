@@ -20,6 +20,14 @@ const (
 	TransportWails TransportKind = "wails"
 )
 
+type ConnectionScope string
+
+const (
+	ConnectionScopeSession ConnectionScope = "session"
+	ConnectionScopeApp     ConnectionScope = "app"
+	ConnectionScopeTopic   ConnectionScope = "topic"
+)
+
 type WailsRouteContext struct {
 	Service   string
 	Operation string
@@ -37,6 +45,7 @@ type RouteInfo struct {
 	Path      string
 	Methods   []string
 	Transport TransportKind
+	Scope     ConnectionScope
 }
 
 type ContextInterface interface {

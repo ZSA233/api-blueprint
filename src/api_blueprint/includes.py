@@ -9,5 +9,5 @@ from api_blueprint.engine.model import (
     HeaderModel, Header, APIKeyHeader, NoneHeader,
     KV, ArrayKV,
 )
-from api_blueprint.engine import Blueprint, provider
+from api_blueprint.engine import Blueprint, ConnectionScope, DefaultConnectionClose, provider
 from api_blueprint.engine.wrapper import GeneralWrapper, NoneWrapper

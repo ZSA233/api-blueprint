@@ -207,6 +207,88 @@ go 1.23.8
     assert "func NewImpl(eng *gin.Engine)" not in core_route.read_text(encoding="utf-8")
 
 
+def test_golang_writer_generates_stream_and_channel_contracts(tmp_path):
+    output_dir = tmp_path / "golang"
+    output_dir.mkdir()
+    (tmp_path / "go.mod").write_text(
+        """
+module example.com/generated
+
+go 1.23.8
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    class Open(Model):
+        run_id = String(description="run id")
+
+    class TaskState(Model):
+        status = String(description="status")
+
+    class TaskProgress(Model):
+        value = String(description="value")
+
+    class ClientInput(Model):
+        text = String(description="text")
+
+    bp = Blueprint(root="/api", providers=[provider.Req(), provider.Auth(), provider.Handle(), provider.Rsp()])
+    with bp.group("/runs") as views:
+        views.STREAM("/events").OPEN(Open).SERVER_MESSAGE(
+            "TaskStreamMessage",
+            state=TaskState,
+            progress=TaskProgress,
+        )
+        views.CHANNEL("/chat").OPEN(Open).CLIENT_MESSAGE(ClientInput).SERVER_MESSAGE(TaskState)
+
+    writer = GolangWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    core_interface = (output_dir / "views" / "routes" / "api" / "runs" / "gen_interface.go").read_text(encoding="utf-8")
+    core_models = (output_dir / "views" / "routes" / "api" / "runs" / "gen_protos.go").read_text(encoding="utf-8")
+    provider_connection = (output_dir / "views" / "providers" / "gen_connection.go").read_text(encoding="utf-8")
+    http_adapter = (output_dir / "views" / "transports" / "http" / "api" / "runs" / "gen_interface.go").read_text(encoding="utf-8")
+    impl = (output_dir / "views" / "routes" / "api" / "runs" / "impl.go").read_text(encoding="utf-8")
+    gen_impl = (output_dir / "views" / "routes" / "api" / "runs" / "gen_impl.go").read_text(encoding="utf-8")
+
+    assert (
+        "Events(\n"
+        "\t\tctx *CTX_Events,\n"
+        "\t\tstream providers.Stream[OPEN_Events, TaskStreamMessage, CLOSE_Events],\n"
+        "\t) error"
+        in core_interface
+    )
+    assert (
+        "Chat(\n"
+        "\t\tctx *CTX_Chat,\n"
+        "\t\tchannel providers.Channel[OPEN_Chat, SERVER_Chat_MESSAGE, CLIENT_Chat_MESSAGE, CLOSE_Chat],\n"
+        "\t) error"
+        in core_interface
+    )
+    assert "type TaskStreamMessage struct" in core_models
+    assert "type CLOSE_Events = protos.DefaultConnectionClose" in core_models
+    assert "type CLOSE_Chat = protos.DefaultConnectionClose" in core_models
+    assert 'const TaskStreamMessageTypeState = "state"' in core_models
+    assert "type Stream[O, S, CL any] interface" in provider_connection
+    assert "Close(*CL) error" in provider_connection
+    assert "Abort(code int, reason string) error" in provider_connection
+    assert "type Channel[O, S, C, CL any] interface" in provider_connection
+    assert 'Scope:     sharedprovider.ConnectionScope("session")' in http_adapter
+    assert "httptransport.STREAM(" in http_adapter
+    assert "httptransport.STREAM[" not in http_adapter
+    assert "httptransport.CHANNEL(" in http_adapter
+    assert "httptransport.CHANNEL[" not in http_adapter
+    assert "connection scope[%s] is not supported by the default HTTP runtime" in (
+        output_dir / "views" / "transports" / "http" / "gen_engine.go"
+    ).read_text(encoding="utf-8")
+    assert "serverMessage, err := NewTaskStreamMessageState(&serverData)" not in gen_impl
+    assert "clientMessage, err := channel.Recv(ctx)" not in gen_impl
+    assert 'return fmt.Errorf("not implemented")' in gen_impl
+    assert "serverMessage, err := NewTaskStreamMessageState(&serverData)" not in impl
+    assert "clientMessage, err := channel.Recv(ctx)" not in impl
+
+
 def test_golang_http_adapter_respects_already_written_gin_response(tmp_path):
     output_dir = tmp_path / "golang"
     output_dir.mkdir()

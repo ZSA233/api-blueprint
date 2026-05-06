@@ -168,12 +168,35 @@ make wails-hello-compile-check
 
 `wails-hello-check` 是严格模式，会检查 snapshot drift；`wails-hello-compile-check` 只验证重生成后的 TypeScript、Go 和 Wails v3 build，适合开发中快速确认。
 
-## Socket bridge
+## 长连接 bridge
 
-Wails TypeScript 不暴露 raw WebSocket，而是统一使用 `ApiSocketBridge<ServerMessage, ClientMessage>`。
+Wails TypeScript 不暴露 raw WebSocket，也不要求业务代码手写 runtime event name。`STREAM` / `CHANNEL` 在默认 Wails transport 中会映射成 session-scoped runtime events，事件名只存在于 generated Go runtime 与 generated TypeScript transport 内部。生成的 service 暴露轻量 `ConnectionHub` 替换点；默认 hub 只完整支持 `ConnectionScope.SESSION`，`APP` / `TOPIC` 的广播或 topic routing 策略应由自定义 hub 实现。
+
+`STREAM` 返回 `ApiStreamBridge<ServerMessage, CloseMessage>`：
 
 ```ts
-const bridge = demoClient.connectWs({ query, headers });
+const stream = demoClient.subscribeEvents({ open, headers });
+await stream.ready;
+
+const offMessage = stream.onMessage((message) => {
+    console.log(message);
+});
+
+const offClose = stream.onClose((info) => {
+    console.log(info.reason);
+});
+
+await stream.close(1000, "done");
+offMessage();
+offClose();
+```
+
+`onClose` 接收的是 `.CLOSE(Model)` 生成的 typed close payload。客户端 `close(code, reason)` 只是主动关闭请求；如果要表达业务取消，请通过 `CHANNEL` 的 `CLIENT_MESSAGE(cancel=...)` 建模。
+
+`CHANNEL` 返回 `ApiChannelBridge<ServerMessage, ClientMessage, CloseMessage>`：
+
+```ts
+const bridge = demoClient.openSession({ open, headers });
 await bridge.ready;
 
 const offMessage = bridge.onMessage((message) => {
@@ -185,7 +208,7 @@ await bridge.close(1000, "done");
 offMessage();
 ```
 
-HTTP shared client 仍保留 `connect<Route>Raw()` 作为原生 WebSocket escape hatch。
+legacy `WS().RECV().SEND()` 继续生成 `ApiSocketBridge<ServerMessage, ClientMessage>` 兼容旧代码。HTTP shared client 仍保留 `connect<Route>Raw()` 作为原生 WebSocket escape hatch，但新蓝图优先使用 `STREAM` / `CHANNEL`。
 
 ## Harness 示例
 

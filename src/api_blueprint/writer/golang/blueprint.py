@@ -9,12 +9,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Generator, Optional, Set, Type
 
 from api_blueprint.engine.group import RouterGroup
+from api_blueprint.engine.connection import ConnectionKind, DefaultConnectionClose, MessageContract, ModelRef
 from api_blueprint.engine.model import Error, Null, create_model, iter_enum_classes, iter_model_vars
 from api_blueprint.engine.provider import ProviderName
 from api_blueprint.engine.router import Router
 from api_blueprint.engine.utils import join_path_imports, pascal_to_snake_case, snake_to_pascal_case
 from api_blueprint.engine.wrapper import NoneWrapper, ResponseWrapper
 from api_blueprint.writer.core.base import BaseBlueprint
+from api_blueprint.writer.core.contracts import RouteContract, route_contract
 from api_blueprint.writer.core.templates import iter_render, render
 
 from .common import LANG, PackageName, GolangType, internal_codegen_dir
@@ -69,6 +71,7 @@ class GolangErrorGroup:
 class GolangRouter:
     def __init__(self, router: Router):
         self.router = router
+        self.contract: RouteContract = route_contract(router)
 
     @property
     def url(self):
@@ -99,10 +102,7 @@ class GolangRouter:
 
     @property
     def route_id(self) -> str:
-        root_slug = _route_slug(self.router.group.bp.root.strip("/"), default="root")
-        method_slug = _route_slug(",".join(sorted(method.lower() for method in self.router.methods)), default="route")
-        route_name_slug = _route_slug(self.func_name, default="root")
-        return ".".join((root_slug, self.namespace, method_slug, route_name_slug))
+        return self.contract.route_id
 
     def _group_alias(self) -> str:
         branch = self.router.group.branch.strip("/")
@@ -130,8 +130,10 @@ class GolangRouter:
 
     @property
     def query_alias_name(self) -> str | None:
-        if self.router.req_query is None:
+        if self.query_model is None:
             return None
+        if self.is_connection:
+            return f"OPEN_{self.func_name}"
         return f"{self.req_type}_QUERY"
 
     @property
@@ -152,13 +154,13 @@ class GolangRouter:
 
     @property
     def executor_body_type_expr(self) -> str:
-        if "WS" in self.methods:
+        if "WS" in self.methods or self.is_connection:
             return "any"
         return self.local_body_type_expr
 
     @property
     def bind_query(self) -> bool:
-        return self.router.req_query is not None
+        return self.query_model is not None
 
     @property
     def bind_json(self) -> bool:
@@ -191,7 +193,7 @@ class GolangRouter:
     @property
     def req_provider(self):
         options = [
-            ("Q", self.router.req_query),
+            ("Q", self.query_model),
             ("F", self.router.req_form),
             ("J", self.router.req_json),
         ]
@@ -213,6 +215,12 @@ class GolangRouter:
     def providers(self):
         provider_specs: list[str] = []
         for provider in self.router.providers:
+            if self.is_connection and provider.name in {
+                ProviderName.HANDLE.value,
+                ProviderName.RSP.value,
+                ProviderName.WS_HANDLE.value,
+            }:
+                continue
             data = provider.data
             if provider.name == ProviderName.REQ.value:
                 data = self.req_provider
@@ -236,8 +244,8 @@ class GolangRouter:
         req_form_proto = None
         req_json_proto = None
 
-        if self.router.req_query is not None:
-            req_query_proto = GolangProto.from_model_ref(ensure_model(self.router.req_query), f"{self.req_type}_QUERY")
+        if self.query_model is not None:
+            req_query_proto = GolangProto.from_model_ref(ensure_model(self.query_model), self.query_alias_name)
             yield req_query_proto
         if self.router.req_form is not None:
             req_form_proto = GolangProto.from_model_ref(ensure_model(self.router.req_form), f"{self.req_type}_FORM")
@@ -251,7 +259,7 @@ class GolangRouter:
             create_model(
                 self.req_type,
                 {
-                    "Q": self.router.req_query,
+                    "Q": self.query_model,
                     "B": self.router.req_json or self.router.req_form or Null(),
                 },
             ),
@@ -282,7 +290,7 @@ class GolangRouter:
             create_model(
                 self.req_type,
                 {
-                    "Q": self.router.req_query or Null(),
+                    "Q": self.query_model or Null(),
                     "B": self.router.req_json or self.router.req_form or Null(),
                     "P": self.router.rsp_model or Null(),
                 },
@@ -298,9 +306,11 @@ class GolangRouter:
             ),
         )
 
+        yield from self.message_protos()
+
     def com_protos(self) -> Generator[GolangProto, None, None]:
-        if self.router.req_query is not None:
-            yield from GolangProto.from_model(self.router.req_query).com_protos()
+        if self.query_model is not None:
+            yield from GolangProto.from_model(self.query_model).com_protos()
         if self.router.req_form is not None:
             yield from GolangProto.from_model(self.router.req_form).com_protos()
         if self.router.req_json is not None:
@@ -311,6 +321,152 @@ class GolangRouter:
             yield from GolangProto.from_model(recv).com_protos()
         for send in self.router.sends:
             yield from GolangProto.from_model(send).com_protos()
+        for model in self.connection_message_models():
+            yield from GolangProto.from_model(model).com_protos()
+        if self.is_connection:
+            yield from GolangProto.from_model(self.effective_close_model).com_protos()
+
+    @property
+    def connection_kind(self) -> ConnectionKind:
+        return self.router.connection_kind
+
+    @property
+    def is_stream(self) -> bool:
+        return self.connection_kind == ConnectionKind.STREAM
+
+    @property
+    def is_channel(self) -> bool:
+        return self.connection_kind == ConnectionKind.CHANNEL
+
+    @property
+    def is_connection(self) -> bool:
+        return self.is_stream or self.is_channel
+
+    @property
+    def query_model(self) -> ModelRef | None:
+        if self.is_connection:
+            return self.router.open_model
+        return self.router.req_query
+
+    @property
+    def server_message_type(self) -> str:
+        return self._message_type_name(self.router.server_message, "SERVER")
+
+    @property
+    def client_message_type(self) -> str:
+        return self._message_type_name(self.router.client_message, "CLIENT")
+
+    @property
+    def effective_close_model(self) -> ModelRef:
+        return self.router.effective_close_model or DefaultConnectionClose
+
+    @property
+    def close_message_type(self) -> str:
+        if not self.is_connection:
+            return "any"
+        return f"CLOSE_{self.func_name}"
+
+    @property
+    def stream_signature(self) -> str:
+        return (
+            f"{self.func_name}(\n"
+            f"\tctx *{self.ctx_type},\n"
+            f"\tstream providers.Stream[{self.local_query_type_expr}, {self.server_message_type}, {self.close_message_type}],\n"
+            ") error"
+        )
+
+    @property
+    def channel_signature(self) -> str:
+        return (
+            f"{self.func_name}(\n"
+            f"\tctx *{self.ctx_type},\n"
+            f"\tchannel providers.Channel[{self.local_query_type_expr}, {self.server_message_type}, {self.client_message_type}, {self.close_message_type}],\n"
+            ") error"
+        )
+
+    @property
+    def rpc_signature(self) -> str:
+        return f"{self.func_name}(ctx *{self.ctx_type}, req *{self.req_type})(rsp *{self.rsp_type}, err error)"
+
+    @property
+    def interface_signature(self) -> str:
+        if self.is_stream:
+            return self.stream_signature
+        if self.is_channel:
+            return self.channel_signature
+        return self.rpc_signature
+
+    @property
+    def default_body(self) -> str:
+        if self.is_connection:
+            return 'return fmt.Errorf("not implemented")'
+        return 'return nil, fmt.Errorf("not implemented")'
+
+    def message_protos(self) -> Generator[GolangProto, None, None]:
+        yield from self._message_contract_protos(self.router.server_message, "SERVER")
+        yield from self._message_contract_protos(self.router.client_message, "CLIENT")
+        if self.is_connection:
+            yield GolangProto.from_model_ref(ensure_model(self.effective_close_model), self.close_message_type)
+
+    def connection_message_models(self) -> Generator[ModelRef, None, None]:
+        for contract in (self.router.server_message, self.router.client_message):
+            if contract is None:
+                continue
+            for variant in contract.variants:
+                yield variant.model
+
+    def message_unions(self) -> list[dict[str, Any]]:
+        unions: list[dict[str, Any]] = []
+        for contract in (self.router.server_message, self.router.client_message):
+            if contract is None or not contract.is_union:
+                continue
+            variants = []
+            for variant in contract.variants:
+                data_type = self._variant_alias_name(contract, variant.key)
+                variants.append(
+                    {
+                        "key": variant.key,
+                        "const": f"{contract.name}Type{snake_to_pascal_case(variant.key)}",
+                        "ctor": f"New{contract.name}{snake_to_pascal_case(variant.key)}",
+                        "decode": f"Decode{snake_to_pascal_case(variant.key)}",
+                        "data_type": data_type,
+                    }
+                )
+            unions.append({"name": contract.name, "variants": variants})
+        return unions
+
+    def _message_contract_protos(
+        self,
+        contract: MessageContract | None,
+        direction: str,
+    ) -> Generator[GolangProto, None, None]:
+        if contract is None:
+            return
+        if contract.single_model is not None:
+            yield GolangProto.from_model_ref(ensure_model(contract.single_model), self._message_type_name(contract, direction))
+            return
+        for variant in contract.variants:
+            yield GolangProto.from_model_ref(
+                ensure_model(variant.model),
+                self._variant_alias_name(contract, variant.key),
+            )
+
+    def _message_type_name(self, contract: MessageContract | None, direction: str) -> str:
+        if contract is None:
+            return "any"
+        if contract.is_union and contract.name is not None:
+            return contract.name
+        return f"{direction}_{self.func_name}_MESSAGE"
+
+    @staticmethod
+    def _variant_alias_name(contract: MessageContract, key: str) -> str:
+        return f"{contract.name}_{snake_to_pascal_case(key)}_DATA"
+
+    @staticmethod
+    def shared_type_expr(type_name: str) -> str:
+        if type_name == "any":
+            return "any"
+        return f"shared.{type_name}"
 
 
 class GolangRouterGroup:
@@ -375,6 +531,9 @@ class GolangRouterGroup:
                 "ctx_type": view.ctx_type,
                 "req_type": view.req_type,
                 "rsp_type": view.rsp_type,
+                "signature": view.interface_signature,
+                "default_body": view.default_body,
+                "is_connection": view.is_connection,
             }
 
     def registers(self) -> Generator[dict[str, Any], None, None]:
@@ -396,6 +555,19 @@ class GolangRouterGroup:
                     "query_type": view.local_query_type_expr,
                     "body_type": view.executor_body_type_expr,
                     "rsp_type": view.rsp_type,
+                    "server_message_type": view.server_message_type,
+                    "client_message_type": view.client_message_type,
+                    "close_message_type": view.close_message_type,
+                    "http_query_type": view.shared_type_expr(view.local_query_type_expr),
+                    "http_body_type": view.shared_type_expr(view.executor_body_type_expr),
+                    "http_rsp_type": view.shared_type_expr(view.rsp_type),
+                    "http_server_message_type": view.shared_type_expr(view.server_message_type),
+                    "http_client_message_type": view.shared_type_expr(view.client_message_type),
+                    "http_close_message_type": view.shared_type_expr(view.close_message_type),
+                    "connection_scope": view.contract.connection_scope.value if view.contract.connection_scope else "",
+                    "is_stream": view.is_stream,
+                    "is_channel": view.is_channel,
+                    "is_connection": view.is_connection,
                     "raw_response": view.http_raw_response,
                     "bind_query": view.bind_query,
                     "bind_json": view.bind_json,
@@ -418,7 +590,18 @@ class GolangRouterGroup:
                 "ctx_type": view.ctx_type,
                 "req_type": view.req_type,
                 "rsp_type": view.rsp_type,
+                "signature": view.interface_signature,
+                "default_body": view.default_body,
+                "is_connection": view.is_connection,
             }
+
+    def message_unions(self) -> Generator[dict[str, Any], None, None]:
+        for router in self.group:
+            yield from GolangRouter(router).message_unions()
+
+    @property
+    def uses_connection_runtime(self) -> bool:
+        return any(GolangRouter(router).is_connection for router in self.group)
 
 
 class GolangBlueprint(BaseBlueprint["GolangWriter"]):

@@ -9,7 +9,7 @@ import (
 
 type HelloService struct {
 	impl          RouterInterface
-	sessions      *wailstransport.SocketHub
+	sessions      wailstransport.ConnectionHub
 	greetExecutor *sharedprovider.RouteExecutor[REQ_Greet_QUERY, any, RSP_Greet]
 }
 
@@ -28,6 +28,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 				Path:      "/api/hello/greet",
 				Methods:   []string{"GET"},
 				Transport: sharedprovider.TransportWails,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req=Q|handle|rsp=json@NoneWrapper",
 			impl.Greet,
@@ -35,8 +36,17 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 	}
 }
 
-func (svc *HelloService) Greet(envelope *INVOKE_Greet) (rsp *RSP_Greet, err error) {
-	req, reqErr := wailstransport.EnvelopeToReq[REQ_Greet_QUERY, any](envelope, wailstransport.ReqEnvelopeOptions{
+func (svc *HelloService) SetConnectionHub(hub wailstransport.ConnectionHub) {
+	if svc == nil || hub == nil {
+		return
+	}
+	svc.sessions = hub
+}
+
+func (svc *HelloService) Greet(
+	envelope *INVOKE_Greet,
+) (rsp *RSP_Greet, err error) {
+	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
 		BindQuery: true,
 		BindJSON:  false,
 		BindForm:  false,
@@ -45,7 +55,11 @@ func (svc *HelloService) Greet(envelope *INVOKE_Greet) (rsp *RSP_Greet, err erro
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[REQ_Greet_QUERY, any, RSP_Greet]("HelloService", "Greet", wailstransport.EnvelopeHeaders(envelope))
+	ctx := sharedprovider.NewWailsContext[REQ_Greet_QUERY, any, RSP_Greet](
+		"HelloService",
+		"Greet",
+		wailstransport.EnvelopeHeaders(envelope),
+	)
 	ctx.Req = &sharedprovider.ReqContext[REQ_Greet_QUERY, any, RSP_Greet]{Request: req}
 	execErr := svc.greetExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()

@@ -29,19 +29,27 @@ export interface RequestOptions<R> {
   timeoutMs?: number;
 }
 
-export interface SocketConnectOptions<Recv, Send> {
+export interface StreamConnectOptions<Recv, Close = SocketCloseInfo> {
   routeId: string;
+  connectionKind: "stream" | "channel" | "legacy_ws";
+  scope: "session" | "app" | "topic" | "";
   path: string;
   service: string;
   namespace: string;
   connectMethod: string;
-  sendMethod: string;
   closeMethod: string;
+  open?: Record<string, unknown>;
   query?: Record<string, unknown>;
   headers?: Record<string, string>;
-  protocols?: string | string[];
   eventBase: string;
 }
+
+export interface ChannelConnectOptions<Recv, Send, Close = SocketCloseInfo> extends StreamConnectOptions<Recv, Close> {
+  sendMethod: string;
+  protocols?: string | string[];
+}
+
+export interface SocketConnectOptions<Recv, Send> extends ChannelConnectOptions<Recv, Send, SocketCloseInfo> {}
 
 export type SocketCloseInfo = {
   code?: number;
@@ -50,21 +58,32 @@ export type SocketCloseInfo = {
 };
 
 export type SocketMessageHandler<Recv> = (message: Recv) => void;
-export type SocketCloseHandler = (info: SocketCloseInfo) => void;
+export type SocketCloseHandler<Close = SocketCloseInfo> = (info: Close) => void;
 export type SocketUnsubscribe = () => void;
 
-export interface ApiSocketBridge<Recv, Send> {
+export interface ApiStreamBridge<Recv, Close = SocketCloseInfo> {
   readonly mode: string;
   readonly routeId: string;
   readonly ready: Promise<void>;
   onMessage(listener: SocketMessageHandler<Recv>): SocketUnsubscribe;
-  onClose(listener: SocketCloseHandler): SocketUnsubscribe;
-  send(message: Send): Promise<void>;
+  onClose(listener: SocketCloseHandler<Close>): SocketUnsubscribe;
   close(code?: number, reason?: string): Promise<void>;
 }
 
+export interface ApiChannelBridge<Recv, Send, Close = SocketCloseInfo> extends ApiStreamBridge<Recv, Close> {
+  send(message: Send): Promise<void>;
+}
+
+export type ApiSocketBridge<Recv, Send> = ApiChannelBridge<Recv, Send>;
+
 export interface ApiTransport {
   request<R>(options: RequestOptions<R>): Promise<R>;
+  openStream<Recv, Close = SocketCloseInfo>(
+    options: StreamConnectOptions<Recv, Close>,
+  ): ApiStreamBridge<Recv, Close>;
+  openChannel<Recv, Send, Close = SocketCloseInfo>(
+    options: ChannelConnectOptions<Recv, Send, Close>,
+  ): ApiChannelBridge<Recv, Send, Close>;
   connectBridge<Recv, Send>(options: SocketConnectOptions<Recv, Send>): ApiSocketBridge<Recv, Send>;
   connectRaw?(options: SocketConnectOptions<unknown, unknown>): WebSocket;
 }
@@ -82,6 +101,18 @@ export class BaseClient {
 
   protected request<R>(options: RequestOptions<R>): Promise<R> {
     return this.transport.request(options);
+  }
+
+  protected openStream<Recv, Close = SocketCloseInfo>(
+    options: StreamConnectOptions<Recv, Close>,
+  ): ApiStreamBridge<Recv, Close> {
+    return this.transport.openStream(options);
+  }
+
+  protected openChannel<Recv, Send, Close = SocketCloseInfo>(
+    options: ChannelConnectOptions<Recv, Send, Close>,
+  ): ApiChannelBridge<Recv, Send, Close> {
+    return this.transport.openChannel(options);
   }
 
   protected connectBridge<Recv, Send>(options: SocketConnectOptions<Recv, Send>): ApiSocketBridge<Recv, Send> {

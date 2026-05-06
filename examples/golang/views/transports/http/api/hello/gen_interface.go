@@ -28,6 +28,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Path:      "/api/hello/abc",
 				Methods:   []string{"GET"},
 				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req=Q|auth|handle|rsp=json@GeneralWrapper",
 			impl.Abc,
@@ -35,6 +36,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		eng,
 		false,
 	)
+
 	httptransport.GET(
 		"/api/hello/map-enum",
 		sharedprovider.NewRouteExecutor(
@@ -48,6 +50,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Path:      "/api/hello/map-enum",
 				Methods:   []string{"GET"},
 				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req|auth|handle|rsp=json@GeneralWrapper",
 			impl.MapEnum,
@@ -55,6 +58,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		eng,
 		false,
 	)
+
 	httptransport.GET(
 		"/api/hello/list-enum",
 		sharedprovider.NewRouteExecutor(
@@ -68,6 +72,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Path:      "/api/hello/list-enum",
 				Methods:   []string{"GET"},
 				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req|auth|handle|rsp=json@GeneralWrapper",
 			impl.ListEnum,
@@ -75,6 +80,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		eng,
 		false,
 	)
+
 	httptransport.GET(
 		"/api/hello/string",
 		sharedprovider.NewRouteExecutor(
@@ -88,6 +94,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Path:      "/api/hello/string",
 				Methods:   []string{"GET"},
 				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req|auth|handle|rsp=json@GeneralWrapper",
 			impl.String,
@@ -95,6 +102,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		eng,
 		false,
 	)
+
 	httptransport.GET(
 		"/api/hello/uint64",
 		sharedprovider.NewRouteExecutor(
@@ -108,6 +116,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Path:      "/api/hello/uint64",
 				Methods:   []string{"GET"},
 				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req|auth|handle|rsp=json@GeneralWrapper",
 			impl.Uint64,
@@ -115,6 +124,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		eng,
 		false,
 	)
+
 	httptransport.GET(
 		"/api/hello/string-emun",
 		sharedprovider.NewRouteExecutor(
@@ -128,6 +138,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Path:      "/api/hello/string-emun",
 				Methods:   []string{"GET"},
 				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req|auth|handle|rsp=json@GeneralWrapper",
 			impl.StringEmun,
@@ -135,6 +146,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		eng,
 		false,
 	)
+
 	httptransport.GET(
 		"/api/hello/hello-way",
 		sharedprovider.NewRouteExecutor(
@@ -148,6 +160,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Path:      "/api/hello/hello-way",
 				Methods:   []string{"GET"},
 				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req=Q|auth|handle|rsp=json@GeneralWrapper",
 			impl.HelloWay,
@@ -155,6 +168,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		eng,
 		false,
 	)
+
 	return impl
 }
 

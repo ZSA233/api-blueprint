@@ -109,7 +109,8 @@ type RSP_XML[P any] struct {
 		{% endfor %}
 	]
 	{% elif wrapper.proto_type == 'alias' %}
-	type {{ wrapper.proto_name }}_INNER{{ wrapper.generic_types(True) }} {% if not proto.alias.new_type %}={% endif %} {{ proto.alias.type_reference(fmts) | safe }}
+	{% set alias_assign = "" if proto.alias.new_type else "=" %}
+	type {{ wrapper.proto_name }}_INNER{{ wrapper.generic_types(True) }} {{ alias_assign }} {{ proto.alias.type_reference(fmts) | safe }}
 	{% endif %}
 
 	type {{ wrapper.proto_def_name }} RSP_XML[{{ wrapper.proto_name }}_INNER{{ wrapper.generic_types() }}]

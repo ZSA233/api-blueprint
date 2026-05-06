@@ -14,7 +14,9 @@ type RouterInterface = sharedroutes.RouterInterface
 type REQ_Ws = sharedroutes.REQ_Ws
 type RSP_Ws = sharedroutes.RSP_Ws
 type CTX_Ws = sharedroutes.CTX_Ws
+
 type WS_SEND_Ws_BODY = sharedprotos.WsMessage
+
 type INVOKE_Ws = wailstransport.InvokeEnvelope[any, any]
 type WS_CONNECT_Ws = wailstransport.InvokeEnvelope[any, any]
 type WS_SEND_Ws = wailstransport.SocketSendEnvelope[WS_SEND_Ws_BODY]

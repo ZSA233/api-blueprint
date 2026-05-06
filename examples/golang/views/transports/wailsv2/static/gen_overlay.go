@@ -13,9 +13,11 @@ type RouterInterface = sharedroutes.RouterInterface
 type REQ_DocJson = sharedroutes.REQ_DocJson
 type RSP_DocJson = sharedroutes.RSP_DocJson
 type CTX_DocJson = sharedroutes.CTX_DocJson
+
 type INVOKE_DocJson = wailstransport.InvokeEnvelope[any, any]
 
 type REQ_Dochaha = sharedroutes.REQ_Dochaha
 type RSP_Dochaha = sharedroutes.RSP_Dochaha
 type CTX_Dochaha = sharedroutes.CTX_Dochaha
+
 type INVOKE_Dochaha = wailstransport.InvokeEnvelope[any, any]

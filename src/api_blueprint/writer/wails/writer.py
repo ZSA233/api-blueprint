@@ -119,6 +119,14 @@ class WailsWriter:
                     add_method(contract.ws.connect_method)
                     add_method(contract.ws.send_method)
                     add_method(contract.ws.close_method)
+                elif contract.stream is not None:
+                    add_method(contract.stream.connect_method)
+                    add_method(contract.stream.close_method)
+                elif contract.channel is not None:
+                    add_method(contract.channel.connect_method)
+                    if contract.channel.send_method is not None:
+                        add_method(contract.channel.send_method)
+                    add_method(contract.channel.close_method)
                 else:
                     add_method(contract.func_name)
         return manifest

@@ -4,9 +4,11 @@ package httptransport
 
 import (
 	"context"
+	{% if writer.has_stream_routes() %}"encoding/json"
+	{% endif %}
 	"fmt"
 	"net/http"
-	{% if 'ws_handle' in writer.list_providers() %}"strings"
+	{% if writer.needs_websocket_runtime() %}"strings"
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
@@ -17,6 +19,16 @@ import (
 )
 
 const GinContextMetadataKey = "api-blueprint/http/gin-context"
+
+const (
+	httpWebSocketEnvelopeMessage = "message"
+	httpWebSocketEnvelopeClose   = "close"
+)
+
+type httpWebSocketEnvelope struct {
+	Type string `json:"type"`
+	Data any    `json:"data,omitempty"`
+}
 
 type ginContextCarrier interface {
 	ContextKind() provider.TransportKind
@@ -33,6 +45,13 @@ func RequireGin(ctx ginContextCarrier) (*gin.Context, error) {
 		return nil, fmt.Errorf("[httptransport] gin context metadata has unexpected type[%T]", value)
 	}
 	return ginCtx, nil
+}
+
+func requireSessionScope(route provider.RouteInfo) error {
+	if route.Scope == "" || route.Scope == provider.ConnectionScopeSession {
+		return nil
+	}
+	return fmt.Errorf("[httptransport] connection scope[%s] is not supported by the default HTTP runtime", route.Scope)
 }
 
 func bindRequest[Q, B, P any](
@@ -156,7 +175,7 @@ func GET[Q, B, P any](
 	engine *gin.Engine,
 	rawResponse bool,
 ) {
-	engine.GET(relativePath, makeHandler[Q, B, P](executor, rawResponse))
+	engine.GET(relativePath, makeHandler(executor, rawResponse))
 }
 
 func POST[Q, B, P any](
@@ -165,7 +184,7 @@ func POST[Q, B, P any](
 	engine *gin.Engine,
 	rawResponse bool,
 ) {
-	engine.POST(relativePath, makeHandler[Q, B, P](executor, rawResponse))
+	engine.POST(relativePath, makeHandler(executor, rawResponse))
 }
 
 func PUT[Q, B, P any](
@@ -174,7 +193,7 @@ func PUT[Q, B, P any](
 	engine *gin.Engine,
 	rawResponse bool,
 ) {
-	engine.PUT(relativePath, makeHandler[Q, B, P](executor, rawResponse))
+	engine.PUT(relativePath, makeHandler(executor, rawResponse))
 }
 
 func DELETE[Q, B, P any](
@@ -183,16 +202,138 @@ func DELETE[Q, B, P any](
 	engine *gin.Engine,
 	rawResponse bool,
 ) {
-	engine.DELETE(relativePath, makeHandler[Q, B, P](executor, rawResponse))
+	engine.DELETE(relativePath, makeHandler(executor, rawResponse))
 }
 
-{% if 'ws_handle' in writer.list_providers() %}
+{% if writer.has_stream_routes() %}
+type HTTPEventStreamConnection struct {
+	ctx    context.Context
+	writer gin.ResponseWriter
+}
+
+func NewHTTPEventStreamConnection(ctx context.Context, writer gin.ResponseWriter) *HTTPEventStreamConnection {
+	return &HTTPEventStreamConnection{ctx: ctx, writer: writer}
+}
+
+func (conn *HTTPEventStreamConnection) Transport() provider.TransportKind {
+	return provider.TransportHTTP
+}
+
+func (conn *HTTPEventStreamConnection) SessionID() string {
+	return ""
+}
+
+func (conn *HTTPEventStreamConnection) Underlying() any {
+	if conn == nil {
+		return nil
+	}
+	return conn.writer
+}
+
+func (conn *HTTPEventStreamConnection) ReadJSON(context.Context, any) error {
+	return fmt.Errorf("[httptransport] stream connections do not support client messages")
+}
+
+func (conn *HTTPEventStreamConnection) WriteJSON(_ context.Context, payload any) error {
+	if conn == nil || conn.writer == nil {
+		return nil
+	}
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	if _, err := conn.writer.Write([]byte("data: ")); err != nil {
+		return err
+	}
+	if _, err := conn.writer.Write(raw); err != nil {
+		return err
+	}
+	if _, err := conn.writer.Write([]byte("\n\n")); err != nil {
+		return err
+	}
+	conn.writer.Flush()
+	return nil
+}
+
+func (conn *HTTPEventStreamConnection) CloseJSON(payload any) error {
+	if conn == nil || conn.writer == nil {
+		return nil
+	}
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	if _, err := conn.writer.Write([]byte("event: close\n")); err != nil {
+		return err
+	}
+	if _, err := conn.writer.Write([]byte("data: ")); err != nil {
+		return err
+	}
+	if _, err := conn.writer.Write(raw); err != nil {
+		return err
+	}
+	if _, err := conn.writer.Write([]byte("\n\n")); err != nil {
+		return err
+	}
+	conn.writer.Flush()
+	return nil
+}
+
+func (conn *HTTPEventStreamConnection) Abort(code int, reason string) error {
+	return conn.CloseJSON(&provider.ConnectionClose{Code: code, Reason: reason})
+}
+
+func (conn *HTTPEventStreamConnection) Close(code int, reason string) error {
+	return conn.Abort(code, reason)
+}
+
+func (conn *HTTPEventStreamConnection) Done() <-chan struct{} {
+	if conn == nil || conn.ctx == nil {
+		return nil
+	}
+	return conn.ctx.Done()
+}
+
+func STREAM[Q, B, P, S, CL any](
+	relativePath string,
+	executor *provider.RouteExecutor[Q, B, P],
+	handler func(*provider.Context[Q, B, P], provider.Stream[Q, S, CL]) error,
+	engine *gin.Engine,
+) {
+	engine.GET(relativePath, func(ginCtx *gin.Context) {
+		if err := requireSessionScope(executor.Route); err != nil {
+			_ = ginCtx.AbortWithError(http.StatusNotImplemented, err)
+			return
+		}
+		ctx := newContext(ginCtx, executor)
+		if err := executor.Run(ctx); err != nil {
+			_ = ginCtx.AbortWithError(http.StatusBadRequest, err)
+			return
+		}
+		if ctx.Req != nil && ctx.Req.Error != nil {
+			_ = ginCtx.AbortWithError(http.StatusBadRequest, ctx.Req.Error)
+			return
+		}
+		ginCtx.Header("Content-Type", "text/event-stream")
+		ginCtx.Header("Cache-Control", "no-cache")
+		ginCtx.Header("Connection", "keep-alive")
+		stream := provider.NewStreamSession[Q, S, CL](ctx.Req.Request.Q, NewHTTPEventStreamConnection(ginCtx.Request.Context(), ginCtx.Writer))
+		if err := handler(ctx, stream); err != nil {
+			_ = stream.Abort(http.StatusInternalServerError, err.Error())
+		}
+	})
+}
+{% endif %}
+
+{% if writer.needs_websocket_runtime() %}
 type HTTPWebSocketConnection struct {
-	conn *websocket.Conn
+	ctx      context.Context
+	conn     *websocket.Conn
+	envelope bool
 }
 
-func NewHTTPWebSocketConnection(conn *websocket.Conn) *HTTPWebSocketConnection {
-	return &HTTPWebSocketConnection{conn: conn}
+func NewHTTPWebSocketConnection(ctx context.Context, conn *websocket.Conn, envelope bool) *HTTPWebSocketConnection {
+	return &HTTPWebSocketConnection{ctx: ctx, conn: conn, envelope: envelope}
 }
 
 func (conn *HTTPWebSocketConnection) Transport() provider.TransportKind {
@@ -228,15 +369,79 @@ func (conn *HTTPWebSocketConnection) WriteJSON(ctx context.Context, payload any)
 	if conn == nil || conn.conn == nil {
 		return nil
 	}
+	if conn.envelope {
+		payload = httpWebSocketEnvelope{Type: httpWebSocketEnvelopeMessage, Data: payload}
+	}
 	return wsjson.Write(ctx, conn.conn, payload)
 }
 
-func (conn *HTTPWebSocketConnection) Close(code int, reason string) error {
+func (conn *HTTPWebSocketConnection) CloseJSON(payload any) error {
+	if conn == nil || conn.conn == nil {
+		return nil
+	}
+	if conn.envelope {
+		if err := wsjson.Write(context.Background(), conn.conn, httpWebSocketEnvelope{Type: httpWebSocketEnvelopeClose, Data: payload}); err != nil {
+			_ = conn.Abort(1000, "")
+			return err
+		}
+	}
+	return conn.Abort(1000, "")
+}
+
+func (conn *HTTPWebSocketConnection) Abort(code int, reason string) error {
 	if conn == nil || conn.conn == nil {
 		return nil
 	}
 	return conn.conn.Close(websocket.StatusCode(code), reason)
 }
+
+func (conn *HTTPWebSocketConnection) Close(code int, reason string) error {
+	return conn.Abort(code, reason)
+}
+
+func (conn *HTTPWebSocketConnection) Done() <-chan struct{} {
+	if conn == nil || conn.ctx == nil {
+		return nil
+	}
+	return conn.ctx.Done()
+}
+
+{% if writer.has_channel_routes() %}
+func CHANNEL[Q, B, P, S, C, CL any](
+	relativePath string,
+	executor *provider.RouteExecutor[Q, B, P],
+	handler func(*provider.Context[Q, B, P], provider.Channel[Q, S, C, CL]) error,
+	engine *gin.Engine,
+) {
+	engine.GET(relativePath, func(ginCtx *gin.Context) {
+		if err := requireSessionScope(executor.Route); err != nil {
+			_ = ginCtx.AbortWithError(http.StatusNotImplemented, err)
+			return
+		}
+		ctx := newContext(ginCtx, executor)
+		if err := executor.Run(ctx); err != nil {
+			_ = ginCtx.AbortWithError(http.StatusBadRequest, err)
+			return
+		}
+		if ctx.Req != nil && ctx.Req.Error != nil {
+			_ = ginCtx.AbortWithError(http.StatusBadRequest, ctx.Req.Error)
+			return
+		}
+		conn, err := websocket.Accept(ginCtx.Writer, ginCtx.Request, &websocket.AcceptOptions{
+			CompressionMode: websocket.CompressionContextTakeover,
+		})
+		if err != nil {
+			_ = ginCtx.AbortWithError(http.StatusBadRequest, err)
+			return
+		}
+		defer conn.CloseNow()
+		channel := provider.NewChannelSession[Q, S, C, CL](ctx.Req.Request.Q, NewHTTPWebSocketConnection(ginCtx.Request.Context(), conn, true))
+		if err := handler(ctx, channel); err != nil {
+			_ = channel.Abort(int(websocket.StatusInternalError), err.Error())
+		}
+	})
+}
+{% endif %}
 
 func wsProvider[Q, B, P any](executor *provider.RouteExecutor[Q, B, P]) *provider.WsHandleProvider[Q, B, P] {
 	for _, prov := range executor.Providers {
@@ -286,10 +491,10 @@ func makeWSHandler[Q, B, P any](
 		defer conn.CloseNow()
 
 		ctx.WsHandle = &provider.WsHandleContext[Q, B, P]{
-			Conn: NewHTTPWebSocketConnection(conn),
+			Conn: NewHTTPWebSocketConnection(ginCtx.Request.Context(), conn, false),
 		}
 		if err := executor.RunWSHandler(ctx); err != nil {
-			_ = ctx.WsHandle.Conn.Close(int(websocket.StatusInternalError), err.Error())
+			_ = ctx.WsHandle.Conn.Abort(int(websocket.StatusInternalError), err.Error())
 		}
 	}
 }
@@ -299,6 +504,6 @@ func WS[Q, B, P any](
 	executor *provider.RouteExecutor[Q, B, P],
 	engine *gin.Engine,
 ) {
-	engine.GET(relativePath, makeWSHandler[Q, B, P](executor))
+	engine.GET(relativePath, makeWSHandler(executor))
 }
 {% endif %}

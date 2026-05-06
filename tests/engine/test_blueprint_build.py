@@ -20,9 +20,14 @@ def test_example_blueprints_build_into_shared_fastapi_app(example_entrypoints):
     assert "/redoc" in paths
     assert "/openapi.json" in paths
     assert "/api/demo/abc" in paths
+    assert "/api/demo/sweep-events" in paths
+    assert "/api/demo/assistant-session" in paths
     assert "/api/hello/hello-way" in paths
     assert "/static/doc.json" in paths
-    assert len(paths) == 22
+    assert len(paths) == 24
+
+    openapi = app.openapi()
+    assert "text/event-stream" in openapi["paths"]["/api/demo/sweep-events"]["get"]["responses"]["200"]["content"]
 
     for bp in entrypoints:
         bp.build()

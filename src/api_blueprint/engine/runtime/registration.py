@@ -6,6 +6,7 @@ import httpx
 from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import JSONResponse
 
+from api_blueprint.engine.connection import ConnectionKind
 from api_blueprint.engine.runtime.endpoint import make_endpoint
 from api_blueprint.engine.runtime.responses import XMLResponse
 from api_blueprint.engine.schema import model_to_pydantic
@@ -88,9 +89,13 @@ def register_router(router: "Router", app: FastAPI) -> None:
     async def handler(request: Request, **kwargs: Any):
         return await proxy_upstream_request(router, request, **kwargs)
 
+    query_model = router.req_query
+    if router.connection_kind in {ConnectionKind.STREAM, ConnectionKind.CHANNEL}:
+        query_model = router.open_model
+
     endpoint = make_endpoint(
         handler,
-        model_to_pydantic(router.req_query, router=router) if router.req_query else None,
+        model_to_pydantic(query_model, router=router) if query_model else None,
         model_to_pydantic(router.req_form, router=router) if router.req_form else None,
         model_to_pydantic(router.req_json, router=router) if router.req_json else None,
         router.headers,
@@ -125,11 +130,29 @@ def register_router(router: "Router", app: FastAPI) -> None:
             },
         }
 
-    ws_methods = [method for method in router.methods if method == "WS"]
+    ws_methods = [method for method in router.methods if method in {"WS", "CHANNEL"}]
     if ws_methods:
         app.add_api_websocket_route(router.url, endpoint)
 
-    api_methods = [method for method in router.methods if method != "WS"]
+    stream_methods = [method for method in router.methods if method == "STREAM"]
+    if stream_methods:
+        app.add_api_route(
+            router.url,
+            endpoint,
+            methods=["GET"],
+            tags=router.tags,
+            response_class=Response,
+            deprecated=router.is_deprecated,
+            responses={
+                200: {
+                    "description": "Server-sent event stream",
+                    "content": {"text/event-stream": {}},
+                }
+            },
+            **copy_extra,
+        )
+
+    api_methods = [method for method in router.methods if method in {"GET", "POST", "PUT", "DELETE", "HEAD"}]
     if api_methods:
         app.add_api_route(
             router.url,

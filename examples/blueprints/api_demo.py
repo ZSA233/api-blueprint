@@ -44,6 +44,51 @@ class WSSend(Model):
     ws_recv = WSRecv(description='ws_recv')
 
 
+class SweepOpen(Model):
+    run_id = String(description='run id')
+    replay_from = String(description='optional replay cursor', omitempty=True)
+
+
+class SweepState(Model):
+    status = String(description='current sweep state')
+
+
+class SweepProgress(Model):
+    current = Uint64(description='current step')
+    total = Uint64(description='total steps')
+
+
+class SweepLog(Model):
+    level = String(description='log level')
+    message = String(description='log message')
+
+
+class ConnectionClose(Model):
+    code = Int(description='logical close code')
+    reason = String(description='close reason', omitempty=True)
+    error = String(description='machine-readable error key', omitempty=True)
+
+
+class AssistantOpen(Model):
+    session_id = String(description='assistant session id')
+
+
+class AssistantInput(Model):
+    text = String(description='user input')
+
+
+class AssistantCancel(Model):
+    reason = String(description='cancel reason', omitempty=True)
+
+
+class AssistantDelta(Model):
+    text = String(description='assistant delta')
+
+
+class AssistantDone(Model):
+    message_id = String(description='final message id')
+
+
 T = TypeVar('T')
 
 class WSResponse(Model, Generic[T]):
@@ -109,6 +154,38 @@ with apibp.group('/demo') as views:
         WSRecv,
     ).SEND(
         WSResponse[WSSend],
+    )
+
+    views.STREAM(
+        '/sweep-events', scope=ConnectionScope.SESSION, summary='Sweep event stream',
+        description='Transport-neutral server push stream example'
+    ).OPEN(
+        SweepOpen
+    ).SERVER_MESSAGE(
+        'SweepStreamMessage',
+        state=SweepState,
+        progress=SweepProgress,
+        log=SweepLog,
+    ).CLOSE(
+        ConnectionClose
+    )
+
+    views.CHANNEL(
+        '/assistant-session', scope=ConnectionScope.SESSION, summary='Assistant channel',
+        description='Transport-neutral bidirectional channel example'
+    ).OPEN(
+        AssistantOpen
+    ).CLIENT_MESSAGE(
+        'AssistantClientMessage',
+        input=AssistantInput,
+        cancel=AssistantCancel,
+    ).SERVER_MESSAGE(
+        'AssistantServerMessage',
+        delta=AssistantDelta,
+        done=AssistantDone,
+        log=SweepLog,
+    ).CLOSE(
+        ConnectionClose
     )
 
     views.POST(

@@ -45,7 +45,7 @@ class Blueprint:
         self.headers = headers
         self.app = app or get_shared_app(root.strip("/"))
 
-        for method in ["POST", "GET", "PUT", "DELETE", "WS"]:
+        for method in ["POST", "GET", "PUT", "DELETE", "WS", "STREAM", "CHANNEL"]:
             setattr(self, method, getattr(self.root_group, method))
 
     def __str__(self) -> str:
@@ -66,6 +66,8 @@ class Blueprint:
     def PUT(self, path: str = "", *, summary: str = None, desc: str = None) -> Router: ...
     def DELETE(self, path: str = "", *, summary: str = None, desc: str = None) -> Router: ...
     def WS(self, path: str = "", *, summary: str = None, desc: str = None) -> Router: ...
+    def STREAM(self, path: str = "", *, summary: str = None, desc: str = None) -> Router: ...
+    def CHANNEL(self, path: str = "", *, summary: str = None, desc: str = None) -> Router: ...
 
     def build(self) -> None:
         if self.is_built:

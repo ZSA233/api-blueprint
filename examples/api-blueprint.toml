@@ -24,7 +24,14 @@ codegen_output = 'kotlin'
 package = 'com.example.apiblueprint'
 base_url = 'http://localhost:2333'
 include = ['tag:api']
-exclude = ['path:/static/**', 'path:/api/ws', 'path:/api/demo/ws', 'path:/api/demo/delete$']
+exclude = [
+    'path:/static/**',
+    'path:/api/ws',
+    'path:/api/demo/ws',
+    'path:/api/demo/sweep-events',
+    'path:/api/demo/assistant-session',
+    'path:/api/demo/delete$',
+]
 
 # Blueprint -> transport snapshot examples
 [[transport.targets]]

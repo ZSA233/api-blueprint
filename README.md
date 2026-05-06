@@ -9,6 +9,8 @@
 
 `api-blueprint` 用 Python DSL 定义 API 契约，并基于同一份契约生成文档服务、Go、TypeScript、Kotlin Android、Wails v2/v3 overlay，以及已有 `.proto` 树的 gRPC 产物。
 
+DSL 支持与 RPC 并列的 transport-neutral `STREAM` / `CHANNEL` 长连接消息契约；HTTP 可映射到 SSE / WebSocket，Wails 默认映射到 session-scoped runtime events，`CLOSE(Model)` 会生成 typed close lifecycle payload。
+
 README 只保留上手路径。完整配置、Wails、gRPC、DSL 和 examples 验证说明见 [深入文档](#深入文档)。
 
 ## 支持的输出
@@ -123,6 +125,7 @@ api-gen-grpc -c examples/api-blueprint.toml --target go.*
 ## 生成产物与用户文件
 
 - `examples/blueprints/` 与 `examples/grpc/protos/` 是示例真源。
+- `examples/blueprints/api_demo.py` 包含 legacy `WS` 以及新 `STREAM` / `CHANNEL` 长连接示例。
 - `examples/golang/`、`examples/typescript/`、`examples/kotlin/`、`examples/grpc/go/`、`examples/grpc/python/` 是生成快照。
 - `examples/wails-hello/` 是独立 Wails v3 hello world 示例，演示不启动 HTTP 服务的 GUI 闭环。
 - `gen_*` 文件由生成器拥有，重生成会覆盖。
@@ -130,6 +133,9 @@ api-gen-grpc -c examples/api-blueprint.toml --target go.*
 - Go / TypeScript 生成物按 `core + transports/<target>` 布局输出；`api-gen-wails` 不生成完整 Wails app shell，external frontend 需先加载 Wails runtime。
 - Wails target 的 `include` / `exclude` 会裁剪 target overlay / facade；未选中 route 的 root 不生成 `transports/<overlay_name>`，共享契约层仍完整生成。
 - Go `views/providers` 是全局 runtime；按 route 选择 provider 实现可使用 route-scoped provider factory，用户自定义 hook 为 `SelectProvider(spec, handler)`，详见生成器文档。
+- `STREAM` / `CHANNEL` 是新的长连接契约入口；多消息类型生成单个判别联合消息，legacy `WS().RECV().SEND()` 仅保留兼容。
+- 默认 HTTP/Wails runtime 只完整支持 `ConnectionScope.SESSION`；`APP` / `TOPIC` 的广播或 topic routing 可通过自定义 connection hub / manager 扩展。
+- `examples/golang/views/routes/api/demo/impl.go` 手写了 `STREAM` / `CHANNEL` 最小用法示例，展示 `Open()`、`Send()`、`Recv()`、typed `Close()` 与异常 `Abort()`。
 - Go HTTP adapter 会尊重已由 Gin handler 写出的响应，适合少量 HTTP-only raw callback。
 - 未声明 `[[transport.targets]]` 时默认生成 HTTP target；Wails-only 项目只声明 `kind = "wails"` target，不会生成 Gin HTTP adapter；HTTP + Wails 项目同时声明 `kind = "http"` 与 `kind = "wails"`。
 - gRPC 只编译已有 `.proto` 树，不会从 Blueprint DSL 反推 proto/service。

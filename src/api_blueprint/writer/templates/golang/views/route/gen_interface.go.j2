@@ -2,7 +2,13 @@
 
 package {{ router_group.package }}
 
+{% if router_group.uses_connection_runtime %}
+import (
+	providers "{{ bp.writer.provider_imports | safe }}"
+)
+
+{% endif %}
 type RouterInterface interface {
-	{% for interface in router_group.interfaces() %}{{ '{func}(ctx *{ctx_type}, req *{req_type})(rsp *{rsp_type}, err error)'.format(**interface) | safe }}
+	{% for interface in router_group.interfaces() %}{{ interface.signature | safe }}
 	{% endfor %}
 }

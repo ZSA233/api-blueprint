@@ -82,6 +82,7 @@ README 必须保持简洁。Wails 的 RouteExecutor、provider pipeline、Go/Typ
 - `src/api_blueprint/application/`：entrypoint 加载、项目装配、docs server 启动与 generator 调度。
 - `src/api_blueprint/hub/` 与 `src/api_blueprint/static/`：文档服务 UI 资源。
 - `examples/blueprints/`：示例蓝图真源。
+- `examples/blueprints/api_demo.py`：同时包含 legacy `WS` 与新 `STREAM` / `CHANNEL` 长连接 DSL 示例。
 - `examples/golang/`、`examples/typescript/` 与 `examples/kotlin/`：Blueprint 生成产物快照；Go / TypeScript 按 `core + transports/<target>` 布局输出，Wails overlay 生成在对应 transport target 目录中。
 - `examples/wails-harness/v2/` 与 `examples/wails-harness/v3/`：repo-owned 的最小 Wails harness 示例工程；app shell 手写维护，但直接消费共享树里生成的 Wails services 与 TypeScript API 产物。
 - `examples/wails-hello/`：独立 Wails v3 hello world 示例；包含自己的 Blueprint、生成快照和手写 Wails app shell，用于演示不开 HTTP 服务的 Wails-only GUI 闭环。
@@ -92,6 +93,8 @@ README 必须保持简洁。Wails 的 RouteExecutor、provider pipeline、Go/Typ
 ## README 必须覆盖的事实
 
 - 项目是“Python DSL -> FastAPI/OpenAPI -> Go/TypeScript/Kotlin/Wails 代码生成器”加“已有 proto 树的 gRPC target 编译器”。
+- Blueprint DSL 把长连接消息流作为与 RPC 并列的一等契约：`STREAM` 表示服务端持续推送，`CHANNEL` 表示双向消息通道；`WS/RECV/SEND` 只作为 legacy WebSocket 写法保留。
+- `STREAM` / `CHANNEL` 使用 `OPEN`、`SERVER_MESSAGE`、`CLIENT_MESSAGE`、typed `CLOSE` 与 `ConnectionScope` 描述 transport-neutral 连接语义；多消息类型必须通过单个判别联合消息契约声明，避免多个裸 event 名。
 - 当前公开 Go / TypeScript / Kotlin Android / Wails v2/v3 / gRPC；Java 仅为内部预留扩展位。
 - Wails v3 标记为 experimental，Wails v2 标记为 preview。
 - `api-gen-wails` 依赖共享 `[golang]` 与 `[typescript]` 配置，并通过 `[[transport.targets]] kind = "wails"` 生成 Wails target；旧 `[golang].transport_adapters`、`[[wails.targets]]`、`go_out_dir` / `typescript_out_dir` 已废弃。
@@ -102,6 +105,8 @@ README 必须保持简洁。Wails 的 RouteExecutor、provider pipeline、Go/Typ
 - Go `views/providers` 是全局 transport-neutral runtime，不按 root 拆分；需要按 root/route/transport 切换同名 provider 实现时，使用 route-scoped provider factory，用户自定义 hook 为 `SelectProvider(spec, handler)`，详见 `docs/*/generators.md`。
 - Go HTTP adapter 不会覆盖 Gin handler 已经写出的响应；`HTTP_RAW_RESPONSE()` 表示 handler owns HTTP success response，只影响 HTTP adapter finalization。
 - Wails 可以运行在不启动 HTTP 服务的 app shell 中；只声明 Wails target 时，Wails app 的 Go import graph 不需要包含 Gin HTTP adapter。
+- Wails `STREAM` / `CHANNEL` 默认通过 session-scoped runtime events 实现，event name 只存在于 generated transport/runtime 内部；HTTP `STREAM` 映射到 SSE，HTTP `CHANNEL` 映射到带内部 envelope 的 WebSocket；默认 runtime 只完整支持 `ConnectionScope.SESSION`，`APP` / `TOPIC` 通过自定义 connection hub / manager 扩展。
+- Go 默认生成的连接 handler 仍保持 `not implemented`；仓库示例在用户拥有的 `examples/golang/views/routes/api/demo/impl.go` 中手写了 `STREAM` / `CHANNEL` 最小用法，展示 `Open()`、`Send()`、`Recv()`、typed `Close()` 与异常 `Abort()`。
 - Wails hello 示例有独立短命令：`make wails-hello-dev` 手动启动，`make wails-hello-check` 严格验证，`make wails-hello-compile-check` 快速编译验证。
 - gRPC v1 不会从 Blueprint DSL 推导 proto；它只编排已有 `.proto` 目录树。
 - TypeScript `base_url_expr` 与 Kotlin `base_url_expr` 会原样输出到生成代码，并与 `base_url` 互斥。

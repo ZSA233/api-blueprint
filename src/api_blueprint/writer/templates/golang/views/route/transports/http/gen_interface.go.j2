@@ -15,6 +15,51 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		impl = shared.NewRouter()
 	}
 {% for register in router_group.registers() %}
+	{% if register.is_stream %}
+	httptransport.STREAM(
+		{{ register.api | tojson }},
+		sharedprovider.NewRouteExecutor[{{ register.http_query_type | safe }}, {{ register.http_body_type | safe }}, {{ register.http_rsp_type | safe }}](
+			sharedprovider.RouteInfo{
+				Root:      {{ register.root | tojson }},
+				Group:     {{ register.group | tojson }},
+				Namespace: {{ register.namespace | tojson }},
+				Service:   {{ register.service | tojson }},
+				Operation: {{ register.operation | tojson }},
+				RouteID:   {{ register.route_id | tojson }},
+				Path:      {{ register.api | tojson }},
+				Methods:   []string{{ "{" }}{% for method in register.methods %}{{ method | tojson }}{% if not loop.last %}, {% endif %}{% endfor %}{{ "}" }},
+				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope({{ register.connection_scope | tojson }}),
+			},
+			{{ register.provider | tojson }},
+			nil,
+		),
+		impl.{{ register.func }},
+		eng,
+	)
+	{% elif register.is_channel %}
+	httptransport.CHANNEL(
+		{{ register.api | tojson }},
+		sharedprovider.NewRouteExecutor[{{ register.http_query_type | safe }}, {{ register.http_body_type | safe }}, {{ register.http_rsp_type | safe }}](
+			sharedprovider.RouteInfo{
+				Root:      {{ register.root | tojson }},
+				Group:     {{ register.group | tojson }},
+				Namespace: {{ register.namespace | tojson }},
+				Service:   {{ register.service | tojson }},
+				Operation: {{ register.operation | tojson }},
+				RouteID:   {{ register.route_id | tojson }},
+				Path:      {{ register.api | tojson }},
+				Methods:   []string{{ "{" }}{% for method in register.methods %}{{ method | tojson }}{% if not loop.last %}, {% endif %}{% endfor %}{{ "}" }},
+				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope({{ register.connection_scope | tojson }}),
+			},
+			{{ register.provider | tojson }},
+			nil,
+		),
+		impl.{{ register.func }},
+		eng,
+	)
+	{% else %}
 	httptransport.{{ register.method }}(
 		{{ register.api | tojson }},
 		sharedprovider.NewRouteExecutor(
@@ -28,6 +73,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Path:      {{ register.api | tojson }},
 				Methods:   []string{{ "{" }}{% for method in register.methods %}{{ method | tojson }}{% if not loop.last %}, {% endif %}{% endfor %}{{ "}" }},
 				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope({{ register.connection_scope | tojson }}),
 			},
 			{{ register.provider | tojson }},
 			impl.{{ register.func }},
@@ -36,7 +82,9 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 {% if register.method != "WS" -%}
 		{{ register.raw_response | tojson }},
 {% endif %}
-	){% endfor %}
+	)
+	{% endif %}
+{% endfor %}
 	return impl
 }
 

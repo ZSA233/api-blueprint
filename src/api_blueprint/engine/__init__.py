@@ -1,4 +1,11 @@
 from api_blueprint.engine.blueprint import Blueprint, ConflictFieldError, Router, RouterGroup
+from api_blueprint.engine.connection import (
+    ConnectionKind,
+    ConnectionScope,
+    DefaultConnectionClose,
+    MessageContract,
+    MessageVariant,
+)
 from api_blueprint.engine.runtime import (
     Auth,
     Custom,
@@ -22,11 +29,16 @@ __all__ = (
     "Blueprint",
     "ConflictFieldError",
     "Custom",
+    "ConnectionKind",
+    "ConnectionScope",
+    "DefaultConnectionClose",
     "Error",
     "GeneralWrapper",
     "Handle",
     "HeaderModel",
     "Model",
+    "MessageContract",
+    "MessageVariant",
     "NoneWrapper",
     "Provider",
     "ProviderName",

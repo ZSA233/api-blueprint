@@ -4,7 +4,7 @@
 
 import type * as Models from "./models";
 import type * as Shared from "{{ shared_models_path }}";
-import { ApiClientConfig, ApiSocketBridge, BaseClient } from "{{ shared_client_path }}";
+import { ApiChannelBridge, ApiClientConfig, ApiSocketBridge, ApiStreamBridge, BaseClient } from "{{ shared_client_path }}";
 
 export class {{ client_class }} extends BaseClient {
   constructor(config: ApiClientConfig = {}) {
@@ -47,6 +47,55 @@ export class {{ client_class }} extends BaseClient {
   }
 
 {% endif -%}
+{% if route.supports_stream %}
+  {{ route.subscribe_method_name }}(
+    request: {
+{% if route.open_type_expr %}      open?: {{ route.open_type_expr }};
+{% endif %}      headers?: Record<string, string>;
+    } = {},
+  ): {{ route.stream_bridge_type_expr }} {
+    return this.openStream<{{ route.stream_open_type_args }}>({
+      routeId: "{{ route.route_id }}",
+      connectionKind: "stream",
+      scope: "{{ route.connection_scope }}",
+      path: "{{ route.url }}",
+      service: "{{ route.service_name }}",
+      namespace: "{{ route.namespace }}",
+      connectMethod: "{{ route.contract.stream.connect_method if route.contract.stream else '' }}",
+      closeMethod: "{{ route.contract.stream.close_method if route.contract.stream else '' }}",
+      eventBase: "{{ route.contract.stream.event_base if route.contract.stream else '' }}",
+{% if route.open_type_expr %}      open: request.open as unknown as Record<string, unknown> | undefined,
+{% endif %}      headers: request.headers,
+    });
+  }
+
+{% endif -%}
+{% if route.supports_channel %}
+  {{ route.open_channel_method_name }}(
+    request: {
+{% if route.open_type_expr %}      open?: {{ route.open_type_expr }};
+{% endif %}      headers?: Record<string, string>;
+    } = {},
+    protocols?: string | string[],
+  ): {{ route.channel_bridge_type_expr }} {
+    return this.openChannel<{{ route.channel_open_type_args }}>({
+      routeId: "{{ route.route_id }}",
+      connectionKind: "channel",
+      scope: "{{ route.connection_scope }}",
+      path: "{{ route.url }}",
+      service: "{{ route.service_name }}",
+      namespace: "{{ route.namespace }}",
+      connectMethod: "{{ route.contract.channel.connect_method if route.contract.channel else '' }}",
+      sendMethod: "{{ route.contract.channel.send_method if route.contract.channel else '' }}",
+      closeMethod: "{{ route.contract.channel.close_method if route.contract.channel else '' }}",
+      eventBase: "{{ route.contract.channel.event_base if route.contract.channel else '' }}",
+{% if route.open_type_expr %}      open: request.open as unknown as Record<string, unknown> | undefined,
+{% endif %}      headers: request.headers,
+      protocols,
+    });
+  }
+
+{% endif -%}
 {% if route.supports_ws %}
   {{ route.connect_method_name }}(
     request: {
@@ -57,6 +106,8 @@ export class {{ client_class }} extends BaseClient {
   ): ApiSocketBridge<{{ route.ws_send_type_expr }}, {{ route.ws_recv_type_expr }}> {
     return this.connectBridge<{{ route.ws_send_type_expr }}, {{ route.ws_recv_type_expr }}>({
       routeId: "{{ route.route_id }}",
+      connectionKind: "legacy_ws",
+      scope: "",
       path: "{{ route.url }}",
       service: "{{ route.service_name }}",
       namespace: "{{ route.namespace }}",
@@ -80,6 +131,8 @@ export class {{ client_class }} extends BaseClient {
   ): WebSocket {
     return this.connectRaw({
       routeId: "{{ route.route_id }}",
+      connectionKind: "legacy_ws",
+      scope: "",
       path: "{{ route.url }}",
       service: "{{ route.service_name }}",
       namespace: "{{ route.namespace }}",

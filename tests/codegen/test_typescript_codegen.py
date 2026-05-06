@@ -73,6 +73,64 @@ def test_typescript_http_generation_uses_transport_bridge_and_raw_ws_escape_hatc
     assert "connectWsRaw(" in client_text
 
 
+def test_typescript_generates_stream_and_channel_contracts(tmp_path: Path):
+    bp = Blueprint(root="/api")
+
+    class Open(Model):
+        run_id = String(description="run id")
+
+    class TaskState(Model):
+        status = String(description="status")
+
+    class TaskProgress(Model):
+        value = String(description="value")
+
+    class ClientInput(Model):
+        text = String(description="text")
+
+    class CloseInfo(Model):
+        reason = String(description="reason")
+
+    with bp.group("/runs") as views:
+        views.STREAM("/events").OPEN(Open).SERVER_MESSAGE(
+            "TaskStreamMessage",
+            state=TaskState,
+            progress=TaskProgress,
+        ).CLOSE(CloseInfo)
+        views.CHANNEL("/chat").OPEN(Open).CLIENT_MESSAGE(ClientInput).SERVER_MESSAGE(TaskState).CLOSE(CloseInfo)
+
+    output_dir = tmp_path / "typescript"
+    output_dir.mkdir()
+    writer = TypeScriptWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    runtime_client = (output_dir / "api" / "runtime" / "gen_client.ts").read_text(encoding="utf-8")
+    models_text = (output_dir / "api" / "routes" / "api" / "runs" / "gen_models.ts").read_text(encoding="utf-8")
+    client_text = (output_dir / "api" / "routes" / "api" / "runs" / "gen_client.ts").read_text(encoding="utf-8")
+    transport_text = (output_dir / "api" / "transports" / "http" / "gen_transport.ts").read_text(encoding="utf-8")
+
+    assert "export interface ApiStreamBridge<Recv, Close = SocketCloseInfo>" in runtime_client
+    assert "export interface ApiChannelBridge<Recv, Send, Close = SocketCloseInfo> extends ApiStreamBridge<Recv, Close>" in runtime_client
+    assert (
+        "export type TaskStreamMessage =\n"
+        '  | { type: "state"; data: TaskState }\n'
+        '  | { type: "progress"; data: TaskProgress };'
+        in models_text
+    )
+    assert "subscribeEvents(" in client_text
+    assert "openChat(" in client_text
+    assert "ApiStreamBridge<Models.TaskStreamMessage, Shared.CloseInfo>" in client_text
+    assert "ApiChannelBridge<Shared.TaskState, Shared.ClientInput, Shared.CloseInfo>" in client_text
+    assert "openStream<Models.TaskStreamMessage, Shared.CloseInfo>" in client_text
+    assert "openChannel<Shared.TaskState, Shared.ClientInput, Shared.CloseInfo>" in client_text
+    assert 'connectionKind: "stream"' in client_text
+    assert 'connectionKind: "channel"' in client_text
+    assert 'scope: "session"' in client_text
+    assert "class HttpEventStreamBridge<Recv, Close = SocketCloseInfo> implements ApiStreamBridge<Recv, Close>" in transport_text
+    assert 'envelope.type === "close"' in transport_text
+
+
 def test_typescript_generation_allows_real_shared_group_without_alias_rewrite(tmp_path: Path):
     bp = Blueprint(root="/api")
     with bp.group("/shared") as views:

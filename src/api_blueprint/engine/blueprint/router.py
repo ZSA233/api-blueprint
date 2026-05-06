@@ -5,6 +5,15 @@ from typing import TYPE_CHECKING, Any, DefaultDict, Literal, Optional, Self, Uni
 
 from fastapi import FastAPI
 
+from api_blueprint.engine.connection import (
+    ConnectionKind,
+    ConnectionScope,
+    DefaultConnectionClose,
+    MessageContract,
+    ModelRef,
+    ensure_model_ref,
+    normalize_message_contract,
+)
 from api_blueprint.engine.runtime import (
     Handle,
     Provider,
@@ -31,7 +40,7 @@ if TYPE_CHECKING:
     from api_blueprint.engine.blueprint.group import RouterGroup
 
 
-METHOD_ENUM = Literal["GET", "POST", "PUT", "DELETE", "HEAD", "WS"]
+METHOD_ENUM = Literal["GET", "POST", "PUT", "DELETE", "HEAD", "WS", "STREAM", "CHANNEL"]
 ModelOrField = Union[Model, Field]
 
 
@@ -56,6 +65,12 @@ class Router:
 
     recvs: list[Model]
     sends: list[Model]
+    connection_kind: ConnectionKind
+    connection_scope: ConnectionScope | None
+    open_model: ModelRef | None
+    close_model: ModelRef | None
+    server_message: MessageContract | None
+    client_message: MessageContract | None
 
     errors: DefaultDict[int, list[Error]]
     extra: dict[str, Any]
@@ -102,6 +117,14 @@ class Router:
         self.errors = defaultdict(list)
         self.recvs = []
         self.sends = []
+        self.connection_kind = self._infer_connection_kind(methods)
+        self.connection_scope = self._normalize_connection_scope(kwargs.pop("scope", None))
+        self.open_model = None
+        self.close_model = None
+        self.server_message = None
+        self.client_message = None
+        if self.connection_kind in {ConnectionKind.STREAM, ConnectionKind.CHANNEL}:
+            self.connection_scope = self.connection_scope or ConnectionScope.SESSION
 
     def __str__(self) -> str:
         return f"<Router {self.methods} - {self.url} >"
@@ -247,6 +270,7 @@ class Router:
         return await proxy_upstream_request(self, request, **kwargs)
 
     def do_register(self, app: FastAPI) -> None:
+        self.validate_connection_contract()
         register_router(self, app)
 
     def RECV(self, *models: list[Model]) -> Self:
@@ -256,3 +280,82 @@ class Router:
     def SEND(self, *models: list[Model]) -> Self:
         self.sends.extend(models)
         return self
+
+    def OPEN(self, model: ModelRef) -> Self:
+        if self.connection_kind not in {ConnectionKind.STREAM, ConnectionKind.CHANNEL}:
+            raise ValueError("OPEN() is only supported by STREAM() and CHANNEL() routes")
+        if self.open_model is not None:
+            raise ValueError("OPEN() can only be called once")
+        self.open_model = ensure_model_ref(model, label="OPEN() model")
+        return self
+
+    def CLOSE(self, model: ModelRef) -> Self:
+        if self.connection_kind not in {ConnectionKind.STREAM, ConnectionKind.CHANNEL}:
+            raise ValueError("CLOSE() is only supported by STREAM() and CHANNEL() routes")
+        if self.close_model is not None:
+            raise ValueError("CLOSE() can only be called once")
+        self.close_model = ensure_model_ref(model, label="CLOSE() model")
+        return self
+
+    def SERVER_MESSAGE(self, *args: object, **variants: ModelRef) -> Self:
+        if self.connection_kind not in {ConnectionKind.STREAM, ConnectionKind.CHANNEL}:
+            raise ValueError("SERVER_MESSAGE() is only supported by STREAM() and CHANNEL() routes")
+        if self.server_message is not None:
+            raise ValueError("SERVER_MESSAGE() can only be called once")
+        self.server_message = normalize_message_contract(args, variants)
+        return self
+
+    def CLIENT_MESSAGE(self, *args: object, **variants: ModelRef) -> Self:
+        if self.connection_kind == ConnectionKind.STREAM:
+            raise ValueError("STREAM() routes do not support CLIENT_MESSAGE()")
+        if self.connection_kind != ConnectionKind.CHANNEL:
+            raise ValueError("CLIENT_MESSAGE() is only supported by CHANNEL() routes")
+        if self.client_message is not None:
+            raise ValueError("CLIENT_MESSAGE() can only be called once")
+        self.client_message = normalize_message_contract(args, variants)
+        return self
+
+    def validate_connection_contract(self) -> None:
+        if self.connection_kind == ConnectionKind.STREAM:
+            if self.server_message is None:
+                raise ValueError(f"STREAM route[{self.url}] requires SERVER_MESSAGE()")
+            if self.client_message is not None:
+                raise ValueError(f"STREAM route[{self.url}] must not define CLIENT_MESSAGE()")
+            self._reject_http_body_contracts()
+        elif self.connection_kind == ConnectionKind.CHANNEL:
+            if self.server_message is None:
+                raise ValueError(f"CHANNEL route[{self.url}] requires SERVER_MESSAGE()")
+            if self.client_message is None:
+                raise ValueError(f"CHANNEL route[{self.url}] requires CLIENT_MESSAGE()")
+            self._reject_http_body_contracts()
+
+    def _reject_http_body_contracts(self) -> None:
+        if self.req_json is not None or self.req_form is not None or self.req_bin is not None or self.rsp_model is not None:
+            raise ValueError(
+                f"{self.connection_kind.value.upper()} route[{self.url}] uses OPEN/SERVER_MESSAGE/CLIENT_MESSAGE/CLOSE "
+                "instead of REQ_JSON/REQ_FORM/REQ_BIN/RSP"
+            )
+
+    @property
+    def effective_close_model(self) -> ModelRef | None:
+        if self.connection_kind in {ConnectionKind.STREAM, ConnectionKind.CHANNEL}:
+            return self.close_model or DefaultConnectionClose
+        return self.close_model
+
+    @staticmethod
+    def _infer_connection_kind(methods: list[METHOD_ENUM]) -> ConnectionKind:
+        if any(method == "STREAM" for method in methods):
+            return ConnectionKind.STREAM
+        if any(method == "CHANNEL" for method in methods):
+            return ConnectionKind.CHANNEL
+        if any(method == "WS" for method in methods):
+            return ConnectionKind.LEGACY_WS
+        return ConnectionKind.RPC
+
+    @staticmethod
+    def _normalize_connection_scope(value: object) -> ConnectionScope | None:
+        if value is None:
+            return None
+        if isinstance(value, ConnectionScope):
+            return value
+        return ConnectionScope(str(value))

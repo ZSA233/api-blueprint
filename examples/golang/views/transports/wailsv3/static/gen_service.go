@@ -9,7 +9,7 @@ import (
 
 type StaticService struct {
 	impl            RouterInterface
-	sessions        *wailstransport.SocketHub
+	sessions        wailstransport.ConnectionHub
 	docJsonExecutor *sharedprovider.RouteExecutor[any, any, RSP_DocJson]
 	dochahaExecutor *sharedprovider.RouteExecutor[any, any, RSP_Dochaha]
 }
@@ -29,6 +29,7 @@ func newGeneratedStaticService(impl RouterInterface, dispatcher wailstransport.E
 				Path:      "/static/doc.json",
 				Methods:   []string{"GET"},
 				Transport: sharedprovider.TransportWails,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req|handle|rsp=json@NoneWrapper",
 			impl.DocJson,
@@ -44,6 +45,7 @@ func newGeneratedStaticService(impl RouterInterface, dispatcher wailstransport.E
 				Path:      "/static/dochaha",
 				Methods:   []string{"GET"},
 				Transport: sharedprovider.TransportWails,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req|handle|rsp=json@NoneWrapper",
 			impl.Dochaha,
@@ -51,8 +53,17 @@ func newGeneratedStaticService(impl RouterInterface, dispatcher wailstransport.E
 	}
 }
 
-func (svc *StaticService) DocJson(envelope *INVOKE_DocJson) (rsp *RSP_DocJson, err error) {
-	req, reqErr := wailstransport.EnvelopeToReq[any, any](envelope, wailstransport.ReqEnvelopeOptions{
+func (svc *StaticService) SetConnectionHub(hub wailstransport.ConnectionHub) {
+	if svc == nil || hub == nil {
+		return
+	}
+	svc.sessions = hub
+}
+
+func (svc *StaticService) DocJson(
+	envelope *INVOKE_DocJson,
+) (rsp *RSP_DocJson, err error) {
+	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
 		BindQuery: false,
 		BindJSON:  false,
 		BindForm:  false,
@@ -61,7 +72,11 @@ func (svc *StaticService) DocJson(envelope *INVOKE_DocJson) (rsp *RSP_DocJson, e
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[any, any, RSP_DocJson]("StaticService", "DocJson", wailstransport.EnvelopeHeaders(envelope))
+	ctx := sharedprovider.NewWailsContext[any, any, RSP_DocJson](
+		"StaticService",
+		"DocJson",
+		wailstransport.EnvelopeHeaders(envelope),
+	)
 	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_DocJson]{Request: req}
 	execErr := svc.docJsonExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
@@ -72,8 +87,10 @@ func (svc *StaticService) DocJson(envelope *INVOKE_DocJson) (rsp *RSP_DocJson, e
 	return response, invokeErr
 }
 
-func (svc *StaticService) Dochaha(envelope *INVOKE_Dochaha) (rsp *RSP_Dochaha, err error) {
-	req, reqErr := wailstransport.EnvelopeToReq[any, any](envelope, wailstransport.ReqEnvelopeOptions{
+func (svc *StaticService) Dochaha(
+	envelope *INVOKE_Dochaha,
+) (rsp *RSP_Dochaha, err error) {
+	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
 		BindQuery: false,
 		BindJSON:  false,
 		BindForm:  false,
@@ -82,7 +99,11 @@ func (svc *StaticService) Dochaha(envelope *INVOKE_Dochaha) (rsp *RSP_Dochaha, e
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[any, any, RSP_Dochaha]("StaticService", "Dochaha", wailstransport.EnvelopeHeaders(envelope))
+	ctx := sharedprovider.NewWailsContext[any, any, RSP_Dochaha](
+		"StaticService",
+		"Dochaha",
+		wailstransport.EnvelopeHeaders(envelope),
+	)
 	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_Dochaha]{Request: req}
 	execErr := svc.dochahaExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()

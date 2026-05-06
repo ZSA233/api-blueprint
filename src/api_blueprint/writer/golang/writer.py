@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import IO, Any, Generator, Literal, Mapping, Optional, Sequence, Set
 
+from api_blueprint.engine.connection import ConnectionKind
 from api_blueprint.engine.model import iter_error_models, iter_model_vars
 from api_blueprint.engine.utils import join_path_imports, pascal_to_snake_case
 from api_blueprint.engine.wrapper import ResponseWrapper
@@ -110,6 +111,28 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
                 for provider in router.providers
             }
         return self._list_providers_cache
+
+    def has_stream_routes(self) -> bool:
+        return any(
+            router.connection_kind == ConnectionKind.STREAM
+            for bp in self.bps
+            for group in bp.get_router_groups()
+            for router in group.routers
+        )
+
+    def has_channel_routes(self) -> bool:
+        return any(
+            router.connection_kind == ConnectionKind.CHANNEL
+            for bp in self.bps
+            for group in bp.get_router_groups()
+            for router in group.routers
+        )
+
+    def has_connection_routes(self) -> bool:
+        return self.has_stream_routes() or self.has_channel_routes()
+
+    def needs_websocket_runtime(self) -> bool:
+        return "ws_handle" in self.list_providers() or self.has_channel_routes()
 
     def formatters(self, update: Optional[dict[str, str]] = None) -> dict[str, str]:
         return self.packages.formatters(update)

@@ -50,6 +50,18 @@ type SocketCloseEnvelope struct {
 	Reason    string `json:"reason,omitempty"`
 }
 
+type ConnectionSession interface {
+	sharedprovider.Connection
+	Descriptor() SocketSessionDescriptor
+	Subprotocol() string
+	Push(payload any) error
+}
+
+type ConnectionHub interface {
+	Open(routeID string, eventBase string, scope sharedprovider.ConnectionScope) (ConnectionSession, error)
+	Get(sessionID string) (ConnectionSession, error)
+}
+
 type SocketHub struct {
 	dispatcher EventDispatcher
 	sequence   atomic.Uint64
@@ -120,14 +132,20 @@ func NewSocketHub(dispatcher EventDispatcher) *SocketHub {
 	}
 }
 
-func (hub *SocketHub) Open(routeID string) *SocketSession {
+func (hub *SocketHub) Open(routeID string, eventBase string, scope sharedprovider.ConnectionScope) (ConnectionSession, error) {
+	if scope != "" && scope != sharedprovider.ConnectionScopeSession {
+		return nil, fmt.Errorf("[wails] connection scope[%s] is not supported by the default SocketHub", scope)
+	}
 	sequence := hub.sequence.Add(1)
 	sessionID := fmt.Sprintf("%s-%d", routeID, sequence)
+	if eventBase == "" {
+		eventBase = fmt.Sprintf("api_blueprint.connection.%s", routeID)
+	}
 	session := &SocketSession{
 		id:           sessionID,
 		routeID:      routeID,
-		messageEvent: fmt.Sprintf("api_blueprint.ws.%s.message.%s", routeID, sessionID),
-		closeEvent:   fmt.Sprintf("api_blueprint.ws.%s.closed.%s", routeID, sessionID),
+		messageEvent: fmt.Sprintf("%s.message.%s", eventBase, sessionID),
+		closeEvent:   fmt.Sprintf("%s.closed.%s", eventBase, sessionID),
 		dispatcher:   hub.dispatcher,
 		incoming:     make(chan any, DefaultSocketIncomingBuffer),
 		closed:       make(chan struct{}),
@@ -141,10 +159,10 @@ func (hub *SocketHub) Open(routeID string) *SocketSession {
 	hub.mu.Lock()
 	hub.sessions[sessionID] = session
 	hub.mu.Unlock()
-	return session
+	return session, nil
 }
 
-func (hub *SocketHub) Get(sessionID string) (*SocketSession, error) {
+func (hub *SocketHub) Get(sessionID string) (ConnectionSession, error) {
 	hub.mu.RLock()
 	session, ok := hub.sessions[sessionID]
 	hub.mu.RUnlock()
@@ -252,7 +270,7 @@ func (session *SocketSession) Push(payload any) error {
 	}
 }
 
-func (session *SocketSession) Close(code int, reason string) error {
+func (session *SocketSession) CloseJSON(payload any) error {
 	var closeErr error
 	session.closeOnce.Do(func() {
 		close(session.closed)
@@ -263,12 +281,24 @@ func (session *SocketSession) Close(code int, reason string) error {
 		if session.dispatcher != nil {
 			closeErr = session.dispatcher.Emit(
 				session.closeEvent,
-				map[string]any{
-					"code":   code,
-					"reason": reason,
-				},
+				payload,
 			)
 		}
 	})
 	return closeErr
+}
+
+func (session *SocketSession) Abort(code int, reason string) error {
+	return session.CloseJSON(&sharedprovider.ConnectionClose{Code: code, Reason: reason})
+}
+
+func (session *SocketSession) Close(code int, reason string) error {
+	return session.Abort(code, reason)
+}
+
+func (session *SocketSession) Done() <-chan struct{} {
+	if session == nil {
+		return nil
+	}
+	return session.closed
 }

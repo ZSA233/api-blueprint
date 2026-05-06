@@ -9,7 +9,7 @@ import (
 
 type ApiService struct {
 	impl       RouterInterface
-	sessions   *wailstransport.SocketHub
+	sessions   wailstransport.ConnectionHub
 	wsExecutor *sharedprovider.RouteExecutor[any, any, RSP_Ws]
 }
 
@@ -28,6 +28,7 @@ func newGeneratedApiService(impl RouterInterface, dispatcher wailstransport.Even
 				Path:      "/api/ws",
 				Methods:   []string{"WS"},
 				Transport: sharedprovider.TransportWails,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req|auth|ws_handle|rsp=json@GeneralWrapper",
 			impl.Ws,
@@ -35,8 +36,17 @@ func newGeneratedApiService(impl RouterInterface, dispatcher wailstransport.Even
 	}
 }
 
-func (svc *ApiService) ConnectWs(envelope *WS_CONNECT_Ws) (rsp *wailstransport.SocketSessionDescriptor, err error) {
-	req, reqErr := wailstransport.EnvelopeToReq[any, any](envelope, wailstransport.ReqEnvelopeOptions{
+func (svc *ApiService) SetConnectionHub(hub wailstransport.ConnectionHub) {
+	if svc == nil || hub == nil {
+		return
+	}
+	svc.sessions = hub
+}
+
+func (svc *ApiService) ConnectWs(
+	envelope *WS_CONNECT_Ws,
+) (rsp *wailstransport.SocketSessionDescriptor, err error) {
+	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
 		BindQuery: false,
 		BindJSON:  false,
 		BindForm:  false,
@@ -45,19 +55,31 @@ func (svc *ApiService) ConnectWs(envelope *WS_CONNECT_Ws) (rsp *wailstransport.S
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[any, any, RSP_Ws]("ApiService", "ConnectWs", wailstransport.EnvelopeHeaders(envelope))
+	ctx := sharedprovider.NewWailsContext[any, any, RSP_Ws](
+		"ApiService",
+		"ConnectWs",
+		wailstransport.EnvelopeHeaders(envelope),
+	)
 	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_Ws]{Request: req}
 	if err := svc.wsExecutor.RunWSPreflight(ctx); err != nil {
 		return nil, err
 	}
 
-	session := svc.sessions.Open("api.api.ws.ws")
+	session, sessionErr := svc.sessions.Open(
+		"api.api.ws.ws",
+		"api_blueprint.ws.api.api.ws.ws",
+		sharedprovider.ConnectionScopeSession,
+	)
+	if sessionErr != nil {
+		err = sessionErr
+		return
+	}
 	ctx.WsHandle = &sharedprovider.WsHandleContext[any, any, RSP_Ws]{Conn: session}
 
 	go func() {
 		if runErr := svc.wsExecutor.RunWSHandler(ctx); runErr != nil {
 			ctx.WsHandle.Error = runErr
-			_ = session.Close(1011, runErr.Error())
+			_ = session.Abort(1011, runErr.Error())
 		}
 	}()
 
@@ -82,5 +104,5 @@ func (svc *ApiService) CloseWs(request *WS_CLOSE_Ws) error {
 	if code == 0 {
 		code = 1000
 	}
-	return session.Close(code, request.Reason)
+	return session.Abort(code, request.Reason)
 }

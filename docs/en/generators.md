@@ -58,6 +58,27 @@ The HTTP adapter imports the blueprint root router only when the root has direct
 
 Use `HTTP_RAW_RESPONSE()` when the handler fully owns the successful HTTP response. This affects only the HTTP adapter: success does not write an automatic response, and errors return 500 only when the Gin writer has not written yet. It is not a shared provider and does not change Wails overlays.
 
+### Long-Connection Contracts
+
+Go core generates transport-neutral handler interfaces for `STREAM` / `CHANNEL`. Business code does not directly depend on SSE, WebSocket, or Wails event names:
+
+```go
+Events(
+	ctx *CTX_Events,
+	stream providers.Stream[OPEN_Events, TaskStreamMessage, CLOSE_Events],
+) error
+Chat(
+	ctx *CTX_Chat,
+	channel providers.Channel[OPEN_Chat, AssistantServerMessage, AssistantClientMessage, CLOSE_Chat],
+) error
+```
+
+In the HTTP transport, `STREAM` generates an SSE adapter and `CHANNEL` generates a WebSocket adapter. In the Wails transport, both are backed by session-scoped runtime events by default. Multi-message variants generate one shared union schema with a `type` discriminator; do not split variants into multiple transport events. `.CLOSE(Model)` is part of the Go handler generic and the TypeScript `onClose` type; server business closures use `Close(&CLOSE_...{...})`, while exceptional or protocol failures use `Abort(code, reason)`.
+
+The default HTTP/Wails runtimes fully implement only `ConnectionScope.SESSION`. `APP` / `TOPIC` remain in the route contract and can be implemented later through a custom connection hub / manager for broadcast or topic routing; the generator does not bake in business fan-out policy.
+
+Generated connection handlers still default to `not implemented`, so example business logic is not written into every user project. The repository example hand-writes the minimal usage in the user-owned `examples/golang/views/routes/api/demo/impl.go`: `STREAM` shows `Open()`, server message construction, `Send()`, and typed `Close()`; `CHANNEL` also shows `Recv(ctx)` for client messages.
+
 ## TypeScript
 
 ```sh
@@ -74,6 +95,8 @@ The TypeScript generator emits:
 
 `base_url_expr` is emitted verbatim into generated code, which fits runtime configuration in Vite, Next.js, and similar projects. It is mutually exclusive with `base_url`.
 
+`STREAM` / `CHANNEL` generate `ApiStreamBridge<Recv, Close>` and `ApiChannelBridge<Recv, Send, Close>`. Single-message directions use the model type directly; multi-message directions generate discriminated union types such as `{ type: "progress"; data: TaskProgress }`. The HTTP transport stream bridge uses SSE, the channel bridge uses WebSocket with an internal envelope to distinguish normal messages from close lifecycle payloads, and the Wails transport uses generated runtime events without exposing event names to business clients.
+
 ## Kotlin Android
 
 ```sh
@@ -83,6 +106,8 @@ api-gen-kotlin -c api-blueprint.toml
 The Kotlin generator emits an OkHttp + kotlinx.serialization Android client.
 
 The current version mainly covers JSON REST routes. `include` / `exclude` can trim the generated API surface.
+
+The Kotlin target does not generate `STREAM` / `CHANNEL` / legacy `WS` long-connection clients; exclude those routes with `include` / `exclude`, or generate them through the Go / TypeScript / Wails targets.
 
 ## Java
 

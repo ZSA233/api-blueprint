@@ -38,6 +38,7 @@ BLUEPRINT_GOLANG_PRESERVED = (
     "go.mod",
     "go.sum",
     "main.go",
+    "views/routes/api/demo/impl.go",
 )
 BLUEPRINT_TYPESCRIPT_PRESERVED = (
     ".vscode/settings.json",
@@ -468,6 +469,116 @@ def validate_example_snapshots(repo_root: Path, workspace: BlueprintExampleWorks
             (examples_root / "kotlin", workspace.kotlin_dir, "blueprint/kotlin"),
         )
     )
+    _validate_blueprint_connection_examples(workspace)
+
+
+def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace) -> None:
+    files = {
+        "go_route_interface": workspace.golang_dir / "views" / "routes" / "api" / "demo" / "gen_interface.go",
+        "go_route_gen_impl": workspace.golang_dir / "views" / "routes" / "api" / "demo" / "gen_impl.go",
+        "go_route_impl": workspace.golang_dir / "views" / "routes" / "api" / "demo" / "impl.go",
+        "go_http_adapter": workspace.golang_dir / "views" / "transports" / "http" / "api" / "demo" / "gen_interface.go",
+        "go_wails_v3_service": workspace.golang_dir
+        / "views"
+        / "transports"
+        / "wailsv3"
+        / "api"
+        / "demo"
+        / "gen_service.go",
+        "ts_wails_v3_transport": workspace.typescript_dir
+        / "api"
+        / "transports"
+        / "wailsv3"
+        / "gen_transport.ts",
+        "ts_wails_v3_bindings": workspace.typescript_dir
+        / "api"
+        / "transports"
+        / "wailsv3"
+        / "gen_bindings.ts",
+        "ts_route_client": workspace.typescript_dir / "api" / "routes" / "api" / "demo" / "gen_client.ts",
+        "ts_route_models": workspace.typescript_dir / "api" / "routes" / "api" / "demo" / "gen_models.ts",
+    }
+    missing_files = [label for label, path in files.items() if not path.is_file()]
+    if missing_files:
+        raise ExampleValidationError("blueprint connection example missing generated files:\n" + "\n".join(missing_files))
+
+    checks = {
+        "go stream handler": (
+            files["go_route_interface"],
+            "SweepEvents(\n"
+            "\t\tctx *CTX_SweepEvents,\n"
+            "\t\tstream providers.Stream[OPEN_SweepEvents, SweepStreamMessage, CLOSE_SweepEvents],\n"
+            "\t) error",
+        ),
+        "go channel handler": (
+            files["go_route_interface"],
+            "AssistantSession(\n"
+            "\t\tctx *CTX_AssistantSession,\n"
+            "\t\tchannel providers.Channel[OPEN_AssistantSession, AssistantServerMessage, AssistantClientMessage, CLOSE_AssistantSession],\n"
+            "\t) error",
+        ),
+        "go stream manual example": (
+            files["go_route_impl"],
+            "serverMessage, err := NewSweepStreamMessageState(&serverData)",
+        ),
+        "go channel manual example": (files["go_route_impl"], "clientMessage, err := channel.Recv(ctx)"),
+        "http stream adapter": (files["go_http_adapter"], "httptransport.STREAM("),
+        "http channel adapter": (files["go_http_adapter"], "httptransport.CHANNEL("),
+        "wails stream event base": (
+            files["go_wails_v3_service"],
+            '"api.demo.stream.sweepevents",\n\t\t"api_blueprint.stream.api.demo.stream.sweepevents",',
+        ),
+        "wails channel event base": (
+            files["go_wails_v3_service"],
+            '"api.demo.channel.assistantsession",\n\t\t"api_blueprint.channel.api.demo.channel.assistantsession",',
+        ),
+        "typescript stream client": (files["ts_route_client"], "subscribeSweepEvents("),
+        "typescript channel client": (files["ts_route_client"], "openAssistantSession("),
+        "typescript stream union": (
+            files["ts_route_models"],
+            "export type SweepStreamMessage =\n"
+            '  | { type: "state"; data: SweepState }\n'
+            '  | { type: "progress"; data: SweepProgress }\n'
+            '  | { type: "log"; data: SweepLog };',
+        ),
+        "typescript channel union": (
+            files["ts_route_models"],
+            "export type AssistantClientMessage =\n"
+            '  | { type: "input"; data: AssistantInput }\n'
+            '  | { type: "cancel"; data: AssistantCancel };',
+        ),
+        "wails v3 bindings import": (
+            files["ts_wails_v3_transport"],
+            'import { WAILS_V3_BINDINGS } from "./gen_bindings";',
+        ),
+        "wails v3 bindings manifest": (
+            files["ts_wails_v3_bindings"],
+            '"demo.DemoService.OpenAssistantSession": "demo/views/transports/wailsv3/api/demo.DemoService.OpenAssistantSession",',
+        ),
+    }
+    validation_errors = []
+    for label, (path, snippet) in checks.items():
+        if snippet not in path.read_text(encoding="utf-8"):
+            validation_errors.append(label)
+    forbidden_checks = {
+        "http stream explicit type args": (files["go_http_adapter"], "httptransport.STREAM["),
+        "http channel explicit type args": (files["go_http_adapter"], "httptransport.CHANNEL["),
+        "wails envelope explicit type args": (files["go_wails_v3_service"], "wailstransport.EnvelopeToReq["),
+        "wails response wrapper explicit type args": (files["go_wails_v3_service"], "WrapRSP_JSON_GeneralWrapper["),
+        "inline wails v3 bindings manifest": (files["ts_wails_v3_transport"], "const WAILS_V3_BINDINGS"),
+        "generated stream scaffold": (
+            files["go_route_gen_impl"],
+            "serverMessage, err := NewSweepStreamMessageState(&serverData)",
+        ),
+        "generated channel scaffold": (files["go_route_gen_impl"], "clientMessage, err := channel.Recv(ctx)"),
+    }
+    for label, (path, snippet) in forbidden_checks.items():
+        if snippet in path.read_text(encoding="utf-8"):
+            validation_errors.append(label)
+    if validation_errors:
+        raise ExampleValidationError(
+            "blueprint connection example validation failed:\n" + "\n".join(validation_errors)
+        )
 
 
 def validate_grpc_snapshots(repo_root: Path, workspace: GrpcExampleWorkspace) -> None:
@@ -508,6 +619,7 @@ def _raise_on_snapshot_drift(pairs: Iterable[tuple[Path, Path, str]]) -> None:
 
 
 def compile_generated_examples(workspace: BlueprintExampleWorkspace) -> None:
+    _validate_blueprint_connection_examples(workspace)
     subprocess.run(["tsc", "-p", str(workspace.typescript_dir / "tsconfig.json"), "--noEmit"], check=True)
     subprocess.run(["go", "test", "./..."], cwd=workspace.golang_dir, check=True)
     _validate_kotlin_sources(workspace.kotlin_dir)

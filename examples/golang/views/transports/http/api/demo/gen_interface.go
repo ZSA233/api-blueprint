@@ -28,6 +28,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Path:      "/api/demo/abc",
 				Methods:   []string{"GET"},
 				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req=Q|auth|handle|rsp=json@GeneralWrapper",
 			impl.Abc,
@@ -35,6 +36,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		eng,
 		false,
 	)
+
 	httptransport.POST(
 		"/api/demo/test_post",
 		sharedprovider.NewRouteExecutor(
@@ -48,6 +50,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Path:      "/api/demo/test_post",
 				Methods:   []string{"POST"},
 				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req=J|auth|handle|rsp=json@GeneralWrapper",
 			impl.TestPost,
@@ -55,6 +58,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		eng,
 		false,
 	)
+
 	httptransport.PUT(
 		"/api/demo/1put",
 		sharedprovider.NewRouteExecutor(
@@ -68,6 +72,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Path:      "/api/demo/1put",
 				Methods:   []string{"PUT"},
 				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req=QJ|auth|handle|rsp=json@GeneralWrapper",
 			impl.Z1put,
@@ -75,6 +80,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		eng,
 		false,
 	)
+
 	httptransport.DELETE(
 		"/api/demo/delete$",
 		sharedprovider.NewRouteExecutor(
@@ -88,6 +94,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Path:      "/api/demo/delete$",
 				Methods:   []string{"DELETE"},
 				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req=Q|auth|handle|rsp=xml@GeneralWrapper",
 			impl.Delete,
@@ -95,6 +102,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		eng,
 		false,
 	)
+
 	httptransport.WS(
 		"/api/demo/ws",
 		sharedprovider.NewRouteExecutor(
@@ -108,12 +116,58 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Path:      "/api/demo/ws",
 				Methods:   []string{"WS"},
 				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req=Q|auth|ws_handle|rsp=json@GeneralWrapper",
 			impl.Ws,
 		),
 		eng,
 	)
+
+	httptransport.STREAM(
+		"/api/demo/sweep-events",
+		sharedprovider.NewRouteExecutor[shared.OPEN_SweepEvents, any, shared.RSP_SweepEvents](
+			sharedprovider.RouteInfo{
+				Root:      "api",
+				Group:     "demo",
+				Namespace: "demo",
+				Service:   "DemoService",
+				Operation: "SweepEvents",
+				RouteID:   "api.demo.stream.sweepevents",
+				Path:      "/api/demo/sweep-events",
+				Methods:   []string{"STREAM"},
+				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope("session"),
+			},
+			"req=Q|auth",
+			nil,
+		),
+		impl.SweepEvents,
+		eng,
+	)
+
+	httptransport.CHANNEL(
+		"/api/demo/assistant-session",
+		sharedprovider.NewRouteExecutor[shared.OPEN_AssistantSession, any, shared.RSP_AssistantSession](
+			sharedprovider.RouteInfo{
+				Root:      "api",
+				Group:     "demo",
+				Namespace: "demo",
+				Service:   "DemoService",
+				Operation: "AssistantSession",
+				RouteID:   "api.demo.channel.assistantsession",
+				Path:      "/api/demo/assistant-session",
+				Methods:   []string{"CHANNEL"},
+				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope("session"),
+			},
+			"req=Q|auth",
+			nil,
+		),
+		impl.AssistantSession,
+		eng,
+	)
+
 	httptransport.POST(
 		"/api/demo/post_deprecated",
 		sharedprovider.NewRouteExecutor(
@@ -127,6 +181,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Path:      "/api/demo/post_deprecated",
 				Methods:   []string{"POST"},
 				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req=J|auth|handle|rsp=json@GeneralWrapper",
 			impl.PostDeprecated,
@@ -134,6 +189,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		eng,
 		false,
 	)
+
 	httptransport.POST(
 		"/api/demo/raw",
 		sharedprovider.NewRouteExecutor(
@@ -147,6 +203,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Path:      "/api/demo/raw",
 				Methods:   []string{"POST"},
 				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req|auth|handle|rsp=json@GeneralWrapper",
 			impl.Raw,
@@ -154,6 +211,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		eng,
 		true,
 	)
+
 	httptransport.POST(
 		"/api/demo/map_model",
 		sharedprovider.NewRouteExecutor(
@@ -167,6 +225,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Path:      "/api/demo/map_model",
 				Methods:   []string{"POST"},
 				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req|auth|handle|rsp=json@GeneralWrapper",
 			impl.MapModel,
@@ -174,6 +233,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		eng,
 		false,
 	)
+
 	return impl
 }
 

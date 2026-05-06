@@ -28,6 +28,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Path:      "/static/doc.json",
 				Methods:   []string{"GET"},
 				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req|handle|rsp=json@NoneWrapper",
 			impl.DocJson,
@@ -35,6 +36,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		eng,
 		false,
 	)
+
 	httptransport.GET(
 		"/static/dochaha",
 		sharedprovider.NewRouteExecutor(
@@ -48,6 +50,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Path:      "/static/dochaha",
 				Methods:   []string{"GET"},
 				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope(""),
 			},
 			"req|handle|rsp=json@NoneWrapper",
 			impl.Dochaha,
@@ -55,6 +58,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		eng,
 		false,
 	)
+
 	return impl
 }
 

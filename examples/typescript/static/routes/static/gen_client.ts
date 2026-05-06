@@ -4,7 +4,7 @@
 
 import type * as Models from "./models";
 import type * as Shared from "../../runtime/models";
-import { ApiClientConfig, ApiSocketBridge, BaseClient } from "../../runtime/client";
+import { ApiChannelBridge, ApiClientConfig, ApiSocketBridge, ApiStreamBridge, BaseClient } from "../../runtime/client";
 
 export class StaticClient extends BaseClient {
   constructor(config: ApiClientConfig = {}) {

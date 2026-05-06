@@ -4,7 +4,7 @@
 
 import type * as Models from "./models";
 import type * as Shared from "../../runtime/models";
-import { ApiClientConfig, ApiSocketBridge, BaseClient } from "../../runtime/client";
+import { ApiChannelBridge, ApiClientConfig, ApiSocketBridge, ApiStreamBridge, BaseClient } from "../../runtime/client";
 
 export class ApiClient extends BaseClient {
   constructor(config: ApiClientConfig = {}) {
@@ -25,6 +25,8 @@ export class ApiClient extends BaseClient {
   ): ApiSocketBridge<Shared.WsMessage, Shared.WsMessage> {
     return this.connectBridge<Shared.WsMessage, Shared.WsMessage>({
       routeId: "api.api.ws.ws",
+      connectionKind: "legacy_ws",
+      scope: "",
       path: "/api/ws",
       service: "ApiService",
       namespace: "api",
@@ -46,6 +48,8 @@ export class ApiClient extends BaseClient {
   ): WebSocket {
     return this.connectRaw({
       routeId: "api.api.ws.ws",
+      connectionKind: "legacy_ws",
+      scope: "",
       path: "/api/ws",
       service: "ApiService",
       namespace: "api",

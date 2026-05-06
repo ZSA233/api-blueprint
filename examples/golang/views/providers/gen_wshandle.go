@@ -20,13 +20,8 @@ type WsHandleProvider[Q, B, P any] struct {
 }
 
 type SocketConnection interface {
-	Transport() TransportKind
-	SessionID() string
+	Connection
 	Subprotocol() string
-	Underlying() any
-	ReadJSON(context.Context, any) error
-	WriteJSON(context.Context, any) error
-	Close(code int, reason string) error
 }
 
 type WsHandleContext[Q, B, P any] struct {
@@ -79,9 +74,9 @@ func (prov *WsHandleProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
 	ctx.WsHandle.Response = rsp
 	ctx.WsHandle.Error = err
 	if err != nil {
-		_ = ctx.WsHandle.Conn.Close(1011, err.Error())
+		_ = ctx.WsHandle.Conn.Abort(1011, err.Error())
 	} else {
-		_ = ctx.WsHandle.Conn.Close(1000, "")
+		_ = ctx.WsHandle.Conn.Abort(1000, "")
 	}
 }
 

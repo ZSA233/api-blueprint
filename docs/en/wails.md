@@ -168,12 +168,35 @@ make wails-hello-compile-check
 
 `wails-hello-check` is strict and checks snapshot drift; `wails-hello-compile-check` only validates regenerated TypeScript, Go, and Wails v3 build output, which is useful during development.
 
-## Socket Bridge
+## Long-Connection Bridge
 
-Wails TypeScript does not expose raw WebSocket. It uses `ApiSocketBridge<ServerMessage, ClientMessage>` instead.
+Wails TypeScript does not expose raw WebSocket and does not require business code to hand-write runtime event names. In the default Wails transport, `STREAM` / `CHANNEL` map to session-scoped runtime events, and event names exist only inside the generated Go runtime and generated TypeScript transport. The generated service exposes a lightweight `ConnectionHub` replacement point; the default hub fully supports only `ConnectionScope.SESSION`, and `APP` / `TOPIC` broadcast or topic routing policy belongs in a custom hub.
+
+`STREAM` returns `ApiStreamBridge<ServerMessage, CloseMessage>`:
 
 ```ts
-const bridge = demoClient.connectWs({ query, headers });
+const stream = demoClient.subscribeEvents({ open, headers });
+await stream.ready;
+
+const offMessage = stream.onMessage((message) => {
+    console.log(message);
+});
+
+const offClose = stream.onClose((info) => {
+    console.log(info.reason);
+});
+
+await stream.close(1000, "done");
+offMessage();
+offClose();
+```
+
+`onClose` receives the typed close payload generated from `.CLOSE(Model)`. Client-side `close(code, reason)` is only an active close request; model business cancellation through a `CHANNEL` `CLIENT_MESSAGE(cancel=...)`.
+
+`CHANNEL` returns `ApiChannelBridge<ServerMessage, ClientMessage, CloseMessage>`:
+
+```ts
+const bridge = demoClient.openSession({ open, headers });
 await bridge.ready;
 
 const offMessage = bridge.onMessage((message) => {
@@ -185,7 +208,7 @@ await bridge.close(1000, "done");
 offMessage();
 ```
 
-The HTTP shared client still keeps `connect<Route>Raw()` as the native WebSocket escape hatch.
+Legacy `WS().RECV().SEND()` still generates `ApiSocketBridge<ServerMessage, ClientMessage>` for compatibility. The HTTP shared client still keeps `connect<Route>Raw()` as the native WebSocket escape hatch, but new blueprints should prefer `STREAM` / `CHANNEL`.
 
 ## Harness Examples
 
