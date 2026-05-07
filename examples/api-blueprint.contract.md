@@ -1,0 +1,22 @@
+# api-blueprint Contract
+
+- `api.api.ws.ws` `legacy_ws` `/api/ws`
+- `api.demo.get.abc` `rpc` `/api/demo/abc`
+- `api.demo.post.testpost` `rpc` `/api/demo/test_post`
+- `api.demo.put.z1put` `rpc` `/api/demo/1put`
+- `api.demo.delete.delete` `rpc` `/api/demo/delete$`
+- `api.demo.ws.ws` `legacy_ws` `/api/demo/ws`
+- `api.demo.stream.sweepevents` `stream` `/api/demo/sweep-events`
+- `api.demo.channel.assistantsession` `channel` `/api/demo/assistant-session`
+- `api.demo.post.postdeprecated` `rpc` `/api/demo/post_deprecated`
+- `api.demo.post.raw` `rpc` `/api/demo/raw`
+- `api.demo.post.mapmodel` `rpc` `/api/demo/map_model`
+- `api.hello.get.abc` `rpc` `/api/hello/abc`
+- `api.hello.get.mapenum` `rpc` `/api/hello/map-enum`
+- `api.hello.get.listenum` `rpc` `/api/hello/list-enum`
+- `api.hello.get.string` `rpc` `/api/hello/string`
+- `api.hello.get.uint64` `rpc` `/api/hello/uint64`
+- `api.hello.get.stringemun` `rpc` `/api/hello/string-emun`
+- `api.hello.get.helloway` `rpc` `/api/hello/hello-way`
+- `static.static.get.docjson` `rpc` `/static/doc.json`
+- `static.static.get.dochaha` `rpc` `/static/dochaha`

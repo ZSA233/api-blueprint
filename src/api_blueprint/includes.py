@@ -2,10 +2,10 @@ from typing import (
     List, Dict, Optional, Any, Generic, TypeVar,
 )
 from api_blueprint.engine.model import (
-    String, Array, Bool, Map, Error, Model, Field,
+    String, Array, Bool, Byte, Map, Error, Model, Field,
     Int, Int8, Int16, Int32, Int64, Enum,
     Uint, Uint8, Uint16, Uint32, Uint64,
-    Float, Float32, Float64, 
+    Float, Float32, Float64, Null, Object,
     HeaderModel, Header, APIKeyHeader, NoneHeader,
     KV, ArrayKV,
 )

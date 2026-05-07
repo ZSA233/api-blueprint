@@ -64,6 +64,22 @@ kind = "grpc-proto"
 out_dir = "grpc/protos"
 package = "example.api"
 go_package_prefix = "example.com/project/grpc/go"
+
+[[targets]]
+id = "grpc.go"
+kind = "grpc-go"
+proto = "grpc.proto"
+out_dir = "grpc/go"
+module = "example.com/project/grpc/go"
+files = ["api/**/*.proto"]
+
+[[targets]]
+id = "grpc.python"
+kind = "grpc-python"
+proto = "grpc.proto"
+out_dir = "grpc/python"
+files = ["api/**/*.proto"]
+python_package_root = "pb"
 ```
 
 公共字段：
@@ -79,6 +95,17 @@ go_package_prefix = "example.com/project/grpc/go"
 - `typescript-client`：生成只依赖 `ApiTransport` 的 TypeScript client core；`base_url` / `base_url_expr` 由 transport facade 注入。
 - `kotlin-client`：首轮只支持 HTTP JSON RPC；`STREAM` / `CHANNEL`、form、binary、自定义 wrapper 会在 `api-gen check` 阶段失败。
 - `grpc-proto`：从 ContractGraph 输出 `.proto` 和 service 定义。
+- `grpc-go`：消费同配置内的 `grpc-proto` target，调用 `protoc` / `protoc-gen-go` / `protoc-gen-go-grpc` 生成 Go protobuf/gRPC stub。
+- `grpc-python`：消费同配置内的 `grpc-proto` target，调用 `grpcio-tools` 生成 Python protobuf/gRPC stub；`python_package_root` 会把生成物放入指定包根并重写生成 import。
+
+gRPC stub target 字段：
+
+- `proto`：必须引用一个 `grpc-proto` target。
+- `files`：相对 proto target `out_dir` 的 glob 列表，例如 `api/**/*.proto`。
+- `source_root`：可选；让 `files` 相对此目录匹配，并把它作为 `protoc` 工作目录。省略时使用 proto target `out_dir`。迁移旧 proto 树时可设为 `grpc/protos/services/...` 来裁剪输出路径。
+- `import_roots`：额外 proto include roots；proto target `out_dir` 会自动加入。
+- `module`：`grpc-go` 可选；设置后使用 Go import path 输出模式，并按 `option go_package` 分目录输出。
+- `python_package_root`：仅 `grpc-python` 使用，例如 `pb` 或 `generated.pb`。
 
 transport target：
 

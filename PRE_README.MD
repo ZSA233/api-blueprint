@@ -25,9 +25,9 @@ README 只回答：
 1. 用 Python DSL 定义 `Blueprint`、路由、请求模型、响应模型与错误结构。
 2. 在运行时构建 FastAPI/OpenAPI 文档服务。
 3. 从 Blueprint 构建唯一协议真源 `ContractGraph`，并输出 AI 友好的 JSON manifest、Markdown contract 摘要与 breaking-change diff。
-4. 基于同一份 `ContractGraph` 输出 Go server、TypeScript client、Kotlin Android HTTP client、Wails v2/v3 overlay 与 gRPC proto/service 定义。
+4. 基于同一份 `ContractGraph` 输出 Go server、TypeScript client、Kotlin Android HTTP client、Wails v2/v3 overlay、gRPC proto/service 定义，以及 protoc-backed Go/Python gRPC stub。
 
-当前对外公开统一 `api-gen` 主命令；Python server/client 和 Go client 仅保留 target schema 与 capability 预留位。
+当前对外公开统一 `api-gen` 主命令；Python server/client 和 Go client 仅保留 target schema 与 capability 预留位。gRPC 产物链路包含 `grpc-proto`、`grpc-go` 与 `grpc-python` targets，其中 Go/Python targets 只编译 protobuf/gRPC stub，不生成业务服务实现。
 
 ## 仓库事实
 
@@ -50,7 +50,7 @@ README 应链接到以下用户文档：
 - `docs/zh/blueprint-dsl.md` / `docs/en/blueprint-dsl.md`：Blueprint DSL 与模型写法。
 - `docs/zh/generators.md` / `docs/en/generators.md`：Go / TypeScript / Kotlin 输出说明。
 - `docs/zh/wails.md` / `docs/en/wails.md`：Wails target、overlay service、provider hook、socket bridge。
-- `docs/zh/grpc.md` / `docs/en/grpc.md`：`grpc-proto` target、proto/service 输出、工具链。
+- `docs/zh/grpc.md` / `docs/en/grpc.md`：`grpc-proto`、`grpc-go`、`grpc-python` targets、proto/service 输出、工具链。
 - `docs/zh/examples-validation.md` / `docs/en/examples-validation.md`：example refresh、validation 与 drift 语义。
 - `docs/release-process.md`：发布流程。
 
@@ -75,7 +75,7 @@ README 必须保持简洁。Wails 的 RouteExecutor、provider pipeline、Go/Typ
 
 - `src/api_blueprint/engine/`：DSL、模型、Blueprint、路由与 FastAPI/OpenAPI 语义。
 - `src/api_blueprint/contract/`：Blueprint -> ContractGraph 的协议 IR、manifest 与 diff。
-- `src/api_blueprint/writer/`：Go / TypeScript / Kotlin / Wails / gRPC proto 代码生成。
+- `src/api_blueprint/writer/`：Go / TypeScript / Kotlin / Wails / gRPC proto 与 protoc-backed stub 代码生成。
 - `src/api_blueprint/application/`：entrypoint 加载、项目装配、docs server 启动与 generator 调度。
 - `src/api_blueprint/hub/` 与 `src/api_blueprint/static/`：文档服务 UI 资源。
 - `examples/blueprints/`：示例蓝图真源。
@@ -83,7 +83,7 @@ README 必须保持简洁。Wails 的 RouteExecutor、provider pipeline、Go/Typ
 - `examples/golang/`、`examples/typescript/` 与 `examples/kotlin/`：Blueprint 生成产物快照；Go / TypeScript 按 `core + transports/<target>` 布局输出，Wails overlay 生成在对应 transport target 目录中。
 - `examples/wails-harness/v2/` 与 `examples/wails-harness/v3/`：repo-owned 的最小 Wails harness 示例工程；app shell 手写维护，但直接消费共享树里生成的 Wails services 与 TypeScript API 产物。
 - `examples/wails-hello/`：独立 Wails v3 hello world 示例；包含自己的 Blueprint、生成快照和手写 Wails app shell，用于演示不开 HTTP 服务的 Wails-only GUI 闭环。
-- `examples/grpc/protos/`：gRPC proto 输出快照。
+- `examples/grpc/protos/`、`examples/grpc/go/` 与 `examples/grpc/python/`：gRPC proto 与 Go/Python protobuf/gRPC stub 输出快照。
 - `tests/`：单元测试、CLI 测试、codegen 测试、example 集成验证、打包与 release contract 测试。
 
 ## README 必须覆盖的事实
@@ -91,7 +91,7 @@ README 必须保持简洁。Wails 的 RouteExecutor、provider pipeline、Go/Typ
 - 项目主链路是 `Blueprint -> ContractGraph -> targets`；ContractGraph 是 Go / TypeScript / Kotlin / Wails / gRPC proto 的唯一协议真源。
 - Blueprint DSL 把长连接消息流作为与 RPC 并列的一等契约：`STREAM` 表示服务端持续推送，`CHANNEL` 表示双向消息通道；legacy `WS/RECV/SEND` 不属于 vNext 公共主线。
 - `STREAM` / `CHANNEL` 使用 `OPEN`、`SERVER_MESSAGE`、`CLIENT_MESSAGE`、typed `CLOSE` 与 `ConnectionScope` 描述 transport-neutral 连接语义；多消息类型必须通过单个判别联合消息契约声明，避免多个裸 event 名。
-- 当前公开 target kind：`contract`、`go-server`、`typescript-client`、`kotlin-client`、`http-transport`、`wails-transport`、`grpc-proto`；`python-server`、`python-client`、`go-client` 仅预留。
+- 当前公开 target kind：`contract`、`go-server`、`typescript-client`、`kotlin-client`、`http-transport`、`wails-transport`、`grpc-proto`、`grpc-go`、`grpc-python`；`python-server`、`python-client`、`go-client` 仅预留。
 - Contract manifest 记录 routes、schemas、connections、稳定 hashes、已解析 target plan 和 capability registry，方便 AI agent 在不读取完整生成树的情况下理解协议边界。
 - Wails v3 标记为 experimental，Wails v2 标记为 preview。
 - `api-gen generate` 从统一 `[[targets]]` 规划依赖；Wails target 只消费已规划的 server/client target 产物并生成 overlay/runtime/binding manifest。
@@ -105,9 +105,10 @@ README 必须保持简洁。Wails 的 RouteExecutor、provider pipeline、Go/Typ
 - Wails `STREAM` / `CHANNEL` 默认通过 session-scoped runtime events 实现，event name 只存在于 generated transport/runtime 内部；HTTP `STREAM` 映射到 SSE，HTTP `CHANNEL` 映射到带内部 envelope 的 WebSocket；默认 runtime 只完整支持 `ConnectionScope.SESSION`，`APP` / `TOPIC` 通过自定义 connection hub / manager 扩展。
 - Go 默认生成的连接 handler 仍保持 `not implemented`；仓库示例在用户拥有的 `examples/golang/views/routes/api/demo/impl.go` 中手写了 `STREAM` / `CHANNEL` 最小用法，展示 `Open()`、`Send()`、`Recv()`、typed `Close()` 与异常 `Abort()`。
 - Wails hello 示例有独立短命令：`make wails-hello-dev` 手动启动，`make wails-hello-check` 严格验证，`make wails-hello-compile-check` 快速编译验证。
-- gRPC proto 由 `grpc-proto` target 从 ContractGraph 输出；旧 raw proto targets/jobs 不属于 vNext 公共主线。
+- gRPC proto 由 `grpc-proto` target 从 ContractGraph 输出；`grpc-go` / `grpc-python` targets 只能消费同配置内的 `grpc-proto` 输出并调用 protoc 工具链生成语言 stub。仓库提交 `examples/grpc/protos/`、`examples/grpc/go/` 与 `examples/grpc/python/` 快照，用来展示实际 proto 与 Go/Python stub 产物；旧 raw proto targets/jobs 不属于 vNext 公共主线。
+- gRPC stub target 的 `source_root` 可裁剪 `files` 的匹配根和 source-relative 输出路径；字段级 `proto_number`、`proto_name`、`proto_optional`、`proto_oneof`、`proto_type` / `proto_import` 支持迁移已有 proto 的关键差异点。
 - TypeScript `base_url_expr` 与 Kotlin `base_url_expr` 会原样输出到生成代码，并与 `base_url` 互斥。
-- `examples/blueprints/` 是 Blueprint 真源；各 language examples 与 `examples/grpc/protos/` 是生成快照。
+- `examples/blueprints/` 是 Blueprint 真源；各 language examples 与 `examples/grpc/{protos,go,python}/` 是生成快照。
 - snapshot drift 是“生成结果发生变化”的信号，不自动等于 bug。
 - `gen_*` 文件由生成器拥有；`impl_*` 和非 `gen_*` passthrough 文件是用户扩展点并在重生成时保留。
 - `main.py` 与 `debug.py` 仅作为本地辅助脚本保留，不属于公共发布面。

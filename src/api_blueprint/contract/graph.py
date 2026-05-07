@@ -162,6 +162,7 @@ class ContractGraphBuilder:
             "request": request,
             "response": response,
             "connection": connection,
+            "proto": _proto_route_metadata(router),
         }
 
     def _connection_manifest(self, router: Router) -> JsonObject:
@@ -216,6 +217,7 @@ class ContractGraphBuilder:
             name = _model_name(model)
             if name not in self.schemas:
                 self.schemas[name] = {
+                    "name": name,
                     "kind": "alias",
                     "type": "alias",
                     "target": self._field_manifest(model.__field_type__),
@@ -226,6 +228,7 @@ class ContractGraphBuilder:
             name = _model_name(model)
             if name not in self.schemas:
                 self.schemas[name] = {
+                    "name": name,
                     "kind": "alias",
                     "type": "alias",
                     "target": self._field_manifest(model),
@@ -239,11 +242,15 @@ class ContractGraphBuilder:
             return name
 
         self.schemas[name] = {
+            "name": name,
             "kind": "model",
             "type": "object",
             "fields": {},
             "auto": bool(getattr(model_cls, "__auto__", False)),
         }
+        proto_model = _proto_model_metadata(model_cls)
+        if proto_model:
+            self.schemas[name]["proto"] = proto_model
         fields: dict[str, JsonObject] = {}
         pydantic_fields = _safe_pydantic_fields(model_cls)
         for field_name, field_value in iter_model_vars(model_cls):
@@ -266,6 +273,7 @@ class ContractGraphBuilder:
                     "description": description,
                 }
             )
+            manifest.update(_proto_field_metadata(extra))
             fields[field_name] = manifest
         self.schemas[name]["fields"] = fields
         return name
@@ -304,6 +312,7 @@ class ContractGraphBuilder:
                 "type": "enum",
                 "enum": getattr(enum_cls, "__name__", "Enum"),
                 "values": values,
+                "enum_values": _enum_value_manifest(enum_cls),
             }
 
         if isinstance(field_value, enum.EnumMeta):
@@ -311,6 +320,7 @@ class ContractGraphBuilder:
                 "type": "enum",
                 "enum": field_value.__name__,
                 "values": [member.value for member in field_value],
+                "enum_values": _enum_value_manifest(field_value),
             }
 
         if isinstance(field_value, Model) or (isinstance(field_value, type) and issubclass(field_value, Model)):
@@ -321,7 +331,10 @@ class ContractGraphBuilder:
 
         field_type = getattr(field_value, "__type__", None)
         if isinstance(field_type, str) and field_type:
-            return {"type": field_type}
+            return {
+                "type": field_type,
+                **_proto_field_metadata(getattr(field_value, "__extra__", {}) or {}),
+            }
 
         if isinstance(field_value, type):
             return {"type": field_value.__name__.lower()}
@@ -391,6 +404,52 @@ def _safe_pydantic_fields(model_cls: type[Model]) -> Mapping[str, Any]:
         return model_to_pydantic(model_cls).model_fields
     except Exception:
         return {}
+
+
+def _proto_route_metadata(router: Router) -> JsonObject:
+    metadata: JsonObject = {}
+    group_extra = dict(getattr(router.group, "extra", {}) or {})
+    route_extra = dict(getattr(router, "extra", {}) or {})
+    for source in (group_extra, route_extra):
+        for key, value in source.items():
+            if not key.startswith("proto_") or value is None or value == "":
+                continue
+            metadata[key.removeprefix("proto_")] = value
+    return metadata
+
+
+def _proto_model_metadata(model_cls: type[Model]) -> JsonObject:
+    metadata: JsonObject = {}
+    for attr, manifest_key in (
+        ("__proto_file__", "file"),
+        ("__proto_package__", "package"),
+        ("__proto_go_package__", "go_package"),
+    ):
+        value = getattr(model_cls, attr, None)
+        if isinstance(value, str) and value:
+            metadata[manifest_key] = value
+    return metadata
+
+
+def _proto_field_metadata(extra: Mapping[str, Any]) -> JsonObject:
+    metadata: JsonObject = {}
+    for key, value in extra.items():
+        if not key.startswith("proto_") or value is None or value == "":
+            continue
+        metadata[key.removeprefix("proto_")] = value
+    return {"proto": metadata} if metadata else {}
+
+
+def _enum_value_manifest(enum_cls: object) -> list[JsonObject]:
+    if not isinstance(enum_cls, enum.EnumMeta):
+        return []
+    return [
+        {
+            "name": member.name,
+            "value": member.value,
+        }
+        for member in enum_cls
+    ]
 
 
 def _stable_hash(value: object) -> str:

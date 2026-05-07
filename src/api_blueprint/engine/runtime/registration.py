@@ -85,6 +85,9 @@ async def proxy_upstream_request(router: "Router", request: Request, **kwargs: A
 def register_router(router: "Router", app: FastAPI) -> None:
     copy_extra = router.extra.copy()
     copy_extra.pop("http_raw_response", None)
+    for key in tuple(copy_extra):
+        if key.startswith("proto_"):
+            copy_extra.pop(key, None)
 
     async def handler(request: Request, **kwargs: Any):
         return await proxy_upstream_request(router, request, **kwargs)

@@ -163,3 +163,45 @@ frontend_mode = "external"
     vnext.generate(config_path, target_ids=("desktop.v3",))
 
     assert (tmp_path / "golang" / "views" / "transports" / "wailsv3" / "api" / "demo" / "gen_service.go").is_file()
+
+
+def test_vnext_generate_grpc_stub_target_generates_proto_dependency_first(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _write_package(tmp_path)
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[blueprint]
+entrypoints = ["blueprints.app:bp"]
+
+[[targets]]
+id = "grpc.proto"
+kind = "grpc-proto"
+out_dir = "grpc/protos"
+package = "example.api"
+
+[[targets]]
+id = "grpc.go"
+kind = "grpc-go"
+proto = "grpc.proto"
+out_dir = "grpc/go"
+files = ["api/**/*.proto"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    captured: dict[str, object] = {}
+
+    def fake_generate_go_stubs(proto_root: Path, target: object) -> None:
+        captured["proto_root"] = proto_root
+        captured["target"] = target
+        captured["proto_exists"] = (proto_root / "api" / "demo.proto").is_file()
+
+    monkeypatch.setattr("api_blueprint.writer.grpc.toolchain.generate_go_stubs", fake_generate_go_stubs)
+
+    vnext.generate(config_path, target_ids=("grpc.go",))
+
+    assert captured["proto_root"] == (tmp_path / "grpc" / "protos").resolve()
+    assert captured["proto_exists"] is True

@@ -7,7 +7,7 @@ Language: [中文](README.md) | English
 
 ## Overview
 
-`api-blueprint` defines API contracts with a Python DSL, builds a unified `ContractGraph`, and generates a documentation service, Go server, TypeScript client, Kotlin Android client, Wails v2/v3 overlays, and gRPC proto/service definitions from the same protocol source of truth.
+`api-blueprint` defines API contracts with a Python DSL, builds a unified `ContractGraph`, and generates a documentation service, Go server, TypeScript client, Kotlin Android client, Wails v2/v3 overlays, gRPC proto/service definitions, and protoc-backed Go/Python gRPC stubs from the same protocol source of truth.
 
 The DSL supports transport-neutral `STREAM` / `CHANNEL` long-connection message contracts alongside RPC; HTTP can map them to SSE / WebSocket, Wails maps them to session-scoped runtime events by default, and `CLOSE(Model)` generates a typed close lifecycle payload.
 
@@ -24,6 +24,7 @@ This README keeps only the onboarding path. See [Learn More](#learn-more) for fu
 | Wails v2 | Preview | `api-gen` | `examples/{golang,typescript,wails-harness/v2}` |
 | Kotlin Android client | Preview | `api-gen` | `examples/kotlin` |
 | gRPC proto | Available | `api-gen` | `examples/grpc/protos` |
+| gRPC Go/Python stubs | Available | `api-gen` | `examples/grpc/{go,python}` |
 
 
 ## Installation
@@ -127,6 +128,22 @@ kind = "grpc-proto"
 out_dir = "grpc/protos"
 package = "example.api"
 go_package_prefix = "example.com/project/grpc/go"
+
+[[targets]]
+id = "grpc.go"
+kind = "grpc-go"
+proto = "grpc.proto"
+out_dir = "grpc/go"
+module = "example.com/project/grpc/go"
+files = ["api/**/*.proto"]
+
+[[targets]]
+id = "grpc.python"
+kind = "grpc-python"
+proto = "grpc.proto"
+out_dir = "grpc/python"
+files = ["api/**/*.proto"]
+python_package_root = "pb"
 ```
 
 ## Common Commands
@@ -146,7 +163,7 @@ api-gen diff old.contract.json new.contract.json
 
 - `examples/blueprints/` is the example Blueprint source of truth.
 - `examples/blueprints/api_demo.py` includes `STREAM` / `CHANNEL` long-connection examples.
-- `examples/golang/`, `examples/typescript/`, `examples/kotlin/`, and `examples/grpc/protos/` are generated snapshots.
+- `examples/golang/`, `examples/typescript/`, `examples/kotlin/`, `examples/grpc/protos/`, `examples/grpc/go/`, and `examples/grpc/python/` are generated snapshots.
 - `examples/wails-hello/` is a standalone Wails v3 hello world example that demonstrates a GUI loop without starting an HTTP server.
 - `gen_*` files are generator-owned and overwritten during regeneration.
 - `impl_*` and non-`gen_*` passthrough files are user-owned extension points and are preserved during regeneration.
@@ -159,7 +176,7 @@ api-gen diff old.contract.json new.contract.json
 - The Go HTTP adapter respects responses already written by Gin handlers, which fits small HTTP-only raw callbacks.
 - The contract manifest records routes, schemas, connections, stable hashes, the resolved target plan, and the capability registry so AI agents can understand protocol boundaries.
 - `[[targets]]` is the unified config entrypoint; transport targets use `kind = "http-transport"` / `kind = "wails-transport"` and explicitly declare `server` plus `clients`.
-- gRPC proto is emitted by the `grpc-proto` target from ContractGraph; existing `.proto` trees are no longer an independent source of truth.
+- gRPC proto is emitted by the `grpc-proto` target from ContractGraph; existing `.proto` trees are no longer an independent source of truth. `grpc-go` / `grpc-python` only consume that proto target and generate protobuf/gRPC stubs, not business service implementations, with `source_root` and field-level proto metadata available for old protocol migration.
 
 ## Learn More
 

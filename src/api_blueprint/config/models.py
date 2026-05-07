@@ -22,6 +22,8 @@ TargetKind = Literal[
     "http-transport",
     "wails-transport",
     "grpc-proto",
+    "grpc-go",
+    "grpc-python",
 ]
 GO_PACKAGE_NAME_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 
@@ -46,7 +48,12 @@ class TargetConfig(BaseModel):
     overlay_name: str | None = None
     server: str | None = None
     clients: list[str] = Field(default_factory=list)
+    proto: str | None = None
+    source_root: str | None = None
+    files: list[str] = Field(default_factory=list)
+    import_roots: list[str] = Field(default_factory=list)
     go_package_prefix: str | None = None
+    python_package_root: str | None = None
     include: list[str] = Field(default_factory=list)
     exclude: list[str] = Field(default_factory=list)
 
@@ -66,6 +73,13 @@ class TargetConfig(BaseModel):
             raise ValueError(f"target[{self.id}] kotlin-client requires package")
         if self.kind == "grpc-proto" and not self.package:
             raise ValueError(f"target[{self.id}] grpc-proto requires package")
+        if self.kind in {"grpc-go", "grpc-python"}:
+            if not self.proto:
+                raise ValueError(f"target[{self.id}] {self.kind} requires proto")
+            if not self.out_dir:
+                raise ValueError(f"target[{self.id}] {self.kind} requires out_dir")
+            if not self.files:
+                raise ValueError(f"target[{self.id}] {self.kind} requires files")
         validate_selection_rules(self.include, label=f"target[{self.id}]")
         validate_selection_rules(self.exclude, label=f"target[{self.id}]")
         return self

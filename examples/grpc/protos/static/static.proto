@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package example.api.static.static;
 
-option go_package = "example.com/project/grpc/go/static;static";
+option go_package = "example.com/project/grpc/go/static/static;static";
 
 service StaticService {
   rpc DocJson (DocJsonRequest) returns (DocJsonResponse);

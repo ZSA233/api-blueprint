@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package example.api.demo;
 
-option go_package = "example.com/project/grpc/go/api;api";
+option go_package = "example.com/project/grpc/go/api/demo;demo";
 
 service DemoService {
   rpc Abc (AbcRequest) returns (AbcResponse);
@@ -99,6 +99,11 @@ message SweepEventsRequest {
 }
 
 message SweepStreamMessage {
+  oneof message {
+    SweepState state = 1;
+    SweepProgress progress = 2;
+    SweepLog log = 3;
+  }
 }
 
 message SweepState {
@@ -116,6 +121,10 @@ message SweepLog {
 }
 
 message AssistantClientMessage {
+  oneof message {
+    AssistantInput input = 1;
+    AssistantCancel cancel = 2;
+  }
 }
 
 message AssistantInput {
@@ -127,6 +136,11 @@ message AssistantCancel {
 }
 
 message AssistantServerMessage {
+  oneof message {
+    AssistantDelta delta = 1;
+    AssistantDone done = 2;
+    SweepLog log = 3;
+  }
 }
 
 message AssistantDelta {
@@ -154,6 +168,10 @@ message RawResponse {
   map<string, RawResponseList2Value> list2 = 2;
 }
 
+message RawResponseList2Value {
+  repeated ApiDemoA value = 1;
+}
+
 message ApiDemoA {
   string bc = 1;
   int64 a = 2;
@@ -172,10 +190,6 @@ message MapModelResponse {
   map<string, ApiDemoMap> value = 1;
 }
 
-message RawResponseList2Value {
-  repeated ApiDemoA value = 1;
-}
-
 enum ColorEnum {
   COLORENUM_UNSPECIFIED = 0;
   COLORENUM_RED = 1;
@@ -185,7 +199,7 @@ enum ColorEnum {
 
 enum StatusEnum {
   STATUSENUM_UNSPECIFIED = 0;
-  STATUSENUM_VALUE_1 = 1;
-  STATUSENUM_VALUE_2 = 2;
-  STATUSENUM_VALUE_3 = 3;
+  STATUSENUM_PENDING = 1;
+  STATUSENUM_RUNNING = 2;
+  STATUSENUM_FINISHED = 3;
 }

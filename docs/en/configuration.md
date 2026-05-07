@@ -64,6 +64,22 @@ kind = "grpc-proto"
 out_dir = "grpc/protos"
 package = "example.api"
 go_package_prefix = "example.com/project/grpc/go"
+
+[[targets]]
+id = "grpc.go"
+kind = "grpc-go"
+proto = "grpc.proto"
+out_dir = "grpc/go"
+module = "example.com/project/grpc/go"
+files = ["api/**/*.proto"]
+
+[[targets]]
+id = "grpc.python"
+kind = "grpc-python"
+proto = "grpc.proto"
+out_dir = "grpc/python"
+files = ["api/**/*.proto"]
+python_package_root = "pb"
 ```
 
 Common fields:
@@ -79,6 +95,17 @@ Core targets:
 - `typescript-client`: emits TypeScript client core that depends only on `ApiTransport`; `base_url` / `base_url_expr` are injected by transport facades.
 - `kotlin-client`: initially supports only HTTP JSON RPC. `STREAM` / `CHANNEL`, form, binary, and custom wrappers fail during `api-gen check`.
 - `grpc-proto`: emits `.proto` files and service definitions from ContractGraph.
+- `grpc-go`: consumes a `grpc-proto` target in the same config and calls `protoc` / `protoc-gen-go` / `protoc-gen-go-grpc` to generate Go protobuf/gRPC stubs.
+- `grpc-python`: consumes a `grpc-proto` target in the same config and calls `grpcio-tools` to generate Python protobuf/gRPC stubs. `python_package_root` places generated files under a package root and rewrites generated imports.
+
+gRPC stub target fields:
+
+- `proto`: must reference a `grpc-proto` target.
+- `files`: glob list relative to the proto target `out_dir`, for example `api/**/*.proto`.
+- `source_root`: optional; makes `files` relative to this directory and uses it as the `protoc` working directory. When omitted, the proto target `out_dir` is used. During old proto-tree migration, set it to paths such as `grpc/protos/services/...` to trim generated output paths.
+- `import_roots`: extra proto include roots; the proto target `out_dir` is included automatically.
+- `module`: optional for `grpc-go`; when set, Go import-path output mode is used and generated files are split by `option go_package`.
+- `python_package_root`: used only by `grpc-python`, for example `pb` or `generated.pb`.
 
 Transport targets:
 

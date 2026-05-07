@@ -38,7 +38,12 @@ class ResolvedApiTargetConfig:
     overlay_name: str | None = None
     server: str | None = None
     clients: tuple[str, ...] = ()
+    proto: str | None = None
+    source_root: Path | None = None
+    files: tuple[str, ...] = ()
+    import_roots: tuple[Path, ...] = ()
     go_package_prefix: str | None = None
+    python_package_root: str | None = None
     include: tuple[str, ...] = ()
     exclude: tuple[str, ...] = ()
 
@@ -142,7 +147,17 @@ def resolve_api_targets(config_path: Path, raw: Config) -> tuple[ResolvedApiTarg
                 }:
                     raise ValueError(f"target[{target.id}] http-transport clients must reference client targets")
 
+        if target.kind in {"grpc-go", "grpc-python"}:
+            if target.proto is None:
+                raise ValueError(f"target[{target.id}] {target.kind} requires proto")
+            proto = target_map.get(target.proto)
+            if proto is None:
+                raise ValueError(f"target[{target.id}] references unknown proto target: {target.proto}")
+            if proto.kind != "grpc-proto":
+                raise ValueError(f"target[{target.id}] {target.kind} proto must reference a grpc-proto target")
+
         out_dir = resolve_output_path(config_path, target.out_dir)
+        source_root = resolve_output_path(config_path, target.source_root)
         overlay_name = target.overlay_name
         if target.kind == "wails-transport":
             overlay_name = overlay_name or default_wails_overlay_name(target.version or "v3")
@@ -162,7 +177,12 @@ def resolve_api_targets(config_path: Path, raw: Config) -> tuple[ResolvedApiTarg
                 overlay_name=overlay_name,
                 server=target.server,
                 clients=tuple(target.clients),
+                proto=target.proto,
+                source_root=source_root,
+                files=tuple(target.files),
+                import_roots=resolve_unique_path_list(config_path, target.import_roots),
                 go_package_prefix=target.go_package_prefix,
+                python_package_root=target.python_package_root,
                 include=normalize_selection_rules(target.include),
                 exclude=normalize_selection_rules(target.exclude),
             )

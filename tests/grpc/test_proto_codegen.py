@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import enum
+import warnings
 
 from api_blueprint.contract import build_contract_graph
 from api_blueprint.engine import Blueprint
-from api_blueprint.engine.model import Array, Enum, Int, Map, String, Model
+import pytest
+
+from api_blueprint.engine.model import Array, Bool, Enum, Int, Map, Object, String, Uint32, Model
 from api_blueprint.writer.grpc.proto_writer import render_proto_files
 
 
@@ -31,6 +34,12 @@ class Color(enum.StrEnum):
     BLUE = "blue"
 
 
+class TaskStatus(enum.IntEnum):
+    TASK_STATUS_UNSPECIFIED = 0
+    TASK_STATUS_PENDING = 1
+    TASK_STATUS_RUNNING = 2
+
+
 class NestedPayload(Model):
     count = Int(description="count")
 
@@ -53,6 +62,56 @@ class RefPayload(Model):
     nested = ANON_Foo_bar(description="nested")
 
 
+class SharedOptions(Model):
+    __proto_file__ = "shared/browseragent/browser/v1/browser.proto"
+    __proto_package__ = "browseragent.browser.v1"
+    __proto_go_package__ = "appkit/browseragent/pb/browser/v1;browserpb"
+
+    user = String(description="user", proto_number=1)
+
+
+class SharedTaskSummary(Model):
+    __proto_file__ = "shared/browseragent/task/v1/task.proto"
+    __proto_package__ = "browseragent.task.v1"
+    __proto_go_package__ = "appkit/browseragent/pb/task/v1;taskpb"
+
+    task_id = String(description="task id", proto_number=1)
+    status = Enum[TaskStatus](description="status", proto_number=2)
+
+
+class ExternalPayload(Model):
+    occurred_at = Object(
+        description="occurred at",
+        proto_type="google.protobuf.Timestamp",
+        proto_import="google/protobuf/timestamp.proto",
+        proto_number=6,
+    )
+    attempt = Uint32(description="attempt", proto_number=7)
+
+
+class ProtoNamePayload(Model):
+    top_level_site = String(description="top level site", proto_name="topLevelSite", proto_number=1)
+    same_party = Bool(description="same party", proto_optional=True, proto_number=2)
+
+
+class HelloMessage(Model):
+    worker_id = String(description="worker id")
+
+
+class TaskCallbackMessage(Model):
+    task_id = String(description="task id")
+
+
+class CallbackMessage(Model):
+    hello = HelloMessage(description="hello", proto_oneof="msg", proto_number=1)
+    task = TaskCallbackMessage(description="task", proto_oneof="msg", proto_number=2)
+
+
+class DuplicateFieldNumbers(Model):
+    first = String(description="first", proto_number=1)
+    second = String(description="second", proto_number=1)
+
+
 def test_grpc_proto_writer_renders_unary_stream_and_bidi_service():
     bp = Blueprint(root="/api")
     with bp.group("/demo") as views:
@@ -71,7 +130,7 @@ def test_grpc_proto_writer_renders_unary_stream_and_bidi_service():
     text = files["api/demo.proto"]
     assert 'syntax = "proto3";' in text
     assert "package example.api.demo;" in text
-    assert 'option go_package = "example.com/project/grpc/go/api;api";' in text
+    assert 'option go_package = "example.com/project/grpc/go/api/demo;demo";' in text
     assert "service DemoService {" in text
     assert "rpc Ping (PingRequest) returns (PingResponse);" in text
     assert "rpc Events (EventsRequest) returns (stream ServerMessage);" in text
@@ -165,3 +224,131 @@ def test_grpc_proto_writer_derives_service_packages_to_avoid_cross_file_name_col
 
     assert "package example.api.demo;" in files["api/demo.proto"]
     assert "package example.api.hello;" in files["api/hello.proto"]
+    assert 'option go_package = "example.com/project/grpc/go/api/demo;demo";' in files["api/demo.proto"]
+    assert 'option go_package = "example.com/project/grpc/go/api/hello;hello";' in files["api/hello.proto"]
+
+
+def test_grpc_proto_writer_renders_metadata_field_numbers_oneof_and_well_known_imports():
+    bp = Blueprint(root="/api")
+    with bp.group("/callback", proto_service="Callback") as views:
+        views.POST("/event", proto_rpc="SendEvent").REQ(ExternalPayload).RSP(CallbackMessage)
+
+    graph = build_contract_graph([bp])
+    files = render_proto_files(
+        graph,
+        package="example.api",
+        go_package_prefix="example.com/project/grpc/go",
+    )
+
+    text = files["api/callback.proto"]
+    assert 'import "google/protobuf/timestamp.proto";' in text
+    assert "service Callback {" in text
+    assert "rpc SendEvent (SendEventRequest) returns (SendEventResponse);" in text
+
+    request = _block(text, "message SendEventRequest {")
+    assert "  google.protobuf.Timestamp occurred_at = 6;" in request
+    assert "  uint32 attempt = 7;" in request
+
+    response = _block(text, "message SendEventResponse {")
+    assert "  oneof msg {" in response
+    assert "    HelloMessage hello = 1;" in response
+    assert "    TaskCallbackMessage task = 2;" in response
+
+
+def test_grpc_proto_writer_imports_cross_file_message_dependencies():
+    class LoginRequest(Model):
+        options = SharedOptions(description="options", proto_number=1)
+
+    bp = Blueprint(root="/api")
+    with bp.group("/steam") as views:
+        views.POST("/login").REQ(LoginRequest).RSP(message=String(description="message"))
+
+    graph = build_contract_graph([bp])
+    files = render_proto_files(
+        graph,
+        package="example.api",
+        go_package_prefix="example.com/project/grpc/go",
+    )
+
+    text = files["api/steam.proto"]
+    assert 'import "shared/browseragent/browser/v1/browser.proto";' in text
+    request = _block(text, "message LoginRequest {")
+    assert "  browseragent.browser.v1.SharedOptions options = 1;" in request
+    assert "shared/browseragent/browser/v1/browser.proto" in files
+    assert "package browseragent.browser.v1;" in files["shared/browseragent/browser/v1/browser.proto"]
+    assert 'option go_package = "appkit/browseragent/pb/browser/v1;browserpb";' in files[
+        "shared/browseragent/browser/v1/browser.proto"
+    ]
+
+
+def test_grpc_proto_writer_uses_cross_file_schema_type_for_rpc_response():
+    class LoginRequest(Model):
+        options = SharedOptions(description="options", proto_number=1)
+
+    bp = Blueprint(root="/api")
+    with bp.group("/steam", proto_service="SteamBrowser") as views:
+        views.POST("/login-async", proto_rpc="LoginAsync").REQ(LoginRequest).RSP(SharedTaskSummary)
+
+    graph = build_contract_graph([bp])
+    files = render_proto_files(
+        graph,
+        package="example.api",
+        go_package_prefix="example.com/project/grpc/go",
+    )
+
+    text = files["api/steam.proto"]
+    assert 'import "shared/browseragent/task/v1/task.proto";' in text
+    assert "rpc LoginAsync (LoginAsyncRequest) returns (browseragent.task.v1.SharedTaskSummary);" in text
+    assert "message LoginAsyncResponse {" not in text
+    task_proto = files["shared/browseragent/task/v1/task.proto"]
+    assert "enum TaskStatus {" in task_proto
+    assert "  TASK_STATUS_UNSPECIFIED = 0;" in task_proto
+    assert "  TASK_STATUS_PENDING = 1;" in task_proto
+    assert "  TASK_STATUS_RUNNING = 2;" in task_proto
+
+
+def test_grpc_proto_writer_renders_proto_name_and_optional_field_metadata():
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.POST("/proto-name").REQ(ProtoNamePayload).RSP(message=String(description="message"))
+
+    graph = build_contract_graph([bp])
+    files = render_proto_files(
+        graph,
+        package="example.api",
+        go_package_prefix="example.com/project/grpc/go",
+    )
+
+    request = _block(files["api/demo.proto"], "message ProtoNameRequest {")
+    assert "  string topLevelSite = 1;" in request
+    assert "  optional bool same_party = 2;" in request
+
+
+def test_grpc_proto_writer_rejects_duplicate_explicit_field_numbers():
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.POST("/duplicate").REQ(DuplicateFieldNumbers).RSP(message=String(description="message"))
+
+    graph = build_contract_graph([bp])
+
+    with pytest.raises(ValueError, match="duplicate proto field number"):
+        render_proto_files(
+            graph,
+            package="example.api",
+            go_package_prefix="example.com/project/grpc/go",
+        )
+
+
+def test_proto_metadata_does_not_leak_as_pydantic_field_kwargs():
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        bp = Blueprint(root="/api")
+        with bp.group("/callback") as views:
+            views.POST("/event").REQ(ExternalPayload).RSP(CallbackMessage)
+
+    leaked = [
+        warning
+        for warning in caught
+        if "Extra keys" in str(warning.message) and "proto_" in str(warning.message)
+    ]
+    assert leaked == []

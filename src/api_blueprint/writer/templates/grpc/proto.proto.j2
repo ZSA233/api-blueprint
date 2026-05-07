@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package {{ file.package }};
+
+option go_package = "{{ file.go_package }}";
+{% for import_path in file.import_paths %}
+import "{{ import_path }}";
+{% endfor %}
+{% if file.import_paths %}
+{% endif %}
+{% for service in file.service_list %}
+service {{ service.name }} {
+{% for rpc in service.rpcs %}  {{ rpc.declaration | safe }}
+{% endfor %}}
+
+{% endfor %}
+{% for message in file.message_list %}
+message {{ message.name }} {
+{% for field in message.fields %}  {{ field.declaration | safe }}
+{% endfor %}{% for oneof in message.oneofs %}  oneof {{ oneof.name }} {
+{% for field in oneof.fields %}    {{ field.declaration | safe }}
+{% endfor %}  }
+{% endfor %}}
+
+{% endfor %}
+{% for enum in file.enum_list %}
+enum {{ enum.name }} {
+{% for declaration in enum.declarations %}  {{ declaration }}
+{% endfor %}}
+
+{% endfor %}

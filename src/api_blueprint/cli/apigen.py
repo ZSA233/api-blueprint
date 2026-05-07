@@ -35,6 +35,18 @@ def explain_target(config: str = "./api-blueprint.toml", target_id: str = "") ->
         click.echo(f"package: {target.package}")
     if target.module is not None:
         click.echo(f"module: {target.module}")
+    if target.proto is not None:
+        click.echo(f"proto: {target.proto}")
+    if target.source_root is not None:
+        click.echo(f"source_root: {target.source_root}")
+    if target.files:
+        click.echo(f"files: {', '.join(target.files)}")
+    if target.import_roots:
+        click.echo(f"import_roots: {', '.join(path.as_posix() for path in target.import_roots)}")
+    if target.go_package_prefix is not None:
+        click.echo(f"go_package_prefix: {target.go_package_prefix}")
+    if target.python_package_root is not None:
+        click.echo(f"python_package_root: {target.python_package_root}")
 
 
 @api_gen.command("manifest")

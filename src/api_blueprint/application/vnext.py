@@ -66,6 +66,16 @@ TARGET_CAPABILITY_REGISTRY: dict[str, dict[str, object]] = {
         "routes": ["rpc", "stream", "channel"],
         "outputs": ["proto"],
     },
+    "grpc-go": {
+        "implemented": True,
+        "inputs": ["proto"],
+        "outputs": ["go", "grpc-go"],
+    },
+    "grpc-python": {
+        "implemented": True,
+        "inputs": ["proto"],
+        "outputs": ["python", "grpc-python"],
+    },
 }
 
 
@@ -113,6 +123,7 @@ def check(config_path: str | Path | None) -> None:
 def generate(config_path: str | Path | None, target_ids: Sequence[str] = ()) -> None:
     from api_blueprint.writer import golang, kotlin, typescript
     from api_blueprint.writer.grpc.proto_writer import render_proto_files
+    from api_blueprint.writer.grpc import toolchain as grpc_toolchain
 
     project = load_project(config_path, command="api-gen generate")
     if not project.entrypoints:
@@ -183,6 +194,16 @@ def generate(config_path: str | Path | None, target_ids: Sequence[str] = ()) -> 
                 file_path = output / relative
                 file_path.parent.mkdir(parents=True, exist_ok=True)
                 file_path.write_text(text, encoding="utf-8")
+        elif target.kind in {"grpc-go", "grpc-python"}:
+            if target.proto is None:
+                raise ValueError(f"target[{target.id}] {target.kind} requires proto")
+            proto_target = target_map[target.proto]
+            generate_target(proto_target)
+            proto_root = require_out_dir(proto_target)
+            if target.kind == "grpc-go":
+                grpc_toolchain.generate_go_stubs(proto_root, target)
+            else:
+                grpc_toolchain.generate_python_stubs(proto_root, target)
         elif target.kind == "wails-transport":
             if target.server is not None:
                 generate_target(target_map[target.server])
@@ -255,6 +276,10 @@ def generation_plan(
                 visit(target_by_id(target, target.server))
             for client_id in target.clients:
                 visit(target_by_id(target, client_id))
+        if target.kind in {"grpc-go", "grpc-python"}:
+            if target.proto is None:
+                raise ValueError(f"target[{target.id}] {target.kind} requires proto")
+            visit(target_by_id(target, target.proto))
 
         visiting.remove(target.id)
         visited.add(target.id)
@@ -387,8 +412,18 @@ def target_manifest(target: ResolvedApiTargetConfig, project_root: Path) -> dict
         manifest["server"] = target.server
     if target.clients:
         manifest["clients"] = list(target.clients)
+    if target.proto is not None:
+        manifest["proto"] = target.proto
+    if target.source_root is not None and target.kind in {"grpc-go", "grpc-python"}:
+        manifest["source_root"] = _portable_path(target.source_root, project_root)
+    if target.files:
+        manifest["files"] = list(target.files)
+    if target.import_roots:
+        manifest["import_roots"] = [_portable_path(path, project_root) for path in target.import_roots]
     if target.go_package_prefix is not None:
         manifest["go_package_prefix"] = target.go_package_prefix
+    if target.python_package_root is not None:
+        manifest["python_package_root"] = target.python_package_root
     if target.include:
         manifest["include"] = list(target.include)
     if target.exclude:

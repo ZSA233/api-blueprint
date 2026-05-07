@@ -69,3 +69,25 @@ kind = 'grpc-proto'
 out_dir = 'grpc/protos'
 package = 'example.api'
 go_package_prefix = 'example.com/project/grpc/go'
+
+[[targets]]
+id = 'grpc.go'
+kind = 'grpc-go'
+proto = 'grpc.proto'
+out_dir = 'grpc/go'
+module = 'example.com/project/grpc/go'
+files = [
+    'api/*.proto',
+    'static/*.proto',
+]
+
+[[targets]]
+id = 'grpc.python'
+kind = 'grpc-python'
+proto = 'grpc.proto'
+out_dir = 'grpc/python'
+files = [
+    'api/*.proto',
+    'static/*.proto',
+]
+python_package_root = 'pb'

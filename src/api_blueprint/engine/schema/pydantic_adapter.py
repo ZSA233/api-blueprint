@@ -78,7 +78,7 @@ def model_to_pydantic(
             nested = model_to_pydantic(attr.__class__, name=field_name, router=router)
             py_type = nested
             description = attr.__extra__.get("description", "")
-            copy_extra = {key: value for key, value in attr.__extra__.items() if key != "description"}
+            copy_extra = _field_factory_extra(attr.__extra__)
             copy_extra["description"] = f"[{attr.__class__.__name__}] {description}"
             info = field_factory(**copy_extra)
         else:
@@ -205,7 +205,7 @@ def resolve_field(
 
 
 def _normalize_field_factory_kwargs(extra: dict[str, Any], *, description: str) -> dict[str, Any]:
-    copy_extra = {key: value for key, value in extra.items() if key != "description"}
+    copy_extra = _field_factory_extra(extra)
     omitempty = bool(copy_extra.pop("omitempty", False))
     regex = copy_extra.pop("regex", None)
 
@@ -221,3 +221,11 @@ def _normalize_field_factory_kwargs(extra: dict[str, Any], *, description: str) 
 
     copy_extra["description"] = description
     return copy_extra
+
+
+def _field_factory_extra(extra: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: value
+        for key, value in extra.items()
+        if key != "description" and not key.startswith("proto_")
+    }

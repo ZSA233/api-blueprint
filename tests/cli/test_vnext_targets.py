@@ -3,6 +3,7 @@ from __future__ import annotations
 from click.testing import CliRunner
 
 from api_blueprint.cli.apigen import api_gen
+from api_blueprint.application import vnext
 from api_blueprint.config import Config, resolve_config
 
 
@@ -97,3 +98,30 @@ formats = ["json", "markdown"]
 
     assert result.exit_code == 0
     assert result.output.strip() == f"contract\tcontract\t{tmp_path.resolve()}"
+
+
+def test_generation_plan_includes_grpc_proto_dependency_for_stub_target(tmp_path):
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[targets]]
+id = "grpc.proto"
+kind = "grpc-proto"
+out_dir = "grpc/protos"
+package = "example.api"
+
+[[targets]]
+id = "grpc.python"
+kind = "grpc-python"
+proto = "grpc.proto"
+out_dir = "grpc/python"
+files = ["api/**/*.proto"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    resolved = resolve_config(config_path)
+
+    planned = vnext.generation_plan(resolved.targets, ("grpc.python",))
+
+    assert [target.id for target in planned] == ["grpc.proto", "grpc.python"]

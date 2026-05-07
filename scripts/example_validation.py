@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import filecmp
+import importlib.util
 import os
 import shutil
 import subprocess
@@ -49,6 +50,8 @@ WAILS_HELLO_GOLANG_PRESERVED = (
     "views/routes/api/hello/impl.go",
 )
 WAILS_HELLO_TYPESCRIPT_PRESERVED = ("tsconfig.json",)
+GRPC_GO_PRESERVED = ("go.mod", "go.sum")
+GRPC_PYTHON_PRESERVED = ()
 
 
 class ExampleValidationError(RuntimeError):
@@ -84,6 +87,8 @@ class GrpcExampleWorkspace:
     root: Path
     config_path: Path
     protos_dir: Path
+    go_dir: Path
+    python_dir: Path
 
 
 @dataclass(frozen=True)
@@ -170,6 +175,18 @@ def collect_missing_validation_requirements(scope: ExampleValidationScope = Exam
                 "protoc",
                 "install the Protocol Buffers compiler, for example `brew install protobuf` or `apt-get install protobuf-compiler`.",
             ),
+            (
+                "protoc-gen-go",
+                "install it with `go install google.golang.org/protobuf/cmd/protoc-gen-go@latest`.",
+            ),
+            (
+                "protoc-gen-go-grpc",
+                "install it with `go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest`.",
+            ),
+            (
+                "go",
+                "install Go and ensure `go` is available on PATH.",
+            ),
         ),
         ExampleValidationScope.WAILS_HELLO: (
             (
@@ -213,6 +230,13 @@ def collect_missing_validation_requirements(scope: ExampleValidationScope = Exam
             "wails3: install the Wails v3 CLI and ensure `wails3` is available on PATH, "
             f"or set `{WAILS_V3_BIN_ENV}` to the executable."
         )
+    if scope in (ExampleValidationScope.ALL, ExampleValidationScope.GRPC) and importlib.util.find_spec(
+        "grpc_tools"
+    ) is None:
+        missing.append(
+            "grpcio-tools: install Python gRPC tooling with `uv add --dev grpcio-tools` "
+            "or `pip install grpcio-tools`."
+        )
 
     return tuple(missing)
 
@@ -244,6 +268,8 @@ def _grpc_workspace(root: Path) -> GrpcExampleWorkspace:
         root=root,
         config_path=root / "api-blueprint.toml",
         protos_dir=root / "grpc" / "protos",
+        go_dir=root / "grpc" / "go",
+        python_dir=root / "grpc" / "python",
     )
 
 
@@ -314,6 +340,14 @@ def _prepare_grpc_outputs(*, source_root: Path, target_root: Path) -> None:
         target_root / "protos",
         _capture_relative_files(source_root / "protos", ()),
     )
+    _prepare_output_dir(
+        target_root / "go",
+        _capture_relative_files(source_root / "go", GRPC_GO_PRESERVED),
+    )
+    _prepare_output_dir(
+        target_root / "python",
+        _capture_relative_files(source_root / "python", GRPC_PYTHON_PRESERVED),
+    )
 
 
 def _prepare_wails_hello_outputs(*, source_root: Path, target_root: Path) -> None:
@@ -373,7 +407,8 @@ def regenerate_blueprint_examples(workspace: BlueprintExampleWorkspace) -> None:
 
 
 def regenerate_grpc_examples(workspace: GrpcExampleWorkspace) -> None:
-    vnext.generate(workspace.config_path, target_ids=("grpc.proto",))
+    vnext.generate(workspace.config_path, target_ids=("grpc.go", "grpc.python"))
+    _tidy_go_module(workspace.go_dir)
 
 
 def regenerate_wails_hello_example(workspace: WailsHelloExampleWorkspace) -> None:
@@ -526,6 +561,8 @@ def validate_grpc_snapshots(repo_root: Path, workspace: GrpcExampleWorkspace) ->
     _raise_on_snapshot_drift(
         (
             (example_root / "protos", workspace.protos_dir, "grpc/protos"),
+            (example_root / "go", workspace.go_dir, "grpc/go"),
+            (example_root / "python", workspace.python_dir, "grpc/python"),
         )
     )
 
@@ -581,6 +618,26 @@ def compile_generated_grpc_examples(workspace: GrpcExampleWorkspace) -> None:
             cwd=workspace.protos_dir,
             check=True,
         )
+    subprocess.run(["go", "test", "./..."], cwd=workspace.go_dir, check=True)
+    _compile_python_grpc_examples(workspace.python_dir)
+
+
+def _compile_python_grpc_examples(python_dir: Path) -> None:
+    snippets = (
+        "import pb.api.api_pb2",
+        "import pb.api.api_pb2_grpc",
+        "import pb.api.demo_pb2",
+        "import pb.api.demo_pb2_grpc",
+        "import pb.api.hello_pb2",
+        "import pb.api.hello_pb2_grpc",
+        "import pb.static.static_pb2",
+        "import pb.static.static_pb2_grpc",
+    )
+    subprocess.run(
+        [sys.executable, "-B", "-c", "; ".join(snippets)],
+        cwd=python_dir,
+        check=True,
+    )
 
 
 def compile_wails_hello_example(workspace: WailsHelloExampleWorkspace) -> None:
