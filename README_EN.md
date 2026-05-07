@@ -17,7 +17,7 @@ This README keeps only the onboarding path. See [Learn More](#learn-more) for fu
 
 | Target | Status | Command | Example |
 |:---|:---:|:---|:---|
-| Contract manifest | Available | `api-gen` | `api-blueprint.contract.json` |
+| Contract / agent manifest | Available | `api-gen` | `api-blueprint.contract.json` / `api-blueprint.agent.json` |
 | Go server | Available | `api-gen` | `examples/golang` |
 | TypeScript client | Preview | `api-gen` | `examples/typescript` |
 | Wails v3 | Experimental | `api-gen` | `examples/{golang,typescript,wails-harness/v3,wails-hello}` |
@@ -94,7 +94,7 @@ entrypoints = ["blueprints.app:*"]
 id = "contract"
 kind = "contract"
 out_dir = "."
-formats = ["json", "markdown"]
+formats = ["json", "markdown", "agent-json", "agent-markdown", "shards"]
 
 [[targets]]
 id = "go.server"
@@ -129,6 +129,14 @@ out_dir = "grpc/protos"
 package = "example.api"
 go_package_prefix = "example.com/project/grpc/go"
 
+[[targets.proto_files]]
+file = "api/demo/v1/demo.proto"
+package = "example.api.demo.v1"
+go_package = "example.com/project/grpc/go/api/demo/v1;demopb"
+schema_modules = ["blueprints.api.demo"]
+route_paths = ["/api/demo/v1/**"]
+service = "DemoService"
+
 [[targets]]
 id = "grpc.go"
 kind = "grpc-go"
@@ -152,7 +160,9 @@ python_package_root = "pb"
 api-doc-server -c examples/api-blueprint.toml
 api-gen list-targets -c examples/api-blueprint.toml
 api-gen explain-target -c examples/api-blueprint.toml --target go.server
-api-gen manifest -c examples/api-blueprint.toml --out api-blueprint.contract.json
+api-gen manifest -c examples/api-blueprint.toml --profile full --out api-blueprint.contract.json
+api-gen manifest -c examples/api-blueprint.toml --profile agent --out api-blueprint.agent.json
+api-gen manifest -c examples/api-blueprint.toml --shards-dir api-blueprint.contract.d
 api-gen check -c examples/api-blueprint.toml
 api-gen generate -c examples/api-blueprint.toml
 api-gen generate -c examples/api-blueprint.toml --target wails.v3
@@ -163,20 +173,20 @@ api-gen diff old.contract.json new.contract.json
 
 - `examples/blueprints/` is the example Blueprint source of truth.
 - `examples/blueprints/api_demo.py` includes `STREAM` / `CHANNEL` long-connection examples.
-- `examples/golang/`, `examples/typescript/`, `examples/kotlin/`, `examples/grpc/protos/`, `examples/grpc/go/`, and `examples/grpc/python/` are generated snapshots.
+- `examples/golang/`, `examples/typescript/`, `examples/kotlin/`, `examples/api-blueprint.{contract,agent}.*`, `examples/api-blueprint.contract.d/`, `examples/grpc/protos/`, `examples/grpc/go/`, and `examples/grpc/python/` are generated snapshots.
 - `examples/wails-hello/` is a standalone Wails v3 hello world example that demonstrates a GUI loop without starting an HTTP server.
 - `gen_*` files are generator-owned and overwritten during regeneration.
 - `impl_*` and non-`gen_*` passthrough files are user-owned extension points and are preserved during regeneration.
 - Go / TypeScript artifacts use a `core + transports/<target>` layout; `api-gen generate --target wails.v3` does not generate a full Wails app shell, and external frontends must load the Wails runtime first.
 - Wails target `include` / `exclude` trims target overlays / facades; roots with no selected routes do not get `transports/<overlay_name>` output, while shared contract layers are still generated in full.
 - Go `views/providers` is a global runtime; use route-scoped provider factories when a provider implementation must vary by route. The user-owned hook is `SelectProvider(spec, handler)`. See the generator docs.
-- `STREAM` / `CHANNEL` are the long-connection contract entrypoints; multi-message directions generate one discriminated union, while legacy `WS().RECV().SEND()` is outside the vNext mainline.
+- `STREAM` / `CHANNEL` are the long-connection contract entrypoints; multi-message directions generate one discriminated union, while legacy `WS().RECV().SEND()` is outside the 1.0 mainline.
 - The default HTTP/Wails runtimes fully support only `ConnectionScope.SESSION`; `APP` / `TOPIC` broadcast or topic routing can be added through a custom connection hub / manager.
 - `examples/golang/views/routes/api/demo/impl.go` hand-writes a minimal `STREAM` / `CHANNEL` usage example that demonstrates `Open()`, `Send()`, `Recv()`, typed `Close()`, and exceptional `Abort()`.
 - The Go HTTP adapter respects responses already written by Gin handlers, which fits small HTTP-only raw callbacks.
-- The contract manifest records routes, schemas, connections, stable hashes, the resolved target plan, and the capability registry so AI agents can understand protocol boundaries.
+- Full `contract.json` records routes, schemas, connections, stable hashes, the resolved target plan, and the capability registry. `agent.json`, `agent.md`, and `contract.d/` provide a compact entrypoint, read order, shards, and target artifact/import indexes so AI agents can read compact context first and drill down only when needed.
 - `[[targets]]` is the unified config entrypoint; transport targets use `kind = "http-transport"` / `kind = "wails-transport"` and explicitly declare `server` plus `clients`.
-- gRPC proto is emitted by the `grpc-proto` target from ContractGraph; existing `.proto` trees are no longer an independent source of truth. `grpc-go` / `grpc-python` only consume that proto target and generate protobuf/gRPC stubs, not business service implementations, with `source_root` and field-level proto metadata available for old protocol migration.
+- gRPC proto can be emitted by the `grpc-proto` target from ContractGraph. `[[targets.proto_files]]` maps DSL modules/routes to proto file/package/go_package/service. The DSL mainline only expresses generic contracts: `field(1, String(...), optional=True)` is a stable field identity, `choice="..."` is a mutually exclusive choice, and `DateTime`, `JSONValue`, and `AnyValue` are semantic value types. `grpc-go` / `grpc-python` can also omit `proto` and compile handwritten proto files directly with `source_root` / `files`.
 
 ## Learn More
 
@@ -211,7 +221,7 @@ See [docs/release-process.md](docs/release-process.md) for the detailed release 
 
 ```sh
 make release-version-show
-make release-preflight RELEASE_TAG=v0.0.1
-make release-local RELEASE_TAG=v0.0.1
-make release-install-check RELEASE_TAG=v0.0.1
+make release-preflight RELEASE_TAG=v1.0.0
+make release-local RELEASE_TAG=v1.0.0
+make release-install-check RELEASE_TAG=v1.0.0
 ```

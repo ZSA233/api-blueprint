@@ -1,0 +1,21 @@
+{
+  "inbound_routes": [
+    "api.demo.post.mapmodel"
+  ],
+  "schema": {
+    "auto": true,
+    "kind": "alias",
+    "name": "RSP_MapModel",
+    "target": {
+      "keys": {
+        "type": "int"
+      },
+      "type": "map",
+      "values": {
+        "ref": "ApiDemoMap",
+        "type": "object"
+      }
+    },
+    "type": "alias"
+  }
+}

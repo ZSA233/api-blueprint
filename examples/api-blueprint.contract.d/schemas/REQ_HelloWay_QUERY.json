@@ -1,0 +1,36 @@
+{
+  "inbound_routes": [
+    "api.hello.get.helloway"
+  ],
+  "schema": {
+    "auto": true,
+    "fields": {
+      "arg1": {
+        "description": "hello-way",
+        "enum": "HelloWayEnum",
+        "enum_identity": "blueprints.api_hello.HelloWayEnum",
+        "enum_module": "blueprints.api_hello",
+        "enum_qualname": "HelloWayEnum",
+        "enum_values": [
+          {
+            "name": "ASD",
+            "value": "ASD"
+          }
+        ],
+        "name": "arg1",
+        "optional": true,
+        "type": "enum",
+        "values": [
+          "ASD"
+        ],
+        "wire_name": "arg1"
+      }
+    },
+    "identity": "api_blueprint.engine.schema.modeling.REQ_HelloWay_QUERY",
+    "kind": "model",
+    "module": "api_blueprint.engine.schema.modeling",
+    "name": "REQ_HelloWay_QUERY",
+    "qualname": "REQ_HelloWay_QUERY",
+    "type": "object"
+  }
+}

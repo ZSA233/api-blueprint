@@ -1,0 +1,130 @@
+{
+  "artifacts": {
+    "go.server": {
+      "files": [
+        "golang/views/routes/api/hello/gen_interface.go",
+        "golang/views/routes/api/hello/gen_protos.go"
+      ],
+      "imports": [],
+      "kind": "go-server"
+    },
+    "grpc.go": {
+      "files": [
+        "grpc/go/api/hello/hello.pb.go",
+        "grpc/go/api/hello/hello_grpc.pb.go"
+      ],
+      "imports": [
+        "example.com/project/grpc/go/api/hello"
+      ],
+      "kind": "grpc-go"
+    },
+    "grpc.proto": {
+      "files": [
+        "grpc/protos/api/hello.proto"
+      ],
+      "imports": [],
+      "kind": "grpc-proto"
+    },
+    "grpc.python": {
+      "files": [
+        "grpc/python/pb/api/hello_pb2.py",
+        "grpc/python/pb/api/hello_pb2_grpc.py"
+      ],
+      "imports": [
+        "pb.api.hello_pb2",
+        "pb.api.hello_pb2_grpc"
+      ],
+      "kind": "grpc-python"
+    },
+    "typescript.client": {
+      "files": [
+        "typescript/api/routes/api/hello/client.ts",
+        "typescript/api/routes/api/hello/models.ts"
+      ],
+      "imports": [
+        "typescript/api/routes/api/hello"
+      ],
+      "kind": "typescript-client"
+    },
+    "wails.v2": {
+      "files": [
+        "golang/views/transports/wailsv2/api/hello/gen_service.go",
+        "typescript/api/transports/wailsv2/api/hello/client.ts"
+      ],
+      "imports": [],
+      "kind": "wails-transport"
+    },
+    "wails.v3": {
+      "files": [
+        "golang/views/transports/wailsv3/api/hello/gen_service.go",
+        "typescript/api/transports/wailsv3/api/hello/client.ts"
+      ],
+      "imports": [],
+      "kind": "wails-transport"
+    }
+  },
+  "connection": null,
+  "route": {
+    "connection": null,
+    "deprecated": false,
+    "hash": "02b4de6432a18dfd07a611835eba959297080f4e84d643e4d05c802399b269a5",
+    "id": "api.hello.get.stringemun",
+    "kind": "rpc",
+    "method_name": "stringEmun",
+    "methods": [
+      "GET"
+    ],
+    "operation": "StringEmun",
+    "path": "/string-emun",
+    "proto": {},
+    "request": {
+      "binary_model": null,
+      "form_model": null,
+      "json_model": null,
+      "query_model": null
+    },
+    "response": {
+      "media_type": "application/json",
+      "model": "RSP_StringEmun",
+      "wrapper": "GeneralWrapper"
+    },
+    "service_id": "api.hello",
+    "url": "/api/hello/string-emun"
+  },
+  "schemas": {
+    "RSP_StringEmun": {
+      "auto": true,
+      "kind": "alias",
+      "name": "RSP_StringEmun",
+      "target": {
+        "enum": "MapEnum",
+        "enum_identity": "blueprints.api_hello.MapEnum",
+        "enum_module": "blueprints.api_hello",
+        "enum_qualname": "MapEnum",
+        "enum_values": [
+          {
+            "name": "A",
+            "value": "a"
+          },
+          {
+            "name": "B",
+            "value": "b"
+          }
+        ],
+        "type": "enum",
+        "values": [
+          "a",
+          "b"
+        ]
+      },
+      "type": "alias"
+    }
+  },
+  "service": {
+    "group": "hello",
+    "id": "api.hello",
+    "name": "HelloService",
+    "path": "/api/hello",
+    "root": "api"
+  }
+}

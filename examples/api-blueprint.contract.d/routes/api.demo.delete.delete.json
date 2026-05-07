@@ -1,0 +1,188 @@
+{
+  "artifacts": {
+    "go.server": {
+      "files": [
+        "golang/views/routes/api/demo/gen_interface.go",
+        "golang/views/routes/api/demo/gen_protos.go"
+      ],
+      "imports": [],
+      "kind": "go-server"
+    },
+    "grpc.go": {
+      "files": [
+        "grpc/go/api/demo/demo.pb.go",
+        "grpc/go/api/demo/demo_grpc.pb.go"
+      ],
+      "imports": [
+        "example.com/project/grpc/go/api/demo"
+      ],
+      "kind": "grpc-go"
+    },
+    "grpc.proto": {
+      "files": [
+        "grpc/protos/api/demo.proto"
+      ],
+      "imports": [],
+      "kind": "grpc-proto"
+    },
+    "grpc.python": {
+      "files": [
+        "grpc/python/pb/api/demo_pb2.py",
+        "grpc/python/pb/api/demo_pb2_grpc.py"
+      ],
+      "imports": [
+        "pb.api.demo_pb2",
+        "pb.api.demo_pb2_grpc"
+      ],
+      "kind": "grpc-python"
+    },
+    "typescript.client": {
+      "files": [
+        "typescript/api/routes/api/demo/client.ts",
+        "typescript/api/routes/api/demo/models.ts"
+      ],
+      "imports": [
+        "typescript/api/routes/api/demo"
+      ],
+      "kind": "typescript-client"
+    },
+    "wails.v2": {
+      "files": [
+        "golang/views/transports/wailsv2/api/demo/gen_service.go",
+        "typescript/api/transports/wailsv2/api/demo/client.ts"
+      ],
+      "imports": [],
+      "kind": "wails-transport"
+    },
+    "wails.v3": {
+      "files": [
+        "golang/views/transports/wailsv3/api/demo/gen_service.go",
+        "typescript/api/transports/wailsv3/api/demo/client.ts"
+      ],
+      "imports": [],
+      "kind": "wails-transport"
+    }
+  },
+  "connection": null,
+  "route": {
+    "connection": null,
+    "deprecated": false,
+    "hash": "e37d7466d6eeb803cf2f4b46510376bae95ba296eb5cbd9dbd57f53d46a666cc",
+    "id": "api.demo.delete.delete",
+    "kind": "rpc",
+    "method_name": "delete",
+    "methods": [
+      "DELETE"
+    ],
+    "operation": "Delete",
+    "path": "/delete$",
+    "proto": {},
+    "request": {
+      "binary_model": null,
+      "form_model": null,
+      "json_model": null,
+      "query_model": "REQ_Delete_QUERY"
+    },
+    "response": {
+      "media_type": "application/xml",
+      "model": "RSP_Delete",
+      "wrapper": "GeneralWrapper"
+    },
+    "service_id": "api.demo",
+    "url": "/api/demo/delete$"
+  },
+  "schemas": {
+    "ANON_Delete_anon_list": {
+      "auto": true,
+      "fields": {
+        "kv1": {
+          "description": "kv1",
+          "name": "kv1",
+          "optional": false,
+          "type": "int64",
+          "wire_name": "kv1"
+        },
+        "kv2": {
+          "description": "kv2",
+          "items": {
+            "type": "string"
+          },
+          "name": "kv2",
+          "optional": false,
+          "type": "array",
+          "wire_name": "kv2"
+        }
+      },
+      "identity": "api_blueprint.engine.schema.modeling.ANON_Delete_anon_list",
+      "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
+      "name": "ANON_Delete_anon_list",
+      "qualname": "ANON_Delete_anon_list",
+      "type": "object"
+    },
+    "REQ_Delete_QUERY": {
+      "auto": true,
+      "fields": {
+        "arg1": {
+          "description": "arg1",
+          "name": "arg1",
+          "optional": true,
+          "type": "string",
+          "wire_name": "arg1"
+        },
+        "arg2": {
+          "description": "arg2",
+          "name": "arg2",
+          "optional": true,
+          "type": "float",
+          "wire_name": "arg2"
+        }
+      },
+      "identity": "api_blueprint.engine.schema.modeling.REQ_Delete_QUERY",
+      "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
+      "name": "REQ_Delete_QUERY",
+      "qualname": "REQ_Delete_QUERY",
+      "type": "object"
+    },
+    "RSP_Delete": {
+      "auto": true,
+      "fields": {
+        "anon_list": {
+          "description": "",
+          "items": {
+            "ref": "ANON_Delete_anon_list",
+            "type": "object"
+          },
+          "name": "anon_list",
+          "optional": false,
+          "type": "array",
+          "wire_name": "anon_list"
+        },
+        "list": {
+          "description": "list",
+          "items": {
+            "type": "string"
+          },
+          "name": "list",
+          "optional": false,
+          "type": "array",
+          "wire_name": "list"
+        }
+      },
+      "identity": "api_blueprint.engine.schema.modeling.RSP_Delete",
+      "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
+      "name": "RSP_Delete",
+      "qualname": "RSP_Delete",
+      "type": "object"
+    }
+  },
+  "service": {
+    "group": "demo",
+    "id": "api.demo",
+    "name": "DemoService",
+    "path": "/api/demo",
+    "root": "api"
+  }
+}

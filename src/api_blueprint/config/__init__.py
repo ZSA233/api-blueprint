@@ -2,6 +2,7 @@ from api_blueprint.config.loader import load_config, normalize_config_path, read
 from api_blueprint.config.models import (
     BlueprintConfig,
     Config,
+    GrpcProtoFileConfig,
     TargetConfig,
     TargetKind,
     WailsFrontendMode,
@@ -11,6 +12,7 @@ from api_blueprint.config.models import (
 from api_blueprint.config.resolved import (
     ResolvedApiTargetConfig,
     ResolvedConfig,
+    ResolvedGrpcProtoFileConfig,
     ResolvedTargetConfig,
     ResolvedWailsConfig,
     ResolvedWailsTargetConfig,
@@ -23,10 +25,12 @@ from api_blueprint.config.resolved import (
 __all__ = (
     "BlueprintConfig",
     "Config",
+    "GrpcProtoFileConfig",
     "TargetConfig",
     "TargetKind",
     "ResolvedApiTargetConfig",
     "ResolvedConfig",
+    "ResolvedGrpcProtoFileConfig",
     "ResolvedTargetConfig",
     "ResolvedWailsConfig",
     "ResolvedWailsTargetConfig",

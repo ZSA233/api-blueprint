@@ -7,7 +7,25 @@ from api_blueprint.contract import build_contract_graph
 from api_blueprint.engine import Blueprint
 import pytest
 
-from api_blueprint.engine.model import Array, Bool, Enum, Int, Map, Object, String, Uint32, Model
+from api_blueprint.engine.model import (
+    AnyPayload,
+    AnyValue,
+    Array,
+    Bool,
+    DateTime,
+    Enum,
+    Int,
+    JSONValue,
+    Map,
+    Object,
+    String,
+    Struct,
+    Timestamp,
+    Uint32,
+    Model,
+    field,
+)
+from api_blueprint.config.resolved import ResolvedGrpcProtoFileConfig
 from api_blueprint.writer.grpc.proto_writer import render_proto_files
 
 
@@ -35,6 +53,8 @@ class Color(enum.StrEnum):
 
 
 class TaskStatus(enum.IntEnum):
+    __module__ = "blueprints.shared.browseragent.task"
+
     TASK_STATUS_UNSPECIFIED = 0
     TASK_STATUS_PENDING = 1
     TASK_STATUS_RUNNING = 2
@@ -112,6 +132,82 @@ class DuplicateFieldNumbers(Model):
     second = String(description="second", proto_number=1)
 
 
+class LayoutBrowserOptions(Model):
+    __module__ = "blueprints.shared.browseragent.browser"
+
+    user = field(1, String(description="user"))
+
+
+class LayoutTaskSummary(Model):
+    __module__ = "blueprints.shared.browseragent.task"
+
+    task_id = field(1, String(description="task id"))
+    status = field(2, Enum[TaskStatus](description="status"))
+
+
+class LayoutLoginRequest(Model):
+    __module__ = "blueprints.services.steamagent.browser.steam"
+
+    options = field(1, LayoutBrowserOptions(description="options"))
+
+
+class FieldSemanticsPayload(Model):
+    name = field(1, String(description="name"), optional=True)
+    nested = field(2, LayoutBrowserOptions(description="options"), optional=True)
+    tags = field(3, Array[String](description="tags"), optional=True)
+    attrs = field(4, Map[String, String](description="attrs"), optional=True)
+    occurred_at = field(5, DateTime(description="occurred at"))
+    payload = field(6, AnyValue(description="payload"))
+    metadata = field(7, JSONValue(description="metadata"))
+
+
+class ChoiceSuccess(Model):
+    message = field(1, String(description="message"))
+
+
+class ChoiceError(Model):
+    code = field(1, String(description="code"))
+
+
+class GenericChoicePayload(Model):
+    success = field(1, ChoiceSuccess(description="success"), choice="result")
+    error = field(2, ChoiceError(description="error"), choice="result")
+
+
+class GenericAliasPayload(Model):
+    http_only = field(1, Bool(description="http only"), alias="httpOnly")
+    default_name = field(2, Bool(description="default name"))
+
+
+class ExternalTaskStatusPayload(Model):
+    __module__ = "blueprints.services.callback"
+
+    status = field(1, Enum[TaskStatus](description="status"))
+
+
+def _layout(
+    *,
+    file: str,
+    package: str,
+    go_package: str,
+    schema_modules: tuple[str, ...] = (),
+    route_paths: tuple[str, ...] = (),
+    service: str | None = None,
+    schema_names: tuple[str, ...] = (),
+) -> ResolvedGrpcProtoFileConfig:
+    return ResolvedGrpcProtoFileConfig(
+        file=file,
+        package=package,
+        go_package=go_package,
+        schema_modules=schema_modules,
+        schema_names=schema_names,
+        route_paths=route_paths,
+        route_ids=(),
+        service_ids=(),
+        service=service,
+    )
+
+
 def test_grpc_proto_writer_renders_unary_stream_and_bidi_service():
     bp = Blueprint(root="/api")
     with bp.group("/demo") as views:
@@ -135,6 +231,213 @@ def test_grpc_proto_writer_renders_unary_stream_and_bidi_service():
     assert "rpc Ping (PingRequest) returns (PingResponse);" in text
     assert "rpc Events (EventsRequest) returns (stream ServerMessage);" in text
     assert "rpc Chat (stream ClientMessage) returns (stream ServerMessage);" in text
+
+
+def test_grpc_proto_writer_uses_config_layout_without_proto_metadata():
+    bp = Blueprint(root="/services/steamagent/browser")
+    with bp.group("/steam/v1") as views:
+        views.POST("/login-async", proto_rpc="LoginAsync").REQ(LayoutLoginRequest).RSP(LayoutTaskSummary)
+
+    graph = build_contract_graph([bp])
+    files = render_proto_files(
+        graph,
+        package="contracts.grpc",
+        go_package_prefix="contracts/grpc",
+        proto_files=(
+            _layout(
+                file="shared/browseragent/browser/v1/browser.proto",
+                package="browseragent.browser.v1",
+                go_package="appkit/browseragent/pb/browser/v1;browserpb",
+                schema_modules=("blueprints.shared.browseragent.browser",),
+            ),
+            _layout(
+                file="shared/browseragent/task/v1/task.proto",
+                package="browseragent.task.v1",
+                go_package="appkit/browseragent/pb/task/v1;taskpb",
+                schema_modules=("blueprints.shared.browseragent.task",),
+            ),
+            _layout(
+                file="services/steamagent/browser/steam/v1/steam.proto",
+                package="steamagent.browser.steam.v1",
+                go_package="steam-agent/internal/grpc/pb/browser/steam/v1;steampb",
+                schema_modules=("blueprints.services.steamagent.browser.steam",),
+                route_paths=("/services/steamagent/browser/steam/v1/**",),
+                service="SteamBrowser",
+            ),
+        ),
+    )
+
+    steam = files["services/steamagent/browser/steam/v1/steam.proto"]
+    assert "package steamagent.browser.steam.v1;" in steam
+    assert 'option go_package = "steam-agent/internal/grpc/pb/browser/steam/v1;steampb";' in steam
+    assert 'import "shared/browseragent/browser/v1/browser.proto";' in steam
+    assert 'import "shared/browseragent/task/v1/task.proto";' in steam
+    assert "service SteamBrowser {" in steam
+    assert "rpc LoginAsync (LoginAsyncRequest) returns (browseragent.task.v1.LayoutTaskSummary);" in steam
+    request = _block(steam, "message LoginAsyncRequest {")
+    assert "  browseragent.browser.v1.LayoutBrowserOptions options = 1;" in request
+
+
+def test_grpc_proto_writer_uses_config_layout_for_same_named_models():
+    RequestPayload = type(
+        "SharedPayload",
+        (Model,),
+        {
+            "__module__": "blueprints.request",
+            "value": field(1, String(description="value")),
+        },
+    )
+    ResponsePayload = type(
+        "SharedPayload",
+        (Model,),
+        {
+            "__module__": "blueprints.response",
+            "message": field(1, String(description="message")),
+        },
+    )
+
+    bp = Blueprint(root="/api")
+    with bp.group("/shared") as views:
+        views.POST("/submit").REQ(RequestPayload).RSP(ResponsePayload)
+
+    graph = build_contract_graph([bp])
+    files = render_proto_files(
+        graph,
+        package="example.api",
+        go_package_prefix="example.com/project/grpc/go",
+        proto_files=(
+            _layout(
+                file="request.proto",
+                package="request.v1",
+                go_package="example.com/project/request;requestpb",
+                schema_modules=("blueprints.request",),
+            ),
+            _layout(
+                file="response.proto",
+                package="response.v1",
+                go_package="example.com/project/response;responsepb",
+                schema_modules=("blueprints.response",),
+            ),
+            _layout(
+                file="service.proto",
+                package="service.v1",
+                go_package="example.com/project/service;servicepb",
+                route_paths=("/api/shared/**",),
+                service="SharedService",
+            ),
+        ),
+    )
+
+    service = files["service.proto"]
+    assert 'import "request.proto";' in service
+    assert 'import "response.proto";' in service
+    assert "rpc Submit (request.v1.SharedPayload) returns (response.v1.SharedPayload);" in service
+    assert "message SharedPayload {" in files["request.proto"]
+    assert "  string value = 1;" in files["request.proto"]
+    assert "message SharedPayload {" in files["response.proto"]
+    assert "  string message = 1;" in files["response.proto"]
+
+
+def test_grpc_proto_writer_uses_field_helper_optional_and_semantic_well_known_types():
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.POST("/field-semantics").REQ(FieldSemanticsPayload).RSP(message=String(description="message"))
+
+    graph = build_contract_graph([bp])
+    files = render_proto_files(
+        graph,
+        package="example.api",
+        go_package_prefix="example.com/project/grpc/go",
+    )
+
+    text = files["api/demo.proto"]
+    assert 'import "google/protobuf/any.proto";' in text
+    assert 'import "google/protobuf/struct.proto";' in text
+    assert 'import "google/protobuf/timestamp.proto";' in text
+    request = _block(text, "message FieldSemanticsRequest {")
+    assert "  optional string name = 1;" in request
+    assert "  LayoutBrowserOptions nested = 2;" in request
+    assert "  repeated string tags = 3;" in request
+    assert "  map<string, string> attrs = 4;" in request
+    assert "  google.protobuf.Timestamp occurred_at = 5;" in request
+    assert "  google.protobuf.Any payload = 6;" in request
+    assert "  google.protobuf.Struct metadata = 7;" in request
+
+
+def test_grpc_proto_writer_maps_generic_choice_to_oneof():
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.POST("/choice").REQ(GenericChoicePayload).RSP(message=String(description="message"))
+
+    graph = build_contract_graph([bp])
+    files = render_proto_files(
+        graph,
+        package="example.api",
+        go_package_prefix="example.com/project/grpc/go",
+    )
+
+    request = _block(files["api/demo.proto"], "message ChoiceRequest {")
+    assert "  oneof result {" in request
+    assert "    ChoiceSuccess success = 1;" in request
+    assert "    ChoiceError error = 2;" in request
+
+
+def test_grpc_proto_writer_preserves_explicit_alias_as_wire_name():
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.POST("/alias").REQ(GenericAliasPayload).RSP(message=String(description="message"))
+
+    graph = build_contract_graph([bp])
+    files = render_proto_files(
+        graph,
+        package="example.api",
+        go_package_prefix="example.com/project/grpc/go",
+    )
+
+    request = _block(files["api/demo.proto"], "message AliasRequest {")
+    assert "  bool httpOnly = 1;" in request
+    assert "  bool default_name = 2;" in request
+    assert "httponly" not in request
+
+
+def test_grpc_proto_writer_imports_layout_enum_from_another_file_without_proto_metadata():
+    bp = Blueprint(root="/services/callback")
+    with bp.group("/events/v1") as views:
+        views.POST("/send").REQ(ExternalTaskStatusPayload).RSP(message=String(description="message"))
+
+    graph = build_contract_graph([bp])
+    files = render_proto_files(
+        graph,
+        package="contracts.grpc",
+        go_package_prefix="contracts/grpc",
+        proto_files=(
+            _layout(
+                file="shared/browseragent/task/v1/task.proto",
+                package="browseragent.task.v1",
+                go_package="appkit/browseragent/pb/task/v1;taskpb",
+                schema_modules=("blueprints.shared.browseragent.task",),
+                schema_names=("TaskStatus",),
+            ),
+            _layout(
+                file="services/callback/events/v1/events.proto",
+                package="callback.events.v1",
+                go_package="callback/events/v1;eventspb",
+                schema_modules=("blueprints.services.callback",),
+                route_paths=("/services/callback/events/v1/**",),
+                service="CallbackEvents",
+            ),
+        ),
+    )
+
+    events = files["services/callback/events/v1/events.proto"]
+    assert 'import "shared/browseragent/task/v1/task.proto";' in events
+    request = _block(events, "message SendRequest {")
+    assert "  browseragent.task.v1.TaskStatus status = 1;" in request
+    assert "enum TaskStatus {" not in events
+
+    task = files["shared/browseragent/task/v1/task.proto"]
+    assert "enum TaskStatus {" in task
+    assert "  TASK_STATUS_UNSPECIFIED = 0;" in task
 
 
 def test_grpc_proto_writer_renders_rpc_request_schema_nested_models_and_enums():

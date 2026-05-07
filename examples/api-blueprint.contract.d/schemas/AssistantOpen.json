@@ -1,0 +1,23 @@
+{
+  "inbound_routes": [
+    "api.demo.channel.assistantsession"
+  ],
+  "schema": {
+    "auto": false,
+    "fields": {
+      "session_id": {
+        "description": "assistant session id",
+        "name": "session_id",
+        "optional": false,
+        "type": "string",
+        "wire_name": "session_id"
+      }
+    },
+    "identity": "blueprints.api_demo.AssistantOpen",
+    "kind": "model",
+    "module": "blueprints.api_demo",
+    "name": "AssistantOpen",
+    "qualname": "AssistantOpen",
+    "type": "object"
+  }
+}

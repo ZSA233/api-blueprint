@@ -6,12 +6,12 @@ entrypoints = [
     'blueprints.app:*',
 ]
 
-# vNext unified targets example
+# 1.0 unified targets example
 [[targets]]
 id = 'contract'
 kind = 'contract'
 out_dir = '.'
-formats = ['json', 'markdown']
+formats = ['json', 'markdown', 'agent-json', 'agent-markdown', 'shards']
 
 [[targets]]
 id = 'go.server'
@@ -69,6 +69,34 @@ kind = 'grpc-proto'
 out_dir = 'grpc/protos'
 package = 'example.api'
 go_package_prefix = 'example.com/project/grpc/go'
+
+[[targets.proto_files]]
+file = 'api/api.proto'
+package = 'example.api.api'
+go_package = 'example.com/project/grpc/go/api/api;api'
+route_paths = ['/api/ws']
+service = 'ApiService'
+
+[[targets.proto_files]]
+file = 'api/demo.proto'
+package = 'example.api.demo'
+go_package = 'example.com/project/grpc/go/api/demo;demo'
+route_paths = ['/api/demo/**']
+service = 'DemoService'
+
+[[targets.proto_files]]
+file = 'api/hello.proto'
+package = 'example.api.hello'
+go_package = 'example.com/project/grpc/go/api/hello;hello'
+route_paths = ['/api/hello/**']
+service = 'HelloService'
+
+[[targets.proto_files]]
+file = 'static/static.proto'
+package = 'example.api.static.static'
+go_package = 'example.com/project/grpc/go/static/static;static'
+route_paths = ['/static/**']
+service = 'StaticService'
 
 [[targets]]
 id = 'grpc.go'

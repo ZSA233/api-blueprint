@@ -1,0 +1,37 @@
+{
+  "inbound_routes": [
+    "api.demo.delete.delete"
+  ],
+  "schema": {
+    "auto": true,
+    "fields": {
+      "anon_list": {
+        "description": "",
+        "items": {
+          "ref": "ANON_Delete_anon_list",
+          "type": "object"
+        },
+        "name": "anon_list",
+        "optional": false,
+        "type": "array",
+        "wire_name": "anon_list"
+      },
+      "list": {
+        "description": "list",
+        "items": {
+          "type": "string"
+        },
+        "name": "list",
+        "optional": false,
+        "type": "array",
+        "wire_name": "list"
+      }
+    },
+    "identity": "api_blueprint.engine.schema.modeling.RSP_Delete",
+    "kind": "model",
+    "module": "api_blueprint.engine.schema.modeling",
+    "name": "RSP_Delete",
+    "qualname": "RSP_Delete",
+    "type": "object"
+  }
+}

@@ -1,0 +1,130 @@
+{
+  "artifacts": {
+    "go.server": {
+      "files": [
+        "golang/views/routes/api/hello/gen_interface.go",
+        "golang/views/routes/api/hello/gen_protos.go"
+      ],
+      "imports": [],
+      "kind": "go-server"
+    },
+    "grpc.go": {
+      "files": [
+        "grpc/go/api/hello/hello.pb.go",
+        "grpc/go/api/hello/hello_grpc.pb.go"
+      ],
+      "imports": [
+        "example.com/project/grpc/go/api/hello"
+      ],
+      "kind": "grpc-go"
+    },
+    "grpc.proto": {
+      "files": [
+        "grpc/protos/api/hello.proto"
+      ],
+      "imports": [],
+      "kind": "grpc-proto"
+    },
+    "grpc.python": {
+      "files": [
+        "grpc/python/pb/api/hello_pb2.py",
+        "grpc/python/pb/api/hello_pb2_grpc.py"
+      ],
+      "imports": [
+        "pb.api.hello_pb2",
+        "pb.api.hello_pb2_grpc"
+      ],
+      "kind": "grpc-python"
+    },
+    "typescript.client": {
+      "files": [
+        "typescript/api/routes/api/hello/client.ts",
+        "typescript/api/routes/api/hello/models.ts"
+      ],
+      "imports": [
+        "typescript/api/routes/api/hello"
+      ],
+      "kind": "typescript-client"
+    },
+    "wails.v2": {
+      "files": [
+        "golang/views/transports/wailsv2/api/hello/gen_service.go",
+        "typescript/api/transports/wailsv2/api/hello/client.ts"
+      ],
+      "imports": [],
+      "kind": "wails-transport"
+    },
+    "wails.v3": {
+      "files": [
+        "golang/views/transports/wailsv3/api/hello/gen_service.go",
+        "typescript/api/transports/wailsv3/api/hello/client.ts"
+      ],
+      "imports": [],
+      "kind": "wails-transport"
+    }
+  },
+  "connection": null,
+  "route": {
+    "connection": null,
+    "deprecated": false,
+    "hash": "317e9b3790a171476900b961a97b1010fcf824a26a2d2ed0aefc0944ae8cc463",
+    "id": "api.hello.get.helloway",
+    "kind": "rpc",
+    "method_name": "helloWay",
+    "methods": [
+      "GET"
+    ],
+    "operation": "HelloWay",
+    "path": "/hello-way",
+    "proto": {},
+    "request": {
+      "binary_model": null,
+      "form_model": null,
+      "json_model": null,
+      "query_model": "REQ_HelloWay_QUERY"
+    },
+    "response": null,
+    "service_id": "api.hello",
+    "url": "/api/hello/hello-way"
+  },
+  "schemas": {
+    "REQ_HelloWay_QUERY": {
+      "auto": true,
+      "fields": {
+        "arg1": {
+          "description": "hello-way",
+          "enum": "HelloWayEnum",
+          "enum_identity": "blueprints.api_hello.HelloWayEnum",
+          "enum_module": "blueprints.api_hello",
+          "enum_qualname": "HelloWayEnum",
+          "enum_values": [
+            {
+              "name": "ASD",
+              "value": "ASD"
+            }
+          ],
+          "name": "arg1",
+          "optional": true,
+          "type": "enum",
+          "values": [
+            "ASD"
+          ],
+          "wire_name": "arg1"
+        }
+      },
+      "identity": "api_blueprint.engine.schema.modeling.REQ_HelloWay_QUERY",
+      "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
+      "name": "REQ_HelloWay_QUERY",
+      "qualname": "REQ_HelloWay_QUERY",
+      "type": "object"
+    }
+  },
+  "service": {
+    "group": "hello",
+    "id": "api.hello",
+    "name": "HelloService",
+    "path": "/api/hello",
+    "root": "api"
+  }
+}

@@ -2,13 +2,22 @@ from __future__ import annotations
 
 import fnmatch
 import json
+import shutil
 from pathlib import Path
 from typing import Sequence
 
-from api_blueprint.application.project import build_entrypoints, load_project
+from api_blueprint.application.entrypoints import load_entrypoints
+from api_blueprint.application.project import LoadedProject, build_entrypoints, load_project
 from api_blueprint.config import ResolvedApiTargetConfig, ResolvedTargetConfig, resolve_config
 from api_blueprint.config.resolved import ResolvedWailsConfig, ResolvedWailsTargetConfig
-from api_blueprint.contract import ContractGraph, build_contract_graph, diff_manifests
+from api_blueprint.contract import (
+    ContractGraph,
+    build_agent_manifest,
+    build_contract_graph,
+    build_contract_shards,
+    diff_manifests,
+    render_agent_markdown,
+)
 from api_blueprint.engine import Blueprint
 
 
@@ -97,13 +106,24 @@ def load_contract_graph(config_path: str | Path | None, *, command: str) -> Cont
     return graph
 
 
-def write_manifest(config_path: str | Path | None, out_path: Path) -> None:
+def write_manifest(
+    config_path: str | Path | None,
+    out_path: Path | None,
+    *,
+    profile: str = "full",
+    shards_dir: Path | None = None,
+) -> None:
     graph = load_contract_graph(config_path, command="api-gen manifest")
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(
-        json.dumps(graph.to_manifest(), ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    manifest_data = graph.to_manifest()
+    if out_path is not None:
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = build_agent_manifest(manifest_data) if profile == "agent" else manifest_data
+        out_path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+    if shards_dir is not None:
+        write_contract_shards(manifest_data, shards_dir)
 
 
 def diff_files(before: Path, after: Path) -> dict[str, list[str]]:
@@ -114,6 +134,8 @@ def diff_files(before: Path, after: Path) -> dict[str, list[str]]:
 
 def check(config_path: str | Path | None) -> None:
     resolved = resolve_config(config_path)
+    if not _target_plan_requires_blueprint(resolved.targets):
+        return
     graph = load_contract_graph(config_path, command="api-gen check")
     errors = capability_errors(graph, resolved.targets)
     if errors:
@@ -125,16 +147,14 @@ def generate(config_path: str | Path | None, target_ids: Sequence[str] = ()) -> 
     from api_blueprint.writer.grpc.proto_writer import render_proto_files
     from api_blueprint.writer.grpc import toolchain as grpc_toolchain
 
-    project = load_project(config_path, command="api-gen generate")
-    if not project.entrypoints:
-        raise ModuleNotFoundError("[api-gen generate] 未指定蓝图entrypoints")
-    build_entrypoints(project.entrypoints)
-    graph = build_contract_graph(project.entrypoints)
-    attach_target_context(graph, project.resolved.targets, project.resolved.project_root)
-    targets = generation_plan(project.resolved.targets, target_ids)
-    errors = capability_errors(graph, targets)
-    if errors:
-        raise ValueError(errors[0])
+    resolved = resolve_config(config_path)
+    targets = generation_plan(resolved.targets, target_ids)
+    project, graph = _load_project_for_generation(config_path, targets)
+    if graph is not None:
+        attach_target_context(graph, project.resolved.targets, project.resolved.project_root)
+        errors = capability_errors(graph, targets)
+        if errors:
+            raise ValueError(errors[0])
 
     target_map = {target.id: target for target in project.resolved.targets}
     generated: set[str] = set()
@@ -189,17 +209,19 @@ def generate(config_path: str | Path | None, target_ids: Sequence[str] = ()) -> 
                 graph,
                 package=target.package or "",
                 go_package_prefix=target.go_package_prefix or "",
+                proto_files=target.proto_files,
             )
             for relative, text in files.items():
                 file_path = output / relative
                 file_path.parent.mkdir(parents=True, exist_ok=True)
                 file_path.write_text(text, encoding="utf-8")
         elif target.kind in {"grpc-go", "grpc-python"}:
-            if target.proto is None:
-                raise ValueError(f"target[{target.id}] {target.kind} requires proto")
-            proto_target = target_map[target.proto]
-            generate_target(proto_target)
-            proto_root = require_out_dir(proto_target)
+            if target.proto is not None:
+                proto_target = target_map[target.proto]
+                generate_target(proto_target)
+                proto_root = require_out_dir(proto_target)
+            else:
+                proto_root = require_source_root(target)
             if target.kind == "grpc-go":
                 grpc_toolchain.generate_go_stubs(proto_root, target)
             else:
@@ -224,6 +246,32 @@ def generate(config_path: str | Path | None, target_ids: Sequence[str] = ()) -> 
 
     for target in targets:
         generate_target(target)
+
+
+def _load_project_for_generation(
+    config_path: str | Path | None,
+    targets: Sequence[ResolvedApiTargetConfig],
+) -> tuple[LoadedProject, ContractGraph | None]:
+    resolved = resolve_config(config_path)
+    if not _target_plan_requires_blueprint(targets):
+        return LoadedProject(config=resolved.raw, resolved=resolved, entrypoints=[]), None
+
+    if resolved.raw.blueprint is None:
+        raise ValueError("[api-gen generate] 配置中未找到blueprint段落")
+    entrypoints = load_entrypoints(resolved.raw.blueprint.entrypoints, resolved.entrypoint_root)
+    if not entrypoints:
+        raise ModuleNotFoundError("[api-gen generate] 未指定蓝图entrypoints")
+    build_entrypoints(entrypoints)
+    graph = build_contract_graph(entrypoints)
+    return LoadedProject(config=resolved.raw, resolved=resolved, entrypoints=entrypoints), graph
+
+
+def _target_plan_requires_blueprint(targets: Sequence[ResolvedApiTargetConfig]) -> bool:
+    for target in targets:
+        if target.kind in {"grpc-go", "grpc-python"} and target.proto is None:
+            continue
+        return True
+    return False
 
 
 def require_target(
@@ -276,9 +324,7 @@ def generation_plan(
                 visit(target_by_id(target, target.server))
             for client_id in target.clients:
                 visit(target_by_id(target, client_id))
-        if target.kind in {"grpc-go", "grpc-python"}:
-            if target.proto is None:
-                raise ValueError(f"target[{target.id}] {target.kind} requires proto")
+        if target.kind in {"grpc-go", "grpc-python"} and target.proto is not None:
             visit(target_by_id(target, target.proto))
 
         visiting.remove(target.id)
@@ -364,6 +410,15 @@ def write_contract_target(graph: ContractGraph, target: ResolvedApiTargetConfig,
         )
     if "markdown" in formats:
         (out_dir / "api-blueprint.contract.md").write_text(render_contract_markdown(manifest_data), encoding="utf-8")
+    if "agent-json" in formats:
+        (out_dir / "api-blueprint.agent.json").write_text(
+            json.dumps(build_agent_manifest(manifest_data), ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+    if "agent-markdown" in formats:
+        (out_dir / "api-blueprint.agent.md").write_text(render_agent_markdown(manifest_data), encoding="utf-8")
+    if "shards" in formats:
+        write_contract_shards(manifest_data, out_dir / "api-blueprint.contract.d")
 
 
 def render_contract_markdown(manifest_data: dict[str, object]) -> str:
@@ -374,6 +429,15 @@ def render_contract_markdown(manifest_data: dict[str, object]) -> str:
         lines.append(f"- `{route.get('id')}` `{route.get('kind')}` `{route.get('url')}`")
     lines.append("")
     return "\n".join(lines)
+
+
+def write_contract_shards(manifest_data: dict[str, object], shards_dir: Path) -> None:
+    shutil.rmtree(shards_dir, ignore_errors=True)
+    shards = build_contract_shards(manifest_data)
+    for relative, payload in shards.items():
+        path = shards_dir / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def attach_target_context(
@@ -422,6 +486,25 @@ def target_manifest(target: ResolvedApiTargetConfig, project_root: Path) -> dict
         manifest["import_roots"] = [_portable_path(path, project_root) for path in target.import_roots]
     if target.go_package_prefix is not None:
         manifest["go_package_prefix"] = target.go_package_prefix
+    if target.proto_files:
+        manifest["proto_files"] = [
+            {
+                key: value
+                for key, value in {
+                    "file": proto_file.file,
+                    "package": proto_file.package,
+                    "go_package": proto_file.go_package,
+                    "schema_modules": list(proto_file.schema_modules),
+                    "schema_names": list(proto_file.schema_names),
+                    "route_paths": list(proto_file.route_paths),
+                    "route_ids": list(proto_file.route_ids),
+                    "service_ids": list(proto_file.service_ids),
+                    "service": proto_file.service,
+                }.items()
+                if value is not None and value != []
+            }
+            for proto_file in target.proto_files
+        ]
     if target.python_package_root is not None:
         manifest["python_package_root"] = target.python_package_root
     if target.include:
@@ -445,6 +528,12 @@ def require_out_dir(target: ResolvedApiTargetConfig) -> Path:
     if target.out_dir is None:
         raise ValueError(f"target[{target.id}] requires out_dir")
     return target.out_dir
+
+
+def require_source_root(target: ResolvedApiTargetConfig) -> Path:
+    if target.source_root is None:
+        raise ValueError(f"target[{target.id}] {target.kind} requires source_root when proto is omitted")
+    return target.source_root
 
 
 def enabled_http_transports(targets: Sequence[ResolvedApiTargetConfig], server_id: str) -> tuple[str, ...]:

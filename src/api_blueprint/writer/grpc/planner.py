@@ -3,9 +3,10 @@ from __future__ import annotations
 import re
 from collections import OrderedDict
 from dataclasses import dataclass, field
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 from api_blueprint.contract import ContractGraph
+from api_blueprint.writer.grpc.layout import GrpcProtoFileRule, GrpcProtoLayout, ProtoFileLayout
 
 
 JsonObject = Mapping[str, Any]
@@ -110,11 +111,19 @@ class ProtoFilePlan:
 
 
 class ProtoPlanner:
-    def __init__(self, graph: ContractGraph, *, package: str, go_package_prefix: str) -> None:
+    def __init__(
+        self,
+        graph: ContractGraph,
+        *,
+        package: str,
+        go_package_prefix: str,
+        proto_files: Sequence[GrpcProtoFileRule] = (),
+    ) -> None:
         manifest = graph.to_manifest()
         self.schemas = manifest["schemas"] if isinstance(manifest.get("schemas"), Mapping) else {}
         self.package = package
         self.go_package_prefix = go_package_prefix
+        self.layout = GrpcProtoLayout(proto_files)
         self.files: "OrderedDict[str, ProtoFilePlan]" = OrderedDict()
         self._building_messages: set[tuple[str, str]] = set()
         self.routes = manifest["routes"] if isinstance(manifest.get("routes"), list) else []
@@ -126,8 +135,13 @@ class ProtoPlanner:
         return self.files
 
     def _add_route(self, route: JsonObject) -> None:
-        service_file = self._route_file(route)
-        service_name = _route_proto_name(route, "service") or f"{_pascal(_route_group(route))}Service"
+        route_layout = self.layout.route_file(route)
+        service_file = self._route_file(route, route_layout)
+        service_name = (
+            (route_layout.service if route_layout is not None else None)
+            or _route_proto_name(route, "service")
+            or f"{_pascal(_route_group(route))}Service"
+        )
         service = service_file.services.setdefault(service_name, ProtoServicePlan(name=service_name))
         rpc_name = _route_proto_name(route, "rpc") or _pascal(str(route["operation"]))
 
@@ -167,14 +181,26 @@ class ProtoPlanner:
                 ProtoRpcPlan(rpc_name, request_type, response_type, request_stream=True, response_stream=True)
             )
 
-    def _route_file(self, route: JsonObject) -> ProtoFilePlan:
+    def _route_file(self, route: JsonObject, route_layout: ProtoFileLayout | None) -> ProtoFilePlan:
         root, group = _split_service_id(str(route["service_id"]))
         route_proto = _proto_metadata(route)
-        path = str(route_proto.get("file") or f"{root}/{group}.proto")
+        path = str(
+            (route_layout.file if route_layout is not None else None)
+            or route_proto.get("file")
+            or f"{root}/{group}.proto"
+        )
         return self._ensure_file(
             path,
-            package=str(route_proto.get("package") or _service_package(self.package, root, group)),
-            go_package=str(route_proto.get("go_package") or _go_package_for_path(self.go_package_prefix, path)),
+            package=str(
+                (route_layout.package if route_layout is not None else None)
+                or route_proto.get("package")
+                or _service_package(self.package, root, group)
+            ),
+            go_package=str(
+                (route_layout.go_package if route_layout is not None else None)
+                or route_proto.get("go_package")
+                or _go_package_for_path(self.go_package_prefix, path)
+            ),
         )
 
     def _ensure_file(self, path: str, *, package: str, go_package: str) -> ProtoFilePlan:
@@ -189,16 +215,24 @@ class ProtoPlanner:
         self.files[path] = plan
         return plan
 
-    def _file_for_schema(self, schema_name: str, default_file: ProtoFilePlan) -> ProtoFilePlan:
-        schema = _schema_by_name(schema_name, self.schemas)
+    def _file_for_schema_contract(self, schema: JsonObject | None, default_file: ProtoFilePlan) -> ProtoFilePlan:
         schema_proto = _proto_metadata(schema)
-        path = schema_proto.get("file")
+        schema_layout = self.layout.schema_file(schema or {})
+        path = (schema_layout.file if schema_layout is not None else None) or schema_proto.get("file")
         if not isinstance(path, str) or not path:
             return default_file
         return self._ensure_file(
             path,
-            package=str(schema_proto.get("package") or _package_for_path(self.package, path)),
-            go_package=str(schema_proto.get("go_package") or _go_package_for_path(self.go_package_prefix, path)),
+            package=str(
+                (schema_layout.package if schema_layout is not None else None)
+                or schema_proto.get("package")
+                or _package_for_path(self.package, path)
+            ),
+            go_package=str(
+                (schema_layout.go_package if schema_layout is not None else None)
+                or schema_proto.get("go_package")
+                or _go_package_for_path(self.go_package_prefix, path)
+            ),
         )
 
     def _register_message_contract(self, service_file: ProtoFilePlan, message: JsonObject | None) -> str:
@@ -219,7 +253,7 @@ class ProtoPlanner:
                 "wire_name": _proto_field_name(key),
                 "optional": False,
                 "description": "",
-                "proto": {"oneof": "message"},
+                "contract": {"choice": "message"},
             }
         schema = {
             "kind": "model",
@@ -238,9 +272,9 @@ class ProtoPlanner:
         message_name = _proto_type_name(name)
         message_file = service_file
         if schema is not None:
-            schema_name = _schema_name(schema)
+            schema_name = _schema_message_name(schema)
             if schema_name is not None:
-                message_file = self._file_for_schema(schema_name, service_file)
+                message_file = self._file_for_schema_contract(schema, service_file)
                 if message_file.path != service_file.path:
                     service_file.add_import(message_file.path)
                     message_name = _proto_type_name(schema_name)
@@ -336,11 +370,23 @@ class ProtoPlanner:
             return self._message_reference(service_file, ref)
         if field_type == "enum":
             enum_name = _proto_type_name(str(field.get("enum") or "Enum"))
-            values = field.get("values", [])
-            enum_values = field.get("enum_values", [])
-            if isinstance(enum_values, list):
-                service_file.enums.setdefault(enum_name, ProtoEnumPlan(enum_name, _proto_enum_values(enum_name, enum_values, values)))
-            return enum_name
+            enum_file = self._file_for_enum_contract(field, service_file)
+            self._register_enum_contract(enum_file, field)
+            if enum_file.path == service_file.path:
+                return enum_name
+            service_file.add_import(enum_file.path)
+            if enum_file.package == service_file.package:
+                return enum_name
+            return f"{enum_file.package}.{enum_name}"
+        if field_type in {"timestamp", "date_time"}:
+            service_file.add_import("google/protobuf/timestamp.proto")
+            return "google.protobuf.Timestamp"
+        if field_type in {"struct", "json_value"}:
+            service_file.add_import("google/protobuf/struct.proto")
+            return "google.protobuf.Struct"
+        if field_type in {"any_payload", "any_value"}:
+            service_file.add_import("google/protobuf/any.proto")
+            return "google.protobuf.Any"
         return {
             "string": "string",
             "str": "string",
@@ -364,14 +410,35 @@ class ProtoPlanner:
 
     def _message_reference(self, service_file: ProtoFilePlan, ref: str) -> str:
         schema = _schema_by_name(ref, self.schemas)
-        message_file = self._file_for_schema(ref, service_file)
-        message_name = self._register_message_schema(message_file, ref, schema)
+        message_file = self._file_for_schema_contract(schema, service_file)
+        message_name = self._register_message_schema(message_file, _schema_message_name(schema) or ref, schema)
         if message_file.path == service_file.path:
             return message_name
         service_file.add_import(message_file.path)
         if message_file.package == service_file.package:
             return message_name
         return f"{message_file.package}.{message_name}"
+
+    def _file_for_enum_contract(self, enum_field: JsonObject, default_file: ProtoFilePlan) -> ProtoFilePlan:
+        enum_layout = self.layout.enum_file(enum_field)
+        if enum_layout is None:
+            return default_file
+        return self._ensure_file(
+            enum_layout.file,
+            package=str(enum_layout.package or _package_for_path(self.package, enum_layout.file)),
+            go_package=str(enum_layout.go_package or _go_package_for_path(self.go_package_prefix, enum_layout.file)),
+        )
+
+    def _register_enum_contract(self, enum_file: ProtoFilePlan, enum_field: JsonObject) -> str:
+        enum_name = _proto_type_name(str(enum_field.get("enum") or "Enum"))
+        values = enum_field.get("values", [])
+        enum_values = enum_field.get("enum_values", [])
+        if isinstance(enum_values, list):
+            enum_file.enums.setdefault(
+                enum_name,
+                ProtoEnumPlan(enum_name, _proto_enum_values(enum_name, enum_values, values)),
+            )
+        return enum_name
 
     def _proto_map_value_type(self, field: object, *, service_file: ProtoFilePlan, context: str) -> str:
         if not isinstance(field, Mapping):
@@ -406,8 +473,9 @@ def plan_proto_files(
     *,
     package: str,
     go_package_prefix: str,
+    proto_files: Sequence[GrpcProtoFileRule] = (),
 ) -> "OrderedDict[str, ProtoFilePlan]":
-    return ProtoPlanner(graph, package=package, go_package_prefix=go_package_prefix).plan()
+    return ProtoPlanner(graph, package=package, go_package_prefix=go_package_prefix, proto_files=proto_files).plan()
 
 
 def _message_fields(schema: JsonObject | None) -> Mapping[str, Any]:
@@ -469,10 +537,31 @@ def _schema_by_name(name: object, schemas: JsonObject) -> JsonObject | None:
     if not isinstance(name, str):
         return None
     schema = schemas.get(name)
-    return schema if isinstance(schema, Mapping) else None
+    if isinstance(schema, Mapping):
+        return schema
+
+    exact_matches = [
+        candidate
+        for candidate in schemas.values()
+        if isinstance(candidate, Mapping)
+        and name in {candidate.get("identity"), candidate.get("qualname")}
+    ]
+    if len(exact_matches) == 1:
+        return exact_matches[0]
+
+    name_matches = [
+        candidate
+        for candidate in schemas.values()
+        if isinstance(candidate, Mapping) and candidate.get("name") == name
+    ]
+    if len(name_matches) == 1:
+        return name_matches[0]
+    return None
 
 
-def _schema_name(schema: JsonObject) -> str | None:
+def _schema_message_name(schema: JsonObject | None) -> str | None:
+    if not isinstance(schema, Mapping):
+        return None
     for name in ("name",):
         value = schema.get(name)
         if isinstance(value, str) and value:
@@ -538,7 +627,13 @@ def _proto_metadata(value: object) -> JsonObject:
 
 
 def _explicit_field_number(field: JsonObject) -> int | None:
-    value = _proto_metadata(field).get("number")
+    contract = field.get("contract")
+    value = contract.get("field_id") if isinstance(contract, Mapping) else None
+    if value is None:
+        wire = field.get("wire")
+        value = wire.get("number") if isinstance(wire, Mapping) else None
+    if value is None:
+        value = _proto_metadata(field).get("number")
     if value is None:
         return None
     number = int(value)
@@ -548,7 +643,10 @@ def _explicit_field_number(field: JsonObject) -> int | None:
 
 
 def _field_oneof(field: JsonObject) -> str | None:
-    value = _proto_metadata(field).get("oneof")
+    contract = field.get("contract")
+    value = contract.get("choice") if isinstance(contract, Mapping) else None
+    if value is None:
+        value = _proto_metadata(field).get("oneof")
     return str(value) if value else None
 
 
@@ -556,6 +654,9 @@ def _field_proto_name(field: JsonObject, fallback: str) -> str:
     value = _proto_metadata(field).get("name")
     if isinstance(value, str) and value:
         return _proto_identifier(value)
+    source_name = field.get("name")
+    if isinstance(source_name, str) and fallback and fallback != source_name:
+        return _proto_identifier(fallback)
     return _proto_field_name(fallback)
 
 
@@ -563,7 +664,30 @@ def _field_label(field: JsonObject) -> str:
     proto = _proto_metadata(field)
     if proto.get("optional") is True:
         return "optional"
+    contract = field.get("contract")
+    if isinstance(contract, Mapping) and contract.get("optional") is True and _field_allows_proto_optional(field):
+        return "optional"
+    wire = field.get("wire")
+    if isinstance(wire, Mapping) and wire.get("optional") is True and _field_allows_proto_optional(field):
+        return "optional"
     return ""
+
+
+def _field_allows_proto_optional(field: JsonObject) -> bool:
+    if field.get("ref"):
+        return False
+    field_type = field.get("type")
+    return str(field_type) not in {
+        "array",
+        "map",
+        "object",
+        "timestamp",
+        "date_time",
+        "struct",
+        "json_value",
+        "any_payload",
+        "any_value",
+    }
 
 
 def _unique_message_name(service_file: ProtoFilePlan, base_name: str) -> str:

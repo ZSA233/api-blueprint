@@ -3,7 +3,7 @@ from __future__ import annotations
 from click.testing import CliRunner
 
 from api_blueprint.cli.apigen import api_gen
-from api_blueprint.application import vnext
+from api_blueprint.application import generator
 from api_blueprint.config import Config, resolve_config
 
 
@@ -122,6 +122,27 @@ files = ["api/**/*.proto"]
     )
     resolved = resolve_config(config_path)
 
-    planned = vnext.generation_plan(resolved.targets, ("grpc.python",))
+    planned = generator.generation_plan(resolved.targets, ("grpc.python",))
 
     assert [target.id for target in planned] == ["grpc.proto", "grpc.python"]
+
+
+def test_generation_plan_does_not_add_proto_dependency_for_raw_proto_stub(tmp_path):
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[targets]]
+id = "grpc.python"
+kind = "grpc-python"
+source_root = "protocols/grpc"
+out_dir = "grpc/python"
+files = ["**/*.proto"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    resolved = resolve_config(config_path)
+
+    planned = generator.generation_plan(resolved.targets, ("grpc.python",))
+
+    assert [target.id for target in planned] == ["grpc.python"]

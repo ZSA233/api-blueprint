@@ -1,6 +1,6 @@
 # Configuration
 
-`api-blueprint.toml` is the main config file for the documentation service and the unified generator. The vNext mainline uses only `Blueprint -> ContractGraph -> [[targets]]`.
+`api-blueprint.toml` is the main config file for the documentation service and the unified generator. The 1.0 mainline uses only `Blueprint -> ContractGraph -> [[targets]]`.
 
 ## blueprint
 
@@ -24,7 +24,7 @@ entrypoints = ["blueprints.app:*"]
 id = "contract"
 kind = "contract"
 out_dir = "."
-formats = ["json", "markdown"]
+formats = ["json", "markdown", "agent-json", "agent-markdown", "shards"]
 
 [[targets]]
 id = "go.server"
@@ -90,22 +90,23 @@ Common fields:
 
 Core targets:
 
-- `contract`: emits `api-blueprint.contract.json` and / or `api-blueprint.contract.md`.
+- `contract`: emits `api-blueprint.contract.json`, `api-blueprint.contract.md`, `api-blueprint.agent.json`, `api-blueprint.agent.md`, and / or `api-blueprint.contract.d/` shards.
 - `go-server`: emits Go server core; Go client is reserved for a future `go-client` target.
 - `typescript-client`: emits TypeScript client core that depends only on `ApiTransport`; `base_url` / `base_url_expr` are injected by transport facades.
 - `kotlin-client`: initially supports only HTTP JSON RPC. `STREAM` / `CHANNEL`, form, binary, and custom wrappers fail during `api-gen check`.
-- `grpc-proto`: emits `.proto` files and service definitions from ContractGraph.
-- `grpc-go`: consumes a `grpc-proto` target in the same config and calls `protoc` / `protoc-gen-go` / `protoc-gen-go-grpc` to generate Go protobuf/gRPC stubs.
-- `grpc-python`: consumes a `grpc-proto` target in the same config and calls `grpcio-tools` to generate Python protobuf/gRPC stubs. `python_package_root` places generated files under a package root and rewrites generated imports.
+- `grpc-proto`: emits `.proto` files and service definitions from ContractGraph. `[[targets.proto_files]]` can map DSL schema module/name plus route path/id/service to a specific proto file/package/go_package/service.
+- `grpc-go`: consumes a `grpc-proto` target in the same config, or handwritten proto files directly, and calls `protoc` / `protoc-gen-go` / `protoc-gen-go-grpc` to generate Go protobuf/gRPC stubs.
+- `grpc-python`: consumes a `grpc-proto` target in the same config, or handwritten proto files directly, and calls `grpcio-tools` to generate Python protobuf/gRPC stubs. `python_package_root` places generated files under a package root and rewrites generated imports.
 
 gRPC stub target fields:
 
-- `proto`: must reference a `grpc-proto` target.
-- `files`: glob list relative to the proto target `out_dir`, for example `api/**/*.proto`.
-- `source_root`: optional; makes `files` relative to this directory and uses it as the `protoc` working directory. When omitted, the proto target `out_dir` is used. During old proto-tree migration, set it to paths such as `grpc/protos/services/...` to trim generated output paths.
+- `proto`: optional. When set, it references a `grpc-proto` target and stubs are generated after proto generation.
+- `source_root`: required when `proto` is omitted and handwritten proto files are compiled directly. It makes `files` relative to this directory and uses it as the `protoc` working directory.
+- `files`: glob list relative to the proto target `out_dir` or `source_root`, for example `api/**/*.proto`.
 - `import_roots`: extra proto include roots; the proto target `out_dir` is included automatically.
 - `module`: optional for `grpc-go`; when set, Go import-path output mode is used and generated files are split by `option go_package`.
 - `python_package_root`: used only by `grpc-python`, for example `pb` or `generated.pb`.
+- `proto_files`: used only by `grpc-proto`; each rule supports `file`, `package`, `go_package`, `schema_modules`, `schema_names`, `route_paths`, `route_ids`, `service_ids`, and `service`.
 
 Transport targets:
 
@@ -127,11 +128,13 @@ These targets currently exist only in the schema and capability registry and do 
 ```sh
 api-gen list-targets -c api-blueprint.toml
 api-gen explain-target -c api-blueprint.toml --target go.server
-api-gen manifest -c api-blueprint.toml --out api-blueprint.contract.json
+api-gen manifest -c api-blueprint.toml --profile full --out api-blueprint.contract.json
+api-gen manifest -c api-blueprint.toml --profile agent --out api-blueprint.agent.json
+api-gen manifest -c api-blueprint.toml --shards-dir api-blueprint.contract.d
 api-gen diff old.contract.json new.contract.json
 api-gen check -c api-blueprint.toml
 api-gen generate -c api-blueprint.toml
 api-gen generate -c api-blueprint.toml --target wails.v3
 ```
 
-`api-gen manifest` emits routes, schemas, connections, stable hashes, the resolved target plan, and the capability registry. `api-gen check` builds ContractGraph first, then validates target dependencies and capabilities. Failing before generation is easier to maintain than writing a partial output tree.
+`api-gen manifest --profile full` emits the full manifest; `--profile agent` emits the compact agent manifest; `--shards-dir` emits service / route / schema shards. `manifest.version` is the manifest schema compatibility version, for example `1.0`; `manifest.generator.version` comes from the package version source of truth. `api-gen check` builds ContractGraph first, then validates target dependencies and capabilities. Failing before generation is easier to maintain than writing a partial output tree.

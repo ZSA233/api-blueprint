@@ -218,7 +218,7 @@ await bridge.close(1000, "done");
 offMessage();
 ```
 
-legacy `WS().RECV().SEND()` 不进入 vNext ContractGraph 主线。新蓝图应使用 `STREAM` / `CHANNEL`，避免把多个逻辑消息误建模成多个裸 event。
+legacy `WS().RECV().SEND()` 不进入 1.0 ContractGraph 主线。新蓝图应使用 `STREAM` / `CHANNEL`，避免把多个逻辑消息误建模成多个裸 event。
 
 ## Harness 示例
 

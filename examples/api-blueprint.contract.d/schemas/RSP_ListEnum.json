@@ -1,0 +1,35 @@
+{
+  "inbound_routes": [
+    "api.hello.get.listenum"
+  ],
+  "schema": {
+    "auto": true,
+    "kind": "alias",
+    "name": "RSP_ListEnum",
+    "target": {
+      "items": {
+        "enum": "MapEnum",
+        "enum_identity": "blueprints.api_hello.MapEnum",
+        "enum_module": "blueprints.api_hello",
+        "enum_qualname": "MapEnum",
+        "enum_values": [
+          {
+            "name": "A",
+            "value": "a"
+          },
+          {
+            "name": "B",
+            "value": "b"
+          }
+        ],
+        "type": "enum",
+        "values": [
+          "a",
+          "b"
+        ]
+      },
+      "type": "array"
+    },
+    "type": "alias"
+  }
+}

@@ -188,3 +188,56 @@ def test_grpc_python_toolchain_uses_package_root_and_rewrites_generated_imports(
 def test_grpc_stub_toolchain_rejects_empty_file_selection(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError, match="no proto files matched"):
         select_proto_files(tmp_path / "protos", ("api/**/*.proto",))
+
+
+def test_raw_proto_go_and_python_toolchains_use_source_root(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    source_root = tmp_path / "protocols" / "grpc"
+    source_root.mkdir(parents=True)
+    (source_root / "demo.proto").write_text('syntax = "proto3";\n', encoding="utf-8")
+    go_target = _target(
+        kind="grpc-go",
+        out_dir=tmp_path / "go",
+        files=("*.proto",),
+        source_root=source_root,
+    )
+    python_target = _target(
+        kind="grpc-python",
+        out_dir=tmp_path / "python",
+        files=("*.proto",),
+        source_root=source_root,
+        python_package_root="pb",
+    )
+    go_captured: dict[str, Any] = {}
+    python_captured: dict[str, Any] = {}
+
+    monkeypatch.setattr("shutil.which", lambda name: f"/usr/local/bin/{name}")
+
+    def fake_run(command: list[str], *, cwd: Path, check: bool) -> subprocess.CompletedProcess[str]:
+        go_captured["command"] = command
+        go_captured["cwd"] = cwd
+        go_captured["check"] = check
+        return subprocess.CompletedProcess(command, 0)
+
+    def fake_protoc_main(args: list[str]) -> int:
+        python_captured["args"] = args
+        output_root = Path(next(arg.removeprefix("--python_out=") for arg in args if arg.startswith("--python_out=")))
+        (output_root / "demo_pb2.py").write_text("", encoding="utf-8")
+        return 0
+
+    generate_go_stubs(source_root, go_target, runner=fake_run)
+    generate_python_stubs(
+        source_root,
+        python_target,
+        protoc_main=fake_protoc_main,
+        builtin_proto_root=tmp_path / "grpc_tools" / "_proto",
+    )
+
+    assert go_captured["cwd"] == source_root
+    assert go_captured["command"][:2] == ["protoc", f"-I{source_root.as_posix()}"]
+    assert go_captured["command"][-1] == "demo.proto"
+    assert f"-I{source_root.as_posix()}" in python_captured["args"]
+    assert python_captured["args"][-1] == "demo.proto"
+    assert (python_target.out_dir / "pb" / "__init__.py").is_file()

@@ -5,6 +5,7 @@
 ## 真源与快照
 
 - `examples/blueprints/`：Blueprint 真源。
+- `examples/api-blueprint.contract.json`、`examples/api-blueprint.agent.json`、`examples/api-blueprint.agent.md`、`examples/api-blueprint.contract.d/`：contract 与 agent manifest 快照。
 - `examples/golang/`、`examples/typescript/`、`examples/kotlin/`：Blueprint 生成快照。
 - `examples/wails-harness/v2/`、`examples/wails-harness/v3/`：手写最小 Wails harness，消费共享生成产物。
 - `examples/wails-hello/`：独立 Wails v3 hello 示例；`blueprints/` 是真源，`golang/` 与 `typescript/` 是生成快照，`app/` 是手写 Wails app shell。

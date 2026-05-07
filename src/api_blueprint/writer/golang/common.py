@@ -214,7 +214,7 @@ class GolangTagBuilder:
     def build(cls, name: str, field: Union[Field, Model], field_info: FieldInfo) -> str:
         extra = getattr(field, "__extra__", {}) or {}
         alias = extra.get("alias")
-        omitempty = extra.get("omitempty", False)
+        omitempty = extra.get("omitempty", False) or extra.get("optional", False)
         field_name = alias or name
         normal_val = field_name if not omitempty else f"{name},omitempty"
 

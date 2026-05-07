@@ -32,6 +32,30 @@ class Object(Field):
         super().__init__(**kwargs)
 
 
+class DateTime(Object):
+    __type__ = "date_time"
+
+
+class JSONValue(Object):
+    __type__ = "json_value"
+
+
+class AnyValue(Object):
+    __type__ = "any_value"
+
+
+class Timestamp(Object):
+    __type__ = "timestamp"
+
+
+class Struct(Object):
+    __type__ = "struct"
+
+
+class AnyPayload(Object):
+    __type__ = "any_payload"
+
+
 class Null(Field):
     __type__ = "null"
 

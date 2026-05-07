@@ -42,7 +42,7 @@ class TargetConfig(BaseModel):
     base_url: str | None = None
     base_url_expr: str | None = None
     package: str | None = None
-    formats: list[Literal["json", "markdown"]] = Field(default_factory=list)
+    formats: list[Literal["json", "markdown", "agent-json", "agent-markdown", "shards"]] = Field(default_factory=list)
     version: WailsVersion | None = None
     frontend_mode: WailsFrontendMode = "external"
     overlay_name: str | None = None
@@ -56,6 +56,7 @@ class TargetConfig(BaseModel):
     python_package_root: str | None = None
     include: list[str] = Field(default_factory=list)
     exclude: list[str] = Field(default_factory=list)
+    proto_files: list["GrpcProtoFileConfig"] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_target_fields(self) -> "TargetConfig":
@@ -73,9 +74,11 @@ class TargetConfig(BaseModel):
             raise ValueError(f"target[{self.id}] kotlin-client requires package")
         if self.kind == "grpc-proto" and not self.package:
             raise ValueError(f"target[{self.id}] grpc-proto requires package")
+        if self.kind != "grpc-proto" and self.proto_files:
+            raise ValueError(f"target[{self.id}] proto_files is only supported by grpc-proto targets")
         if self.kind in {"grpc-go", "grpc-python"}:
-            if not self.proto:
-                raise ValueError(f"target[{self.id}] {self.kind} requires proto")
+            if not self.proto and not self.source_root:
+                raise ValueError(f"target[{self.id}] {self.kind} requires proto or source_root")
             if not self.out_dir:
                 raise ValueError(f"target[{self.id}] {self.kind} requires out_dir")
             if not self.files:
@@ -83,6 +86,20 @@ class TargetConfig(BaseModel):
         validate_selection_rules(self.include, label=f"target[{self.id}]")
         validate_selection_rules(self.exclude, label=f"target[{self.id}]")
         return self
+
+
+class GrpcProtoFileConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    file: str
+    package: str | None = None
+    go_package: str | None = None
+    schema_modules: list[str] = Field(default_factory=list)
+    schema_names: list[str] = Field(default_factory=list)
+    route_paths: list[str] = Field(default_factory=list)
+    route_ids: list[str] = Field(default_factory=list)
+    service_ids: list[str] = Field(default_factory=list)
+    service: str | None = None
 
 
 class BlueprintConfig(BaseModel):

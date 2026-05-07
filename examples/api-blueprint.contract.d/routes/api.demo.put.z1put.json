@@ -1,0 +1,217 @@
+{
+  "artifacts": {
+    "go.server": {
+      "files": [
+        "golang/views/routes/api/demo/gen_interface.go",
+        "golang/views/routes/api/demo/gen_protos.go"
+      ],
+      "imports": [],
+      "kind": "go-server"
+    },
+    "grpc.go": {
+      "files": [
+        "grpc/go/api/demo/demo.pb.go",
+        "grpc/go/api/demo/demo_grpc.pb.go"
+      ],
+      "imports": [
+        "example.com/project/grpc/go/api/demo"
+      ],
+      "kind": "grpc-go"
+    },
+    "grpc.proto": {
+      "files": [
+        "grpc/protos/api/demo.proto"
+      ],
+      "imports": [],
+      "kind": "grpc-proto"
+    },
+    "grpc.python": {
+      "files": [
+        "grpc/python/pb/api/demo_pb2.py",
+        "grpc/python/pb/api/demo_pb2_grpc.py"
+      ],
+      "imports": [
+        "pb.api.demo_pb2",
+        "pb.api.demo_pb2_grpc"
+      ],
+      "kind": "grpc-python"
+    },
+    "typescript.client": {
+      "files": [
+        "typescript/api/routes/api/demo/client.ts",
+        "typescript/api/routes/api/demo/models.ts"
+      ],
+      "imports": [
+        "typescript/api/routes/api/demo"
+      ],
+      "kind": "typescript-client"
+    },
+    "wails.v2": {
+      "files": [
+        "golang/views/transports/wailsv2/api/demo/gen_service.go",
+        "typescript/api/transports/wailsv2/api/demo/client.ts"
+      ],
+      "imports": [],
+      "kind": "wails-transport"
+    },
+    "wails.v3": {
+      "files": [
+        "golang/views/transports/wailsv3/api/demo/gen_service.go",
+        "typescript/api/transports/wailsv3/api/demo/client.ts"
+      ],
+      "imports": [],
+      "kind": "wails-transport"
+    }
+  },
+  "connection": null,
+  "route": {
+    "connection": null,
+    "deprecated": false,
+    "hash": "8fcc6643c88f434213d285e1fbff27744ca683e19288e01027565ad6a7ca4011",
+    "id": "api.demo.put.z1put",
+    "kind": "rpc",
+    "method_name": "z1put",
+    "methods": [
+      "PUT"
+    ],
+    "operation": "Z1put",
+    "path": "/1put",
+    "proto": {},
+    "request": {
+      "binary_model": null,
+      "form_model": null,
+      "json_model": "REQ_Func1put_JSON",
+      "query_model": "REQ_Func1put_QUERY"
+    },
+    "response": {
+      "media_type": "application/json",
+      "model": "RSP_Func1put",
+      "wrapper": "GeneralWrapper"
+    },
+    "service_id": "api.demo",
+    "url": "/api/demo/1put"
+  },
+  "schemas": {
+    "ANON_Func1put_anon_kv": {
+      "auto": true,
+      "fields": {
+        "kv1": {
+          "description": "kv1",
+          "name": "kv1",
+          "optional": false,
+          "type": "uint",
+          "wire_name": "kv1"
+        },
+        "kv2": {
+          "description": "kv2",
+          "items": {
+            "type": "float64"
+          },
+          "name": "kv2",
+          "optional": false,
+          "type": "array",
+          "wire_name": "kv2"
+        }
+      },
+      "identity": "api_blueprint.engine.schema.modeling.ANON_Func1put_anon_kv",
+      "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
+      "name": "ANON_Func1put_anon_kv",
+      "qualname": "ANON_Func1put_anon_kv",
+      "type": "object"
+    },
+    "REQ_Func1put_JSON": {
+      "auto": true,
+      "fields": {
+        "req1": {
+          "description": "req1",
+          "name": "req1",
+          "optional": false,
+          "type": "string",
+          "wire_name": "req1"
+        },
+        "req2": {
+          "description": "req2",
+          "name": "req2",
+          "optional": true,
+          "type": "int",
+          "wire_name": "req2"
+        }
+      },
+      "identity": "api_blueprint.engine.schema.modeling.REQ_Func1put_JSON",
+      "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
+      "name": "REQ_Func1put_JSON",
+      "qualname": "REQ_Func1put_JSON",
+      "type": "object"
+    },
+    "REQ_Func1put_QUERY": {
+      "auto": true,
+      "fields": {
+        "arg1": {
+          "description": "arg1",
+          "name": "arg1",
+          "optional": true,
+          "type": "string",
+          "wire_name": "arg1"
+        },
+        "arg2": {
+          "description": "arg2",
+          "name": "arg2",
+          "optional": true,
+          "type": "float",
+          "wire_name": "arg2"
+        },
+        "arg3": {
+          "description": "arg3",
+          "name": "arg3",
+          "optional": true,
+          "type": "string",
+          "wire_name": "arg3"
+        }
+      },
+      "identity": "api_blueprint.engine.schema.modeling.REQ_Func1put_QUERY",
+      "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
+      "name": "REQ_Func1put_QUERY",
+      "qualname": "REQ_Func1put_QUERY",
+      "type": "object"
+    },
+    "RSP_Func1put": {
+      "auto": true,
+      "fields": {
+        "anon_kv": {
+          "description": "",
+          "name": "anon_kv",
+          "optional": false,
+          "ref": "ANON_Func1put_anon_kv",
+          "type": "object",
+          "wire_name": "anon_kv"
+        },
+        "list": {
+          "description": "list",
+          "items": {
+            "type": "string"
+          },
+          "name": "list",
+          "optional": false,
+          "type": "array",
+          "wire_name": "list"
+        }
+      },
+      "identity": "api_blueprint.engine.schema.modeling.RSP_Func1put",
+      "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
+      "name": "RSP_Func1put",
+      "qualname": "RSP_Func1put",
+      "type": "object"
+    }
+  },
+  "service": {
+    "group": "demo",
+    "id": "api.demo",
+    "name": "DemoService",
+    "path": "/api/demo",
+    "root": "api"
+  }
+}

@@ -1,6 +1,6 @@
 # 配置说明
 
-`api-blueprint.toml` 是文档服务和统一生成器的主配置文件。vNext 主线只使用 `Blueprint -> ContractGraph -> [[targets]]`。
+`api-blueprint.toml` 是文档服务和统一生成器的主配置文件。1.0 主线只使用 `Blueprint -> ContractGraph -> [[targets]]`。
 
 ## blueprint
 
@@ -24,7 +24,7 @@ entrypoints = ["blueprints.app:*"]
 id = "contract"
 kind = "contract"
 out_dir = "."
-formats = ["json", "markdown"]
+formats = ["json", "markdown", "agent-json", "agent-markdown", "shards"]
 
 [[targets]]
 id = "go.server"
@@ -90,22 +90,23 @@ python_package_root = "pb"
 
 核心 target：
 
-- `contract`：输出 `api-blueprint.contract.json` 和 / 或 `api-blueprint.contract.md`。
+- `contract`：输出 `api-blueprint.contract.json`、`api-blueprint.contract.md`、`api-blueprint.agent.json`、`api-blueprint.agent.md` 和 / 或 `api-blueprint.contract.d/` shards。
 - `go-server`：生成 Go 服务端 core；Go client 本轮只预留 `go-client` target。
 - `typescript-client`：生成只依赖 `ApiTransport` 的 TypeScript client core；`base_url` / `base_url_expr` 由 transport facade 注入。
 - `kotlin-client`：首轮只支持 HTTP JSON RPC；`STREAM` / `CHANNEL`、form、binary、自定义 wrapper 会在 `api-gen check` 阶段失败。
-- `grpc-proto`：从 ContractGraph 输出 `.proto` 和 service 定义。
-- `grpc-go`：消费同配置内的 `grpc-proto` target，调用 `protoc` / `protoc-gen-go` / `protoc-gen-go-grpc` 生成 Go protobuf/gRPC stub。
-- `grpc-python`：消费同配置内的 `grpc-proto` target，调用 `grpcio-tools` 生成 Python protobuf/gRPC stub；`python_package_root` 会把生成物放入指定包根并重写生成 import。
+- `grpc-proto`：从 ContractGraph 输出 `.proto` 和 service 定义；可通过 `[[targets.proto_files]]` 把 DSL schema module/name 与 route path/id/service 映射到指定 proto file/package/go_package/service。
+- `grpc-go`：消费同配置内的 `grpc-proto` target，或直接消费手写 proto，调用 `protoc` / `protoc-gen-go` / `protoc-gen-go-grpc` 生成 Go protobuf/gRPC stub。
+- `grpc-python`：消费同配置内的 `grpc-proto` target，或直接消费手写 proto，调用 `grpcio-tools` 生成 Python protobuf/gRPC stub；`python_package_root` 会把生成物放入指定包根并重写生成 import。
 
 gRPC stub target 字段：
 
-- `proto`：必须引用一个 `grpc-proto` target。
-- `files`：相对 proto target `out_dir` 的 glob 列表，例如 `api/**/*.proto`。
-- `source_root`：可选；让 `files` 相对此目录匹配，并把它作为 `protoc` 工作目录。省略时使用 proto target `out_dir`。迁移旧 proto 树时可设为 `grpc/protos/services/...` 来裁剪输出路径。
+- `proto`：可选；引用一个 `grpc-proto` target 时会先生成 proto 再生成 stub。
+- `source_root`：当省略 `proto` 时必填，用来直接编译手写 proto；设置后 `files` 相对此目录匹配，并把它作为 `protoc` 工作目录。
+- `files`：相对 proto target `out_dir` 或 `source_root` 的 glob 列表，例如 `api/**/*.proto`。
 - `import_roots`：额外 proto include roots；proto target `out_dir` 会自动加入。
 - `module`：`grpc-go` 可选；设置后使用 Go import path 输出模式，并按 `option go_package` 分目录输出。
 - `python_package_root`：仅 `grpc-python` 使用，例如 `pb` 或 `generated.pb`。
+- `proto_files`：仅 `grpc-proto` 使用；每条规则支持 `file`、`package`、`go_package`、`schema_modules`、`schema_names`、`route_paths`、`route_ids`、`service_ids`、`service`。
 
 transport target：
 
@@ -127,11 +128,13 @@ transport target：
 ```sh
 api-gen list-targets -c api-blueprint.toml
 api-gen explain-target -c api-blueprint.toml --target go.server
-api-gen manifest -c api-blueprint.toml --out api-blueprint.contract.json
+api-gen manifest -c api-blueprint.toml --profile full --out api-blueprint.contract.json
+api-gen manifest -c api-blueprint.toml --profile agent --out api-blueprint.agent.json
+api-gen manifest -c api-blueprint.toml --shards-dir api-blueprint.contract.d
 api-gen diff old.contract.json new.contract.json
 api-gen check -c api-blueprint.toml
 api-gen generate -c api-blueprint.toml
 api-gen generate -c api-blueprint.toml --target wails.v3
 ```
 
-`api-gen manifest` 输出 routes、schemas、connections、稳定 hashes、已解析 target plan 和 capability registry；`api-gen check` 会先构建 ContractGraph，再做 target dependency 和 capability 校验。生成前失败比生成半套代码更容易维护。
+`api-gen manifest --profile full` 输出完整 manifest；`--profile agent` 输出 compact agent manifest；`--shards-dir` 输出按 service / route / schema 拆分的 shards。`manifest.version` 是 manifest schema 兼容版本，例如 `1.0`；`manifest.generator.version` 来自包版本真源。`api-gen check` 会先构建 ContractGraph，再做 target dependency 和 capability 校验。生成前失败比生成半套代码更容易维护。

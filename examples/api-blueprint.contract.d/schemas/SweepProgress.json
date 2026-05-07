@@ -1,0 +1,30 @@
+{
+  "inbound_routes": [
+    "api.demo.stream.sweepevents"
+  ],
+  "schema": {
+    "auto": false,
+    "fields": {
+      "current": {
+        "description": "current step",
+        "name": "current",
+        "optional": false,
+        "type": "uint64",
+        "wire_name": "current"
+      },
+      "total": {
+        "description": "total steps",
+        "name": "total",
+        "optional": false,
+        "type": "uint64",
+        "wire_name": "total"
+      }
+    },
+    "identity": "blueprints.api_demo.SweepProgress",
+    "kind": "model",
+    "module": "blueprints.api_demo",
+    "name": "SweepProgress",
+    "qualname": "SweepProgress",
+    "type": "object"
+  }
+}

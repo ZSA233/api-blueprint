@@ -1,0 +1,43 @@
+{
+  "inbound_routes": [
+    "api.demo.post.raw"
+  ],
+  "schema": {
+    "auto": true,
+    "fields": {
+      "list": {
+        "description": "list",
+        "items": {
+          "type": "string"
+        },
+        "name": "list",
+        "optional": false,
+        "type": "array",
+        "wire_name": "list"
+      },
+      "list2": {
+        "description": "list2",
+        "keys": {
+          "type": "int64"
+        },
+        "name": "list2",
+        "optional": false,
+        "type": "map",
+        "values": {
+          "items": {
+            "ref": "ApiDemoA",
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "wire_name": "list2"
+      }
+    },
+    "identity": "api_blueprint.engine.schema.modeling.RSP_Raw",
+    "kind": "model",
+    "module": "api_blueprint.engine.schema.modeling",
+    "name": "RSP_Raw",
+    "qualname": "RSP_Raw",
+    "type": "object"
+  }
+}

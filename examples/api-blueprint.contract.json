@@ -193,6 +193,10 @@
     }
   ],
   "errors": [],
+  "generator": {
+    "name": "api-blueprint",
+    "version": "1.0.0"
+  },
   "hashes": {
     "routes": {
       "api.api.ws.ws": "b139b74c59d24253897b3eabfd2f54904d77eaeedf0d9068faeb8411a13da4a7",
@@ -217,43 +221,43 @@
       "static.static.get.docjson": "cd96ad6332050b940a9b924c881950d74d137fb62dcb90f1080e5121e656cffb"
     },
     "schemas": {
-      "ANON_Delete_anon_list": "cb133e6f9ed13d1b0a9c9bf5313d7587208428d4db4a3e38a1ca7770d788839a",
-      "ANON_Func1put_anon_kv": "45222ccd9022bbb40828fc46e3fae29486ffc12dd38574b38bf1e52fb85b176f",
-      "ApiDemoA": "6dcf90a708e035088dc630fa7760e70d20ef08bbd049022225ecffec6734af16",
-      "ApiDemoMap": "834322b88b87ef0bb311f9c7b87477c8b7ff662e4ea0adf917cf3f876906ff63",
-      "ApiDemoSubA": "daa109921621b0683fdc27e8b9c9c09cc5cb4dca50b758086e683c4760ab5e98",
-      "ApiHelloMap": "b55edfe9ecc254ee8fb2d0ac9e9090a5d934050fbb1a8aaacd5fabb310074e88",
-      "AssistantCancel": "0d1cf77acef50abd5d5734257bcd4ec38ee8c9324e1b27064cedc195e4ced87a",
-      "AssistantDelta": "61f867d08220f8c7ec9a74d826609158fc731cf20eb1f1be58f7102268857511",
-      "AssistantDone": "706b24c598fcecf89d4b8571569b88381e734f8d86ae2848782fae1c314b904f",
-      "AssistantInput": "fa8f1073d582c2748b39a0b367ae03bacb53e4e0d317980e47fefdaa833506dd",
-      "AssistantOpen": "9d2573cca5a4c2567c0beab8da452bc53e69b18534ad68bbe6cca1f94185ca29",
-      "ConnectionClose": "c81282c3f493236bd178f6b1d7e49044ca66354c50e701b4b783f63cd56c517f",
-      "REQ_Abc_QUERY": "b8dbf3a7df39ccfe32416f2f545d3c4c6b504a0d57707af21fa290d9e32540d4",
-      "REQ_Delete_QUERY": "70c6a95f82d69885d3b561d67ecf4f8fad615c1eb2b26aa560a32ab55f4820db",
-      "REQ_Func1put_JSON": "c3339d18ad1dbcfdfd45988f9fe1db119ad732ceb2c45bba888955e1812a2283",
-      "REQ_Func1put_QUERY": "81796d92bfee575f70721074bdb59065313f2b8f6488f1941ae436f0330658cb",
-      "REQ_HelloWay_QUERY": "a61a6e8991773cdd6a0eeb31de10002d9e6692be5dd63ece6d90d9198d0a21d9",
-      "REQ_PostDeprecated_JSON": "f682dfcd2a770a3f9acd1ddca149286eb42c8a7dd0b704c5f0e8c3fea4003715",
-      "REQ_TestPost_JSON": "1ed0f238b5489b5e7d8be671c15bc5df582be7e88b1903618709fe67c59858e9",
+      "ANON_Delete_anon_list": "da61e669d4132905b44f3c59b97c481fd5b13feab7ef288e2e0cdf0ce58292cf",
+      "ANON_Func1put_anon_kv": "a69d1e6b594c7223cd9b0ba84421f975b52db57cd93b7988fbbbbfa730aef45f",
+      "ApiDemoA": "60f1f04b2e33dde39e8c677285c3a37cd9e862f3a6ec25f5e8f7e7ea39a025ae",
+      "ApiDemoMap": "e9c51eb4ac14c40949d1907637e8eaf206127167d181d6d01b790bebf0cdfe79",
+      "ApiDemoSubA": "8754237ad11230d834aeba57ddfa19c9607d2ff885ef393c2cc1b3cee1cc4ec5",
+      "ApiHelloMap": "f25fe913270f0a6c3e9837ac7a8dddb09c08dda274405d8af8592bcc0b6e4a36",
+      "AssistantCancel": "8bcef1bdc5ad25d47d491b28959a57c8ca0f1aea8fc2dc2cbbb2c60cb733b06e",
+      "AssistantDelta": "64ab97d8c87b8acb2b56d65c34c713ef9ec9ea0ba0d7d7f769c252cb87991474",
+      "AssistantDone": "a8f6e9f80d8da40bf3e90d485edd5a895477284e467210331f7b7f5de4c9494a",
+      "AssistantInput": "7814920163cc9e2b3d483c0c645cebf7d51fc044d49f4242b13788f7012bb696",
+      "AssistantOpen": "c63e635fd1ad1c5281384a44b8eb2fae0f41cef895972be76e3b0d71959fcd34",
+      "ConnectionClose": "66aabaf5d61435e9b19626c14c0f0ca2976da3bfe325d7e7865e20219c6723a1",
+      "REQ_Abc_QUERY": "f22f00508820cbb512fc1cc9f0001b15af7e1988cff5e16a62b103760293c56d",
+      "REQ_Delete_QUERY": "c4ec21622cd510b89908b2cdaba73ca2bd9cffc9ba27bf5d61611a34ff33bb53",
+      "REQ_Func1put_JSON": "aa3f2d881c80500b897cd2c5dcb4ef792fe00857839ec21645ad404c9660fcf1",
+      "REQ_Func1put_QUERY": "263c40280eb5dd7eb4db065bf356f22f3053c8e6e2dffecc9d93b73e10553866",
+      "REQ_HelloWay_QUERY": "c8e969784a1919c68aa6414bc6e05d12899407b330a35bb75bf79ec412e9d737",
+      "REQ_PostDeprecated_JSON": "f4bb0784c2e2c33e3c99dbdb7e8295a08fe32487d7ba1f63d596956ee6814c49",
+      "REQ_TestPost_JSON": "8e9db01a82da5183d4062ffa9a83d0775045ad8d5314b122d1daaae94eb1152c",
       "RSP_Abc": "724a27071b5bd189913ce016a4c052531e7d0941e03220f3dd138fd9a84e15fe",
-      "RSP_Delete": "56136bc6d56f4b84cf17b858cc7fd00957c7c9a807615803e982b842da98e2a9",
-      "RSP_DocJson": "e8078adedb8ecb004f134a2e4ee6829a48004ce1cd612386245f8aab5427a2c6",
-      "RSP_Dochaha": "869e7ae3210faf71b204ac2590c2c274542f9d0cb48335940d32b5d8894b3d88",
-      "RSP_Func1put": "f017c00aaa2dece2c4b66d541d549db291500a0ca1b9b3e76872709f312efd22",
-      "RSP_ListEnum": "b3aeacb39e4842c53260271d8a7c48fd0624aaa623f37d4cf53ce77b9a49c1c4",
-      "RSP_MapEnum": "d557fc928a3ef59c565cb914d8122f1e51c68feea4a30bb911426e72c1157f70",
+      "RSP_Delete": "83e56f832767a76721132e33c7bf9b1e7cbf02cdde2517facf0d9e123dc54cd0",
+      "RSP_DocJson": "b939cd498fb9c08dc6848e575a3ab6f9caa8d0eb44711f0889d8558c83e0064a",
+      "RSP_Dochaha": "20dd120c0a4277784ce2942defbff1a7f8a520eb3e25abd0c6a4da640586b4ee",
+      "RSP_Func1put": "74d8e54440b35df5527d5361bacf0fa2348213a836111c2b27c62974ba9627cc",
+      "RSP_ListEnum": "6713c80c0e821306b74161d44d7cb597a632254fa47e353eab623a0f384b0174",
+      "RSP_MapEnum": "d71ee3dfb7e4a91813958c6e27fef6ea330a3288958976f88211dff710aab110",
       "RSP_MapModel": "512c19455272967946a1f95b293f5e7f2f30814422c7bb8af5fc933056b6d91e",
-      "RSP_PostDeprecated": "6d1350a3810b67878640ab1fbdacd6644f93f73613d602138025207a5d8349be",
-      "RSP_Raw": "cc8223f826263414509aaecf0c9a72f335d54ad044b32d93adb7ceae9ac9f55b",
+      "RSP_PostDeprecated": "f2dc1afd9632a1db684be53271506f0d57d525f51bcd5ca864a56e75a78daa5c",
+      "RSP_Raw": "8bbb28d5f2668ca9f5106931ba4e68b61b0db07ec6c6523879c07a64ab4e5ec7",
       "RSP_String": "8ef8e8c305987e75679ab072bf26470296d768da0ae9e088bc75aa7b6625160e",
-      "RSP_StringEmun": "d4ca02e31c85b3ffe58f23edf453aef42303b788bd17f551da4af94b38b88bef",
-      "RSP_TestPost": "af1d6c5f27d1fb0c06967a889d0ac8bf3c2943b44dcdb03167149dc46f19c930",
+      "RSP_StringEmun": "20ffa85f7ca8f894dddf94c78a5a10f7e81b38d00d291a6d8b2df60f2275f999",
+      "RSP_TestPost": "1430b27f4ff37a1922698fc6bcf506710c7d5bb1b49a2d179037130559001477",
       "RSP_Uint64": "6b8dc36f08445629aecee5fea1117fd73fa2c95eda5331e57e6ded3abc736e80",
-      "SweepLog": "af167b12d724963fb0a34bc62aad63217214c93a7660044bf819b8a08cd168ea",
-      "SweepOpen": "50d5bd0dfc7e299e8aee4ab68b0e3804885f31d4dc5b753ab8f4a50cec918019",
-      "SweepProgress": "5b55ce25dbada9da1983a934fa67b767c98100d09e13b773e2743b02c475201a",
-      "SweepState": "eb917a71f39776cbfcd20b71e5145d17da718fd96ec5fe6bed3e2731832efc43"
+      "SweepLog": "e3c13a8499172399261ecdb4402eaf7d08eb5fafb8da1ec6c59fdc8f76bab7ea",
+      "SweepOpen": "40f20e24484e8be5dd70a0b7ee202904113177ae8c97485a4e2fd3cad7587297",
+      "SweepProgress": "fc1775e932dbfa66ac4eaffa30a9dfd66595a86aa240f2f8b5ef8d0ace33c482",
+      "SweepState": "7adc67c934f3cdfd3d3475d35ad544b206faa77940fac9e206ae552afd77091f"
     }
   },
   "routes": [
@@ -850,8 +854,11 @@
           "wire_name": "kv2"
         }
       },
+      "identity": "api_blueprint.engine.schema.modeling.ANON_Delete_anon_list",
       "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
       "name": "ANON_Delete_anon_list",
+      "qualname": "ANON_Delete_anon_list",
       "type": "object"
     },
     "ANON_Func1put_anon_kv": {
@@ -875,8 +882,11 @@
           "wire_name": "kv2"
         }
       },
+      "identity": "api_blueprint.engine.schema.modeling.ANON_Func1put_anon_kv",
       "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
       "name": "ANON_Func1put_anon_kv",
+      "qualname": "ANON_Func1put_anon_kv",
       "type": "object"
     },
     "ApiDemoA": {
@@ -906,6 +916,9 @@
         "enum_color": {
           "description": "color",
           "enum": "ColorEnum",
+          "enum_identity": "blueprints.api_demo.ColorEnum",
+          "enum_module": "blueprints.api_demo",
+          "enum_qualname": "ColorEnum",
           "enum_values": [
             {
               "name": "RED",
@@ -934,6 +947,9 @@
           "description": "status",
           "items": {
             "enum": "StatusEnum",
+            "enum_identity": "blueprints.api_demo.StatusEnum",
+            "enum_module": "blueprints.api_demo",
+            "enum_qualname": "StatusEnum",
             "enum_values": [
               {
                 "name": "PENDING",
@@ -963,6 +979,9 @@
         "enum_status": {
           "description": "status",
           "enum": "StatusEnum",
+          "enum_identity": "blueprints.api_demo.StatusEnum",
+          "enum_module": "blueprints.api_demo",
+          "enum_qualname": "StatusEnum",
           "enum_values": [
             {
               "name": "PENDING",
@@ -1009,8 +1028,11 @@
           "wire_name": "lmnop"
         }
       },
+      "identity": "blueprints.api_demo.ApiDemoA",
       "kind": "model",
+      "module": "blueprints.api_demo",
       "name": "ApiDemoA",
+      "qualname": "ApiDemoA",
       "type": "object"
     },
     "ApiDemoMap": {
@@ -1024,8 +1046,11 @@
           "wire_name": "haha"
         }
       },
+      "identity": "blueprints.api_demo.ApiDemoMap",
       "kind": "model",
+      "module": "blueprints.api_demo",
       "name": "ApiDemoMap",
+      "qualname": "ApiDemoMap",
       "type": "object"
     },
     "ApiDemoSubA": {
@@ -1056,8 +1081,11 @@
           "wire_name": "hello"
         }
       },
+      "identity": "blueprints.api_demo.ApiDemoSubA",
       "kind": "model",
+      "module": "blueprints.api_demo",
       "name": "ApiDemoSubA",
+      "qualname": "ApiDemoSubA",
       "type": "object"
     },
     "ApiHelloMap": {
@@ -1071,8 +1099,11 @@
           "wire_name": "haha"
         }
       },
+      "identity": "blueprints.api_hello.ApiHelloMap",
       "kind": "model",
+      "module": "blueprints.api_hello",
       "name": "ApiHelloMap",
+      "qualname": "ApiHelloMap",
       "type": "object"
     },
     "AssistantCancel": {
@@ -1086,8 +1117,11 @@
           "wire_name": "reason"
         }
       },
+      "identity": "blueprints.api_demo.AssistantCancel",
       "kind": "model",
+      "module": "blueprints.api_demo",
       "name": "AssistantCancel",
+      "qualname": "AssistantCancel",
       "type": "object"
     },
     "AssistantDelta": {
@@ -1101,8 +1135,11 @@
           "wire_name": "text"
         }
       },
+      "identity": "blueprints.api_demo.AssistantDelta",
       "kind": "model",
+      "module": "blueprints.api_demo",
       "name": "AssistantDelta",
+      "qualname": "AssistantDelta",
       "type": "object"
     },
     "AssistantDone": {
@@ -1116,8 +1153,11 @@
           "wire_name": "message_id"
         }
       },
+      "identity": "blueprints.api_demo.AssistantDone",
       "kind": "model",
+      "module": "blueprints.api_demo",
       "name": "AssistantDone",
+      "qualname": "AssistantDone",
       "type": "object"
     },
     "AssistantInput": {
@@ -1131,8 +1171,11 @@
           "wire_name": "text"
         }
       },
+      "identity": "blueprints.api_demo.AssistantInput",
       "kind": "model",
+      "module": "blueprints.api_demo",
       "name": "AssistantInput",
+      "qualname": "AssistantInput",
       "type": "object"
     },
     "AssistantOpen": {
@@ -1146,8 +1189,11 @@
           "wire_name": "session_id"
         }
       },
+      "identity": "blueprints.api_demo.AssistantOpen",
       "kind": "model",
+      "module": "blueprints.api_demo",
       "name": "AssistantOpen",
+      "qualname": "AssistantOpen",
       "type": "object"
     },
     "ConnectionClose": {
@@ -1175,8 +1221,11 @@
           "wire_name": "reason"
         }
       },
+      "identity": "blueprints.api_demo.ConnectionClose",
       "kind": "model",
+      "module": "blueprints.api_demo",
       "name": "ConnectionClose",
+      "qualname": "ConnectionClose",
       "type": "object"
     },
     "REQ_Abc_QUERY": {
@@ -1204,8 +1253,11 @@
           "wire_name": "arg3"
         }
       },
+      "identity": "api_blueprint.engine.schema.modeling.REQ_Abc_QUERY",
       "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
       "name": "REQ_Abc_QUERY",
+      "qualname": "REQ_Abc_QUERY",
       "type": "object"
     },
     "REQ_Delete_QUERY": {
@@ -1226,8 +1278,11 @@
           "wire_name": "arg2"
         }
       },
+      "identity": "api_blueprint.engine.schema.modeling.REQ_Delete_QUERY",
       "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
       "name": "REQ_Delete_QUERY",
+      "qualname": "REQ_Delete_QUERY",
       "type": "object"
     },
     "REQ_Func1put_JSON": {
@@ -1248,8 +1303,11 @@
           "wire_name": "req2"
         }
       },
+      "identity": "api_blueprint.engine.schema.modeling.REQ_Func1put_JSON",
       "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
       "name": "REQ_Func1put_JSON",
+      "qualname": "REQ_Func1put_JSON",
       "type": "object"
     },
     "REQ_Func1put_QUERY": {
@@ -1277,8 +1335,11 @@
           "wire_name": "arg3"
         }
       },
+      "identity": "api_blueprint.engine.schema.modeling.REQ_Func1put_QUERY",
       "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
       "name": "REQ_Func1put_QUERY",
+      "qualname": "REQ_Func1put_QUERY",
       "type": "object"
     },
     "REQ_HelloWay_QUERY": {
@@ -1287,6 +1348,9 @@
         "arg1": {
           "description": "hello-way",
           "enum": "HelloWayEnum",
+          "enum_identity": "blueprints.api_hello.HelloWayEnum",
+          "enum_module": "blueprints.api_hello",
+          "enum_qualname": "HelloWayEnum",
           "enum_values": [
             {
               "name": "ASD",
@@ -1302,8 +1366,11 @@
           "wire_name": "arg1"
         }
       },
+      "identity": "api_blueprint.engine.schema.modeling.REQ_HelloWay_QUERY",
       "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
       "name": "REQ_HelloWay_QUERY",
+      "qualname": "REQ_HelloWay_QUERY",
       "type": "object"
     },
     "REQ_PostDeprecated_JSON": {
@@ -1324,8 +1391,11 @@
           "wire_name": "req2"
         }
       },
+      "identity": "api_blueprint.engine.schema.modeling.REQ_PostDeprecated_JSON",
       "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
       "name": "REQ_PostDeprecated_JSON",
+      "qualname": "REQ_PostDeprecated_JSON",
       "type": "object"
     },
     "REQ_TestPost_JSON": {
@@ -1346,8 +1416,11 @@
           "wire_name": "req2"
         }
       },
+      "identity": "api_blueprint.engine.schema.modeling.REQ_TestPost_JSON",
       "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
       "name": "REQ_TestPost_JSON",
+      "qualname": "REQ_TestPost_JSON",
       "type": "object"
     },
     "RSP_Abc": {
@@ -1391,15 +1464,21 @@
           "wire_name": "list"
         }
       },
+      "identity": "api_blueprint.engine.schema.modeling.RSP_Delete",
       "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
       "name": "RSP_Delete",
+      "qualname": "RSP_Delete",
       "type": "object"
     },
     "RSP_DocJson": {
       "auto": true,
       "fields": {},
+      "identity": "api_blueprint.engine.schema.modeling.RSP_DocJson",
       "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
       "name": "RSP_DocJson",
+      "qualname": "RSP_DocJson",
       "type": "object"
     },
     "RSP_Dochaha": {
@@ -1413,8 +1492,11 @@
           "wire_name": "a"
         }
       },
+      "identity": "api_blueprint.engine.schema.modeling.RSP_Dochaha",
       "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
       "name": "RSP_Dochaha",
+      "qualname": "RSP_Dochaha",
       "type": "object"
     },
     "RSP_Func1put": {
@@ -1439,8 +1521,11 @@
           "wire_name": "list"
         }
       },
+      "identity": "api_blueprint.engine.schema.modeling.RSP_Func1put",
       "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
       "name": "RSP_Func1put",
+      "qualname": "RSP_Func1put",
       "type": "object"
     },
     "RSP_ListEnum": {
@@ -1450,6 +1535,9 @@
       "target": {
         "items": {
           "enum": "MapEnum",
+          "enum_identity": "blueprints.api_hello.MapEnum",
+          "enum_module": "blueprints.api_hello",
+          "enum_qualname": "MapEnum",
           "enum_values": [
             {
               "name": "A",
@@ -1477,6 +1565,9 @@
       "target": {
         "keys": {
           "enum": "MapEnum",
+          "enum_identity": "blueprints.api_hello.MapEnum",
+          "enum_module": "blueprints.api_hello",
+          "enum_qualname": "MapEnum",
           "enum_values": [
             {
               "name": "A",
@@ -1531,8 +1622,11 @@
           "wire_name": "list"
         }
       },
+      "identity": "api_blueprint.engine.schema.modeling.RSP_PostDeprecated",
       "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
       "name": "RSP_PostDeprecated",
+      "qualname": "RSP_PostDeprecated",
       "type": "object"
     },
     "RSP_Raw": {
@@ -1566,8 +1660,11 @@
           "wire_name": "list2"
         }
       },
+      "identity": "api_blueprint.engine.schema.modeling.RSP_Raw",
       "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
       "name": "RSP_Raw",
+      "qualname": "RSP_Raw",
       "type": "object"
     },
     "RSP_String": {
@@ -1585,6 +1682,9 @@
       "name": "RSP_StringEmun",
       "target": {
         "enum": "MapEnum",
+        "enum_identity": "blueprints.api_hello.MapEnum",
+        "enum_module": "blueprints.api_hello",
+        "enum_qualname": "MapEnum",
         "enum_values": [
           {
             "name": "A",
@@ -1631,8 +1731,11 @@
           "wire_name": "map"
         }
       },
+      "identity": "api_blueprint.engine.schema.modeling.RSP_TestPost",
       "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
       "name": "RSP_TestPost",
+      "qualname": "RSP_TestPost",
       "type": "object"
     },
     "RSP_Uint64": {
@@ -1662,8 +1765,11 @@
           "wire_name": "message"
         }
       },
+      "identity": "blueprints.api_demo.SweepLog",
       "kind": "model",
+      "module": "blueprints.api_demo",
       "name": "SweepLog",
+      "qualname": "SweepLog",
       "type": "object"
     },
     "SweepOpen": {
@@ -1684,8 +1790,11 @@
           "wire_name": "run_id"
         }
       },
+      "identity": "blueprints.api_demo.SweepOpen",
       "kind": "model",
+      "module": "blueprints.api_demo",
       "name": "SweepOpen",
+      "qualname": "SweepOpen",
       "type": "object"
     },
     "SweepProgress": {
@@ -1706,8 +1815,11 @@
           "wire_name": "total"
         }
       },
+      "identity": "blueprints.api_demo.SweepProgress",
       "kind": "model",
+      "module": "blueprints.api_demo",
       "name": "SweepProgress",
+      "qualname": "SweepProgress",
       "type": "object"
     },
     "SweepState": {
@@ -1721,8 +1833,11 @@
           "wire_name": "status"
         }
       },
+      "identity": "blueprints.api_demo.SweepState",
       "kind": "model",
+      "module": "blueprints.api_demo",
       "name": "SweepState",
+      "qualname": "SweepState",
       "type": "object"
     }
   },
@@ -1760,7 +1875,10 @@
     {
       "formats": [
         "json",
-        "markdown"
+        "markdown",
+        "agent-json",
+        "agent-markdown",
+        "shards"
       ],
       "id": "contract",
       "kind": "contract",
@@ -1832,7 +1950,45 @@
       "id": "grpc.proto",
       "kind": "grpc-proto",
       "out_dir": "grpc/protos",
-      "package": "example.api"
+      "package": "example.api",
+      "proto_files": [
+        {
+          "file": "api/api.proto",
+          "go_package": "example.com/project/grpc/go/api/api;api",
+          "package": "example.api.api",
+          "route_paths": [
+            "/api/ws"
+          ],
+          "service": "ApiService"
+        },
+        {
+          "file": "api/demo.proto",
+          "go_package": "example.com/project/grpc/go/api/demo;demo",
+          "package": "example.api.demo",
+          "route_paths": [
+            "/api/demo/**"
+          ],
+          "service": "DemoService"
+        },
+        {
+          "file": "api/hello.proto",
+          "go_package": "example.com/project/grpc/go/api/hello;hello",
+          "package": "example.api.hello",
+          "route_paths": [
+            "/api/hello/**"
+          ],
+          "service": "HelloService"
+        },
+        {
+          "file": "static/static.proto",
+          "go_package": "example.com/project/grpc/go/static/static;static",
+          "package": "example.api.static.static",
+          "route_paths": [
+            "/static/**"
+          ],
+          "service": "StaticService"
+        }
+      ]
     },
     {
       "files": [
@@ -1857,5 +2013,5 @@
       "python_package_root": "pb"
     }
   ],
-  "version": "vnext-1"
+  "version": "1.0"
 }

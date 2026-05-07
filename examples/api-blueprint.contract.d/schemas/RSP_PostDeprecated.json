@@ -1,0 +1,26 @@
+{
+  "inbound_routes": [
+    "api.demo.post.postdeprecated"
+  ],
+  "schema": {
+    "auto": true,
+    "fields": {
+      "list": {
+        "description": "list",
+        "items": {
+          "type": "string"
+        },
+        "name": "list",
+        "optional": false,
+        "type": "array",
+        "wire_name": "list"
+      }
+    },
+    "identity": "api_blueprint.engine.schema.modeling.RSP_PostDeprecated",
+    "kind": "model",
+    "module": "api_blueprint.engine.schema.modeling",
+    "name": "RSP_PostDeprecated",
+    "qualname": "RSP_PostDeprecated",
+    "type": "object"
+  }
+}

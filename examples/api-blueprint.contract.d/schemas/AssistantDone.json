@@ -1,0 +1,23 @@
+{
+  "inbound_routes": [
+    "api.demo.channel.assistantsession"
+  ],
+  "schema": {
+    "auto": false,
+    "fields": {
+      "message_id": {
+        "description": "final message id",
+        "name": "message_id",
+        "optional": false,
+        "type": "string",
+        "wire_name": "message_id"
+      }
+    },
+    "identity": "blueprints.api_demo.AssistantDone",
+    "kind": "model",
+    "module": "blueprints.api_demo",
+    "name": "AssistantDone",
+    "qualname": "AssistantDone",
+    "type": "object"
+  }
+}

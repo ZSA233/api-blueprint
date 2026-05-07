@@ -26,10 +26,13 @@ with bp.group("/demo") as views:
 class Item(Model):
     id = Uint64(description="id")
     name = String(description="name")
-    tags = Array[String](description="tags", omitempty=True)
+    tags = Array[String](description="tags", optional=True)
 ```
 
 常用类型来自 `api_blueprint.includes`，包括 `String`、`Bool`、`Int`、`Uint64`、`Float`、`Array`、`Map` 等。
+`optional=True` 表示字段可缺省；旧的 `omitempty=True` 仍兼容，但新 DSL 推荐使用 `optional=True`。
+需要稳定字段身份时使用 `field(number, Type(...))`；需要表达互斥选择时使用 `field(number, Type(...), choice="group")`。这些都是通用契约语义，不绑定具体生成 target。
+通用语义类型包括 `DateTime`、`JSONValue`、`AnyValue`，具体 target 可映射到自身的时间、JSON 或任意载荷表达。
 
 ## 请求与响应
 
@@ -75,8 +78,8 @@ class TaskLog(Model):
 
 class StreamClose(Model):
     code = Int(description="logical close code")
-    reason = String(description="close reason", omitempty=True)
-    error = String(description="machine-readable error key", omitempty=True)
+    reason = String(description="close reason", optional=True)
+    error = String(description="machine-readable error key", optional=True)
 
 
 with bp.group("/runs") as views:
@@ -157,7 +160,7 @@ with bp.group("/demo") as views:
     views.WS("/ws").RECV(ClientMessage).SEND(ServerMessage)
 ```
 
-`WS().RECV().SEND()` 是 legacy 写法，不进入 vNext ContractGraph 主线。新蓝图优先使用 `STREAM` / `CHANNEL`，避免把多个逻辑消息误建模成多个裸 event。
+`WS().RECV().SEND()` 是 legacy 写法，不进入 1.0 ContractGraph 主线。新蓝图优先使用 `STREAM` / `CHANNEL`，避免把多个逻辑消息误建模成多个裸 event。
 
 ## 文档输出
 

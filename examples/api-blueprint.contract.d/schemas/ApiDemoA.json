@@ -1,0 +1,152 @@
+{
+  "inbound_routes": [
+    "api.demo.get.abc",
+    "api.demo.post.raw"
+  ],
+  "schema": {
+    "auto": false,
+    "fields": {
+      "a": {
+        "description": "a",
+        "name": "a",
+        "optional": false,
+        "type": "int",
+        "wire_name": "a"
+      },
+      "bc": {
+        "description": "bc",
+        "name": "bc",
+        "optional": false,
+        "type": "string",
+        "wire_name": "bc"
+      },
+      "efg": {
+        "description": "efg",
+        "name": "efg",
+        "optional": false,
+        "type": "float32",
+        "wire_name": "efg"
+      },
+      "enum_color": {
+        "description": "color",
+        "enum": "ColorEnum",
+        "enum_identity": "blueprints.api_demo.ColorEnum",
+        "enum_module": "blueprints.api_demo",
+        "enum_qualname": "ColorEnum",
+        "enum_values": [
+          {
+            "name": "RED",
+            "value": "red"
+          },
+          {
+            "name": "GREEN",
+            "value": "green"
+          },
+          {
+            "name": "BLUE",
+            "value": "blue"
+          }
+        ],
+        "name": "enum_color",
+        "optional": true,
+        "type": "enum",
+        "values": [
+          "red",
+          "green",
+          "blue"
+        ],
+        "wire_name": "enum_color"
+      },
+      "enum_list": {
+        "description": "status",
+        "items": {
+          "enum": "StatusEnum",
+          "enum_identity": "blueprints.api_demo.StatusEnum",
+          "enum_module": "blueprints.api_demo",
+          "enum_qualname": "StatusEnum",
+          "enum_values": [
+            {
+              "name": "PENDING",
+              "value": 1
+            },
+            {
+              "name": "RUNNING",
+              "value": 2
+            },
+            {
+              "name": "FINISHED",
+              "value": 3
+            }
+          ],
+          "type": "enum",
+          "values": [
+            1,
+            2,
+            3
+          ]
+        },
+        "name": "enum_list",
+        "optional": false,
+        "type": "array",
+        "wire_name": "enum_list"
+      },
+      "enum_status": {
+        "description": "status",
+        "enum": "StatusEnum",
+        "enum_identity": "blueprints.api_demo.StatusEnum",
+        "enum_module": "blueprints.api_demo",
+        "enum_qualname": "StatusEnum",
+        "enum_values": [
+          {
+            "name": "PENDING",
+            "value": 1
+          },
+          {
+            "name": "RUNNING",
+            "value": 2
+          },
+          {
+            "name": "FINISHED",
+            "value": 3
+          }
+        ],
+        "name": "enum_status",
+        "optional": false,
+        "type": "enum",
+        "values": [
+          1,
+          2,
+          3
+        ],
+        "wire_name": "enum_status"
+      },
+      "hijk": {
+        "description": "hijk",
+        "items": {
+          "type": "uint"
+        },
+        "name": "hijk",
+        "optional": false,
+        "type": "array",
+        "wire_name": "hijk"
+      },
+      "lmnop": {
+        "description": "[ApiDemoSubA] lmnop",
+        "items": {
+          "ref": "ApiDemoSubA",
+          "type": "object"
+        },
+        "name": "lmnop",
+        "optional": true,
+        "type": "array",
+        "wire_name": "lmnop"
+      }
+    },
+    "identity": "blueprints.api_demo.ApiDemoA",
+    "kind": "model",
+    "module": "blueprints.api_demo",
+    "name": "ApiDemoA",
+    "qualname": "ApiDemoA",
+    "type": "object"
+  }
+}

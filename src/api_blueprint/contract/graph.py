@@ -7,6 +7,7 @@ from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Mapping, get_origin
 
+from api_blueprint._version import __version__
 from api_blueprint.engine import Blueprint
 from api_blueprint.engine.connection import ConnectionKind, MessageContract, ModelRef
 from api_blueprint.engine.model import (
@@ -27,7 +28,7 @@ from .route import RouteContract, route_contract
 from .runtime import ContractRouteRuntime
 
 
-MANIFEST_VERSION = "vnext-1"
+MANIFEST_VERSION = "1.0"
 
 
 JsonObject = dict[str, Any]
@@ -71,6 +72,10 @@ class ContractGraph:
         schema_hashes = {name: _stable_hash(schema) for name, schema in self.schemas.items()}
         return {
             "version": MANIFEST_VERSION,
+            "generator": {
+                "name": "api-blueprint",
+                "version": __version__,
+            },
             "services": list(self.services),
             "routes": routes,
             "schemas": dict(self.schemas),
@@ -98,6 +103,8 @@ class ContractGraphBuilder:
         self.routes: list[JsonObject] = []
         self.schemas: "OrderedDict[str, JsonObject]" = OrderedDict()
         self.route_runtime: dict[str, ContractRouteRuntime] = {}
+        self._qualified_schema_names: set[str] = set()
+        self._schema_ref_rewrites: dict[str, str] = {}
 
     def build(self, blueprints: Iterable[Blueprint]) -> ContractGraph:
         for blueprint in blueprints:
@@ -149,7 +156,7 @@ class ContractGraphBuilder:
         if router.connection_kind in {ConnectionKind.STREAM, ConnectionKind.CHANNEL}:
             connection = self._connection_manifest(router)
 
-        return {
+        route = {
             "id": contract.route_id,
             "service_id": service_id,
             "kind": _route_kind(router),
@@ -164,6 +171,8 @@ class ContractGraphBuilder:
             "connection": connection,
             "proto": _proto_route_metadata(router),
         }
+        self._apply_schema_ref_rewrites(route)
+        return route
 
     def _connection_manifest(self, router: Router) -> JsonObject:
         close_model = router.effective_close_model
@@ -238,11 +247,18 @@ class ContractGraphBuilder:
 
         model_cls = unwrap_model_type(model)
         name = _model_name(model_cls)
-        if name in self.schemas:
-            return name
+        schema_id = self._schema_id(model_cls)
+        if schema_id in self.schemas:
+            return schema_id
 
-        self.schemas[name] = {
+        module = _model_module(model_cls)
+        qualname = _model_qualname(model_cls)
+        identity = _model_identity(model_cls)
+        self.schemas[schema_id] = {
             "name": name,
+            "module": module,
+            "qualname": qualname,
+            "identity": identity,
             "kind": "model",
             "type": "object",
             "fields": {},
@@ -250,7 +266,7 @@ class ContractGraphBuilder:
         }
         proto_model = _proto_model_metadata(model_cls)
         if proto_model:
-            self.schemas[name]["proto"] = proto_model
+            self.schemas[schema_id]["proto"] = proto_model
         fields: dict[str, JsonObject] = {}
         pydantic_fields = _safe_pydantic_fields(model_cls)
         for field_name, field_value in iter_model_vars(model_cls):
@@ -259,7 +275,7 @@ class ContractGraphBuilder:
             extra = dict(getattr(field_value, "__extra__", {}) or {})
             alias = str(extra.get("alias") or field_name)
             pydantic_field = pydantic_fields.get(field_name)
-            optional = bool(extra.get("omitempty", False))
+            optional = bool(extra.get("optional", False) or extra.get("omitempty", False))
             description = str(extra.get("description") or "")
             if pydantic_field is not None:
                 optional = optional or not pydantic_field.is_required()
@@ -273,10 +289,43 @@ class ContractGraphBuilder:
                     "description": description,
                 }
             )
+            manifest.update(_contract_field_metadata(extra))
             manifest.update(_proto_field_metadata(extra))
             fields[field_name] = manifest
-        self.schemas[name]["fields"] = fields
-        return name
+        self.schemas[schema_id]["fields"] = fields
+        return schema_id
+
+    def _schema_id(self, model_cls: type[Model]) -> str:
+        name = _model_name(model_cls)
+        identity = _model_identity(model_cls)
+        if name in self._qualified_schema_names:
+            return identity
+        existing = self.schemas.get(name)
+        if existing is None:
+            if identity in self.schemas:
+                return identity
+            return name
+        if existing.get("identity") == identity:
+            return name
+
+        existing_identity = str(existing.get("identity") or name)
+        if existing_identity != name and existing_identity not in self.schemas:
+            self._qualified_schema_names.add(name)
+            self._schema_ref_rewrites[name] = existing_identity
+            self.schemas[existing_identity] = existing
+            del self.schemas[name]
+            self._replace_schema_ref(name, existing_identity)
+        return identity
+
+    def _replace_schema_ref(self, old: str, new: str) -> None:
+        for route in self.routes:
+            _replace_schema_ref_value(route, old, new)
+        for schema in self.schemas.values():
+            _replace_schema_ref_value(schema, old, new)
+
+    def _apply_schema_ref_rewrites(self, value: JsonObject) -> None:
+        for old, new in self._schema_ref_rewrites.items():
+            _replace_schema_ref_value(value, old, new)
 
     def _field_manifest(self, field_value: Any) -> JsonObject:
         if _is_parametrized_field(field_value):
@@ -311,6 +360,7 @@ class ContractGraphBuilder:
             return {
                 "type": "enum",
                 "enum": getattr(enum_cls, "__name__", "Enum"),
+                **_enum_contract_metadata(enum_cls),
                 "values": values,
                 "enum_values": _enum_value_manifest(enum_cls),
             }
@@ -319,6 +369,7 @@ class ContractGraphBuilder:
             return {
                 "type": "enum",
                 "enum": field_value.__name__,
+                **_enum_contract_metadata(field_value),
                 "values": [member.value for member in field_value],
                 "enum_values": _enum_value_manifest(field_value),
             }
@@ -333,6 +384,7 @@ class ContractGraphBuilder:
         if isinstance(field_type, str) and field_type:
             return {
                 "type": field_type,
+                **_contract_field_metadata(getattr(field_value, "__extra__", {}) or {}),
                 **_proto_field_metadata(getattr(field_value, "__extra__", {}) or {}),
             }
 
@@ -399,6 +451,24 @@ def _model_name(model: object) -> str:
     return model.__class__.__name__
 
 
+def _model_module(model: object) -> str:
+    value = getattr(model, "__module__", "")
+    return value if isinstance(value, str) else ""
+
+
+def _model_qualname(model: object) -> str:
+    value = getattr(model, "__qualname__", None)
+    if isinstance(value, str) and value:
+        return value
+    return _model_name(model)
+
+
+def _model_identity(model: object) -> str:
+    module = _model_module(model)
+    qualname = _model_qualname(model)
+    return f"{module}.{qualname}" if module else qualname
+
+
 def _safe_pydantic_fields(model_cls: type[Model]) -> Mapping[str, Any]:
     try:
         return model_to_pydantic(model_cls).model_fields
@@ -438,6 +508,55 @@ def _proto_field_metadata(extra: Mapping[str, Any]) -> JsonObject:
             continue
         metadata[key.removeprefix("proto_")] = value
     return {"proto": metadata} if metadata else {}
+
+
+def _contract_field_metadata(extra: Mapping[str, Any]) -> JsonObject:
+    metadata: JsonObject = {}
+    number = extra.get("contract_field_id")
+    if number is None:
+        number = extra.get("wire_number")
+    if number is not None:
+        metadata["field_id"] = int(number)
+    if extra.get("optional") is True:
+        metadata["optional"] = True
+    choice = extra.get("contract_choice")
+    if isinstance(choice, str) and choice:
+        metadata["choice"] = choice
+    return {"contract": metadata} if metadata else {}
+
+
+def _enum_contract_metadata(enum_cls: object) -> JsonObject:
+    if not isinstance(enum_cls, enum.EnumMeta):
+        return {}
+    module = _model_module(enum_cls)
+    qualname = _model_qualname(enum_cls)
+    identity = _model_identity(enum_cls)
+    return {
+        "enum_module": module,
+        "enum_qualname": qualname,
+        "enum_identity": identity,
+    }
+
+
+def _replace_schema_ref_value(value: object, old: str, new: str) -> None:
+    if isinstance(value, dict):
+        for key, item in list(value.items()):
+            if key in {
+                "query_model",
+                "json_model",
+                "form_model",
+                "binary_model",
+                "open_model",
+                "close_model",
+                "model",
+                "ref",
+            } and item == old:
+                value[key] = new
+                continue
+            _replace_schema_ref_value(item, old, new)
+    elif isinstance(value, list):
+        for item in value:
+            _replace_schema_ref_value(item, old, new)
 
 
 def _enum_value_manifest(enum_cls: object) -> list[JsonObject]:

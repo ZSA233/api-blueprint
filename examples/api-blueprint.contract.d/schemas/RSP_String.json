@@ -1,0 +1,14 @@
+{
+  "inbound_routes": [
+    "api.hello.get.string"
+  ],
+  "schema": {
+    "auto": true,
+    "kind": "alias",
+    "name": "RSP_String",
+    "target": {
+      "type": "string"
+    },
+    "type": "alias"
+  }
+}

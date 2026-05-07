@@ -79,7 +79,10 @@ def model_to_pydantic(
             py_type = nested
             description = attr.__extra__.get("description", "")
             copy_extra = _field_factory_extra(attr.__extra__)
+            optional = bool(copy_extra.pop("optional", False))
             copy_extra["description"] = f"[{attr.__class__.__name__}] {description}"
+            if optional and copy_extra.get("default", ...) is ...:
+                copy_extra["default"] = None
             info = field_factory(**copy_extra)
         else:
             continue
@@ -206,6 +209,7 @@ def resolve_field(
 
 def _normalize_field_factory_kwargs(extra: dict[str, Any], *, description: str) -> dict[str, Any]:
     copy_extra = _field_factory_extra(extra)
+    optional = bool(copy_extra.pop("optional", False))
     omitempty = bool(copy_extra.pop("omitempty", False))
     regex = copy_extra.pop("regex", None)
 
@@ -219,6 +223,9 @@ def _normalize_field_factory_kwargs(extra: dict[str, Any], *, description: str) 
     if merged_schema_extra:
         copy_extra["json_schema_extra"] = merged_schema_extra
 
+    if optional and copy_extra.get("default", ...) is ...:
+        copy_extra["default"] = None
+
     copy_extra["description"] = description
     return copy_extra
 
@@ -227,5 +234,10 @@ def _field_factory_extra(extra: dict[str, Any]) -> dict[str, Any]:
     return {
         key: value
         for key, value in extra.items()
-        if key != "description" and not key.startswith("proto_")
+        if (
+            key != "description"
+            and not key.startswith("proto_")
+            and not key.startswith("wire_")
+            and not key.startswith("contract_")
+        )
     }

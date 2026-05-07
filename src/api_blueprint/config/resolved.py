@@ -46,6 +46,20 @@ class ResolvedApiTargetConfig:
     python_package_root: str | None = None
     include: tuple[str, ...] = ()
     exclude: tuple[str, ...] = ()
+    proto_files: tuple["ResolvedGrpcProtoFileConfig", ...] = ()
+
+
+@dataclass(frozen=True)
+class ResolvedGrpcProtoFileConfig:
+    file: str
+    package: str | None = None
+    go_package: str | None = None
+    schema_modules: tuple[str, ...] = ()
+    schema_names: tuple[str, ...] = ()
+    route_paths: tuple[str, ...] = ()
+    route_ids: tuple[str, ...] = ()
+    service_ids: tuple[str, ...] = ()
+    service: str | None = None
 
 
 @dataclass(frozen=True)
@@ -148,13 +162,12 @@ def resolve_api_targets(config_path: Path, raw: Config) -> tuple[ResolvedApiTarg
                     raise ValueError(f"target[{target.id}] http-transport clients must reference client targets")
 
         if target.kind in {"grpc-go", "grpc-python"}:
-            if target.proto is None:
-                raise ValueError(f"target[{target.id}] {target.kind} requires proto")
-            proto = target_map.get(target.proto)
-            if proto is None:
-                raise ValueError(f"target[{target.id}] references unknown proto target: {target.proto}")
-            if proto.kind != "grpc-proto":
-                raise ValueError(f"target[{target.id}] {target.kind} proto must reference a grpc-proto target")
+            if target.proto is not None:
+                proto = target_map.get(target.proto)
+                if proto is None:
+                    raise ValueError(f"target[{target.id}] references unknown proto target: {target.proto}")
+                if proto.kind != "grpc-proto":
+                    raise ValueError(f"target[{target.id}] {target.kind} proto must reference a grpc-proto target")
 
         out_dir = resolve_output_path(config_path, target.out_dir)
         source_root = resolve_output_path(config_path, target.source_root)
@@ -185,6 +198,20 @@ def resolve_api_targets(config_path: Path, raw: Config) -> tuple[ResolvedApiTarg
                 python_package_root=target.python_package_root,
                 include=normalize_selection_rules(target.include),
                 exclude=normalize_selection_rules(target.exclude),
+                proto_files=tuple(
+                    ResolvedGrpcProtoFileConfig(
+                        file=proto_file.file,
+                        package=proto_file.package,
+                        go_package=proto_file.go_package,
+                        schema_modules=tuple(proto_file.schema_modules),
+                        schema_names=tuple(proto_file.schema_names),
+                        route_paths=tuple(proto_file.route_paths),
+                        route_ids=tuple(proto_file.route_ids),
+                        service_ids=tuple(proto_file.service_ids),
+                        service=proto_file.service,
+                    )
+                    for proto_file in target.proto_files
+                ),
             )
         )
     return tuple(resolved)

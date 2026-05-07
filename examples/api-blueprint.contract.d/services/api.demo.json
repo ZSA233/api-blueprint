@@ -1,0 +1,889 @@
+{
+  "routes": [
+    {
+      "artifacts": {
+        "go.server": {
+          "files": [
+            "golang/views/routes/api/demo/gen_interface.go",
+            "golang/views/routes/api/demo/gen_protos.go"
+          ],
+          "imports": [],
+          "kind": "go-server"
+        },
+        "grpc.go": {
+          "files": [
+            "grpc/go/api/demo/demo.pb.go",
+            "grpc/go/api/demo/demo_grpc.pb.go"
+          ],
+          "imports": [
+            "example.com/project/grpc/go/api/demo"
+          ],
+          "kind": "grpc-go"
+        },
+        "grpc.proto": {
+          "files": [
+            "grpc/protos/api/demo.proto"
+          ],
+          "imports": [],
+          "kind": "grpc-proto"
+        },
+        "grpc.python": {
+          "files": [
+            "grpc/python/pb/api/demo_pb2.py",
+            "grpc/python/pb/api/demo_pb2_grpc.py"
+          ],
+          "imports": [
+            "pb.api.demo_pb2",
+            "pb.api.demo_pb2_grpc"
+          ],
+          "kind": "grpc-python"
+        },
+        "typescript.client": {
+          "files": [
+            "typescript/api/routes/api/demo/client.ts",
+            "typescript/api/routes/api/demo/models.ts"
+          ],
+          "imports": [
+            "typescript/api/routes/api/demo"
+          ],
+          "kind": "typescript-client"
+        },
+        "wails.v2": {
+          "files": [
+            "golang/views/transports/wailsv2/api/demo/gen_service.go",
+            "typescript/api/transports/wailsv2/api/demo/client.ts"
+          ],
+          "imports": [],
+          "kind": "wails-transport"
+        },
+        "wails.v3": {
+          "files": [
+            "golang/views/transports/wailsv3/api/demo/gen_service.go",
+            "typescript/api/transports/wailsv3/api/demo/client.ts"
+          ],
+          "imports": [],
+          "kind": "wails-transport"
+        }
+      },
+      "connection": null,
+      "hash": "8dcbefbf73d53a05ea31593b125172d01ce14336c75eb99717d7f6704a8bd150",
+      "id": "api.demo.get.abc",
+      "kind": "rpc",
+      "methods": [
+        "GET"
+      ],
+      "operation": "Abc",
+      "request_models": [
+        "REQ_Abc_QUERY"
+      ],
+      "response_model": "ApiDemoA",
+      "schemas": [
+        "ApiDemoA",
+        "ApiDemoMap",
+        "ApiDemoSubA",
+        "REQ_Abc_QUERY"
+      ],
+      "service_id": "api.demo",
+      "shard": "api-blueprint.contract.d/routes/api.demo.get.abc.json",
+      "url": "/api/demo/abc"
+    },
+    {
+      "artifacts": {
+        "go.server": {
+          "files": [
+            "golang/views/routes/api/demo/gen_interface.go",
+            "golang/views/routes/api/demo/gen_protos.go"
+          ],
+          "imports": [],
+          "kind": "go-server"
+        },
+        "grpc.go": {
+          "files": [
+            "grpc/go/api/demo/demo.pb.go",
+            "grpc/go/api/demo/demo_grpc.pb.go"
+          ],
+          "imports": [
+            "example.com/project/grpc/go/api/demo"
+          ],
+          "kind": "grpc-go"
+        },
+        "grpc.proto": {
+          "files": [
+            "grpc/protos/api/demo.proto"
+          ],
+          "imports": [],
+          "kind": "grpc-proto"
+        },
+        "grpc.python": {
+          "files": [
+            "grpc/python/pb/api/demo_pb2.py",
+            "grpc/python/pb/api/demo_pb2_grpc.py"
+          ],
+          "imports": [
+            "pb.api.demo_pb2",
+            "pb.api.demo_pb2_grpc"
+          ],
+          "kind": "grpc-python"
+        },
+        "typescript.client": {
+          "files": [
+            "typescript/api/routes/api/demo/client.ts",
+            "typescript/api/routes/api/demo/models.ts"
+          ],
+          "imports": [
+            "typescript/api/routes/api/demo"
+          ],
+          "kind": "typescript-client"
+        },
+        "wails.v2": {
+          "files": [
+            "golang/views/transports/wailsv2/api/demo/gen_service.go",
+            "typescript/api/transports/wailsv2/api/demo/client.ts"
+          ],
+          "imports": [],
+          "kind": "wails-transport"
+        },
+        "wails.v3": {
+          "files": [
+            "golang/views/transports/wailsv3/api/demo/gen_service.go",
+            "typescript/api/transports/wailsv3/api/demo/client.ts"
+          ],
+          "imports": [],
+          "kind": "wails-transport"
+        }
+      },
+      "connection": null,
+      "hash": "feada30d07e6b443844676b118cd6760c71449cb2750bfa56d58fa927788c664",
+      "id": "api.demo.post.testpost",
+      "kind": "rpc",
+      "methods": [
+        "POST"
+      ],
+      "operation": "TestPost",
+      "request_models": [
+        "REQ_TestPost_JSON"
+      ],
+      "response_model": "RSP_TestPost",
+      "schemas": [
+        "ApiDemoMap",
+        "REQ_TestPost_JSON",
+        "RSP_TestPost"
+      ],
+      "service_id": "api.demo",
+      "shard": "api-blueprint.contract.d/routes/api.demo.post.testpost.json",
+      "url": "/api/demo/test_post"
+    },
+    {
+      "artifacts": {
+        "go.server": {
+          "files": [
+            "golang/views/routes/api/demo/gen_interface.go",
+            "golang/views/routes/api/demo/gen_protos.go"
+          ],
+          "imports": [],
+          "kind": "go-server"
+        },
+        "grpc.go": {
+          "files": [
+            "grpc/go/api/demo/demo.pb.go",
+            "grpc/go/api/demo/demo_grpc.pb.go"
+          ],
+          "imports": [
+            "example.com/project/grpc/go/api/demo"
+          ],
+          "kind": "grpc-go"
+        },
+        "grpc.proto": {
+          "files": [
+            "grpc/protos/api/demo.proto"
+          ],
+          "imports": [],
+          "kind": "grpc-proto"
+        },
+        "grpc.python": {
+          "files": [
+            "grpc/python/pb/api/demo_pb2.py",
+            "grpc/python/pb/api/demo_pb2_grpc.py"
+          ],
+          "imports": [
+            "pb.api.demo_pb2",
+            "pb.api.demo_pb2_grpc"
+          ],
+          "kind": "grpc-python"
+        },
+        "typescript.client": {
+          "files": [
+            "typescript/api/routes/api/demo/client.ts",
+            "typescript/api/routes/api/demo/models.ts"
+          ],
+          "imports": [
+            "typescript/api/routes/api/demo"
+          ],
+          "kind": "typescript-client"
+        },
+        "wails.v2": {
+          "files": [
+            "golang/views/transports/wailsv2/api/demo/gen_service.go",
+            "typescript/api/transports/wailsv2/api/demo/client.ts"
+          ],
+          "imports": [],
+          "kind": "wails-transport"
+        },
+        "wails.v3": {
+          "files": [
+            "golang/views/transports/wailsv3/api/demo/gen_service.go",
+            "typescript/api/transports/wailsv3/api/demo/client.ts"
+          ],
+          "imports": [],
+          "kind": "wails-transport"
+        }
+      },
+      "connection": null,
+      "hash": "8fcc6643c88f434213d285e1fbff27744ca683e19288e01027565ad6a7ca4011",
+      "id": "api.demo.put.z1put",
+      "kind": "rpc",
+      "methods": [
+        "PUT"
+      ],
+      "operation": "Z1put",
+      "request_models": [
+        "REQ_Func1put_QUERY",
+        "REQ_Func1put_JSON"
+      ],
+      "response_model": "RSP_Func1put",
+      "schemas": [
+        "ANON_Func1put_anon_kv",
+        "REQ_Func1put_JSON",
+        "REQ_Func1put_QUERY",
+        "RSP_Func1put"
+      ],
+      "service_id": "api.demo",
+      "shard": "api-blueprint.contract.d/routes/api.demo.put.z1put.json",
+      "url": "/api/demo/1put"
+    },
+    {
+      "artifacts": {
+        "go.server": {
+          "files": [
+            "golang/views/routes/api/demo/gen_interface.go",
+            "golang/views/routes/api/demo/gen_protos.go"
+          ],
+          "imports": [],
+          "kind": "go-server"
+        },
+        "grpc.go": {
+          "files": [
+            "grpc/go/api/demo/demo.pb.go",
+            "grpc/go/api/demo/demo_grpc.pb.go"
+          ],
+          "imports": [
+            "example.com/project/grpc/go/api/demo"
+          ],
+          "kind": "grpc-go"
+        },
+        "grpc.proto": {
+          "files": [
+            "grpc/protos/api/demo.proto"
+          ],
+          "imports": [],
+          "kind": "grpc-proto"
+        },
+        "grpc.python": {
+          "files": [
+            "grpc/python/pb/api/demo_pb2.py",
+            "grpc/python/pb/api/demo_pb2_grpc.py"
+          ],
+          "imports": [
+            "pb.api.demo_pb2",
+            "pb.api.demo_pb2_grpc"
+          ],
+          "kind": "grpc-python"
+        },
+        "typescript.client": {
+          "files": [
+            "typescript/api/routes/api/demo/client.ts",
+            "typescript/api/routes/api/demo/models.ts"
+          ],
+          "imports": [
+            "typescript/api/routes/api/demo"
+          ],
+          "kind": "typescript-client"
+        },
+        "wails.v2": {
+          "files": [
+            "golang/views/transports/wailsv2/api/demo/gen_service.go",
+            "typescript/api/transports/wailsv2/api/demo/client.ts"
+          ],
+          "imports": [],
+          "kind": "wails-transport"
+        },
+        "wails.v3": {
+          "files": [
+            "golang/views/transports/wailsv3/api/demo/gen_service.go",
+            "typescript/api/transports/wailsv3/api/demo/client.ts"
+          ],
+          "imports": [],
+          "kind": "wails-transport"
+        }
+      },
+      "connection": null,
+      "hash": "e37d7466d6eeb803cf2f4b46510376bae95ba296eb5cbd9dbd57f53d46a666cc",
+      "id": "api.demo.delete.delete",
+      "kind": "rpc",
+      "methods": [
+        "DELETE"
+      ],
+      "operation": "Delete",
+      "request_models": [
+        "REQ_Delete_QUERY"
+      ],
+      "response_model": "RSP_Delete",
+      "schemas": [
+        "ANON_Delete_anon_list",
+        "REQ_Delete_QUERY",
+        "RSP_Delete"
+      ],
+      "service_id": "api.demo",
+      "shard": "api-blueprint.contract.d/routes/api.demo.delete.delete.json",
+      "url": "/api/demo/delete$"
+    },
+    {
+      "artifacts": {
+        "go.server": {
+          "files": [
+            "golang/views/routes/api/demo/gen_interface.go",
+            "golang/views/routes/api/demo/gen_protos.go"
+          ],
+          "imports": [],
+          "kind": "go-server"
+        },
+        "grpc.go": {
+          "files": [
+            "grpc/go/api/demo/demo.pb.go",
+            "grpc/go/api/demo/demo_grpc.pb.go"
+          ],
+          "imports": [
+            "example.com/project/grpc/go/api/demo"
+          ],
+          "kind": "grpc-go"
+        },
+        "grpc.proto": {
+          "files": [
+            "grpc/protos/api/demo.proto"
+          ],
+          "imports": [],
+          "kind": "grpc-proto"
+        },
+        "grpc.python": {
+          "files": [
+            "grpc/python/pb/api/demo_pb2.py",
+            "grpc/python/pb/api/demo_pb2_grpc.py"
+          ],
+          "imports": [
+            "pb.api.demo_pb2",
+            "pb.api.demo_pb2_grpc"
+          ],
+          "kind": "grpc-python"
+        },
+        "typescript.client": {
+          "files": [
+            "typescript/api/routes/api/demo/client.ts",
+            "typescript/api/routes/api/demo/models.ts"
+          ],
+          "imports": [
+            "typescript/api/routes/api/demo"
+          ],
+          "kind": "typescript-client"
+        },
+        "wails.v2": {
+          "files": [
+            "golang/views/transports/wailsv2/api/demo/gen_service.go",
+            "typescript/api/transports/wailsv2/api/demo/client.ts"
+          ],
+          "imports": [],
+          "kind": "wails-transport"
+        },
+        "wails.v3": {
+          "files": [
+            "golang/views/transports/wailsv3/api/demo/gen_service.go",
+            "typescript/api/transports/wailsv3/api/demo/client.ts"
+          ],
+          "imports": [],
+          "kind": "wails-transport"
+        }
+      },
+      "connection": null,
+      "hash": "8fc76e77569bd15c697f6f54c2bca8398f3ca71304b7a01a0440ee04cf938f3c",
+      "id": "api.demo.ws.ws",
+      "kind": "legacy_ws",
+      "methods": [],
+      "operation": "Ws",
+      "request_models": [
+        "ApiDemoSubA"
+      ],
+      "response_model": null,
+      "schemas": [
+        "ApiDemoMap",
+        "ApiDemoSubA"
+      ],
+      "service_id": "api.demo",
+      "shard": "api-blueprint.contract.d/routes/api.demo.ws.ws.json",
+      "url": "/api/demo/ws"
+    },
+    {
+      "artifacts": {
+        "go.server": {
+          "files": [
+            "golang/views/routes/api/demo/gen_interface.go",
+            "golang/views/routes/api/demo/gen_protos.go"
+          ],
+          "imports": [],
+          "kind": "go-server"
+        },
+        "grpc.go": {
+          "files": [
+            "grpc/go/api/demo/demo.pb.go",
+            "grpc/go/api/demo/demo_grpc.pb.go"
+          ],
+          "imports": [
+            "example.com/project/grpc/go/api/demo"
+          ],
+          "kind": "grpc-go"
+        },
+        "grpc.proto": {
+          "files": [
+            "grpc/protos/api/demo.proto"
+          ],
+          "imports": [],
+          "kind": "grpc-proto"
+        },
+        "grpc.python": {
+          "files": [
+            "grpc/python/pb/api/demo_pb2.py",
+            "grpc/python/pb/api/demo_pb2_grpc.py"
+          ],
+          "imports": [
+            "pb.api.demo_pb2",
+            "pb.api.demo_pb2_grpc"
+          ],
+          "kind": "grpc-python"
+        },
+        "typescript.client": {
+          "files": [
+            "typescript/api/routes/api/demo/client.ts",
+            "typescript/api/routes/api/demo/models.ts"
+          ],
+          "imports": [
+            "typescript/api/routes/api/demo"
+          ],
+          "kind": "typescript-client"
+        },
+        "wails.v2": {
+          "files": [
+            "golang/views/transports/wailsv2/api/demo/gen_service.go",
+            "typescript/api/transports/wailsv2/api/demo/client.ts"
+          ],
+          "imports": [],
+          "kind": "wails-transport"
+        },
+        "wails.v3": {
+          "files": [
+            "golang/views/transports/wailsv3/api/demo/gen_service.go",
+            "typescript/api/transports/wailsv3/api/demo/client.ts"
+          ],
+          "imports": [],
+          "kind": "wails-transport"
+        }
+      },
+      "connection": {
+        "client_message_models": [],
+        "close_model": "ConnectionClose",
+        "kind": "stream",
+        "open_model": "SweepOpen",
+        "scope": "session",
+        "server_message_models": [
+          "SweepState",
+          "SweepProgress",
+          "SweepLog"
+        ]
+      },
+      "hash": "12a38163f412590839dd869ecf15c1ed303a753bae4d4703709ca9cd97864098",
+      "id": "api.demo.stream.sweepevents",
+      "kind": "stream",
+      "methods": [],
+      "operation": "SweepEvents",
+      "request_models": [],
+      "response_model": null,
+      "schemas": [
+        "ConnectionClose",
+        "SweepLog",
+        "SweepOpen",
+        "SweepProgress",
+        "SweepState"
+      ],
+      "service_id": "api.demo",
+      "shard": "api-blueprint.contract.d/routes/api.demo.stream.sweepevents.json",
+      "url": "/api/demo/sweep-events"
+    },
+    {
+      "artifacts": {
+        "go.server": {
+          "files": [
+            "golang/views/routes/api/demo/gen_interface.go",
+            "golang/views/routes/api/demo/gen_protos.go"
+          ],
+          "imports": [],
+          "kind": "go-server"
+        },
+        "grpc.go": {
+          "files": [
+            "grpc/go/api/demo/demo.pb.go",
+            "grpc/go/api/demo/demo_grpc.pb.go"
+          ],
+          "imports": [
+            "example.com/project/grpc/go/api/demo"
+          ],
+          "kind": "grpc-go"
+        },
+        "grpc.proto": {
+          "files": [
+            "grpc/protos/api/demo.proto"
+          ],
+          "imports": [],
+          "kind": "grpc-proto"
+        },
+        "grpc.python": {
+          "files": [
+            "grpc/python/pb/api/demo_pb2.py",
+            "grpc/python/pb/api/demo_pb2_grpc.py"
+          ],
+          "imports": [
+            "pb.api.demo_pb2",
+            "pb.api.demo_pb2_grpc"
+          ],
+          "kind": "grpc-python"
+        },
+        "typescript.client": {
+          "files": [
+            "typescript/api/routes/api/demo/client.ts",
+            "typescript/api/routes/api/demo/models.ts"
+          ],
+          "imports": [
+            "typescript/api/routes/api/demo"
+          ],
+          "kind": "typescript-client"
+        },
+        "wails.v2": {
+          "files": [
+            "golang/views/transports/wailsv2/api/demo/gen_service.go",
+            "typescript/api/transports/wailsv2/api/demo/client.ts"
+          ],
+          "imports": [],
+          "kind": "wails-transport"
+        },
+        "wails.v3": {
+          "files": [
+            "golang/views/transports/wailsv3/api/demo/gen_service.go",
+            "typescript/api/transports/wailsv3/api/demo/client.ts"
+          ],
+          "imports": [],
+          "kind": "wails-transport"
+        }
+      },
+      "connection": {
+        "client_message_models": [
+          "AssistantInput",
+          "AssistantCancel"
+        ],
+        "close_model": "ConnectionClose",
+        "kind": "channel",
+        "open_model": "AssistantOpen",
+        "scope": "session",
+        "server_message_models": [
+          "AssistantDelta",
+          "AssistantDone",
+          "SweepLog"
+        ]
+      },
+      "hash": "3694fdda89dc15a3a99151e1853595cbf379018c4061b8f707d301b0a204a356",
+      "id": "api.demo.channel.assistantsession",
+      "kind": "channel",
+      "methods": [],
+      "operation": "AssistantSession",
+      "request_models": [],
+      "response_model": null,
+      "schemas": [
+        "AssistantCancel",
+        "AssistantDelta",
+        "AssistantDone",
+        "AssistantInput",
+        "AssistantOpen",
+        "ConnectionClose",
+        "SweepLog"
+      ],
+      "service_id": "api.demo",
+      "shard": "api-blueprint.contract.d/routes/api.demo.channel.assistantsession.json",
+      "url": "/api/demo/assistant-session"
+    },
+    {
+      "artifacts": {
+        "go.server": {
+          "files": [
+            "golang/views/routes/api/demo/gen_interface.go",
+            "golang/views/routes/api/demo/gen_protos.go"
+          ],
+          "imports": [],
+          "kind": "go-server"
+        },
+        "grpc.go": {
+          "files": [
+            "grpc/go/api/demo/demo.pb.go",
+            "grpc/go/api/demo/demo_grpc.pb.go"
+          ],
+          "imports": [
+            "example.com/project/grpc/go/api/demo"
+          ],
+          "kind": "grpc-go"
+        },
+        "grpc.proto": {
+          "files": [
+            "grpc/protos/api/demo.proto"
+          ],
+          "imports": [],
+          "kind": "grpc-proto"
+        },
+        "grpc.python": {
+          "files": [
+            "grpc/python/pb/api/demo_pb2.py",
+            "grpc/python/pb/api/demo_pb2_grpc.py"
+          ],
+          "imports": [
+            "pb.api.demo_pb2",
+            "pb.api.demo_pb2_grpc"
+          ],
+          "kind": "grpc-python"
+        },
+        "typescript.client": {
+          "files": [
+            "typescript/api/routes/api/demo/client.ts",
+            "typescript/api/routes/api/demo/models.ts"
+          ],
+          "imports": [
+            "typescript/api/routes/api/demo"
+          ],
+          "kind": "typescript-client"
+        },
+        "wails.v2": {
+          "files": [
+            "golang/views/transports/wailsv2/api/demo/gen_service.go",
+            "typescript/api/transports/wailsv2/api/demo/client.ts"
+          ],
+          "imports": [],
+          "kind": "wails-transport"
+        },
+        "wails.v3": {
+          "files": [
+            "golang/views/transports/wailsv3/api/demo/gen_service.go",
+            "typescript/api/transports/wailsv3/api/demo/client.ts"
+          ],
+          "imports": [],
+          "kind": "wails-transport"
+        }
+      },
+      "connection": null,
+      "hash": "9090784f87d1af0cb9ca55b70e53528ddf4f37030c00501af126d9cbb40bd413",
+      "id": "api.demo.post.postdeprecated",
+      "kind": "rpc",
+      "methods": [
+        "POST"
+      ],
+      "operation": "PostDeprecated",
+      "request_models": [
+        "REQ_PostDeprecated_JSON"
+      ],
+      "response_model": "RSP_PostDeprecated",
+      "schemas": [
+        "REQ_PostDeprecated_JSON",
+        "RSP_PostDeprecated"
+      ],
+      "service_id": "api.demo",
+      "shard": "api-blueprint.contract.d/routes/api.demo.post.postdeprecated.json",
+      "url": "/api/demo/post_deprecated"
+    },
+    {
+      "artifacts": {
+        "go.server": {
+          "files": [
+            "golang/views/routes/api/demo/gen_interface.go",
+            "golang/views/routes/api/demo/gen_protos.go"
+          ],
+          "imports": [],
+          "kind": "go-server"
+        },
+        "grpc.go": {
+          "files": [
+            "grpc/go/api/demo/demo.pb.go",
+            "grpc/go/api/demo/demo_grpc.pb.go"
+          ],
+          "imports": [
+            "example.com/project/grpc/go/api/demo"
+          ],
+          "kind": "grpc-go"
+        },
+        "grpc.proto": {
+          "files": [
+            "grpc/protos/api/demo.proto"
+          ],
+          "imports": [],
+          "kind": "grpc-proto"
+        },
+        "grpc.python": {
+          "files": [
+            "grpc/python/pb/api/demo_pb2.py",
+            "grpc/python/pb/api/demo_pb2_grpc.py"
+          ],
+          "imports": [
+            "pb.api.demo_pb2",
+            "pb.api.demo_pb2_grpc"
+          ],
+          "kind": "grpc-python"
+        },
+        "typescript.client": {
+          "files": [
+            "typescript/api/routes/api/demo/client.ts",
+            "typescript/api/routes/api/demo/models.ts"
+          ],
+          "imports": [
+            "typescript/api/routes/api/demo"
+          ],
+          "kind": "typescript-client"
+        },
+        "wails.v2": {
+          "files": [
+            "golang/views/transports/wailsv2/api/demo/gen_service.go",
+            "typescript/api/transports/wailsv2/api/demo/client.ts"
+          ],
+          "imports": [],
+          "kind": "wails-transport"
+        },
+        "wails.v3": {
+          "files": [
+            "golang/views/transports/wailsv3/api/demo/gen_service.go",
+            "typescript/api/transports/wailsv3/api/demo/client.ts"
+          ],
+          "imports": [],
+          "kind": "wails-transport"
+        }
+      },
+      "connection": null,
+      "hash": "02db0e23905cc751a94623776855d299dc5808a68efcd7f28227e73672471e4d",
+      "id": "api.demo.post.raw",
+      "kind": "rpc",
+      "methods": [
+        "POST"
+      ],
+      "operation": "Raw",
+      "request_models": [],
+      "response_model": "RSP_Raw",
+      "schemas": [
+        "ApiDemoA",
+        "ApiDemoMap",
+        "ApiDemoSubA",
+        "RSP_Raw"
+      ],
+      "service_id": "api.demo",
+      "shard": "api-blueprint.contract.d/routes/api.demo.post.raw.json",
+      "url": "/api/demo/raw"
+    },
+    {
+      "artifacts": {
+        "go.server": {
+          "files": [
+            "golang/views/routes/api/demo/gen_interface.go",
+            "golang/views/routes/api/demo/gen_protos.go"
+          ],
+          "imports": [],
+          "kind": "go-server"
+        },
+        "grpc.go": {
+          "files": [
+            "grpc/go/api/demo/demo.pb.go",
+            "grpc/go/api/demo/demo_grpc.pb.go"
+          ],
+          "imports": [
+            "example.com/project/grpc/go/api/demo"
+          ],
+          "kind": "grpc-go"
+        },
+        "grpc.proto": {
+          "files": [
+            "grpc/protos/api/demo.proto"
+          ],
+          "imports": [],
+          "kind": "grpc-proto"
+        },
+        "grpc.python": {
+          "files": [
+            "grpc/python/pb/api/demo_pb2.py",
+            "grpc/python/pb/api/demo_pb2_grpc.py"
+          ],
+          "imports": [
+            "pb.api.demo_pb2",
+            "pb.api.demo_pb2_grpc"
+          ],
+          "kind": "grpc-python"
+        },
+        "typescript.client": {
+          "files": [
+            "typescript/api/routes/api/demo/client.ts",
+            "typescript/api/routes/api/demo/models.ts"
+          ],
+          "imports": [
+            "typescript/api/routes/api/demo"
+          ],
+          "kind": "typescript-client"
+        },
+        "wails.v2": {
+          "files": [
+            "golang/views/transports/wailsv2/api/demo/gen_service.go",
+            "typescript/api/transports/wailsv2/api/demo/client.ts"
+          ],
+          "imports": [],
+          "kind": "wails-transport"
+        },
+        "wails.v3": {
+          "files": [
+            "golang/views/transports/wailsv3/api/demo/gen_service.go",
+            "typescript/api/transports/wailsv3/api/demo/client.ts"
+          ],
+          "imports": [],
+          "kind": "wails-transport"
+        }
+      },
+      "connection": null,
+      "hash": "039ab7a56325f976818808316abbf23dd1592bcb5fdba1e9745bb99333aa28a2",
+      "id": "api.demo.post.mapmodel",
+      "kind": "rpc",
+      "methods": [
+        "POST"
+      ],
+      "operation": "MapModel",
+      "request_models": [],
+      "response_model": "RSP_MapModel",
+      "schemas": [
+        "ApiDemoMap",
+        "RSP_MapModel"
+      ],
+      "service_id": "api.demo",
+      "shard": "api-blueprint.contract.d/routes/api.demo.post.mapmodel.json",
+      "url": "/api/demo/map_model"
+    }
+  ],
+  "service": {
+    "group": "demo",
+    "id": "api.demo",
+    "name": "DemoService",
+    "path": "/api/demo",
+    "root": "api"
+  }
+}

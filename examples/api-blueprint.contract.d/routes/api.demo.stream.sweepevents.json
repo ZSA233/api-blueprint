@@ -1,0 +1,268 @@
+{
+  "artifacts": {
+    "go.server": {
+      "files": [
+        "golang/views/routes/api/demo/gen_interface.go",
+        "golang/views/routes/api/demo/gen_protos.go"
+      ],
+      "imports": [],
+      "kind": "go-server"
+    },
+    "grpc.go": {
+      "files": [
+        "grpc/go/api/demo/demo.pb.go",
+        "grpc/go/api/demo/demo_grpc.pb.go"
+      ],
+      "imports": [
+        "example.com/project/grpc/go/api/demo"
+      ],
+      "kind": "grpc-go"
+    },
+    "grpc.proto": {
+      "files": [
+        "grpc/protos/api/demo.proto"
+      ],
+      "imports": [],
+      "kind": "grpc-proto"
+    },
+    "grpc.python": {
+      "files": [
+        "grpc/python/pb/api/demo_pb2.py",
+        "grpc/python/pb/api/demo_pb2_grpc.py"
+      ],
+      "imports": [
+        "pb.api.demo_pb2",
+        "pb.api.demo_pb2_grpc"
+      ],
+      "kind": "grpc-python"
+    },
+    "typescript.client": {
+      "files": [
+        "typescript/api/routes/api/demo/client.ts",
+        "typescript/api/routes/api/demo/models.ts"
+      ],
+      "imports": [
+        "typescript/api/routes/api/demo"
+      ],
+      "kind": "typescript-client"
+    },
+    "wails.v2": {
+      "files": [
+        "golang/views/transports/wailsv2/api/demo/gen_service.go",
+        "typescript/api/transports/wailsv2/api/demo/client.ts"
+      ],
+      "imports": [],
+      "kind": "wails-transport"
+    },
+    "wails.v3": {
+      "files": [
+        "golang/views/transports/wailsv3/api/demo/gen_service.go",
+        "typescript/api/transports/wailsv3/api/demo/client.ts"
+      ],
+      "imports": [],
+      "kind": "wails-transport"
+    }
+  },
+  "connection": {
+    "client_message": null,
+    "close_model": "ConnectionClose",
+    "kind": "stream",
+    "open_model": "SweepOpen",
+    "scope": "session",
+    "server_message": {
+      "name": "SweepStreamMessage",
+      "variants": [
+        {
+          "key": "state",
+          "model": "SweepState"
+        },
+        {
+          "key": "progress",
+          "model": "SweepProgress"
+        },
+        {
+          "key": "log",
+          "model": "SweepLog"
+        }
+      ]
+    }
+  },
+  "route": {
+    "connection": {
+      "client_message": null,
+      "close_model": "ConnectionClose",
+      "kind": "stream",
+      "open_model": "SweepOpen",
+      "scope": "session",
+      "server_message": {
+        "name": "SweepStreamMessage",
+        "variants": [
+          {
+            "key": "state",
+            "model": "SweepState"
+          },
+          {
+            "key": "progress",
+            "model": "SweepProgress"
+          },
+          {
+            "key": "log",
+            "model": "SweepLog"
+          }
+        ]
+      }
+    },
+    "deprecated": false,
+    "hash": "12a38163f412590839dd869ecf15c1ed303a753bae4d4703709ca9cd97864098",
+    "id": "api.demo.stream.sweepevents",
+    "kind": "stream",
+    "method_name": "sweepEvents",
+    "methods": [],
+    "operation": "SweepEvents",
+    "path": "/sweep-events",
+    "proto": {},
+    "request": {
+      "binary_model": null,
+      "form_model": null,
+      "json_model": null,
+      "query_model": null
+    },
+    "response": null,
+    "service_id": "api.demo",
+    "url": "/api/demo/sweep-events"
+  },
+  "schemas": {
+    "ConnectionClose": {
+      "auto": false,
+      "fields": {
+        "code": {
+          "description": "logical close code",
+          "name": "code",
+          "optional": false,
+          "type": "int",
+          "wire_name": "code"
+        },
+        "error": {
+          "description": "machine-readable error key",
+          "name": "error",
+          "optional": true,
+          "type": "string",
+          "wire_name": "error"
+        },
+        "reason": {
+          "description": "close reason",
+          "name": "reason",
+          "optional": true,
+          "type": "string",
+          "wire_name": "reason"
+        }
+      },
+      "identity": "blueprints.api_demo.ConnectionClose",
+      "kind": "model",
+      "module": "blueprints.api_demo",
+      "name": "ConnectionClose",
+      "qualname": "ConnectionClose",
+      "type": "object"
+    },
+    "SweepLog": {
+      "auto": false,
+      "fields": {
+        "level": {
+          "description": "log level",
+          "name": "level",
+          "optional": false,
+          "type": "string",
+          "wire_name": "level"
+        },
+        "message": {
+          "description": "log message",
+          "name": "message",
+          "optional": false,
+          "type": "string",
+          "wire_name": "message"
+        }
+      },
+      "identity": "blueprints.api_demo.SweepLog",
+      "kind": "model",
+      "module": "blueprints.api_demo",
+      "name": "SweepLog",
+      "qualname": "SweepLog",
+      "type": "object"
+    },
+    "SweepOpen": {
+      "auto": false,
+      "fields": {
+        "replay_from": {
+          "description": "optional replay cursor",
+          "name": "replay_from",
+          "optional": true,
+          "type": "string",
+          "wire_name": "replay_from"
+        },
+        "run_id": {
+          "description": "run id",
+          "name": "run_id",
+          "optional": false,
+          "type": "string",
+          "wire_name": "run_id"
+        }
+      },
+      "identity": "blueprints.api_demo.SweepOpen",
+      "kind": "model",
+      "module": "blueprints.api_demo",
+      "name": "SweepOpen",
+      "qualname": "SweepOpen",
+      "type": "object"
+    },
+    "SweepProgress": {
+      "auto": false,
+      "fields": {
+        "current": {
+          "description": "current step",
+          "name": "current",
+          "optional": false,
+          "type": "uint64",
+          "wire_name": "current"
+        },
+        "total": {
+          "description": "total steps",
+          "name": "total",
+          "optional": false,
+          "type": "uint64",
+          "wire_name": "total"
+        }
+      },
+      "identity": "blueprints.api_demo.SweepProgress",
+      "kind": "model",
+      "module": "blueprints.api_demo",
+      "name": "SweepProgress",
+      "qualname": "SweepProgress",
+      "type": "object"
+    },
+    "SweepState": {
+      "auto": false,
+      "fields": {
+        "status": {
+          "description": "current sweep state",
+          "name": "status",
+          "optional": false,
+          "type": "string",
+          "wire_name": "status"
+        }
+      },
+      "identity": "blueprints.api_demo.SweepState",
+      "kind": "model",
+      "module": "blueprints.api_demo",
+      "name": "SweepState",
+      "qualname": "SweepState",
+      "type": "object"
+    }
+  },
+  "service": {
+    "group": "demo",
+    "id": "api.demo",
+    "name": "DemoService",
+    "path": "/api/demo",
+    "root": "api"
+  }
+}

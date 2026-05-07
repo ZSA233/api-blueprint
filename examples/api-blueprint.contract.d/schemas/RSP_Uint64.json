@@ -1,0 +1,14 @@
+{
+  "inbound_routes": [
+    "api.hello.get.uint64"
+  ],
+  "schema": {
+    "auto": true,
+    "kind": "alias",
+    "name": "RSP_Uint64",
+    "target": {
+      "type": "uint64"
+    },
+    "type": "alias"
+  }
+}

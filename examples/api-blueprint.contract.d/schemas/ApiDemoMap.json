@@ -1,0 +1,27 @@
+{
+  "inbound_routes": [
+    "api.demo.get.abc",
+    "api.demo.post.testpost",
+    "api.demo.ws.ws",
+    "api.demo.post.raw",
+    "api.demo.post.mapmodel"
+  ],
+  "schema": {
+    "auto": false,
+    "fields": {
+      "haha": {
+        "description": "haha",
+        "name": "haha",
+        "optional": false,
+        "type": "int64",
+        "wire_name": "haha"
+      }
+    },
+    "identity": "blueprints.api_demo.ApiDemoMap",
+    "kind": "model",
+    "module": "blueprints.api_demo",
+    "name": "ApiDemoMap",
+    "qualname": "ApiDemoMap",
+    "type": "object"
+  }
+}

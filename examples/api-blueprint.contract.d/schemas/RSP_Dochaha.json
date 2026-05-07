@@ -1,0 +1,23 @@
+{
+  "inbound_routes": [
+    "static.static.get.dochaha"
+  ],
+  "schema": {
+    "auto": true,
+    "fields": {
+      "a": {
+        "description": "a",
+        "name": "a",
+        "optional": true,
+        "type": "string",
+        "wire_name": "a"
+      }
+    },
+    "identity": "api_blueprint.engine.schema.modeling.RSP_Dochaha",
+    "kind": "model",
+    "module": "api_blueprint.engine.schema.modeling",
+    "name": "RSP_Dochaha",
+    "qualname": "RSP_Dochaha",
+    "type": "object"
+  }
+}

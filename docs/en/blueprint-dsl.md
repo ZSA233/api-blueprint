@@ -26,10 +26,13 @@ with bp.group("/demo") as views:
 class Item(Model):
     id = Uint64(description="id")
     name = String(description="name")
-    tags = Array[String](description="tags", omitempty=True)
+    tags = Array[String](description="tags", optional=True)
 ```
 
 Common types come from `api_blueprint.includes`, including `String`, `Bool`, `Int`, `Uint64`, `Float`, `Array`, and `Map`.
+`optional=True` marks a field as optional. Legacy `omitempty=True` remains compatible, but new DSL should prefer `optional=True`.
+Use `field(number, Type(...))` when a field needs stable identity, and `field(number, Type(...), choice="group")` to model mutually exclusive choices. These are generic contract semantics, not tied to a specific target.
+Semantic value types include `DateTime`, `JSONValue`, and `AnyValue`; individual targets map them to their own time, JSON, or arbitrary payload representation.
 
 ## Requests And Responses
 
@@ -75,8 +78,8 @@ class TaskLog(Model):
 
 class StreamClose(Model):
     code = Int(description="logical close code")
-    reason = String(description="close reason", omitempty=True)
-    error = String(description="machine-readable error key", omitempty=True)
+    reason = String(description="close reason", optional=True)
+    error = String(description="machine-readable error key", optional=True)
 
 
 with bp.group("/runs") as views:
@@ -157,7 +160,7 @@ with bp.group("/demo") as views:
     views.WS("/ws").RECV(ClientMessage).SEND(ServerMessage)
 ```
 
-`WS().RECV().SEND()` is a legacy form outside the vNext ContractGraph mainline. New blueprints should prefer `STREAM` / `CHANNEL` so multiple logical messages are not modeled as multiple raw events.
+`WS().RECV().SEND()` is a legacy form outside the 1.0 ContractGraph mainline. New blueprints should prefer `STREAM` / `CHANNEL` so multiple logical messages are not modeled as multiple raw events.
 
 ## Documentation Output
 

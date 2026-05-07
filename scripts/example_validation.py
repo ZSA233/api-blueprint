@@ -21,7 +21,7 @@ for path in (PROJECT_ROOT, SRC_ROOT):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
-from api_blueprint.application import vnext
+from api_blueprint.application import generator
 
 GO_ENUM_VERSION = "v0.9.2"
 KOTLIN_VERSION = "2.1.21"
@@ -321,6 +321,7 @@ def prepare_grpc_workspace(repo_root: Path) -> GrpcExampleWorkspace:
 
 
 def _prepare_blueprint_outputs(*, source_root: Path, target_root: Path) -> None:
+    _prepare_contract_outputs(target_root)
     _prepare_output_dir(
         target_root / "golang",
         _capture_relative_files(source_root / "golang", BLUEPRINT_GOLANG_PRESERVED),
@@ -333,6 +334,17 @@ def _prepare_blueprint_outputs(*, source_root: Path, target_root: Path) -> None:
         target_root / "kotlin",
         _capture_relative_files(source_root / "kotlin", BLUEPRINT_KOTLIN_PRESERVED),
     )
+
+
+def _prepare_contract_outputs(target_root: Path) -> None:
+    for name in (
+        "api-blueprint.contract.json",
+        "api-blueprint.contract.md",
+        "api-blueprint.agent.json",
+        "api-blueprint.agent.md",
+    ):
+        (target_root / name).unlink(missing_ok=True)
+    shutil.rmtree(target_root / "api-blueprint.contract.d", ignore_errors=True)
 
 
 def _prepare_grpc_outputs(*, source_root: Path, target_root: Path) -> None:
@@ -402,17 +414,17 @@ def _prepare_output_dir(root: Path, preserved_files: Mapping[Path, bytes]) -> No
 
 
 def regenerate_blueprint_examples(workspace: BlueprintExampleWorkspace) -> None:
-    vnext.generate(workspace.config_path, target_ids=("http", "wails.v2", "wails.v3"))
+    generator.generate(workspace.config_path, target_ids=("contract", "http", "wails.v2", "wails.v3"))
     _tidy_go_module(workspace.golang_dir)
 
 
 def regenerate_grpc_examples(workspace: GrpcExampleWorkspace) -> None:
-    vnext.generate(workspace.config_path, target_ids=("grpc.go", "grpc.python"))
+    generator.generate(workspace.config_path, target_ids=("grpc.go", "grpc.python"))
     _tidy_go_module(workspace.go_dir)
 
 
 def regenerate_wails_hello_example(workspace: WailsHelloExampleWorkspace) -> None:
-    vnext.generate(workspace.config_path, target_ids=("hello.v3",))
+    generator.generate(workspace.config_path, target_ids=("hello.v3",))
     _tidy_go_module(workspace.golang_dir)
     _tidy_go_module(workspace.app_dir)
 
@@ -439,6 +451,11 @@ def validate_example_snapshots(repo_root: Path, workspace: BlueprintExampleWorks
     examples_root = repo_root / "examples"
     _raise_on_snapshot_drift(
         (
+            (examples_root / "api-blueprint.contract.json", workspace.root / "api-blueprint.contract.json", "contract/json"),
+            (examples_root / "api-blueprint.contract.md", workspace.root / "api-blueprint.contract.md", "contract/markdown"),
+            (examples_root / "api-blueprint.agent.json", workspace.root / "api-blueprint.agent.json", "contract/agent-json"),
+            (examples_root / "api-blueprint.agent.md", workspace.root / "api-blueprint.agent.md", "contract/agent-markdown"),
+            (examples_root / "api-blueprint.contract.d", workspace.root / "api-blueprint.contract.d", "contract/shards"),
             (examples_root / "golang", workspace.golang_dir, "blueprint/golang"),
             (examples_root / "typescript", workspace.typescript_dir, "blueprint/typescript"),
             (examples_root / "kotlin", workspace.kotlin_dir, "blueprint/kotlin"),
@@ -580,7 +597,7 @@ def validate_wails_hello_snapshots(repo_root: Path, workspace: WailsHelloExample
 def _raise_on_snapshot_drift(pairs: Iterable[tuple[Path, Path, str]]) -> None:
     problems: list[str] = []
     for expected, actual, label in pairs:
-        problems.extend(_collect_dir_diff(expected, actual, prefix=label))
+        problems.extend(_collect_path_diff(expected, actual, prefix=label))
     if not problems:
         return
 
@@ -592,6 +609,23 @@ def _raise_on_snapshot_drift(pairs: Iterable[tuple[Path, Path, str]]) -> None:
         + "refresh and review the committed examples with `make example-refresh` or "
         + "`uv run python scripts/example_validation.py --mode refresh`."
     )
+
+
+def _collect_path_diff(expected: Path, actual: Path, prefix: str = "") -> list[str]:
+    label = prefix or expected.name
+    if expected.is_dir():
+        if not actual.is_dir():
+            return [f"{label}: missing directory"]
+        return _collect_dir_diff(expected, actual, prefix=label)
+    if expected.is_file():
+        if not actual.is_file():
+            return [f"{label}: missing file"]
+        if expected.read_bytes() != actual.read_bytes():
+            return [f"{label}: changed file"]
+        return []
+    if actual.exists():
+        return [f"{label}: unexpected {actual.name}"]
+    return []
 
 
 def compile_generated_examples(workspace: BlueprintExampleWorkspace) -> None:

@@ -1,0 +1,334 @@
+{
+  "artifacts": {
+    "go.server": {
+      "files": [
+        "golang/views/routes/api/demo/gen_interface.go",
+        "golang/views/routes/api/demo/gen_protos.go"
+      ],
+      "imports": [],
+      "kind": "go-server"
+    },
+    "grpc.go": {
+      "files": [
+        "grpc/go/api/demo/demo.pb.go",
+        "grpc/go/api/demo/demo_grpc.pb.go"
+      ],
+      "imports": [
+        "example.com/project/grpc/go/api/demo"
+      ],
+      "kind": "grpc-go"
+    },
+    "grpc.proto": {
+      "files": [
+        "grpc/protos/api/demo.proto"
+      ],
+      "imports": [],
+      "kind": "grpc-proto"
+    },
+    "grpc.python": {
+      "files": [
+        "grpc/python/pb/api/demo_pb2.py",
+        "grpc/python/pb/api/demo_pb2_grpc.py"
+      ],
+      "imports": [
+        "pb.api.demo_pb2",
+        "pb.api.demo_pb2_grpc"
+      ],
+      "kind": "grpc-python"
+    },
+    "typescript.client": {
+      "files": [
+        "typescript/api/routes/api/demo/client.ts",
+        "typescript/api/routes/api/demo/models.ts"
+      ],
+      "imports": [
+        "typescript/api/routes/api/demo"
+      ],
+      "kind": "typescript-client"
+    },
+    "wails.v2": {
+      "files": [
+        "golang/views/transports/wailsv2/api/demo/gen_service.go",
+        "typescript/api/transports/wailsv2/api/demo/client.ts"
+      ],
+      "imports": [],
+      "kind": "wails-transport"
+    },
+    "wails.v3": {
+      "files": [
+        "golang/views/transports/wailsv3/api/demo/gen_service.go",
+        "typescript/api/transports/wailsv3/api/demo/client.ts"
+      ],
+      "imports": [],
+      "kind": "wails-transport"
+    }
+  },
+  "connection": null,
+  "route": {
+    "connection": null,
+    "deprecated": false,
+    "hash": "8dcbefbf73d53a05ea31593b125172d01ce14336c75eb99717d7f6704a8bd150",
+    "id": "api.demo.get.abc",
+    "kind": "rpc",
+    "method_name": "abc",
+    "methods": [
+      "GET"
+    ],
+    "operation": "Abc",
+    "path": "/abc",
+    "proto": {},
+    "request": {
+      "binary_model": null,
+      "form_model": null,
+      "json_model": null,
+      "query_model": "REQ_Abc_QUERY"
+    },
+    "response": {
+      "media_type": "application/json",
+      "model": "ApiDemoA",
+      "wrapper": "GeneralWrapper"
+    },
+    "service_id": "api.demo",
+    "url": "/api/demo/abc"
+  },
+  "schemas": {
+    "ApiDemoA": {
+      "auto": false,
+      "fields": {
+        "a": {
+          "description": "a",
+          "name": "a",
+          "optional": false,
+          "type": "int",
+          "wire_name": "a"
+        },
+        "bc": {
+          "description": "bc",
+          "name": "bc",
+          "optional": false,
+          "type": "string",
+          "wire_name": "bc"
+        },
+        "efg": {
+          "description": "efg",
+          "name": "efg",
+          "optional": false,
+          "type": "float32",
+          "wire_name": "efg"
+        },
+        "enum_color": {
+          "description": "color",
+          "enum": "ColorEnum",
+          "enum_identity": "blueprints.api_demo.ColorEnum",
+          "enum_module": "blueprints.api_demo",
+          "enum_qualname": "ColorEnum",
+          "enum_values": [
+            {
+              "name": "RED",
+              "value": "red"
+            },
+            {
+              "name": "GREEN",
+              "value": "green"
+            },
+            {
+              "name": "BLUE",
+              "value": "blue"
+            }
+          ],
+          "name": "enum_color",
+          "optional": true,
+          "type": "enum",
+          "values": [
+            "red",
+            "green",
+            "blue"
+          ],
+          "wire_name": "enum_color"
+        },
+        "enum_list": {
+          "description": "status",
+          "items": {
+            "enum": "StatusEnum",
+            "enum_identity": "blueprints.api_demo.StatusEnum",
+            "enum_module": "blueprints.api_demo",
+            "enum_qualname": "StatusEnum",
+            "enum_values": [
+              {
+                "name": "PENDING",
+                "value": 1
+              },
+              {
+                "name": "RUNNING",
+                "value": 2
+              },
+              {
+                "name": "FINISHED",
+                "value": 3
+              }
+            ],
+            "type": "enum",
+            "values": [
+              1,
+              2,
+              3
+            ]
+          },
+          "name": "enum_list",
+          "optional": false,
+          "type": "array",
+          "wire_name": "enum_list"
+        },
+        "enum_status": {
+          "description": "status",
+          "enum": "StatusEnum",
+          "enum_identity": "blueprints.api_demo.StatusEnum",
+          "enum_module": "blueprints.api_demo",
+          "enum_qualname": "StatusEnum",
+          "enum_values": [
+            {
+              "name": "PENDING",
+              "value": 1
+            },
+            {
+              "name": "RUNNING",
+              "value": 2
+            },
+            {
+              "name": "FINISHED",
+              "value": 3
+            }
+          ],
+          "name": "enum_status",
+          "optional": false,
+          "type": "enum",
+          "values": [
+            1,
+            2,
+            3
+          ],
+          "wire_name": "enum_status"
+        },
+        "hijk": {
+          "description": "hijk",
+          "items": {
+            "type": "uint"
+          },
+          "name": "hijk",
+          "optional": false,
+          "type": "array",
+          "wire_name": "hijk"
+        },
+        "lmnop": {
+          "description": "[ApiDemoSubA] lmnop",
+          "items": {
+            "ref": "ApiDemoSubA",
+            "type": "object"
+          },
+          "name": "lmnop",
+          "optional": true,
+          "type": "array",
+          "wire_name": "lmnop"
+        }
+      },
+      "identity": "blueprints.api_demo.ApiDemoA",
+      "kind": "model",
+      "module": "blueprints.api_demo",
+      "name": "ApiDemoA",
+      "qualname": "ApiDemoA",
+      "type": "object"
+    },
+    "ApiDemoMap": {
+      "auto": false,
+      "fields": {
+        "haha": {
+          "description": "haha",
+          "name": "haha",
+          "optional": false,
+          "type": "int64",
+          "wire_name": "haha"
+        }
+      },
+      "identity": "blueprints.api_demo.ApiDemoMap",
+      "kind": "model",
+      "module": "blueprints.api_demo",
+      "name": "ApiDemoMap",
+      "qualname": "ApiDemoMap",
+      "type": "object"
+    },
+    "ApiDemoSubA": {
+      "auto": false,
+      "fields": {
+        "amap": {
+          "description": "[ApiDemoMap] amap",
+          "items": {
+            "ref": "ApiDemoMap",
+            "type": "object"
+          },
+          "name": "amap",
+          "optional": false,
+          "type": "array",
+          "wire_name": "amap"
+        },
+        "hello": {
+          "description": "hello",
+          "keys": {
+            "type": "string"
+          },
+          "name": "hello",
+          "optional": false,
+          "type": "map",
+          "values": {
+            "type": "int"
+          },
+          "wire_name": "hello"
+        }
+      },
+      "identity": "blueprints.api_demo.ApiDemoSubA",
+      "kind": "model",
+      "module": "blueprints.api_demo",
+      "name": "ApiDemoSubA",
+      "qualname": "ApiDemoSubA",
+      "type": "object"
+    },
+    "REQ_Abc_QUERY": {
+      "auto": true,
+      "fields": {
+        "arg1": {
+          "description": "arg1",
+          "name": "arg1",
+          "optional": true,
+          "type": "boolean",
+          "wire_name": "arg1"
+        },
+        "arg2": {
+          "description": "arg2",
+          "name": "arg2",
+          "optional": true,
+          "type": "float",
+          "wire_name": "arg2"
+        },
+        "arg3": {
+          "description": "arg3",
+          "name": "arg3",
+          "optional": true,
+          "type": "string",
+          "wire_name": "arg3"
+        }
+      },
+      "identity": "api_blueprint.engine.schema.modeling.REQ_Abc_QUERY",
+      "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
+      "name": "REQ_Abc_QUERY",
+      "qualname": "REQ_Abc_QUERY",
+      "type": "object"
+    }
+  },
+  "service": {
+    "group": "demo",
+    "id": "api.demo",
+    "name": "DemoService",
+    "path": "/api/demo",
+    "root": "api"
+  }
+}

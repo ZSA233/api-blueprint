@@ -1,0 +1,112 @@
+{
+  "artifacts": {
+    "go.server": {
+      "files": [
+        "golang/views/routes/api/hello/gen_interface.go",
+        "golang/views/routes/api/hello/gen_protos.go"
+      ],
+      "imports": [],
+      "kind": "go-server"
+    },
+    "grpc.go": {
+      "files": [
+        "grpc/go/api/hello/hello.pb.go",
+        "grpc/go/api/hello/hello_grpc.pb.go"
+      ],
+      "imports": [
+        "example.com/project/grpc/go/api/hello"
+      ],
+      "kind": "grpc-go"
+    },
+    "grpc.proto": {
+      "files": [
+        "grpc/protos/api/hello.proto"
+      ],
+      "imports": [],
+      "kind": "grpc-proto"
+    },
+    "grpc.python": {
+      "files": [
+        "grpc/python/pb/api/hello_pb2.py",
+        "grpc/python/pb/api/hello_pb2_grpc.py"
+      ],
+      "imports": [
+        "pb.api.hello_pb2",
+        "pb.api.hello_pb2_grpc"
+      ],
+      "kind": "grpc-python"
+    },
+    "typescript.client": {
+      "files": [
+        "typescript/api/routes/api/hello/client.ts",
+        "typescript/api/routes/api/hello/models.ts"
+      ],
+      "imports": [
+        "typescript/api/routes/api/hello"
+      ],
+      "kind": "typescript-client"
+    },
+    "wails.v2": {
+      "files": [
+        "golang/views/transports/wailsv2/api/hello/gen_service.go",
+        "typescript/api/transports/wailsv2/api/hello/client.ts"
+      ],
+      "imports": [],
+      "kind": "wails-transport"
+    },
+    "wails.v3": {
+      "files": [
+        "golang/views/transports/wailsv3/api/hello/gen_service.go",
+        "typescript/api/transports/wailsv3/api/hello/client.ts"
+      ],
+      "imports": [],
+      "kind": "wails-transport"
+    }
+  },
+  "connection": null,
+  "route": {
+    "connection": null,
+    "deprecated": false,
+    "hash": "6d8d8a0ad2428b99317e524e9339ac9c832bfd10e842237ddf781fc2f1c4a676",
+    "id": "api.hello.get.uint64",
+    "kind": "rpc",
+    "method_name": "uint64",
+    "methods": [
+      "GET"
+    ],
+    "operation": "Uint64",
+    "path": "/uint64",
+    "proto": {},
+    "request": {
+      "binary_model": null,
+      "form_model": null,
+      "json_model": null,
+      "query_model": null
+    },
+    "response": {
+      "media_type": "application/json",
+      "model": "RSP_Uint64",
+      "wrapper": "GeneralWrapper"
+    },
+    "service_id": "api.hello",
+    "url": "/api/hello/uint64"
+  },
+  "schemas": {
+    "RSP_Uint64": {
+      "auto": true,
+      "kind": "alias",
+      "name": "RSP_Uint64",
+      "target": {
+        "type": "uint64"
+      },
+      "type": "alias"
+    }
+  },
+  "service": {
+    "group": "hello",
+    "id": "api.hello",
+    "name": "HelloService",
+    "path": "/api/hello",
+    "root": "api"
+  }
+}

@@ -218,7 +218,7 @@ await bridge.close(1000, "done");
 offMessage();
 ```
 
-Legacy `WS().RECV().SEND()` is outside the vNext ContractGraph mainline. New blueprints should use `STREAM` / `CHANNEL` so multiple logical messages are not modeled as multiple raw events.
+Legacy `WS().RECV().SEND()` is outside the 1.0 ContractGraph mainline. New blueprints should use `STREAM` / `CHANNEL` so multiple logical messages are not modeled as multiple raw events.
 
 ## Harness Examples
 

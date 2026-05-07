@@ -1,0 +1,30 @@
+{
+  "inbound_routes": [
+    "api.demo.post.testpost"
+  ],
+  "schema": {
+    "auto": true,
+    "fields": {
+      "req1": {
+        "description": "req1",
+        "name": "req1",
+        "optional": false,
+        "type": "string",
+        "wire_name": "req1"
+      },
+      "req2": {
+        "description": "req2",
+        "name": "req2",
+        "optional": true,
+        "type": "int",
+        "wire_name": "req2"
+      }
+    },
+    "identity": "api_blueprint.engine.schema.modeling.REQ_TestPost_JSON",
+    "kind": "model",
+    "module": "api_blueprint.engine.schema.modeling",
+    "name": "REQ_TestPost_JSON",
+    "qualname": "REQ_TestPost_JSON",
+    "type": "object"
+  }
+}

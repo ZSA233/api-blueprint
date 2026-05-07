@@ -1,0 +1,175 @@
+{
+  "routes": [
+    {
+      "artifacts": {
+        "go.server": {
+          "files": [
+            "golang/views/routes/static/gen_interface.go",
+            "golang/views/routes/static/gen_protos.go"
+          ],
+          "imports": [],
+          "kind": "go-server"
+        },
+        "grpc.go": {
+          "files": [
+            "grpc/go/static/static/static.pb.go",
+            "grpc/go/static/static/static_grpc.pb.go"
+          ],
+          "imports": [
+            "example.com/project/grpc/go/static/static"
+          ],
+          "kind": "grpc-go"
+        },
+        "grpc.proto": {
+          "files": [
+            "grpc/protos/static/static.proto"
+          ],
+          "imports": [],
+          "kind": "grpc-proto"
+        },
+        "grpc.python": {
+          "files": [
+            "grpc/python/pb/static/static_pb2.py",
+            "grpc/python/pb/static/static_pb2_grpc.py"
+          ],
+          "imports": [
+            "pb.static.static_pb2",
+            "pb.static.static_pb2_grpc"
+          ],
+          "kind": "grpc-python"
+        },
+        "typescript.client": {
+          "files": [
+            "typescript/static/routes/static/client.ts",
+            "typescript/static/routes/static/models.ts"
+          ],
+          "imports": [
+            "typescript/static/routes/static"
+          ],
+          "kind": "typescript-client"
+        },
+        "wails.v2": {
+          "files": [
+            "golang/views/transports/wailsv2/static/gen_service.go",
+            "typescript/static/transports/wailsv2/static/client.ts"
+          ],
+          "imports": [],
+          "kind": "wails-transport"
+        },
+        "wails.v3": {
+          "files": [
+            "golang/views/transports/wailsv3/static/gen_service.go",
+            "typescript/static/transports/wailsv3/static/client.ts"
+          ],
+          "imports": [],
+          "kind": "wails-transport"
+        }
+      },
+      "connection": null,
+      "hash": "cd96ad6332050b940a9b924c881950d74d137fb62dcb90f1080e5121e656cffb",
+      "id": "static.static.get.docjson",
+      "kind": "rpc",
+      "methods": [
+        "GET"
+      ],
+      "operation": "DocJson",
+      "request_models": [],
+      "response_model": "RSP_DocJson",
+      "schemas": [
+        "RSP_DocJson"
+      ],
+      "service_id": "static.static",
+      "shard": "api-blueprint.contract.d/routes/static.static.get.docjson.json",
+      "url": "/static/doc.json"
+    },
+    {
+      "artifacts": {
+        "go.server": {
+          "files": [
+            "golang/views/routes/static/gen_interface.go",
+            "golang/views/routes/static/gen_protos.go"
+          ],
+          "imports": [],
+          "kind": "go-server"
+        },
+        "grpc.go": {
+          "files": [
+            "grpc/go/static/static/static.pb.go",
+            "grpc/go/static/static/static_grpc.pb.go"
+          ],
+          "imports": [
+            "example.com/project/grpc/go/static/static"
+          ],
+          "kind": "grpc-go"
+        },
+        "grpc.proto": {
+          "files": [
+            "grpc/protos/static/static.proto"
+          ],
+          "imports": [],
+          "kind": "grpc-proto"
+        },
+        "grpc.python": {
+          "files": [
+            "grpc/python/pb/static/static_pb2.py",
+            "grpc/python/pb/static/static_pb2_grpc.py"
+          ],
+          "imports": [
+            "pb.static.static_pb2",
+            "pb.static.static_pb2_grpc"
+          ],
+          "kind": "grpc-python"
+        },
+        "typescript.client": {
+          "files": [
+            "typescript/static/routes/static/client.ts",
+            "typescript/static/routes/static/models.ts"
+          ],
+          "imports": [
+            "typescript/static/routes/static"
+          ],
+          "kind": "typescript-client"
+        },
+        "wails.v2": {
+          "files": [
+            "golang/views/transports/wailsv2/static/gen_service.go",
+            "typescript/static/transports/wailsv2/static/client.ts"
+          ],
+          "imports": [],
+          "kind": "wails-transport"
+        },
+        "wails.v3": {
+          "files": [
+            "golang/views/transports/wailsv3/static/gen_service.go",
+            "typescript/static/transports/wailsv3/static/client.ts"
+          ],
+          "imports": [],
+          "kind": "wails-transport"
+        }
+      },
+      "connection": null,
+      "hash": "2e062766b09aa4924005dff43df13919bbb72a970d35d6c517a88f6773cb794f",
+      "id": "static.static.get.dochaha",
+      "kind": "rpc",
+      "methods": [
+        "GET"
+      ],
+      "operation": "Dochaha",
+      "request_models": [],
+      "response_model": "RSP_Dochaha",
+      "schemas": [
+        "RSP_Dochaha"
+      ],
+      "service_id": "static.static",
+      "shard": "api-blueprint.contract.d/routes/static.static.get.dochaha.json",
+      "url": "/static/dochaha"
+    }
+  ],
+  "service": {
+    "group": "static",
+    "id": "static.static",
+    "name": "StaticService",
+    "path": "/static",
+    "root": "static"
+  }
+}

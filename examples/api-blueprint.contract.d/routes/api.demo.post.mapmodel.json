@@ -1,0 +1,137 @@
+{
+  "artifacts": {
+    "go.server": {
+      "files": [
+        "golang/views/routes/api/demo/gen_interface.go",
+        "golang/views/routes/api/demo/gen_protos.go"
+      ],
+      "imports": [],
+      "kind": "go-server"
+    },
+    "grpc.go": {
+      "files": [
+        "grpc/go/api/demo/demo.pb.go",
+        "grpc/go/api/demo/demo_grpc.pb.go"
+      ],
+      "imports": [
+        "example.com/project/grpc/go/api/demo"
+      ],
+      "kind": "grpc-go"
+    },
+    "grpc.proto": {
+      "files": [
+        "grpc/protos/api/demo.proto"
+      ],
+      "imports": [],
+      "kind": "grpc-proto"
+    },
+    "grpc.python": {
+      "files": [
+        "grpc/python/pb/api/demo_pb2.py",
+        "grpc/python/pb/api/demo_pb2_grpc.py"
+      ],
+      "imports": [
+        "pb.api.demo_pb2",
+        "pb.api.demo_pb2_grpc"
+      ],
+      "kind": "grpc-python"
+    },
+    "typescript.client": {
+      "files": [
+        "typescript/api/routes/api/demo/client.ts",
+        "typescript/api/routes/api/demo/models.ts"
+      ],
+      "imports": [
+        "typescript/api/routes/api/demo"
+      ],
+      "kind": "typescript-client"
+    },
+    "wails.v2": {
+      "files": [
+        "golang/views/transports/wailsv2/api/demo/gen_service.go",
+        "typescript/api/transports/wailsv2/api/demo/client.ts"
+      ],
+      "imports": [],
+      "kind": "wails-transport"
+    },
+    "wails.v3": {
+      "files": [
+        "golang/views/transports/wailsv3/api/demo/gen_service.go",
+        "typescript/api/transports/wailsv3/api/demo/client.ts"
+      ],
+      "imports": [],
+      "kind": "wails-transport"
+    }
+  },
+  "connection": null,
+  "route": {
+    "connection": null,
+    "deprecated": false,
+    "hash": "039ab7a56325f976818808316abbf23dd1592bcb5fdba1e9745bb99333aa28a2",
+    "id": "api.demo.post.mapmodel",
+    "kind": "rpc",
+    "method_name": "mapModel",
+    "methods": [
+      "POST"
+    ],
+    "operation": "MapModel",
+    "path": "/map_model",
+    "proto": {},
+    "request": {
+      "binary_model": null,
+      "form_model": null,
+      "json_model": null,
+      "query_model": null
+    },
+    "response": {
+      "media_type": "application/json",
+      "model": "RSP_MapModel",
+      "wrapper": "GeneralWrapper"
+    },
+    "service_id": "api.demo",
+    "url": "/api/demo/map_model"
+  },
+  "schemas": {
+    "ApiDemoMap": {
+      "auto": false,
+      "fields": {
+        "haha": {
+          "description": "haha",
+          "name": "haha",
+          "optional": false,
+          "type": "int64",
+          "wire_name": "haha"
+        }
+      },
+      "identity": "blueprints.api_demo.ApiDemoMap",
+      "kind": "model",
+      "module": "blueprints.api_demo",
+      "name": "ApiDemoMap",
+      "qualname": "ApiDemoMap",
+      "type": "object"
+    },
+    "RSP_MapModel": {
+      "auto": true,
+      "kind": "alias",
+      "name": "RSP_MapModel",
+      "target": {
+        "keys": {
+          "type": "int"
+        },
+        "type": "map",
+        "values": {
+          "ref": "ApiDemoMap",
+          "type": "object"
+        }
+      },
+      "type": "alias"
+    }
+  },
+  "service": {
+    "group": "demo",
+    "id": "api.demo",
+    "name": "DemoService",
+    "path": "/api/demo",
+    "root": "api"
+  }
+}

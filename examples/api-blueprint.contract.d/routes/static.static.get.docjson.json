@@ -1,0 +1,113 @@
+{
+  "artifacts": {
+    "go.server": {
+      "files": [
+        "golang/views/routes/static/gen_interface.go",
+        "golang/views/routes/static/gen_protos.go"
+      ],
+      "imports": [],
+      "kind": "go-server"
+    },
+    "grpc.go": {
+      "files": [
+        "grpc/go/static/static/static.pb.go",
+        "grpc/go/static/static/static_grpc.pb.go"
+      ],
+      "imports": [
+        "example.com/project/grpc/go/static/static"
+      ],
+      "kind": "grpc-go"
+    },
+    "grpc.proto": {
+      "files": [
+        "grpc/protos/static/static.proto"
+      ],
+      "imports": [],
+      "kind": "grpc-proto"
+    },
+    "grpc.python": {
+      "files": [
+        "grpc/python/pb/static/static_pb2.py",
+        "grpc/python/pb/static/static_pb2_grpc.py"
+      ],
+      "imports": [
+        "pb.static.static_pb2",
+        "pb.static.static_pb2_grpc"
+      ],
+      "kind": "grpc-python"
+    },
+    "typescript.client": {
+      "files": [
+        "typescript/static/routes/static/client.ts",
+        "typescript/static/routes/static/models.ts"
+      ],
+      "imports": [
+        "typescript/static/routes/static"
+      ],
+      "kind": "typescript-client"
+    },
+    "wails.v2": {
+      "files": [
+        "golang/views/transports/wailsv2/static/gen_service.go",
+        "typescript/static/transports/wailsv2/static/client.ts"
+      ],
+      "imports": [],
+      "kind": "wails-transport"
+    },
+    "wails.v3": {
+      "files": [
+        "golang/views/transports/wailsv3/static/gen_service.go",
+        "typescript/static/transports/wailsv3/static/client.ts"
+      ],
+      "imports": [],
+      "kind": "wails-transport"
+    }
+  },
+  "connection": null,
+  "route": {
+    "connection": null,
+    "deprecated": false,
+    "hash": "cd96ad6332050b940a9b924c881950d74d137fb62dcb90f1080e5121e656cffb",
+    "id": "static.static.get.docjson",
+    "kind": "rpc",
+    "method_name": "docJson",
+    "methods": [
+      "GET"
+    ],
+    "operation": "DocJson",
+    "path": "/doc.json",
+    "proto": {},
+    "request": {
+      "binary_model": null,
+      "form_model": null,
+      "json_model": null,
+      "query_model": null
+    },
+    "response": {
+      "media_type": "application/json",
+      "model": "RSP_DocJson",
+      "wrapper": "NoneWrapper"
+    },
+    "service_id": "static.static",
+    "url": "/static/doc.json"
+  },
+  "schemas": {
+    "RSP_DocJson": {
+      "auto": true,
+      "fields": {},
+      "identity": "api_blueprint.engine.schema.modeling.RSP_DocJson",
+      "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
+      "name": "RSP_DocJson",
+      "qualname": "RSP_DocJson",
+      "type": "object"
+    }
+  },
+  "service": {
+    "group": "static",
+    "id": "static.static",
+    "name": "StaticService",
+    "path": "/static",
+    "root": "static"
+  }
+}

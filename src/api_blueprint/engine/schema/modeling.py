@@ -135,6 +135,35 @@ class Model(metaclass=ModelMeta):
         return True
 
 
+def field(
+    number: int,
+    value: AnyField,
+    *,
+    optional: bool | None = None,
+    choice: str | None = None,
+    **kwargs: Any,
+) -> AnyField:
+    if number <= 0:
+        raise ValueError(f"field number must be positive: {number}")
+
+    if isinstance(value, type) and isinstance(value, ModelMeta):
+        value = value(**kwargs)
+        kwargs = {}
+    elif isinstance(value, type) and issubclass(value, Field):
+        value = value(**kwargs)
+        kwargs = {}
+
+    extra = dict(getattr(value, "__extra__", {}) or {})
+    extra.update(kwargs)
+    extra["contract_field_id"] = number
+    if optional is not None:
+        extra["optional"] = optional
+    if choice is not None:
+        extra["contract_choice"] = choice
+    setattr(value, "__extra__", extra)
+    return value
+
+
 def create_model(name: str, data: dict[str, Any], **kwargs: Any) -> "Model":
     namespace = data.copy()
     namespace["__name__"] = name

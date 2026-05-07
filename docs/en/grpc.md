@@ -1,6 +1,6 @@
 # gRPC
 
-vNext gRPC no longer treats an existing `.proto` tree as an independent source of truth. The `grpc-proto` target emits `.proto` files and service definitions from ContractGraph, and ContractGraph still comes from Blueprint.
+1.0 gRPC emits `.proto` files and service definitions from ContractGraph through the `grpc-proto` target by default, and ContractGraph still comes from Blueprint. When you only need to compile handwritten proto files into Go/Python stubs, `grpc-go` / `grpc-python` can omit `grpc-proto` and consume files under `source_root` directly.
 
 ## Targets
 
@@ -11,6 +11,14 @@ kind = "grpc-proto"
 out_dir = "grpc/protos"
 package = "example.api"
 go_package_prefix = "example.com/project/grpc/go"
+
+[[targets.proto_files]]
+file = "api/demo/v1/demo.proto"
+package = "example.api.demo.v1"
+go_package = "example.com/project/grpc/go/api/demo/v1;demopb"
+schema_modules = ["blueprints.api.demo"]
+route_paths = ["/api/demo/v1/**"]
+service = "DemoService"
 
 [[targets]]
 id = "grpc.go"
@@ -31,10 +39,11 @@ python_package_root = "pb"
 
 - `out_dir`: proto output directory.
 - `package`: proto package.
-- `go_package_prefix`: used to generate `option go_package`; files are split by Blueprint root/group.
-- `proto` on `grpc-go` / `grpc-python` must reference a `grpc-proto` target in the same config.
-- `files` matches relative to the proto target `out_dir`; the proto target `out_dir` is automatically added as an include root.
-- `source_root` is optional; when set, `files` is matched relative to that directory, `protoc` runs there, and the proto target `out_dir` is still added as an include root.
+- `go_package_prefix`: used to generate `option go_package` when no `proto_files` rule matches; files are split by Blueprint root/group.
+- `[[targets.proto_files]]`: optional layout rules. Rules are evaluated in order and map schema module/name plus route path/id/service to a specific proto file/package/go_package/service.
+- `proto` on `grpc-go` / `grpc-python` can reference a `grpc-proto` target in the same config. When `proto` is omitted, `source_root` is required.
+- `files` matches relative to the proto target `out_dir` or `source_root`; when a proto target is referenced, its `out_dir` is automatically added as an include root.
+- `source_root` is used for handwritten proto files or trimmed generated paths. When set, `files` is matched relative to that directory and `protoc` runs there.
 - `module`: optional for `grpc-go`; when set, Go import-path output mode is used and generated files are split by `option go_package`, avoiding multiple proto files in the same Go package directory.
 - `grpc-go` requires `protoc`, `protoc-gen-go`, and `protoc-gen-go-grpc`.
 - `grpc-python` requires `grpcio-tools`; `python_package_root` places generated files under a package root and rewrites generated imports.
@@ -43,6 +52,26 @@ Go/Python targets generate only protobuf/gRPC stubs, not business service implem
 
 The repository commits `examples/grpc/protos/`, `examples/grpc/go/`, and `examples/grpc/python/` snapshots so users can inspect actual proto, Go stub, and Python stub output. There is currently no `grpc-typescript` target; `examples/typescript/` demonstrates API Blueprint's TypeScript HTTP/Wails client artifacts, not gRPC TypeScript stubs.
 
+Handwritten proto direct compilation example:
+
+```toml
+[[targets]]
+id = "grpc.go"
+kind = "grpc-go"
+source_root = "protocols/grpc"
+out_dir = "grpc/go"
+files = ["**/*.proto"]
+import_roots = ["third_party/protos"]
+
+[[targets]]
+id = "grpc.python"
+kind = "grpc-python"
+source_root = "protocols/grpc"
+out_dir = "grpc/python"
+files = ["**/*.proto"]
+python_package_root = "pb"
+```
+
 ## RPC Mapping
 
 - Normal HTTP routes emit unary RPCs.
@@ -50,19 +79,40 @@ The repository commits `examples/grpc/protos/`, `examples/grpc/go/`, and `exampl
 - `CHANNEL` emits bidirectional streaming RPCs.
 - Single-model or union `SERVER_MESSAGE` / `CLIENT_MESSAGE` contracts enter the proto message set.
 
-## Proto Metadata
+## DSL Fields And Layout
 
-Blueprint remains the source of truth, but models and fields can carry small proto metadata for migrating existing protocols:
+Blueprint remains the source of truth. New protocols should keep target-specific layout in TOML and keep generic contract semantics next to field declarations:
 
 ```python
+from api_blueprint.includes import *
+
+
 class SharedOptions(Model):
-    __proto_file__ = "shared/browseragent/browser/v1/browser.proto"
-    __proto_package__ = "browseragent.browser.v1"
-    __proto_go_package__ = "example.com/project/grpc/go/shared/browseragent/browser/v1;browserpb"
-
-    user = String(description="user", proto_number=1)
+    user = field(1, String(description="user"))
+    display_name = field(2, String(description="display name"), optional=True)
 
 
+class ExternalPayload(Model):
+    occurred_at = field(1, DateTime(description="occurred at"))
+    payload = field(2, AnyValue(description="payload"))
+    metadata = field(3, JSONValue(description="metadata"))
+
+
+class CallbackMessage(Model):
+    hello = field(1, Hello(description="hello"), choice="msg")
+    task = field(2, TaskCallback(description="task"), choice="msg")
+```
+
+- `field(number, value)`: declares a stable contract field id. The gRPC writer maps it to a proto field number.
+- `optional=True`: generic optional field semantics. gRPC renders proto3 `optional` for scalar/enum fields; message/repeated/map fields do not render proto optional.
+- `choice="..."`: generic mutually exclusive choice semantics. The gRPC writer maps same-name choices to proto `oneof`.
+- `alias`: use it when the serialized field name must differ from the DSL field name. gRPC preserves it as the proto field name.
+- `DateTime` / `JSONValue` / `AnyValue`: semantic value types. The gRPC writer maps them to `google.protobuf.Timestamp`, `google.protobuf.Struct`, and `google.protobuf.Any`, with imports generated automatically.
+- Omitted field ids are still assigned as proto field numbers in declaration order. Use `field()` for protocols that need long-term compatibility.
+
+Legacy proto metadata remains available as a migration escape hatch, but it is not the recommended style for new protocols. New DSL should not add gRPC/proto/Go/TypeScript/Kotlin-specific fields:
+
+```python
 class CallbackMessage(Model):
     hello = HelloMessage(description="hello", proto_oneof="msg", proto_number=1)
     task = TaskCallbackMessage(description="task", proto_oneof="msg", proto_number=2)
@@ -82,11 +132,9 @@ class CookiePartitionKey(Model):
     same_party = Bool(description="same party", proto_optional=True, proto_number=2)
 ```
 
-- `proto_number`: explicit field number. Duplicate field numbers fail during proto planning. Omitted field numbers are assigned automatically in declaration order.
-- `proto_name`: explicit proto field name, useful when migrating a small number of existing camelCase proto fields. Omitted names are normalized from the DSL field name.
-- `proto_optional`: renders a proto3 `optional` field.
-- `proto_oneof`: renders fields with the same name as a proto `oneof`.
-- `proto_type` / `proto_import`: map to a well-known type or external proto type.
+- `proto_number` / `proto_name` / `proto_optional`: legacy field metadata for existing proto compatibility.
+- `proto_oneof`: legacy proto oneof metadata. New code should use generic `choice`.
+- `proto_type` / `proto_import`: legacy external type metadata. Prefer `DateTime`, `JSONValue`, and `AnyValue` for common semantic types; cross-file schema/enum references should come from layout resolution.
 - `__proto_file__` / `__proto_package__` / `__proto_go_package__`: emit a model into a specific proto file and automatically import it from referencing files.
 - Numeric enums use Python enum member names and numeric values. Unprefixed names are prefixed with the enum name; names that already contain underscores or a full proto-style prefix are kept unchanged.
 
@@ -101,4 +149,4 @@ api-gen diff old.contract.json new.contract.json
 api-gen check -c api-blueprint.toml
 ```
 
-Old raw proto targets/jobs are outside the vNext public mainline. When field numbers, oneof, well-known types, or cross-file imports are needed, express them as Blueprint DSL metadata and let `grpc-proto` emit the proto files.
+Old raw proto targets/jobs are outside the 1.0 public mainline. When you only need to compile handwritten proto files, use `grpc-go` / `grpc-python` targets without `proto`. For Blueprint-generated proto, prefer `proto_files` for layout, `field()` for stable field identity, `choice` for mutually exclusive choices, and generic semantic field types for time, JSON, and arbitrary payloads; legacy `proto_*` metadata is only a compatibility escape hatch.

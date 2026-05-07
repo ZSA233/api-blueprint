@@ -1,0 +1,24 @@
+{
+  "inbound_routes": [
+    "api.hello.get.abc",
+    "api.hello.get.mapenum"
+  ],
+  "schema": {
+    "auto": false,
+    "fields": {
+      "haha": {
+        "description": "haha",
+        "name": "haha",
+        "optional": false,
+        "type": "int64",
+        "wire_name": "haha"
+      }
+    },
+    "identity": "blueprints.api_hello.ApiHelloMap",
+    "kind": "model",
+    "module": "blueprints.api_hello",
+    "name": "ApiHelloMap",
+    "qualname": "ApiHelloMap",
+    "type": "object"
+  }
+}

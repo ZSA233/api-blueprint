@@ -75,6 +75,60 @@ package = "com.example.generated"
     assert manifest["capabilities"]["python-client"]["implemented"] is False
 
 
+def test_api_gen_manifest_writes_agent_profile_and_shards(tmp_path):
+    _write_blueprint(tmp_path)
+    config_path = tmp_path / "api-blueprint.toml"
+    out_path = tmp_path / "agent.json"
+    shards_dir = tmp_path / "contract.d"
+    config_path.write_text(
+        """
+[blueprint]
+entrypoints = ["blueprints.app:bp"]
+
+[[targets]]
+id = "contract"
+kind = "contract"
+out_dir = "."
+formats = ["agent-json", "agent-markdown", "shards"]
+
+[[targets]]
+id = "typescript.client"
+kind = "typescript-client"
+out_dir = "typescript"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(
+        api_gen,
+        [
+            "manifest",
+            "-c",
+            str(config_path),
+            "--profile",
+            "agent",
+            "--out",
+            str(out_path),
+            "--shards-dir",
+            str(shards_dir),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    agent = json.loads(out_path.read_text(encoding="utf-8"))
+    assert agent["kind"] == "api-blueprint.agent"
+    assert agent["version"] == "1.0"
+    assert agent["generator"]["version"] == "1.0.0"
+    assert agent["counts"]["routes"] == 1
+    assert agent["routes"][0]["shard"] == "api-blueprint.contract.d/routes/api.demo.get.ping.json"
+    assert "typescript.client" in agent["routes"][0]["artifacts"]
+    assert (shards_dir / "index.json").is_file()
+    route_shard = json.loads((shards_dir / "routes" / "api.demo.get.ping.json").read_text(encoding="utf-8"))
+    assert route_shard["route"]["id"] == "api.demo.get.ping"
+    assert route_shard["schemas"]
+
+
 def test_api_gen_diff_reports_breaking_changes(tmp_path):
     before = tmp_path / "before.json"
     after = tmp_path / "after.json"
@@ -155,10 +209,12 @@ def test_api_gen_module_does_not_expose_legacy_split_commands() -> None:
         assert not hasattr(apigen_module, name)
 
 
-def test_api_gen_help_only_lists_unified_vnext_commands() -> None:
+def test_api_gen_help_only_lists_unified_1_0_commands() -> None:
     result = CliRunner().invoke(api_gen, ["--help"])
 
     assert result.exit_code == 0
+    assert "1.0" in result.output
+    assert "vNext" not in result.output
     for command in ("generate", "list-targets", "explain-target", "manifest", "diff", "check"):
         assert command in result.output
     for legacy in ("gen-golang", "gen-typescript", "gen-kotlin", "gen-grpc", "gen-wails"):

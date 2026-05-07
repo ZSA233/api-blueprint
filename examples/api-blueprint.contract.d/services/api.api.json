@@ -1,0 +1,89 @@
+{
+  "routes": [
+    {
+      "artifacts": {
+        "go.server": {
+          "files": [
+            "golang/views/routes/api/gen_interface.go",
+            "golang/views/routes/api/gen_protos.go"
+          ],
+          "imports": [],
+          "kind": "go-server"
+        },
+        "grpc.go": {
+          "files": [
+            "grpc/go/api/api/api.pb.go",
+            "grpc/go/api/api/api_grpc.pb.go"
+          ],
+          "imports": [
+            "example.com/project/grpc/go/api/api"
+          ],
+          "kind": "grpc-go"
+        },
+        "grpc.proto": {
+          "files": [
+            "grpc/protos/api/api.proto"
+          ],
+          "imports": [],
+          "kind": "grpc-proto"
+        },
+        "grpc.python": {
+          "files": [
+            "grpc/python/pb/api/api_pb2.py",
+            "grpc/python/pb/api/api_pb2_grpc.py"
+          ],
+          "imports": [
+            "pb.api.api_pb2",
+            "pb.api.api_pb2_grpc"
+          ],
+          "kind": "grpc-python"
+        },
+        "typescript.client": {
+          "files": [
+            "typescript/api/routes/api/client.ts",
+            "typescript/api/routes/api/models.ts"
+          ],
+          "imports": [
+            "typescript/api/routes/api"
+          ],
+          "kind": "typescript-client"
+        },
+        "wails.v2": {
+          "files": [
+            "golang/views/transports/wailsv2/api/gen_service.go",
+            "typescript/api/transports/wailsv2/api/client.ts"
+          ],
+          "imports": [],
+          "kind": "wails-transport"
+        },
+        "wails.v3": {
+          "files": [
+            "golang/views/transports/wailsv3/api/gen_service.go",
+            "typescript/api/transports/wailsv3/api/client.ts"
+          ],
+          "imports": [],
+          "kind": "wails-transport"
+        }
+      },
+      "connection": null,
+      "hash": "b139b74c59d24253897b3eabfd2f54904d77eaeedf0d9068faeb8411a13da4a7",
+      "id": "api.api.ws.ws",
+      "kind": "legacy_ws",
+      "methods": [],
+      "operation": "Ws",
+      "request_models": [],
+      "response_model": null,
+      "schemas": [],
+      "service_id": "api.api",
+      "shard": "api-blueprint.contract.d/routes/api.api.ws.ws.json",
+      "url": "/api/ws"
+    }
+  ],
+  "service": {
+    "group": "api",
+    "id": "api.api",
+    "name": "ApiService",
+    "path": "/api",
+    "root": "api"
+  }
+}

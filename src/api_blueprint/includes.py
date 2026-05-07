@@ -5,9 +5,9 @@ from api_blueprint.engine.model import (
     String, Array, Bool, Byte, Map, Error, Model, Field,
     Int, Int8, Int16, Int32, Int64, Enum,
     Uint, Uint8, Uint16, Uint32, Uint64,
-    Float, Float32, Float64, Null, Object,
+    Float, Float32, Float64, Null, Object, DateTime, JSONValue, AnyValue, Timestamp, Struct, AnyPayload,
     HeaderModel, Header, APIKeyHeader, NoneHeader,
-    KV, ArrayKV,
+    KV, ArrayKV, field,
 )
 from api_blueprint.engine import Blueprint, ConnectionScope, DefaultConnectionClose, provider
 from api_blueprint.engine.wrapper import GeneralWrapper, NoneWrapper

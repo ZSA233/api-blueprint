@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from api_blueprint.application import vnext
+from api_blueprint.application import generator
 
 
 def _write_package(tmp_path: Path) -> None:
@@ -44,7 +44,7 @@ go 1.23.8
 
 
 def _reject_router_fallback(_router: object) -> object:
-    raise AssertionError("vNext generation must pass ContractGraph to writer")
+    raise AssertionError("1.0 generation must pass ContractGraph to writer")
 
 
 def test_vnext_generate_go_uses_contract_graph_adapter(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -67,7 +67,7 @@ module = "example.com/generated"
     )
     monkeypatch.setattr("api_blueprint.writer.golang.blueprint.route_protocol_from_router", _reject_router_fallback)
 
-    vnext.generate(config_path, target_ids=("go.server",))
+    generator.generate(config_path, target_ids=("go.server",))
 
     assert (tmp_path / "golang" / "views" / "routes" / "api" / "demo" / "gen_protos.go").is_file()
 
@@ -94,7 +94,7 @@ base_url = "http://localhost:2333"
     )
     monkeypatch.setattr("api_blueprint.writer.typescript.blueprint.route_protocol_from_router", _reject_router_fallback)
 
-    vnext.generate(config_path, target_ids=("typescript.client",))
+    generator.generate(config_path, target_ids=("typescript.client",))
 
     assert (tmp_path / "typescript" / "api" / "routes" / "api" / "demo" / "gen_client.ts").is_file()
 
@@ -119,7 +119,7 @@ base_url = "http://localhost:2333"
     )
     monkeypatch.setattr("api_blueprint.writer.kotlin.blueprint.route_protocol_from_router", _reject_router_fallback)
 
-    vnext.generate(config_path, target_ids=("kotlin.client",))
+    generator.generate(config_path, target_ids=("kotlin.client",))
 
     assert (tmp_path / "kotlin" / "com" / "example" / "generated" / "endpoints" / "DemoApi.kt").is_file()
 
@@ -160,7 +160,7 @@ frontend_mode = "external"
     monkeypatch.setattr("api_blueprint.writer.typescript.blueprint.route_protocol_from_router", _reject_router_fallback)
     monkeypatch.setattr("api_blueprint.writer.wails.golang.route_protocol_from_router", _reject_router_fallback)
 
-    vnext.generate(config_path, target_ids=("desktop.v3",))
+    generator.generate(config_path, target_ids=("desktop.v3",))
 
     assert (tmp_path / "golang" / "views" / "transports" / "wailsv3" / "api" / "demo" / "gen_service.go").is_file()
 
@@ -201,7 +201,7 @@ files = ["api/**/*.proto"]
 
     monkeypatch.setattr("api_blueprint.writer.grpc.toolchain.generate_go_stubs", fake_generate_go_stubs)
 
-    vnext.generate(config_path, target_ids=("grpc.go",))
+    generator.generate(config_path, target_ids=("grpc.go",))
 
     assert captured["proto_root"] == (tmp_path / "grpc" / "protos").resolve()
     assert captured["proto_exists"] is True

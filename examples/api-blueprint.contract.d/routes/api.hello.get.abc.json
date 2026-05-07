@@ -1,0 +1,169 @@
+{
+  "artifacts": {
+    "go.server": {
+      "files": [
+        "golang/views/routes/api/hello/gen_interface.go",
+        "golang/views/routes/api/hello/gen_protos.go"
+      ],
+      "imports": [],
+      "kind": "go-server"
+    },
+    "grpc.go": {
+      "files": [
+        "grpc/go/api/hello/hello.pb.go",
+        "grpc/go/api/hello/hello_grpc.pb.go"
+      ],
+      "imports": [
+        "example.com/project/grpc/go/api/hello"
+      ],
+      "kind": "grpc-go"
+    },
+    "grpc.proto": {
+      "files": [
+        "grpc/protos/api/hello.proto"
+      ],
+      "imports": [],
+      "kind": "grpc-proto"
+    },
+    "grpc.python": {
+      "files": [
+        "grpc/python/pb/api/hello_pb2.py",
+        "grpc/python/pb/api/hello_pb2_grpc.py"
+      ],
+      "imports": [
+        "pb.api.hello_pb2",
+        "pb.api.hello_pb2_grpc"
+      ],
+      "kind": "grpc-python"
+    },
+    "typescript.client": {
+      "files": [
+        "typescript/api/routes/api/hello/client.ts",
+        "typescript/api/routes/api/hello/models.ts"
+      ],
+      "imports": [
+        "typescript/api/routes/api/hello"
+      ],
+      "kind": "typescript-client"
+    },
+    "wails.v2": {
+      "files": [
+        "golang/views/transports/wailsv2/api/hello/gen_service.go",
+        "typescript/api/transports/wailsv2/api/hello/client.ts"
+      ],
+      "imports": [],
+      "kind": "wails-transport"
+    },
+    "wails.v3": {
+      "files": [
+        "golang/views/transports/wailsv3/api/hello/gen_service.go",
+        "typescript/api/transports/wailsv3/api/hello/client.ts"
+      ],
+      "imports": [],
+      "kind": "wails-transport"
+    }
+  },
+  "connection": null,
+  "route": {
+    "connection": null,
+    "deprecated": false,
+    "hash": "9c799b1ce28c66c193f5d9c2af79bdc4765676bca954535fdbf7c9edd33a0e22",
+    "id": "api.hello.get.abc",
+    "kind": "rpc",
+    "method_name": "abc",
+    "methods": [
+      "GET"
+    ],
+    "operation": "Abc",
+    "path": "/abc",
+    "proto": {},
+    "request": {
+      "binary_model": null,
+      "form_model": null,
+      "json_model": null,
+      "query_model": "REQ_Abc_QUERY"
+    },
+    "response": {
+      "media_type": "application/json",
+      "model": "RSP_Abc",
+      "wrapper": "GeneralWrapper"
+    },
+    "service_id": "api.hello",
+    "url": "/api/hello/abc"
+  },
+  "schemas": {
+    "ApiHelloMap": {
+      "auto": false,
+      "fields": {
+        "haha": {
+          "description": "haha",
+          "name": "haha",
+          "optional": false,
+          "type": "int64",
+          "wire_name": "haha"
+        }
+      },
+      "identity": "blueprints.api_hello.ApiHelloMap",
+      "kind": "model",
+      "module": "blueprints.api_hello",
+      "name": "ApiHelloMap",
+      "qualname": "ApiHelloMap",
+      "type": "object"
+    },
+    "REQ_Abc_QUERY": {
+      "auto": true,
+      "fields": {
+        "arg1": {
+          "description": "arg1",
+          "name": "arg1",
+          "optional": true,
+          "type": "boolean",
+          "wire_name": "arg1"
+        },
+        "arg2": {
+          "description": "arg2",
+          "name": "arg2",
+          "optional": true,
+          "type": "float",
+          "wire_name": "arg2"
+        },
+        "arg3": {
+          "description": "arg3",
+          "name": "arg3",
+          "optional": true,
+          "type": "string",
+          "wire_name": "arg3"
+        }
+      },
+      "identity": "api_blueprint.engine.schema.modeling.REQ_Abc_QUERY",
+      "kind": "model",
+      "module": "api_blueprint.engine.schema.modeling",
+      "name": "REQ_Abc_QUERY",
+      "qualname": "REQ_Abc_QUERY",
+      "type": "object"
+    },
+    "RSP_Abc": {
+      "auto": true,
+      "kind": "alias",
+      "name": "RSP_Abc",
+      "target": {
+        "keys": {
+          "type": "string"
+        },
+        "type": "map",
+        "values": {
+          "ref": "ApiHelloMap",
+          "type": "object"
+        }
+      },
+      "type": "alias"
+    }
+  },
+  "service": {
+    "group": "hello",
+    "id": "api.hello",
+    "name": "HelloService",
+    "path": "/api/hello",
+    "root": "api"
+  }
+}

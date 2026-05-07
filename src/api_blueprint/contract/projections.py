@@ -1,0 +1,507 @@
+from __future__ import annotations
+
+import re
+from collections.abc import Mapping
+from typing import Any
+
+
+JsonObject = dict[str, Any]
+
+AGENT_MANIFEST_KIND = "api-blueprint.agent"
+SHARD_ROOT = "api-blueprint.contract.d"
+AGENT_READ_ORDER_NOTE = "先读 `api-blueprint.agent.json`，再读 route shard，最后才看生成物"
+
+
+def build_agent_manifest(manifest: Mapping[str, Any]) -> JsonObject:
+    services = _list_of_maps(manifest.get("services"))
+    routes = _list_of_maps(manifest.get("routes"))
+    schemas = _mapping_of_maps(manifest.get("schemas"))
+    connections = _list_of_maps(manifest.get("connections"))
+    targets = _list_of_maps(manifest.get("targets"))
+    capabilities = manifest.get("capabilities") if isinstance(manifest.get("capabilities"), Mapping) else {}
+    route_artifacts = _route_artifacts(routes, targets)
+
+    return {
+        "kind": AGENT_MANIFEST_KIND,
+        "version": str(manifest.get("version") or "1.0"),
+        "generator": dict(manifest.get("generator")) if isinstance(manifest.get("generator"), Mapping) else {},
+        "source": "api-blueprint.contract.json",
+        "counts": _counts(services, routes, schemas, connections, targets),
+        "read_order": [
+            {
+                "step": 1,
+                "path": "api-blueprint.agent.json",
+                "purpose": "Compact cross-service index for routes, schemas, connections, targets, and artifacts.",
+            },
+            {
+                "step": 2,
+                "path": f"{SHARD_ROOT}/index.json",
+                "purpose": "Shard directory index; use it when the compact route summary is not enough.",
+            },
+            {
+                "step": 3,
+                "path": f"{SHARD_ROOT}/routes/<route_id>.json",
+                "purpose": "Open the route shard for request/response models, connection messages, and target imports.",
+            },
+            {
+                "step": 4,
+                "path": "generated artifacts",
+                "purpose": "Only inspect generated source when the artifact/import index points to a target-specific entry.",
+            },
+        ],
+        "shards": {
+            "index": f"{SHARD_ROOT}/index.json",
+            "routes_dir": f"{SHARD_ROOT}/routes",
+            "services_dir": f"{SHARD_ROOT}/services",
+            "schemas_dir": f"{SHARD_ROOT}/schemas",
+        },
+        "services": [_service_summary(service, routes) for service in services],
+        "routes": [_route_summary(route, schemas, route_artifacts.get(_route_id(route), {})) for route in routes],
+        "connections": [_connection_summary(connection) for connection in connections],
+        "targets": [_target_summary(target, routes) for target in targets],
+        "capabilities": dict(capabilities),
+        "agent_notes": [
+            AGENT_READ_ORDER_NOTE,
+            "Use route shards for exact request, response, stream, and channel model shapes.",
+            "Use generated artifacts only for language-specific invocation details after locating them in artifacts.",
+        ],
+    }
+
+
+def build_contract_shards(manifest: Mapping[str, Any]) -> dict[str, JsonObject]:
+    services = _list_of_maps(manifest.get("services"))
+    routes = _list_of_maps(manifest.get("routes"))
+    schemas = _mapping_of_maps(manifest.get("schemas"))
+    targets = _list_of_maps(manifest.get("targets"))
+    route_artifacts = _route_artifacts(routes, targets)
+    routes_by_service = _routes_by_service(routes)
+
+    shards: dict[str, JsonObject] = {
+        "index.json": {
+            "version": str(manifest.get("version") or "1.0"),
+            "generator": dict(manifest.get("generator")) if isinstance(manifest.get("generator"), Mapping) else {},
+            "counts": _counts(services, routes, schemas, _list_of_maps(manifest.get("connections")), targets),
+            "services": [
+                {
+                    "id": _string(service.get("id")),
+                    "shard": f"services/{_safe_file_stem(_string(service.get('id')))}.json",
+                }
+                for service in services
+            ],
+            "routes": [
+                {
+                    "id": _route_id(route),
+                    "kind": _string(route.get("kind")),
+                    "url": _string(route.get("url")),
+                    "shard": f"routes/{_safe_file_stem(_route_id(route))}.json",
+                }
+                for route in routes
+            ],
+            "schemas": [
+                {
+                    "name": name,
+                    "shard": f"schemas/{_safe_file_stem(name)}.json",
+                }
+                for name in sorted(schemas)
+            ],
+        }
+    }
+
+    for service in services:
+        service_id = _string(service.get("id"))
+        service_routes = routes_by_service.get(service_id, [])
+        shards[f"services/{_safe_file_stem(service_id)}.json"] = {
+            "service": dict(service),
+            "routes": [_route_summary(route, schemas, route_artifacts.get(_route_id(route), {})) for route in service_routes],
+        }
+
+    for route in routes:
+        route_id = _route_id(route)
+        route_schema_names = _route_schema_names(route, schemas)
+        shards[f"routes/{_safe_file_stem(route_id)}.json"] = {
+            "route": dict(route),
+            "service": _service_for_route(route, services),
+            "connection": route.get("connection"),
+            "schemas": {name: schemas[name] for name in route_schema_names if name in schemas},
+            "artifacts": route_artifacts.get(route_id, {}),
+        }
+
+    inbound_routes = _schema_inbound_routes(routes, schemas)
+    for name, schema in schemas.items():
+        shards[f"schemas/{_safe_file_stem(name)}.json"] = {
+            "schema": dict(schema),
+            "inbound_routes": inbound_routes.get(name, []),
+        }
+
+    return shards
+
+
+def render_agent_markdown(manifest: Mapping[str, Any]) -> str:
+    agent = build_agent_manifest(manifest)
+    lines = [
+        "# api-blueprint Agent Guide",
+        "",
+        AGENT_READ_ORDER_NOTE + "。",
+        "",
+        "## Read Order",
+    ]
+    for item in agent["read_order"]:
+        lines.append(f"{item['step']}. `{item['path']}` - {item['purpose']}")
+    lines.extend(["", "## Counts"])
+    for key, value in agent["counts"].items():
+        lines.append(f"- `{key}`: {value}")
+    lines.extend(["", "## Routes"])
+    for route in agent["routes"]:
+        lines.append(f"- `{route['id']}` `{route['kind']}` `{route['url']}` -> `{route['shard']}`")
+    lines.extend(
+        [
+            "",
+            "## Generated Artifacts",
+            "Use route `artifacts` entries for import paths and generated files. Do not start by reading generated source.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _counts(
+    services: list[JsonObject],
+    routes: list[JsonObject],
+    schemas: Mapping[str, JsonObject],
+    connections: list[JsonObject],
+    targets: list[JsonObject],
+) -> JsonObject:
+    return {
+        "services": len(services),
+        "routes": len(routes),
+        "schemas": len(schemas),
+        "connections": len(connections),
+        "targets": len(targets),
+    }
+
+
+def _service_summary(service: Mapping[str, Any], routes: list[JsonObject]) -> JsonObject:
+    service_id = _string(service.get("id"))
+    route_ids = [_route_id(route) for route in routes if _string(route.get("service_id")) == service_id]
+    return {
+        "id": service_id,
+        "root": _string(service.get("root")),
+        "group": _string(service.get("group")),
+        "name": _string(service.get("name")),
+        "path": _string(service.get("path")),
+        "route_count": len(route_ids),
+        "routes": route_ids,
+        "shard": f"{SHARD_ROOT}/services/{_safe_file_stem(service_id)}.json",
+    }
+
+
+def _route_summary(route: Mapping[str, Any], schemas: Mapping[str, JsonObject], artifacts: Mapping[str, Any]) -> JsonObject:
+    route_id = _route_id(route)
+    response = route.get("response") if isinstance(route.get("response"), Mapping) else {}
+    return {
+        "id": route_id,
+        "service_id": _string(route.get("service_id")),
+        "kind": _string(route.get("kind")),
+        "operation": _string(route.get("operation")),
+        "methods": list(route.get("methods") if isinstance(route.get("methods"), list) else []),
+        "url": _string(route.get("url")),
+        "request_models": _request_models(route),
+        "response_model": response.get("model") if isinstance(response, Mapping) else None,
+        "connection": _compact_connection(route.get("connection")),
+        "schemas": _route_schema_names(route, schemas),
+        "artifacts": dict(artifacts),
+        "hash": _string(route.get("hash")),
+        "shard": f"{SHARD_ROOT}/routes/{_safe_file_stem(route_id)}.json",
+    }
+
+
+def _connection_summary(connection: Mapping[str, Any]) -> JsonObject:
+    route_id = _string(connection.get("route_id"))
+    return {
+        "route_id": route_id,
+        "kind": _string(connection.get("kind")),
+        "scope": _string(connection.get("scope")),
+        "open_model": connection.get("open_model"),
+        "close_model": connection.get("close_model"),
+        "server_message_models": _message_models(connection.get("server_message")),
+        "client_message_models": _message_models(connection.get("client_message")),
+        "shard": f"{SHARD_ROOT}/routes/{_safe_file_stem(route_id)}.json",
+    }
+
+
+def _target_summary(target: Mapping[str, Any], routes: list[JsonObject]) -> JsonObject:
+    return {
+        "id": _string(target.get("id")),
+        "kind": _string(target.get("kind")),
+        "out_dir": target.get("out_dir"),
+        "role": _target_role(target),
+        "artifacts": _target_level_artifacts(target, routes),
+    }
+
+
+def _target_role(target: Mapping[str, Any]) -> str:
+    kind = _string(target.get("kind"))
+    if kind.endswith("-server"):
+        return "server"
+    if kind.endswith("-client"):
+        return "client"
+    if kind.endswith("-transport"):
+        return "transport"
+    if kind.startswith("grpc-"):
+        return "grpc"
+    return kind or "unknown"
+
+
+def _target_level_artifacts(target: Mapping[str, Any], routes: list[JsonObject]) -> JsonObject:
+    route_ids = [_route_id(route) for route in routes]
+    return {
+        "route_count": len(route_ids),
+        "routes": route_ids,
+    }
+
+
+def _route_artifacts(routes: list[JsonObject], targets: list[JsonObject]) -> dict[str, JsonObject]:
+    result: dict[str, JsonObject] = {}
+    for route in routes:
+        route_id = _route_id(route)
+        result[route_id] = {}
+        for target in targets:
+            target_id = _string(target.get("id"))
+            if not target_id:
+                continue
+            if not _target_selects_route(target, route):
+                continue
+            artifact = _artifact_for_route(target, route)
+            if artifact:
+                result[route_id][target_id] = artifact
+    return result
+
+
+def _artifact_for_route(target: Mapping[str, Any], route: Mapping[str, Any]) -> JsonObject:
+    kind = _string(target.get("kind"))
+    out_dir = _string(target.get("out_dir"))
+    service_id = _string(route.get("service_id"))
+    root, group = _split_service_id(service_id)
+    pascal_group = _pascal(group)
+    files: list[str] = []
+    imports: list[str] = []
+    handled = True
+
+    if kind == "go-server":
+        base = _join(out_dir, "views", "routes", root, "" if root == group else group)
+        files = [_join(base, "gen_interface.go"), _join(base, "gen_protos.go")]
+        module = _string(target.get("module"))
+        if module:
+            imports = [_join(module, "views", "routes", root, "" if root == group else group)]
+    elif kind == "typescript-client":
+        base = _join(out_dir, root, "routes", root, "" if root == group else group)
+        files = [_join(base, "client.ts"), _join(base, "models.ts")]
+        imports = [_posix_without_suffix(base)]
+    elif kind == "kotlin-client":
+        package = _string(target.get("package"))
+        package_path = package.replace(".", "/")
+        files = [
+            _join(out_dir, package_path, "endpoints", f"{pascal_group}Api.kt"),
+            _join(out_dir, package_path, "models", f"{pascal_group}ApiModels.kt"),
+        ]
+        if package:
+            imports = [f"{package}.endpoints.{pascal_group}Api"]
+    elif kind == "wails-transport":
+        overlay = _string(target.get("overlay_name")) or "wails"
+        files = [
+            _join("golang", "views", "transports", overlay, root, "" if root == group else group, "gen_service.go"),
+            _join("typescript", root, "transports", overlay, root, "" if root == group else group, "client.ts"),
+        ]
+    elif kind == "grpc-proto":
+        files = [_join(out_dir, root, f"{group}.proto")]
+    elif kind == "grpc-go":
+        module = _string(target.get("module"))
+        package_path = _join(root, group)
+        files = [
+            _join(out_dir, package_path, f"{group}.pb.go"),
+            _join(out_dir, package_path, f"{group}_grpc.pb.go"),
+        ]
+        if module:
+            imports = [_join(module, package_path)]
+    elif kind == "grpc-python":
+        package_root = _string(target.get("python_package_root"))
+        import_prefix = f"{package_root}." if package_root else ""
+        files = [
+            _join(out_dir, *(package_root.split(".") if package_root else ()), root, f"{group}_pb2.py"),
+            _join(out_dir, *(package_root.split(".") if package_root else ()), root, f"{group}_pb2_grpc.py"),
+        ]
+        imports = [f"{import_prefix}{root}.{group}_pb2", f"{import_prefix}{root}.{group}_pb2_grpc"]
+    else:
+        handled = False
+
+    if not handled:
+        return {}
+    return {"kind": kind, "files": [path for path in files if path], "imports": imports}
+
+
+def _target_selects_route(target: Mapping[str, Any], route: Mapping[str, Any]) -> bool:
+    include = [str(item) for item in target.get("include", [])] if isinstance(target.get("include"), list) else []
+    exclude = [str(item) for item in target.get("exclude", [])] if isinstance(target.get("exclude"), list) else []
+    if include and not any(_route_matches_rule(route, rule) for rule in include):
+        return False
+    return not any(_route_matches_rule(route, rule) for rule in exclude)
+
+
+def _route_matches_rule(route: Mapping[str, Any], rule: str) -> bool:
+    import fnmatch
+
+    if ":" not in rule:
+        return fnmatch.fnmatchcase(_route_id(route), rule)
+    key, pattern = rule.split(":", 1)
+    if key == "path":
+        return fnmatch.fnmatchcase(_string(route.get("url")), pattern)
+    if key == "method":
+        methods = route.get("methods")
+        return isinstance(methods, list) and any(fnmatch.fnmatchcase(str(method), pattern.upper()) for method in methods)
+    if key == "group":
+        return fnmatch.fnmatchcase(_string(route.get("service_id")).rsplit(".", 1)[-1], pattern)
+    if key == "name":
+        return fnmatch.fnmatchcase(_string(route.get("operation")), pattern)
+    if key == "kind":
+        return fnmatch.fnmatchcase(_string(route.get("kind")), pattern)
+    return False
+
+
+def _route_schema_names(route: Mapping[str, Any], schemas: Mapping[str, JsonObject]) -> list[str]:
+    direct = set(_request_models(route))
+    response = route.get("response")
+    if isinstance(response, Mapping) and response.get("model") is not None:
+        direct.add(str(response["model"]))
+    connection = route.get("connection")
+    if isinstance(connection, Mapping):
+        for key in ("open_model", "close_model"):
+            if connection.get(key) is not None:
+                direct.add(str(connection[key]))
+        for message_key in ("server_message", "client_message"):
+            direct.update(_message_models(connection.get(message_key)))
+
+    result: set[str] = set()
+    pending = list(direct)
+    while pending:
+        name = pending.pop()
+        if name in result or name not in schemas:
+            continue
+        result.add(name)
+        for ref in _collect_schema_refs(schemas[name]):
+            if ref not in result:
+                pending.append(ref)
+    return sorted(result)
+
+
+def _request_models(route: Mapping[str, Any]) -> list[str]:
+    request = route.get("request")
+    if not isinstance(request, Mapping):
+        return []
+    models = []
+    for key in ("query_model", "json_model", "form_model", "binary_model"):
+        value = request.get(key)
+        if value is not None:
+            models.append(str(value))
+    return models
+
+
+def _message_models(message: object) -> list[str]:
+    if not isinstance(message, Mapping):
+        return []
+    return [str(variant["model"]) for variant in _list_of_maps(message.get("variants")) if variant.get("model") is not None]
+
+
+def _compact_connection(connection: object) -> JsonObject | None:
+    if not isinstance(connection, Mapping):
+        return None
+    return {
+        "kind": _string(connection.get("kind")),
+        "scope": _string(connection.get("scope")),
+        "open_model": connection.get("open_model"),
+        "close_model": connection.get("close_model"),
+        "server_message_models": _message_models(connection.get("server_message")),
+        "client_message_models": _message_models(connection.get("client_message")),
+    }
+
+
+def _collect_schema_refs(value: object) -> set[str]:
+    refs: set[str] = set()
+    if isinstance(value, Mapping):
+        ref = value.get("ref")
+        if isinstance(ref, str):
+            refs.add(ref)
+        for child in value.values():
+            refs.update(_collect_schema_refs(child))
+    elif isinstance(value, list):
+        for child in value:
+            refs.update(_collect_schema_refs(child))
+    return refs
+
+
+def _schema_inbound_routes(routes: list[JsonObject], schemas: Mapping[str, JsonObject]) -> dict[str, list[str]]:
+    inbound: dict[str, list[str]] = {name: [] for name in schemas}
+    for route in routes:
+        route_id = _route_id(route)
+        for name in _route_schema_names(route, schemas):
+            inbound.setdefault(name, []).append(route_id)
+    return inbound
+
+
+def _routes_by_service(routes: list[JsonObject]) -> dict[str, list[JsonObject]]:
+    result: dict[str, list[JsonObject]] = {}
+    for route in routes:
+        result.setdefault(_string(route.get("service_id")), []).append(route)
+    return result
+
+
+def _service_for_route(route: Mapping[str, Any], services: list[JsonObject]) -> JsonObject | None:
+    service_id = _string(route.get("service_id"))
+    for service in services:
+        if _string(service.get("id")) == service_id:
+            return dict(service)
+    return None
+
+
+def _split_service_id(service_id: str) -> tuple[str, str]:
+    if "." not in service_id:
+        return service_id or "root", service_id or "root"
+    root, group = service_id.split(".", 1)
+    return root or "root", group or root or "root"
+
+
+def _route_id(route: Mapping[str, Any]) -> str:
+    return _string(route.get("id"))
+
+
+def _safe_file_stem(value: str) -> str:
+    safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", value.strip())
+    return safe or "root"
+
+
+def _pascal(value: str) -> str:
+    return "".join(part[:1].upper() + part[1:] for part in re.split(r"[^A-Za-z0-9]+", value) if part)
+
+
+def _join(*parts: object) -> str:
+    normalized = [str(part).strip("/") for part in parts if str(part).strip("/")]
+    return "/".join(normalized)
+
+
+def _posix_without_suffix(path: str) -> str:
+    return path.removesuffix(".ts").removesuffix(".go").removesuffix(".kt")
+
+
+def _string(value: object) -> str:
+    return value if isinstance(value, str) else ""
+
+
+def _list_of_maps(value: object) -> list[JsonObject]:
+    if not isinstance(value, list):
+        return []
+    return [dict(item) for item in value if isinstance(item, Mapping)]
+
+
+def _mapping_of_maps(value: object) -> dict[str, JsonObject]:
+    if not isinstance(value, Mapping):
+        return {}
+    return {str(key): dict(item) for key, item in value.items() if isinstance(item, Mapping)}

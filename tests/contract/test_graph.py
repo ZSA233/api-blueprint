@@ -1,9 +1,16 @@
 from __future__ import annotations
 
-from api_blueprint.contract import RouteContract, build_contract_graph, route_contract
+from api_blueprint.contract import (
+    RouteContract,
+    build_agent_manifest,
+    build_contract_graph,
+    build_contract_shards,
+    render_agent_markdown,
+    route_contract,
+)
 from api_blueprint.engine import Blueprint
 from api_blueprint.engine.connection import ConnectionScope
-from api_blueprint.engine.model import Int, String, Model
+from api_blueprint.engine.model import Int, String, Model, field
 from api_blueprint.writer.core import contracts as legacy_contracts
 
 
@@ -24,6 +31,12 @@ class CloseInfo(Model):
     reason = String(description="reason", omitempty=True)
 
 
+class GenericContractPayload(Model):
+    name = field(1, String(description="name"), optional=True)
+    success = field(2, String(description="success"), choice="result")
+    error = field(3, String(description="error"), choice="result")
+
+
 def test_contract_graph_manifest_captures_rpc_and_connection_routes():
     bp = Blueprint(root="/api")
     with bp.group("/runs") as views:
@@ -37,7 +50,8 @@ def test_contract_graph_manifest_captures_rpc_and_connection_routes():
     graph = build_contract_graph([bp])
     manifest = graph.to_manifest()
 
-    assert manifest["version"] == "vnext-1"
+    assert manifest["version"] == "1.0"
+    assert manifest["generator"]["name"] == "api-blueprint"
     assert [service["id"] for service in manifest["services"]] == ["api.runs"]
     route_ids = [route["id"] for route in manifest["routes"]]
     assert route_ids == ["api.runs.get.status", "api.runs.stream.events"]
@@ -58,6 +72,168 @@ def test_contract_graph_manifest_captures_rpc_and_connection_routes():
     schema = manifest["schemas"]["CloseInfo"]
     assert schema["fields"]["reason"]["optional"] is True
     assert len(manifest["hashes"]["routes"]["api.runs.stream.events"]) == 64
+
+
+def test_contract_graph_keeps_distinct_identities_for_same_named_models():
+    AlphaPayload = type(
+        "SharedPayload",
+        (Model,),
+        {
+            "__module__": "blueprints.alpha",
+            "value": String(description="value"),
+        },
+    )
+    BetaPayload = type(
+        "SharedPayload",
+        (Model,),
+        {
+            "__module__": "blueprints.beta",
+            "code": Int(description="code"),
+        },
+    )
+    GammaPayload = type(
+        "SharedPayload",
+        (Model,),
+        {
+            "__module__": "blueprints.gamma",
+            "label": String(description="label"),
+        },
+    )
+
+    bp = Blueprint(root="/api")
+    with bp.group("/alpha") as views:
+        views.POST("/submit").REQ(AlphaPayload).RSP(message=String(description="message"))
+    with bp.group("/beta") as views:
+        views.POST("/submit").REQ(BetaPayload).RSP(message=String(description="message"))
+    with bp.group("/gamma") as views:
+        views.POST("/submit").REQ(GammaPayload).RSP(message=String(description="message"))
+
+    manifest = build_contract_graph([bp]).to_manifest()
+
+    alpha_route, beta_route, gamma_route = manifest["routes"]
+    alpha_schema = alpha_route["request"]["json_model"]
+    beta_schema = beta_route["request"]["json_model"]
+    gamma_schema = gamma_route["request"]["json_model"]
+    assert alpha_schema != beta_schema
+    assert beta_schema != gamma_schema
+    assert gamma_schema == "blueprints.gamma.SharedPayload"
+    assert manifest["schemas"][alpha_schema]["identity"] == "blueprints.alpha.SharedPayload"
+    assert manifest["schemas"][beta_schema]["identity"] == "blueprints.beta.SharedPayload"
+    assert manifest["schemas"][gamma_schema]["identity"] == "blueprints.gamma.SharedPayload"
+    assert manifest["schemas"][alpha_schema]["module"] == "blueprints.alpha"
+    assert manifest["schemas"][beta_schema]["module"] == "blueprints.beta"
+    assert manifest["schemas"][gamma_schema]["module"] == "blueprints.gamma"
+
+
+def test_contract_graph_rewrites_same_route_same_named_model_refs():
+    RequestPayload = type(
+        "SharedPayload",
+        (Model,),
+        {
+            "__module__": "blueprints.request",
+            "value": String(description="value"),
+        },
+    )
+    ResponsePayload = type(
+        "SharedPayload",
+        (Model,),
+        {
+            "__module__": "blueprints.response",
+            "message": String(description="message"),
+        },
+    )
+
+    bp = Blueprint(root="/api")
+    with bp.group("/shared") as views:
+        views.POST("/submit").REQ(RequestPayload).RSP(ResponsePayload)
+
+    manifest = build_contract_graph([bp]).to_manifest()
+
+    route = manifest["routes"][0]
+    assert route["request"]["json_model"] == "blueprints.request.SharedPayload"
+    assert route["response"]["model"] == "blueprints.response.SharedPayload"
+    assert set(manifest["schemas"]) >= {
+        "blueprints.request.SharedPayload",
+        "blueprints.response.SharedPayload",
+    }
+
+
+def test_contract_graph_uses_generic_field_contract_metadata():
+    bp = Blueprint(root="/api")
+    with bp.group("/contract") as views:
+        views.POST("/submit").REQ(GenericContractPayload).RSP(message=String(description="message"))
+
+    manifest = build_contract_graph([bp]).to_manifest()
+
+    fields = manifest["schemas"]["GenericContractPayload"]["fields"]
+    assert fields["name"]["contract"] == {"field_id": 1, "optional": True}
+    assert fields["success"]["contract"] == {"field_id": 2, "choice": "result"}
+    assert fields["error"]["contract"] == {"field_id": 3, "choice": "result"}
+    assert "wire" not in fields["name"]
+    assert "proto" not in fields["success"]
+
+
+def test_agent_manifest_and_shards_are_compact_navigation_layers():
+    bp = Blueprint(root="/api")
+    with bp.group("/runs") as views:
+        views.GET("/status").RSP(message=String(description="message"))
+        views.STREAM("/events", scope=ConnectionScope.SESSION).OPEN(OpenRequest).SERVER_MESSAGE(
+            "RunStreamMessage",
+            state=StreamState,
+            done=StreamDone,
+        ).CLOSE(CloseInfo)
+
+    graph = build_contract_graph([bp])
+    graph.targets = [
+        {
+            "id": "go.server",
+            "kind": "go-server",
+            "out_dir": "golang",
+            "module": "example.com/project/golang",
+        },
+        {
+            "id": "typescript.client",
+            "kind": "typescript-client",
+            "out_dir": "typescript",
+        },
+        {
+            "id": "grpc.python",
+            "kind": "grpc-python",
+            "out_dir": "grpc/python",
+            "python_package_root": "pb",
+        },
+    ]
+    manifest = graph.to_manifest()
+
+    agent = build_agent_manifest(manifest)
+    shards = build_contract_shards(manifest)
+    markdown = render_agent_markdown(manifest)
+
+    assert agent["version"] == "1.0"
+    assert agent["generator"]["name"] == "api-blueprint"
+    assert agent["counts"] == {
+        "services": 1,
+        "routes": 2,
+        "schemas": 5,
+        "connections": 1,
+        "targets": 3,
+    }
+    assert agent["read_order"][0]["path"] == "api-blueprint.agent.json"
+    assert agent["shards"]["index"] == "api-blueprint.contract.d/index.json"
+    stream_summary = next(route for route in agent["routes"] if route["id"] == "api.runs.stream.events")
+    assert stream_summary["shard"] == "api-blueprint.contract.d/routes/api.runs.stream.events.json"
+    assert stream_summary["schemas"] == ["CloseInfo", "OpenRequest", "StreamDone", "StreamState"]
+    assert "go.server" in stream_summary["artifacts"]
+    assert stream_summary["artifacts"]["grpc.python"]["imports"] == [
+        "pb.api.runs_pb2",
+        "pb.api.runs_pb2_grpc",
+    ]
+    route_shard = shards["routes/api.runs.stream.events.json"]
+    assert sorted(route_shard["schemas"]) == ["CloseInfo", "OpenRequest", "StreamDone", "StreamState"]
+    assert route_shard["connection"]["kind"] == "stream"
+    assert route_shard["artifacts"]["typescript.client"]["files"]
+    assert shards["index.json"]["counts"]["routes"] == 2
+    assert "先读 `api-blueprint.agent.json`，再读 route shard，最后才看生成物" in markdown
 
 
 def test_contract_route_contract_is_the_writer_core_compat_source():
