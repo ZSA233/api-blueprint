@@ -118,7 +118,7 @@ class TaskProgress(Model):
 
 
 with bp.group("/runs") as views:
-    views.STREAM("/events", scope=ConnectionScope.SESSION).OPEN(SweepOpen).SERVER_MESSAGE(
+    views.STREAM("/events", scope=ConnectionScope.SESSION, operation_id="TaskEvents").OPEN(SweepOpen).SERVER_MESSAGE(
         "TaskStreamMessage",
         state=TaskState,
         progress=TaskProgress,
@@ -147,7 +147,7 @@ class AssistantDelta(Model):
 
 
 with bp.group("/assistant") as views:
-    views.CHANNEL("/session", scope=ConnectionScope.SESSION).OPEN(SweepOpen).CLIENT_MESSAGE(UserInput).SERVER_MESSAGE(AssistantDelta).CLOSE(StreamClose)
+    views.CHANNEL("/session", scope=ConnectionScope.SESSION, operation_id="AssistantSession").OPEN(SweepOpen).CLIENT_MESSAGE(UserInput).SERVER_MESSAGE(AssistantDelta).CLOSE(StreamClose)
 ```
 
 API 规则：
@@ -156,6 +156,7 @@ API 规则：
 - 不支持 `.SERVER_MESSAGE(TaskState, TaskLog)`，因为缺少稳定 discriminator value。
 - `STREAM` 不允许 `.CLIENT_MESSAGE(...)`。
 - `CHANNEL` 必须同时有 `.CLIENT_MESSAGE(...)` 与 `.SERVER_MESSAGE(...)`。
+- `operation_id` 可用于 RPC / `STREAM` / `CHANNEL`，当生成的 handler / client / transport 名称需要稳定业务语义、而不是默认 path 推导名时应显式设置；它只影响 operation-derived surface，不改变 route id、path 或连接语义。
 - `scope` 支持 `ConnectionScope.SESSION`、`ConnectionScope.APP` 与 `ConnectionScope.TOPIC`，transport 可按自身能力映射；当前默认 HTTP/Wails runtime 只完整支持 `SESSION`。
 - HTTP `STREAM` 映射为 SSE，HTTP `CHANNEL` 映射为 WebSocket。
 - Wails `STREAM` / `CHANNEL` 映射为 session-scoped runtime events，event name 只存在于 generated transport/runtime 内部。

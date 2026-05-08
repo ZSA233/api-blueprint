@@ -118,7 +118,7 @@ class TaskProgress(Model):
 
 
 with bp.group("/runs") as views:
-    views.STREAM("/events", scope=ConnectionScope.SESSION).OPEN(SweepOpen).SERVER_MESSAGE(
+    views.STREAM("/events", scope=ConnectionScope.SESSION, operation_id="TaskEvents").OPEN(SweepOpen).SERVER_MESSAGE(
         "TaskStreamMessage",
         state=TaskState,
         progress=TaskProgress,
@@ -147,7 +147,7 @@ class AssistantDelta(Model):
 
 
 with bp.group("/assistant") as views:
-    views.CHANNEL("/session", scope=ConnectionScope.SESSION).OPEN(SweepOpen).CLIENT_MESSAGE(UserInput).SERVER_MESSAGE(AssistantDelta).CLOSE(StreamClose)
+    views.CHANNEL("/session", scope=ConnectionScope.SESSION, operation_id="AssistantSession").OPEN(SweepOpen).CLIENT_MESSAGE(UserInput).SERVER_MESSAGE(AssistantDelta).CLOSE(StreamClose)
 ```
 
 API rules:
@@ -156,6 +156,7 @@ API rules:
 - `.SERVER_MESSAGE(TaskState, TaskLog)` is not supported because it has no stable discriminator value.
 - `STREAM` does not allow `.CLIENT_MESSAGE(...)`.
 - `CHANNEL` requires both `.CLIENT_MESSAGE(...)` and `.SERVER_MESSAGE(...)`.
+- `operation_id` can be set on RPC / `STREAM` / `CHANNEL` when generated handler / client / transport names should use stable business semantics instead of default path-derived names. It changes only the operation-derived surface, not the route id, path, or connection semantics.
 - `scope` supports `ConnectionScope.SESSION`, `ConnectionScope.APP`, and `ConnectionScope.TOPIC`; each transport can map it according to its own capabilities. The default HTTP/Wails runtimes currently fully support only `SESSION`.
 - HTTP `STREAM` maps to SSE, and HTTP `CHANNEL` maps to WebSocket.
 - Wails `STREAM` / `CHANNEL` map to session-scoped runtime events; event names exist only inside the generated transport/runtime.

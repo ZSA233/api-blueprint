@@ -239,6 +239,40 @@ def test_typescript_generates_stream_and_channel_contracts(tmp_path: Path):
     assert 'envelope.type === "close"' in transport_text
 
 
+def test_typescript_channel_operation_id_changes_generated_method_name(tmp_path: Path):
+    bp = Blueprint(root="/api")
+
+    class Open(Model):
+        device_id = String(description="device id")
+
+    class ServerMessage(Model):
+        text = String(description="text")
+
+    class ClientMessage(Model):
+        text = String(description="text")
+
+    class CloseInfo(Model):
+        reason = String(description="reason")
+
+    with bp.group("/demo") as views:
+        views.CHANNEL("/ws", operation_id="Realtime").OPEN(Open).CLIENT_MESSAGE(ClientMessage).SERVER_MESSAGE(
+            ServerMessage
+        ).CLOSE(CloseInfo)
+
+    output_dir = tmp_path / "typescript"
+    output_dir.mkdir()
+    writer = TypeScriptWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    client_text = (output_dir / "api" / "routes" / "api" / "demo" / "gen_client.ts").read_text(encoding="utf-8")
+    assert "openRealtime(" in client_text
+    assert 'routeId: "api.demo.channel.ws"' in client_text
+    assert 'connectMethod: "OpenRealtime"' in client_text
+    assert 'sendMethod: "SendRealtime"' in client_text
+    assert 'closeMethod: "CloseRealtime"' in client_text
+
+
 def test_typescript_generation_allows_real_shared_group_without_alias_rewrite(tmp_path: Path):
     bp = Blueprint(root="/api")
     with bp.group("/shared") as views:

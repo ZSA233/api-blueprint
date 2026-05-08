@@ -26,30 +26,9 @@ def list_targets(config: str = "./api-blueprint.toml") -> None:
 @click.option("-c", "--config", default="./api-blueprint.toml", help="配置文件")
 @click.option("--target", "target_id", required=True, help="target id")
 def explain_target(config: str = "./api-blueprint.toml", target_id: str = "") -> None:
-    target = generator.explain_target(config, target_id)
-    click.echo(f"id: {target.id}")
-    click.echo(f"kind: {target.kind}")
-    click.echo(f"out_dir: {target.out_dir or '(none)'}")
-    if target.server is not None:
-        click.echo(f"server: {target.server}")
-    if target.clients:
-        click.echo(f"clients: {', '.join(target.clients)}")
-    if target.package is not None:
-        click.echo(f"package: {target.package}")
-    if target.module is not None:
-        click.echo(f"module: {target.module}")
-    if target.proto is not None:
-        click.echo(f"proto: {target.proto}")
-    if target.source_root is not None:
-        click.echo(f"source_root: {target.source_root}")
-    if target.files:
-        click.echo(f"files: {', '.join(target.files)}")
-    if target.import_roots:
-        click.echo(f"import_roots: {', '.join(path.as_posix() for path in target.import_roots)}")
-    if target.go_package_prefix is not None:
-        click.echo(f"go_package_prefix: {target.go_package_prefix}")
-    if target.python_package_root is not None:
-        click.echo(f"python_package_root: {target.python_package_root}")
+    summary = generator.explain_target_summary(config, target_id)
+    for key, value in summary.items():
+        click.echo(f"{key}: {_format_explain_target_value(value)}")
 
 
 @api_gen.command("manifest")
@@ -199,6 +178,22 @@ def _emit_inspection(
         return
     for line in formatter(payload):
         click.echo(line)
+
+
+def _format_explain_target_value(value: object) -> str:
+    if value is None:
+        return "(none)"
+    if isinstance(value, (list, tuple)):
+        return "[" + ", ".join(_format_explain_target_scalar(item) for item in value) + "]"
+    return _format_explain_target_scalar(value)
+
+
+def _format_explain_target_scalar(value: object) -> str:
+    if isinstance(value, Mapping):
+        return json.dumps(value, ensure_ascii=False, sort_keys=True)
+    if isinstance(value, Path):
+        return value.as_posix()
+    return str(value)
 
 
 def _format_inspect_routes(payload: dict[str, Any]) -> list[str]:

@@ -125,6 +125,36 @@ with bp.group("/demo") as views:
     )
 
 
+def _write_connection_inspect_blueprint(tmp_path: Path) -> None:
+    pkg = tmp_path / "blueprints"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text("", encoding="utf-8")
+    (pkg / "app.py").write_text(
+        """
+from api_blueprint.engine import Blueprint, ConnectionScope, Model
+from api_blueprint.engine.model import String
+
+class Open(Model):
+    device_id = String(description="device id")
+
+class ClientMessage(Model):
+    text = String(description="text")
+
+class ServerMessage(Model):
+    text = String(description="text")
+
+class Close(Model):
+    reason = String(description="reason")
+
+bp = Blueprint(root="/api")
+with bp.group("/demo") as views:
+    views.CHANNEL("/ws", scope=ConnectionScope.SESSION, operation_id="Realtime").OPEN(Open).CLIENT_MESSAGE(ClientMessage).SERVER_MESSAGE(ServerMessage).CLOSE(Close)
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+
 def test_api_gen_manifest_defaults_to_index_profile(tmp_path):
     _write_blueprint(tmp_path)
     config_path = tmp_path / "api-blueprint.toml"
@@ -412,6 +442,37 @@ def test_api_gen_inspect_schema_errors_and_json(tmp_path):
     assert "go.server" in payload["targets"]
 
 
+def test_api_gen_inspect_route_json_omits_shard_metadata(tmp_path):
+    _write_bulk_inspect_blueprint(tmp_path)
+    config_path = _write_inspect_config(tmp_path)
+
+    single = CliRunner().invoke(
+        api_gen,
+        ["inspect", "route", "api.demo.post.submit", "-c", str(config_path), "--json"],
+    )
+    assert single.exit_code == 0, single.output
+    single_payload = json.loads(single.output)
+    assert single_payload["id"] == "api.demo.post.submit"
+    assert "shard" not in single_payload
+
+    bulk = CliRunner().invoke(
+        api_gen,
+        [
+            "inspect",
+            "route",
+            "api.demo.post.submit",
+            "api.demo.get.ping",
+            "-c",
+            str(config_path),
+            "--json",
+        ],
+    )
+    assert bulk.exit_code == 0, bulk.output
+    bulk_payload = json.loads(bulk.output)
+    assert bulk_payload["count"] == 2
+    assert all("shard" not in route for route in bulk_payload["routes"])
+
+
 def test_api_gen_inspect_supports_bulk_route_schema_files_and_errors(tmp_path):
     _write_bulk_inspect_blueprint(tmp_path)
     config_path = _write_inspect_config(tmp_path)
@@ -492,6 +553,72 @@ def test_api_gen_inspect_supports_bulk_route_schema_files_and_errors(tmp_path):
         "api.demo.get.ping",
     ]
     assert [route["count"] for route in errors_payload["routes"]] == [1, 1]
+
+
+def test_api_gen_explain_target_shows_effective_mainline_target_summary(tmp_path):
+    _write_blueprint(tmp_path)
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[blueprint]
+entrypoints = ["blueprints.app:bp"]
+
+[[contract]]
+id = "contract"
+out_dir = "."
+
+[[go.server]]
+id = "go.server"
+out_dir = "golang/server"
+module = "example.com/project/server"
+
+[[typescript.client]]
+id = "typescript.client"
+out_dir = "typescript"
+
+[[transport.wails]]
+id = "gui.v3"
+version = "v3"
+server = "go.server"
+clients = ["typescript.client"]
+include = ["path:/api/**"]
+exclude = ["path:/api/demo/ping"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = CliRunner().invoke(api_gen, ["explain-target", "-c", str(config_path), "--target", "contract"])
+    assert contract.exit_code == 0, contract.output
+    assert "id: contract" in contract.output
+    assert "kind: contract" in contract.output
+    assert "formats: [index]" in contract.output
+
+    wails = CliRunner().invoke(api_gen, ["explain-target", "-c", str(config_path), "--target", "gui.v3"])
+    assert wails.exit_code == 0, wails.output
+    assert "kind: wails-transport" in wails.output
+    assert "version: v3" in wails.output
+    assert "overlay_name: wailsv3" in wails.output
+    assert "frontend_mode: external" in wails.output
+    assert "server: go.server" in wails.output
+    assert "clients: [typescript.client]" in wails.output
+    assert "include: [path:/api/**]" in wails.output
+    assert "exclude: [path:/api/demo/ping]" in wails.output
+
+
+def test_api_gen_inspect_route_uses_operation_id_for_channel_operation(tmp_path):
+    _write_connection_inspect_blueprint(tmp_path)
+    config_path = _write_inspect_config(tmp_path)
+
+    result = CliRunner().invoke(
+        api_gen,
+        ["inspect", "route", "api.demo.channel.ws", "-c", str(config_path), "--json"],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["id"] == "api.demo.channel.ws"
+    assert payload["operation"] == "Realtime"
 
 
 def test_api_gen_diff_reports_breaking_changes(tmp_path):

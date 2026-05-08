@@ -4,7 +4,7 @@ import json
 import os
 import shutil
 from pathlib import Path
-from typing import Sequence
+from typing import Any, Sequence
 
 from api_blueprint.application.entrypoints import load_entrypoints
 from api_blueprint.application.project import LoadedProject, build_entrypoints, load_project
@@ -29,6 +29,23 @@ from api_blueprint.writer.core.planning import (
 
 TARGET_CAPABILITY_REGISTRY: dict[str, dict[str, object]] = target_capability_manifest()
 
+EXPLAIN_TARGET_KIND_FIELDS: dict[str, tuple[str, ...]] = {
+    "contract": ("formats",),
+    "go-server": ("module",),
+    "go-client": ("module", "base_url", "base_url_expr", "include", "exclude"),
+    "typescript-client": ("base_url", "base_url_expr"),
+    "kotlin-client": ("package", "base_url", "base_url_expr", "include", "exclude"),
+    "python-server": ("python_package_root", "include", "exclude"),
+    "python-client": ("python_package_root", "base_url", "base_url_expr", "include", "exclude"),
+    "http-transport": ("server", "clients"),
+    "wails-transport": ("version", "overlay_name", "frontend_mode", "server", "clients", "include", "exclude"),
+    "grpc-proto": ("package", "go_package_prefix", "proto_files"),
+    "grpc-go": ("proto", "source_root", "files", "import_roots", "module"),
+    "grpc-python": ("proto", "source_root", "files", "import_roots", "python_package_root"),
+}
+
+EXPLAIN_TARGET_LIST_FIELDS = {"formats", "clients", "files", "import_roots", "include", "exclude", "proto_files"}
+
 
 def list_targets(config_path: str | Path | None) -> tuple[ResolvedApiTargetConfig, ...]:
     return resolve_config(config_path).targets
@@ -36,6 +53,20 @@ def list_targets(config_path: str | Path | None) -> tuple[ResolvedApiTargetConfi
 
 def explain_target(config_path: str | Path | None, target_id: str) -> ResolvedApiTargetConfig:
     return require_target(resolve_config(config_path).targets, target_id)
+
+
+def explain_target_summary(config_path: str | Path | None, target_id: str) -> dict[str, Any]:
+    resolved = resolve_config(config_path)
+    target = require_target(resolved.targets, target_id)
+    manifest = target_manifest(target, resolved.project_root)
+    fields = ("id", "kind", "out_dir", *EXPLAIN_TARGET_KIND_FIELDS.get(target.kind, ()))
+    summary: dict[str, Any] = {}
+    for field in fields:
+        value = _effective_target_summary_value(field, target, manifest)
+        if value is None:
+            continue
+        summary[field] = value
+    return summary
 
 
 def load_contract_graph(config_path: str | Path | None, *, command: str) -> ContractGraph:
@@ -446,6 +477,22 @@ def target_manifest(target: ResolvedApiTargetConfig, project_root: Path) -> dict
     if target.exclude:
         manifest["exclude"] = list(target.exclude)
     return manifest
+
+
+def _effective_target_summary_value(
+    field: str,
+    target: ResolvedApiTargetConfig,
+    manifest: dict[str, object],
+) -> Any:
+    if field in manifest:
+        return manifest[field]
+    if field == "formats" and target.kind == "contract":
+        return ["index"]
+    if field in EXPLAIN_TARGET_LIST_FIELDS:
+        return []
+    if field == "frontend_mode" and target.kind == "wails-transport":
+        return target.frontend_mode
+    return None
 
 
 def _portable_path(path: Path, project_root: Path) -> str:

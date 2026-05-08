@@ -60,7 +60,7 @@ class RouteContract:
 
 
 def route_contract(router: Router) -> RouteContract:
-    func_name = _func_name(router.leaf)
+    func_name = _operation_name(router)
     group_slug = _group_slug(router)
     group_alias = _group_alias(router)
     group_prefix = _group_prefix(router)
@@ -74,7 +74,7 @@ def route_contract(router: Router) -> RouteContract:
 
     root_slug = _slug((router.group.bp.root or "").strip("/"), default="root")
     route_method_slug = _route_method_slug(router)
-    route_name_slug = _slug(func_name, default="root")
+    route_name_slug = _slug(_func_name(router.leaf), default="root")
     route_id = ".".join((root_slug, group_alias, route_method_slug, route_name_slug))
     supports_ws = router.connection_kind == ConnectionKind.LEGACY_WS
     supports_stream = router.connection_kind == ConnectionKind.STREAM
@@ -154,6 +154,13 @@ def _func_name(leaf: str) -> str:
     if not leaf.strip("/"):
         return "Root"
     return snake_to_pascal_case(leaf, "", "Z")
+
+
+def _operation_name(router: Router) -> str:
+    operation_id = router.extra.get("operation_id")
+    if isinstance(operation_id, str) and operation_id.strip():
+        return snake_to_pascal_case(operation_id.strip(), "", "Z")
+    return _func_name(router.leaf)
 
 
 def _group_prefix(router: Router) -> str:

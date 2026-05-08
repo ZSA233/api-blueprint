@@ -76,7 +76,6 @@ def _inspect_route_from_context(context: InspectionContext, route_query: str) ->
         "errors": route.get("errors", []),
         "schemas": route.get("schemas", []),
         "artifacts": route.get("artifacts", {}),
-        "shard": route.get("shard"),
     }
 
 
