@@ -107,7 +107,7 @@ files = ["api/**/*.proto"]
 
     generator.generate(config_path, target_ids=("grpc.go",))
 
-    messages = [record.getMessage() for record in caplog.records]
+    messages = [record.getMessage().replace("\\", "/") for record in caplog.records]
     assert any("[*] Generating target: grpc.proto (grpc-proto)" in message for message in messages)
     assert any("[*] Generating target: grpc.go (grpc-go)" in message for message in messages)
     assert any("[.] Skipped target: grpc.proto (already generated)" in message for message in messages)

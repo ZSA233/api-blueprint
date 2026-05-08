@@ -26,13 +26,22 @@ def _template_root(lang: str) -> Path:
     return Path(__file__).resolve().parents[1] / "templates" / lang
 
 
+def _template_relative_parts(relative_path: str) -> tuple[str, ...]:
+    normalized = relative_path.replace("\\", "/")
+    return tuple(part for part in normalized.split("/") if part and part != ".")
+
+
+def _template_lookup_name(relative_path: str, name: str) -> str:
+    return "/".join((*_template_relative_parts(relative_path), name))
+
+
 def render(lang: str, name: str, context: dict[str, Any], relative_path: str = "") -> str:
     templates = _TEMPLATE_CACHE.get(lang)
     if templates is None:
         path = _template_root(lang)
         templates = load_templates(str(path))
         _TEMPLATE_CACHE[lang] = templates
-    return templates.get_template(str(Path(relative_path) / f"{name}.j2")).render(context)
+    return templates.get_template(_template_lookup_name(relative_path, f"{name}.j2")).render(context)
 
 
 def iter_render(
@@ -47,7 +56,8 @@ def iter_render(
         templates = load_templates(str(path))
         _TEMPLATE_CACHE[lang] = templates
 
-    for file_name in os.listdir(path / relative_path.lstrip("/")):
+    relative_parts = _template_relative_parts(relative_path)
+    for file_name in os.listdir(path.joinpath(*relative_parts)):
         filepath = Path(file_name)
         filename = filepath.name
         orig_name, ext = os.path.splitext(filename)
@@ -55,4 +65,4 @@ def iter_render(
             continue
         if orig_name in exclusives or orig_name.startswith("__"):
             continue
-        yield orig_name, templates.get_template(str(Path(relative_path) / filename)).render(context)
+        yield orig_name, templates.get_template(_template_lookup_name(relative_path, filename)).render(context)
