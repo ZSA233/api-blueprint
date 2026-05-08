@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from api_blueprint import __version__
 from click.testing import CliRunner
 
 import api_blueprint.cli.apigen as apigen_module
@@ -296,7 +297,7 @@ out_dir = "typescript"
     agent = json.loads(out_path.read_text(encoding="utf-8"))
     assert agent["kind"] == "api-blueprint.agent"
     assert agent["version"] == "1.0"
-    assert agent["generator"]["version"] == "1.0.0"
+    assert agent["generator"]["version"] == __version__
     assert agent["counts"]["routes"] == 1
     assert agent["routes"][0]["shard"] == "api-blueprint.contract.d/routes/api.demo.get.ping.json"
     assert "typescript.client" in agent["routes"][0]["artifacts"]

@@ -4,6 +4,7 @@ import json
 import logging
 from pathlib import Path
 
+from api_blueprint import __version__
 from api_blueprint.application import generator
 
 
@@ -53,7 +54,7 @@ go_package_prefix = "example.com/project/grpc/go"
 
     manifest = json.loads((tmp_path / "api-blueprint.contract.json").read_text(encoding="utf-8"))
     assert manifest["version"] == "1.0"
-    assert manifest["generator"]["version"] == "1.0.0"
+    assert manifest["generator"]["version"] == __version__
     assert manifest["routes"][0]["id"] == "api.demo.get.ping"
     proto = tmp_path / "grpc" / "protos" / "api" / "demo.proto"
     assert proto.is_file()
