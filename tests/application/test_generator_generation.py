@@ -137,6 +137,96 @@ package = "com.example.generated"
     assert (tmp_path / "api-blueprint.contract.json").is_file()
 
 
+def test_generator_contract_target_defaults_to_index_only(tmp_path: Path) -> None:
+    _write_package(
+        tmp_path,
+        """
+from api_blueprint.engine import Blueprint, Model
+from api_blueprint.engine.model import String
+
+class PingResult(Model):
+    message = String(description="message")
+
+bp = Blueprint(root="/api")
+with bp.group("/demo") as views:
+    views.GET("/ping").RSP(PingResult)
+""",
+    )
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[blueprint]
+entrypoints = ["blueprints.app:bp"]
+
+[[contract]]
+id = "contract"
+out_dir = "."
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    generator.generate(config_path, target_ids=("contract",))
+
+    assert (tmp_path / "api-blueprint.index.json").is_file()
+    assert not (tmp_path / "api-blueprint.contract.json").exists()
+    index = json.loads((tmp_path / "api-blueprint.index.json").read_text(encoding="utf-8"))
+    assert index["kind"] == "api-blueprint.index"
+    assert index["read_order"][0]["path"] == "api-gen inspect"
+    assert index["routes"][0] == {
+        "id": "api.demo.get.ping",
+        "service_id": "api.demo",
+        "kind": "rpc",
+        "operation": "Ping",
+        "methods": ["GET"],
+        "url": "/api/demo/ping",
+    }
+    assert "schemas" not in index
+    assert "errors" not in index
+    assert "connections" not in index
+    assert "schemas" not in index["routes"][0]
+    assert "errors" not in index["routes"][0]
+    assert "targets" not in index["routes"][0]
+    assert "artifacts" not in index["routes"][0]
+    assert index["queries"]["route"] == "api-gen inspect route <route-id> [<route-id> ...] -c api-blueprint.toml"
+
+
+def test_generator_contract_target_can_write_index_full_contract_and_shards(tmp_path: Path) -> None:
+    _write_package(
+        tmp_path,
+        """
+from api_blueprint.engine import Blueprint
+from api_blueprint.engine.model import String
+
+bp = Blueprint(root="/api")
+with bp.group("/demo") as views:
+    views.GET("/ping").RSP(message=String(description="message"))
+""",
+    )
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[blueprint]
+entrypoints = ["blueprints.app:bp"]
+
+[[contract]]
+id = "contract"
+out_dir = "."
+formats = ["index", "json", "shards"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    generator.generate(config_path, target_ids=("contract",))
+
+    index = json.loads((tmp_path / "api-blueprint.index.json").read_text(encoding="utf-8"))
+    contract = json.loads((tmp_path / "api-blueprint.contract.json").read_text(encoding="utf-8"))
+    assert index["kind"] == "api-blueprint.index"
+    assert contract["routes"][0]["id"] == "api.demo.get.ping"
+    assert (tmp_path / "api-blueprint.contract.d" / "index.json").is_file()
+
+
 def test_generator_contract_target_writes_agent_outputs_and_shards(tmp_path: Path) -> None:
     _write_package(
         tmp_path,

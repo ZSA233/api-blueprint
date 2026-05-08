@@ -22,6 +22,7 @@ def read_toml(path: Path) -> dict[str, Any]:
 
 
 AliasTargetKind = Literal[
+    "contract",
     "go-server",
     "go-client",
     "typescript-client",
@@ -52,6 +53,7 @@ ALIAS_TARGET_KINDS: dict[AliasTable, AliasTargetKind] = {
     ("grpc", "python"): "grpc-python",
 }
 ALIAS_NAMESPACES = frozenset(namespace for namespace, _table in ALIAS_TARGET_KINDS)
+CONTRACT_ALIAS_TABLE = "contract"
 
 
 def normalize_target_aliases(payload: dict[str, Any]) -> dict[str, Any]:
@@ -59,6 +61,14 @@ def normalize_target_aliases(payload: dict[str, Any]) -> dict[str, Any]:
     alias_targets: list[TargetPayload] = []
 
     for key, value in payload.items():
+        if key == CONTRACT_ALIAS_TABLE:
+            if not isinstance(value, list):
+                raise ValueError("config alias table [[contract]] must be an array table")
+            for item in value:
+                if not isinstance(item, dict):
+                    raise ValueError("config alias table [[contract]] entries must be tables")
+                alias_targets.append(_normalize_alias_target("[[contract]]", "contract", item))
+            continue
         if key not in ALIAS_NAMESPACES:
             normalized[key] = value
             continue

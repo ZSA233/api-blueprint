@@ -86,10 +86,49 @@ out_dir = "typescript"
     return config_path
 
 
-def test_api_gen_manifest_writes_contract_json(tmp_path):
+def _write_bulk_inspect_blueprint(tmp_path: Path) -> None:
+    pkg = tmp_path / "blueprints"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text("", encoding="utf-8")
+    (pkg / "app.py").write_text(
+        """
+from api_blueprint.engine import Blueprint, Error, Model, Toast
+from api_blueprint.engine.model import String
+
+class CommonErr(Model):
+    UNKNOWN = Error(
+        -1,
+        "未知错误",
+        toast=Toast(
+            key="common.unknown",
+            default="未知错误",
+            level="error",
+        ),
+    )
+
+class SubmitBody(Model):
+    name = String(description="name")
+
+class SubmitResult(Model):
+    message = String(description="message")
+
+class PingResult(Model):
+    message = String(description="message")
+
+bp = Blueprint(root="/api", errors=[CommonErr])
+with bp.group("/demo") as views:
+    views.POST("/submit").REQ(SubmitBody).RSP(SubmitResult)
+    views.GET("/ping").RSP(PingResult)
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def test_api_gen_manifest_defaults_to_index_profile(tmp_path):
     _write_blueprint(tmp_path)
     config_path = tmp_path / "api-blueprint.toml"
-    out_path = tmp_path / "contract.json"
+    out_path = tmp_path / "index.json"
     config_path.write_text(
         """
 [blueprint]
@@ -114,22 +153,70 @@ package = "com.example.generated"
     result = CliRunner().invoke(api_gen, ["manifest", "-c", str(config_path), "--out", str(out_path)])
 
     assert result.exit_code == 0, result.output
+    index = json.loads(out_path.read_text(encoding="utf-8"))
+    assert index["kind"] == "api-blueprint.index"
+    assert index["routes"][0]["id"] == "api.demo.get.ping"
+    assert "schemas" not in index
+    assert "errors" not in index
+    assert "connections" not in index
+    assert "schemas" not in index["routes"][0]
+    assert "errors" not in index["routes"][0]
+    assert "targets" not in index["routes"][0]
+    assert "artifacts" not in index["routes"][0]
+    assert index["queries"] == {
+        "routes": "api-gen inspect routes -c api-blueprint.toml",
+        "route": "api-gen inspect route <route-id> [<route-id> ...] -c api-blueprint.toml",
+        "schema": "api-gen inspect schema <SchemaName> [<SchemaName> ...] -c api-blueprint.toml",
+        "errors": "api-gen inspect errors --route <route-id> [--route <route-id> ...] -c api-blueprint.toml",
+        "files": "api-gen inspect files --route <route-id> [--route <route-id> ...] --target <target-id> -c api-blueprint.toml",
+        "full_contract": "api-gen manifest --profile full --out api-blueprint.contract.json -c api-blueprint.toml",
+    }
+    assert index["targets"][0] == {
+        "id": "contract",
+        "kind": "contract",
+        "out_dir": ".",
+        "role": "contract",
+        "route_count": 1,
+    }
+    assert index["targets"][1]["id"] == "kotlin.client"
+    assert index["targets"][1]["kind"] == "kotlin-client"
+    assert "package" not in index["targets"][1]
+    assert "capabilities" not in index
+
+
+def test_api_gen_manifest_writes_full_contract_profile(tmp_path):
+    _write_blueprint(tmp_path)
+    config_path = tmp_path / "api-blueprint.toml"
+    out_path = tmp_path / "contract.json"
+    config_path.write_text(
+        """
+[blueprint]
+entrypoints = ["blueprints.app:bp"]
+
+[[targets]]
+id = "contract"
+kind = "contract"
+out_dir = "."
+formats = ["json"]
+
+[[targets]]
+id = "kotlin.client"
+kind = "kotlin-client"
+out_dir = "kotlin"
+package = "com.example.generated"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(
+        api_gen,
+        ["manifest", "-c", str(config_path), "--profile", "full", "--out", str(out_path)],
+    )
+
+    assert result.exit_code == 0, result.output
     manifest = json.loads(out_path.read_text(encoding="utf-8"))
     assert manifest["routes"][0]["id"] == "api.demo.get.ping"
-    assert manifest["targets"] == [
-        {
-            "id": "contract",
-            "kind": "contract",
-            "out_dir": ".",
-            "formats": ["json"],
-        },
-        {
-            "id": "kotlin.client",
-            "kind": "kotlin-client",
-            "out_dir": "kotlin",
-            "package": "com.example.generated",
-        },
-    ]
     assert manifest["capabilities"]["kotlin-client"]["implemented"] is True
     assert manifest["capabilities"]["kotlin-client"]["routes"] == ["rpc", "legacy_ws", "stream", "channel"]
     assert manifest["capabilities"]["python-client"]["implemented"] is True
@@ -323,6 +410,88 @@ def test_api_gen_inspect_schema_errors_and_json(tmp_path):
     payload = json.loads(payload_result.output)
     assert payload["route"] == "api.demo.post.submit"
     assert "go.server" in payload["targets"]
+
+
+def test_api_gen_inspect_supports_bulk_route_schema_files_and_errors(tmp_path):
+    _write_bulk_inspect_blueprint(tmp_path)
+    config_path = _write_inspect_config(tmp_path)
+
+    routes = CliRunner().invoke(
+        api_gen,
+        [
+            "inspect",
+            "route",
+            "api.demo.post.submit",
+            "api.demo.get.ping",
+            "-c",
+            str(config_path),
+            "--json",
+        ],
+    )
+    assert routes.exit_code == 0, routes.output
+    routes_payload = json.loads(routes.output)
+    assert routes_payload["count"] == 2
+    assert [route["id"] for route in routes_payload["routes"]] == [
+        "api.demo.post.submit",
+        "api.demo.get.ping",
+    ]
+
+    schemas = CliRunner().invoke(
+        api_gen,
+        ["inspect", "schema", "SubmitBody", "PingResult", "-c", str(config_path), "--json"],
+    )
+    assert schemas.exit_code == 0, schemas.output
+    schemas_payload = json.loads(schemas.output)
+    assert schemas_payload["count"] == 2
+    assert [schema["name"] for schema in schemas_payload["schemas"]] == ["SubmitBody", "PingResult"]
+
+    files = CliRunner().invoke(
+        api_gen,
+        [
+            "inspect",
+            "files",
+            "-c",
+            str(config_path),
+            "--route",
+            "api.demo.post.submit",
+            "--route",
+            "api.demo.get.ping",
+            "--target",
+            "typescript.client",
+            "--json",
+        ],
+    )
+    assert files.exit_code == 0, files.output
+    files_payload = json.loads(files.output)
+    assert files_payload["count"] == 2
+    assert [route["route"] for route in files_payload["routes"]] == [
+        "api.demo.post.submit",
+        "api.demo.get.ping",
+    ]
+    assert set(files_payload["routes"][0]["targets"]) == {"typescript.client"}
+
+    errors = CliRunner().invoke(
+        api_gen,
+        [
+            "inspect",
+            "errors",
+            "-c",
+            str(config_path),
+            "--route",
+            "api.demo.post.submit",
+            "--route",
+            "api.demo.get.ping",
+            "--json",
+        ],
+    )
+    assert errors.exit_code == 0, errors.output
+    errors_payload = json.loads(errors.output)
+    assert errors_payload["count"] == 2
+    assert [route["route"] for route in errors_payload["routes"]] == [
+        "api.demo.post.submit",
+        "api.demo.get.ping",
+    ]
+    assert [route["count"] for route in errors_payload["routes"]] == [1, 1]
 
 
 def test_api_gen_diff_reports_breaking_changes(tmp_path):

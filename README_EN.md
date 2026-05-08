@@ -17,7 +17,7 @@ This README keeps only the onboarding path. See [Learn More](#learn-more) for fu
 
 | Target | Status | Command | Example |
 |:---|:---:|:---|:---|
-| Inspect / contract manifest | Available | `api-gen` | `api-gen inspect` / `api-blueprint.contract.json` |
+| Inspect / contract index | Available | `api-gen` | `api-gen inspect` / `api-blueprint.index.json` |
 | Go server | Available | `api-gen` | `examples/golang/server` |
 | Go client | Preview | `api-gen` | `examples/golang/client` |
 | TypeScript client | Preview | `api-gen` | `examples/typescript` |
@@ -112,11 +112,9 @@ The following is a common multi-target config skeleton. See [Configuration](docs
 [blueprint]
 entrypoints = ["blueprints.app:*"]
 
-[[targets]]
+[[contract]]
 id = "contract"
-kind = "contract"
 out_dir = "."
-formats = ["json"]
 
 [[go.server]]
 id = "go.server"
@@ -182,10 +180,11 @@ api-doc-server -c examples/api-blueprint.toml
 api-gen list-targets -c examples/api-blueprint.toml
 api-gen explain-target -c examples/api-blueprint.toml --target go.server
 api-gen inspect routes -c examples/api-blueprint.toml
-api-gen inspect route api.demo.post.testpost -c examples/api-blueprint.toml
-api-gen inspect files -c examples/api-blueprint.toml --route api.demo.post.testpost --target go.server
-api-gen inspect schema ApiDemoA -c examples/api-blueprint.toml
-api-gen inspect errors -c examples/api-blueprint.toml --route api.demo.post.testpost
+api-gen inspect route api.demo.post.testpost api.demo.channel.assistantsession -c examples/api-blueprint.toml
+api-gen inspect files -c examples/api-blueprint.toml --route api.demo.post.testpost --route api.demo.channel.assistantsession --target go.server
+api-gen inspect schema ApiDemoA RSP_TestPost -c examples/api-blueprint.toml
+api-gen inspect errors -c examples/api-blueprint.toml --route api.demo.post.testpost --route api.demo.channel.assistantsession
+api-gen manifest -c examples/api-blueprint.toml --out api-blueprint.index.json
 api-gen manifest -c examples/api-blueprint.toml --profile full --out api-blueprint.contract.json
 api-gen manifest -c examples/api-blueprint.toml --profile agent --out api-blueprint.agent.json
 api-gen manifest -c examples/api-blueprint.toml --shards-dir api-blueprint.contract.d
@@ -199,7 +198,7 @@ api-gen diff old.contract.json new.contract.json
 
 - `examples/blueprints/` is the example Blueprint source of truth.
 - `examples/blueprints/api_demo.py` includes `STREAM` / `CHANNEL` long-connection examples.
-- `examples/golang/server/`, `examples/golang/client/`, `examples/typescript/`, `examples/kotlin/`, `examples/api-blueprint.{contract,agent}.*`, `examples/api-blueprint.contract.d/`, `examples/grpc/protos/`, `examples/grpc/go/`, and `examples/grpc/python/` are generated snapshots.
+- `examples/golang/server/`, `examples/golang/client/`, `examples/typescript/`, `examples/kotlin/`, `examples/api-blueprint.index.json`, optional contract/agent/shard snapshots, `examples/grpc/protos/`, `examples/grpc/go/`, and `examples/grpc/python/` are generated snapshots.
 - `examples/wails-hello/` is a standalone Wails v3 hello world example that demonstrates a GUI loop without starting an HTTP server.
 - Go / TypeScript / Python `gen_*` files are generator-owned and overwritten during regeneration; Kotlin `Gen*.kt` files are generator-owned and include a generated header.
 - `impl_*`, Python `client.py` / `service.py`, and Kotlin non-`Gen*` façade/extension files are user-owned extension points and are preserved during regeneration.
@@ -213,9 +212,9 @@ api-gen diff old.contract.json new.contract.json
 - The default HTTP/Wails runtimes fully support only `ConnectionScope.SESSION`; `APP` / `TOPIC` broadcast or topic routing can be added through a custom connection hub / manager.
 - `examples/golang/server/views/routes/api/demo/impl.go` hand-writes a minimal `STREAM` / `CHANNEL` usage example that demonstrates `Open()`, `Send()`, `Recv()`, typed `Close()`, and exceptional `Abort()`.
 - The Go HTTP adapter respects responses already written by Gin handlers, which fits small HTTP-only raw callbacks.
-- AI agents and maintainers should query ContractGraph on demand with `api-gen inspect routes/route/files/schema/errors` first; `contract.json`, `agent.json`, `agent.md`, and `contract.d/` are mainly for offline snapshots, archiving, and diffs. Full `contract.json` records routes, schemas, connections, the error catalog, stable hashes, the resolved target plan, and the capability registry; agent/shard outputs provide compact entrypoints, read order, shards, and target artifact/import indexes.
+- AI agents and maintainers should query ContractGraph on demand with `api-gen inspect routes/route/files/schema/errors` first; `route` / `schema` accept multiple queries, and `files` / `errors` accept repeated `--route`, so agents can avoid restarting the command for related endpoints. Then read lightweight `api-blueprint.index.json` for the service / route / target catalog and follow its `queries` commands for batched route, schema, error, or generated file details. Full `contract.json` is generated only by explicit `formats = ["json"]` or `api-gen manifest --profile full`, and is mainly for diffs, archiving, and exhaustive fallback inspection; `agent.json`, `agent.md`, and `contract.d/` are mainly for offline navigation bundles and archives.
 - ContractGraph normalizes `Blueprint(errors=...)` and route `.ERR(...)` into a language-agnostic error catalog, with `message` plus `toast.key/default/level` for each error. Generated code does not embed locale tables; business i18n resolves the current language by toast key, and client helpers fall back through `toast.text`, external i18n, `toast.default`, then `message`. Go client, TypeScript, Kotlin, and Python client/server split runtime error types/helpers from static catalog data into separate generated files; Go server emits runtime types plus grouped error values only, avoiding a duplicate root catalog. Business wrapper codes are not automatically converted into thrown exceptions.
-- `[[targets]]` is the canonical config entrypoint; shortcut tables such as `[[go.server]]`, `[[go.client]]`, `[[python.server]]`, `[[transport.http]]`, `[[grpc.proto]]`, `[[grpc.go]]`, and `[[grpc.python]]` are normalized into targets when loading config. In shortcut tables, Python `module` maps to `python_package_root`, Kotlin `module` maps to `package`, and `[[grpc.python]] module` also maps to `python_package_root`.
+- `[[targets]]` is the canonical config entrypoint; shortcut tables such as `[[contract]]`, `[[go.server]]`, `[[go.client]]`, `[[python.server]]`, `[[transport.http]]`, `[[grpc.proto]]`, `[[grpc.go]]`, and `[[grpc.python]]` are normalized into targets when loading config. In shortcut tables, Python `module` maps to `python_package_root`, Kotlin `module` maps to `package`, and `[[grpc.python]] module` also maps to `python_package_root`.
 - gRPC proto can be emitted by the `grpc-proto` target from ContractGraph. `[[targets.proto_files]]` or the shortcut `[[grpc.proto.proto_files]]` maps DSL modules/routes to proto file/package/go_package/service. The DSL mainline only expresses generic contracts: `field(1, String(...), optional=True)` is a stable field identity, `choice="..."` is a mutually exclusive choice, and `DateTime`, `JSONValue`, and `AnyValue` are semantic value types. `grpc-go` / `grpc-python` can also omit `proto` and compile handwritten proto files directly with `source_root` / `files`.
 
 ## Learn More

@@ -10,8 +10,69 @@ from api_blueprint.writer.core.planning import route_matches_rule
 JsonObject = dict[str, Any]
 
 AGENT_MANIFEST_KIND = "api-blueprint.agent"
+INDEX_MANIFEST_KIND = "api-blueprint.index"
 SHARD_ROOT = "api-blueprint.contract.d"
-AGENT_READ_ORDER_NOTE = "优先使用 `api-gen inspect` 按需查询 route/schema/files/errors；只有离线或需要完整快照时才读 manifest/shard，最后才看生成物"
+AGENT_READ_ORDER_NOTE = "优先使用 `api-gen inspect` 按需查询 route/schema/files/errors；其次读取轻量 `api-blueprint.index.json` 查看接口目录；只有离线归档、diff 或需要完整快照时才读 full contract/shards，最后才看生成物"
+
+
+def build_index_manifest(manifest: Mapping[str, Any]) -> JsonObject:
+    services = _list_of_maps(manifest.get("services"))
+    routes = _list_of_maps(manifest.get("routes"))
+    schemas = _mapping_of_maps(manifest.get("schemas"))
+    errors = _list_of_maps(manifest.get("errors"))
+    connections = _list_of_maps(manifest.get("connections"))
+    targets = _list_of_maps(manifest.get("targets"))
+
+    return {
+        "kind": INDEX_MANIFEST_KIND,
+        "version": str(manifest.get("version") or "1.0"),
+        "generator": dict(manifest.get("generator")) if isinstance(manifest.get("generator"), Mapping) else {},
+        "counts": _counts(services, routes, schemas, errors, connections, targets),
+        "purpose": "Lightweight route catalog. Use inspect commands for route schemas, errors, generated files, and full details.",
+        "queries": {
+            "routes": "api-gen inspect routes -c api-blueprint.toml",
+            "route": "api-gen inspect route <route-id> [<route-id> ...] -c api-blueprint.toml",
+            "schema": "api-gen inspect schema <SchemaName> [<SchemaName> ...] -c api-blueprint.toml",
+            "errors": "api-gen inspect errors --route <route-id> [--route <route-id> ...] -c api-blueprint.toml",
+            "files": "api-gen inspect files --route <route-id> [--route <route-id> ...] --target <target-id> -c api-blueprint.toml",
+            "full_contract": "api-gen manifest --profile full --out api-blueprint.contract.json -c api-blueprint.toml",
+        },
+        "read_order": [
+            {
+                "step": 1,
+                "path": "api-gen inspect",
+                "purpose": "Query exact route, schema, error, and generated file details on demand.",
+            },
+            {
+                "step": 2,
+                "path": "api-blueprint.index.json",
+                "purpose": "Lightweight offline route catalog for choosing which route to inspect next.",
+            },
+            {
+                "step": 3,
+                "path": f"{SHARD_ROOT}/index.json",
+                "purpose": "Optional offline shard index when inspect is unavailable or a larger local snapshot is needed.",
+            },
+            {
+                "step": 4,
+                "path": "api-blueprint.contract.json",
+                "purpose": "Explicit full fallback snapshot for diff, archiving, and exhaustive contract inspection.",
+            },
+            {
+                "step": 5,
+                "path": "generated artifacts",
+                "purpose": "Read generated source only after locating the relevant target-specific files.",
+            },
+        ],
+        "services": [_service_index_summary(service, routes) for service in services],
+        "routes": [_route_index_summary(route) for route in routes],
+        "targets": [_target_index_summary(target, routes) for target in targets],
+        "agent_notes": [
+            AGENT_READ_ORDER_NOTE,
+            "This index intentionally omits route schemas, errors, and generated file lists; use the `queries` commands for those details.",
+            "Do not open api-blueprint.contract.json by default; generate or read it only for diff, archiving, or exhaustive fallback.",
+        ],
+    }
 
 
 def build_agent_manifest(manifest: Mapping[str, Any]) -> JsonObject:
@@ -71,7 +132,7 @@ def build_agent_manifest(manifest: Mapping[str, Any]) -> JsonObject:
         "capabilities": dict(capabilities),
         "agent_notes": [
             AGENT_READ_ORDER_NOTE,
-            "Prefer `api-gen inspect route <route_id>` and `api-gen inspect files --route <route_id>` over opening generated trees.",
+            "Prefer batched `api-gen inspect route <route_id> [<route_id> ...]` and repeated `--route` for files/errors over opening generated trees.",
             "Use route shards only for offline snapshots or when inspect output is not enough.",
             "Use generated artifacts only for language-specific invocation details after locating them with inspect or artifacts.",
         ],
@@ -158,10 +219,10 @@ def render_agent_markdown(manifest: Mapping[str, Any]) -> str:
         "",
         "## Preferred Commands",
         "- `api-gen inspect routes -c api-blueprint.toml`",
-        "- `api-gen inspect route <route_id> -c api-blueprint.toml`",
-        "- `api-gen inspect files --route <route_id> --target <target_id> -c api-blueprint.toml`",
-        "- `api-gen inspect schema <SchemaName> -c api-blueprint.toml`",
-        "- `api-gen inspect errors --route <route_id> -c api-blueprint.toml`",
+        "- `api-gen inspect route <route_id> [<route_id> ...] -c api-blueprint.toml`",
+        "- `api-gen inspect files --route <route_id> [--route <route_id> ...] --target <target_id> -c api-blueprint.toml`",
+        "- `api-gen inspect schema <SchemaName> [<SchemaName> ...] -c api-blueprint.toml`",
+        "- `api-gen inspect errors --route <route_id> [--route <route_id> ...] -c api-blueprint.toml`",
         "",
         "## Read Order",
     ]
@@ -238,6 +299,30 @@ def _route_summary(route: Mapping[str, Any], schemas: Mapping[str, JsonObject], 
     }
 
 
+def _service_index_summary(service: Mapping[str, Any], routes: list[JsonObject]) -> JsonObject:
+    service_id = _string(service.get("id"))
+    route_count = len([route for route in routes if _string(route.get("service_id")) == service_id])
+    return {
+        "id": service_id,
+        "root": _string(service.get("root")),
+        "group": _string(service.get("group")),
+        "name": _string(service.get("name")),
+        "path": _string(service.get("path")),
+        "route_count": route_count,
+    }
+
+
+def _route_index_summary(route: Mapping[str, Any]) -> JsonObject:
+    return {
+        "id": _route_id(route),
+        "service_id": _string(route.get("service_id")),
+        "kind": _string(route.get("kind")),
+        "operation": _string(route.get("operation")),
+        "methods": list(route.get("methods") if isinstance(route.get("methods"), list) else []),
+        "url": _string(route.get("url")),
+    }
+
+
 def _connection_summary(connection: Mapping[str, Any]) -> JsonObject:
     route_id = _string(connection.get("route_id"))
     return {
@@ -249,6 +334,21 @@ def _connection_summary(connection: Mapping[str, Any]) -> JsonObject:
         "server_message_models": _message_models(connection.get("server_message")),
         "client_message_models": _message_models(connection.get("client_message")),
         "shard": f"{SHARD_ROOT}/routes/{_safe_file_stem(route_id)}.json",
+    }
+
+
+def _target_index_summary(target: Mapping[str, Any], routes: list[JsonObject]) -> JsonObject:
+    selected_routes = [
+        _route_id(route)
+        for route in routes
+        if _string(target.get("id")) and _target_selects_route(target, route)
+    ]
+    return {
+        "id": _string(target.get("id")),
+        "kind": _string(target.get("kind")),
+        "out_dir": target.get("out_dir"),
+        "role": _target_role(target),
+        "route_count": len(selected_routes),
     }
 
 

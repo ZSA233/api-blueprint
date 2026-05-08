@@ -15,6 +15,7 @@ from api_blueprint.contract import (
     build_agent_manifest,
     build_contract_graph,
     build_contract_shards,
+    build_index_manifest,
     diff_manifests,
     render_agent_markdown,
 )
@@ -58,7 +59,12 @@ def write_manifest(
     manifest_data = graph.to_manifest()
     if out_path is not None:
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        payload = build_agent_manifest(manifest_data) if profile == "agent" else manifest_data
+        if profile == "agent":
+            payload = build_agent_manifest(manifest_data)
+        elif profile == "index":
+            payload = build_index_manifest(manifest_data)
+        else:
+            payload = manifest_data
         out_path.write_text(
             json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
@@ -318,8 +324,13 @@ def generation_plan(
 def write_contract_target(graph: ContractGraph, target: ResolvedApiTargetConfig, project_root: Path) -> None:
     out_dir = target.out_dir or project_root
     out_dir.mkdir(parents=True, exist_ok=True)
-    formats = target.formats or ("json",)
+    formats = target.formats or ("index",)
     manifest_data = graph.to_manifest()
+    if "index" in formats:
+        (out_dir / "api-blueprint.index.json").write_text(
+            json.dumps(build_index_manifest(manifest_data), ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
     if "json" in formats:
         (out_dir / "api-blueprint.contract.json").write_text(
             json.dumps(manifest_data, ensure_ascii=False, indent=2, sort_keys=True) + "\n",

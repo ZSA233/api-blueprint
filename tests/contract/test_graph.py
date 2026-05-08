@@ -362,7 +362,7 @@ def test_agent_manifest_and_shards_are_compact_navigation_layers():
     assert route_shard["artifacts"]["typescript.client"]["files"]
     assert shards["index.json"]["counts"]["routes"] == 2
     assert "优先使用 `api-gen inspect` 按需查询 route/schema/files/errors" in markdown
-    assert "`api-gen inspect route <route_id> -c api-blueprint.toml`" in markdown
+    assert "`api-gen inspect route <route_id> [<route_id> ...] -c api-blueprint.toml`" in markdown
 
 
 def test_contract_artifacts_use_shared_selection_and_python_root_group_paths():

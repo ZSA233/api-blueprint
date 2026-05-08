@@ -360,6 +360,7 @@ def _prepare_blueprint_outputs(*, source_root: Path, target_root: Path) -> None:
 
 def _prepare_contract_outputs(target_root: Path) -> None:
     for name in (
+        "api-blueprint.index.json",
         "api-blueprint.contract.json",
         "api-blueprint.contract.md",
         "api-blueprint.agent.json",
@@ -474,11 +475,7 @@ def validate_example_snapshots(repo_root: Path, workspace: BlueprintExampleWorks
     examples_root = repo_root / "examples"
     _raise_on_snapshot_drift(
         (
-            (examples_root / "api-blueprint.contract.json", workspace.root / "api-blueprint.contract.json", "contract/json"),
-            (examples_root / "api-blueprint.contract.md", workspace.root / "api-blueprint.contract.md", "contract/markdown"),
-            (examples_root / "api-blueprint.agent.json", workspace.root / "api-blueprint.agent.json", "contract/agent-json"),
-            (examples_root / "api-blueprint.agent.md", workspace.root / "api-blueprint.agent.md", "contract/agent-markdown"),
-            (examples_root / "api-blueprint.contract.d", workspace.root / "api-blueprint.contract.d", "contract/shards"),
+            (examples_root / "api-blueprint.index.json", workspace.root / "api-blueprint.index.json", "contract/index"),
             (examples_root / "golang", workspace.golang_dir, "blueprint/golang"),
             (examples_root / "typescript", workspace.typescript_dir, "blueprint/typescript"),
             (examples_root / "kotlin", workspace.kotlin_dir, "blueprint/kotlin"),

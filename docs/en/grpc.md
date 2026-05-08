@@ -140,7 +140,7 @@ class CookiePartitionKey(Model):
 api-gen generate -c api-blueprint.toml --target grpc.proto
 api-gen generate -c api-blueprint.toml --target grpc.go
 api-gen generate -c api-blueprint.toml --target grpc.python
-api-gen manifest -c api-blueprint.toml --out api-blueprint.contract.json
+api-gen manifest -c api-blueprint.toml --profile full --out api-blueprint.contract.json
 api-gen diff old.contract.json new.contract.json
 api-gen check -c api-blueprint.toml
 ```

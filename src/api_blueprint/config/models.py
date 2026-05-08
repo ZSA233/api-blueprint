@@ -42,7 +42,9 @@ class TargetConfig(BaseModel):
     base_url: str | None = None
     base_url_expr: str | None = None
     package: str | None = None
-    formats: list[Literal["json", "markdown", "agent-json", "agent-markdown", "shards"]] = Field(default_factory=list)
+    formats: list[Literal["index", "json", "markdown", "agent-json", "agent-markdown", "shards"]] = Field(
+        default_factory=list
+    )
     version: WailsVersion | None = None
     frontend_mode: WailsFrontendMode = "external"
     overlay_name: str | None = None

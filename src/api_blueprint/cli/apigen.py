@@ -54,12 +54,18 @@ def explain_target(config: str = "./api-blueprint.toml", target_id: str = "") ->
 
 @api_gen.command("manifest")
 @click.option("-c", "--config", default="./api-blueprint.toml", help="配置文件")
-@click.option("--profile", type=click.Choice(("full", "agent")), default="full", show_default=True, help="manifest profile")
+@click.option(
+    "--profile",
+    type=click.Choice(("index", "full", "agent")),
+    default="index",
+    show_default=True,
+    help="manifest profile",
+)
 @click.option("--out", "out_path", required=False, type=click.Path(path_type=Path), help="manifest 输出路径")
 @click.option("--shards-dir", type=click.Path(path_type=Path), help="contract shards 输出目录")
 def manifest(
     config: str = "./api-blueprint.toml",
-    profile: str = "full",
+    profile: str = "index",
     out_path: Path | None = None,
     shards_dir: Path | None = None,
 ) -> None:
@@ -106,44 +112,62 @@ def inspect_routes(config: str = "./api-blueprint.toml", as_json: bool = False) 
 
 
 @inspect_group.command("route")
-@click.argument("route")
+@click.argument("routes", nargs=-1, required=True)
 @click.option("-c", "--config", default="./api-blueprint.toml", help="配置文件")
 @click.option("--json", "as_json", is_flag=True, help="输出 JSON")
-def inspect_route(route: str, config: str = "./api-blueprint.toml", as_json: bool = False) -> None:
-    payload = _inspection_call(lambda: inspection.inspect_route(config, route))
+def inspect_route(routes: tuple[str, ...], config: str = "./api-blueprint.toml", as_json: bool = False) -> None:
+    payload = _inspection_call(
+        lambda: inspection.inspect_route(config, routes[0])
+        if len(routes) == 1
+        else inspection.inspect_routes_detail(config, routes)
+    )
     _emit_inspection(payload, as_json=as_json, formatter=_format_inspect_route)
 
 
 @inspect_group.command("files")
 @click.option("-c", "--config", default="./api-blueprint.toml", help="配置文件")
-@click.option("--route", "route", required=True, help="route id / path / operation")
+@click.option("--route", "routes", multiple=True, required=True, help="route id / path / operation")
 @click.option("--target", "target_id", required=False, help="target id")
 @click.option("--json", "as_json", is_flag=True, help="输出 JSON")
 def inspect_files(
-    route: str,
+    routes: tuple[str, ...],
     config: str = "./api-blueprint.toml",
     target_id: str | None = None,
     as_json: bool = False,
 ) -> None:
-    payload = _inspection_call(lambda: inspection.inspect_files(config, route, target_id=target_id))
+    payload = _inspection_call(
+        lambda: inspection.inspect_files(config, routes[0], target_id=target_id)
+        if len(routes) == 1
+        else inspection.inspect_files_many(config, routes, target_id=target_id)
+    )
     _emit_inspection(payload, as_json=as_json, formatter=_format_inspect_files)
 
 
 @inspect_group.command("schema")
-@click.argument("schema")
+@click.argument("schemas", nargs=-1, required=True)
 @click.option("-c", "--config", default="./api-blueprint.toml", help="配置文件")
 @click.option("--json", "as_json", is_flag=True, help="输出 JSON")
-def inspect_schema(schema: str, config: str = "./api-blueprint.toml", as_json: bool = False) -> None:
-    payload = _inspection_call(lambda: inspection.inspect_schema(config, schema))
+def inspect_schema(schemas: tuple[str, ...], config: str = "./api-blueprint.toml", as_json: bool = False) -> None:
+    payload = _inspection_call(
+        lambda: inspection.inspect_schema(config, schemas[0])
+        if len(schemas) == 1
+        else inspection.inspect_schemas(config, schemas)
+    )
     _emit_inspection(payload, as_json=as_json, formatter=_format_inspect_schema)
 
 
 @inspect_group.command("errors")
 @click.option("-c", "--config", default="./api-blueprint.toml", help="配置文件")
-@click.option("--route", "route", required=False, help="route id / path / operation")
+@click.option("--route", "routes", multiple=True, required=False, help="route id / path / operation")
 @click.option("--json", "as_json", is_flag=True, help="输出 JSON")
-def inspect_errors(config: str = "./api-blueprint.toml", route: str | None = None, as_json: bool = False) -> None:
-    payload = _inspection_call(lambda: inspection.inspect_errors(config, route_query=route))
+def inspect_errors(config: str = "./api-blueprint.toml", routes: tuple[str, ...] = (), as_json: bool = False) -> None:
+    payload = _inspection_call(
+        lambda: inspection.inspect_errors(config, route_query=None)
+        if not routes
+        else inspection.inspect_errors(config, route_query=routes[0])
+        if len(routes) == 1
+        else inspection.inspect_errors_many(config, routes)
+    )
     _emit_inspection(payload, as_json=as_json, formatter=_format_inspect_errors)
 
 
@@ -189,6 +213,14 @@ def _format_inspect_routes(payload: dict[str, Any]) -> list[str]:
 
 
 def _format_inspect_route(payload: dict[str, Any]) -> list[str]:
+    if isinstance(payload.get("routes"), Sequence) and not isinstance(payload.get("routes"), (str, bytes)):
+        lines = [f"routes: {payload.get('count', 0)}"]
+        for route in _list_of_maps(payload.get("routes")):
+            if len(lines) > 1:
+                lines.append("")
+            lines.extend(_format_inspect_route(route))
+        return lines
+
     lines = [f"route: {payload.get('id')}"]
     methods = ",".join(str(method) for method in payload.get("methods", [])) or "-"
     lines.append(f"http: {methods} {payload.get('url')}")
@@ -216,12 +248,28 @@ def _format_inspect_route(payload: dict[str, Any]) -> list[str]:
 
 
 def _format_inspect_files(payload: dict[str, Any]) -> list[str]:
+    if isinstance(payload.get("routes"), Sequence) and not isinstance(payload.get("routes"), (str, bytes)):
+        lines = [f"routes: {payload.get('count', 0)}"]
+        for route in _list_of_maps(payload.get("routes")):
+            if len(lines) > 1:
+                lines.append("")
+            lines.extend(_format_inspect_files(route))
+        return lines
+
     lines = [f"route: {payload.get('route')}"]
     lines.extend(_format_artifacts(payload.get("targets", {})))
     return lines
 
 
 def _format_inspect_schema(payload: dict[str, Any]) -> list[str]:
+    if isinstance(payload.get("schemas"), Sequence) and not isinstance(payload.get("schemas"), (str, bytes)):
+        lines = [f"schemas: {payload.get('count', 0)}"]
+        for schema in _list_of_maps(payload.get("schemas")):
+            if len(lines) > 1:
+                lines.append("")
+            lines.extend(_format_inspect_schema(schema))
+        return lines
+
     schema = payload.get("schema") if isinstance(payload.get("schema"), Mapping) else {}
     lines = [f"schema: {payload.get('name')}", f"type: {schema.get('type') or schema.get('kind') or 'unknown'}"]
     fields = schema.get("fields")
@@ -235,6 +283,14 @@ def _format_inspect_schema(payload: dict[str, Any]) -> list[str]:
 
 
 def _format_inspect_errors(payload: dict[str, Any]) -> list[str]:
+    if isinstance(payload.get("routes"), Sequence) and not isinstance(payload.get("routes"), (str, bytes)):
+        lines = [f"routes: {payload.get('count', 0)}"]
+        for route in _list_of_maps(payload.get("routes")):
+            if len(lines) > 1:
+                lines.append("")
+            lines.extend(_format_inspect_errors(route))
+        return lines
+
     lines: list[str] = []
     if payload.get("route"):
         lines.append(f"route: {payload['route']}")

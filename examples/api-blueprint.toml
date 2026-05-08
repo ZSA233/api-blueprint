@@ -7,11 +7,9 @@ entrypoints = [
 ]
 
 # Unified targets example. Shortcut target tables are normalized into canonical targets.
-[[targets]]
+[[contract]]
 id = 'contract'
-kind = 'contract'
 out_dir = '.'
-formats = ['json', 'markdown', 'agent-json', 'agent-markdown', 'shards']
 
 [[go.server]]
 id = 'go.server'

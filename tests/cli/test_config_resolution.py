@@ -95,9 +95,8 @@ def test_alias_target_tables_normalize_to_vnext_targets(tmp_path) -> None:
     config_path = tmp_path / "api-blueprint.toml"
     config_path.write_text(
         """
-[[targets]]
+[[contract]]
 id = "contract"
-kind = "contract"
 out_dir = "."
 
 [[go.server]]
@@ -210,6 +209,27 @@ module = "pb"
     assert config.targets[9].proto_files[0].file == "api/demo.proto"
     assert config.targets[9].proto_files[0].service == "DemoService"
     assert config.targets[11].python_package_root == "pb"
+
+
+def test_contract_alias_table_normalizes_to_contract_target(tmp_path) -> None:
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[contract]]
+id = "contract"
+out_dir = "."
+formats = ["index"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    config = Config.load(config_path)
+
+    assert len(config.targets) == 1
+    assert config.targets[0].id == "contract"
+    assert config.targets[0].kind == "contract"
+    assert config.targets[0].formats == ["index"]
 
 
 def test_alias_target_tables_reject_explicit_kind(tmp_path) -> None:

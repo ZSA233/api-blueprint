@@ -1,6 +1,6 @@
 # Configuration
 
-`api-blueprint.toml` is the main config file for the documentation service and the unified generator. The 1.0 mainline uses `Blueprint -> ContractGraph -> targets`; `[[targets]]` is the canonical entrypoint, and shortcut tables such as `[[go.server]]`, `[[go.client]]`, `[[python.server]]`, `[[transport.http]]`, `[[grpc.proto]]`, and `[[grpc.go]]` are normalized into the same target list when config is loaded.
+`api-blueprint.toml` is the main config file for the documentation service and the unified generator. The 1.0 mainline uses `Blueprint -> ContractGraph -> targets`; `[[targets]]` is the canonical entrypoint, and shortcut tables such as `[[contract]]`, `[[go.server]]`, `[[go.client]]`, `[[python.server]]`, `[[transport.http]]`, `[[grpc.proto]]`, and `[[grpc.go]]` are normalized into the same target list when config is loaded.
 
 ## blueprint
 
@@ -20,11 +20,9 @@ entrypoints = ["blueprints.app:*"]
 ## targets
 
 ```toml
-[[targets]]
+[[contract]]
 id = "contract"
-kind = "contract"
 out_dir = "."
-formats = ["json"]
 
 [[go.server]]
 id = "go.server"
@@ -109,7 +107,7 @@ Shortcut tables infer `kind`, so they must not include an explicit `kind`. `id` 
 
 Core targets:
 
-- `contract`: emits `api-blueprint.contract.json`, `api-blueprint.contract.md`, `api-blueprint.agent.json`, `api-blueprint.agent.md`, and / or `api-blueprint.contract.d/` shards according to `formats`, with routes, schemas, connections, the error catalog, target plan, and capability registry. For daily work, prefer generating only `json` for diffs/archives and use `api-gen inspect` for on-demand AI/human queries; enable `agent-*` and `shards` for offline snapshots or a complete navigation bundle.
+- `contract`: when `formats` is omitted, emits only lightweight `api-blueprint.index.json` with the service / route / target catalog plus recommended `api-gen inspect` query commands. It does not inline schemas, the error catalog, route artifacts, or shard details. `formats = ["json"]` emits full `api-blueprint.contract.json` for diffs, archiving, or exhaustive fallback inspection; `markdown`, `agent-*`, and `shards` are useful for offline navigation bundles, archives, or shard snapshots.
 - `go-server`: emits Go server core. `out_dir` is the package root; route/provider/transport/error artifacts live under `routes`, `providers`, `transports`, and `runtime/errors`. If a project wants `/views` in the package path, set `out_dir` explicitly to `.../views`.
 - `go-client`: emits a preview Go client. RPC/query/json/form/binary HTTP calls are usable; legacy WS / STREAM / CHANNEL generate transport-neutral surfaces, and the default HTTP adapter returns an explicit unsupported error so projects can swap in a custom transport.
 - `typescript-client`: emits TypeScript client core that depends only on `ApiTransport`; `base_url` / `base_url_expr` are injected by transport facades.
@@ -153,10 +151,11 @@ Transport targets:
 api-gen list-targets -c api-blueprint.toml
 api-gen explain-target -c api-blueprint.toml --target go.server
 api-gen inspect routes -c api-blueprint.toml
-api-gen inspect route api.demo.post.testpost -c api-blueprint.toml
-api-gen inspect files -c api-blueprint.toml --route api.demo.post.testpost --target go.server
-api-gen inspect schema ApiDemoA -c api-blueprint.toml
-api-gen inspect errors -c api-blueprint.toml --route api.demo.post.testpost
+api-gen inspect route api.demo.post.testpost api.demo.channel.assistantsession -c api-blueprint.toml
+api-gen inspect files -c api-blueprint.toml --route api.demo.post.testpost --route api.demo.channel.assistantsession --target go.server
+api-gen inspect schema ApiDemoA RSP_TestPost -c api-blueprint.toml
+api-gen inspect errors -c api-blueprint.toml --route api.demo.post.testpost --route api.demo.channel.assistantsession
+api-gen manifest -c api-blueprint.toml --out api-blueprint.index.json
 api-gen manifest -c api-blueprint.toml --profile full --out api-blueprint.contract.json
 api-gen manifest -c api-blueprint.toml --profile agent --out api-blueprint.agent.json
 api-gen manifest -c api-blueprint.toml --shards-dir api-blueprint.contract.d
@@ -166,4 +165,4 @@ api-gen generate -c api-blueprint.toml
 api-gen generate -c api-blueprint.toml --target wails.v3
 ```
 
-`api-gen inspect` loads Blueprint from config and builds ContractGraph directly, so agents can query by route, schema, error, or target file index without generating `contract.d` first or opening generated source. `api-gen manifest --profile full` emits the full manifest; `--profile agent` emits the compact agent manifest; `--shards-dir` emits service / route / schema shards. `manifest.version` is the manifest schema compatibility version, for example `1.0`; `manifest.generator.version` comes from the package version source of truth. `api-gen check` builds ContractGraph first, then uses shared planner / capability metadata to validate target dependencies, routes, request kinds, and wrappers. Failing before generation is easier to maintain than writing a partial output tree.
+`api-gen inspect` loads Blueprint from config and builds ContractGraph directly, so agents can query by route, schema, error, or target file index without generating `contract.d` first or opening generated source. The `route` / `schema` subcommands accept multiple queries, while `files` / `errors` accept repeated `--route`, so an agent can retrieve details for related endpoints in one command. `api-gen manifest` defaults to the catalog-only lightweight index; `--profile full` emits the full manifest; `--profile agent` emits the compact agent manifest; `--shards-dir` emits service / route / schema shards. `manifest.version` is the manifest schema compatibility version, for example `1.0`; `manifest.generator.version` comes from the package version source of truth. `api-gen check` builds ContractGraph first, then uses shared planner / capability metadata to validate target dependencies, routes, request kinds, and wrappers. Failing before generation is easier to maintain than writing a partial output tree.

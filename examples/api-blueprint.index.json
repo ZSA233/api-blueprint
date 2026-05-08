@@ -1,0 +1,385 @@
+{
+  "agent_notes": [
+    "优先使用 `api-gen inspect` 按需查询 route/schema/files/errors；其次读取轻量 `api-blueprint.index.json` 查看接口目录；只有离线归档、diff 或需要完整快照时才读 full contract/shards，最后才看生成物",
+    "This index intentionally omits route schemas, errors, and generated file lists; use the `queries` commands for those details.",
+    "Do not open api-blueprint.contract.json by default; generate or read it only for diff, archiving, or exhaustive fallback."
+  ],
+  "counts": {
+    "connections": 2,
+    "errors": 2,
+    "routes": 20,
+    "schemas": 37,
+    "services": 4,
+    "targets": 14
+  },
+  "generator": {
+    "name": "api-blueprint",
+    "version": "1.0.0"
+  },
+  "kind": "api-blueprint.index",
+  "purpose": "Lightweight route catalog. Use inspect commands for route schemas, errors, generated files, and full details.",
+  "queries": {
+    "errors": "api-gen inspect errors --route <route-id> [--route <route-id> ...] -c api-blueprint.toml",
+    "files": "api-gen inspect files --route <route-id> [--route <route-id> ...] --target <target-id> -c api-blueprint.toml",
+    "full_contract": "api-gen manifest --profile full --out api-blueprint.contract.json -c api-blueprint.toml",
+    "route": "api-gen inspect route <route-id> [<route-id> ...] -c api-blueprint.toml",
+    "routes": "api-gen inspect routes -c api-blueprint.toml",
+    "schema": "api-gen inspect schema <SchemaName> [<SchemaName> ...] -c api-blueprint.toml"
+  },
+  "read_order": [
+    {
+      "path": "api-gen inspect",
+      "purpose": "Query exact route, schema, error, and generated file details on demand.",
+      "step": 1
+    },
+    {
+      "path": "api-blueprint.index.json",
+      "purpose": "Lightweight offline route catalog for choosing which route to inspect next.",
+      "step": 2
+    },
+    {
+      "path": "api-blueprint.contract.d/index.json",
+      "purpose": "Optional offline shard index when inspect is unavailable or a larger local snapshot is needed.",
+      "step": 3
+    },
+    {
+      "path": "api-blueprint.contract.json",
+      "purpose": "Explicit full fallback snapshot for diff, archiving, and exhaustive contract inspection.",
+      "step": 4
+    },
+    {
+      "path": "generated artifacts",
+      "purpose": "Read generated source only after locating the relevant target-specific files.",
+      "step": 5
+    }
+  ],
+  "routes": [
+    {
+      "id": "api.api.ws.ws",
+      "kind": "legacy_ws",
+      "methods": [],
+      "operation": "Ws",
+      "service_id": "api.api",
+      "url": "/api/ws"
+    },
+    {
+      "id": "api.demo.get.abc",
+      "kind": "rpc",
+      "methods": [
+        "GET"
+      ],
+      "operation": "Abc",
+      "service_id": "api.demo",
+      "url": "/api/demo/abc"
+    },
+    {
+      "id": "api.demo.post.testpost",
+      "kind": "rpc",
+      "methods": [
+        "POST"
+      ],
+      "operation": "TestPost",
+      "service_id": "api.demo",
+      "url": "/api/demo/test_post"
+    },
+    {
+      "id": "api.demo.put.z1put",
+      "kind": "rpc",
+      "methods": [
+        "PUT"
+      ],
+      "operation": "Z1put",
+      "service_id": "api.demo",
+      "url": "/api/demo/1put"
+    },
+    {
+      "id": "api.demo.delete.delete",
+      "kind": "rpc",
+      "methods": [
+        "DELETE"
+      ],
+      "operation": "Delete",
+      "service_id": "api.demo",
+      "url": "/api/demo/delete$"
+    },
+    {
+      "id": "api.demo.ws.ws",
+      "kind": "legacy_ws",
+      "methods": [],
+      "operation": "Ws",
+      "service_id": "api.demo",
+      "url": "/api/demo/ws"
+    },
+    {
+      "id": "api.demo.stream.sweepevents",
+      "kind": "stream",
+      "methods": [],
+      "operation": "SweepEvents",
+      "service_id": "api.demo",
+      "url": "/api/demo/sweep-events"
+    },
+    {
+      "id": "api.demo.channel.assistantsession",
+      "kind": "channel",
+      "methods": [],
+      "operation": "AssistantSession",
+      "service_id": "api.demo",
+      "url": "/api/demo/assistant-session"
+    },
+    {
+      "id": "api.demo.post.postdeprecated",
+      "kind": "rpc",
+      "methods": [
+        "POST"
+      ],
+      "operation": "PostDeprecated",
+      "service_id": "api.demo",
+      "url": "/api/demo/post_deprecated"
+    },
+    {
+      "id": "api.demo.post.raw",
+      "kind": "rpc",
+      "methods": [
+        "POST"
+      ],
+      "operation": "Raw",
+      "service_id": "api.demo",
+      "url": "/api/demo/raw"
+    },
+    {
+      "id": "api.demo.post.mapmodel",
+      "kind": "rpc",
+      "methods": [
+        "POST"
+      ],
+      "operation": "MapModel",
+      "service_id": "api.demo",
+      "url": "/api/demo/map_model"
+    },
+    {
+      "id": "api.hello.get.abc",
+      "kind": "rpc",
+      "methods": [
+        "GET"
+      ],
+      "operation": "Abc",
+      "service_id": "api.hello",
+      "url": "/api/hello/abc"
+    },
+    {
+      "id": "api.hello.get.mapenum",
+      "kind": "rpc",
+      "methods": [
+        "GET"
+      ],
+      "operation": "MapEnum",
+      "service_id": "api.hello",
+      "url": "/api/hello/map-enum"
+    },
+    {
+      "id": "api.hello.get.listenum",
+      "kind": "rpc",
+      "methods": [
+        "GET"
+      ],
+      "operation": "ListEnum",
+      "service_id": "api.hello",
+      "url": "/api/hello/list-enum"
+    },
+    {
+      "id": "api.hello.get.string",
+      "kind": "rpc",
+      "methods": [
+        "GET"
+      ],
+      "operation": "String",
+      "service_id": "api.hello",
+      "url": "/api/hello/string"
+    },
+    {
+      "id": "api.hello.get.uint64",
+      "kind": "rpc",
+      "methods": [
+        "GET"
+      ],
+      "operation": "Uint64",
+      "service_id": "api.hello",
+      "url": "/api/hello/uint64"
+    },
+    {
+      "id": "api.hello.get.stringemun",
+      "kind": "rpc",
+      "methods": [
+        "GET"
+      ],
+      "operation": "StringEmun",
+      "service_id": "api.hello",
+      "url": "/api/hello/string-emun"
+    },
+    {
+      "id": "api.hello.get.helloway",
+      "kind": "rpc",
+      "methods": [
+        "GET"
+      ],
+      "operation": "HelloWay",
+      "service_id": "api.hello",
+      "url": "/api/hello/hello-way"
+    },
+    {
+      "id": "static.static.get.docjson",
+      "kind": "rpc",
+      "methods": [
+        "GET"
+      ],
+      "operation": "DocJson",
+      "service_id": "static.static",
+      "url": "/static/doc.json"
+    },
+    {
+      "id": "static.static.get.dochaha",
+      "kind": "rpc",
+      "methods": [
+        "GET"
+      ],
+      "operation": "Dochaha",
+      "service_id": "static.static",
+      "url": "/static/dochaha"
+    }
+  ],
+  "services": [
+    {
+      "group": "api",
+      "id": "api.api",
+      "name": "ApiService",
+      "path": "/api",
+      "root": "api",
+      "route_count": 1
+    },
+    {
+      "group": "demo",
+      "id": "api.demo",
+      "name": "DemoService",
+      "path": "/api/demo",
+      "root": "api",
+      "route_count": 10
+    },
+    {
+      "group": "hello",
+      "id": "api.hello",
+      "name": "HelloService",
+      "path": "/api/hello",
+      "root": "api",
+      "route_count": 7
+    },
+    {
+      "group": "static",
+      "id": "static.static",
+      "name": "StaticService",
+      "path": "/static",
+      "root": "static",
+      "route_count": 2
+    }
+  ],
+  "targets": [
+    {
+      "id": "contract",
+      "kind": "contract",
+      "out_dir": ".",
+      "role": "contract",
+      "route_count": 20
+    },
+    {
+      "id": "go.server",
+      "kind": "go-server",
+      "out_dir": "golang/server/views",
+      "role": "server",
+      "route_count": 20
+    },
+    {
+      "id": "go.client",
+      "kind": "go-client",
+      "out_dir": "golang/client",
+      "role": "client",
+      "route_count": 20
+    },
+    {
+      "id": "typescript.client",
+      "kind": "typescript-client",
+      "out_dir": "typescript",
+      "role": "client",
+      "route_count": 20
+    },
+    {
+      "id": "kotlin.client",
+      "kind": "kotlin-client",
+      "out_dir": "kotlin",
+      "role": "client",
+      "route_count": 13
+    },
+    {
+      "id": "python.server",
+      "kind": "python-server",
+      "out_dir": "python/server",
+      "role": "server",
+      "route_count": 20
+    },
+    {
+      "id": "python.client",
+      "kind": "python-client",
+      "out_dir": "python/client",
+      "role": "client",
+      "route_count": 20
+    },
+    {
+      "id": "http",
+      "kind": "http-transport",
+      "out_dir": null,
+      "role": "transport",
+      "route_count": 20
+    },
+    {
+      "id": "http.python",
+      "kind": "http-transport",
+      "out_dir": null,
+      "role": "transport",
+      "route_count": 20
+    },
+    {
+      "id": "wails.v3",
+      "kind": "wails-transport",
+      "out_dir": null,
+      "role": "transport",
+      "route_count": 20
+    },
+    {
+      "id": "wails.v2",
+      "kind": "wails-transport",
+      "out_dir": null,
+      "role": "transport",
+      "route_count": 20
+    },
+    {
+      "id": "grpc.proto",
+      "kind": "grpc-proto",
+      "out_dir": "grpc/protos",
+      "role": "grpc",
+      "route_count": 20
+    },
+    {
+      "id": "grpc.go",
+      "kind": "grpc-go",
+      "out_dir": "grpc/go",
+      "role": "grpc",
+      "route_count": 20
+    },
+    {
+      "id": "grpc.python",
+      "kind": "grpc-python",
+      "out_dir": "grpc/python",
+      "role": "grpc",
+      "route_count": 20
+    }
+  ],
+  "version": "1.0"
+}

@@ -48,6 +48,19 @@ def inspect_routes(config_path: str | Path | None) -> JsonObject:
 
 def inspect_route(config_path: str | Path | None, route_query: str) -> JsonObject:
     context = load_inspection_context(config_path)
+    return _inspect_route_from_context(context, route_query)
+
+
+def inspect_routes_detail(config_path: str | Path | None, route_queries: Sequence[str]) -> JsonObject:
+    context = load_inspection_context(config_path)
+    routes = [_inspect_route_from_context(context, route_query) for route_query in route_queries]
+    return {
+        "count": len(routes),
+        "routes": routes,
+    }
+
+
+def _inspect_route_from_context(context: InspectionContext, route_query: str) -> JsonObject:
     route = _find_route(context.agent, route_query)
     route_id = _string(route.get("id"))
     return {
@@ -69,6 +82,22 @@ def inspect_route(config_path: str | Path | None, route_query: str) -> JsonObjec
 
 def inspect_files(config_path: str | Path | None, route_query: str, target_id: str | None = None) -> JsonObject:
     route = inspect_route(config_path, route_query)
+    return _inspect_files_from_route(route, target_id=target_id)
+
+
+def inspect_files_many(
+    config_path: str | Path | None,
+    route_queries: Sequence[str],
+    target_id: str | None = None,
+) -> JsonObject:
+    routes = inspect_routes_detail(config_path, route_queries)["routes"]
+    return {
+        "count": len(routes),
+        "routes": [_inspect_files_from_route(route, target_id=target_id) for route in _list_of_maps(routes)],
+    }
+
+
+def _inspect_files_from_route(route: Mapping[str, Any], target_id: str | None = None) -> JsonObject:
     artifacts = route.get("artifacts") if isinstance(route.get("artifacts"), Mapping) else {}
     selected: dict[str, object] = {}
     for artifact_target_id, artifact in artifacts.items():
@@ -85,6 +114,19 @@ def inspect_files(config_path: str | Path | None, route_query: str, target_id: s
 
 def inspect_schema(config_path: str | Path | None, schema_query: str) -> JsonObject:
     context = load_inspection_context(config_path)
+    return _inspect_schema_from_context(context, schema_query)
+
+
+def inspect_schemas(config_path: str | Path | None, schema_queries: Sequence[str]) -> JsonObject:
+    context = load_inspection_context(config_path)
+    schemas = [_inspect_schema_from_context(context, schema_query) for schema_query in schema_queries]
+    return {
+        "count": len(schemas),
+        "schemas": schemas,
+    }
+
+
+def _inspect_schema_from_context(context: InspectionContext, schema_query: str) -> JsonObject:
     schema_name = _find_schema_name(context.manifest, schema_query)
     raw_schemas = context.manifest.get("schemas")
     schemas = raw_schemas if isinstance(raw_schemas, Mapping) else {}
@@ -104,6 +146,20 @@ def inspect_errors(config_path: str | Path | None, route_query: str | None = Non
     if route_query is None:
         return {"count": len(errors), "errors": errors}
 
+    return _inspect_route_errors(context, errors, route_query)
+
+
+def inspect_errors_many(config_path: str | Path | None, route_queries: Sequence[str]) -> JsonObject:
+    context = load_inspection_context(config_path)
+    errors = _list_of_maps(context.manifest.get("errors"))
+    routes = [_inspect_route_errors(context, errors, route_query) for route_query in route_queries]
+    return {
+        "count": len(routes),
+        "routes": routes,
+    }
+
+
+def _inspect_route_errors(context: InspectionContext, errors: list[JsonObject], route_query: str) -> JsonObject:
     route = _find_route(context.agent, route_query)
     route_error_ids = {str(error_id) for error_id in route.get("errors", []) if error_id is not None}
     selected = [error for error in errors if _string(error.get("id")) in route_error_ids]
