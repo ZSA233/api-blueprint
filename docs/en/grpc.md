@@ -48,6 +48,8 @@ module = "pb"
 
 Go/Python targets generate only protobuf/gRPC stubs, not business service implementations.
 
+When you run `api-gen generate --target grpc.*`, `grpc-proto` logs each written `.proto` file, and `grpc-go` / `grpc-python` log toolchain execution and completion. These are generator-owned outputs, so they do not use content-level skip semantics.
+
 The repository commits `examples/grpc/protos/`, `examples/grpc/go/`, and `examples/grpc/python/` snapshots so users can inspect actual proto, Go stub, and Python stub output. There is currently no `grpc-typescript` target; `examples/typescript/` demonstrates API Blueprint's TypeScript HTTP/Wails client artifacts, not gRPC TypeScript stubs.
 
 Handwritten proto direct compilation example:

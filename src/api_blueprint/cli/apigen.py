@@ -74,7 +74,9 @@ def check(config: str = "./api-blueprint.toml") -> None:
 @click.option("-c", "--config", default="./api-blueprint.toml", help="配置文件")
 @click.option("--target", "target_ids", multiple=True, help="仅生成指定 target id")
 def generate(config: str = "./api-blueprint.toml", target_ids: tuple[str, ...] = ()) -> None:
+    planned = generator.generation_plan(generator.list_targets(config), target_ids)
     generator.generate(config, target_ids=target_ids)
+    click.echo(f"ok: generated {len(planned)} target(s)")
 
 
 @api_gen.group("inspect")

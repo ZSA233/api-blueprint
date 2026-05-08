@@ -102,6 +102,8 @@ api-doc-server -c api-blueprint.toml
 api-gen generate -c api-blueprint.toml
 ```
 
+生成器拥有的文件会直接写出并记录进度，保留的用户扩展文件才会使用 skip 语义。
+
 TypeScript、Kotlin、Python client 的 `base_url` / `base_url_expr` 由 HTTP transport adapter / factory 使用；共享 route/runtime client 保持 transport-neutral。
 
 ## 最小配置

@@ -695,6 +695,28 @@ entrypoints = ["blueprints.app:bp"]
     assert result.exit_code == 0, result.output
 
 
+def test_api_gen_generate_reports_success(tmp_path):
+    _write_blueprint(tmp_path)
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[blueprint]
+entrypoints = ["blueprints.app:bp"]
+
+[[contract]]
+id = "contract"
+out_dir = "."
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(api_gen, ["generate", "-c", str(config_path), "--target", "contract"])
+
+    assert result.exit_code == 0, result.output
+    assert "ok: generated 1 target(s)" in result.output
+
+
 def test_api_gen_module_does_not_expose_legacy_split_commands() -> None:
     for name in ("gen_golang", "gen_typescript", "gen_kotlin", "gen_grpc", "gen_wails"):
         assert not hasattr(apigen_module, name)

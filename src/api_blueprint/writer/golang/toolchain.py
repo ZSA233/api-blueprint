@@ -68,7 +68,7 @@ class GolangToolchain:
     ) -> ResolvedGoModule:
         if module == "":
             module = None
-        working_dir = Path(path).absolute()
+        working_dir = Path(path).resolve()
         gmods = self.read_gomodule(working_dir)
         if len(gmods) > 1 and not module:
             raise ModuleNotFoundError(
@@ -84,7 +84,7 @@ class GolangToolchain:
                 )
             if module is not None and module != mod:
                 continue
-            module_dir = Path(mod_dir)
+            module_dir = Path(mod_dir).resolve()
             return ResolvedGoModule(
                 module=mod,
                 module_dir=module_dir,

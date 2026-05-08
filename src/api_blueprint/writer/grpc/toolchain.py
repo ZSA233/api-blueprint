@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import re
 import shutil
@@ -10,6 +11,10 @@ from pathlib import Path
 from typing import Any, Generator, Sequence
 
 from api_blueprint.config import ResolvedApiTargetConfig
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+logger = logging.getLogger("GrpcToolchain")
+logger.setLevel(logging.INFO)
 
 
 SubprocessRunner = Callable[..., subprocess.CompletedProcess[Any]]
@@ -46,6 +51,14 @@ def generate_go_stubs(
     files = select_proto_files(source_root, target.files)
     target.out_dir.mkdir(parents=True, exist_ok=True)
     go_options, go_grpc_options = _go_output_options(target)
+    file_list = ", ".join(path.as_posix() for path in files)
+    logger.info(
+        "[*] Running gRPC Go stubs: target[%s] cwd=%s out=%s files=%s",
+        target.id,
+        source_root.as_posix(),
+        target.out_dir.as_posix(),
+        file_list,
+    )
     command = [
         "protoc",
         *_include_args(source_root, (proto_root, *target.import_roots)),
@@ -56,6 +69,7 @@ def generate_go_stubs(
         *[path.as_posix() for path in files],
     ]
     runner(command, cwd=source_root, check=True)
+    logger.info("[+] Generated Go gRPC stubs: target[%s]", target.id)
 
 
 def generate_python_stubs(
@@ -75,6 +89,14 @@ def generate_python_stubs(
 
     output_root = _python_output_root(target)
     output_root.mkdir(parents=True, exist_ok=True)
+    file_list = ", ".join(path.as_posix() for path in files)
+    logger.info(
+        "[*] Running gRPC Python stubs: target[%s] cwd=%s out=%s files=%s",
+        target.id,
+        source_root.as_posix(),
+        output_root.as_posix(),
+        file_list,
+    )
     args = [
         "grpc_tools.protoc",
         *_include_args(source_root, (proto_root, *target.import_roots, builtin_proto_root)),
@@ -93,6 +115,7 @@ def generate_python_stubs(
     _ensure_python_packages(output_root)
     if target.python_package_root:
         _rewrite_python_imports(output_root, _python_import_root(target.python_package_root))
+    logger.info("[+] Generated Python gRPC stubs: target[%s]", target.id)
 
 
 def _require_target_out_dir(target: ResolvedApiTargetConfig) -> None:

@@ -27,6 +27,11 @@ if TYPE_CHECKING:
     from .writer import TypeScriptWriter
 
 SHARED_MODULE = RUNTIME_MODULE
+_SAFE_LEGACY_TS_PASSTHROUGHS: dict[str, set[str]] = {
+    "client.ts": {"export * from './gen_client';", 'export * from "./gen_client";'},
+    "models.ts": {"export * from './gen_models';", 'export * from "./gen_models";'},
+    "index.ts": {"export * from './gen_index';", 'export * from "./gen_index";'},
+}
 
 
 def _group_module_key(slug: str, *, root: bool = False) -> str:
@@ -1048,20 +1053,69 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
         root_dir = self.writer.working_dir / self.package
         if not root_dir.exists():
             return
-        legacy_shared = root_dir / "(shared)"
-        if legacy_shared.exists():
-            shutil.rmtree(legacy_shared)
+        removable_dirs: list[Path] = []
+        blocking_files: list[Path] = []
+        for legacy_shared in (root_dir / "(shared)", root_dir / "shared"):
+            if legacy_shared.exists():
+                removable, blocking = self._inspect_legacy_generated_dir(legacy_shared)
+                if removable:
+                    removable_dirs.append(legacy_shared)
+                blocking_files.extend(blocking)
         legacy_core = root_dir / "core"
         if legacy_core.exists():
-            shutil.rmtree(legacy_core)
+            removable, blocking = self._inspect_legacy_generated_dir(legacy_core)
+            if removable:
+                removable_dirs.append(legacy_core)
+            blocking_files.extend(blocking)
         for legacy_transport in ("http", "wailsv2", "wailsv3"):
             legacy_dir = root_dir / legacy_transport
             if legacy_dir.exists():
-                shutil.rmtree(legacy_dir)
+                removable, blocking = self._inspect_legacy_generated_dir(legacy_dir)
+                if removable:
+                    removable_dirs.append(legacy_dir)
+                blocking_files.extend(blocking)
         for group in self.groups.values():
             legacy_group = root_dir / group.slug
             if legacy_group.exists():
-                shutil.rmtree(legacy_group)
-            legacy_root_group = root_dir / self.writer.routes_dir_name / "_root"
-            if legacy_root_group.exists():
-                shutil.rmtree(legacy_root_group)
+                removable, blocking = self._inspect_legacy_generated_dir(legacy_group)
+                if removable:
+                    removable_dirs.append(legacy_group)
+                blocking_files.extend(blocking)
+        legacy_root_group = root_dir / self.writer.routes_dir_name / "_root"
+        if legacy_root_group.exists():
+            removable, blocking = self._inspect_legacy_generated_dir(legacy_root_group)
+            if removable:
+                removable_dirs.append(legacy_root_group)
+            blocking_files.extend(blocking)
+        if blocking_files:
+            files = ", ".join(self._portable_legacy_path(path) for path in blocking_files)
+            raise ValueError(f"legacy generated layout contains user-owned or unknown files: {files}")
+        for path in removable_dirs:
+            shutil.rmtree(path)
+
+    def _inspect_legacy_generated_dir(self, root: Path) -> tuple[bool, list[Path]]:
+        blocking: list[Path] = []
+        for path in sorted(root.rglob("*")):
+            if not path.is_file():
+                continue
+            status = self._legacy_generated_path_status(path)
+            if status == "generated":
+                continue
+            blocking.append(path)
+        return not blocking, blocking
+
+    def _legacy_generated_path_status(self, path: Path) -> str:
+        if path.name.startswith("gen_"):
+            return "generated"
+        if path.name in _SAFE_LEGACY_TS_PASSTHROUGHS:
+            source = path.read_text(encoding="utf-8").strip()
+            if source in _SAFE_LEGACY_TS_PASSTHROUGHS[path.name]:
+                return "generated"
+            return "user"
+        return "unknown"
+
+    def _portable_legacy_path(self, path: Path) -> str:
+        try:
+            return path.relative_to(self.writer.working_dir).as_posix()
+        except ValueError:
+            return path.as_posix()

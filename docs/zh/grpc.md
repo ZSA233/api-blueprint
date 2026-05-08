@@ -48,6 +48,8 @@ module = "pb"
 
 Go/Python target 只生成 protobuf/gRPC stub，不生成业务 service 实现。
 
+执行 `api-gen generate --target grpc.*` 时，`grpc-proto` 会记录每个写出的 `.proto` 文件，`grpc-go` / `grpc-python` 会记录 stub 工具链执行与完成。它们都属于生成器拥有输出，不使用内容级 skip 语义。
+
 仓库示例提交了 `examples/grpc/protos/`、`examples/grpc/go/` 与 `examples/grpc/python/` 快照，可直接查看 proto、Go stub 和 Python stub 的实际输出。当前没有 `grpc-typescript` target；`examples/typescript/` 展示的是 API Blueprint 的 TypeScript HTTP/Wails client 产物，不是 gRPC TypeScript stub。
 
 手写 proto 直编示例：

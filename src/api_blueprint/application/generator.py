@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import shutil
 from pathlib import Path
@@ -25,6 +26,10 @@ from api_blueprint.writer.core.planning import (
     target_capability_manifest,
     target_selects_route,
 )
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+logger = logging.getLogger("ApplicationGenerator")
+logger.setLevel(logging.INFO)
 
 
 TARGET_CAPABILITY_REGISTRY: dict[str, dict[str, object]] = target_capability_manifest()
@@ -122,7 +127,7 @@ def check(config_path: str | Path | None) -> None:
 
 def generate(config_path: str | Path | None, target_ids: Sequence[str] = ()) -> None:
     from api_blueprint.writer import golang, kotlin, python as python_writer, typescript
-    from api_blueprint.writer.grpc.proto_writer import render_proto_files
+    from api_blueprint.writer.grpc.proto_writer import render_proto_files, write_proto_files
     from api_blueprint.writer.grpc import toolchain as grpc_toolchain
 
     resolved = resolve_config(config_path)
@@ -139,7 +144,9 @@ def generate(config_path: str | Path | None, target_ids: Sequence[str] = ()) -> 
 
     def generate_target(target: ResolvedApiTargetConfig) -> None:
         if target.id in generated:
+            logger.info("[.] Skipped target: %s (already generated)", target.id)
             return
+        logger.info("[*] Generating target: %s (%s)", target.id, target.kind)
 
         if target.kind == "contract":
             write_contract_target(graph, target, project.resolved.project_root)
@@ -229,10 +236,7 @@ def generate(config_path: str | Path | None, target_ids: Sequence[str] = ()) -> 
                 go_package_prefix=target.go_package_prefix or "",
                 proto_files=target.proto_files,
             )
-            for relative, text in files.items():
-                file_path = output / relative
-                file_path.parent.mkdir(parents=True, exist_ok=True)
-                file_path.write_text(text, encoding="utf-8")
+            write_proto_files(output, files)
         elif target.kind in {"grpc-go", "grpc-python"}:
             if target.proto is not None:
                 proto_target = target_map[target.proto]

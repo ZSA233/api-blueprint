@@ -3,6 +3,8 @@ from __future__ import annotations
 import shutil
 import subprocess
 
+import pytest
+
 from api_blueprint.contract import build_contract_graph
 from api_blueprint.engine import Blueprint, Error, Model, Toast, provider
 from api_blueprint.engine.model import String
@@ -703,3 +705,34 @@ go 1.23.8
     assert not (package_root / "views").exists()
     assert not (package_root.parent / "errors").exists()
     assert (package_root / "routes" / "api" / "demo" / "gen_interface.go").is_file()
+
+
+def test_golang_writer_blocks_legacy_cleanup_when_user_impl_exists(tmp_path):
+    package_root = (tmp_path / "golang" / "server" / "views").resolve()
+    package_root.mkdir(parents=True)
+    (package_root.parent / "go.mod").write_text(
+        """
+module example.com/generated/golang/server
+
+go 1.23.8
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    legacy_providers = package_root / "views" / "providers"
+    legacy_providers.mkdir(parents=True)
+    user_impl = legacy_providers / "impl_provider.go"
+    user_impl.write_text("// user-owned implementation\n", encoding="utf-8")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.GET("/ping").RSP()
+
+    writer = GolangWriter(package_root, module="example.com/generated/golang/server")
+    writer.register(bp)
+
+    with pytest.raises(ValueError, match="legacy generated layout contains user-owned or unknown files"):
+        writer.gen()
+
+    assert user_impl.exists()
+    assert not (package_root / "routes").exists()

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -32,3 +33,22 @@ def test_resolve_module_import_turns_command_line_arguments_into_module_not_foun
     toolchain = GolangToolchain(logging.getLogger("test-golang-toolchain"))
     with pytest.raises(ModuleNotFoundError, match="找不到 gomodule"):
         toolchain.resolve_module_import(tmp_path, label="[wails]")
+
+
+def test_resolve_module_import_normalizes_real_paths(monkeypatch, tmp_path):
+    real_root = tmp_path / "real"
+    real_root.mkdir()
+    link_root = tmp_path / "link"
+    link_root.symlink_to(real_root, target_is_directory=True)
+
+    monkeypatch.setattr(
+        GolangToolchain,
+        "read_gomodule",
+        staticmethod(lambda _path: [("example.com/demo", str(real_root.resolve()))]),
+    )
+
+    toolchain = GolangToolchain(logging.getLogger("test-golang-toolchain"))
+    resolved = toolchain.resolve_module_import(Path(link_root), module="example.com/demo", label="[go]")
+
+    assert resolved.module == "example.com/demo"
+    assert resolved.import_path == "example.com/demo"

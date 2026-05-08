@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 
 from api_blueprint.application import generator
@@ -57,6 +58,60 @@ go_package_prefix = "example.com/project/grpc/go"
     proto = tmp_path / "grpc" / "protos" / "api" / "demo.proto"
     assert proto.is_file()
     assert "rpc Ping (PingRequest) returns (PingResponse);" in proto.read_text(encoding="utf-8")
+
+
+def test_vnext_application_generate_logs_grpc_target_lifecycle(
+    monkeypatch,
+    tmp_path: Path,
+    caplog,
+) -> None:
+    _write_package(
+        tmp_path,
+        """
+from api_blueprint.engine import Blueprint
+from api_blueprint.engine.model import String
+
+bp = Blueprint(root="/api")
+with bp.group("/demo") as views:
+    views.GET("/ping").RSP(message=String(description="message"))
+""",
+    )
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[blueprint]
+entrypoints = ["blueprints.app:bp"]
+
+[[targets]]
+id = "grpc.proto"
+kind = "grpc-proto"
+out_dir = "grpc/protos"
+package = "example.api"
+
+[[targets]]
+id = "grpc.go"
+kind = "grpc-go"
+proto = "grpc.proto"
+out_dir = "grpc/go"
+files = ["api/**/*.proto"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    def fake_generate_go_stubs(proto_root: Path, target: object) -> None:
+        return None
+
+    monkeypatch.setattr("api_blueprint.writer.grpc.toolchain.generate_go_stubs", fake_generate_go_stubs)
+    caplog.set_level(logging.INFO)
+
+    generator.generate(config_path, target_ids=("grpc.go",))
+
+    messages = [record.getMessage() for record in caplog.records]
+    assert any("[*] Generating target: grpc.proto (grpc-proto)" in message for message in messages)
+    assert any("[*] Generating target: grpc.go (grpc-go)" in message for message in messages)
+    assert any("[.] Skipped target: grpc.proto (already generated)" in message for message in messages)
+    assert any("[+] Written:" in message and "grpc/protos/api/demo.proto" in message for message in messages)
 
 
 def test_vnext_application_check_honors_kotlin_target_exclude(tmp_path: Path) -> None:

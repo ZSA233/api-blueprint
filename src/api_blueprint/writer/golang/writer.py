@@ -4,7 +4,7 @@ import logging
 import shutil
 from contextlib import contextmanager
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Any, Generator, Literal, Mapping, Optional, Sequence, Set
+from typing import IO, TYPE_CHECKING, Any, Generator, Iterable, Literal, Mapping, Optional, Sequence, Set
 
 from api_blueprint.engine.connection import ConnectionKind
 from api_blueprint.engine.model import iter_error_models, iter_model_vars
@@ -216,12 +216,24 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
     def cleanup_legacy_output_roots(self) -> None:
         if self.views_package:
             return
+        removable_dirs: list[Path] = []
+        blocking_files: list[Path] = []
         legacy_views_dir = self.working_dir / PackageName.VIEWS.value
         if self._looks_like_legacy_generated_go_root(legacy_views_dir):
-            shutil.rmtree(legacy_views_dir)
+            removable, blocking = self._inspect_legacy_generated_dir(legacy_views_dir)
+            if removable:
+                removable_dirs.append(legacy_views_dir)
+            blocking_files.extend(blocking)
         for legacy_errors_dir in (self.working_dir / PackageName.ERROR.value, self.working_dir.parent / PackageName.ERROR.value):
             if self._looks_like_legacy_generated_errors_dir(legacy_errors_dir):
-                shutil.rmtree(legacy_errors_dir)
+                removable, blocking = self._inspect_legacy_generated_dir(legacy_errors_dir)
+                if removable:
+                    removable_dirs.append(legacy_errors_dir)
+                blocking_files.extend(blocking)
+        if blocking_files:
+            raise ValueError(self._legacy_cleanup_error_message(blocking_files))
+        for path in removable_dirs:
+            shutil.rmtree(path)
 
     @staticmethod
     def _looks_like_legacy_generated_go_root(path: Path) -> bool:
@@ -241,6 +253,47 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
             if "type CodeErrInterface interface" in text or "func New(code int, message string) *Error" in text:
                 return True
         return any(child.is_dir() and (child / "gen_errors.go").is_file() for child in path.iterdir())
+
+    def _inspect_legacy_generated_dir(self, root: Path) -> tuple[bool, list[Path]]:
+        blocking: list[Path] = []
+        for path in self._iter_legacy_files(root):
+            status = self._legacy_generated_path_status(path)
+            if status == "generated":
+                continue
+            blocking.append(path)
+        return not blocking, blocking
+
+    @staticmethod
+    def _iter_legacy_files(root: Path) -> Iterable[Path]:
+        for path in sorted(root.rglob("*")):
+            if path.is_file():
+                yield path
+
+    @staticmethod
+    def _legacy_generated_path_status(path: Path) -> Literal["generated", "user", "unknown"]:
+        name = path.name
+        if name.startswith("gen_"):
+            return "generated"
+        if name == "engine.go":
+            return "generated"
+        if name == "errors.go":
+            text = path.read_text(encoding="utf-8")
+            if "type CodeErrInterface interface" in text or "func New(code int, message string) *Error" in text:
+                return "generated"
+            return "unknown"
+        if name == "impl.go" or name.startswith("impl_"):
+            return "user"
+        return "unknown"
+
+    def _legacy_cleanup_error_message(self, blocking_files: Sequence[Path]) -> str:
+        files = ", ".join(self._portable_legacy_path(path) for path in blocking_files)
+        return f"legacy generated layout contains user-owned or unknown files: {files}"
+
+    def _portable_legacy_path(self, path: Path) -> str:
+        try:
+            return path.relative_to(self.working_dir).as_posix()
+        except ValueError:
+            return path.as_posix()
 
     def gen_errors(self) -> None:
         for error_group in self.error_vars():

@@ -102,6 +102,8 @@ api-doc-server -c api-blueprint.toml
 api-gen generate -c api-blueprint.toml
 ```
 
+Generator-owned files are written with progress logs, while preserved user extension files are the ones that use skip semantics.
+
 For TypeScript, Kotlin, and Python clients, `base_url` / `base_url_expr` are owned by the HTTP transport adapter / factory; shared route/runtime clients stay transport-neutral.
 
 ## Minimal Configuration

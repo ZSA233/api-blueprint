@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -80,6 +81,30 @@ def test_grpc_go_toolchain_runs_protoc_with_selected_proto_files(
     assert f"--go-grpc_out={target.out_dir.as_posix()}" in command
     assert "--go-grpc_opt=paths=source_relative" in command
     assert command[-1] == "api/demo.proto"
+
+
+def test_grpc_go_toolchain_logs_execution(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    proto_root = tmp_path / "protos"
+    (proto_root / "api").mkdir(parents=True)
+    (proto_root / "api" / "demo.proto").write_text('syntax = "proto3";\n', encoding="utf-8")
+    target = _target(kind="grpc-go", out_dir=tmp_path / "go")
+
+    monkeypatch.setattr("shutil.which", lambda name: f"/usr/local/bin/{name}")
+    caplog.set_level(logging.INFO)
+
+    def fake_run(command: list[str], *, cwd: Path, check: bool) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(command, 0)
+
+    generate_go_stubs(proto_root, target, runner=fake_run)
+
+    messages = [record.getMessage() for record in caplog.records]
+    assert any("[*] Running gRPC Go stubs: target[grpc-go]" in message for message in messages)
+    assert any("api/demo.proto" in message for message in messages)
+    assert any("[+] Generated Go gRPC stubs: target[grpc-go]" in message for message in messages)
 
 
 def test_grpc_go_toolchain_uses_target_source_root_for_file_selection(
@@ -183,6 +208,35 @@ def test_grpc_python_toolchain_uses_package_root_and_rewrites_generated_imports(
     assert (package_root / "api" / "demo_pb2_grpc.py").read_text(encoding="utf-8") == (
         "from generated.pb.api import demo_pb2 as api_dot_demo__pb2\n"
     )
+
+
+def test_grpc_python_toolchain_logs_execution(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    proto_root = tmp_path / "protos"
+    (proto_root / "api").mkdir(parents=True)
+    (proto_root / "api" / "demo.proto").write_text('syntax = "proto3";\n', encoding="utf-8")
+    target = _target(kind="grpc-python", out_dir=tmp_path / "python", python_package_root="generated.pb")
+    caplog.set_level(logging.INFO)
+
+    def fake_protoc_main(args: list[str]) -> int:
+        output_root = Path(next(arg.removeprefix("--python_out=") for arg in args if arg.startswith("--python_out=")))
+        (output_root / "api").mkdir(parents=True)
+        (output_root / "api" / "demo_pb2.py").write_text("", encoding="utf-8")
+        return 0
+
+    generate_python_stubs(
+        proto_root,
+        target,
+        protoc_main=fake_protoc_main,
+        builtin_proto_root=tmp_path / "grpc_tools" / "_proto",
+    )
+
+    messages = [record.getMessage() for record in caplog.records]
+    assert any("[*] Running gRPC Python stubs: target[grpc-python]" in message for message in messages)
+    assert any("api/demo.proto" in message for message in messages)
+    assert any("[+] Generated Python gRPC stubs: target[grpc-python]" in message for message in messages)
 
 
 def test_grpc_stub_toolchain_rejects_empty_file_selection(tmp_path: Path) -> None:
