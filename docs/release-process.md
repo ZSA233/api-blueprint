@@ -156,7 +156,7 @@ make example-refresh
 
 这里要注意当前 CI 的职责边界：
 
-- `example-validation` 会通过共享的 `.github/actions/setup-example-toolchains` 安装 Go、Node 24、TypeScript、`go-enum` 与 `protoc` 工具链；`setup-go` 也会显式指向示例 Go module 的 `go.sum`，避免 release / CI 出现根目录 `go.sum` 缺失告警。
+- `example-validation` 会通过共享的 `.github/actions/setup-example-toolchains` 安装 Go、Node 24、TypeScript、`go-enum` 与 `protoc` 工具链；`setup-go` 也会显式指向示例 Go server module 的 `go.sum`，避免 release / CI 出现根目录 `go.sum` 缺失告警。
 - `python-tests` 会通过 `pytest -m "not example_validation"` 排除 `tests/integration/examples/` 里的专用外部工具链校验，避免在通用 Python matrix 中重复跑这类重型检查。
 - `release.yml` / `release-rc.yml` 的 `release-bundle` 也必须复用同一套 examples toolchain setup；否则 `make release-preflight` 会比普通 CI 少掉 examples 所需依赖，出现“CI 绿、正式发布红”的分叉。
 - 因此判断 release ref 是否“CI 全绿”时，`example-validation` 必须和三个 `python-tests` matrix 一起看，不能只看 pytest matrix。

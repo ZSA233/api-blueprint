@@ -8,7 +8,7 @@ runs:
       with:
         go-version: "1.25"
         cache-dependency-path: |
-          examples/golang/go.sum
+          examples/golang/server/go.sum
           examples/wails-harness/v2/go.sum
           examples/wails-harness/v3/go.sum
           examples/wails-hello/golang/go.sum

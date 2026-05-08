@@ -22,7 +22,7 @@ def test_legacy_config_sections_are_rejected(tmp_path, legacy_config: str) -> No
     config_path = tmp_path / "api-blueprint.toml"
     config_path.write_text(legacy_config, encoding="utf-8")
 
-    with pytest.raises(ValueError, match="Extra inputs are not permitted"):
+    with pytest.raises(ValueError, match="Extra inputs are not permitted|unsupported config alias table"):
         Config.load(config_path)
 
 
@@ -34,12 +34,122 @@ def test_example_config_loads_vnext_targets() -> None:
     assert config.blueprint.docs_server == "0.0.0.0:2332"
     assert [target.id for target in config.targets] == [
         "contract",
+        "grpc.proto",
+        "grpc.go",
+        "grpc.python",
         "go.server",
+        "go.client",
         "typescript.client",
         "kotlin.client",
+        "python.server",
+        "python.client",
         "http",
+        "http.python",
         "wails.v3",
         "wails.v2",
+    ]
+    assert [target.kind for target in config.targets] == [
+        "contract",
+        "grpc-proto",
+        "grpc-go",
+        "grpc-python",
+        "go-server",
+        "go-client",
+        "typescript-client",
+        "kotlin-client",
+        "python-server",
+        "python-client",
+        "http-transport",
+        "http-transport",
+        "wails-transport",
+        "wails-transport",
+    ]
+
+
+def test_alias_target_tables_normalize_to_vnext_targets(tmp_path) -> None:
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[targets]]
+id = "contract"
+kind = "contract"
+out_dir = "."
+
+[[go.server]]
+id = "go.server"
+out_dir = "golang"
+module = "example.com/project/golang"
+
+[[go.client]]
+id = "go.client"
+out_dir = "go-client"
+module = "example.com/project/go-client"
+
+[[typescript.client]]
+id = "typescript.client"
+out_dir = "typescript"
+base_url = "http://localhost:2333"
+
+[[kotlin.client]]
+id = "kotlin.client"
+out_dir = "kotlin"
+module = "com.example.generated"
+
+[[python.server]]
+id = "python.server"
+out_dir = "python/server"
+module = "server_app"
+
+[[python.client]]
+id = "python.client"
+out_dir = "python/client"
+python_package_root = "client_app"
+
+[[transport.http]]
+id = "http"
+server = "python.server"
+clients = ["python.client"]
+
+[[transport.wails]]
+id = "wails.v3"
+version = "v3"
+server = "go.server"
+clients = ["typescript.client"]
+
+[[grpc.proto]]
+id = "grpc.proto"
+out_dir = "grpc/protos"
+package = "example.api"
+
+[[grpc.go]]
+id = "grpc.go"
+proto = "grpc.proto"
+out_dir = "grpc/go"
+files = ["api/*.proto"]
+
+[[grpc.python]]
+id = "grpc.python"
+proto = "grpc.proto"
+out_dir = "grpc/python"
+files = ["api/*.proto"]
+module = "pb"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    config = Config.load(config_path)
+
+    assert [target.id for target in config.targets] == [
+        "contract",
+        "go.server",
+        "go.client",
+        "typescript.client",
+        "kotlin.client",
+        "python.server",
+        "python.client",
+        "http",
+        "wails.v3",
         "grpc.proto",
         "grpc.go",
         "grpc.python",
@@ -47,15 +157,115 @@ def test_example_config_loads_vnext_targets() -> None:
     assert [target.kind for target in config.targets] == [
         "contract",
         "go-server",
+        "go-client",
         "typescript-client",
         "kotlin-client",
+        "python-server",
+        "python-client",
         "http-transport",
-        "wails-transport",
         "wails-transport",
         "grpc-proto",
         "grpc-go",
         "grpc-python",
     ]
+    assert config.targets[1].module == "example.com/project/golang"
+    assert config.targets[4].module is None
+    assert config.targets[4].package == "com.example.generated"
+    assert config.targets[5].module is None
+    assert config.targets[5].python_package_root == "server_app"
+    assert config.targets[6].python_package_root == "client_app"
+    assert config.targets[11].python_package_root == "pb"
+
+
+def test_alias_target_tables_reject_explicit_kind(tmp_path) -> None:
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[go.server]]
+id = "go.server"
+kind = "go-server"
+out_dir = "golang"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match=r"\[\[go.server\]\].*must not include kind"):
+        Config.load(config_path)
+
+
+def test_python_alias_rejects_conflicting_module_and_package_root(tmp_path) -> None:
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[python.client]]
+id = "python.client"
+out_dir = "python/client"
+module = "client_app"
+python_package_root = "generated_client"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match=r"\[\[python.client\]\].*module and python_package_root must match"):
+        Config.load(config_path)
+
+
+def test_kotlin_alias_rejects_conflicting_module_and_package(tmp_path) -> None:
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[kotlin.client]]
+id = "kotlin.client"
+out_dir = "kotlin"
+module = "com.example.generated"
+package = "com.example.other"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match=r"\[\[kotlin.client\]\].*module and package must match"):
+        Config.load(config_path)
+
+
+def test_alias_target_tables_reject_unknown_alias_table(tmp_path) -> None:
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[go.mobile]]
+id = "go.mobile"
+out_dir = "mobile"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match=r"unsupported config alias table \[\[go.mobile\]\]"):
+        Config.load(config_path)
+
+
+def test_alias_target_tables_preserve_duplicate_id_validation(tmp_path) -> None:
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[targets]]
+id = "client"
+kind = "typescript-client"
+out_dir = "typescript"
+
+[[python.client]]
+id = "client"
+out_dir = "python/client"
+module = "client_app"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="duplicate ids"):
+        Config.load(config_path)
 
 
 def test_resolve_config_converts_vnext_target_outputs_to_absolute_paths() -> None:
@@ -63,7 +273,7 @@ def test_resolve_config_converts_vnext_target_outputs_to_absolute_paths() -> Non
     targets = {target.id: target for target in resolved.targets}
 
     assert targets["contract"].out_dir == EXAMPLE_CONFIG.parent.resolve()
-    assert targets["go.server"].out_dir == (EXAMPLE_CONFIG.parent / "golang").resolve()
+    assert targets["go.server"].out_dir == (EXAMPLE_CONFIG.parent / "golang" / "server").resolve()
     assert targets["typescript.client"].out_dir == (EXAMPLE_CONFIG.parent / "typescript").resolve()
     assert targets["kotlin.client"].out_dir == (EXAMPLE_CONFIG.parent / "kotlin").resolve()
     assert targets["kotlin.client"].package == "com.example.apiblueprint"

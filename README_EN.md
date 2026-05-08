@@ -7,7 +7,7 @@ Language: [中文](README.md) | English
 
 ## Overview
 
-`api-blueprint` defines API contracts with a Python DSL, builds a unified `ContractGraph`, and generates a documentation service, Go server, TypeScript client, Kotlin Android client, Python client/server, Wails v2/v3 overlays, gRPC proto/service definitions, and protoc-backed Go/Python gRPC stubs from the same protocol source of truth and shared target planner.
+`api-blueprint` defines API contracts with a Python DSL, builds a unified `ContractGraph`, and generates a documentation service, Go server/client, TypeScript client, Kotlin Android client, Python client/server, Wails v2/v3 overlays, gRPC proto/service definitions, and protoc-backed Go/Python gRPC stubs from the same protocol source of truth and shared target planner.
 
 The DSL supports transport-neutral `STREAM` / `CHANNEL` long-connection message contracts alongside RPC; HTTP can map them to SSE / WebSocket, Wails maps them to session-scoped runtime events by default, and `CLOSE(Model)` generates a typed close lifecycle payload.
 
@@ -18,10 +18,11 @@ This README keeps only the onboarding path. See [Learn More](#learn-more) for fu
 | Target | Status | Command | Example |
 |:---|:---:|:---|:---|
 | Contract / agent manifest | Available | `api-gen` | `api-blueprint.contract.json` / `api-blueprint.agent.json` |
-| Go server | Available | `api-gen` | `examples/golang` |
+| Go server | Available | `api-gen` | `examples/golang/server` |
+| Go client | Preview | `api-gen` | `examples/golang/client` |
 | TypeScript client | Preview | `api-gen` | `examples/typescript` |
-| Wails v3 | Experimental | `api-gen` | `examples/{golang,typescript,wails-harness/v3,wails-hello}` |
-| Wails v2 | Preview | `api-gen` | `examples/{golang,typescript,wails-harness/v2}` |
+| Wails v3 | Experimental | `api-gen` | `examples/{golang/server,typescript,wails-harness/v3,wails-hello}` |
+| Wails v2 | Preview | `api-gen` | `examples/{golang/server,typescript,wails-harness/v2}` |
 | Kotlin Android client | Preview | `api-gen` | `examples/kotlin` |
 | Python client/server | Preview | `api-gen` | `python_package_root` package layout |
 | gRPC proto | Available | `api-gen` | `examples/grpc/protos` |
@@ -60,41 +61,40 @@ Create minimal config and generate code:
 [blueprint]
 entrypoints = ["blueprints.app:bp"]
 
-[[targets]]
+[[go.server]]
 id = "go.server"
-kind = "go-server"
 out_dir = "golang"
 
-[[targets]]
+[[go.client]]
+id = "go.client"
+out_dir = "golang-client"
+base_url = "http://localhost:2333"
+
+[[typescript.client]]
 id = "typescript.client"
-kind = "typescript-client"
 out_dir = "typescript"
 base_url = "http://localhost:2333"
 
-[[targets]]
+[[kotlin.client]]
 id = "kotlin.client"
-kind = "kotlin-client"
 out_dir = "kotlin"
-package = "com.example.apiblueprint"
+module = "com.example.apiblueprint"
 
-[[targets]]
+[[python.server]]
 id = "python.server"
-kind = "python-server"
 out_dir = "python/server"
-python_package_root = "api_blueprint_example_server"
+module = "api_blueprint_example_server"
 
-[[targets]]
+[[python.client]]
 id = "python.client"
-kind = "python-client"
 out_dir = "python/client"
-python_package_root = "api_blueprint_example_client"
+module = "api_blueprint_example_client"
 base_url = "http://localhost:2333"
 
-[[targets]]
+[[transport.http]]
 id = "http"
-kind = "http-transport"
 server = "go.server"
-clients = ["typescript.client", "kotlin.client", "python.client"]
+clients = ["go.client", "typescript.client", "kotlin.client", "python.client"]
 ```
 
 ```sh
@@ -118,27 +118,29 @@ kind = "contract"
 out_dir = "."
 formats = ["json", "markdown", "agent-json", "agent-markdown", "shards"]
 
-[[targets]]
+[[go.server]]
 id = "go.server"
-kind = "go-server"
-out_dir = "golang"
-module = "example.com/project/golang"
+out_dir = "golang/server"
+module = "example.com/project/golang/server"
 
-[[targets]]
+[[go.client]]
+id = "go.client"
+out_dir = "golang/client"
+module = "example.com/project/golang/client"
+base_url = "http://localhost:2333"
+
+[[typescript.client]]
 id = "typescript.client"
-kind = "typescript-client"
 out_dir = "typescript"
 base_url = "http://localhost:2333"
 
-[[targets]]
+[[transport.http]]
 id = "http"
-kind = "http-transport"
 server = "go.server"
-clients = ["typescript.client"]
+clients = ["go.client", "typescript.client"]
 
-[[targets]]
+[[transport.wails]]
 id = "wails.v3"
-kind = "wails-transport"
 version = "v3"
 server = "go.server"
 clients = ["typescript.client"]
@@ -195,11 +197,11 @@ api-gen diff old.contract.json new.contract.json
 
 - `examples/blueprints/` is the example Blueprint source of truth.
 - `examples/blueprints/api_demo.py` includes `STREAM` / `CHANNEL` long-connection examples.
-- `examples/golang/`, `examples/typescript/`, `examples/kotlin/`, `examples/api-blueprint.{contract,agent}.*`, `examples/api-blueprint.contract.d/`, `examples/grpc/protos/`, `examples/grpc/go/`, and `examples/grpc/python/` are generated snapshots.
+- `examples/golang/server/`, `examples/golang/client/`, `examples/typescript/`, `examples/kotlin/`, `examples/api-blueprint.{contract,agent}.*`, `examples/api-blueprint.contract.d/`, `examples/grpc/protos/`, `examples/grpc/go/`, and `examples/grpc/python/` are generated snapshots.
 - `examples/wails-hello/` is a standalone Wails v3 hello world example that demonstrates a GUI loop without starting an HTTP server.
 - Go / TypeScript / Python `gen_*` files are generator-owned and overwritten during regeneration; Kotlin `Gen*.kt` files are generator-owned and include a generated header.
 - `impl_*`, Python `client.py` / `service.py`, and Kotlin non-`Gen*` façade/extension files are user-owned extension points and are preserved during regeneration.
-- Go / TypeScript artifacts use a `core + transports/<target>` layout; Kotlin uses the new `<package>/<root>/runtime`, `<package>/<root>/routes/<root>/<group...>`, and `<package>/<root>/transports/http` layout, and the old `<package>/ApiClient.kt`, `endpoints/`, `models/`, and `internal/` layout is a breaking change.
+- Go server artifacts use `views/routes`, `views/providers`, and `views/transports`; Go client artifacts use `runtime`, `routes/<root>/<group...>`, and `transports/http`, with `base_url` owned only by the HTTP transport config. Kotlin uses the new `<package>/<root>/runtime`, `<package>/<root>/routes/<root>/<group...>`, and `<package>/<root>/transports/http` layout, and the old `<package>/ApiClient.kt`, `endpoints/`, `models/`, and `internal/` layout is a breaking change.
 - Python client/server use `python_package_root` as the package root; route output mirrors the full path, for example `routes/api/demo`, root-level routes live in `routes/api`, and `routes/root` is no longer used. The client is async-first over HTTP, and the server emits route service contracts/stubs plus a FastAPI HTTP adapter scaffold.
 - `api-gen check` and writers share planner / capability metadata; contract / agent artifact indexes point to the new Kotlin / Python full route path outputs.
 - `api-gen generate --target wails.v3` does not generate a full Wails app shell, and external frontends must load the Wails runtime first; Wails targets still combine only a Go server and TypeScript client.
@@ -207,10 +209,10 @@ api-gen diff old.contract.json new.contract.json
 - Go `views/providers` is a global runtime; use route-scoped provider factories when a provider implementation must vary by route. The user-owned hook is `SelectProvider(spec, handler)`. See the generator docs.
 - `STREAM` / `CHANNEL` are the long-connection contract entrypoints; multi-message directions generate one discriminated union, while legacy `WS().RECV().SEND()` is outside the 1.0 mainline.
 - The default HTTP/Wails runtimes fully support only `ConnectionScope.SESSION`; `APP` / `TOPIC` broadcast or topic routing can be added through a custom connection hub / manager.
-- `examples/golang/views/routes/api/demo/impl.go` hand-writes a minimal `STREAM` / `CHANNEL` usage example that demonstrates `Open()`, `Send()`, `Recv()`, typed `Close()`, and exceptional `Abort()`.
+- `examples/golang/server/views/routes/api/demo/impl.go` hand-writes a minimal `STREAM` / `CHANNEL` usage example that demonstrates `Open()`, `Send()`, `Recv()`, typed `Close()`, and exceptional `Abort()`.
 - The Go HTTP adapter respects responses already written by Gin handlers, which fits small HTTP-only raw callbacks.
 - Full `contract.json` records routes, schemas, connections, stable hashes, the resolved target plan, and the capability registry. `agent.json`, `agent.md`, and `contract.d/` provide a compact entrypoint, read order, shards, and target artifact/import indexes so AI agents can read compact context first and drill down only when needed.
-- `[[targets]]` is the unified config entrypoint; transport targets use `kind = "http-transport"` / `kind = "wails-transport"` and explicitly declare `server` plus `clients`.
+- `[[targets]]` is the canonical config entrypoint; shortcut tables such as `[[go.server]]`, `[[go.client]]`, `[[python.server]]`, and `[[transport.http]]` are normalized into targets when loading config. In shortcut tables, Python `module` maps to `python_package_root`, and Kotlin `module` maps to `package`.
 - gRPC proto can be emitted by the `grpc-proto` target from ContractGraph. `[[targets.proto_files]]` maps DSL modules/routes to proto file/package/go_package/service. The DSL mainline only expresses generic contracts: `field(1, String(...), optional=True)` is a stable field identity, `choice="..."` is a mutually exclusive choice, and `DateTime`, `JSONValue`, and `AnyValue` are semantic value types. `grpc-go` / `grpc-python` can also omit `proto` and compile handwritten proto files directly with `source_root` / `files`.
 
 ## Learn More

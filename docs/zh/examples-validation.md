@@ -6,7 +6,7 @@
 
 - `examples/blueprints/`：Blueprint 真源。
 - `examples/api-blueprint.contract.json`、`examples/api-blueprint.agent.json`、`examples/api-blueprint.agent.md`、`examples/api-blueprint.contract.d/`：contract 与 agent manifest 快照。
-- `examples/golang/`、`examples/typescript/`、`examples/kotlin/`：Blueprint 生成快照。
+- `examples/golang/server/`、`examples/golang/client/`、`examples/typescript/`、`examples/kotlin/`：Blueprint 生成快照。
 - `examples/wails-harness/v2/`、`examples/wails-harness/v3/`：手写最小 Wails harness，消费共享生成产物。
 - `examples/wails-hello/`：独立 Wails v3 hello 示例；`blueprints/` 是真源，`golang/` 与 `typescript/` 是生成快照，`app/` 是手写 Wails app shell。
 - `examples/grpc/protos/`、`examples/grpc/go/`、`examples/grpc/python/`：`grpc-proto`、`grpc-go` 与 `grpc-python` targets 从 ContractGraph 生成的 proto、Go stub 和 Python stub 快照。

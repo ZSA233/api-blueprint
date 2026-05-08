@@ -32,11 +32,15 @@ GRADLE_BIN_ENV = "API_BLUEPRINT_GRADLE_BIN"
 WAILS_V2_BIN_ENV = "API_BLUEPRINT_WAILS_V2_BIN"
 WAILS_V3_BIN_ENV = "API_BLUEPRINT_WAILS_V3_BIN"
 
-BLUEPRINT_GOLANG_PRESERVED = (
+BLUEPRINT_GOLANG_SERVER_PRESERVED = (
     "go.mod",
     "go.sum",
     "main.go",
     "views/routes/api/demo/impl.go",
+)
+BLUEPRINT_GOLANG_CLIENT_PRESERVED = (
+    "go.mod",
+    "go.sum",
 )
 BLUEPRINT_TYPESCRIPT_PRESERVED = (
     ".vscode/settings.json",
@@ -77,6 +81,8 @@ class BlueprintExampleWorkspace:
     root: Path
     config_path: Path
     golang_dir: Path
+    golang_server_dir: Path
+    golang_client_dir: Path
     typescript_dir: Path
     kotlin_dir: Path
     python_dir: Path
@@ -258,6 +264,8 @@ def _blueprint_workspace(root: Path) -> BlueprintExampleWorkspace:
         root=root,
         config_path=root / "api-blueprint.toml",
         golang_dir=root / "golang",
+        golang_server_dir=root / "golang" / "server",
+        golang_client_dir=root / "golang" / "client",
         typescript_dir=root / "typescript",
         kotlin_dir=root / "kotlin",
         python_dir=root / "python",
@@ -325,9 +333,16 @@ def prepare_grpc_workspace(repo_root: Path) -> GrpcExampleWorkspace:
 
 def _prepare_blueprint_outputs(*, source_root: Path, target_root: Path) -> None:
     _prepare_contract_outputs(target_root)
+    go_server_preserved = _capture_relative_files(source_root / "golang" / "server", BLUEPRINT_GOLANG_SERVER_PRESERVED)
+    go_client_preserved = _capture_relative_files(source_root / "golang" / "client", BLUEPRINT_GOLANG_CLIENT_PRESERVED)
+    shutil.rmtree(target_root / "golang", ignore_errors=True)
     _prepare_output_dir(
-        target_root / "golang",
-        _capture_relative_files(source_root / "golang", BLUEPRINT_GOLANG_PRESERVED),
+        target_root / "golang" / "server",
+        go_server_preserved,
+    )
+    _prepare_output_dir(
+        target_root / "golang" / "client",
+        go_client_preserved,
     )
     _prepare_output_dir(
         target_root / "typescript",
@@ -422,7 +437,8 @@ def _prepare_output_dir(root: Path, preserved_files: Mapping[Path, bytes]) -> No
 
 def regenerate_blueprint_examples(workspace: BlueprintExampleWorkspace) -> None:
     generator.generate(workspace.config_path, target_ids=("contract", "http", "http.python", "wails.v2", "wails.v3"))
-    _tidy_go_module(workspace.golang_dir)
+    _tidy_go_module(workspace.golang_server_dir)
+    _tidy_go_module(workspace.golang_client_dir)
 
 
 def regenerate_grpc_examples(workspace: GrpcExampleWorkspace) -> None:
@@ -474,11 +490,13 @@ def validate_example_snapshots(repo_root: Path, workspace: BlueprintExampleWorks
 
 def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace) -> None:
     files = {
-        "go_route_interface": workspace.golang_dir / "views" / "routes" / "api" / "demo" / "gen_interface.go",
-        "go_route_gen_impl": workspace.golang_dir / "views" / "routes" / "api" / "demo" / "gen_impl.go",
-        "go_route_impl": workspace.golang_dir / "views" / "routes" / "api" / "demo" / "impl.go",
-        "go_http_adapter": workspace.golang_dir / "views" / "transports" / "http" / "api" / "demo" / "gen_interface.go",
-        "go_wails_v3_service": workspace.golang_dir
+        "go_route_interface": workspace.golang_server_dir / "views" / "routes" / "api" / "demo" / "gen_interface.go",
+        "go_route_gen_impl": workspace.golang_server_dir / "views" / "routes" / "api" / "demo" / "gen_impl.go",
+        "go_route_impl": workspace.golang_server_dir / "views" / "routes" / "api" / "demo" / "impl.go",
+        "go_http_adapter": workspace.golang_server_dir / "views" / "transports" / "http" / "api" / "demo" / "gen_interface.go",
+        "go_client_route": workspace.golang_client_dir / "routes" / "api" / "demo" / "gen_client.go",
+        "go_client_http": workspace.golang_client_dir / "transports" / "http" / "gen_transport.go",
+        "go_wails_v3_service": workspace.golang_server_dir
         / "views"
         / "transports"
         / "wailsv3"
@@ -522,6 +540,7 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
             "serverMessage, err := NewSweepStreamMessageState(&serverData)",
         ),
         "go channel manual example": (files["go_route_impl"], "clientMessage, err := channel.Recv(ctx)"),
+        "go client unsupported connection": (files["go_client_http"], "UnsupportedConnectionError"),
         "http stream adapter": (files["go_http_adapter"], "httptransport.STREAM("),
         "http channel adapter": (files["go_http_adapter"], "httptransport.CHANNEL("),
         "wails stream event base": (
@@ -553,7 +572,7 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         ),
         "wails v3 bindings manifest": (
             files["ts_wails_v3_bindings"],
-            '"demo.DemoService.OpenAssistantSession": "demo/views/transports/wailsv3/api/demo.DemoService.OpenAssistantSession",',
+            '"demo.DemoService.OpenAssistantSession": "example.com/project/golang/server/views/transports/wailsv3/api/demo.DemoService.OpenAssistantSession",',
         ),
     }
     validation_errors = []
@@ -639,7 +658,8 @@ def _collect_path_diff(expected: Path, actual: Path, prefix: str = "") -> list[s
 def compile_generated_examples(workspace: BlueprintExampleWorkspace) -> None:
     _validate_blueprint_connection_examples(workspace)
     subprocess.run(["tsc", "-p", str(workspace.typescript_dir / "tsconfig.json"), "--noEmit"], check=True)
-    subprocess.run(["go", "test", "./..."], cwd=workspace.golang_dir, check=True)
+    subprocess.run(["go", "test", "./..."], cwd=workspace.golang_server_dir, check=True)
+    subprocess.run(["go", "test", "./..."], cwd=workspace.golang_client_dir, check=True)
     _validate_kotlin_sources(workspace.kotlin_dir)
     _validate_python_sources(workspace.python_dir)
     _compile_wails_harness(workspace.wails_v2_dir, version="v2")
@@ -694,7 +714,8 @@ def compile_wails_hello_example(workspace: WailsHelloExampleWorkspace) -> None:
 def compile_repo_examples(repo_root: Path) -> None:
     workspace = _blueprint_workspace(repo_root / "examples")
     subprocess.run(["tsc", "-p", str(workspace.typescript_dir / "tsconfig.json"), "--noEmit"], check=True)
-    subprocess.run(["go", "test", "./..."], cwd=workspace.golang_dir, check=True)
+    subprocess.run(["go", "test", "./..."], cwd=workspace.golang_server_dir, check=True)
+    subprocess.run(["go", "test", "./..."], cwd=workspace.golang_client_dir, check=True)
     _validate_kotlin_sources(workspace.kotlin_dir)
     _validate_python_sources(workspace.python_dir)
 

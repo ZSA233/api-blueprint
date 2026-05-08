@@ -4,10 +4,10 @@ import (
 	"embed"
 	"fmt"
 
-	bindingapi "demo/views/transports/wailsv3/api"
-	bindingdemo "demo/views/transports/wailsv3/api/demo"
-	bindinghello "demo/views/transports/wailsv3/api/hello"
-	bindingstatic "demo/views/transports/wailsv3/static"
+	bindingapi "example.com/project/golang/server/views/transports/wailsv3/api"
+	bindingdemo "example.com/project/golang/server/views/transports/wailsv3/api/demo"
+	bindinghello "example.com/project/golang/server/views/transports/wailsv3/api/hello"
+	bindingstatic "example.com/project/golang/server/views/transports/wailsv3/static"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )

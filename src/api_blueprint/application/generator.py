@@ -116,6 +116,20 @@ def generate(config_path: str | Path | None, target_ids: Sequence[str] = ()) -> 
             )
             writer.register(*project.entrypoints)
             writer.gen()
+        elif target.kind == "go-client":
+            output = require_out_dir(target)
+            output.mkdir(parents=True, exist_ok=True)
+            writer = golang.GolangClientWriter(
+                output,
+                module=target.module,
+                base_url=target.base_url or "",
+                base_url_expr=target.base_url_expr,
+                include=target.include,
+                exclude=target.exclude,
+                contract_graph=graph,
+            )
+            writer.register(*project.entrypoints)
+            writer.gen()
         elif target.kind == "typescript-client":
             output = require_out_dir(target)
             output.mkdir(parents=True, exist_ok=True)
@@ -203,8 +217,6 @@ def generate(config_path: str | Path | None, target_ids: Sequence[str] = ()) -> 
                 generate_target(target_map[target.server])
             for client_id in target.clients:
                 generate_target(target_map[client_id])
-        elif target.kind in {"go-client"}:
-            raise ValueError(f"target[{target.id}] {target.kind} is reserved but not implemented")
         else:
             raise ValueError(f"target[{target.id}] unsupported kind: {target.kind}")
 

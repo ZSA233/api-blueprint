@@ -6,7 +6,7 @@
 
 `api-gen check`、contract / agent artifact projection 和各语言 writer 使用同一份 planner / capability metadata。生成前会统一校验 target 依赖、route kind、request kind 与 response wrapper，避免 check 通过但 writer 才发现不支持的情况。
 
-Kotlin / Python 是新实现的生成器表面，当前按 preview 口径使用。它们的 contract / agent artifact path 指向完整镜像 route path 的输出路径，例如 `routes/api/demo`；Python 不再使用 `routes/root` sentinel。
+Go client、Kotlin / Python 是新实现的生成器表面，当前按 preview 口径使用。它们的 contract / agent artifact path 指向完整镜像 route path 的输出路径，例如 `routes/api/demo`；Python 不再使用 `routes/root` sentinel。
 
 ## Go
 
@@ -83,7 +83,25 @@ HTTP transport 中，`STREAM` 生成 SSE adapter，`CHANNEL` 生成 WebSocket ad
 
 默认 HTTP/Wails runtime 只完整实现 `ConnectionScope.SESSION`。`APP` / `TOPIC` 会保留在 route contract 中，后续可通过自定义 connection hub / manager 实现广播或 topic 路由，不由生成器内置业务 fan-out 策略。
 
-默认生成的连接 handler 仍保持 `not implemented`，避免把示例业务逻辑写进所有用户项目。仓库示例在用户拥有的 `examples/golang/views/routes/api/demo/impl.go` 中手写了最小用法：`STREAM` 展示 `Open()`、构造 server message、`Send()` 与 typed `Close()`；`CHANNEL` 额外展示 `Recv(ctx)` 接收客户端消息。
+默认生成的连接 handler 仍保持 `not implemented`，避免把示例业务逻辑写进所有用户项目。仓库示例在用户拥有的 `examples/golang/server/views/routes/api/demo/impl.go` 中手写了最小用法：`STREAM` 展示 `Open()`、构造 server message、`Send()` 与 typed `Close()`；`CHANNEL` 额外展示 `Recv(ctx)` 接收客户端消息。
+
+## Go Client
+
+```sh
+api-gen generate -c api-blueprint.toml --target go.client
+```
+
+Go client target 输出 preview HTTP client：
+
+- `runtime/gen_*.go`
+- `routes/<root>/<group...>/gen_client.go`
+- `routes/<root>/<group...>/gen_models.go`
+- `routes/<root>/<group...>/client.go`
+- `transports/http/gen_config.go`
+- `transports/http/gen_transport.go`
+- `transports/http/client.go`
+
+`gen_*.go` 文件由生成器拥有并覆盖；`client.go` façade 由用户拥有并保留。route/runtime client 只依赖 transport abstraction，`base_url` / `base_url_expr` 只写入 HTTP transport config。默认 HTTP adapter 实现 RPC 的 query/json/form/binary 请求；legacy WS / STREAM / CHANNEL 会生成方法 surface，但默认 HTTP adapter 返回明确 unsupported error，项目可以替换自定义 transport。
 
 ## TypeScript
 
@@ -153,13 +171,9 @@ Python server 同样使用 `python_package_root` 作为包根，输出 route ser
 
 `routes/<root>/<group...>/gen_service.py` 是生成的 service contract，`routes/<root>/<group...>/service.py` 是用户可维护 stub 入口，`transports/http/gen_server.py` 与 `server.py` 提供 FastAPI HTTP adapter scaffold。root-level route 直接生成在 `routes/<root>`，不生成 `routes/root`。该目标是新实现 surface，建议把生成结果纳入项目自己的类型检查、lint 和安装 smoke。
 
-## 预留 targets
-
-Go client 目前只作为 target schema 预留，不生成业务代码。
-
 ## examples 快照
 
-`examples/golang/`、`examples/typescript/` 与 `examples/kotlin/` 是生成快照，不是业务真源。Kotlin/Python contract / agent artifact 索引会使用新的 route 输出路径。需要接受预期生成变化时，使用：
+`examples/golang/server/`、`examples/golang/client/`、`examples/typescript/` 与 `examples/kotlin/` 是生成快照，不是业务真源。Go client、Kotlin/Python contract / agent artifact 索引会使用新的 route 输出路径。需要接受预期生成变化时，使用：
 
 ```sh
 make example-refresh

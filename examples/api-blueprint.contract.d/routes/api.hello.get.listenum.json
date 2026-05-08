@@ -1,11 +1,26 @@
 {
   "artifacts": {
+    "go.client": {
+      "files": [
+        "golang/client/routes/api/hello/gen_models.go",
+        "golang/client/routes/api/hello/gen_client.go",
+        "golang/client/routes/api/hello/client.go",
+        "golang/client/transports/http/gen_transport.go",
+        "golang/client/transports/http/client.go"
+      ],
+      "imports": [
+        "example.com/project/golang/client/routes/api/hello"
+      ],
+      "kind": "go-client"
+    },
     "go.server": {
       "files": [
-        "golang/views/routes/api/hello/gen_interface.go",
-        "golang/views/routes/api/hello/gen_protos.go"
+        "golang/server/views/routes/api/hello/gen_interface.go",
+        "golang/server/views/routes/api/hello/gen_protos.go"
       ],
-      "imports": [],
+      "imports": [
+        "example.com/project/golang/server/views/routes/api/hello"
+      ],
       "kind": "go-server"
     },
     "grpc.go": {

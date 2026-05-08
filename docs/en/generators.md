@@ -6,7 +6,7 @@ This page covers the main non-Wails, non-gRPC generators. See [Wails](wails.md) 
 
 `api-gen check`, contract / agent artifact projection, and language writers use the same planner / capability metadata. Before generation, target dependencies, route kinds, request kinds, and response wrappers are validated consistently, avoiding cases where check passes and a writer later discovers unsupported input.
 
-Kotlin / Python are newly implemented generator surfaces and should currently be treated as preview. Their contract / agent artifact paths point to outputs that mirror the full route path, for example `routes/api/demo`; Python no longer uses a `routes/root` sentinel.
+Go client, Kotlin, and Python are newly implemented generator surfaces and should currently be treated as preview. Their contract / agent artifact paths point to outputs that mirror the full route path, for example `routes/api/demo`; Python no longer uses a `routes/root` sentinel.
 
 ## Go
 
@@ -83,7 +83,25 @@ In the HTTP transport, `STREAM` generates an SSE adapter and `CHANNEL` generates
 
 The default HTTP/Wails runtimes fully implement only `ConnectionScope.SESSION`. `APP` / `TOPIC` remain in the route contract and can be implemented later through a custom connection hub / manager for broadcast or topic routing; the generator does not bake in business fan-out policy.
 
-Generated connection handlers still default to `not implemented`, so example business logic is not written into every user project. The repository example hand-writes the minimal usage in the user-owned `examples/golang/views/routes/api/demo/impl.go`: `STREAM` shows `Open()`, server message construction, `Send()`, and typed `Close()`; `CHANNEL` also shows `Recv(ctx)` for client messages.
+Generated connection handlers still default to `not implemented`, so example business logic is not written into every user project. The repository example hand-writes the minimal usage in the user-owned `examples/golang/server/views/routes/api/demo/impl.go`: `STREAM` shows `Open()`, server message construction, `Send()`, and typed `Close()`; `CHANNEL` also shows `Recv(ctx)` for client messages.
+
+## Go Client
+
+```sh
+api-gen generate -c api-blueprint.toml --target go.client
+```
+
+The Go client target emits a preview HTTP client:
+
+- `runtime/gen_*.go`
+- `routes/<root>/<group...>/gen_client.go`
+- `routes/<root>/<group...>/gen_models.go`
+- `routes/<root>/<group...>/client.go`
+- `transports/http/gen_config.go`
+- `transports/http/gen_transport.go`
+- `transports/http/client.go`
+
+`gen_*.go` files are generator-owned and overwritten; `client.go` façades are user-owned and preserved. Route/runtime clients depend only on the transport abstraction, while `base_url` / `base_url_expr` are written only to the HTTP transport config. The default HTTP adapter implements RPC query/json/form/binary requests. Legacy WS / STREAM / CHANNEL methods are generated, but the default HTTP adapter returns an explicit unsupported error so projects can swap in a custom transport.
 
 ## TypeScript
 
@@ -153,13 +171,9 @@ Python server also uses `python_package_root` as its package root and emits rout
 
 `routes/<root>/<group...>/gen_service.py` is the generated service contract, `routes/<root>/<group...>/service.py` is the user-maintained stub entrypoint, and `transports/http/gen_server.py` plus `server.py` provide the FastAPI HTTP adapter scaffold. Root-level routes are emitted directly under `routes/<root>`, not `routes/root`. This target is a newly implemented surface, so include generated output in the consuming project's type checks, lint, and install smoke tests.
 
-## Reserved Targets
-
-Go client currently exists only as a reserved target schema entry and does not generate business code.
-
 ## Example Snapshots
 
-`examples/golang/`, `examples/typescript/`, and `examples/kotlin/` are generated snapshots, not business sources. Kotlin/Python contract / agent artifact indexes use the new route output paths. To accept intentional generation changes, use:
+`examples/golang/server/`, `examples/golang/client/`, `examples/typescript/`, and `examples/kotlin/` are generated snapshots, not business sources. Go client and Kotlin/Python contract / agent artifact indexes use the new route output paths. To accept intentional generation changes, use:
 
 ```sh
 make example-refresh

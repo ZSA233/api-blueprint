@@ -298,6 +298,19 @@ def _artifact_for_route(target: Mapping[str, Any], route: Mapping[str, Any]) -> 
         module = _string(target.get("module"))
         if module:
             imports = [_join(module, "views", "routes", root, "" if root == group else group)]
+    elif kind == "go-client":
+        base = _join(out_dir, "routes", route_path)
+        transport_base = _join(out_dir, "transports", "http")
+        files = [
+            _join(base, "gen_models.go"),
+            _join(base, "gen_client.go"),
+            _join(base, "client.go"),
+            _join(transport_base, "gen_transport.go"),
+            _join(transport_base, "client.go"),
+        ]
+        module = _string(target.get("module"))
+        if module:
+            imports = [_join(module, "routes", route_path)]
     elif kind == "typescript-client":
         base = _join(out_dir, root, "routes", root, "" if root == group else group)
         files = [_join(base, "client.ts"), _join(base, "models.ts")]

@@ -27,10 +27,12 @@ your-project/
     __init__.py
     app.py
   golang/
+    server/
+    client/
   typescript/
 ```
 
-`blueprints/` 是 API 契约真源，`golang/` 和 `typescript/` 是生成产物目录。
+`blueprints/` 是 API 契约真源，`golang/server`、`golang/client` 和 `typescript/` 是生成产物目录。
 
 ## 定义 Blueprint
 
@@ -54,22 +56,24 @@ with bp.group("/demo") as views:
 [blueprint]
 entrypoints = ["blueprints.app:bp"]
 
-[[targets]]
+[[go.server]]
 id = "go.server"
-kind = "go-server"
-out_dir = "golang"
+out_dir = "golang/server"
 
-[[targets]]
+[[go.client]]
+id = "go.client"
+out_dir = "golang/client"
+base_url = "http://localhost:2333"
+
+[[typescript.client]]
 id = "typescript.client"
-kind = "typescript-client"
 out_dir = "typescript"
 base_url = "http://localhost:2333"
 
-[[targets]]
+[[transport.http]]
 id = "http"
-kind = "http-transport"
 server = "go.server"
-clients = ["typescript.client"]
+clients = ["go.client", "typescript.client"]
 ```
 
 ## 启动文档服务

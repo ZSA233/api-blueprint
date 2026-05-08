@@ -18,6 +18,7 @@ from .protos import (
 )
 from .toolchain import GolangToolchain
 from .writer import GolangWriter
+from .client import GolangClientWriter
 
 register_target(
     GeneratorTargetSpec(
@@ -30,6 +31,7 @@ register_target(
 
 __all__ = (
     "GolangBlueprint",
+    "GolangClientWriter",
     "GolangEnum",
     "GolangEnumMember",
     "GolangError",

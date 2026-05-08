@@ -2,12 +2,27 @@
   "routes": [
     {
       "artifacts": {
+        "go.client": {
+          "files": [
+            "golang/client/routes/static/gen_models.go",
+            "golang/client/routes/static/gen_client.go",
+            "golang/client/routes/static/client.go",
+            "golang/client/transports/http/gen_transport.go",
+            "golang/client/transports/http/client.go"
+          ],
+          "imports": [
+            "example.com/project/golang/client/routes/static"
+          ],
+          "kind": "go-client"
+        },
         "go.server": {
           "files": [
-            "golang/views/routes/static/gen_interface.go",
-            "golang/views/routes/static/gen_protos.go"
+            "golang/server/views/routes/static/gen_interface.go",
+            "golang/server/views/routes/static/gen_protos.go"
           ],
-          "imports": [],
+          "imports": [
+            "example.com/project/golang/server/views/routes/static"
+          ],
           "kind": "go-server"
         },
         "grpc.go": {
@@ -108,12 +123,27 @@
     },
     {
       "artifacts": {
+        "go.client": {
+          "files": [
+            "golang/client/routes/static/gen_models.go",
+            "golang/client/routes/static/gen_client.go",
+            "golang/client/routes/static/client.go",
+            "golang/client/transports/http/gen_transport.go",
+            "golang/client/transports/http/client.go"
+          ],
+          "imports": [
+            "example.com/project/golang/client/routes/static"
+          ],
+          "kind": "go-client"
+        },
         "go.server": {
           "files": [
-            "golang/views/routes/static/gen_interface.go",
-            "golang/views/routes/static/gen_protos.go"
+            "golang/server/views/routes/static/gen_interface.go",
+            "golang/server/views/routes/static/gen_protos.go"
           ],
-          "imports": [],
+          "imports": [
+            "example.com/project/golang/server/views/routes/static"
+          ],
           "kind": "go-server"
         },
         "grpc.go": {

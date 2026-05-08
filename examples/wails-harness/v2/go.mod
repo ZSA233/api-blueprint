@@ -3,7 +3,7 @@ module example.com/api-blueprint/wails-harness-v2
 go 1.23.8
 
 require (
-	demo v0.0.0
+	example.com/project/golang/server v0.0.0
 	github.com/wailsapp/wails/v2 v2.11.0
 )
 
@@ -37,4 +37,4 @@ require (
 	golang.org/x/text v0.22.0 // indirect
 )
 
-replace demo => ../../golang
+replace example.com/project/golang/server => ../../golang/server

@@ -55,7 +55,13 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
         requests=("query", "json", "form", "binary", "open"),
         wrappers=("none", "general", "custom"),
     ),
-    "go-client": TargetCapability(implemented=False, reserved=True),
+    "go-client": TargetCapability(
+        implemented=True,
+        routes=("rpc", "legacy_ws", "stream", "channel"),
+        requests=("query", "json", "form", "binary", "open"),
+        wrappers=("none", "general", "custom"),
+        transport="injected",
+    ),
     "typescript-client": TargetCapability(
         implemented=True,
         routes=("rpc", "legacy_ws", "stream", "channel"),

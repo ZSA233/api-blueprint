@@ -192,6 +192,12 @@ def test_agent_manifest_and_shards_are_compact_navigation_layers():
             "module": "example.com/project/golang",
         },
         {
+            "id": "go.client",
+            "kind": "go-client",
+            "out_dir": "golang/client",
+            "module": "example.com/project/golang/client",
+        },
+        {
             "id": "typescript.client",
             "kind": "typescript-client",
             "out_dir": "typescript",
@@ -234,7 +240,7 @@ def test_agent_manifest_and_shards_are_compact_navigation_layers():
         "routes": 2,
         "schemas": 5,
         "connections": 1,
-        "targets": 6,
+        "targets": 7,
     }
     assert agent["read_order"][0]["path"] == "api-blueprint.agent.json"
     assert agent["shards"]["index"] == "api-blueprint.contract.d/index.json"
@@ -242,6 +248,16 @@ def test_agent_manifest_and_shards_are_compact_navigation_layers():
     assert stream_summary["shard"] == "api-blueprint.contract.d/routes/api.runs.stream.events.json"
     assert stream_summary["schemas"] == ["CloseInfo", "OpenRequest", "StreamDone", "StreamState"]
     assert "go.server" in stream_summary["artifacts"]
+    assert stream_summary["artifacts"]["go.client"]["files"] == [
+        "golang/client/routes/api/runs/gen_models.go",
+        "golang/client/routes/api/runs/gen_client.go",
+        "golang/client/routes/api/runs/client.go",
+        "golang/client/transports/http/gen_transport.go",
+        "golang/client/transports/http/client.go",
+    ]
+    assert stream_summary["artifacts"]["go.client"]["imports"] == [
+        "example.com/project/golang/client/routes/api/runs",
+    ]
     assert stream_summary["artifacts"]["grpc.python"]["imports"] == [
         "pb.api.runs_pb2",
         "pb.api.runs_pb2_grpc",

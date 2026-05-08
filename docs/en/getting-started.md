@@ -27,10 +27,12 @@ your-project/
     __init__.py
     app.py
   golang/
+    server/
+    client/
   typescript/
 ```
 
-`blueprints/` is the API contract source of truth. `golang/` and `typescript/` are generated artifact directories.
+`blueprints/` is the API contract source of truth. `golang/server`, `golang/client`, and `typescript/` are generated artifact directories.
 
 ## Define A Blueprint
 
@@ -54,22 +56,24 @@ with bp.group("/demo") as views:
 [blueprint]
 entrypoints = ["blueprints.app:bp"]
 
-[[targets]]
+[[go.server]]
 id = "go.server"
-kind = "go-server"
-out_dir = "golang"
+out_dir = "golang/server"
 
-[[targets]]
+[[go.client]]
+id = "go.client"
+out_dir = "golang/client"
+base_url = "http://localhost:2333"
+
+[[typescript.client]]
 id = "typescript.client"
-kind = "typescript-client"
 out_dir = "typescript"
 base_url = "http://localhost:2333"
 
-[[targets]]
+[[transport.http]]
 id = "http"
-kind = "http-transport"
 server = "go.server"
-clients = ["typescript.client"]
+clients = ["go.client", "typescript.client"]
 ```
 
 ## Start The Docs Server

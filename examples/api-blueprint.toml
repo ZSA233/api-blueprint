@@ -6,30 +6,33 @@ entrypoints = [
     'blueprints.app:*',
 ]
 
-# 1.0 unified targets example
+# Unified targets example. Shortcut target tables are normalized into canonical targets.
 [[targets]]
 id = 'contract'
 kind = 'contract'
 out_dir = '.'
 formats = ['json', 'markdown', 'agent-json', 'agent-markdown', 'shards']
 
-[[targets]]
+[[go.server]]
 id = 'go.server'
-kind = 'go-server'
-out_dir = 'golang'
-module = ''
+out_dir = 'golang/server'
+module = 'example.com/project/golang/server'
 
-[[targets]]
+[[go.client]]
+id = 'go.client'
+out_dir = 'golang/client'
+module = 'example.com/project/golang/client'
+base_url = 'http://localhost:2333'
+
+[[typescript.client]]
 id = 'typescript.client'
-kind = 'typescript-client'
 out_dir = 'typescript'
 base_url = 'http://localhost:2333'
 
-[[targets]]
+[[kotlin.client]]
 id = 'kotlin.client'
-kind = 'kotlin-client'
 out_dir = 'kotlin'
-package = 'com.example.apiblueprint'
+module = 'com.example.apiblueprint'
 base_url = 'http://localhost:2333'
 include = ['tag:api']
 exclude = [
@@ -41,42 +44,36 @@ exclude = [
     'path:/api/demo/delete$',
 ]
 
-[[targets]]
+[[python.server]]
 id = 'python.server'
-kind = 'python-server'
 out_dir = 'python/server'
-python_package_root = 'api_blueprint_example_server'
+module = 'api_blueprint_example_server'
 
-[[targets]]
+[[python.client]]
 id = 'python.client'
-kind = 'python-client'
 out_dir = 'python/client'
-python_package_root = 'api_blueprint_example_client'
+module = 'api_blueprint_example_client'
 base_url = 'http://localhost:2333'
 
-[[targets]]
+[[transport.http]]
 id = 'http'
-kind = 'http-transport'
 server = 'go.server'
-clients = ['typescript.client', 'kotlin.client']
+clients = ['go.client', 'typescript.client', 'kotlin.client']
 
-[[targets]]
+[[transport.http]]
 id = 'http.python'
-kind = 'http-transport'
 server = 'python.server'
 clients = ['python.client']
 
-[[targets]]
+[[transport.wails]]
 id = 'wails.v3'
-kind = 'wails-transport'
 version = 'v3'
 server = 'go.server'
 clients = ['typescript.client']
 frontend_mode = 'external'
 
-[[targets]]
+[[transport.wails]]
 id = 'wails.v2'
-kind = 'wails-transport'
 version = 'v2'
 server = 'go.server'
 clients = ['typescript.client']

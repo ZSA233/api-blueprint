@@ -9,9 +9,26 @@
       "routes": []
     },
     "go-client": {
-      "implemented": false,
-      "reserved": true,
-      "routes": []
+      "implemented": true,
+      "requests": [
+        "query",
+        "json",
+        "form",
+        "binary",
+        "open"
+      ],
+      "routes": [
+        "rpc",
+        "legacy_ws",
+        "stream",
+        "channel"
+      ],
+      "transport": "injected",
+      "wrappers": [
+        "none",
+        "general",
+        "custom"
+      ]
     },
     "go-server": {
       "implemented": true,
@@ -1997,88 +2014,6 @@
       "out_dir": "."
     },
     {
-      "id": "go.server",
-      "kind": "go-server",
-      "module": "",
-      "out_dir": "golang"
-    },
-    {
-      "base_url": "http://localhost:2333",
-      "id": "typescript.client",
-      "kind": "typescript-client",
-      "out_dir": "typescript"
-    },
-    {
-      "base_url": "http://localhost:2333",
-      "exclude": [
-        "path:/static/**",
-        "path:/api/ws",
-        "path:/api/demo/ws",
-        "path:/api/demo/sweep-events",
-        "path:/api/demo/assistant-session",
-        "path:/api/demo/delete$"
-      ],
-      "id": "kotlin.client",
-      "include": [
-        "tag:api"
-      ],
-      "kind": "kotlin-client",
-      "out_dir": "kotlin",
-      "package": "com.example.apiblueprint"
-    },
-    {
-      "id": "python.server",
-      "kind": "python-server",
-      "out_dir": "python/server",
-      "python_package_root": "api_blueprint_example_server"
-    },
-    {
-      "base_url": "http://localhost:2333",
-      "id": "python.client",
-      "kind": "python-client",
-      "out_dir": "python/client",
-      "python_package_root": "api_blueprint_example_client"
-    },
-    {
-      "clients": [
-        "typescript.client",
-        "kotlin.client"
-      ],
-      "id": "http",
-      "kind": "http-transport",
-      "server": "go.server"
-    },
-    {
-      "clients": [
-        "python.client"
-      ],
-      "id": "http.python",
-      "kind": "http-transport",
-      "server": "python.server"
-    },
-    {
-      "clients": [
-        "typescript.client"
-      ],
-      "frontend_mode": "external",
-      "id": "wails.v3",
-      "kind": "wails-transport",
-      "overlay_name": "wailsv3",
-      "server": "go.server",
-      "version": "v3"
-    },
-    {
-      "clients": [
-        "typescript.client"
-      ],
-      "frontend_mode": "external",
-      "id": "wails.v2",
-      "kind": "wails-transport",
-      "overlay_name": "wailsv2",
-      "server": "go.server",
-      "version": "v2"
-    },
-    {
       "go_package_prefix": "example.com/project/grpc/go",
       "id": "grpc.proto",
       "kind": "grpc-proto",
@@ -2144,6 +2079,96 @@
       "out_dir": "grpc/python",
       "proto": "grpc.proto",
       "python_package_root": "pb"
+    },
+    {
+      "id": "go.server",
+      "kind": "go-server",
+      "module": "example.com/project/golang/server",
+      "out_dir": "golang/server"
+    },
+    {
+      "base_url": "http://localhost:2333",
+      "id": "go.client",
+      "kind": "go-client",
+      "module": "example.com/project/golang/client",
+      "out_dir": "golang/client"
+    },
+    {
+      "base_url": "http://localhost:2333",
+      "id": "typescript.client",
+      "kind": "typescript-client",
+      "out_dir": "typescript"
+    },
+    {
+      "base_url": "http://localhost:2333",
+      "exclude": [
+        "path:/static/**",
+        "path:/api/ws",
+        "path:/api/demo/ws",
+        "path:/api/demo/sweep-events",
+        "path:/api/demo/assistant-session",
+        "path:/api/demo/delete$"
+      ],
+      "id": "kotlin.client",
+      "include": [
+        "tag:api"
+      ],
+      "kind": "kotlin-client",
+      "out_dir": "kotlin",
+      "package": "com.example.apiblueprint"
+    },
+    {
+      "id": "python.server",
+      "kind": "python-server",
+      "out_dir": "python/server",
+      "python_package_root": "api_blueprint_example_server"
+    },
+    {
+      "base_url": "http://localhost:2333",
+      "id": "python.client",
+      "kind": "python-client",
+      "out_dir": "python/client",
+      "python_package_root": "api_blueprint_example_client"
+    },
+    {
+      "clients": [
+        "go.client",
+        "typescript.client",
+        "kotlin.client"
+      ],
+      "id": "http",
+      "kind": "http-transport",
+      "server": "go.server"
+    },
+    {
+      "clients": [
+        "python.client"
+      ],
+      "id": "http.python",
+      "kind": "http-transport",
+      "server": "python.server"
+    },
+    {
+      "clients": [
+        "typescript.client"
+      ],
+      "frontend_mode": "external",
+      "id": "wails.v3",
+      "kind": "wails-transport",
+      "overlay_name": "wailsv3",
+      "server": "go.server",
+      "version": "v3"
+    },
+    {
+      "clients": [
+        "typescript.client"
+      ],
+      "frontend_mode": "external",
+      "id": "wails.v2",
+      "kind": "wails-transport",
+      "overlay_name": "wailsv2",
+      "server": "go.server",
+      "version": "v2"
     }
   ],
   "version": "1.0"

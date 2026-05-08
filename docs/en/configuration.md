@@ -1,6 +1,6 @@
 # Configuration
 
-`api-blueprint.toml` is the main config file for the documentation service and the unified generator. The 1.0 mainline uses only `Blueprint -> ContractGraph -> [[targets]]`.
+`api-blueprint.toml` is the main config file for the documentation service and the unified generator. The 1.0 mainline uses `Blueprint -> ContractGraph -> targets`; `[[targets]]` is the canonical entrypoint, and shortcut tables such as `[[go.server]]`, `[[go.client]]`, `[[python.server]]`, and `[[transport.http]]` are normalized into the same target list when config is loaded.
 
 ## blueprint
 
@@ -26,46 +26,45 @@ kind = "contract"
 out_dir = "."
 formats = ["json", "markdown", "agent-json", "agent-markdown", "shards"]
 
-[[targets]]
+[[go.server]]
 id = "go.server"
-kind = "go-server"
-out_dir = "golang"
-module = "example.com/project/golang"
+out_dir = "golang/server"
+module = "example.com/project/golang/server"
 
-[[targets]]
+[[go.client]]
+id = "go.client"
+out_dir = "golang/client"
+module = "example.com/project/golang/client"
+base_url = "http://localhost:2333"
+
+[[typescript.client]]
 id = "typescript.client"
-kind = "typescript-client"
 out_dir = "typescript"
 base_url = "http://localhost:2333"
 
-[[targets]]
+[[kotlin.client]]
 id = "kotlin.client"
-kind = "kotlin-client"
 out_dir = "kotlin"
-package = "com.example.apiblueprint"
+module = "com.example.apiblueprint"
 
-[[targets]]
+[[python.server]]
 id = "python.server"
-kind = "python-server"
 out_dir = "python/server"
-python_package_root = "api_blueprint_example_server"
+module = "api_blueprint_example_server"
 
-[[targets]]
+[[python.client]]
 id = "python.client"
-kind = "python-client"
 out_dir = "python/client"
-python_package_root = "api_blueprint_example_client"
+module = "api_blueprint_example_client"
 base_url = "http://localhost:2333"
 
-[[targets]]
+[[transport.http]]
 id = "http"
-kind = "http-transport"
 server = "go.server"
-clients = ["typescript.client", "kotlin.client", "python.client"]
+clients = ["go.client", "typescript.client", "kotlin.client", "python.client"]
 
-[[targets]]
+[[transport.wails]]
 id = "wails.v3"
-kind = "wails-transport"
 version = "v3"
 server = "go.server"
 clients = ["typescript.client"]
@@ -101,10 +100,13 @@ Common fields:
 - `kind`: target type.
 - `out_dir`: generated output directory; transport targets usually do not need one.
 
+Shortcut tables infer `kind`, so they must not include an explicit `kind`. `id` is still required. In shortcut tables, Go `module` remains the Go module; Python `module` maps to `python_package_root`; Kotlin `module` maps to `package`, and explicit `package` is still accepted.
+
 Core targets:
 
 - `contract`: emits `api-blueprint.contract.json`, `api-blueprint.contract.md`, `api-blueprint.agent.json`, `api-blueprint.agent.md`, and / or `api-blueprint.contract.d/` shards.
-- `go-server`: emits Go server core; Go client is reserved for a future `go-client` target.
+- `go-server`: emits Go server core.
+- `go-client`: emits a preview Go client. RPC/query/json/form/binary HTTP calls are usable; legacy WS / STREAM / CHANNEL generate transport-neutral surfaces, and the default HTTP adapter returns an explicit unsupported error so projects can swap in a custom transport.
 - `typescript-client`: emits TypeScript client core that depends only on `ApiTransport`; `base_url` / `base_url_expr` are injected by transport facades.
 - `kotlin-client`: emits an OkHttp + kotlinx.serialization Android client. Through the shared transport abstraction it generates RPC, legacy WS, STREAM, and CHANNEL route surfaces, and supports query/json/form/binary/open request kinds plus none/general/custom response wrappers. `base_url` / `base_url_expr` are used by the generated OkHttp HTTP adapter config, while route/runtime clients stay transport-neutral. The built-in OkHttp adapter is RPC-first; long-connection bridges are preview/custom transport surfaces.
 - `python-server`: emits Python route service contracts/stubs and a FastAPI HTTP adapter scaffold. `python_package_root` controls the generated package root.
@@ -116,6 +118,8 @@ Core targets:
 Kotlin / Python client/server, `api-gen check`, and contract / agent artifact projection use the same planner / capability metadata. If a target capability does not support a route, request kind, or wrapper, generation should fail before writing a partial output tree.
 
 The Kotlin client output layout is `<package>/<root>/runtime/*`, `<package>/<root>/routes/<root>/<group...>/*`, and `<package>/<root>/transports/http/*`. `Gen*.kt` files are generator-owned; non-`Gen*` façade / extension files are user-owned. This is a breaking layout change from the old `<package>/ApiClient.kt`, `endpoints/`, `models/`, and `internal/` layout.
+
+The Go client output layout is `runtime/*`, `routes/<root>/<group...>/*`, and `transports/http/*`. `gen_*.go` files are generator-owned, while `client.go` façades are user-owned and preserved during regeneration. `base_url` / `base_url_expr` are written only to the HTTP transport config, not route/runtime clients.
 
 The Python client/server output layout is `<python_package_root>/<root>/runtime/*`, `<python_package_root>/<root>/routes/<root>/<group...>/*`, and `<python_package_root>/<root>/transports/http/*`. Root-level routes are emitted under `routes/<root>`, not `routes/root`. If `python_package_root` is omitted, the generator uses its default package root.
 
@@ -131,16 +135,10 @@ gRPC stub target fields:
 
 Transport targets:
 
-- `http-transport`: declares an HTTP server/client combination. `server` can reference a `go-server` or `python-server`; `clients` can reference TypeScript, Kotlin, or Python clients.
+- `http-transport`: declares an HTTP server/client combination. `server` can reference a `go-server` or `python-server`; `clients` can reference Go, TypeScript, Kotlin, or Python clients.
 - `wails-transport`: declares a Wails overlay and must set `version`, `server`, and `clients`. Wails remains Go + TypeScript only and does not attach Kotlin / Python clients.
 - `frontend_mode = "external"` emits Wails TypeScript facades for external frontends; `none` emits only the Go overlay.
 - `include` / `exclude` can trim the Wails target overlay / facade.
-
-Reserved targets:
-
-- `go-client`
-
-This target currently exists only in the schema and capability registry and does not generate business code.
 
 ## CLI
 
