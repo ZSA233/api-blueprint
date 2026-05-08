@@ -9,5 +9,15 @@ import (
 
 var (
 	{% for var in error_group.error_vars() %}
-	{{ var.key }} = e.New({{ var.code }}, "{{ var.message }}"){% endfor %}
+	{{ var.key }} = e.NewCatalogError(
+		{{ var.id | code_literal }},
+		{{ var.key | code_literal }},
+		{{ var.code }},
+		{{ var.message | code_literal }},
+		e.ToastSpec{
+			Key:     {{ var.toast_key | code_literal }},
+			Level:   {{ var.toast_level | code_literal }},
+			Default: {{ var.toast_default | code_literal }},
+		},
+	){% endfor %}
 )

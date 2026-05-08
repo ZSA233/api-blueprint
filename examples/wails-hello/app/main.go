@@ -4,7 +4,7 @@ import (
 	"embed"
 	"fmt"
 
-	bindinghello "example.com/api-blueprint/wails-hello/golang/views/transports/wailsv3/api/hello"
+	bindinghello "example.com/api-blueprint/wails-hello/golang/transports/wailsv3/api/hello"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )

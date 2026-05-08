@@ -10,6 +10,7 @@ from typing import IO, TYPE_CHECKING, Generator, Optional, Sequence
 from api_blueprint.engine.router import Router
 from api_blueprint.writer.core.base import BaseWriter
 from api_blueprint.writer.core.contract_adapters import RouteContractIndex, RouteProtocolContract
+from api_blueprint.writer.core.errors import ErrorCatalogEntry, ErrorCatalogGroup, error_catalog_from_manifest, group_error_catalog
 from api_blueprint.writer.core.files import ensure_filepath_open
 from api_blueprint.writer.core.templates import render
 
@@ -51,6 +52,7 @@ class KotlinWriter(BaseWriter[KotlinBlueprint]):
         self.include = normalize_rules(include)
         self.exclude = normalize_rules(exclude)
         self.allow_empty = allow_empty
+        self.contract_graph = contract_graph
         self.route_contract_index = RouteContractIndex.from_graph(contract_graph) if contract_graph is not None else None
 
     @property
@@ -77,8 +79,30 @@ class KotlinWriter(BaseWriter[KotlinBlueprint]):
         if self.route_contract_index is None:
             from api_blueprint.contract import build_contract_graph
 
-            self.route_contract_index = RouteContractIndex.from_graph(build_contract_graph([bp.bp for bp in self.bps]))
+            self.contract_graph = build_contract_graph([bp.bp for bp in self.bps])
+            self.route_contract_index = RouteContractIndex.from_graph(self.contract_graph)
         return self.route_contract_index
+
+    def error_catalog(self) -> tuple[ErrorCatalogEntry, ...]:
+        if self.contract_graph is None:
+            from api_blueprint.contract import build_contract_graph
+
+            self.contract_graph = build_contract_graph([bp.bp for bp in self.bps])
+            if self.route_contract_index is None:
+                self.route_contract_index = RouteContractIndex.from_graph(self.contract_graph)
+        return error_catalog_from_manifest(self.contract_graph.to_manifest())
+
+    def error_groups(self) -> tuple[ErrorCatalogGroup, ...]:
+        return group_error_catalog(self.error_catalog())
+
+    def error_catalog_for_bp(self, bp: KotlinBlueprint) -> tuple[ErrorCatalogEntry, ...]:
+        if self.contract_graph is None:
+            self._ensure_route_contract_index()
+        route_ids = [route.protocol.route.route_id for route in bp.routes]
+        return error_catalog_from_manifest(self.contract_graph.to_manifest(), route_ids=route_ids)
+
+    def error_groups_for_bp(self, bp: KotlinBlueprint) -> tuple[ErrorCatalogGroup, ...]:
+        return group_error_catalog(self.error_catalog_for_bp(bp))
 
     def route_protocol_for(self, router: Router) -> RouteProtocolContract:
         return self._ensure_route_contract_index().protocol_for_router(router)

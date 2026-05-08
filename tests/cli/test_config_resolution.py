@@ -34,9 +34,6 @@ def test_example_config_loads_vnext_targets() -> None:
     assert config.blueprint.docs_server == "0.0.0.0:2332"
     assert [target.id for target in config.targets] == [
         "contract",
-        "grpc.proto",
-        "grpc.go",
-        "grpc.python",
         "go.server",
         "go.client",
         "typescript.client",
@@ -47,12 +44,12 @@ def test_example_config_loads_vnext_targets() -> None:
         "http.python",
         "wails.v3",
         "wails.v2",
+        "grpc.proto",
+        "grpc.go",
+        "grpc.python",
     ]
     assert [target.kind for target in config.targets] == [
         "contract",
-        "grpc-proto",
-        "grpc-go",
-        "grpc-python",
         "go-server",
         "go-client",
         "typescript-client",
@@ -63,7 +60,35 @@ def test_example_config_loads_vnext_targets() -> None:
         "http-transport",
         "wails-transport",
         "wails-transport",
+        "grpc-proto",
+        "grpc-go",
+        "grpc-python",
     ]
+
+
+def test_target_manifest_keeps_sibling_go_output_portable(tmp_path) -> None:
+    service_root = tmp_path / "services" / "agent"
+    scripts_dir = service_root / "scripts"
+    scripts_dir.mkdir(parents=True)
+    (service_root / "go.mod").write_text("module example.com/agent\n\ngo 1.23\n", encoding="utf-8")
+    config_path = scripts_dir / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[targets]]
+id = "go.server"
+kind = "go-server"
+out_dir = "../internal/views"
+module = "example.com/agent"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    target = resolve_config(config_path).targets[0]
+    manifest = target_manifest(target, scripts_dir)
+
+    assert manifest["out_dir"] == "../internal/views"
+    assert manifest["go_import_root"] == "example.com/agent/internal/views"
 
 
 def test_alias_target_tables_normalize_to_vnext_targets(tmp_path) -> None:
@@ -121,6 +146,13 @@ id = "grpc.proto"
 out_dir = "grpc/protos"
 package = "example.api"
 
+[[grpc.proto.proto_files]]
+file = "api/demo.proto"
+package = "example.api.demo"
+go_package = "example.com/project/grpc/go/api/demo;demo"
+route_paths = ["/api/demo/**"]
+service = "DemoService"
+
 [[grpc.go]]
 id = "grpc.go"
 proto = "grpc.proto"
@@ -174,6 +206,9 @@ module = "pb"
     assert config.targets[5].module is None
     assert config.targets[5].python_package_root == "server_app"
     assert config.targets[6].python_package_root == "client_app"
+    assert len(config.targets[9].proto_files) == 1
+    assert config.targets[9].proto_files[0].file == "api/demo.proto"
+    assert config.targets[9].proto_files[0].service == "DemoService"
     assert config.targets[11].python_package_root == "pb"
 
 
@@ -273,7 +308,7 @@ def test_resolve_config_converts_vnext_target_outputs_to_absolute_paths() -> Non
     targets = {target.id: target for target in resolved.targets}
 
     assert targets["contract"].out_dir == EXAMPLE_CONFIG.parent.resolve()
-    assert targets["go.server"].out_dir == (EXAMPLE_CONFIG.parent / "golang" / "server").resolve()
+    assert targets["go.server"].out_dir == (EXAMPLE_CONFIG.parent / "golang" / "server" / "views").resolve()
     assert targets["typescript.client"].out_dir == (EXAMPLE_CONFIG.parent / "typescript").resolve()
     assert targets["kotlin.client"].out_dir == (EXAMPLE_CONFIG.parent / "kotlin").resolve()
     assert targets["kotlin.client"].package == "com.example.apiblueprint"

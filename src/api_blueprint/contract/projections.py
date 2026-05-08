@@ -18,6 +18,7 @@ def build_agent_manifest(manifest: Mapping[str, Any]) -> JsonObject:
     services = _list_of_maps(manifest.get("services"))
     routes = _list_of_maps(manifest.get("routes"))
     schemas = _mapping_of_maps(manifest.get("schemas"))
+    errors = _list_of_maps(manifest.get("errors"))
     connections = _list_of_maps(manifest.get("connections"))
     targets = _list_of_maps(manifest.get("targets"))
     capabilities = manifest.get("capabilities") if isinstance(manifest.get("capabilities"), Mapping) else {}
@@ -28,7 +29,7 @@ def build_agent_manifest(manifest: Mapping[str, Any]) -> JsonObject:
         "version": str(manifest.get("version") or "1.0"),
         "generator": dict(manifest.get("generator")) if isinstance(manifest.get("generator"), Mapping) else {},
         "source": "api-blueprint.contract.json",
-        "counts": _counts(services, routes, schemas, connections, targets),
+        "counts": _counts(services, routes, schemas, errors, connections, targets),
         "read_order": [
             {
                 "step": 1,
@@ -59,6 +60,7 @@ def build_agent_manifest(manifest: Mapping[str, Any]) -> JsonObject:
         },
         "services": [_service_summary(service, routes) for service in services],
         "routes": [_route_summary(route, schemas, route_artifacts.get(_route_id(route), {})) for route in routes],
+        "errors": errors,
         "connections": [_connection_summary(connection) for connection in connections],
         "targets": [_target_summary(target, routes) for target in targets],
         "capabilities": dict(capabilities),
@@ -74,6 +76,7 @@ def build_contract_shards(manifest: Mapping[str, Any]) -> dict[str, JsonObject]:
     services = _list_of_maps(manifest.get("services"))
     routes = _list_of_maps(manifest.get("routes"))
     schemas = _mapping_of_maps(manifest.get("schemas"))
+    errors = _list_of_maps(manifest.get("errors"))
     targets = _list_of_maps(manifest.get("targets"))
     route_artifacts = _route_artifacts(routes, targets)
     routes_by_service = _routes_by_service(routes)
@@ -82,7 +85,8 @@ def build_contract_shards(manifest: Mapping[str, Any]) -> dict[str, JsonObject]:
         "index.json": {
             "version": str(manifest.get("version") or "1.0"),
             "generator": dict(manifest.get("generator")) if isinstance(manifest.get("generator"), Mapping) else {},
-            "counts": _counts(services, routes, schemas, _list_of_maps(manifest.get("connections")), targets),
+            "counts": _counts(services, routes, schemas, errors, _list_of_maps(manifest.get("connections")), targets),
+            "errors": errors,
             "services": [
                 {
                     "id": _string(service.get("id")),
@@ -124,6 +128,7 @@ def build_contract_shards(manifest: Mapping[str, Any]) -> dict[str, JsonObject]:
             "route": dict(route),
             "service": _service_for_route(route, services),
             "connection": route.get("connection"),
+            "errors": list(route.get("errors") if isinstance(route.get("errors"), list) else []),
             "schemas": {name: schemas[name] for name in route_schema_names if name in schemas},
             "artifacts": route_artifacts.get(route_id, {}),
         }
@@ -170,6 +175,7 @@ def _counts(
     services: list[JsonObject],
     routes: list[JsonObject],
     schemas: Mapping[str, JsonObject],
+    errors: list[JsonObject],
     connections: list[JsonObject],
     targets: list[JsonObject],
 ) -> JsonObject:
@@ -177,6 +183,7 @@ def _counts(
         "services": len(services),
         "routes": len(routes),
         "schemas": len(schemas),
+        "errors": len(errors),
         "connections": len(connections),
         "targets": len(targets),
     }
@@ -210,6 +217,7 @@ def _route_summary(route: Mapping[str, Any], schemas: Mapping[str, JsonObject], 
         "request_models": _request_models(route),
         "response_model": response.get("model") if isinstance(response, Mapping) else None,
         "connection": _compact_connection(route.get("connection")),
+        "errors": list(route.get("errors") if isinstance(route.get("errors"), list) else []),
         "schemas": _route_schema_names(route, schemas),
         "artifacts": dict(artifacts),
         "hash": _string(route.get("hash")),
@@ -264,6 +272,7 @@ def _target_level_artifacts(target: Mapping[str, Any], routes: list[JsonObject])
 
 def _route_artifacts(routes: list[JsonObject], targets: list[JsonObject]) -> dict[str, JsonObject]:
     result: dict[str, JsonObject] = {}
+    targets_by_id = {_string(target.get("id")): target for target in targets if _string(target.get("id"))}
     for route in routes:
         route_id = _route_id(route)
         result[route_id] = {}
@@ -273,13 +282,17 @@ def _route_artifacts(routes: list[JsonObject], targets: list[JsonObject]) -> dic
                 continue
             if not _target_selects_route(target, route):
                 continue
-            artifact = _artifact_for_route(target, route)
+            artifact = _artifact_for_route(target, route, targets_by_id)
             if artifact:
                 result[route_id][target_id] = artifact
     return result
 
 
-def _artifact_for_route(target: Mapping[str, Any], route: Mapping[str, Any]) -> JsonObject:
+def _artifact_for_route(
+    target: Mapping[str, Any],
+    route: Mapping[str, Any],
+    targets_by_id: Mapping[str, Mapping[str, Any]] | None = None,
+) -> JsonObject:
     kind = _string(target.get("kind"))
     out_dir = _string(target.get("out_dir"))
     service_id = _string(route.get("service_id"))
@@ -293,11 +306,11 @@ def _artifact_for_route(target: Mapping[str, Any], route: Mapping[str, Any]) -> 
     handled = True
 
     if kind == "go-server":
-        base = _join(out_dir, "views", "routes", root, "" if root == group else group)
+        base = _join(out_dir, "routes", root, "" if root == group else group)
         files = [_join(base, "gen_interface.go"), _join(base, "gen_protos.go")]
-        module = _string(target.get("module"))
-        if module:
-            imports = [_join(module, "views", "routes", root, "" if root == group else group)]
+        import_root = _string(target.get("go_import_root")) or _string(target.get("module"))
+        if import_root:
+            imports = [_join(import_root, "routes", root, "" if root == group else group)]
     elif kind == "go-client":
         base = _join(out_dir, "routes", route_path)
         transport_base = _join(out_dir, "transports", "http")
@@ -308,7 +321,7 @@ def _artifact_for_route(target: Mapping[str, Any], route: Mapping[str, Any]) -> 
             _join(transport_base, "gen_transport.go"),
             _join(transport_base, "client.go"),
         ]
-        module = _string(target.get("module"))
+        module = _string(target.get("go_import_root")) or _string(target.get("module"))
         if module:
             imports = [_join(module, "routes", route_path)]
     elif kind == "typescript-client":
@@ -354,9 +367,18 @@ def _artifact_for_route(target: Mapping[str, Any], route: Mapping[str, Any]) -> 
         ]
     elif kind == "wails-transport":
         overlay = _string(target.get("overlay_name")) or "wails"
+        server_target = (
+            targets_by_id.get(_string(target.get("server"))) if targets_by_id is not None else None
+        )
+        client_ids = list(target.get("clients") if isinstance(target.get("clients"), list) else [])
+        client_target = (
+            targets_by_id.get(_string(client_ids[0])) if targets_by_id is not None and client_ids else None
+        )
+        go_root = _string(server_target.get("out_dir")) if server_target is not None else "golang"
+        ts_root = _string(client_target.get("out_dir")) if client_target is not None else "typescript"
         files = [
-            _join("golang", "views", "transports", overlay, root, "" if root == group else group, "gen_service.go"),
-            _join("typescript", root, "transports", overlay, root, "" if root == group else group, "client.ts"),
+            _join(go_root, "transports", overlay, root, "" if root == group else group, "gen_service.go"),
+            _join(ts_root, root, "transports", overlay, root, "" if root == group else group, "client.ts"),
         ]
     elif kind == "grpc-proto":
         if _string(route.get("kind")) == "legacy_ws":

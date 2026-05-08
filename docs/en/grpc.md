@@ -5,14 +5,13 @@
 ## Targets
 
 ```toml
-[[targets]]
+[[grpc.proto]]
 id = "grpc.proto"
-kind = "grpc-proto"
 out_dir = "grpc/protos"
 package = "example.api"
 go_package_prefix = "example.com/project/grpc/go"
 
-[[targets.proto_files]]
+[[grpc.proto.proto_files]]
 file = "api/demo/v1/demo.proto"
 package = "example.api.demo.v1"
 go_package = "example.com/project/grpc/go/api/demo/v1;demopb"
@@ -20,33 +19,32 @@ schema_modules = ["blueprints.api.demo"]
 route_paths = ["/api/demo/v1/**"]
 service = "DemoService"
 
-[[targets]]
+[[grpc.go]]
 id = "grpc.go"
-kind = "grpc-go"
 proto = "grpc.proto"
 out_dir = "grpc/go"
 module = "example.com/project/grpc/go"
 files = ["api/**/*.proto"]
 
-[[targets]]
+[[grpc.python]]
 id = "grpc.python"
-kind = "grpc-python"
 proto = "grpc.proto"
 out_dir = "grpc/python"
 files = ["api/**/*.proto"]
-python_package_root = "pb"
+module = "pb"
 ```
 
 - `out_dir`: proto output directory.
 - `package`: proto package.
 - `go_package_prefix`: used to generate `option go_package` when no `proto_files` rule matches; files are split by Blueprint root/group.
-- `[[targets.proto_files]]`: optional layout rules. Rules are evaluated in order and map schema module/name plus route path/id/service to a specific proto file/package/go_package/service.
+- `[[grpc.proto]]`, `[[grpc.go]]`, and `[[grpc.python]]` are shortcut tables that normalize to canonical `[[targets]]`; canonical config remains supported.
+- `[[targets.proto_files]]` / `[[grpc.proto.proto_files]]`: optional layout rules. Rules are evaluated in order and map schema module/name plus route path/id/service to a specific proto file/package/go_package/service.
 - `proto` on `grpc-go` / `grpc-python` can reference a `grpc-proto` target in the same config. When `proto` is omitted, `source_root` is required.
 - `files` matches relative to the proto target `out_dir` or `source_root`; when a proto target is referenced, its `out_dir` is automatically added as an include root.
 - `source_root` is used for handwritten proto files or trimmed generated paths. When set, `files` is matched relative to that directory and `protoc` runs there.
 - `module`: optional for `grpc-go`; when set, Go import-path output mode is used and generated files are split by `option go_package`, avoiding multiple proto files in the same Go package directory.
 - `grpc-go` requires `protoc`, `protoc-gen-go`, and `protoc-gen-go-grpc`.
-- `grpc-python` requires `grpcio-tools`; `python_package_root` places generated files under a package root and rewrites generated imports.
+- `grpc-python` requires `grpcio-tools`; `python_package_root` places generated files under a package root and rewrites generated imports. In the shortcut table, `module = "pb"` maps to `python_package_root = "pb"`.
 
 Go/Python targets generate only protobuf/gRPC stubs, not business service implementations.
 
@@ -55,21 +53,19 @@ The repository commits `examples/grpc/protos/`, `examples/grpc/go/`, and `exampl
 Handwritten proto direct compilation example:
 
 ```toml
-[[targets]]
+[[grpc.go]]
 id = "grpc.go"
-kind = "grpc-go"
 source_root = "protocols/grpc"
 out_dir = "grpc/go"
 files = ["**/*.proto"]
 import_roots = ["third_party/protos"]
 
-[[targets]]
+[[grpc.python]]
 id = "grpc.python"
-kind = "grpc-python"
 source_root = "protocols/grpc"
 out_dir = "grpc/python"
 files = ["**/*.proto"]
-python_package_root = "pb"
+module = "pb"
 ```
 
 ## RPC Mapping

@@ -98,7 +98,7 @@
     },
     "wails.v2": {
       "files": [
-        "golang/views/transports/wailsv2/api/hello/gen_service.go",
+        "golang/server/views/transports/wailsv2/api/hello/gen_service.go",
         "typescript/api/transports/wailsv2/api/hello/client.ts"
       ],
       "imports": [],
@@ -106,7 +106,7 @@
     },
     "wails.v3": {
       "files": [
-        "golang/views/transports/wailsv3/api/hello/gen_service.go",
+        "golang/server/views/transports/wailsv3/api/hello/gen_service.go",
         "typescript/api/transports/wailsv3/api/hello/client.ts"
       ],
       "imports": [],
@@ -114,10 +114,18 @@
     }
   },
   "connection": null,
+  "errors": [
+    "CommonErr.UNKNOWN",
+    "CommonErr.TOKEN_EXPIRE"
+  ],
   "route": {
     "connection": null,
     "deprecated": false,
-    "hash": "c49f6d1f65560c210a3a6b3b3ebb460c0f4cc8bd85dfc3cb4c37792c19f00b7f",
+    "errors": [
+      "CommonErr.UNKNOWN",
+      "CommonErr.TOKEN_EXPIRE"
+    ],
+    "hash": "27e69ab4d48a770a2017a21c10fa69993f32812dbdeae287d612ce31d6dbab5e",
     "id": "api.hello.get.mapenum",
     "kind": "rpc",
     "method_name": "mapEnum",

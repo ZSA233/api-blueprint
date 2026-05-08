@@ -58,7 +58,8 @@ entrypoints = ["blueprints.app:bp"]
 
 [[go.server]]
 id = "go.server"
-out_dir = "golang/server"
+out_dir = "golang/server/views"
+module = "example.com/project/golang/server"
 
 [[go.client]]
 id = "go.client"

@@ -59,7 +59,7 @@
     },
     "wails.v2": {
       "files": [
-        "golang/views/transports/wailsv2/api/demo/gen_service.go",
+        "golang/server/views/transports/wailsv2/api/demo/gen_service.go",
         "typescript/api/transports/wailsv2/api/demo/client.ts"
       ],
       "imports": [],
@@ -67,7 +67,7 @@
     },
     "wails.v3": {
       "files": [
-        "golang/views/transports/wailsv3/api/demo/gen_service.go",
+        "golang/server/views/transports/wailsv3/api/demo/gen_service.go",
         "typescript/api/transports/wailsv3/api/demo/client.ts"
       ],
       "imports": [],
@@ -75,10 +75,18 @@
     }
   },
   "connection": null,
+  "errors": [
+    "CommonErr.UNKNOWN",
+    "CommonErr.TOKEN_EXPIRE"
+  ],
   "route": {
     "connection": null,
     "deprecated": false,
-    "hash": "4f1e1879a5861aa0a5e42eb47ce2481174f90ad49e4b8c6a02ecd7a51a14928e",
+    "errors": [
+      "CommonErr.UNKNOWN",
+      "CommonErr.TOKEN_EXPIRE"
+    ],
+    "hash": "fd0e998e4c4f45bc3c589f29c98ec049e81049f9357f183c1d8a12439a2af10a",
     "id": "api.demo.ws.ws",
     "kind": "legacy_ws",
     "method_name": "ws",

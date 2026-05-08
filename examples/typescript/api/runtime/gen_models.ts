@@ -197,6 +197,8 @@ export interface GeneralWrapper<T = any> {
   code: number;
   /** message */
   message?: string;
+  /** toast */
+  toast?: Record<string, string>;
   /** data */
   data?: T;
 }

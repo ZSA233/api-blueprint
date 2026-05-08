@@ -53,9 +53,29 @@ class GolangError:
         return self._err.message
 
     @property
+    def id(self) -> str:
+        cls_name, key = self._err.__key__
+        return f"{cls_name}.{key}"
+
+    @property
     def key(self) -> str:
         _cls_name, key = self._err.__key__
         return key.upper()
+
+    @property
+    def toast_key(self) -> str:
+        toast = getattr(self._err, "toast", None)
+        return str(getattr(toast, "key", "") or self.id)
+
+    @property
+    def toast_default(self) -> str:
+        toast = getattr(self._err, "toast", None)
+        return str(getattr(toast, "default", "") or self.message)
+
+    @property
+    def toast_level(self) -> str:
+        toast = getattr(self._err, "toast", None)
+        return str(getattr(toast, "level", "") or "error")
 
 
 class GolangErrorGroup:

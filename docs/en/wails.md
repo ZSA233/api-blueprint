@@ -33,25 +33,27 @@ frontend_mode = "external"
 Wails Go overlays are generated under the transport target directory inside the Go target output tree referenced by `server`:
 
 ```text
-views/
-  routes/
+routes/
+  api/
+    demo/
+      gen_interface.go
+      impl.go
+providers/
+  gen_context.go
+runtime/
+  errors/
+    gen_errors.go
+transports/
+  wailsv3/
+    gen_runtime.go
     api/
       demo/
-        gen_interface.go
-        impl.go
-  providers/
-    gen_context.go
-  transports/
-    wailsv3/
-      gen_runtime.go
-      api/
-        demo/
-          gen_overlay.go
-          gen_service.go
-          impl_service.go
+        gen_overlay.go
+        gen_service.go
+        impl_service.go
 ```
 
-`views/routes/<root>/<group>` is the transport-neutral core; `views/providers` is the shared provider runtime; `views/transports/<overlay_name>` is the Wails target. The route-local `impl_service.go` is a user-owned bootstrap constructor entry and is preserved across regeneration.
+`routes/<root>/<group>` is the transport-neutral core; `providers` is the shared provider runtime; `runtime/errors` is the generated business error catalog; `transports/<overlay_name>` is the Wails target. The route-local `impl_service.go` is a user-owned bootstrap constructor entry and is preserved across regeneration. If you want a `views/...` package path, configure the referenced Go server target with `out_dir = ".../views"`; Wails does not append it implicitly.
 
 ## TypeScript Output Layout
 
@@ -89,9 +91,9 @@ Long-term ownership boundary:
 - `impl_*` helpers: user-owned, but should not retake the provider main flow.
 - Wails runtime: generated-only, no `impl_runtime.go`.
 
-`RouteExecutor` is a reusable route-level execution plan and carries `RouteInfo`. Request-scoped state must live in `Context` or its metadata store, and custom providers should be stateless/reentrant. When a provider implementation must vary by Wails / HTTP or by root/route, use `views/providers.RegisterProviderFactory` and inspect `ProviderSpec.Route`; selection happens when the executor is created and does not enter the request hot path. HTTP-only providers should explicitly import `views/transports/http` and use adapter helpers such as `httptransport.RequireGin(ctx)` to access Gin context.
+`RouteExecutor` is a reusable route-level execution plan and carries `RouteInfo`. Request-scoped state must live in `Context` or its metadata store, and custom providers should be stateless/reentrant. When a provider implementation must vary by Wails / HTTP or by root/route, use `providers.RegisterProviderFactory` and inspect `ProviderSpec.Route`; selection happens when the executor is created and does not enter the request hot path. HTTP-only providers should explicitly import `transports/http` under the generated package root and use adapter helpers such as `httptransport.RequireGin(ctx)` to access Gin context.
 
-HTTP behavior tests should generally live in an external test package, for example `package demo_test`, and import the `views/transports/http/<root>/<group>` adapter. Business handler unit tests can stay in the route package and call handlers directly with typed `ctx/req` values. Use `views/transports/http.RequireGin(ctx)` only when Gin APIs are actually required; doing so explicitly couples that code to the HTTP adapter.
+HTTP behavior tests should generally live in an external test package, for example `package demo_test`, and import the `transports/http/<root>/<group>` adapter under the generated package root. Business handler unit tests can stay in the route package and call handlers directly with typed `ctx/req` values. Use `transports/http.RequireGin(ctx)` only when Gin APIs are actually required; doing so explicitly couples that code to the HTTP adapter.
 
 ## TypeScript Transport
 

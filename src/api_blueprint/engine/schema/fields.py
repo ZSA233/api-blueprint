@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 import zlib
-from typing import Any, ForwardRef, Generic, Optional, TypeVar, get_args, get_origin, overload
+from typing import Any, ForwardRef, Generic, Mapping, Optional, TypeVar, get_args, get_origin, overload
 
 from fastapi.security import api_key as fa_apikey
 
@@ -473,9 +473,21 @@ class Map(Field, Generic[K, V]):
         return value_type
 
 
+class Toast:
+    key: str
+    default: str
+    level: str
+
+    def __init__(self, key: str, default: str, level: str = "error") -> None:
+        self.key = key
+        self.default = default
+        self.level = level
+
+
 class Error(Field):
     code: int
     message: str
+    toast: Toast | None
 
     __type__ = "error"
 
@@ -490,13 +502,34 @@ class Error(Field):
         alias: str | None = ...,
         example: Any = ...,
         omitempty: bool = False,
+        toast: Toast | Mapping[str, Any] | None = ...,
         **kwargs: Any,
     ) -> None: ...
 
-    def __init__(self, code: int, message: str, **kwargs: Any):
+    def __init__(
+        self,
+        code: int,
+        message: str,
+        *,
+        toast: Toast | Mapping[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(**kwargs)
         self.code = code
         self.message = message
+        self.toast = _normalize_toast(toast)
+
+
+def _normalize_toast(value: Toast | Mapping[str, Any] | None) -> Toast | None:
+    if value is None:
+        return None
+    if isinstance(value, Toast):
+        return value
+    return Toast(
+        key=str(value.get("key") or ""),
+        default=str(value.get("default") or ""),
+        level=str(value.get("level") or "error"),
+    )
 
 
 class Header(Field):

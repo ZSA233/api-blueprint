@@ -87,7 +87,7 @@
     },
     "wails.v2": {
       "files": [
-        "golang/views/transports/wailsv2/static/gen_service.go",
+        "golang/server/views/transports/wailsv2/static/gen_service.go",
         "typescript/static/transports/wailsv2/static/client.ts"
       ],
       "imports": [],
@@ -95,7 +95,7 @@
     },
     "wails.v3": {
       "files": [
-        "golang/views/transports/wailsv3/static/gen_service.go",
+        "golang/server/views/transports/wailsv3/static/gen_service.go",
         "typescript/static/transports/wailsv3/static/client.ts"
       ],
       "imports": [],
@@ -103,10 +103,12 @@
     }
   },
   "connection": null,
+  "errors": [],
   "route": {
     "connection": null,
     "deprecated": false,
-    "hash": "007f8815f879ec5ad87eb170fb6504fc801d7bc0b5aee4714bcb1431d36ff074",
+    "errors": [],
+    "hash": "0544e8c4957e862e37939024a0d72b75b5e6bf2b0801ce6e8a50851406a3eebe",
     "id": "static.static.get.docjson",
     "kind": "rpc",
     "method_name": "docJson",

@@ -12,6 +12,7 @@ from api_blueprint.engine.router import Router
 from api_blueprint.route_selection import normalize_selection_rules
 from api_blueprint.writer.core.base import BaseWriter
 from api_blueprint.writer.core.contract_adapters import RouteContractIndex, RouteProtocolContract
+from api_blueprint.writer.core.errors import ErrorCatalogEntry, ErrorCatalogGroup, error_catalog_from_manifest, group_error_catalog
 from api_blueprint.writer.core.files import ensure_filepath_open
 from api_blueprint.writer.core.planning import route_matches_rule
 from api_blueprint.writer.core.templates import render
@@ -54,6 +55,7 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
         self.rendered_base_url = base_url_expr if base_url_expr is not None else json.dumps(self.base_url)
         self.include = normalize_selection_rules(include)
         self.exclude = normalize_selection_rules(exclude)
+        self.contract_graph = contract_graph
         self.route_contract_index = RouteContractIndex.from_graph(contract_graph) if contract_graph is not None else None
 
     @property
@@ -82,8 +84,30 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
         if self.route_contract_index is None:
             from api_blueprint.contract import build_contract_graph
 
-            self.route_contract_index = RouteContractIndex.from_graph(build_contract_graph([bp.bp for bp in self.bps]))
+            self.contract_graph = build_contract_graph([bp.bp for bp in self.bps])
+            self.route_contract_index = RouteContractIndex.from_graph(self.contract_graph)
         return self.route_contract_index
+
+    def error_catalog(self) -> tuple[ErrorCatalogEntry, ...]:
+        if self.contract_graph is None:
+            from api_blueprint.contract import build_contract_graph
+
+            self.contract_graph = build_contract_graph([bp.bp for bp in self.bps])
+            if self.route_contract_index is None:
+                self.route_contract_index = RouteContractIndex.from_graph(self.contract_graph)
+        return error_catalog_from_manifest(self.contract_graph.to_manifest())
+
+    def error_groups(self) -> tuple[ErrorCatalogGroup, ...]:
+        return group_error_catalog(self.error_catalog())
+
+    def error_catalog_for_bp(self, bp: PythonBlueprint) -> tuple[ErrorCatalogEntry, ...]:
+        if self.contract_graph is None:
+            self._ensure_route_contract_index()
+        route_ids = [route.contract.route_id for route in bp.routes]
+        return error_catalog_from_manifest(self.contract_graph.to_manifest(), route_ids=route_ids)
+
+    def error_groups_for_bp(self, bp: PythonBlueprint) -> tuple[ErrorCatalogGroup, ...]:
+        return group_error_catalog(self.error_catalog_for_bp(bp))
 
     def _gen_blueprint(self, bp: PythonBlueprint) -> None:
         context = {"writer": self, "bp": bp}
@@ -102,6 +126,13 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
         with self.write_file(plan.runtime.generated_file, overwrite=True) as handle:
             if handle:
                 handle.write(_render_python(self.runtime_template, context, "runtime"))
+        self._write_runtime_errors_facade(plan.runtime.directory)
+        with self.write_file(plan.runtime.directory / "gen_errors.py", overwrite=True) as handle:
+            if handle:
+                handle.write(_render_python("gen_errors.py", context, "runtime"))
+        with self.write_file(plan.runtime.directory / "gen_error_catalog.py", overwrite=True) as handle:
+            if handle:
+                handle.write(_render_python("gen_error_catalog.py", context, "runtime"))
 
         for group_plan in plan.route_groups:
             self._gen_group(group_plan)
@@ -160,6 +191,15 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
 
     def _default_public_import(self) -> str:
         return f"from .{self.route_template.removesuffix('.py')} import *\n"
+
+    def _write_runtime_errors_facade(self, runtime_dir: Path) -> None:
+        path = runtime_dir / "errors.py"
+        legacy_source = "from .gen_errors import *\n"
+        source = legacy_source + "from .gen_error_catalog import *\n"
+        overwrite = path.is_file() and path.read_text(encoding="utf-8") == legacy_source
+        with self.write_file(path, overwrite=overwrite) as handle:
+            if handle:
+                handle.write(source)
 
     def _ensure_package_tree(self, package_dir: Path) -> None:
         package_dirs: list[Path] = []

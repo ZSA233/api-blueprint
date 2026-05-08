@@ -4,12 +4,24 @@ import shutil
 import subprocess
 
 from api_blueprint.contract import build_contract_graph
-from api_blueprint.engine import Blueprint, Model
+from api_blueprint.engine import Blueprint, Error, Model, Toast
 from api_blueprint.engine.model import String
 from api_blueprint.writer.golang.client import GolangClientWriter
 
 
 def test_golang_client_writer_generates_layout_preserves_user_files_and_compiles(tmp_path):
+    class CommonErr(Model):
+        UNKNOWN = Error(-1, "unknown")
+        TOKEN_EXPIRE = Error(
+            55555,
+            "token登录态失效",
+            toast=Toast(
+                key="auth.token_expire",
+                default="登录状态已失效，请重新登录",
+                level="warning",
+            ),
+        )
+
     class SubmitJson(Model):
         value = String(description="value")
 
@@ -31,7 +43,7 @@ def test_golang_client_writer_generates_layout_preserves_user_files_and_compiles
     class ClientMessage(Model):
         text = String(description="text")
 
-    bp = Blueprint(root="/api")
+    bp = Blueprint(root="/api", errors=[CommonErr])
     views = bp.group("/demo")
     views.GET("/ping").ARGS(q=String(description="q")).RSP(SubmitResponse)
     views.POST("/submit").REQ(SubmitJson).RSP(SubmitResponse)
@@ -59,6 +71,7 @@ def test_golang_client_writer_generates_layout_preserves_user_files_and_compiles
 
     assert (output_dir / "runtime" / "gen_client.go").is_file()
     assert (output_dir / "runtime" / "gen_errors.go").is_file()
+    assert (output_dir / "runtime" / "gen_error_catalog.go").is_file()
     assert (route_dir / "gen_client.go").is_file()
     assert (route_dir / "gen_models.go").is_file()
     assert (http_dir / "gen_config.go").is_file()
@@ -67,6 +80,8 @@ def test_golang_client_writer_generates_layout_preserves_user_files_and_compiles
     assert http_client.read_text(encoding="utf-8") == "package http\n\n// USER HTTP CLIENT\n"
 
     runtime_text = (output_dir / "runtime" / "gen_client.go").read_text(encoding="utf-8")
+    errors_text = (output_dir / "runtime" / "gen_errors.go").read_text(encoding="utf-8")
+    catalog_text = (output_dir / "runtime" / "gen_error_catalog.go").read_text(encoding="utf-8")
     route_text = (route_dir / "gen_client.go").read_text(encoding="utf-8")
     models_text = (route_dir / "gen_models.go").read_text(encoding="utf-8")
     config_text = (http_dir / "gen_config.go").read_text(encoding="utf-8")
@@ -83,6 +98,19 @@ def test_golang_client_writer_generates_layout_preserves_user_files_and_compiles
     assert "func (client *GenDemoClient) SubscribeEvents(ctx context.Context" in route_text
     assert "func (client *GenDemoClient) OpenChat(ctx context.Context" in route_text
     assert "UnsupportedTransportError" in runtime_text
+    assert "type ApiCodeError struct" in errors_text
+    assert "type ApiToastSpec struct" in errors_text
+    assert "func ResolveApiToast(" in errors_text
+    assert "ErrorCatalogByID" not in errors_text
+    assert '"CommonErr.UNKNOWN"' not in errors_text
+    assert '"CommonErr.UNKNOWN"' in catalog_text
+    assert "CommonErrTokenExpire ApiErrorCode = 55555" in catalog_text
+    assert '"CommonErr.TOKEN_EXPIRE": {\n' in catalog_text
+    assert 'ID:      "CommonErr.TOKEN_EXPIRE",' in catalog_text
+    assert 'Toast: ApiToastSpec{\n' in catalog_text
+    assert '"登录状态已失效，请重新登录"' in catalog_text
+    assert "\\u767b" not in catalog_text
+    assert "locales" not in catalog_text
     assert "UnsupportedTransportError" in transport_text
     assert "ConnectUnsupported" in transport_text
     assert "StreamUnsupported" in transport_text
@@ -94,6 +122,42 @@ def test_golang_client_writer_generates_layout_preserves_user_files_and_compiles
     if shutil.which("go") is None:
         return
 
+    (output_dir / "runtime" / "toast_test.go").write_text(
+        """
+package runtime
+
+import "testing"
+
+func TestResolveApiToastPriority(t *testing.T) {
+	payload := ApiToastPayload{
+		Key:     "auth.token_expire",
+		Default: "登录状态已失效，请重新登录",
+	}
+	translate := func(key string) (string, bool) {
+		if key == "auth.token_expire" {
+			return "Sign in again", true
+		}
+		return "", false
+	}
+	if got := ResolveApiToast(payload, translate, "fallback"); got != "Sign in again" {
+		t.Fatalf("expected translation, got %q", got)
+	}
+	payload.Text = "企业账号登录已失效，请重新绑定后继续使用"
+	if got := ResolveApiToast(payload, translate, "fallback"); got != payload.Text {
+		t.Fatalf("expected server override text, got %q", got)
+	}
+	payload = ApiToastPayload{Default: "默认提示"}
+	if got := ResolveApiToast(payload, nil, "fallback"); got != "默认提示" {
+		t.Fatalf("expected default, got %q", got)
+	}
+	if got := ResolveApiToast(ApiToastPayload{}, nil, "fallback"); got != "fallback" {
+		t.Fatalf("expected message fallback, got %q", got)
+	}
+}
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
     (output_dir / "go.mod").write_text(
         "module example.com/generated/client\n\ngo 1.23.8\n",
         encoding="utf-8",

@@ -24,11 +24,11 @@ Go 生成器输出：
 
 `gen_*` 文件由生成器拥有，重生成会覆盖。`impl_*` 与非 `gen_*` 文件是用户拥有扩展点，重生成时保留。Kotlin 使用相同 ownership 模型，但生成器拥有文件命名为 `Gen*.kt`，非 `Gen*` façade / extension 文件由用户拥有。
 
-`go-server` 只负责 Go 服务端 core。HTTP / Wails 输出由 `http-transport` / `wails-transport` target 通过 `server = "go.server"` 显式挂接。HTTP 入口生成在 `views/transports/http/<root>` 中，例如 `views/transports/http/api.NewBlueprint(engine)`。
+`go-server` 只负责 Go 服务端 core。它的 `out_dir` 是生成包根，不再隐式追加 `views`。HTTP / Wails 输出由 `http-transport` / `wails-transport` target 通过 `server = "go.server"` 显式挂接。HTTP 入口生成在 `<out_dir>/transports/http/<root>` 中，例如 `transports/http/api.NewBlueprint(engine)`。
 
-Go route core 固定生成在 `views/routes/**`，provider runtime 固定生成在 `views/providers`。这两个目录名不再通过配置自定义，业务 root 可以安全使用 `/providers` 或 `/transports` 这类路径。
+Go route core 生成在 `<out_dir>/routes/**`，provider runtime 生成在 `<out_dir>/providers`，transport adapter 生成在 `<out_dir>/transports/**`，error catalog 实现生成在 `<out_dir>/runtime/errors/**`。如果希望 import path 包含 `/views`，应显式设置 `out_dir = ".../views"`。
 
-`views/providers` 是全局 transport-neutral runtime，不按 blueprint root 拆分。TypeScript 的 per-root `runtime` 主要服务模型和 client 命名隔离，和 Go provider hook 不是同一类职责。
+`providers` 是生成包根下的全局 transport-neutral runtime，不按 blueprint root 拆分。TypeScript 的 per-root `runtime` 主要服务模型和 client 命名隔离，和 Go provider hook 不是同一类职责。
 
 需要按 root、route 或 transport 切换 provider 实现时，不要解析请求 path。生成器会在每个 route executor 构造期写入 `RouteInfo`，并把它挂到 `Context.Route` 与 `ProviderSpec.Route`：
 
@@ -58,7 +58,7 @@ bp = Blueprint(
 )
 ```
 
-provider factory 应在应用启动或包 `init()` 阶段注册。provider sequence 只在 executor 创建期解析，factory 也只在创建期运行；高并发请求路径只执行已缓存 provider 实例。如果需要不用全局 registry 的项目内选择逻辑，直接在用户拥有的 `views/providers/impl_provider.go` 中实现 `SelectProvider(spec, handler)`；旧的 `Select(key, value, handler)` hook 已移除。
+provider factory 应在应用启动或包 `init()` 阶段注册。provider sequence 只在 executor 创建期解析，factory 也只在创建期运行；高并发请求路径只执行已缓存 provider 实例。如果需要不用全局 registry 的项目内选择逻辑，直接在用户拥有的 `providers/impl_provider.go` 中实现 `SelectProvider(spec, handler)`；旧的 `Select(key, value, handler)` hook 已移除。
 
 HTTP adapter 只在 blueprint root 存在直接 routes 时导入 root router。handler 如果已经通过 Gin 写出响应，adapter 不再追加自动响应；否则没有 `rsp` provider 的 route 仍保持旧行为，由 adapter 写出 handler 返回值。
 
@@ -84,6 +84,10 @@ HTTP transport 中，`STREAM` 生成 SSE adapter，`CHANNEL` 生成 WebSocket ad
 默认 HTTP/Wails runtime 只完整实现 `ConnectionScope.SESSION`。`APP` / `TOPIC` 会保留在 route contract 中，后续可通过自定义 connection hub / manager 实现广播或 topic 路由，不由生成器内置业务 fan-out 策略。
 
 默认生成的连接 handler 仍保持 `not implemented`，避免把示例业务逻辑写进所有用户项目。仓库示例在用户拥有的 `examples/golang/server/views/routes/api/demo/impl.go` 中手写了最小用法：`STREAM` 展示 `Open()`、构造 server message、`Send()` 与 typed `Close()`；`CHANNEL` 额外展示 `Recv(ctx)` 接收客户端消息。
+
+### Error catalog
+
+ContractGraph 会把 `Blueprint(errors=...)` 和 route `.ERR(...)` 声明收集成语言无关 error catalog。`message` 是协议级默认说明，`toast.key/default/level` 是用户展示层兜底；生成器不会输出内置多语言表或 `locales/*.json`。Go client、TypeScript、Kotlin、Python client/server 会把 runtime 错误类型/helper 与静态 catalog 数据拆到独立 generated 文件，例如 `gen_error_catalog.*` 或 `GenApiErrorCatalog.kt`；Go server 只在 `runtime/errors` 下输出 runtime 类型，并在 `runtime/errors/common_err` 这类分组包生成实现 `CodeError` 的错误值，避免 root catalog 与分组错误值重复。业务 i18n 系统按 toast key 解析当前语言，客户端 helper 按 `toast.text`、外部 i18n、`toast.default`、`message` 的优先级得到展示文案。`WithToast(...)` 返回不可变覆盖副本，适合按请求语言、租户或灰度返回动态 `toast.text`。HTTP transport failure 仍由 transport runtime 表达，业务 wrapper code 不会被默认转换成异常。
 
 ## Go Client
 

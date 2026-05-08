@@ -33,25 +33,27 @@ frontend_mode = "external"
 Wails Go overlay 生成在 `server` 指向的 Go target 输出树的 transport target 目录中：
 
 ```text
-views/
-  routes/
+routes/
+  api/
+    demo/
+      gen_interface.go
+      impl.go
+providers/
+  gen_context.go
+runtime/
+  errors/
+    gen_errors.go
+transports/
+  wailsv3/
+    gen_runtime.go
     api/
       demo/
-        gen_interface.go
-        impl.go
-  providers/
-    gen_context.go
-  transports/
-    wailsv3/
-      gen_runtime.go
-      api/
-        demo/
-          gen_overlay.go
-          gen_service.go
-          impl_service.go
+        gen_overlay.go
+        gen_service.go
+        impl_service.go
 ```
 
-`views/routes/<root>/<group>` 是 transport-neutral core；`views/providers` 是共享 provider runtime；`views/transports/<overlay_name>` 是 Wails target。route 目录中的 `impl_service.go` 是用户拥有的 bootstrap 构造入口，重生成时保留。
+`routes/<root>/<group>` 是 transport-neutral core；`providers` 是共享 provider runtime；`runtime/errors` 是生成的业务 error catalog；`transports/<overlay_name>` 是 Wails target。route 目录中的 `impl_service.go` 是用户拥有的 bootstrap 构造入口，重生成时保留。如果希望包路径包含 `views/...`，应在被引用的 Go server target 上显式设置 `out_dir = ".../views"`；Wails 不再隐式追加。
 
 ## TypeScript 输出布局
 
@@ -89,9 +91,9 @@ Go HTTP 与 Wails 共用生成的 `RouteExecutor` provider pipeline。Wails serv
 - `impl_*` helper：用户拥有，但不应重新承载 provider 主流程。
 - Wails runtime：generated-only，不提供 `impl_runtime.go`。
 
-`RouteExecutor` 是 route-level 可复用执行计划，并会携带 `RouteInfo`。请求级状态必须放入 `Context` 或 metadata store，自定义 provider 应保持 stateless/reentrant。需要按 Wails / HTTP 或 root/route 选择不同 provider 实现时，使用 `views/providers.RegisterProviderFactory` 读取 `ProviderSpec.Route`，选择发生在 executor 创建期，不进入请求热路径。HTTP-only provider 应显式导入 `views/transports/http` 并通过类似 `httptransport.RequireGin(ctx)` 的 adapter helper 获取 Gin 上下文。
+`RouteExecutor` 是 route-level 可复用执行计划，并会携带 `RouteInfo`。请求级状态必须放入 `Context` 或 metadata store，自定义 provider 应保持 stateless/reentrant。需要按 Wails / HTTP 或 root/route 选择不同 provider 实现时，使用 `providers.RegisterProviderFactory` 读取 `ProviderSpec.Route`，选择发生在 executor 创建期，不进入请求热路径。HTTP-only provider 应显式导入生成包根下的 `transports/http` 并通过类似 `httptransport.RequireGin(ctx)` 的 adapter helper 获取 Gin 上下文。
 
-HTTP 行为测试建议放在外部测试包中，例如 `package demo_test`，再导入 `views/transports/http/<root>/<group>` adapter。业务 handler 单测可以继续放在 route 包内，直接构造 typed `ctx/req` 调用 handler。只有确实需要 Gin API 时才使用 `views/transports/http.RequireGin(ctx)`；这会让相关代码显式绑定 HTTP adapter。
+HTTP 行为测试建议放在外部测试包中，例如 `package demo_test`，再导入生成包根下的 `transports/http/<root>/<group>` adapter。业务 handler 单测可以继续放在 route 包内，直接构造 typed `ctx/req` 调用 handler。只有确实需要 Gin API 时才使用 `transports/http.RequireGin(ctx)`；这会让相关代码显式绑定 HTTP adapter。
 
 ## TypeScript transport
 

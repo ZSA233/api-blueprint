@@ -186,10 +186,10 @@ go 1.23.8
     writer.gen()
 
     service_text = (
-        output_dir / "views" / "transports" / "wailsv3" / "api" / "demo" / "gen_service.go"
+        output_dir / "transports" / "wailsv3" / "api" / "demo" / "gen_service.go"
     ).read_text(encoding="utf-8")
     overlay_text = (
-        output_dir / "views" / "transports" / "wailsv3" / "api" / "demo" / "gen_overlay.go"
+        output_dir / "transports" / "wailsv3" / "api" / "demo" / "gen_overlay.go"
     ).read_text(encoding="utf-8")
     assert "submitExecutor *sharedprovider.RouteExecutor[REQ_Submit_QUERY, REQ_Submit_JSON, RSP_Submit]" in service_text
     assert "BindJSON:  true" in service_text
@@ -219,17 +219,17 @@ go 1.23.8
     result = _invoke_wails_generate(config)
     assert result.exit_code == 0, result.output
 
-    shared_go_client = shared_go / "views" / "routes" / "api" / "demo" / "gen_interface.go"
+    shared_go_client = shared_go / "routes" / "api" / "demo" / "gen_interface.go"
     shared_ts_client = shared_ts / "api" / "routes" / "api" / "demo" / "gen_client.ts"
     assert shared_go_client.is_file()
     assert shared_ts_client.is_file()
 
-    go_overlay_service = (shared_go / "views" / "transports" / "wailsv3" / "api" / "demo" / "gen_service.go").read_text(encoding="utf-8")
-    go_overlay_types = (shared_go / "views" / "transports" / "wailsv3" / "api" / "demo" / "gen_overlay.go").read_text(encoding="utf-8")
-    go_impl_service = (shared_go / "views" / "transports" / "wailsv3" / "api" / "demo" / "impl_service.go").read_text(encoding="utf-8")
-    go_runtime = (shared_go / "views" / "transports" / "wailsv3" / "gen_runtime.go").read_text(encoding="utf-8")
-    go_provider_context = (shared_go / "views" / "providers" / "gen_context.go").read_text(encoding="utf-8")
-    go_provider_executor = (shared_go / "views" / "providers" / "gen_executor.go").read_text(encoding="utf-8")
+    go_overlay_service = (shared_go / "transports" / "wailsv3" / "api" / "demo" / "gen_service.go").read_text(encoding="utf-8")
+    go_overlay_types = (shared_go / "transports" / "wailsv3" / "api" / "demo" / "gen_overlay.go").read_text(encoding="utf-8")
+    go_impl_service = (shared_go / "transports" / "wailsv3" / "api" / "demo" / "impl_service.go").read_text(encoding="utf-8")
+    go_runtime = (shared_go / "transports" / "wailsv3" / "gen_runtime.go").read_text(encoding="utf-8")
+    go_provider_context = (shared_go / "providers" / "gen_context.go").read_text(encoding="utf-8")
+    go_provider_executor = (shared_go / "providers" / "gen_executor.go").read_text(encoding="utf-8")
     ts_overlay_transport = (shared_ts / "api" / "transports" / "wailsv3" / "gen_transport.ts").read_text(encoding="utf-8")
     ts_overlay_bindings = (shared_ts / "api" / "transports" / "wailsv3" / "gen_bindings.ts").read_text(encoding="utf-8")
     ts_overlay_client = (shared_ts / "api" / "transports" / "wailsv3" / "api" / "demo" / "gen_client.ts").read_text(encoding="utf-8")
@@ -284,11 +284,11 @@ go 1.23.8
     assert "return newGeneratedDemoService(shared.NewRouter(), dispatcher)" in go_impl_service
     assert 'package demo' in go_overlay_types
     assert 'package wailstransport' in go_runtime
-    assert not (shared_go / "views" / "transports" / "wailsv3" / "api" / "demo" / "bindings").exists()
-    assert not (shared_go / "views" / "transports" / "wailsv3" / "runtime").exists()
-    assert not (shared_go / "views" / "transports" / "http").exists()
+    assert not (shared_go / "transports" / "wailsv3" / "api" / "demo" / "bindings").exists()
+    assert not (shared_go / "transports" / "wailsv3" / "runtime").exists()
+    assert not (shared_go / "transports" / "http").exists()
     assert not (shared_ts / "api" / "transports" / "http").exists()
-    assert not (shared_go / "views" / "engine.go").exists()
+    assert not (shared_go / "engine.go").exists()
     assert "type RouteExecutor[Q, B, P any] struct" in go_provider_executor
     assert "func (executor *RouteExecutor[Q, B, P]) RunWSPreflight" in go_provider_executor
     assert "ctx.Route = &executor.Route" in go_provider_executor
@@ -316,32 +316,32 @@ go 1.23.8
     assert "(event as { data?: unknown }).data" in ts_overlay_transport
     assert (
         '"demo.DemoService.Ping": '
-        '"example.com/generated/golang/views/transports/wailsv3/api/demo.DemoService.Ping"'
+        '"example.com/generated/golang/transports/wailsv3/api/demo.DemoService.Ping"'
         in ts_overlay_bindings
     )
     assert (
         '"demo.DemoService.ConnectWs": '
-        '"example.com/generated/golang/views/transports/wailsv3/api/demo.DemoService.ConnectWs"'
+        '"example.com/generated/golang/transports/wailsv3/api/demo.DemoService.ConnectWs"'
         in ts_overlay_bindings
     )
     assert (
         '"demo.DemoService.SendWs": '
-        '"example.com/generated/golang/views/transports/wailsv3/api/demo.DemoService.SendWs"'
+        '"example.com/generated/golang/transports/wailsv3/api/demo.DemoService.SendWs"'
         in ts_overlay_bindings
     )
     assert (
         '"demo.DemoService.CloseWs": '
-        '"example.com/generated/golang/views/transports/wailsv3/api/demo.DemoService.CloseWs"'
+        '"example.com/generated/golang/transports/wailsv3/api/demo.DemoService.CloseWs"'
         in ts_overlay_bindings
     )
     assert (
         '"demo.DemoService.SubscribeEvents": '
-        '"example.com/generated/golang/views/transports/wailsv3/api/demo.DemoService.SubscribeEvents"'
+        '"example.com/generated/golang/transports/wailsv3/api/demo.DemoService.SubscribeEvents"'
         in ts_overlay_bindings
     )
     assert (
         '"demo.DemoService.OpenChat": '
-        '"example.com/generated/golang/views/transports/wailsv3/api/demo.DemoService.OpenChat"'
+        '"example.com/generated/golang/transports/wailsv3/api/demo.DemoService.OpenChat"'
         in ts_overlay_bindings
     )
     assert "export class DemoClient" not in ts_overlay_client
@@ -379,11 +379,11 @@ go 1.23.8
     result = _invoke_wails_generate(config)
     assert result.exit_code == 0, result.output
 
-    assert (shared_go / "views" / "transports" / "wailsv3" / "api" / "demo" / "gen_service.go").is_file()
-    assert (shared_go / "views" / "transports" / "wailsv3" / "api" / "demo" / "impl_service.go").is_file()
-    assert not (shared_go / "views" / "transports" / "wailsv3" / "api" / "demo" / "bindings").exists()
-    assert not (shared_go / "views" / "transports" / "wailsv3" / "api" / "hello").exists()
-    assert (shared_go / "views" / "routes" / "api" / "hello" / "gen_interface.go").is_file()
+    assert (shared_go / "transports" / "wailsv3" / "api" / "demo" / "gen_service.go").is_file()
+    assert (shared_go / "transports" / "wailsv3" / "api" / "demo" / "impl_service.go").is_file()
+    assert not (shared_go / "transports" / "wailsv3" / "api" / "demo" / "bindings").exists()
+    assert not (shared_go / "transports" / "wailsv3" / "api" / "hello").exists()
+    assert (shared_go / "routes" / "api" / "hello" / "gen_interface.go").is_file()
 
     assert (shared_ts / "api" / "transports" / "wailsv3" / "api" / "demo" / "gen_client.ts").is_file()
     assert not (shared_ts / "api" / "transports" / "wailsv3" / "api" / "hello").exists()
@@ -418,10 +418,10 @@ go 1.23.8
     result = _invoke_wails_generate(config)
     assert result.exit_code == 0, result.output
 
-    assert (shared_go / "views" / "routes" / "third" / "proxy" / "gen_interface.go").is_file()
+    assert (shared_go / "routes" / "third" / "proxy" / "gen_interface.go").is_file()
     assert (shared_ts / "third" / "routes" / "third" / "proxy" / "gen_client.ts").is_file()
     assert (shared_ts / "api" / "transports" / "wailsv3" / "api" / "demo" / "gen_client.ts").is_file()
-    assert not (shared_go / "views" / "transports" / "wailsv3" / "third").exists()
+    assert not (shared_go / "transports" / "wailsv3" / "third").exists()
     assert not (shared_ts / "third" / "transports" / "wailsv3").exists()
     assert "Transports" not in (shared_ts / "third" / "gen_index.ts").read_text(encoding="utf-8")
 
@@ -498,8 +498,8 @@ go 1.23.8
     result = _invoke_wails_generate(config)
     assert result.exit_code == 0, result.output
 
-    assert (shared_go / "views" / "transports" / "wailsv3" / "api" / "demo" / "gen_service.go").is_file()
-    assert (shared_go / "views" / "transports" / "wailsv3" / "api" / "demo" / "impl_service.go").is_file()
+    assert (shared_go / "transports" / "wailsv3" / "api" / "demo" / "gen_service.go").is_file()
+    assert (shared_go / "transports" / "wailsv3" / "api" / "demo" / "impl_service.go").is_file()
     assert not (shared_ts / "api" / "transports" / "wailsv3").exists()
     assert (shared_ts / "api" / "routes" / "api" / "demo" / "gen_client.ts").is_file()
 
@@ -526,13 +526,13 @@ go 1.23.8
     result = _invoke_wails_generate(config)
     assert result.exit_code == 0, result.output
 
-    provider_file = shared_go / "views" / "providers" / "gen_provider.go"
-    route_file = shared_go / "views" / "routes" / "api" / "demo" / "gen_protos.go"
-    overlay_service = shared_go / "views" / "transports" / "wailsv3" / "api" / "demo" / "gen_service.go"
-    runtime_file = shared_go / "views" / "transports" / "wailsv3" / "gen_runtime.go"
-    binding_impl = shared_go / "views" / "transports" / "wailsv3" / "api" / "demo" / "impl_service.go"
-    expected_provider_import = f'providers "example.com/generated/{shared_go.name}/views/providers"'
-    expected_shared_provider_import = f'sharedprovider "example.com/generated/{shared_go.name}/views/providers"'
+    provider_file = shared_go / "providers" / "gen_provider.go"
+    route_file = shared_go / "routes" / "api" / "demo" / "gen_protos.go"
+    overlay_service = shared_go / "transports" / "wailsv3" / "api" / "demo" / "gen_service.go"
+    runtime_file = shared_go / "transports" / "wailsv3" / "gen_runtime.go"
+    binding_impl = shared_go / "transports" / "wailsv3" / "api" / "demo" / "impl_service.go"
+    expected_provider_import = f'providers "example.com/generated/{shared_go.name}/providers"'
+    expected_shared_provider_import = f'sharedprovider "example.com/generated/{shared_go.name}/providers"'
 
     assert provider_file.is_file()
     assert binding_impl.is_file()
@@ -593,11 +593,11 @@ go 1.23.8
     result = _invoke_wails_generate(config)
     assert result.exit_code == 0, result.output
 
-    impl_service = shared_go / "views" / "transports" / "wailsv3" / "api" / "demo" / "impl_service.go"
+    impl_service = shared_go / "transports" / "wailsv3" / "api" / "demo" / "impl_service.go"
     custom_impl = """
 package demo
 
-import wailstransport "example.com/generated/golang/views/transports/wailsv3"
+import wailstransport "example.com/generated/golang/transports/wailsv3"
 
 func NewService(dispatcher wailstransport.EventDispatcher) *DemoService {
 	return newGeneratedDemoService(nil, dispatcher)
@@ -637,7 +637,7 @@ go 1.23.8
     writer.register(bp)
     writer.gen()
 
-    impl_auth = output_dir / "views" / "providers" / "impl_auth.go"
+    impl_auth = output_dir / "providers" / "impl_auth.go"
     impl_auth.write_text("package providers\n\n// custom auth hook\n", encoding="utf-8")
 
     writer = GolangWriter(output_dir)
@@ -681,8 +681,8 @@ with bp.group("/demo") as views:
 
     result = _invoke_wails_generate(config)
     assert result.exit_code == 0, result.output
-    assert (shared_go / "views" / "providers" / "gen_provider.go").is_file()
-    assert (shared_go / "views" / "routes" / "providers" / "demo" / "gen_interface.go").is_file()
+    assert (shared_go / "providers" / "gen_provider.go").is_file()
+    assert (shared_go / "routes" / "providers" / "demo" / "gen_interface.go").is_file()
 
 
 def test_wails_codegen_rejects_go_reserved_namespace_segments(tmp_path: Path):

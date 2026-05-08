@@ -70,7 +70,7 @@ module = "example.com/generated"
 
     generator.generate(config_path, target_ids=("go.server",))
 
-    assert (tmp_path / "golang" / "views" / "routes" / "api" / "demo" / "gen_protos.go").is_file()
+    assert (tmp_path / "golang" / "routes" / "api" / "demo" / "gen_protos.go").is_file()
 
 
 def test_vnext_generate_typescript_uses_contract_graph_adapter(
@@ -219,7 +219,7 @@ frontend_mode = "external"
 
     generator.generate(config_path, target_ids=("desktop.v3",))
 
-    assert (tmp_path / "golang" / "views" / "transports" / "wailsv3" / "api" / "demo" / "gen_service.go").is_file()
+    assert (tmp_path / "golang" / "transports" / "wailsv3" / "api" / "demo" / "gen_service.go").is_file()
 
 
 def test_vnext_generate_grpc_stub_target_generates_proto_dependency_first(

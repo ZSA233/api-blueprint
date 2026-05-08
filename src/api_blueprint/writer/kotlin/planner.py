@@ -67,6 +67,8 @@ def build_kotlin_blueprint_plan(writer: "KotlinWriter", bp: "KotlinBlueprint") -
             directory=runtime_dir,
             generated_files=(
                 ("GenApiException.kt", "ApiException.kt"),
+                ("GenApiErrors.kt", "ApiErrors.kt"),
+                ("GenApiErrorCatalog.kt", "ApiErrorCatalog.kt"),
                 ("GenApiTransport.kt", "ApiTransport.kt"),
                 ("GenApiClient.kt", "GenApiClient.kt"),
             ),

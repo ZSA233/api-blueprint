@@ -261,33 +261,58 @@
       }
     }
   ],
-  "errors": [],
+  "errors": [
+    {
+      "code": -1,
+      "group": "CommonErr",
+      "id": "CommonErr.UNKNOWN",
+      "key": "UNKNOWN",
+      "message": "未知错误",
+      "toast": {
+        "default": "未知错误",
+        "key": "CommonErr.UNKNOWN",
+        "level": "error"
+      }
+    },
+    {
+      "code": 55555,
+      "group": "CommonErr",
+      "id": "CommonErr.TOKEN_EXPIRE",
+      "key": "TOKEN_EXPIRE",
+      "message": "token登录态失效",
+      "toast": {
+        "default": "登录状态已失效，请重新登录",
+        "key": "auth.token_expire",
+        "level": "warning"
+      }
+    }
+  ],
   "generator": {
     "name": "api-blueprint",
     "version": "1.0.0"
   },
   "hashes": {
     "routes": {
-      "api.api.ws.ws": "2cfb9552b1830d0455039cc55437984d122c61d4de57c17c6cd1a555256f1610",
-      "api.demo.channel.assistantsession": "122597c16d21b65ca32a8b9d25ff8bb5836a0ceea0fe73c886297582b02ab3be",
-      "api.demo.delete.delete": "a00395bc7ae3e1459a65322ab8d5eacbfdc45400a765220f304c5803b82c7e5f",
-      "api.demo.get.abc": "13b90b08d2ad7eb4836b6cbd893c2dd79f40838150dc726f6bdab9f125180264",
-      "api.demo.post.mapmodel": "b670886c55e9e8d22d6c988a351353e635070177aa520d13ff37190b4c3c931b",
-      "api.demo.post.postdeprecated": "ab4bf0b9dba1ce7b3daeb4a0c79fe5937c35049efab97de6238c14c7d47bf3d0",
-      "api.demo.post.raw": "482224644788ef4265f3156e2f3399b3159cacbfab93ddf929823244b5e9cfd5",
-      "api.demo.post.testpost": "f1ee8c378d6a5e5abc60c29155d653459b9980f5294731fa3f99819b35d01d59",
-      "api.demo.put.z1put": "13a87ab18f8435a3801e2e1529fe421f844bcc25c8dcac4b683d40cafd613ae9",
-      "api.demo.stream.sweepevents": "064636b0a6c8b652e77dd0d12c5b32dcf8ff16e398ba22aa18d41a000373afd8",
-      "api.demo.ws.ws": "4f1e1879a5861aa0a5e42eb47ce2481174f90ad49e4b8c6a02ecd7a51a14928e",
-      "api.hello.get.abc": "e596cd4720c6117501478ec5cb77d11187ff30a2b496637066826081f1b415dd",
-      "api.hello.get.helloway": "812b2bd1d81188743018536309d6b14d925aa10df8f8d0273030e70fc7493f80",
-      "api.hello.get.listenum": "6c216123d5c85cdc833bc7fc30ff640c50ccee3fd7c93788c47f1fe7968169ca",
-      "api.hello.get.mapenum": "c49f6d1f65560c210a3a6b3b3ebb460c0f4cc8bd85dfc3cb4c37792c19f00b7f",
-      "api.hello.get.string": "0943913a83557afb7bfc891c91cde4ad1a35b1771f2be2ef7a9da05ab83790a4",
-      "api.hello.get.stringemun": "4079542d707ffe5f00cd1a38d111258ca3fa13946d2db42846d2ea750ddb5693",
-      "api.hello.get.uint64": "6969fa9afd7491752f4c5f58d21f0cac45eba367ffca3b524efbcb4c9c946b69",
-      "static.static.get.dochaha": "27051eb588500d12533d535afea10ea3552ccb0a2d984ffd940930ffc8e04ddc",
-      "static.static.get.docjson": "007f8815f879ec5ad87eb170fb6504fc801d7bc0b5aee4714bcb1431d36ff074"
+      "api.api.ws.ws": "37a1a4dbd18c0762292f8b1ad276221d2b6ef0cc95ae0963e5692f310c8a0092",
+      "api.demo.channel.assistantsession": "43a2addf7d2919f81b856493394361bb0175d8a8f9e4d7d6339f1e5a3fca4f25",
+      "api.demo.delete.delete": "9ed658185eb6d5fde1e1fe317fb31b4e9704c6e9b4106d6b1329635554c6c6cb",
+      "api.demo.get.abc": "8f4d005d6aba031f1e87dae8463578d169d8c11b6e34e1a4adc1600471697a44",
+      "api.demo.post.mapmodel": "cfb7a8902b5c716d2bea9b8c3cb3a81c78fafb98a8655627fefb45a92fa8c9e8",
+      "api.demo.post.postdeprecated": "b4c42c2a1c60d7359d0508f36f2c9d40bd4d6097d3ff94408d6e4aa829f40758",
+      "api.demo.post.raw": "28ebd462a7c34f6fb42d59ba19f76110f7a442c59b8d6188a0bd02b67604a10b",
+      "api.demo.post.testpost": "4a191fbafd7789576bcee8c456ec0889a57a39b9c8056c2029d32b9106619271",
+      "api.demo.put.z1put": "eccb76926fb76edd68c6e999a7542d52c8e380ad9d1ca94435a2f6621b5ae72f",
+      "api.demo.stream.sweepevents": "ab9d741c83cf0470b03e13caf2030d009b681a9de2d89c80c1b9c0dd3f068065",
+      "api.demo.ws.ws": "fd0e998e4c4f45bc3c589f29c98ec049e81049f9357f183c1d8a12439a2af10a",
+      "api.hello.get.abc": "45a2b4fa95fdfe3d364e6b515f44bc3fe7eb01b8bb0a4f9606c0fa22c810e1a2",
+      "api.hello.get.helloway": "6bdf55c61fc0f06d76d1151447c93f0ebaa653c4e44a51bc78a193192ae4b8c3",
+      "api.hello.get.listenum": "6a05bdabcb51ba53894944f0014934ce017f7ab9402d168e7433c4d070a5a3e5",
+      "api.hello.get.mapenum": "27e69ab4d48a770a2017a21c10fa69993f32812dbdeae287d612ce31d6dbab5e",
+      "api.hello.get.string": "0f35bf2dca19de0a48f63ad8f3c40c58a96f74a790823dbf5631bbf4454beefa",
+      "api.hello.get.stringemun": "c5cb052bdc7d8055c5dcd0b903198842368922dab22ec2169cc36a7666e6b008",
+      "api.hello.get.uint64": "4dd67372dedafa060ddc17bae3b34ece6f5c3639f47ceaefb586933b778f32ca",
+      "static.static.get.dochaha": "bb664c64fd8340131c614d03908ccdd75c2a8b7f1bd65efd5cf8cd938487a502",
+      "static.static.get.docjson": "0544e8c4957e862e37939024a0d72b75b5e6bf2b0801ce6e8a50851406a3eebe"
     },
     "schemas": {
       "ANON_Delete_anon_list": "da61e669d4132905b44f3c59b97c481fd5b13feab7ef288e2e0cdf0ce58292cf",
@@ -333,7 +358,11 @@
     {
       "connection": null,
       "deprecated": false,
-      "hash": "2cfb9552b1830d0455039cc55437984d122c61d4de57c17c6cd1a555256f1610",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "37a1a4dbd18c0762292f8b1ad276221d2b6ef0cc95ae0963e5692f310c8a0092",
       "id": "api.api.ws.ws",
       "kind": "legacy_ws",
       "method_name": "ws",
@@ -357,7 +386,11 @@
     {
       "connection": null,
       "deprecated": false,
-      "hash": "13b90b08d2ad7eb4836b6cbd893c2dd79f40838150dc726f6bdab9f125180264",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "8f4d005d6aba031f1e87dae8463578d169d8c11b6e34e1a4adc1600471697a44",
       "id": "api.demo.get.abc",
       "kind": "rpc",
       "method_name": "abc",
@@ -387,7 +420,11 @@
     {
       "connection": null,
       "deprecated": false,
-      "hash": "f1ee8c378d6a5e5abc60c29155d653459b9980f5294731fa3f99819b35d01d59",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "4a191fbafd7789576bcee8c456ec0889a57a39b9c8056c2029d32b9106619271",
       "id": "api.demo.post.testpost",
       "kind": "rpc",
       "method_name": "testPost",
@@ -417,7 +454,11 @@
     {
       "connection": null,
       "deprecated": false,
-      "hash": "13a87ab18f8435a3801e2e1529fe421f844bcc25c8dcac4b683d40cafd613ae9",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "eccb76926fb76edd68c6e999a7542d52c8e380ad9d1ca94435a2f6621b5ae72f",
       "id": "api.demo.put.z1put",
       "kind": "rpc",
       "method_name": "z1put",
@@ -447,7 +488,11 @@
     {
       "connection": null,
       "deprecated": false,
-      "hash": "a00395bc7ae3e1459a65322ab8d5eacbfdc45400a765220f304c5803b82c7e5f",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "9ed658185eb6d5fde1e1fe317fb31b4e9704c6e9b4106d6b1329635554c6c6cb",
       "id": "api.demo.delete.delete",
       "kind": "rpc",
       "method_name": "delete",
@@ -477,7 +522,11 @@
     {
       "connection": null,
       "deprecated": false,
-      "hash": "4f1e1879a5861aa0a5e42eb47ce2481174f90ad49e4b8c6a02ecd7a51a14928e",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "fd0e998e4c4f45bc3c589f29c98ec049e81049f9357f183c1d8a12439a2af10a",
       "id": "api.demo.ws.ws",
       "kind": "legacy_ws",
       "method_name": "ws",
@@ -524,7 +573,11 @@
         }
       },
       "deprecated": false,
-      "hash": "064636b0a6c8b652e77dd0d12c5b32dcf8ff16e398ba22aa18d41a000373afd8",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "ab9d741c83cf0470b03e13caf2030d009b681a9de2d89c80c1b9c0dd3f068065",
       "id": "api.demo.stream.sweepevents",
       "kind": "stream",
       "method_name": "sweepEvents",
@@ -583,7 +636,11 @@
         }
       },
       "deprecated": false,
-      "hash": "122597c16d21b65ca32a8b9d25ff8bb5836a0ceea0fe73c886297582b02ab3be",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "43a2addf7d2919f81b856493394361bb0175d8a8f9e4d7d6339f1e5a3fca4f25",
       "id": "api.demo.channel.assistantsession",
       "kind": "channel",
       "method_name": "assistantSession",
@@ -607,7 +664,11 @@
     {
       "connection": null,
       "deprecated": true,
-      "hash": "ab4bf0b9dba1ce7b3daeb4a0c79fe5937c35049efab97de6238c14c7d47bf3d0",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "b4c42c2a1c60d7359d0508f36f2c9d40bd4d6097d3ff94408d6e4aa829f40758",
       "id": "api.demo.post.postdeprecated",
       "kind": "rpc",
       "method_name": "postDeprecated",
@@ -637,7 +698,11 @@
     {
       "connection": null,
       "deprecated": false,
-      "hash": "482224644788ef4265f3156e2f3399b3159cacbfab93ddf929823244b5e9cfd5",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "28ebd462a7c34f6fb42d59ba19f76110f7a442c59b8d6188a0bd02b67604a10b",
       "id": "api.demo.post.raw",
       "kind": "rpc",
       "method_name": "raw",
@@ -667,7 +732,11 @@
     {
       "connection": null,
       "deprecated": false,
-      "hash": "b670886c55e9e8d22d6c988a351353e635070177aa520d13ff37190b4c3c931b",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "cfb7a8902b5c716d2bea9b8c3cb3a81c78fafb98a8655627fefb45a92fa8c9e8",
       "id": "api.demo.post.mapmodel",
       "kind": "rpc",
       "method_name": "mapModel",
@@ -697,7 +766,11 @@
     {
       "connection": null,
       "deprecated": false,
-      "hash": "e596cd4720c6117501478ec5cb77d11187ff30a2b496637066826081f1b415dd",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "45a2b4fa95fdfe3d364e6b515f44bc3fe7eb01b8bb0a4f9606c0fa22c810e1a2",
       "id": "api.hello.get.abc",
       "kind": "rpc",
       "method_name": "abc",
@@ -727,7 +800,11 @@
     {
       "connection": null,
       "deprecated": false,
-      "hash": "c49f6d1f65560c210a3a6b3b3ebb460c0f4cc8bd85dfc3cb4c37792c19f00b7f",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "27e69ab4d48a770a2017a21c10fa69993f32812dbdeae287d612ce31d6dbab5e",
       "id": "api.hello.get.mapenum",
       "kind": "rpc",
       "method_name": "mapEnum",
@@ -757,7 +834,11 @@
     {
       "connection": null,
       "deprecated": false,
-      "hash": "6c216123d5c85cdc833bc7fc30ff640c50ccee3fd7c93788c47f1fe7968169ca",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "6a05bdabcb51ba53894944f0014934ce017f7ab9402d168e7433c4d070a5a3e5",
       "id": "api.hello.get.listenum",
       "kind": "rpc",
       "method_name": "listEnum",
@@ -787,7 +868,11 @@
     {
       "connection": null,
       "deprecated": false,
-      "hash": "0943913a83557afb7bfc891c91cde4ad1a35b1771f2be2ef7a9da05ab83790a4",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "0f35bf2dca19de0a48f63ad8f3c40c58a96f74a790823dbf5631bbf4454beefa",
       "id": "api.hello.get.string",
       "kind": "rpc",
       "method_name": "string",
@@ -817,7 +902,11 @@
     {
       "connection": null,
       "deprecated": false,
-      "hash": "6969fa9afd7491752f4c5f58d21f0cac45eba367ffca3b524efbcb4c9c946b69",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "4dd67372dedafa060ddc17bae3b34ece6f5c3639f47ceaefb586933b778f32ca",
       "id": "api.hello.get.uint64",
       "kind": "rpc",
       "method_name": "uint64",
@@ -847,7 +936,11 @@
     {
       "connection": null,
       "deprecated": false,
-      "hash": "4079542d707ffe5f00cd1a38d111258ca3fa13946d2db42846d2ea750ddb5693",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "c5cb052bdc7d8055c5dcd0b903198842368922dab22ec2169cc36a7666e6b008",
       "id": "api.hello.get.stringemun",
       "kind": "rpc",
       "method_name": "stringEmun",
@@ -877,7 +970,11 @@
     {
       "connection": null,
       "deprecated": false,
-      "hash": "812b2bd1d81188743018536309d6b14d925aa10df8f8d0273030e70fc7493f80",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "6bdf55c61fc0f06d76d1151447c93f0ebaa653c4e44a51bc78a193192ae4b8c3",
       "id": "api.hello.get.helloway",
       "kind": "rpc",
       "method_name": "helloWay",
@@ -903,7 +1000,8 @@
     {
       "connection": null,
       "deprecated": false,
-      "hash": "007f8815f879ec5ad87eb170fb6504fc801d7bc0b5aee4714bcb1431d36ff074",
+      "errors": [],
+      "hash": "0544e8c4957e862e37939024a0d72b75b5e6bf2b0801ce6e8a50851406a3eebe",
       "id": "static.static.get.docjson",
       "kind": "rpc",
       "method_name": "docJson",
@@ -933,7 +1031,8 @@
     {
       "connection": null,
       "deprecated": false,
-      "hash": "27051eb588500d12533d535afea10ea3552ccb0a2d984ffd940930ffc8e04ddc",
+      "errors": [],
+      "hash": "bb664c64fd8340131c614d03908ccdd75c2a8b7f1bd65efd5cf8cd938487a502",
       "id": "static.static.get.dochaha",
       "kind": "rpc",
       "method_name": "dochaha",
@@ -2014,80 +2113,15 @@
       "out_dir": "."
     },
     {
-      "go_package_prefix": "example.com/project/grpc/go",
-      "id": "grpc.proto",
-      "kind": "grpc-proto",
-      "out_dir": "grpc/protos",
-      "package": "example.api",
-      "proto_files": [
-        {
-          "file": "api/api.proto",
-          "go_package": "example.com/project/grpc/go/api/api;api",
-          "package": "example.api.api",
-          "route_paths": [
-            "/api/ws"
-          ],
-          "service": "ApiService"
-        },
-        {
-          "file": "api/demo.proto",
-          "go_package": "example.com/project/grpc/go/api/demo;demo",
-          "package": "example.api.demo",
-          "route_paths": [
-            "/api/demo/**"
-          ],
-          "service": "DemoService"
-        },
-        {
-          "file": "api/hello.proto",
-          "go_package": "example.com/project/grpc/go/api/hello;hello",
-          "package": "example.api.hello",
-          "route_paths": [
-            "/api/hello/**"
-          ],
-          "service": "HelloService"
-        },
-        {
-          "file": "static/static.proto",
-          "go_package": "example.com/project/grpc/go/static/static;static",
-          "package": "example.api.static.static",
-          "route_paths": [
-            "/static/**"
-          ],
-          "service": "StaticService"
-        }
-      ]
-    },
-    {
-      "files": [
-        "api/*.proto",
-        "static/*.proto"
-      ],
-      "id": "grpc.go",
-      "kind": "grpc-go",
-      "module": "example.com/project/grpc/go",
-      "out_dir": "grpc/go",
-      "proto": "grpc.proto"
-    },
-    {
-      "files": [
-        "api/*.proto",
-        "static/*.proto"
-      ],
-      "id": "grpc.python",
-      "kind": "grpc-python",
-      "out_dir": "grpc/python",
-      "proto": "grpc.proto",
-      "python_package_root": "pb"
-    },
-    {
+      "go_import_root": "example.com/project/golang/server/views",
       "id": "go.server",
       "kind": "go-server",
       "module": "example.com/project/golang/server",
-      "out_dir": "golang/server"
+      "out_dir": "golang/server/views"
     },
     {
       "base_url": "http://localhost:2333",
+      "go_import_root": "example.com/project/golang/client",
       "id": "go.client",
       "kind": "go-client",
       "module": "example.com/project/golang/client",
@@ -2169,6 +2203,73 @@
       "overlay_name": "wailsv2",
       "server": "go.server",
       "version": "v2"
+    },
+    {
+      "go_package_prefix": "example.com/project/grpc/go",
+      "id": "grpc.proto",
+      "kind": "grpc-proto",
+      "out_dir": "grpc/protos",
+      "package": "example.api",
+      "proto_files": [
+        {
+          "file": "api/api.proto",
+          "go_package": "example.com/project/grpc/go/api/api;api",
+          "package": "example.api.api",
+          "route_paths": [
+            "/api/ws"
+          ],
+          "service": "ApiService"
+        },
+        {
+          "file": "api/demo.proto",
+          "go_package": "example.com/project/grpc/go/api/demo;demo",
+          "package": "example.api.demo",
+          "route_paths": [
+            "/api/demo/**"
+          ],
+          "service": "DemoService"
+        },
+        {
+          "file": "api/hello.proto",
+          "go_package": "example.com/project/grpc/go/api/hello;hello",
+          "package": "example.api.hello",
+          "route_paths": [
+            "/api/hello/**"
+          ],
+          "service": "HelloService"
+        },
+        {
+          "file": "static/static.proto",
+          "go_package": "example.com/project/grpc/go/static/static;static",
+          "package": "example.api.static.static",
+          "route_paths": [
+            "/static/**"
+          ],
+          "service": "StaticService"
+        }
+      ]
+    },
+    {
+      "files": [
+        "api/*.proto",
+        "static/*.proto"
+      ],
+      "id": "grpc.go",
+      "kind": "grpc-go",
+      "module": "example.com/project/grpc/go",
+      "out_dir": "grpc/go",
+      "proto": "grpc.proto"
+    },
+    {
+      "files": [
+        "api/*.proto",
+        "static/*.proto"
+      ],
+      "id": "grpc.python",
+      "kind": "grpc-python",
+      "out_dir": "grpc/python",
+      "proto": "grpc.proto",
+      "python_package_root": "pb"
     }
   ],
   "version": "1.0"

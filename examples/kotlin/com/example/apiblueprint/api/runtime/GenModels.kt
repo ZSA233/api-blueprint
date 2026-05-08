@@ -57,6 +57,7 @@ public enum class ColorEnum(public val wireValue: String) {
 public data class GeneralResponse<T>(
     public val code: Int,
     public val message: String? = null,
+    public val toast: Map<String, kotlinx.serialization.json.JsonElement>? = null,
     public val data: T
 )
 

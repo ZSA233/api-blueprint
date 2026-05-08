@@ -19,20 +19,22 @@ type REQ[Q, B any] struct {
 // ============================= JSON ================================
 
 type RSP_JSON_GeneralWrapper[T any] struct {
-	Code    int    `json:"code" xml:"code" form:"code" binding:"required"`
-	Message string `json:"message,omitempty" xml:"message,omitempty" form:"message,omitempty" binding:"omitempty"`
-	Data    *T     `json:"data,omitempty" xml:"data,omitempty" form:"data,omitempty" binding:"omitempty"`
+	Code    int               `json:"code" xml:"code" form:"code" binding:"required"`
+	Message string            `json:"message,omitempty" xml:"message,omitempty" form:"message,omitempty" binding:"omitempty"`
+	Toast   map[string]string `json:"toast,omitempty" xml:"toast,omitempty" form:"toast,omitempty" binding:"omitempty"`
+	Data    *T                `json:"data,omitempty" xml:"data,omitempty" form:"data,omitempty" binding:"omitempty"`
 }
 
 type RSP_JSON_NoneWrapper = any
 
 func NewRSP_JSON_GeneralWrapper[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (codeInt int, rsp any) {
-	code, message := unwrapError(err)
-	_, _ = code, message
+	code, message, toast := unwrapError(err)
+	_, _, _ = code, message, toast
 
 	return 0, &RSP_JSON_GeneralWrapper[P]{
 		Code:    code,
 		Message: message,
+		Toast:   toast,
 		Data:    data,
 	}
 }
@@ -47,8 +49,8 @@ func WrapRSP_JSON_GeneralWrapper[P any](data *P, err error) *RSP_JSON_GeneralWra
 }
 
 func NewRSP_JSON_NoneWrapper[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (codeInt int, rsp any) {
-	code, message := unwrapError(err)
-	_, _ = code, message
+	code, message, toast := unwrapError(err)
+	_, _, _ = code, message, toast
 
 	return int(code), (RSP_JSON_NoneWrapper)(data)
 }
@@ -82,9 +84,10 @@ type RSP_XML[P any] struct {
 }
 
 type RSP_XML_GeneralWrapper_INNER[T any] struct {
-	Code    int    `json:"code" xml:"code" form:"code" binding:"required"`
-	Message string `json:"message,omitempty" xml:"message,omitempty" form:"message,omitempty" binding:"omitempty"`
-	Data    *T     `json:"data,omitempty" xml:"data,omitempty" form:"data,omitempty" binding:"omitempty"`
+	Code    int               `json:"code" xml:"code" form:"code" binding:"required"`
+	Message string            `json:"message,omitempty" xml:"message,omitempty" form:"message,omitempty" binding:"omitempty"`
+	Toast   map[string]string `json:"toast,omitempty" xml:"toast,omitempty" form:"toast,omitempty" binding:"omitempty"`
+	Data    *T                `json:"data,omitempty" xml:"data,omitempty" form:"data,omitempty" binding:"omitempty"`
 }
 
 type RSP_XML_GeneralWrapper[T any] RSP_XML[RSP_XML_GeneralWrapper_INNER[T]]
@@ -102,8 +105,8 @@ func (r RSP_XML_NoneWrapper) MarshalXML(enc *xml.Encoder, start xml.StartElement
 }
 
 func NewRSP_XML_GeneralWrapper[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (codeInt int, rsp any) {
-	code, message := unwrapError(err)
-	_, _ = code, message
+	code, message, toast := unwrapError(err)
+	_, _, _ = code, message, toast
 
 	return int(code), &RSP_XML_GeneralWrapper[P]{
 		XMLName: xml.Name{Local: "response"},
@@ -116,8 +119,8 @@ func NewRSP_XML_GeneralWrapper[Q, B, P any](prov *RspProvider[Q, B, P], data *P,
 }
 
 func NewRSP_XML_NoneWrapper[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (codeInt int, rsp any) {
-	code, message := unwrapError(err)
-	_, _ = code, message
+	code, message, toast := unwrapError(err)
+	_, _, _ = code, message, toast
 
 	inner := (RSP_XML_NoneWrapper_INNER)(data)
 	return int(code), &RSP_XML_NoneWrapper{

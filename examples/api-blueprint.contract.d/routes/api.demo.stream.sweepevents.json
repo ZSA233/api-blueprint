@@ -87,7 +87,7 @@
     },
     "wails.v2": {
       "files": [
-        "golang/views/transports/wailsv2/api/demo/gen_service.go",
+        "golang/server/views/transports/wailsv2/api/demo/gen_service.go",
         "typescript/api/transports/wailsv2/api/demo/client.ts"
       ],
       "imports": [],
@@ -95,7 +95,7 @@
     },
     "wails.v3": {
       "files": [
-        "golang/views/transports/wailsv3/api/demo/gen_service.go",
+        "golang/server/views/transports/wailsv3/api/demo/gen_service.go",
         "typescript/api/transports/wailsv3/api/demo/client.ts"
       ],
       "imports": [],
@@ -126,6 +126,10 @@
       ]
     }
   },
+  "errors": [
+    "CommonErr.UNKNOWN",
+    "CommonErr.TOKEN_EXPIRE"
+  ],
   "route": {
     "connection": {
       "client_message": null,
@@ -152,7 +156,11 @@
       }
     },
     "deprecated": false,
-    "hash": "064636b0a6c8b652e77dd0d12c5b32dcf8ff16e398ba22aa18d41a000373afd8",
+    "errors": [
+      "CommonErr.UNKNOWN",
+      "CommonErr.TOKEN_EXPIRE"
+    ],
+    "hash": "ab9d741c83cf0470b03e13caf2030d009b681a9de2d89c80c1b9c0dd3f068065",
     "id": "api.demo.stream.sweepevents",
     "kind": "stream",
     "method_name": "sweepEvents",

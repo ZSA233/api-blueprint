@@ -12,6 +12,7 @@
 - `services`: 4
 - `routes`: 20
 - `schemas`: 37
+- `errors`: 2
 - `connections`: 2
 - `targets`: 14
 

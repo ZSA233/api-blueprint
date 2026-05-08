@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import shutil
 import subprocess
 
 from api_blueprint.contract import build_contract_graph
-from api_blueprint.engine import Blueprint, Error, Model, provider
+from api_blueprint.engine import Blueprint, Error, Model, Toast, provider
 from api_blueprint.engine.model import String
 from api_blueprint.engine.wrapper import GeneralWrapper
 from api_blueprint.writer.golang import GolangResponseWrapper
@@ -37,12 +38,12 @@ go 1.23.8
     writer.register(bp)
     writer.gen()
 
-    provider_file = output_dir / "views" / "providers" / "gen_provider.go"
-    provider_impl = output_dir / "views" / "providers" / "impl_provider.go"
-    provider_context = output_dir / "views" / "providers" / "gen_context.go"
-    provider_executor = output_dir / "views" / "providers" / "gen_executor.go"
-    route_file = output_dir / "views" / "routes" / "api" / "demo" / "gen_protos.go"
-    expected_provider_import = f'providers "example.com/generated/{output_dir.name}/views/providers"'
+    provider_file = output_dir / "providers" / "gen_provider.go"
+    provider_impl = output_dir / "providers" / "impl_provider.go"
+    provider_context = output_dir / "providers" / "gen_context.go"
+    provider_executor = output_dir / "providers" / "gen_executor.go"
+    route_file = output_dir / "routes" / "api" / "demo" / "gen_protos.go"
+    expected_provider_import = f'providers "example.com/generated/{output_dir.name}/providers"'
 
     assert provider_file.is_file()
     assert provider_context.is_file()
@@ -74,7 +75,7 @@ go 1.23.8
     assert "type RoutePlan" not in provider_executor_text
     assert "routePlan" not in provider_executor_text
     assert "ctx.Route = &executor.Route" in provider_executor_text
-    assert "ctx.Abort(ctx.Req.Error)" in (output_dir / "views" / "providers" / "gen_req.go").read_text(
+    assert "ctx.Abort(ctx.Req.Error)" in (output_dir / "providers" / "gen_req.go").read_text(
         encoding="utf-8"
     )
 
@@ -110,7 +111,7 @@ go 1.23.8
     writer.register(bp)
     writer.gen()
 
-    interface_text = (output_dir / "views" / "routes" / "api" / "demo" / "gen_interface.go").read_text(
+    interface_text = (output_dir / "routes" / "api" / "demo" / "gen_interface.go").read_text(
         encoding="utf-8"
     )
     assert "Ping(ctx *CTX_Ping, req *REQ_Ping)" in interface_text
@@ -148,12 +149,11 @@ go 1.23.8
     writer.register(bp)
     writer.gen()
 
-    route_models = (output_dir / "views" / "routes" / "api" / "demo" / "gen_protos.go").read_text(
+    route_models = (output_dir / "routes" / "api" / "demo" / "gen_protos.go").read_text(
         encoding="utf-8"
     )
     shared_models = (
         output_dir
-        / "views"
         / "routes"
         / "api"
         / "_gen_protos"
@@ -183,8 +183,8 @@ go 1.23.8
     with bp.group("/demo") as views:
         views.GET("/ping").RSP()
 
-    stale_engine = output_dir / "views" / "engine.go"
-    stale_http = output_dir / "views" / "api" / "demo" / "_http"
+    stale_engine = output_dir / "engine.go"
+    stale_http = output_dir / "api" / "demo" / "_http"
     stale_http.mkdir(parents=True)
     stale_engine.parent.mkdir(parents=True, exist_ok=True)
     stale_engine.write_text("package views\n", encoding="utf-8")
@@ -194,19 +194,19 @@ go 1.23.8
     writer.register(bp)
     writer.gen()
 
-    assert not (output_dir / "views" / "_http").exists()
-    assert not (output_dir / "views" / "api" / "_http").exists()
-    assert not (output_dir / "views" / "api" / "demo" / "_http").exists()
-    assert not (output_dir / "views" / "engine.go").exists()
+    assert not (output_dir / "_http").exists()
+    assert not (output_dir / "api" / "_http").exists()
+    assert not (output_dir / "api" / "demo" / "_http").exists()
+    assert not (output_dir / "engine.go").exists()
 
     generated_core = "\n".join(
         path.read_text(encoding="utf-8")
         for path in (
-            output_dir / "views" / "routes" / "api" / "gen_blueprint.go",
-            output_dir / "views" / "routes" / "api" / "demo" / "gen_interface.go",
-            output_dir / "views" / "providers" / "gen_context.go",
-            output_dir / "views" / "providers" / "gen_req.go",
-            output_dir / "views" / "providers" / "gen_rsp.go",
+            output_dir / "routes" / "api" / "gen_blueprint.go",
+            output_dir / "routes" / "api" / "demo" / "gen_interface.go",
+            output_dir / "providers" / "gen_context.go",
+            output_dir / "providers" / "gen_req.go",
+            output_dir / "providers" / "gen_rsp.go",
         )
         if path.is_file()
     )
@@ -235,8 +235,8 @@ go 1.23.8
     writer.register(bp)
     writer.gen()
 
-    assert (output_dir / "views" / "routes" / "api" / "demo" / "gen_interface.go").is_file()
-    assert not (output_dir / "views" / "transports" / "http").exists()
+    assert (output_dir / "routes" / "api" / "demo" / "gen_interface.go").is_file()
+    assert not (output_dir / "transports" / "http").exists()
 
 
 def test_golang_writer_generates_http_adapter_separately_from_core(tmp_path):
@@ -260,9 +260,9 @@ go 1.23.8
     writer.register(bp)
     writer.gen()
 
-    root_adapter = output_dir / "views" / "transports" / "http" / "api" / "gen_blueprint.go"
-    route_adapter = output_dir / "views" / "transports" / "http" / "api" / "demo" / "gen_interface.go"
-    core_route = output_dir / "views" / "routes" / "api" / "demo" / "gen_interface.go"
+    root_adapter = output_dir / "transports" / "http" / "api" / "gen_blueprint.go"
+    route_adapter = output_dir / "transports" / "http" / "api" / "demo" / "gen_interface.go"
+    core_route = output_dir / "routes" / "api" / "demo" / "gen_interface.go"
 
     assert root_adapter.is_file()
     assert route_adapter.is_file()
@@ -333,12 +333,12 @@ go 1.23.8
     writer.register(bp)
     writer.gen()
 
-    core_interface = (output_dir / "views" / "routes" / "api" / "runs" / "gen_interface.go").read_text(encoding="utf-8")
-    core_models = (output_dir / "views" / "routes" / "api" / "runs" / "gen_protos.go").read_text(encoding="utf-8")
-    provider_connection = (output_dir / "views" / "providers" / "gen_connection.go").read_text(encoding="utf-8")
-    http_adapter = (output_dir / "views" / "transports" / "http" / "api" / "runs" / "gen_interface.go").read_text(encoding="utf-8")
-    impl = (output_dir / "views" / "routes" / "api" / "runs" / "impl.go").read_text(encoding="utf-8")
-    gen_impl = (output_dir / "views" / "routes" / "api" / "runs" / "gen_impl.go").read_text(encoding="utf-8")
+    core_interface = (output_dir / "routes" / "api" / "runs" / "gen_interface.go").read_text(encoding="utf-8")
+    core_models = (output_dir / "routes" / "api" / "runs" / "gen_protos.go").read_text(encoding="utf-8")
+    provider_connection = (output_dir / "providers" / "gen_connection.go").read_text(encoding="utf-8")
+    http_adapter = (output_dir / "transports" / "http" / "api" / "runs" / "gen_interface.go").read_text(encoding="utf-8")
+    impl = (output_dir / "routes" / "api" / "runs" / "impl.go").read_text(encoding="utf-8")
+    gen_impl = (output_dir / "routes" / "api" / "runs" / "gen_impl.go").read_text(encoding="utf-8")
 
     assert (
         "Events(\n"
@@ -368,7 +368,7 @@ go 1.23.8
     assert "httptransport.CHANNEL(" in http_adapter
     assert "httptransport.CHANNEL[" not in http_adapter
     assert "connection scope[%s] is not supported by the default HTTP runtime" in (
-        output_dir / "views" / "transports" / "http" / "gen_engine.go"
+        output_dir / "transports" / "http" / "gen_engine.go"
     ).read_text(encoding="utf-8")
     assert "serverMessage, err := NewTaskStreamMessageState(&serverData)" not in gen_impl
     assert "clientMessage, err := channel.Recv(ctx)" not in gen_impl
@@ -398,10 +398,10 @@ go 1.23.8
     writer.register(bp)
     writer.gen()
 
-    route_adapter = (output_dir / "views" / "transports" / "http" / "api" / "demo" / "gen_interface.go").read_text(
+    route_adapter = (output_dir / "transports" / "http" / "api" / "demo" / "gen_interface.go").read_text(
         encoding="utf-8"
     )
-    http_runtime = (output_dir / "views" / "transports" / "http" / "gen_engine.go").read_text(encoding="utf-8")
+    http_runtime = (output_dir / "transports" / "http" / "gen_engine.go").read_text(encoding="utf-8")
     assert "sharedprovider.NewRouteExecutor(" in route_adapter
     assert 'RouteID:   "api.demo.post.callback"' in route_adapter
     assert "\n\t\t\t\"\",\n" in route_adapter
@@ -438,7 +438,7 @@ go 1.23.8
     writer.register(bp)
     writer.gen()
 
-    route_adapter = (output_dir / "views" / "transports" / "http" / "static" / "gen_interface.go").read_text(
+    route_adapter = (output_dir / "transports" / "http" / "static" / "gen_interface.go").read_text(
         encoding="utf-8"
     )
     assert 'Root:      "static"' in route_adapter
@@ -467,7 +467,7 @@ go 1.23.8
     writer.register(bp)
     writer.gen()
 
-    (output_dir / "views" / "providers" / "route_factory_test.go").write_text(
+    (output_dir / "providers" / "route_factory_test.go").write_text(
         """
 package providers
 
@@ -543,7 +543,7 @@ func TestRouteAwareProviderFactory(t *testing.T) {
         encoding="utf-8",
     )
     result = subprocess.run(
-        ["go", "test", "./views/providers"],
+        ["go", "test", "./providers"],
         cwd=output_dir,
         text=True,
         capture_output=True,
@@ -573,8 +573,8 @@ go 1.23.8
     writer.register(bp)
     writer.gen()
 
-    assert (output_dir / "views" / "providers" / "gen_provider.go").is_file()
-    assert (output_dir / "views" / "routes" / "providers" / "demo" / "gen_interface.go").is_file()
+    assert (output_dir / "providers" / "gen_provider.go").is_file()
+    assert (output_dir / "routes" / "providers" / "demo" / "gen_interface.go").is_file()
 
 
 def test_golang_writer_generates_only_declared_error_models(tmp_path):
@@ -591,7 +591,15 @@ go 1.23.8
     )
 
     class UsedErr(Model):
-        BOOM = Error(1001, "boom")
+        BOOM = Error(
+            1001,
+            "boom",
+            toast=Toast(
+                key="demo.boom",
+                default="操作失败，请稍后再试",
+                level="warning",
+            ),
+        )
 
     class UnusedErr(Model):
         NOISE = Error(1002, "noise")
@@ -600,9 +608,98 @@ go 1.23.8
     with bp.group("/demo") as views:
         views.GET("/ping").RSP()
 
+    stale_catalog = output_dir / "runtime" / "errors" / "gen_error_catalog.go"
+    stale_catalog.parent.mkdir(parents=True)
+    stale_catalog.write_text(
+        "// Code generated by api-blueprint (Golang); DO NOT EDIT.\n\npackage errors\n\nvar CatalogByID = map[string]CatalogEntry{}\n",
+        encoding="utf-8",
+    )
+
     writer = GolangWriter(output_dir)
     writer.register(bp)
     writer.gen()
 
-    assert (output_dir / "errors" / "used_err" / "gen_errors.go").is_file()
-    assert not (output_dir / "errors" / "unused_err").exists()
+    group_errors = (output_dir / "runtime" / "errors" / "used_err" / "gen_errors.go").read_text(encoding="utf-8")
+    runtime_errors = (output_dir / "runtime" / "errors" / "gen_errors.go").read_text(encoding="utf-8")
+    assert "BOOM = e.NewCatalogError(" in group_errors
+    assert "e.ToastSpec{\n" in group_errors
+    assert 'Key:     "demo.boom",' in group_errors
+    assert 'Default: "操作失败，请稍后再试",' in group_errors
+    assert "type CodeError interface" in runtime_errors
+    assert "type ToastProvider interface" in runtime_errors
+    assert "func (e Error) WithToast(toast ToastPayload) *Error" in runtime_errors
+    assert "CatalogByID" not in runtime_errors
+    assert "CatalogEntry" not in runtime_errors
+    assert "\\u64cd" not in group_errors
+    assert (output_dir / "runtime" / "errors" / "errors.go").is_file()
+    assert not (output_dir / "runtime" / "errors" / "gen_error_catalog.go").exists()
+    assert not (output_dir / "runtime" / "errors" / "unused_err").exists()
+
+    if shutil.which("go") is not None:
+        (output_dir / "runtime" / "errors" / "toast_test.go").write_text(
+            """
+package errors
+
+import "testing"
+
+func TestWithToastDoesNotMutateOriginal(t *testing.T) {
+	original := NewCatalogError("UsedErr.BOOM", "BOOM", 1001, "boom", ToastSpec{
+		Key:     "demo.boom",
+		Level:   "warning",
+		Default: "操作失败，请稍后再试",
+	})
+	override := original.WithToast(ToastPayload{
+		Key:  "demo.boom.enterprise",
+		Text: "企业账号异常，请联系管理员",
+	})
+	if original.Toast().Key != "demo.boom" || original.Toast().Text != "" {
+		t.Fatalf("original toast was mutated: %#v", original.Toast())
+	}
+	if override.Toast().Key != "demo.boom.enterprise" || override.Toast().Text == "" {
+		t.Fatalf("override toast not applied: %#v", override.Toast())
+	}
+}
+            """.strip()
+            + "\n",
+            encoding="utf-8",
+        )
+        result = subprocess.run(
+            ["go", "test", "./runtime/errors"],
+            cwd=output_dir,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_golang_writer_cleans_legacy_views_and_sibling_errors_when_out_dir_is_package_root(tmp_path):
+    package_root = tmp_path / "golang" / "server" / "views"
+    package_root.mkdir(parents=True)
+    (package_root.parent / "go.mod").write_text(
+        """
+module example.com/generated/golang/server
+
+go 1.23.8
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    legacy_double_views = package_root / "views" / "routes"
+    legacy_double_views.mkdir(parents=True)
+    (legacy_double_views / "gen_interface.go").write_text("package stale\n", encoding="utf-8")
+    legacy_errors = package_root.parent / "errors" / "common_err"
+    legacy_errors.mkdir(parents=True)
+    (legacy_errors / "gen_errors.go").write_text("package common_err\n", encoding="utf-8")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.GET("/ping").RSP()
+
+    writer = GolangWriter(package_root, module="example.com/generated/golang/server")
+    writer.register(bp)
+    writer.gen()
+
+    assert not (package_root / "views").exists()
+    assert not (package_root.parent / "errors").exists()
+    assert (package_root / "routes" / "api" / "demo" / "gen_interface.go").is_file()

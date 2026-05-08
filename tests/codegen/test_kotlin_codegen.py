@@ -5,7 +5,7 @@ import enum
 import pytest
 
 from api_blueprint.contract import build_contract_graph
-from api_blueprint.engine import Blueprint
+from api_blueprint.engine import Blueprint, Toast
 from api_blueprint.engine.schema import Error, Field
 from api_blueprint.engine.model import Array, Enum, Int64, Map, Model, String
 from api_blueprint.engine.wrapper import ResponseWrapper
@@ -92,6 +92,18 @@ def test_kotlin_selection_matches_path_tag_group_method_and_name(example_entrypo
 
 
 def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full_route_surface(tmp_path):
+    class CommonErr(Model):
+        UNKNOWN = Error(-1, "unknown")
+        TOKEN_EXPIRE = Error(
+            55555,
+            "token登录态失效",
+            toast=Toast(
+                key="auth.token_expire",
+                default="登录状态已失效，请重新登录",
+                level="warning",
+            ),
+        )
+
     class SubmitJson(Model):
         value = String(description="value")
 
@@ -116,7 +128,7 @@ def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full
     class CloseInfo(Model):
         reason = String(description="reason")
 
-    bp = Blueprint(root="/api")
+    bp = Blueprint(root="/api", errors=[CommonErr])
     bp.GET("/status").RSP(SubmitResponse)
     views = bp.group("/demo")
     views.GET("/ping").ARGS(q=String(description="q")).RSP(SubmitResponse)
@@ -157,6 +169,8 @@ def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full
     writer.gen()
 
     runtime_text = (runtime_dir / "GenApiTransport.kt").read_text(encoding="utf-8")
+    errors_text = (runtime_dir / "GenApiErrors.kt").read_text(encoding="utf-8")
+    catalog_text = (runtime_dir / "GenApiErrorCatalog.kt").read_text(encoding="utf-8")
     generated_client_text = (runtime_dir / "GenApiClient.kt").read_text(encoding="utf-8")
     client_text = (runtime_dir / "ApiClient.kt").read_text(encoding="utf-8")
     route_text = (route_dir / "GenDemoApi.kt").read_text(encoding="utf-8")
@@ -169,6 +183,8 @@ def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full
 
     for generated_text in (
         runtime_text,
+        errors_text,
+        catalog_text,
         generated_client_text,
         route_text,
         route_models_text,
@@ -178,6 +194,8 @@ def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full
         assert generated_text.startswith(KOTLIN_GENERATED_HEADER)
     assert (runtime_dir / "GenModels.kt").is_file()
     assert (runtime_dir / "GenApiException.kt").is_file()
+    assert (runtime_dir / "GenApiErrors.kt").is_file()
+    assert (runtime_dir / "GenApiErrorCatalog.kt").is_file()
     assert client_text == "// USER CLIENT FACADE\n"
     assert route_facade_text == "// USER ROUTE FACADE\n"
     assert factory_text == "// USER HTTP FACADE\n"
@@ -196,6 +214,16 @@ def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full
     assert "public interface ApiSocketBridge<Send, Recv>" in runtime_text
     assert "public interface ApiStreamBridge<Recv, Close>" in runtime_text
     assert "public interface ApiChannelBridge<Recv, Send, Close>" in runtime_text
+    assert "class ApiCodeError" in errors_text
+    assert "data class ApiToastSpec" in errors_text
+    assert "fun resolveApiToast(" in errors_text
+    assert "ERROR_CATALOG_BY_ID" not in errors_text
+    assert '"CommonErr.UNKNOWN"' not in errors_text
+    assert '"CommonErr.UNKNOWN"' in catalog_text
+    assert "const val TOKEN_EXPIRE: Int = 55555" in catalog_text
+    assert 'default = "登录状态已失效，请重新登录"' in catalog_text
+    assert "\\u767b" not in catalog_text
+    assert "locales" not in catalog_text
     assert "public open class GenApiClient" in generated_client_text
     assert "public val demo: DemoApi = DemoApi(transport)" in generated_client_text
 

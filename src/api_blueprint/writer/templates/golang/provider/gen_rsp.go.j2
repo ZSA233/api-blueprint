@@ -65,15 +65,18 @@ func (prov *RspProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
 	ctx.Next()
 }
 
-func unwrapError(err error) (code int, message string) {
+func unwrapError(err error) (code int, message string, toast map[string]string) {
 	switch e := err.(type) {
-	case errors.CodeErrInterface:
+	case errors.CodeError:
 		code = e.Code()
 		message = e.Message()
 	case nil:
 	default:
 		message = fmt.Sprintf("%v", e)
 		code = -1
+	}
+	if e, ok := err.(errors.ToastProvider); ok {
+		toast = e.Toast().Map()
 	}
 	return
 }

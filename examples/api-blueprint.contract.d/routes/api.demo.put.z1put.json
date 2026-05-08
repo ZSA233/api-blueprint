@@ -98,7 +98,7 @@
     },
     "wails.v2": {
       "files": [
-        "golang/views/transports/wailsv2/api/demo/gen_service.go",
+        "golang/server/views/transports/wailsv2/api/demo/gen_service.go",
         "typescript/api/transports/wailsv2/api/demo/client.ts"
       ],
       "imports": [],
@@ -106,7 +106,7 @@
     },
     "wails.v3": {
       "files": [
-        "golang/views/transports/wailsv3/api/demo/gen_service.go",
+        "golang/server/views/transports/wailsv3/api/demo/gen_service.go",
         "typescript/api/transports/wailsv3/api/demo/client.ts"
       ],
       "imports": [],
@@ -114,10 +114,18 @@
     }
   },
   "connection": null,
+  "errors": [
+    "CommonErr.UNKNOWN",
+    "CommonErr.TOKEN_EXPIRE"
+  ],
   "route": {
     "connection": null,
     "deprecated": false,
-    "hash": "13a87ab18f8435a3801e2e1529fe421f844bcc25c8dcac4b683d40cafd613ae9",
+    "errors": [
+      "CommonErr.UNKNOWN",
+      "CommonErr.TOKEN_EXPIRE"
+    ],
+    "hash": "eccb76926fb76edd68c6e999a7542d52c8e380ad9d1ca94435a2f6621b5ae72f",
     "id": "api.demo.put.z1put",
     "kind": "rpc",
     "method_name": "z1put",

@@ -520,6 +520,18 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
     def render_passthrough(self, target: str) -> str:
         return f'\n\nexport * from "{target}";\n'
 
+    def render_errors_passthrough(self) -> str:
+        return '\n\nexport * from "./gen_errors";\nexport * from "./gen_error_catalog";\n'
+
+    def write_errors_passthrough(self, shared_dir: Path) -> None:
+        path = shared_dir / "errors.ts"
+        source = self.render_errors_passthrough()
+        legacy_source = self.render_passthrough("./gen_errors")
+        overwrite = path.is_file() and path.read_text(encoding="utf-8") == legacy_source
+        with self.writer.write_file(path, overwrite=overwrite) as handle:
+            if handle:
+                handle.write(source)
+
     def transport_root_exports(self, root_dir: Path, *extra_transports: str) -> list[dict[str, str]]:
         transports_dir = root_dir / self.writer.transports_dir_name
         names = set(extra_transports)
@@ -911,6 +923,13 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
             with self.writer.write_file(shared_dir / tmpl, overwrite=tmpl.startswith("gen_")) as handle:
                 if handle:
                     handle.write(render(self.writer.template_lang, tmpl, shared_context))
+        with self.writer.write_file(shared_dir / "gen_errors.ts", overwrite=True) as handle:
+            if handle:
+                handle.write(render(self.writer.template_lang, "gen_errors.ts", {"writer": self.writer, "bp": self}))
+        with self.writer.write_file(shared_dir / "gen_error_catalog.ts", overwrite=True) as handle:
+            if handle:
+                handle.write(render(self.writer.template_lang, "gen_error_catalog.ts", {"writer": self.writer, "bp": self}))
+        self.write_errors_passthrough(shared_dir)
 
         for out_tmpl, tmpl in [
             ("gen_client.ts", "gen_shared_client.ts"),
@@ -936,6 +955,7 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                                 "client_class": None,
                                 "extra_exports": [
                                     'export * from "./gen_client";',
+                                    'export * from "./errors";',
                                 ],
                             },
                         )

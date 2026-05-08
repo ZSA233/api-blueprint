@@ -54,6 +54,25 @@ with bp.group("/items") as views:
 - `JSON(Model)`：JSON 请求体。
 - `RSP(...)`：响应模型。
 
+## Error 与 Toast
+
+错误定义使用 `Error(code, message)`，其中 `message` 是协议级默认说明，适合日志、OpenAPI 和老客户端兜底。需要用户展示文案时使用 `Toast(key, default, level)`：DSL 只写一种默认语言，生成器只输出 key/default/level，不生成内置多语言 map。
+
+```python
+class CommonErr(Model):
+    TOKEN_EXPIRE = Error(
+        55555,
+        "token登录态失效",
+        toast=Toast(
+            key="auth.token_expire",
+            default="登录状态已失效，请重新登录",
+            level="warning",
+        ),
+    )
+```
+
+不写 `toast` 时默认等价于 `key="<Group>.<KEY>"`、`default=message`、`level="error"`。响应 wrapper 会携带可选 `toast` 字段；客户端展示文案按 `toast.text`、业务 i18n、`toast.default`、`message` 兜底。服务端需要按请求语言、租户或灰度覆盖展示文案时，应返回不可变覆盖结果，不修改生成的全局错误值或 catalog entry。
+
 ## 长连接消息流
 
 `STREAM` 与 `CHANNEL` 是新的长连接 DSL 入口，语义上与 RPC 并列，而不是直接暴露底层 WebSocket、SSE 或 Wails event。

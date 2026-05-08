@@ -41,8 +41,8 @@ package {{ writer.provider_package }}
 {% for wrapper in rsp_json_wrappers %}
 	{% set proto = wrapper.proto %}
 	func NewRSP_JSON_{{ wrapper.class_name }}[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (codeInt int, rsp any) {
-		code, message := unwrapError(err)
-		_, _ = code, message
+		code, message, toast := unwrapError(err)
+		_, _, _ = code, message, toast
 		{{ 
 			wrapper.json_factory(
 				wrapper_name=wrapper.proto_name,
@@ -50,6 +50,7 @@ package {{ writer.provider_package }}
 				code='code', 
 				data='data', 
 				message='message',
+				toast='toast',
 			) | safe
 		}}
 	}
@@ -123,8 +124,8 @@ type RSP_XML[P any] struct {
 
 {% for wrapper in rsp_xml_wrappers %}
 	func NewRSP_XML_{{ wrapper.class_name }}[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (codeInt int, rsp any) {
-		code, message := unwrapError(err)
-		_, _ = code, message
+		code, message, toast := unwrapError(err)
+		_, _, _ = code, message, toast
 		{{ 
 			wrapper.xml_factory(
 				wrapper_name=wrapper.proto_name,
@@ -132,6 +133,7 @@ type RSP_XML[P any] struct {
 				code='code', 
 				data='data', 
 				message='message',
+				toast='toast',
 			) | safe
 		}}
 	}

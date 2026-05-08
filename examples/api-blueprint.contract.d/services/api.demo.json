@@ -100,7 +100,7 @@
         },
         "wails.v2": {
           "files": [
-            "golang/views/transports/wailsv2/api/demo/gen_service.go",
+            "golang/server/views/transports/wailsv2/api/demo/gen_service.go",
             "typescript/api/transports/wailsv2/api/demo/client.ts"
           ],
           "imports": [],
@@ -108,7 +108,7 @@
         },
         "wails.v3": {
           "files": [
-            "golang/views/transports/wailsv3/api/demo/gen_service.go",
+            "golang/server/views/transports/wailsv3/api/demo/gen_service.go",
             "typescript/api/transports/wailsv3/api/demo/client.ts"
           ],
           "imports": [],
@@ -116,7 +116,11 @@
         }
       },
       "connection": null,
-      "hash": "13b90b08d2ad7eb4836b6cbd893c2dd79f40838150dc726f6bdab9f125180264",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "8f4d005d6aba031f1e87dae8463578d169d8c11b6e34e1a4adc1600471697a44",
       "id": "api.demo.get.abc",
       "kind": "rpc",
       "methods": [
@@ -237,7 +241,7 @@
         },
         "wails.v2": {
           "files": [
-            "golang/views/transports/wailsv2/api/demo/gen_service.go",
+            "golang/server/views/transports/wailsv2/api/demo/gen_service.go",
             "typescript/api/transports/wailsv2/api/demo/client.ts"
           ],
           "imports": [],
@@ -245,7 +249,7 @@
         },
         "wails.v3": {
           "files": [
-            "golang/views/transports/wailsv3/api/demo/gen_service.go",
+            "golang/server/views/transports/wailsv3/api/demo/gen_service.go",
             "typescript/api/transports/wailsv3/api/demo/client.ts"
           ],
           "imports": [],
@@ -253,7 +257,11 @@
         }
       },
       "connection": null,
-      "hash": "f1ee8c378d6a5e5abc60c29155d653459b9980f5294731fa3f99819b35d01d59",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "4a191fbafd7789576bcee8c456ec0889a57a39b9c8056c2029d32b9106619271",
       "id": "api.demo.post.testpost",
       "kind": "rpc",
       "methods": [
@@ -373,7 +381,7 @@
         },
         "wails.v2": {
           "files": [
-            "golang/views/transports/wailsv2/api/demo/gen_service.go",
+            "golang/server/views/transports/wailsv2/api/demo/gen_service.go",
             "typescript/api/transports/wailsv2/api/demo/client.ts"
           ],
           "imports": [],
@@ -381,7 +389,7 @@
         },
         "wails.v3": {
           "files": [
-            "golang/views/transports/wailsv3/api/demo/gen_service.go",
+            "golang/server/views/transports/wailsv3/api/demo/gen_service.go",
             "typescript/api/transports/wailsv3/api/demo/client.ts"
           ],
           "imports": [],
@@ -389,7 +397,11 @@
         }
       },
       "connection": null,
-      "hash": "13a87ab18f8435a3801e2e1529fe421f844bcc25c8dcac4b683d40cafd613ae9",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "eccb76926fb76edd68c6e999a7542d52c8e380ad9d1ca94435a2f6621b5ae72f",
       "id": "api.demo.put.z1put",
       "kind": "rpc",
       "methods": [
@@ -500,7 +512,7 @@
         },
         "wails.v2": {
           "files": [
-            "golang/views/transports/wailsv2/api/demo/gen_service.go",
+            "golang/server/views/transports/wailsv2/api/demo/gen_service.go",
             "typescript/api/transports/wailsv2/api/demo/client.ts"
           ],
           "imports": [],
@@ -508,7 +520,7 @@
         },
         "wails.v3": {
           "files": [
-            "golang/views/transports/wailsv3/api/demo/gen_service.go",
+            "golang/server/views/transports/wailsv3/api/demo/gen_service.go",
             "typescript/api/transports/wailsv3/api/demo/client.ts"
           ],
           "imports": [],
@@ -516,7 +528,11 @@
         }
       },
       "connection": null,
-      "hash": "a00395bc7ae3e1459a65322ab8d5eacbfdc45400a765220f304c5803b82c7e5f",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "9ed658185eb6d5fde1e1fe317fb31b4e9704c6e9b4106d6b1329635554c6c6cb",
       "id": "api.demo.delete.delete",
       "kind": "rpc",
       "methods": [
@@ -597,7 +613,7 @@
         },
         "wails.v2": {
           "files": [
-            "golang/views/transports/wailsv2/api/demo/gen_service.go",
+            "golang/server/views/transports/wailsv2/api/demo/gen_service.go",
             "typescript/api/transports/wailsv2/api/demo/client.ts"
           ],
           "imports": [],
@@ -605,7 +621,7 @@
         },
         "wails.v3": {
           "files": [
-            "golang/views/transports/wailsv3/api/demo/gen_service.go",
+            "golang/server/views/transports/wailsv3/api/demo/gen_service.go",
             "typescript/api/transports/wailsv3/api/demo/client.ts"
           ],
           "imports": [],
@@ -613,7 +629,11 @@
         }
       },
       "connection": null,
-      "hash": "4f1e1879a5861aa0a5e42eb47ce2481174f90ad49e4b8c6a02ecd7a51a14928e",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "fd0e998e4c4f45bc3c589f29c98ec049e81049f9357f183c1d8a12439a2af10a",
       "id": "api.demo.ws.ws",
       "kind": "legacy_ws",
       "methods": [],
@@ -719,7 +739,7 @@
         },
         "wails.v2": {
           "files": [
-            "golang/views/transports/wailsv2/api/demo/gen_service.go",
+            "golang/server/views/transports/wailsv2/api/demo/gen_service.go",
             "typescript/api/transports/wailsv2/api/demo/client.ts"
           ],
           "imports": [],
@@ -727,7 +747,7 @@
         },
         "wails.v3": {
           "files": [
-            "golang/views/transports/wailsv3/api/demo/gen_service.go",
+            "golang/server/views/transports/wailsv3/api/demo/gen_service.go",
             "typescript/api/transports/wailsv3/api/demo/client.ts"
           ],
           "imports": [],
@@ -746,7 +766,11 @@
           "SweepLog"
         ]
       },
-      "hash": "064636b0a6c8b652e77dd0d12c5b32dcf8ff16e398ba22aa18d41a000373afd8",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "ab9d741c83cf0470b03e13caf2030d009b681a9de2d89c80c1b9c0dd3f068065",
       "id": "api.demo.stream.sweepevents",
       "kind": "stream",
       "methods": [],
@@ -853,7 +877,7 @@
         },
         "wails.v2": {
           "files": [
-            "golang/views/transports/wailsv2/api/demo/gen_service.go",
+            "golang/server/views/transports/wailsv2/api/demo/gen_service.go",
             "typescript/api/transports/wailsv2/api/demo/client.ts"
           ],
           "imports": [],
@@ -861,7 +885,7 @@
         },
         "wails.v3": {
           "files": [
-            "golang/views/transports/wailsv3/api/demo/gen_service.go",
+            "golang/server/views/transports/wailsv3/api/demo/gen_service.go",
             "typescript/api/transports/wailsv3/api/demo/client.ts"
           ],
           "imports": [],
@@ -883,7 +907,11 @@
           "SweepLog"
         ]
       },
-      "hash": "122597c16d21b65ca32a8b9d25ff8bb5836a0ceea0fe73c886297582b02ab3be",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "43a2addf7d2919f81b856493394361bb0175d8a8f9e4d7d6339f1e5a3fca4f25",
       "id": "api.demo.channel.assistantsession",
       "kind": "channel",
       "methods": [],
@@ -1003,7 +1031,7 @@
         },
         "wails.v2": {
           "files": [
-            "golang/views/transports/wailsv2/api/demo/gen_service.go",
+            "golang/server/views/transports/wailsv2/api/demo/gen_service.go",
             "typescript/api/transports/wailsv2/api/demo/client.ts"
           ],
           "imports": [],
@@ -1011,7 +1039,7 @@
         },
         "wails.v3": {
           "files": [
-            "golang/views/transports/wailsv3/api/demo/gen_service.go",
+            "golang/server/views/transports/wailsv3/api/demo/gen_service.go",
             "typescript/api/transports/wailsv3/api/demo/client.ts"
           ],
           "imports": [],
@@ -1019,7 +1047,11 @@
         }
       },
       "connection": null,
-      "hash": "ab4bf0b9dba1ce7b3daeb4a0c79fe5937c35049efab97de6238c14c7d47bf3d0",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "b4c42c2a1c60d7359d0508f36f2c9d40bd4d6097d3ff94408d6e4aa829f40758",
       "id": "api.demo.post.postdeprecated",
       "kind": "rpc",
       "methods": [
@@ -1138,7 +1170,7 @@
         },
         "wails.v2": {
           "files": [
-            "golang/views/transports/wailsv2/api/demo/gen_service.go",
+            "golang/server/views/transports/wailsv2/api/demo/gen_service.go",
             "typescript/api/transports/wailsv2/api/demo/client.ts"
           ],
           "imports": [],
@@ -1146,7 +1178,7 @@
         },
         "wails.v3": {
           "files": [
-            "golang/views/transports/wailsv3/api/demo/gen_service.go",
+            "golang/server/views/transports/wailsv3/api/demo/gen_service.go",
             "typescript/api/transports/wailsv3/api/demo/client.ts"
           ],
           "imports": [],
@@ -1154,7 +1186,11 @@
         }
       },
       "connection": null,
-      "hash": "482224644788ef4265f3156e2f3399b3159cacbfab93ddf929823244b5e9cfd5",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "28ebd462a7c34f6fb42d59ba19f76110f7a442c59b8d6188a0bd02b67604a10b",
       "id": "api.demo.post.raw",
       "kind": "rpc",
       "methods": [
@@ -1273,7 +1309,7 @@
         },
         "wails.v2": {
           "files": [
-            "golang/views/transports/wailsv2/api/demo/gen_service.go",
+            "golang/server/views/transports/wailsv2/api/demo/gen_service.go",
             "typescript/api/transports/wailsv2/api/demo/client.ts"
           ],
           "imports": [],
@@ -1281,7 +1317,7 @@
         },
         "wails.v3": {
           "files": [
-            "golang/views/transports/wailsv3/api/demo/gen_service.go",
+            "golang/server/views/transports/wailsv3/api/demo/gen_service.go",
             "typescript/api/transports/wailsv3/api/demo/client.ts"
           ],
           "imports": [],
@@ -1289,7 +1325,11 @@
         }
       },
       "connection": null,
-      "hash": "b670886c55e9e8d22d6c988a351353e635070177aa520d13ff37190b4c3c931b",
+      "errors": [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE"
+      ],
+      "hash": "cfb7a8902b5c716d2bea9b8c3cb3a81c78fafb98a8655627fefb45a92fa8c9e8",
       "id": "api.demo.post.mapmodel",
       "kind": "rpc",
       "methods": [

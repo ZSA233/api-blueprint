@@ -1,17 +1,25 @@
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 from typing import Any
 
 from fastapi.templating import Jinja2Templates
+from markupsafe import Markup
 
 
 _TEMPLATE_CACHE: dict[str, Jinja2Templates] = {}
 
 
 def load_templates(directory: str | None) -> Jinja2Templates:
-    return Jinja2Templates(directory=directory)
+    templates = Jinja2Templates(directory=directory)
+    templates.env.filters["code_literal"] = code_literal
+    return templates
+
+
+def code_literal(value: Any) -> Markup:
+    return Markup(json.dumps(value, ensure_ascii=False))
 
 
 def _template_root(lang: str) -> Path:

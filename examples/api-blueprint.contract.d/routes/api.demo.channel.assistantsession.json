@@ -87,7 +87,7 @@
     },
     "wails.v2": {
       "files": [
-        "golang/views/transports/wailsv2/api/demo/gen_service.go",
+        "golang/server/views/transports/wailsv2/api/demo/gen_service.go",
         "typescript/api/transports/wailsv2/api/demo/client.ts"
       ],
       "imports": [],
@@ -95,7 +95,7 @@
     },
     "wails.v3": {
       "files": [
-        "golang/views/transports/wailsv3/api/demo/gen_service.go",
+        "golang/server/views/transports/wailsv3/api/demo/gen_service.go",
         "typescript/api/transports/wailsv3/api/demo/client.ts"
       ],
       "imports": [],
@@ -138,6 +138,10 @@
       ]
     }
   },
+  "errors": [
+    "CommonErr.UNKNOWN",
+    "CommonErr.TOKEN_EXPIRE"
+  ],
   "route": {
     "connection": {
       "client_message": {
@@ -176,7 +180,11 @@
       }
     },
     "deprecated": false,
-    "hash": "122597c16d21b65ca32a8b9d25ff8bb5836a0ceea0fe73c886297582b02ab3be",
+    "errors": [
+      "CommonErr.UNKNOWN",
+      "CommonErr.TOKEN_EXPIRE"
+    ],
+    "hash": "43a2addf7d2919f81b856493394361bb0175d8a8f9e4d7d6339f1e5a3fca4f25",
     "id": "api.demo.channel.assistantsession",
     "kind": "channel",
     "method_name": "assistantSession",

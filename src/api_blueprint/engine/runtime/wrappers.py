@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import Any, Generic, TypeVar
 
-from api_blueprint.engine.schema import Error, Field, Int, Model, String
+from api_blueprint.engine.schema import Error, Field, Int, Map, Model, String
 
 TM = TypeVar("TM", bound=Model)
 
@@ -88,6 +88,7 @@ class NoneWrapper(ResponseWrapper):
 class GeneralWrapper(ResponseWrapper, Generic[TM]):
     code = Int(description="code")
     message = String(description="message", omitempty=True)
+    toast = Map[str, str](description="toast", omitempty=True)
     data: TM = Field(description="data", omitempty=True)
 
     __xml_options__ = {
@@ -118,6 +119,7 @@ class GeneralWrapper(ResponseWrapper, Generic[TM]):
         return key, {
             "code": err.code,
             "message": err.message,
+            "toast": _error_toast_payload(err),
         }
 
     @classmethod
@@ -127,6 +129,7 @@ class GeneralWrapper(ResponseWrapper, Generic[TM]):
                 return 0, &{wrapper_name}{generic_types}{{
                     Code:    {code},
                     Message: {message},
+                    Toast:   {toast},
                     Data:    {data},
                 }}""",
             "xml": """
@@ -139,3 +142,20 @@ class GeneralWrapper(ResponseWrapper, Generic[TM]):
                     }},
                 }}""" % (cls.get_xml_root_name(),),
         }[typ]
+
+
+def _error_toast_payload(err: Error) -> dict[str, str]:
+    cls_key, name = err.__key__
+    fallback_key = f"{cls_key}.{name}"
+    toast = err.toast
+    if toast is None:
+        return {
+            "key": fallback_key,
+            "level": "error",
+            "default": err.message,
+        }
+    return {
+        "key": toast.key or fallback_key,
+        "level": toast.level or "error",
+        "default": toast.default or err.message,
+    }

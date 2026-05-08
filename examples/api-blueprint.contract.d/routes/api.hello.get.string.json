@@ -98,7 +98,7 @@
     },
     "wails.v2": {
       "files": [
-        "golang/views/transports/wailsv2/api/hello/gen_service.go",
+        "golang/server/views/transports/wailsv2/api/hello/gen_service.go",
         "typescript/api/transports/wailsv2/api/hello/client.ts"
       ],
       "imports": [],
@@ -106,7 +106,7 @@
     },
     "wails.v3": {
       "files": [
-        "golang/views/transports/wailsv3/api/hello/gen_service.go",
+        "golang/server/views/transports/wailsv3/api/hello/gen_service.go",
         "typescript/api/transports/wailsv3/api/hello/client.ts"
       ],
       "imports": [],
@@ -114,10 +114,18 @@
     }
   },
   "connection": null,
+  "errors": [
+    "CommonErr.UNKNOWN",
+    "CommonErr.TOKEN_EXPIRE"
+  ],
   "route": {
     "connection": null,
     "deprecated": false,
-    "hash": "0943913a83557afb7bfc891c91cde4ad1a35b1771f2be2ef7a9da05ab83790a4",
+    "errors": [
+      "CommonErr.UNKNOWN",
+      "CommonErr.TOKEN_EXPIRE"
+    ],
+    "hash": "0f35bf2dca19de0a48f63ad8f3c40c58a96f74a790823dbf5631bbf4454beefa",
     "id": "api.hello.get.string",
     "kind": "rpc",
     "method_name": "string",

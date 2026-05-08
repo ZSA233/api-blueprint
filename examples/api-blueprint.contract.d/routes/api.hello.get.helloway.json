@@ -98,7 +98,7 @@
     },
     "wails.v2": {
       "files": [
-        "golang/views/transports/wailsv2/api/hello/gen_service.go",
+        "golang/server/views/transports/wailsv2/api/hello/gen_service.go",
         "typescript/api/transports/wailsv2/api/hello/client.ts"
       ],
       "imports": [],
@@ -106,7 +106,7 @@
     },
     "wails.v3": {
       "files": [
-        "golang/views/transports/wailsv3/api/hello/gen_service.go",
+        "golang/server/views/transports/wailsv3/api/hello/gen_service.go",
         "typescript/api/transports/wailsv3/api/hello/client.ts"
       ],
       "imports": [],
@@ -114,10 +114,18 @@
     }
   },
   "connection": null,
+  "errors": [
+    "CommonErr.UNKNOWN",
+    "CommonErr.TOKEN_EXPIRE"
+  ],
   "route": {
     "connection": null,
     "deprecated": false,
-    "hash": "812b2bd1d81188743018536309d6b14d925aa10df8f8d0273030e70fc7493f80",
+    "errors": [
+      "CommonErr.UNKNOWN",
+      "CommonErr.TOKEN_EXPIRE"
+    ],
+    "hash": "6bdf55c61fc0f06d76d1151447c93f0ebaa653c4e44a51bc78a193192ae4b8c3",
     "id": "api.hello.get.helloway",
     "kind": "rpc",
     "method_name": "helloWay",

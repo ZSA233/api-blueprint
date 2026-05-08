@@ -14,6 +14,7 @@ from api_blueprint.engine.model import (
     AnonKV,
     Array,
     Enum as ModelEnum,
+    Error,
     Field,
     FieldWrappedModel,
     Map,
@@ -102,18 +103,21 @@ class ContractGraphBuilder:
         self.services: "OrderedDict[str, JsonObject]" = OrderedDict()
         self.routes: list[JsonObject] = []
         self.schemas: "OrderedDict[str, JsonObject]" = OrderedDict()
+        self.errors: "OrderedDict[str, JsonObject]" = OrderedDict()
         self.route_runtime: dict[str, ContractRouteRuntime] = {}
         self._qualified_schema_names: set[str] = set()
         self._schema_ref_rewrites: dict[str, str] = {}
 
     def build(self, blueprints: Iterable[Blueprint]) -> ContractGraph:
         for blueprint in blueprints:
+            self.add_errors(blueprint.errors)
             for _group, router in blueprint.iter_router():
                 self.add_router(router)
         return ContractGraph(
             services=list(self.services.values()),
             routes=self.routes,
             schemas=self.schemas,
+            errors=list(self.errors.values()),
             route_runtime=dict(self.route_runtime),
         )
 
@@ -125,6 +129,12 @@ class ContractGraphBuilder:
         route = self._route_manifest(router, contract)
         self.routes.append(route)
         self.route_runtime[contract.route_id] = self._route_runtime(router)
+        self.add_errors(router.errors)
+
+    def add_errors(self, errors_by_code: Mapping[int, list[Error]]) -> None:
+        for err in _iter_declared_errors(errors_by_code):
+            manifest = _error_manifest(err)
+            self.errors.setdefault(manifest["id"], manifest)
 
     def _service_manifest(self, router: Router, contract: RouteContract) -> JsonObject:
         root_slug = _contract_root_slug(contract)
@@ -167,6 +177,7 @@ class ContractGraphBuilder:
             "url": router.url,
             "tags": list(router.tags),
             "deprecated": router.is_deprecated,
+            "errors": self._route_error_ids(router),
             "request": request,
             "response": response,
             "connection": connection,
@@ -174,6 +185,19 @@ class ContractGraphBuilder:
         }
         self._apply_schema_ref_rewrites(route)
         return route
+
+    def _route_error_ids(self, router: Router) -> list[str]:
+        seen: set[str] = set()
+        result: list[str] = []
+        for errors_by_code in (router.bp.errors, router.errors):
+            for err in _iter_declared_errors(errors_by_code):
+                manifest = _error_manifest(err)
+                self.errors.setdefault(manifest["id"], manifest)
+                if manifest["id"] in seen:
+                    continue
+                seen.add(manifest["id"])
+                result.append(manifest["id"])
+        return result
 
     def _connection_manifest(self, router: Router) -> JsonObject:
         close_model = router.effective_close_model
@@ -439,6 +463,55 @@ def _route_kind(router: Router) -> str:
     if router.connection_kind == ConnectionKind.RPC:
         return "rpc"
     return router.connection_kind.value
+
+
+def _iter_declared_errors(errors_by_code: Mapping[int, list[Error]]) -> Iterable[Error]:
+    for errors in errors_by_code.values():
+        for err in errors:
+            yield err
+
+
+def _error_manifest(err: Error) -> JsonObject:
+    group, key = _error_group_key(err)
+    return {
+        "id": f"{group}.{key}",
+        "group": group,
+        "key": key,
+        "code": int(err.code),
+        "message": str(err.message),
+        "toast": _error_toast_manifest(err, group, key),
+    }
+
+
+def _error_toast_manifest(err: Error, group: str, key: str) -> JsonObject:
+    toast = getattr(err, "toast", None)
+    if toast is None:
+        return {
+            "key": f"{group}.{key}",
+            "default": str(err.message),
+            "level": "error",
+        }
+    return {
+        "key": str(toast.key or f"{group}.{key}"),
+        "default": str(toast.default or err.message),
+        "level": str(toast.level or "error"),
+    }
+
+
+def _error_group_key(err: Error) -> tuple[str, str]:
+    raw_key = getattr(err, "__key__", None)
+    if (
+        isinstance(raw_key, tuple)
+        and len(raw_key) == 2
+        and isinstance(raw_key[0], str)
+        and isinstance(raw_key[1], str)
+        and raw_key[0]
+        and raw_key[1]
+    ):
+        return raw_key
+    code = int(err.code)
+    suffix = f"NEG_{abs(code)}" if code < 0 else str(code)
+    return "Error", f"CODE_{suffix}"
 
 
 def _contract_root_slug(contract: RouteContract) -> str:

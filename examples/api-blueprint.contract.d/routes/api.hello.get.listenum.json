@@ -98,7 +98,7 @@
     },
     "wails.v2": {
       "files": [
-        "golang/views/transports/wailsv2/api/hello/gen_service.go",
+        "golang/server/views/transports/wailsv2/api/hello/gen_service.go",
         "typescript/api/transports/wailsv2/api/hello/client.ts"
       ],
       "imports": [],
@@ -106,7 +106,7 @@
     },
     "wails.v3": {
       "files": [
-        "golang/views/transports/wailsv3/api/hello/gen_service.go",
+        "golang/server/views/transports/wailsv3/api/hello/gen_service.go",
         "typescript/api/transports/wailsv3/api/hello/client.ts"
       ],
       "imports": [],
@@ -114,10 +114,18 @@
     }
   },
   "connection": null,
+  "errors": [
+    "CommonErr.UNKNOWN",
+    "CommonErr.TOKEN_EXPIRE"
+  ],
   "route": {
     "connection": null,
     "deprecated": false,
-    "hash": "6c216123d5c85cdc833bc7fc30ff640c50ccee3fd7c93788c47f1fe7968169ca",
+    "errors": [
+      "CommonErr.UNKNOWN",
+      "CommonErr.TOKEN_EXPIRE"
+    ],
+    "hash": "6a05bdabcb51ba53894944f0014934ce017f7ab9402d168e7433c4d070a5a3e5",
     "id": "api.hello.get.listenum",
     "kind": "rpc",
     "method_name": "listEnum",

@@ -98,7 +98,7 @@
     },
     "wails.v2": {
       "files": [
-        "golang/views/transports/wailsv2/api/demo/gen_service.go",
+        "golang/server/views/transports/wailsv2/api/demo/gen_service.go",
         "typescript/api/transports/wailsv2/api/demo/client.ts"
       ],
       "imports": [],
@@ -106,7 +106,7 @@
     },
     "wails.v3": {
       "files": [
-        "golang/views/transports/wailsv3/api/demo/gen_service.go",
+        "golang/server/views/transports/wailsv3/api/demo/gen_service.go",
         "typescript/api/transports/wailsv3/api/demo/client.ts"
       ],
       "imports": [],
@@ -114,10 +114,18 @@
     }
   },
   "connection": null,
+  "errors": [
+    "CommonErr.UNKNOWN",
+    "CommonErr.TOKEN_EXPIRE"
+  ],
   "route": {
     "connection": null,
     "deprecated": true,
-    "hash": "ab4bf0b9dba1ce7b3daeb4a0c79fe5937c35049efab97de6238c14c7d47bf3d0",
+    "errors": [
+      "CommonErr.UNKNOWN",
+      "CommonErr.TOKEN_EXPIRE"
+    ],
+    "hash": "b4c42c2a1c60d7359d0508f36f2c9d40bd4d6097d3ff94408d6e4aa829f40758",
     "id": "api.demo.post.postdeprecated",
     "kind": "rpc",
     "method_name": "postDeprecated",

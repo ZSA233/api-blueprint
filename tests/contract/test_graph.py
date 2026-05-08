@@ -8,7 +8,7 @@ from api_blueprint.contract import (
     render_agent_markdown,
     route_contract,
 )
-from api_blueprint.engine import Blueprint
+from api_blueprint.engine import Blueprint, Error, Toast
 from api_blueprint.engine.connection import ConnectionScope
 from api_blueprint.engine.model import Int, String, Model, field
 from api_blueprint.writer.core import contracts as legacy_contracts
@@ -72,6 +72,77 @@ def test_contract_graph_manifest_captures_rpc_and_connection_routes():
     schema = manifest["schemas"]["CloseInfo"]
     assert schema["fields"]["reason"]["optional"] is True
     assert len(manifest["hashes"]["routes"]["api.runs.stream.events"]) == 64
+
+
+def test_contract_graph_manifest_captures_error_catalog_and_route_visibility():
+    class CommonErr(Model):
+        UNKNOWN = Error(-1, "unknown")
+        TOKEN_EXPIRE = Error(
+            55555,
+            "token登录态失效",
+            toast=Toast(
+                key="auth.token_expire",
+                default="登录状态已失效，请重新登录",
+                level="warning",
+            ),
+        )
+
+    class DemoErr(Model):
+        BOOM = Error(1001, "boom")
+
+    bp = Blueprint(root="/api", errors=[CommonErr])
+    with bp.group("/demo") as views:
+        views.GET("/ping").ERR(DemoErr).RSP(message=String(description="message"))
+
+    manifest = build_contract_graph([bp]).to_manifest()
+    agent = build_agent_manifest(manifest)
+    shards = build_contract_shards(manifest)
+
+    assert manifest["errors"] == [
+        {
+            "id": "CommonErr.UNKNOWN",
+            "group": "CommonErr",
+            "key": "UNKNOWN",
+            "code": -1,
+            "message": "unknown",
+            "toast": {
+                "key": "CommonErr.UNKNOWN",
+                "default": "unknown",
+                "level": "error",
+            },
+        },
+        {
+            "id": "CommonErr.TOKEN_EXPIRE",
+            "group": "CommonErr",
+            "key": "TOKEN_EXPIRE",
+            "code": 55555,
+            "message": "token登录态失效",
+            "toast": {
+                "key": "auth.token_expire",
+                "default": "登录状态已失效，请重新登录",
+                "level": "warning",
+            },
+        },
+        {
+            "id": "DemoErr.BOOM",
+            "group": "DemoErr",
+            "key": "BOOM",
+            "code": 1001,
+            "message": "boom",
+            "toast": {
+                "key": "DemoErr.BOOM",
+                "default": "boom",
+                "level": "error",
+            },
+        },
+    ]
+    assert "translations" not in manifest["errors"][1]["toast"]
+    assert manifest["routes"][0]["errors"] == ["CommonErr.UNKNOWN", "CommonErr.TOKEN_EXPIRE", "DemoErr.BOOM"]
+    assert agent["counts"]["errors"] == 3
+    assert agent["errors"] == manifest["errors"]
+    assert agent["routes"][0]["errors"] == manifest["routes"][0]["errors"]
+    assert shards["index.json"]["counts"]["errors"] == 3
+    assert shards["routes/api.demo.get.ping.json"]["errors"] == manifest["routes"][0]["errors"]
 
 
 def test_contract_graph_keeps_distinct_identities_for_same_named_models():
@@ -239,6 +310,7 @@ def test_agent_manifest_and_shards_are_compact_navigation_layers():
         "services": 1,
         "routes": 2,
         "schemas": 5,
+        "errors": 0,
         "connections": 1,
         "targets": 7,
     }
@@ -247,7 +319,13 @@ def test_agent_manifest_and_shards_are_compact_navigation_layers():
     stream_summary = next(route for route in agent["routes"] if route["id"] == "api.runs.stream.events")
     assert stream_summary["shard"] == "api-blueprint.contract.d/routes/api.runs.stream.events.json"
     assert stream_summary["schemas"] == ["CloseInfo", "OpenRequest", "StreamDone", "StreamState"]
-    assert "go.server" in stream_summary["artifacts"]
+    assert stream_summary["artifacts"]["go.server"]["files"] == [
+        "golang/routes/api/runs/gen_interface.go",
+        "golang/routes/api/runs/gen_protos.go",
+    ]
+    assert stream_summary["artifacts"]["go.server"]["imports"] == [
+        "example.com/project/golang/routes/api/runs",
+    ]
     assert stream_summary["artifacts"]["go.client"]["files"] == [
         "golang/client/routes/api/runs/gen_models.go",
         "golang/client/routes/api/runs/gen_client.go",

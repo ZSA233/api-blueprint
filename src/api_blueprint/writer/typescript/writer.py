@@ -12,6 +12,7 @@ from api_blueprint.route_selection import normalize_selection_rules
 from api_blueprint.writer.core.base import BaseWriter
 from api_blueprint.writer.core.contract_adapters import RouteContractIndex, RouteProtocolContract
 from api_blueprint.writer.core.contracts import RouteContract
+from api_blueprint.writer.core.errors import ErrorCatalogEntry, ErrorCatalogGroup, error_catalog_from_manifest, group_error_catalog
 from api_blueprint.writer.core.files import ensure_filepath_open
 
 from .blueprint import TypeScriptBlueprint
@@ -62,6 +63,7 @@ class TypeScriptWriter(BaseWriter[TypeScriptBlueprint]):
         self.include = normalize_selection_rules(include)
         self.exclude = normalize_selection_rules(exclude)
         self.wails_binding_manifest = dict(wails_binding_manifest or {})
+        self.contract_graph = contract_graph
         self.route_contract_index = RouteContractIndex.from_graph(contract_graph) if contract_graph is not None else None
         self._written_files: Set[str] = set()
 
@@ -93,8 +95,30 @@ class TypeScriptWriter(BaseWriter[TypeScriptBlueprint]):
         if self.route_contract_index is None:
             from api_blueprint.contract import build_contract_graph
 
-            self.route_contract_index = RouteContractIndex.from_graph(build_contract_graph([bp.bp for bp in self.bps]))
+            self.contract_graph = build_contract_graph([bp.bp for bp in self.bps])
+            self.route_contract_index = RouteContractIndex.from_graph(self.contract_graph)
         return self.route_contract_index
+
+    def error_catalog(self) -> tuple[ErrorCatalogEntry, ...]:
+        if self.contract_graph is None:
+            from api_blueprint.contract import build_contract_graph
+
+            self.contract_graph = build_contract_graph([bp.bp for bp in self.bps])
+            if self.route_contract_index is None:
+                self.route_contract_index = RouteContractIndex.from_graph(self.contract_graph)
+        return error_catalog_from_manifest(self.contract_graph.to_manifest())
+
+    def error_groups(self) -> tuple[ErrorCatalogGroup, ...]:
+        return group_error_catalog(self.error_catalog())
+
+    def error_catalog_for_bp(self, bp: TypeScriptBlueprint) -> tuple[ErrorCatalogEntry, ...]:
+        if self.contract_graph is None:
+            self._ensure_route_contract_index()
+        route_ids = [route.contract.route_id for route in bp.routes]
+        return error_catalog_from_manifest(self.contract_graph.to_manifest(), route_ids=route_ids)
+
+    def error_groups_for_bp(self, bp: TypeScriptBlueprint) -> tuple[ErrorCatalogGroup, ...]:
+        return group_error_catalog(self.error_catalog_for_bp(bp))
 
     def route_contract_for(self, router: Router) -> RouteContract:
         return self._ensure_route_contract_index().protocol_for_router(router).route

@@ -129,6 +129,89 @@ out_dir = "typescript"
     assert route_shard["schemas"]
 
 
+def test_api_gen_manifest_keeps_sibling_target_artifacts_portable(tmp_path):
+    service_root = tmp_path / "services" / "agent"
+    scripts_dir = service_root / "scripts"
+    package_dir = scripts_dir / "blueprints"
+    package_dir.mkdir(parents=True)
+    (package_dir / "__init__.py").write_text("", encoding="utf-8")
+    (package_dir / "app.py").write_text(
+        """
+from api_blueprint.engine import Blueprint
+from api_blueprint.engine.model import String
+
+bp = Blueprint(root="/api")
+with bp.group("/demo") as views:
+    views.GET("/ping").RSP(message=String(description="message"))
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    (service_root / "go.mod").write_text("module example.com/agent\n\ngo 1.23\n", encoding="utf-8")
+    config_path = scripts_dir / "api-blueprint.toml"
+    out_path = scripts_dir / "agent.json"
+    config_path.write_text(
+        """
+[blueprint]
+entrypoints = ["blueprints.app:bp"]
+
+[[targets]]
+id = "go.server"
+kind = "go-server"
+out_dir = "../internal/views"
+module = "example.com/agent"
+
+[[targets]]
+id = "typescript.client"
+kind = "typescript-client"
+out_dir = "../../../webui/src/lib/api"
+
+[[targets]]
+id = "gui.v3"
+kind = "wails-transport"
+version = "v3"
+server = "go.server"
+clients = ["typescript.client"]
+overlay_name = "wailsv3"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(
+        api_gen,
+        [
+            "manifest",
+            "-c",
+            str(config_path),
+            "--profile",
+            "agent",
+            "--out",
+            str(out_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    agent = json.loads(out_path.read_text(encoding="utf-8"))
+    artifacts = agent["routes"][0]["artifacts"]
+    assert artifacts["go.server"]["files"] == [
+        "../internal/views/routes/api/demo/gen_interface.go",
+        "../internal/views/routes/api/demo/gen_protos.go",
+    ]
+    assert artifacts["go.server"]["imports"] == ["example.com/agent/internal/views/routes/api/demo"]
+    assert artifacts["typescript.client"]["files"] == [
+        "../../../webui/src/lib/api/api/routes/api/demo/client.ts",
+        "../../../webui/src/lib/api/api/routes/api/demo/models.ts",
+    ]
+    assert artifacts["gui.v3"]["files"] == [
+        "../internal/views/transports/wailsv3/api/demo/gen_service.go",
+        "../../../webui/src/lib/api/api/transports/wailsv3/api/demo/client.ts",
+    ]
+    payload = json.dumps(agent)
+    assert "/Volumes/" not in payload
+    assert "example.com/agent/Volumes" not in payload
+
+
 def test_api_gen_diff_reports_breaking_changes(tmp_path):
     before = tmp_path / "before.json"
     after = tmp_path / "after.json"

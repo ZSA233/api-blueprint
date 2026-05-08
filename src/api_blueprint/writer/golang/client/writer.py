@@ -13,8 +13,10 @@ from typing import IO, Any, Generator, Mapping, Sequence
 from api_blueprint.contract import ContractGraph, build_contract_graph
 from api_blueprint.route_selection import normalize_selection_rules
 from api_blueprint.writer.core.base import BaseBlueprint, BaseWriter
+from api_blueprint.writer.core.errors import ErrorCatalogEntry, error_catalog_from_manifest
 from api_blueprint.writer.core.files import ensure_filepath_open
 from api_blueprint.writer.core.planning import route_matches_rule
+from api_blueprint.writer.core.templates import render
 
 
 logger = logging.getLogger("GolangClientWriter")
@@ -105,11 +107,12 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
         manifest = graph.to_manifest()
         routes = [dict(route) for route in _list_of_maps(manifest.get("routes")) if self._route_selected(route)]
         schemas = _mapping_of_maps(manifest.get("schemas"))
+        errors = error_catalog_from_manifest(manifest, route_ids=[str(route.get("id") or "") for route in routes])
         services = _mapping_of_maps_by_id(manifest.get("services"))
         type_names = _TypeNames(schemas)
         groups = _build_groups(routes, services)
 
-        self._write_runtime_files(schemas, type_names)
+        self._write_runtime_files(schemas, type_names, errors)
         for group in groups:
             self._write_group_files(group, schemas, type_names)
         self._write_http_files()
@@ -120,10 +123,30 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
             return False
         return not any(route_matches_rule(route, rule) for rule in self.exclude)
 
-    def _write_runtime_files(self, schemas: Mapping[str, JsonObject], type_names: "_TypeNames") -> None:
-        self._write_generated("runtime/gen_client.go", _runtime_client_source())
-        self._write_generated("runtime/gen_errors.go", _runtime_errors_source())
-        self._write_generated("runtime/gen_models.go", _runtime_models_source(schemas, type_names))
+    def _write_runtime_files(
+        self,
+        schemas: Mapping[str, JsonObject],
+        type_names: "_TypeNames",
+        errors: tuple[ErrorCatalogEntry, ...],
+    ) -> None:
+        self._write_generated("runtime/gen_client.go", render("golang", "gen_client.go", {}, "client/runtime"))
+        self._write_generated(
+            "runtime/gen_errors.go",
+            render("golang", "gen_errors.go", {"errors": errors}, "client/runtime"),
+        )
+        self._write_generated(
+            "runtime/gen_error_catalog.go",
+            render("golang", "gen_error_catalog.go", {"errors": errors}, "client/runtime"),
+        )
+        self._write_generated(
+            "runtime/gen_models.go",
+            render(
+                "golang",
+                "gen_models.go",
+                {"lines": _runtime_model_lines(schemas, type_names)},
+                "client/runtime",
+            ),
+        )
 
     def _write_group_files(
         self,
@@ -132,14 +155,58 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
         type_names: "_TypeNames",
     ) -> None:
         route_dir = Path("routes").joinpath(*group.segments)
-        self._write_generated(route_dir / "gen_models.go", _group_models_source(group, schemas, type_names, self.runtime_import))
-        self._write_generated(route_dir / "gen_client.go", _group_client_source(group, type_names, self.runtime_import))
-        self._write_user_file(route_dir / "client.go", _group_public_source(group))
+        model_lines = _group_model_lines(group, schemas, type_names)
+        self._write_generated(
+            route_dir / "gen_models.go",
+            render(
+                "golang",
+                "gen_models.go",
+                {
+                    "group": group,
+                    "has_runtime_import": any("runtime." in line for line in model_lines),
+                    "lines": model_lines,
+                    "runtime_import": self.runtime_import,
+                },
+                "client/routes",
+            ),
+        )
+        self._write_generated(
+            route_dir / "gen_client.go",
+            render(
+                "golang",
+                "gen_client.go",
+                {
+                    "client_class_for_route": _client_class_for_route,
+                    "connection_method_name": _connection_method_name,
+                    "connection_transport_method": _connection_transport_method,
+                    "group": group,
+                    "route_params": _route_params,
+                    "route_response_type": _route_response_type,
+                    "runtime_import": self.runtime_import,
+                    "runtime_request_fields": _runtime_request_fields,
+                },
+                "client/routes",
+            ),
+        )
+        self._write_user_file(
+            route_dir / "client.go",
+            render("golang", "client.go", {"group": group}, "client/routes"),
+        )
 
     def _write_http_files(self) -> None:
-        self._write_generated("transports/http/gen_config.go", _http_config_source(self.base_url, self.base_url_expr))
-        self._write_generated("transports/http/gen_transport.go", _http_transport_source(self.runtime_import))
-        self._write_user_file("transports/http/client.go", _http_public_source(self.runtime_import))
+        base_url_code = self.base_url_expr if self.base_url_expr is not None else _code_literal(self.base_url)
+        self._write_generated(
+            "transports/http/gen_config.go",
+            render("golang", "gen_config.go", {"base_url_code": base_url_code}, "client/transports/http"),
+        )
+        self._write_generated(
+            "transports/http/gen_transport.go",
+            render("golang", "gen_transport.go", {"runtime_import": self.runtime_import}, "client/transports/http"),
+        )
+        self._write_user_file(
+            "transports/http/client.go",
+            render("golang", "client.go", {"runtime_import": self.runtime_import}, "client/transports/http"),
+        )
 
     @property
     def runtime_import(self) -> str:
@@ -198,85 +265,18 @@ class _TypeNames:
         return "any"
 
 
-def _runtime_client_source() -> str:
-    return """// Code generated by api-blueprint (Go client); DO NOT EDIT.
-
-package runtime
-
-import "context"
-
-type Request struct {
-	Method string
-	Path   string
-	Query  any
-	JSON   any
-	Form   any
-	Binary any
-}
-
-type ConnectionRequest struct {
-	Kind    string
-	RouteID string
-	Path    string
-	Open    any
-	Query   any
-}
-
-type Transport interface {
-	Do(ctx context.Context, request Request, response any) error
-	ConnectUnsupported(ctx context.Context, request ConnectionRequest) error
-	StreamUnsupported(ctx context.Context, request ConnectionRequest) error
-	ChannelUnsupported(ctx context.Context, request ConnectionRequest) error
-}
-
-type WebSocket[Send any, Recv any] interface{}
-type Stream[Open any, Server any, Close any] interface{}
-type Channel[Open any, Server any, Client any, Close any] interface{}
-
-type TransportError = UnsupportedTransportError
-"""
-
-
-def _runtime_errors_source() -> str:
-    return """// Code generated by api-blueprint (Go client); DO NOT EDIT.
-
-package runtime
-
-import "fmt"
-
-type UnsupportedTransportError struct {
-	Kind    string
-	RouteID string
-	Path    string
-}
-
-func (err UnsupportedTransportError) Error() string {
-	return fmt.Sprintf("api-blueprint go client transport does not support %s connections for route %s (%s)", err.Kind, err.RouteID, err.Path)
-}
-
-type UnsupportedConnectionError = UnsupportedTransportError
-
-type HTTPError struct {
-	StatusCode int
-	Body       string
-}
-
-func (err HTTPError) Error() string {
-	return fmt.Sprintf("api-blueprint http request failed with status %d: %s", err.StatusCode, err.Body)
-}
-"""
-
-
-def _runtime_models_source(schemas: Mapping[str, JsonObject], type_names: _TypeNames) -> str:
+def _runtime_model_lines(schemas: Mapping[str, JsonObject], type_names: _TypeNames) -> list[str]:
     enums = _collect_enums(schemas)
-    lines = ["// Code generated by api-blueprint (Go client); DO NOT EDIT.", "", "package runtime", ""]
+    lines: list[str] = []
     for enum in enums.values():
         lines.extend(_render_enum(enum))
         lines.append("")
     for schema_name, schema in schemas.items():
         lines.extend(_render_schema(schema_name, schema, type_names))
         lines.append("")
-    return "\n".join(lines).rstrip() + "\n"
+    while lines and lines[-1] == "":
+        lines.pop()
+    return lines
 
 
 def _render_schema(schema_name: str, schema: Mapping[str, Any], type_names: _TypeNames) -> list[str]:
@@ -312,32 +312,23 @@ def _render_enum(enum: Mapping[str, Any]) -> list[str]:
         if not isinstance(member, Mapping):
             continue
         member_name = _go_exported(str(member.get("name") or member.get("value") or "Value"))
-        lines.append(f"\t{name}{member_name} {name} = {json.dumps(member.get('value'))}")
+        lines.append(f"\t{name}{member_name} {name} = {_code_literal(member.get('value'))}")
     lines.append(")")
     return lines
 
 
-def _group_models_source(
+def _group_model_lines(
     group: GoClientGroup,
     schemas: Mapping[str, JsonObject],
     type_names: _TypeNames,
-    runtime_import: str,
-) -> str:
+) -> list[str]:
     body: list[str] = []
     emitted_messages: set[str] = set()
     for route in group.routes:
         body.extend(_route_aliases(route, schemas, type_names, emitted_messages))
-
-    lines = [
-        "// Code generated by api-blueprint (Go client); DO NOT EDIT.",
-        "",
-        f"package {group.package}",
-        "",
-    ]
-    if any("runtime." in line for line in body):
-        lines.extend([f'import runtime "{runtime_import}"', ""])
-    lines.extend(body)
-    return "\n".join(lines).rstrip() + "\n"
+    while body and body[-1] == "":
+        body.pop()
+    return body
 
 
 def _route_aliases(
@@ -397,90 +388,6 @@ def _render_route_schema(alias: str, schema: Mapping[str, Any], type_names: _Typ
     return lines
 
 
-def _group_client_source(group: GoClientGroup, type_names: _TypeNames, runtime_import: str) -> str:
-    lines = [
-        "// Code generated by api-blueprint (Go client); DO NOT EDIT.",
-        "",
-        f"package {group.package}",
-        "",
-        "import (",
-        '\t"context"',
-        f'\truntime "{runtime_import}"',
-        ")",
-        "",
-        f"type Gen{group.client_class} struct {{",
-        "\ttransport runtime.Transport",
-        "}",
-        "",
-        f"func NewGen{group.client_class}(transport runtime.Transport) *Gen{group.client_class} {{",
-        f"\treturn &Gen{group.client_class}{{transport: transport}}",
-        "}",
-        "",
-    ]
-    for route in group.routes:
-        lines.extend(_route_method_source(route, type_names))
-        lines.append("")
-    return "\n".join(lines).rstrip() + "\n"
-
-
-def _route_method_source(route: GoClientRoute, type_names: _TypeNames) -> list[str]:
-    if route.kind == "legacy_ws":
-        return _connection_method_source(route, "ConnectUnsupported", _route_params(route, include_open=False))
-    if route.kind == "stream":
-        return _connection_method_source(route, "StreamUnsupported", _route_params(route, include_open=True))
-    if route.kind == "channel":
-        return _connection_method_source(route, "ChannelUnsupported", _route_params(route, include_open=True))
-    return _rpc_method_source(route, type_names)
-
-
-def _rpc_method_source(route: GoClientRoute, type_names: _TypeNames) -> list[str]:
-    params = _route_params(route, include_open=False)
-    response_model = route.response.get("model")
-    response_type = f"*RSP_{route.operation}_BODY" if isinstance(response_model, str) and response_model else "any"
-    args = ["ctx context.Context", *params]
-    lines = [
-        f"func (client *Gen{_client_class_for_route(route)}) {route.operation}({', '.join(args)}) ({response_type}, error) {{",
-        "\trequest := runtime.Request{",
-        f"\t\tMethod: {json.dumps(route.method)},",
-        f"\t\tPath:   {json.dumps(route.url)},",
-    ]
-    for field, value in _runtime_request_fields(route):
-        lines.append(f"\t\t{field}: {value},")
-    lines.extend(["\t}", "\tvar response RSP_" + route.operation + "_BODY"])
-    if response_type == "any":
-        lines[-1] = "\tvar response any"
-    lines.extend(
-        [
-            "\tif err := client.transport.Do(ctx, request, &response); err != nil {",
-            "\t\treturn nil, err",
-            "\t}",
-            "\treturn &response, nil",
-            "}",
-        ]
-    )
-    if response_type == "any":
-        lines[-2] = "\treturn response, nil"
-    _ = type_names
-    return lines
-
-
-def _connection_method_source(route: GoClientRoute, transport_method: str, params: list[str]) -> list[str]:
-    args = ["ctx context.Context", *params]
-    lines = [
-        f"func (client *Gen{_client_class_for_route(route)}) {_connection_method_name(route)}({', '.join(args)}) error {{",
-        "\trequest := runtime.ConnectionRequest{",
-        f"\t\tKind:    {json.dumps(route.kind)},",
-        f"\t\tRouteID: {json.dumps(route.route_id)},",
-        f"\t\tPath:    {json.dumps(route.url)},",
-    ]
-    if "openData" in " ".join(params):
-        lines.append("\t\tOpen:    openData,")
-    if "query" in " ".join(params):
-        lines.append("\t\tQuery:   query,")
-    lines.extend(["\t}", f"\treturn client.transport.{transport_method}(ctx, request)", "}"])
-    return lines
-
-
 def _connection_method_name(route: GoClientRoute) -> str:
     if route.kind == "legacy_ws":
         return f"Connect{route.operation}"
@@ -489,6 +396,23 @@ def _connection_method_name(route: GoClientRoute) -> str:
     if route.kind == "channel":
         return f"Open{route.operation}"
     return route.operation
+
+
+def _connection_transport_method(route: GoClientRoute) -> str:
+    if route.kind == "legacy_ws":
+        return "ConnectUnsupported"
+    if route.kind == "stream":
+        return "StreamUnsupported"
+    if route.kind == "channel":
+        return "ChannelUnsupported"
+    return "Do"
+
+
+def _route_response_type(route: GoClientRoute) -> str:
+    response_model = route.response.get("model")
+    if isinstance(response_model, str) and response_model:
+        return f"*RSP_{route.operation}_BODY"
+    return "any"
 
 
 def _client_class_for_route(route: GoClientRoute) -> str:
@@ -523,200 +447,6 @@ def _runtime_request_fields(route: GoClientRoute) -> list[tuple[str, str]]:
     if isinstance(route.request.get("binary_model"), str):
         fields.append(("Binary", "binaryBody"))
     return fields
-
-
-def _group_public_source(group: GoClientGroup) -> str:
-    return f"""package {group.package}
-
-type {group.client_class} = Gen{group.client_class}
-
-var New{group.client_class} = NewGen{group.client_class}
-"""
-
-
-def _http_config_source(base_url: str, base_url_expr: str | None) -> str:
-    rendered_base_url = base_url_expr if base_url_expr is not None else json.dumps(base_url)
-    return f"""// Code generated by api-blueprint (Go client); DO NOT EDIT.
-
-package http
-
-import nethttp "net/http"
-
-type HttpConfig struct {{
-	BaseURL string
-	Client  *nethttp.Client
-}}
-
-func DefaultHttpConfig() HttpConfig {{
-	return HttpConfig{{BaseURL: {rendered_base_url}}}
-}}
-"""
-
-
-def _http_transport_source(runtime_import: str) -> str:
-    return f"""// Code generated by api-blueprint (Go client); DO NOT EDIT.
-
-package http
-
-import (
-	"bytes"
-	"context"
-	"encoding/json"
-	"fmt"
-	"io"
-	nethttp "net/http"
-	"net/url"
-	"reflect"
-	"strings"
-
-	runtime "{runtime_import}"
-)
-
-type HttpTransport struct {{
-	config HttpConfig
-	client *nethttp.Client
-}}
-
-func NewHttpTransport(config HttpConfig) *HttpTransport {{
-	client := config.Client
-	if client == nil {{
-		client = nethttp.DefaultClient
-	}}
-	return &HttpTransport{{config: config, client: client}}
-}}
-
-var _ = runtime.UnsupportedConnectionError{{}}
-
-func (transport *HttpTransport) Do(ctx context.Context, request runtime.Request, response any) error {{
-	endpoint, err := joinURL(transport.config.BaseURL, request.Path)
-	if err != nil {{
-		return err
-	}}
-	if request.Query != nil {{
-		query, err := encodeValues(request.Query)
-		if err != nil {{
-			return err
-		}}
-		endpoint.RawQuery = query.Encode()
-	}}
-
-	body, contentType, err := encodeBody(request)
-	if err != nil {{
-		return err
-	}}
-	httpRequest, err := nethttp.NewRequestWithContext(ctx, request.Method, endpoint.String(), body)
-	if err != nil {{
-		return err
-	}}
-	if contentType != "" {{
-		httpRequest.Header.Set("Content-Type", contentType)
-	}}
-	httpRequest.Header.Set("Accept", "application/json")
-
-	httpResponse, err := transport.client.Do(httpRequest)
-	if err != nil {{
-		return err
-	}}
-	defer httpResponse.Body.Close()
-
-	if httpResponse.StatusCode >= 400 {{
-		data, _ := io.ReadAll(httpResponse.Body)
-		return runtime.HTTPError{{StatusCode: httpResponse.StatusCode, Body: string(data)}}
-	}}
-	if response == nil || httpResponse.StatusCode == nethttp.StatusNoContent {{
-		return nil
-	}}
-	return json.NewDecoder(httpResponse.Body).Decode(response)
-}}
-
-func (transport *HttpTransport) ConnectUnsupported(ctx context.Context, request runtime.ConnectionRequest) error {{
-	return runtime.UnsupportedTransportError{{Kind: request.Kind, RouteID: request.RouteID, Path: request.Path}}
-}}
-
-func (transport *HttpTransport) StreamUnsupported(ctx context.Context, request runtime.ConnectionRequest) error {{
-	return runtime.UnsupportedTransportError{{Kind: request.Kind, RouteID: request.RouteID, Path: request.Path}}
-}}
-
-func (transport *HttpTransport) ChannelUnsupported(ctx context.Context, request runtime.ConnectionRequest) error {{
-	return runtime.UnsupportedTransportError{{Kind: request.Kind, RouteID: request.RouteID, Path: request.Path}}
-}}
-
-func joinURL(base string, path string) (*url.URL, error) {{
-	if base == "" {{
-		base = "http://localhost"
-	}}
-	endpoint, err := url.Parse(strings.TrimRight(base, "/") + "/" + strings.TrimLeft(path, "/"))
-	if err != nil {{
-		return nil, err
-	}}
-	return endpoint, nil
-}}
-
-func encodeBody(request runtime.Request) (io.Reader, string, error) {{
-	switch {{
-	case request.Binary != nil:
-		data, err := json.Marshal(request.Binary)
-		return bytes.NewReader(data), "application/octet-stream", err
-	case request.Form != nil:
-		values, err := encodeValues(request.Form)
-		if err != nil {{
-			return nil, "", err
-		}}
-		return strings.NewReader(values.Encode()), "application/x-www-form-urlencoded", nil
-	case request.JSON != nil:
-		data, err := json.Marshal(request.JSON)
-		return bytes.NewReader(data), "application/json", err
-	default:
-		return nil, "", nil
-	}}
-}}
-
-func encodeValues(input any) (url.Values, error) {{
-	values := url.Values{{}}
-	if input == nil {{
-		return values, nil
-	}}
-	value := reflect.ValueOf(input)
-	if value.Kind() == reflect.Pointer {{
-		if value.IsNil() {{
-			return values, nil
-		}}
-		value = value.Elem()
-	}}
-	if value.Kind() != reflect.Struct {{
-		return values, fmt.Errorf("api-blueprint http transport expected struct values, got %s", value.Kind())
-	}}
-	valueType := value.Type()
-	for i := 0; i < value.NumField(); i++ {{
-		field := value.Field(i)
-		fieldType := valueType.Field(i)
-		key := fieldType.Tag.Get("form")
-		if key == "" {{
-			key = fieldType.Tag.Get("json")
-		}}
-		key = strings.Split(key, ",")[0]
-		if key == "" || key == "-" {{
-			key = fieldType.Name
-		}}
-		if field.IsZero() {{
-			continue
-		}}
-		values.Set(key, fmt.Sprint(field.Interface()))
-	}}
-	return values, nil
-}}
-"""
-
-
-def _http_public_source(runtime_import: str) -> str:
-    return f"""package http
-
-import runtime "{runtime_import}"
-
-func NewClient(config HttpConfig) runtime.Transport {{
-	return NewHttpTransport(config)
-}}
-"""
 
 
 def _go_type_for_schema_value(value: Mapping[str, Any], type_names: _TypeNames) -> str:
@@ -890,3 +620,7 @@ def _path_segment(value: str, *, default: str) -> str:
 
 def _join_import(*parts: str) -> str:
     return "/".join(part.strip("/") for part in parts if part.strip("/"))
+
+
+def _code_literal(value: object) -> str:
+    return json.dumps(value, ensure_ascii=False)

@@ -87,7 +87,7 @@
     },
     "wails.v2": {
       "files": [
-        "golang/views/transports/wailsv2/static/gen_service.go",
+        "golang/server/views/transports/wailsv2/static/gen_service.go",
         "typescript/static/transports/wailsv2/static/client.ts"
       ],
       "imports": [],
@@ -95,7 +95,7 @@
     },
     "wails.v3": {
       "files": [
-        "golang/views/transports/wailsv3/static/gen_service.go",
+        "golang/server/views/transports/wailsv3/static/gen_service.go",
         "typescript/static/transports/wailsv3/static/client.ts"
       ],
       "imports": [],
@@ -103,10 +103,12 @@
     }
   },
   "connection": null,
+  "errors": [],
   "route": {
     "connection": null,
     "deprecated": false,
-    "hash": "27051eb588500d12533d535afea10ea3552ccb0a2d984ffd940930ffc8e04ddc",
+    "errors": [],
+    "hash": "bb664c64fd8340131c614d03908ccdd75c2a8b7f1bd65efd5cf8cd938487a502",
     "id": "static.static.get.dochaha",
     "kind": "rpc",
     "method_name": "dochaha",

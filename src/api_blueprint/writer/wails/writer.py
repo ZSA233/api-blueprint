@@ -41,9 +41,9 @@ class WailsWriter:
             frontend_mode=target.frontend_mode,
             include=target.include,
             exclude=target.exclude,
-            go_transport_dir=(go_root / "views" / "transports" / overlay_name).resolve(),
-            go_service_pattern=f"{(go_root / 'views' / 'transports' / overlay_name).as_posix()}/<blueprint-root>/<group...>",
-            go_route_overlay_pattern=f"{(go_root / 'views' / 'transports' / overlay_name).as_posix()}/<blueprint-root>/<group...>",
+            go_transport_dir=(go_root / "transports" / overlay_name).resolve(),
+            go_service_pattern=f"{(go_root / 'transports' / overlay_name).as_posix()}/<blueprint-root>/<group...>",
+            go_route_overlay_pattern=f"{(go_root / 'transports' / overlay_name).as_posix()}/<blueprint-root>/<group...>",
             typescript_route_overlay_pattern=(
                 None
                 if target.frontend_mode == "none"

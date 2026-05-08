@@ -22,7 +22,7 @@ from api_blueprint.engine.runtime import (
     get_shared_app,
     reset_shared_app,
 )
-from api_blueprint.engine.schema import Error, HeaderModel, Model, unwrap_errors
+from api_blueprint.engine.schema import Error, HeaderModel, Model, Toast, unwrap_errors
 
 __all__ = (
     "Auth",
@@ -47,6 +47,7 @@ __all__ = (
     "Router",
     "RouterGroup",
     "Rsp",
+    "Toast",
     "WsHandle",
     "build_default_app",
     "get_shared_app",

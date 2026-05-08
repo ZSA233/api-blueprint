@@ -54,6 +54,25 @@ with bp.group("/items") as views:
 - `JSON(Model)`: JSON request body.
 - `RSP(...)`: response model.
 
+## Errors And Toast
+
+Error definitions use `Error(code, message)`. `message` is the protocol-level default description for logs, OpenAPI, and older-client fallback. Use `Toast(key, default, level)` for user-facing display metadata: the DSL writes only one default language, and generators emit only key/default/level instead of a built-in locale map.
+
+```python
+class CommonErr(Model):
+    TOKEN_EXPIRE = Error(
+        55555,
+        "token login state expired",
+        toast=Toast(
+            key="auth.token_expire",
+            default="Your session has expired. Please sign in again.",
+            level="warning",
+        ),
+    )
+```
+
+When `toast` is omitted, the default is equivalent to `key="<Group>.<KEY>"`, `default=message`, and `level="error"`. Response wrappers carry an optional `toast` field; clients resolve display text through `toast.text`, business i18n, `toast.default`, then `message`. When the server must override display text by request language, tenant, or rollout, return an immutable override result instead of mutating generated global error values or catalog entries.
+
 ## Long-Connection Message Flows
 
 `STREAM` and `CHANNEL` are the new long-connection DSL entrypoints. They sit alongside RPC semantically and do not expose the underlying WebSocket, SSE, or Wails event details directly.

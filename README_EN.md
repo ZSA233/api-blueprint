@@ -120,7 +120,7 @@ formats = ["json", "markdown", "agent-json", "agent-markdown", "shards"]
 
 [[go.server]]
 id = "go.server"
-out_dir = "golang/server"
+out_dir = "golang/server/views"
 module = "example.com/project/golang/server"
 
 [[go.client]]
@@ -146,14 +146,13 @@ server = "go.server"
 clients = ["typescript.client"]
 frontend_mode = "external"
 
-[[targets]]
+[[grpc.proto]]
 id = "grpc.proto"
-kind = "grpc-proto"
 out_dir = "grpc/protos"
 package = "example.api"
 go_package_prefix = "example.com/project/grpc/go"
 
-[[targets.proto_files]]
+[[grpc.proto.proto_files]]
 file = "api/demo/v1/demo.proto"
 package = "example.api.demo.v1"
 go_package = "example.com/project/grpc/go/api/demo/v1;demopb"
@@ -161,21 +160,19 @@ schema_modules = ["blueprints.api.demo"]
 route_paths = ["/api/demo/v1/**"]
 service = "DemoService"
 
-[[targets]]
+[[grpc.go]]
 id = "grpc.go"
-kind = "grpc-go"
 proto = "grpc.proto"
 out_dir = "grpc/go"
 module = "example.com/project/grpc/go"
 files = ["api/**/*.proto"]
 
-[[targets]]
+[[grpc.python]]
 id = "grpc.python"
-kind = "grpc-python"
 proto = "grpc.proto"
 out_dir = "grpc/python"
 files = ["api/**/*.proto"]
-python_package_root = "pb"
+module = "pb"
 ```
 
 ## Common Commands
@@ -201,19 +198,20 @@ api-gen diff old.contract.json new.contract.json
 - `examples/wails-hello/` is a standalone Wails v3 hello world example that demonstrates a GUI loop without starting an HTTP server.
 - Go / TypeScript / Python `gen_*` files are generator-owned and overwritten during regeneration; Kotlin `Gen*.kt` files are generator-owned and include a generated header.
 - `impl_*`, Python `client.py` / `service.py`, and Kotlin non-`Gen*` façade/extension files are user-owned extension points and are preserved during regeneration.
-- Go server artifacts use `views/routes`, `views/providers`, and `views/transports`; Go client artifacts use `runtime`, `routes/<root>/<group...>`, and `transports/http`, with `base_url` owned only by the HTTP transport config. Kotlin uses the new `<package>/<root>/runtime`, `<package>/<root>/routes/<root>/<group...>`, and `<package>/<root>/transports/http` layout, and the old `<package>/ApiClient.kt`, `endpoints/`, `models/`, and `internal/` layout is a breaking change.
+- Go server `out_dir` is the generated package root and no longer appends `views` implicitly. The example uses `golang/server/views`, so server artifacts live under `views/routes`, `views/providers`, `views/runtime/errors`, and `views/transports`. Go client artifacts use `runtime`, `routes/<root>/<group...>`, and `transports/http`, with `base_url` owned only by the HTTP transport config. Kotlin uses the new `<package>/<root>/runtime`, `<package>/<root>/routes/<root>/<group...>`, and `<package>/<root>/transports/http` layout, and the old `<package>/ApiClient.kt`, `endpoints/`, `models/`, and `internal/` layout is a breaking change.
 - Python client/server use `python_package_root` as the package root; route output mirrors the full path, for example `routes/api/demo`, root-level routes live in `routes/api`, and `routes/root` is no longer used. The client is async-first over HTTP, and the server emits route service contracts/stubs plus a FastAPI HTTP adapter scaffold.
 - `api-gen check` and writers share planner / capability metadata; contract / agent artifact indexes point to the new Kotlin / Python full route path outputs.
 - `api-gen generate --target wails.v3` does not generate a full Wails app shell, and external frontends must load the Wails runtime first; Wails targets still combine only a Go server and TypeScript client.
 - Wails target `include` / `exclude` trims target overlays / facades; roots with no selected routes do not get `transports/<overlay_name>` output, while shared contract layers are still generated in full.
-- Go `views/providers` is a global runtime; use route-scoped provider factories when a provider implementation must vary by route. The user-owned hook is `SelectProvider(spec, handler)`. See the generator docs.
+- Go `providers` is a global runtime under the generated package root; use route-scoped provider factories when a provider implementation must vary by route. The user-owned hook is `SelectProvider(spec, handler)`. See the generator docs.
 - `STREAM` / `CHANNEL` are the long-connection contract entrypoints; multi-message directions generate one discriminated union, while legacy `WS().RECV().SEND()` is outside the 1.0 mainline.
 - The default HTTP/Wails runtimes fully support only `ConnectionScope.SESSION`; `APP` / `TOPIC` broadcast or topic routing can be added through a custom connection hub / manager.
 - `examples/golang/server/views/routes/api/demo/impl.go` hand-writes a minimal `STREAM` / `CHANNEL` usage example that demonstrates `Open()`, `Send()`, `Recv()`, typed `Close()`, and exceptional `Abort()`.
 - The Go HTTP adapter respects responses already written by Gin handlers, which fits small HTTP-only raw callbacks.
-- Full `contract.json` records routes, schemas, connections, stable hashes, the resolved target plan, and the capability registry. `agent.json`, `agent.md`, and `contract.d/` provide a compact entrypoint, read order, shards, and target artifact/import indexes so AI agents can read compact context first and drill down only when needed.
-- `[[targets]]` is the canonical config entrypoint; shortcut tables such as `[[go.server]]`, `[[go.client]]`, `[[python.server]]`, and `[[transport.http]]` are normalized into targets when loading config. In shortcut tables, Python `module` maps to `python_package_root`, and Kotlin `module` maps to `package`.
-- gRPC proto can be emitted by the `grpc-proto` target from ContractGraph. `[[targets.proto_files]]` maps DSL modules/routes to proto file/package/go_package/service. The DSL mainline only expresses generic contracts: `field(1, String(...), optional=True)` is a stable field identity, `choice="..."` is a mutually exclusive choice, and `DateTime`, `JSONValue`, and `AnyValue` are semantic value types. `grpc-go` / `grpc-python` can also omit `proto` and compile handwritten proto files directly with `source_root` / `files`.
+- Full `contract.json` records routes, schemas, connections, the error catalog, stable hashes, the resolved target plan, and the capability registry. `agent.json`, `agent.md`, and `contract.d/` provide a compact entrypoint, read order, shards, and target artifact/import indexes so AI agents can read compact context first and drill down only when needed.
+- ContractGraph normalizes `Blueprint(errors=...)` and route `.ERR(...)` into a language-agnostic error catalog, with `message` plus `toast.key/default/level` for each error. Generated code does not embed locale tables; business i18n resolves the current language by toast key, and client helpers fall back through `toast.text`, external i18n, `toast.default`, then `message`. Go client, TypeScript, Kotlin, and Python client/server split runtime error types/helpers from static catalog data into separate generated files; Go server emits runtime types plus grouped error values only, avoiding a duplicate root catalog. Business wrapper codes are not automatically converted into thrown exceptions.
+- `[[targets]]` is the canonical config entrypoint; shortcut tables such as `[[go.server]]`, `[[go.client]]`, `[[python.server]]`, `[[transport.http]]`, `[[grpc.proto]]`, `[[grpc.go]]`, and `[[grpc.python]]` are normalized into targets when loading config. In shortcut tables, Python `module` maps to `python_package_root`, Kotlin `module` maps to `package`, and `[[grpc.python]] module` also maps to `python_package_root`.
+- gRPC proto can be emitted by the `grpc-proto` target from ContractGraph. `[[targets.proto_files]]` or the shortcut `[[grpc.proto.proto_files]]` maps DSL modules/routes to proto file/package/go_package/service. The DSL mainline only expresses generic contracts: `field(1, String(...), optional=True)` is a stable field identity, `choice="..."` is a mutually exclusive choice, and `DateTime`, `JSONValue`, and `AnyValue` are semantic value types. `grpc-go` / `grpc-python` can also omit `proto` and compile handwritten proto files directly with `source_root` / `files`.
 
 ## Learn More
 

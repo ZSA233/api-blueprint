@@ -1,11 +1,38 @@
 {
   "counts": {
     "connections": 2,
+    "errors": 2,
     "routes": 20,
     "schemas": 37,
     "services": 4,
     "targets": 14
   },
+  "errors": [
+    {
+      "code": -1,
+      "group": "CommonErr",
+      "id": "CommonErr.UNKNOWN",
+      "key": "UNKNOWN",
+      "message": "未知错误",
+      "toast": {
+        "default": "未知错误",
+        "key": "CommonErr.UNKNOWN",
+        "level": "error"
+      }
+    },
+    {
+      "code": 55555,
+      "group": "CommonErr",
+      "id": "CommonErr.TOKEN_EXPIRE",
+      "key": "TOKEN_EXPIRE",
+      "message": "token登录态失效",
+      "toast": {
+        "default": "登录状态已失效，请重新登录",
+        "key": "auth.token_expire",
+        "level": "warning"
+      }
+    }
+  ],
   "generator": {
     "name": "api-blueprint",
     "version": "1.0.0"

@@ -52,7 +52,7 @@ BLUEPRINT_PYTHON_PRESERVED = ()
 WAILS_HELLO_GOLANG_PRESERVED = (
     "go.mod",
     "go.sum",
-    "views/routes/api/hello/impl.go",
+    "routes/api/hello/impl.go",
 )
 WAILS_HELLO_TYPESCRIPT_PRESERVED = ("tsconfig.json",)
 GRPC_GO_PRESERVED = ("go.mod", "go.sum")

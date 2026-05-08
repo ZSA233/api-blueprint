@@ -452,8 +452,8 @@ class WailsGoWriter(BaseWriter[WailsBlueprint]):
         self.module_import = shared_go_module.import_path
         self.shared_packages = GolangPackageLayout(
             module_import=shared_go_module.import_path,
-            views_package=PackageName.VIEWS.value,
-            errors_package=PackageName.ERROR.value,
+            views_package="",
+            errors_package="runtime/errors",
         )
 
     @property

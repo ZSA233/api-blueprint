@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 from pathlib import Path
 from typing import Sequence
@@ -374,6 +375,12 @@ def target_manifest(target: ResolvedApiTargetConfig, project_root: Path) -> dict
         manifest["out_dir"] = _portable_path(target.out_dir, project_root)
     if target.module is not None:
         manifest["module"] = target.module
+        if target.kind in {"go-server", "go-client"} and target.out_dir is not None:
+            manifest["go_import_root"] = _derive_go_import_root(
+                target.module,
+                _portable_path(target.out_dir, project_root),
+                target.out_dir,
+            )
     if target.base_url is not None:
         manifest["base_url"] = target.base_url
     if target.base_url_expr is not None:
@@ -434,10 +441,49 @@ def _portable_path(path: Path, project_root: Path) -> str:
     resolved_path = path.resolve()
     resolved_root = project_root.resolve()
     try:
-        relative = resolved_path.relative_to(resolved_root)
+        relative_path = os.path.relpath(resolved_path, resolved_root)
     except ValueError:
         return resolved_path.as_posix()
-    return "." if relative == Path(".") else relative.as_posix()
+    if relative_path == ".":
+        return "."
+    return Path(relative_path).as_posix()
+
+
+def _derive_go_import_root(module: str, out_dir: str, out_path: Path | None = None) -> str:
+    if out_path is not None:
+        module_root = _find_nearest_go_module_root(out_path)
+        if module_root is not None:
+            try:
+                relative = out_path.resolve().relative_to(module_root)
+            except ValueError:
+                relative = Path(".")
+            relative_parts = [part for part in relative.as_posix().split("/") if part and part != "."]
+            return "/".join([module, *relative_parts]) if relative_parts else module
+
+    out_parts = [
+        part
+        for part in Path(out_dir).as_posix().split("/")
+        if part and part not in {".", ".."}
+    ]
+    if not out_parts:
+        return module
+
+    module_parts = [part for part in module.split("/") if part]
+    matched = 0
+    max_match = min(len(module_parts), len(out_parts))
+    for size in range(1, max_match + 1):
+        if module_parts[-size:] == out_parts[:size]:
+            matched = size
+    extra_parts = out_parts[matched:]
+    return "/".join([module, *extra_parts]) if extra_parts else module
+
+
+def _find_nearest_go_module_root(path: Path) -> Path | None:
+    resolved = path.resolve()
+    for candidate in (resolved, *resolved.parents):
+        if (candidate / "go.mod").is_file():
+            return candidate
+    return None
 
 
 def require_out_dir(target: ResolvedApiTargetConfig) -> Path:

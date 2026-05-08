@@ -4,7 +4,7 @@ package providers
 
 import (
 	"encoding/xml"
-	errors "example.com/project/golang/server/errors"
+	errors "example.com/project/golang/server/views/runtime/errors"
 	"fmt"
 	"strings"
 )
@@ -65,15 +65,18 @@ func (prov *RspProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
 	ctx.Next()
 }
 
-func unwrapError(err error) (code int, message string) {
+func unwrapError(err error) (code int, message string, toast map[string]string) {
 	switch e := err.(type) {
-	case errors.CodeErrInterface:
+	case errors.CodeError:
 		code = e.Code()
 		message = e.Message()
 	case nil:
 	default:
 		message = fmt.Sprintf("%v", e)
 		code = -1
+	}
+	if e, ok := err.(errors.ToastProvider); ok {
+		toast = e.Toast().Map()
 	}
 	return
 }

@@ -24,11 +24,11 @@ The Go generator emits:
 
 `gen_*` files are generator-owned and overwritten during regeneration. `impl_*` and non-`gen_*` files are user-owned extension points and are preserved. Kotlin follows the same ownership model with `Gen*.kt` as generator-owned files and non-`Gen*` façade / extension files as user-owned files.
 
-`go-server` owns only the Go server core. HTTP / Wails output is attached explicitly by `http-transport` / `wails-transport` targets through `server = "go.server"`. The HTTP entrypoint is generated under `views/transports/http/<root>`, for example `views/transports/http/api.NewBlueprint(engine)`.
+`go-server` owns only the Go server core. Its `out_dir` is the generated package root and no longer appends `views` implicitly. HTTP / Wails output is attached explicitly by `http-transport` / `wails-transport` targets through `server = "go.server"`. The HTTP entrypoint is generated under `<out_dir>/transports/http/<root>`, for example `transports/http/api.NewBlueprint(engine)`.
 
-Go route core is fixed under `views/routes/**`, and the provider runtime is fixed under `views/providers`. These directory names are no longer configurable, so business roots can safely use paths such as `/providers` or `/transports`.
+Go route core is generated under `<out_dir>/routes/**`, provider runtime under `<out_dir>/providers`, transport adapters under `<out_dir>/transports/**`, and error catalog implementations under `<out_dir>/runtime/errors/**`. If you want the import path to include `/views`, set `out_dir = ".../views"` explicitly.
 
-`views/providers` is a global transport-neutral runtime and is not split per blueprint root. TypeScript's per-root `runtime` mainly isolates model and client names; it is not the same responsibility as Go provider hooks.
+`providers` is a global transport-neutral runtime under the generated package root and is not split per blueprint root. TypeScript's per-root `runtime` mainly isolates model and client names; it is not the same responsibility as Go provider hooks.
 
 When a provider implementation must vary by root, route, or transport, do not parse the request path. The generator writes `RouteInfo` into every route executor and exposes it through `Context.Route` and `ProviderSpec.Route`:
 
@@ -58,7 +58,7 @@ bp = Blueprint(
 )
 ```
 
-Register provider factories during application startup or package `init()`. The provider sequence is parsed only when the executor is created, and factories also run only at creation time. The high-concurrency request path only executes cached provider instances. If a project needs selection logic without the global registry, implement `SelectProvider(spec, handler)` in the user-owned `views/providers/impl_provider.go`; the old `Select(key, value, handler)` hook has been removed.
+Register provider factories during application startup or package `init()`. The provider sequence is parsed only when the executor is created, and factories also run only at creation time. The high-concurrency request path only executes cached provider instances. If a project needs selection logic without the global registry, implement `SelectProvider(spec, handler)` in the user-owned `providers/impl_provider.go`; the old `Select(key, value, handler)` hook has been removed.
 
 The HTTP adapter imports the blueprint root router only when the root has direct routes. If a handler has already written a Gin response, the adapter does not append an automatic response; otherwise routes without an `rsp` provider keep the existing behavior where the adapter writes the handler return value.
 
@@ -84,6 +84,10 @@ In the HTTP transport, `STREAM` generates an SSE adapter and `CHANNEL` generates
 The default HTTP/Wails runtimes fully implement only `ConnectionScope.SESSION`. `APP` / `TOPIC` remain in the route contract and can be implemented later through a custom connection hub / manager for broadcast or topic routing; the generator does not bake in business fan-out policy.
 
 Generated connection handlers still default to `not implemented`, so example business logic is not written into every user project. The repository example hand-writes the minimal usage in the user-owned `examples/golang/server/views/routes/api/demo/impl.go`: `STREAM` shows `Open()`, server message construction, `Send()`, and typed `Close()`; `CHANNEL` also shows `Recv(ctx)` for client messages.
+
+### Error Catalog
+
+ContractGraph collects `Blueprint(errors=...)` and route `.ERR(...)` declarations into a language-agnostic error catalog. `message` is the protocol-level default description, while `toast.key/default/level` is the user-facing fallback surface; generators do not emit built-in locale tables or `locales/*.json`. Go client, TypeScript, Kotlin, and Python client/server split runtime error types/helpers from static catalog data into separate generated files such as `gen_error_catalog.*` or `GenApiErrorCatalog.kt`; Go server emits runtime types under `runtime/errors` and grouped error values under packages such as `runtime/errors/common_err`, avoiding a duplicate root catalog. Business i18n resolves the current language by toast key, and client helpers resolve display text in the order `toast.text`, external i18n, `toast.default`, then `message`. Generated group errors implement `CodeError`, and `WithToast(...)` returns an immutable override copy for request-language, tenant, or rollout-specific dynamic `toast.text`. The HTTP transport still represents transport failures separately, and business wrapper codes are not automatically converted into thrown exceptions.
 
 ## Go Client
 
