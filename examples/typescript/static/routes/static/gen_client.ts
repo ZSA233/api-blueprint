@@ -8,7 +8,7 @@ import { ApiChannelBridge, ApiClientConfig, ApiSocketBridge, ApiStreamBridge, Ba
 
 export class StaticClient extends BaseClient {
   constructor(config: ApiClientConfig = {}) {
-    super(config, "http://localhost:2333");
+    super(config);
   }
 
 

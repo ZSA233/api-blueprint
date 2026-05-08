@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import fnmatch
 import json
 import shutil
 from pathlib import Path
@@ -19,73 +18,14 @@ from api_blueprint.contract import (
     render_agent_markdown,
 )
 from api_blueprint.engine import Blueprint
+from api_blueprint.writer.core.planning import (
+    capability_errors,
+    target_capability_manifest,
+    target_selects_route,
+)
 
 
-TARGET_CAPABILITY_REGISTRY: dict[str, dict[str, object]] = {
-    "contract": {
-        "implemented": True,
-        "routes": [],
-        "outputs": ["json", "markdown"],
-    },
-    "go-server": {
-        "implemented": True,
-        "routes": ["rpc", "stream", "channel"],
-        "requests": ["query", "json", "form", "binary"],
-        "wrappers": ["none", "general", "custom"],
-    },
-    "go-client": {
-        "implemented": False,
-        "routes": [],
-        "reserved": True,
-    },
-    "typescript-client": {
-        "implemented": True,
-        "routes": ["rpc", "stream", "channel"],
-        "requests": ["query", "json", "form", "binary"],
-        "transport": "injected",
-        "wrappers": ["none", "general", "custom"],
-    },
-    "kotlin-client": {
-        "implemented": True,
-        "routes": ["rpc"],
-        "requests": ["query", "json"],
-        "wrappers": ["none", "general"],
-    },
-    "python-server": {
-        "implemented": False,
-        "routes": [],
-        "reserved": True,
-    },
-    "python-client": {
-        "implemented": False,
-        "routes": [],
-        "reserved": True,
-    },
-    "http-transport": {
-        "implemented": True,
-        "routes": ["rpc", "stream", "channel"],
-    },
-    "wails-transport": {
-        "implemented": True,
-        "routes": ["rpc", "stream", "channel"],
-        "frontend_modes": ["external", "none"],
-    },
-    "grpc-proto": {
-        "implemented": True,
-        "routes": ["rpc", "stream", "channel"],
-        "outputs": ["proto"],
-    },
-    "grpc-go": {
-        "implemented": True,
-        "inputs": ["proto"],
-        "outputs": ["go", "grpc-go"],
-    },
-    "grpc-python": {
-        "implemented": True,
-        "inputs": ["proto"],
-        "outputs": ["python", "grpc-python"],
-    },
-}
+TARGET_CAPABILITY_REGISTRY: dict[str, dict[str, object]] = target_capability_manifest()
 
 
 def list_targets(config_path: str | Path | None) -> tuple[ResolvedApiTargetConfig, ...]:
@@ -143,7 +83,7 @@ def check(config_path: str | Path | None) -> None:
 
 
 def generate(config_path: str | Path | None, target_ids: Sequence[str] = ()) -> None:
-    from api_blueprint.writer import golang, kotlin, typescript
+    from api_blueprint.writer import golang, kotlin, python as python_writer, typescript
     from api_blueprint.writer.grpc.proto_writer import render_proto_files
     from api_blueprint.writer.grpc import toolchain as grpc_toolchain
 
@@ -202,6 +142,32 @@ def generate(config_path: str | Path | None, target_ids: Sequence[str] = ()) -> 
             )
             writer.register(*project.entrypoints)
             writer.gen()
+        elif target.kind == "python-client":
+            output = require_out_dir(target)
+            output.mkdir(parents=True, exist_ok=True)
+            writer = python_writer.PythonClientWriter(
+                output,
+                python_package_root=target.python_package_root,
+                base_url=target.base_url or "",
+                base_url_expr=target.base_url_expr,
+                include=target.include,
+                exclude=target.exclude,
+                contract_graph=graph,
+            )
+            writer.register(*project.entrypoints)
+            writer.gen()
+        elif target.kind == "python-server":
+            output = require_out_dir(target)
+            output.mkdir(parents=True, exist_ok=True)
+            writer = python_writer.PythonServerWriter(
+                output,
+                python_package_root=target.python_package_root,
+                include=target.include,
+                exclude=target.exclude,
+                contract_graph=graph,
+            )
+            writer.register(*project.entrypoints)
+            writer.gen()
         elif target.kind == "grpc-proto":
             output = require_out_dir(target)
             output.mkdir(parents=True, exist_ok=True)
@@ -237,7 +203,7 @@ def generate(config_path: str | Path | None, target_ids: Sequence[str] = ()) -> 
                 generate_target(target_map[target.server])
             for client_id in target.clients:
                 generate_target(target_map[client_id])
-        elif target.kind in {"python-server", "python-client", "go-client"}:
+        elif target.kind in {"go-client"}:
             raise ValueError(f"target[{target.id}] {target.kind} is reserved but not implemented")
         else:
             raise ValueError(f"target[{target.id}] unsupported kind: {target.kind}")
@@ -334,68 +300,6 @@ def generation_plan(
     for target in selected:
         visit(target)
     return tuple(planned)
-
-
-def capability_errors(
-    graph: ContractGraph,
-    targets: Sequence[ResolvedApiTargetConfig],
-) -> list[str]:
-    manifest_data = graph.to_manifest()
-    routes = manifest_data["routes"]
-    errors: list[str] = []
-    for target in targets:
-        target_capability = TARGET_CAPABILITY_REGISTRY.get(target.kind, {})
-        if target_capability.get("implemented") is False:
-            errors.append(f"{target.kind} is reserved but not implemented: target[{target.id}]")
-            continue
-        if target.kind != "kotlin-client":
-            continue
-        for route in routes:
-            if not isinstance(route, dict):
-                continue
-            if not target_selects_route(target, route):
-                continue
-            route_id = route["id"]
-            route_kind = route["kind"]
-            if route_kind in {"stream", "channel"}:
-                errors.append(f"kotlin-client does not support {route_kind} route: {route_id}")
-                continue
-            request = route.get("request") or {}
-            if request.get("form_model") is not None:
-                errors.append(f"kotlin-client does not support form request route: {route_id}")
-            if request.get("binary_model") is not None:
-                errors.append(f"kotlin-client does not support binary request route: {route_id}")
-            response = route.get("response") or {}
-            wrapper = response.get("wrapper")
-            if wrapper not in {None, "NoneWrapper", "GeneralWrapper"}:
-                errors.append(f"kotlin-client does not support custom response wrapper route: {route_id}")
-    return errors
-
-
-def target_selects_route(target: ResolvedApiTargetConfig, route: dict[str, object]) -> bool:
-    if target.include and not any(route_matches_rule(route, rule) for rule in target.include):
-        return False
-    if any(route_matches_rule(route, rule) for rule in target.exclude):
-        return False
-    return True
-
-
-def route_matches_rule(route: dict[str, object], rule: str) -> bool:
-    if ":" not in rule:
-        return fnmatch.fnmatchcase(str(route.get("id", "")), rule)
-    key, pattern = rule.split(":", 1)
-    if key == "path":
-        return fnmatch.fnmatchcase(str(route.get("url", "")), pattern)
-    if key == "method":
-        methods = route.get("methods", [])
-        return isinstance(methods, list) and any(fnmatch.fnmatchcase(str(method), pattern.upper()) for method in methods)
-    if key == "group":
-        return fnmatch.fnmatchcase(str(route.get("service_id", "")).rsplit(".", 1)[-1], pattern)
-    if key == "name":
-        return fnmatch.fnmatchcase(str(route.get("operation", "")), pattern)
-    if key == "kind":
-        return fnmatch.fnmatchcase(str(route.get("kind", "")), pattern)
-    return False
 
 
 def write_contract_target(graph: ContractGraph, target: ResolvedApiTargetConfig, project_root: Path) -> None:

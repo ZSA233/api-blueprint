@@ -13,7 +13,7 @@
 - `routes`: 20
 - `schemas`: 37
 - `connections`: 2
-- `targets`: 10
+- `targets`: 13
 
 ## Routes
 - `api.api.ws.ws` `legacy_ws` `/api/ws` -> `api-blueprint.contract.d/routes/api.api.ws.ws.json`

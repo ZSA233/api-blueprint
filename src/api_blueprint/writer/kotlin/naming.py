@@ -75,3 +75,23 @@ def to_kotlin_property_name(value: str, *, fallback: str = "value") -> str:
 def to_package_path(package: str) -> str:
     return package.replace(".", "/")
 
+
+def to_kotlin_package_component(value: str, *, fallback: str = "root") -> str:
+    tokens = split_tokens(value)
+    result = "".join(token.lower() for token in tokens)
+    if not result:
+        result = fallback
+    if not result[0].isalpha():
+        result = f"{fallback}{result}"
+    if result in KOTLIN_KEYWORDS:
+        return f"`{result}`"
+    return result
+
+
+def to_kotlin_package_path(value: str, *, fallback: str = "root") -> str:
+    parts = [to_kotlin_package_component(part, fallback=fallback) for part in value.strip("/").split("/") if part]
+    return "/".join(parts or [fallback])
+
+
+def to_kotlin_package_suffix(value: str, *, fallback: str = "root") -> str:
+    return to_kotlin_package_path(value, fallback=fallback).replace("/", ".")

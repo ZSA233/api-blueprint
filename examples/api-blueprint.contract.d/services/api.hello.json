@@ -38,6 +38,41 @@
           ],
           "kind": "grpc-python"
         },
+        "kotlin.client": {
+          "files": [
+            "kotlin/com/example/apiblueprint/api/routes/api/hello/GenHelloApiModels.kt",
+            "kotlin/com/example/apiblueprint/api/routes/api/hello/GenHelloApi.kt",
+            "kotlin/com/example/apiblueprint/api/routes/api/hello/HelloApi.kt"
+          ],
+          "imports": [
+            "com.example.apiblueprint.api.routes.api.hello.HelloApi"
+          ],
+          "kind": "kotlin-client"
+        },
+        "python.client": {
+          "files": [
+            "python/client/api_blueprint_example_client/api/routes/api/hello/gen_client.py",
+            "python/client/api_blueprint_example_client/api/routes/api/hello/client.py",
+            "python/client/api_blueprint_example_client/api/transports/http/gen_client.py"
+          ],
+          "imports": [
+            "api_blueprint_example_client.api.routes.api.hello.client"
+          ],
+          "kind": "python-client"
+        },
+        "python.server": {
+          "files": [
+            "python/server/api_blueprint_example_server/api/routes/api/hello/gen_service.py",
+            "python/server/api_blueprint_example_server/api/routes/api/hello/service.py",
+            "python/server/api_blueprint_example_server/api/transports/http/gen_server.py",
+            "python/server/api_blueprint_example_server/api/transports/http/server.py"
+          ],
+          "imports": [
+            "api_blueprint_example_server.api.routes.api.hello.service",
+            "api_blueprint_example_server.api.transports.http.server"
+          ],
+          "kind": "python-server"
+        },
         "typescript.client": {
           "files": [
             "typescript/api/routes/api/hello/client.ts",
@@ -66,7 +101,7 @@
         }
       },
       "connection": null,
-      "hash": "9c799b1ce28c66c193f5d9c2af79bdc4765676bca954535fdbf7c9edd33a0e22",
+      "hash": "e596cd4720c6117501478ec5cb77d11187ff30a2b496637066826081f1b415dd",
       "id": "api.hello.get.abc",
       "kind": "rpc",
       "methods": [
@@ -124,6 +159,41 @@
           ],
           "kind": "grpc-python"
         },
+        "kotlin.client": {
+          "files": [
+            "kotlin/com/example/apiblueprint/api/routes/api/hello/GenHelloApiModels.kt",
+            "kotlin/com/example/apiblueprint/api/routes/api/hello/GenHelloApi.kt",
+            "kotlin/com/example/apiblueprint/api/routes/api/hello/HelloApi.kt"
+          ],
+          "imports": [
+            "com.example.apiblueprint.api.routes.api.hello.HelloApi"
+          ],
+          "kind": "kotlin-client"
+        },
+        "python.client": {
+          "files": [
+            "python/client/api_blueprint_example_client/api/routes/api/hello/gen_client.py",
+            "python/client/api_blueprint_example_client/api/routes/api/hello/client.py",
+            "python/client/api_blueprint_example_client/api/transports/http/gen_client.py"
+          ],
+          "imports": [
+            "api_blueprint_example_client.api.routes.api.hello.client"
+          ],
+          "kind": "python-client"
+        },
+        "python.server": {
+          "files": [
+            "python/server/api_blueprint_example_server/api/routes/api/hello/gen_service.py",
+            "python/server/api_blueprint_example_server/api/routes/api/hello/service.py",
+            "python/server/api_blueprint_example_server/api/transports/http/gen_server.py",
+            "python/server/api_blueprint_example_server/api/transports/http/server.py"
+          ],
+          "imports": [
+            "api_blueprint_example_server.api.routes.api.hello.service",
+            "api_blueprint_example_server.api.transports.http.server"
+          ],
+          "kind": "python-server"
+        },
         "typescript.client": {
           "files": [
             "typescript/api/routes/api/hello/client.ts",
@@ -152,7 +222,7 @@
         }
       },
       "connection": null,
-      "hash": "f3ffff723e2325070fc7d77810305043d03bc9ceb55b3b5d75ff29305fe2736d",
+      "hash": "c49f6d1f65560c210a3a6b3b3ebb460c0f4cc8bd85dfc3cb4c37792c19f00b7f",
       "id": "api.hello.get.mapenum",
       "kind": "rpc",
       "methods": [
@@ -207,6 +277,41 @@
           ],
           "kind": "grpc-python"
         },
+        "kotlin.client": {
+          "files": [
+            "kotlin/com/example/apiblueprint/api/routes/api/hello/GenHelloApiModels.kt",
+            "kotlin/com/example/apiblueprint/api/routes/api/hello/GenHelloApi.kt",
+            "kotlin/com/example/apiblueprint/api/routes/api/hello/HelloApi.kt"
+          ],
+          "imports": [
+            "com.example.apiblueprint.api.routes.api.hello.HelloApi"
+          ],
+          "kind": "kotlin-client"
+        },
+        "python.client": {
+          "files": [
+            "python/client/api_blueprint_example_client/api/routes/api/hello/gen_client.py",
+            "python/client/api_blueprint_example_client/api/routes/api/hello/client.py",
+            "python/client/api_blueprint_example_client/api/transports/http/gen_client.py"
+          ],
+          "imports": [
+            "api_blueprint_example_client.api.routes.api.hello.client"
+          ],
+          "kind": "python-client"
+        },
+        "python.server": {
+          "files": [
+            "python/server/api_blueprint_example_server/api/routes/api/hello/gen_service.py",
+            "python/server/api_blueprint_example_server/api/routes/api/hello/service.py",
+            "python/server/api_blueprint_example_server/api/transports/http/gen_server.py",
+            "python/server/api_blueprint_example_server/api/transports/http/server.py"
+          ],
+          "imports": [
+            "api_blueprint_example_server.api.routes.api.hello.service",
+            "api_blueprint_example_server.api.transports.http.server"
+          ],
+          "kind": "python-server"
+        },
         "typescript.client": {
           "files": [
             "typescript/api/routes/api/hello/client.ts",
@@ -235,7 +340,7 @@
         }
       },
       "connection": null,
-      "hash": "02997e811deb53128ad4f9b7f31dc3e83c5e55a98f42ce15adc15508e5e1ce92",
+      "hash": "6c216123d5c85cdc833bc7fc30ff640c50ccee3fd7c93788c47f1fe7968169ca",
       "id": "api.hello.get.listenum",
       "kind": "rpc",
       "methods": [
@@ -289,6 +394,41 @@
           ],
           "kind": "grpc-python"
         },
+        "kotlin.client": {
+          "files": [
+            "kotlin/com/example/apiblueprint/api/routes/api/hello/GenHelloApiModels.kt",
+            "kotlin/com/example/apiblueprint/api/routes/api/hello/GenHelloApi.kt",
+            "kotlin/com/example/apiblueprint/api/routes/api/hello/HelloApi.kt"
+          ],
+          "imports": [
+            "com.example.apiblueprint.api.routes.api.hello.HelloApi"
+          ],
+          "kind": "kotlin-client"
+        },
+        "python.client": {
+          "files": [
+            "python/client/api_blueprint_example_client/api/routes/api/hello/gen_client.py",
+            "python/client/api_blueprint_example_client/api/routes/api/hello/client.py",
+            "python/client/api_blueprint_example_client/api/transports/http/gen_client.py"
+          ],
+          "imports": [
+            "api_blueprint_example_client.api.routes.api.hello.client"
+          ],
+          "kind": "python-client"
+        },
+        "python.server": {
+          "files": [
+            "python/server/api_blueprint_example_server/api/routes/api/hello/gen_service.py",
+            "python/server/api_blueprint_example_server/api/routes/api/hello/service.py",
+            "python/server/api_blueprint_example_server/api/transports/http/gen_server.py",
+            "python/server/api_blueprint_example_server/api/transports/http/server.py"
+          ],
+          "imports": [
+            "api_blueprint_example_server.api.routes.api.hello.service",
+            "api_blueprint_example_server.api.transports.http.server"
+          ],
+          "kind": "python-server"
+        },
         "typescript.client": {
           "files": [
             "typescript/api/routes/api/hello/client.ts",
@@ -317,7 +457,7 @@
         }
       },
       "connection": null,
-      "hash": "016c3f8acb0a03b09b1102bb1b3626a3938f8a05ff25c84c918ef33264977a1b",
+      "hash": "0943913a83557afb7bfc891c91cde4ad1a35b1771f2be2ef7a9da05ab83790a4",
       "id": "api.hello.get.string",
       "kind": "rpc",
       "methods": [
@@ -371,6 +511,41 @@
           ],
           "kind": "grpc-python"
         },
+        "kotlin.client": {
+          "files": [
+            "kotlin/com/example/apiblueprint/api/routes/api/hello/GenHelloApiModels.kt",
+            "kotlin/com/example/apiblueprint/api/routes/api/hello/GenHelloApi.kt",
+            "kotlin/com/example/apiblueprint/api/routes/api/hello/HelloApi.kt"
+          ],
+          "imports": [
+            "com.example.apiblueprint.api.routes.api.hello.HelloApi"
+          ],
+          "kind": "kotlin-client"
+        },
+        "python.client": {
+          "files": [
+            "python/client/api_blueprint_example_client/api/routes/api/hello/gen_client.py",
+            "python/client/api_blueprint_example_client/api/routes/api/hello/client.py",
+            "python/client/api_blueprint_example_client/api/transports/http/gen_client.py"
+          ],
+          "imports": [
+            "api_blueprint_example_client.api.routes.api.hello.client"
+          ],
+          "kind": "python-client"
+        },
+        "python.server": {
+          "files": [
+            "python/server/api_blueprint_example_server/api/routes/api/hello/gen_service.py",
+            "python/server/api_blueprint_example_server/api/routes/api/hello/service.py",
+            "python/server/api_blueprint_example_server/api/transports/http/gen_server.py",
+            "python/server/api_blueprint_example_server/api/transports/http/server.py"
+          ],
+          "imports": [
+            "api_blueprint_example_server.api.routes.api.hello.service",
+            "api_blueprint_example_server.api.transports.http.server"
+          ],
+          "kind": "python-server"
+        },
         "typescript.client": {
           "files": [
             "typescript/api/routes/api/hello/client.ts",
@@ -399,7 +574,7 @@
         }
       },
       "connection": null,
-      "hash": "6d8d8a0ad2428b99317e524e9339ac9c832bfd10e842237ddf781fc2f1c4a676",
+      "hash": "6969fa9afd7491752f4c5f58d21f0cac45eba367ffca3b524efbcb4c9c946b69",
       "id": "api.hello.get.uint64",
       "kind": "rpc",
       "methods": [
@@ -453,6 +628,41 @@
           ],
           "kind": "grpc-python"
         },
+        "kotlin.client": {
+          "files": [
+            "kotlin/com/example/apiblueprint/api/routes/api/hello/GenHelloApiModels.kt",
+            "kotlin/com/example/apiblueprint/api/routes/api/hello/GenHelloApi.kt",
+            "kotlin/com/example/apiblueprint/api/routes/api/hello/HelloApi.kt"
+          ],
+          "imports": [
+            "com.example.apiblueprint.api.routes.api.hello.HelloApi"
+          ],
+          "kind": "kotlin-client"
+        },
+        "python.client": {
+          "files": [
+            "python/client/api_blueprint_example_client/api/routes/api/hello/gen_client.py",
+            "python/client/api_blueprint_example_client/api/routes/api/hello/client.py",
+            "python/client/api_blueprint_example_client/api/transports/http/gen_client.py"
+          ],
+          "imports": [
+            "api_blueprint_example_client.api.routes.api.hello.client"
+          ],
+          "kind": "python-client"
+        },
+        "python.server": {
+          "files": [
+            "python/server/api_blueprint_example_server/api/routes/api/hello/gen_service.py",
+            "python/server/api_blueprint_example_server/api/routes/api/hello/service.py",
+            "python/server/api_blueprint_example_server/api/transports/http/gen_server.py",
+            "python/server/api_blueprint_example_server/api/transports/http/server.py"
+          ],
+          "imports": [
+            "api_blueprint_example_server.api.routes.api.hello.service",
+            "api_blueprint_example_server.api.transports.http.server"
+          ],
+          "kind": "python-server"
+        },
         "typescript.client": {
           "files": [
             "typescript/api/routes/api/hello/client.ts",
@@ -481,7 +691,7 @@
         }
       },
       "connection": null,
-      "hash": "02b4de6432a18dfd07a611835eba959297080f4e84d643e4d05c802399b269a5",
+      "hash": "4079542d707ffe5f00cd1a38d111258ca3fa13946d2db42846d2ea750ddb5693",
       "id": "api.hello.get.stringemun",
       "kind": "rpc",
       "methods": [
@@ -535,6 +745,41 @@
           ],
           "kind": "grpc-python"
         },
+        "kotlin.client": {
+          "files": [
+            "kotlin/com/example/apiblueprint/api/routes/api/hello/GenHelloApiModels.kt",
+            "kotlin/com/example/apiblueprint/api/routes/api/hello/GenHelloApi.kt",
+            "kotlin/com/example/apiblueprint/api/routes/api/hello/HelloApi.kt"
+          ],
+          "imports": [
+            "com.example.apiblueprint.api.routes.api.hello.HelloApi"
+          ],
+          "kind": "kotlin-client"
+        },
+        "python.client": {
+          "files": [
+            "python/client/api_blueprint_example_client/api/routes/api/hello/gen_client.py",
+            "python/client/api_blueprint_example_client/api/routes/api/hello/client.py",
+            "python/client/api_blueprint_example_client/api/transports/http/gen_client.py"
+          ],
+          "imports": [
+            "api_blueprint_example_client.api.routes.api.hello.client"
+          ],
+          "kind": "python-client"
+        },
+        "python.server": {
+          "files": [
+            "python/server/api_blueprint_example_server/api/routes/api/hello/gen_service.py",
+            "python/server/api_blueprint_example_server/api/routes/api/hello/service.py",
+            "python/server/api_blueprint_example_server/api/transports/http/gen_server.py",
+            "python/server/api_blueprint_example_server/api/transports/http/server.py"
+          ],
+          "imports": [
+            "api_blueprint_example_server.api.routes.api.hello.service",
+            "api_blueprint_example_server.api.transports.http.server"
+          ],
+          "kind": "python-server"
+        },
         "typescript.client": {
           "files": [
             "typescript/api/routes/api/hello/client.ts",
@@ -563,7 +808,7 @@
         }
       },
       "connection": null,
-      "hash": "317e9b3790a171476900b961a97b1010fcf824a26a2d2ed0aefc0944ae8cc463",
+      "hash": "812b2bd1d81188743018536309d6b14d925aa10df8f8d0273030e70fc7493f80",
       "id": "api.hello.get.helloway",
       "kind": "rpc",
       "methods": [

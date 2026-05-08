@@ -8,7 +8,7 @@ import { ApiChannelBridge, ApiClientConfig, ApiSocketBridge, ApiStreamBridge, Ba
 
 export class {{ client_class }} extends BaseClient {
   constructor(config: ApiClientConfig = {}) {
-    super(config, {{ writer.rendered_base_url }});
+    super(config);
   }
 
 {% for route in routes %}

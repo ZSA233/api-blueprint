@@ -10,33 +10,29 @@
           "imports": [],
           "kind": "go-server"
         },
-        "grpc.go": {
+        "python.client": {
           "files": [
-            "grpc/go/api/api/api.pb.go",
-            "grpc/go/api/api/api_grpc.pb.go"
+            "python/client/api_blueprint_example_client/api/routes/api/gen_client.py",
+            "python/client/api_blueprint_example_client/api/routes/api/client.py",
+            "python/client/api_blueprint_example_client/api/transports/http/gen_client.py"
           ],
           "imports": [
-            "example.com/project/grpc/go/api/api"
+            "api_blueprint_example_client.api.routes.api.client"
           ],
-          "kind": "grpc-go"
+          "kind": "python-client"
         },
-        "grpc.proto": {
+        "python.server": {
           "files": [
-            "grpc/protos/api/api.proto"
-          ],
-          "imports": [],
-          "kind": "grpc-proto"
-        },
-        "grpc.python": {
-          "files": [
-            "grpc/python/pb/api/api_pb2.py",
-            "grpc/python/pb/api/api_pb2_grpc.py"
+            "python/server/api_blueprint_example_server/api/routes/api/gen_service.py",
+            "python/server/api_blueprint_example_server/api/routes/api/service.py",
+            "python/server/api_blueprint_example_server/api/transports/http/gen_server.py",
+            "python/server/api_blueprint_example_server/api/transports/http/server.py"
           ],
           "imports": [
-            "pb.api.api_pb2",
-            "pb.api.api_pb2_grpc"
+            "api_blueprint_example_server.api.routes.api.service",
+            "api_blueprint_example_server.api.transports.http.server"
           ],
-          "kind": "grpc-python"
+          "kind": "python-server"
         },
         "typescript.client": {
           "files": [
@@ -66,7 +62,7 @@
         }
       },
       "connection": null,
-      "hash": "b139b74c59d24253897b3eabfd2f54904d77eaeedf0d9068faeb8411a13da4a7",
+      "hash": "2cfb9552b1830d0455039cc55437984d122c61d4de57c17c6cd1a555256f1610",
       "id": "api.api.ws.ws",
       "kind": "legacy_ws",
       "methods": [],

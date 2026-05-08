@@ -8,7 +8,7 @@ import { ApiChannelBridge, ApiClientConfig, ApiSocketBridge, ApiStreamBridge, Ba
 
 export class HelloClient extends BaseClient {
   constructor(config: ApiClientConfig = {}) {
-    super(config, "");
+    super(config);
   }
 
 

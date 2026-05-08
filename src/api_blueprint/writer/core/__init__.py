@@ -8,6 +8,14 @@ from api_blueprint.writer.core.registry import (
     register_placeholder_target,
     register_target,
 )
+from api_blueprint.writer.core.planning import (
+    TARGET_CAPABILITIES,
+    TargetCapability,
+    capability_errors,
+    route_matches_rule,
+    target_capability_manifest,
+    target_selects_route,
+)
 from api_blueprint.writer.core.templates import iter_render, load_templates, render
 
 __all__ = (
@@ -15,6 +23,9 @@ __all__ = (
     "BaseWriter",
     "GeneratorTargetSpec",
     "SafeFmtter",
+    "TARGET_CAPABILITIES",
+    "TargetCapability",
+    "capability_errors",
     "ensure_default_targets",
     "ensure_filepath",
     "ensure_filepath_open",
@@ -22,7 +33,10 @@ __all__ = (
     "iter_render",
     "iter_targets",
     "load_templates",
+    "route_matches_rule",
     "register_placeholder_target",
     "register_target",
     "render",
+    "target_capability_manifest",
+    "target_selects_route",
 )

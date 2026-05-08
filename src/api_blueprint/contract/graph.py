@@ -165,6 +165,7 @@ class ContractGraphBuilder:
             "methods": list(contract.http_methods),
             "path": router.leaf,
             "url": router.url,
+            "tags": list(router.tags),
             "deprecated": router.is_deprecated,
             "request": request,
             "response": response,

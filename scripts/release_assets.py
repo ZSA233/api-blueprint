@@ -190,6 +190,12 @@ def _assert_wheel_contains(wheel_path: Path, prefix: str) -> None:
             raise ReleaseAssetsError(f"{wheel_path.name} is missing packaged files under {prefix}")
 
 
+def _assert_wheel_contains_file(wheel_path: Path, path: str) -> None:
+    with zipfile.ZipFile(wheel_path) as zf:
+        if path not in zf.namelist():
+            raise ReleaseAssetsError(f"{wheel_path.name} is missing packaged file {path}")
+
+
 def validate_dist_artifacts(dist_dir: Path) -> DistArtifacts:
     artifacts = collect_dist_artifacts(dist_dir)
     if len(artifacts.wheels) != 1:
@@ -201,6 +207,10 @@ def validate_dist_artifacts(dist_dir: Path) -> DistArtifacts:
 
     wheel_path = artifacts.wheels[0]
     _assert_wheel_contains(wheel_path, "api_blueprint/writer/templates/")
+    _assert_wheel_contains_file(wheel_path, "api_blueprint/writer/templates/kotlin/runtime/ApiTransport.kt.j2")
+    _assert_wheel_contains_file(wheel_path, "api_blueprint/writer/templates/kotlin/transports/http/OkHttpApiTransport.kt.j2")
+    _assert_wheel_contains_file(wheel_path, "api_blueprint/writer/templates/python/runtime/gen_client.py.j2")
+    _assert_wheel_contains_file(wheel_path, "api_blueprint/writer/templates/python/transports/http/gen_server.py.j2")
     _assert_wheel_contains(wheel_path, "api_blueprint/hub/templates/")
     _assert_wheel_contains(wheel_path, "api_blueprint/static/")
     return artifacts

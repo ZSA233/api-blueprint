@@ -36,6 +36,41 @@
       ],
       "kind": "grpc-python"
     },
+    "kotlin.client": {
+      "files": [
+        "kotlin/com/example/apiblueprint/api/routes/api/hello/GenHelloApiModels.kt",
+        "kotlin/com/example/apiblueprint/api/routes/api/hello/GenHelloApi.kt",
+        "kotlin/com/example/apiblueprint/api/routes/api/hello/HelloApi.kt"
+      ],
+      "imports": [
+        "com.example.apiblueprint.api.routes.api.hello.HelloApi"
+      ],
+      "kind": "kotlin-client"
+    },
+    "python.client": {
+      "files": [
+        "python/client/api_blueprint_example_client/api/routes/api/hello/gen_client.py",
+        "python/client/api_blueprint_example_client/api/routes/api/hello/client.py",
+        "python/client/api_blueprint_example_client/api/transports/http/gen_client.py"
+      ],
+      "imports": [
+        "api_blueprint_example_client.api.routes.api.hello.client"
+      ],
+      "kind": "python-client"
+    },
+    "python.server": {
+      "files": [
+        "python/server/api_blueprint_example_server/api/routes/api/hello/gen_service.py",
+        "python/server/api_blueprint_example_server/api/routes/api/hello/service.py",
+        "python/server/api_blueprint_example_server/api/transports/http/gen_server.py",
+        "python/server/api_blueprint_example_server/api/transports/http/server.py"
+      ],
+      "imports": [
+        "api_blueprint_example_server.api.routes.api.hello.service",
+        "api_blueprint_example_server.api.transports.http.server"
+      ],
+      "kind": "python-server"
+    },
     "typescript.client": {
       "files": [
         "typescript/api/routes/api/hello/client.ts",
@@ -67,7 +102,7 @@
   "route": {
     "connection": null,
     "deprecated": false,
-    "hash": "016c3f8acb0a03b09b1102bb1b3626a3938f8a05ff25c84c918ef33264977a1b",
+    "hash": "0943913a83557afb7bfc891c91cde4ad1a35b1771f2be2ef7a9da05ab83790a4",
     "id": "api.hello.get.string",
     "kind": "rpc",
     "method_name": "string",
@@ -89,6 +124,9 @@
       "wrapper": "GeneralWrapper"
     },
     "service_id": "api.hello",
+    "tags": [
+      "api"
+    ],
     "url": "/api/hello/string"
   },
   "schemas": {

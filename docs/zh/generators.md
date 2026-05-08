@@ -2,6 +2,12 @@
 
 本文概述非 Wails、非 gRPC 的主要生成器。Wails 见 [Wails 说明](wails.md)，gRPC 见 [gRPC 说明](grpc.md)。
 
+## 共享规划与 capability
+
+`api-gen check`、contract / agent artifact projection 和各语言 writer 使用同一份 planner / capability metadata。生成前会统一校验 target 依赖、route kind、request kind 与 response wrapper，避免 check 通过但 writer 才发现不支持的情况。
+
+Kotlin / Python 是新实现的生成器表面，当前按 preview 口径使用。它们的 contract / agent artifact path 指向完整镜像 route path 的输出路径，例如 `routes/api/demo`；Python 不再使用 `routes/root` sentinel。
+
 ## Go
 
 ```sh
@@ -16,7 +22,7 @@ Go 生成器输出：
 - transport-neutral Go core。
 - 可选 HTTP/Gin adapter。
 
-`gen_*` 文件由生成器拥有，重生成会覆盖。`impl_*` 与非 `gen_*` 文件是用户拥有扩展点，重生成时保留。
+`gen_*` 文件由生成器拥有，重生成会覆盖。`impl_*` 与非 `gen_*` 文件是用户拥有扩展点，重生成时保留。Kotlin 使用相同 ownership 模型，但生成器拥有文件命名为 `Gen*.kt`，非 `Gen*` façade / extension 文件由用户拥有。
 
 `go-server` 只负责 Go 服务端 core。HTTP / Wails 输出由 `http-transport` / `wails-transport` target 通过 `server = "go.server"` 显式挂接。HTTP 入口生成在 `views/transports/http/<root>` 中，例如 `views/transports/http/api.NewBlueprint(engine)`。
 
@@ -93,7 +99,7 @@ TypeScript client target 输出：
 - 由 transport target 注入的 `createClients(config)` facade。
 - user-owned passthrough 文件，例如 `client.ts`、`transport.ts`、`factory.ts`。
 
-`base_url_expr` 会原样写入生成代码，适合 Vite、Next.js 等运行时配置；它与 `base_url` 互斥。
+`base_url` / `base_url_expr` 由生成的 HTTP transport facade 拥有，不进入 route/runtime client。`base_url_expr` 会原样写入生成代码，适合 Vite、Next.js 等运行时配置；它与 `base_url` 互斥。
 
 `STREAM` / `CHANNEL` 会生成 `ApiStreamBridge<Recv, Close>` 与 `ApiChannelBridge<Recv, Send, Close>`。单消息方向直接使用模型类型；多消息方向生成判别联合类型，例如 `{ type: "progress"; data: TaskProgress }`。HTTP transport 的 stream bridge 使用 SSE，channel bridge 使用内部 envelope 的 WebSocket 来区分普通消息与 close lifecycle payload；Wails transport 使用 generated runtime events，但事件名不暴露给业务 client。
 
@@ -105,17 +111,55 @@ api-gen generate -c api-blueprint.toml --target kotlin.client
 
 Kotlin target 输出 OkHttp + kotlinx.serialization Android 客户端。
 
-当前版本只覆盖 HTTP JSON RPC route。`api-gen check` 会在生成前拒绝 `STREAM` / `CHANNEL`、form、binary 与自定义 wrapper。
+Kotlin 输出为 package-first layout，route 目录完整镜像真实 route path：
 
-Kotlin 目标不生成 `STREAM` / `CHANNEL` / legacy `WS` 长连接客户端；这类 route 应通过 `include` / `exclude` 排除，或使用 Go / TypeScript / Wails 目标生成。
+- `<package>/<root>/runtime/*`
+- `<package>/<root>/routes/<root>/<group...>/*`
+- `<package>/<root>/transports/http/*`
+
+这是相对旧 `<package>/ApiClient.kt`、`endpoints/`、`models/`、`internal/` 的破坏性布局变更。重生成时旧布局会被清理，业务代码应改为导入 `<package>.<root>.runtime`、`<package>.<root>.routes...` 与 `<package>.<root>.transports.http` 下的类型。
+
+Kotlin 生成器拥有文件统一命名为 `Gen*.kt`，例如 `routes/api/demo/GenDemoApi.kt` 和 `runtime/GenApiClient.kt`，并带 generated header。非 `Gen*` façade 文件，例如 `DemoApi.kt`、`runtime/ApiClient.kt`、`transports/http/HttpApiClient.kt`，是保留的用户扩展点。
+
+Kotlin 通过 transport abstraction 生成 `rpc`、`legacy_ws`、`stream`、`channel` route surface，支持 query/json/form/binary/open request kind，并支持 none/general/custom response wrapper。内置 OkHttp adapter 以 RPC 为主；长连接 bridge 属于 preview/custom transport surface，建议先用 `api-gen check` 和目标平台 smoke 验证后再接入生产调用路径。
+
+`base_url` / `base_url_expr` 会写入生成的 `transports/http/HttpApiConfig.kt` 默认值，不进入 transport-neutral runtime client。
+
+## Python Client
+
+```sh
+api-gen generate -c api-blueprint.toml --target python.client
+```
+
+Python client 使用 `python_package_root` 作为包根，输出 async-first HTTP client：
+
+- `<python_package_root>/<root>/runtime/*`
+- `<python_package_root>/<root>/routes/<root>/<group...>/*`
+- `<python_package_root>/<root>/transports/http/*`
+
+`routes/<root>/<group...>/gen_client.py` 是生成 route client，`routes/<root>/<group...>/client.py` 是保留的 passthrough 入口，`transports/http/gen_client.py` 提供默认 httpx adapter。root-level route 直接生成在 `routes/<root>`，不生成 `routes/root`。该 adapter 实现 RPC 请求；WS/STREAM/CHANNEL bridge interface 会生成，但连接 transport 需要项目自定义或后续扩展。`base_url` / `base_url_expr` 由 HTTP transport adapter 使用。
+
+## Python Server
+
+```sh
+api-gen generate -c api-blueprint.toml --target python.server
+```
+
+Python server 同样使用 `python_package_root` 作为包根，输出 route service contracts/stubs 与 FastAPI HTTP adapter scaffold：
+
+- `<python_package_root>/<root>/runtime/*`
+- `<python_package_root>/<root>/routes/<root>/<group...>/*`
+- `<python_package_root>/<root>/transports/http/*`
+
+`routes/<root>/<group...>/gen_service.py` 是生成的 service contract，`routes/<root>/<group...>/service.py` 是用户可维护 stub 入口，`transports/http/gen_server.py` 与 `server.py` 提供 FastAPI HTTP adapter scaffold。root-level route 直接生成在 `routes/<root>`，不生成 `routes/root`。该目标是新实现 surface，建议把生成结果纳入项目自己的类型检查、lint 和安装 smoke。
 
 ## 预留 targets
 
-Python server/client 与 Go client 目前只作为 target schema 预留，不生成业务代码。
+Go client 目前只作为 target schema 预留，不生成业务代码。
 
 ## examples 快照
 
-`examples/golang/`、`examples/typescript/` 与 `examples/kotlin/` 是生成快照，不是业务真源。需要接受预期生成变化时，使用：
+`examples/golang/`、`examples/typescript/` 与 `examples/kotlin/` 是生成快照，不是业务真源。Kotlin/Python contract / agent artifact 索引会使用新的 route 输出路径。需要接受预期生成变化时，使用：
 
 ```sh
 make example-refresh

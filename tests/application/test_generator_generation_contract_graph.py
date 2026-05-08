@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import py_compile
 from pathlib import Path
 
 import pytest
@@ -121,7 +122,63 @@ base_url = "http://localhost:2333"
 
     generator.generate(config_path, target_ids=("kotlin.client",))
 
-    assert (tmp_path / "kotlin" / "com" / "example" / "generated" / "endpoints" / "DemoApi.kt").is_file()
+    assert (
+        tmp_path / "kotlin" / "com" / "example" / "generated" / "api" / "routes" / "api" / "demo" / "GenDemoApi.kt"
+    ).is_file()
+
+
+def test_vnext_generate_python_client_target(tmp_path: Path) -> None:
+    _write_package(tmp_path)
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[blueprint]
+entrypoints = ["blueprints.app:bp"]
+
+[[targets]]
+id = "python.client"
+kind = "python-client"
+out_dir = "python"
+python_package_root = "example.generated"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    generator.generate(config_path, target_ids=("python.client",))
+
+    generated = tmp_path / "python" / "example" / "generated" / "api"
+    assert (generated / "runtime" / "gen_client.py").is_file()
+    assert (generated / "routes" / "api" / "demo" / "gen_client.py").is_file()
+    assert (generated / "transports" / "http" / "gen_client.py").is_file()
+    py_compile.compile(str(generated / "routes" / "api" / "demo" / "gen_client.py"), doraise=True)
+
+
+def test_vnext_generate_python_server_target(tmp_path: Path) -> None:
+    _write_package(tmp_path)
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[blueprint]
+entrypoints = ["blueprints.app:bp"]
+
+[[targets]]
+id = "python.server"
+kind = "python-server"
+out_dir = "python"
+python_package_root = "example.generated"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    generator.generate(config_path, target_ids=("python.server",))
+
+    generated = tmp_path / "python" / "example" / "generated" / "api"
+    assert (generated / "runtime" / "gen_server.py").is_file()
+    assert (generated / "routes" / "api" / "demo" / "gen_service.py").is_file()
+    assert (generated / "transports" / "http" / "gen_server.py").is_file()
+    py_compile.compile(str(generated / "routes" / "api" / "demo" / "gen_service.py"), doraise=True)
 
 
 def test_vnext_generate_wails_uses_contract_graph_adapter(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

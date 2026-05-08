@@ -1,0 +1,105 @@
+{% autoescape false %}package {{ bp.root_package }}.runtime
+
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.SerializationStrategy
+import kotlinx.serialization.json.Json
+
+public data class ApiRequest<T>(
+    public val method: String,
+    public val path: String,
+    public val query: Map<String, String?> = emptyMap(),
+    public val headers: Map<String, String> = emptyMap(),
+    public val json: Any? = null,
+    public val jsonSerializer: SerializationStrategy<*>? = null,
+    public val form: Any? = null,
+    public val formSerializer: SerializationStrategy<*>? = null,
+    public val binary: Any? = null,
+    public val binarySerializer: SerializationStrategy<*>? = null,
+    public val responseSerializer: KSerializer<T>,
+    public val responseMediaType: String = "application/json",
+)
+
+public data class ApiResponse(
+    public val statusCode: Int,
+    public val body: String,
+    public val headers: Map<String, String> = emptyMap(),
+)
+
+public data class SocketCloseInfo(
+    public val code: Int? = null,
+    public val reason: String? = null,
+    public val error: String? = null,
+)
+
+public data class SocketConnectOptions(
+    public val routeId: String,
+    public val connectionKind: String,
+    public val path: String,
+    public val query: Map<String, String?> = emptyMap(),
+    public val open: Any? = null,
+    public val headers: Map<String, String> = emptyMap(),
+    public val protocols: List<String> = emptyList(),
+)
+
+public data class StreamConnectOptions(
+    public val routeId: String,
+    public val connectionKind: String,
+    public val path: String,
+    public val query: Map<String, String?> = emptyMap(),
+    public val open: Any? = null,
+    public val headers: Map<String, String> = emptyMap(),
+)
+
+public data class ChannelConnectOptions(
+    public val routeId: String,
+    public val connectionKind: String,
+    public val path: String,
+    public val query: Map<String, String?> = emptyMap(),
+    public val open: Any? = null,
+    public val headers: Map<String, String> = emptyMap(),
+    public val protocols: List<String> = emptyList(),
+)
+
+public interface ApiSocketBridge<Send, Recv> {
+    public fun send(message: Send)
+    public fun close(code: Int? = null, reason: String? = null)
+    public fun onMessage(listener: (Recv) -> Unit)
+}
+
+public interface ApiStreamBridge<Recv, Close> {
+    public fun close(code: Int? = null, reason: String? = null)
+    public fun onMessage(listener: (Recv) -> Unit)
+    public fun onClose(listener: (Close) -> Unit)
+}
+
+public interface ApiChannelBridge<Recv, Send, Close> : ApiStreamBridge<Recv, Close> {
+    public fun send(message: Send)
+}
+
+public interface ApiTransport {
+    public suspend fun execute(request: ApiRequest<*>): ApiResponse
+    public fun connectSocket(options: SocketConnectOptions): ApiSocketBridge<*, *>
+    public fun openStream(options: StreamConnectOptions): ApiStreamBridge<*, *>
+    public fun openChannel(options: ChannelConnectOptions): ApiChannelBridge<*, *, *>
+}
+
+private val apiJson = Json {
+    ignoreUnknownKeys = true
+}
+
+public suspend fun <T> ApiTransport.request(request: ApiRequest<T>): T {
+    val response = execute(request)
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw ApiException(response.statusCode, response.body)
+    }
+    if (request.responseSerializer.descriptor.serialName == "kotlin.Unit") {
+        @Suppress("UNCHECKED_CAST")
+        return Unit as T
+    }
+    if (request.responseMediaType != "application/json") {
+        @Suppress("UNCHECKED_CAST")
+        return response.body as T
+    }
+    return apiJson.decodeFromString(request.responseSerializer, response.body)
+}
+{% endautoescape %}

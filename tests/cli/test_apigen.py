@@ -71,8 +71,8 @@ package = "com.example.generated"
         },
     ]
     assert manifest["capabilities"]["kotlin-client"]["implemented"] is True
-    assert manifest["capabilities"]["kotlin-client"]["routes"] == ["rpc"]
-    assert manifest["capabilities"]["python-client"]["implemented"] is False
+    assert manifest["capabilities"]["kotlin-client"]["routes"] == ["rpc", "legacy_ws", "stream", "channel"]
+    assert manifest["capabilities"]["python-client"]["implemented"] is True
 
 
 def test_api_gen_manifest_writes_agent_profile_and_shards(tmp_path):
@@ -142,7 +142,7 @@ def test_api_gen_diff_reports_breaking_changes(tmp_path):
     assert "route removed: api.demo.get.ping" in result.output
 
 
-def test_api_gen_check_fails_when_kotlin_target_selects_connection_route(tmp_path):
+def test_api_gen_check_allows_kotlin_target_to_select_connection_route(tmp_path):
     _write_blueprint(tmp_path)
     (tmp_path / "blueprints" / "app.py").write_text(
         """
@@ -177,11 +177,10 @@ package = "com.example.generated"
 
     result = CliRunner().invoke(api_gen, ["check", "-c", str(config_path)])
 
-    assert result.exit_code != 0
-    assert "kotlin-client does not support stream route" in str(result.exception)
+    assert result.exit_code == 0, result.output
 
 
-def test_api_gen_check_fails_for_reserved_target(tmp_path):
+def test_api_gen_check_accepts_python_client_target(tmp_path):
     _write_blueprint(tmp_path)
     config_path = tmp_path / "api-blueprint.toml"
     config_path.write_text(
@@ -189,10 +188,11 @@ def test_api_gen_check_fails_for_reserved_target(tmp_path):
 [blueprint]
 entrypoints = ["blueprints.app:bp"]
 
-[[targets]]
-id = "python.client"
-kind = "python-client"
-out_dir = "python"
+    [[targets]]
+    id = "python.client"
+    kind = "python-client"
+    out_dir = "python"
+    python_package_root = "generated"
 """.strip()
         + "\n",
         encoding="utf-8",
@@ -200,8 +200,7 @@ out_dir = "python"
 
     result = CliRunner().invoke(api_gen, ["check", "-c", str(config_path)])
 
-    assert result.exit_code != 0
-    assert "python-client is reserved but not implemented" in str(result.exception)
+    assert result.exit_code == 0, result.output
 
 
 def test_api_gen_module_does_not_expose_legacy_split_commands() -> None:

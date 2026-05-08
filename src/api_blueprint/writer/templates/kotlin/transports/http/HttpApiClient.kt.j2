@@ -1,0 +1,12 @@
+{% autoescape false %}package {{ bp.root_package }}.transports.http
+
+import {{ bp.root_package }}.runtime.ApiClient
+import okhttp3.OkHttpClient
+
+public fun createHttpApiClient(
+    config: HttpApiConfig = HttpApiConfig(),
+    httpClient: OkHttpClient = OkHttpClient(),
+): ApiClient {
+    return ApiClient(OkHttpApiTransport(config, httpClient))
+}
+{% endautoescape %}

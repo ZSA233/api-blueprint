@@ -2,6 +2,12 @@
 
 This page covers the main non-Wails, non-gRPC generators. See [Wails](wails.md) for Wails and [gRPC](grpc.md) for gRPC.
 
+## Shared Planning And Capabilities
+
+`api-gen check`, contract / agent artifact projection, and language writers use the same planner / capability metadata. Before generation, target dependencies, route kinds, request kinds, and response wrappers are validated consistently, avoiding cases where check passes and a writer later discovers unsupported input.
+
+Kotlin / Python are newly implemented generator surfaces and should currently be treated as preview. Their contract / agent artifact paths point to outputs that mirror the full route path, for example `routes/api/demo`; Python no longer uses a `routes/root` sentinel.
+
 ## Go
 
 ```sh
@@ -16,7 +22,7 @@ The Go generator emits:
 - Transport-neutral Go core.
 - Optional HTTP/Gin adapter.
 
-`gen_*` files are generator-owned and overwritten during regeneration. `impl_*` and non-`gen_*` files are user-owned extension points and are preserved.
+`gen_*` files are generator-owned and overwritten during regeneration. `impl_*` and non-`gen_*` files are user-owned extension points and are preserved. Kotlin follows the same ownership model with `Gen*.kt` as generator-owned files and non-`Gen*` façade / extension files as user-owned files.
 
 `go-server` owns only the Go server core. HTTP / Wails output is attached explicitly by `http-transport` / `wails-transport` targets through `server = "go.server"`. The HTTP entrypoint is generated under `views/transports/http/<root>`, for example `views/transports/http/api.NewBlueprint(engine)`.
 
@@ -93,7 +99,7 @@ The TypeScript client target emits:
 - `createClients(config)` facades injected by transport targets.
 - User-owned passthrough files such as `client.ts`, `transport.ts`, and `factory.ts`.
 
-`base_url_expr` is emitted verbatim into generated code, which fits runtime configuration in Vite, Next.js, and similar projects. It is mutually exclusive with `base_url`.
+`base_url` / `base_url_expr` are owned by generated HTTP transport facades, not route/runtime clients. `base_url_expr` is emitted verbatim into generated code, which fits runtime configuration in Vite, Next.js, and similar projects. It is mutually exclusive with `base_url`.
 
 `STREAM` / `CHANNEL` generate `ApiStreamBridge<Recv, Close>` and `ApiChannelBridge<Recv, Send, Close>`. Single-message directions use the model type directly; multi-message directions generate discriminated union types such as `{ type: "progress"; data: TaskProgress }`. The HTTP transport stream bridge uses SSE, the channel bridge uses WebSocket with an internal envelope to distinguish normal messages from close lifecycle payloads, and the Wails transport uses generated runtime events without exposing event names to business clients.
 
@@ -105,17 +111,55 @@ api-gen generate -c api-blueprint.toml --target kotlin.client
 
 The Kotlin target emits an OkHttp + kotlinx.serialization Android client.
 
-The current version covers only HTTP JSON RPC routes. `api-gen check` rejects `STREAM` / `CHANNEL`, form, binary, and custom wrappers before generation.
+Kotlin emits a package-first layout whose route directory mirrors the full route path:
 
-The Kotlin target does not generate `STREAM` / `CHANNEL` / legacy `WS` long-connection clients; exclude those routes with `include` / `exclude`, or generate them through the Go / TypeScript / Wails targets.
+- `<package>/<root>/runtime/*`
+- `<package>/<root>/routes/<root>/<group...>/*`
+- `<package>/<root>/transports/http/*`
+
+This is a breaking layout change from the old `<package>/ApiClient.kt`, `endpoints/`, `models/`, and `internal/` layout. Regeneration cleans up the old layout, so business code should import types from `<package>.<root>.runtime`, `<package>.<root>.routes...`, and `<package>.<root>.transports.http`.
+
+Kotlin generator-owned files are named `Gen*.kt`, for example `routes/api/demo/GenDemoApi.kt` and `runtime/GenApiClient.kt`, and include a generated header. Non-`Gen*` façade files such as `DemoApi.kt`, `runtime/ApiClient.kt`, and `transports/http/HttpApiClient.kt` are preserved user extension points.
+
+Through the transport abstraction, Kotlin generates `rpc`, `legacy_ws`, `stream`, and `channel` route surfaces, and supports query/json/form/binary/open request kinds plus none/general/custom response wrappers. The built-in OkHttp adapter is RPC-first; long-connection bridges are preview/custom transport surfaces, so validate with `api-gen check` and target-platform smoke tests before putting them on a production call path.
+
+`base_url` / `base_url_expr` are written into the generated `transports/http/HttpApiConfig.kt` default, not into the transport-neutral runtime client.
+
+## Python Client
+
+```sh
+api-gen generate -c api-blueprint.toml --target python.client
+```
+
+Python client uses `python_package_root` as its package root and emits an async-first HTTP client:
+
+- `<python_package_root>/<root>/runtime/*`
+- `<python_package_root>/<root>/routes/<root>/<group...>/*`
+- `<python_package_root>/<root>/transports/http/*`
+
+`routes/<root>/<group...>/gen_client.py` is the generated route client, `routes/<root>/<group...>/client.py` is the preserved passthrough entrypoint, and `transports/http/gen_client.py` provides the default httpx adapter. Root-level routes are emitted directly under `routes/<root>`, not `routes/root`. That adapter implements RPC requests; WS/STREAM/CHANNEL bridge interfaces are generated, but connection transports need project-specific customization or later extension. `base_url` / `base_url_expr` are used by the HTTP transport adapter.
+
+## Python Server
+
+```sh
+api-gen generate -c api-blueprint.toml --target python.server
+```
+
+Python server also uses `python_package_root` as its package root and emits route service contracts/stubs plus a FastAPI HTTP adapter scaffold:
+
+- `<python_package_root>/<root>/runtime/*`
+- `<python_package_root>/<root>/routes/<root>/<group...>/*`
+- `<python_package_root>/<root>/transports/http/*`
+
+`routes/<root>/<group...>/gen_service.py` is the generated service contract, `routes/<root>/<group...>/service.py` is the user-maintained stub entrypoint, and `transports/http/gen_server.py` plus `server.py` provide the FastAPI HTTP adapter scaffold. Root-level routes are emitted directly under `routes/<root>`, not `routes/root`. This target is a newly implemented surface, so include generated output in the consuming project's type checks, lint, and install smoke tests.
 
 ## Reserved Targets
 
-Python server/client and Go client currently exist only as reserved target schema entries and do not generate business code.
+Go client currently exists only as a reserved target schema entry and does not generate business code.
 
 ## Example Snapshots
 
-`examples/golang/`, `examples/typescript/`, and `examples/kotlin/` are generated snapshots, not business sources. To accept intentional generation changes, use:
+`examples/golang/`, `examples/typescript/`, and `examples/kotlin/` are generated snapshots, not business sources. Kotlin/Python contract / agent artifact indexes use the new route output paths. To accept intentional generation changes, use:
 
 ```sh
 make example-refresh

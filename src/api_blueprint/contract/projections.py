@@ -4,6 +4,8 @@ import re
 from collections.abc import Mapping
 from typing import Any
 
+from api_blueprint.writer.core.planning import route_matches_rule
+
 
 JsonObject = dict[str, Any]
 
@@ -282,6 +284,9 @@ def _artifact_for_route(target: Mapping[str, Any], route: Mapping[str, Any]) -> 
     out_dir = _string(target.get("out_dir"))
     service_id = _string(route.get("service_id"))
     root, group = _split_service_id(service_id)
+    route_path = _route_path(root, group)
+    python_route_package = route_path.replace("/", ".")
+    kotlin_route_package = route_path.replace("/", ".")
     pascal_group = _pascal(group)
     files: list[str] = []
     imports: list[str] = []
@@ -300,12 +305,40 @@ def _artifact_for_route(target: Mapping[str, Any], route: Mapping[str, Any]) -> 
     elif kind == "kotlin-client":
         package = _string(target.get("package"))
         package_path = package.replace(".", "/")
+        base = _join(out_dir, package_path, root, "routes", route_path)
         files = [
-            _join(out_dir, package_path, "endpoints", f"{pascal_group}Api.kt"),
-            _join(out_dir, package_path, "models", f"{pascal_group}ApiModels.kt"),
+            _join(base, f"Gen{pascal_group}ApiModels.kt"),
+            _join(base, f"Gen{pascal_group}Api.kt"),
+            _join(base, f"{pascal_group}Api.kt"),
         ]
         if package:
-            imports = [f"{package}.endpoints.{pascal_group}Api"]
+            imports = [f"{package}.{root}.routes.{kotlin_route_package}.{pascal_group}Api"]
+    elif kind == "python-client":
+        package_root = _string(target.get("python_package_root")) or "api_blueprint_generated"
+        package_parts = _python_package_parts(package_root)
+        base = _join(out_dir, *package_parts, root, "routes", route_path)
+        transport_base = _join(out_dir, *package_parts, root, "transports", "http")
+        files = [
+            _join(base, "gen_client.py"),
+            _join(base, "client.py"),
+            _join(transport_base, "gen_client.py"),
+        ]
+        imports = [f"{package_root}.{root}.routes.{python_route_package}.client"]
+    elif kind == "python-server":
+        package_root = _string(target.get("python_package_root")) or "api_blueprint_generated"
+        package_parts = _python_package_parts(package_root)
+        route_base = _join(out_dir, *package_parts, root, "routes", route_path)
+        transport_base = _join(out_dir, *package_parts, root, "transports", "http")
+        files = [
+            _join(route_base, "gen_service.py"),
+            _join(route_base, "service.py"),
+            _join(transport_base, "gen_server.py"),
+            _join(transport_base, "server.py"),
+        ]
+        imports = [
+            f"{package_root}.{root}.routes.{python_route_package}.service",
+            f"{package_root}.{root}.transports.http.server",
+        ]
     elif kind == "wails-transport":
         overlay = _string(target.get("overlay_name")) or "wails"
         files = [
@@ -313,8 +346,12 @@ def _artifact_for_route(target: Mapping[str, Any], route: Mapping[str, Any]) -> 
             _join("typescript", root, "transports", overlay, root, "" if root == group else group, "client.ts"),
         ]
     elif kind == "grpc-proto":
+        if _string(route.get("kind")) == "legacy_ws":
+            return {}
         files = [_join(out_dir, root, f"{group}.proto")]
     elif kind == "grpc-go":
+        if _string(route.get("kind")) == "legacy_ws":
+            return {}
         module = _string(target.get("module"))
         package_path = _join(root, group)
         files = [
@@ -324,6 +361,8 @@ def _artifact_for_route(target: Mapping[str, Any], route: Mapping[str, Any]) -> 
         if module:
             imports = [_join(module, package_path)]
     elif kind == "grpc-python":
+        if _string(route.get("kind")) == "legacy_ws":
+            return {}
         package_root = _string(target.get("python_package_root"))
         import_prefix = f"{package_root}." if package_root else ""
         files = [
@@ -342,29 +381,9 @@ def _artifact_for_route(target: Mapping[str, Any], route: Mapping[str, Any]) -> 
 def _target_selects_route(target: Mapping[str, Any], route: Mapping[str, Any]) -> bool:
     include = [str(item) for item in target.get("include", [])] if isinstance(target.get("include"), list) else []
     exclude = [str(item) for item in target.get("exclude", [])] if isinstance(target.get("exclude"), list) else []
-    if include and not any(_route_matches_rule(route, rule) for rule in include):
+    if include and not any(route_matches_rule(route, rule) for rule in include):
         return False
-    return not any(_route_matches_rule(route, rule) for rule in exclude)
-
-
-def _route_matches_rule(route: Mapping[str, Any], rule: str) -> bool:
-    import fnmatch
-
-    if ":" not in rule:
-        return fnmatch.fnmatchcase(_route_id(route), rule)
-    key, pattern = rule.split(":", 1)
-    if key == "path":
-        return fnmatch.fnmatchcase(_string(route.get("url")), pattern)
-    if key == "method":
-        methods = route.get("methods")
-        return isinstance(methods, list) and any(fnmatch.fnmatchcase(str(method), pattern.upper()) for method in methods)
-    if key == "group":
-        return fnmatch.fnmatchcase(_string(route.get("service_id")).rsplit(".", 1)[-1], pattern)
-    if key == "name":
-        return fnmatch.fnmatchcase(_string(route.get("operation")), pattern)
-    if key == "kind":
-        return fnmatch.fnmatchcase(_string(route.get("kind")), pattern)
-    return False
+    return not any(route_matches_rule(route, rule) for rule in exclude)
 
 
 def _route_schema_names(route: Mapping[str, Any], schemas: Mapping[str, JsonObject]) -> list[str]:
@@ -467,6 +486,14 @@ def _split_service_id(service_id: str) -> tuple[str, str]:
         return service_id or "root", service_id or "root"
     root, group = service_id.split(".", 1)
     return root or "root", group or root or "root"
+
+
+def _route_path(root: str, group: str) -> str:
+    return root if root == group else _join(root, group)
+
+
+def _python_package_parts(package_root: str) -> tuple[str, ...]:
+    return tuple(part for part in re.split(r"[./]+", package_root) if part)
 
 
 def _route_id(route: Mapping[str, Any]) -> str:

@@ -1,0 +1,81 @@
+from __future__ import annotations
+
+from typing import Any
+
+from fastapi import APIRouter, WebSocket
+from starlette.responses import StreamingResponse
+
+{% for group in bp.groups.values() -%}
+from ...routes.{{ group.package_path }}.service import {{ group.service_class }}, {{ group.service_class }}Stub
+{% endfor %}
+
+
+def create_router(
+{% for group in bp.groups.values() %}
+    {{ group.alias }}_service: {{ group.service_class }} | None = None,
+{% endfor %}
+) -> APIRouter:
+    router = APIRouter()
+{% for group in bp.groups.values() %}
+    {{ group.alias }}_service_impl = {{ group.alias }}_service or {{ group.service_class }}Stub()
+{% endfor %}
+{% for group in bp.groups.values() %}{% for route in group.routes %}
+{% if route.is_rpc %}
+
+    @router.api_route({{ route.url_literal | safe }}, methods={{ route.method_list_literal | safe }})
+{% if route.params %}
+    async def {{ group.alias }}_{{ route.method_name }}(
+{% for param in route.params %}
+        {{ param.name }}: dict[str, Any] | None = None,
+{% endfor %}
+    ) -> Any:
+{% else %}
+    async def {{ group.alias }}_{{ route.method_name }}() -> Any:
+{% endif %}
+        service = {{ group.alias }}_service_impl
+{% if route.params %}
+        return await service.{{ route.method_name }}(
+{% for param in route.params %}
+            {{ param.name }}={{ param.name }},
+{% endfor %}
+        )
+{% else %}
+        return await service.{{ route.method_name }}()
+{% endif %}
+{% elif route.supports_stream %}
+
+    @router.api_route({{ route.url_literal | safe }}, methods=["GET"])
+{% if route.params %}
+    async def {{ group.alias }}_{{ route.subscribe_method_name }}(
+{% for param in route.params %}
+        {{ param.name }}: dict[str, Any] | None = None,
+{% endfor %}
+    ) -> Any:
+{% else %}
+    async def {{ group.alias }}_{{ route.subscribe_method_name }}() -> Any:
+{% endif %}
+        service = {{ group.alias }}_service_impl
+{% if route.params %}
+        result = await service.{{ route.method_name }}(
+{% for param in route.params %}
+            {{ param.name }}={{ param.name }},
+{% endfor %}
+        )
+{% else %}
+        result = await service.{{ route.method_name }}()
+{% endif %}
+        if hasattr(result, "__aiter__"):
+            return StreamingResponse(result)
+        return result
+{% elif route.supports_ws or route.supports_channel %}
+
+    @router.websocket({{ route.url_literal | safe }})
+    async def {{ group.alias }}_{{ route.websocket_endpoint_name }}(websocket: WebSocket) -> None:
+        await websocket.accept()
+        service = {{ group.alias }}_service_impl
+        await service.{{ route.method_name }}()
+        await websocket.close()
+{% endif %}
+{% endfor %}{% endfor %}
+
+    return router

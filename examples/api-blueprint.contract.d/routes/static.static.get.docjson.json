@@ -36,6 +36,30 @@
       ],
       "kind": "grpc-python"
     },
+    "python.client": {
+      "files": [
+        "python/client/api_blueprint_example_client/static/routes/static/gen_client.py",
+        "python/client/api_blueprint_example_client/static/routes/static/client.py",
+        "python/client/api_blueprint_example_client/static/transports/http/gen_client.py"
+      ],
+      "imports": [
+        "api_blueprint_example_client.static.routes.static.client"
+      ],
+      "kind": "python-client"
+    },
+    "python.server": {
+      "files": [
+        "python/server/api_blueprint_example_server/static/routes/static/gen_service.py",
+        "python/server/api_blueprint_example_server/static/routes/static/service.py",
+        "python/server/api_blueprint_example_server/static/transports/http/gen_server.py",
+        "python/server/api_blueprint_example_server/static/transports/http/server.py"
+      ],
+      "imports": [
+        "api_blueprint_example_server.static.routes.static.service",
+        "api_blueprint_example_server.static.transports.http.server"
+      ],
+      "kind": "python-server"
+    },
     "typescript.client": {
       "files": [
         "typescript/static/routes/static/client.ts",
@@ -67,7 +91,7 @@
   "route": {
     "connection": null,
     "deprecated": false,
-    "hash": "cd96ad6332050b940a9b924c881950d74d137fb62dcb90f1080e5121e656cffb",
+    "hash": "007f8815f879ec5ad87eb170fb6504fc801d7bc0b5aee4714bcb1431d36ff074",
     "id": "static.static.get.docjson",
     "kind": "rpc",
     "method_name": "docJson",
@@ -89,6 +113,9 @@
       "wrapper": "NoneWrapper"
     },
     "service_id": "static.static",
+    "tags": [
+      "static"
+    ],
     "url": "/static/doc.json"
   },
   "schemas": {

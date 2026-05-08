@@ -8,33 +8,29 @@
       "imports": [],
       "kind": "go-server"
     },
-    "grpc.go": {
+    "python.client": {
       "files": [
-        "grpc/go/api/demo/demo.pb.go",
-        "grpc/go/api/demo/demo_grpc.pb.go"
+        "python/client/api_blueprint_example_client/api/routes/api/demo/gen_client.py",
+        "python/client/api_blueprint_example_client/api/routes/api/demo/client.py",
+        "python/client/api_blueprint_example_client/api/transports/http/gen_client.py"
       ],
       "imports": [
-        "example.com/project/grpc/go/api/demo"
+        "api_blueprint_example_client.api.routes.api.demo.client"
       ],
-      "kind": "grpc-go"
+      "kind": "python-client"
     },
-    "grpc.proto": {
+    "python.server": {
       "files": [
-        "grpc/protos/api/demo.proto"
-      ],
-      "imports": [],
-      "kind": "grpc-proto"
-    },
-    "grpc.python": {
-      "files": [
-        "grpc/python/pb/api/demo_pb2.py",
-        "grpc/python/pb/api/demo_pb2_grpc.py"
+        "python/server/api_blueprint_example_server/api/routes/api/demo/gen_service.py",
+        "python/server/api_blueprint_example_server/api/routes/api/demo/service.py",
+        "python/server/api_blueprint_example_server/api/transports/http/gen_server.py",
+        "python/server/api_blueprint_example_server/api/transports/http/server.py"
       ],
       "imports": [
-        "pb.api.demo_pb2",
-        "pb.api.demo_pb2_grpc"
+        "api_blueprint_example_server.api.routes.api.demo.service",
+        "api_blueprint_example_server.api.transports.http.server"
       ],
-      "kind": "grpc-python"
+      "kind": "python-server"
     },
     "typescript.client": {
       "files": [
@@ -67,7 +63,7 @@
   "route": {
     "connection": null,
     "deprecated": false,
-    "hash": "8fc76e77569bd15c697f6f54c2bca8398f3ca71304b7a01a0440ee04cf938f3c",
+    "hash": "4f1e1879a5861aa0a5e42eb47ce2481174f90ad49e4b8c6a02ecd7a51a14928e",
     "id": "api.demo.ws.ws",
     "kind": "legacy_ws",
     "method_name": "ws",
@@ -83,6 +79,9 @@
     },
     "response": null,
     "service_id": "api.demo",
+    "tags": [
+      "api"
+    ],
     "url": "/api/demo/ws"
   },
   "schemas": {

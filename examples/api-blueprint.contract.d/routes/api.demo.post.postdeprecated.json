@@ -36,6 +36,41 @@
       ],
       "kind": "grpc-python"
     },
+    "kotlin.client": {
+      "files": [
+        "kotlin/com/example/apiblueprint/api/routes/api/demo/GenDemoApiModels.kt",
+        "kotlin/com/example/apiblueprint/api/routes/api/demo/GenDemoApi.kt",
+        "kotlin/com/example/apiblueprint/api/routes/api/demo/DemoApi.kt"
+      ],
+      "imports": [
+        "com.example.apiblueprint.api.routes.api.demo.DemoApi"
+      ],
+      "kind": "kotlin-client"
+    },
+    "python.client": {
+      "files": [
+        "python/client/api_blueprint_example_client/api/routes/api/demo/gen_client.py",
+        "python/client/api_blueprint_example_client/api/routes/api/demo/client.py",
+        "python/client/api_blueprint_example_client/api/transports/http/gen_client.py"
+      ],
+      "imports": [
+        "api_blueprint_example_client.api.routes.api.demo.client"
+      ],
+      "kind": "python-client"
+    },
+    "python.server": {
+      "files": [
+        "python/server/api_blueprint_example_server/api/routes/api/demo/gen_service.py",
+        "python/server/api_blueprint_example_server/api/routes/api/demo/service.py",
+        "python/server/api_blueprint_example_server/api/transports/http/gen_server.py",
+        "python/server/api_blueprint_example_server/api/transports/http/server.py"
+      ],
+      "imports": [
+        "api_blueprint_example_server.api.routes.api.demo.service",
+        "api_blueprint_example_server.api.transports.http.server"
+      ],
+      "kind": "python-server"
+    },
     "typescript.client": {
       "files": [
         "typescript/api/routes/api/demo/client.ts",
@@ -67,7 +102,7 @@
   "route": {
     "connection": null,
     "deprecated": true,
-    "hash": "9090784f87d1af0cb9ca55b70e53528ddf4f37030c00501af126d9cbb40bd413",
+    "hash": "ab4bf0b9dba1ce7b3daeb4a0c79fe5937c35049efab97de6238c14c7d47bf3d0",
     "id": "api.demo.post.postdeprecated",
     "kind": "rpc",
     "method_name": "postDeprecated",
@@ -89,6 +124,9 @@
       "wrapper": "GeneralWrapper"
     },
     "service_id": "api.demo",
+    "tags": [
+      "api"
+    ],
     "url": "/api/demo/post_deprecated"
   },
   "schemas": {

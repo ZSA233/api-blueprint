@@ -9,9 +9,10 @@ from api_blueprint.engine.router import Router
 from api_blueprint.engine.utils import snake_to_pascal_case
 from api_blueprint.engine.wrapper import NoneWrapper, ResponseWrapper
 from api_blueprint.writer.core.base import BaseBlueprint
+from api_blueprint.engine.connection import MessageContract
 from api_blueprint.writer.core.contract_adapters import RouteProtocolContract, route_protocol_from_router
 
-from .naming import to_kotlin_property_name, to_kotlin_type_name
+from .naming import to_kotlin_package_path, to_kotlin_package_suffix, to_kotlin_property_name, to_kotlin_type_name
 from .protos import KotlinProto, KotlinProtoRegistry, KotlinResolvedType
 from .selection import KotlinRouteSelection
 
@@ -32,42 +33,99 @@ class KotlinRoute:
         self.group_slug = self.protocol.route.group_slug
         self.group_class = to_kotlin_type_name(self.group_slug, fallback="Root") + "Api"
         self.url = self.protocol.route.url
-        if self.protocol.route.supports_stream or self.protocol.route.supports_channel:
-            raise ValueError(f"[kotlin-client] 暂不支持长连接 route: {self.url}")
         self.http_methods = list(self.protocol.route.http_methods)
         self.supports_ws = self.protocol.route.supports_ws
-        if self.supports_ws:
-            raise ValueError(f"[kotlin-client] 暂不支持 WebSocket route: {self.url}")
-        if len(self.http_methods) != 1:
+        self.supports_stream = self.protocol.route.supports_stream
+        self.supports_channel = self.protocol.route.supports_channel
+        if self.is_rpc and len(self.http_methods) != 1:
             raise ValueError(f"[kotlin-client] Kotlin 客户端要求每个 route 只有一个 HTTP method: {self.url}")
 
         self.query_proto = self._ensure_model(self.protocol.request.query.model, "Query")
+        self.open_proto = self._ensure_model(self.protocol.request.open.model, "Open")
         self.form_proto = self._ensure_model(self.protocol.request.form.model, "Form")
         self.json_proto = self._ensure_model(self.protocol.request.json.model, "Json")
-        self.bin_proto = self.protocol.request.binary.model is not None
-        if self.form_proto is not None or self.bin_proto:
-            raise ValueError(f"[kotlin-client] 暂不支持 form/binary body route: {self.url}")
+        self.binary_proto = self._ensure_model(self.protocol.request.binary.model, "Binary")
 
         self.response_media_type = self.protocol.response.media_type
         self.response_payload_proto = self._ensure_model(self.protocol.response.model.model, "Response")
         self.wrapper_proto = self._register_wrapper(self.protocol.response.wrapper)
         self.response_type = self._response_type()
+        self.ws_recv_proto = self._ensure_message_contract(self.protocol.server_message, "WsRecv")
+        self.ws_send_proto = self._ensure_message_contract(self.protocol.client_message, "WsSend")
+        if self.supports_ws:
+            self.ws_recv_proto = self._ensure_ws_models(self.protocol.recvs, "WsRecv") or self.ws_recv_proto
+            self.ws_send_proto = self._ensure_ws_models(self.protocol.sends, "WsSend") or self.ws_send_proto
+        self.server_message_proto = self._ensure_message_contract(self.protocol.server_message, "ServerMessage")
+        self.client_message_proto = self._ensure_message_contract(self.protocol.client_message, "ClientMessage")
+        self.close_proto = self._ensure_model(self.protocol.close_model, "Close")
+
+    @property
+    def is_rpc(self) -> bool:
+        return not (self.supports_ws or self.supports_stream or self.supports_channel)
 
     @property
     def http_method(self) -> str:
-        return self.http_methods[0]
+        return self.http_methods[0] if self.http_methods else "GET"
 
     @property
     def query_type(self) -> str | None:
         return self.query_proto.name if self.query_proto else None
 
     @property
+    def open_type(self) -> str | None:
+        return self.open_proto.name if self.open_proto else None
+
+    @property
     def json_type(self) -> str | None:
         return self.json_proto.name if self.json_proto else None
 
     @property
+    def form_type(self) -> str | None:
+        return self.form_proto.name if self.form_proto else None
+
+    @property
+    def binary_type(self) -> str | None:
+        return self.binary_proto.name if self.binary_proto else None
+
+    @property
     def response_serializer_expr(self) -> str:
         return self.response_type.serializer_expr()
+
+    @property
+    def ws_recv_type(self) -> str:
+        return self.ws_recv_proto.name if self.ws_recv_proto else "kotlinx.serialization.json.JsonElement"
+
+    @property
+    def ws_send_type(self) -> str:
+        return self.ws_send_proto.name if self.ws_send_proto else "kotlinx.serialization.json.JsonElement"
+
+    @property
+    def server_message_type(self) -> str:
+        return self.server_message_proto.name if self.server_message_proto else "kotlinx.serialization.json.JsonElement"
+
+    @property
+    def client_message_type(self) -> str:
+        return self.client_message_proto.name if self.client_message_proto else "kotlinx.serialization.json.JsonElement"
+
+    @property
+    def close_type(self) -> str:
+        return self.close_proto.name if self.close_proto else "SocketCloseInfo"
+
+    @property
+    def connect_method_name(self) -> str:
+        return to_kotlin_property_name(self.protocol.route.ws.connect_method if self.protocol.route.ws else f"connect{self.func_name}")
+
+    @property
+    def subscribe_method_name(self) -> str:
+        return to_kotlin_property_name(
+            self.protocol.route.stream.connect_method if self.protocol.route.stream else f"subscribe{self.func_name}"
+        )
+
+    @property
+    def open_channel_method_name(self) -> str:
+        return to_kotlin_property_name(
+            self.protocol.route.channel.connect_method if self.protocol.route.channel else f"open{self.func_name}"
+        )
 
     def _func_name(self) -> str:
         if not self.router.leaf.strip("/"):
@@ -93,6 +151,36 @@ class KotlinRoute:
         tag = "route" if is_route_model else "shared"
         module = self.group_slug if is_route_model else "shared"
         return self.registry.ensure(model, name=name, tag=tag, module=module)
+
+    def _ensure_ws_models(
+        self,
+        models: tuple[Union[Type[Model], Model], ...],
+        suffix: str,
+    ) -> Optional[KotlinProto]:
+        if not models:
+            return None
+        if len(models) == 1:
+            return self._ensure_model(models[0], suffix)
+        return self.registry.register_alias(
+            f"{self.group_class.removesuffix('Api')}{self.func_name}{suffix}",
+            KotlinResolvedType("kotlinx.serialization.json.JsonElement"),
+            tag="route",
+            module=self.group_slug,
+        )
+
+    def _ensure_message_contract(self, contract: MessageContract | None, suffix: str) -> Optional[KotlinProto]:
+        if contract is None:
+            return None
+        if contract.single_model is not None:
+            return self._ensure_model(contract.single_model, suffix)
+        for variant in contract.variants:
+            self._ensure_model(variant.model, f"{suffix}{variant.key.capitalize()}")
+        return self.registry.register_alias(
+            contract.name or f"{self.group_class.removesuffix('Api')}{self.func_name}{suffix}",
+            KotlinResolvedType("kotlinx.serialization.json.JsonElement"),
+            tag="route",
+            module=self.group_slug,
+        )
 
     def _register_wrapper(self, wrapper_cls: type[ResponseWrapper]) -> Optional[KotlinProto]:
         wrapper_cls = wrapper_cls or NoneWrapper
@@ -126,6 +214,8 @@ class KotlinApiGroup:
     slug: str
     class_name: str
     property_name: str
+    package_path: str
+    package_suffix: str
     routes: list[KotlinRoute] = field(default_factory=list)
 
 
@@ -135,6 +225,18 @@ class KotlinBlueprint(BaseBlueprint["KotlinWriter"]):
         self.registry = KotlinProtoRegistry()
         self.routes: list[KotlinRoute] = []
         self.groups: "OrderedDict[str, KotlinApiGroup]" = OrderedDict()
+
+    @property
+    def root_package_path(self) -> str:
+        return to_kotlin_package_path(self.bp.root, fallback="api")
+
+    @property
+    def root_package_suffix(self) -> str:
+        return to_kotlin_package_suffix(self.bp.root, fallback="api")
+
+    @property
+    def root_package(self) -> str:
+        return f"{self.writer.package}.{self.root_package_suffix}"
 
     def collect(self) -> None:
         self.routes = []
@@ -150,28 +252,25 @@ class KotlinBlueprint(BaseBlueprint["KotlinWriter"]):
             self.routes.append(route)
             group = self.groups.get(route.group_slug)
             if group is None:
+                group_path = self._route_group_package_path(route.group_slug)
                 group = KotlinApiGroup(
                     slug=route.group_slug,
                     class_name=route.group_class,
                     property_name=to_kotlin_property_name(route.group_slug),
+                    package_path=to_kotlin_package_path(group_path),
+                    package_suffix=to_kotlin_package_suffix(group_path),
                 )
                 self.groups[route.group_slug] = group
             group.routes.append(route)
-        self._propagate_route_modules()
 
-    def _propagate_route_modules(self) -> None:
-        """Move auto-generated field-type models to the same module as their route parent."""
-        for proto in self.registry.filter(module="shared"):
-            if getattr(proto.model, "__auto__", False) and proto.tags <= {"shared"}:
-                if not proto.fields and proto.kind != "data":
-                    continue
-                for route_group in self.groups:
-                    route_protos = self.registry.filter(module=route_group)
-                    for route_proto in route_protos:
-                        if proto in route_proto.dependencies():
-                            proto.module = route_group
-                            proto.add_tag("route")
-                            break
+    def _route_group_package_path(self, group_slug: str) -> str:
+        root = self.bp.root.strip("/")
+        group_path = group_slug.strip("/")
+        if not root:
+            return group_path
+        if group_path == root or group_path.startswith(f"{root}/"):
+            return group_path
+        return f"{root}/{group_path}"
 
     def protocol_for_router(self, router: Router) -> RouteProtocolContract:
         return self.writer.route_protocol_for(router)
@@ -195,9 +294,18 @@ class KotlinBlueprint(BaseBlueprint["KotlinWriter"]):
                 self.registry.ensure(model_cls, tag="shared")
 
         collect(protocol.request.query.model)
+        collect(protocol.request.open.model)
         collect(protocol.request.form.model)
         collect(protocol.request.json.model)
+        collect(protocol.request.binary.model)
         collect(protocol.response.model.model)
+        collect(protocol.close_model)
+        if protocol.server_message is not None:
+            for variant in protocol.server_message.variants:
+                collect(variant.model)
+        if protocol.client_message is not None:
+            for variant in protocol.client_message.variants:
+                collect(variant.model)
         for recv in protocol.recvs:
             collect(recv)
         for send in protocol.sends:

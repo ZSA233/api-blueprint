@@ -22,6 +22,14 @@ import type {
 type RequestBody = RequestInit["body"];
 
 
+export interface ApiHttpTransportConfig extends ApiClientConfig {
+  baseUrl?: string;
+  fetcher?: typeof fetch;
+  defaultHeaders?: Record<string, string>;
+  timeoutMs?: number;
+  init?: RequestInit;
+}
+
 function serializeQuery(params?: Record<string, unknown>): string {
   if (!params) {
     return "";
@@ -267,7 +275,7 @@ export class DefaultTransport implements ApiTransport {
   protected readonly fetcher: typeof fetch;
   protected readonly timeoutMs?: number;
 
-  constructor(protected readonly config: ApiClientConfig = {}, defaultBaseUrl: string = "") {
+  constructor(protected readonly config: ApiHttpTransportConfig = {}, defaultBaseUrl: string = "") {
     this.baseUrl = config.baseUrl ?? defaultBaseUrl;
     this.fetcher = config.fetcher ?? defaultFetch;
     this.timeoutMs = config.timeoutMs;

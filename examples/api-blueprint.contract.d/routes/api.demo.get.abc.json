@@ -36,6 +36,41 @@
       ],
       "kind": "grpc-python"
     },
+    "kotlin.client": {
+      "files": [
+        "kotlin/com/example/apiblueprint/api/routes/api/demo/GenDemoApiModels.kt",
+        "kotlin/com/example/apiblueprint/api/routes/api/demo/GenDemoApi.kt",
+        "kotlin/com/example/apiblueprint/api/routes/api/demo/DemoApi.kt"
+      ],
+      "imports": [
+        "com.example.apiblueprint.api.routes.api.demo.DemoApi"
+      ],
+      "kind": "kotlin-client"
+    },
+    "python.client": {
+      "files": [
+        "python/client/api_blueprint_example_client/api/routes/api/demo/gen_client.py",
+        "python/client/api_blueprint_example_client/api/routes/api/demo/client.py",
+        "python/client/api_blueprint_example_client/api/transports/http/gen_client.py"
+      ],
+      "imports": [
+        "api_blueprint_example_client.api.routes.api.demo.client"
+      ],
+      "kind": "python-client"
+    },
+    "python.server": {
+      "files": [
+        "python/server/api_blueprint_example_server/api/routes/api/demo/gen_service.py",
+        "python/server/api_blueprint_example_server/api/routes/api/demo/service.py",
+        "python/server/api_blueprint_example_server/api/transports/http/gen_server.py",
+        "python/server/api_blueprint_example_server/api/transports/http/server.py"
+      ],
+      "imports": [
+        "api_blueprint_example_server.api.routes.api.demo.service",
+        "api_blueprint_example_server.api.transports.http.server"
+      ],
+      "kind": "python-server"
+    },
     "typescript.client": {
       "files": [
         "typescript/api/routes/api/demo/client.ts",
@@ -67,7 +102,7 @@
   "route": {
     "connection": null,
     "deprecated": false,
-    "hash": "8dcbefbf73d53a05ea31593b125172d01ce14336c75eb99717d7f6704a8bd150",
+    "hash": "13b90b08d2ad7eb4836b6cbd893c2dd79f40838150dc726f6bdab9f125180264",
     "id": "api.demo.get.abc",
     "kind": "rpc",
     "method_name": "abc",
@@ -89,6 +124,9 @@
       "wrapper": "GeneralWrapper"
     },
     "service_id": "api.demo",
+    "tags": [
+      "api"
+    ],
     "url": "/api/demo/abc"
   },
   "schemas": {

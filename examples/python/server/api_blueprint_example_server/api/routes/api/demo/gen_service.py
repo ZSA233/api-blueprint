@@ -1,0 +1,117 @@
+from __future__ import annotations
+
+from typing import Any, Protocol
+
+
+class DemoService(Protocol):
+    async def abc(
+        self,
+        query: dict[str, Any] | None = None,
+    ) -> Any:
+        ...
+
+    async def test_post(
+        self,
+        json: dict[str, Any] | None = None,
+    ) -> Any:
+        ...
+
+    async def z1put(
+        self,
+        query: dict[str, Any] | None = None,
+        json: dict[str, Any] | None = None,
+    ) -> Any:
+        ...
+
+    async def delete(
+        self,
+        query: dict[str, Any] | None = None,
+    ) -> Any:
+        ...
+
+    async def ws(
+        self,
+        query: dict[str, Any] | None = None,
+    ) -> Any:
+        ...
+
+    async def sweep_events(
+        self,
+        open_data: dict[str, Any] | None = None,
+    ) -> Any:
+        ...
+
+    async def assistant_session(
+        self,
+        open_data: dict[str, Any] | None = None,
+    ) -> Any:
+        ...
+
+    async def post_deprecated(
+        self,
+        json: dict[str, Any] | None = None,
+    ) -> Any:
+        ...
+
+    async def raw(self) -> Any:
+        ...
+
+    async def map_model(self) -> Any:
+        ...
+
+
+class DemoServiceStub:
+    async def abc(
+        self,
+        query: dict[str, Any] | None = None,
+    ) -> Any:
+        raise NotImplementedError("abc")
+
+    async def test_post(
+        self,
+        json: dict[str, Any] | None = None,
+    ) -> Any:
+        raise NotImplementedError("test_post")
+
+    async def z1put(
+        self,
+        query: dict[str, Any] | None = None,
+        json: dict[str, Any] | None = None,
+    ) -> Any:
+        raise NotImplementedError("z1put")
+
+    async def delete(
+        self,
+        query: dict[str, Any] | None = None,
+    ) -> Any:
+        raise NotImplementedError("delete")
+
+    async def ws(
+        self,
+        query: dict[str, Any] | None = None,
+    ) -> Any:
+        raise NotImplementedError("ws")
+
+    async def sweep_events(
+        self,
+        open_data: dict[str, Any] | None = None,
+    ) -> Any:
+        raise NotImplementedError("sweep_events")
+
+    async def assistant_session(
+        self,
+        open_data: dict[str, Any] | None = None,
+    ) -> Any:
+        raise NotImplementedError("assistant_session")
+
+    async def post_deprecated(
+        self,
+        json: dict[str, Any] | None = None,
+    ) -> Any:
+        raise NotImplementedError("post_deprecated")
+
+    async def raw(self) -> Any:
+        raise NotImplementedError("raw")
+
+    async def map_model(self) -> Any:
+        raise NotImplementedError("map_model")

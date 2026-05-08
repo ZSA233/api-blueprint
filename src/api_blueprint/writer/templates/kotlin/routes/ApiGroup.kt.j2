@@ -1,0 +1,142 @@
+{% autoescape false %}package {{ bp.root_package }}.routes.{{ group.package_suffix }}
+
+import {{ bp.root_package }}.runtime.*
+import kotlinx.serialization.builtins.*
+
+public open class Gen{{ group.class_name }} internal constructor(
+    private val transport: ApiTransport,
+) {
+{%- for route in group.routes %}
+{%- if route.is_rpc %}
+
+    public open suspend fun {{ route.method_name }}(
+{%- if route.query_type %}
+        query: {{ route.query_type }},
+{%- endif %}
+{%- if route.json_type %}
+        json: {{ route.json_type }},
+{%- endif %}
+{%- if route.form_type %}
+        form: {{ route.form_type }},
+{%- endif %}
+{%- if route.binary_type %}
+        binary: {{ route.binary_type }},
+{%- endif %}
+        headers: Map<String, String> = emptyMap(),
+    ): {{ route.response_type.text }} {
+        return transport.request(
+            ApiRequest(
+                method = "{{ route.http_method }}",
+                path = "{{ route.url }}",
+{%- if route.query_type %}
+                query = query.toQueryMap(),
+{%- endif %}
+                headers = headers,
+{%- if route.json_type %}
+                json = json,
+                jsonSerializer = {{ route.json_type }}.serializer(),
+{%- endif %}
+{%- if route.form_type %}
+                form = form,
+                formSerializer = {{ route.form_type }}.serializer(),
+{%- endif %}
+{%- if route.binary_type %}
+                binary = binary,
+                binarySerializer = {{ route.binary_type }}.serializer(),
+{%- endif %}
+                responseSerializer = {{ route.response_serializer_expr }},
+                responseMediaType = "{{ route.response_media_type }}",
+            )
+        )
+    }
+{%- elif route.supports_ws %}
+
+    @Suppress("UNCHECKED_CAST")
+    public open fun {{ route.connect_method_name }}(
+{%- if route.query_type %}
+        query: {{ route.query_type }},
+{%- endif %}
+        headers: Map<String, String> = emptyMap(),
+        protocols: List<String> = emptyList(),
+    ): ApiSocketBridge<{{ route.ws_send_type }}, {{ route.ws_recv_type }}> {
+        return transport.connectSocket(
+            SocketConnectOptions(
+                routeId = "{{ route.protocol.route.route_id }}",
+                connectionKind = "legacy_ws",
+                path = "{{ route.url }}",
+{%- if route.query_type %}
+                query = query.toQueryMap(),
+{%- endif %}
+                headers = headers,
+                protocols = protocols,
+            )
+        ) as ApiSocketBridge<{{ route.ws_send_type }}, {{ route.ws_recv_type }}>
+    }
+{%- elif route.supports_stream %}
+
+    @Suppress("UNCHECKED_CAST")
+    public open fun {{ route.subscribe_method_name }}(
+{%- if route.query_type %}
+        query: {{ route.query_type }},
+{%- endif %}
+{%- if route.open_type %}
+        open: {{ route.open_type }},
+{%- endif %}
+        headers: Map<String, String> = emptyMap(),
+    ): ApiStreamBridge<{{ route.server_message_type }}, {{ route.close_type }}> {
+        return transport.openStream(
+            StreamConnectOptions(
+                routeId = "{{ route.protocol.route.route_id }}",
+                connectionKind = "stream",
+                path = "{{ route.url }}",
+{%- if route.query_type %}
+                query = query.toQueryMap(),
+{%- endif %}
+{%- if route.open_type %}
+                open = open,
+{%- endif %}
+                headers = headers,
+            )
+        ) as ApiStreamBridge<{{ route.server_message_type }}, {{ route.close_type }}>
+    }
+{%- elif route.supports_channel %}
+
+    @Suppress("UNCHECKED_CAST")
+    public open fun {{ route.open_channel_method_name }}(
+{%- if route.query_type %}
+        query: {{ route.query_type }},
+{%- endif %}
+{%- if route.open_type %}
+        open: {{ route.open_type }},
+{%- endif %}
+        headers: Map<String, String> = emptyMap(),
+        protocols: List<String> = emptyList(),
+    ): ApiChannelBridge<{{ route.server_message_type }}, {{ route.client_message_type }}, {{ route.close_type }}> {
+        return transport.openChannel(
+            ChannelConnectOptions(
+                routeId = "{{ route.protocol.route.route_id }}",
+                connectionKind = "channel",
+                path = "{{ route.url }}",
+{%- if route.query_type %}
+                query = query.toQueryMap(),
+{%- endif %}
+{%- if route.open_type %}
+                open = open,
+{%- endif %}
+                headers = headers,
+                protocols = protocols,
+            )
+        ) as ApiChannelBridge<{{ route.server_message_type }}, {{ route.client_message_type }}, {{ route.close_type }}>
+    }
+{%- endif %}
+{%- endfor %}
+{%- for route in group.routes if route.query_type %}
+
+    private fun {{ route.query_type }}.toQueryMap(): Map<String, String?> = mapOf(
+{%- for field in route.query_proto.fields %}
+        "{{ field.serial_name }}" to {{ field.type.query_expr(field.name, optional=field.optional) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+    )
+{%- endfor %}
+}
+{% endautoescape %}

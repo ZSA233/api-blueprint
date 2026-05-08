@@ -197,6 +197,24 @@ def test_agent_manifest_and_shards_are_compact_navigation_layers():
             "out_dir": "typescript",
         },
         {
+            "id": "kotlin.client",
+            "kind": "kotlin-client",
+            "out_dir": "kotlin",
+            "package": "com.example.generated",
+        },
+        {
+            "id": "python.client",
+            "kind": "python-client",
+            "out_dir": "python/client",
+            "python_package_root": "client_app",
+        },
+        {
+            "id": "python.server",
+            "kind": "python-server",
+            "out_dir": "python/server",
+            "python_package_root": "server_app",
+        },
+        {
             "id": "grpc.python",
             "kind": "grpc-python",
             "out_dir": "grpc/python",
@@ -216,7 +234,7 @@ def test_agent_manifest_and_shards_are_compact_navigation_layers():
         "routes": 2,
         "schemas": 5,
         "connections": 1,
-        "targets": 3,
+        "targets": 6,
     }
     assert agent["read_order"][0]["path"] == "api-blueprint.agent.json"
     assert agent["shards"]["index"] == "api-blueprint.contract.d/index.json"
@@ -228,12 +246,108 @@ def test_agent_manifest_and_shards_are_compact_navigation_layers():
         "pb.api.runs_pb2",
         "pb.api.runs_pb2_grpc",
     ]
+    assert stream_summary["artifacts"]["kotlin.client"]["files"] == [
+        "kotlin/com/example/generated/api/routes/api/runs/GenRunsApiModels.kt",
+        "kotlin/com/example/generated/api/routes/api/runs/GenRunsApi.kt",
+        "kotlin/com/example/generated/api/routes/api/runs/RunsApi.kt",
+    ]
+    assert stream_summary["artifacts"]["python.client"]["files"] == [
+        "python/client/client_app/api/routes/api/runs/gen_client.py",
+        "python/client/client_app/api/routes/api/runs/client.py",
+        "python/client/client_app/api/transports/http/gen_client.py",
+    ]
+    assert stream_summary["artifacts"]["python.server"]["files"] == [
+        "python/server/server_app/api/routes/api/runs/gen_service.py",
+        "python/server/server_app/api/routes/api/runs/service.py",
+        "python/server/server_app/api/transports/http/gen_server.py",
+        "python/server/server_app/api/transports/http/server.py",
+    ]
     route_shard = shards["routes/api.runs.stream.events.json"]
     assert sorted(route_shard["schemas"]) == ["CloseInfo", "OpenRequest", "StreamDone", "StreamState"]
     assert route_shard["connection"]["kind"] == "stream"
     assert route_shard["artifacts"]["typescript.client"]["files"]
     assert shards["index.json"]["counts"]["routes"] == 2
     assert "先读 `api-blueprint.agent.json`，再读 route shard，最后才看生成物" in markdown
+
+
+def test_contract_artifacts_use_shared_selection_and_python_root_group_paths():
+    bp = Blueprint(root="/api")
+    with bp.group("/") as views:
+        views.GET("/ping").RSP(message=String(description="message"))
+
+    manifest = build_contract_graph([bp]).to_manifest()
+    manifest["routes"][0]["tags"] = ["api"]
+    manifest["targets"] = [
+        {
+            "id": "kotlin.client",
+            "kind": "kotlin-client",
+            "out_dir": "kotlin",
+            "package": "com.example.generated",
+            "include": ["tag:api"],
+        },
+        {
+            "id": "python.client",
+            "kind": "python-client",
+            "out_dir": "python/client",
+            "python_package_root": "client_app",
+        },
+        {
+            "id": "python.server",
+            "kind": "python-server",
+            "out_dir": "python/server",
+            "python_package_root": "server_app",
+        },
+    ]
+
+    agent = build_agent_manifest(manifest)
+    route_summary = agent["routes"][0]
+
+    assert route_summary["artifacts"]["kotlin.client"]["files"] == [
+        "kotlin/com/example/generated/api/routes/api/GenApiApiModels.kt",
+        "kotlin/com/example/generated/api/routes/api/GenApiApi.kt",
+        "kotlin/com/example/generated/api/routes/api/ApiApi.kt",
+    ]
+    assert route_summary["artifacts"]["python.client"]["files"] == [
+        "python/client/client_app/api/routes/api/gen_client.py",
+        "python/client/client_app/api/routes/api/client.py",
+        "python/client/client_app/api/transports/http/gen_client.py",
+    ]
+    assert route_summary["artifacts"]["python.client"]["imports"] == [
+        "client_app.api.routes.api.client",
+    ]
+    assert route_summary["artifacts"]["python.server"]["files"] == [
+        "python/server/server_app/api/routes/api/gen_service.py",
+        "python/server/server_app/api/routes/api/service.py",
+        "python/server/server_app/api/transports/http/gen_server.py",
+        "python/server/server_app/api/transports/http/server.py",
+    ]
+
+
+def test_contract_artifacts_do_not_claim_grpc_outputs_for_legacy_ws_routes():
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.WS("/ws").SEND(StreamState).RECV(StreamDone)
+
+    manifest = build_contract_graph([bp]).to_manifest()
+    manifest["targets"] = [
+        {
+            "id": "grpc.proto",
+            "kind": "grpc-proto",
+            "out_dir": "grpc/protos",
+        },
+        {
+            "id": "grpc.python",
+            "kind": "grpc-python",
+            "out_dir": "grpc/python",
+            "python_package_root": "pb",
+        },
+    ]
+
+    agent = build_agent_manifest(manifest)
+
+    assert agent["routes"][0]["kind"] == "legacy_ws"
+    assert "grpc.proto" not in agent["routes"][0]["artifacts"]
+    assert "grpc.python" not in agent["routes"][0]["artifacts"]
 
 
 def test_contract_route_contract_is_the_writer_core_compat_source():

@@ -4,11 +4,6 @@
 
 export interface ApiClientConfig {
   transport?: ApiTransport;
-  baseUrl?: string;
-  fetcher?: typeof fetch;
-  defaultHeaders?: Record<string, string>;
-  timeoutMs?: number;
-  init?: RequestInit;
 }
 
 type RequestBody = RequestInit["body"];
@@ -91,8 +86,7 @@ export interface ApiTransport {
 export class BaseClient {
   protected readonly transport: ApiTransport;
 
-  constructor(protected readonly config: ApiClientConfig = {}, defaultBaseUrl: string = "") {
-    void defaultBaseUrl;
+  constructor(protected readonly config: ApiClientConfig = {}) {
     if (!config.transport) {
       throw new Error("ApiClientConfig.transport is required. Use a generated transport facade to create clients.");
     }

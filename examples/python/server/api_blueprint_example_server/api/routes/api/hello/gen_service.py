@@ -1,0 +1,61 @@
+from __future__ import annotations
+
+from typing import Any, Protocol
+
+
+class HelloService(Protocol):
+    async def abc(
+        self,
+        query: dict[str, Any] | None = None,
+    ) -> Any:
+        ...
+
+    async def map_enum(self) -> Any:
+        ...
+
+    async def list_enum(self) -> Any:
+        ...
+
+    async def string(self) -> Any:
+        ...
+
+    async def uint64(self) -> Any:
+        ...
+
+    async def string_emun(self) -> Any:
+        ...
+
+    async def hello_way(
+        self,
+        query: dict[str, Any] | None = None,
+    ) -> Any:
+        ...
+
+
+class HelloServiceStub:
+    async def abc(
+        self,
+        query: dict[str, Any] | None = None,
+    ) -> Any:
+        raise NotImplementedError("abc")
+
+    async def map_enum(self) -> Any:
+        raise NotImplementedError("map_enum")
+
+    async def list_enum(self) -> Any:
+        raise NotImplementedError("list_enum")
+
+    async def string(self) -> Any:
+        raise NotImplementedError("string")
+
+    async def uint64(self) -> Any:
+        raise NotImplementedError("uint64")
+
+    async def string_emun(self) -> Any:
+        raise NotImplementedError("string_emun")
+
+    async def hello_way(
+        self,
+        query: dict[str, Any] | None = None,
+    ) -> Any:
+        raise NotImplementedError("hello_way")

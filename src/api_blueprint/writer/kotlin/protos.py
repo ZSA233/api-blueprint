@@ -122,7 +122,7 @@ class KotlinTypeResolver:
     def __init__(self, registry: "KotlinProtoRegistry"):
         self.registry = registry
 
-    def resolve(self, field: Union[Field, Model, Type[Any], Any]) -> KotlinResolvedType:
+    def resolve(self, field: Union[Field, Model, Type[Any], Any], *, module: str | None = None) -> KotlinResolvedType:
         if is_parametrized(field):
             field = field()
 
@@ -172,15 +172,15 @@ class KotlinTypeResolver:
             )
         if isinstance(field, Array):
             elem = field.elem_type()
-            elem_type = self.resolve(elem)
+            elem_type = self.resolve(elem, module=module)
             return KotlinResolvedType(
                 f"List<{elem_type.text}>",
                 set(elem_type.deps),
                 serializer=f"ListSerializer({elem_type.serializer_expr()})",
             )
         if isinstance(field, Map):
-            key_type = self.resolve(field.key_type())
-            value_type = self.resolve(field.value_type())
+            key_type = self.resolve(field.key_type(), module=module)
+            value_type = self.resolve(field.value_type(), module=module)
             if key_type.text in {"String", "Int", "Long"}:
                 key_text = key_type.text
                 key_serializer = key_type.serializer_expr()
@@ -196,12 +196,16 @@ class KotlinTypeResolver:
         if isinstance(field, AnonKV):
             obj = field.get_obj()
             if obj is None:
-                return self.resolve(Map[String, Field]())
-            return self.resolve(obj)
+                return self.resolve(Map[String, Field](), module=module)
+            return self.resolve(obj, module=module)
         if isinstance(field, FieldWrappedModel):
-            return self.resolve(field.__field_type__)
+            return self.resolve(field.__field_type__, module=module)
         if isinstance(field, Model) or (isinstance(field, type) and issubclass(field, Model)):
-            proto = self.registry.ensure(field, tag="shared")
+            cls = unwrap_model_type(field)
+            is_auto = bool(getattr(cls, "__auto__", False))
+            owner_module = module if is_auto and module else "shared"
+            owner_tag = "route" if owner_module != "shared" else "shared"
+            proto = self.registry.ensure(field, tag=owner_tag, module=owner_module)
             if proto is None:
                 return KotlinResolvedType(
                     "kotlinx.serialization.json.JsonElement",
@@ -211,7 +215,7 @@ class KotlinTypeResolver:
 
         origin = get_origin(field)
         if origin and isinstance(origin, type):
-            return self.resolve(origin)
+            return self.resolve(origin, module=module)
         return KotlinResolvedType(
             "kotlinx.serialization.json.JsonElement",
             serializer="kotlinx.serialization.json.JsonElement.serializer()",
@@ -262,7 +266,7 @@ class KotlinProtoRegistry:
             if proto is not None:
                 proto.add_tag(tag)
                 return proto
-            alias_type = self._resolver.resolve(model.__field_type__)
+            alias_type = self._resolver.resolve(model.__field_type__, module=effective_module)
             proto = KotlinProto(name=kotlin_name, model=None, kind="alias", alias_type=alias_type, module=effective_module)
             proto.add_tag(tag)
             self._aliases[kotlin_name] = proto
@@ -324,22 +328,16 @@ class KotlinProtoRegistry:
         return proto
 
     def register_wrapper(self, wrapper_cls: type[Model]) -> KotlinProto:
-        """Register a response wrapper as a shared data class proto.
-
-        Kotlin currently supports the built-in ``GeneralWrapper`` shape only. Custom
-        wrapper classes can have arbitrary field semantics, so the generator fails
-        explicitly instead of emitting a misleading ``GeneralResponse`` facade.
-        """
-        wrapper_name = getattr(wrapper_cls, "__name__", "ResponseWrapper")
-        if wrapper_cls is not GeneralWrapper:
-            raise ValueError(f"[kotlin-client] 暂不支持自定义 response wrapper: {wrapper_name}")
-
+        """Register a generic response wrapper as a shared serializable model."""
+        wrapper_name = "GeneralResponse" if wrapper_cls is GeneralWrapper else to_kotlin_type_name(
+            getattr(wrapper_cls, "__name__", "ResponseWrapper")
+        )
         proto = self._protos.get((wrapper_cls, None))
         if proto is not None:
             return proto
 
         proto = KotlinProto(
-            name="GeneralResponse",
+            name=wrapper_name,
             model=wrapper_cls,
             kind="wrapper",
             module="shared",
@@ -354,12 +352,12 @@ class KotlinProtoRegistry:
             serial_name = extra.get("alias") or field_name
             optional = (not field_info.is_required()) or bool(extra.get("omitempty", False))
 
-            is_generic = (field_name == "data" and type(model_field) is Field)
+            is_generic = type(model_field) is Field
             if is_generic:
                 resolved = KotlinResolvedType("T")
                 optional = False
             else:
-                resolved = self._resolver.resolve(model_field)
+                resolved = self._resolver.resolve(model_field, module=proto.module)
                 if optional and not resolved.text.endswith("?"):
                     resolved = resolved.as_nullable()
 
@@ -388,7 +386,7 @@ class KotlinProtoRegistry:
             field_info = pyd_model.model_fields[name]
             extra = getattr(model_field, "__extra__", {}) or {}
             serial_name = extra.get("alias") or name
-            resolved = self._resolver.resolve(model_field)
+            resolved = self._resolver.resolve(model_field, module=proto.module)
             optional = (not field_info.is_required()) or bool(extra.get("omitempty", False))
             field_type = resolved
             if optional and not resolved.text.endswith("?"):

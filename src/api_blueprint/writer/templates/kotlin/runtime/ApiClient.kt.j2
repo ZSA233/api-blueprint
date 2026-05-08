@@ -1,0 +1,6 @@
+{% autoescape false %}package {{ bp.root_package }}.runtime
+
+public class ApiClient(
+    transport: ApiTransport,
+) : GenApiClient(transport)
+{% endautoescape %}

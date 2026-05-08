@@ -36,6 +36,41 @@
       ],
       "kind": "grpc-python"
     },
+    "kotlin.client": {
+      "files": [
+        "kotlin/com/example/apiblueprint/api/routes/api/hello/GenHelloApiModels.kt",
+        "kotlin/com/example/apiblueprint/api/routes/api/hello/GenHelloApi.kt",
+        "kotlin/com/example/apiblueprint/api/routes/api/hello/HelloApi.kt"
+      ],
+      "imports": [
+        "com.example.apiblueprint.api.routes.api.hello.HelloApi"
+      ],
+      "kind": "kotlin-client"
+    },
+    "python.client": {
+      "files": [
+        "python/client/api_blueprint_example_client/api/routes/api/hello/gen_client.py",
+        "python/client/api_blueprint_example_client/api/routes/api/hello/client.py",
+        "python/client/api_blueprint_example_client/api/transports/http/gen_client.py"
+      ],
+      "imports": [
+        "api_blueprint_example_client.api.routes.api.hello.client"
+      ],
+      "kind": "python-client"
+    },
+    "python.server": {
+      "files": [
+        "python/server/api_blueprint_example_server/api/routes/api/hello/gen_service.py",
+        "python/server/api_blueprint_example_server/api/routes/api/hello/service.py",
+        "python/server/api_blueprint_example_server/api/transports/http/gen_server.py",
+        "python/server/api_blueprint_example_server/api/transports/http/server.py"
+      ],
+      "imports": [
+        "api_blueprint_example_server.api.routes.api.hello.service",
+        "api_blueprint_example_server.api.transports.http.server"
+      ],
+      "kind": "python-server"
+    },
     "typescript.client": {
       "files": [
         "typescript/api/routes/api/hello/client.ts",
@@ -67,7 +102,7 @@
   "route": {
     "connection": null,
     "deprecated": false,
-    "hash": "02997e811deb53128ad4f9b7f31dc3e83c5e55a98f42ce15adc15508e5e1ce92",
+    "hash": "6c216123d5c85cdc833bc7fc30ff640c50ccee3fd7c93788c47f1fe7968169ca",
     "id": "api.hello.get.listenum",
     "kind": "rpc",
     "method_name": "listEnum",
@@ -89,6 +124,9 @@
       "wrapper": "GeneralWrapper"
     },
     "service_id": "api.hello",
+    "tags": [
+      "api"
+    ],
     "url": "/api/hello/list-enum"
   },
   "schemas": {

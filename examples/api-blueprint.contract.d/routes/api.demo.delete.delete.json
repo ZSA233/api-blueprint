@@ -36,6 +36,30 @@
       ],
       "kind": "grpc-python"
     },
+    "python.client": {
+      "files": [
+        "python/client/api_blueprint_example_client/api/routes/api/demo/gen_client.py",
+        "python/client/api_blueprint_example_client/api/routes/api/demo/client.py",
+        "python/client/api_blueprint_example_client/api/transports/http/gen_client.py"
+      ],
+      "imports": [
+        "api_blueprint_example_client.api.routes.api.demo.client"
+      ],
+      "kind": "python-client"
+    },
+    "python.server": {
+      "files": [
+        "python/server/api_blueprint_example_server/api/routes/api/demo/gen_service.py",
+        "python/server/api_blueprint_example_server/api/routes/api/demo/service.py",
+        "python/server/api_blueprint_example_server/api/transports/http/gen_server.py",
+        "python/server/api_blueprint_example_server/api/transports/http/server.py"
+      ],
+      "imports": [
+        "api_blueprint_example_server.api.routes.api.demo.service",
+        "api_blueprint_example_server.api.transports.http.server"
+      ],
+      "kind": "python-server"
+    },
     "typescript.client": {
       "files": [
         "typescript/api/routes/api/demo/client.ts",
@@ -67,7 +91,7 @@
   "route": {
     "connection": null,
     "deprecated": false,
-    "hash": "e37d7466d6eeb803cf2f4b46510376bae95ba296eb5cbd9dbd57f53d46a666cc",
+    "hash": "a00395bc7ae3e1459a65322ab8d5eacbfdc45400a765220f304c5803b82c7e5f",
     "id": "api.demo.delete.delete",
     "kind": "rpc",
     "method_name": "delete",
@@ -89,6 +113,9 @@
       "wrapper": "GeneralWrapper"
     },
     "service_id": "api.demo",
+    "tags": [
+      "api"
+    ],
     "url": "/api/demo/delete$"
   },
   "schemas": {

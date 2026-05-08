@@ -1,0 +1,7 @@
+{% autoescape false %}package {{ bp.root_package }}.runtime
+
+public class ApiException(
+    public val statusCode: Int,
+    public val responseBody: String,
+) : RuntimeException("Request failed: $statusCode $responseBody")
+{% endautoescape %}

@@ -4,7 +4,7 @@
     "routes": 20,
     "schemas": 37,
     "services": 4,
-    "targets": 10
+    "targets": 13
   },
   "generator": {
     "name": "api-blueprint",

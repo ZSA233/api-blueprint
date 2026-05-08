@@ -36,6 +36,30 @@
       ],
       "kind": "grpc-python"
     },
+    "python.client": {
+      "files": [
+        "python/client/api_blueprint_example_client/api/routes/api/demo/gen_client.py",
+        "python/client/api_blueprint_example_client/api/routes/api/demo/client.py",
+        "python/client/api_blueprint_example_client/api/transports/http/gen_client.py"
+      ],
+      "imports": [
+        "api_blueprint_example_client.api.routes.api.demo.client"
+      ],
+      "kind": "python-client"
+    },
+    "python.server": {
+      "files": [
+        "python/server/api_blueprint_example_server/api/routes/api/demo/gen_service.py",
+        "python/server/api_blueprint_example_server/api/routes/api/demo/service.py",
+        "python/server/api_blueprint_example_server/api/transports/http/gen_server.py",
+        "python/server/api_blueprint_example_server/api/transports/http/server.py"
+      ],
+      "imports": [
+        "api_blueprint_example_server.api.routes.api.demo.service",
+        "api_blueprint_example_server.api.transports.http.server"
+      ],
+      "kind": "python-server"
+    },
     "typescript.client": {
       "files": [
         "typescript/api/routes/api/demo/client.ts",
@@ -137,7 +161,7 @@
       }
     },
     "deprecated": false,
-    "hash": "3694fdda89dc15a3a99151e1853595cbf379018c4061b8f707d301b0a204a356",
+    "hash": "122597c16d21b65ca32a8b9d25ff8bb5836a0ceea0fe73c886297582b02ab3be",
     "id": "api.demo.channel.assistantsession",
     "kind": "channel",
     "method_name": "assistantSession",
@@ -153,6 +177,9 @@
     },
     "response": null,
     "service_id": "api.demo",
+    "tags": [
+      "api"
+    ],
     "url": "/api/demo/assistant-session"
   },
   "schemas": {

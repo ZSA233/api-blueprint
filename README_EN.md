@@ -7,7 +7,7 @@ Language: [中文](README.md) | English
 
 ## Overview
 
-`api-blueprint` defines API contracts with a Python DSL, builds a unified `ContractGraph`, and generates a documentation service, Go server, TypeScript client, Kotlin Android client, Wails v2/v3 overlays, gRPC proto/service definitions, and protoc-backed Go/Python gRPC stubs from the same protocol source of truth.
+`api-blueprint` defines API contracts with a Python DSL, builds a unified `ContractGraph`, and generates a documentation service, Go server, TypeScript client, Kotlin Android client, Python client/server, Wails v2/v3 overlays, gRPC proto/service definitions, and protoc-backed Go/Python gRPC stubs from the same protocol source of truth and shared target planner.
 
 The DSL supports transport-neutral `STREAM` / `CHANNEL` long-connection message contracts alongside RPC; HTTP can map them to SSE / WebSocket, Wails maps them to session-scoped runtime events by default, and `CLOSE(Model)` generates a typed close lifecycle payload.
 
@@ -23,6 +23,7 @@ This README keeps only the onboarding path. See [Learn More](#learn-more) for fu
 | Wails v3 | Experimental | `api-gen` | `examples/{golang,typescript,wails-harness/v3,wails-hello}` |
 | Wails v2 | Preview | `api-gen` | `examples/{golang,typescript,wails-harness/v2}` |
 | Kotlin Android client | Preview | `api-gen` | `examples/kotlin` |
+| Python client/server | Preview | `api-gen` | `python_package_root` package layout |
 | gRPC proto | Available | `api-gen` | `examples/grpc/protos` |
 | gRPC Go/Python stubs | Available | `api-gen` | `examples/grpc/{go,python}` |
 
@@ -71,16 +72,37 @@ out_dir = "typescript"
 base_url = "http://localhost:2333"
 
 [[targets]]
+id = "kotlin.client"
+kind = "kotlin-client"
+out_dir = "kotlin"
+package = "com.example.apiblueprint"
+
+[[targets]]
+id = "python.server"
+kind = "python-server"
+out_dir = "python/server"
+python_package_root = "api_blueprint_example_server"
+
+[[targets]]
+id = "python.client"
+kind = "python-client"
+out_dir = "python/client"
+python_package_root = "api_blueprint_example_client"
+base_url = "http://localhost:2333"
+
+[[targets]]
 id = "http"
 kind = "http-transport"
 server = "go.server"
-clients = ["typescript.client"]
+clients = ["typescript.client", "kotlin.client", "python.client"]
 ```
 
 ```sh
 api-doc-server -c api-blueprint.toml
 api-gen generate -c api-blueprint.toml
 ```
+
+For TypeScript, Kotlin, and Python clients, `base_url` / `base_url_expr` are owned by the HTTP transport adapter / factory; shared route/runtime clients stay transport-neutral.
 
 ## Minimal Configuration
 
@@ -175,9 +197,12 @@ api-gen diff old.contract.json new.contract.json
 - `examples/blueprints/api_demo.py` includes `STREAM` / `CHANNEL` long-connection examples.
 - `examples/golang/`, `examples/typescript/`, `examples/kotlin/`, `examples/api-blueprint.{contract,agent}.*`, `examples/api-blueprint.contract.d/`, `examples/grpc/protos/`, `examples/grpc/go/`, and `examples/grpc/python/` are generated snapshots.
 - `examples/wails-hello/` is a standalone Wails v3 hello world example that demonstrates a GUI loop without starting an HTTP server.
-- `gen_*` files are generator-owned and overwritten during regeneration.
-- `impl_*` and non-`gen_*` passthrough files are user-owned extension points and are preserved during regeneration.
-- Go / TypeScript artifacts use a `core + transports/<target>` layout; `api-gen generate --target wails.v3` does not generate a full Wails app shell, and external frontends must load the Wails runtime first.
+- Go / TypeScript / Python `gen_*` files are generator-owned and overwritten during regeneration; Kotlin `Gen*.kt` files are generator-owned and include a generated header.
+- `impl_*`, Python `client.py` / `service.py`, and Kotlin non-`Gen*` façade/extension files are user-owned extension points and are preserved during regeneration.
+- Go / TypeScript artifacts use a `core + transports/<target>` layout; Kotlin uses the new `<package>/<root>/runtime`, `<package>/<root>/routes/<root>/<group...>`, and `<package>/<root>/transports/http` layout, and the old `<package>/ApiClient.kt`, `endpoints/`, `models/`, and `internal/` layout is a breaking change.
+- Python client/server use `python_package_root` as the package root; route output mirrors the full path, for example `routes/api/demo`, root-level routes live in `routes/api`, and `routes/root` is no longer used. The client is async-first over HTTP, and the server emits route service contracts/stubs plus a FastAPI HTTP adapter scaffold.
+- `api-gen check` and writers share planner / capability metadata; contract / agent artifact indexes point to the new Kotlin / Python full route path outputs.
+- `api-gen generate --target wails.v3` does not generate a full Wails app shell, and external frontends must load the Wails runtime first; Wails targets still combine only a Go server and TypeScript client.
 - Wails target `include` / `exclude` trims target overlays / facades; roots with no selected routes do not get `transports/<overlay_name>` output, while shared contract layers are still generated in full.
 - Go `views/providers` is a global runtime; use route-scoped provider factories when a provider implementation must vary by route. The user-owned hook is `SelectProvider(spec, handler)`. See the generator docs.
 - `STREAM` / `CHANNEL` are the long-connection contract entrypoints; multi-message directions generate one discriminated union, while legacy `WS().RECV().SEND()` is outside the 1.0 mainline.
@@ -195,7 +220,7 @@ api-gen diff old.contract.json new.contract.json
 | Getting started | [docs/en/getting-started.md](docs/en/getting-started.md) |
 | Config fields | [docs/en/configuration.md](docs/en/configuration.md) |
 | Blueprint DSL | [docs/en/blueprint-dsl.md](docs/en/blueprint-dsl.md) |
-| Go / TypeScript / Kotlin | [docs/en/generators.md](docs/en/generators.md) |
+| Go / TypeScript / Kotlin / Python | [docs/en/generators.md](docs/en/generators.md) |
 | Wails | [docs/en/wails.md](docs/en/wails.md) |
 | gRPC | [docs/en/grpc.md](docs/en/grpc.md) |
 | Examples validation | [docs/en/examples-validation.md](docs/en/examples-validation.md) |

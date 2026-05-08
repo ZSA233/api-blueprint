@@ -146,3 +146,35 @@ files = ["**/*.proto"]
     planned = generator.generation_plan(resolved.targets, ("grpc.python",))
 
     assert [target.id for target in planned] == ["grpc.python"]
+
+
+def test_generation_plan_includes_python_http_transport_dependencies(tmp_path):
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[targets]]
+id = "python.server"
+kind = "python-server"
+out_dir = "python/server"
+python_package_root = "server_app"
+
+[[targets]]
+id = "python.client"
+kind = "python-client"
+out_dir = "python/client"
+python_package_root = "client_app"
+
+[[targets]]
+id = "http"
+kind = "http-transport"
+server = "python.server"
+clients = ["python.client"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    resolved = resolve_config(config_path)
+
+    planned = generator.generation_plan(resolved.targets, ("http",))
+
+    assert [target.id for target in planned] == ["python.server", "python.client", "http"]

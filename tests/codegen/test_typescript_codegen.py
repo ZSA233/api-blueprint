@@ -58,18 +58,27 @@ def test_typescript_http_generation_uses_transport_bridge_and_raw_ws_escape_hatc
 
     output_dir = tmp_path / "typescript"
     output_dir.mkdir()
-    writer = TypeScriptWriter(output_dir)
+    writer = TypeScriptWriter(output_dir, base_url="http://localhost:2333")
     writer.register(bp)
     writer.gen()
 
     http_transport = (output_dir / "api" / "transports" / "http" / "gen_transport.ts").read_text(encoding="utf-8")
+    runtime_client = (output_dir / "api" / "runtime" / "gen_client.ts").read_text(encoding="utf-8")
     runtime_index = (output_dir / "api" / "runtime" / "gen_index.ts").read_text(encoding="utf-8")
     http_factory = (output_dir / "api" / "transports" / "http" / "api" / "gen_factory.ts").read_text(encoding="utf-8")
     client_text = (output_dir / "api" / "routes" / "api" / "demo" / "gen_client.ts").read_text(encoding="utf-8")
     assert "export class DefaultTransport implements ApiTransport" in http_transport
+    assert "export interface ApiClientConfig {\n  transport?: ApiTransport;\n}" in runtime_client
+    assert "export interface ApiHttpTransportConfig extends ApiClientConfig" in http_transport
+    assert "baseUrl?: string;" in http_transport
+    assert "fetcher?: typeof fetch;" in http_transport
     assert not (output_dir / "api" / "runtime" / "gen_factory.ts").exists()
     assert 'demoClient: new DemoClientImpl(sharedConfig),' in http_factory
+    assert 'new DefaultTransport(config, "http://localhost:2333")' in http_factory
     assert 'export * from "./factory";' not in runtime_index
+    assert "http://localhost:2333" not in client_text
+    assert "super(config);" in client_text
+    assert "super(config," not in client_text
     assert "connectBridge<Shared.WSSend, Shared.WSRecv>" in client_text
     assert "connectWsRaw(" in client_text
 

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-import fnmatch
 from dataclasses import dataclass
 from typing import Sequence
 
+from api_blueprint.engine.connection import ConnectionKind
 from api_blueprint.engine.router import Router
+from api_blueprint.writer.core.planning import route_matches_rule
 
 
 @dataclass(frozen=True)
@@ -21,22 +22,26 @@ class KotlinRouteSelection:
 
 
 def matches_rule(router: Router, rule: str, *, route_name: str) -> bool:
-    scope, _, pattern = rule.partition(":")
-    if not pattern:
-        scope = "path"
-        pattern = rule
+    if ":" in rule:
+        scope, _pattern = rule.split(":", 1)
+        if scope not in {"path", "tag", "group", "method", "name", "kind"}:
+            raise ValueError(f"[kotlin-client] 不支持的 include/exclude 规则: {rule}")
+    return route_matches_rule(_route_manifest(router, route_name=route_name), rule)
 
-    if scope == "path":
-        return fnmatch.fnmatchcase(router.url, pattern)
-    if scope == "tag":
-        return any(fnmatch.fnmatchcase(tag, pattern) for tag in router.tags)
-    if scope == "group":
-        return fnmatch.fnmatchcase(router.group.branch.strip("/"), pattern.strip("/"))
-    if scope == "method":
-        return any(fnmatch.fnmatchcase(method, pattern.upper()) for method in router.methods)
-    if scope == "name":
-        return fnmatch.fnmatchcase(route_name, pattern)
-    raise ValueError(f"[kotlin-client] 不支持的 include/exclude 规则: {rule}")
+
+def _route_manifest(router: Router, *, route_name: str) -> dict[str, object]:
+    root = router.group.root.strip("/") or "root"
+    group = router.group.branch.strip("/") or root
+    kind = "rpc" if router.connection_kind == ConnectionKind.RPC else router.connection_kind.value
+    return {
+        "id": f"{root}.{group}.{route_name}",
+        "service_id": f"{root}.{group}",
+        "kind": kind,
+        "operation": route_name,
+        "methods": list(router.methods),
+        "url": router.url,
+        "tags": list(router.tags),
+    }
 
 
 def normalize_rules(rules: Sequence[str]) -> tuple[str, ...]:

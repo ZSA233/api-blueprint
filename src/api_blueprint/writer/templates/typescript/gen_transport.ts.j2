@@ -24,6 +24,14 @@ import { WAILS_V3_BINDINGS } from "./gen_bindings";
 type RequestBody = RequestInit["body"];
 
 {% if writer.transport_kind == "http" %}
+export interface ApiHttpTransportConfig extends ApiClientConfig {
+  baseUrl?: string;
+  fetcher?: typeof fetch;
+  defaultHeaders?: Record<string, string>;
+  timeoutMs?: number;
+  init?: RequestInit;
+}
+
 function serializeQuery(params?: Record<string, unknown>): string {
   if (!params) {
     return "";
@@ -269,7 +277,7 @@ export class {{ writer.transport_class_name }} implements ApiTransport {
   protected readonly fetcher: typeof fetch;
   protected readonly timeoutMs?: number;
 
-  constructor(protected readonly config: ApiClientConfig = {}, defaultBaseUrl: string = "") {
+  constructor(protected readonly config: ApiHttpTransportConfig = {}, defaultBaseUrl: string = "") {
     this.baseUrl = config.baseUrl ?? defaultBaseUrl;
     this.fetcher = config.fetcher ?? defaultFetch;
     this.timeoutMs = config.timeoutMs;

@@ -1,0 +1,14 @@
+{% autoescape false %}package {{ bp.root_package }}.runtime
+
+{% for group in bp.groups.values() -%}
+import {{ bp.root_package }}.routes.{{ group.package_suffix }}.{{ group.class_name }}
+{% endfor %}
+
+public open class GenApiClient(
+    private val transport: ApiTransport,
+) {
+{%- for group in bp.groups.values() %}
+    public val {{ group.property_name }}: {{ group.class_name }} = {{ group.class_name }}(transport)
+{%- endfor %}
+}
+{% endautoescape %}

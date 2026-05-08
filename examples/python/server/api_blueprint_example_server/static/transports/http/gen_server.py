@@ -1,0 +1,27 @@
+from __future__ import annotations
+
+from typing import Any
+
+from fastapi import APIRouter, WebSocket
+from starlette.responses import StreamingResponse
+
+from ...routes.static.service import StaticService, StaticServiceStub
+
+
+def create_router(
+    static_service: StaticService | None = None,
+) -> APIRouter:
+    router = APIRouter()
+    static_service_impl = static_service or StaticServiceStub()
+
+    @router.api_route("/static/doc.json", methods=["GET"])
+    async def static_doc_json() -> Any:
+        service = static_service_impl
+        return await service.doc_json()
+
+    @router.api_route("/static/dochaha", methods=["GET"])
+    async def static_dochaha() -> Any:
+        service = static_service_impl
+        return await service.dochaha()
+
+    return router

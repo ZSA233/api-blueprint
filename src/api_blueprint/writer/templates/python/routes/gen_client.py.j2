@@ -1,0 +1,87 @@
+from __future__ import annotations
+
+from typing import Any
+
+from {{ group.runtime_import_prefix }}runtime.client import ApiChannelBridge, ApiClientTransport, ApiSocketBridge, ApiStreamBridge
+
+
+class {{ group.client_class }}:
+    def __init__(self, transport: ApiClientTransport):
+        self._transport = transport
+{% for route in group.routes %}
+{% if route.is_rpc %}
+
+{% if route.params %}
+    async def {{ route.method_name }}(
+        self{% for param in route.params %},
+        {{ param.name }}: dict[str, Any] | None = None{% endfor %},
+    ) -> Any:
+{% else %}
+    async def {{ route.method_name }}(self) -> Any:
+{% endif %}
+        response_type: str | None = {{ route.response_type_literal | safe }}
+        return await self._transport.request(
+            {{ route.http_method_literal | safe }},
+            {{ route.url_literal | safe }},
+{% for param in route.params %}
+            {{ param.call_name }}={{ param.name }},
+{% endfor %}
+            response_type=response_type,
+        )
+{% elif route.supports_ws %}
+
+    def {{ route.connect_method_name }}(
+        self{% for param in route.params if param.call_name == "query" %},
+        {{ param.name }}: dict[str, Any] | None = None{% endfor %},
+        headers: dict[str, str] | None = None,
+        protocols: tuple[str, ...] = (),
+    ) -> ApiSocketBridge[Any, Any]:
+        return self._transport.connect_socket(
+            route_id={{ route.route_id_literal | safe }},
+            path={{ route.url_literal | safe }},
+{% for param in route.params if param.call_name == "query" %}
+            query={{ param.name }},
+{% endfor %}
+            headers=headers,
+            protocols=protocols,
+        )
+{% elif route.supports_stream %}
+
+    def {{ route.subscribe_method_name }}(
+        self{% for param in route.params if param.call_name in ("query", "open_data") %},
+        {{ param.name }}: dict[str, Any] | None = None{% endfor %},
+        headers: dict[str, str] | None = None,
+    ) -> ApiStreamBridge[Any, Any]:
+        return self._transport.open_stream(
+            route_id={{ route.route_id_literal | safe }},
+            path={{ route.url_literal | safe }},
+{% for param in route.params if param.call_name == "query" %}
+            query={{ param.name }},
+{% endfor %}
+{% for param in route.params if param.call_name == "open_data" %}
+            open_data={{ param.name }},
+{% endfor %}
+            headers=headers,
+        )
+{% elif route.supports_channel %}
+
+    def {{ route.open_channel_method_name }}(
+        self{% for param in route.params if param.call_name in ("query", "open_data") %},
+        {{ param.name }}: dict[str, Any] | None = None{% endfor %},
+        headers: dict[str, str] | None = None,
+        protocols: tuple[str, ...] = (),
+    ) -> ApiChannelBridge[Any, Any, Any]:
+        return self._transport.open_channel(
+            route_id={{ route.route_id_literal | safe }},
+            path={{ route.url_literal | safe }},
+{% for param in route.params if param.call_name == "query" %}
+            query={{ param.name }},
+{% endfor %}
+{% for param in route.params if param.call_name == "open_data" %}
+            open_data={{ param.name }},
+{% endfor %}
+            headers=headers,
+            protocols=protocols,
+        )
+{% endif %}
+{% endfor %}

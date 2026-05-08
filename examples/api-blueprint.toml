@@ -42,10 +42,29 @@ exclude = [
 ]
 
 [[targets]]
+id = 'python.server'
+kind = 'python-server'
+out_dir = 'python/server'
+python_package_root = 'api_blueprint_example_server'
+
+[[targets]]
+id = 'python.client'
+kind = 'python-client'
+out_dir = 'python/client'
+python_package_root = 'api_blueprint_example_client'
+base_url = 'http://localhost:2333'
+
+[[targets]]
 id = 'http'
 kind = 'http-transport'
 server = 'go.server'
 clients = ['typescript.client', 'kotlin.client']
+
+[[targets]]
+id = 'http.python'
+kind = 'http-transport'
+server = 'python.server'
+clients = ['python.client']
 
 [[targets]]
 id = 'wails.v3'

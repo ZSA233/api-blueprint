@@ -1,0 +1,8 @@
+{% autoescape false %}package {{ bp.root_package }}.routes.{{ group.package_suffix }}
+
+import {{ bp.root_package }}.runtime.ApiTransport
+
+public class {{ group.class_name }} internal constructor(
+    transport: ApiTransport,
+) : Gen{{ group.class_name }}(transport)
+{% endautoescape %}
