@@ -1,12 +1,20 @@
 # api-blueprint Agent Guide
 
-先读 `api-blueprint.agent.json`，再读 route shard，最后才看生成物。
+优先使用 `api-gen inspect` 按需查询 route/schema/files/errors；只有离线或需要完整快照时才读 manifest/shard，最后才看生成物。
+
+## Preferred Commands
+- `api-gen inspect routes -c api-blueprint.toml`
+- `api-gen inspect route <route_id> -c api-blueprint.toml`
+- `api-gen inspect files --route <route_id> --target <target_id> -c api-blueprint.toml`
+- `api-gen inspect schema <SchemaName> -c api-blueprint.toml`
+- `api-gen inspect errors --route <route_id> -c api-blueprint.toml`
 
 ## Read Order
-1. `api-blueprint.agent.json` - Compact cross-service index for routes, schemas, connections, targets, and artifacts.
-2. `api-blueprint.contract.d/index.json` - Shard directory index; use it when the compact route summary is not enough.
-3. `api-blueprint.contract.d/routes/<route_id>.json` - Open the route shard for request/response models, connection messages, and target imports.
-4. `generated artifacts` - Only inspect generated source when the artifact/import index points to a target-specific entry.
+1. `api-gen inspect` - Query routes, route details, schema details, errors, and generated file indexes on demand.
+2. `api-blueprint.agent.json` - Compact cross-service index for routes, schemas, connections, targets, and artifacts.
+3. `api-blueprint.contract.d/index.json` - Optional shard directory index; use it when inspect is unavailable or a full offline snapshot is needed.
+4. `api-blueprint.contract.d/routes/<route_id>.json` - Optional route shard for request/response models, connection messages, and target imports.
+5. `generated artifacts` - Only inspect generated source when the artifact/import index points to a target-specific entry.
 
 ## Counts
 - `services`: 4

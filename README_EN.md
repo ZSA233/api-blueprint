@@ -17,7 +17,7 @@ This README keeps only the onboarding path. See [Learn More](#learn-more) for fu
 
 | Target | Status | Command | Example |
 |:---|:---:|:---|:---|
-| Contract / agent manifest | Available | `api-gen` | `api-blueprint.contract.json` / `api-blueprint.agent.json` |
+| Inspect / contract manifest | Available | `api-gen` | `api-gen inspect` / `api-blueprint.contract.json` |
 | Go server | Available | `api-gen` | `examples/golang/server` |
 | Go client | Preview | `api-gen` | `examples/golang/client` |
 | TypeScript client | Preview | `api-gen` | `examples/typescript` |
@@ -116,7 +116,7 @@ entrypoints = ["blueprints.app:*"]
 id = "contract"
 kind = "contract"
 out_dir = "."
-formats = ["json", "markdown", "agent-json", "agent-markdown", "shards"]
+formats = ["json"]
 
 [[go.server]]
 id = "go.server"
@@ -181,6 +181,11 @@ module = "pb"
 api-doc-server -c examples/api-blueprint.toml
 api-gen list-targets -c examples/api-blueprint.toml
 api-gen explain-target -c examples/api-blueprint.toml --target go.server
+api-gen inspect routes -c examples/api-blueprint.toml
+api-gen inspect route api.demo.post.testpost -c examples/api-blueprint.toml
+api-gen inspect files -c examples/api-blueprint.toml --route api.demo.post.testpost --target go.server
+api-gen inspect schema ApiDemoA -c examples/api-blueprint.toml
+api-gen inspect errors -c examples/api-blueprint.toml --route api.demo.post.testpost
 api-gen manifest -c examples/api-blueprint.toml --profile full --out api-blueprint.contract.json
 api-gen manifest -c examples/api-blueprint.toml --profile agent --out api-blueprint.agent.json
 api-gen manifest -c examples/api-blueprint.toml --shards-dir api-blueprint.contract.d
@@ -208,7 +213,7 @@ api-gen diff old.contract.json new.contract.json
 - The default HTTP/Wails runtimes fully support only `ConnectionScope.SESSION`; `APP` / `TOPIC` broadcast or topic routing can be added through a custom connection hub / manager.
 - `examples/golang/server/views/routes/api/demo/impl.go` hand-writes a minimal `STREAM` / `CHANNEL` usage example that demonstrates `Open()`, `Send()`, `Recv()`, typed `Close()`, and exceptional `Abort()`.
 - The Go HTTP adapter respects responses already written by Gin handlers, which fits small HTTP-only raw callbacks.
-- Full `contract.json` records routes, schemas, connections, the error catalog, stable hashes, the resolved target plan, and the capability registry. `agent.json`, `agent.md`, and `contract.d/` provide a compact entrypoint, read order, shards, and target artifact/import indexes so AI agents can read compact context first and drill down only when needed.
+- AI agents and maintainers should query ContractGraph on demand with `api-gen inspect routes/route/files/schema/errors` first; `contract.json`, `agent.json`, `agent.md`, and `contract.d/` are mainly for offline snapshots, archiving, and diffs. Full `contract.json` records routes, schemas, connections, the error catalog, stable hashes, the resolved target plan, and the capability registry; agent/shard outputs provide compact entrypoints, read order, shards, and target artifact/import indexes.
 - ContractGraph normalizes `Blueprint(errors=...)` and route `.ERR(...)` into a language-agnostic error catalog, with `message` plus `toast.key/default/level` for each error. Generated code does not embed locale tables; business i18n resolves the current language by toast key, and client helpers fall back through `toast.text`, external i18n, `toast.default`, then `message`. Go client, TypeScript, Kotlin, and Python client/server split runtime error types/helpers from static catalog data into separate generated files; Go server emits runtime types plus grouped error values only, avoiding a duplicate root catalog. Business wrapper codes are not automatically converted into thrown exceptions.
 - `[[targets]]` is the canonical config entrypoint; shortcut tables such as `[[go.server]]`, `[[go.client]]`, `[[python.server]]`, `[[transport.http]]`, `[[grpc.proto]]`, `[[grpc.go]]`, and `[[grpc.python]]` are normalized into targets when loading config. In shortcut tables, Python `module` maps to `python_package_root`, Kotlin `module` maps to `package`, and `[[grpc.python]] module` also maps to `python_package_root`.
 - gRPC proto can be emitted by the `grpc-proto` target from ContractGraph. `[[targets.proto_files]]` or the shortcut `[[grpc.proto.proto_files]]` maps DSL modules/routes to proto file/package/go_package/service. The DSL mainline only expresses generic contracts: `field(1, String(...), optional=True)` is a stable field identity, `choice="..."` is a mutually exclusive choice, and `DateTime`, `JSONValue`, and `AnyValue` are semantic value types. `grpc-go` / `grpc-python` can also omit `proto` and compile handwritten proto files directly with `source_root` / `files`.

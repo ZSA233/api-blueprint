@@ -314,7 +314,7 @@ def test_agent_manifest_and_shards_are_compact_navigation_layers():
         "connections": 1,
         "targets": 7,
     }
-    assert agent["read_order"][0]["path"] == "api-blueprint.agent.json"
+    assert agent["read_order"][0]["path"] == "api-gen inspect"
     assert agent["shards"]["index"] == "api-blueprint.contract.d/index.json"
     stream_summary = next(route for route in agent["routes"] if route["id"] == "api.runs.stream.events")
     assert stream_summary["shard"] == "api-blueprint.contract.d/routes/api.runs.stream.events.json"
@@ -361,7 +361,8 @@ def test_agent_manifest_and_shards_are_compact_navigation_layers():
     assert route_shard["connection"]["kind"] == "stream"
     assert route_shard["artifacts"]["typescript.client"]["files"]
     assert shards["index.json"]["counts"]["routes"] == 2
-    assert "先读 `api-blueprint.agent.json`，再读 route shard，最后才看生成物" in markdown
+    assert "优先使用 `api-gen inspect` 按需查询 route/schema/files/errors" in markdown
+    assert "`api-gen inspect route <route_id> -c api-blueprint.toml`" in markdown
 
 
 def test_contract_artifacts_use_shared_selection_and_python_root_group_paths():

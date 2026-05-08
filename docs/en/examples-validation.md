@@ -5,7 +5,7 @@
 ## Sources And Snapshots
 
 - `examples/blueprints/`: Blueprint source of truth.
-- `examples/api-blueprint.contract.json`, `examples/api-blueprint.agent.json`, `examples/api-blueprint.agent.md`, `examples/api-blueprint.contract.d/`: contract and agent manifest snapshots.
+- `examples/api-blueprint.contract.json`, `examples/api-blueprint.agent.json`, `examples/api-blueprint.agent.md`, `examples/api-blueprint.contract.d/`: contract and agent manifest snapshots. Prefer `api-gen inspect` for daily on-demand project understanding; these files mainly serve offline navigation, archiving, and drift validation.
 - `examples/golang/server/`, `examples/golang/client/`, `examples/typescript/`, `examples/kotlin/`: Blueprint generated snapshots.
 - `examples/wails-harness/v2/`, `examples/wails-harness/v3/`: handwritten minimal Wails harnesses that consume shared generated artifacts.
 - `examples/wails-hello/`: standalone Wails v3 hello example; `blueprints/` is the source of truth, `golang/` and `typescript/` are generated snapshots, and `app/` is a handwritten Wails app shell.

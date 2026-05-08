@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from click.testing import CliRunner
 
@@ -24,6 +25,65 @@ with bp.group("/demo") as views:
         + "\n",
         encoding="utf-8",
     )
+
+
+def _write_inspect_blueprint(tmp_path: Path) -> None:
+    pkg = tmp_path / "blueprints"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text("", encoding="utf-8")
+    (pkg / "app.py").write_text(
+        """
+from api_blueprint.engine import Blueprint, Error, Model, Toast
+from api_blueprint.engine.model import String
+
+class CommonErr(Model):
+    UNKNOWN = Error(
+        -1,
+        "未知错误",
+        toast=Toast(
+            key="common.unknown",
+            default="未知错误",
+            level="error",
+        ),
+    )
+
+class SubmitBody(Model):
+    name = String(description="name")
+
+class SubmitResult(Model):
+    message = String(description="message")
+
+bp = Blueprint(root="/api", errors=[CommonErr])
+with bp.group("/demo") as views:
+    views.POST("/submit").REQ(SubmitBody).RSP(SubmitResult)
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def _write_inspect_config(tmp_path: Path) -> Path:
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[blueprint]
+entrypoints = ["blueprints.app:bp"]
+
+[[targets]]
+id = "go.server"
+kind = "go-server"
+out_dir = "golang/server"
+module = "example.com/generated"
+
+[[targets]]
+id = "typescript.client"
+kind = "typescript-client"
+out_dir = "typescript"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    return config_path
 
 
 def test_api_gen_manifest_writes_contract_json(tmp_path):
@@ -212,6 +272,59 @@ overlay_name = "wailsv3"
     assert "example.com/agent/Volumes" not in payload
 
 
+def test_api_gen_inspect_routes_route_and_files(tmp_path):
+    _write_inspect_blueprint(tmp_path)
+    config_path = _write_inspect_config(tmp_path)
+
+    routes = CliRunner().invoke(api_gen, ["inspect", "routes", "-c", str(config_path)])
+    assert routes.exit_code == 0, routes.output
+    assert "routes: 1" in routes.output
+    assert "- api.demo.post.submit POST /api/demo/submit (rpc)" in routes.output
+    assert "targets: go.server, typescript.client" in routes.output
+
+    route = CliRunner().invoke(api_gen, ["inspect", "route", "api.demo.post.submit", "-c", str(config_path)])
+    assert route.exit_code == 0, route.output
+    assert "request: SubmitBody" in route.output
+    assert "response: SubmitResult" in route.output
+    assert "[go.server]" in route.output
+    assert "golang/server/routes/api/demo/gen_interface.go" in route.output
+
+    files = CliRunner().invoke(
+        api_gen,
+        ["inspect", "files", "-c", str(config_path), "--route", "api.demo.post.submit", "--target", "typescript.client"],
+    )
+    assert files.exit_code == 0, files.output
+    assert "[typescript.client]" in files.output
+    assert "typescript/api/routes/api/demo/client.ts" in files.output
+    assert "go.server" not in files.output
+
+
+def test_api_gen_inspect_schema_errors_and_json(tmp_path):
+    _write_inspect_blueprint(tmp_path)
+    config_path = _write_inspect_config(tmp_path)
+
+    schema = CliRunner().invoke(api_gen, ["inspect", "schema", "SubmitBody", "-c", str(config_path)])
+    assert schema.exit_code == 0, schema.output
+    assert "schema: SubmitBody" in schema.output
+    assert "- name: string" in schema.output
+    assert "inbound routes: api.demo.post.submit" in schema.output
+
+    errors = CliRunner().invoke(api_gen, ["inspect", "errors", "-c", str(config_path), "--route", "api.demo.post.submit"])
+    assert errors.exit_code == 0, errors.output
+    assert "route: api.demo.post.submit" in errors.output
+    assert "- CommonErr.UNKNOWN code=-1 message=未知错误" in errors.output
+    assert "toast: key=common.unknown" in errors.output
+
+    payload_result = CliRunner().invoke(
+        api_gen,
+        ["inspect", "files", "-c", str(config_path), "--route", "/api/demo/submit", "--json"],
+    )
+    assert payload_result.exit_code == 0, payload_result.output
+    payload = json.loads(payload_result.output)
+    assert payload["route"] == "api.demo.post.submit"
+    assert "go.server" in payload["targets"]
+
+
 def test_api_gen_diff_reports_breaking_changes(tmp_path):
     before = tmp_path / "before.json"
     after = tmp_path / "after.json"
@@ -297,7 +410,7 @@ def test_api_gen_help_only_lists_unified_1_0_commands() -> None:
     assert result.exit_code == 0
     assert "1.0" in result.output
     assert "vNext" not in result.output
-    for command in ("generate", "list-targets", "explain-target", "manifest", "diff", "check"):
+    for command in ("generate", "list-targets", "explain-target", "manifest", "diff", "check", "inspect"):
         assert command in result.output
     for legacy in ("gen-golang", "gen-typescript", "gen-kotlin", "gen-grpc", "gen-wails"):
         assert legacy not in result.output

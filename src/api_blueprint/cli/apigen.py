@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
+from typing import Any, Callable, Mapping, Sequence
 
 import click
 
 from api_blueprint.application import generator
+from api_blueprint.application import inspection
 
 
 @click.group()
@@ -89,6 +92,61 @@ def generate(config: str = "./api-blueprint.toml", target_ids: tuple[str, ...] =
     generator.generate(config, target_ids=target_ids)
 
 
+@api_gen.group("inspect")
+def inspect_group() -> None:
+    """Query compact ContractGraph views before reading generated source."""
+
+
+@inspect_group.command("routes")
+@click.option("-c", "--config", default="./api-blueprint.toml", help="配置文件")
+@click.option("--json", "as_json", is_flag=True, help="输出 JSON")
+def inspect_routes(config: str = "./api-blueprint.toml", as_json: bool = False) -> None:
+    payload = _inspection_call(lambda: inspection.inspect_routes(config))
+    _emit_inspection(payload, as_json=as_json, formatter=_format_inspect_routes)
+
+
+@inspect_group.command("route")
+@click.argument("route")
+@click.option("-c", "--config", default="./api-blueprint.toml", help="配置文件")
+@click.option("--json", "as_json", is_flag=True, help="输出 JSON")
+def inspect_route(route: str, config: str = "./api-blueprint.toml", as_json: bool = False) -> None:
+    payload = _inspection_call(lambda: inspection.inspect_route(config, route))
+    _emit_inspection(payload, as_json=as_json, formatter=_format_inspect_route)
+
+
+@inspect_group.command("files")
+@click.option("-c", "--config", default="./api-blueprint.toml", help="配置文件")
+@click.option("--route", "route", required=True, help="route id / path / operation")
+@click.option("--target", "target_id", required=False, help="target id")
+@click.option("--json", "as_json", is_flag=True, help="输出 JSON")
+def inspect_files(
+    route: str,
+    config: str = "./api-blueprint.toml",
+    target_id: str | None = None,
+    as_json: bool = False,
+) -> None:
+    payload = _inspection_call(lambda: inspection.inspect_files(config, route, target_id=target_id))
+    _emit_inspection(payload, as_json=as_json, formatter=_format_inspect_files)
+
+
+@inspect_group.command("schema")
+@click.argument("schema")
+@click.option("-c", "--config", default="./api-blueprint.toml", help="配置文件")
+@click.option("--json", "as_json", is_flag=True, help="输出 JSON")
+def inspect_schema(schema: str, config: str = "./api-blueprint.toml", as_json: bool = False) -> None:
+    payload = _inspection_call(lambda: inspection.inspect_schema(config, schema))
+    _emit_inspection(payload, as_json=as_json, formatter=_format_inspect_schema)
+
+
+@inspect_group.command("errors")
+@click.option("-c", "--config", default="./api-blueprint.toml", help="配置文件")
+@click.option("--route", "route", required=False, help="route id / path / operation")
+@click.option("--json", "as_json", is_flag=True, help="输出 JSON")
+def inspect_errors(config: str = "./api-blueprint.toml", route: str | None = None, as_json: bool = False) -> None:
+    payload = _inspection_call(lambda: inspection.inspect_errors(config, route_query=route))
+    _emit_inspection(payload, as_json=as_json, formatter=_format_inspect_errors)
+
+
 def _echo_diff(diff: dict[str, list[str]]) -> None:
     for label, key in (("BREAKING", "breaking"), ("RISKY", "risky"), ("COMPATIBLE", "compatible")):
         entries = diff.get(key, [])
@@ -97,3 +155,144 @@ def _echo_diff(diff: dict[str, list[str]]) -> None:
         click.echo(label)
         for entry in entries:
             click.echo(f"- {entry}")
+
+
+def _inspection_call(callback: Callable[[], dict[str, Any]]) -> dict[str, Any]:
+    try:
+        return callback()
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+
+def _emit_inspection(
+    payload: dict[str, Any],
+    *,
+    as_json: bool,
+    formatter: Callable[[dict[str, Any]], list[str]],
+) -> None:
+    if as_json:
+        click.echo(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
+        return
+    for line in formatter(payload):
+        click.echo(line)
+
+
+def _format_inspect_routes(payload: dict[str, Any]) -> list[str]:
+    lines = [f"routes: {payload.get('count', 0)}"]
+    for route in _list_of_maps(payload.get("routes")):
+        methods = ",".join(str(method) for method in route.get("methods", [])) or "-"
+        lines.append(f"- {route.get('id')} {methods} {route.get('url')} ({route.get('kind')})")
+        _append_optional_list(lines, "  schemas", route.get("schemas", []))
+        _append_optional_list(lines, "  errors", route.get("errors", []))
+        _append_optional_list(lines, "  targets", route.get("targets", []))
+    return lines
+
+
+def _format_inspect_route(payload: dict[str, Any]) -> list[str]:
+    lines = [f"route: {payload.get('id')}"]
+    methods = ",".join(str(method) for method in payload.get("methods", [])) or "-"
+    lines.append(f"http: {methods} {payload.get('url')}")
+    lines.append(f"kind: {payload.get('kind')}")
+    lines.append(f"operation: {payload.get('operation')}")
+    _append_optional_list(lines, "request", payload.get("request_models", []))
+    if payload.get("response_model"):
+        lines.append(f"response: {payload.get('response_model')}")
+    connection = payload.get("connection")
+    if isinstance(connection, Mapping):
+        summary = " ".join(
+            part
+            for part in (
+                str(connection.get("kind") or ""),
+                f"scope={connection.get('scope')}" if connection.get("scope") else "",
+            )
+            if part
+        )
+        if summary:
+            lines.append(f"connection: {summary}")
+    _append_optional_list(lines, "errors", payload.get("errors", []))
+    _append_optional_list(lines, "schemas", payload.get("schemas", []))
+    lines.extend(_format_artifacts(payload.get("artifacts", {})))
+    return lines
+
+
+def _format_inspect_files(payload: dict[str, Any]) -> list[str]:
+    lines = [f"route: {payload.get('route')}"]
+    lines.extend(_format_artifacts(payload.get("targets", {})))
+    return lines
+
+
+def _format_inspect_schema(payload: dict[str, Any]) -> list[str]:
+    schema = payload.get("schema") if isinstance(payload.get("schema"), Mapping) else {}
+    lines = [f"schema: {payload.get('name')}", f"type: {schema.get('type') or schema.get('kind') or 'unknown'}"]
+    fields = schema.get("fields")
+    if isinstance(fields, Mapping) and fields:
+        lines.append("fields:")
+        for field_name, field in fields.items():
+            field_type = _schema_value_type(field)
+            lines.append(f"- {field_name}: {field_type}")
+    _append_optional_list(lines, "inbound routes", payload.get("inbound_routes", []))
+    return lines
+
+
+def _format_inspect_errors(payload: dict[str, Any]) -> list[str]:
+    lines: list[str] = []
+    if payload.get("route"):
+        lines.append(f"route: {payload['route']}")
+    lines.append(f"errors: {payload.get('count', 0)}")
+    for error in _list_of_maps(payload.get("errors")):
+        lines.append(f"- {error.get('id')} code={error.get('code')} message={error.get('message')}")
+        toast = error.get("toast")
+        if isinstance(toast, Mapping):
+            lines.append(
+                "  toast: "
+                f"key={toast.get('key')} "
+                f"level={toast.get('level')} "
+                f"default={toast.get('default')}"
+            )
+    return lines
+
+
+def _format_artifacts(value: object) -> list[str]:
+    artifacts = value if isinstance(value, Mapping) else {}
+    if not artifacts:
+        return []
+    lines = ["generated files:"]
+    for target_id, artifact in artifacts.items():
+        if not isinstance(artifact, Mapping):
+            continue
+        lines.append(f"[{target_id}]")
+        for file_path in artifact.get("files", []):
+            lines.append(f"- {file_path}")
+        imports = artifact.get("imports", [])
+        if imports:
+            lines.append("imports:")
+            for import_path in imports:
+                lines.append(f"- {import_path}")
+    return lines
+
+
+def _append_optional_list(lines: list[str], label: str, values: object) -> None:
+    items = [str(item) for item in values] if isinstance(values, Sequence) and not isinstance(values, (str, bytes)) else []
+    if items:
+        lines.append(f"{label}: {', '.join(items)}")
+
+
+def _schema_value_type(value: object) -> str:
+    if not isinstance(value, Mapping):
+        return "unknown"
+    if value.get("ref"):
+        return str(value["ref"])
+    if value.get("enum"):
+        return str(value["enum"])
+    value_type = str(value.get("type") or value.get("kind") or "unknown")
+    if value_type == "array" and isinstance(value.get("items"), Mapping):
+        return f"array[{_schema_value_type(value['items'])}]"
+    if value_type == "map" and isinstance(value.get("values"), Mapping):
+        return f"map[string,{_schema_value_type(value['values'])}]"
+    return value_type
+
+
+def _list_of_maps(value: object) -> list[dict[str, Any]]:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        return []
+    return [dict(item) for item in value if isinstance(item, Mapping)]

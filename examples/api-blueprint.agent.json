@@ -1,15 +1,19 @@
 {
   "agent_notes": [
-    "先读 `api-blueprint.agent.json`，再读 route shard，最后才看生成物",
-    "Use route shards for exact request, response, stream, and channel model shapes.",
-    "Use generated artifacts only for language-specific invocation details after locating them in artifacts."
+    "优先使用 `api-gen inspect` 按需查询 route/schema/files/errors；只有离线或需要完整快照时才读 manifest/shard，最后才看生成物",
+    "Prefer `api-gen inspect route <route_id>` and `api-gen inspect files --route <route_id>` over opening generated trees.",
+    "Use route shards only for offline snapshots or when inspect output is not enough.",
+    "Use generated artifacts only for language-specific invocation details after locating them with inspect or artifacts."
   ],
   "capabilities": {
     "contract": {
       "implemented": true,
       "outputs": [
         "json",
-        "markdown"
+        "markdown",
+        "agent-json",
+        "agent-markdown",
+        "shards"
       ],
       "routes": []
     },
@@ -276,24 +280,29 @@
   "kind": "api-blueprint.agent",
   "read_order": [
     {
-      "path": "api-blueprint.agent.json",
-      "purpose": "Compact cross-service index for routes, schemas, connections, targets, and artifacts.",
+      "path": "api-gen inspect",
+      "purpose": "Query routes, route details, schema details, errors, and generated file indexes on demand.",
       "step": 1
     },
     {
-      "path": "api-blueprint.contract.d/index.json",
-      "purpose": "Shard directory index; use it when the compact route summary is not enough.",
+      "path": "api-blueprint.agent.json",
+      "purpose": "Compact cross-service index for routes, schemas, connections, targets, and artifacts.",
       "step": 2
     },
     {
-      "path": "api-blueprint.contract.d/routes/<route_id>.json",
-      "purpose": "Open the route shard for request/response models, connection messages, and target imports.",
+      "path": "api-blueprint.contract.d/index.json",
+      "purpose": "Optional shard directory index; use it when inspect is unavailable or a full offline snapshot is needed.",
       "step": 3
+    },
+    {
+      "path": "api-blueprint.contract.d/routes/<route_id>.json",
+      "purpose": "Optional route shard for request/response models, connection messages, and target imports.",
+      "step": 4
     },
     {
       "path": "generated artifacts",
       "purpose": "Only inspect generated source when the artifact/import index points to a target-specific entry.",
-      "step": 4
+      "step": 5
     }
   ],
   "routes": [

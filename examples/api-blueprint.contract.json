@@ -4,7 +4,10 @@
       "implemented": true,
       "outputs": [
         "json",
-        "markdown"
+        "markdown",
+        "agent-json",
+        "agent-markdown",
+        "shards"
       ],
       "routes": []
     },

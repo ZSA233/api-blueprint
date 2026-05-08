@@ -24,7 +24,7 @@ entrypoints = ["blueprints.app:*"]
 id = "contract"
 kind = "contract"
 out_dir = "."
-formats = ["json", "markdown", "agent-json", "agent-markdown", "shards"]
+formats = ["json"]
 
 [[go.server]]
 id = "go.server"
@@ -109,7 +109,7 @@ module = "pb"
 
 核心 target：
 
-- `contract`：输出 `api-blueprint.contract.json`、`api-blueprint.contract.md`、`api-blueprint.agent.json`、`api-blueprint.agent.md` 和 / 或 `api-blueprint.contract.d/` shards，其中包含 routes、schemas、connections、error catalog、target plan 和 capability registry。
+- `contract`：按 `formats` 输出 `api-blueprint.contract.json`、`api-blueprint.contract.md`、`api-blueprint.agent.json`、`api-blueprint.agent.md` 和 / 或 `api-blueprint.contract.d/` shards，其中包含 routes、schemas、connections、error catalog、target plan 和 capability registry。推荐日常只生成 `json` 用于 diff/归档，AI agent 和人工排查优先使用 `api-gen inspect` 按需查询；`agent-*` 与 `shards` 适合离线快照或需要完整导航包时开启。
 - `go-server`：生成 Go 服务端 core。`out_dir` 是包根；route/provider/transport/error 产物分别位于 `routes`、`providers`、`transports`、`runtime/errors`，如果需要包路径包含 `/views`，应显式把 `out_dir` 写成 `.../views`。
 - `go-client`：生成 preview Go client；RPC/query/json/form/binary HTTP 调用可用，legacy WS / STREAM / CHANNEL 生成 transport-neutral surface，默认 HTTP adapter 返回明确 unsupported error，便于项目替换自定义 transport。
 - `typescript-client`：生成只依赖 `ApiTransport` 的 TypeScript client core；`base_url` / `base_url_expr` 由 transport facade 注入。
@@ -152,6 +152,11 @@ transport target：
 ```sh
 api-gen list-targets -c api-blueprint.toml
 api-gen explain-target -c api-blueprint.toml --target go.server
+api-gen inspect routes -c api-blueprint.toml
+api-gen inspect route api.demo.post.testpost -c api-blueprint.toml
+api-gen inspect files -c api-blueprint.toml --route api.demo.post.testpost --target go.server
+api-gen inspect schema ApiDemoA -c api-blueprint.toml
+api-gen inspect errors -c api-blueprint.toml --route api.demo.post.testpost
 api-gen manifest -c api-blueprint.toml --profile full --out api-blueprint.contract.json
 api-gen manifest -c api-blueprint.toml --profile agent --out api-blueprint.agent.json
 api-gen manifest -c api-blueprint.toml --shards-dir api-blueprint.contract.d
@@ -161,4 +166,4 @@ api-gen generate -c api-blueprint.toml
 api-gen generate -c api-blueprint.toml --target wails.v3
 ```
 
-`api-gen manifest --profile full` 输出完整 manifest；`--profile agent` 输出 compact agent manifest；`--shards-dir` 输出按 service / route / schema 拆分的 shards。`manifest.version` 是 manifest schema 兼容版本，例如 `1.0`；`manifest.generator.version` 来自包版本真源。`api-gen check` 会先构建 ContractGraph，再使用共享 planner / capability metadata 做 target dependency、route、request kind 和 wrapper 校验。生成前失败比生成半套代码更容易维护。
+`api-gen inspect` 直接从配置加载 Blueprint 并构建 ContractGraph，适合按 route、schema、error 或 target 文件索引查询，不需要先生成 `contract.d` 或打开生成代码。`api-gen manifest --profile full` 输出完整 manifest；`--profile agent` 输出 compact agent manifest；`--shards-dir` 输出按 service / route / schema 拆分的 shards。`manifest.version` 是 manifest schema 兼容版本，例如 `1.0`；`manifest.generator.version` 来自包版本真源。`api-gen check` 会先构建 ContractGraph，再使用共享 planner / capability metadata 做 target dependency、route、request kind 和 wrapper 校验。生成前失败比生成半套代码更容易维护。

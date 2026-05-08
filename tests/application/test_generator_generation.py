@@ -171,8 +171,8 @@ formats = ["json", "markdown", "agent-json", "agent-markdown", "shards"]
     assert (tmp_path / "api-blueprint.contract.md").is_file()
     agent = json.loads((tmp_path / "api-blueprint.agent.json").read_text(encoding="utf-8"))
     assert agent["kind"] == "api-blueprint.agent"
-    assert agent["read_order"][0]["path"] == "api-blueprint.agent.json"
-    assert "先读 `api-blueprint.agent.json`，再读 route shard，最后才看生成物" in (
+    assert agent["read_order"][0]["path"] == "api-gen inspect"
+    assert "优先使用 `api-gen inspect` 按需查询 route/schema/files/errors" in (
         tmp_path / "api-blueprint.agent.md"
     ).read_text(encoding="utf-8")
     assert (tmp_path / "api-blueprint.contract.d" / "index.json").is_file()

@@ -11,7 +11,7 @@ JsonObject = dict[str, Any]
 
 AGENT_MANIFEST_KIND = "api-blueprint.agent"
 SHARD_ROOT = "api-blueprint.contract.d"
-AGENT_READ_ORDER_NOTE = "先读 `api-blueprint.agent.json`，再读 route shard，最后才看生成物"
+AGENT_READ_ORDER_NOTE = "优先使用 `api-gen inspect` 按需查询 route/schema/files/errors；只有离线或需要完整快照时才读 manifest/shard，最后才看生成物"
 
 
 def build_agent_manifest(manifest: Mapping[str, Any]) -> JsonObject:
@@ -33,21 +33,26 @@ def build_agent_manifest(manifest: Mapping[str, Any]) -> JsonObject:
         "read_order": [
             {
                 "step": 1,
+                "path": "api-gen inspect",
+                "purpose": "Query routes, route details, schema details, errors, and generated file indexes on demand.",
+            },
+            {
+                "step": 2,
                 "path": "api-blueprint.agent.json",
                 "purpose": "Compact cross-service index for routes, schemas, connections, targets, and artifacts.",
             },
             {
-                "step": 2,
-                "path": f"{SHARD_ROOT}/index.json",
-                "purpose": "Shard directory index; use it when the compact route summary is not enough.",
-            },
-            {
                 "step": 3,
-                "path": f"{SHARD_ROOT}/routes/<route_id>.json",
-                "purpose": "Open the route shard for request/response models, connection messages, and target imports.",
+                "path": f"{SHARD_ROOT}/index.json",
+                "purpose": "Optional shard directory index; use it when inspect is unavailable or a full offline snapshot is needed.",
             },
             {
                 "step": 4,
+                "path": f"{SHARD_ROOT}/routes/<route_id>.json",
+                "purpose": "Optional route shard for request/response models, connection messages, and target imports.",
+            },
+            {
+                "step": 5,
                 "path": "generated artifacts",
                 "purpose": "Only inspect generated source when the artifact/import index points to a target-specific entry.",
             },
@@ -66,8 +71,9 @@ def build_agent_manifest(manifest: Mapping[str, Any]) -> JsonObject:
         "capabilities": dict(capabilities),
         "agent_notes": [
             AGENT_READ_ORDER_NOTE,
-            "Use route shards for exact request, response, stream, and channel model shapes.",
-            "Use generated artifacts only for language-specific invocation details after locating them in artifacts.",
+            "Prefer `api-gen inspect route <route_id>` and `api-gen inspect files --route <route_id>` over opening generated trees.",
+            "Use route shards only for offline snapshots or when inspect output is not enough.",
+            "Use generated artifacts only for language-specific invocation details after locating them with inspect or artifacts.",
         ],
     }
 
@@ -149,6 +155,13 @@ def render_agent_markdown(manifest: Mapping[str, Any]) -> str:
         "# api-blueprint Agent Guide",
         "",
         AGENT_READ_ORDER_NOTE + "。",
+        "",
+        "## Preferred Commands",
+        "- `api-gen inspect routes -c api-blueprint.toml`",
+        "- `api-gen inspect route <route_id> -c api-blueprint.toml`",
+        "- `api-gen inspect files --route <route_id> --target <target_id> -c api-blueprint.toml`",
+        "- `api-gen inspect schema <SchemaName> -c api-blueprint.toml`",
+        "- `api-gen inspect errors --route <route_id> -c api-blueprint.toml`",
         "",
         "## Read Order",
     ]

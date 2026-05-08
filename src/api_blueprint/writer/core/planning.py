@@ -48,7 +48,7 @@ class TargetCapability:
 
 
 TARGET_CAPABILITIES: dict[str, TargetCapability] = {
-    "contract": TargetCapability(implemented=True, outputs=("json", "markdown")),
+    "contract": TargetCapability(implemented=True, outputs=("json", "markdown", "agent-json", "agent-markdown", "shards")),
     "go-server": TargetCapability(
         implemented=True,
         routes=("rpc", "legacy_ws", "stream", "channel"),

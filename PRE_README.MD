@@ -24,7 +24,7 @@ README 只回答：
 
 1. 用 Python DSL 定义 `Blueprint`、路由、请求模型、响应模型与错误结构。
 2. 在运行时构建 FastAPI/OpenAPI 文档服务。
-3. 从 Blueprint 构建唯一协议真源 `ContractGraph`，并输出完整 JSON manifest、AI agent compact manifest、Markdown agent guide、contract shards 与 breaking-change diff。
+3. 从 Blueprint 构建唯一协议真源 `ContractGraph`，并通过 `api-gen inspect` 按需查询 routes、schema、errors 和 target artifacts；同时可选输出完整 JSON manifest、AI agent compact manifest、Markdown agent guide、contract shards 与 breaking-change diff。
 4. 基于同一份 `ContractGraph` 和共享 planner / capability metadata 输出 Go server/client、TypeScript client、Kotlin Android client、Python client/server、Wails v2/v3 overlay、gRPC proto/service 定义，以及 protoc-backed Go/Python gRPC stub。
 
 当前对外公开统一 `api-gen` 主命令；Go client 是 preview target，HTTP RPC 可用，legacy WS / STREAM / CHANNEL 先生成 transport-neutral surface 并由默认 HTTP adapter 返回明确 unsupported error。`api-gen check` 与各语言 writer 共享同一份 target capability metadata，避免 check 与生成器支持面漂移。Kotlin / Python / Go client 是新实现的生成器表面，文档应避免把它们描述为完全成熟的生产 SDK。gRPC 产物链路包含 `grpc-proto`、`grpc-go` 与 `grpc-python` targets，其中 Go/Python targets 只编译 protobuf/gRPC stub，不生成业务服务实现。`grpc-go` / `grpc-python` 也可省略 `proto` 并直接使用 `source_root` / `files` 编译手写 proto。
@@ -92,7 +92,7 @@ README 必须保持简洁。Wails 的 RouteExecutor、provider pipeline、Go/Typ
 - Blueprint DSL 把长连接消息流作为与 RPC 并列的一等契约：`STREAM` 表示服务端持续推送，`CHANNEL` 表示双向消息通道；legacy `WS/RECV/SEND` 不属于 1.0 公共主线。
 - `STREAM` / `CHANNEL` 使用 `OPEN`、`SERVER_MESSAGE`、`CLIENT_MESSAGE`、typed `CLOSE` 与 `ConnectionScope` 描述 transport-neutral 连接语义；多消息类型必须通过单个判别联合消息契约声明，避免多个裸 event 名。
 - 当前公开 target kind：`contract`、`go-server`、`go-client`、`typescript-client`、`kotlin-client`、`python-server`、`python-client`、`http-transport`、`wails-transport`、`grpc-proto`、`grpc-go`、`grpc-python`。
-- 完整 `api-blueprint.contract.json` 记录 routes、schemas、connections、error catalog、稳定 hashes、已解析 target plan 和 capability registry；`api-blueprint.agent.json`、`api-blueprint.agent.md` 与 `api-blueprint.contract.d/` 提供 compact 入口、阅读顺序、按 route/service/schema 分片和 target artifact/import 索引，方便 AI agent 先读 compact manifest，再按需打开 shard，最后才看生成物。Kotlin / Python 的 artifact/import 索引必须指向完整镜像 route path 的输出路径，例如 `routes/api/demo`；Python 不再使用 `routes/root` sentinel。
+- AI agent 与人类维护者应优先使用 `api-gen inspect routes/route/files/schema/errors` 按需查询 ContractGraph，而不是先读生成物、完整 `contract.json` 或庞大的 `contract.d/`。完整 `api-blueprint.contract.json` 记录 routes、schemas、connections、error catalog、稳定 hashes、已解析 target plan 和 capability registry；`api-blueprint.agent.json`、`api-blueprint.agent.md` 与 `api-blueprint.contract.d/` 是可选的离线导航/归档快照，提供 compact 入口、阅读顺序、按 route/service/schema 分片和 target artifact/import 索引。Kotlin / Python 的 artifact/import 索引必须指向完整镜像 route path 的输出路径，例如 `routes/api/demo`；Python 不再使用 `routes/root` sentinel。
 - ContractGraph 从 `Blueprint(errors=...)` 和 route `.ERR(...)` 收集语言无关 error catalog，manifest 稳定输出 error group、member key、code、message、`toast.key/default/level`，并在 route summary 中列出可见 error ids。DSL 中 `message` 是协议级默认说明，`Toast(key, default, level)` 是用户展示层兜底；生成器只输出 key/default/level，不生成内置多语言表或 `locales/*.json`。生成物会把 runtime 错误类型/helper 与静态 catalog 数据拆到独立 generated 文件，避免错误码增长后挤压运行时结构文件。业务 i18n 系统按 key 查找当前语言，客户端 helper 的展示优先级是服务端 `toast.text` 覆盖、外部 i18n、`toast.default`、`message`。服务端可用不可变覆盖返回动态 toast 文案；业务错误码不默认改变 HTTP status，也不默认把 `GeneralWrapper.code != 0` 转成异常。
 - `manifest.version` 是 manifest schema 兼容版本，初始为 `1.0`；`manifest.generator.version` 来自包版本真源 `release-version.toml` / `src/api_blueprint/_version.py`，例如 `1.0.0`。
 - Wails v3 标记为 experimental，Wails v2 标记为 preview。
