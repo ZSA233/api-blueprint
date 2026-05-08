@@ -102,9 +102,7 @@ api-doc-server -c api-blueprint.toml
 api-gen generate -c api-blueprint.toml
 ```
 
-生成器拥有的文件会直接写出并记录进度，保留的用户扩展文件才会使用 skip 语义。
-
-TypeScript、Kotlin、Python client 的 `base_url` / `base_url_expr` 由 HTTP transport adapter / factory 使用；共享 route/runtime client 保持 transport-neutral。
+生成器扩展点、文件 ownership 与目录布局见 [生成器说明](docs/zh/generators.md)。
 
 ## 最小配置
 
@@ -195,31 +193,6 @@ api-gen generate -c examples/api-blueprint.toml
 api-gen generate -c examples/api-blueprint.toml --target wails.v3
 api-gen diff old.contract.json new.contract.json
 ```
-
-## 生成产物与用户文件
-
-- `examples/blueprints/` 是示例 Blueprint 真源。
-- `examples/blueprints/api_demo.py` 包含 `STREAM` / `CHANNEL` 长连接示例。
-- `examples/golang/server/`、`examples/golang/client/`、`examples/typescript/`、`examples/kotlin/`、`examples/api-blueprint.index.json`、可选 contract/agent/shards 快照、`examples/grpc/protos/`、`examples/grpc/go/`、`examples/grpc/python/` 是生成快照。
-- `examples/wails-hello/` 是独立 Wails v3 hello world 示例，演示不启动 HTTP 服务的 GUI 闭环。
-- Go / TypeScript / Python 的 `gen_*` 文件由生成器拥有，重生成会覆盖；Kotlin 的 `Gen*.kt` 文件由生成器拥有并带 generated header。
-- `impl_*`、Python `client.py` / `service.py`、Kotlin 非 `Gen*` façade/extension 文件是用户拥有扩展点，重生成时保留。
-- Go server 的 `out_dir` 是生成包根，不再隐式追加 `views`；示例使用 `golang/server/views`，因此 server 产物位于 `views/routes`、`views/providers`、`views/runtime/errors`、`views/transports`。Go client 生成物按 `runtime`、`routes/<root>/<group...>`、`transports/http` 输出，`base_url` 只属于 HTTP transport config；Kotlin 使用 `<package>/<root>/runtime`、`<package>/<root>/routes/<root>/<group...>`、`<package>/<root>/transports/http` 新布局，旧 `<package>/ApiClient.kt`、`endpoints/`、`models/`、`internal/` 布局已破坏性变更。
-- Python client/server 使用 `python_package_root` 包根；route 输出完整镜像 path，例如 `routes/api/demo`，root-level route 位于 `routes/api`，不再使用 `routes/root`；client 是 async-first HTTP client，server 输出 route service contracts/stubs 与 FastAPI HTTP adapter scaffold。
-- `api-gen check` 与 writer 共享 planner / capability metadata；contract / agent artifacts 的 target 文件索引会指向 Kotlin / Python 新的完整 route path 输出路径。
-- `api-gen generate --target wails.v3` 不生成完整 Wails app shell，external frontend 需先加载 Wails runtime；Wails target 仍只组合 Go server 与 TypeScript client。
-- Wails target 的 `include` / `exclude` 会裁剪 target overlay / facade；未选中 route 的 root 不生成 `transports/<overlay_name>`，共享契约层仍完整生成。
-- Go `providers` 是生成包根下的全局 runtime；按 route 选择 provider 实现可使用 route-scoped provider factory，用户自定义 hook 为 `SelectProvider(spec, handler)`，详见生成器文档。
-- `STREAM` / `CHANNEL` 是长连接契约入口；多消息类型生成单个判别联合消息，legacy `WS().RECV().SEND()` 不进入 1.0 主线。
-- `operation_id` 是 RPC / `STREAM` / `CHANNEL` 的正式主线能力；当你希望生成的 handler / client / transport 名称使用稳定业务语义而不是 path 推导名时，应显式设置它。`operation_id` 只影响 operation-derived surface，不改变 route id、path 或连接语义。
-- 默认 HTTP/Wails runtime 只完整支持 `ConnectionScope.SESSION`；`APP` / `TOPIC` 的广播或 topic routing 可通过自定义 connection hub / manager 扩展。
-- `examples/golang/server/views/routes/api/demo/impl.go` 手写了 `STREAM` / `CHANNEL` 最小用法示例，展示 `Open()`、`Send()`、`Recv()`、typed `Close()` 与异常 `Abort()`。
-- Go HTTP adapter 会尊重已由 Gin handler 写出的响应，适合少量 HTTP-only raw callback。
-- AI agent 与人类维护者应优先使用 `api-gen inspect routes/route/files/schema/errors` 按需查询 ContractGraph；`route` / `schema` 可一次传多个查询，`files` / `errors` 可重复 `--route`，避免为多个接口反复启动命令。`inspect` 只返回 live ContractGraph 查询结果，不暗示 shard 文件存在，也不返回默认 shard 路径。其次读取轻量 `api-blueprint.index.json` 查看 service / route / target 目录，并按其中的 `queries` 命令继续批量查询相关 route、schema、error 或生成文件。完整 `contract.json` 只在显式 `formats = ["json"]` 或 `api-gen manifest --profile full` 时生成，主要用于 diff、归档和兜底全量检查；`agent.json`、`agent.md` 与 `contract.d/` 主要用于离线导航包和归档。
-- ContractGraph 会把 `Blueprint(errors=...)` 和 route `.ERR(...)` 收束为 language-agnostic error catalog，并为每个错误输出 `message` 与 `toast.key/default/level`。生成代码不内置多语言表；业务 i18n 通过 toast key 解析当前语言，客户端 helper 按 `toast.text`、外部 i18n、`toast.default`、`message` 的顺序兜底。Go client、TypeScript、Kotlin、Python client/server 会把 runtime 错误类型/helper 与静态 catalog 数据拆到独立 generated 文件；Go server 只生成 runtime 类型和分组错误值，避免 root catalog 与分组错误值重复。业务 wrapper code 不会被默认转换成异常。
-- `[[targets]]` 是 canonical 配置入口；也可以使用 `[[contract]]`、`[[go.server]]`、`[[go.client]]`、`[[python.server]]`、`[[transport.http]]`、`[[grpc.proto]]`、`[[grpc.go]]`、`[[grpc.python]]` 等快捷表，加载时会 normalize 成 targets。快捷表中的 Python `module` 映射到 `python_package_root`，Kotlin `module` 映射到 `package`，`[[grpc.python]] module` 同样映射到 `python_package_root`。
-- `api-gen explain-target --target <id>` 输出 effective target summary，而不是原始 TOML 片段；它会显示当前 target kind 的关键字段和关键生效值，例如 contract target 省略 `formats` 时会显示 `formats = ["index"]`，Wails target 会显示 `version`、`overlay_name`、`frontend_mode`、`include`、`exclude`。
-- gRPC proto 可由 `grpc-proto` target 从 ContractGraph 输出；`[[targets.proto_files]]` 或快捷表 `[[grpc.proto.proto_files]]` 可把 DSL module/route 映射到 proto file/package/go_package/service。DSL 主线只表达通用契约：`field(1, String(...), optional=True)` 表示稳定字段身份，`choice="..."` 表示互斥选择，`DateTime`、`JSONValue`、`AnyValue` 表示通用语义类型。`grpc-go` / `grpc-python` 也可以省略 `proto` 并直接通过 `source_root` / `files` 编译手写 proto。
 
 ## 深入文档
 

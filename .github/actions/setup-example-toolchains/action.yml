@@ -58,8 +58,6 @@ runs:
     - name: Install generator toolchains
       shell: bash
       run: |
-        sudo apt-get update
-        sudo apt-get install -y protobuf-compiler
         curl -fsSL -o /tmp/protoc-32.0-linux-x86_64.zip \
           https://github.com/protocolbuffers/protobuf/releases/download/v32.0/protoc-32.0-linux-x86_64.zip
         unzip -o /tmp/protoc-32.0-linux-x86_64.zip -d "$HOME/.local"

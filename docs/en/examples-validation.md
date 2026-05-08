@@ -65,4 +65,4 @@ Strict examples validation may require:
 
 ## Release Requirement
 
-`make release-preflight` must include strict `make example-validation`. Before release, all intentional snapshot changes should already have been accepted through `make example-refresh` and committed.
+`make release-preflight` must include strict `make example-validation`. Release branch CI must also run strict `example-validation`. Before release, all intentional snapshot changes should already have been accepted through `make example-refresh` and committed.

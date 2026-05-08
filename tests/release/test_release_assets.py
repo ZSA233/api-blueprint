@@ -24,11 +24,16 @@ def test_makefile_exposes_example_validation_and_release_preflight_uses_it():
     compile_block = _target_block(text, "example-compile-check")
     refresh_block = _target_block(text, "example-refresh")
     preflight_block = _target_block(text, "release-preflight")
+    tag_check_block = _target_block(text, "release-tag-check")
 
     assert "uv run python scripts/example_validation.py" in example_block
     assert "uv run python scripts/example_validation.py --mode compile" in compile_block
     assert "uv run python scripts/example_validation.py --mode refresh" in refresh_block
     assert "$(MAKE) example-validation" in preflight_block
+    assert 'uv run python scripts/release_version.py check-sync --tag "$(RELEASE_TAG)"' in tag_check_block
+    assert "uv run python scripts/release_assets.py validate-config" in tag_check_block
+    assert "uv run python scripts/release_assets.py validate-docs" in tag_check_block
+    assert 'uv run python scripts/release_assets.py validate-release-version --tag "$(RELEASE_TAG)"' in tag_check_block
 
 
 def test_ci_and_release_bundle_share_example_toolchain_setup():
@@ -41,17 +46,26 @@ def test_ci_and_release_bundle_share_example_toolchain_setup():
     toolchain_text = (
         REPO_ROOT / ".github" / "actions" / "setup-example-toolchains" / "action.yml"
     ).read_text(encoding="utf-8")
+    example_validation_job = _job_block(ci_text, "example-validation")
+    python_tests_job = _job_block(ci_text, "python-tests")
 
     assert "example-validation:" in ci_text
     assert "./.github/actions/setup-example-toolchains" in ci_text
+    assert "workflow_dispatch" in example_validation_job
+    assert "refs/heads/release/" in example_validation_job
+    assert "example-validation" not in python_tests_job
+    assert "release-contract" in python_tests_job
     assert "./.github/actions/setup-example-toolchains" in release_bundle_text
+    assert 'run: make release-tag-check RELEASE_TAG="${{ inputs.release_tag }}"' in release_bundle_text
+    assert "make release-preflight" not in release_bundle_text
     assert "actions/setup-java@v5" in toolchain_text
     assert 'java-version: "17"' in toolchain_text
     assert "actions/setup-go@v6" in toolchain_text
     assert "actions/setup-node@v6" in toolchain_text
     assert 'node-version: "24"' in toolchain_text
     assert "examples/golang/server/go.sum" in toolchain_text
-    assert "protobuf-compiler" in toolchain_text
+    assert "protobuf-compiler" not in toolchain_text
+    assert toolchain_text.count("apt-get update") == 1
     assert "github.com/abice/go-enum@v0.9.2" in toolchain_text
     assert "google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.10" in toolchain_text
     assert "google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.0" in toolchain_text
@@ -62,6 +76,16 @@ def test_ci_and_release_bundle_share_example_toolchain_setup():
     assert 'go-version: "1.25"' in ci_text
     assert "build:\n    runs-on: ubuntu-22.04" in release_text
     assert "build:\n    runs-on: ubuntu-22.04" in release_rc_text
+
+
+def test_readme_stays_as_onboarding_entrypoint():
+    readme_zh = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    readme_en = (REPO_ROOT / "README_EN.md").read_text(encoding="utf-8")
+
+    assert "## 生成产物与用户文件" not in readme_zh
+    assert "## Generated Artifacts And User Files" not in readme_en
+    assert "生成器扩展点、文件 ownership 与目录布局见" in readme_zh
+    assert "See the generator docs for extension points, file ownership, and output layout." in readme_en
 
 
 def _target_block(text: str, target: str) -> str:
@@ -81,4 +105,24 @@ def _target_block(text: str, target: str) -> str:
 
     if not collected:
         raise AssertionError(f"target {target!r} not found in Makefile")
+    return "\n".join(collected)
+
+
+def _job_block(text: str, job: str) -> str:
+    marker = f"  {job}:"
+    lines = text.splitlines()
+    collecting = False
+    collected: list[str] = []
+    for line in lines:
+        if not collecting and line == marker:
+            collecting = True
+            collected.append(line)
+            continue
+        if collecting:
+            if line.startswith("  ") and not line.startswith("    ") and line.endswith(":"):
+                break
+            collected.append(line)
+
+    if not collected:
+        raise AssertionError(f"job {job!r} not found in workflow")
     return "\n".join(collected)

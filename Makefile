@@ -1,4 +1,4 @@
-.PHONY: sync test example-validation example-compile-check example-refresh wails-hello-dev wails-hello-check wails-hello-compile-check wails-hello-refresh build release-preflight release-local release-install-check release-version-show release-version-rc release-version-stable
+.PHONY: sync test example-validation example-compile-check example-refresh wails-hello-dev wails-hello-check wails-hello-compile-check wails-hello-refresh build release-tag-check release-preflight release-local release-install-check release-version-show release-version-rc release-version-stable
 
 RELEASE_TAG ?=
 DIST_DIR ?= dist
@@ -34,12 +34,16 @@ wails-hello-refresh:
 build:
 	uv build --sdist --wheel
 
-release-preflight:
+release-tag-check:
 	@if [ -z "$(RELEASE_TAG)" ]; then echo "RELEASE_TAG is required" >&2; exit 1; fi
 	uv run python scripts/release_version.py check-sync --tag "$(RELEASE_TAG)"
 	uv run python scripts/release_assets.py validate-config
 	uv run python scripts/release_assets.py validate-docs
 	uv run python scripts/release_assets.py validate-release-version --tag "$(RELEASE_TAG)"
+
+release-preflight:
+	@if [ -z "$(RELEASE_TAG)" ]; then echo "RELEASE_TAG is required" >&2; exit 1; fi
+	$(MAKE) release-tag-check RELEASE_TAG="$(RELEASE_TAG)"
 	$(MAKE) test
 	$(MAKE) example-validation
 

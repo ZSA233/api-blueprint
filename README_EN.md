@@ -102,9 +102,7 @@ api-doc-server -c api-blueprint.toml
 api-gen generate -c api-blueprint.toml
 ```
 
-Generator-owned files are written with progress logs, while preserved user extension files are the ones that use skip semantics.
-
-For TypeScript, Kotlin, and Python clients, `base_url` / `base_url_expr` are owned by the HTTP transport adapter / factory; shared route/runtime clients stay transport-neutral.
+See the generator docs for extension points, file ownership, and output layout.
 
 ## Minimal Configuration
 
@@ -195,31 +193,6 @@ api-gen generate -c examples/api-blueprint.toml
 api-gen generate -c examples/api-blueprint.toml --target wails.v3
 api-gen diff old.contract.json new.contract.json
 ```
-
-## Generated Artifacts And User Files
-
-- `examples/blueprints/` is the example Blueprint source of truth.
-- `examples/blueprints/api_demo.py` includes `STREAM` / `CHANNEL` long-connection examples.
-- `examples/golang/server/`, `examples/golang/client/`, `examples/typescript/`, `examples/kotlin/`, `examples/api-blueprint.index.json`, optional contract/agent/shard snapshots, `examples/grpc/protos/`, `examples/grpc/go/`, and `examples/grpc/python/` are generated snapshots.
-- `examples/wails-hello/` is a standalone Wails v3 hello world example that demonstrates a GUI loop without starting an HTTP server.
-- Go / TypeScript / Python `gen_*` files are generator-owned and overwritten during regeneration; Kotlin `Gen*.kt` files are generator-owned and include a generated header.
-- `impl_*`, Python `client.py` / `service.py`, and Kotlin non-`Gen*` façade/extension files are user-owned extension points and are preserved during regeneration.
-- Go server `out_dir` is the generated package root and no longer appends `views` implicitly. The example uses `golang/server/views`, so server artifacts live under `views/routes`, `views/providers`, `views/runtime/errors`, and `views/transports`. Go client artifacts use `runtime`, `routes/<root>/<group...>`, and `transports/http`, with `base_url` owned only by the HTTP transport config. Kotlin uses the new `<package>/<root>/runtime`, `<package>/<root>/routes/<root>/<group...>`, and `<package>/<root>/transports/http` layout, and the old `<package>/ApiClient.kt`, `endpoints/`, `models/`, and `internal/` layout is a breaking change.
-- Python client/server use `python_package_root` as the package root; route output mirrors the full path, for example `routes/api/demo`, root-level routes live in `routes/api`, and `routes/root` is no longer used. The client is async-first over HTTP, and the server emits route service contracts/stubs plus a FastAPI HTTP adapter scaffold.
-- `api-gen check` and writers share planner / capability metadata; contract / agent artifact indexes point to the new Kotlin / Python full route path outputs.
-- `api-gen generate --target wails.v3` does not generate a full Wails app shell, and external frontends must load the Wails runtime first; Wails targets still combine only a Go server and TypeScript client.
-- Wails target `include` / `exclude` trims target overlays / facades; roots with no selected routes do not get `transports/<overlay_name>` output, while shared contract layers are still generated in full.
-- Go `providers` is a global runtime under the generated package root; use route-scoped provider factories when a provider implementation must vary by route. The user-owned hook is `SelectProvider(spec, handler)`. See the generator docs.
-- `STREAM` / `CHANNEL` are the long-connection contract entrypoints; multi-message directions generate one discriminated union, while legacy `WS().RECV().SEND()` is outside the 1.0 mainline.
-- `operation_id` is a first-class mainline capability for RPC / `STREAM` / `CHANNEL`. Set it explicitly when generated handler / client / transport names should use stable business semantics instead of path-derived names. `operation_id` changes only the operation-derived surface, not the route id, path, or connection semantics.
-- The default HTTP/Wails runtimes fully support only `ConnectionScope.SESSION`; `APP` / `TOPIC` broadcast or topic routing can be added through a custom connection hub / manager.
-- `examples/golang/server/views/routes/api/demo/impl.go` hand-writes a minimal `STREAM` / `CHANNEL` usage example that demonstrates `Open()`, `Send()`, `Recv()`, typed `Close()`, and exceptional `Abort()`.
-- The Go HTTP adapter respects responses already written by Gin handlers, which fits small HTTP-only raw callbacks.
-- AI agents and maintainers should query ContractGraph on demand with `api-gen inspect routes/route/files/schema/errors` first; `route` / `schema` accept multiple queries, and `files` / `errors` accept repeated `--route`, so agents can avoid restarting the command for related endpoints. `inspect` returns only live ContractGraph query results, does not imply shard files exist, and does not return a default shard path. Then read lightweight `api-blueprint.index.json` for the service / route / target catalog and follow its `queries` commands for batched route, schema, error, or generated file details. Full `contract.json` is generated only by explicit `formats = ["json"]` or `api-gen manifest --profile full`, and is mainly for diffs, archiving, and exhaustive fallback inspection; `agent.json`, `agent.md`, and `contract.d/` are mainly for offline navigation bundles and archives.
-- ContractGraph normalizes `Blueprint(errors=...)` and route `.ERR(...)` into a language-agnostic error catalog, with `message` plus `toast.key/default/level` for each error. Generated code does not embed locale tables; business i18n resolves the current language by toast key, and client helpers fall back through `toast.text`, external i18n, `toast.default`, then `message`. Go client, TypeScript, Kotlin, and Python client/server split runtime error types/helpers from static catalog data into separate generated files; Go server emits runtime types plus grouped error values only, avoiding a duplicate root catalog. Business wrapper codes are not automatically converted into thrown exceptions.
-- `[[targets]]` is the canonical config entrypoint; shortcut tables such as `[[contract]]`, `[[go.server]]`, `[[go.client]]`, `[[python.server]]`, `[[transport.http]]`, `[[grpc.proto]]`, `[[grpc.go]]`, and `[[grpc.python]]` are normalized into targets when loading config. In shortcut tables, Python `module` maps to `python_package_root`, Kotlin `module` maps to `package`, and `[[grpc.python]] module` also maps to `python_package_root`.
-- `api-gen explain-target --target <id>` prints the effective target summary instead of a raw TOML fragment; it shows the key fields and key effective values for the current target kind. For example, a contract target with omitted `formats` still shows `formats = ["index"]`, and a Wails target shows `version`, `overlay_name`, `frontend_mode`, `include`, and `exclude`.
-- gRPC proto can be emitted by the `grpc-proto` target from ContractGraph. `[[targets.proto_files]]` or the shortcut `[[grpc.proto.proto_files]]` maps DSL modules/routes to proto file/package/go_package/service. The DSL mainline only expresses generic contracts: `field(1, String(...), optional=True)` is a stable field identity, `choice="..."` is a mutually exclusive choice, and `DateTime`, `JSONValue`, and `AnyValue` are semantic value types. `grpc-go` / `grpc-python` can also omit `proto` and compile handwritten proto files directly with `source_root` / `files`.
 
 ## Learn More
 

@@ -29,6 +29,7 @@ jobs:
           uv run python scripts/release_assets.py validate-docs
 
   example-validation:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/')) }}
     needs: release-contract
     runs-on: ubuntu-22.04
     steps:
@@ -51,7 +52,6 @@ jobs:
   python-tests:
     needs:
       - release-contract
-      - example-validation
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

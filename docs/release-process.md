@@ -144,7 +144,7 @@ make example-refresh
 2. 优先复用这次 push 自动触发的 `CI` 结果。
 3. 如果需要补跑，可以再手动触发一次 `CI` workflow。
 
-发版继续之前，至少要确认这些作业全部通过：
+发版继续之前，至少要确认 release ref 上这些作业全部通过：
 
 - `release-contract`
 - `example-validation`
@@ -156,10 +156,11 @@ make example-refresh
 
 这里要注意当前 CI 的职责边界：
 
-- `example-validation` 会通过共享的 `.github/actions/setup-example-toolchains` 安装 Go、Node 24、TypeScript、`go-enum` 与 `protoc` 工具链；`setup-go` 也会显式指向示例 Go server module 的 `go.sum`，避免 release / CI 出现根目录 `go.sum` 缺失告警。
+- 常规 `pull_request` 与 `main` push 主要跑 `release-contract` + `python-tests`，不再默认阻塞在严格 `example-validation` 上。
+- `example-validation` 只在 `release/*` push 与手动 `workflow_dispatch` 时运行；它会通过共享的 `.github/actions/setup-example-toolchains` 安装 Go、Node 24、TypeScript、`go-enum` 与 pinned `protoc` 工具链。
 - `python-tests` 会通过 `pytest -m "not example_validation"` 排除 `tests/integration/examples/` 里的专用外部工具链校验，避免在通用 Python matrix 中重复跑这类重型检查。
-- `release.yml` / `release-rc.yml` 的 `release-bundle` 也必须复用同一套 examples toolchain setup；否则 `make release-preflight` 会比普通 CI 少掉 examples 所需依赖，出现“CI 绿、正式发布红”的分叉。
-- 因此判断 release ref 是否“CI 全绿”时，`example-validation` 必须和三个 `python-tests` matrix 一起看，不能只看 pytest matrix。
+- `release.yml` / `release-rc.yml` 的 `release-bundle` 仍复用同一套 examples toolchain setup，但 tag workflow 只跑 release metadata check、构建与 install check，不再重复完整 `make release-preflight`。
+- 因此判断 release ref 是否“CI 全绿”时，必须看 release branch 上的 `example-validation` 与三个 `python-tests` matrix，不能只看 pytest matrix。
 
 CI 未通过时的固定处理原则：
 
@@ -188,6 +189,7 @@ git rev-parse vX.Y.Z[-rc.N]
 - 不会创建 GitHub Release / prerelease
 - 不会推进 `stable` 分支
 - 不会触发 `production` environment 审批
+- `build` job 会执行 release metadata check、构建与 install check，不重复完整 `make release-preflight`
 
 推荐在公开 push tag 前，先做一次远端 dry-run。
 

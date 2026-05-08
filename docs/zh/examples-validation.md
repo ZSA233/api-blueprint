@@ -65,4 +65,4 @@ make example-validation
 
 ## 发布前要求
 
-`make release-preflight` 必须包含严格 `make example-validation`。进入发布前，所有预期 snapshot 变化都应已经通过 `make example-refresh` 接受并提交。
+`make release-preflight` 必须包含严格 `make example-validation`。release branch CI 也必须跑严格 `example-validation`。进入发布前，所有预期 snapshot 变化都应已经通过 `make example-refresh` 接受并提交。

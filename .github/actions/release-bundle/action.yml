@@ -21,9 +21,9 @@ runs:
       shell: bash
       run: make sync
 
-    - name: Preflight release checks
+    - name: Release metadata checks
       shell: bash
-      run: make release-preflight RELEASE_TAG="${{ inputs.release_tag }}"
+      run: make release-tag-check RELEASE_TAG="${{ inputs.release_tag }}"
 
     - name: Build release artifacts
       shell: bash

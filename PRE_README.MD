@@ -11,10 +11,9 @@ README 只回答：
 - 如何安装。
 - 如何用最小 Blueprint 与最小配置跑起来。
 - 常用 CLI 是什么。
-- 生成文件哪些由生成器拥有、哪些由用户拥有。
 - 更详细的配置、生成器、Wails、gRPC、DSL、examples 验证与发布说明去哪里看。
 
-详细语义、目录布局、迁移规则、provider pipeline、Wails socket bridge、gRPC target 推导、example drift 处理等内容必须放到 `docs/` 下的专题文档中，再由 README 链接过去。
+详细语义、目录布局、迁移规则、generator ownership、provider pipeline、Wails socket bridge、gRPC target 推导、example drift 处理等内容必须放到 `docs/` 下的专题文档中，再由 README 链接过去。
 
 ## 项目定位
 
@@ -64,10 +63,9 @@ README 应链接到以下用户文档：
 4. 快速开始
 5. 最小配置
 6. 常用命令
-7. 生成产物与用户文件
-8. 深入文档
-9. 开发
-10. 发布
+7. 深入文档
+8. 开发
+9. 发布
 
 README 必须保持简洁。Wails 的 RouteExecutor、provider pipeline、Go/TypeScript 内部保留目录、gRPC module 推导等细节不应直接堆在 README 中。
 
@@ -86,7 +84,7 @@ README 必须保持简洁。Wails 的 RouteExecutor、provider pipeline、Go/Typ
 - `examples/grpc/protos/`、`examples/grpc/go/` 与 `examples/grpc/python/`：gRPC proto 与 Go/Python protobuf/gRPC stub 输出快照。
 - `tests/`：单元测试、CLI 测试、codegen 测试、example 集成验证、打包与 release contract 测试。
 
-## README 必须覆盖的事实
+## 用户文档必须覆盖的事实
 
 - 项目主链路是 `Blueprint -> ContractGraph -> shared target planner -> writers`；ContractGraph 是 Go / TypeScript / Kotlin / Python / Wails / gRPC proto 的唯一协议真源。
 - Blueprint DSL 把长连接消息流作为与 RPC 并列的一等契约：`STREAM` 表示服务端持续推送，`CHANNEL` 表示双向消息通道；legacy `WS/RECV/SEND` 不属于 1.0 公共主线。
