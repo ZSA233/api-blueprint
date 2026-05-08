@@ -55,6 +55,9 @@ def test_ci_and_release_bundle_share_example_toolchain_setup():
     assert "google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.0" in toolchain_text
     assert "GITHUB_PATH" in toolchain_text
     assert 'uv run pytest -q -m "not example_validation"' in ci_text
+    assert "python-tests:" in ci_text
+    assert "actions/setup-go@v6" in ci_text
+    assert 'go-version: "1.25"' in ci_text
 
 
 def _target_block(text: str, target: str) -> str:
