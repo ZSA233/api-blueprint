@@ -25,7 +25,7 @@ from api_blueprint.engine.model import (
 )
 from api_blueprint.engine.router import Router
 
-from .route import RouteContract, route_contract
+from .route import RouteContract, resolve_route_contracts, route_contract
 from .runtime import ContractRouteRuntime
 
 
@@ -109,10 +109,15 @@ class ContractGraphBuilder:
         self._schema_ref_rewrites: dict[str, str] = {}
 
     def build(self, blueprints: Iterable[Blueprint]) -> ContractGraph:
+        routers: list[Router] = []
         for blueprint in blueprints:
             self.add_errors(blueprint.errors)
             for _group, router in blueprint.iter_router():
-                self.add_router(router)
+                router.validate_connection_contract()
+                routers.append(router)
+        contracts = resolve_route_contracts(routers)
+        for router in routers:
+            self.add_router(router, contract=contracts[router])
         return ContractGraph(
             services=list(self.services.values()),
             routes=self.routes,
@@ -121,9 +126,9 @@ class ContractGraphBuilder:
             route_runtime=dict(self.route_runtime),
         )
 
-    def add_router(self, router: Router) -> None:
+    def add_router(self, router: Router, *, contract: RouteContract | None = None) -> None:
         router.validate_connection_contract()
-        contract = route_contract(router)
+        contract = contract or route_contract(router)
         service = self._service_manifest(router, contract)
         self.services.setdefault(service["id"], service)
         route = self._route_manifest(router, contract)

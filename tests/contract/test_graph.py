@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from api_blueprint.contract import (
     RouteContract,
     build_agent_manifest,
@@ -12,6 +14,7 @@ from api_blueprint.engine import Blueprint, Error, Toast
 from api_blueprint.engine.connection import ConnectionScope
 from api_blueprint.engine.model import Int, String, Model, field
 from api_blueprint.writer.core import contracts as legacy_contracts
+from api_blueprint.writer.core.contract_adapters import RouteContractIndex
 
 
 class OpenRequest(Model):
@@ -72,6 +75,50 @@ def test_contract_graph_manifest_captures_rpc_and_connection_routes():
     schema = manifest["schemas"]["CloseInfo"]
     assert schema["fields"]["reason"]["optional"] is True
     assert len(manifest["hashes"]["routes"]["api.runs.stream.events"]) == 64
+
+
+def test_route_contract_preserves_explicit_operation_id_casing_variants():
+    bp = Blueprint(root="/api")
+    with bp.group("/pascal") as views:
+        pascal_router = views.GET("/events", operation_id="TaskEvents").RSP(message=String(description="message"))
+    with bp.group("/camel") as views:
+        camel_router = views.GET("/events", operation_id="taskEvents").RSP(message=String(description="message"))
+    with bp.group("/snake") as views:
+        snake_router = views.GET("/events", operation_id="task_events").RSP(message=String(description="message"))
+
+    assert route_contract(pascal_router).func_name == "TaskEvents"
+    assert route_contract(camel_router).func_name == "TaskEvents"
+    assert route_contract(snake_router).func_name == "TaskEvents"
+
+
+def test_contract_graph_disambiguates_same_path_http_methods_and_route_contract_index_resolves_them():
+    bp = Blueprint(root="/api")
+    with bp.group("/settings") as views:
+        get_router = views.GET("/current").RSP(message=String(description="message"))
+        put_router = views.PUT("/current").RSP(message=String(description="message"))
+
+    graph = build_contract_graph([bp])
+    manifest = graph.to_manifest()
+    routes_by_id = {route["id"]: route for route in manifest["routes"]}
+
+    assert routes_by_id["api.settings.get.current"]["operation"] == "CurrentGet"
+    assert routes_by_id["api.settings.get.current"]["method_name"] == "currentGet"
+    assert routes_by_id["api.settings.put.current"]["operation"] == "CurrentPut"
+    assert routes_by_id["api.settings.put.current"]["method_name"] == "currentPut"
+
+    route_index = RouteContractIndex.from_graph(graph)
+    assert route_index.protocol_for_router(get_router).route.func_name == "CurrentGet"
+    assert route_index.protocol_for_router(put_router).route.func_name == "CurrentPut"
+
+
+def test_contract_graph_rejects_duplicate_explicit_operation_names_in_same_group():
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.GET("/events", operation_id="TaskEvents").RSP(message=String(description="message"))
+        views.PUT("/events", operation_id="TaskEvents").RSP(message=String(description="message"))
+
+    with pytest.raises(ValueError, match="duplicate operation name.*TaskEvents"):
+        build_contract_graph([bp])
 
 
 def test_contract_graph_manifest_captures_error_catalog_and_route_visibility():

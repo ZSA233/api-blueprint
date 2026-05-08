@@ -5,6 +5,7 @@ from api_blueprint.contract.route import (
     RouteContract,
     WsBridgeContract,
     route_contract,
+    route_id_for_router,
     to_camel,
 )
 
@@ -13,5 +14,6 @@ __all__ = (
     "RouteContract",
     "WsBridgeContract",
     "route_contract",
+    "route_id_for_router",
     "to_camel",
 )

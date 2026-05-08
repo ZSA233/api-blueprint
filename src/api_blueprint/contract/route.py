@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import re
+from collections import defaultdict
 from dataclasses import dataclass
+from typing import Sequence
 
 from api_blueprint.engine.connection import ConnectionKind, ConnectionScope, ModelRef
 from api_blueprint.engine.router import Router
@@ -60,7 +62,47 @@ class RouteContract:
 
 
 def route_contract(router: Router) -> RouteContract:
-    func_name = _operation_name(router)
+    return _build_route_contract(router, func_name=_operation_name(router))
+
+
+def route_id_for_router(router: Router) -> str:
+    return _route_id(router, root_slug=_root_slug(router), group_alias=_group_alias(router))
+
+
+def resolve_route_contracts(routers: Sequence[Router]) -> dict[Router, RouteContract]:
+    candidates_by_scope: dict[tuple[str, str], list[_RouteOperationCandidate]] = defaultdict(list)
+    for router in routers:
+        root_slug = _root_slug(router)
+        group_alias = _group_alias(router)
+        candidates_by_scope[(root_slug, group_alias)].append(
+            _RouteOperationCandidate(
+                router=router,
+                scope=(root_slug, group_alias),
+                route_id=_route_id(router, root_slug=root_slug, group_alias=group_alias),
+                base_name=_operation_name(router),
+                explicit_name=_has_explicit_operation_id(router),
+                disambiguator=_operation_disambiguator(router),
+            )
+        )
+
+    resolved: dict[Router, RouteContract] = {}
+    for candidates in candidates_by_scope.values():
+        names = _resolve_operation_names(candidates)
+        for candidate in candidates:
+            resolved[candidate.router] = _build_route_contract(
+                candidate.router,
+                func_name=names[candidate.router],
+                route_id=candidate.route_id,
+            )
+    return resolved
+
+
+def _build_route_contract(
+    router: Router,
+    *,
+    func_name: str,
+    route_id: str | None = None,
+) -> RouteContract:
     group_slug = _group_slug(router)
     group_alias = _group_alias(router)
     group_prefix = _group_prefix(router)
@@ -72,10 +114,7 @@ def route_contract(router: Router) -> RouteContract:
     if not service_name.endswith("Service"):
         service_name += "Service"
 
-    root_slug = _slug((router.group.bp.root or "").strip("/"), default="root")
-    route_method_slug = _route_method_slug(router)
-    route_name_slug = _slug(_func_name(router.leaf), default="root")
-    route_id = ".".join((root_slug, group_alias, route_method_slug, route_name_slug))
+    route_id = route_id or route_id_for_router(router)
     supports_ws = router.connection_kind == ConnectionKind.LEGACY_WS
     supports_stream = router.connection_kind == ConnectionKind.STREAM
     supports_channel = router.connection_kind == ConnectionKind.CHANNEL
@@ -159,8 +198,43 @@ def _func_name(leaf: str) -> str:
 def _operation_name(router: Router) -> str:
     operation_id = router.extra.get("operation_id")
     if isinstance(operation_id, str) and operation_id.strip():
-        return snake_to_pascal_case(operation_id.strip(), "", "Z")
+        return _normalize_operation_id(operation_id.strip(), invalid_prefix="Z")
     return _func_name(router.leaf)
+
+
+def _has_explicit_operation_id(router: Router) -> bool:
+    operation_id = router.extra.get("operation_id")
+    return isinstance(operation_id, str) and bool(operation_id.strip())
+
+
+def _normalize_operation_id(value: str, *, invalid_prefix: str) -> str:
+    segments = value.split("/")
+    normalized_segments: list[str] = []
+
+    for segment in segments:
+        if not segment:
+            continue
+        parts = re.split(r"[^0-9A-Za-z]+", segment)
+        normalized = "".join(_pascalize_token(part) for part in parts if part)
+        if not normalized:
+            normalized = invalid_prefix
+        if not normalized[0].isalpha():
+            normalized = invalid_prefix + normalized
+        normalized = re.sub(r"[^0-9A-Za-z_]", "", normalized)
+        normalized_segments.append(normalized)
+
+    name = "_".join(normalized_segments)
+    if not name:
+        name = invalid_prefix
+    if not name[0].isalpha():
+        name = invalid_prefix + name
+    return name
+
+
+def _pascalize_token(token: str) -> str:
+    if not token:
+        return token
+    return token[:1].upper() + token[1:]
 
 
 def _group_prefix(router: Router) -> str:
@@ -198,6 +272,16 @@ def _slug(value: str, *, default: str) -> str:
     return normalized or default
 
 
+def _root_slug(router: Router) -> str:
+    return _slug((router.group.bp.root or "").strip("/"), default="root")
+
+
+def _route_id(router: Router, *, root_slug: str, group_alias: str) -> str:
+    route_method_slug = _route_method_slug(router)
+    route_name_slug = _slug(_func_name(router.leaf), default="root")
+    return ".".join((root_slug, group_alias, route_method_slug, route_name_slug))
+
+
 def _route_method_slug(router: Router) -> str:
     if router.connection_kind == ConnectionKind.STREAM:
         return "stream"
@@ -206,7 +290,118 @@ def _route_method_slug(router: Router) -> str:
     return _slug(",".join(sorted(method.lower() for method in router.methods)), default="route")
 
 
+def _operation_disambiguator(router: Router) -> str:
+    if router.connection_kind == ConnectionKind.LEGACY_WS:
+        return "Ws"
+    if router.connection_kind == ConnectionKind.STREAM:
+        return "Stream"
+    if router.connection_kind == ConnectionKind.CHANNEL:
+        return "Channel"
+
+    http_methods = [method for method in router.methods if method in _HTTP_METHOD_DISAMBIGUATORS]
+    if http_methods:
+        ordered = sorted(http_methods)
+        return "".join(_HTTP_METHOD_DISAMBIGUATORS[method] for method in ordered)
+    return "Route"
+
+
 def to_camel(name: str) -> str:
     if not name:
         return name
     return name[0].lower() + name[1:]
+
+
+@dataclass(frozen=True)
+class _RouteOperationCandidate:
+    router: Router
+    scope: tuple[str, str]
+    route_id: str
+    base_name: str
+    explicit_name: bool
+    disambiguator: str
+
+
+_HTTP_METHOD_DISAMBIGUATORS: dict[str, str] = {
+    "DELETE": "Delete",
+    "GET": "Get",
+    "HEAD": "Head",
+    "POST": "Post",
+    "PUT": "Put",
+}
+
+
+def _resolve_operation_names(candidates: Sequence[_RouteOperationCandidate]) -> dict[Router, str]:
+    resolved: dict[Router, str] = {}
+    used_names: dict[str, _RouteOperationCandidate] = {}
+
+    explicit_by_name: dict[str, list[_RouteOperationCandidate]] = defaultdict(list)
+    auto_by_name: dict[str, list[_RouteOperationCandidate]] = defaultdict(list)
+    for candidate in candidates:
+        if candidate.explicit_name:
+            explicit_by_name[candidate.base_name].append(candidate)
+        else:
+            auto_by_name[candidate.base_name].append(candidate)
+
+    for name, items in explicit_by_name.items():
+        if len(items) > 1:
+            raise ValueError(_duplicate_operation_message(name, items))
+        resolved[items[0].router] = name
+        used_names[name] = items[0]
+
+    unresolved: list[_RouteOperationCandidate] = []
+    for name, items in auto_by_name.items():
+        if len(items) == 1 and name not in used_names:
+            resolved[items[0].router] = name
+            used_names[name] = items[0]
+            continue
+        unresolved.extend(items)
+
+    for candidate in unresolved:
+        for proposed in (
+            f"{candidate.base_name}{candidate.disambiguator}",
+            f"{candidate.disambiguator}{candidate.base_name}",
+        ):
+            if proposed in used_names:
+                continue
+            resolved[candidate.router] = proposed
+            used_names[proposed] = candidate
+            break
+        else:
+            raise ValueError(_auto_operation_collision_message(candidate, used_names))
+
+    return resolved
+
+
+def _duplicate_operation_message(name: str, candidates: Sequence[_RouteOperationCandidate]) -> str:
+    scope = ".".join(candidates[0].scope)
+    routes = ", ".join(_candidate_summary(candidate) for candidate in candidates)
+    return (
+        f"duplicate operation name '{name}' in service[{scope}] for routes: {routes}. "
+        "Set unique operation_id values for the conflicting routes."
+    )
+
+
+def _auto_operation_collision_message(
+    candidate: _RouteOperationCandidate,
+    used_names: dict[str, _RouteOperationCandidate],
+) -> str:
+    scope = ".".join(candidate.scope)
+    conflicting = [
+        name
+        for name in (
+            candidate.base_name,
+            f"{candidate.base_name}{candidate.disambiguator}",
+            f"{candidate.disambiguator}{candidate.base_name}",
+        )
+        if name in used_names
+    ]
+    names = ", ".join(conflicting) if conflicting else candidate.base_name
+    return (
+        f"could not derive a unique operation name for route {_candidate_summary(candidate)} in service[{scope}]. "
+        f"Tried names: {names}. Set an explicit unique operation_id for this route."
+    )
+
+
+def _candidate_summary(candidate: _RouteOperationCandidate) -> str:
+    methods = ",".join(method for method in candidate.router.methods if method) or candidate.router.connection_kind.value
+    return f"{candidate.route_id} [{methods} {candidate.router.url}]"

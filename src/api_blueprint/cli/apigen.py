@@ -66,7 +66,7 @@ def diff_command(before: Path, after: Path) -> None:
 @api_gen.command("check")
 @click.option("-c", "--config", default="./api-blueprint.toml", help="配置文件")
 def check(config: str = "./api-blueprint.toml") -> None:
-    generator.check(config)
+    _generator_call(lambda: generator.check(config))
     click.echo("ok")
 
 
@@ -75,7 +75,7 @@ def check(config: str = "./api-blueprint.toml") -> None:
 @click.option("--target", "target_ids", multiple=True, help="仅生成指定 target id")
 def generate(config: str = "./api-blueprint.toml", target_ids: tuple[str, ...] = ()) -> None:
     planned = generator.generation_plan(generator.list_targets(config), target_ids)
-    generator.generate(config, target_ids=target_ids)
+    _generator_call(lambda: generator.generate(config, target_ids=target_ids))
     click.echo(f"ok: generated {len(planned)} target(s)")
 
 
@@ -165,6 +165,13 @@ def _echo_diff(diff: dict[str, list[str]]) -> None:
 def _inspection_call(callback: Callable[[], dict[str, Any]]) -> dict[str, Any]:
     try:
         return callback()
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+
+def _generator_call(callback: Callable[[], None]) -> None:
+    try:
+        callback()
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
 

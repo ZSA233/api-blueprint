@@ -91,6 +91,32 @@ def test_kotlin_selection_matches_path_tag_group_method_and_name(example_entrypo
     )
 
 
+def test_kotlin_writer_name_filter_uses_resolved_operation_name_for_same_path_methods(tmp_path):
+    bp = Blueprint(root="/api")
+    with bp.group("/settings") as views:
+        views.GET("/current").RSP(message=String(description="message"))
+        views.PUT("/current").RSP(message=String(description="message"))
+
+    writer = KotlinWriter(tmp_path / "kotlin", package="com.example.generated", include=("name:CurrentGet",))
+    writer.register(bp)
+    writer.gen()
+
+    route_text = (
+        tmp_path
+        / "kotlin"
+        / "com"
+        / "example"
+        / "generated"
+        / "api"
+        / "routes"
+        / "api"
+        / "settings"
+        / "GenSettingsApi.kt"
+    ).read_text(encoding="utf-8")
+    assert "public open suspend fun currentGet(" in route_text
+    assert "public open suspend fun currentPut(" not in route_text
+
+
 def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full_route_surface(tmp_path):
     class CommonErr(Model):
         UNKNOWN = Error(-1, "unknown")

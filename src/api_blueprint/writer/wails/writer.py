@@ -4,8 +4,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Sequence
 
 from api_blueprint.config import ResolvedTargetConfig, ResolvedWailsConfig, ResolvedWailsTargetConfig
+from api_blueprint.contract import build_contract_graph
 from api_blueprint.engine import Blueprint
 from api_blueprint.engine.utils import join_path_imports
+from api_blueprint.writer.core.contract_adapters import RouteContractIndex
 from api_blueprint.writer.typescript.writer import TypeScriptWriter
 
 from .golang import WailsGoWriter
@@ -20,6 +22,7 @@ class WailsWriter:
     def __init__(self, config: ResolvedWailsConfig, *, contract_graph: ContractGraph | None = None):
         self.config = config
         self.contract_graph = contract_graph
+        self.route_contract_index = RouteContractIndex.from_graph(contract_graph) if contract_graph is not None else None
 
     def list_targets(self, patterns: Sequence[str] = ()) -> tuple[ResolvedWailsTargetConfig, ...]:
         return select_targets(self.config.targets, patterns)
@@ -78,12 +81,20 @@ class WailsWriter:
     def _selection_for_target(self, target: ResolvedWailsTargetConfig) -> WailsRouteSelection:
         return WailsRouteSelection(include=target.include, exclude=target.exclude)
 
+    def _ensure_route_contract_index(self, entrypoints: list[Blueprint]) -> RouteContractIndex:
+        if self.route_contract_index is None:
+            graph = self.contract_graph or build_contract_graph(entrypoints)
+            self.route_contract_index = RouteContractIndex.from_graph(graph)
+        return self.route_contract_index
+
     def _count_selected_routes(self, entrypoints: list[Blueprint], target: ResolvedWailsTargetConfig) -> int:
         selection = self._selection_for_target(target)
+        route_contract_index = self._ensure_route_contract_index(entrypoints)
         count = 0
         for blueprint in entrypoints:
             for _group, router in blueprint.iter_router():
-                if selection.includes_route(router):
+                route_name = route_contract_index.protocol_for_router(router).route.func_name
+                if selection.includes_route(router, route_name=route_name):
                     count += 1
         return count
 
@@ -104,9 +115,9 @@ class WailsWriter:
             if not root_package:
                 continue
             for group, router in blueprint.iter_router():
-                if not selection.includes_route(router):
-                    continue
                 contract = go_writer.route_protocol_for(router).route
+                if not selection.includes_route(router, route_name=contract.func_name):
+                    continue
                 branch = group.branch.strip("/")
                 binding_import = join_path_imports(
                     go_writer.shared_views_imports,

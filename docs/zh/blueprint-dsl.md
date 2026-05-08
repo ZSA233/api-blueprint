@@ -156,7 +156,9 @@ API 规则：
 - 不支持 `.SERVER_MESSAGE(TaskState, TaskLog)`，因为缺少稳定 discriminator value。
 - `STREAM` 不允许 `.CLIENT_MESSAGE(...)`。
 - `CHANNEL` 必须同时有 `.CLIENT_MESSAGE(...)` 与 `.SERVER_MESSAGE(...)`。
-- `operation_id` 可用于 RPC / `STREAM` / `CHANNEL`，当生成的 handler / client / transport 名称需要稳定业务语义、而不是默认 path 推导名时应显式设置；它只影响 operation-derived surface，不改变 route id、path 或连接语义。
+- `operation_id` 可用于 RPC / `STREAM` / `CHANNEL`，当生成的 handler / client / transport 名称需要稳定业务语义、而不是默认 path 推导名时应显式设置；显式值会规范化成稳定的 PascalCase 标识符，但不会压平 token 内部大小写，例如 `TaskEvents` / `taskEvents` / `task_events` 都会稳定为 `TaskEvents`。它只影响 operation-derived surface，不改变 route id、path 或连接语义。
+- 如果未显式设置 `operation_id`，且同一个 group 下出现同 path 的自动命名冲突，生成器会按 method 或 connection kind 自动消歧，例如 `CurrentGet` / `CurrentPut`、`EventsStream` / `EventsChannel`。
+- 如果多个 route 的显式 `operation_id` 规范化后仍然冲突，`api-gen check` / `api-gen generate` 会直接失败，并要求为冲突 route 提供唯一的 `operation_id`。
 - `scope` 支持 `ConnectionScope.SESSION`、`ConnectionScope.APP` 与 `ConnectionScope.TOPIC`，transport 可按自身能力映射；当前默认 HTTP/Wails runtime 只完整支持 `SESSION`。
 - HTTP `STREAM` 映射为 SSE，HTTP `CHANNEL` 映射为 WebSocket。
 - Wails `STREAM` / `CHANNEL` 映射为 session-scoped runtime events，event name 只存在于 generated transport/runtime 内部。

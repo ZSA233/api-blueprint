@@ -275,6 +275,28 @@ def test_typescript_channel_operation_id_changes_generated_method_name(tmp_path:
     assert 'closeMethod: "CloseRealtime"' in client_text
 
 
+def test_typescript_writer_disambiguates_same_path_http_methods_with_contract_graph(tmp_path: Path):
+    bp = Blueprint(root="/api")
+    with bp.group("/settings") as views:
+        views.GET("/current").RSP(message=String(description="message"))
+        views.PUT("/current").RSP(message=String(description="message"))
+
+    graph = build_contract_graph([bp])
+    output_dir = tmp_path / "typescript"
+    output_dir.mkdir()
+    writer = TypeScriptWriter(output_dir, contract_graph=graph)
+    writer.register(bp)
+    writer.gen()
+
+    client_text = (output_dir / "api" / "routes" / "api" / "settings" / "gen_client.ts").read_text(encoding="utf-8")
+    assert "async currentGet(" in client_text
+    assert 'method: "GET"' in client_text
+    assert 'operation: "CurrentGet"' in client_text
+    assert "async currentPut(" in client_text
+    assert 'method: "PUT"' in client_text
+    assert 'operation: "CurrentPut"' in client_text
+
+
 def test_typescript_generation_allows_real_shared_group_without_alias_rewrite(tmp_path: Path):
     bp = Blueprint(root="/api")
     with bp.group("/shared") as views:

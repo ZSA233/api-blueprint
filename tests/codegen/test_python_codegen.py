@@ -419,6 +419,28 @@ def test_python_client_uses_contract_graph_route_protocol_models(tmp_path: Path)
     assert "response_type: str | None = 'Result'" in route_text
 
 
+def test_python_client_writer_disambiguates_same_path_http_methods_with_contract_graph(tmp_path: Path):
+    bp = Blueprint(root="/api")
+    with bp.group("/settings") as views:
+        views.GET("/current").RSP(Result)
+        views.PUT("/current").RSP(Result)
+
+    graph = build_contract_graph([bp])
+    output_dir = tmp_path / "python"
+    writer = PythonClientWriter(output_dir, contract_graph=graph)
+    writer.register(bp)
+    writer.gen()
+
+    route_text = (
+        output_dir / "api_blueprint_generated" / "api" / "routes" / "api" / "settings" / "gen_client.py"
+    ).read_text(encoding="utf-8")
+    assert "async def current_get(" in route_text
+    assert '        "GET",' in route_text
+    assert "async def current_put(" in route_text
+    assert '        "PUT",' in route_text
+    _compile_generated_files(output_dir)
+
+
 def test_python_client_generates_connection_bridge_methods(tmp_path: Path):
     class OpenPayload(Model):
         value = String(description="value")

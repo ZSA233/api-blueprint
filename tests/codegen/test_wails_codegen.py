@@ -153,6 +153,25 @@ with third_bp.group("/proxy") as views:
     )
 
 
+def _write_same_path_method_blueprint_package(tmp_path: Path) -> None:
+    pkg = tmp_path / "blueprints"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text("", encoding="utf-8")
+    (pkg / "app.py").write_text(
+        """
+from api_blueprint.engine import Blueprint
+from api_blueprint.engine.model import String
+
+bp = Blueprint(root="/api")
+with bp.group("/settings") as views:
+    views.GET("/current").RSP(message=String(description="message"))
+    views.PUT("/current").RSP(message=String(description="message"))
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+
 def test_wails_go_writer_contract_graph_adapter_owns_request_and_response_models(tmp_path: Path):
     output_dir = tmp_path / "golang"
     output_dir.mkdir()
@@ -195,6 +214,43 @@ go 1.23.8
     assert "BindJSON:  true" in service_text
     assert "type REQ_Submit_QUERY = sharedroutes.REQ_Submit_QUERY" in overlay_text
     assert "type REQ_Submit_JSON = sharedroutes.REQ_Submit_JSON" in overlay_text
+
+
+def test_wails_codegen_name_filter_uses_resolved_operation_name_for_same_path_methods(tmp_path: Path):
+    config = tmp_path / "api-blueprint.toml"
+    shared_go = tmp_path / "golang"
+    shared_ts = tmp_path / "typescript"
+    for path in (shared_go, shared_ts):
+        path.mkdir()
+
+    (tmp_path / "go.mod").write_text(
+        """
+module example.com/generated
+
+go 1.23.8
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    _write_wails_vnext_config(
+        config,
+        go_out=shared_go.name,
+        ts_out=shared_ts.name,
+        include=("name:CurrentGet",),
+    )
+    _write_same_path_method_blueprint_package(tmp_path)
+
+    result = _invoke_wails_generate(config)
+    assert result.exit_code == 0, result.output
+
+    go_service = (shared_go / "transports" / "wailsv3" / "api" / "settings" / "gen_service.go").read_text(
+        encoding="utf-8"
+    )
+    ts_bindings = (shared_ts / "api" / "transports" / "wailsv3" / "gen_bindings.ts").read_text(encoding="utf-8")
+    assert "CurrentGet" in go_service
+    assert "CurrentPut" not in go_service
+    assert "CurrentGet" in ts_bindings
+    assert "CurrentPut" not in ts_bindings
 
 
 def test_wails_codegen_generates_shared_contracts_and_overlays(tmp_path: Path):
@@ -567,8 +623,7 @@ go 1.23.8
 
     result = _invoke_wails_generate(config)
     assert result.exit_code != 0
-    assert isinstance(result.exception, ValueError)
-    assert "没有可生成的 route" in str(result.exception)
+    assert "没有可生成的 route" in result.output
 
 
 def test_wails_binding_impl_service_is_preserved_on_regeneration(tmp_path: Path):
@@ -719,5 +774,4 @@ with bp.group("/_demo") as views:
 
     result = _invoke_wails_generate(config)
     assert result.exit_code != 0
-    assert isinstance(result.exception, ValueError)
-    assert "保留目录段[_demo]" in str(result.exception)
+    assert "保留目录段[_demo]" in result.output

@@ -156,7 +156,9 @@ API rules:
 - `.SERVER_MESSAGE(TaskState, TaskLog)` is not supported because it has no stable discriminator value.
 - `STREAM` does not allow `.CLIENT_MESSAGE(...)`.
 - `CHANNEL` requires both `.CLIENT_MESSAGE(...)` and `.SERVER_MESSAGE(...)`.
-- `operation_id` can be set on RPC / `STREAM` / `CHANNEL` when generated handler / client / transport names should use stable business semantics instead of default path-derived names. It changes only the operation-derived surface, not the route id, path, or connection semantics.
+- `operation_id` can be set on RPC / `STREAM` / `CHANNEL` when generated handler / client / transport names should use stable business semantics instead of default path-derived names. Explicit values are normalized into stable PascalCase identifiers without flattening token-internal casing, so `TaskEvents`, `taskEvents`, and `task_events` all stabilize to `TaskEvents`. It changes only the operation-derived surface, not the route id, path, or connection semantics.
+- When `operation_id` is omitted and auto-generated names collide inside the same group for the same path, the generator disambiguates them by method or connection kind, for example `CurrentGet` / `CurrentPut` or `EventsStream` / `EventsChannel`.
+- If multiple explicit `operation_id` values still collide after normalization, `api-gen check` / `api-gen generate` fail and require unique `operation_id` values for the conflicting routes.
 - `scope` supports `ConnectionScope.SESSION`, `ConnectionScope.APP`, and `ConnectionScope.TOPIC`; each transport can map it according to its own capabilities. The default HTTP/Wails runtimes currently fully support only `SESSION`.
 - HTTP `STREAM` maps to SSE, and HTTP `CHANNEL` maps to WebSocket.
 - Wails `STREAM` / `CHANNEL` map to session-scoped runtime events; event names exist only inside the generated transport/runtime.

@@ -19,8 +19,8 @@ class WailsRouteSelection:
         object.__setattr__(self, "include", normalize_selection_rules(self.include))
         object.__setattr__(self, "exclude", normalize_selection_rules(self.exclude))
 
-    def includes_route(self, router: Router) -> bool:
-        route_name = route_contract(router).func_name
+    def includes_route(self, router: Router, *, route_name: str | None = None) -> bool:
+        route_name = route_name or route_contract(router).func_name
         if self.include and not any(self._matches(router, rule, route_name=route_name) for rule in self.include):
             return False
         if any(self._matches(router, rule, route_name=route_name) for rule in self.exclude):

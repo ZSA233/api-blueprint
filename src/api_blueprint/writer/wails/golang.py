@@ -395,8 +395,10 @@ class WailsBlueprint(BaseBlueprint["WailsGoWriter"]):
             groups: list[WailsRouterGroup] = []
             selection = self.writer.route_selection
             for group, router in self.iter_router():
-                if selection is not None and not selection.includes_route(router):
-                    continue
+                if selection is not None:
+                    route_name = self.protocol_for_router(router).route.func_name
+                    if not selection.includes_route(router, route_name=route_name):
+                        continue
                 if group not in selected_by_group:
                     selected_by_group[group] = []
                     ordered_groups.append(group)

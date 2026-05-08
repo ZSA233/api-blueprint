@@ -8,7 +8,7 @@ from api_blueprint.engine.connection import ConnectionKind, ConnectionScope, Def
 from api_blueprint.engine.router import Router
 from api_blueprint.engine.utils import snake_to_pascal_case
 from api_blueprint.engine.wrapper import NoneWrapper, ResponseWrapper
-from api_blueprint.writer.core.contracts import ConnectionBridgeContract, RouteContract, WsBridgeContract
+from api_blueprint.writer.core.contracts import ConnectionBridgeContract, RouteContract, WsBridgeContract, route_id_for_router
 
 if TYPE_CHECKING:
     from api_blueprint.contract import ContractGraph
@@ -71,21 +71,20 @@ class RouteProtocolContract:
 
 @dataclass(frozen=True)
 class RouteContractIndex:
-    routes: dict[tuple[str, str], ManifestRoute]
+    routes: dict[str, ManifestRoute]
     services: dict[str, ManifestService]
     route_runtime: dict[str, Any]
 
     @classmethod
     def from_graph(cls, graph: ContractGraph) -> "RouteContractIndex":
         manifest = graph.to_manifest()
-        routes: dict[tuple[str, str], ManifestRoute] = {}
+        routes: dict[str, ManifestRoute] = {}
         for route in manifest.get("routes", []):
             if not isinstance(route, Mapping):
                 continue
-            url = route.get("url")
-            kind = route.get("kind")
-            if isinstance(url, str) and isinstance(kind, str):
-                routes[(url, kind)] = route
+            route_id = route.get("id")
+            if isinstance(route_id, str):
+                routes[route_id] = route
         services = {
             str(service["id"]): service
             for service in manifest.get("services", [])
@@ -97,15 +96,15 @@ class RouteContractIndex:
         return self.protocol_for_router(router, close_model=close_model).route
 
     def protocol_for_router(self, router: Router, *, close_model: ModelRef | None = None) -> RouteProtocolContract:
-        kind = _router_kind(router)
-        route = self.routes.get((router.url, kind))
+        route_id = route_id_for_router(router)
+        route = self.routes.get(route_id)
         if route is None:
-            raise KeyError(f"ContractGraph route not found for {kind} {router.url}")
+            kind = _router_kind(router)
+            raise KeyError(f"ContractGraph route not found for {route_id} ({kind} {router.url})")
         service_id = str(route.get("service_id") or "")
         service = self.services.get(service_id)
         if service is None:
             raise KeyError(f"ContractGraph service not found for route {route.get('id')}: {service_id}")
-        route_id = str(route.get("id") or "")
         runtime = self.route_runtime.get(route_id) or _runtime_from_router(router)
         return route_protocol_from_manifest(route, service, runtime, close_model=close_model)
 

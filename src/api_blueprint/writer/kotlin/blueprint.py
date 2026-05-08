@@ -6,7 +6,6 @@ from typing import Optional, Type, Union
 
 from api_blueprint.engine.model import FieldWrappedModel, Model, iter_field_model_type, unwrap_model_type
 from api_blueprint.engine.router import Router
-from api_blueprint.engine.utils import snake_to_pascal_case
 from api_blueprint.engine.wrapper import NoneWrapper, ResponseWrapper
 from api_blueprint.writer.core.base import BaseBlueprint
 from api_blueprint.engine.connection import MessageContract
@@ -28,7 +27,7 @@ class KotlinRoute:
         self.router = router
         self.registry = registry
         self.protocol = protocol or route_protocol_from_router(router)
-        self.func_name = self._func_name()
+        self.func_name = self.protocol.route.func_name
         self.method_name = to_kotlin_property_name(self.func_name)
         self.group_slug = self.protocol.route.group_slug
         self.group_class = to_kotlin_type_name(self.group_slug, fallback="Root") + "Api"
@@ -126,11 +125,6 @@ class KotlinRoute:
         return to_kotlin_property_name(
             self.protocol.route.channel.connect_method if self.protocol.route.channel else f"open{self.func_name}"
         )
-
-    def _func_name(self) -> str:
-        if not self.router.leaf.strip("/"):
-            return "Root"
-        return snake_to_pascal_case(self.router.leaf, "", "Func")
 
     def _group_slug(self) -> str:
         branch = self.router.group.branch.strip("/")
@@ -244,7 +238,7 @@ class KotlinBlueprint(BaseBlueprint["KotlinWriter"]):
         selection = KotlinRouteSelection(include=self.writer.include, exclude=self.writer.exclude)
         for _group, router in self.iter_router():
             protocol = self.protocol_for_router(router)
-            route_name = snake_to_pascal_case(router.leaf or "root", "", "Func")
+            route_name = protocol.route.func_name
             if not selection.includes(router, route_name=route_name):
                 continue
             self._register_common_models(protocol)
