@@ -50,10 +50,13 @@ def inc_to_letters(inc: int, chars: str = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'):
 
 
 def join_path_imports(p1: Union[str, Path], *pp: Union[str, Path]) -> str:
-    p1 = Path(p1)
-    for p in pp:
-        p1 /= p
-    return str(p1).strip('/')
+    segments: list[str] = []
+    for part in (p1, *pp):
+        text = str(part).strip().replace("\\", "/")
+        if not text:
+            continue
+        segments.extend(segment for segment in text.split("/") if segment)
+    return "/".join(segments)
 
 
 def join_url_path(*parts: Union[str, Path]) -> str:
