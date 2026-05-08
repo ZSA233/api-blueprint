@@ -41,11 +41,11 @@ public open class GenDemoApi internal constructor(
         )
     }
 
-    public open suspend fun func1put(
-        query: DemoFunc1putQuery,
-        json: DemoFunc1putJson,
+    public open suspend fun z1put(
+        query: DemoZ1putQuery,
+        json: DemoZ1putJson,
         headers: Map<String, String> = emptyMap(),
-    ): GeneralResponse<DemoFunc1putResponse> {
+    ): GeneralResponse<DemoZ1putResponse> {
         return transport.request(
             ApiRequest(
                 method = "PUT",
@@ -53,8 +53,8 @@ public open class GenDemoApi internal constructor(
                 query = query.toQueryMap(),
                 headers = headers,
                 json = json,
-                jsonSerializer = DemoFunc1putJson.serializer(),
-                responseSerializer = GeneralResponse.serializer(DemoFunc1putResponse.serializer()),
+                jsonSerializer = DemoZ1putJson.serializer(),
+                responseSerializer = GeneralResponse.serializer(DemoZ1putResponse.serializer()),
                 responseMediaType = "application/json",
             )
         )
@@ -111,7 +111,7 @@ public open class GenDemoApi internal constructor(
         "arg2" to arg2?.toString()
     )
 
-    private fun DemoFunc1putQuery.toQueryMap(): Map<String, String?> = mapOf(
+    private fun DemoZ1putQuery.toQueryMap(): Map<String, String?> = mapOf(
         "arg1" to arg1?.toString(),
         "arg2" to arg2?.toString(),
         "arg3" to arg3?.toString()

@@ -26,26 +26,6 @@ public data class DemoAbcQuery(
     public val arg2: Float? = null
 )
 
-@Serializable
-public data class DemoFunc1putJson(
-    public val req1: String,
-    public val req2: Int? = null
-)
-
-@Serializable
-public data class DemoFunc1putQuery(
-    public val arg1: String? = null,
-    public val arg2: Float? = null,
-    public val arg3: String? = null
-)
-
-@Serializable
-public data class DemoFunc1putResponse(
-    public val list: List<String>,
-    @SerialName("anon_kv")
-    public val anonKv: AnonFunc1putAnonKv
-)
-
 public typealias DemoMapModelResponse = Map<Int, ApiDemoMap>
 
 @Serializable
@@ -75,4 +55,24 @@ public data class DemoTestPostJson(
 public data class DemoTestPostResponse(
     public val list: List<String>,
     public val map: Map<String, ApiDemoMap>
+)
+
+@Serializable
+public data class DemoZ1putJson(
+    public val req1: String,
+    public val req2: Int? = null
+)
+
+@Serializable
+public data class DemoZ1putQuery(
+    public val arg1: String? = null,
+    public val arg2: Float? = null,
+    public val arg3: String? = null
+)
+
+@Serializable
+public data class DemoZ1putResponse(
+    public val list: List<String>,
+    @SerialName("anon_kv")
+    public val anonKv: AnonFunc1putAnonKv
 )
