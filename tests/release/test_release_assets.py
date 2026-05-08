@@ -43,6 +43,8 @@ def test_ci_and_release_bundle_share_example_toolchain_setup():
     assert "example-validation:" in ci_text
     assert "./.github/actions/setup-example-toolchains" in ci_text
     assert "./.github/actions/setup-example-toolchains" in release_bundle_text
+    assert "actions/setup-java@v5" in toolchain_text
+    assert 'java-version: "17"' in toolchain_text
     assert "actions/setup-go@v6" in toolchain_text
     assert "actions/setup-node@v6" in toolchain_text
     assert 'node-version: "24"' in toolchain_text

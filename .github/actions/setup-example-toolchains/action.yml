@@ -1,9 +1,14 @@
 name: Setup Example Toolchains
-description: Install the shared Go, Node, TypeScript, Wails, and proto toolchains used by example validation
+description: Install the shared Go, Java, Node, TypeScript, Wails, and proto toolchains used by example validation
 
 runs:
   using: composite
   steps:
+    - uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: "17"
+
     - uses: actions/setup-go@v6
       with:
         go-version: "1.25"
