@@ -33,6 +33,8 @@ def test_makefile_exposes_example_validation_and_release_preflight_uses_it():
 
 def test_ci_and_release_bundle_share_example_toolchain_setup():
     ci_text = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    release_text = (REPO_ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+    release_rc_text = (REPO_ROOT / ".github" / "workflows" / "release-rc.yml").read_text(encoding="utf-8")
     release_bundle_text = (
         REPO_ROOT / ".github" / "actions" / "release-bundle" / "action.yml"
     ).read_text(encoding="utf-8")
@@ -58,6 +60,8 @@ def test_ci_and_release_bundle_share_example_toolchain_setup():
     assert "python-tests:" in ci_text
     assert "actions/setup-go@v6" in ci_text
     assert 'go-version: "1.25"' in ci_text
+    assert "build:\n    runs-on: ubuntu-22.04" in release_text
+    assert "build:\n    runs-on: ubuntu-22.04" in release_rc_text
 
 
 def _target_block(text: str, target: str) -> str:
