@@ -5,7 +5,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Sequence
 
-from api_blueprint.engine.connection import ConnectionKind, ConnectionScope, ModelRef
+from api_blueprint.engine.connection import ConnectionDelivery, ConnectionKind, ConnectionScope, ModelRef
 from api_blueprint.engine.router import Router
 from api_blueprint.engine.utils import snake_to_pascal_case
 
@@ -27,6 +27,7 @@ class ConnectionBridgeContract:
     route_id: str
     kind: ConnectionKind
     scope: ConnectionScope
+    delivery: ConnectionDelivery
     close_model: ModelRef
     connect_method: str
     close_method: str
@@ -53,6 +54,7 @@ class RouteContract:
     supports_ws: bool
     supports_stream: bool
     supports_channel: bool
+    connection_delivery: ConnectionDelivery | None
     connection_scope: ConnectionScope | None
     connection_close_model: ModelRef | None
     url: str
@@ -141,6 +143,7 @@ def _build_route_contract(
             route_id=route_id,
             kind=ConnectionKind.STREAM,
             scope=router.connection_scope or ConnectionScope.SESSION,
+            delivery=router.connection_delivery or ConnectionDelivery.ORDERED,
             close_model=connection_close_model,
             connect_method=f"Subscribe{func_name}",
             close_method=f"Close{func_name}",
@@ -155,6 +158,7 @@ def _build_route_contract(
             route_id=route_id,
             kind=ConnectionKind.CHANNEL,
             scope=router.connection_scope or ConnectionScope.SESSION,
+            delivery=router.connection_delivery or ConnectionDelivery.ORDERED,
             close_model=connection_close_model,
             connect_method=f"Open{func_name}",
             send_method=f"Send{func_name}",
@@ -180,6 +184,7 @@ def _build_route_contract(
         supports_ws=supports_ws,
         supports_stream=supports_stream,
         supports_channel=supports_channel,
+        connection_delivery=router.connection_delivery,
         connection_scope=router.connection_scope,
         connection_close_model=connection_close_model,
         url=router.url,

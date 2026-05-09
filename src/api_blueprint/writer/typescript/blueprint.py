@@ -209,6 +209,12 @@ class TypeScriptRoute:
         return self.contract.connection_scope.value
 
     @property
+    def connection_delivery(self) -> str:
+        if self.contract.connection_delivery is None:
+            return ""
+        return self.contract.connection_delivery.value
+
+    @property
     def stream_bridge_type_expr(self) -> str:
         return self._bridge_type_expr("ApiStreamBridge", self.server_message_type_expr)
 

@@ -61,11 +61,7 @@ func (svc *{{ routes[0].service_name }}) SetConnectionHub(hub wailstransport.Con
 func (svc *{{ route.service_name }}) {{ route.connection_connect_func }}(
 	envelope *{{ route.connection_connect_type }},
 ) (rsp *wailstransport.SocketSessionDescriptor, err error) {
-	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
-		BindQuery: {{ route.bind_query | tojson }},
-		BindJSON:  false,
-		BindForm:  false,
-	})
+	req, reqErr := wailstransport.ConnectionOpenEnvelopeToReq(envelope, {{ route.bind_query | tojson }})
 	if reqErr != nil {
 		err = reqErr
 		return
@@ -73,22 +69,25 @@ func (svc *{{ route.service_name }}) {{ route.connection_connect_func }}(
 	ctx := sharedprovider.NewWailsContext[{{ route.local_query_type_expr }}, any, {{ route.rsp_type }}](
 		{{ route.service_name | tojson }},
 		{{ route.connection_connect_func | tojson }},
-		wailstransport.EnvelopeHeaders(envelope),
+		wailstransport.ConnectionOpenHeaders(envelope),
 	)
 	ctx.Req = &sharedprovider.ReqContext[{{ route.local_query_type_expr }}, any, {{ route.rsp_type }}]{Request: req}
 	if err := svc.{{ route.executor_field_name }}.Run(ctx); err != nil {
 		return nil, err
 	}
 
-	session, sessionErr := svc.sessions.Open(
-		{{ route.route_id | tojson }},
-		{{ route.event_base | tojson }},
-		sharedprovider.ConnectionScope({{ route.connection_scope | tojson }}),
-	)
+	openSpec := wailstransport.ConnectionOpenSpec{
+		RouteID:            {{ route.route_id | tojson }},
+		EventBase:          {{ route.event_base | tojson }},
+		Scope:              sharedprovider.ConnectionScope({{ route.connection_scope | tojson }}),
+		RequestedSessionID: wailstransport.ConnectionOpenEnvelopeSessionID(envelope),
+	}
+	session, sessionErr := svc.sessions.Open(openSpec)
 	if sessionErr != nil {
 		err = sessionErr
 		return
 	}
+	session = wailstransport.WrapConnectionSession(session, {{ route.ordered_connection_delivery | tojson }})
 	stream := sharedprovider.NewStreamSession[{{ route.local_query_type_expr }}, {{ route.server_message_type }}, {{ route.close_message_type }}](
 		req.Q,
 		session,
@@ -108,6 +107,7 @@ func (svc *{{ route.service_name }}) {{ route.connection_close_func }}(request *
 	if err != nil {
 		return err
 	}
+	session = wailstransport.WrapConnectionSession(session, {{ route.ordered_connection_delivery | tojson }})
 	code := request.Code
 	if code == 0 {
 		code = 1000
@@ -119,11 +119,7 @@ func (svc *{{ route.service_name }}) {{ route.connection_close_func }}(request *
 func (svc *{{ route.service_name }}) {{ route.connection_connect_func }}(
 	envelope *{{ route.connection_connect_type }},
 ) (rsp *wailstransport.SocketSessionDescriptor, err error) {
-	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
-		BindQuery: {{ route.bind_query | tojson }},
-		BindJSON:  false,
-		BindForm:  false,
-	})
+	req, reqErr := wailstransport.ConnectionOpenEnvelopeToReq(envelope, {{ route.bind_query | tojson }})
 	if reqErr != nil {
 		err = reqErr
 		return
@@ -131,22 +127,25 @@ func (svc *{{ route.service_name }}) {{ route.connection_connect_func }}(
 	ctx := sharedprovider.NewWailsContext[{{ route.local_query_type_expr }}, any, {{ route.rsp_type }}](
 		{{ route.service_name | tojson }},
 		{{ route.connection_connect_func | tojson }},
-		wailstransport.EnvelopeHeaders(envelope),
+		wailstransport.ConnectionOpenHeaders(envelope),
 	)
 	ctx.Req = &sharedprovider.ReqContext[{{ route.local_query_type_expr }}, any, {{ route.rsp_type }}]{Request: req}
 	if err := svc.{{ route.executor_field_name }}.Run(ctx); err != nil {
 		return nil, err
 	}
 
-	session, sessionErr := svc.sessions.Open(
-		{{ route.route_id | tojson }},
-		{{ route.event_base | tojson }},
-		sharedprovider.ConnectionScope({{ route.connection_scope | tojson }}),
-	)
+	openSpec := wailstransport.ConnectionOpenSpec{
+		RouteID:            {{ route.route_id | tojson }},
+		EventBase:          {{ route.event_base | tojson }},
+		Scope:              sharedprovider.ConnectionScope({{ route.connection_scope | tojson }}),
+		RequestedSessionID: wailstransport.ConnectionOpenEnvelopeSessionID(envelope),
+	}
+	session, sessionErr := svc.sessions.Open(openSpec)
 	if sessionErr != nil {
 		err = sessionErr
 		return
 	}
+	session = wailstransport.WrapConnectionSession(session, {{ route.ordered_connection_delivery | tojson }})
 	channel := sharedprovider.NewChannelSession[{{ route.local_query_type_expr }}, {{ route.server_message_type }}, {{ route.client_message_type }}, {{ route.close_message_type }}](
 		req.Q,
 		session,
@@ -174,6 +173,7 @@ func (svc *{{ route.service_name }}) {{ route.connection_close_func }}(request *
 	if err != nil {
 		return err
 	}
+	session = wailstransport.WrapConnectionSession(session, {{ route.ordered_connection_delivery | tojson }})
 	code := request.Code
 	if code == 0 {
 		code = 1000
@@ -204,11 +204,11 @@ func (svc *{{ route.service_name }}) {{ route.connect_func }}(
 		return nil, err
 	}
 
-	session, sessionErr := svc.sessions.Open(
-		{{ route.route_id | tojson }},
-		{{ route.event_base | tojson }},
-		sharedprovider.ConnectionScopeSession,
-	)
+	session, sessionErr := svc.sessions.Open(wailstransport.ConnectionOpenSpec{
+		RouteID:   {{ route.route_id | tojson }},
+		EventBase: {{ route.event_base | tojson }},
+		Scope:     sharedprovider.ConnectionScopeSession,
+	})
 	if sessionErr != nil {
 		err = sessionErr
 		return

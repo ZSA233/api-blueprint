@@ -16,6 +16,11 @@ class ConnectionScope(str, Enum):
     TOPIC = "topic"
 
 
+class ConnectionDelivery(str, Enum):
+    ORDERED = "ordered"
+    UNORDERED = "unordered"
+
+
 class ConnectionKind(str, Enum):
     RPC = "rpc"
     STREAM = "stream"

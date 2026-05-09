@@ -65,7 +65,7 @@ type CLOSE_SweepEvents = sharedroutes.CLOSE_SweepEvents
 
 type INVOKE_SweepEvents = wailstransport.InvokeEnvelope[OPEN_SweepEvents, any]
 
-type CONNECTION_CONNECT_SweepEvents = wailstransport.InvokeEnvelope[OPEN_SweepEvents, any]
+type CONNECTION_CONNECT_SweepEvents = wailstransport.ConnectionOpenEnvelope[OPEN_SweepEvents]
 type CONNECTION_CLOSE_SweepEvents = wailstransport.SocketCloseEnvelope
 
 type REQ_AssistantSession = sharedroutes.REQ_AssistantSession
@@ -80,7 +80,7 @@ type CLOSE_AssistantSession = sharedroutes.CLOSE_AssistantSession
 type AssistantClientMessage = sharedroutes.AssistantClientMessage
 type INVOKE_AssistantSession = wailstransport.InvokeEnvelope[OPEN_AssistantSession, any]
 
-type CONNECTION_CONNECT_AssistantSession = wailstransport.InvokeEnvelope[OPEN_AssistantSession, any]
+type CONNECTION_CONNECT_AssistantSession = wailstransport.ConnectionOpenEnvelope[OPEN_AssistantSession]
 type CONNECTION_CLOSE_AssistantSession = wailstransport.SocketCloseEnvelope
 
 type CHANNEL_SEND_AssistantSession = wailstransport.SocketSendEnvelope[AssistantClientMessage]

@@ -182,7 +182,13 @@ make wails-hello-compile-check
 
 ## 长连接 bridge
 
-Wails TypeScript 不暴露 raw WebSocket，也不要求业务代码手写 runtime event name。`STREAM` / `CHANNEL` 在默认 Wails transport 中会映射成 session-scoped runtime events，事件名只存在于 generated Go runtime 与 generated TypeScript transport 内部。生成的 service 暴露轻量 `ConnectionHub` 替换点；默认 hub 只完整支持 `ConnectionScope.SESSION`，`APP` / `TOPIC` 的广播或 topic routing 策略应由自定义 hub 实现。
+Wails TypeScript 不暴露 raw WebSocket，也不要求业务代码手写 runtime event name。`STREAM` / `CHANNEL` 在默认 Wails transport 中会映射成 session-scoped runtime events，事件名只存在于 generated Go runtime 与 generated TypeScript transport 内部。现在建连会使用前端预分配的 `session_id`：生成的 TypeScript bridge 会先按 route/eventBase/sessionId 计算 deterministic event name 并完成订阅，再发送 connect RPC，从而避免 ordered 交付丢掉 `seq=1`。生成的 service 仍暴露轻量 `ConnectionHub` 替换点；自定义 hub 现在通过 `Open(ConnectionOpenSpec)` 接收请求，并必须返回符合生成器命名规则的 descriptor。默认 hub 只完整支持 `ConnectionScope.SESSION`，`APP` / `TOPIC` 的广播或 topic routing 策略仍应由自定义 hub 实现。
+
+生成的 Wails `STREAM` / `CHANNEL` 默认是“有序异步”交付：Go runtime 会补 session 级 `seq` envelope，生成的 TypeScript bridge 会在交给业务 `onMessage` / `onClose` 前完成重排。这与 HTTP 不同：HTTP `STREAM` / `CHANNEL` 本身就依赖 SSE / WebSocket 的单连接原生顺序，不额外叠加 Wails 这套 seq/reorder overlay。只有 arrival order 不值得缓冲成本的 telemetry 一类场景，才建议 route 显式切到 `delivery=ConnectionDelivery.UNORDERED`；这个 opt-out 当前主要对 Wails transport 有实际差异。
+
+ordered 交付不是“容忍丢帧后无限等待”，而是 fail-fast。若 ordered route 的 `seq` gap 在生成器内置超时内一直无法闭合、收到非法 ordered envelope，或重排缓冲超过上限，bridge 会本地关闭，并通过结构化 `onClose` 暴露 `error: "ordered_delivery_gap"`、`error: "ordered_delivery_protocol_error"`、`error: "ordered_delivery_buffer_overflow"`。生成 transport 不做隐式自动重连；需要重试时，应由业务在自己的 `onClose` 策略里决定是否 reopen。
+
+这次对自定义 Wails hub 属于 breaking contract 更新：`ConnectionHub.Open(...)` 现在接收单个 `ConnectionOpenSpec`，不再使用位置参数 route/eventBase。若项目重写了生成 hub，需要同步消费请求中的 `session_id`，并复用生成器提供的 descriptor / event-name helper，而不是再发明另一套 event naming 规则。
 
 `STREAM` 返回 `ApiStreamBridge<ServerMessage, CloseMessage>`：
 
@@ -203,7 +209,7 @@ offMessage();
 offClose();
 ```
 
-`onClose` 接收的是 `.CLOSE(Model)` 生成的 typed close payload。客户端 `close(code, reason)` 只是主动关闭请求；如果要表达业务取消，请通过 `CHANNEL` 的 `CLIENT_MESSAGE(cancel=...)` 建模。
+`onClose` 接收的是 `.CLOSE(Model)` 生成的 typed close payload。对于 ordered route，transport 层 fail-fast 也会通过这个回调暴露，业务可检查 `info.error` 后决定是否 reopen。客户端 `close(code, reason)` 只是主动关闭请求；如果要表达业务取消，请通过 `CHANNEL` 的 `CLIENT_MESSAGE(cancel=...)` 建模。
 
 `CHANNEL` 返回 `ApiChannelBridge<ServerMessage, ClientMessage, CloseMessage>`：
 

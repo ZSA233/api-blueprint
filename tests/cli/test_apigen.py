@@ -132,7 +132,7 @@ def _write_connection_inspect_blueprint(tmp_path: Path) -> None:
     (pkg / "__init__.py").write_text("", encoding="utf-8")
     (pkg / "app.py").write_text(
         """
-from api_blueprint.engine import Blueprint, ConnectionScope, Model
+from api_blueprint.engine import Blueprint, ConnectionDelivery, ConnectionScope, Model
 from api_blueprint.engine.model import String
 
 class Open(Model):
@@ -149,7 +149,7 @@ class Close(Model):
 
 bp = Blueprint(root="/api")
 with bp.group("/demo") as views:
-    views.CHANNEL("/ws", scope=ConnectionScope.SESSION, operation_id="Realtime").OPEN(Open).CLIENT_MESSAGE(ClientMessage).SERVER_MESSAGE(ServerMessage).CLOSE(Close)
+    views.CHANNEL("/ws", scope=ConnectionScope.SESSION, delivery=ConnectionDelivery.UNORDERED, operation_id="Realtime").OPEN(Open).CLIENT_MESSAGE(ClientMessage).SERVER_MESSAGE(ServerMessage).CLOSE(Close)
 """.strip()
         + "\n",
         encoding="utf-8",
@@ -639,6 +639,7 @@ def test_api_gen_inspect_route_uses_operation_id_for_channel_operation(tmp_path)
     payload = json.loads(result.output)
     assert payload["id"] == "api.demo.channel.ws"
     assert payload["operation"] == "Realtime"
+    assert payload["connection"]["delivery"] == "unordered"
 
 
 def test_api_gen_diff_reports_breaking_changes(tmp_path):

@@ -9,7 +9,9 @@
 
 `api-blueprint` 用 Python DSL 定义 API 契约，构建统一 `ContractGraph`，再基于同一份协议真源和共享 target planner 生成文档服务、Go server/client、TypeScript client、Kotlin Android client、Python client/server、Wails v2/v3 overlay、gRPC proto/service 定义，以及 protoc-backed Go/Python gRPC stub。
 
-DSL 支持与 RPC 并列的 transport-neutral `STREAM` / `CHANNEL` 长连接消息契约；HTTP 可映射到 SSE / WebSocket，Wails 默认映射到 session-scoped runtime events，`CLOSE(Model)` 会生成 typed close lifecycle payload。
+DSL 支持与 RPC 并列的 transport-neutral `STREAM` / `CHANNEL` 长连接消息契约；HTTP 可映射到 SSE / WebSocket，Wails 默认映射到带 client-allocated `session_id` 握手的 session-scoped runtime events，`CLOSE(Model)` 会生成 typed close lifecycle payload。
+
+长连接 route 还支持 `ConnectionDelivery`：默认 `ordered`。HTTP 下的 ordered 直接依赖 SSE / WebSocket 单连接顺序，不额外叠加 seq/reorder 机制；Wails ordered 路由才会补 transport-level 保序，并在遇到不可恢复的缺帧、协议错误或缓冲溢出时通过结构化 `onClose` fail-fast 暴露，是否 reopen 由业务决定。仅高频 telemetry 一类场景才建议显式切到 `unordered`；该选项当前主要影响 Wails transport。
 
 README 只保留上手路径。完整配置、Wails、gRPC、DSL 和 examples 验证说明见 [深入文档](#深入文档)。
 

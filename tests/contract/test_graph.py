@@ -11,7 +11,7 @@ from api_blueprint.contract import (
     route_contract,
 )
 from api_blueprint.engine import Blueprint, Error, Toast
-from api_blueprint.engine.connection import ConnectionScope
+from api_blueprint.engine.connection import ConnectionDelivery, ConnectionScope
 from api_blueprint.engine.model import Int, String, Model, field
 from api_blueprint.writer.core import contracts as legacy_contracts
 from api_blueprint.writer.core.contract_adapters import RouteContractIndex
@@ -67,6 +67,7 @@ def test_contract_graph_manifest_captures_rpc_and_connection_routes():
     stream = manifest["routes"][1]
     assert stream["kind"] == "stream"
     assert stream["connection"]["scope"] == "session"
+    assert stream["connection"]["delivery"] == "ordered"
     assert stream["connection"]["open_model"] == "OpenRequest"
     assert stream["connection"]["close_model"] == "CloseInfo"
     assert stream["connection"]["server_message"]["name"] == "RunStreamMessage"
@@ -75,6 +76,21 @@ def test_contract_graph_manifest_captures_rpc_and_connection_routes():
     schema = manifest["schemas"]["CloseInfo"]
     assert schema["fields"]["reason"]["optional"] is True
     assert len(manifest["hashes"]["routes"]["api.runs.stream.events"]) == 64
+
+
+def test_contract_graph_manifest_carries_declared_connection_delivery():
+    bp = Blueprint(root="/api")
+    with bp.group("/runs") as views:
+        views.STREAM("/events").SERVER_MESSAGE(StreamState)
+        views.CHANNEL("/chat", delivery=ConnectionDelivery.UNORDERED).SERVER_MESSAGE(StreamState).CLIENT_MESSAGE(
+            StreamDone
+        )
+
+    manifest = build_contract_graph([bp]).to_manifest()
+    routes = {route["id"]: route for route in manifest["routes"]}
+
+    assert routes["api.runs.stream.events"]["connection"]["delivery"] == "ordered"
+    assert routes["api.runs.channel.chat"]["connection"]["delivery"] == "unordered"
 
 
 def test_route_contract_preserves_explicit_operation_id_casing_variants():

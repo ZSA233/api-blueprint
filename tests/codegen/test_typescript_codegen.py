@@ -6,7 +6,7 @@ import pytest
 
 from api_blueprint.contract import build_contract_graph
 from api_blueprint.engine.model import Enum, Model, String
-from api_blueprint.engine import Blueprint, Error, Toast
+from api_blueprint.engine import Blueprint, ConnectionDelivery, Error, Toast
 from api_blueprint.engine.wrapper import GeneralWrapper
 from api_blueprint.writer.core.contracts import route_contract
 from api_blueprint.writer.typescript import TypeScriptProtoRegistry, to_ts_identifier, to_ts_name
@@ -207,7 +207,7 @@ def test_typescript_generates_stream_and_channel_contracts(tmp_path: Path):
             state=TaskState,
             progress=TaskProgress,
         ).CLOSE(CloseInfo)
-        views.CHANNEL("/chat").OPEN(Open).CLIENT_MESSAGE(ClientInput).SERVER_MESSAGE(TaskState).CLOSE(CloseInfo)
+        views.CHANNEL("/chat", delivery=ConnectionDelivery.UNORDERED).OPEN(Open).CLIENT_MESSAGE(ClientInput).SERVER_MESSAGE(TaskState).CLOSE(CloseInfo)
 
     output_dir = tmp_path / "typescript"
     output_dir.mkdir()
@@ -222,6 +222,7 @@ def test_typescript_generates_stream_and_channel_contracts(tmp_path: Path):
 
     assert "export interface ApiStreamBridge<Recv, Close = SocketCloseInfo>" in runtime_client
     assert "export interface ApiChannelBridge<Recv, Send, Close = SocketCloseInfo> extends ApiStreamBridge<Recv, Close>" in runtime_client
+    assert 'delivery?: "ordered" | "unordered";' in runtime_client
     assert (
         "export type TaskStreamMessage =\n"
         '  | { type: "state"; data: TaskState }\n'
@@ -237,6 +238,8 @@ def test_typescript_generates_stream_and_channel_contracts(tmp_path: Path):
     assert 'connectionKind: "stream"' in client_text
     assert 'connectionKind: "channel"' in client_text
     assert 'scope: "session"' in client_text
+    assert 'delivery: "ordered"' in client_text
+    assert 'delivery: "unordered"' in client_text
     assert "class HttpEventStreamBridge<Recv, Close = SocketCloseInfo> implements ApiStreamBridge<Recv, Close>" in transport_text
     assert 'envelope.type === "close"' in transport_text
 

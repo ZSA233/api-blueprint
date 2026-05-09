@@ -28,6 +28,7 @@ export interface StreamConnectOptions<Recv, Close = SocketCloseInfo> {
   routeId: string;
   connectionKind: "stream" | "channel" | "legacy_ws";
   scope: "session" | "app" | "topic" | "";
+  delivery?: "ordered" | "unordered";
   path: string;
   service: string;
   namespace: string;

@@ -341,11 +341,11 @@ func (svc *DemoService) ConnectWs(
 		return nil, err
 	}
 
-	session, sessionErr := svc.sessions.Open(
-		"api.demo.ws.ws",
-		"api_blueprint.ws.api.demo.ws.ws",
-		sharedprovider.ConnectionScopeSession,
-	)
+	session, sessionErr := svc.sessions.Open(wailstransport.ConnectionOpenSpec{
+		RouteID:   "api.demo.ws.ws",
+		EventBase: "api_blueprint.ws.api.demo.ws.ws",
+		Scope:     sharedprovider.ConnectionScopeSession,
+	})
 	if sessionErr != nil {
 		err = sessionErr
 		return
@@ -386,11 +386,7 @@ func (svc *DemoService) CloseWs(request *WS_CLOSE_Ws) error {
 func (svc *DemoService) SubscribeSweepEvents(
 	envelope *CONNECTION_CONNECT_SweepEvents,
 ) (rsp *wailstransport.SocketSessionDescriptor, err error) {
-	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
-		BindQuery: true,
-		BindJSON:  false,
-		BindForm:  false,
-	})
+	req, reqErr := wailstransport.ConnectionOpenEnvelopeToReq(envelope, true)
 	if reqErr != nil {
 		err = reqErr
 		return
@@ -398,22 +394,25 @@ func (svc *DemoService) SubscribeSweepEvents(
 	ctx := sharedprovider.NewWailsContext[OPEN_SweepEvents, any, RSP_SweepEvents](
 		"DemoService",
 		"SubscribeSweepEvents",
-		wailstransport.EnvelopeHeaders(envelope),
+		wailstransport.ConnectionOpenHeaders(envelope),
 	)
 	ctx.Req = &sharedprovider.ReqContext[OPEN_SweepEvents, any, RSP_SweepEvents]{Request: req}
 	if err := svc.sweepEventsExecutor.Run(ctx); err != nil {
 		return nil, err
 	}
 
-	session, sessionErr := svc.sessions.Open(
-		"api.demo.stream.sweepevents",
-		"api_blueprint.stream.api.demo.stream.sweepevents",
-		sharedprovider.ConnectionScope("session"),
-	)
+	openSpec := wailstransport.ConnectionOpenSpec{
+		RouteID:            "api.demo.stream.sweepevents",
+		EventBase:          "api_blueprint.stream.api.demo.stream.sweepevents",
+		Scope:              sharedprovider.ConnectionScope("session"),
+		RequestedSessionID: wailstransport.ConnectionOpenEnvelopeSessionID(envelope),
+	}
+	session, sessionErr := svc.sessions.Open(openSpec)
 	if sessionErr != nil {
 		err = sessionErr
 		return
 	}
+	session = wailstransport.WrapConnectionSession(session, true)
 	stream := sharedprovider.NewStreamSession[OPEN_SweepEvents, SweepStreamMessage, CLOSE_SweepEvents](
 		req.Q,
 		session,
@@ -433,6 +432,7 @@ func (svc *DemoService) CloseSweepEvents(request *CONNECTION_CLOSE_SweepEvents) 
 	if err != nil {
 		return err
 	}
+	session = wailstransport.WrapConnectionSession(session, true)
 	code := request.Code
 	if code == 0 {
 		code = 1000
@@ -443,11 +443,7 @@ func (svc *DemoService) CloseSweepEvents(request *CONNECTION_CLOSE_SweepEvents) 
 func (svc *DemoService) OpenAssistantSession(
 	envelope *CONNECTION_CONNECT_AssistantSession,
 ) (rsp *wailstransport.SocketSessionDescriptor, err error) {
-	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
-		BindQuery: true,
-		BindJSON:  false,
-		BindForm:  false,
-	})
+	req, reqErr := wailstransport.ConnectionOpenEnvelopeToReq(envelope, true)
 	if reqErr != nil {
 		err = reqErr
 		return
@@ -455,22 +451,25 @@ func (svc *DemoService) OpenAssistantSession(
 	ctx := sharedprovider.NewWailsContext[OPEN_AssistantSession, any, RSP_AssistantSession](
 		"DemoService",
 		"OpenAssistantSession",
-		wailstransport.EnvelopeHeaders(envelope),
+		wailstransport.ConnectionOpenHeaders(envelope),
 	)
 	ctx.Req = &sharedprovider.ReqContext[OPEN_AssistantSession, any, RSP_AssistantSession]{Request: req}
 	if err := svc.assistantSessionExecutor.Run(ctx); err != nil {
 		return nil, err
 	}
 
-	session, sessionErr := svc.sessions.Open(
-		"api.demo.channel.assistantsession",
-		"api_blueprint.channel.api.demo.channel.assistantsession",
-		sharedprovider.ConnectionScope("session"),
-	)
+	openSpec := wailstransport.ConnectionOpenSpec{
+		RouteID:            "api.demo.channel.assistantsession",
+		EventBase:          "api_blueprint.channel.api.demo.channel.assistantsession",
+		Scope:              sharedprovider.ConnectionScope("session"),
+		RequestedSessionID: wailstransport.ConnectionOpenEnvelopeSessionID(envelope),
+	}
+	session, sessionErr := svc.sessions.Open(openSpec)
 	if sessionErr != nil {
 		err = sessionErr
 		return
 	}
+	session = wailstransport.WrapConnectionSession(session, true)
 	channel := sharedprovider.NewChannelSession[OPEN_AssistantSession, AssistantServerMessage, AssistantClientMessage, CLOSE_AssistantSession](
 		req.Q,
 		session,
@@ -498,6 +497,7 @@ func (svc *DemoService) CloseAssistantSession(request *CONNECTION_CLOSE_Assistan
 	if err != nil {
 		return err
 	}
+	session = wailstransport.WrapConnectionSession(session, true)
 	code := request.Code
 	if code == 0 {
 		code = 1000

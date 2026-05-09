@@ -182,7 +182,13 @@ make wails-hello-compile-check
 
 ## Long-Connection Bridge
 
-Wails TypeScript does not expose raw WebSocket and does not require business code to hand-write runtime event names. In the default Wails transport, `STREAM` / `CHANNEL` map to session-scoped runtime events, and event names exist only inside the generated Go runtime and generated TypeScript transport. The generated service exposes a lightweight `ConnectionHub` replacement point; the default hub fully supports only `ConnectionScope.SESSION`, and `APP` / `TOPIC` broadcast or topic routing policy belongs in a custom hub.
+Wails TypeScript does not expose raw WebSocket and does not require business code to hand-write runtime event names. In the default Wails transport, `STREAM` / `CHANNEL` map to session-scoped runtime events, and event names exist only inside the generated Go runtime and generated TypeScript transport. Connection setup now uses a client-allocated `session_id`: the generated TypeScript bridge computes deterministic per-session event names, subscribes first, and then sends the connect RPC so ordered delivery cannot miss `seq=1`. The generated service still exposes a lightweight `ConnectionHub` replacement point; custom hubs now receive `Open(ConnectionOpenSpec)` and must return a descriptor that preserves the generated event naming contract. The default hub fully supports only `ConnectionScope.SESSION`, and `APP` / `TOPIC` broadcast or topic routing policy still belongs in a custom hub.
+
+Generated Wails `STREAM` / `CHANNEL` delivery is ordered-async by default: the Go runtime adds per-session `seq` envelopes, and the generated TypeScript bridge reorders messages before business `onMessage` / `onClose`. This is intentionally different from HTTP, where `STREAM`/`CHANNEL` already rely on native per-connection SSE / WebSocket ordering and do not add the Wails seq/reorder overlay. Routes can opt into `delivery=ConnectionDelivery.UNORDERED` for telemetry-style flows where arrival order is not worth the buffering cost; that opt-out currently has transport-specific meaning mainly on Wails.
+
+Ordered delivery is fail-fast rather than loss-tolerant. If an ordered route sees a `seq` gap that does not drain within the generated timeout, receives an invalid ordered envelope, or exceeds the pending reorder buffer, the bridge closes locally with structured `onClose` info such as `error: "ordered_delivery_gap"`, `error: "ordered_delivery_protocol_error"`, or `error: "ordered_delivery_buffer_overflow"`. The generated transport does not auto-reconnect; applications that want retry should reopen the stream or channel from their own `onClose` policy.
+
+This is a breaking contract update for custom Wails hubs: `ConnectionHub.Open(...)` now takes a single `ConnectionOpenSpec` instead of positional route/event arguments. If a project overrides the generated hub, update it to consume the requested `session_id` and reuse the generated descriptor/event-name helper logic rather than inventing a different event naming scheme.
 
 `STREAM` returns `ApiStreamBridge<ServerMessage, CloseMessage>`:
 
@@ -203,7 +209,7 @@ offMessage();
 offClose();
 ```
 
-`onClose` receives the typed close payload generated from `.CLOSE(Model)`. Client-side `close(code, reason)` is only an active close request; model business cancellation through a `CHANNEL` `CLIENT_MESSAGE(cancel=...)`.
+`onClose` receives the typed close payload generated from `.CLOSE(Model)`. On ordered routes, transport-level fail-fast errors are surfaced through the same callback, so application code can inspect `info.error` and decide whether to reopen. Client-side `close(code, reason)` is only an active close request; model business cancellation through a `CHANNEL` `CLIENT_MESSAGE(cancel=...)`.
 
 `CHANNEL` returns `ApiChannelBridge<ServerMessage, ClientMessage, CloseMessage>`:
 

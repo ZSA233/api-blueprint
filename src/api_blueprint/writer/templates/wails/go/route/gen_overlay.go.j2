@@ -34,7 +34,7 @@ type {{ route.ctx_type }} = sharedroutes.{{ route.ctx_type }}
 type {{ route.ws_send_type }} = wailstransport.SocketSendEnvelope[{{ route.local_ws_payload_type_expr }}]
 type {{ route.ws_close_type }} = wailstransport.SocketCloseEnvelope
 {% endif %}
-{% if route.is_connection %}type {{ route.connection_connect_type }} = wailstransport.InvokeEnvelope[{{ route.local_query_type_expr }}, any]
+{% if route.is_connection %}type {{ route.connection_connect_type }} = wailstransport.ConnectionOpenEnvelope[{{ route.local_query_type_expr }}]
 type {{ route.connection_close_type }} = wailstransport.SocketCloseEnvelope
 {% endif %}
 {% if route.is_channel %}type {{ route.channel_send_type }} = wailstransport.SocketSendEnvelope[{{ route.client_message_type }}]

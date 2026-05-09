@@ -65,3 +65,106 @@ with bp.group("/demo") as views:
     field = router.rsp_model["anon_kv"]
 
     assert getattr(field.get_obj(), "__name__", None) == "ANON_Func1put_anon_kv"
+
+
+def test_api_doc_server_accepts_vnext_config_without_legacy_golang_section(tmp_path, monkeypatch):
+    pkg = tmp_path / "blueprints"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text("", encoding="utf-8")
+    (pkg / "app.py").write_text(
+        """
+from api_blueprint.engine import Blueprint
+
+bp = Blueprint(root="/api")
+
+with bp.group("/demo") as views:
+    views.GET("/hello").RSP(message="ok")
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+    [blueprint]
+    docs_server = "0.0.0.0:2332"
+    entrypoints = ["blueprints.app:bp"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    calls: list[tuple[str, int, list[object] | None]] = []
+
+    class FakeSocket:
+        def __init__(self, host: str, port: int) -> None:
+            self._host = host
+            self._port = port
+
+        def getsockname(self) -> tuple[str, int]:
+            return (self._host, self._port)
+
+    def fake_bind_socket(self) -> FakeSocket:
+        return FakeSocket(self.host, self.port)
+
+    def fake_server_run(self, sockets: list[object] | None = None) -> None:
+        calls.append((self.config.host, self.config.port, sockets))
+
+    monkeypatch.setattr("api_blueprint.application.docs.uvicorn.Config.bind_socket", fake_bind_socket)
+    monkeypatch.setattr("api_blueprint.application.docs.uvicorn.Server.run", fake_server_run)
+
+    runner = CliRunner()
+    result = runner.invoke(apidoc_server, ["-c", str(config_path)])
+
+    assert result.exit_code == 0, result.output
+    assert "[api-doc-server] Docs: http://localhost:2332/docs" in result.output
+    assert len(calls) == 1
+    assert calls[0][:2] == ("0.0.0.0", 2332)
+    assert len(calls[0][2] or []) == 1
+
+
+def test_api_doc_server_reports_actual_bound_port_for_zero_port_config(tmp_path, monkeypatch):
+    pkg = tmp_path / "blueprints"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text("", encoding="utf-8")
+    (pkg / "app.py").write_text(
+        """
+from api_blueprint.engine import Blueprint
+
+bp = Blueprint(root="/api")
+
+with bp.group("/demo") as views:
+    views.GET("/hello").RSP(message="ok")
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+    [blueprint]
+    docs_server = "0.0.0.0:0"
+    entrypoints = ["blueprints.app:bp"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    class FakeSocket:
+        def getsockname(self) -> tuple[str, int]:
+            return ("0.0.0.0", 49123)
+
+    def fake_bind_socket(self) -> FakeSocket:
+        return FakeSocket()
+
+    def fake_server_run(self, sockets: list[object] | None = None) -> None:
+        return None
+
+    monkeypatch.setattr("api_blueprint.application.docs.uvicorn.Config.bind_socket", fake_bind_socket)
+    monkeypatch.setattr("api_blueprint.application.docs.uvicorn.Server.run", fake_server_run)
+
+    runner = CliRunner()
+    result = runner.invoke(apidoc_server, ["-c", str(config_path)])
+
+    assert result.exit_code == 0, result.output
+    assert "[api-doc-server] Docs: http://localhost:49123/docs" in result.output

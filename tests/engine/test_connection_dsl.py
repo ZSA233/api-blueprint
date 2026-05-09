@@ -1,6 +1,6 @@
 import pytest
 
-from api_blueprint.engine import Blueprint, ConnectionScope, DefaultConnectionClose
+from api_blueprint.engine import Blueprint, ConnectionDelivery, ConnectionScope, DefaultConnectionClose
 from api_blueprint.engine.model import Model, String
 from api_blueprint.writer.core.contracts import route_contract
 
@@ -91,6 +91,22 @@ def test_connection_scope_accepts_declared_scope_values():
     assert route.connection_scope == ConnectionScope.TOPIC
 
 
+def test_connection_routes_default_to_ordered_delivery():
+    bp = Blueprint(root="/api")
+    stream = bp.STREAM("/events").SERVER_MESSAGE(ServerMessage)
+    channel = bp.CHANNEL("/chat").SERVER_MESSAGE(ServerMessage).CLIENT_MESSAGE(ClientMessage)
+
+    assert stream.connection_delivery == ConnectionDelivery.ORDERED
+    assert channel.connection_delivery == ConnectionDelivery.ORDERED
+
+
+def test_connection_delivery_accepts_declared_delivery_values():
+    bp = Blueprint(root="/api")
+    route = bp.STREAM("/events", delivery="unordered").SERVER_MESSAGE(ServerMessage)
+
+    assert route.connection_delivery == ConnectionDelivery.UNORDERED
+
+
 def test_connection_route_contract_carries_declared_scope():
     bp = Blueprint(root="/api")
     route = bp.CHANNEL("/chat", scope=ConnectionScope.APP).SERVER_MESSAGE(ServerMessage).CLIENT_MESSAGE(ClientMessage)
@@ -100,6 +116,21 @@ def test_connection_route_contract_carries_declared_scope():
     assert contract.connection_scope == ConnectionScope.APP
     assert contract.channel is not None
     assert contract.channel.scope == ConnectionScope.APP
+
+
+def test_connection_route_contract_carries_declared_delivery():
+    bp = Blueprint(root="/api")
+    route = (
+        bp.CHANNEL("/chat", delivery=ConnectionDelivery.UNORDERED)
+        .SERVER_MESSAGE(ServerMessage)
+        .CLIENT_MESSAGE(ClientMessage)
+    )
+
+    contract = route_contract(route)
+
+    assert contract.connection_delivery == ConnectionDelivery.UNORDERED
+    assert contract.channel is not None
+    assert contract.channel.delivery == ConnectionDelivery.UNORDERED
 
 
 def test_connection_uses_default_close_model_when_not_declared():

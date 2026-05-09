@@ -542,11 +542,11 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         "http channel adapter": (files["go_http_adapter"], "httptransport.CHANNEL("),
         "wails stream event base": (
             files["go_wails_v3_service"],
-            '"api.demo.stream.sweepevents",\n\t\t"api_blueprint.stream.api.demo.stream.sweepevents",',
+            'RouteID:            "api.demo.stream.sweepevents"',
         ),
         "wails channel event base": (
             files["go_wails_v3_service"],
-            '"api.demo.channel.assistantsession",\n\t\t"api_blueprint.channel.api.demo.channel.assistantsession",',
+            'RouteID:            "api.demo.channel.assistantsession"',
         ),
         "typescript stream client": (files["ts_route_client"], "subscribeSweepEvents("),
         "typescript channel client": (files["ts_route_client"], "openAssistantSession("),

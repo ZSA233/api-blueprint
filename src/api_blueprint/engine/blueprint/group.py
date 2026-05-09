@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar, Union, overlo
 from fastapi.types import IncEx
 
 from api_blueprint.engine.blueprint.router import Router
-from api_blueprint.engine.connection import ConnectionScope
+from api_blueprint.engine.connection import ConnectionDelivery, ConnectionScope
 from api_blueprint.engine.runtime import Handle, Provider, ResponseWrapper, WsHandle
 from api_blueprint.engine.schema import HeaderModel
 from api_blueprint.engine.utils import join_url_path
@@ -234,9 +234,10 @@ class RouterGroup(Generic[T]):
         path: str = "",
         *,
         scope: ConnectionScope = ConnectionScope.SESSION,
+        delivery: ConnectionDelivery = ConnectionDelivery.ORDERED,
         **kwargs: dict[str, Any],
     ) -> Router:
-        router = Router(self, ["STREAM"], path, handle=Handle(None), scope=scope, **kwargs)
+        router = Router(self, ["STREAM"], path, handle=Handle(None), scope=scope, delivery=delivery, **kwargs)
         self.pending_routers.append(router)
         return router
 
@@ -245,8 +246,9 @@ class RouterGroup(Generic[T]):
         path: str = "",
         *,
         scope: ConnectionScope = ConnectionScope.SESSION,
+        delivery: ConnectionDelivery = ConnectionDelivery.ORDERED,
         **kwargs: dict[str, Any],
     ) -> Router:
-        router = Router(self, ["CHANNEL"], path, handle=Handle(None), scope=scope, **kwargs)
+        router = Router(self, ["CHANNEL"], path, handle=Handle(None), scope=scope, delivery=delivery, **kwargs)
         self.pending_routers.append(router)
         return router

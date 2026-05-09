@@ -67,7 +67,7 @@ def _write_blueprint_package(tmp_path: Path) -> None:
     (pkg / "__init__.py").write_text("", encoding="utf-8")
     (pkg / "app.py").write_text(
         """
-from api_blueprint.engine import Blueprint, provider
+from api_blueprint.engine import Blueprint, ConnectionDelivery, provider
 from api_blueprint.engine.model import Model, String
 from api_blueprint.engine.wrapper import GeneralWrapper
 
@@ -103,7 +103,7 @@ with bp.group("/demo") as views:
     views.GET("/ping").ARGS(q=String(description="q")).RSP(message=String(description="message"))
     views.WS("/ws").RECV(WSRecv).SEND(WSSend)
     views.STREAM("/events").OPEN(OpenInfo).SERVER_MESSAGE("DemoStreamMessage", event=StreamMessage).CLOSE(CloseInfo)
-    views.CHANNEL("/chat").OPEN(OpenInfo).CLIENT_MESSAGE(ClientMessage).SERVER_MESSAGE(StreamMessage).CLOSE(CloseInfo)
+    views.CHANNEL("/chat", delivery=ConnectionDelivery.UNORDERED).OPEN(OpenInfo).CLIENT_MESSAGE(ClientMessage).SERVER_MESSAGE(StreamMessage).CLOSE(CloseInfo)
         """.strip()
         + "\n",
         encoding="utf-8",
@@ -276,9 +276,10 @@ go 1.23.8
     assert result.exit_code == 0, result.output
 
     shared_go_client = shared_go / "routes" / "api" / "demo" / "gen_interface.go"
-    shared_ts_client = shared_ts / "api" / "routes" / "api" / "demo" / "gen_client.ts"
+    shared_ts_client_path = shared_ts / "api" / "routes" / "api" / "demo" / "gen_client.ts"
     assert shared_go_client.is_file()
-    assert shared_ts_client.is_file()
+    assert shared_ts_client_path.is_file()
+    shared_ts_client = shared_ts_client_path.read_text(encoding="utf-8")
 
     go_overlay_service = (shared_go / "transports" / "wailsv3" / "api" / "demo" / "gen_service.go").read_text(encoding="utf-8")
     go_overlay_types = (shared_go / "transports" / "wailsv3" / "api" / "demo" / "gen_overlay.go").read_text(encoding="utf-8")
@@ -297,9 +298,12 @@ go 1.23.8
     assert "func (svc *DemoService) ConnectWs" in go_overlay_service
     assert "func (svc *DemoService) SubscribeEvents" in go_overlay_service
     assert "func (svc *DemoService) OpenChat" in go_overlay_service
-    assert '"api.demo.stream.events",\n\t\t"api_blueprint.stream.api.demo.stream.events",' in go_overlay_service
-    assert '"api.demo.channel.chat",\n\t\t"api_blueprint.channel.api.demo.channel.chat",' in go_overlay_service
-    assert '"api.demo.ws.ws",\n\t\t"api_blueprint.ws.api.demo.ws.ws",' in go_overlay_service
+    assert 'RouteID:            "api.demo.stream.events"' in go_overlay_service
+    assert 'EventBase:          "api_blueprint.stream.api.demo.stream.events"' in go_overlay_service
+    assert 'RouteID:            "api.demo.channel.chat"' in go_overlay_service
+    assert 'EventBase:          "api_blueprint.channel.api.demo.channel.chat"' in go_overlay_service
+    assert 'RouteID:   "api.demo.ws.ws"' in go_overlay_service
+    assert 'EventBase: "api_blueprint.ws.api.demo.ws.ws"' in go_overlay_service
     assert "sharedprovider.NewStreamSession[OPEN_Events, DemoStreamMessage, CLOSE_Events]" in go_overlay_service
     assert (
         "sharedprovider.NewChannelSession[OPEN_Chat, SERVER_Chat_MESSAGE, CLIENT_Chat_MESSAGE, CLOSE_Chat]"
@@ -334,6 +338,8 @@ go 1.23.8
     assert "svc.pingExecutor.Run(ctx)" in go_overlay_service
     assert "svc.wsExecutor.RunWSPreflight(ctx)" in go_overlay_service
     assert "svc.wsExecutor.RunWSHandler(ctx)" in go_overlay_service
+    assert go_overlay_service.count("WrapConnectionSession(session, true)") == 2
+    assert go_overlay_service.count("WrapConnectionSession(session, false)") == 2
     assert "response, invokeErr := svc.impl" not in go_overlay_service
     assert "type RouterInterface = sharedroutes.RouterInterface" in go_overlay_types
     assert "func NewService(dispatcher wailstransport.EventDispatcher)" in go_impl_service
@@ -354,15 +360,55 @@ go 1.23.8
     assert "ctx.Gin.Next()" not in go_provider_context
     assert "type ReqEnvelopeOptions struct" in go_runtime
     assert "type ConnectionHub interface" in go_runtime
+    assert "type ConnectionOpenEnvelope[Q any] struct" in go_runtime
+    assert "type ConnectionOpenSpec struct" in go_runtime
+    assert "Open(spec ConnectionOpenSpec) (ConnectionSession, error)" in go_runtime
+    assert "type OrderedConnectionEnvelope struct" in go_runtime
+    assert "var orderedConnectionStates sync.Map" in go_runtime
+    assert "func WrapConnectionSession(session ConnectionSession, ordered bool) ConnectionSession" in go_runtime
+    assert "func ConnectionOpenEnvelopeToReq[Q any]" in go_runtime
+    assert "func ConnectionOpenHeaders[Q any]" in go_runtime
+    assert "func ConnectionOpenEnvelopeSessionID[Q any](envelope *ConnectionOpenEnvelope[Q]) string" in go_runtime
+    assert "func BuildConnectionDescriptor(spec ConnectionOpenSpec, sessionID string) SocketSessionDescriptor" in go_runtime
     assert "CloseJSON(payload any) error" in go_runtime
     assert "connection scope[%s] is not supported by the default SocketHub" in go_runtime
     assert "if options.BindQuery" in go_runtime
     assert 'return nil, fmt.Errorf("[WailsReq] json body is required")' in go_runtime
     assert "wailstransport.ReqEnvelopeOptions{" in go_overlay_service
     assert "wailstransport.EnvelopeToReq[" not in go_overlay_service
+    assert "openSpec := wailstransport.ConnectionOpenSpec{" in go_overlay_service
+    assert "wailstransport.ConnectionOpenEnvelopeToReq(" in go_overlay_service
+    assert "wailstransport.ConnectionOpenHeaders(envelope)" in go_overlay_service
+    assert "wailstransport.ConnectionOpenEnvelopeSessionID(envelope)" in go_overlay_service
+    assert "envelope.SessionID" not in go_overlay_service
     assert "BindQuery: true" in go_overlay_service
+    assert "type CONNECTION_CONNECT_Events = wailstransport.ConnectionOpenEnvelope[OPEN_Events]" in go_overlay_types
+    assert "type CONNECTION_CONNECT_Chat = wailstransport.ConnectionOpenEnvelope[OPEN_Chat]" in go_overlay_types
     assert "export class WailsV3Transport implements ApiTransport" in ts_overlay_transport
     assert "export async function ensureWailsRuntime(): Promise<void>" in ts_overlay_transport
+    assert "type WailsConnectionOpenEnvelope<Query> = {" in ts_overlay_transport
+    assert "function generateWailsConnectionSessionId(routeId: string): string {" in ts_overlay_transport
+    assert "function buildWailsConnectionEventName(eventBase: string, kind: \"message\" | \"closed\", sessionId: string): string {" in ts_overlay_transport
+    assert "type WailsOrderedEnvelope<Payload> = {" in ts_overlay_transport
+    assert "const WAILS_ORDERED_DELIVERY_GAP_TIMEOUT_MS =" in ts_overlay_transport
+    assert "const WAILS_ORDERED_DELIVERY_MAX_PENDING_MESSAGES =" in ts_overlay_transport
+    assert "private readonly pendingMessages = new Map<number, Recv>();" in ts_overlay_transport
+    assert "private gapTimeoutHandle: ReturnType<typeof setTimeout> | null = null;" in ts_overlay_transport
+    assert "private subscribedSession: WailsSocketSession | null = null;" in ts_overlay_transport
+    assert "const provisionalSession: WailsSocketSession = {" in ts_overlay_transport
+    assert "this.subscribedSession = provisionalSession;" in ts_overlay_transport
+    assert "this.runtime.buildWailsConnectionEnvelope(" in ts_overlay_transport
+    ensure_index = ts_overlay_transport.index("await ensureWailsRuntime();")
+    subscribe_index = ts_overlay_transport.index("this.runtime.subscribeEvent(messageEvent, this.messageHandler);")
+    invoke_index = ts_overlay_transport.index("const session = await this.runtime.invokeOperation<WailsSocketSession>(")
+    assert ensure_index < subscribe_index
+    assert subscribe_index < invoke_index
+    assert 'error: "ordered_delivery_gap"' in ts_overlay_transport
+    assert 'error: "ordered_delivery_protocol_error"' in ts_overlay_transport
+    assert 'error: "ordered_delivery_buffer_overflow"' in ts_overlay_transport
+    assert "this.startOrderedGapTimer();" in ts_overlay_transport
+    assert "this.clearOrderedGapTimer();" in ts_overlay_transport
+    assert "this.failOrderedDelivery(" in ts_overlay_transport
     assert "Call.ByName" in ts_overlay_transport
     assert "callByName(bindingName, payload)" in ts_overlay_transport
     assert 'import { WAILS_V3_BINDINGS } from "./gen_bindings";' in ts_overlay_transport
@@ -404,6 +450,8 @@ go 1.23.8
     assert "export type DemoClient = Omit<SharedDemoClient, HiddenRawWebSocketMethods>;" in ts_overlay_client
     assert "export function createClient(config: ApiClientConfig = {}): DemoClient" in ts_overlay_client
     assert "transport: config.transport ?? new WailsV3Transport(config)" in ts_overlay_client
+    assert 'delivery: "ordered"' in shared_ts_client
+    assert 'delivery: "unordered"' in shared_ts_client
     assert "connectWsRaw(" not in ts_overlay_client
     assert 'import { createClient as createDemoClient } from "./demo/client";' in ts_overlay_factory
     assert "demoClient: createDemoClient(config)," in ts_overlay_factory

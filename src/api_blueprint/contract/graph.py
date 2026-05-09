@@ -9,7 +9,7 @@ from typing import Any, Iterable, Mapping, get_origin
 
 from api_blueprint._version import __version__
 from api_blueprint.engine import Blueprint
-from api_blueprint.engine.connection import ConnectionKind, MessageContract, ModelRef
+from api_blueprint.engine.connection import ConnectionDelivery, ConnectionKind, MessageContract, ModelRef
 from api_blueprint.engine.model import (
     AnonKV,
     Array,
@@ -208,6 +208,7 @@ class ContractGraphBuilder:
         close_model = router.effective_close_model
         return {
             "kind": router.connection_kind.value,
+            "delivery": (router.connection_delivery.value if router.connection_delivery is not None else ConnectionDelivery.ORDERED.value),
             "scope": (router.connection_scope.value if router.connection_scope is not None else "session"),
             "open_model": self._schema_ref(router.open_model),
             "close_model": self._schema_ref(close_model),

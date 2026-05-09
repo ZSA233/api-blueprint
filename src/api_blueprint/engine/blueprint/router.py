@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, DefaultDict, Literal, Optional, Self, Uni
 from fastapi import FastAPI
 
 from api_blueprint.engine.connection import (
+    ConnectionDelivery,
     ConnectionKind,
     ConnectionScope,
     DefaultConnectionClose,
@@ -66,6 +67,7 @@ class Router:
     recvs: list[Model]
     sends: list[Model]
     connection_kind: ConnectionKind
+    connection_delivery: ConnectionDelivery | None
     connection_scope: ConnectionScope | None
     open_model: ModelRef | None
     close_model: ModelRef | None
@@ -119,12 +121,14 @@ class Router:
         self.sends = []
         self.connection_kind = self._infer_connection_kind(methods)
         self.connection_scope = self._normalize_connection_scope(kwargs.pop("scope", None))
+        self.connection_delivery = self._normalize_connection_delivery(kwargs.pop("delivery", None))
         self.open_model = None
         self.close_model = None
         self.server_message = None
         self.client_message = None
         if self.connection_kind in {ConnectionKind.STREAM, ConnectionKind.CHANNEL}:
             self.connection_scope = self.connection_scope or ConnectionScope.SESSION
+            self.connection_delivery = self.connection_delivery or ConnectionDelivery.ORDERED
 
     def __str__(self) -> str:
         return f"<Router {self.methods} - {self.url} >"
@@ -359,3 +363,11 @@ class Router:
         if isinstance(value, ConnectionScope):
             return value
         return ConnectionScope(str(value))
+
+    @staticmethod
+    def _normalize_connection_delivery(value: object) -> ConnectionDelivery | None:
+        if value is None:
+            return None
+        if isinstance(value, ConnectionDelivery):
+            return value
+        return ConnectionDelivery(str(value))

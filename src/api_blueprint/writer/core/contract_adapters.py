@@ -4,7 +4,14 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Mapping
 
-from api_blueprint.engine.connection import ConnectionKind, ConnectionScope, DefaultConnectionClose, MessageContract, ModelRef
+from api_blueprint.engine.connection import (
+    ConnectionDelivery,
+    ConnectionKind,
+    ConnectionScope,
+    DefaultConnectionClose,
+    MessageContract,
+    ModelRef,
+)
 from api_blueprint.engine.router import Router
 from api_blueprint.engine.utils import snake_to_pascal_case
 from api_blueprint.engine.wrapper import NoneWrapper, ResponseWrapper
@@ -154,6 +161,7 @@ def route_contract_from_manifest(
     service_name = str(service.get("name") or _suffix(snake_to_pascal_case(group_alias or "root", "", "Group"), "Service"))
     kind = str(route.get("kind") or "rpc")
     connection_scope = _connection_scope(route)
+    connection_delivery = _connection_delivery(route)
     methods = tuple(
         str(method)
         for method in route.get("methods", [])
@@ -182,6 +190,7 @@ def route_contract_from_manifest(
             route_id=route_id,
             kind=ConnectionKind.STREAM,
             scope=connection_scope or ConnectionScope.SESSION,
+            delivery=connection_delivery or ConnectionDelivery.ORDERED,
             close_model=bridge_close_model,
             connect_method=f"Subscribe{func_name}",
             close_method=f"Close{func_name}",
@@ -198,6 +207,7 @@ def route_contract_from_manifest(
             route_id=route_id,
             kind=ConnectionKind.CHANNEL,
             scope=connection_scope or ConnectionScope.SESSION,
+            delivery=connection_delivery or ConnectionDelivery.ORDERED,
             close_model=bridge_close_model,
             connect_method=f"Open{func_name}",
             send_method=f"Send{func_name}",
@@ -223,6 +233,7 @@ def route_contract_from_manifest(
         supports_ws=kind == ConnectionKind.LEGACY_WS.value,
         supports_stream=kind == ConnectionKind.STREAM.value,
         supports_channel=kind == ConnectionKind.CHANNEL.value,
+        connection_delivery=connection_delivery,
         connection_scope=connection_scope,
         connection_close_model=close_model,
         url=str(route.get("url") or ""),
@@ -316,6 +327,16 @@ def _connection_scope(route: ManifestRoute) -> ConnectionScope | None:
     if not isinstance(value, str):
         return None
     return ConnectionScope(value)
+
+
+def _connection_delivery(route: ManifestRoute) -> ConnectionDelivery | None:
+    connection = route.get("connection")
+    if not isinstance(connection, Mapping):
+        return None
+    value = connection.get("delivery")
+    if not isinstance(value, str):
+        return None
+    return ConnectionDelivery(value)
 
 
 def _slug(value: str, *, default: str) -> str:

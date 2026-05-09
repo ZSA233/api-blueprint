@@ -1,5 +1,6 @@
 from api_blueprint.engine.blueprint import Blueprint, ConflictFieldError, Router, RouterGroup
 from api_blueprint.engine.connection import (
+    ConnectionDelivery,
     ConnectionKind,
     ConnectionScope,
     DefaultConnectionClose,
@@ -29,6 +30,7 @@ __all__ = (
     "Blueprint",
     "ConflictFieldError",
     "Custom",
+    "ConnectionDelivery",
     "ConnectionKind",
     "ConnectionScope",
     "DefaultConnectionClose",

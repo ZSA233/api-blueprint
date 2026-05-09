@@ -18,7 +18,7 @@ NAV_ITEMS = []
 
 def add_nav_items(app: FastAPI, host: str):
     title = app.title
-    link = urljoin(host, app.docs_url)
+    link = urljoin(host, app.docs_url or "/docs")
     NAV_ITEMS.append({
         'name': title,
         'url': link,

@@ -9,7 +9,9 @@ Language: [中文](README.md) | English
 
 `api-blueprint` defines API contracts with a Python DSL, builds a unified `ContractGraph`, and generates a documentation service, Go server/client, TypeScript client, Kotlin Android client, Python client/server, Wails v2/v3 overlays, gRPC proto/service definitions, and protoc-backed Go/Python gRPC stubs from the same protocol source of truth and shared target planner.
 
-The DSL supports transport-neutral `STREAM` / `CHANNEL` long-connection message contracts alongside RPC; HTTP can map them to SSE / WebSocket, Wails maps them to session-scoped runtime events by default, and `CLOSE(Model)` generates a typed close lifecycle payload.
+The DSL supports transport-neutral `STREAM` / `CHANNEL` long-connection message contracts alongside RPC; HTTP can map them to SSE / WebSocket, Wails maps them to session-scoped runtime events with a client-allocated `session_id` handshake by default, and `CLOSE(Model)` generates a typed close lifecycle payload.
+
+Long-connection routes also support `ConnectionDelivery`: the default is `ordered`. On HTTP, ordered delivery relies on the native per-connection ordering of SSE / WebSocket and does not add the Wails-style seq/reorder overlay; only ordered Wails routes add transport-level ordering and fail fast through a structured `onClose` when they hit an unrecoverable gap, protocol error, or buffer overflow, with application code deciding whether to reopen. `unordered` should be an explicit opt-in only for high-frequency telemetry-style flows, and it currently matters primarily for the Wails transport.
 
 This README keeps only the onboarding path. See [Learn More](#learn-more) for full configuration, Wails, gRPC, DSL, and examples validation docs.
 

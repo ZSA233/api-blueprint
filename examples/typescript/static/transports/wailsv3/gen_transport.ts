@@ -57,6 +57,46 @@ type WailsCloseEnvelope = {
   reason?: string;
 };
 
+type WailsConnectionOpenEnvelope<Query> = {
+  session_id?: string;
+  Q?: Query;
+  Headers?: Record<string, string>;
+};
+
+type WailsOrderedEnvelope<Payload> = {
+  seq: number;
+  payload?: Payload;
+};
+
+const WAILS_ORDERED_DELIVERY_GAP_TIMEOUT_MS = 5000;
+const WAILS_ORDERED_DELIVERY_MAX_PENDING_MESSAGES = 256;
+let wailsConnectionSessionCounter = 0;
+
+function parseWailsOrderedEnvelope<Payload>(payload?: unknown): WailsOrderedEnvelope<Payload> | null {
+  if (payload == null || typeof payload !== "object") {
+    return null;
+  }
+  const seq = (payload as { seq?: unknown }).seq;
+  if (typeof seq !== "number" || !Number.isSafeInteger(seq) || seq < 1) {
+    return null;
+  }
+  return payload as WailsOrderedEnvelope<Payload>;
+}
+
+function generateWailsConnectionSessionId(routeId: string): string {
+  const prefix = routeId || "route";
+  const uuid = globalThis.crypto?.randomUUID?.();
+  if (typeof uuid === "string") {
+    return `${prefix}-${uuid}`;
+  }
+  wailsConnectionSessionCounter += 1;
+  return `${prefix}-${Date.now()}-${wailsConnectionSessionCounter}-${Math.random().toString(16).slice(2)}`;
+}
+
+function buildWailsConnectionEventName(eventBase: string, kind: "message" | "closed", sessionId: string): string {
+  return `${eventBase}.${kind}.${sessionId}`;
+}
+
 declare global {
   interface Window {
     WailsInvoke?: (message: string) => void;
@@ -132,6 +172,13 @@ class WailsStreamBridge<Recv, Close = SocketCloseInfo> implements ApiStreamBridg
   protected readonly messageListeners = new Set<SocketMessageHandler<Recv>>();
   protected readonly closeListeners = new Set<SocketCloseHandler<Close>>();
   protected session: WailsSocketSession | null = null;
+  private subscribedSession: WailsSocketSession | null = null;
+  private readonly delivery: "ordered" | "unordered";
+  private readonly pendingMessages = new Map<number, Recv>();
+  private pendingClose: WailsOrderedEnvelope<Close> | null = null;
+  private gapTimeoutHandle: ReturnType<typeof setTimeout> | null = null;
+  private nextSequence = 1;
+  private closed = false;
   private readonly messageHandler: WailsEventHandler;
   private readonly closeHandler: WailsEventHandler;
 
@@ -140,13 +187,12 @@ class WailsStreamBridge<Recv, Close = SocketCloseInfo> implements ApiStreamBridg
     protected readonly options: StreamConnectOptions<Recv, Close>,
   ) {
     this.routeId = options.routeId;
+    this.delivery = options.delivery ?? "unordered";
     this.messageHandler = (payload?: unknown) => {
-      this.messageListeners.forEach((listener) => listener(payload as Recv));
+      this.handleMessageEvent(payload);
     };
     this.closeHandler = (payload?: unknown) => {
-      const info = (payload ?? {}) as Close;
-      this.emitClose(info);
-      this.unsubscribe();
+      this.handleCloseEvent(payload);
     };
     this.ready = this.connect();
   }
@@ -181,15 +227,48 @@ class WailsStreamBridge<Recv, Close = SocketCloseInfo> implements ApiStreamBridg
   }
 
   protected async connect(): Promise<void> {
-    const session = await this.runtime.invokeOperation<WailsSocketSession>(
-      this.options.namespace,
-      this.options.service,
-      this.options.connectMethod,
-      this.runtime.buildWailsEnvelope(this.options.open ?? this.options.query, undefined, this.options.headers),
-    );
-    this.session = session;
-    this.runtime.subscribeEvent(session.message_event, this.messageHandler);
-    this.runtime.subscribeEvent(session.close_event, this.closeHandler);
+    await ensureWailsRuntime();
+    const sessionId = generateWailsConnectionSessionId(this.routeId);
+    const eventBase = this.options.eventBase || `api_blueprint.connection.${this.routeId}`;
+    const messageEvent = buildWailsConnectionEventName(eventBase, "message", sessionId);
+    const closeEvent = buildWailsConnectionEventName(eventBase, "closed", sessionId);
+    const provisionalSession: WailsSocketSession = {
+      id: sessionId,
+      route_id: this.routeId,
+      message_event: messageEvent,
+      close_event: closeEvent,
+    };
+    this.subscribedSession = provisionalSession;
+    try {
+      this.runtime.subscribeEvent(messageEvent, this.messageHandler);
+      this.runtime.subscribeEvent(closeEvent, this.closeHandler);
+      const session = await this.runtime.invokeOperation<WailsSocketSession>(
+        this.options.namespace,
+        this.options.service,
+        this.options.connectMethod,
+        this.runtime.buildWailsConnectionEnvelope(
+          sessionId,
+          this.options.open ?? this.options.query,
+          this.options.headers,
+        ),
+      );
+      if (session.message_event !== messageEvent || session.close_event !== closeEvent) {
+        throw new Error(
+          `Wails route ${this.routeId} returned unexpected event names for session ${sessionId}.`,
+        );
+      }
+      this.session = session;
+      if (this.subscribedSession === provisionalSession) {
+        this.subscribedSession = session;
+      }
+    } catch (error) {
+      if (this.subscribedSession === provisionalSession) {
+        this.subscribedSession = null;
+        this.runtime.unsubscribeEvent(messageEvent, this.messageHandler);
+        this.runtime.unsubscribeEvent(closeEvent, this.closeHandler);
+      }
+      throw error;
+    }
   }
 
   protected async awaitSession(): Promise<WailsSocketSession> {
@@ -200,16 +279,193 @@ class WailsStreamBridge<Recv, Close = SocketCloseInfo> implements ApiStreamBridg
     return this.session;
   }
 
+  protected emitMessage(message: Recv): void {
+    if (this.closed) {
+      return;
+    }
+    this.messageListeners.forEach((listener) => listener(message));
+  }
+
   protected emitClose(info: Close): void {
+    if (this.closed) {
+      return;
+    }
+    this.closed = true;
     this.closeListeners.forEach((listener) => listener(info));
   }
 
   protected unsubscribe(): void {
-    if (this.session == null) {
+    this.clearOrderedGapTimer();
+    this.pendingMessages.clear();
+    this.pendingClose = null;
+    const session = this.subscribedSession;
+    if (session == null) {
       return;
     }
-    this.runtime.unsubscribeEvent(this.session.message_event, this.messageHandler);
-    this.runtime.unsubscribeEvent(this.session.close_event, this.closeHandler);
+    this.subscribedSession = null;
+    this.runtime.unsubscribeEvent(session.message_event, this.messageHandler);
+    this.runtime.unsubscribeEvent(session.close_event, this.closeHandler);
+  }
+
+  private handleMessageEvent(payload?: unknown): void {
+    if (this.closed) {
+      return;
+    }
+    if (this.delivery !== "ordered") {
+      this.emitMessage(payload as Recv);
+      return;
+    }
+    const envelope = parseWailsOrderedEnvelope<Recv>(payload);
+    if (envelope == null) {
+      this.failOrderedDelivery(
+        "ordered_delivery_protocol_error",
+        `Ordered Wails route ${this.routeId} received a message without a valid seq envelope.`,
+      );
+      return;
+    }
+    if (envelope.seq < this.nextSequence) {
+      return;
+    }
+    if (envelope.seq === this.nextSequence) {
+      this.emitMessage(envelope.payload as Recv);
+      this.nextSequence += 1;
+      this.flushOrderedEvents();
+      return;
+    }
+    this.pendingMessages.set(envelope.seq, envelope.payload as Recv);
+    if (this.pendingMessages.size > WAILS_ORDERED_DELIVERY_MAX_PENDING_MESSAGES) {
+      this.failOrderedDelivery(
+        "ordered_delivery_buffer_overflow",
+        `Ordered Wails route ${this.routeId} exceeded the pending message buffer while waiting for seq ${this.nextSequence}.`,
+      );
+      return;
+    }
+    this.flushOrderedEvents();
+  }
+
+  private handleCloseEvent(payload?: unknown): void {
+    if (this.closed) {
+      return;
+    }
+    if (this.delivery !== "ordered") {
+      const info = (payload ?? {}) as Close;
+      this.emitClose(info);
+      this.unsubscribe();
+      return;
+    }
+    const envelope = parseWailsOrderedEnvelope<Close>(payload);
+    if (envelope == null) {
+      this.failOrderedDelivery(
+        "ordered_delivery_protocol_error",
+        `Ordered Wails route ${this.routeId} received a close event without a valid seq envelope.`,
+      );
+      return;
+    }
+    if (envelope.seq < this.nextSequence) {
+      return;
+    }
+    this.pendingClose = envelope;
+    this.flushOrderedEvents();
+  }
+
+  private flushOrderedEvents(): void {
+    while (this.pendingMessages.has(this.nextSequence)) {
+      const payload = this.pendingMessages.get(this.nextSequence);
+      this.pendingMessages.delete(this.nextSequence);
+      this.emitMessage(payload as Recv);
+      this.nextSequence += 1;
+    }
+    if (this.pendingClose != null && this.pendingClose.seq === this.nextSequence) {
+      const envelope = this.pendingClose;
+      this.pendingClose = null;
+      this.clearOrderedGapTimer();
+      this.emitClose((envelope.payload ?? {}) as Close);
+      this.unsubscribe();
+      return;
+    }
+    if (this.hasOrderedGap()) {
+      this.startOrderedGapTimer();
+    } else {
+      this.clearOrderedGapTimer();
+    }
+  }
+
+  private hasOrderedGap(): boolean {
+    return this.pendingMessages.size > 0 || (this.pendingClose != null && this.pendingClose.seq > this.nextSequence);
+  }
+
+  private startOrderedGapTimer(): void {
+    if (this.gapTimeoutHandle != null || this.closed) {
+      return;
+    }
+    this.gapTimeoutHandle = setTimeout(() => {
+      this.gapTimeoutHandle = null;
+      if (!this.hasOrderedGap() || this.closed) {
+        return;
+      }
+      this.failOrderedDelivery(
+        "ordered_delivery_gap",
+        `Ordered Wails route ${this.routeId} timed out while waiting for seq ${this.nextSequence}.`,
+      );
+    }, WAILS_ORDERED_DELIVERY_GAP_TIMEOUT_MS);
+  }
+
+  private clearOrderedGapTimer(): void {
+    if (this.gapTimeoutHandle == null) {
+      return;
+    }
+    clearTimeout(this.gapTimeoutHandle);
+    this.gapTimeoutHandle = null;
+  }
+
+  private failOrderedDelivery(
+    kind: "ordered_delivery_gap" | "ordered_delivery_protocol_error" | "ordered_delivery_buffer_overflow",
+    reason: string,
+  ): void {
+    if (this.closed) {
+      return;
+    }
+    let info: Close;
+    if (kind === "ordered_delivery_gap") {
+      info = {
+        code: 1011,
+        reason,
+        error: "ordered_delivery_gap",
+      } as Close;
+    } else if (kind === "ordered_delivery_protocol_error") {
+      info = {
+        code: 1002,
+        reason,
+        error: "ordered_delivery_protocol_error",
+      } as Close;
+    } else {
+      info = {
+        code: 1009,
+        reason,
+        error: "ordered_delivery_buffer_overflow",
+      } as Close;
+    }
+    this.clearOrderedGapTimer();
+    this.abortOrderedDeliverySession((info as SocketCloseInfo).code, (info as SocketCloseInfo).reason);
+    this.emitClose(info);
+    this.unsubscribe();
+  }
+
+  private abortOrderedDeliverySession(code?: number, reason?: string): void {
+    const session = this.session ?? this.subscribedSession;
+    if (session == null) {
+      return;
+    }
+    void this.runtime.invokeOperation<void>(
+      this.options.namespace,
+      this.options.service,
+      this.options.closeMethod,
+      {
+        session_id: session.id,
+        code,
+        reason,
+      } as WailsCloseEnvelope,
+    ).catch(() => undefined);
   }
 }
 
@@ -283,6 +539,18 @@ export class WailsV3Transport implements ApiTransport {
       B: body,
       Headers: headers ?? {},
     };
+  }
+
+  buildWailsConnectionEnvelope(
+    sessionId: string,
+    query?: Record<string, unknown>,
+    headers?: Record<string, string>,
+  ): unknown {
+    return {
+      session_id: sessionId,
+      Q: query,
+      Headers: headers ?? {},
+    } as WailsConnectionOpenEnvelope<Record<string, unknown>>;
   }
 
   async invokeOperation<R>(

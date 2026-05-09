@@ -65,11 +65,11 @@ func (svc *ApiService) ConnectWs(
 		return nil, err
 	}
 
-	session, sessionErr := svc.sessions.Open(
-		"api.api.ws.ws",
-		"api_blueprint.ws.api.api.ws.ws",
-		sharedprovider.ConnectionScopeSession,
-	)
+	session, sessionErr := svc.sessions.Open(wailstransport.ConnectionOpenSpec{
+		RouteID:   "api.api.ws.ws",
+		EventBase: "api_blueprint.ws.api.api.ws.ws",
+		Scope:     sharedprovider.ConnectionScopeSession,
+	})
 	if sessionErr != nil {
 		err = sessionErr
 		return

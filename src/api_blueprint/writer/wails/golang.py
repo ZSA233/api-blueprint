@@ -144,6 +144,14 @@ class WailsRouter:
         return self.contract.connection_scope.value if self.contract.connection_scope else ""
 
     @property
+    def connection_delivery(self) -> str:
+        return self.contract.connection_delivery.value if self.contract.connection_delivery else ""
+
+    @property
+    def ordered_connection_delivery(self) -> bool:
+        return self.connection_delivery == "ordered"
+
+    @property
     def service_name(self) -> str:
         return self.contract.service_name
 

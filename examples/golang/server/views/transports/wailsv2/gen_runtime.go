@@ -50,6 +50,24 @@ type SocketCloseEnvelope struct {
 	Reason    string `json:"reason,omitempty"`
 }
 
+type ConnectionOpenEnvelope[Q any] struct {
+	SessionID string            `json:"session_id,omitempty"`
+	Q         *Q                `json:"Q,omitempty"`
+	Headers   map[string]string `json:"Headers,omitempty"`
+}
+
+type ConnectionOpenSpec struct {
+	RouteID            string
+	EventBase          string
+	Scope              sharedprovider.ConnectionScope
+	RequestedSessionID string
+}
+
+type OrderedConnectionEnvelope struct {
+	Seq     uint64 `json:"seq"`
+	Payload any    `json:"payload,omitempty"`
+}
+
 type ConnectionSession interface {
 	sharedprovider.Connection
 	Descriptor() SocketSessionDescriptor
@@ -58,8 +76,22 @@ type ConnectionSession interface {
 }
 
 type ConnectionHub interface {
-	Open(routeID string, eventBase string, scope sharedprovider.ConnectionScope) (ConnectionSession, error)
+	Open(spec ConnectionOpenSpec) (ConnectionSession, error)
 	Get(sessionID string) (ConnectionSession, error)
+}
+
+type orderedConnectionState struct {
+	mu           sync.Mutex
+	nextSequence uint64
+	closed       bool
+}
+
+var orderedConnectionStates sync.Map
+
+type orderedConnectionSession struct {
+	ConnectionSession
+	key   string
+	state *orderedConnectionState
 }
 
 type SocketHub struct {
@@ -125,6 +157,58 @@ func EnvelopeHeaders[Q, B any](envelope *InvokeEnvelope[Q, B]) map[string]string
 	return envelope.Headers
 }
 
+func ConnectionOpenEnvelopeToReq[Q any](envelope *ConnectionOpenEnvelope[Q], bindQuery bool) (*sharedprovider.REQ[Q, any], error) {
+	if envelope == nil {
+		envelope = &ConnectionOpenEnvelope[Q]{}
+	}
+
+	var reqQ *Q
+	if bindQuery {
+		reqQ = envelope.Q
+		if reqQ == nil {
+			reqQ = new(Q)
+		}
+	} else {
+		reqQ = envelope.Q
+	}
+
+	return &sharedprovider.REQ[Q, any]{
+		Q: reqQ,
+		B: nil,
+	}, nil
+}
+
+func ConnectionOpenHeaders[Q any](envelope *ConnectionOpenEnvelope[Q]) map[string]string {
+	if envelope == nil || envelope.Headers == nil {
+		return map[string]string{}
+	}
+	return envelope.Headers
+}
+
+func ConnectionOpenEnvelopeSessionID[Q any](envelope *ConnectionOpenEnvelope[Q]) string {
+	if envelope == nil {
+		return ""
+	}
+	return envelope.SessionID
+}
+
+func BuildConnectionEventName(eventBase string, kind string, sessionID string) string {
+	return fmt.Sprintf("%s.%s.%s", eventBase, kind, sessionID)
+}
+
+func BuildConnectionDescriptor(spec ConnectionOpenSpec, sessionID string) SocketSessionDescriptor {
+	eventBase := spec.EventBase
+	if eventBase == "" {
+		eventBase = fmt.Sprintf("api_blueprint.connection.%s", spec.RouteID)
+	}
+	return SocketSessionDescriptor{
+		ID:           sessionID,
+		RouteID:      spec.RouteID,
+		MessageEvent: BuildConnectionEventName(eventBase, "message", sessionID),
+		CloseEvent:   BuildConnectionEventName(eventBase, "closed", sessionID),
+	}
+}
+
 func NewSocketHub(dispatcher EventDispatcher) *SocketHub {
 	return &SocketHub{
 		dispatcher: dispatcher,
@@ -132,20 +216,104 @@ func NewSocketHub(dispatcher EventDispatcher) *SocketHub {
 	}
 }
 
-func (hub *SocketHub) Open(routeID string, eventBase string, scope sharedprovider.ConnectionScope) (ConnectionSession, error) {
-	if scope != "" && scope != sharedprovider.ConnectionScopeSession {
-		return nil, fmt.Errorf("[wails] connection scope[%s] is not supported by the default SocketHub", scope)
+func WrapConnectionSession(session ConnectionSession, ordered bool) ConnectionSession {
+	if session == nil || !ordered {
+		return session
 	}
-	sequence := hub.sequence.Add(1)
-	sessionID := fmt.Sprintf("%s-%d", routeID, sequence)
-	if eventBase == "" {
-		eventBase = fmt.Sprintf("api_blueprint.connection.%s", routeID)
+	if wrapped, ok := session.(*orderedConnectionSession); ok {
+		return wrapped
 	}
+	key := orderedConnectionStateKey(session)
+	return &orderedConnectionSession{
+		ConnectionSession: session,
+		key:               key,
+		state:             orderedConnectionStateForSession(key, session.Done()),
+	}
+}
+
+func (session *orderedConnectionSession) WriteJSON(ctx context.Context, payload any) error {
+	session.state.mu.Lock()
+	defer session.state.mu.Unlock()
+	if session.state.closed {
+		return io.EOF
+	}
+	return session.ConnectionSession.WriteJSON(ctx, session.nextEnvelope(payload))
+}
+
+func (session *orderedConnectionSession) CloseJSON(payload any) error {
+	session.state.mu.Lock()
+	defer session.state.mu.Unlock()
+	if session.state.closed {
+		return nil
+	}
+	session.state.closed = true
+	return session.ConnectionSession.CloseJSON(session.nextEnvelope(payload))
+}
+
+func (session *orderedConnectionSession) Abort(code int, reason string) error {
+	if code == 0 {
+		code = 1000
+	}
+	return session.CloseJSON(&sharedprovider.ConnectionClose{Code: code, Reason: reason})
+}
+
+func (session *orderedConnectionSession) Close(code int, reason string) error {
+	return session.Abort(code, reason)
+}
+
+func (session *orderedConnectionSession) nextEnvelope(payload any) *OrderedConnectionEnvelope {
+	session.state.nextSequence++
+	return &OrderedConnectionEnvelope{
+		Seq:     session.state.nextSequence,
+		Payload: payload,
+	}
+}
+
+func orderedConnectionStateKey(session ConnectionSession) string {
+	sessionID := session.SessionID()
+	if sessionID != "" {
+		return sessionID
+	}
+	value := reflect.ValueOf(session)
+	if value.IsValid() && value.Kind() == reflect.Pointer && !value.IsNil() {
+		return fmt.Sprintf("%T:%x", session, value.Pointer())
+	}
+	return fmt.Sprintf("%T", session)
+}
+
+func orderedConnectionStateForSession(key string, done <-chan struct{}) *orderedConnectionState {
+	if state, ok := orderedConnectionStates.Load(key); ok {
+		return state.(*orderedConnectionState)
+	}
+	state := &orderedConnectionState{}
+	actual, loaded := orderedConnectionStates.LoadOrStore(key, state)
+	if loaded {
+		return actual.(*orderedConnectionState)
+	}
+	if done != nil {
+		go func() {
+			<-done
+			orderedConnectionStates.Delete(key)
+		}()
+	}
+	return state
+}
+
+func (hub *SocketHub) Open(spec ConnectionOpenSpec) (ConnectionSession, error) {
+	if spec.Scope != "" && spec.Scope != sharedprovider.ConnectionScopeSession {
+		return nil, fmt.Errorf("[wails] connection scope[%s] is not supported by the default SocketHub", spec.Scope)
+	}
+	sessionID := spec.RequestedSessionID
+	if sessionID == "" {
+		sequence := hub.sequence.Add(1)
+		sessionID = fmt.Sprintf("%s-%d", spec.RouteID, sequence)
+	}
+	descriptor := BuildConnectionDescriptor(spec, sessionID)
 	session := &SocketSession{
-		id:           sessionID,
-		routeID:      routeID,
-		messageEvent: fmt.Sprintf("%s.message.%s", eventBase, sessionID),
-		closeEvent:   fmt.Sprintf("%s.closed.%s", eventBase, sessionID),
+		id:           descriptor.ID,
+		routeID:      descriptor.RouteID,
+		messageEvent: descriptor.MessageEvent,
+		closeEvent:   descriptor.CloseEvent,
 		dispatcher:   hub.dispatcher,
 		incoming:     make(chan any, DefaultSocketIncomingBuffer),
 		closed:       make(chan struct{}),
@@ -157,6 +325,10 @@ func (hub *SocketHub) Open(routeID string, eventBase string, scope sharedprovide
 	}
 
 	hub.mu.Lock()
+	if _, exists := hub.sessions[sessionID]; exists {
+		hub.mu.Unlock()
+		return nil, fmt.Errorf("[wails] websocket session[%s] already exists", sessionID)
+	}
 	hub.sessions[sessionID] = session
 	hub.mu.Unlock()
 	return session, nil

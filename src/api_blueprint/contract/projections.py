@@ -328,6 +328,7 @@ def _connection_summary(connection: Mapping[str, Any]) -> JsonObject:
     return {
         "route_id": route_id,
         "kind": _string(connection.get("kind")),
+        "delivery": _string(connection.get("delivery")),
         "scope": _string(connection.get("scope")),
         "open_model": connection.get("open_model"),
         "close_model": connection.get("close_model"),
@@ -583,6 +584,7 @@ def _compact_connection(connection: object) -> JsonObject | None:
         return None
     return {
         "kind": _string(connection.get("kind")),
+        "delivery": _string(connection.get("delivery")),
         "scope": _string(connection.get("scope")),
         "open_model": connection.get("open_model"),
         "close_model": connection.get("close_model"),
