@@ -28,6 +28,8 @@ README 只回答：
 
 当前对外公开统一 `api-gen` 主命令；Go client 是 preview target，HTTP RPC 可用，legacy WS / STREAM / CHANNEL 先生成 transport-neutral surface 并由默认 HTTP adapter 返回明确 unsupported error。`api-gen check` 与各语言 writer 共享同一份 target capability metadata，避免 check 与生成器支持面漂移。Kotlin / Python / Go client 是新实现的生成器表面，文档应避免把它们描述为完全成熟的生产 SDK。gRPC 产物链路包含 `grpc-proto`、`grpc-go` 与 `grpc-python` targets，其中 Go/Python targets 只编译 protobuf/gRPC stub，不生成业务服务实现。`grpc-go` / `grpc-python` 也可省略 `proto` 并直接使用 `source_root` / `files` 编译手写 proto。
 
+`api-doc-server` 继续使用 `[blueprint].docs_server = "host:port"` 配置监听地址；当端口写成 `0` 时，会先绑定系统分配的空闲端口，再打印实际 docs / hub 入口 URL，而不是把 `:0` 原样显示给用户。
+
 ## 仓库事实
 
 - 包名：`api-blueprint`

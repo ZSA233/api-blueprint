@@ -104,6 +104,8 @@ api-doc-server -c api-blueprint.toml
 api-gen generate -c api-blueprint.toml
 ```
 
+`api-doc-server` prints the effective entry URL after startup; when `[blueprint].docs_server` uses `host:0`, the output shows the OS-assigned port rather than `:0`.
+
 See the generator docs for extension points, file ownership, and output layout.
 
 ## Minimal Configuration

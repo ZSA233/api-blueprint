@@ -104,6 +104,8 @@ api-doc-server -c api-blueprint.toml
 api-gen generate -c api-blueprint.toml
 ```
 
+`api-doc-server` 会在启动后额外打印实际入口地址；如果 `[blueprint].docs_server` 使用 `host:0`，输出会显示系统分配的真实端口，而不是 `:0`。
+
 生成器扩展点、文件 ownership 与目录布局见 [生成器说明](docs/zh/generators.md)。
 
 ## 最小配置

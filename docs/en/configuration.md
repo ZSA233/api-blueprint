@@ -11,7 +11,7 @@ docs_domain = ""
 entrypoints = ["blueprints.app:*"]
 ```
 
-- `docs_server`: listen address for `api-doc-server`.
+- `docs_server`: listen address for `api-doc-server`. `host:0` is allowed; the server binds an OS-assigned free port and prints the effective docs or hub URL after startup.
 - `docs_domain`: displayed docs domain, can be empty.
 - `entrypoints`: Python objects to load, using `module.path:attribute` or `module.path:*`.
 

@@ -11,7 +11,7 @@ docs_domain = ""
 entrypoints = ["blueprints.app:*"]
 ```
 
-- `docs_server`：`api-doc-server` 监听地址。
+- `docs_server`：`api-doc-server` 监听地址。允许使用 `host:0`；服务会绑定系统分配的空闲端口，并在启动后打印实际 docs 或 hub 入口 URL。
 - `docs_domain`：文档服务展示域名，可留空。
 - `entrypoints`：需要加载的 Python 对象，支持 `module.path:attribute` 和 `module.path:*`。
 

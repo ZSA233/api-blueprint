@@ -84,6 +84,7 @@ api-doc-server -c api-blueprint.toml
 ```
 
 The docs server loads `[blueprint].entrypoints` and builds FastAPI/OpenAPI output.
+If `docs_server` uses `host:0`, startup output prints the actual assigned port.
 
 ## Generate Code
 

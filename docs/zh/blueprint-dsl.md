@@ -194,3 +194,5 @@ with bp.group("/demo") as views:
 ```sh
 api-doc-server -c api-blueprint.toml
 ```
+
+当 `[blueprint].docs_server` 使用 `host:0` 时，启动输出会打印带真实绑定端口的 docs 或 hub URL。

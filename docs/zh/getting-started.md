@@ -84,6 +84,7 @@ api-doc-server -c api-blueprint.toml
 ```
 
 默认文档服务会加载 `[blueprint].entrypoints`，构建 FastAPI/OpenAPI 输出。
+如果 `docs_server` 使用 `host:0`，启动输出会打印实际分配到的端口。
 
 ## 生成代码
 

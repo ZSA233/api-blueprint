@@ -194,3 +194,5 @@ with bp.group("/demo") as views:
 ```sh
 api-doc-server -c api-blueprint.toml
 ```
+
+When `[blueprint].docs_server` uses `host:0`, startup output prints the actual docs or hub URL with the bound port.
