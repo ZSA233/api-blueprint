@@ -1,7 +1,7 @@
 package hello
 
 import (
-	"fmt"
+	protos "example.com/project/golang/server/views/routes/api/_gen_protos"
 )
 
 type Router struct {
@@ -13,29 +13,41 @@ func NewRouter() *Router {
 }
 
 func (impl *Router) Abc(ctx *CTX_Abc, req *REQ_Abc) (rsp *RSP_Abc, err error) {
-	return nil, fmt.Errorf("not implemented")
+	return &RSP_Abc{
+		"hello": {Haha: 1001},
+		"type":  {Haha: int64(len(req.Q.Type))},
+	}, nil
 }
 
 func (impl *Router) MapEnum(ctx *CTX_MapEnum, req *REQ_MapEnum) (rsp *RSP_MapEnum, err error) {
-	return nil, fmt.Errorf("not implemented")
+	return &RSP_MapEnum{
+		"a": {Haha: 11},
+		"b": {Haha: 22},
+	}, nil
 }
 
 func (impl *Router) ListEnum(ctx *CTX_ListEnum, req *REQ_ListEnum) (rsp *RSP_ListEnum, err error) {
-	return nil, fmt.Errorf("not implemented")
+	return &RSP_ListEnum{"a", "b"}, nil
 }
 
 func (impl *Router) String(ctx *CTX_String, req *REQ_String) (rsp *RSP_String, err error) {
-	return nil, fmt.Errorf("not implemented")
+	value := RSP_String("hello-string")
+	return &value, nil
 }
 
 func (impl *Router) Uint64(ctx *CTX_Uint64, req *REQ_Uint64) (rsp *RSP_Uint64, err error) {
-	return nil, fmt.Errorf("not implemented")
+	value := RSP_Uint64(9007199254740991)
+	return &value, nil
 }
 
 func (impl *Router) StringEmun(ctx *CTX_StringEmun, req *REQ_StringEmun) (rsp *RSP_StringEmun, err error) {
-	return nil, fmt.Errorf("not implemented")
+	value := RSP_StringEmun("a")
+	return &value, nil
 }
 
 func (impl *Router) HelloWay(ctx *CTX_HelloWay, req *REQ_HelloWay) (rsp *RSP_HelloWay, err error) {
-	return nil, fmt.Errorf("not implemented")
+	var value RSP_HelloWay = map[string]string{"arg1": req.Q.Arg1}
+	return &value, nil
 }
+
+var _ = protos.ApiHelloMap{}

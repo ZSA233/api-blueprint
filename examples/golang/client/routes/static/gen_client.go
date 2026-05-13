@@ -17,8 +17,9 @@ func NewGenStaticClient(transport runtime.Transport) *GenStaticClient {
 
 func (client *GenStaticClient) DocJson(ctx context.Context) (*RSP_DocJson_BODY, error) {
 	request := runtime.Request{
-		Method: "GET",
-		Path:   "/static/doc.json",
+		Method:          "GET",
+		Path:            "/static/doc.json",
+		ResponseWrapper: "NoneWrapper",
 	}
 	var response RSP_DocJson_BODY
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -29,8 +30,9 @@ func (client *GenStaticClient) DocJson(ctx context.Context) (*RSP_DocJson_BODY, 
 
 func (client *GenStaticClient) Dochaha(ctx context.Context) (*RSP_Dochaha_BODY, error) {
 	request := runtime.Request{
-		Method: "GET",
-		Path:   "/static/dochaha",
+		Method:          "GET",
+		Path:            "/static/dochaha",
+		ResponseWrapper: "NoneWrapper",
 	}
 	var response RSP_Dochaha_BODY
 	if err := client.transport.Do(ctx, request, &response); err != nil {

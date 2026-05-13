@@ -4,7 +4,7 @@ package {{ router_group.package }}
 
 {% set protos_list = router_group.protos() | list %}
 {% set message_unions = router_group.message_unions() | list %}
-{% set fmts = bp.formatters() %}
+{% set fmts = router_group.formatters() %}
 
 {% set ns = namespace(imports=[]) %}
 

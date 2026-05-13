@@ -71,6 +71,7 @@ def _inspect_route_from_context(context: InspectionContext, route_query: str) ->
         "methods": route.get("methods", []),
         "url": route.get("url"),
         "request_models": route.get("request_models", []),
+        "binary_schema": route.get("binary_schema"),
         "response_model": route.get("response_model"),
         "connection": route.get("connection"),
         "errors": route.get("errors", []),
@@ -123,6 +124,32 @@ def inspect_schemas(config_path: str | Path | None, schema_queries: Sequence[str
         "count": len(schemas),
         "schemas": schemas,
     }
+
+
+def inspect_binary_schema(config_path: str | Path | None, schema_query: str) -> JsonObject:
+    context = load_inspection_context(config_path)
+    matches: list[JsonObject] = []
+    for route in _list_of_maps(context.manifest.get("routes")):
+        request = route.get("request")
+        if not isinstance(request, Mapping):
+            continue
+        schema = request.get("binary_schema")
+        if not isinstance(schema, Mapping):
+            continue
+        name = _string(schema.get("name"))
+        source = _string(schema.get("source"))
+        if schema_query in {name, source} or schema_query in name or schema_query in source:
+            matches.append({"route": route.get("id"), "schema": dict(schema)})
+    if len(matches) == 1:
+        return matches[0]
+    if not matches:
+        raise ValueError(f"binary schema not found: {schema_query}")
+    raise ValueError(
+        "binary schema query matched multiple schemas: "
+        + schema_query
+        + " -> "
+        + ", ".join(_string(item["schema"].get("name")) for item in matches)
+    )
 
 
 def _inspect_schema_from_context(context: InspectionContext, schema_query: str) -> JsonObject:

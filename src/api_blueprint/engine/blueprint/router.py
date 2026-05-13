@@ -15,6 +15,7 @@ from api_blueprint.engine.connection import (
     ensure_model_ref,
     normalize_message_contract,
 )
+from api_blueprint.engine.binary_schema import BinarySchema, load_binary_schema, resolve_schema_path
 from api_blueprint.engine.runtime import (
     Handle,
     Provider,
@@ -60,6 +61,7 @@ class Router:
     req_form: Optional[Model]
     req_bin: Optional[Model]
     req_json: Optional[Model]
+    req_binary_schema: Optional[BinarySchema]
 
     rsp_model: Optional[Model]
     rsp_wrapper: Optional[ResponseWrapper]
@@ -104,6 +106,7 @@ class Router:
         self.req_form = None
         self.req_json = None
         self.req_bin = None
+        self.req_binary_schema = None
         self.rsp_model = None
 
         self.rsp_wrapper = response_wrapper
@@ -196,6 +199,7 @@ class Router:
         return self
 
     def REQ_JSON(self, __model: Optional[Model] = None, **kwargs: dict[str, ModelOrField]) -> Self:
+        self._reject_if_binary_schema("REQ_JSON")
         if __model is None:
             __model = create_model(f"REQ_{self.name}_JSON", kwargs)
 
@@ -210,6 +214,7 @@ class Router:
         return self.REQ_JSON(__model, **kwargs)
 
     def REQ_FORM(self, __model: Optional[Model] = None, **kwargs: dict[str, ModelOrField]) -> Self:
+        self._reject_if_binary_schema("REQ_FORM")
         if __model is None:
             __model = create_model(f"REQ_{self.name}_FORM", kwargs)
 
@@ -221,14 +226,15 @@ class Router:
         return self
 
     def REQ_BIN(self, __model: Optional[Model] = None, **kwargs: dict[str, ModelOrField]) -> Self:
-        if __model is None:
-            __model = create_model(f"REQ_{self.name}_BIN", kwargs)
+        raise ValueError("REQ_BIN(Model) is removed; use REQ_BINARY(path)")
 
-        if isinstance(__model, Model):
-            __model = __model.__class__
-        elif isinstance(__model, Field):
-            __model = create_field_wrapped_model(f"REQ_{self.name}_BIN", __model)
-        self.req_bin = __model
+    def REQ_BINARY(self, schema: str | BinarySchema) -> Self:
+        if self.req_json is not None or self.req_form is not None or self.req_bin is not None:
+            raise ValueError("REQ_BINARY() cannot be combined with REQ/REQ_JSON/REQ_FORM/REQ_BIN")
+        if self.req_binary_schema is not None:
+            raise ValueError("REQ_BINARY() can only be called once")
+        self.req_binary_schema = schema if isinstance(schema, BinarySchema) else load_binary_schema(resolve_schema_path(schema))
+        self._attach_binary_openapi()
         return self
 
     def _RSP_AS_MODEL(self, __model: Optional[Model] = None, **kwargs: dict[str, ModelOrField]) -> Optional[Model]:
@@ -334,10 +340,16 @@ class Router:
             self._reject_http_body_contracts()
 
     def _reject_http_body_contracts(self) -> None:
-        if self.req_json is not None or self.req_form is not None or self.req_bin is not None or self.rsp_model is not None:
+        if (
+            self.req_json is not None
+            or self.req_form is not None
+            or self.req_bin is not None
+            or self.req_binary_schema is not None
+            or self.rsp_model is not None
+        ):
             raise ValueError(
                 f"{self.connection_kind.value.upper()} route[{self.url}] uses OPEN/SERVER_MESSAGE/CLIENT_MESSAGE/CLOSE "
-                "instead of REQ_JSON/REQ_FORM/REQ_BIN/RSP"
+                "instead of REQ_JSON/REQ_FORM/REQ_BINARY/RSP"
             )
 
     @property
@@ -371,3 +383,20 @@ class Router:
         if isinstance(value, ConnectionDelivery):
             return value
         return ConnectionDelivery(str(value))
+
+    def _reject_if_binary_schema(self, method: str) -> None:
+        if self.req_binary_schema is not None:
+            raise ValueError(f"{method}() cannot be combined with REQ_BINARY()")
+
+    def _attach_binary_openapi(self) -> None:
+        schema = self.req_binary_schema
+        if schema is None:
+            return
+        extra = dict(self.extra.get("openapi_extra") or {})
+        request_body = dict(extra.get("requestBody") or {})
+        content = dict(request_body.get("content") or {})
+        content[schema.content_type] = {"schema": {"type": "string", "format": "binary"}}
+        request_body["content"] = content
+        extra["requestBody"] = request_body
+        extra["x-api-blueprint-binary-schema"] = schema.to_route_manifest()
+        self.extra["openapi_extra"] = extra

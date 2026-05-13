@@ -87,6 +87,55 @@ out_dir = "typescript"
     return config_path
 
 
+def _write_binary_inspect_blueprint(tmp_path: Path) -> None:
+    pkg = tmp_path / "blueprints"
+    binary_dir = pkg / "binary"
+    binary_dir.mkdir(parents=True)
+    (pkg / "__init__.py").write_text("", encoding="utf-8")
+    (binary_dir / "demo_packet.md").write_text(
+        """
+# packet DemoPacket
+
+endian: little
+content-type: application/octet-stream
+content-encoding: identity,gzip
+
+## header
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| magic | bytes | 4 | const="DEMO" | magic |
+| item_num | u32 | 1 | min=1,max=8,sizeof=items | item count |
+
+## body
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| items | DemoItem | item_num | | items |
+
+## struct DemoItem
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| value | u32 | 1 | max=100 | value |
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    (pkg / "app.py").write_text(
+        """
+from api_blueprint.engine import Blueprint, provider
+from api_blueprint.engine.model import String
+
+bp = Blueprint(root="/api", providers=[provider.Req(), provider.Handle(), provider.Rsp()])
+with bp.group("/demo") as views:
+    views.POST("/binary").ARGS(token=String(description="token")).REQ_BINARY("./binary/demo_packet.md").RSP(ok=String(description="ok"))
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+
 def _write_bulk_inspect_blueprint(tmp_path: Path) -> None:
     pkg = tmp_path / "blueprints"
     pkg.mkdir()
@@ -460,6 +509,23 @@ def test_api_gen_inspect_schema_errors_and_json(tmp_path):
     payload = json.loads(payload_result.output)
     assert payload["route"] == "api.demo.post.submit"
     assert "go.server" in payload["targets"]
+
+
+def test_api_gen_inspect_binary_schema(tmp_path):
+    _write_binary_inspect_blueprint(tmp_path)
+    config_path = _write_inspect_config(tmp_path)
+
+    route = CliRunner().invoke(api_gen, ["inspect", "route", "api.demo.post.binary", "-c", str(config_path)])
+    assert route.exit_code == 0, route.output
+    assert "binary schema: DemoPacket" in route.output
+
+    schema = CliRunner().invoke(api_gen, ["inspect", "binary-schema", "DemoPacket", "-c", str(config_path)])
+    assert schema.exit_code == 0, schema.output
+    assert "binary schema: DemoPacket" in schema.output
+    assert "route: api.demo.post.binary" in schema.output
+    assert "content-encoding: identity, gzip" in schema.output
+    assert "- DemoPacketHeader fields=2" in schema.output
+    assert "- DemoItem fields=1" in schema.output
 
 
 def test_api_gen_inspect_route_json_omits_shard_metadata(tmp_path):

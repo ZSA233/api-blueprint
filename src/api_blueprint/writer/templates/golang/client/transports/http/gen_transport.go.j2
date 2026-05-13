@@ -70,7 +70,7 @@ func (transport *HttpTransport) Do(ctx context.Context, request runtime.Request,
 	if response == nil || httpResponse.StatusCode == nethttp.StatusNoContent {
 		return nil
 	}
-	return json.NewDecoder(httpResponse.Body).Decode(response)
+	return decodeResponse(httpResponse.Body, request.ResponseWrapper, response)
 }
 
 func (transport *HttpTransport) ConnectUnsupported(ctx context.Context, request runtime.ConnectionRequest) error {
@@ -113,6 +113,32 @@ func encodeBody(request runtime.Request) (io.Reader, string, error) {
 	default:
 		return nil, "", nil
 	}
+}
+
+func decodeResponse(reader io.Reader, wrapper string, response any) error {
+	if wrapper == "" || wrapper == "NoneWrapper" {
+		return json.NewDecoder(reader).Decode(response)
+	}
+	if wrapper != "GeneralWrapper" {
+		return fmt.Errorf("api-blueprint http transport unsupported response wrapper %q", wrapper)
+	}
+
+	var envelope struct {
+		Code    int               `json:"code"`
+		Message string            `json:"message,omitempty"`
+		Toast   map[string]string `json:"toast,omitempty"`
+		Data    json.RawMessage   `json:"data,omitempty"`
+	}
+	if err := json.NewDecoder(reader).Decode(&envelope); err != nil {
+		return err
+	}
+	if envelope.Code != 0 {
+		return runtime.NewApiCodeError(runtime.ApiErrorCode(envelope.Code), envelope.Message)
+	}
+	if response == nil || len(envelope.Data) == 0 || string(envelope.Data) == "null" {
+		return nil
+	}
+	return json.Unmarshal(envelope.Data, response)
 }
 
 func encodeValues(input any) (url.Values, error) {

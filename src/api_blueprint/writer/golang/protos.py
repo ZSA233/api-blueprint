@@ -163,6 +163,8 @@ class GolangProtoGeneric:
         for proto in self.types:
             if isinstance(proto, GolangProto):
                 parents += proto.import_specs(formatters)
+            elif isinstance(proto, GolangType):
+                parents += list(proto.parents or [])
         imports = []
         for parent in parents:
             package = formatters.get(f"{parent}_package", "")

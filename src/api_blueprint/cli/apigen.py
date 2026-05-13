@@ -137,6 +137,15 @@ def inspect_schema(schemas: tuple[str, ...], config: str = "./api-blueprint.toml
     _emit_inspection(payload, as_json=as_json, formatter=_format_inspect_schema)
 
 
+@inspect_group.command("binary-schema")
+@click.argument("schema_query", required=True)
+@click.option("-c", "--config", default="./api-blueprint.toml", help="配置文件")
+@click.option("--json", "as_json", is_flag=True, help="输出 JSON")
+def inspect_binary_schema(schema_query: str, config: str = "./api-blueprint.toml", as_json: bool = False) -> None:
+    payload = _inspection_call(lambda: inspection.inspect_binary_schema(config, schema_query))
+    _emit_inspection(payload, as_json=as_json, formatter=_format_inspect_binary_schema)
+
+
 @inspect_group.command("errors")
 @click.option("-c", "--config", default="./api-blueprint.toml", help="配置文件")
 @click.option("--route", "routes", multiple=True, required=False, help="route id / path / operation")
@@ -231,6 +240,8 @@ def _format_inspect_route(payload: dict[str, Any]) -> list[str]:
     lines.append(f"kind: {payload.get('kind')}")
     lines.append(f"operation: {payload.get('operation')}")
     _append_optional_list(lines, "request", payload.get("request_models", []))
+    if payload.get("binary_schema"):
+        lines.append(f"binary schema: {payload.get('binary_schema')}")
     if payload.get("response_model"):
         lines.append(f"response: {payload.get('response_model')}")
     connection = payload.get("connection")
@@ -283,6 +294,30 @@ def _format_inspect_schema(payload: dict[str, Any]) -> list[str]:
             field_type = _schema_value_type(field)
             lines.append(f"- {field_name}: {field_type}")
     _append_optional_list(lines, "inbound routes", payload.get("inbound_routes", []))
+    return lines
+
+
+def _format_inspect_binary_schema(payload: dict[str, Any]) -> list[str]:
+    schema = payload.get("schema") if isinstance(payload.get("schema"), Mapping) else {}
+    lines = [
+        f"binary schema: {schema.get('name')}",
+        f"route: {payload.get('route')}",
+        f"source: {schema.get('source')}",
+        f"endian: {schema.get('endian')}",
+        f"content-type: {schema.get('content_type')}",
+    ]
+    encodings = schema.get("content_encoding")
+    if isinstance(encodings, Sequence) and not isinstance(encodings, (str, bytes)):
+        lines.append("content-encoding: " + ", ".join(str(item) for item in encodings))
+    for label in ("sections", "structs"):
+        items = schema.get(label)
+        if isinstance(items, Sequence) and not isinstance(items, (str, bytes)):
+            lines.append(f"{label}:")
+            for item in items:
+                if not isinstance(item, Mapping):
+                    continue
+                field_count = len(item.get("fields", [])) if isinstance(item.get("fields"), Sequence) else 0
+                lines.append(f"- {item.get('name')} fields={field_count}")
     return lines
 
 

@@ -13,6 +13,8 @@ The DSL supports transport-neutral `STREAM` / `CHANNEL` long-connection message 
 
 Long-connection routes also support `ConnectionDelivery`: the default is `ordered`. On HTTP, ordered delivery relies on the native per-connection ordering of SSE / WebSocket and does not add the Wails-style seq/reorder overlay; only ordered Wails routes add transport-level ordering and fail fast through a structured `onClose` when they hit an unrecoverable gap, protocol error, or buffer overflow, with application code deciding whether to reopen. `unordered` should be an explicit opt-in only for high-frequency telemetry-style flows, and it currently matters primarily for the Wails transport.
 
+HTTP binary request bodies can be described with first-class Markdown Binary Schema: routes use `.REQ_BINARY("./binary/packet.md")`, schema files use a strict `# packet` / metadata / Markdown table structure that can render as documentation, and the Go server generates route-group-local `_gen_binary` parsers backed by shared `runtime/binary` helpers, with HTTP adapter support for `identity` / `gzip` body decoding.
+
 This README keeps only the onboarding path. See [Learn More](#learn-more) for full configuration, Wails, gRPC, DSL, and examples validation docs.
 
 ## Supported Outputs
@@ -187,6 +189,7 @@ api-gen inspect routes -c examples/api-blueprint.toml
 api-gen inspect route api.demo.post.testpost api.demo.channel.assistantsession -c examples/api-blueprint.toml
 api-gen inspect files -c examples/api-blueprint.toml --route api.demo.post.testpost --route api.demo.channel.assistantsession --target go.server
 api-gen inspect schema ApiDemoA RSP_TestPost -c examples/api-blueprint.toml
+api-gen inspect binary-schema DetPacketV2 -c examples/api-blueprint.toml
 api-gen inspect errors -c examples/api-blueprint.toml --route api.demo.post.testpost --route api.demo.channel.assistantsession
 api-gen manifest -c examples/api-blueprint.toml --out api-blueprint.index.json
 api-gen manifest -c examples/api-blueprint.toml --profile full --out api-blueprint.contract.json
@@ -219,11 +222,12 @@ make test
 make example-compile-check
 make example-refresh
 make example-validation
+make example-golang-suite
 make wails-hello-dev
 make wails-hello-check
 ```
 
-`example-compile-check` is for development validation, `example-refresh` accepts intentional generation changes, and `example-validation` strictly confirms snapshot convergence. `wails-hello-dev` regenerates the hello overlay and starts the Wails v3 GUI; `wails-hello-check` strictly validates only the standalone hello example.
+`example-compile-check` is for development validation, `example-refresh` accepts intentional generation changes, and `example-validation` strictly confirms snapshot convergence. `example-golang-suite` is a manual end-to-end validation aid; it is not part of default tests, release preflight, or CI. `wails-hello-dev` regenerates the hello overlay and starts the Wails v3 GUI; `wails-hello-check` strictly validates only the standalone hello example.
 
 ## Release
 

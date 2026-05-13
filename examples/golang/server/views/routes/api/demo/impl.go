@@ -1,9 +1,8 @@
 package demo
 
 import (
-	"fmt"
-
 	providers "example.com/project/golang/server/views/providers"
+	protos "example.com/project/golang/server/views/routes/api/_gen_protos"
 )
 
 type Router struct {
@@ -15,23 +14,42 @@ func NewRouter() *Router {
 }
 
 func (impl *Router) Abc(ctx *CTX_Abc, req *REQ_Abc) (rsp *RSP_Abc, err error) {
-	return nil, fmt.Errorf("not implemented")
+	return demoA("abc", 7), nil
 }
 
 func (impl *Router) TestPost(ctx *CTX_TestPost, req *REQ_TestPost) (rsp *RSP_TestPost, err error) {
-	return nil, fmt.Errorf("not implemented")
+	body := req.B
+	return &RSP_TestPost{
+		List: []string{"test_post", body.Req1},
+		Map: map[string]*protos.ApiDemoMap{
+			"req2": {Haha: int64(body.Req2)},
+		},
+	}, nil
 }
 
 func (impl *Router) Z1put(ctx *CTX_Z1put, req *REQ_Z1put) (rsp *RSP_Z1put, err error) {
-	return nil, fmt.Errorf("not implemented")
+	query := req.Q
+	body := req.B
+	return &RSP_Z1put{
+		List: []string{query.Arg1, body.Req1},
+		AnonKv: &protos.ANON_Func1put_anon_kv{
+			Kv1: uint(body.Req2),
+			Kv2: []float64{query.Arg2, float64(body.Req2)},
+		},
+	}, nil
 }
 
 func (impl *Router) Delete(ctx *CTX_Delete, req *REQ_Delete) (rsp *RSP_Delete, err error) {
-	return nil, fmt.Errorf("not implemented")
+	return &RSP_Delete{
+		List: []string{req.Q.Arg1},
+		AnonList: []*protos.ANON_Delete_anon_list{
+			{Kv1: int64(req.Q.Arg2), Kv2: []string{"deleted"}},
+		},
+	}, nil
 }
 
 func (impl *Router) Ws(ctx *CTX_Ws, req *REQ_Ws) (rsp *RSP_Ws, err error) {
-	return nil, fmt.Errorf("not implemented")
+	return nil, nil
 }
 
 func (impl *Router) SweepEvents(
@@ -101,13 +119,39 @@ func (impl *Router) AssistantSession(
 }
 
 func (impl *Router) PostDeprecated(ctx *CTX_PostDeprecated, req *REQ_PostDeprecated) (rsp *RSP_PostDeprecated, err error) {
-	return nil, fmt.Errorf("not implemented")
+	return &RSP_PostDeprecated{List: []string{req.B.Req1}}, nil
 }
 
 func (impl *Router) Raw(ctx *CTX_Raw, req *REQ_Raw) (rsp *RSP_Raw, err error) {
-	return nil, fmt.Errorf("not implemented")
+	return &RSP_Raw{
+		List: []string{"raw"},
+		List2: map[int64][]*protos.ApiDemoA{
+			1: {demoA("raw", 1)},
+		},
+	}, nil
 }
 
 func (impl *Router) MapModel(ctx *CTX_MapModel, req *REQ_MapModel) (rsp *RSP_MapModel, err error) {
-	return nil, fmt.Errorf("not implemented")
+	return &RSP_MapModel{
+		1: {Haha: 101},
+		2: {Haha: 202},
+	}, nil
+}
+
+func demoA(label string, n int) *protos.ApiDemoA {
+	return &protos.ApiDemoA{
+		Bc:         label,
+		A:          n,
+		Efg:        1.5,
+		Hijk:       []uint{1, 2, 3},
+		EnumColor:  "red",
+		EnumStatus: 2,
+		EnumList:   []int{1, 2, 3},
+		Lmnop: []*protos.ApiDemoSubA{
+			{
+				Hello: map[string]int{"n": n},
+				Amap:  []*protos.ApiDemoMap{{Haha: int64(n)}},
+			},
+		},
+	}
 }

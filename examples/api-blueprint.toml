@@ -21,11 +21,13 @@ id = 'go.client'
 out_dir = 'golang/client'
 module = 'example.com/project/golang/client'
 base_url = 'http://localhost:2333'
+exclude = ['path:/api/binary/**']
 
 [[typescript.client]]
 id = 'typescript.client'
 out_dir = 'typescript'
 base_url = 'http://localhost:2333'
+exclude = ['path:/api/binary/**']
 
 [[kotlin.client]]
 id = 'kotlin.client'
@@ -36,6 +38,7 @@ include = ['tag:api']
 exclude = [
     'path:/static/**',
     'path:/api/ws',
+    'path:/api/binary/**',
     'path:/api/demo/ws',
     'path:/api/demo/sweep-events',
     'path:/api/demo/assistant-session',
@@ -46,12 +49,14 @@ exclude = [
 id = 'python.server'
 out_dir = 'python/server'
 module = 'api_blueprint_example_server'
+exclude = ['path:/api/binary/**']
 
 [[python.client]]
 id = 'python.client'
 out_dir = 'python/client'
 module = 'api_blueprint_example_client'
 base_url = 'http://localhost:2333'
+exclude = ['path:/api/binary/**']
 
 [[transport.http]]
 id = 'http'
@@ -69,6 +74,7 @@ version = 'v3'
 server = 'go.server'
 clients = ['typescript.client']
 frontend_mode = 'external'
+exclude = ['path:/api/binary/**']
 
 [[transport.wails]]
 id = 'wails.v2'
@@ -76,6 +82,7 @@ version = 'v2'
 server = 'go.server'
 clients = ['typescript.client']
 frontend_mode = 'external'
+exclude = ['path:/api/binary/**']
 
 
 
@@ -84,6 +91,7 @@ id = 'grpc.proto'
 out_dir = 'grpc/protos'
 package = 'example.api'
 go_package_prefix = 'example.com/project/grpc/go'
+exclude = ['path:/api/binary/**']
 
 [[grpc.proto.proto_files]]
 file = 'api/api.proto'
@@ -118,6 +126,7 @@ id = 'grpc.go'
 proto = 'grpc.proto'
 out_dir = 'grpc/go'
 module = 'example.com/project/grpc/go'
+exclude = ['path:/api/binary/**']
 files = [
     'api/*.proto',
     'static/*.proto',
@@ -127,6 +136,7 @@ files = [
 id = 'grpc.python'
 proto = 'grpc.proto'
 out_dir = 'grpc/python'
+exclude = ['path:/api/binary/**']
 files = [
     'api/*.proto',
     'static/*.proto',

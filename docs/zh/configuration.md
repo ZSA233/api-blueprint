@@ -108,7 +108,7 @@ module = "pb"
 核心 target：
 
 - `contract`：省略 `formats` 时默认只输出轻量 `api-blueprint.index.json`，用于 AI agent 和人工维护者离线获得 service / route / target 目录以及推荐 `api-gen inspect` 查询命令；它不内联 schema、error catalog、route artifact 或 shard 明细。`formats = ["json"]` 才输出完整 `api-blueprint.contract.json`，用于 diff、归档或兜底全量检查；`markdown`、`agent-*` 与 `shards` 适合离线导航包、归档或需要分片快照时开启。
-- `go-server`：生成 Go 服务端 core。`out_dir` 是包根；route/provider/transport/error 产物分别位于 `routes`、`providers`、`transports`、`runtime/errors`，如果需要包路径包含 `/views`，应显式把 `out_dir` 写成 `.../views`。
+- `go-server`：生成 Go 服务端 core。`out_dir` 是包根；route/provider/transport/error 产物分别位于 `routes`、`providers`、`transports`、`runtime/errors`。Markdown Binary Schema parser 按 route group 位于 `routes/<root>/<group...>/_gen_binary`，共享二进制 runtime 位于 `runtime/binary`。如果需要包路径包含 `/views`，应显式把 `out_dir` 写成 `.../views`。
 - `go-client`：生成 preview Go client；RPC/query/json/form/binary HTTP 调用可用，legacy WS / STREAM / CHANNEL 生成 transport-neutral surface，默认 HTTP adapter 返回明确 unsupported error，便于项目替换自定义 transport。
 - `typescript-client`：生成只依赖 `ApiTransport` 的 TypeScript client core；`base_url` / `base_url_expr` 由 transport facade 注入。
 - `kotlin-client`：生成 OkHttp + kotlinx.serialization Android client；通过共享 transport abstraction 生成 RPC、legacy WS、STREAM、CHANNEL route surface，支持 query/json/form/binary/open request kind，以及 none/general/custom response wrapper。`base_url` / `base_url_expr` 由生成的 OkHttp HTTP adapter config 使用，route/runtime client 保持 transport-neutral。内置 OkHttp adapter 以 RPC 为主，长连接 bridge 属于 preview/custom transport surface。

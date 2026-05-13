@@ -52,7 +52,7 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
     "go-server": TargetCapability(
         implemented=True,
         routes=("rpc", "legacy_ws", "stream", "channel"),
-        requests=("query", "json", "form", "binary", "open"),
+        requests=("query", "json", "form", "binary", "binary-schema", "open"),
         wrappers=("none", "general", "custom"),
     ),
     "go-client": TargetCapability(
@@ -183,6 +183,7 @@ def _route_capability_errors(
             ("json", "json_model"),
             ("form", "form_model"),
             ("binary", "binary_model"),
+            ("binary-schema", "binary_schema"),
             ("open", "open_model"),
         ):
             if request.get(manifest_key) is not None and request_kind not in capability.requests:

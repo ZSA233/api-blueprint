@@ -20,6 +20,7 @@ from api_blueprint.writer.core.contract_adapters import RouteProtocolContract, r
 from api_blueprint.writer.core.contracts import RouteContract
 from api_blueprint.writer.core.templates import iter_render, render
 
+from .binary_schema import compact_go_binary_source, go_binary_state_fields, unique_go_binary_schemas
 from .common import LANG, PackageName, GolangType, internal_codegen_dir
 from .protos import (
     GolangEnum,
@@ -164,6 +165,18 @@ class GolangRouter:
             return f"{self.req_type}_JSON"
         if self.protocol.request.form.model is not None:
             return f"{self.req_type}_FORM"
+        if self.protocol.request.binary_schema is not None:
+            return f"{{binary_package$}}{self.protocol.request.binary_schema.name}"
+        return None
+
+    @property
+    def body_proto_ref(self) -> GolangProto | GolangType | None:
+        if self.protocol.request.json.model is not None:
+            return GolangProto.from_model_ref(ensure_model(self.protocol.request.json.model), f"{self.req_type}_JSON")
+        if self.protocol.request.form.model is not None:
+            return GolangProto.from_model_ref(ensure_model(self.protocol.request.form.model), f"{self.req_type}_FORM")
+        if self.protocol.request.binary_schema is not None:
+            return GolangType(f"{{binary_package$}}{self.protocol.request.binary_schema.name}")
         return None
 
     @property
@@ -193,6 +206,10 @@ class GolangRouter:
         return self.protocol.request.form.model is not None
 
     @property
+    def bind_binary(self) -> bool:
+        return self.protocol.request.binary_schema is not None
+
+    @property
     def is_json_response(self) -> bool:
         return self.protocol.response.media_type == "application/json"
 
@@ -218,6 +235,7 @@ class GolangRouter:
             ("Q", self.query_model),
             ("F", self.protocol.request.form.model),
             ("J", self.protocol.request.json.model),
+            ("B", self.protocol.request.binary_schema),
         ]
         return "".join(value for value, ok in options if ok)
 
@@ -265,6 +283,7 @@ class GolangRouter:
         req_query_proto = None
         req_form_proto = None
         req_json_proto = None
+        req_body_proto: GolangProto | GolangType | None = None
 
         if self.query_model is not None:
             req_query_proto = GolangProto.from_model_ref(ensure_model(self.query_model), self.query_alias_name)
@@ -275,12 +294,16 @@ class GolangRouter:
                 f"{self.req_type}_FORM",
             )
             yield req_form_proto
+            req_body_proto = req_form_proto
         if self.protocol.request.json.model is not None:
             req_json_proto = GolangProto.from_model_ref(
                 ensure_model(self.protocol.request.json.model),
                 f"{self.req_type}_JSON",
             )
             yield req_json_proto
+            req_body_proto = req_json_proto
+        if self.protocol.request.binary_schema is not None:
+            req_body_proto = GolangType(f"{{binary_package$}}{self.protocol.request.binary_schema.name}")
 
         yield GolangProto(
             self.req_type,
@@ -294,7 +317,7 @@ class GolangRouter:
             "generic",
             generic=GolangProtoGeneric(
                 name=GolangType("{provider_package$}REQ"),
-                types=[req_query_proto or GolangType("any"), req_json_proto or req_form_proto or GolangType("any")],
+                types=[req_query_proto or GolangType("any"), req_body_proto or GolangType("any")],
             ),
         )
 
@@ -331,7 +354,7 @@ class GolangRouter:
                 name=GolangType("{provider_package$}Context"),
                 types=[
                     req_query_proto or GolangType("any"),
-                    req_json_proto or req_form_proto or GolangType("any"),
+                    req_body_proto or GolangType("any"),
                     rsp_json_proto or GolangType("any"),
                 ],
             ),
@@ -551,6 +574,31 @@ class GolangRouterGroup:
             imports = join_path_imports(imports, self.package)
         return imports
 
+    @property
+    def binary_package(self) -> str:
+        return "binary"
+
+    @property
+    def binary_gen_path(self) -> str:
+        return "_gen_binary"
+
+    @property
+    def binary_imports(self) -> str:
+        return join_path_imports(self.imports, self.binary_gen_path)
+
+    def formatters(self, update: Optional[dict[str, str]] = None) -> dict[str, str]:
+        formatters = self.bp.formatters()
+        formatters.update(
+            {
+                "binary_package": self.binary_package,
+                "binary_imports": self.binary_imports,
+            }
+        )
+        formatters.update({key + "$": value + "." for key, value in formatters.items() if key.endswith("_package")})
+        if update:
+            formatters.update(update)
+        return formatters
+
     def __len__(self) -> int:
         return len(self.group)
 
@@ -606,6 +654,7 @@ class GolangRouterGroup:
                     "bind_query": view.bind_query,
                     "bind_json": view.bind_json,
                     "bind_form": view.bind_form,
+                    "bind_binary": view.bind_binary,
                 }
 
     def protos(self) -> Generator[GolangProto, None, None]:
@@ -615,6 +664,10 @@ class GolangRouterGroup:
     def com_protos(self) -> Generator[GolangProto, None, None]:
         for router in self.group:
             yield from self._router_view(router).com_protos()
+
+    def binary_schemas(self) -> list[Any]:
+        schemas = [router.req_binary_schema for router in self.group if router.req_binary_schema is not None]
+        return unique_go_binary_schemas(schemas)
 
     def implements(self) -> Generator[dict[str, Any], None, None]:
         for router in self.group:
@@ -706,6 +759,30 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
     def com_enum_imports(self) -> str:
         return join_path_imports(self.imports, self.com_enum_gen_path)
 
+    @property
+    def binary_package(self) -> str:
+        return "binary"
+
+    @property
+    def binary_gen_path(self) -> str:
+        return "_gen_binary"
+
+    @property
+    def binary_imports(self) -> str:
+        return join_path_imports(self.imports, self.binary_gen_path)
+
+    @property
+    def binary_runtime_package(self) -> str:
+        return "binaryruntime"
+
+    @property
+    def binary_runtime_gen_path(self) -> str:
+        return "runtime/binary"
+
+    @property
+    def binary_runtime_imports(self) -> str:
+        return join_path_imports(self.writer.views_imports, self.binary_runtime_gen_path)
+
     def formatters(self, update: Optional[dict[str, str]] = None) -> dict[str, str]:
         formatters = self.writer.formatters()
         formatters.update(
@@ -714,6 +791,10 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
                 "enums_imports": self.com_enum_imports,
                 "protos_package": self.com_proto_package,
                 "protos_imports": self.com_proto_imports,
+                "binary_package": self.binary_package,
+                "binary_imports": self.binary_imports,
+                "binary_runtime_package": self.binary_runtime_package,
+                "binary_runtime_imports": self.binary_runtime_imports,
             }
         )
         formatters.update({key + "$": value + "." for key, value in formatters.items() if key.endswith("_package")})
@@ -757,6 +838,7 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
         ctx = {"writer": self.writer, "bp": self}
 
         self.cleanup_legacy_http_files()
+        self.cleanup_binary_codegen_dirs(view_dir)
 
         with self.writer.write_file(view_dir / self.com_proto_gen_path / "protos.go", overwrite=True) as handle:
             if handle:
@@ -767,6 +849,28 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
             if handle:
                 handle.write(render(LANG, "enums.go", ctx, "views/_gen_enums"))
         self.writer.toolchain.run_go_enum(enums_path)
+
+        runtime_dir = self.writer.working_dir / self.writer.views_package / self.binary_runtime_gen_path
+        if self.binary_schemas():
+            runtime_ctx = {
+                **ctx,
+                "binary_runtime_package": self.binary_runtime_package,
+            }
+            with self.writer.write_file(
+                runtime_dir / "gen_runtime.go",
+                overwrite=True,
+            ) as handle:
+                if handle:
+                    handle.write(
+                        compact_go_binary_source(
+                            render(
+                                LANG,
+                                "gen_runtime.go",
+                                runtime_ctx,
+                                "views/runtime/binary",
+                            )
+                        )
+                    )
 
         with self.writer.write_file(view_dir / "gen_blueprint.go", overwrite=True) as handle:
             if handle:
@@ -796,6 +900,14 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
         transports_http = views_dir / "transports" / "http"
         if transports_http.exists():
             shutil.rmtree(transports_http)
+
+    def cleanup_binary_codegen_dirs(self, view_dir: Path) -> None:
+        for binary_dir in sorted(view_dir.rglob(self.binary_gen_path), key=lambda path: len(path.parts), reverse=True):
+            if binary_dir.is_dir():
+                shutil.rmtree(binary_dir)
+        legacy_runtime_dir = view_dir / "_gen_binary_runtime"
+        if legacy_runtime_dir.exists():
+            shutil.rmtree(legacy_runtime_dir)
 
     def gen_http_adapter(self) -> None:
         ctx = {"writer": self.writer, "bp": self}
@@ -829,12 +941,41 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
     def gen_routers(self, group: GolangRouterGroup) -> None:
         view_dir = self.writer.working_dir / self.writer.views_package / "routes" / self.package / group.package
         ctx = {"writer": self.writer, "bp": self, "router_group": group}
+        self.gen_binary_router(group, view_dir if group.branch else view_dir.parent)
         for name, text in iter_render(LANG, ctx, "views/route"):
             overwrite = name.startswith("gen_")
             path = view_dir / name if group.branch else view_dir.parent / name
             with self.writer.write_file(path, overwrite=overwrite) as handle:
                 if handle:
                     handle.write(text)
+
+    def gen_binary_router(self, group: GolangRouterGroup, view_dir: Path) -> None:
+        binary_schemas = group.binary_schemas()
+        if not binary_schemas:
+            return
+        binary_ctx = {
+            "writer": self.writer,
+            "bp": self,
+            "router_group": group,
+            "binary_package": group.binary_package,
+            "binary_runtime_imports": self.binary_runtime_imports,
+            "binary_schemas": binary_schemas,
+            "binary_state_fields": go_binary_state_fields(binary_schemas),
+            "binary_needs_math": any(schema.needs_math for schema in binary_schemas),
+            "binary_needs_unsafe": any(schema.needs_unsafe for schema in binary_schemas),
+        }
+        with self.writer.write_file(view_dir / group.binary_gen_path / "gen_binary.go", overwrite=True) as handle:
+            if handle:
+                handle.write(
+                    compact_go_binary_source(
+                        render(
+                            LANG,
+                            "gen_binary.go",
+                            binary_ctx,
+                            "views/_gen_binary",
+                        )
+                    )
+                )
 
     def gen_http_router(self, group: GolangRouterGroup) -> None:
         view_dir = self.writer.http_transport_dir / self.package
@@ -846,3 +987,10 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
             with self.writer.write_file(view_dir / name, overwrite=overwrite) as handle:
                 if handle:
                     handle.write(text)
+
+    def binary_schemas(self):
+        schemas = []
+        for _group, router in self.iter_router():
+            if router.req_binary_schema is not None:
+                schemas.append(router.req_binary_schema)
+        return unique_go_binary_schemas(schemas)

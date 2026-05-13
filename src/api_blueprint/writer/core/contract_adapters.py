@@ -12,6 +12,7 @@ from api_blueprint.engine.connection import (
     MessageContract,
     ModelRef,
 )
+from api_blueprint.engine.binary_schema import BinarySchema
 from api_blueprint.engine.router import Router
 from api_blueprint.engine.utils import snake_to_pascal_case
 from api_blueprint.engine.wrapper import NoneWrapper, ResponseWrapper
@@ -31,6 +32,7 @@ class RouteRuntimeSnapshot:
     json_model: ModelRef | None
     form_model: ModelRef | None
     binary_model: ModelRef | None
+    binary_schema: BinarySchema | None
     open_model: ModelRef | None
     response_model: ModelRef | None
     response_media_type: str
@@ -54,6 +56,7 @@ class RouteRequestContract:
     json: RouteModelSlot
     form: RouteModelSlot
     binary: RouteModelSlot
+    binary_schema: BinarySchema | None
     open: RouteModelSlot
 
 
@@ -257,6 +260,7 @@ def _route_protocol_from_contract(
             json=RouteModelSlot(_optional_str(request_manifest.get("json_model")), runtime.json_model),
             form=RouteModelSlot(_optional_str(request_manifest.get("form_model")), runtime.form_model),
             binary=RouteModelSlot(_optional_str(request_manifest.get("binary_model")), runtime.binary_model),
+            binary_schema=runtime.binary_schema,
             open=RouteModelSlot(_connection_schema(route, "open_model"), runtime.open_model),
         ),
         response=RouteResponseContract(
@@ -278,6 +282,7 @@ def _runtime_from_router(router: Router) -> RouteRuntimeSnapshot:
         json_model=router.req_json,
         form_model=router.req_form,
         binary_model=router.req_bin,
+        binary_schema=router.req_binary_schema,
         open_model=router.open_model,
         response_model=router.rsp_model,
         response_media_type=router.rsp_media_type,

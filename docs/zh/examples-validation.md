@@ -17,6 +17,7 @@
 make example-compile-check
 make example-refresh
 make example-validation
+make example-golang-suite
 make wails-hello-compile-check
 make wails-hello-check
 ```
@@ -24,6 +25,7 @@ make wails-hello-check
 - `example-compile-check`：功能开发期使用，允许 snapshot drift，只验证重生成产物仍可编译或导入。
 - `example-refresh`：接受预期生成变化，刷新仓库里的 snapshots。
 - `example-validation`：严格模式，要求当前生成器输出与已提交 snapshots 收敛。
+- `example-golang-suite`：手动端到端增强验证；它在临时 workspace 重生成 Go server/client，启动真实 Go server 进程，再通过 generated Go client 和原生 HTTP binary 请求验证回路。它不接入默认 `test`、`example-validation`、`release-preflight` 或 CI。
 - `wails-hello-compile-check`：只验证独立 Wails hello 示例，允许 snapshot drift，适合快速开发验证。
 - `wails-hello-check`：只严格验证独立 Wails hello 示例，包含重生成、snapshot drift、TypeScript、Go、`wails3 doctor` 和 `wails3 build`。
 
@@ -33,6 +35,7 @@ make wails-hello-check
 uv run python scripts/example_validation.py --scope wails-hello --mode check
 uv run python scripts/example_validation.py --scope wails-hello --mode compile
 uv run python scripts/example_validation.py --scope wails-hello --mode refresh
+uv run python scripts/example_validation.py --scope blueprint --mode golang-suite
 ```
 
 ## Drift 语义

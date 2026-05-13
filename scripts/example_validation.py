@@ -36,11 +36,17 @@ BLUEPRINT_GOLANG_SERVER_PRESERVED = (
     "go.mod",
     "go.sum",
     "main.go",
+    "views/routes/api/binary/impl.go",
     "views/routes/api/demo/impl.go",
+    "views/routes/api/hello/impl.go",
 )
 BLUEPRINT_GOLANG_CLIENT_PRESERVED = (
     "go.mod",
     "go.sum",
+)
+BLUEPRINT_GOLANG_SUITE_PRESERVED = (
+    "go.mod",
+    "main.go",
 )
 BLUEPRINT_TYPESCRIPT_PRESERVED = (
     ".vscode/settings.json",
@@ -67,6 +73,7 @@ class ExampleValidationMode(StrEnum):
     CHECK = "check"
     COMPILE = "compile"
     REFRESH = "refresh"
+    GOLANG_SUITE = "golang-suite"
 
 
 class ExampleValidationScope(StrEnum):
@@ -83,6 +90,7 @@ class BlueprintExampleWorkspace:
     golang_dir: Path
     golang_server_dir: Path
     golang_client_dir: Path
+    golang_suite_dir: Path
     typescript_dir: Path
     kotlin_dir: Path
     python_dir: Path
@@ -266,6 +274,7 @@ def _blueprint_workspace(root: Path) -> BlueprintExampleWorkspace:
         golang_dir=root / "golang",
         golang_server_dir=root / "golang" / "server",
         golang_client_dir=root / "golang" / "client",
+        golang_suite_dir=root / "golang" / "suite",
         typescript_dir=root / "typescript",
         kotlin_dir=root / "kotlin",
         python_dir=root / "python",
@@ -335,6 +344,7 @@ def _prepare_blueprint_outputs(*, source_root: Path, target_root: Path) -> None:
     _prepare_contract_outputs(target_root)
     go_server_preserved = _capture_relative_files(source_root / "golang" / "server", BLUEPRINT_GOLANG_SERVER_PRESERVED)
     go_client_preserved = _capture_relative_files(source_root / "golang" / "client", BLUEPRINT_GOLANG_CLIENT_PRESERVED)
+    go_suite_preserved = _capture_relative_files(source_root / "golang" / "suite", BLUEPRINT_GOLANG_SUITE_PRESERVED)
     shutil.rmtree(target_root / "golang", ignore_errors=True)
     _prepare_output_dir(
         target_root / "golang" / "server",
@@ -343,6 +353,10 @@ def _prepare_blueprint_outputs(*, source_root: Path, target_root: Path) -> None:
     _prepare_output_dir(
         target_root / "golang" / "client",
         go_client_preserved,
+    )
+    _prepare_output_dir(
+        target_root / "golang" / "suite",
+        go_suite_preserved,
     )
     _prepare_output_dir(
         target_root / "typescript",
@@ -438,6 +452,12 @@ def _prepare_output_dir(root: Path, preserved_files: Mapping[Path, bytes]) -> No
 
 def regenerate_blueprint_examples(workspace: BlueprintExampleWorkspace) -> None:
     generator.generate(workspace.config_path, target_ids=("contract", "http", "http.python", "wails.v2", "wails.v3"))
+    _tidy_go_module(workspace.golang_server_dir)
+    _tidy_go_module(workspace.golang_client_dir)
+
+
+def regenerate_blueprint_golang_suite_examples(workspace: BlueprintExampleWorkspace) -> None:
+    generator.generate(workspace.config_path, target_ids=("go.server", "go.client"))
     _tidy_go_module(workspace.golang_server_dir)
     _tidy_go_module(workspace.golang_client_dir)
 
@@ -1023,6 +1043,19 @@ def compile_wails_hello_examples(repo_root: Path) -> None:
         shutil.rmtree(wails_hello_workspace.root, ignore_errors=True)
 
 
+def run_golang_suite_examples(repo_root: Path, scope: ExampleValidationScope = ExampleValidationScope.BLUEPRINT) -> None:
+    if scope not in (ExampleValidationScope.ALL, ExampleValidationScope.BLUEPRINT):
+        raise ExampleValidationError("golang-suite mode only supports --scope blueprint")
+    if shutil.which("go") is None:
+        raise ExampleValidationError("go: install Go and ensure `go` is available on PATH.")
+    blueprint_workspace = prepare_blueprint_workspace(repo_root)
+    try:
+        regenerate_blueprint_golang_suite_examples(blueprint_workspace)
+        subprocess.run(["go", "run", "."], cwd=blueprint_workspace.golang_suite_dir, check=True)
+    finally:
+        shutil.rmtree(blueprint_workspace.root, ignore_errors=True)
+
+
 def refresh_examples(repo_root: Path, scope: ExampleValidationScope = ExampleValidationScope.ALL) -> None:
     ensure_validation_requirements(scope)
     if scope in (ExampleValidationScope.ALL, ExampleValidationScope.BLUEPRINT):
@@ -1063,7 +1096,8 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Validation mode: `check` fails on snapshot drift, "
             "`compile` skips snapshot diff and only checks regenerated outputs compile, "
-            "`refresh` regenerates examples in-place and compiles them."
+            "`refresh` regenerates examples in-place and compiles them, "
+            "and `golang-suite` runs the manual generated Go client/server round-trip suite."
         ),
     )
     parser.add_argument(
@@ -1089,6 +1123,8 @@ def main(argv: list[str] | None = None) -> int:
             validate_examples(repo_root, scope=scope)
         elif mode is ExampleValidationMode.COMPILE:
             compile_examples(repo_root, scope=scope)
+        elif mode is ExampleValidationMode.GOLANG_SUITE:
+            run_golang_suite_examples(repo_root, scope=scope)
         else:
             refresh_examples(repo_root, scope=scope)
     except (ExampleValidationError, FileNotFoundError, ModuleNotFoundError, subprocess.CalledProcessError) as exc:

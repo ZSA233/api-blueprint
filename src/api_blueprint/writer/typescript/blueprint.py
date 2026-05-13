@@ -403,18 +403,17 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
         self.groups = OrderedDict()
         for group in self.get_router_groups():
             for router in group.routers:
-                if self.writer.overlay_name is not None:
-                    route_name = self.protocol_for_router(router).route.func_name
-                    if self.writer.include and not any(
-                        matches_selection_rule(router, rule, route_name=route_name, label="[api-gen wails-transport]")
-                        for rule in self.writer.include
-                    ):
-                        continue
-                    if any(
-                        matches_selection_rule(router, rule, route_name=route_name, label="[api-gen wails-transport]")
-                        for rule in self.writer.exclude
-                    ):
-                        continue
+                route_name = self.protocol_for_router(router).route.func_name
+                if self.writer.include and not any(
+                    matches_selection_rule(router, rule, route_name=route_name, label="[api-gen typescript]")
+                    for rule in self.writer.include
+                ):
+                    continue
+                if any(
+                    matches_selection_rule(router, rule, route_name=route_name, label="[api-gen typescript]")
+                    for rule in self.writer.exclude
+                ):
+                    continue
                 self._register_route(router)
 
     def _register_route(self, router: Router) -> None:

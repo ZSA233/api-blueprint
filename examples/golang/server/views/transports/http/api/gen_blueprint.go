@@ -5,8 +5,10 @@ package api
 import (
 	sharedroot "example.com/project/golang/server/views/routes/api"
 
+	sharedBinary "example.com/project/golang/server/views/routes/api/binary"
 	sharedDemo "example.com/project/golang/server/views/routes/api/demo"
 	sharedHello "example.com/project/golang/server/views/routes/api/hello"
+	binary "example.com/project/golang/server/views/transports/http/api/binary"
 	demo "example.com/project/golang/server/views/transports/http/api/demo"
 	hello "example.com/project/golang/server/views/transports/http/api/hello"
 
@@ -14,15 +16,17 @@ import (
 )
 
 type Blueprint struct {
-	Router      *sharedroot.Router
-	DemoRouter  *sharedDemo.Router
-	HelloRouter *sharedHello.Router
+	Router       *sharedroot.Router
+	BinaryRouter *sharedBinary.Router
+	DemoRouter   *sharedDemo.Router
+	HelloRouter  *sharedHello.Router
 }
 
 func NewBlueprint(eng *gin.Engine) *Blueprint {
 	return &Blueprint{
-		Router:      NewRouter(eng),
-		DemoRouter:  demo.NewRouter(eng),
-		HelloRouter: hello.NewRouter(eng),
+		Router:       NewRouter(eng),
+		BinaryRouter: binary.NewRouter(eng),
+		DemoRouter:   demo.NewRouter(eng),
+		HelloRouter:  hello.NewRouter(eng),
 	}
 }

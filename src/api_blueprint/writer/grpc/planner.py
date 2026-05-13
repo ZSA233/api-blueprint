@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any, Mapping, Sequence
 
 from api_blueprint.contract import ContractGraph
+from api_blueprint.writer.core.planning import route_matches_rule
 from api_blueprint.writer.grpc.layout import GrpcProtoFileRule, GrpcProtoLayout, ProtoFileLayout
 
 
@@ -118,6 +119,8 @@ class ProtoPlanner:
         package: str,
         go_package_prefix: str,
         proto_files: Sequence[GrpcProtoFileRule] = (),
+        include: Sequence[str] = (),
+        exclude: Sequence[str] = (),
     ) -> None:
         manifest = graph.to_manifest()
         self.schemas = manifest["schemas"] if isinstance(manifest.get("schemas"), Mapping) else {}
@@ -127,12 +130,19 @@ class ProtoPlanner:
         self.files: "OrderedDict[str, ProtoFilePlan]" = OrderedDict()
         self._building_messages: set[tuple[str, str]] = set()
         self.routes = manifest["routes"] if isinstance(manifest.get("routes"), list) else []
+        self.include = tuple(include)
+        self.exclude = tuple(exclude)
 
     def plan(self) -> "OrderedDict[str, ProtoFilePlan]":
         for route in self.routes:
-            if isinstance(route, Mapping):
+            if isinstance(route, Mapping) and self._route_selected(route):
                 self._add_route(route)
         return self.files
+
+    def _route_selected(self, route: JsonObject) -> bool:
+        if self.include and not any(route_matches_rule(route, rule) for rule in self.include):
+            return False
+        return not any(route_matches_rule(route, rule) for rule in self.exclude)
 
     def _add_route(self, route: JsonObject) -> None:
         route_layout = self.layout.route_file(route)
@@ -474,8 +484,17 @@ def plan_proto_files(
     package: str,
     go_package_prefix: str,
     proto_files: Sequence[GrpcProtoFileRule] = (),
+    include: Sequence[str] = (),
+    exclude: Sequence[str] = (),
 ) -> "OrderedDict[str, ProtoFilePlan]":
-    return ProtoPlanner(graph, package=package, go_package_prefix=go_package_prefix, proto_files=proto_files).plan()
+    return ProtoPlanner(
+        graph,
+        package=package,
+        go_package_prefix=go_package_prefix,
+        proto_files=proto_files,
+        include=include,
+        exclude=exclude,
+    ).plan()
 
 
 def _message_fields(schema: JsonObject | None) -> Mapping[str, Any]:

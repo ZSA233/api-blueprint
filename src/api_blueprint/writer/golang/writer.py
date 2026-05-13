@@ -202,6 +202,7 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
     def gen(self) -> None:
         self.validate_package_contract()
         self.cleanup_legacy_output_roots()
+        self.cleanup_binary_runtime()
         for bp in self.bps:
             bp.build()
             bp.gen_views()
@@ -212,6 +213,11 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
         if self._written_files:
             for file in self._written_files:
                 self.toolchain.run_format(file)
+
+    def cleanup_binary_runtime(self) -> None:
+        runtime_dir = self.working_dir / self.views_package / "runtime" / "binary"
+        if runtime_dir.exists():
+            shutil.rmtree(runtime_dir)
 
     def cleanup_legacy_output_roots(self) -> None:
         if self.views_package:

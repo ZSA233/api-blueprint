@@ -17,6 +17,7 @@
 make example-compile-check
 make example-refresh
 make example-validation
+make example-golang-suite
 make wails-hello-compile-check
 make wails-hello-check
 ```
@@ -24,6 +25,7 @@ make wails-hello-check
 - `example-compile-check`: for feature development; allows snapshot drift and only verifies regenerated artifacts still compile or import.
 - `example-refresh`: accepts intentional generation changes and refreshes committed snapshots.
 - `example-validation`: strict mode; requires generator output and committed snapshots to converge.
+- `example-golang-suite`: manual end-to-end validation aid; it regenerates the Go server/client in a temporary workspace, starts a real Go server process, then verifies the loop with the generated Go client and raw HTTP binary requests. It is not part of default `test`, `example-validation`, `release-preflight`, or CI.
 - `wails-hello-compile-check`: validates only the standalone Wails hello example, allows snapshot drift, and is useful for fast development checks.
 - `wails-hello-check`: strictly validates only the standalone Wails hello example, including regeneration, snapshot drift, TypeScript, Go, `wails3 doctor`, and `wails3 build`.
 
@@ -33,6 +35,7 @@ You can also use the script scope directly:
 uv run python scripts/example_validation.py --scope wails-hello --mode check
 uv run python scripts/example_validation.py --scope wails-hello --mode compile
 uv run python scripts/example_validation.py --scope wails-hello --mode refresh
+uv run python scripts/example_validation.py --scope blueprint --mode golang-suite
 ```
 
 ## Drift Meaning

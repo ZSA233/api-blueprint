@@ -3,10 +3,12 @@
 package httptransport
 
 import (
+	"compress/gzip"
 	"context"
 	"encoding/json"
 
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -33,6 +35,10 @@ type httpWebSocketEnvelope struct {
 type ginContextCarrier interface {
 	ContextKind() provider.TransportKind
 	Get(string) (any, bool)
+}
+
+type binaryBodyDecoder interface {
+	DecodeBinary(io.Reader) error
 }
 
 func RequireGin(ctx ginContextCarrier) (*gin.Context, error) {
@@ -80,12 +86,48 @@ func bindRequest[Q, B, P any](
 		if err := ginCtx.ShouldBind(reqB); err != nil {
 			return nil, err
 		}
+	} else if reqProvider.BindBinary {
+		reqB = new(B)
+		if err := bindBinaryBody(ginCtx, reqB); err != nil {
+			return nil, err
+		}
 	}
 
 	return &provider.REQ[Q, B]{
 		Q: reqQ,
 		B: reqB,
 	}, nil
+}
+
+func bindBinaryBody(ginCtx *gin.Context, target any) error {
+	decoder, ok := target.(binaryBodyDecoder)
+	if !ok {
+		return fmt.Errorf("[httptransport] binary request body %T does not implement DecodeBinary(io.Reader)", target)
+	}
+	if ginCtx.Request == nil || ginCtx.Request.Body == nil {
+		return fmt.Errorf("[httptransport] binary request body is empty")
+	}
+
+	encoding := strings.TrimSpace(strings.ToLower(ginCtx.GetHeader("Content-Encoding")))
+	if encoding == "" {
+		encoding = "identity"
+	}
+
+	var reader io.Reader = ginCtx.Request.Body
+	switch encoding {
+	case "identity":
+	case "gzip":
+		gzipReader, err := gzip.NewReader(ginCtx.Request.Body)
+		if err != nil {
+			return fmt.Errorf("[httptransport] decode gzip request body: %w", err)
+		}
+		defer gzipReader.Close()
+		reader = gzipReader
+	default:
+		return fmt.Errorf("[httptransport] unsupported binary Content-Encoding %q", encoding)
+	}
+
+	return decoder.DecodeBinary(reader)
 }
 
 func newContext[Q, B, P any](ginCtx *gin.Context, executor *provider.RouteExecutor[Q, B, P]) *provider.Context[Q, B, P] {

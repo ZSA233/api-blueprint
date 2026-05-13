@@ -7,9 +7,9 @@
   "counts": {
     "connections": 2,
     "errors": 2,
-    "routes": 20,
-    "schemas": 37,
-    "services": 4,
+    "routes": 21,
+    "schemas": 39,
+    "services": 5,
     "targets": 14
   },
   "generator": {
@@ -61,6 +61,16 @@
       "operation": "Ws",
       "service_id": "api.api",
       "url": "/api/ws"
+    },
+    {
+      "id": "api.binary.post.packet",
+      "kind": "rpc",
+      "methods": [
+        "POST"
+      ],
+      "operation": "Packet",
+      "service_id": "api.binary",
+      "url": "/api/binary/packet"
     },
     {
       "id": "api.demo.get.abc",
@@ -257,6 +267,14 @@
       "route_count": 1
     },
     {
+      "group": "binary",
+      "id": "api.binary",
+      "name": "BinaryService",
+      "path": "/api/binary",
+      "root": "api",
+      "route_count": 1
+    },
+    {
       "group": "demo",
       "id": "api.demo",
       "name": "DemoService",
@@ -287,14 +305,14 @@
       "kind": "contract",
       "out_dir": ".",
       "role": "contract",
-      "route_count": 20
+      "route_count": 21
     },
     {
       "id": "go.server",
       "kind": "go-server",
       "out_dir": "golang/server/views",
       "role": "server",
-      "route_count": 20
+      "route_count": 21
     },
     {
       "id": "go.client",
@@ -336,14 +354,14 @@
       "kind": "http-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 20
+      "route_count": 21
     },
     {
       "id": "http.python",
       "kind": "http-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 20
+      "route_count": 21
     },
     {
       "id": "wails.v3",

@@ -17,9 +17,10 @@ func NewGenHelloClient(transport runtime.Transport) *GenHelloClient {
 
 func (client *GenHelloClient) Abc(ctx context.Context, query *REQ_Abc_QUERY) (*RSP_Abc_BODY, error) {
 	request := runtime.Request{
-		Method: "GET",
-		Path:   "/api/hello/abc",
-		Query:  query,
+		Method:          "GET",
+		Path:            "/api/hello/abc",
+		ResponseWrapper: "GeneralWrapper",
+		Query:           query,
 	}
 	var response RSP_Abc_BODY
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -30,8 +31,9 @@ func (client *GenHelloClient) Abc(ctx context.Context, query *REQ_Abc_QUERY) (*R
 
 func (client *GenHelloClient) MapEnum(ctx context.Context) (*RSP_MapEnum_BODY, error) {
 	request := runtime.Request{
-		Method: "GET",
-		Path:   "/api/hello/map-enum",
+		Method:          "GET",
+		Path:            "/api/hello/map-enum",
+		ResponseWrapper: "GeneralWrapper",
 	}
 	var response RSP_MapEnum_BODY
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -42,8 +44,9 @@ func (client *GenHelloClient) MapEnum(ctx context.Context) (*RSP_MapEnum_BODY, e
 
 func (client *GenHelloClient) ListEnum(ctx context.Context) (*RSP_ListEnum_BODY, error) {
 	request := runtime.Request{
-		Method: "GET",
-		Path:   "/api/hello/list-enum",
+		Method:          "GET",
+		Path:            "/api/hello/list-enum",
+		ResponseWrapper: "GeneralWrapper",
 	}
 	var response RSP_ListEnum_BODY
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -54,8 +57,9 @@ func (client *GenHelloClient) ListEnum(ctx context.Context) (*RSP_ListEnum_BODY,
 
 func (client *GenHelloClient) String(ctx context.Context) (*RSP_String_BODY, error) {
 	request := runtime.Request{
-		Method: "GET",
-		Path:   "/api/hello/string",
+		Method:          "GET",
+		Path:            "/api/hello/string",
+		ResponseWrapper: "GeneralWrapper",
 	}
 	var response RSP_String_BODY
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -66,8 +70,9 @@ func (client *GenHelloClient) String(ctx context.Context) (*RSP_String_BODY, err
 
 func (client *GenHelloClient) Uint64(ctx context.Context) (*RSP_Uint64_BODY, error) {
 	request := runtime.Request{
-		Method: "GET",
-		Path:   "/api/hello/uint64",
+		Method:          "GET",
+		Path:            "/api/hello/uint64",
+		ResponseWrapper: "GeneralWrapper",
 	}
 	var response RSP_Uint64_BODY
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -78,8 +83,9 @@ func (client *GenHelloClient) Uint64(ctx context.Context) (*RSP_Uint64_BODY, err
 
 func (client *GenHelloClient) StringEmun(ctx context.Context) (*RSP_StringEmun_BODY, error) {
 	request := runtime.Request{
-		Method: "GET",
-		Path:   "/api/hello/string-emun",
+		Method:          "GET",
+		Path:            "/api/hello/string-emun",
+		ResponseWrapper: "GeneralWrapper",
 	}
 	var response RSP_StringEmun_BODY
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -90,9 +96,10 @@ func (client *GenHelloClient) StringEmun(ctx context.Context) (*RSP_StringEmun_B
 
 func (client *GenHelloClient) HelloWay(ctx context.Context, query *REQ_HelloWay_QUERY) (any, error) {
 	request := runtime.Request{
-		Method: "GET",
-		Path:   "/api/hello/hello-way",
-		Query:  query,
+		Method:          "GET",
+		Path:            "/api/hello/hello-way",
+		ResponseWrapper: "NoneWrapper",
+		Query:           query,
 	}
 	var response any
 	if err := client.transport.Do(ctx, request, &response); err != nil {

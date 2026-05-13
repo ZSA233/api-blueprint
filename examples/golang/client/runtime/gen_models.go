@@ -31,6 +31,21 @@ const (
 	HelloWayEnumASD HelloWayEnum = "ASD"
 )
 
+type REQ_Packet_QUERY struct {
+	Trace string `json:"trace,omitempty" form:"trace,omitempty"`
+}
+
+type RSP_Packet struct {
+	Trace       string  `json:"trace" form:"trace"`
+	Version     uint    `json:"version" form:"version"`
+	Item_count  uint    `json:"item_count" form:"item_count"`
+	Payload     string  `json:"payload" form:"payload"`
+	Score_sum   float64 `json:"score_sum" form:"score_sum"`
+	First_label string  `json:"first_label" form:"first_label"`
+	Item_ids    []uint  `json:"item_ids" form:"item_ids"`
+	Checksum    uint    `json:"checksum" form:"checksum"`
+}
+
 type REQ_Abc_QUERY struct {
 	Arg1 bool    `json:"arg1,omitempty" form:"arg1,omitempty"`
 	Arg3 string  `json:"arg3,omitempty" form:"arg3,omitempty"`

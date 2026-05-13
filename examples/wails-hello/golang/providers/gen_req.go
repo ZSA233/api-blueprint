@@ -17,18 +17,19 @@ type ReqContext[Q, B, P any] struct {
 }
 
 type ReqProvider[Q, B, P any] struct {
-	Data      string
-	Route     RouteInfo
-	BindQuery bool
-	BindJSON  bool
-	BindForm  bool
+	Data       string
+	Route      RouteInfo
+	BindQuery  bool
+	BindJSON   bool
+	BindForm   bool
+	BindBinary bool
 }
 
 func NewReqProvider[Q, B, P any](
 	data string,
 	handler func(c *Context[Q, B, P], req *REQ[Q, B]) (rsp *P, err error),
 ) *ReqProvider[Q, B, P] {
-	var bindQuery, bindJSON, bindForm bool
+	var bindQuery, bindJSON, bindForm, bindBinary bool
 	if strings.Contains(data, "Q") {
 		bindQuery = true
 	}
@@ -38,11 +39,15 @@ func NewReqProvider[Q, B, P any](
 	if strings.Contains(data, "F") {
 		bindForm = true
 	}
+	if strings.Contains(data, "B") {
+		bindBinary = true
+	}
 	return &ReqProvider[Q, B, P]{
-		Data:      data,
-		BindQuery: bindQuery,
-		BindJSON:  bindJSON,
-		BindForm:  bindForm,
+		Data:       data,
+		BindQuery:  bindQuery,
+		BindJSON:   bindJSON,
+		BindForm:   bindForm,
+		BindBinary: bindBinary,
 	}
 }
 

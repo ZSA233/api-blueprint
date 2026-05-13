@@ -68,6 +68,11 @@ class GoClientRoute:
         connection = self.route.get("connection")
         return connection if isinstance(connection, Mapping) else {}
 
+    @property
+    def response_wrapper(self) -> str:
+        wrapper = self.response.get("wrapper")
+        return str(wrapper or "NoneWrapper")
+
 
 @dataclass
 class GoClientGroup:
@@ -182,6 +187,7 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
                     "group": group,
                     "route_params": _route_params,
                     "route_response_type": _route_response_type,
+                    "response_wrapper_name": _response_wrapper_name,
                     "runtime_import": self.runtime_import,
                     "runtime_request_fields": _runtime_request_fields,
                 },
@@ -413,6 +419,10 @@ def _route_response_type(route: GoClientRoute) -> str:
     if isinstance(response_model, str) and response_model:
         return f"*RSP_{route.operation}_BODY"
     return "any"
+
+
+def _response_wrapper_name(route: GoClientRoute) -> str:
+    return route.response_wrapper
 
 
 def _client_class_for_route(route: GoClientRoute) -> str:

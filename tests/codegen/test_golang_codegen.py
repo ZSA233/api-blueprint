@@ -7,6 +7,7 @@ import pytest
 
 from api_blueprint.contract import build_contract_graph
 from api_blueprint.engine import Blueprint, Error, Model, Toast, provider
+from api_blueprint.engine.binary_schema import parse_binary_schema
 from api_blueprint.engine.model import String
 from api_blueprint.engine.wrapper import GeneralWrapper
 from api_blueprint.writer.golang import GolangResponseWrapper
@@ -166,6 +167,155 @@ go 1.23.8
     assert "type RSP_Submit_BODY = protos.SubmitResponse" in route_models
     assert "type SubmitJson struct" in shared_models
     assert "type SubmitResponse struct" in shared_models
+
+
+def test_golang_writer_generates_binary_schema_parser_and_http_binding(tmp_path):
+    output_dir = tmp_path / "golang"
+    output_dir.mkdir()
+    (tmp_path / "go.mod").write_text(
+        """
+module example.com/generated
+
+go 1.23.8
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    schema = parse_binary_schema(
+        """
+# packet DemoPacket
+
+endian: little
+content-type: application/octet-stream
+content-encoding: identity,gzip
+
+## header
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| magic | bytes | 4 | const="DEMO" | magic |
+| item_num | u32 | 1 | min=1,max=8,sizeof=items | item count |
+
+## body
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| session_id_len | u32 | 1 | max=128,sizeof=session_id | session id length |
+| session_id | string | session_id_len | encoding=utf8 | session id |
+| items | DemoItem | item_num | | items |
+
+## struct DemoItem
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| value | u32 | 1 | max=100 | value |
+        """.strip(),
+        source_path=tmp_path / "demo_packet.md",
+    )
+
+    bp = Blueprint(root="/api", providers=[provider.Req(), provider.Handle(), provider.Rsp()])
+    with bp.group("/demo") as views:
+        views.POST("/binary").ARGS(token=String(description="token")).REQ_BINARY(schema).RSP(ok=String(description="ok"))
+
+    writer = GolangWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    binary_parser = (output_dir / "routes" / "api" / "demo" / "_gen_binary" / "gen_binary.go").read_text(
+        encoding="utf-8"
+    )
+    binary_runtime = (output_dir / "runtime" / "binary" / "gen_runtime.go").read_text(
+        encoding="utf-8"
+    )
+    route_models = (output_dir / "routes" / "api" / "demo" / "gen_protos.go").read_text(
+        encoding="utf-8"
+    )
+    req_provider = (output_dir / "providers" / "gen_req.go").read_text(encoding="utf-8")
+    http_runtime = (output_dir / "transports" / "http" / "gen_engine.go").read_text(encoding="utf-8")
+    http_route = (output_dir / "transports" / "http" / "api" / "demo" / "gen_interface.go").read_text(
+        encoding="utf-8"
+    )
+
+    assert "package binary" in binary_parser
+    assert "package binaryruntime" in binary_runtime
+    assert "func ParseDemoPacket(r io.Reader) (*DemoPacket, error)" in binary_parser
+    assert "func (msg *DemoPacket) DecodeBinary(r io.Reader) error" in binary_parser
+    assert "evalBinaryExpr" not in binary_parser
+    assert "vars map[string]uint64" not in binary_parser
+    assert 'fmt.Sprintf("%s.' not in binary_parser
+    assert "\n\n\n" not in binary_parser
+    assert "if out.Magic != [4]byte{68, 69, 77, 79}" in binary_parser
+    assert "var fixed [8]byte" in binary_parser
+    assert "func BytesOf" not in binary_parser
+    assert "func BytesOf" in binary_runtime
+    assert "binaryruntime.UnsafeString(sessionIDValue)" in binary_parser
+    assert "SessionID    string" in binary_parser
+    assert 'binary "example.com/generated/golang/routes/api/demo/_gen_binary"' in route_models
+    assert "binary.DemoPacket" in route_models
+    assert "BindBinary bool" in req_provider
+    assert 'strings.Contains(data, "B")' in req_provider
+    assert "gzip.NewReader" in http_runtime
+    assert "decoder.DecodeBinary(reader)" in http_runtime
+    assert '"req=QB|handle|rsp=json@NoneWrapper"' in http_route
+
+    if shutil.which("go") is None:
+        pytest.skip("go toolchain is not available")
+
+    assert not (output_dir / "routes" / "api" / "_gen_binary").exists()
+
+    binary_test = output_dir / "routes" / "api" / "demo" / "_gen_binary" / "gen_binary_test.go"
+    binary_test.write_text(
+        r'''
+package binary
+
+import (
+	"bytes"
+	stdbinary "encoding/binary"
+	"strings"
+	"testing"
+)
+
+func demoPacketForTest(magic string, itemNum uint32, sessionID string, values ...uint32) []byte {
+	var buf bytes.Buffer
+	buf.WriteString(magic)
+	_ = stdbinary.Write(&buf, stdbinary.LittleEndian, itemNum)
+	_ = stdbinary.Write(&buf, stdbinary.LittleEndian, uint32(len(sessionID)))
+	buf.WriteString(sessionID)
+	for _, value := range values {
+		_ = stdbinary.Write(&buf, stdbinary.LittleEndian, value)
+	}
+	return buf.Bytes()
+}
+
+func TestParseDemoPacketGenerated(t *testing.T) {
+	parsed, err := ParseDemoPacket(bytes.NewReader(demoPacketForTest("DEMO", 2, "session-a", 7, 9)))
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if parsed.Body.SessionID != "session-a" {
+		t.Fatalf("unexpected session id: %q", parsed.Body.SessionID)
+	}
+	if len(parsed.Body.Items) != 2 || parsed.Body.Items[0].Value != 7 || parsed.Body.Items[1].Value != 9 {
+		t.Fatalf("unexpected items: %+v", parsed.Body.Items)
+	}
+}
+
+func TestParseDemoPacketGeneratedErrors(t *testing.T) {
+	if _, err := ParseDemoPacket(bytes.NewReader(demoPacketForTest("BAD!", 1, "x", 1))); err == nil || !strings.Contains(err.Error(), "DemoPacket.header.magic: const mismatch") {
+		t.Fatalf("expected magic error, got %v", err)
+	}
+	if _, err := ParseDemoPacket(bytes.NewReader(demoPacketForTest("DEMO", 9, "x", 1))); err == nil || !strings.Contains(err.Error(), "DemoPacket.header.item_num: exceeds max") {
+		t.Fatalf("expected max error, got %v", err)
+	}
+	if _, err := ParseDemoPacket(bytes.NewReader(demoPacketForTest("DEMO", 1, "x", 101))); err == nil || !strings.Contains(err.Error(), "DemoPacket.body.items[0].value: exceeds max") {
+		t.Fatalf("expected nested max error, got %v", err)
+	}
+}
+'''.lstrip(),
+        encoding="utf-8",
+    )
+    subprocess.run(["go", "test", "./golang/routes/api/demo/_gen_binary"], cwd=tmp_path, check=True)
 
 
 def test_golang_writer_can_generate_core_without_http_adapter(tmp_path):

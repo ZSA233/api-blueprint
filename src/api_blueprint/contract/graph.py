@@ -158,6 +158,9 @@ class ContractGraphBuilder:
             "json_model": self._schema_ref(router.req_json),
             "form_model": self._schema_ref(router.req_form),
             "binary_model": self._schema_ref(router.req_bin),
+            "binary_schema": router.req_binary_schema.to_manifest(include_html=True)
+            if router.req_binary_schema is not None
+            else None,
         }
         response = None
         if router.rsp_model is not None:
@@ -222,6 +225,7 @@ class ContractGraphBuilder:
             json_model=router.req_json,
             form_model=router.req_form,
             binary_model=router.req_bin,
+            binary_schema=router.req_binary_schema,
             open_model=router.open_model,
             response_model=router.rsp_model,
             response_media_type=router.rsp_media_type,

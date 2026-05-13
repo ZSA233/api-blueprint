@@ -33,8 +33,9 @@ func (client *Gen{{ client_class_for_route(route) }}) {{ connection_method_name(
 
 func (client *Gen{{ client_class_for_route(route) }}) {{ route.operation }}(ctx context.Context{% for param in params %}, {{ param }}{% endfor %}) ({{ response_type }}, error) {
 	request := runtime.Request{
-		Method: {{ route.method | code_literal }},
-		Path:   {{ route.url | code_literal }},
+		Method:          {{ route.method | code_literal }},
+		Path:            {{ route.url | code_literal }},
+		ResponseWrapper: {{ response_wrapper_name(route) | code_literal }},
 {% for field, value in runtime_request_fields(route) %}		{{ field }}: {{ value }},
 {% endfor %}	}
 {% if response_type == "any" %}	var response any

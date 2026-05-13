@@ -17,9 +17,10 @@ func NewGenDemoClient(transport runtime.Transport) *GenDemoClient {
 
 func (client *GenDemoClient) Abc(ctx context.Context, query *REQ_Abc_QUERY) (*RSP_Abc_BODY, error) {
 	request := runtime.Request{
-		Method: "GET",
-		Path:   "/api/demo/abc",
-		Query:  query,
+		Method:          "GET",
+		Path:            "/api/demo/abc",
+		ResponseWrapper: "GeneralWrapper",
+		Query:           query,
 	}
 	var response RSP_Abc_BODY
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -30,9 +31,10 @@ func (client *GenDemoClient) Abc(ctx context.Context, query *REQ_Abc_QUERY) (*RS
 
 func (client *GenDemoClient) TestPost(ctx context.Context, jsonBody *REQ_TestPost_JSON) (*RSP_TestPost_BODY, error) {
 	request := runtime.Request{
-		Method: "POST",
-		Path:   "/api/demo/test_post",
-		JSON:   jsonBody,
+		Method:          "POST",
+		Path:            "/api/demo/test_post",
+		ResponseWrapper: "GeneralWrapper",
+		JSON:            jsonBody,
 	}
 	var response RSP_TestPost_BODY
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -43,10 +45,11 @@ func (client *GenDemoClient) TestPost(ctx context.Context, jsonBody *REQ_TestPos
 
 func (client *GenDemoClient) Z1put(ctx context.Context, query *REQ_Z1put_QUERY, jsonBody *REQ_Z1put_JSON) (*RSP_Z1put_BODY, error) {
 	request := runtime.Request{
-		Method: "PUT",
-		Path:   "/api/demo/1put",
-		Query:  query,
-		JSON:   jsonBody,
+		Method:          "PUT",
+		Path:            "/api/demo/1put",
+		ResponseWrapper: "GeneralWrapper",
+		Query:           query,
+		JSON:            jsonBody,
 	}
 	var response RSP_Z1put_BODY
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -57,9 +60,10 @@ func (client *GenDemoClient) Z1put(ctx context.Context, query *REQ_Z1put_QUERY, 
 
 func (client *GenDemoClient) Delete(ctx context.Context, query *REQ_Delete_QUERY) (*RSP_Delete_BODY, error) {
 	request := runtime.Request{
-		Method: "DELETE",
-		Path:   "/api/demo/delete$",
-		Query:  query,
+		Method:          "DELETE",
+		Path:            "/api/demo/delete$",
+		ResponseWrapper: "GeneralWrapper",
+		Query:           query,
 	}
 	var response RSP_Delete_BODY
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -100,9 +104,10 @@ func (client *GenDemoClient) OpenAssistantSession(ctx context.Context, openData 
 
 func (client *GenDemoClient) PostDeprecated(ctx context.Context, jsonBody *REQ_PostDeprecated_JSON) (*RSP_PostDeprecated_BODY, error) {
 	request := runtime.Request{
-		Method: "POST",
-		Path:   "/api/demo/post_deprecated",
-		JSON:   jsonBody,
+		Method:          "POST",
+		Path:            "/api/demo/post_deprecated",
+		ResponseWrapper: "GeneralWrapper",
+		JSON:            jsonBody,
 	}
 	var response RSP_PostDeprecated_BODY
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -113,8 +118,9 @@ func (client *GenDemoClient) PostDeprecated(ctx context.Context, jsonBody *REQ_P
 
 func (client *GenDemoClient) Raw(ctx context.Context) (*RSP_Raw_BODY, error) {
 	request := runtime.Request{
-		Method: "POST",
-		Path:   "/api/demo/raw",
+		Method:          "POST",
+		Path:            "/api/demo/raw",
+		ResponseWrapper: "GeneralWrapper",
 	}
 	var response RSP_Raw_BODY
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -125,8 +131,9 @@ func (client *GenDemoClient) Raw(ctx context.Context) (*RSP_Raw_BODY, error) {
 
 func (client *GenDemoClient) MapModel(ctx context.Context) (*RSP_MapModel_BODY, error) {
 	request := runtime.Request{
-		Method: "POST",
-		Path:   "/api/demo/map_model",
+		Method:          "POST",
+		Path:            "/api/demo/map_model",
+		ResponseWrapper: "GeneralWrapper",
 	}
 	var response RSP_MapModel_BODY
 	if err := client.transport.Do(ctx, request, &response); err != nil {

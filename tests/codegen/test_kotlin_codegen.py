@@ -139,9 +139,6 @@ def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full
     class FormPayload(Model):
         label = String(description="label")
 
-    class BinaryPayload(Model):
-        checksum = String(description="checksum")
-
     class OpenPayload(Model):
         run_id = String(alias="run_id", description="run id")
 
@@ -160,7 +157,6 @@ def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full
     views.GET("/ping").ARGS(q=String(description="q")).RSP(SubmitResponse)
     views.POST("/submit").REQ(SubmitJson).RSP(SubmitResponse)
     views.POST("/form").REQ_FORM(FormPayload).RSP(SubmitResponse)
-    views.POST("/binary").REQ_BIN(BinaryPayload).RSP(SubmitResponse)
     views.WS("/ws").ARGS(token=String(description="token")).SEND(ClientMessage).RECV(ServerMessage)
     views.STREAM("/events").OPEN(OpenPayload).SERVER_MESSAGE(ServerMessage).CLOSE(CloseInfo)
     views.CHANNEL("/chat").OPEN(OpenPayload).CLIENT_MESSAGE(ClientMessage).SERVER_MESSAGE(ServerMessage).CLOSE(CloseInfo)
@@ -260,7 +256,6 @@ def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full
     assert "query: DemoPingQuery," in route_text
     assert "json: SubmitJson," in route_text
     assert "form: FormPayload," in route_text
-    assert "binary: BinaryPayload," in route_text
     assert "public open fun connectWs(" in route_text
     assert "public open fun subscribeEvents(" in route_text
     assert "public open fun openChat(" in route_text

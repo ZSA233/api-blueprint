@@ -5,12 +5,13 @@ package runtime
 import "context"
 
 type Request struct {
-	Method string
-	Path   string
-	Query  any
-	JSON   any
-	Form   any
-	Binary any
+	Method          string
+	Path            string
+	Query           any
+	JSON            any
+	Form            any
+	Binary          any
+	ResponseWrapper string
 }
 
 type ConnectionRequest struct {

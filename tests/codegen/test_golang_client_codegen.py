@@ -4,7 +4,7 @@ import shutil
 import subprocess
 
 from api_blueprint.contract import build_contract_graph
-from api_blueprint.engine import Blueprint, Error, Model, Toast
+from api_blueprint.engine import Blueprint, Error, GeneralWrapper, Model, Toast
 from api_blueprint.engine.model import String
 from api_blueprint.writer.golang.client import GolangClientWriter
 
@@ -31,9 +31,6 @@ def test_golang_client_writer_generates_layout_preserves_user_files_and_compiles
     class FormPayload(Model):
         label = String(description="label")
 
-    class BinaryPayload(Model):
-        checksum = String(description="checksum")
-
     class OpenPayload(Model):
         run_id = String(alias="run_id", description="run id")
 
@@ -43,12 +40,11 @@ def test_golang_client_writer_generates_layout_preserves_user_files_and_compiles
     class ClientMessage(Model):
         text = String(description="text")
 
-    bp = Blueprint(root="/api", errors=[CommonErr])
+    bp = Blueprint(root="/api", errors=[CommonErr], response_wrapper=GeneralWrapper)
     views = bp.group("/demo")
     views.GET("/ping").ARGS(q=String(description="q")).RSP(SubmitResponse)
     views.POST("/submit").REQ(SubmitJson).RSP(SubmitResponse)
     views.POST("/form").REQ_FORM(FormPayload).RSP(SubmitResponse)
-    views.POST("/binary").REQ_BIN(BinaryPayload).RSP(SubmitResponse)
     views.WS("/ws").ARGS(token=String(description="token")).SEND(ClientMessage).RECV(ServerMessage)
     views.STREAM("/events").OPEN(OpenPayload).SERVER_MESSAGE(ServerMessage)
     views.CHANNEL("/chat").OPEN(OpenPayload).CLIENT_MESSAGE(ClientMessage).SERVER_MESSAGE(ServerMessage)
@@ -90,10 +86,12 @@ def test_golang_client_writer_generates_layout_preserves_user_files_and_compiles
     assert "BaseURL" not in runtime_text
     assert "base_url" not in runtime_text
     assert "baseUrl" not in runtime_text
+    assert "ResponseWrapper string" in runtime_text
     assert 'BaseURL string' in config_text
     assert '"http://localhost:2333"' in config_text
     assert "context.Context" in route_text
     assert "func (client *GenDemoClient) Ping(ctx context.Context" in route_text
+    assert 'ResponseWrapper: "GeneralWrapper"' in route_text
     assert "func (client *GenDemoClient) ConnectWs(ctx context.Context" in route_text
     assert "func (client *GenDemoClient) SubscribeEvents(ctx context.Context" in route_text
     assert "func (client *GenDemoClient) OpenChat(ctx context.Context" in route_text
@@ -112,6 +110,10 @@ def test_golang_client_writer_generates_layout_preserves_user_files_and_compiles
     assert "\\u767b" not in catalog_text
     assert "locales" not in catalog_text
     assert "UnsupportedTransportError" in transport_text
+    assert "decodeResponse(httpResponse.Body, request.ResponseWrapper, response)" in transport_text
+    assert 'wrapper == "" || wrapper == "NoneWrapper"' in transport_text
+    assert 'wrapper != "GeneralWrapper"' in transport_text
+    assert "runtime.NewApiCodeError" in transport_text
     assert "ConnectUnsupported" in transport_text
     assert "StreamUnsupported" in transport_text
     assert "ChannelUnsupported" in transport_text
@@ -152,6 +154,66 @@ func TestResolveApiToastPriority(t *testing.T) {
 	}
 	if got := ResolveApiToast(ApiToastPayload{}, nil, "fallback"); got != "fallback" {
 		t.Fatalf("expected message fallback, got %q", got)
+	}
+}
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    (output_dir / "client_roundtrip_test.go").write_text(
+        """
+package client_test
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	demo "example.com/generated/client/routes/api/demo"
+	runtime "example.com/generated/client/runtime"
+	httptransport "example.com/generated/client/transports/http"
+)
+
+func TestGeneralWrapperRoundTrip(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body demo.REQ_Submit_JSON
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		if body.Value == "bad" {
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"code":    55555,
+				"message": "expired",
+			})
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"code": 0,
+			"data": map[string]any{"status": "ok"},
+		})
+	}))
+	defer server.Close()
+
+	transport := httptransport.NewHttpTransport(httptransport.HttpConfig{BaseURL: server.URL})
+	client := demo.NewGenDemoClient(transport)
+	rsp, err := client.Submit(context.Background(), &demo.REQ_Submit_JSON{Value: "good"})
+	if err != nil {
+		t.Fatalf("submit returned error: %v", err)
+	}
+	if rsp == nil || rsp.Status != "ok" {
+		t.Fatalf("unexpected response: %#v", rsp)
+	}
+
+	_, err = client.Submit(context.Background(), &demo.REQ_Submit_JSON{Value: "bad"})
+	var codeErr runtime.ApiCodeError
+	if !errors.As(err, &codeErr) {
+		t.Fatalf("expected ApiCodeError, got %T %v", err, err)
+	}
+	if codeErr.Code() != 55555 || codeErr.Message() != "expired" {
+		t.Fatalf("unexpected api code error: code=%d message=%q", codeErr.Code(), codeErr.Message())
 	}
 }
         """.strip()

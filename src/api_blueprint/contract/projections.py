@@ -289,6 +289,7 @@ def _route_summary(route: Mapping[str, Any], schemas: Mapping[str, JsonObject], 
         "methods": list(route.get("methods") if isinstance(route.get("methods"), list) else []),
         "url": _string(route.get("url")),
         "request_models": _request_models(route),
+        "binary_schema": _binary_schema_name(route),
         "response_model": response.get("model") if isinstance(response, Mapping) else None,
         "connection": _compact_connection(route.get("connection")),
         "errors": list(route.get("errors") if isinstance(route.get("errors"), list) else []),
@@ -571,6 +572,17 @@ def _request_models(route: Mapping[str, Any]) -> list[str]:
         if value is not None:
             models.append(str(value))
     return models
+
+
+def _binary_schema_name(route: Mapping[str, Any]) -> str | None:
+    request = route.get("request")
+    if not isinstance(request, Mapping):
+        return None
+    schema = request.get("binary_schema")
+    if not isinstance(schema, Mapping):
+        return None
+    name = schema.get("name")
+    return str(name) if name is not None else None
 
 
 def _message_models(message: object) -> list[str]:

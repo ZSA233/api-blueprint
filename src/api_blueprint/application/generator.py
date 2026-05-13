@@ -38,7 +38,7 @@ EXPLAIN_TARGET_KIND_FIELDS: dict[str, tuple[str, ...]] = {
     "contract": ("formats",),
     "go-server": ("module",),
     "go-client": ("module", "base_url", "base_url_expr", "include", "exclude"),
-    "typescript-client": ("base_url", "base_url_expr"),
+    "typescript-client": ("base_url", "base_url_expr", "include", "exclude"),
     "kotlin-client": ("package", "base_url", "base_url_expr", "include", "exclude"),
     "python-server": ("python_package_root", "include", "exclude"),
     "python-client": ("python_package_root", "base_url", "base_url_expr", "include", "exclude"),
@@ -183,6 +183,8 @@ def generate(config_path: str | Path | None, target_ids: Sequence[str] = ()) -> 
                 base_url=target.base_url or "",
                 base_url_expr=target.base_url_expr,
                 emit_http_facade=target_has_http_transport(project.resolved.targets, target.id),
+                include=target.include,
+                exclude=target.exclude,
                 contract_graph=graph,
             )
             writer.register(*project.entrypoints)
@@ -235,6 +237,8 @@ def generate(config_path: str | Path | None, target_ids: Sequence[str] = ()) -> 
                 package=target.package or "",
                 go_package_prefix=target.go_package_prefix or "",
                 proto_files=target.proto_files,
+                include=target.include,
+                exclude=target.exclude,
             )
             write_proto_files(output, files)
         elif target.kind in {"grpc-go", "grpc-python"}:

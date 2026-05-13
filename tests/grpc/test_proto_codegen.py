@@ -627,6 +627,25 @@ def test_grpc_proto_writer_renders_proto_name_and_optional_field_metadata():
     assert "  optional bool same_party = 2;" in request
 
 
+def test_grpc_proto_writer_applies_target_route_selection_rules():
+    bp = Blueprint(root="/api")
+    with bp.group("/public") as views:
+        views.GET("/ping").RSP(message=String(description="message"))
+    with bp.group("/private") as views:
+        views.GET("/ping").RSP(message=String(description="message"))
+
+    graph = build_contract_graph([bp])
+    files = render_proto_files(
+        graph,
+        package="example.api",
+        go_package_prefix="example.com/project/grpc/go",
+        exclude=("path:/api/private/**",),
+    )
+
+    assert list(files) == ["api/public.proto"]
+    assert "PublicService" in files["api/public.proto"]
+
+
 def test_grpc_proto_writer_rejects_duplicate_explicit_field_numbers():
     bp = Blueprint(root="/api")
     with bp.group("/demo") as views:
