@@ -4,6 +4,7 @@ package com.example.apiblueprint.api.runtime
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.json.Json
+import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody
 
 public data class ApiRequest<T>(
     public val method: String,
@@ -14,8 +15,7 @@ public data class ApiRequest<T>(
     public val jsonSerializer: SerializationStrategy<*>? = null,
     public val form: Any? = null,
     public val formSerializer: SerializationStrategy<*>? = null,
-    public val binary: Any? = null,
-    public val binarySerializer: SerializationStrategy<*>? = null,
+    public val binary: ApiBinaryBody? = null,
     public val responseSerializer: KSerializer<T>,
     public val responseMediaType: String = "application/json",
 )

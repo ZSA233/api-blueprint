@@ -195,6 +195,7 @@ content-encoding: identity,gzip
 | field | type | count | rule | comment |
 |---|---|---:|---|---|
 | magic | bytes | 4 | const="DEMO" | magic |
+| flags | DemoFlags | 1 | min=0 | flags |
 | item_num | u32 | 1 | min=1,max=8,sizeof=items | item count |
 
 ## body
@@ -210,6 +211,21 @@ content-encoding: identity,gzip
 | field | type | count | rule | comment |
 |---|---|---:|---|---|
 | value | u32 | 1 | max=100 | value |
+
+## enum DemoMode : u8
+
+| name | value | comment |
+|---|---:|---|
+| Normal | 0 | normal |
+| Fast | 1 | fast |
+
+## bitflags DemoFlags : u32
+
+| name | bits | rule | comment |
+|---|---:|---|---|
+| HasItems | 0 | | has items |
+| Mode | 1..2 | enum=DemoMode | mode |
+| Reserved | 3..31 | const=0 | reserved |
         """.strip(),
         source_path=tmp_path / "demo_packet.md",
     )
@@ -246,7 +262,17 @@ content-encoding: identity,gzip
     assert 'fmt.Sprintf("%s.' not in binary_parser
     assert "\n\n\n" not in binary_parser
     assert "if out.Magic != [4]byte{68, 69, 77, 79}" in binary_parser
-    assert "var fixed [8]byte" in binary_parser
+    assert "var fixed [12]byte" in binary_parser
+    assert "&4294967288 != 0" in binary_parser
+    assert "func (f DemoFlags) HasItems() bool" in binary_parser
+    assert "func (f DemoFlags) WithHasItems(enabled bool) DemoFlags" in binary_parser
+    assert "func (f DemoFlags) Mode() DemoMode" in binary_parser
+    assert "func (f DemoFlags) WithMode(value DemoMode) DemoFlags" in binary_parser
+    assert "DemoFlagsReservedMask DemoFlags = 4294967288" in binary_parser
+    assert "func (f DemoFlags) HasReservedBits() bool" in binary_parser
+    assert "func (f DemoFlags) Validate() error" in binary_parser
+    assert "ClearReservedBits" not in binary_parser
+    assert "DemoFlagsReserved   DemoFlags" not in binary_parser
     assert "func BytesOf" not in binary_parser
     assert "func BytesOf" in binary_runtime
     assert "binaryruntime.UnsafeString(sessionIDValue)" in binary_parser
@@ -276,9 +302,10 @@ import (
 	"testing"
 )
 
-func demoPacketForTest(magic string, itemNum uint32, sessionID string, values ...uint32) []byte {
+func demoPacketForTest(magic string, flags uint32, itemNum uint32, sessionID string, values ...uint32) []byte {
 	var buf bytes.Buffer
 	buf.WriteString(magic)
+	_ = stdbinary.Write(&buf, stdbinary.LittleEndian, flags)
 	_ = stdbinary.Write(&buf, stdbinary.LittleEndian, itemNum)
 	_ = stdbinary.Write(&buf, stdbinary.LittleEndian, uint32(len(sessionID)))
 	buf.WriteString(sessionID)
@@ -289,7 +316,7 @@ func demoPacketForTest(magic string, itemNum uint32, sessionID string, values ..
 }
 
 func TestParseDemoPacketGenerated(t *testing.T) {
-	parsed, err := ParseDemoPacket(bytes.NewReader(demoPacketForTest("DEMO", 2, "session-a", 7, 9)))
+	parsed, err := ParseDemoPacket(bytes.NewReader(demoPacketForTest("DEMO", 1, 2, "session-a", 7, 9)))
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
@@ -302,13 +329,16 @@ func TestParseDemoPacketGenerated(t *testing.T) {
 }
 
 func TestParseDemoPacketGeneratedErrors(t *testing.T) {
-	if _, err := ParseDemoPacket(bytes.NewReader(demoPacketForTest("BAD!", 1, "x", 1))); err == nil || !strings.Contains(err.Error(), "DemoPacket.header.magic: const mismatch") {
+	if _, err := ParseDemoPacket(bytes.NewReader(demoPacketForTest("BAD!", 1, 1, "x", 1))); err == nil || !strings.Contains(err.Error(), "DemoPacket.header.magic: const mismatch") {
 		t.Fatalf("expected magic error, got %v", err)
 	}
-	if _, err := ParseDemoPacket(bytes.NewReader(demoPacketForTest("DEMO", 9, "x", 1))); err == nil || !strings.Contains(err.Error(), "DemoPacket.header.item_num: exceeds max") {
+	if _, err := ParseDemoPacket(bytes.NewReader(demoPacketForTest("DEMO", 8, 1, "x", 1))); err == nil || !strings.Contains(err.Error(), "DemoPacket.header.flags: const mismatch") {
+		t.Fatalf("expected reserved flags error, got %v", err)
+	}
+	if _, err := ParseDemoPacket(bytes.NewReader(demoPacketForTest("DEMO", 1, 9, "x", 1))); err == nil || !strings.Contains(err.Error(), "DemoPacket.header.item_num: exceeds max") {
 		t.Fatalf("expected max error, got %v", err)
 	}
-	if _, err := ParseDemoPacket(bytes.NewReader(demoPacketForTest("DEMO", 1, "x", 101))); err == nil || !strings.Contains(err.Error(), "DemoPacket.body.items[0].value: exceeds max") {
+	if _, err := ParseDemoPacket(bytes.NewReader(demoPacketForTest("DEMO", 1, 1, "x", 101))); err == nil || !strings.Contains(err.Error(), "DemoPacket.body.items[0].value: exceeds max") {
 		t.Fatalf("expected nested max error, got %v", err)
 	}
 }

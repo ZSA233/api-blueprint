@@ -16,14 +16,25 @@ data class ApiToastPayload(
 )
 
 class ApiCodeError(
-    val entry: ApiErrorCatalogEntry,
-    val toast: ApiToastPayload = ApiToastPayload(
-        key = entry.toast.key,
-        level = entry.toast.level,
-        default = entry.toast.default,
-    ),
-) : RuntimeException(entry.message) {
-    val code: ApiErrorCode = entry.code
+    val code: ApiErrorCode,
+    val apiMessage: String? = null,
+    val toastPayload: Any? = null,
+    val rawBody: String? = null,
+    val entry: ApiErrorCatalogEntry? = null,
+) : RuntimeException(apiMessage ?: entry?.message ?: "API error $code") {
+    constructor(
+        entry: ApiErrorCatalogEntry,
+        toast: ApiToastPayload = ApiToastPayload(
+            key = entry.toast.key,
+            level = entry.toast.level,
+            default = entry.toast.default,
+        ),
+    ) : this(
+        code = entry.code,
+        apiMessage = entry.message,
+        toastPayload = toast,
+        entry = entry,
+    )
 }
 
 data class ApiErrorCatalogEntry(

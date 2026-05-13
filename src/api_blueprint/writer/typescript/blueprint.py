@@ -20,6 +20,7 @@ from api_blueprint.writer.core.contract_adapters import RouteProtocolContract, r
 from api_blueprint.writer.core.contracts import RouteContract
 from api_blueprint.writer.core.templates import render
 
+from .binary_schema import TypeScriptBinarySchema, unique_typescript_binary_schemas
 from .naming import to_camel
 from .protos import RUNTIME_MODULE, TypeScriptProto, TypeScriptProtoRegistry, TypeScriptResolvedType
 
@@ -82,7 +83,8 @@ class TypeScriptRoute:
         self.open_proto = self._ensure_model(self.protocol.request.open.model, "OPEN", "")
         self.form_proto = self._ensure_model(self.protocol.request.form.model, "REQ", "FORM")
         self.json_proto = self._ensure_model(self.protocol.request.json.model, "REQ", "JSON")
-        self.bin_proto = self.protocol.request.binary.model is not None
+        self.binary_schema = self.protocol.request.binary_schema
+        self.bin_proto = self.binary_schema is None and self.protocol.request.binary.model is not None
 
         self.response_media_type = self.protocol.response.media_type
         self.response_payload_proto = self._ensure_model(self.protocol.response.model.model, "RSP", "JSON")
@@ -105,7 +107,23 @@ class TypeScriptRoute:
 
     @property
     def has_body(self) -> bool:
-        return bool(self.json_proto or self.form_proto or self.bin_proto)
+        return bool(self.json_proto or self.form_proto or self.bin_proto or self.has_binary_schema)
+
+    @property
+    def has_binary_schema(self) -> bool:
+        return self.binary_schema is not None
+
+    @property
+    def binary_type_expr(self) -> str | None:
+        if self.binary_schema is None:
+            return None
+        return f"Binary.{self.binary_schema.name}"
+
+    @property
+    def binary_wire_expr(self) -> str | None:
+        if self.binary_schema is None:
+            return None
+        return f"Binary.{self.binary_schema.name}Wire"
 
     @property
     def query_type_expr(self) -> str | None:
@@ -351,6 +369,10 @@ class TypeScriptViewGroup:
             base += "Client"
         return base
 
+    def binary_schemas(self) -> list[TypeScriptBinarySchema]:
+        schemas = [route.binary_schema for route in self.routes if route.binary_schema is not None]
+        return unique_typescript_binary_schemas(schemas)
+
 
 @dataclass(frozen=True)
 class TypeScriptClientFactoryEntry:
@@ -511,6 +533,9 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                 path = self._relative_import_path(current_dir, module_dirs[dep_module] / "models.ts")
                 deps_map.setdefault(path, set()).add(dep.name)
         return [{"path": path, "names": sorted(names)} for path, names in sorted(deps_map.items(), key=lambda item: item[0])]
+
+    def has_binary_schemas(self) -> bool:
+        return any(group.binary_schemas() for group in self.groups.values())
 
     def render_reexport(self, current_dir: Path, target_file: Path) -> str:
         target = self._relative_import_path(current_dir, target_file)
@@ -687,6 +712,8 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                         {
                             "writer": self.writer,
                             "client_api_path": self._relative_import_path(transport_dir, module_dirs[SHARED_MODULE] / "client.ts"),
+                            "binary_runtime_path": self._relative_import_path(transport_dir, module_dirs[SHARED_MODULE] / "binary" / "index.ts"),
+                            "has_binary_schemas": self.has_binary_schemas(),
                         },
                     )
                 )
@@ -845,6 +872,8 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                         {
                             "writer": self.writer,
                             "client_api_path": self._relative_import_path(http_dir, module_dirs[SHARED_MODULE] / "client.ts"),
+                            "binary_runtime_path": self._relative_import_path(http_dir, module_dirs[SHARED_MODULE] / "binary" / "index.ts"),
+                            "has_binary_schemas": self.has_binary_schemas(),
                         },
                     )
                 )
@@ -941,6 +970,19 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                 handle.write(render(self.writer.template_lang, "gen_error_catalog.ts", {"writer": self.writer, "bp": self}))
         self.write_errors_passthrough(shared_dir)
 
+        has_binary_schemas = self.has_binary_schemas()
+        binary_runtime_dir = shared_dir / "binary"
+        if has_binary_schemas:
+            binary_runtime_dir.mkdir(parents=True, exist_ok=True)
+            with self.writer.write_file(binary_runtime_dir / "gen_runtime.ts", overwrite=True) as handle:
+                if handle:
+                    handle.write(render(self.writer.template_lang, "binary_runtime.ts", {}, ""))
+            with self.writer.write_file(binary_runtime_dir / "index.ts", overwrite=False) as handle:
+                if handle:
+                    handle.write(self.render_passthrough("./gen_runtime"))
+        elif binary_runtime_dir.exists():
+            shutil.rmtree(binary_runtime_dir)
+
         for out_tmpl, tmpl in [
             ("gen_client.ts", "gen_shared_client.ts"),
             ("client.ts", "client.ts"),
@@ -951,6 +993,7 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                         "writer": self.writer,
                         "client_api_path": "./client",
                         "clients": self.factory_entries(module_dirs),
+                        "has_binary_schemas": has_binary_schemas,
                     }
                     handle.write(render(self.writer.template_lang, tmpl, context))
 
@@ -963,12 +1006,13 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                             tmpl,
                             {
                                 "client_class": None,
-                                "extra_exports": [
-                                    'export * from "./gen_client";',
-                                    'export * from "./errors";',
-                                ],
-                            },
-                        )
+                        "extra_exports": [
+                            'export * from "./gen_client";',
+                            'export * from "./errors";',
+                            *(['export * from "./binary";'] if has_binary_schemas else []),
+                        ],
+                    },
+                )
                     )
 
         for group in self.groups.values():
@@ -990,11 +1034,36 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                 "client_class": group.client_class,
                 "shared_models_path": self._relative_import_path(group_dir, shared_dir / "models.ts"),
                 "shared_client_path": self._relative_import_path(group_dir, shared_dir / "client.ts"),
+                "binary_runtime_path": self._relative_import_path(group_dir, binary_runtime_dir / "index.ts"),
+                "has_binary_schemas": bool(group.binary_schemas()),
             }
             for tmpl in ["gen_client.ts", "client.ts"]:
                 with self.writer.write_file(group_dir / tmpl, overwrite=tmpl.startswith("gen_")) as handle:
                     if handle:
                         handle.write(render(self.writer.template_lang, tmpl, client_context))
+
+            binary_schemas = group.binary_schemas()
+            binary_dir = group_dir / "binary"
+            if binary_schemas:
+                binary_dir.mkdir(parents=True, exist_ok=True)
+                with self.writer.write_file(binary_dir / "gen_binary.ts", overwrite=True) as handle:
+                    if handle:
+                        handle.write(
+                            render(
+                                self.writer.template_lang,
+                                "binary_schema.ts",
+                                {
+                                    "binary_schemas": binary_schemas,
+                                    "runtime_binary_path": self._relative_import_path(binary_dir, binary_runtime_dir / "index.ts"),
+                                },
+                                "",
+                            )
+                        )
+                with self.writer.write_file(binary_dir / "index.ts", overwrite=False) as handle:
+                    if handle:
+                        handle.write(self.render_passthrough("./gen_binary"))
+            elif binary_dir.exists():
+                shutil.rmtree(binary_dir)
 
             for tmpl in ["gen_index.ts", "index.ts"]:
                 with self.writer.write_file(group_dir / tmpl, overwrite=tmpl.startswith("gen_")) as handle:
@@ -1005,7 +1074,7 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                                 tmpl,
                                 {
                                     "client_class": group.client_class,
-                                    "extra_exports": [],
+                                    "extra_exports": ['export * as Binary from "./binary";'] if binary_schemas else [],
                                 },
                             )
                         )

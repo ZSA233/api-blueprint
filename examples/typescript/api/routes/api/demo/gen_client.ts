@@ -6,6 +6,7 @@ import type * as Models from "./models";
 import type * as Shared from "../../../runtime/models";
 import { ApiChannelBridge, ApiClientConfig, ApiSocketBridge, ApiStreamBridge, BaseClient } from "../../../runtime/client";
 
+
 export class DemoClient extends BaseClient {
   constructor(config: ApiClientConfig = {}) {
     super(config);
@@ -17,6 +18,7 @@ export class DemoClient extends BaseClient {
    * 这是abc的description
    * Tags: api
    */
+
   async abc(
     request: {
       query?: Models.ReqAbcQuery;
@@ -45,6 +47,7 @@ export class DemoClient extends BaseClient {
    * 这是post的description
    * Tags: api
    */
+
   async testPost(
     request: {
       json?: Models.ReqTestPostJson;
@@ -75,6 +78,7 @@ export class DemoClient extends BaseClient {
    * 这是put的description
    * Tags: api
    */
+
   async z1put(
     request: {
       query?: Models.ReqZ1putQuery;
@@ -107,6 +111,7 @@ export class DemoClient extends BaseClient {
    * 这是delete的description
    * Tags: api
    */
+
   async delete(
     request: {
       query?: Models.ReqDeleteQuery;
@@ -249,6 +254,7 @@ export class DemoClient extends BaseClient {
    * 这是一个description
    * Tags: api
    */
+
   async postDeprecated(
     request: {
       json?: Models.ReqPostDeprecatedJson;
@@ -279,6 +285,7 @@ export class DemoClient extends BaseClient {
    * 这是一个raw description
    * Tags: api
    */
+
   async raw(
     request: {
       headers?: Record<string, string>;
@@ -305,6 +312,7 @@ export class DemoClient extends BaseClient {
    * 这是一个raw description
    * Tags: api
    */
+
   async mapModel(
     request: {
       headers?: Record<string, string>;

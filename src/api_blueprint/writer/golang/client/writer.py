@@ -18,6 +18,8 @@ from api_blueprint.writer.core.files import ensure_filepath_open
 from api_blueprint.writer.core.planning import route_matches_rule
 from api_blueprint.writer.core.templates import render
 
+from .binary_schema import GoClientBinarySchema, unique_go_client_binary_schemas
+
 
 logger = logging.getLogger("GolangClientWriter")
 logger.setLevel(logging.INFO)
@@ -73,6 +75,15 @@ class GoClientRoute:
         wrapper = self.response.get("wrapper")
         return str(wrapper or "NoneWrapper")
 
+    @property
+    def binary_schema(self) -> Mapping[str, Any] | None:
+        schema = self.request.get("binary_schema")
+        return schema if isinstance(schema, Mapping) else None
+
+    @property
+    def has_binary_schema(self) -> bool:
+        return self.binary_schema is not None
+
 
 @dataclass
 class GoClientGroup:
@@ -80,6 +91,7 @@ class GoClientGroup:
     package: str
     client_class: str
     routes: list[GoClientRoute] = field(default_factory=list)
+    binary_schemas: list[GoClientBinarySchema] = field(default_factory=list)
 
 
 class GolangClientBlueprint(BaseBlueprint["GolangClientWriter"]):
@@ -117,7 +129,7 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
         type_names = _TypeNames(schemas)
         groups = _build_groups(routes, services)
 
-        self._write_runtime_files(schemas, type_names, errors)
+        self._write_runtime_files(schemas, type_names, errors, groups)
         for group in groups:
             self._write_group_files(group, schemas, type_names)
         self._write_http_files()
@@ -133,6 +145,7 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
         schemas: Mapping[str, JsonObject],
         type_names: "_TypeNames",
         errors: tuple[ErrorCatalogEntry, ...],
+        groups: tuple[GoClientGroup, ...],
     ) -> None:
         self._write_generated("runtime/gen_client.go", render("golang", "gen_client.go", {}, "client/runtime"))
         self._write_generated(
@@ -151,6 +164,10 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
                 {"lines": _runtime_model_lines(schemas, type_names)},
                 "client/runtime",
             ),
+        )
+        self._write_generated(
+            "runtime/binary/gen_runtime.go",
+            render("golang", "gen_runtime.go", {}, "client/runtime/binary"),
         )
 
     def _write_group_files(
@@ -185,15 +202,34 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
                     "connection_method_name": _connection_method_name,
                     "connection_transport_method": _connection_transport_method,
                     "group": group,
+                    "has_binary_schemas": any(route.has_binary_schema for route in group.routes),
                     "route_params": _route_params,
                     "route_response_type": _route_response_type,
                     "response_wrapper_name": _response_wrapper_name,
+                    "runtime_binary_import": self.runtime_binary_import,
                     "runtime_import": self.runtime_import,
                     "runtime_request_fields": _runtime_request_fields,
                 },
                 "client/routes",
             ),
         )
+        if group.binary_schemas:
+            self._write_generated(
+                route_dir / "binary" / "gen_binary.go",
+                render(
+                    "golang",
+                    "gen_binary.go",
+                    {
+                        "binary_schemas": group.binary_schemas,
+                        "runtime_binary_import": self.runtime_binary_import,
+                    },
+                    "client/routes/binary",
+                ),
+            )
+        else:
+            stale_binary_dir = self.working_dir / route_dir / "binary"
+            if stale_binary_dir.exists():
+                shutil.rmtree(stale_binary_dir)
         self._write_user_file(
             route_dir / "client.go",
             render("golang", "client.go", {"group": group}, "client/routes"),
@@ -207,7 +243,15 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
         )
         self._write_generated(
             "transports/http/gen_transport.go",
-            render("golang", "gen_transport.go", {"runtime_import": self.runtime_import}, "client/transports/http"),
+            render(
+                "golang",
+                "gen_transport.go",
+                {
+                    "runtime_binary_import": self.runtime_binary_import,
+                    "runtime_import": self.runtime_import,
+                },
+                "client/transports/http",
+            ),
         )
         self._write_user_file(
             "transports/http/client.go",
@@ -217,6 +261,10 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
     @property
     def runtime_import(self) -> str:
         return _join_import(self.module, "runtime")
+
+    @property
+    def runtime_binary_import(self) -> str:
+        return _join_import(self.module, "runtime", "binary")
 
     @contextmanager
     def write_file(self, filepath: str | Path, overwrite: bool = False) -> Generator[IO[str] | None, None, None]:
@@ -349,7 +397,7 @@ def _route_aliases(
         (f"REQ_{operation}_QUERY", route.request.get("query_model")),
         (f"REQ_{operation}_JSON", route.request.get("json_model")),
         (f"REQ_{operation}_FORM", route.request.get("form_model")),
-        (f"REQ_{operation}_BINARY", route.request.get("binary_model")),
+        (f"REQ_{operation}_BINARY", None if route.has_binary_schema else route.request.get("binary_model")),
         (f"OPEN_{operation}", route.connection.get("open_model")),
         (f"CLOSE_{operation}", route.connection.get("close_model")),
         (f"RSP_{operation}_BODY", route.response.get("model")),
@@ -439,7 +487,9 @@ def _route_params(route: GoClientRoute, *, include_open: bool) -> list[str]:
         params.append(f"jsonBody *REQ_{route.operation}_JSON")
     if isinstance(route.request.get("form_model"), str):
         params.append(f"formBody *REQ_{route.operation}_FORM")
-    if isinstance(route.request.get("binary_model"), str):
+    if route.has_binary_schema:
+        params.append("binaryBody runtimebinary.Body")
+    elif isinstance(route.request.get("binary_model"), str):
         params.append(f"binaryBody *REQ_{route.operation}_BINARY")
     if include_open and isinstance(route.connection.get("open_model"), str):
         params.append(f"openData *OPEN_{route.operation}")
@@ -454,7 +504,7 @@ def _runtime_request_fields(route: GoClientRoute) -> list[tuple[str, str]]:
         fields.append(("JSON", "jsonBody"))
     if isinstance(route.request.get("form_model"), str):
         fields.append(("Form", "formBody"))
-    if isinstance(route.request.get("binary_model"), str):
+    if route.has_binary_schema or isinstance(route.request.get("binary_model"), str):
         fields.append(("Binary", "binaryBody"))
     return fields
 
@@ -568,7 +618,12 @@ def _build_groups(routes: Sequence[JsonObject], services: Mapping[str, JsonObjec
                 client_class=f"{_go_exported(group_name)}Client",
             )
             groups[segments] = group
-        group.routes.append(GoClientRoute(route))
+        client_route = GoClientRoute(route)
+        group.routes.append(client_route)
+        if client_route.binary_schema is not None:
+            group.binary_schemas = unique_go_client_binary_schemas(
+                [schema.raw for schema in group.binary_schemas] + [client_route.binary_schema]
+            )
     return tuple(groups.values())
 
 

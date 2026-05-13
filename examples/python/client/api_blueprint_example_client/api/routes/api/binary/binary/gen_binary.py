@@ -1,0 +1,170 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from .....runtime.binary import (
+    ApiBinaryBody,
+    BinaryWriter,
+    EncodedBinaryBlock,
+    StreamingBinaryBody,
+    is_api_binary_body,
+    require_binary,
+    require_range,
+    require_size,
+)
+
+
+class DemoKind:
+    Metric = 1
+    Debug = 2
+
+
+class DemoFlags:
+    HasPayload = 1
+    HasScores = 2
+    FastPath = 4
+    Mode = 24
+    Reserved = 4294967264
+
+
+@dataclass
+class DemoPacket:
+    header: DemoPacketHeader
+    body: DemoPacketBody
+
+
+class DemoPacketWire:
+    CONTENT_TYPE = "application/octet-stream"
+
+    @staticmethod
+    def body(write, content_length: int | None = None) -> ApiBinaryBody:
+        return StreamingBinaryBody(
+            write=write,
+            content_length=content_length,
+            content_type="application/octet-stream",
+            endian='little',
+        )
+
+    @staticmethod
+    def to_binary_body(value: DemoPacket | ApiBinaryBody) -> ApiBinaryBody:
+        if is_api_binary_body(value):
+            return value
+        return DemoPacketWire.body(lambda writer: write_demopacket(value, writer))
+
+
+def write_demopacket(value: DemoPacket, writer: BinaryWriter) -> None:
+    state = {
+        "version": 0,
+        "kind": 0,
+        "flags": 0,
+        "short_code": 0,
+        "signed_delta": 0,
+        "item_count": 0,
+        "payload_len": 0,
+        "score_count": 0,
+        "checksum": 0,
+        "id": 0,
+        "label_len": 0,
+    }
+    write_demopacketheader(value.header, writer, state)
+    write_demopacketbody(value.body, writer, state)
+
+
+@dataclass
+class DemoPacketHeader:
+    flags: int
+    short_code: int
+    signed_delta: int
+    item_count: int
+    payload_len: int
+
+
+def write_demopacketheader(value: DemoPacketHeader, writer: BinaryWriter, state: dict[str, int]) -> None:
+    require_binary("DemoPacketHeader.magic", b'ABP1' == b'ABP1', "const mismatch")
+    require_size("DemoPacketHeader.magic", len(b'ABP1'), 4)
+    writer.write_bytes("DemoPacketHeader.magic", b'ABP1')
+    require_binary("DemoPacketHeader.version", int(1) == int(1), "const mismatch")
+    writer.write_u16("DemoPacketHeader.version", 1)
+    state["version"] = int(1)
+    require_binary("DemoPacketHeader.kind", int(1) == int(1), "const mismatch")
+    writer.write_u16("DemoPacketHeader.kind", 1)
+    state["kind"] = int(1)
+    require_range("DemoPacketHeader.flags", int(value.flags), 0, 2**63 - 1)
+    require_binary("DemoPacketHeader.flags", (int(value.flags) & 4294967264) == 0, "reserved bits must be zero")
+    writer.write_u32("DemoPacketHeader.flags", value.flags)
+    state["flags"] = int(value.flags)
+    writer.write_zeroes("DemoPacketHeader.header_pad", 1)
+    writer.write_zeroes("DemoPacketHeader.reserved0", 2)
+    require_range("DemoPacketHeader.short_code", int(value.short_code), 1, 2**63 - 1)
+    require_range("DemoPacketHeader.short_code", int(value.short_code), -(2**63), 16777215)
+    writer.write_u24("DemoPacketHeader.short_code", value.short_code)
+    state["short_code"] = int(value.short_code)
+    require_range("DemoPacketHeader.signed_delta", int(value.signed_delta), 0, 2**63 - 1)
+    require_range("DemoPacketHeader.signed_delta", int(value.signed_delta), -(2**63), 8388607)
+    writer.write_i24("DemoPacketHeader.signed_delta", value.signed_delta)
+    state["signed_delta"] = int(value.signed_delta)
+    require_range("DemoPacketHeader.item_count", int(value.item_count), 1, 2**63 - 1)
+    require_range("DemoPacketHeader.item_count", int(value.item_count), -(2**63), 8)
+    writer.write_u16("DemoPacketHeader.item_count", value.item_count)
+    state["item_count"] = int(value.item_count)
+    require_range("DemoPacketHeader.payload_len", int(value.payload_len), 0, 2**63 - 1)
+    require_range("DemoPacketHeader.payload_len", int(value.payload_len), -(2**63), 64)
+    writer.write_u32("DemoPacketHeader.payload_len", value.payload_len)
+    state["payload_len"] = int(value.payload_len)
+    require_binary("DemoPacketHeader.score_count", int(2) == int(2), "const mismatch")
+    require_range("DemoPacketHeader.score_count", int(2), -(2**63), 4)
+    writer.write_u16("DemoPacketHeader.score_count", 2)
+    state["score_count"] = int(2)
+
+
+@dataclass
+class DemoPacketBody:
+    items: list[DemoPacketItem]
+    payload: bytes
+    scores: list[float]
+    checksum: int
+
+
+def write_demopacketbody(value: DemoPacketBody, writer: BinaryWriter, state: dict[str, int]) -> None:
+    items_count = state.get("item_count", 0)
+    require_size("DemoPacketBody.items", len(value.items), items_count)
+    for item in value.items:
+        write_demopacketitem(item, writer, state)
+
+    payload_count = state.get("payload_len", 0)
+    require_size("DemoPacketBody.payload", len(value.payload), payload_count)
+    writer.write_bytes("DemoPacketBody.payload", value.payload)
+    scores_count = state.get("score_count", 0)
+    require_size("DemoPacketBody.scores", len(value.scores), scores_count)
+    for item in value.scores:
+        writer.write_f64("DemoPacketBody.scores", item)
+
+    require_binary("DemoPacketBody.checksum", int(value.checksum) == state.get("item_count", 0) + state.get("payload_len", 0), "assert mismatch")
+    writer.write_u32("DemoPacketBody.checksum", value.checksum)
+    state["checksum"] = int(value.checksum)
+
+
+@dataclass
+class DemoPacketItem:
+    id: int
+    enabled: bool
+    value: float
+    label_len: int
+    label: bytes
+
+
+def write_demopacketitem(value: DemoPacketItem, writer: BinaryWriter, state: dict[str, int]) -> None:
+    require_range("DemoPacketItem.id", int(value.id), 1, 2**63 - 1)
+    require_range("DemoPacketItem.id", int(value.id), -(2**63), 999)
+    writer.write_u32("DemoPacketItem.id", value.id)
+    state["id"] = int(value.id)
+    writer.write_bool("DemoPacketItem.enabled", value.enabled)
+    writer.write_f64("DemoPacketItem.value", value.value)
+    require_range("DemoPacketItem.label_len", int(value.label_len), 1, 2**63 - 1)
+    require_range("DemoPacketItem.label_len", int(value.label_len), -(2**63), 16)
+    require_size("DemoPacketItem.label_len.label", len(value.label), int(value.label_len))
+    writer.write_u8("DemoPacketItem.label_len", value.label_len)
+    state["label_len"] = int(value.label_len)
+    label_count = state.get("label_len", 0)
+    require_size("DemoPacketItem.label", len(value.label), label_count)
+    writer.write_bytes("DemoPacketItem.label", value.label)

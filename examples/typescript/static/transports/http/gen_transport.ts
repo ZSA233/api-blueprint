@@ -19,6 +19,7 @@ import type {
 } from "../../runtime/client";
 
 
+
 type RequestBody = RequestInit["body"];
 
 
@@ -314,6 +315,7 @@ export class DefaultTransport implements ApiTransport {
     query,
     json,
     form,
+
     body: rawBody,
     headers: extraHeaders,
     init,
@@ -334,6 +336,7 @@ export class DefaultTransport implements ApiTransport {
       headers["Content-Type"] = headers["Content-Type"] ?? "application/json";
     } else if (form !== undefined) {
       body = buildFormData(form);
+
     }
 
     const effectiveTimeoutMs = timeoutMs ?? this.timeoutMs;

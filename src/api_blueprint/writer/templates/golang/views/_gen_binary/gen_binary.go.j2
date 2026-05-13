@@ -56,6 +56,11 @@ type _binaryState struct {
 		return binaryruntime.WrapField({{ field.name | code_literal }}, binaryruntime.ErrAssertMismatch)
 	}
 {% endif %}
+{% if field.bitflags_zero_mask %}
+	if uint64(out.{{ field.go_name }})&{{ field.bitflags_zero_mask }} != 0 {
+		return binaryruntime.WrapField({{ field.name | code_literal }}, binaryruntime.ErrConstMismatch)
+	}
+{% endif %}
 {%- endmacro %}
 
 {% macro count_block(field) -%}
@@ -72,7 +77,17 @@ type _binaryState struct {
 {%- endmacro %}
 
 {% macro read_dynamic_field(field) -%}
-{% if field.is_bytes and field.fixed_bytes %}
+{% if field.is_padding %}
+{{ count_block(field) }}
+	if err := reader.Skip(int({{ field.count_var }})); err != nil {
+		return binaryruntime.WrapField({{ field.name | code_literal }}, binaryruntime.ReadFailed(err))
+	}
+{% elif field.is_reserved %}
+{{ count_block(field) }}
+	if err := reader.ReadZero(int({{ field.count_var }})); err != nil {
+		return binaryruntime.WrapField({{ field.name | code_literal }}, binaryruntime.ReadFailed(err))
+	}
+{% elif field.is_bytes and field.fixed_bytes %}
 	if err := reader.ReadFull(out.{{ field.go_name }}[:]); err != nil {
 		return binaryruntime.WrapField({{ field.name | code_literal }}, binaryruntime.ReadFailed(err))
 	}
@@ -106,7 +121,7 @@ type _binaryState struct {
 		if err != nil {
 			return binaryruntime.WrapIndex({{ field.name | code_literal }}, i, binaryruntime.ReadFailed(err))
 		}
-		out.{{ field.go_name }}[i] = {{ field.value_var }}
+		out.{{ field.go_name }}[i] = {{ field.scalar_assignment }}
 	}
 {% else %}
 	for i := range out.{{ field.go_name }} {
@@ -121,7 +136,7 @@ type _binaryState struct {
 	if err != nil {
 		return binaryruntime.WrapField({{ field.name | code_literal }}, binaryruntime.ReadFailed(err))
 	}
-	out.{{ field.go_name }} = {{ field.value_var }}
+	out.{{ field.go_name }} = {{ field.scalar_assignment }}
 {% if field.can_store_var %}
 	state.{{ field.go_name }} = uint64(out.{{ field.go_name }})
 {% endif %}
@@ -135,6 +150,57 @@ type _binaryState struct {
 {%- endmacro %}
 
 {% for schema in binary_schemas %}
+{% for value_set in schema.value_sets %}
+type {{ value_set.name }} {{ value_set.go_type }}
+
+const (
+{% for value in value_set.const_values %}
+	{{ value_set.value_name(value.name) }} {{ value_set.name }} = {{ value.value_literal }}
+{% endfor %}
+{% if value_set.reserved_zero_mask %}
+	{{ value_set.reserved_mask_name }} {{ value_set.name }} = {{ value_set.reserved_zero_mask }}
+{% endif %}
+)
+
+{% if value_set.has_helpers %}
+{% for value in value_set.single_bit_flags %}
+func (f {{ value_set.name }}) {{ value.go_name }}() bool {
+	return f&{{ value_set.value_name(value.name) }} != 0
+}
+
+func (f {{ value_set.name }}) With{{ value.go_name }}(enabled bool) {{ value_set.name }} {
+	if enabled {
+		return f | {{ value_set.value_name(value.name) }}
+	}
+	return f &^ {{ value_set.value_name(value.name) }}
+}
+
+{% endfor %}
+{% for value in value_set.enum_bitfields %}
+func (f {{ value_set.name }}) {{ value.go_name }}() {{ value.enum_name }} {
+	return {{ value.enum_name }}(({{ value_set.go_type }}(f) & {{ value_set.go_type }}({{ value_set.value_name(value.name) }})) >> {{ value.bit_start }})
+}
+
+func (f {{ value_set.name }}) With{{ value.go_name }}(value {{ value.enum_name }}) {{ value_set.name }} {
+	return (f &^ {{ value_set.value_name(value.name) }}) | ({{ value_set.name }}({{ value_set.go_type }}(value)<<{{ value.bit_start }}) & {{ value_set.value_name(value.name) }})
+}
+
+{% endfor %}
+{% if value_set.reserved_zero_mask %}
+func (f {{ value_set.name }}) HasReservedBits() bool {
+	return f&{{ value_set.reserved_mask_name }} != 0
+}
+
+func (f {{ value_set.name }}) Validate() error {
+	if f.HasReservedBits() {
+		return binaryruntime.WrapField({{ value_set.name | code_literal }}, binaryruntime.ErrConstMismatch)
+	}
+	return nil
+}
+
+{% endif %}
+{% endif %}
+{% endfor %}
 type {{ schema.name }} struct {
 {% for section in schema.sections %}
 	{{ schema.packet_field_name(section.name) }} {{ section.name }}
@@ -164,7 +230,7 @@ func (msg *{{ schema.name }}) DecodeBinary(r io.Reader) error {
 
 {% for object in schema.objects %}
 type {{ object.name }} struct {
-{% for field in object.fields %}
+{% for field in object.fields if not field.is_hidden %}
 	{{ field.go_name }} {{ field.go_type }}
 {% endfor %}
 }
@@ -181,10 +247,17 @@ func read{{ object.name }}(reader *binaryruntime.Reader, state *_binaryState, ou
 	}
 {% for fixed_field in object.fixed_prefix_fields %}
 	{{ fixed_field.assignment }}
+{% if fixed_field.field.is_reserved %}
+	if !binaryruntime.AllZero({{ fixed_field.fixed_source }}) {
+		return binaryruntime.WrapField({{ fixed_field.field.name | code_literal }}, binaryruntime.ErrConstMismatch)
+	}
+{% endif %}
 {% if fixed_field.field.can_store_var %}
 	state.{{ fixed_field.field.go_name }} = uint64(out.{{ fixed_field.field.go_name }})
 {% endif %}
+{% if not fixed_field.field.is_hidden %}
 {{ check_field(fixed_field.field) }}
+{% endif %}
 {% endfor %}
 {% endif %}
 {% for field in object.dynamic_fields %}

@@ -56,6 +56,38 @@ def test_kotlin_capability_accepts_connection_routes() -> None:
     assert capability_errors(graph, (target,)) == []
 
 
+@pytest.mark.parametrize(
+    ("kind", "target_kwargs"),
+    [
+        ("go-client", {"module": "example.com/client"}),
+        ("typescript-client", {}),
+        ("kotlin-client", {"package": "com.example"}),
+        ("python-client", {}),
+    ],
+)
+def test_client_capabilities_accept_binary_schema_rpc_routes(kind: str, target_kwargs: dict[str, object]) -> None:
+    class FakeGraph:
+        def to_manifest(self) -> dict[str, object]:
+            return {
+                "routes": [
+                    {
+                        "id": "api.binary.post.packet",
+                        "service_id": "api.binary",
+                        "kind": "rpc",
+                        "operation": "Packet",
+                        "methods": ["POST"],
+                        "url": "/api/binary/packet",
+                        "request": {"query_model": "Query", "binary_schema": {"name": "DemoPacket"}},
+                        "response": {"wrapper": "GeneralWrapper"},
+                    }
+                ]
+            }
+
+    target = ResolvedApiTargetConfig(id=kind, kind=kind, out_dir=None, **target_kwargs)
+
+    assert capability_errors(FakeGraph(), (target,)) == []
+
+
 def test_capability_validation_checks_only_declared_dimensions() -> None:
     bp = Blueprint(root="/api")
     with bp.group("/demo") as views:
@@ -108,3 +140,5 @@ def test_python_targets_are_real_generation_capabilities(kind: str) -> None:
 
     assert manifest[kind]["implemented"] is True
     assert manifest[kind]["routes"] == ["rpc", "legacy_ws", "stream", "channel"]
+    if kind == "python-client":
+        assert "binary-schema" in manifest[kind]["requests"]

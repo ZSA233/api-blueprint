@@ -7,10 +7,12 @@ from typing import Optional, Type, Union
 from api_blueprint.engine.model import FieldWrappedModel, Model, iter_field_model_type, unwrap_model_type
 from api_blueprint.engine.router import Router
 from api_blueprint.engine.wrapper import NoneWrapper, ResponseWrapper
+from api_blueprint.engine.runtime.wrappers import GeneralWrapper
 from api_blueprint.writer.core.base import BaseBlueprint
 from api_blueprint.engine.connection import MessageContract
 from api_blueprint.writer.core.contract_adapters import RouteProtocolContract, route_protocol_from_router
 
+from .binary_schema import KotlinBinarySchema, unique_kotlin_binary_schemas
 from .naming import to_kotlin_package_path, to_kotlin_package_suffix, to_kotlin_property_name, to_kotlin_type_name
 from .protos import KotlinProto, KotlinProtoRegistry, KotlinResolvedType
 from .selection import KotlinRouteSelection
@@ -43,12 +45,17 @@ class KotlinRoute:
         self.open_proto = self._ensure_model(self.protocol.request.open.model, "Open")
         self.form_proto = self._ensure_model(self.protocol.request.form.model, "Form")
         self.json_proto = self._ensure_model(self.protocol.request.json.model, "Json")
-        self.binary_proto = self._ensure_model(self.protocol.request.binary.model, "Binary")
+        self.binary_schema = self.protocol.request.binary_schema
+        self.binary_proto = None if self.binary_schema is not None else self._ensure_model(
+            self.protocol.request.binary.model, "Binary"
+        )
 
         self.response_media_type = self.protocol.response.media_type
         self.response_payload_proto = self._ensure_model(self.protocol.response.model.model, "Response")
+        self.response_payload_type = self._payload_response_type()
         self.wrapper_proto = self._register_wrapper(self.protocol.response.wrapper)
         self.response_type = self._response_type()
+        self.transport_response_type = self._transport_response_type()
         self.ws_recv_proto = self._ensure_message_contract(self.protocol.server_message, "WsRecv")
         self.ws_send_proto = self._ensure_message_contract(self.protocol.client_message, "WsSend")
         if self.supports_ws:
@@ -84,11 +91,21 @@ class KotlinRoute:
 
     @property
     def binary_type(self) -> str | None:
+        if self.binary_schema is not None:
+            return self.binary_schema.name
         return self.binary_proto.name if self.binary_proto else None
 
     @property
+    def has_binary_schema(self) -> bool:
+        return self.binary_schema is not None
+
+    @property
+    def unwrap_general_wrapper(self) -> bool:
+        return self.protocol.response.wrapper is GeneralWrapper
+
+    @property
     def response_serializer_expr(self) -> str:
-        return self.response_type.serializer_expr()
+        return self.transport_response_type.serializer_expr()
 
     @property
     def ws_recv_type(self) -> str:
@@ -182,7 +199,7 @@ class KotlinRoute:
             return None
         return self.registry.register_wrapper(wrapper_cls)
 
-    def _response_type(self) -> KotlinResolvedType:
+    def _payload_response_type(self) -> KotlinResolvedType:
         if self.response_media_type != "application/json":
             return KotlinResolvedType("String", serializer="String.serializer()")
         if self.response_payload_proto is None:
@@ -192,15 +209,27 @@ class KotlinRoute:
         payload_deps: set[KotlinProto] = {self.response_payload_proto}
         payload_serializer = self.response_payload_proto.serializer_expr()
 
+        return KotlinResolvedType(payload_name, payload_deps, serializer=payload_serializer)
+
+    def _response_type(self) -> KotlinResolvedType:
+        if self.wrapper_proto is not None and not self.unwrap_general_wrapper:
+            wrapper_name = self.wrapper_proto.name
+            return KotlinResolvedType(
+                f"{wrapper_name}<{self.response_payload_type.text}>",
+                set(self.response_payload_type.deps) | {self.wrapper_proto},
+                serializer=f"{wrapper_name}.serializer({self.response_payload_type.serializer_expr()})",
+            )
+        return self.response_payload_type
+
+    def _transport_response_type(self) -> KotlinResolvedType:
         if self.wrapper_proto is not None:
             wrapper_name = self.wrapper_proto.name
             return KotlinResolvedType(
-                f"{wrapper_name}<{payload_name}>",
-                payload_deps | {self.wrapper_proto},
-                serializer=f"{wrapper_name}.serializer({payload_serializer})",
+                f"{wrapper_name}<{self.response_payload_type.text}>",
+                set(self.response_payload_type.deps) | {self.wrapper_proto},
+                serializer=f"{wrapper_name}.serializer({self.response_payload_type.serializer_expr()})",
             )
-
-        return KotlinResolvedType(payload_name, payload_deps, serializer=payload_serializer)
+        return self.response_payload_type
 
 
 @dataclass
@@ -211,6 +240,10 @@ class KotlinApiGroup:
     package_path: str
     package_suffix: str
     routes: list[KotlinRoute] = field(default_factory=list)
+
+    def binary_schemas(self) -> list[KotlinBinarySchema]:
+        schemas = [route.binary_schema for route in self.routes if route.binary_schema is not None]
+        return unique_kotlin_binary_schemas(schemas)
 
 
 class KotlinBlueprint(BaseBlueprint["KotlinWriter"]):

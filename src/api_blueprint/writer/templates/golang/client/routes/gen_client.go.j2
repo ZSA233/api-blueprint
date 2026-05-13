@@ -5,6 +5,8 @@ package {{ group.package }}
 import (
 	"context"
 	runtime "{{ runtime_import }}"
+{% if has_binary_schemas %}	runtimebinary "{{ runtime_binary_import }}"
+{% endif %}
 )
 
 type Gen{{ group.client_class }} struct {

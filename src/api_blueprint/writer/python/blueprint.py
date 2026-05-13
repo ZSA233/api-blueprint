@@ -11,6 +11,7 @@ from api_blueprint.writer.core.base import BaseBlueprint
 from api_blueprint.writer.core.contract_adapters import RouteProtocolContract
 
 from .naming import to_path_segments, to_py_class_name, to_py_identifier
+from .binary_schema import PythonBinarySchema, unique_python_binary_schemas
 
 if TYPE_CHECKING:
     from .writer import PythonBaseWriter
@@ -20,6 +21,8 @@ if TYPE_CHECKING:
 class PythonRequestParam:
     name: str
     call_name: str
+    annotation: str = "dict[str, Any] | None"
+    default: str = "None"
 
 
 class PythonRoute:
@@ -31,6 +34,7 @@ class PythonRoute:
         self.url = self.contract.url
         self.http_methods = tuple(self.contract.http_methods or ("GET",))
         self.response_type = _model_name(protocol.response.model.model)
+        self.binary_schema = protocol.request.binary_schema
         self.params = self._request_params()
 
     @property
@@ -91,6 +95,22 @@ class PythonRoute:
         return repr(self.response_type)
 
     @property
+    def has_binary_schema(self) -> bool:
+        return self.binary_schema is not None
+
+    @property
+    def binary_type_name(self) -> str | None:
+        if self.binary_schema is None:
+            return None
+        return self.binary_schema.name
+
+    @property
+    def binary_wire_name(self) -> str | None:
+        if self.binary_schema is None:
+            return None
+        return f"{self.binary_schema.name}Wire"
+
+    @property
     def http_method_literal(self) -> str:
         return json.dumps(self.http_methods[0])
 
@@ -120,8 +140,10 @@ class PythonRoute:
             params.append(PythonRequestParam("json", "json"))
         if self.protocol.request.form.model is not None:
             params.append(PythonRequestParam("form", "form"))
-        if self.protocol.request.binary.model is not None:
-            params.append(PythonRequestParam("binary", "binary"))
+        if self.binary_schema is not None:
+            params.append(PythonRequestParam("binary", "binary", f"{self.binary_schema.name} | ApiBinaryBody", "..."))
+        elif self.protocol.request.binary.model is not None:
+            params.append(PythonRequestParam("binary", "binary", "bytes | None", "None"))
         if self.protocol.request.open.model is not None:
             params.append(PythonRequestParam("open_data", "open_data"))
         return params
@@ -143,6 +165,10 @@ class PythonRouteGroup:
     @property
     def runtime_import_prefix(self) -> str:
         return "." * (len(self.segments) + 2)
+
+    def binary_schemas(self) -> list[PythonBinarySchema]:
+        schemas = [route.binary_schema for route in self.routes if route.binary_schema is not None]
+        return unique_python_binary_schemas(schemas)
 
 
 class PythonBlueprint(BaseBlueprint["PythonBaseWriter"]):

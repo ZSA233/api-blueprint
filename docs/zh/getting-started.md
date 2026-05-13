@@ -105,6 +105,7 @@ api-gen generate -c examples/api-blueprint.toml --target wails.v3
 
 - 配置字段见 [配置说明](configuration.md)。
 - DSL 写法见 [Blueprint DSL](blueprint-dsl.md)。
+- 二进制请求体见 [Markdown Binary Schema](binary-schema.md)。
 - 生成目标差异见 [生成器说明](generators.md)。
 - Wails 接入见 [Wails 说明](wails.md)。
 - gRPC target 见 [gRPC 说明](grpc.md)。

@@ -14,6 +14,7 @@ from api_blueprint.writer.core.errors import ErrorCatalogEntry, ErrorCatalogGrou
 from api_blueprint.writer.core.files import ensure_filepath_open
 from api_blueprint.writer.core.templates import render
 
+from .binary_schema import compact_kotlin_binary_source
 from .blueprint import KotlinBlueprint
 from .naming import to_package_path
 from .planner import build_kotlin_blueprint_plan
@@ -138,6 +139,12 @@ class KotlinWriter(BaseWriter[KotlinBlueprint]):
                 if handle:
                     handle.write(render("kotlin", template_name, context, "runtime"))
 
+        plan.runtime.binary_runtime_file.parent.mkdir(parents=True, exist_ok=True)
+        with self.write_file(plan.runtime.binary_runtime_file, overwrite=True) as handle:
+            if handle:
+                handle.write(KOTLIN_GENERATED_HEADER)
+                handle.write(render("kotlin", "BinaryRuntime.kt", context, "runtime/binary"))
+
         for output_name, template_name in plan.http_transport.generated_files:
             with self.write_file(plan.http_transport.directory / output_name, overwrite=True) as handle:
                 if handle:
@@ -167,6 +174,23 @@ class KotlinWriter(BaseWriter[KotlinBlueprint]):
                     handle.write(KOTLIN_GENERATED_HEADER)
                     handle.write(render("kotlin", "ApiGroup.kt", {**context, "group": route_group.group}, "routes"))
 
+            binary_schemas = route_group.group.binary_schemas()
+            if binary_schemas:
+                route_group.binary_file.parent.mkdir(parents=True, exist_ok=True)
+                with self.write_file(route_group.binary_file, overwrite=True) as handle:
+                    if handle:
+                        handle.write(KOTLIN_GENERATED_HEADER)
+                        handle.write(
+                            compact_kotlin_binary_source(
+                                render(
+                                    "kotlin",
+                                    "GenBinary.kt",
+                                    {**context, "group": route_group.group, "binary_schemas": binary_schemas},
+                                    "routes/binary",
+                                )
+                            )
+                        )
+
             with self.write_file(route_group.facade_file, overwrite=False) as handle:
                 if handle:
                     handle.write(render("kotlin", "ApiGroupFacade.kt", {**context, "group": route_group.group}, "routes"))
@@ -192,6 +216,8 @@ class KotlinWriter(BaseWriter[KotlinBlueprint]):
             branch_only_dir = routes_dir / route_group.group.slug
             if branch_only_dir != route_group.directory and branch_only_dir.exists():
                 shutil.rmtree(branch_only_dir)
+            if not route_group.group.binary_schemas() and route_group.binary_file.parent.exists():
+                shutil.rmtree(route_group.binary_file.parent)
 
     def _is_stale_generated_runtime_client(self, path: Path) -> bool:
         if not path.exists():

@@ -51,6 +51,47 @@ func (reader *Reader) ReadBytes(n int) ([]byte, error) {
 	return buf, nil
 }
 
+func (reader *Reader) Skip(n int) error {
+	if n < 0 {
+		return errors.New("negative byte count")
+	}
+	var buf [8192]byte
+	remaining := n
+	for remaining > 0 {
+		chunk := remaining
+		if chunk > len(buf) {
+			chunk = len(buf)
+		}
+		if err := reader.ReadFull(buf[:chunk]); err != nil {
+			return err
+		}
+		remaining -= chunk
+	}
+	return nil
+}
+
+func (reader *Reader) ReadZero(n int) error {
+	if n < 0 {
+		return errors.New("negative byte count")
+	}
+	var buf [8192]byte
+	remaining := n
+	for remaining > 0 {
+		chunk := remaining
+		if chunk > len(buf) {
+			chunk = len(buf)
+		}
+		if err := reader.ReadFull(buf[:chunk]); err != nil {
+			return err
+		}
+		if !AllZero(buf[:chunk]) {
+			return ErrConstMismatch
+		}
+		remaining -= chunk
+	}
+	return nil
+}
+
 func (reader *Reader) ReadUint8() (uint8, error) {
 	if err := reader.ReadFull(reader.scratch[:1]); err != nil {
 		return 0, err
@@ -63,6 +104,13 @@ func (reader *Reader) ReadUint16() (uint16, error) {
 		return 0, err
 	}
 	return reader.Order.Uint16(reader.scratch[:2]), nil
+}
+
+func (reader *Reader) ReadUint24() (uint32, error) {
+	if err := reader.ReadFull(reader.scratch[:3]); err != nil {
+		return 0, err
+	}
+	return Uint24(reader.Order, reader.scratch[:3]), nil
 }
 
 func (reader *Reader) ReadUint32() (uint32, error) {
@@ -87,6 +135,17 @@ func (reader *Reader) ReadInt8() (int8, error) {
 func (reader *Reader) ReadInt16() (int16, error) {
 	value, err := reader.ReadUint16()
 	return int16(value), err
+}
+
+func (reader *Reader) ReadInt24() (int32, error) {
+	value, err := reader.ReadUint24()
+	if err != nil {
+		return 0, err
+	}
+	if value&0x800000 != 0 {
+		return int32(value | 0xFF000000), nil
+	}
+	return int32(value), nil
 }
 
 func (reader *Reader) ReadInt32() (int32, error) {
@@ -305,8 +364,32 @@ func Float32(order stdbinary.ByteOrder, value []byte) float32 {
 	return math.Float32frombits(order.Uint32(value))
 }
 
+func Uint24(order stdbinary.ByteOrder, value []byte) uint32 {
+	if order == stdbinary.LittleEndian {
+		return uint32(value[0]) | uint32(value[1])<<8 | uint32(value[2])<<16
+	}
+	return uint32(value[2]) | uint32(value[1])<<8 | uint32(value[0])<<16
+}
+
+func Int24(order stdbinary.ByteOrder, value []byte) int32 {
+	unsigned := Uint24(order, value)
+	if unsigned&0x800000 != 0 {
+		return int32(unsigned | 0xFF000000)
+	}
+	return int32(unsigned)
+}
+
 func Float64(order stdbinary.ByteOrder, value []byte) float64 {
 	return math.Float64frombits(order.Uint64(value))
+}
+
+func AllZero(value []byte) bool {
+	for _, item := range value {
+		if item != 0 {
+			return false
+		}
+	}
+	return true
 }
 
 func nativeByteOrder() stdbinary.ByteOrder {

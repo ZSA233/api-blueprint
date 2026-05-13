@@ -3,6 +3,13 @@ from __future__ import annotations
 from typing import Any
 
 from {{ group.runtime_import_prefix }}runtime.client import ApiChannelBridge, ApiClientTransport, ApiSocketBridge, ApiStreamBridge
+{% if group.binary_schemas() %}
+from {{ group.runtime_import_prefix }}runtime.binary import ApiBinaryBody
+from .binary.gen_binary import (
+{% for schema in group.binary_schemas() %}    {{ schema.py_type }},
+    {{ schema.py_type }}Wire,
+{% endfor %})
+{% endif %}
 
 
 class {{ group.client_class }}:
@@ -14,7 +21,7 @@ class {{ group.client_class }}:
 {% if route.params %}
     async def {{ route.method_name }}(
         self{% for param in route.params %},
-        {{ param.name }}: dict[str, Any] | None = None{% endfor %},
+        {{ param.name }}: {{ param.annotation }} = {{ param.default }}{% endfor %},
     ) -> Any:
 {% else %}
     async def {{ route.method_name }}(self) -> Any:
@@ -24,7 +31,7 @@ class {{ group.client_class }}:
             {{ route.http_method_literal | safe }},
             {{ route.url_literal | safe }},
 {% for param in route.params %}
-            {{ param.call_name }}={{ param.name }},
+            {{ param.call_name }}={% if param.call_name == "binary" and route.has_binary_schema %}{{ route.binary_wire_name }}.to_binary_body({{ param.name }}){% else %}{{ param.name }}{% endif %},
 {% endfor %}
             response_type=response_type,
         )

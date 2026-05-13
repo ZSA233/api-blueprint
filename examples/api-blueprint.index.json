@@ -319,21 +319,21 @@
       "kind": "go-client",
       "out_dir": "golang/client",
       "role": "client",
-      "route_count": 20
+      "route_count": 21
     },
     {
       "id": "typescript.client",
       "kind": "typescript-client",
       "out_dir": "typescript",
       "role": "client",
-      "route_count": 20
+      "route_count": 21
     },
     {
       "id": "kotlin.client",
       "kind": "kotlin-client",
       "out_dir": "kotlin",
       "role": "client",
-      "route_count": 13
+      "route_count": 14
     },
     {
       "id": "python.server",
@@ -347,7 +347,7 @@
       "kind": "python-client",
       "out_dir": "python/client",
       "role": "client",
-      "route_count": 20
+      "route_count": 21
     },
     {
       "id": "http",

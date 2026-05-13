@@ -11,6 +11,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import okio.BufferedSink
 import java.net.URLEncoder
 
 public class OkHttpApiTransport(
@@ -65,9 +66,14 @@ public class OkHttpApiTransport(
             return encodePayload(form, formSerializer).toRequestBody("application/json; charset=utf-8".toMediaType())
         }
         if (binary != null) {
-            return when (binary) {
-                is ByteArray -> binary.toRequestBody("application/octet-stream".toMediaType())
-                else -> encodePayload(binary, binarySerializer).toRequestBody("application/json; charset=utf-8".toMediaType())
+            return object : RequestBody() {
+                override fun contentType() = binary.contentType.toMediaType()
+
+                override fun contentLength(): Long = binary.contentLength ?: -1L
+
+                override fun writeTo(sink: BufferedSink) {
+                    binary.writeTo(sink)
+                }
             }
         }
         return null

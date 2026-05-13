@@ -10,6 +10,7 @@ import httpx
 
 from api_blueprint.contract import build_contract_graph
 from api_blueprint.engine import Blueprint, Error, Toast
+from api_blueprint.engine.binary_schema import parse_binary_schema
 from api_blueprint.engine.model import Model, String
 from api_blueprint.writer.python import PythonClientWriter, PythonServerWriter
 
@@ -481,4 +482,85 @@ def test_python_client_generates_connection_bridge_methods(tmp_path: Path):
     assert "return self._transport.open_channel(" in route_text
     assert "raise NotImplementedError" in transport_text
     assert "default httpx adapter" in transport_text
+    _compile_generated_files(output_dir)
+
+
+def test_python_client_generates_binary_body_union_runtime_and_transport(tmp_path: Path):
+    schema = parse_binary_schema(
+        """
+# packet DemoPacket
+
+endian: little
+
+## header
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| kind | DemoKind | 1 | const=1 | kind |
+| flags | DemoFlags | 1 | min=0 | flags |
+| pad0 | padding | 1 | | pad |
+| code | u24 | 1 | min=1,max=16777215 | code |
+| delta | i24 | 1 | min=-8,max=8 | delta |
+| payload_len | u16 | 1 | max=16,sizeof=payload | payload length |
+
+## body
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| payload | bytes | payload_len | | payload |
+
+## enum DemoKind : u16
+
+| name | value | comment |
+|---|---:|---|
+| Metric | 1 | metric |
+
+## bitflags DemoFlags : u32
+
+| name | bits | rule | comment |
+|---|---:|---|---|
+| HasPayload | 0 | | payload |
+| Reserved | 1..31 | const=0 | reserved |
+""".strip(),
+        source_path="demo_packet.md",
+    )
+    bp = Blueprint(root="/api")
+    with bp.group("/binary") as views:
+        views.POST("/packet").REQ_BINARY(schema).RSP(Result)
+
+    output_dir = tmp_path / "python"
+    writer = PythonClientWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    route_text = (
+        output_dir / "api_blueprint_generated" / "api" / "routes" / "api" / "binary" / "gen_client.py"
+    ).read_text(encoding="utf-8")
+    schema_text = (
+        output_dir
+        / "api_blueprint_generated"
+        / "api"
+        / "routes"
+        / "api"
+        / "binary"
+        / "binary"
+        / "gen_binary.py"
+    ).read_text(encoding="utf-8")
+    runtime_text = (
+        output_dir / "api_blueprint_generated" / "api" / "runtime" / "binary" / "gen_runtime.py"
+    ).read_text(encoding="utf-8")
+    transport_text = (
+        output_dir / "api_blueprint_generated" / "api" / "transports" / "http" / "gen_client.py"
+    ).read_text(encoding="utf-8")
+
+    assert "binary: DemoPacket | ApiBinaryBody" in route_text
+    assert "binary=DemoPacketWire.to_binary_body(binary)" in route_text
+    assert "class DemoKind:" in schema_text
+    assert "class DemoFlags:" in schema_text
+    assert "reserved bits must be zero" in schema_text
+    assert "writer.write_u24" in schema_text
+    assert "writer.write_i24" in schema_text
+    assert "writer.write_zeroes" in schema_text
+    assert "class RawBinaryBody" in runtime_text
+    assert "binary.to_bytes()" in transport_text
     _compile_generated_files(output_dir)

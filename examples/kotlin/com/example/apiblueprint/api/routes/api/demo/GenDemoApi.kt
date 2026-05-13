@@ -2,6 +2,7 @@
 package com.example.apiblueprint.api.routes.api.demo
 
 import com.example.apiblueprint.api.runtime.*
+
 import kotlinx.serialization.builtins.*
 
 public open class GenDemoApi internal constructor(
@@ -11,8 +12,8 @@ public open class GenDemoApi internal constructor(
     public open suspend fun abc(
         query: DemoAbcQuery,
         headers: Map<String, String> = emptyMap(),
-    ): GeneralResponse<ApiDemoA> {
-        return transport.request(
+    ): ApiDemoA {
+        val envelope = transport.request(
             ApiRequest(
                 method = "GET",
                 path = "/api/demo/abc",
@@ -22,13 +23,17 @@ public open class GenDemoApi internal constructor(
                 responseMediaType = "application/json",
             )
         )
+        if (envelope.code != 0) {
+            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
+        }
+        return envelope.data ?: throw ApiException(200, "Missing response data for /api/demo/abc")
     }
 
     public open suspend fun testPost(
         json: DemoTestPostJson,
         headers: Map<String, String> = emptyMap(),
-    ): GeneralResponse<DemoTestPostResponse> {
-        return transport.request(
+    ): DemoTestPostResponse {
+        val envelope = transport.request(
             ApiRequest(
                 method = "POST",
                 path = "/api/demo/test_post",
@@ -39,14 +44,18 @@ public open class GenDemoApi internal constructor(
                 responseMediaType = "application/json",
             )
         )
+        if (envelope.code != 0) {
+            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
+        }
+        return envelope.data ?: throw ApiException(200, "Missing response data for /api/demo/test_post")
     }
 
     public open suspend fun z1put(
         query: DemoZ1putQuery,
         json: DemoZ1putJson,
         headers: Map<String, String> = emptyMap(),
-    ): GeneralResponse<DemoZ1putResponse> {
-        return transport.request(
+    ): DemoZ1putResponse {
+        val envelope = transport.request(
             ApiRequest(
                 method = "PUT",
                 path = "/api/demo/1put",
@@ -58,13 +67,17 @@ public open class GenDemoApi internal constructor(
                 responseMediaType = "application/json",
             )
         )
+        if (envelope.code != 0) {
+            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
+        }
+        return envelope.data ?: throw ApiException(200, "Missing response data for /api/demo/1put")
     }
 
     public open suspend fun postDeprecated(
         json: DemoPostDeprecatedJson,
         headers: Map<String, String> = emptyMap(),
-    ): GeneralResponse<DemoPostDeprecatedResponse> {
-        return transport.request(
+    ): DemoPostDeprecatedResponse {
+        val envelope = transport.request(
             ApiRequest(
                 method = "POST",
                 path = "/api/demo/post_deprecated",
@@ -75,12 +88,16 @@ public open class GenDemoApi internal constructor(
                 responseMediaType = "application/json",
             )
         )
+        if (envelope.code != 0) {
+            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
+        }
+        return envelope.data ?: throw ApiException(200, "Missing response data for /api/demo/post_deprecated")
     }
 
     public open suspend fun raw(
         headers: Map<String, String> = emptyMap(),
-    ): GeneralResponse<DemoRawResponse> {
-        return transport.request(
+    ): DemoRawResponse {
+        val envelope = transport.request(
             ApiRequest(
                 method = "POST",
                 path = "/api/demo/raw",
@@ -89,12 +106,16 @@ public open class GenDemoApi internal constructor(
                 responseMediaType = "application/json",
             )
         )
+        if (envelope.code != 0) {
+            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
+        }
+        return envelope.data ?: throw ApiException(200, "Missing response data for /api/demo/raw")
     }
 
     public open suspend fun mapModel(
         headers: Map<String, String> = emptyMap(),
-    ): GeneralResponse<DemoMapModelResponse> {
-        return transport.request(
+    ): DemoMapModelResponse {
+        val envelope = transport.request(
             ApiRequest(
                 method = "POST",
                 path = "/api/demo/map_model",
@@ -103,6 +124,10 @@ public open class GenDemoApi internal constructor(
                 responseMediaType = "application/json",
             )
         )
+        if (envelope.code != 0) {
+            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
+        }
+        return envelope.data ?: throw ApiException(200, "Missing response data for /api/demo/map_model")
     }
 
     private fun DemoAbcQuery.toQueryMap(): Map<String, String?> = mapOf(

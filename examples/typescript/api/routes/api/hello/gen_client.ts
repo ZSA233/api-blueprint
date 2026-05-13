@@ -6,6 +6,7 @@ import type * as Models from "./models";
 import type * as Shared from "../../../runtime/models";
 import { ApiChannelBridge, ApiClientConfig, ApiSocketBridge, ApiStreamBridge, BaseClient } from "../../../runtime/client";
 
+
 export class HelloClient extends BaseClient {
   constructor(config: ApiClientConfig = {}) {
     super(config);
@@ -17,6 +18,7 @@ export class HelloClient extends BaseClient {
    * 这是abc的description
    * Tags: api
    */
+
   async abc(
     request: {
       query?: Models.ReqAbcQuery;
@@ -45,6 +47,7 @@ export class HelloClient extends BaseClient {
    * map-enum
    * Tags: api
    */
+
   async mapEnum(
     request: {
       headers?: Record<string, string>;
@@ -71,6 +74,7 @@ export class HelloClient extends BaseClient {
    * list-enum
    * Tags: api
    */
+
   async listEnum(
     request: {
       headers?: Record<string, string>;
@@ -97,6 +101,7 @@ export class HelloClient extends BaseClient {
    * string
    * Tags: api
    */
+
   async string(
     request: {
       headers?: Record<string, string>;
@@ -123,6 +128,7 @@ export class HelloClient extends BaseClient {
    * uint64
    * Tags: api
    */
+
   async uint64(
     request: {
       headers?: Record<string, string>;
@@ -149,6 +155,7 @@ export class HelloClient extends BaseClient {
    * string-enum
    * Tags: api
    */
+
   async stringEmun(
     request: {
       headers?: Record<string, string>;
@@ -175,6 +182,7 @@ export class HelloClient extends BaseClient {
    * hello-way
    * Tags: api
    */
+
   async helloWay(
     request: {
       query?: Models.ReqHelloWayQuery;

@@ -355,7 +355,11 @@ class KotlinProtoRegistry:
             is_generic = type(model_field) is Field
             if is_generic:
                 resolved = KotlinResolvedType("T")
-                optional = False
+                if wrapper_cls is GeneralWrapper and serial_name == "data":
+                    resolved = KotlinResolvedType("T?")
+                    optional = True
+                else:
+                    optional = False
             else:
                 resolved = self._resolver.resolve(model_field, module=proto.module)
                 if optional and not resolved.text.endswith("?"):

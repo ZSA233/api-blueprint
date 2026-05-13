@@ -18,6 +18,9 @@ import type {
   StreamConnectOptions,
 } from "../../runtime/client";
 
+import { binaryBodyToUint8Array } from "../../runtime/binary/index";
+
+
 
 type RequestBody = RequestInit["body"];
 
@@ -314,6 +317,8 @@ export class DefaultTransport implements ApiTransport {
     query,
     json,
     form,
+    binary,
+
     body: rawBody,
     headers: extraHeaders,
     init,
@@ -334,6 +339,10 @@ export class DefaultTransport implements ApiTransport {
       headers["Content-Type"] = headers["Content-Type"] ?? "application/json";
     } else if (form !== undefined) {
       body = buildFormData(form);
+    } else if (binary !== undefined) {
+      body = binaryBodyToUint8Array(binary) as RequestBody;
+      headers["Content-Type"] = headers["Content-Type"] ?? binary.contentType;
+
     }
 
     const effectiveTimeoutMs = timeoutMs ?? this.timeoutMs;

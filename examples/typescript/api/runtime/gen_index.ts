@@ -4,4 +4,5 @@
 export * from "./models";
 export * from "./gen_client";
 export * from "./errors";
+export * from "./binary";
 

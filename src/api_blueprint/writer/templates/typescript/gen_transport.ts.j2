@@ -17,6 +17,9 @@ import type {
   SocketConnectOptions,
   StreamConnectOptions,
 } from "{{ client_api_path or './client' }}";
+{% if has_binary_schemas %}
+import { binaryBodyToUint8Array } from "{{ binary_runtime_path }}";
+{% endif %}
 {% if writer.transport_kind == "wails-v3" %}
 import { WAILS_V3_BINDINGS } from "./gen_bindings";
 {% endif %}
@@ -316,6 +319,8 @@ export class {{ writer.transport_class_name }} implements ApiTransport {
     query,
     json,
     form,
+{% if has_binary_schemas %}    binary,
+{% endif %}
     body: rawBody,
     headers: extraHeaders,
     init,
@@ -336,6 +341,10 @@ export class {{ writer.transport_class_name }} implements ApiTransport {
       headers["Content-Type"] = headers["Content-Type"] ?? "application/json";
     } else if (form !== undefined) {
       body = buildFormData(form);
+{% if has_binary_schemas %}    } else if (binary !== undefined) {
+      body = binaryBodyToUint8Array(binary) as RequestBody;
+      headers["Content-Type"] = headers["Content-Type"] ?? binary.contentType;
+{% endif %}
     }
 
     const effectiveTimeoutMs = timeoutMs ?? this.timeoutMs;

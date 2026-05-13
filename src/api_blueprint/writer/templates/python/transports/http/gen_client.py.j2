@@ -5,6 +5,7 @@ from typing import Any, Mapping
 import httpx
 
 from ...runtime.client import ApiChannelBridge, ApiClientTransport, ApiSocketBridge, ApiStreamBridge
+from ...runtime.binary import ApiBinaryBody, is_api_binary_body
 
 
 class HttpClientTransport(ApiClientTransport):
@@ -30,7 +31,7 @@ class HttpClientTransport(ApiClientTransport):
         query: Mapping[str, Any] | None = None,
         json: Any = None,
         form: Mapping[str, Any] | None = None,
-        binary: bytes | None = None,
+        binary: bytes | ApiBinaryBody | None = None,
         open_data: Mapping[str, Any] | None = None,
         response_type: str | None = None,
     ) -> Any:
@@ -42,7 +43,10 @@ class HttpClientTransport(ApiClientTransport):
         elif form is not None:
             request_kwargs["data"] = form
         elif binary is not None:
-            request_kwargs["content"] = binary
+            request_kwargs["content"] = binary.to_bytes() if is_api_binary_body(binary) else binary
+            request_kwargs.setdefault("headers", {})["content-type"] = (
+                binary.content_type if is_api_binary_body(binary) else "application/octet-stream"
+            )
         elif open_data is not None:
             request_kwargs["json"] = open_data
 

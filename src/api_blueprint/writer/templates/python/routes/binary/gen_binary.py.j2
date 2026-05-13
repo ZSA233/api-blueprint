@@ -1,0 +1,145 @@
+{% autoescape false %}from __future__ import annotations
+
+from dataclasses import dataclass
+
+from {{ runtime_import_prefix }}runtime.binary import (
+    ApiBinaryBody,
+    BinaryWriter,
+    EncodedBinaryBlock,
+    StreamingBinaryBody,
+    is_api_binary_body,
+    require_binary,
+    require_range,
+    require_size,
+)
+
+
+{% macro check_field(field, receiver, number_expr, path) -%}
+{% if field.rule.get("const") %}
+{% if field.is_bytes or field.is_string or field.wire_type == "bool" %}
+    require_binary({{ path | code_literal }}, {{ receiver }} == {{ field.const_expr }}, "const mismatch")
+{% else %}
+    require_binary({{ path | code_literal }}, int({{ receiver }}) == int({{ field.const_expr }}), "const mismatch")
+{% endif %}
+{% endif %}
+{% if field.rule.get("min") and field.is_integer_scalar %}
+    require_range({{ path | code_literal }}, int({{ receiver }}), {{ field.min_expr }}, 2**63 - 1)
+{% endif %}
+{% if field.rule.get("max") and field.is_integer_scalar %}
+    require_range({{ path | code_literal }}, int({{ receiver }}), -(2**63), {{ field.max_expr }})
+{% endif %}
+{% if field.rule.get("assert") and field.is_integer_scalar %}
+    require_binary({{ path | code_literal }}, int({{ receiver }}) == {{ field.assert_expr }}, "assert mismatch")
+{% endif %}
+{% if field.bitflags_zero_mask %}
+    require_binary({{ path | code_literal }}, (int({{ receiver }}) & {{ field.bitflags_zero_mask }}) == 0, "reserved bits must be zero")
+{% endif %}
+{%- endmacro %}
+
+{% macro write_field(field, object) -%}
+{% set path = object.name ~ "." ~ field.name %}
+{% if field.is_hidden %}
+    writer.write_zeroes({{ path | code_literal }}, {{ field.count_expr }})
+{% elif field.is_bytes %}
+{% if field.rule.get("const") %}
+{{ check_field(field, field.value_expr, field.value_expr, path) }}
+    require_size({{ path | code_literal }}, len({{ field.value_expr }}), {{ field.count_expr }})
+    writer.write_bytes({{ path | code_literal }}, {{ field.value_expr }})
+{% else %}
+    {{ field.py_name }}_count = {{ field.count_expr }}
+{% if field.rule.get("max") %}
+    require_range({{ path | code_literal }}, {{ field.py_name }}_count, 0, {{ field.max_expr }})
+{% endif %}
+    require_size({{ path | code_literal }}, len({{ field.value_expr }}), {{ field.py_name }}_count)
+    writer.write_bytes({{ path | code_literal }}, {{ field.value_expr }})
+{% endif %}
+{% elif field.is_string %}
+    {{ field.py_name }}_count = {{ field.count_expr }}
+{% if field.rule.get("max") %}
+    require_range({{ path | code_literal }}, {{ field.py_name }}_count, 0, {{ field.max_expr }})
+{% endif %}
+    require_size({{ path | code_literal }}, len({{ field.value_expr }}.encode("utf-8")), {{ field.py_name }}_count)
+    writer.write_string({{ path | code_literal }}, {{ field.value_expr }})
+{% elif field.is_array %}
+    {{ field.py_name }}_count = {{ field.count_expr }}
+{% if field.rule.get("max") %}
+    require_range({{ path | code_literal }}, {{ field.py_name }}_count, 0, {{ field.max_expr }})
+{% endif %}
+    require_size({{ path | code_literal }}, len({{ field.value_expr }}), {{ field.py_name }}_count)
+    for item in {{ field.value_expr }}:
+{% if field.is_scalar %}
+        writer.{{ field.write_method }}({{ path | code_literal }}, item)
+{% else %}
+        write_{{ field.typ | lower }}(item, writer, state)
+{% endif %}
+{% elif field.is_scalar %}
+{{ check_field(field, field.value_expr, field.value_expr, path) }}
+{% if field.sizeof_name and object.has_public_field(field.sizeof_name) %}
+    require_size({{ (path ~ "." ~ field.sizeof_name) | code_literal }}, len(value.{{ field.sizeof_py_name }}), int({{ field.value_expr }}))
+{% endif %}
+    writer.{{ field.write_method }}({{ path | code_literal }}, {{ field.value_expr }})
+{% if field.is_integer_scalar %}
+    state[{{ field.py_name | code_literal }}] = int({{ field.value_expr }})
+{% endif %}
+{% else %}
+    write_{{ field.typ | lower }}({{ field.value_expr }}, writer, state)
+{% endif %}
+{%- endmacro %}
+
+{% for schema in binary_schemas %}
+{% for value_set in schema.value_sets %}
+class {{ value_set.py_type }}:
+{% for value in value_set.values %}    {{ value_set.value_name(value.name) }} = {{ value.value }}
+{% endfor %}
+
+{% endfor %}
+@dataclass
+class {{ schema.py_type }}:
+{% for section in schema.sections %}    {{ schema.packet_field_name(section.name) }}: {{ section.py_type }}
+{% endfor %}
+
+
+class {{ schema.py_type }}Wire:
+    CONTENT_TYPE = {{ schema.content_type | code_literal }}
+
+    @staticmethod
+    def body(write, content_length: int | None = None) -> ApiBinaryBody:
+        return StreamingBinaryBody(
+            write=write,
+            content_length=content_length,
+            content_type={{ schema.content_type | code_literal }},
+            endian={{ schema.endian }},
+        )
+
+    @staticmethod
+    def to_binary_body(value: {{ schema.py_type }} | ApiBinaryBody) -> ApiBinaryBody:
+        if is_api_binary_body(value):
+            return value
+        return {{ schema.py_type }}Wire.body(lambda writer: write_{{ schema.name | lower }}(value, writer))
+
+
+def write_{{ schema.name | lower }}(value: {{ schema.py_type }}, writer: BinaryWriter) -> None:
+    state = {
+{% for field_name in schema.state_fields %}        {{ field_name | code_literal }}: 0,
+{% endfor %}    }
+{% for section in schema.sections %}    write_{{ section.name | lower }}(value.{{ schema.packet_field_name(section.name) }}, writer, state)
+{% endfor %}
+
+
+{% for object in schema.objects %}
+@dataclass
+class {{ object.py_type }}:
+{% if object.data_fields %}
+{% for field in object.data_fields %}    {{ field.py_name }}: {{ field.py_type }}
+{% endfor %}
+{% else %}    pass
+{% endif %}
+
+
+def write_{{ object.name | lower }}(value: {{ object.py_type }}, writer: BinaryWriter, state: dict[str, int]) -> None:
+{% for field in object.fields %}{{ write_field(field, object) }}
+{% endfor %}
+
+{% endfor %}
+{% endfor %}
+{% endautoescape %}

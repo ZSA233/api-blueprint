@@ -1,0 +1,296 @@
+{% autoescape false %}package {{ bp.root_package }}.routes.{{ group.package_suffix }}.binary
+
+import {{ bp.root_package }}.runtime.binary.ApiBinaryBody
+import {{ bp.root_package }}.runtime.binary.BinaryEndian
+import {{ bp.root_package }}.runtime.binary.BinaryWriter
+import {{ bp.root_package }}.runtime.binary.EncodedBinaryBlock
+import {{ bp.root_package }}.runtime.binary.StreamingBinaryBody
+import {{ bp.root_package }}.runtime.binary.binarySize
+import {{ bp.root_package }}.runtime.binary.requireBinary
+import {{ bp.root_package }}.runtime.binary.requireRange
+import {{ bp.root_package }}.runtime.binary.requireSize
+import okio.ByteString
+
+{% macro check_expr(field, receiver, long_expr, path) -%}
+{% if field.const_value %}
+{% if field.is_bytes %}
+    requireBinary({{ path | code_literal }}, {{ receiver }}.contentEquals({{ field.default_expr }}), "const mismatch")
+{% elif field.is_string %}
+    requireBinary({{ path | code_literal }}, {{ receiver }} == {{ field.default_expr }}, "const mismatch")
+{% elif field.typ == "bool" %}
+    requireBinary({{ path | code_literal }}, {{ receiver }} == {{ field.default_expr }}, "const mismatch")
+{% else %}
+    requireBinary({{ path | code_literal }}, {{ long_expr }} == {{ field.const_long_expr }}, "const mismatch")
+{% endif %}
+{% endif %}
+{% if field.min_value and field.supports_numeric_rules %}
+    requireRange({{ path | code_literal }}, {{ long_expr }}, {{ field.min_expr }}, Long.MAX_VALUE)
+{% endif %}
+{% if field.max_value and field.supports_numeric_rules %}
+    requireRange({{ path | code_literal }}, {{ long_expr }}, Long.MIN_VALUE, {{ field.max_expr }})
+{% endif %}
+{% if field.assert_value and field.supports_numeric_rules %}
+    requireBinary({{ path | code_literal }}, {{ long_expr }} == {{ field.assert_expr }}, "assert mismatch")
+{% endif %}
+{% if field.bitflags_zero_mask %}
+    requireBinary({{ path | code_literal }}, (({{ long_expr }}) and {{ field.bitflags_zero_mask }}L) == 0L, "reserved bits must be zero")
+{% endif %}
+{%- endmacro %}
+
+{% macro write_field(field, object) -%}
+{% set object_name = object.name %}
+{% set path = object_name ~ "." ~ field.name %}
+{% if field.is_hidden %}
+    writer.writeZeroes({{ path | code_literal }}, {{ field.count_expr }})
+{% elif field.is_bytes %}
+{% if field.fixed_bytes %}
+{{ check_expr(field, field.value_expr, field.value_long_expr, path) }}
+    writer.writeBytesExact({{ path | code_literal }}, {{ field.value_expr }}, {{ field.count_expr }})
+{% else %}
+    val {{ field.count_var }} = {{ field.count_expr }}
+{% if field.max_value %}
+    requireRange({{ path | code_literal }}, {{ field.count_var }}, 0L, {{ field.max_expr }})
+{% endif %}
+    requireSize({{ path | code_literal }}, binarySize({{ field.value_expr }}), {{ field.count_var }})
+{{ check_expr(field, field.value_expr, field.value_long_expr, path) }}
+    writer.writeBytes({{ path | code_literal }}, {{ field.value_expr }})
+{% endif %}
+{% elif field.is_string %}
+    val {{ field.count_var }} = {{ field.count_expr }}
+{% if field.max_value %}
+    requireRange({{ path | code_literal }}, {{ field.count_var }}, 0L, {{ field.max_expr }})
+{% endif %}
+    requireSize({{ path | code_literal }}, binarySize({{ field.value_expr }}), {{ field.count_var }})
+{{ check_expr(field, field.value_expr, field.value_long_expr, path) }}
+    writer.writeUtf8String({{ path | code_literal }}, {{ field.value_expr }})
+{% elif field.is_array %}
+    val {{ field.count_var }} = {{ field.count_expr }}
+{% if field.max_value %}
+    requireRange({{ path | code_literal }}, {{ field.count_var }}, 0L, {{ field.max_expr }})
+{% endif %}
+    requireSize({{ path | code_literal }}, binarySize({{ field.value_expr }}), {{ field.count_var }})
+{% if field.is_scalar %}
+    {{ field.value_expr }}.forEachIndexed { index, item ->
+        writer.{{ field.write_method }}({{ path | code_literal }} + "[$index]", item)
+    }
+{% else %}
+    {{ field.value_expr }}.forEachIndexed { index, item ->
+        write{{ field.typ }}(item, writer, state, {{ path | code_literal }} + "[$index]")
+    }
+{% endif %}
+{{ check_expr(field, field.value_expr, field.value_long_expr, path) }}
+{% elif field.is_scalar %}
+{{ check_expr(field, field.value_expr, field.value_long_expr, path) }}
+{% if field.sizeof_value and object.has_field(field.sizeof_value) %}
+    requireSize({{ (path ~ "." ~ field.sizeof_value) | code_literal }}, binarySize(value.{{ field.sizeof_kotlin_name }}), {{ field.value_long_expr }})
+{% endif %}
+    writer.{{ field.write_method }}({{ path | code_literal }}, {{ field.value_expr }})
+{% if field.can_store_var %}
+    state.{{ field.kotlin_name }} = {{ field.value_long_expr }}
+{% endif %}
+{% else %}
+    write{{ field.typ }}({{ field.value_expr }}, writer, state, {{ path | code_literal }})
+{{ check_expr(field, field.value_expr, field.value_long_expr, path) }}
+{% endif %}
+{%- endmacro %}
+
+{% macro write_param_field(field, object, bytes_as_byte_string=False) -%}
+{% set path = object.name ~ "." ~ field.name %}
+{% set receiver = field.kotlin_name %}
+{% set long_expr = field.param_long_expr %}
+{% set byte_string_bytes = bytes_as_byte_string and field.has_dynamic_byte_string_param %}
+{% if field.is_hidden %}
+    writer.writeZeroes({{ path | code_literal }}, {{ field.count_expr }})
+{% elif field.is_bytes %}
+{% if field.fixed_bytes %}
+{{ check_expr(field, receiver, long_expr, path) }}
+    writer.writeBytesExact({{ path | code_literal }}, {{ receiver }}, {{ field.count_expr }})
+{% else %}
+    val {{ field.count_var }} = {{ field.count_expr }}
+{% if field.max_value %}
+    requireRange({{ path | code_literal }}, {{ field.count_var }}, 0L, {{ field.max_expr }})
+{% endif %}
+    requireSize({{ path | code_literal }}, binarySize({{ receiver }}), {{ field.count_var }})
+{{ check_expr(field, receiver, long_expr, path) }}
+{% if byte_string_bytes %}
+    writer.writeByteString({{ path | code_literal }}, {{ receiver }})
+{% else %}
+    writer.writeBytes({{ path | code_literal }}, {{ receiver }})
+{% endif %}
+{% endif %}
+{% elif field.is_string %}
+    val {{ field.count_var }} = {{ field.count_expr }}
+{% if field.max_value %}
+    requireRange({{ path | code_literal }}, {{ field.count_var }}, 0L, {{ field.max_expr }})
+{% endif %}
+    requireSize({{ path | code_literal }}, binarySize({{ receiver }}), {{ field.count_var }})
+{{ check_expr(field, receiver, long_expr, path) }}
+    writer.writeUtf8String({{ path | code_literal }}, {{ receiver }})
+{% elif field.is_scalar %}
+{{ check_expr(field, receiver, long_expr, path) }}
+{% if field.sizeof_value and object.has_field(field.sizeof_value) %}
+    requireSize({{ (path ~ "." ~ field.sizeof_value) | code_literal }}, binarySize({{ field.sizeof_kotlin_name }}), {{ long_expr }})
+{% endif %}
+    writer.{{ field.write_method }}({{ path | code_literal }}, {{ receiver }})
+{% if field.can_store_var %}
+    state.{{ field.kotlin_name }} = {{ long_expr }}
+{% endif %}
+{% else %}
+    write{{ field.typ }}({{ receiver }}, writer, state, {{ path | code_literal }})
+{{ check_expr(field, receiver, long_expr, path) }}
+{% endif %}
+{%- endmacro %}
+
+{% macro block_helpers(field, object, schema) -%}
+{% set path = object.block_path(field) %}
+{% set count_var = field.count_var %}
+{% set byte_size_expr = field.block_byte_size_expr %}
+    public fun {{ object.block_factory_name(field) }}(
+        bytes: ByteString,
+        count: Long,
+    ): EncodedBinaryBlock = EncodedBinaryBlock(
+        field = {{ path | code_literal }},
+        count = count,
+        bytes = bytes,
+    )
+
+    public fun {{ object.block_writer_name(field) }}(
+        writer: BinaryWriter,
+        block: EncodedBinaryBlock,
+        state: {{ schema.state_type }} = {{ schema.state_type }}(),
+        path: String = {{ path | code_literal }},
+    ) {
+        val {{ count_var }} = {{ field.count_expr }}
+        requireBinary(path, block.field == {{ path | code_literal }}, "block field ${block.field} does not match " + {{ path | code_literal }})
+        requireSize("$path.count", block.count, {{ count_var }})
+{% if byte_size_expr %}
+        requireSize("$path.bytes", block.byteSize, {{ byte_size_expr }})
+{% endif %}
+        writer.writeBlock(path, block)
+    }
+
+    public fun {{ object.fragment_writer_name(field) }}(
+        writer: BinaryWriter,
+        block: EncodedBinaryBlock,
+        state: {{ schema.state_type }} = {{ schema.state_type }}(),
+        path: String = {{ path | code_literal }},
+    ) {
+        val {{ count_var }} = {{ field.count_expr }}
+        requireBinary(path, block.field == {{ path | code_literal }}, "block field ${block.field} does not match " + {{ path | code_literal }})
+        requireRange("$path.count", block.count, 0L, {{ count_var }})
+{% if byte_size_expr %}
+        requireSize("$path.bytes", block.byteSize, {{ byte_size_expr }})
+{% endif %}
+        writer.writeBlock(path, block)
+    }
+{%- endmacro %}
+
+{% for schema in binary_schemas %}
+{% for value_set in schema.value_sets %}
+public typealias {{ value_set.name }} = {{ value_set.kotlin_type }}
+
+public object {{ value_set.values_object }} {
+{%- for value in value_set.values %}
+    public const val {{ value_set.value_name(value.name) }}: {{ value_set.kotlin_type }} = {{ value_set.value_literal(value.value) }}
+{%- endfor %}
+}
+
+{% endfor %}
+public data class {{ schema.name }}(
+{%- for section in schema.sections %}
+    public val {{ schema.packet_field_name(section.name) }}: {{ section.name }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+)
+
+public fun {{ schema.name }}.toBinaryBody(): ApiBinaryBody = {{ schema.name }}Wire.toBinaryBody(this)
+
+public class {{ schema.state_type }} {
+{%- for field in schema.state_fields %}
+    public var {{ field.kotlin_name }}: Long = 0L
+{%- endfor %}
+}
+
+{% for object in schema.objects %}
+public data class {{ object.name }}(
+{%- for field in object.data_fields %}
+    public val {{ field.kotlin_name }}: {{ field.kotlin_type }}{% if field.default_expr %} = {{ field.default_expr }}{% endif %}{% if not loop.last %},{% endif %}
+{%- endfor %}
+)
+
+{% endfor %}
+public object {{ schema.name }}Wire {
+    public const val CONTENT_TYPE: String = "{{ schema.content_type }}"
+    public val ENDIAN: BinaryEndian = {{ schema.endian }}
+
+    public fun body(
+        contentLength: Long? = null,
+        write: (BinaryWriter) -> Unit,
+    ): ApiBinaryBody = StreamingBinaryBody(
+        contentType = CONTENT_TYPE,
+        contentLength = contentLength,
+        endian = ENDIAN,
+        write = write,
+    )
+
+    public fun toBinaryBody(value: {{ schema.name }}): ApiBinaryBody = body { writer ->
+        write(value, writer)
+    }
+
+    public fun write(value: {{ schema.name }}, writer: BinaryWriter) {
+        val state = {{ schema.state_type }}()
+{%- for section in schema.sections %}
+        write{{ section.name }}(value.{{ schema.packet_field_name(section.name) }}, writer, state, "{{ schema.name }}.{{ schema.packet_field_name(section.name) }}")
+{%- endfor %}
+    }
+
+{% for object in schema.objects %}
+    public fun {{ object.writer_name }}(
+        value: {{ object.name }},
+        writer: BinaryWriter,
+        state: {{ schema.state_type }} = {{ schema.state_type }}(),
+        path: String = "{{ object.name }}",
+    ) {
+{%- for field in object.fields %}
+{{ write_field(field, object) | indent(4, false) }}
+{%- endfor %}
+    }
+
+{% if object.can_generate_param_writer %}
+    public fun {{ object.writer_name }}(
+        writer: BinaryWriter,
+{%- for field in object.param_fields %}
+        {{ field.param_declaration }},
+{%- endfor %}
+        state: {{ schema.state_type }} = {{ schema.state_type }}(),
+        path: String = "{{ object.name }}",
+    ) {
+{%- for field in object.fields %}
+{{ write_param_field(field, object) | indent(4, false) }}
+{%- endfor %}
+    }
+
+{% if object.has_dynamic_bytes_param %}
+    public fun {{ object.writer_name }}(
+        writer: BinaryWriter,
+{%- for field in object.param_fields %}
+        {{ field.byte_string_param_declaration }},
+{%- endfor %}
+        state: {{ schema.state_type }} = {{ schema.state_type }}(),
+        path: String = "{{ object.name }}",
+    ) {
+{%- for field in object.fields %}
+{{ write_param_field(field, object, bytes_as_byte_string=True) | indent(4, false) }}
+{%- endfor %}
+    }
+
+{% endif %}
+{% endif %}
+{% for field in object.fields if field.supports_binary_block %}
+{{ block_helpers(field, object, schema) }}
+
+{% endfor %}
+{% endfor %}
+}
+
+{% endfor %}
+{% endautoescape %}

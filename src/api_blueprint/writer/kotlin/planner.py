@@ -18,6 +18,7 @@ class KotlinRuntimePlan:
     user_files: tuple[tuple[str, str], ...]
     models_file: Path
     shared_protos: tuple[KotlinProto, ...]
+    binary_runtime_file: Path
 
 
 @dataclass(frozen=True)
@@ -34,6 +35,7 @@ class KotlinRouteGroupPlan:
     models_file: Path
     client_file: Path
     facade_file: Path
+    binary_file: Path
     protos: tuple[KotlinProto, ...]
 
 
@@ -57,6 +59,7 @@ def build_kotlin_blueprint_plan(writer: "KotlinWriter", bp: "KotlinBlueprint") -
             models_file=routes_dir / group.package_path / f"Gen{group.class_name}Models.kt",
             client_file=routes_dir / group.package_path / f"Gen{group.class_name}.kt",
             facade_file=routes_dir / group.package_path / f"{group.class_name}.kt",
+            binary_file=routes_dir / group.package_path / "binary" / "GenBinary.kt",
             protos=tuple(bp.registry.filter(module=group.slug)),
         )
         for group in bp.groups.values()
@@ -75,6 +78,7 @@ def build_kotlin_blueprint_plan(writer: "KotlinWriter", bp: "KotlinBlueprint") -
             user_files=(("ApiClient.kt", "ApiClient.kt"),),
             models_file=runtime_dir / "GenModels.kt",
             shared_protos=tuple(bp.registry.filter(module="shared")),
+            binary_runtime_file=runtime_dir / "binary" / "GenBinaryRuntime.kt",
         ),
         http_transport=KotlinHttpTransportPlan(
             directory=http_dir,

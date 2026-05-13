@@ -51,10 +51,11 @@ BLUEPRINT_GOLANG_SUITE_PRESERVED = (
 BLUEPRINT_TYPESCRIPT_PRESERVED = (
     ".vscode/settings.json",
     "index.ts",
+    "suite.ts",
     "tsconfig.json",
 )
 BLUEPRINT_KOTLIN_PRESERVED = ()
-BLUEPRINT_PYTHON_PRESERVED = ()
+BLUEPRINT_PYTHON_PRESERVED = ("client/suite.py",)
 WAILS_HELLO_GOLANG_PRESERVED = (
     "go.mod",
     "go.sum",
@@ -457,7 +458,7 @@ def regenerate_blueprint_examples(workspace: BlueprintExampleWorkspace) -> None:
 
 
 def regenerate_blueprint_golang_suite_examples(workspace: BlueprintExampleWorkspace) -> None:
-    generator.generate(workspace.config_path, target_ids=("go.server", "go.client"))
+    generator.generate(workspace.config_path, target_ids=("go.server", "go.client", "typescript.client", "python.client"))
     _tidy_go_module(workspace.golang_server_dir)
     _tidy_go_module(workspace.golang_client_dir)
 
@@ -1046,12 +1047,18 @@ def compile_wails_hello_examples(repo_root: Path) -> None:
 def run_golang_suite_examples(repo_root: Path, scope: ExampleValidationScope = ExampleValidationScope.BLUEPRINT) -> None:
     if scope not in (ExampleValidationScope.ALL, ExampleValidationScope.BLUEPRINT):
         raise ExampleValidationError("golang-suite mode only supports --scope blueprint")
-    if shutil.which("go") is None:
-        raise ExampleValidationError("go: install Go and ensure `go` is available on PATH.")
+    missing = []
+    for binary in ("go", "tsc", "node"):
+        if shutil.which(binary) is None:
+            missing.append(f"{binary}: install {binary} and ensure it is available on PATH.")
+    if missing:
+        raise ExampleValidationError("golang-suite mode requires additional tooling:\n" + "\n".join(missing))
     blueprint_workspace = prepare_blueprint_workspace(repo_root)
     try:
         regenerate_blueprint_golang_suite_examples(blueprint_workspace)
-        subprocess.run(["go", "run", "."], cwd=blueprint_workspace.golang_suite_dir, check=True)
+        env = os.environ.copy()
+        env.setdefault("API_BLUEPRINT_PYTHON", sys.executable)
+        subprocess.run(["go", "run", "."], cwd=blueprint_workspace.golang_suite_dir, env=env, check=True)
     finally:
         shutil.rmtree(blueprint_workspace.root, ignore_errors=True)
 

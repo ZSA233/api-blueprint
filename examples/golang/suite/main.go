@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"encoding/binary"
+	stdbinary "encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,9 +21,12 @@ import (
 	"syscall"
 	"time"
 
+	binaryapi "example.com/project/golang/client/routes/api/binary"
+	binaryschema "example.com/project/golang/client/routes/api/binary/binary"
 	demo "example.com/project/golang/client/routes/api/demo"
 	hello "example.com/project/golang/client/routes/api/hello"
 	runtime "example.com/project/golang/client/runtime"
+	runtimebinary "example.com/project/golang/client/runtime/binary"
 	httptransport "example.com/project/golang/client/transports/http"
 )
 
@@ -52,6 +55,7 @@ func run() error {
 	}
 
 	transport := httptransport.NewClient(httptransport.HttpConfig{BaseURL: baseURL})
+	binaryClient := binaryapi.NewBinaryClient(transport)
 	demoClient := demo.NewDemoClient(transport)
 	helloClient := hello.NewHelloClient(transport)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -64,6 +68,15 @@ func run() error {
 		return err
 	}
 	if err := checkBinaryHTTP(baseURL); err != nil {
+		return err
+	}
+	if err := checkGeneratedBinaryClient(ctx, binaryClient); err != nil {
+		return err
+	}
+	if err := checkTypeScriptBinaryClient(baseURL); err != nil {
+		return err
+	}
+	if err := checkPythonBinaryClient(baseURL); err != nil {
 		return err
 	}
 	return nil
@@ -260,6 +273,129 @@ func checkBinaryHTTP(baseURL string) error {
 	return nil
 }
 
+func checkGeneratedBinaryClient(ctx context.Context, client *binaryapi.BinaryClient) error {
+	packet := buildDemoPacket()
+	if err := callGeneratedBinary(ctx, client, "go-typed", packet); err != nil {
+		return err
+	}
+	rawBody := runtimebinary.NewRawBody(buildDemoPacketFixture("ABP1", 2, "payload-ok"))
+	if err := callGeneratedBinary(ctx, client, "go-raw", rawBody); err != nil {
+		return err
+	}
+	streamBody := binaryschema.NewDemoPacketBody(-1, func(writer *runtimebinary.Writer) error {
+		return binaryschema.WriteDemoPacket(packet, writer)
+	})
+	if err := callGeneratedBinary(ctx, client, "go-stream", streamBody); err != nil {
+		return err
+	}
+	return nil
+}
+
+func callGeneratedBinary(ctx context.Context, client *binaryapi.BinaryClient, trace string, body runtimebinary.Body) error {
+	rsp, err := client.Packet(ctx, &binaryapi.REQ_Packet_QUERY{Trace: trace}, body)
+	if err != nil {
+		return fmt.Errorf("generated binary %s: %w", trace, err)
+	}
+	expected := binaryResponse{
+		Trace:      trace,
+		Version:    1,
+		ItemCount:  2,
+		Payload:    "payload-ok",
+		ScoreSum:   8,
+		FirstLabel: "alpha",
+		ItemIDs:    []uint{11, 22},
+		Checksum:   12,
+	}
+	actual := binaryResponse{
+		Trace:      rsp.Trace,
+		Version:    rsp.Version,
+		ItemCount:  rsp.Item_count,
+		Payload:    rsp.Payload,
+		ScoreSum:   rsp.Score_sum,
+		FirstLabel: rsp.First_label,
+		ItemIDs:    rsp.Item_ids,
+		Checksum:   rsp.Checksum,
+	}
+	if !reflect.DeepEqual(actual, expected) {
+		return fmt.Errorf("generated binary %s response = %#v", trace, actual)
+	}
+	return nil
+}
+
+func checkTypeScriptBinaryClient(baseURL string) error {
+	suiteDir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	typescriptDir := filepath.Clean(filepath.Join(suiteDir, "..", "..", "typescript"))
+	outDir, err := os.MkdirTemp("", "api-blueprint-ts-suite-")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(outDir)
+
+	if err := runSuiteCommand(
+		typescriptDir,
+		"compile TypeScript suite",
+		"tsc",
+		"-p",
+		filepath.Join(typescriptDir, "tsconfig.json"),
+		"--module",
+		"commonjs",
+		"--moduleResolution",
+		"node",
+		"--outDir",
+		outDir,
+	); err != nil {
+		return err
+	}
+	return runSuiteCommand(typescriptDir, "run TypeScript suite", "node", filepath.Join(outDir, "suite.js"), baseURL)
+}
+
+func checkPythonBinaryClient(baseURL string) error {
+	suiteDir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	pythonBin := os.Getenv("API_BLUEPRINT_PYTHON")
+	if pythonBin == "" {
+		pythonBin = "python3"
+	}
+	pythonClientDir := filepath.Clean(filepath.Join(suiteDir, "..", "..", "python", "client"))
+	return runSuiteCommand(pythonClientDir, "run Python suite", pythonBin, filepath.Join(pythonClientDir, "suite.py"), baseURL)
+}
+
+func runSuiteCommand(cwd string, label string, name string, args ...string) error {
+	cmd := exec.Command(name, args...)
+	cmd.Dir = cwd
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s: %w\n%s", label, err, string(output))
+	}
+	return nil
+}
+
+func buildDemoPacket() *binaryschema.DemoPacket {
+	return &binaryschema.DemoPacket{
+		Header: binaryschema.DemoPacketHeader{
+			Flags:        binaryschema.DemoFlagsHasPayload | binaryschema.DemoFlagsHasScores,
+			Short_code:   0x010203,
+			Signed_delta: 7,
+			Item_count:   2,
+			Payload_len:  uint32(len("payload-ok")),
+		},
+		Body: binaryschema.DemoPacketBody{
+			Items: []binaryschema.DemoPacketItem{
+				{Id: 11, Enabled: true, Value: 1.25, Label_len: 5, Label: []byte("alpha")},
+				{Id: 22, Enabled: false, Value: 2.5, Label_len: 4, Label: []byte("beta")},
+			},
+			Payload:  []byte("payload-ok"),
+			Scores:   []float64{3.5, 4.5},
+			Checksum: 12,
+		},
+	}
+}
+
 func postBinary(baseURL string, trace string, body []byte, gzipBody bool) error {
 	resp, err := sendBinary(baseURL, trace, body, gzipBody)
 	if err != nil {
@@ -345,6 +481,12 @@ func buildDemoPacketFixture(magic string, itemCount uint16, payload string) []by
 	buf := new(bytes.Buffer)
 	writeBytes(buf, []byte(magic)[:4])
 	writeUint16(buf, 1)
+	writeUint16(buf, 1)
+	writeUint32(buf, uint32(binaryschema.DemoFlagsHasPayload|binaryschema.DemoFlagsHasScores))
+	writeBytes(buf, []byte{0})
+	writeBytes(buf, []byte{0, 0})
+	writeUint24(buf, 0x010203)
+	writeInt24(buf, 7)
 	writeUint16(buf, itemCount)
 	writeUint32(buf, uint32(len(payload)))
 	writeUint16(buf, 2)
@@ -377,18 +519,26 @@ func writeBytes(buf *bytes.Buffer, value []byte) {
 
 func writeUint16(buf *bytes.Buffer, value uint16) {
 	var scratch [2]byte
-	binary.LittleEndian.PutUint16(scratch[:], value)
+	stdbinary.LittleEndian.PutUint16(scratch[:], value)
 	writeBytes(buf, scratch[:])
+}
+
+func writeUint24(buf *bytes.Buffer, value uint32) {
+	writeBytes(buf, []byte{byte(value), byte(value >> 8), byte(value >> 16)})
 }
 
 func writeUint32(buf *bytes.Buffer, value uint32) {
 	var scratch [4]byte
-	binary.LittleEndian.PutUint32(scratch[:], value)
+	stdbinary.LittleEndian.PutUint32(scratch[:], value)
 	writeBytes(buf, scratch[:])
+}
+
+func writeInt24(buf *bytes.Buffer, value int32) {
+	writeUint24(buf, uint32(value)&0xFFFFFF)
 }
 
 func writeFloat64(buf *bytes.Buffer, value float64) {
 	var scratch [8]byte
-	binary.LittleEndian.PutUint64(scratch[:], math.Float64bits(value))
+	stdbinary.LittleEndian.PutUint64(scratch[:], math.Float64bits(value))
 	writeBytes(buf, scratch[:])
 }

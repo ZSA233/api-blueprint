@@ -54,6 +54,8 @@ with bp.group("/items") as views:
 - `JSON(Model)`: JSON request body.
 - `RSP(...)`: response model.
 
+Binary HTTP request bodies use `.REQ_BINARY("./binary/packet.md")` to reference Markdown Binary Schema. See [Markdown Binary Schema](binary-schema.md) for table format, field types, rules, and generated output.
+
 ## Errors And Toast
 
 Error definitions use `Error(code, message)`. `message` is the protocol-level default description for logs, OpenAPI, and older-client fallback. Use `Toast(key, default, level)` for user-facing display metadata: the DSL writes only one default language, and generators emit only key/default/level instead of a built-in locale map.

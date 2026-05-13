@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from api_blueprint.contract import build_contract_graph
+from api_blueprint.engine.binary_schema import parse_binary_schema
 from api_blueprint.engine.model import Enum, Model, String
 from api_blueprint.engine import Blueprint, ConnectionDelivery, Error, Toast
 from api_blueprint.engine.wrapper import GeneralWrapper
@@ -331,6 +332,73 @@ def test_typescript_root_routes_use_root_client_file_without_reserved_slug(tmp_p
     assert (output_dir / "api" / "routes" / "api" / "root" / "client.ts").is_file()
     assert not (output_dir / "api" / "routes" / "_root").exists()
     assert not (output_dir / "api" / "transports" / "http" / "api" / "_root").exists()
+
+
+def test_typescript_client_generates_binary_overloads_runtime_and_transport(tmp_path: Path):
+    schema = parse_binary_schema(
+        """
+# packet DemoPacket
+
+endian: little
+
+## header
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| flags | DemoFlags | 1 | min=0 | flags |
+| pad0 | padding | 1 | | pad |
+| code | u24 | 1 | min=1,max=16777215 | code |
+| delta | i24 | 1 | min=-8,max=8 | delta |
+| payload_len | u16 | 1 | max=16,sizeof=payload | payload length |
+
+## body
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| payload | bytes | payload_len | | payload |
+
+## bitflags DemoFlags : u32
+
+| name | bits | rule | comment |
+|---|---:|---|---|
+| HasPayload | 0 | | payload |
+| Reserved | 1..31 | const=0 | reserved |
+""".strip(),
+        source_path="demo_packet.md",
+    )
+    bp = Blueprint(root="/api", response_wrapper=GeneralWrapper)
+    with bp.group("/binary") as views:
+        views.POST("/packet").REQ_BINARY(schema).RSP(message=String(description="message"))
+
+    output_dir = tmp_path / "typescript"
+    output_dir.mkdir()
+    writer = TypeScriptWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    route_text = (output_dir / "api" / "routes" / "api" / "binary" / "gen_client.ts").read_text(
+        encoding="utf-8"
+    )
+    schema_text = (
+        output_dir / "api" / "routes" / "api" / "binary" / "binary" / "gen_binary.ts"
+    ).read_text(encoding="utf-8")
+    runtime_text = (output_dir / "api" / "runtime" / "binary" / "gen_runtime.ts").read_text(encoding="utf-8")
+    transport_text = (output_dir / "api" / "transports" / "http" / "gen_transport.ts").read_text(encoding="utf-8")
+
+    assert "binary: Binary.DemoPacket;" in route_text
+    assert "binary: ApiBinaryBody;" in route_text
+    assert "binary: Binary.DemoPacket | ApiBinaryBody;" in route_text
+    assert "DemoPacketWire.toBinaryBody(request.binary)" in route_text
+    assert "export const DemoFlagsValues" in schema_text
+    assert "HasPayload: 1" in schema_text
+    assert "reserved bits must be zero" in schema_text
+    assert "writer.writeU24" in schema_text
+    assert "writer.writeI24" in schema_text
+    assert "writer.writeZeroes" in schema_text
+    assert "class RawBinaryBody" in runtime_text
+    assert "private writeScratch" in runtime_text
+    assert "this.writeScratch(8);" in runtime_text
+    assert "binaryBodyToUint8Array" in transport_text
 
 
 def test_typescript_writer_blocks_legacy_group_cleanup_when_user_client_exists(tmp_path: Path):

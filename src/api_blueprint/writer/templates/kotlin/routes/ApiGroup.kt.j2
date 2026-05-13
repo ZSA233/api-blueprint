@@ -1,6 +1,10 @@
 {% autoescape false %}package {{ bp.root_package }}.routes.{{ group.package_suffix }}
 
 import {{ bp.root_package }}.runtime.*
+{% if group.binary_schemas() %}
+import {{ bp.root_package }}.runtime.binary.ApiBinaryBody
+import {{ bp.root_package }}.routes.{{ group.package_suffix }}.binary.*
+{% endif %}
 import kotlinx.serialization.builtins.*
 
 public open class Gen{{ group.class_name }} internal constructor(
@@ -24,7 +28,11 @@ public open class Gen{{ group.class_name }} internal constructor(
 {%- endif %}
         headers: Map<String, String> = emptyMap(),
     ): {{ route.response_type.text }} {
+{%- if route.unwrap_general_wrapper %}
+        val envelope = transport.request(
+{%- else %}
         return transport.request(
+{%- endif %}
             ApiRequest(
                 method = "{{ route.http_method }}",
                 path = "{{ route.url }}",
@@ -41,14 +49,53 @@ public open class Gen{{ group.class_name }} internal constructor(
                 formSerializer = {{ route.form_type }}.serializer(),
 {%- endif %}
 {%- if route.binary_type %}
-                binary = binary,
-                binarySerializer = {{ route.binary_type }}.serializer(),
+                binary = {% if route.has_binary_schema %}binary.toBinaryBody(){% else %}binary{% endif %},
 {%- endif %}
                 responseSerializer = {{ route.response_serializer_expr }},
                 responseMediaType = "{{ route.response_media_type }}",
             )
         )
+{%- if route.unwrap_general_wrapper %}
+        if (envelope.code != 0) {
+            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
+        }
+        return envelope.data ?: throw ApiException(200, "Missing response data for {{ route.url }}")
+{%- endif %}
     }
+{%- if route.has_binary_schema %}
+
+    public open suspend fun {{ route.method_name }}(
+{%- if route.query_type %}
+        query: {{ route.query_type }},
+{%- endif %}
+        binary: ApiBinaryBody,
+        headers: Map<String, String> = emptyMap(),
+    ): {{ route.response_type.text }} {
+{%- if route.unwrap_general_wrapper %}
+        val envelope = transport.request(
+{%- else %}
+        return transport.request(
+{%- endif %}
+            ApiRequest(
+                method = "{{ route.http_method }}",
+                path = "{{ route.url }}",
+{%- if route.query_type %}
+                query = query.toQueryMap(),
+{%- endif %}
+                headers = headers,
+                binary = binary,
+                responseSerializer = {{ route.response_serializer_expr }},
+                responseMediaType = "{{ route.response_media_type }}",
+            )
+        )
+{%- if route.unwrap_general_wrapper %}
+        if (envelope.code != 0) {
+            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
+        }
+        return envelope.data ?: throw ApiException(200, "Missing response data for {{ route.url }}")
+{%- endif %}
+    }
+{%- endif %}
 {%- elif route.supports_ws %}
 
     @Suppress("UNCHECKED_CAST")

@@ -6,6 +6,8 @@ import type { ApiClientConfig } from "../../../runtime/client";
 import { DefaultTransport, type ApiHttpTransportConfig } from "../transport";
 import type { ApiClient } from "../../../routes/api/client";
 import { ApiClient as ApiClientImpl } from "../../../routes/api/client";
+import type { BinaryClient } from "../../../routes/api/binary/client";
+import { BinaryClient as BinaryClientImpl } from "../../../routes/api/binary/client";
 import type { DemoClient } from "../../../routes/api/demo/client";
 import { DemoClient as DemoClientImpl } from "../../../routes/api/demo/client";
 import type { HelloClient } from "../../../routes/api/hello/client";
@@ -14,6 +16,7 @@ import { HelloClient as HelloClientImpl } from "../../../routes/api/hello/client
 
 export interface GeneratedClients {
   apiClient: ApiClient;
+  binaryClient: BinaryClient;
   demoClient: DemoClient;
   helloClient: HelloClient;
 }
@@ -23,6 +26,7 @@ export function createClients(config: ApiHttpTransportConfig = {}): GeneratedCli
   const sharedConfig: ApiClientConfig = { transport };
   return {
     apiClient: new ApiClientImpl(sharedConfig),
+    binaryClient: new BinaryClientImpl(sharedConfig),
     demoClient: new DemoClientImpl(sharedConfig),
     helloClient: new HelloClientImpl(sharedConfig),
   };

@@ -54,6 +54,8 @@ with bp.group("/items") as views:
 - `JSON(Model)`：JSON 请求体。
 - `RSP(...)`：响应模型。
 
+二进制 HTTP 请求体使用 `.REQ_BINARY("./binary/packet.md")` 引用 Markdown Binary Schema。Schema 表格格式、字段类型、规则和生成输出见 [Markdown Binary Schema](binary-schema.md)。
+
 ## Error 与 Toast
 
 错误定义使用 `Error(code, message)`，其中 `message` 是协议级默认说明，适合日志、OpenAPI 和老客户端兜底。需要用户展示文案时使用 `Toast(key, default, level)`：DSL 只写一种默认语言，生成器只输出 key/default/level，不生成内置多语言 map。

@@ -5,6 +5,7 @@ import subprocess
 
 from api_blueprint.contract import build_contract_graph
 from api_blueprint.engine import Blueprint, Error, GeneralWrapper, Model, Toast
+from api_blueprint.engine.binary_schema import parse_binary_schema
 from api_blueprint.engine.model import String
 from api_blueprint.writer.golang.client import GolangClientWriter
 
@@ -232,3 +233,87 @@ func TestGeneralWrapperRoundTrip(t *testing.T) {
         check=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_golang_client_generates_binary_body_interface_and_schema_writer(tmp_path):
+    class SubmitResponse(Model):
+        status = String(description="status")
+
+    schema = parse_binary_schema(
+        """
+# packet DemoPacket
+
+endian: little
+
+## header
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| kind | DemoKind | 1 | const=1 | kind |
+| flags | DemoFlags | 1 | min=0 | flags |
+| pad0 | padding | 1 | | pad |
+| code | u24 | 1 | min=1,max=16777215 | code |
+| delta | i24 | 1 | min=-8,max=8 | delta |
+| payload_len | u16 | 1 | max=16,sizeof=payload | payload length |
+
+## body
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| payload | bytes | payload_len | | payload |
+
+## enum DemoKind : u16
+
+| name | value | comment |
+|---|---:|---|
+| Metric | 1 | metric |
+| Debug | 2 | debug |
+
+## bitflags DemoFlags : u32
+
+| name | bits | rule | comment |
+|---|---:|---|---|
+| HasPayload | 0 | | payload |
+| Mode | 1..2 | enum=DemoKind | mode |
+| Reserved | 3..31 | const=0 | reserved |
+""".strip(),
+        source_path="demo_packet.md",
+    )
+    bp = Blueprint(root="/api", response_wrapper=GeneralWrapper)
+    with bp.group("/binary") as views:
+        views.POST("/packet").REQ_BINARY(schema).RSP(SubmitResponse)
+
+    output_dir = tmp_path / "client"
+    writer = GolangClientWriter(output_dir, module="example.com/generated/client")
+    writer.register(bp)
+    writer.gen()
+
+    route_text = (output_dir / "routes" / "api" / "binary" / "gen_client.go").read_text(encoding="utf-8")
+    schema_text = (
+        output_dir / "routes" / "api" / "binary" / "binary" / "gen_binary.go"
+    ).read_text(encoding="utf-8")
+    runtime_text = (output_dir / "runtime" / "binary" / "gen_runtime.go").read_text(encoding="utf-8")
+    transport_text = (output_dir / "transports" / "http" / "gen_transport.go").read_text(encoding="utf-8")
+
+    assert "binaryBody runtimebinary.Body" in route_text
+    assert "Binary:          binaryBody" in route_text
+    assert "type DemoKind uint16" in schema_text
+    assert "type DemoFlags uint32" in schema_text
+    assert "func (f DemoFlags) HasPayload() bool" in schema_text
+    assert "func (f DemoFlags) WithHasPayload(enabled bool) DemoFlags" in schema_text
+    assert "func (f DemoFlags) Mode() DemoKind" in schema_text
+    assert "func (f DemoFlags) WithMode(value DemoKind) DemoFlags" in schema_text
+    assert "DemoFlagsReservedMask DemoFlags = 4294967288" in schema_text
+    assert "func (f DemoFlags) HasReservedBits() bool" in schema_text
+    assert "func (f DemoFlags) Validate() error" in schema_text
+    assert "ClearReservedBits" not in schema_text
+    assert "DemoFlagsReserved   DemoFlags" not in schema_text
+    assert "reserved bits must be zero" in schema_text
+    assert "writer.WriteUint24" in schema_text
+    assert "writer.WriteInt24" in schema_text
+    assert "runtimebinary.RequireSignedRange" in schema_text
+    assert "func NewDemoPacketBody(contentLength int64" in schema_text
+    assert "type Body interface" in runtime_text
+    assert "func RequireSignedRange(" in runtime_text
+    assert "body.WriteBinary" in transport_text
+    assert "json.Marshal(request.Binary)" not in transport_text

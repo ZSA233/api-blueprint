@@ -84,8 +84,10 @@ def test_readme_stays_as_onboarding_entrypoint():
 
     assert "## 生成产物与用户文件" not in readme_zh
     assert "## Generated Artifacts And User Files" not in readme_en
-    assert "生成器扩展点、文件 ownership 与目录布局见" in readme_zh
-    assert "See the generator docs for extension points, file ownership, and output layout." in readme_en
+    assert "## 30 秒示例" in readme_zh
+    assert "## 30-Second Example" in readme_en
+    assert "[docs/zh/binary-schema.md]" in readme_zh
+    assert "[docs/en/binary-schema.md]" in readme_en
 
 
 def _target_block(text: str, target: str) -> str:

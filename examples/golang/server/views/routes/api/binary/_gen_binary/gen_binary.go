@@ -10,13 +10,86 @@ import (
 )
 
 type _binaryState struct {
-	Version    uint64
-	ItemCount  uint64
-	PayloadLen uint64
-	ScoreCount uint64
-	Checksum   uint64
-	ID         uint64
-	LabelLen   uint64
+	Version     uint64
+	Kind        uint64
+	Flags       uint64
+	ShortCode   uint64
+	SignedDelta uint64
+	ItemCount   uint64
+	PayloadLen  uint64
+	ScoreCount  uint64
+	Checksum    uint64
+	ID          uint64
+	LabelLen    uint64
+}
+
+type DemoKind uint16
+
+const (
+	DemoKindMetric DemoKind = 1
+	DemoKindDebug  DemoKind = 2
+)
+
+type DemoFlags uint32
+
+const (
+	DemoFlagsHasPayload   DemoFlags = 1
+	DemoFlagsHasScores    DemoFlags = 2
+	DemoFlagsFastPath     DemoFlags = 4
+	DemoFlagsMode         DemoFlags = 24
+	DemoFlagsReservedMask DemoFlags = 4294967264
+)
+
+func (f DemoFlags) HasPayload() bool {
+	return f&DemoFlagsHasPayload != 0
+}
+
+func (f DemoFlags) WithHasPayload(enabled bool) DemoFlags {
+	if enabled {
+		return f | DemoFlagsHasPayload
+	}
+	return f &^ DemoFlagsHasPayload
+}
+
+func (f DemoFlags) HasScores() bool {
+	return f&DemoFlagsHasScores != 0
+}
+
+func (f DemoFlags) WithHasScores(enabled bool) DemoFlags {
+	if enabled {
+		return f | DemoFlagsHasScores
+	}
+	return f &^ DemoFlagsHasScores
+}
+
+func (f DemoFlags) FastPath() bool {
+	return f&DemoFlagsFastPath != 0
+}
+
+func (f DemoFlags) WithFastPath(enabled bool) DemoFlags {
+	if enabled {
+		return f | DemoFlagsFastPath
+	}
+	return f &^ DemoFlagsFastPath
+}
+
+func (f DemoFlags) Mode() DemoKind {
+	return DemoKind((uint32(f) & uint32(DemoFlagsMode)) >> 3)
+}
+
+func (f DemoFlags) WithMode(value DemoKind) DemoFlags {
+	return (f &^ DemoFlagsMode) | (DemoFlags(uint32(value)<<3) & DemoFlagsMode)
+}
+
+func (f DemoFlags) HasReservedBits() bool {
+	return f&DemoFlagsReservedMask != 0
+}
+
+func (f DemoFlags) Validate() error {
+	if f.HasReservedBits() {
+		return binaryruntime.WrapField("DemoFlags", binaryruntime.ErrConstMismatch)
+	}
+	return nil
 }
 
 type DemoPacket struct {
@@ -47,22 +120,32 @@ func (msg *DemoPacket) DecodeBinary(r io.Reader) error {
 }
 
 type DemoPacketHeader struct {
-	Magic      [4]byte
-	Version    uint16
-	ItemCount  uint16
-	PayloadLen uint32
-	ScoreCount uint16
+	Magic       [4]byte
+	Version     uint16
+	Kind        DemoKind
+	Flags       DemoFlags
+	ShortCode   uint32
+	SignedDelta int32
+	ItemCount   uint16
+	PayloadLen  uint32
+	ScoreCount  uint16
 }
 
 func readDemoPacketHeader(reader *binaryruntime.Reader, state *_binaryState, out *DemoPacketHeader) error {
-	var fixed [14]byte
+	var fixed [29]byte
 	if n, err := reader.ReadFullCount(fixed[:]); err != nil {
 		return binaryruntime.WrapField(binaryruntime.FixedFieldName(n, []binaryruntime.FixedField{
 			{End: 4, Path: "magic"},
 			{End: 6, Path: "version"},
-			{End: 8, Path: "item_count"},
-			{End: 12, Path: "payload_len"},
-			{End: 14, Path: "score_count"},
+			{End: 8, Path: "kind"},
+			{End: 12, Path: "flags"},
+			{End: 13, Path: "header_pad"},
+			{End: 15, Path: "reserved0"},
+			{End: 18, Path: "short_code"},
+			{End: 21, Path: "signed_delta"},
+			{End: 23, Path: "item_count"},
+			{End: 27, Path: "payload_len"},
+			{End: 29, Path: "score_count"},
 		}), binaryruntime.ReadFailed(err))
 	}
 	copy(out.Magic[:], fixed[0:4])
@@ -74,7 +157,39 @@ func readDemoPacketHeader(reader *binaryruntime.Reader, state *_binaryState, out
 	if uint64(out.Version) != uint64(1) {
 		return binaryruntime.WrapField("version", binaryruntime.ErrConstMismatch)
 	}
-	out.ItemCount = reader.Order.Uint16(fixed[6:8])
+	out.Kind = DemoKind(reader.Order.Uint16(fixed[6:8]))
+	state.Kind = uint64(out.Kind)
+	if uint64(out.Kind) != uint64(1) {
+		return binaryruntime.WrapField("kind", binaryruntime.ErrConstMismatch)
+	}
+	out.Flags = DemoFlags(reader.Order.Uint32(fixed[8:12]))
+	state.Flags = uint64(out.Flags)
+	if uint64(out.Flags) < uint64(0) {
+		return binaryruntime.WrapField("flags", binaryruntime.ErrBelowMin)
+	}
+	if uint64(out.Flags)&4294967264 != 0 {
+		return binaryruntime.WrapField("flags", binaryruntime.ErrConstMismatch)
+	}
+	if !binaryruntime.AllZero(fixed[13:15]) {
+		return binaryruntime.WrapField("reserved0", binaryruntime.ErrConstMismatch)
+	}
+	out.ShortCode = binaryruntime.Uint24(reader.Order, fixed[15:18])
+	state.ShortCode = uint64(out.ShortCode)
+	if uint64(out.ShortCode) < uint64(1) {
+		return binaryruntime.WrapField("short_code", binaryruntime.ErrBelowMin)
+	}
+	if uint64(out.ShortCode) > uint64(16777215) {
+		return binaryruntime.WrapField("short_code", binaryruntime.ErrExceedsMax)
+	}
+	out.SignedDelta = binaryruntime.Int24(reader.Order, fixed[18:21])
+	state.SignedDelta = uint64(out.SignedDelta)
+	if uint64(out.SignedDelta) < uint64(0) {
+		return binaryruntime.WrapField("signed_delta", binaryruntime.ErrBelowMin)
+	}
+	if uint64(out.SignedDelta) > uint64(8388607) {
+		return binaryruntime.WrapField("signed_delta", binaryruntime.ErrExceedsMax)
+	}
+	out.ItemCount = reader.Order.Uint16(fixed[21:23])
 	state.ItemCount = uint64(out.ItemCount)
 	if uint64(out.ItemCount) < uint64(1) {
 		return binaryruntime.WrapField("item_count", binaryruntime.ErrBelowMin)
@@ -82,7 +197,7 @@ func readDemoPacketHeader(reader *binaryruntime.Reader, state *_binaryState, out
 	if uint64(out.ItemCount) > uint64(8) {
 		return binaryruntime.WrapField("item_count", binaryruntime.ErrExceedsMax)
 	}
-	out.PayloadLen = reader.Order.Uint32(fixed[8:12])
+	out.PayloadLen = reader.Order.Uint32(fixed[23:27])
 	state.PayloadLen = uint64(out.PayloadLen)
 	if uint64(out.PayloadLen) < uint64(0) {
 		return binaryruntime.WrapField("payload_len", binaryruntime.ErrBelowMin)
@@ -90,7 +205,7 @@ func readDemoPacketHeader(reader *binaryruntime.Reader, state *_binaryState, out
 	if uint64(out.PayloadLen) > uint64(64) {
 		return binaryruntime.WrapField("payload_len", binaryruntime.ErrExceedsMax)
 	}
-	out.ScoreCount = reader.Order.Uint16(fixed[12:14])
+	out.ScoreCount = reader.Order.Uint16(fixed[27:29])
 	state.ScoreCount = uint64(out.ScoreCount)
 	if uint64(out.ScoreCount) != uint64(2) {
 		return binaryruntime.WrapField("score_count", binaryruntime.ErrConstMismatch)

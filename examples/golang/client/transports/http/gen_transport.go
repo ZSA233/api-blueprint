@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	runtime "example.com/project/golang/client/runtime"
+	runtimebinary "example.com/project/golang/client/runtime/binary"
 )
 
 type HttpTransport struct {
@@ -44,7 +45,7 @@ func (transport *HttpTransport) Do(ctx context.Context, request runtime.Request,
 		endpoint.RawQuery = query.Encode()
 	}
 
-	body, contentType, err := encodeBody(request)
+	body, contentType, contentLength, err := encodeBody(request)
 	if err != nil {
 		return err
 	}
@@ -54,6 +55,9 @@ func (transport *HttpTransport) Do(ctx context.Context, request runtime.Request,
 	}
 	if contentType != "" {
 		httpRequest.Header.Set("Content-Type", contentType)
+	}
+	if contentLength >= 0 {
+		httpRequest.ContentLength = contentLength
 	}
 	httpRequest.Header.Set("Accept", "application/json")
 
@@ -96,22 +100,30 @@ func joinURL(base string, path string) (*url.URL, error) {
 	return endpoint, nil
 }
 
-func encodeBody(request runtime.Request) (io.Reader, string, error) {
+func encodeBody(request runtime.Request) (io.Reader, string, int64, error) {
 	switch {
 	case request.Binary != nil:
-		data, err := json.Marshal(request.Binary)
-		return bytes.NewReader(data), "application/octet-stream", err
+		body, ok := request.Binary.(runtimebinary.Body)
+		if !ok {
+			return nil, "", -1, fmt.Errorf("api-blueprint http transport expected binary.Body, got %T", request.Binary)
+		}
+		reader, writer := io.Pipe()
+		go func() {
+			_ = writer.CloseWithError(body.WriteBinary(writer))
+		}()
+		return reader, body.ContentType(), body.ContentLength(), nil
 	case request.Form != nil:
 		values, err := encodeValues(request.Form)
 		if err != nil {
-			return nil, "", err
+			return nil, "", -1, err
 		}
-		return strings.NewReader(values.Encode()), "application/x-www-form-urlencoded", nil
+		encoded := values.Encode()
+		return strings.NewReader(encoded), "application/x-www-form-urlencoded", int64(len(encoded)), nil
 	case request.JSON != nil:
 		data, err := json.Marshal(request.JSON)
-		return bytes.NewReader(data), "application/json", err
+		return bytes.NewReader(data), "application/json", int64(len(data)), err
 	default:
-		return nil, "", nil
+		return nil, "", -1, nil
 	}
 }
 

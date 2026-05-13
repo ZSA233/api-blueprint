@@ -6,6 +6,8 @@ import pytest
 
 from api_blueprint.contract import build_contract_graph
 from api_blueprint.engine import Blueprint, Toast
+from api_blueprint.engine.binary_schema import parse_binary_schema
+from api_blueprint.engine.runtime.wrappers import GeneralWrapper
 from api_blueprint.engine.schema import Error, Field
 from api_blueprint.engine.model import Array, Enum, Int64, Map, Model, String
 from api_blueprint.engine.wrapper import ResponseWrapper
@@ -59,6 +61,15 @@ def test_kotlin_registry_builds_serializers_for_alias_and_enum_types():
     assert map_type.serializer_expr() == "MapSerializer(String.serializer(), ListSerializer(WireEnum.serializer()))"
     assert int_enum_proto.enum_wire_type == "int"
     assert int_enum_proto.enum_wire_literal(StatusEnum.PENDING.value) == "1"
+
+
+def test_kotlin_registry_allows_general_wrapper_error_without_data():
+    registry = KotlinProtoRegistry()
+    proto = registry.register_wrapper(GeneralWrapper)
+
+    data_field = next(field for field in proto.fields if field.name == "data")
+    assert data_field.type.text == "T?"
+    assert data_field.optional is True
 
 
 def test_kotlin_registry_filter_by_module():
@@ -322,6 +333,105 @@ def test_kotlin_writer_generates_custom_response_wrapper(tmp_path):
     assert ": GenApiClient(transport)" in client_facade_text
     assert "public fun createHttpApiClient" in http_facade_text
     assert "config: HttpApiConfig = HttpApiConfig()" in http_facade_text
+
+
+def test_kotlin_writer_generates_binary_schema_client_and_writer(tmp_path):
+    schema = parse_binary_schema(
+        """
+# packet DemoPacket
+
+endian: little
+content-type: application/octet-stream
+content-encoding: identity,gzip
+
+## header
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| magic | bytes | 4 | const="ABP1" | magic |
+| version | u16 | 1 | const=1 | protocol version |
+| flags | DemoFlags | 1 | min=0 | flags |
+| item_count | u16 | 1 | min=1,max=8,sizeof=items | item count |
+| payload_len | u32 | 1 | min=0,max=64,sizeof=payload | payload bytes |
+
+## body
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| items | DemoPacketItem | item_count | | items |
+| payload | bytes | payload_len | encoding=utf-8 | payload |
+| checksum | u32 | 1 | assert=item_count + payload_len | checksum |
+
+## struct DemoPacketItem
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| id | u32 | 1 | min=1,max=999 | item id |
+| enabled | bool | 1 | | enabled |
+| score | f64 | 1 | | score |
+| label_len | u8 | 1 | min=1,max=16,sizeof=label | label bytes |
+| label | bytes | label_len | encoding=utf-8 | label |
+
+## bitflags DemoFlags : u32
+
+| name | bits | rule | comment |
+|---|---:|---|---|
+| HasPayload | 0 | | payload |
+| Reserved | 1..31 | const=0 | reserved |
+""",
+        source_path="demo_packet.md",
+    )
+
+    bp = Blueprint(root="/api")
+    views = bp.group("/binary")
+    views.POST("/packet", response_wrapper=GeneralWrapper).ARGS(
+        trace=String(description="trace"),
+    ).REQ_BINARY(schema).RSP(
+        payload=String(description="payload"),
+    )
+    bp.is_built = True
+
+    writer = KotlinWriter(tmp_path / "kotlin", package="com.example.generated")
+    writer.register(bp)
+    writer.gen()
+
+    root_dir = tmp_path / "kotlin" / "com" / "example" / "generated" / "api"
+    runtime_binary_text = (root_dir / "runtime" / "binary" / "GenBinaryRuntime.kt").read_text(encoding="utf-8")
+    route_text = (root_dir / "routes" / "api" / "binary" / "GenBinaryApi.kt").read_text(encoding="utf-8")
+    binary_text = (root_dir / "routes" / "api" / "binary" / "binary" / "GenBinary.kt").read_text(encoding="utf-8")
+    runtime_models_text = (root_dir / "runtime" / "GenModels.kt").read_text(encoding="utf-8")
+    http_text = (root_dir / "transports" / "http" / "GenOkHttpApiTransport.kt").read_text(encoding="utf-8")
+
+    assert "public interface ApiBinaryBody" in runtime_binary_text
+    assert "public data class EncodedBinaryBlock(" in runtime_binary_text
+    assert "public class BinaryWriter" in runtime_binary_text
+    assert "public fun writeBlock(path: String, block: EncodedBinaryBlock)" in runtime_binary_text
+    assert "public data class DemoPacket(" in binary_text
+    assert "public object DemoFlagsValues" in binary_text
+    assert "reserved bits must be zero" in binary_text
+    assert "public object DemoPacketWire" in binary_text
+    assert "public fun writeDemoPacketItem(" in binary_text
+    assert "public fun writeDemoPacketItemHeaderPayloadBlock(" not in binary_text
+    assert "public fun writeDemoPacketBodyPayloadBlock(" in binary_text
+    assert "public fun writeDemoPacketBodyItemsFragment(" in binary_text
+    assert "public fun writeDemoPacketItem(" in binary_text
+    assert "label: ByteString," in binary_text
+    assert "writer.writeByteString(\"DemoPacketItem.label\", label)" in binary_text
+    assert "requireSize(\"DemoPacketItem.label_len.label\", binarySize(value.label), value.labelLen.toLong())" in binary_text
+    assert "writer.writeF64(\"DemoPacketItem.score\", value.score)" in binary_text
+    assert "public open suspend fun packet(" in route_text
+    assert "binary: DemoPacket," in route_text
+    assert "binary = binary.toBinaryBody()" in route_text
+    assert route_text.count("public open suspend fun packet(") == 2
+    assert "binary: ApiBinaryBody," in route_text
+    assert "binarySerializer" not in route_text
+    assert "val envelope = transport.request(" in route_text
+    assert "throw ApiCodeError(envelope.code, envelope.message, envelope.toast)" in route_text
+    assert 'return envelope.data ?: throw ApiException(200, "Missing response data for /api/binary/packet")' in route_text
+    assert "public data class GeneralResponse<T>(" in runtime_models_text
+    assert "public val data: T? = null" in runtime_models_text
+    assert "override fun writeTo(sink: BufferedSink)" in http_text
+    assert "binary.writeTo(sink)" in http_text
 
 
 def test_kotlin_writer_replaces_stale_generated_runtime_client_with_default_facade(tmp_path):

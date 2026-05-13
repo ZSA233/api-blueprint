@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any, AsyncIterator, Generic, Mapping, Protocol, TypeVar
 
+from .binary import ApiBinaryBody
+
 
 RecvT = TypeVar("RecvT")
 SendT = TypeVar("SendT")
@@ -17,7 +19,7 @@ class ApiClientTransport(Protocol):
         query: Mapping[str, Any] | None = None,
         json: Any = None,
         form: Mapping[str, Any] | None = None,
-        binary: bytes | None = None,
+        binary: bytes | ApiBinaryBody | None = None,
         open_data: Mapping[str, Any] | None = None,
         response_type: str | None = None,
     ) -> Any:

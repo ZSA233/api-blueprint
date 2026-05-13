@@ -58,21 +58,21 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
     "go-client": TargetCapability(
         implemented=True,
         routes=("rpc", "legacy_ws", "stream", "channel"),
-        requests=("query", "json", "form", "binary", "open"),
+        requests=("query", "json", "form", "binary", "binary-schema", "open"),
         wrappers=("none", "general", "custom"),
         transport="injected",
     ),
     "typescript-client": TargetCapability(
         implemented=True,
         routes=("rpc", "legacy_ws", "stream", "channel"),
-        requests=("query", "json", "form", "binary", "open"),
+        requests=("query", "json", "form", "binary", "binary-schema", "open"),
         wrappers=("none", "general", "custom"),
         transport="injected",
     ),
     "kotlin-client": TargetCapability(
         implemented=True,
         routes=("rpc", "legacy_ws", "stream", "channel"),
-        requests=("query", "json", "form", "binary", "open"),
+        requests=("query", "json", "form", "binary", "binary-schema", "open"),
         wrappers=("none", "general", "custom"),
         transport="injected",
     ),
@@ -85,7 +85,7 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
     "python-client": TargetCapability(
         implemented=True,
         routes=("rpc", "legacy_ws", "stream", "channel"),
-        requests=("query", "json", "form", "binary", "open"),
+        requests=("query", "json", "form", "binary", "binary-schema", "open"),
         wrappers=("none", "general", "custom"),
         transport="injected",
     ),

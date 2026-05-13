@@ -9,8 +9,8 @@ README 只回答：
 - 这个项目解决什么问题。
 - 支持哪些生成目标。
 - 如何安装。
-- 如何用最小 Blueprint 与最小配置跑起来。
-- 常用 CLI 是什么。
+- 如何用一个最小 Blueprint 与最小配置跑起来。
+- 常用生成目标分别负责什么。
 - 更详细的配置、生成器、Wails、gRPC、DSL、examples 验证与发布说明去哪里看。
 
 详细语义、目录布局、迁移规则、generator ownership、provider pipeline、Wails socket bridge、gRPC target 推导、example drift 处理等内容必须放到 `docs/` 下的专题文档中，再由 README 链接过去。
@@ -49,6 +49,7 @@ README 应链接到以下用户文档：
 - `docs/zh/getting-started.md` / `docs/en/getting-started.md`：完整快速开始。
 - `docs/zh/configuration.md` / `docs/en/configuration.md`：配置文件字段说明。
 - `docs/zh/blueprint-dsl.md` / `docs/en/blueprint-dsl.md`：Blueprint DSL 与模型写法。
+- `docs/zh/binary-schema.md` / `docs/en/binary-schema.md`：Markdown Binary Schema、表格格式、字段类型、规则、enum/bitflags、生成输出与检查命令。
 - `docs/zh/generators.md` / `docs/en/generators.md`：Go / TypeScript / Kotlin / Python 输出说明。
 - `docs/zh/wails.md` / `docs/en/wails.md`：Wails target、overlay service、provider hook、socket bridge。
 - `docs/zh/grpc.md` / `docs/en/grpc.md`：`grpc-proto`、`grpc-go`、`grpc-python` targets、proto/service 输出、工具链。
@@ -60,16 +61,14 @@ README 应链接到以下用户文档：
 ## README 推荐结构
 
 1. 项目概述
-2. 支持的输出
+2. 适合什么场景
 3. 安装
-4. 快速开始
-5. 最小配置
-6. 常用命令
-7. 深入文档
-8. 开发
-9. 发布
+4. 30 秒示例
+5. 常用目标
+6. 下一步文档索引
+7. 开发和发布
 
-README 必须保持简洁。Wails 的 RouteExecutor、provider pipeline、Go/TypeScript 内部保留目录、gRPC module 推导等细节不应直接堆在 README 中。
+README 必须保持简洁。常用命令只保留能帮助新用户跑通的最短路径；完整 CLI、Wails 的 RouteExecutor、provider pipeline、Go/TypeScript 内部保留目录、Markdown Binary Schema 表格细节、gRPC module 推导等内容不应直接堆在 README 中。
 
 ## 结构事实
 
@@ -91,7 +90,7 @@ README 必须保持简洁。Wails 的 RouteExecutor、provider pipeline、Go/Typ
 - 项目主链路是 `Blueprint -> ContractGraph -> shared target planner -> writers`；ContractGraph 是 Go / TypeScript / Kotlin / Python / Wails / gRPC proto 的唯一协议真源。
 - Blueprint DSL 把长连接消息流作为与 RPC 并列的一等契约：`STREAM` 表示服务端持续推送，`CHANNEL` 表示双向消息通道；legacy `WS/RECV/SEND` 不属于 1.0 公共主线。
 - `STREAM` / `CHANNEL` 使用 `OPEN`、`SERVER_MESSAGE`、`CLIENT_MESSAGE`、typed `CLOSE`、`ConnectionScope` 与 `ConnectionDelivery` 描述 transport-neutral 连接语义；多消息类型必须通过单个判别联合消息契约声明，避免多个裸 event 名。
-- Markdown Binary Schema 是 HTTP 二进制请求体的一等契约：route 使用 `.REQ_BINARY("./binary/packet.md")` 绑定严格 `# packet` + metadata + `## section` / `## struct` + 固定列 Markdown table；旧 `.REQ_BIN(Model)` 不再作为正式能力，应报错提示迁移到 `.REQ_BINARY(path)`。Schema 源文件同时可由 Markdown parser 渲染文档，ContractGraph route manifest 使用 `request.binary_schema` 保存 schema AST / HTML / source path。Go server 按 route group 生成局部 `_gen_binary` parser，并在 `runtime/binary` 下生成共享 binary runtime 复用 reader、bytes/unsafe 批量读取和错误路径 helper；HTTP adapter 在 query/form/json 之外支持 `BindBinary`，按 `identity` / `gzip` 解码后调用 `DecodeBinary(io.Reader)` 填充 `req.B`。
+- Markdown Binary Schema 是 HTTP 二进制请求体的一等契约：route 使用 `.REQ_BINARY("./binary/packet.md")` 绑定严格 `# packet` + metadata + `## section` / `## struct` + 固定列 Markdown table；旧 `.REQ_BIN(Model)` 不再作为正式能力，应报错提示迁移到 `.REQ_BINARY(path)`。Schema 源文件同时可由 Markdown parser 渲染文档，ContractGraph route manifest 使用 `request.binary_schema` 保存 schema AST / HTML / source path。字段类型支持 `u8/u16/u24/u32/u64/i8/i16/i24/i32/i64/f32/f64/bool/bytes/string/padding/reserved/<StructName>/<EnumName>/<BitflagsName>`；`enum` 表继续使用 `name/value/comment`，`bitflags` 推荐使用 `name/bits/rule/comment`，其中 `bits` 可写单 bit 或 `start..end` 位段，`rule=const=0` 表示这些位是必须为 0 的保留位，`rule=enum=<EnumName>` 表示位段按 enum 解释；旧 `name/value/comment` bitflags 表仍作为兼容形式保留。Go bitflags 生成物底层保持整数别名，并为单 bit、enum 位段和 reserved mask 生成 `HasXxx` / `WithXxx`、`Xxx` / `WithXxx`、`ReservedMask` / `HasReservedBits` / `Validate` helper。Go server 按 route group 生成局部 `_gen_binary` parser，并在 `runtime/binary` 下生成共享 binary runtime 复用 reader、bytes/unsafe 批量读取和错误路径 helper；HTTP adapter 在 query/form/json 之外支持 `BindBinary`，按 `identity` / `gzip` 解码后调用 `DecodeBinary(io.Reader)` 填充 `req.B`。Go / TypeScript / Kotlin / Python client 对同一 schema 生成 route-local binary typed packet、streaming/raw body、writer helper 与共享 binary runtime；route surface 不使用 `Raw` 后缀分叉，而是通过语言自己的 overload / interface / union 表达 typed packet 与 `ApiBinaryBody`，HTTP adapter 直接发送 `application/octet-stream` body 并解包 `GeneralWrapper`。
 - `operation_id` 是 RPC / `STREAM` / `CHANNEL` 的正式主线能力，用于稳定生成出来的 handler / client / transport 命名；显式值会规范化为稳定 PascalCase 标识符，但不压平 token 内部大小写，例如 `TaskEvents` / `taskEvents` / `task_events` 都稳定到 `TaskEvents`。它改变 operation-derived surface，但不改变 route id、path 或 ContractGraph 中的连接语义。未显式设置 `operation_id` 且同 group 下发生同 path 多路由自动命名冲突时，生成器会按 method / connection kind 自动消歧，例如 `CurrentGet` / `CurrentPut`；若显式 `operation_id` 归一化后仍冲突，则 `api-gen check` / `generate` 会直接失败并要求用户提供唯一名称。
 - 当前公开 target kind：`contract`、`go-server`、`go-client`、`typescript-client`、`kotlin-client`、`python-server`、`python-client`、`http-transport`、`wails-transport`、`grpc-proto`、`grpc-go`、`grpc-python`。
 - AI agent 与人类维护者应优先使用 `api-gen inspect routes/route/files/schema/binary-schema/errors` 按需查询 ContractGraph，而不是先读生成物、完整 `contract.json` 或庞大的 `contract.d/`。`route` / `schema` 子命令必须支持一次传多个查询，`binary-schema` 可按 schema name 或 source path 查询，`files` / `errors` 必须支持重复 `--route`，让 agent 能批量取得相关接口细节。`inspect` 只返回 live ContractGraph 查询结果，不暗示 shard 文件存在，也不返回默认 shard 路径；离线 shard 入口只存在于显式生成的 `api-blueprint.agent.json`、`api-blueprint.agent.md` 与 `api-blueprint.contract.d/`。默认 contract target 只生成轻量 `api-blueprint.index.json`，它只包含 service / route / target 目录和 inspect 命令模板，不内联 schema、error catalog、route artifact 或 shard 明细；完整 `api-blueprint.contract.json` 只在显式 `formats = ["json"]` 或 `api-gen manifest --profile full` 时生成，用于 diff、归档或兜底全量检查。Kotlin / Python 的 artifact/import 索引必须指向完整镜像 route path 的输出路径，例如 `routes/api/demo`；Python 不再使用 `routes/root` sentinel。
@@ -100,15 +99,15 @@ README 必须保持简洁。Wails 的 RouteExecutor、provider pipeline、Go/Typ
 - Wails v3 标记为 experimental，Wails v2 标记为 preview。
 - `api-gen generate` 从统一 `[[targets]]` 规划依赖；快捷表如 `[[contract]]`、`[[go.server]]`、`[[go.client]]`、`[[python.server]]`、`[[transport.http]]` 会在加载时 normalize 成 canonical targets。生成器拥有的文件会直接写出并记录进度，用户拥有的保留文件才使用 skip 语义。Wails target 只消费已规划的 server/client target 产物并生成 overlay/runtime/binding manifest。
 - `api-gen explain-target --target <id>` 输出 effective target summary，而不是原始 TOML 片段；至少要显示当前 target kind 的关键字段和关键生效值，例如 contract target 省略 `formats` 时仍显示 `formats = ["index"]`，Wails target 需显示 `version`、`overlay_name`、`frontend_mode`、`include`、`exclude`。
-- `api-gen check` 与 writer 共享 planner / capability metadata；Kotlin / Python 当前 capability 覆盖 `rpc`、`legacy_ws`、`stream`、`channel`，request kinds 覆盖 query/json/form/binary/open，response wrappers 覆盖 none/general/custom。Markdown Binary Schema 使用独立 request kind `binary-schema`，第一版只声明 Go server 支持。
+- `api-gen check` 与 writer 共享 planner / capability metadata；Kotlin / Python 当前 capability 覆盖 `rpc`、`legacy_ws`、`stream`、`channel`，request kinds 覆盖 query/json/form/binary/open，response wrappers 覆盖 none/general/custom。Markdown Binary Schema 使用独立 request kind `binary-schema`，当前声明 Go server 与 Go / TypeScript / Kotlin / Python client 支持，Wails / gRPC 继续通过 include/exclude 避开 binary route。
 - Wails `frontend_mode = "external"` 只生成 API artifacts；外部 frontend 需要在挂载应用前加载 Wails runtime，可使用生成的 `ensureWailsRuntime()` helper。
 - Wails target 保持 Go + TypeScript only；不要把 Kotlin / Python client 加入 Wails `clients`。
 - Wails target 的 `include` / `exclude` 只裁剪 target overlay / facade；未选中 route 的 root 不生成 `transports/<overlay_name>`，但共享 Go / TypeScript 契约层仍完整生成。
 - `[[targets]]` 是 canonical target 配置；快捷表会推导 `kind`，`id` 仍必填。`[[contract]]` 是 contract target 快捷表；快捷表中的 Python `module` 映射到 `python_package_root`，Kotlin `module` 映射到 `package`，Go `module` 保持 Go module。transport target 使用 `kind = "http-transport"` / `kind = "wails-transport"` 或 `[[transport.http]]` / `[[transport.wails]]` 并显式声明 `server` 与 `clients`；gRPC 可使用 `[[grpc.proto]]`、`[[grpc.proto.proto_files]]`、`[[grpc.go]]`、`[[grpc.python]]`，也继续兼容 canonical `[[targets]]`。
-- Go client 输出为 `runtime/gen_*.go`、`routes/<root>/<group...>/gen_client.go`、`routes/<root>/<group...>/gen_models.go`、保留的 `client.go` façade，以及 `transports/http/gen_config.go` / `gen_transport.go` / 保留的 `client.go`。`base_url` / `base_url_expr` 只进入 HTTP transport config，不进入 route/runtime client。默认 HTTP adapter 实现 RPC query/json/form/binary 请求，连接类 route 返回明确 unsupported error 以便项目替换自定义 transport。
+- Go client 输出为 `runtime/gen_*.go`、`runtime/binary/gen_runtime.go`、`routes/<root>/<group...>/gen_client.go`、`routes/<root>/<group...>/gen_models.go`、route-local `binary/gen_binary.go`、保留的 `client.go` façade，以及 `transports/http/gen_config.go` / `gen_transport.go` / 保留的 `client.go`。`base_url` / `base_url_expr` 只进入 HTTP transport config，不进入 route/runtime client。默认 HTTP adapter 实现 RPC query/json/form/binary-schema 请求，连接类 route 返回明确 unsupported error 以便项目替换自定义 transport。
 - Go server 的 `out_dir` 是生成包根，不再隐式追加 `views`；core 生成在 `<out_dir>/routes/**`，Markdown Binary Schema parser 按 route group 生成在 `<out_dir>/routes/<root>/<group...>/_gen_binary`，共享二进制 runtime 生成在 `<out_dir>/runtime/binary`，provider runtime 在 `<out_dir>/providers`，error runtime 与分组错误值生成在 `<out_dir>/runtime/errors/**`，HTTP/Wails adapter 在 `<out_dir>/transports/**`。如果项目需要 import path 包含 `/views`，应把 `out_dir` 显式设置为 `.../views`。TypeScript 输出为 `api/runtime/**`、`api/routes/**`、`api/transports/**`。
-- Kotlin client 输出为 `<package>/<root>/runtime/*`、`<package>/<root>/routes/<root>/<group...>/*`、`<package>/<root>/transports/http/*`；第一个 `<root>` 是生成包分段，`routes/<root>/<group...>` 镜像真实 route path。Kotlin 通过 transport abstraction 生成 RPC、legacy WS、STREAM、CHANNEL route surface，支持 query/json/form/binary/open request kind 以及 none/general/custom response wrapper。内置 OkHttp adapter 以 RPC 为主，长连接 bridge 属于 preview surface，接入生产前必须用目标平台 smoke 或自定义 transport 验证。旧 `<package>/ApiClient.kt`、`endpoints/`、`models/`、`internal/` 是破坏性旧布局，不再作为文档入口。
-- Python client/server 使用 `python_package_root` 作为包根；client 是 async-first，按 `<package_root>/<root>/runtime/*`、`<package_root>/<root>/routes/<root>/<group...>/*`、`<package_root>/<root>/transports/http/*` 输出；root-level route 直接位于 `routes/<root>`，不生成 `routes/root`。默认 httpx adapter 实现 RPC 请求，WS/STREAM/CHANNEL 暴露 bridge interface 但默认 adapter 明确要求自定义连接 transport；server 输出 route service contracts/stubs 与 FastAPI HTTP adapter scaffold。Python 生成器属于新实现表面，应按 preview 口径描述。
+- Kotlin client 输出为 `<package>/<root>/runtime/*`、`<package>/<root>/routes/<root>/<group...>/*`、`<package>/<root>/transports/http/*`；第一个 `<root>` 是生成包分段，`routes/<root>/<group...>` 镜像真实 route path。Kotlin 通过 transport abstraction 生成 RPC、legacy WS、STREAM、CHANNEL route surface，支持 query/json/form/binary/binary-schema/open request kind 以及 none/general/custom response wrapper。Markdown Binary Schema 额外输出 `<group>/binary/GenBinary.kt` 和 `runtime/binary/GenBinaryRuntime.kt`，typed overload 会把 packet 编码成 `ApiBinaryBody`，`ApiBinaryBody` overload 允许已有高性能 streaming body 直接接入；生成的 `EncodedBinaryBlock` helper 允许业务把已缓存或压缩的字段片段按 schema 字段、count 和 byte size 校验后写入。内置 OkHttp adapter 以 RPC 为主，长连接 bridge 属于 preview surface，接入生产前必须用目标平台 smoke 或自定义 transport 验证。旧 `<package>/ApiClient.kt`、`endpoints/`、`models/`、`internal/` 是破坏性旧布局，不再作为文档入口。
+- Python client/server 使用 `python_package_root` 作为包根；client 是 async-first，按 `<package_root>/<root>/runtime/*`、`<package_root>/<root>/runtime/binary/*`、`<package_root>/<root>/routes/<root>/<group...>/*`、route-local `binary/gen_binary.py`、`<package_root>/<root>/transports/http/*` 输出；root-level route 直接位于 `routes/<root>`，不生成 `routes/root`。默认 httpx adapter 实现 RPC query/json/form/binary-schema 请求，WS/STREAM/CHANNEL 暴露 bridge interface 但默认 adapter 明确要求自定义连接 transport；server 输出 route service contracts/stubs 与 FastAPI HTTP adapter scaffold。Python 生成器属于新实现表面，应按 preview 口径描述。
 - Go `providers` 是生成包根下的全局 transport-neutral runtime，不按 root 拆分；需要按 root/route/transport 切换同名 provider 实现时，使用 route-scoped provider factory，用户自定义 hook 为 `SelectProvider(spec, handler)`，详见 `docs/*/generators.md`。
 - Go HTTP adapter 不会覆盖 Gin handler 已经写出的响应；`HTTP_RAW_RESPONSE()` 表示 handler owns HTTP success response，只影响 HTTP adapter finalization。
 - Wails 可以运行在不启动 HTTP 服务的 app shell 中；只声明 Wails target 时，Wails app 的 Go import graph 不需要包含 Gin HTTP adapter。
@@ -124,7 +123,7 @@ README 必须保持简洁。Wails 的 RouteExecutor、provider pipeline、Go/Typ
 - snapshot drift 是“生成结果发生变化”的信号，不自动等于 bug。
 - Go / TypeScript / Python 的 `gen_*` 文件由生成器拥有；Kotlin 的 `Gen*.kt` 文件由生成器拥有，并带 `Code generated by api-blueprint; DO NOT EDIT.` header。`impl_*`、Python `client.py` / `service.py`、Kotlin 非 `Gen*` facade / extension 文件是用户扩展点并在重生成时保留。
 - `main.py` 与 `debug.py` 仅作为本地辅助脚本保留，不属于公共发布面。
-- `make example-golang-suite` 是手动增强验证：它在临时 workspace 重生成 Go server/client，启动真实 Go server 进程，再通过 generated Go client 与原生 HTTP binary 请求验证端到端回路。该命令不接入默认 `test`、`example-validation`、`release-preflight` 或 CI。
+- `make example-golang-suite` 是手动增强验证：它在临时 workspace 重生成 Go server、Go client、TypeScript client 与 Python client，启动真实 Go server 进程，再通过 generated Go / TypeScript / Python client 与原生 HTTP binary 请求验证端到端回路。该命令不接入默认 `test`、`example-validation`、`release-preflight` 或 CI。
 
 ## 文档维护规则
 

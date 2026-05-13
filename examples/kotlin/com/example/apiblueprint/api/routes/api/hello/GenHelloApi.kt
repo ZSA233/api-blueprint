@@ -2,6 +2,7 @@
 package com.example.apiblueprint.api.routes.api.hello
 
 import com.example.apiblueprint.api.runtime.*
+
 import kotlinx.serialization.builtins.*
 
 public open class GenHelloApi internal constructor(
@@ -11,8 +12,8 @@ public open class GenHelloApi internal constructor(
     public open suspend fun abc(
         query: HelloAbcQuery,
         headers: Map<String, String> = emptyMap(),
-    ): GeneralResponse<HelloAbcResponse> {
-        return transport.request(
+    ): HelloAbcResponse {
+        val envelope = transport.request(
             ApiRequest(
                 method = "GET",
                 path = "/api/hello/abc",
@@ -22,12 +23,16 @@ public open class GenHelloApi internal constructor(
                 responseMediaType = "application/json",
             )
         )
+        if (envelope.code != 0) {
+            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
+        }
+        return envelope.data ?: throw ApiException(200, "Missing response data for /api/hello/abc")
     }
 
     public open suspend fun mapEnum(
         headers: Map<String, String> = emptyMap(),
-    ): GeneralResponse<HelloMapEnumResponse> {
-        return transport.request(
+    ): HelloMapEnumResponse {
+        val envelope = transport.request(
             ApiRequest(
                 method = "GET",
                 path = "/api/hello/map-enum",
@@ -36,12 +41,16 @@ public open class GenHelloApi internal constructor(
                 responseMediaType = "application/json",
             )
         )
+        if (envelope.code != 0) {
+            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
+        }
+        return envelope.data ?: throw ApiException(200, "Missing response data for /api/hello/map-enum")
     }
 
     public open suspend fun listEnum(
         headers: Map<String, String> = emptyMap(),
-    ): GeneralResponse<HelloListEnumResponse> {
-        return transport.request(
+    ): HelloListEnumResponse {
+        val envelope = transport.request(
             ApiRequest(
                 method = "GET",
                 path = "/api/hello/list-enum",
@@ -50,12 +59,16 @@ public open class GenHelloApi internal constructor(
                 responseMediaType = "application/json",
             )
         )
+        if (envelope.code != 0) {
+            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
+        }
+        return envelope.data ?: throw ApiException(200, "Missing response data for /api/hello/list-enum")
     }
 
     public open suspend fun string(
         headers: Map<String, String> = emptyMap(),
-    ): GeneralResponse<HelloStringResponse> {
-        return transport.request(
+    ): HelloStringResponse {
+        val envelope = transport.request(
             ApiRequest(
                 method = "GET",
                 path = "/api/hello/string",
@@ -64,12 +77,16 @@ public open class GenHelloApi internal constructor(
                 responseMediaType = "application/json",
             )
         )
+        if (envelope.code != 0) {
+            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
+        }
+        return envelope.data ?: throw ApiException(200, "Missing response data for /api/hello/string")
     }
 
     public open suspend fun uint64(
         headers: Map<String, String> = emptyMap(),
-    ): GeneralResponse<HelloUint64Response> {
-        return transport.request(
+    ): HelloUint64Response {
+        val envelope = transport.request(
             ApiRequest(
                 method = "GET",
                 path = "/api/hello/uint64",
@@ -78,12 +95,16 @@ public open class GenHelloApi internal constructor(
                 responseMediaType = "application/json",
             )
         )
+        if (envelope.code != 0) {
+            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
+        }
+        return envelope.data ?: throw ApiException(200, "Missing response data for /api/hello/uint64")
     }
 
     public open suspend fun stringEmun(
         headers: Map<String, String> = emptyMap(),
-    ): GeneralResponse<HelloStringEmunResponse> {
-        return transport.request(
+    ): HelloStringEmunResponse {
+        val envelope = transport.request(
             ApiRequest(
                 method = "GET",
                 path = "/api/hello/string-emun",
@@ -92,22 +113,30 @@ public open class GenHelloApi internal constructor(
                 responseMediaType = "application/json",
             )
         )
+        if (envelope.code != 0) {
+            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
+        }
+        return envelope.data ?: throw ApiException(200, "Missing response data for /api/hello/string-emun")
     }
 
     public open suspend fun helloWay(
         query: HelloHelloWayQuery,
         headers: Map<String, String> = emptyMap(),
     ): Unit {
-        return transport.request(
+        val envelope = transport.request(
             ApiRequest(
                 method = "GET",
                 path = "/api/hello/hello-way",
                 query = query.toQueryMap(),
                 headers = headers,
-                responseSerializer = Unit.serializer(),
+                responseSerializer = GeneralResponse.serializer(Unit.serializer()),
                 responseMediaType = "application/json",
             )
         )
+        if (envelope.code != 0) {
+            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
+        }
+        return envelope.data ?: throw ApiException(200, "Missing response data for /api/hello/hello-way")
     }
 
     private fun HelloAbcQuery.toQueryMap(): Map<String, String?> = mapOf(

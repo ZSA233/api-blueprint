@@ -105,6 +105,7 @@ api-gen generate -c examples/api-blueprint.toml --target wails.v3
 
 - See [Configuration](configuration.md) for config fields.
 - See [Blueprint DSL](blueprint-dsl.md) for DSL usage.
+- See [Markdown Binary Schema](binary-schema.md) for binary request bodies.
 - See [Generators](generators.md) for generator differences.
 - See [Wails](wails.md) for Wails integration.
 - See [gRPC](grpc.md) for gRPC targets.

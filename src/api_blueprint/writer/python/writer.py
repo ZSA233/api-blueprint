@@ -126,6 +126,14 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
         with self.write_file(plan.runtime.generated_file, overwrite=True) as handle:
             if handle:
                 handle.write(_render_python(self.runtime_template, context, "runtime"))
+        binary_runtime_dir = plan.runtime.directory / "binary"
+        self._ensure_package_markers(binary_runtime_dir)
+        with self.write_file(binary_runtime_dir / "gen_runtime.py", overwrite=True) as handle:
+            if handle:
+                handle.write(_render_python("gen_runtime.py", context, "runtime/binary"))
+        with self.write_file(binary_runtime_dir / "__init__.py", overwrite=True) as handle:
+            if handle:
+                handle.write("from .gen_runtime import *\n")
         self._write_runtime_errors_facade(plan.runtime.directory)
         with self.write_file(plan.runtime.directory / "gen_errors.py", overwrite=True) as handle:
             if handle:
@@ -159,6 +167,27 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
         with self.write_file(group_plan.generated_file, overwrite=True) as handle:
             if handle:
                 handle.write(_render_python(self.route_template, {"group": group_plan.group}, "routes"))
+        binary_schemas = group_plan.group.binary_schemas()
+        binary_dir = group_plan.directory / "binary"
+        if binary_schemas:
+            self._ensure_package_markers(binary_dir)
+            with self.write_file(binary_dir / "gen_binary.py", overwrite=True) as handle:
+                if handle:
+                    handle.write(
+                        _render_python(
+                            "gen_binary.py",
+                            {
+                                "binary_schemas": binary_schemas,
+                                "runtime_import_prefix": group_plan.group.runtime_import_prefix + ".",
+                            },
+                            "routes/binary",
+                        )
+                    )
+            with self.write_file(binary_dir / "__init__.py", overwrite=True) as handle:
+                if handle:
+                    handle.write("from .gen_binary import *\n")
+        elif binary_dir.exists():
+            shutil.rmtree(binary_dir)
         self._cleanup_legacy_route_dir(group_plan)
 
     def _migrate_legacy_public_file(self, group_plan: "PythonRouteGroupPlan") -> None:
