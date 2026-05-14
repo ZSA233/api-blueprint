@@ -1,0 +1,77 @@
+{% autoescape false %}package {{ bp.root_package }}.transports.http.{{ group.package_suffix }};
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import {{ bp.root_package }}.routes.{{ group.package_suffix }}.{{ group.service_class }};
+import {{ bp.root_package }}.routes.{{ group.package_suffix }}.{{ group.stub_class }};
+import {{ bp.root_package }}.routes.{{ group.package_suffix }}.{{ group.models_class }};
+import {{ bp.root_package }}.runtime.GenModels;
+import {{ bp.root_package }}.runtime.binary.ApiBinaryBody;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class {{ group.controller_class }} {
+    private final {{ group.service_class }} service;
+    private final ObjectMapper objectMapper;
+
+    public {{ group.controller_class }}(
+        @Autowired(required = false) {{ group.service_class }} service,
+        ObjectMapper objectMapper
+    ) {
+        this.service = service == null ? new {{ group.stub_class }}() : service;
+        this.objectMapper = objectMapper;
+    }
+{% for route in group.routes %}
+{% if route.is_rpc %}
+
+    @RequestMapping(path = {{ route.url | code_literal }}, method = RequestMethod.{{ route.http_method }})
+    public Object {{ route.method_name }}(
+        @RequestParam Map<String, String> queryParams{% if route.json_model %},
+        @RequestBody(required = false) {{ writer.schema_type(route.json_model, group) }} json{% elif route.binary_schema or route.binary_model %},
+        @RequestBody(required = false) byte[] binaryBody{% endif %}
+    ) throws Exception {
+{%- if route.query_model %}
+        {{ writer.schema_type(route.query_model, group) }} query = objectMapper.convertValue(queryParams, {{ writer.schema_class_literal(route.query_model, group) }});
+{%- endif %}
+{%- if route.form_model %}
+        {{ writer.schema_type(route.form_model, group) }} form = objectMapper.convertValue(queryParams, {{ writer.schema_class_literal(route.form_model, group) }});
+{%- endif %}
+{%- if route.binary_schema %}
+        ApiBinaryBody binary = ApiBinaryBody.of(binaryBody == null ? new byte[0] : binaryBody);
+{%- endif %}
+        Object result = service.{{ route.method_name }}(
+{%- for type_name, name in writer.route_params(route, group) %}
+            {{ "binary" if name == "binaryBody" and route.binary_schema else name }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+        );
+        return wrapResponse({{ route.response_wrapper | code_literal }}, result);
+    }
+{% else %}
+
+    @RequestMapping(path = {{ route.url | code_literal }}, method = RequestMethod.GET)
+    public ResponseEntity<String> {{ route.method_name }}Unsupported() {
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body("{{ route.kind }} route is not implemented by the generated Spring MVC adapter");
+    }
+{% endif %}
+{% endfor %}
+
+    private Object wrapResponse(String wrapper, Object data) {
+        if (!"GeneralWrapper".equals(wrapper)) {
+            return data;
+        }
+        Map<String, Object> envelope = new LinkedHashMap<>();
+        envelope.put("code", 0);
+        envelope.put("message", "");
+        envelope.put("data", data);
+        return envelope;
+    }
+}
+{% endautoescape %}

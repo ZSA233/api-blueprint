@@ -1,0 +1,19 @@
+package {{ bp.root_package }}.runtime;
+
+{% for group in bp.groups.values() -%}
+import {{ bp.root_package }}.routes.{{ group.package_suffix }}.{{ group.class_name }};
+{% endfor %}
+
+public class GenApiClient {
+    protected final ApiTransport transport;
+{% for group in bp.groups.values() %}
+    public final {{ group.class_name }} {{ group.property_name }};
+{% endfor %}
+
+    public GenApiClient(ApiTransport transport) {
+        this.transport = transport;
+{% for group in bp.groups.values() %}
+        this.{{ group.property_name }} = new {{ group.class_name }}(transport);
+{% endfor %}
+    }
+}

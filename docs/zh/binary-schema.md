@@ -139,10 +139,14 @@ padding/reserved
 
 ## 生成结果
 
-Go server 会按 route group 生成局部 parser，例如：
+生成器会按 route group 输出局部 binary helper，并复用共享 runtime。Go server / Go client 使用独立 `_gen_binary` package；Java/Kotlin 输出同 route package 下的 `GenBinary`；TypeScript/Python 输出同 route 目录下的 `gen_binary` module。例如：
 
 ```text
 routes/api/binary/_gen_binary/gen_binary.go
+routes/api/binary/GenBinary.java
+routes/api/binary/GenBinary.kt
+routes/api/binary/gen_binary.ts
+routes/api/binary/gen_binary.py
 runtime/binary/gen_runtime.go
 ```
 

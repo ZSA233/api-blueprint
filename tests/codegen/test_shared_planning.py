@@ -62,6 +62,7 @@ def test_kotlin_capability_accepts_connection_routes() -> None:
         ("go-client", {"module": "example.com/client"}),
         ("typescript-client", {}),
         ("kotlin-client", {"package": "com.example"}),
+        ("java-client", {"package": "com.example"}),
         ("python-client", {}),
     ],
 )
@@ -142,3 +143,12 @@ def test_python_targets_are_real_generation_capabilities(kind: str) -> None:
     assert manifest[kind]["routes"] == ["rpc", "legacy_ws", "stream", "channel"]
     if kind == "python-client":
         assert "binary-schema" in manifest[kind]["requests"]
+
+
+@pytest.mark.parametrize("kind", ["java-client", "java-server"])
+def test_java_targets_are_real_generation_capabilities(kind: str) -> None:
+    manifest = target_capability_manifest()
+
+    assert manifest[kind]["implemented"] is True
+    assert manifest[kind]["routes"] == ["rpc", "legacy_ws", "stream", "channel"]
+    assert "binary-schema" in manifest[kind]["requests"]

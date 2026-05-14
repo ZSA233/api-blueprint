@@ -4,7 +4,6 @@ package com.example.apiblueprint.api.routes.api.binary
 import com.example.apiblueprint.api.runtime.*
 
 import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody
-import com.example.apiblueprint.api.routes.api.binary.binary.*
 
 import kotlinx.serialization.builtins.*
 
@@ -14,7 +13,7 @@ public open class GenBinaryApi internal constructor(
 
     public open suspend fun packet(
         query: BinaryPacketQuery,
-        binary: DemoPacket,
+        binary: GenBinary.DemoPacket,
         headers: Map<String, String> = emptyMap(),
     ): BinaryPacketResponse {
         val envelope = transport.request(
@@ -23,7 +22,7 @@ public open class GenBinaryApi internal constructor(
                 path = "/api/binary/packet",
                 query = query.toQueryMap(),
                 headers = headers,
-                binary = binary.toBinaryBody(),
+                binary = GenBinary.DemoPacketWire.toBinaryBody(binary),
                 responseSerializer = GeneralResponse.serializer(BinaryPacketResponse.serializer()),
                 responseMediaType = "application/json",
             )

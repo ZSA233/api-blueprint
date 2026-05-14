@@ -4,7 +4,7 @@ import {
   DemoFlagsValues,
   DemoPacket,
   DemoPacketWire,
-} from "./api/routes/api/binary/binary";
+} from "./api/routes/api/binary/gen_binary";
 
 declare const process: {
   argv: string[];

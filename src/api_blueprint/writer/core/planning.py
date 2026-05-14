@@ -76,6 +76,19 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
         wrappers=("none", "general", "custom"),
         transport="injected",
     ),
+    "java-server": TargetCapability(
+        implemented=True,
+        routes=("rpc", "legacy_ws", "stream", "channel"),
+        requests=("query", "json", "form", "binary", "binary-schema", "open"),
+        wrappers=("none", "general", "custom"),
+    ),
+    "java-client": TargetCapability(
+        implemented=True,
+        routes=("rpc", "legacy_ws", "stream", "channel"),
+        requests=("query", "json", "form", "binary", "binary-schema", "open"),
+        wrappers=("none", "general", "custom"),
+        transport="injected",
+    ),
     "python-server": TargetCapability(
         implemented=True,
         routes=("rpc", "legacy_ws", "stream", "channel"),

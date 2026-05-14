@@ -178,3 +178,32 @@ clients = ["python.client"]
     planned = generator.generation_plan(resolved.targets, ("http",))
 
     assert [target.id for target in planned] == ["python.server", "python.client", "http"]
+
+
+def test_generation_plan_includes_java_http_transport_dependencies(tmp_path):
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[java.server]]
+id = "java.server"
+out_dir = "java/server"
+module = "com.example.generated"
+
+[[java.client]]
+id = "java.client"
+out_dir = "java/client"
+module = "com.example.generated"
+
+[[transport.http]]
+id = "http.java"
+server = "java.server"
+clients = ["java.client"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    resolved = resolve_config(config_path)
+
+    planned = generator.generation_plan(resolved.targets, ("http.java",))
+
+    assert [target.id for target in planned] == ["java.server", "java.client", "http.java"]

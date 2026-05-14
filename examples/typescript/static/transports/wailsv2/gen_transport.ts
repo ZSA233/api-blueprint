@@ -18,13 +18,9 @@ import type {
   StreamConnectOptions,
 } from "../../runtime/client";
 
-
-
 type RequestBody = RequestInit["body"];
 
-
 type WailsEventHandler = (payload?: unknown) => void;
-
 
 type WailsSocketSession = {
   id: string;
@@ -96,7 +92,6 @@ declare global {
   }
 }
 
-
 let wailsRuntimeLoadPromise: Promise<void> | null = null;
 const wailsScriptLoads = new Map<string, Promise<void>>();
 
@@ -148,7 +143,6 @@ export async function ensureWailsRuntime(): Promise<void> {
   }
   await wailsRuntimeLoadPromise;
 }
-
 
 class WailsStreamBridge<Recv, Close = SocketCloseInfo> implements ApiStreamBridge<Recv, Close> {
   readonly mode = "wails-v2";

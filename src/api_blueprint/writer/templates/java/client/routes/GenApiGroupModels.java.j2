@@ -1,0 +1,23 @@
+{% autoescape false %}package {{ bp.root_package }}.routes.{{ group.package_suffix }};
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import {{ bp.root_package }}.runtime.GenModels;
+import java.util.List;
+import java.util.Map;
+
+public final class {{ group.models_class }} {
+    private {{ group.models_class }}() {
+    }
+{% for schema in writer.model_schemas_for_group(group) %}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record {{ schema.name }}(
+{%- for field in schema.fields %}
+        @JsonProperty({{ field.wire_name | code_literal }}) {{ field.java_type }} {{ field.java_name }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ) {
+    }
+{% endfor %}
+}
+{% endautoescape %}

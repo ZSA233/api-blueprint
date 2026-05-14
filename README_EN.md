@@ -18,7 +18,7 @@ Blueprint DSL -> ContractGraph -> api-gen check / inspect / generate -> generate
 ## When To Use
 
 - Backend, web, Android, and script clients need to share one API contract.
-- You want to generate a Go server first, then TypeScript, Kotlin, Go, or Python clients.
+- You want to generate a Go server first, then TypeScript, Kotlin, Java, Go, or Python clients.
 - You need documentation, contract checks, generated snapshots, and end-to-end examples to move together.
 - You need Markdown Binary Schema, Wails, or gRPC in the same generation flow.
 
@@ -84,7 +84,7 @@ api-gen check -c api-blueprint.toml
 api-gen generate -c api-blueprint.toml
 ```
 
-For fuller project layout, Go client, Kotlin, Python, Wails, and gRPC configuration, see [Getting Started](docs/en/getting-started.md) and [Configuration](docs/en/configuration.md).
+For fuller project layout, Go client, Kotlin, Java, Python, Wails, and gRPC configuration, see [Getting Started](docs/en/getting-started.md) and [Configuration](docs/en/configuration.md).
 
 ## Common Targets
 
@@ -94,6 +94,7 @@ For fuller project layout, Go client, Kotlin, Python, Wails, and gRPC configurat
 | Go server | Available | Generate Go routes, providers, HTTP/Wails adapters, and runtime |
 | TypeScript client | Preview | Generate transport-neutral clients, HTTP adapters, and Wails facades |
 | Kotlin Android client | Preview | Generate OkHttp clients, models, binary writers, and route facades |
+| Java client/server | Preview | Generate Java 17 HttpClient clients, Spring MVC server scaffolds, record DTOs, and HTTP adapters |
 | Go / Python client | Preview | Generate non-server clients for scripts, tools, or services |
 | Python server | Preview | Generate FastAPI server scaffolds and service contracts |
 | Wails v2/v3 | Preview / Experimental | Generate Go + TypeScript overlays for desktop GUIs |
@@ -122,6 +123,7 @@ make test
 make example-compile-check
 make example-validation
 make example-golang-suite
+make example-java-suite
 ```
 
-`example-golang-suite` is a manual end-to-end validation aid; it is not part of default tests, release preflight, or CI. See [Release Process](docs/release-process.md) for versioning, build, install, and GitHub Release flow.
+`example-golang-suite` and `example-java-suite` are manual end-to-end validation aids; they are not part of default tests, release preflight, or CI. See [Release Process](docs/release-process.md) for versioning, build, install, and GitHub Release flow.

@@ -7,14 +7,12 @@ import type * as Shared from "../../../runtime/models";
 import { ApiChannelBridge, ApiClientConfig, ApiSocketBridge, ApiStreamBridge, BaseClient } from "../../../runtime/client";
 
 import type { ApiBinaryBody } from "../../../runtime/binary/index";
-import * as Binary from "./binary";
-
+import * as GenBinary from "./gen_binary";
 
 export class BinaryClient extends BaseClient {
   constructor(config: ApiClientConfig = {}) {
     super(config);
   }
-
 
   /**
    * Binary packet example
@@ -25,7 +23,7 @@ export class BinaryClient extends BaseClient {
   async packet(
     request: {
       query?: Models.ReqPacketQuery;
-      binary: Binary.DemoPacket;
+      binary: GenBinary.DemoPacket;
       headers?: Record<string, string>;
     },
     init?: RequestInit,
@@ -42,11 +40,10 @@ export class BinaryClient extends BaseClient {
     timeoutMs?: number,
   ): Promise<Models.RspPacket>;
 
-
   async packet(
     request: {
       query?: Models.ReqPacketQuery;
-      binary: Binary.DemoPacket | ApiBinaryBody;
+      binary: GenBinary.DemoPacket | ApiBinaryBody;
       headers?: Record<string, string>;
     },
     init: RequestInit = {},
@@ -59,7 +56,7 @@ export class BinaryClient extends BaseClient {
       operation: "Packet",
       namespace: "binary",
       query: request.query as unknown as Record<string, unknown> | undefined,
-      binary: Binary.DemoPacketWire.toBinaryBody(request.binary),
+      binary: GenBinary.DemoPacketWire.toBinaryBody(request.binary),
       headers: request.headers,
       init,
       responseType: "json",

@@ -26,6 +26,8 @@ logger.setLevel(logging.INFO)
 
 
 JsonObject = dict[str, Any]
+ROUTE_BINARY_DIR = "_gen_binary"
+LEGACY_ROUTE_BINARY_DIR = "binary"
 
 
 @dataclass(frozen=True)
@@ -215,7 +217,7 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
         )
         if group.binary_schemas:
             self._write_generated(
-                route_dir / "binary" / "gen_binary.go",
+                route_dir / ROUTE_BINARY_DIR / "gen_binary.go",
                 render(
                     "golang",
                     "gen_binary.go",
@@ -226,14 +228,28 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
                     "client/routes/binary",
                 ),
             )
+            self._cleanup_legacy_binary_dir(self.working_dir / route_dir / LEGACY_ROUTE_BINARY_DIR)
         else:
-            stale_binary_dir = self.working_dir / route_dir / "binary"
-            if stale_binary_dir.exists():
-                shutil.rmtree(stale_binary_dir)
+            for stale_binary_dir in (
+                self.working_dir / route_dir / ROUTE_BINARY_DIR,
+                self.working_dir / route_dir / LEGACY_ROUTE_BINARY_DIR,
+            ):
+                self._cleanup_legacy_binary_dir(stale_binary_dir)
         self._write_user_file(
             route_dir / "client.go",
             render("golang", "client.go", {"group": group}, "client/routes"),
         )
+
+    def _cleanup_legacy_binary_dir(self, binary_dir: Path) -> None:
+        if not binary_dir.exists():
+            return
+        for generated_file in (binary_dir / "gen_binary.go",):
+            if generated_file.exists():
+                generated_file.unlink()
+        try:
+            binary_dir.rmdir()
+        except OSError:
+            return
 
     def _write_http_files(self) -> None:
         base_url_code = self.base_url_expr if self.base_url_expr is not None else _code_literal(self.base_url)

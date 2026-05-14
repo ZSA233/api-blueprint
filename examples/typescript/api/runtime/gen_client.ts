@@ -4,7 +4,6 @@
 
 import type { ApiBinaryBody } from "./binary";
 
-
 export interface ApiClientConfig {
   transport?: ApiTransport;
 }

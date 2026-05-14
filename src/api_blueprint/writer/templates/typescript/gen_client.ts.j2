@@ -7,7 +7,7 @@ import type * as Shared from "{{ shared_models_path }}";
 import { ApiChannelBridge, ApiClientConfig, ApiSocketBridge, ApiStreamBridge, BaseClient } from "{{ shared_client_path }}";
 {% if has_binary_schemas %}
 import type { ApiBinaryBody } from "{{ binary_runtime_path }}";
-import * as Binary from "./binary";
+import * as GenBinary from "./gen_binary";
 {% endif %}
 
 export class {{ client_class }} extends BaseClient {

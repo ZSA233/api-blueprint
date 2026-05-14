@@ -1,0 +1,23 @@
+{% autoescape false %}package {{ bp.root_package }}.routes.{{ group.package_suffix }};
+
+import {{ bp.root_package }}.runtime.GenModels;
+import {{ bp.root_package }}.runtime.binary.ApiBinaryBody;
+
+public interface {{ group.generated_service_class }} {
+{% for route in group.routes %}
+{% if route.is_rpc %}
+    {{ writer.response_type(route, group) }} {{ route.method_name }}(
+{%- for type_name, name in writer.route_params(route, group) %}
+        {{ type_name }} {{ name }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ) throws Exception;
+{% else %}
+    Object {{ route.method_name }}(
+{%- for type_name, name in writer.route_params(route, group) %}
+        {{ type_name }} {{ name }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ) throws Exception;
+{% endif %}
+{% endfor %}
+}
+{% endautoescape %}

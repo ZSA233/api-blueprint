@@ -42,6 +42,17 @@ exclude = [
     'path:/api/demo/delete$',
 ]
 
+[[java.server]]
+id = 'java.server'
+out_dir = 'java/server'
+module = 'com.example.apiblueprint'
+
+[[java.client]]
+id = 'java.client'
+out_dir = 'java/client'
+module = 'com.example.apiblueprint'
+base_url = 'http://localhost:2333'
+
 [[python.server]]
 id = 'python.server'
 out_dir = 'python/server'
@@ -63,6 +74,11 @@ clients = ['go.client', 'typescript.client', 'kotlin.client']
 id = 'http.python'
 server = 'python.server'
 clients = ['python.client']
+
+[[transport.http]]
+id = 'http.java'
+server = 'java.server'
+clients = ['java.client']
 
 [[transport.wails]]
 id = 'wails.v3'

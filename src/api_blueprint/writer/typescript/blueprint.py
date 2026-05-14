@@ -28,6 +28,8 @@ if TYPE_CHECKING:
     from .writer import TypeScriptWriter
 
 SHARED_MODULE = RUNTIME_MODULE
+ROUTE_BINARY_MODULE = "gen_binary"
+LEGACY_ROUTE_BINARY_DIR = "binary"
 _SAFE_LEGACY_TS_PASSTHROUGHS: dict[str, set[str]] = {
     "client.ts": {"export * from './gen_client';", 'export * from "./gen_client";'},
     "models.ts": {"export * from './gen_models';", 'export * from "./gen_models";'},
@@ -117,13 +119,13 @@ class TypeScriptRoute:
     def binary_type_expr(self) -> str | None:
         if self.binary_schema is None:
             return None
-        return f"Binary.{self.binary_schema.name}"
+        return f"GenBinary.{self.binary_schema.name}"
 
     @property
     def binary_wire_expr(self) -> str | None:
         if self.binary_schema is None:
             return None
-        return f"Binary.{self.binary_schema.name}Wire"
+        return f"GenBinary.{self.binary_schema.name}Wire"
 
     @property
     def query_type_expr(self) -> str | None:
@@ -553,10 +555,10 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
         )
 
     def render_passthrough(self, target: str) -> str:
-        return f'\n\nexport * from "{target}";\n'
+        return f'export * from "{target}";\n'
 
     def render_errors_passthrough(self) -> str:
-        return '\n\nexport * from "./gen_errors";\nexport * from "./gen_error_catalog";\n'
+        return 'export * from "./gen_errors";\nexport * from "./gen_error_catalog";\n'
 
     def write_errors_passthrough(self, shared_dir: Path) -> None:
         path = shared_dir / "errors.ts"
@@ -566,6 +568,23 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
         with self.writer.write_file(path, overwrite=overwrite) as handle:
             if handle:
                 handle.write(source)
+
+    def _cleanup_legacy_binary_dir(self, binary_dir: Path) -> None:
+        if not binary_dir.exists():
+            return
+        generated_file = binary_dir / "gen_binary.ts"
+        if generated_file.exists():
+            generated_file.unlink()
+        index_file = binary_dir / "index.ts"
+        if index_file.exists() and index_file.read_text(encoding="utf-8").strip() in {
+            'export * from "./gen_binary";',
+            "export * from './gen_binary';",
+        }:
+            index_file.unlink()
+        try:
+            binary_dir.rmdir()
+        except OSError:
+            return
 
     def transport_root_exports(self, root_dir: Path, *extra_transports: str) -> list[dict[str, str]]:
         transports_dir = root_dir / self.writer.transports_dir_name
@@ -1043,10 +1062,10 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                         handle.write(render(self.writer.template_lang, tmpl, client_context))
 
             binary_schemas = group.binary_schemas()
-            binary_dir = group_dir / "binary"
+            binary_file = group_dir / f"{ROUTE_BINARY_MODULE}.ts"
+            legacy_binary_dir = group_dir / LEGACY_ROUTE_BINARY_DIR
             if binary_schemas:
-                binary_dir.mkdir(parents=True, exist_ok=True)
-                with self.writer.write_file(binary_dir / "gen_binary.ts", overwrite=True) as handle:
+                with self.writer.write_file(binary_file, overwrite=True) as handle:
                     if handle:
                         handle.write(
                             render(
@@ -1054,16 +1073,16 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                                 "binary_schema.ts",
                                 {
                                     "binary_schemas": binary_schemas,
-                                    "runtime_binary_path": self._relative_import_path(binary_dir, binary_runtime_dir / "index.ts"),
+                                    "runtime_binary_path": self._relative_import_path(group_dir, binary_runtime_dir / "index.ts"),
                                 },
                                 "",
                             )
                         )
-                with self.writer.write_file(binary_dir / "index.ts", overwrite=False) as handle:
-                    if handle:
-                        handle.write(self.render_passthrough("./gen_binary"))
-            elif binary_dir.exists():
-                shutil.rmtree(binary_dir)
+                self._cleanup_legacy_binary_dir(legacy_binary_dir)
+            else:
+                if binary_file.exists():
+                    binary_file.unlink()
+                self._cleanup_legacy_binary_dir(legacy_binary_dir)
 
             for tmpl in ["gen_index.ts", "index.ts"]:
                 with self.writer.write_file(group_dir / tmpl, overwrite=tmpl.startswith("gen_")) as handle:
@@ -1074,7 +1093,7 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                                 tmpl,
                                 {
                                     "client_class": group.client_class,
-                                    "extra_exports": ['export * as Binary from "./binary";'] if binary_schemas else [],
+                                    "extra_exports": [f'export * as GenBinary from "./{ROUTE_BINARY_MODULE}";'] if binary_schemas else [],
                                 },
                             )
                         )

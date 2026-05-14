@@ -1,6 +1,6 @@
 # 配置说明
 
-`api-blueprint.toml` 是文档服务和统一生成器的主配置文件。1.0 主线使用 `Blueprint -> ContractGraph -> targets`；`[[targets]]` 是 canonical 入口，`[[contract]]`、`[[go.server]]`、`[[go.client]]`、`[[python.server]]`、`[[transport.http]]`、`[[grpc.proto]]`、`[[grpc.go]]` 等快捷表会在加载时 normalize 成同一个 target 列表。
+`api-blueprint.toml` 是文档服务和统一生成器的主配置文件。1.0 主线使用 `Blueprint -> ContractGraph -> targets`；`[[targets]]` 是 canonical 入口，`[[contract]]`、`[[go.server]]`、`[[go.client]]`、`[[java.server]]`、`[[java.client]]`、`[[python.server]]`、`[[transport.http]]`、`[[grpc.proto]]`、`[[grpc.go]]` 等快捷表会在加载时 normalize 成同一个 target 列表。
 
 ## blueprint
 
@@ -45,6 +45,17 @@ id = "kotlin.client"
 out_dir = "kotlin"
 module = "com.example.apiblueprint"
 
+[[java.server]]
+id = "java.server"
+out_dir = "java/server"
+module = "com.example.apiblueprint"
+
+[[java.client]]
+id = "java.client"
+out_dir = "java/client"
+module = "com.example.apiblueprint"
+base_url = "http://localhost:2333"
+
 [[python.server]]
 id = "python.server"
 out_dir = "python/server"
@@ -60,6 +71,11 @@ base_url = "http://localhost:2333"
 id = "http"
 server = "go.server"
 clients = ["go.client", "typescript.client", "kotlin.client", "python.client"]
+
+[[transport.http]]
+id = "http.java"
+server = "java.server"
+clients = ["java.client"]
 
 [[transport.wails]]
 id = "wails.v3"
@@ -103,28 +119,32 @@ module = "pb"
 - `kind`：target 类型。
 - `out_dir`：生成目录；Go server 中它就是生成包根，不再隐式追加 `views`；transport target 通常不需要。
 
-快捷表会推导 `kind`，因此不允许手写 `kind`。`id` 仍必填。快捷表中的 Go `module` 保持 Go module；Python `module` 会映射到 `python_package_root`；Kotlin `module` 会映射到 `package`，也可以继续写显式 `package`；`[[grpc.python]] module` 同样映射到 `python_package_root`。
+快捷表会推导 `kind`，因此不允许手写 `kind`。`id` 仍必填。快捷表中的 Go `module` 保持 Go module；Python `module` 会映射到 `python_package_root`；Kotlin / Java `module` 会映射到 `package`，也可以继续写显式 `package`；Java 不生成 JPMS `module-info.java`，canonical 字段是 `package`；`[[grpc.python]] module` 同样映射到 `python_package_root`。
 
 核心 target：
 
 - `contract`：省略 `formats` 时默认只输出轻量 `api-blueprint.index.json`，用于 AI agent 和人工维护者离线获得 service / route / target 目录以及推荐 `api-gen inspect` 查询命令；它不内联 schema、error catalog、route artifact 或 shard 明细。`formats = ["json"]` 才输出完整 `api-blueprint.contract.json`，用于 diff、归档或兜底全量检查；`markdown`、`agent-*` 与 `shards` 适合离线导航包、归档或需要分片快照时开启。
 - `go-server`：生成 Go 服务端 core。`out_dir` 是包根；route/provider/transport/error 产物分别位于 `routes`、`providers`、`transports`、`runtime/errors`。Markdown Binary Schema parser 按 route group 位于 `routes/<root>/<group...>/_gen_binary`，共享二进制 runtime 位于 `runtime/binary`。如果需要包路径包含 `/views`，应显式把 `out_dir` 写成 `.../views`。
-- `go-client`：生成 preview Go client；RPC/query/json/form/binary HTTP 调用可用，legacy WS / STREAM / CHANNEL 生成 transport-neutral surface，默认 HTTP adapter 返回明确 unsupported error，便于项目替换自定义 transport。
-- `typescript-client`：生成只依赖 `ApiTransport` 的 TypeScript client core；`base_url` / `base_url_expr` 由 transport facade 注入。
-- `kotlin-client`：生成 OkHttp + kotlinx.serialization Android client；通过共享 transport abstraction 生成 RPC、legacy WS、STREAM、CHANNEL route surface，支持 query/json/form/binary/open request kind，以及 none/general/custom response wrapper。`base_url` / `base_url_expr` 由生成的 OkHttp HTTP adapter config 使用，route/runtime client 保持 transport-neutral。内置 OkHttp adapter 以 RPC 为主，长连接 bridge 属于 preview/custom transport surface。
+- `go-client`：生成 preview Go client；RPC/query/json/form/binary HTTP 调用可用，binary schema writer 位于 route-local `_gen_binary` package，legacy WS / STREAM / CHANNEL 生成 transport-neutral surface，默认 HTTP adapter 返回明确 unsupported error，便于项目替换自定义 transport。
+- `typescript-client`：生成只依赖 `ApiTransport` 的 TypeScript client core；binary schema helper 是 route-local `gen_binary.ts` sibling module；`base_url` / `base_url_expr` 由 transport facade 注入。
+- `kotlin-client`：生成 OkHttp + kotlinx.serialization Android client；通过共享 transport abstraction 生成 RPC、legacy WS、STREAM、CHANNEL route surface，支持 query/json/form/binary/open request kind，以及 none/general/custom response wrapper。binary schema helper 是同 route package 的 `GenBinary.kt`；`base_url` / `base_url_expr` 由生成的 OkHttp HTTP adapter config 使用，route/runtime client 保持 transport-neutral。内置 OkHttp adapter 以 RPC 为主，长连接 bridge 属于 preview/custom transport surface。
+- `java-client`：生成 preview Java 17 client；使用 `java.net.http.HttpClient` + Jackson，输出 transport-neutral route surface 与默认 JDK HTTP adapter。RPC query/json/form/binary/binary-schema 可用，binary schema bridge 是同 route package 的 `GenBinary.java`，legacy WS / STREAM / CHANNEL 默认抛明确 unsupported，便于替换自定义 transport。
+- `java-server`：生成 preview Spring MVC server scaffold；输出 route service interface、stub、runtime 与 Spring controller。binary schema bridge 是同 route package 的 `GenBinary.java`；RPC HTTP controller 可用，非 RPC connection route 先保留 service surface，HTTP adapter 返回明确 501。
 - `python-server`：生成 Python route service contracts/stubs 与 FastAPI HTTP adapter scaffold；使用 `python_package_root` 控制生成包根。
-- `python-client`：生成 async-first Python HTTP client；使用 `python_package_root` 控制生成包根，`base_url` / `base_url_expr` 由 HTTP transport adapter 使用。默认 httpx adapter 实现 RPC 请求，WS/STREAM/CHANNEL 连接 transport 是 preview/custom 扩展点。
+- `python-client`：生成 async-first Python HTTP client；使用 `python_package_root` 控制生成包根，binary schema helper 是 route-local `gen_binary.py` sibling module，`base_url` / `base_url_expr` 由 HTTP transport adapter 使用。默认 httpx adapter 实现 RPC 请求，WS/STREAM/CHANNEL 连接 transport 是 preview/custom 扩展点。
 - `grpc-proto`：从 ContractGraph 输出 `.proto` 和 service 定义；可通过 `[[targets.proto_files]]` 或快捷表 `[[grpc.proto.proto_files]]` 把 DSL schema module/name 与 route path/id/service 映射到指定 proto file/package/go_package/service。
 - `grpc-go`：消费同配置内的 `grpc-proto` target，或直接消费手写 proto，调用 `protoc` / `protoc-gen-go` / `protoc-gen-go-grpc` 生成 Go protobuf/gRPC stub。
 - `grpc-python`：消费同配置内的 `grpc-proto` target，或直接消费手写 proto，调用 `grpcio-tools` 生成 Python protobuf/gRPC stub；`python_package_root` 会把生成物放入指定包根并重写生成 import。
 
-Kotlin / Python client/server、`api-gen check` 和 contract / agent artifact projection 使用同一份 planner / capability metadata。若 target capability 不支持某个 route、request kind 或 wrapper，应在生成前失败，而不是生成半套产物。
+Kotlin / Java / Python client/server、`api-gen check` 和 contract / agent artifact projection 使用同一份 planner / capability metadata。若 target capability 不支持某个 route、request kind 或 wrapper，应在生成前失败，而不是生成半套产物。
 
-ContractGraph 会从 `Blueprint(errors=...)` 和 route `.ERR(...)` 收集语言无关 error catalog。每个错误包含协议级 `message` 与用户展示层 `toast.key/default/level`；生成器只输出这些稳定字段，不生成内置多语言表。业务 i18n 系统按 toast key 取当前语言，客户端 helper 按 `toast.text`、外部 i18n、`toast.default`、`message` 兜底。各主生成器会输出 typed error constants/catalog；Go server 的业务 error 实现位于 `runtime/errors`，Go client、TypeScript、Kotlin、Python client/server 在 runtime 中输出对应 catalog。业务错误码不默认等价于 HTTP status，也不会默认把 wrapper code 转成异常。
+ContractGraph 会从 `Blueprint(errors=...)` 和 route `.ERR(...)` 收集语言无关 error catalog。每个错误包含协议级 `message` 与用户展示层 `toast.key/default/level`；生成器只输出这些稳定字段，不生成内置多语言表。业务 i18n 系统按 toast key 取当前语言，客户端 helper 按 `toast.text`、外部 i18n、`toast.default`、`message` 兜底。各主生成器会输出 typed error constants/catalog；Go server 的业务 error 实现位于 `runtime/errors`，Go client、TypeScript、Kotlin、Java、Python client/server 在 runtime 中输出对应 catalog。业务错误码不默认等价于 HTTP status，也不会默认把 wrapper code 转成异常。
 
 Kotlin client 输出目录是 `<package>/<root>/runtime/*`、`<package>/<root>/routes/<root>/<group...>/*`、`<package>/<root>/transports/http/*`。`Gen*.kt` 文件由生成器拥有；非 `Gen*` façade / extension 文件由用户拥有。这是相对旧 `<package>/ApiClient.kt`、`endpoints/`、`models/`、`internal/` 的破坏性布局变更。
 
 Go client 输出目录是 `runtime/*`、`routes/<root>/<group...>/*`、`transports/http/*`。`gen_*.go` 由生成器拥有，`client.go` façade 由用户拥有并在重生成时保留。`base_url` / `base_url_expr` 只进入 HTTP transport config，不进入 route/runtime client。
+
+Java client/server 输出目录是 `<package>/<root>/runtime/*`、`<package>/<root>/routes/<root>/<group...>/*`、`<package>/<root>/transports/http/*`。`out_dir` 是 package root，不包含 `src/main/java`。client 的用户保留文件是 `ApiClient.java`、`<Group>Api.java`、`HttpApiClient.java`；server 的用户保留文件是 `<Group>Service.java`。DTO 使用 Java 17 `record`，字段使用 Jackson `@JsonProperty`，enum 使用 `@JsonCreator` / `@JsonValue` 保留 wire value。
 
 Python client/server 输出目录是 `<python_package_root>/<root>/runtime/*`、`<python_package_root>/<root>/routes/<root>/<group...>/*`、`<python_package_root>/<root>/transports/http/*`。root-level route 生成在 `routes/<root>`，不生成 `routes/root`。如果省略 `python_package_root`，生成器使用默认包根。
 
@@ -140,8 +160,8 @@ gRPC stub target 字段：
 
 transport target：
 
-- `http-transport`：声明 HTTP server/client 组合；`server` 可引用 `go-server` 或 `python-server`，`clients` 可引用 Go、TypeScript、Kotlin 或 Python client。
-- `wails-transport`：声明 Wails overlay，必须设置 `version`、`server` 和 `clients`；Wails 保持 Go + TypeScript only，不接入 Kotlin / Python client。
+- `http-transport`：声明 HTTP server/client 组合；`server` 可引用 `go-server`、`java-server` 或 `python-server`，`clients` 可引用 Go、TypeScript、Kotlin、Java 或 Python client。
+- `wails-transport`：声明 Wails overlay，必须设置 `version`、`server` 和 `clients`；Wails 保持 Go + TypeScript only，不接入 Kotlin / Java / Python client。
 - `frontend_mode = "external"` 生成外部前端使用的 Wails TypeScript facade；`none` 只生成 Go overlay。
 - `include` / `exclude` 可裁剪 Wails target overlay / facade。
 

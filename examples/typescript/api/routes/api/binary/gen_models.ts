@@ -6,7 +6,6 @@ import type {
   GeneralWrapper,
 } from "../../../runtime/models";
 
-
 // Route Contracts
 
 export interface ReqPacketQuery {

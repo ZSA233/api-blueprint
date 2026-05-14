@@ -18,10 +18,7 @@ import type {
   StreamConnectOptions,
 } from "../../runtime/client";
 
-
-
 type RequestBody = RequestInit["body"];
-
 
 export interface ApiHttpTransportConfig extends ApiClientConfig {
   baseUrl?: string;

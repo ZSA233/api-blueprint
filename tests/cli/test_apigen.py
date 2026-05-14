@@ -485,6 +485,47 @@ def test_api_gen_inspect_routes_route_and_files(tmp_path):
     assert "go.server" not in files.output
 
 
+def test_api_gen_inspect_files_reports_java_artifacts(tmp_path):
+    _write_inspect_blueprint(tmp_path)
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[blueprint]
+entrypoints = ["blueprints.app:bp"]
+
+[[java.server]]
+id = "java.server"
+out_dir = "java/server"
+module = "com.example.generated"
+
+[[java.client]]
+id = "java.client"
+out_dir = "java/client"
+module = "com.example.generated"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    client_files = CliRunner().invoke(
+        api_gen,
+        ["inspect", "files", "-c", str(config_path), "--route", "api.demo.post.submit", "--target", "java.client"],
+    )
+    assert client_files.exit_code == 0, client_files.output
+    assert "[java.client]" in client_files.output
+    assert "java/client/com/example/generated/api/routes/api/demo/GenDemoApi.java" in client_files.output
+    assert "java/client/com/example/generated/api/transports/http/GenJdkHttpApiTransport.java" in client_files.output
+
+    server_files = CliRunner().invoke(
+        api_gen,
+        ["inspect", "files", "-c", str(config_path), "--route", "api.demo.post.submit", "--target", "java.server"],
+    )
+    assert server_files.exit_code == 0, server_files.output
+    assert "[java.server]" in server_files.output
+    assert "java/server/com/example/generated/api/routes/api/demo/GenDemoService.java" in server_files.output
+    assert "java/server/com/example/generated/api/transports/http/api/demo/GenDemoController.java" in server_files.output
+
+
 def test_api_gen_inspect_schema_errors_and_json(tmp_path):
     _write_inspect_blueprint(tmp_path)
     config_path = _write_inspect_config(tmp_path)
@@ -526,6 +567,20 @@ def test_api_gen_inspect_binary_schema(tmp_path):
     assert "content-encoding: identity, gzip" in schema.output
     assert "- DemoPacketHeader fields=2" in schema.output
     assert "- DemoItem fields=1" in schema.output
+
+    go_files = CliRunner().invoke(
+        api_gen,
+        ["inspect", "files", "-c", str(config_path), "--route", "api.demo.post.binary", "--target", "go.server"],
+    )
+    assert go_files.exit_code == 0, go_files.output
+    assert "golang/server/routes/api/demo/_gen_binary/gen_binary.go" in go_files.output
+
+    ts_files = CliRunner().invoke(
+        api_gen,
+        ["inspect", "files", "-c", str(config_path), "--route", "api.demo.post.binary", "--target", "typescript.client"],
+    )
+    assert ts_files.exit_code == 0, ts_files.output
+    assert "typescript/api/routes/api/demo/gen_binary.ts" in ts_files.output
 
 
 def test_api_gen_inspect_route_json_omits_shard_metadata(tmp_path):
@@ -662,6 +717,14 @@ module = "example.com/project/server"
 id = "typescript.client"
 out_dir = "typescript"
 
+[[java.client]]
+id = "java.client"
+out_dir = "java/client"
+module = "com.example.generated"
+base_url = "http://localhost:2333"
+include = ["tag:api"]
+exclude = ["path:/api/demo/ws"]
+
 [[transport.wails]]
 id = "gui.v3"
 version = "v3"
@@ -690,6 +753,17 @@ exclude = ["path:/api/demo/ping"]
     assert "clients: [typescript.client]" in wails.output
     assert "include: [path:/api/**]" in wails.output
     assert "exclude: [path:/api/demo/ping]" in wails.output
+
+    java_client = CliRunner().invoke(
+        api_gen,
+        ["explain-target", "-c", str(config_path), "--target", "java.client"],
+    )
+    assert java_client.exit_code == 0, java_client.output
+    assert "kind: java-client" in java_client.output
+    assert "package: com.example.generated" in java_client.output
+    assert "base_url: http://localhost:2333" in java_client.output
+    assert "include: [tag:api]" in java_client.output
+    assert "exclude: [path:/api/demo/ws]" in java_client.output
 
 
 def test_api_gen_inspect_route_uses_operation_id_for_channel_operation(tmp_path):
@@ -772,6 +846,38 @@ entrypoints = ["blueprints.app:bp"]
     kind = "python-client"
     out_dir = "python"
     python_package_root = "generated"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(api_gen, ["check", "-c", str(config_path)])
+
+    assert result.exit_code == 0, result.output
+
+
+def test_api_gen_check_accepts_java_targets(tmp_path):
+    _write_blueprint(tmp_path)
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[blueprint]
+entrypoints = ["blueprints.app:bp"]
+
+[[java.server]]
+id = "java.server"
+out_dir = "java/server"
+module = "com.example.generated"
+
+[[java.client]]
+id = "java.client"
+out_dir = "java/client"
+module = "com.example.generated"
+
+[[transport.http]]
+id = "http.java"
+server = "java.server"
+clients = ["java.client"]
 """.strip()
         + "\n",
         encoding="utf-8",

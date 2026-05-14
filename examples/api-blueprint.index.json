@@ -10,11 +10,11 @@
     "routes": 21,
     "schemas": 39,
     "services": 5,
-    "targets": 14
+    "targets": 17
   },
   "generator": {
     "name": "api-blueprint",
-    "version": "1.1.0"
+    "version": "1.1.1"
   },
   "kind": "api-blueprint.index",
   "purpose": "Lightweight route catalog. Use inspect commands for route schemas, errors, generated files, and full details.",
@@ -336,6 +336,20 @@
       "route_count": 14
     },
     {
+      "id": "java.server",
+      "kind": "java-server",
+      "out_dir": "java/server",
+      "role": "server",
+      "route_count": 21
+    },
+    {
+      "id": "java.client",
+      "kind": "java-client",
+      "out_dir": "java/client",
+      "role": "client",
+      "route_count": 21
+    },
+    {
       "id": "python.server",
       "kind": "python-server",
       "out_dir": "python/server",
@@ -358,6 +372,13 @@
     },
     {
       "id": "http.python",
+      "kind": "http-transport",
+      "out_dir": null,
+      "role": "transport",
+      "route_count": 21
+    },
+    {
+      "id": "http.java",
       "kind": "http-transport",
       "out_dir": null,
       "role": "transport",

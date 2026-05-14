@@ -7,7 +7,6 @@ import { DefaultTransport, type ApiHttpTransportConfig } from "../transport";
 import type { StaticClient } from "../../../routes/static/client";
 import { StaticClient as StaticClientImpl } from "../../../routes/static/client";
 
-
 export interface GeneratedClients {
   staticClient: StaticClient;
 }

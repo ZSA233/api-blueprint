@@ -22,7 +22,7 @@ import (
 	"time"
 
 	binaryapi "example.com/project/golang/client/routes/api/binary"
-	binaryschema "example.com/project/golang/client/routes/api/binary/binary"
+	binaryschema "example.com/project/golang/client/routes/api/binary/_gen_binary"
 	demo "example.com/project/golang/client/routes/api/demo"
 	hello "example.com/project/golang/client/routes/api/hello"
 	runtime "example.com/project/golang/client/runtime"

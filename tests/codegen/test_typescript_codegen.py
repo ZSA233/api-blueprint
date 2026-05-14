@@ -380,25 +380,38 @@ endian: little
         encoding="utf-8"
     )
     schema_text = (
-        output_dir / "api" / "routes" / "api" / "binary" / "binary" / "gen_binary.ts"
+        output_dir / "api" / "routes" / "api" / "binary" / "gen_binary.ts"
     ).read_text(encoding="utf-8")
     runtime_text = (output_dir / "api" / "runtime" / "binary" / "gen_runtime.ts").read_text(encoding="utf-8")
     transport_text = (output_dir / "api" / "transports" / "http" / "gen_transport.ts").read_text(encoding="utf-8")
 
-    assert "binary: Binary.DemoPacket;" in route_text
+    assert "binary: GenBinary.DemoPacket;" in route_text
     assert "binary: ApiBinaryBody;" in route_text
-    assert "binary: Binary.DemoPacket | ApiBinaryBody;" in route_text
-    assert "DemoPacketWire.toBinaryBody(request.binary)" in route_text
+    assert "binary: GenBinary.DemoPacket | ApiBinaryBody;" in route_text
+    assert "GenBinary.DemoPacketWire.toBinaryBody(request.binary)" in route_text
     assert "export const DemoFlagsValues" in schema_text
     assert "HasPayload: 1" in schema_text
     assert "reserved bits must be zero" in schema_text
     assert "writer.writeU24" in schema_text
     assert "writer.writeI24" in schema_text
     assert "writer.writeZeroes" in schema_text
+    assert _max_consecutive_blank_lines(schema_text) <= 1
     assert "class RawBinaryBody" in runtime_text
     assert "private writeScratch" in runtime_text
     assert "this.writeScratch(8);" in runtime_text
     assert "binaryBodyToUint8Array" in transport_text
+
+
+def _max_consecutive_blank_lines(text: str) -> int:
+    current = 0
+    maximum = 0
+    for line in text.splitlines():
+        if line.strip():
+            current = 0
+            continue
+        current += 1
+        maximum = max(maximum, current)
+    return maximum
 
 
 def test_typescript_writer_blocks_legacy_group_cleanup_when_user_client_exists(tmp_path: Path):

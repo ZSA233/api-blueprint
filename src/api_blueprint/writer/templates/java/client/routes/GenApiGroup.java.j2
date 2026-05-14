@@ -1,0 +1,106 @@
+{% autoescape false %}package {{ bp.root_package }}.routes.{{ group.package_suffix }};
+
+import {{ bp.root_package }}.runtime.ApiChannelBridge;
+import {{ bp.root_package }}.runtime.ApiRequest;
+import {{ bp.root_package }}.runtime.ApiSocketBridge;
+import {{ bp.root_package }}.runtime.ApiStreamBridge;
+import {{ bp.root_package }}.runtime.ApiTransport;
+import {{ bp.root_package }}.runtime.GenModels;
+import {{ bp.root_package }}.runtime.binary.ApiBinaryBody;
+import java.util.Map;
+
+public class {{ group.generated_client_class }} {
+    protected final ApiTransport transport;
+
+    public {{ group.generated_client_class }}(ApiTransport transport) {
+        this.transport = transport;
+    }
+{% for route in group.routes %}
+{% if route.is_rpc %}
+
+    public {{ writer.response_type(route, group) }} {{ route.method_name }}(
+{%- for type_name, name in writer.route_params(route, group) %}
+        {{ type_name }} {{ name }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ) throws Exception {
+        ApiRequest<{{ writer.response_type(route, group) }}> request = new ApiRequest<>(
+            {{ route.http_method | code_literal }},
+            {{ route.url | code_literal }},
+            {% if route.query_model %}query{% else %}null{% endif %},
+            {% if route.json_model %}json{% else %}null{% endif %},
+            {% if route.form_model %}form{% else %}null{% endif %},
+            {% if route.binary_schema or route.binary_model %}binaryBody{% else %}null{% endif %},
+            {{ route.response_wrapper | code_literal }},
+            {{ writer.response_class_literal(route, group) }},
+            {{ route.response_media_type | code_literal }},
+            Map.of()
+        );
+        return transport.execute(request);
+    }
+{% elif route.kind == "legacy_ws" %}
+
+    public ApiSocketBridge<Object, Object> {{ route.connection_method_name }}(
+{%- for type_name, name in writer.route_params(route, group) %}
+        {{ type_name }} {{ name }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ) {
+        ApiRequest<Object> request = new ApiRequest<>(
+            "WS",
+            {{ route.url | code_literal }},
+            {% if route.query_model %}query{% else %}null{% endif %},
+            null,
+            null,
+            null,
+            "NoneWrapper",
+            Object.class,
+            "application/json",
+            Map.of()
+        );
+        return transport.connectSocket(request);
+    }
+{% elif route.kind == "stream" %}
+
+    public ApiStreamBridge<Object, Object> {{ route.connection_method_name }}(
+{%- for type_name, name in writer.route_params(route, group) %}
+        {{ type_name }} {{ name }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ) {
+        ApiRequest<Object> request = new ApiRequest<>(
+            "STREAM",
+            {{ route.url | code_literal }},
+            {% if route.query_model %}query{% else %}null{% endif %},
+            {% if route.open_model %}openData{% else %}null{% endif %},
+            null,
+            null,
+            "NoneWrapper",
+            Object.class,
+            "application/json",
+            Map.of()
+        );
+        return transport.openStream(request);
+    }
+{% elif route.kind == "channel" %}
+
+    public ApiChannelBridge<Object, Object, Object> {{ route.connection_method_name }}(
+{%- for type_name, name in writer.route_params(route, group) %}
+        {{ type_name }} {{ name }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ) {
+        ApiRequest<Object> request = new ApiRequest<>(
+            "CHANNEL",
+            {{ route.url | code_literal }},
+            {% if route.query_model %}query{% else %}null{% endif %},
+            {% if route.open_model %}openData{% else %}null{% endif %},
+            null,
+            null,
+            "NoneWrapper",
+            Object.class,
+            "application/json",
+            Map.of()
+        );
+        return transport.openChannel(request);
+    }
+{% endif %}
+{% endfor %}
+}
+{% endautoescape %}

@@ -6,7 +6,7 @@
 
 `api-gen check`、contract / agent artifact projection 和各语言 writer 使用同一份 planner / capability metadata。生成前会统一校验 target 依赖、route kind、request kind 与 response wrapper，避免 check 通过但 writer 才发现不支持的情况。
 
-Go client、Kotlin / Python 是新实现的生成器表面，当前按 preview 口径使用。它们的 contract / agent artifact path 指向完整镜像 route path 的输出路径，例如 `routes/api/demo`；Python 不再使用 `routes/root` sentinel。
+Go client、Kotlin / Java / Python 是新实现的生成器表面，当前按 preview 口径使用。它们的 contract / agent artifact path 指向完整镜像 route path 的输出路径，例如 `routes/api/demo`；Python 不再使用 `routes/root` sentinel。
 
 ## Go
 
@@ -22,7 +22,7 @@ Go 生成器输出：
 - transport-neutral Go core。
 - 可选 HTTP/Gin adapter。
 
-`gen_*` 文件由生成器拥有，重生成会覆盖。`impl_*` 与非 `gen_*` 文件是用户拥有扩展点，重生成时保留。Kotlin 使用相同 ownership 模型，但生成器拥有文件命名为 `Gen*.kt`，非 `Gen*` façade / extension 文件由用户拥有。
+`gen_*` 文件由生成器拥有，重生成会覆盖。`impl_*` 与非 `gen_*` 文件是用户拥有扩展点，重生成时保留。Kotlin / Java 使用相同 ownership 模型，Kotlin 生成器拥有文件命名为 `Gen*.kt`，Java 生成器拥有文件命名为 `Gen*.java` 以及 runtime generated 文件，非 `Gen*` façade / extension 文件由用户拥有。
 
 `go-server` 只负责 Go 服务端 core。它的 `out_dir` 是生成包根，不再隐式追加 `views`。HTTP / Wails 输出由 `http-transport` / `wails-transport` target 通过 `server = "go.server"` 显式挂接。HTTP 入口生成在 `<out_dir>/transports/http/<root>` 中，例如 `transports/http/api.NewBlueprint(engine)`。
 
@@ -87,7 +87,7 @@ HTTP transport 中，`STREAM` 生成 SSE adapter，`CHANNEL` 生成 WebSocket ad
 
 ### Error catalog
 
-ContractGraph 会把 `Blueprint(errors=...)` 和 route `.ERR(...)` 声明收集成语言无关 error catalog。`message` 是协议级默认说明，`toast.key/default/level` 是用户展示层兜底；生成器不会输出内置多语言表或 `locales/*.json`。Go client、TypeScript、Kotlin、Python client/server 会把 runtime 错误类型/helper 与静态 catalog 数据拆到独立 generated 文件，例如 `gen_error_catalog.*` 或 `GenApiErrorCatalog.kt`；Go server 只在 `runtime/errors` 下输出 runtime 类型，并在 `runtime/errors/common_err` 这类分组包生成实现 `CodeError` 的错误值，避免 root catalog 与分组错误值重复。业务 i18n 系统按 toast key 解析当前语言，客户端 helper 按 `toast.text`、外部 i18n、`toast.default`、`message` 的优先级得到展示文案。`WithToast(...)` 返回不可变覆盖副本，适合按请求语言、租户或灰度返回动态 `toast.text`。HTTP transport failure 仍由 transport runtime 表达，业务 wrapper code 不会被默认转换成异常。
+ContractGraph 会把 `Blueprint(errors=...)` 和 route `.ERR(...)` 声明收集成语言无关 error catalog。`message` 是协议级默认说明，`toast.key/default/level` 是用户展示层兜底；生成器不会输出内置多语言表或 `locales/*.json`。Go client、TypeScript、Kotlin、Java、Python client/server 会把 runtime 错误类型/helper 与静态 catalog 数据拆到独立 generated 文件，例如 `gen_error_catalog.*`、`GenApiErrorCatalog.kt` 或 `GenApiErrorCatalog.java`；Go server 只在 `runtime/errors` 下输出 runtime 类型，并在 `runtime/errors/common_err` 这类分组包生成实现 `CodeError` 的错误值，避免 root catalog 与分组错误值重复。业务 i18n 系统按 toast key 解析当前语言，客户端 helper 按 `toast.text`、外部 i18n、`toast.default`、`message` 的优先级得到展示文案。`WithToast(...)` 返回不可变覆盖副本，适合按请求语言、租户或灰度返回动态 `toast.text`。HTTP transport failure 仍由 transport runtime 表达，业务 wrapper code 不会被默认转换成异常。
 
 ## Go Client
 
@@ -98,8 +98,10 @@ api-gen generate -c api-blueprint.toml --target go.client
 Go client target 输出 preview HTTP client：
 
 - `runtime/gen_*.go`
+- `runtime/binary/gen_runtime.go`
 - `routes/<root>/<group...>/gen_client.go`
 - `routes/<root>/<group...>/gen_models.go`
+- `routes/<root>/<group...>/_gen_binary/gen_binary.go`，仅 binary schema route group 生成
 - `routes/<root>/<group...>/client.go`
 - `transports/http/gen_config.go`
 - `transports/http/gen_transport.go`
@@ -125,6 +127,8 @@ TypeScript client target 输出：
 
 `STREAM` / `CHANNEL` 会生成 `ApiStreamBridge<Recv, Close>` 与 `ApiChannelBridge<Recv, Send, Close>`。单消息方向直接使用模型类型；多消息方向生成判别联合类型，例如 `{ type: "progress"; data: TaskProgress }`。HTTP transport 的 stream bridge 使用 SSE，channel bridge 使用内部 envelope 的 WebSocket 来区分普通消息与 close lifecycle payload；Wails transport 使用 generated runtime events，但事件名不暴露给业务 client。
 
+Markdown Binary Schema helper 是 route-local 的 `gen_binary.ts` sibling module，route client 使用 `GenBinary.<Packet>` / `GenBinary.<Packet>Wire`，不再生成 `routes/.../binary/` 子目录。
+
 ## Kotlin Android
 
 ```sh
@@ -143,9 +147,33 @@ Kotlin 输出为 package-first layout，route 目录完整镜像真实 route pat
 
 Kotlin 生成器拥有文件统一命名为 `Gen*.kt`，例如 `routes/api/demo/GenDemoApi.kt` 和 `runtime/GenApiClient.kt`，并带 generated header。非 `Gen*` façade 文件，例如 `DemoApi.kt`、`runtime/ApiClient.kt`、`transports/http/HttpApiClient.kt`，是保留的用户扩展点。
 
+Markdown Binary Schema helper 是 route-local 的 `GenBinary.kt`，与 route API 位于同一 package。生成类型通过 `GenBinary.<Packet>` / `GenBinary.<Packet>Wire` 暴露，避免再生成 `routes/.../binary/` 子 package。
+
 Kotlin 通过 transport abstraction 生成 `rpc`、`legacy_ws`、`stream`、`channel` route surface，支持 query/json/form/binary/open request kind，并支持 none/general/custom response wrapper。内置 OkHttp adapter 以 RPC 为主；长连接 bridge 属于 preview/custom transport surface，建议先用 `api-gen check` 和目标平台 smoke 验证后再接入生产调用路径。
 
 `base_url` / `base_url_expr` 会写入生成的 `transports/http/HttpApiConfig.kt` 默认值，不进入 transport-neutral runtime client。
+
+## Java Client / Server
+
+```sh
+api-gen generate -c api-blueprint.toml --target http.java
+```
+
+Java target 当前为 preview。`java-client` 使用 Java 17 `java.net.http.HttpClient` + Jackson；`java-server` 使用 Spring MVC + Jackson。生成源码不包含 Gradle/Maven 工程结构，`out_dir` 是 package root，不会追加 `src/main/java`。仓库示例提供 `make example-java-suite`，可运行真实 Spring Boot server 与 generated Java client 的核心 round-trip。
+
+Java client/server 都采用 package-first layout，route 目录完整镜像真实 route path：
+
+- `<package>/<root>/runtime/*`
+- `<package>/<root>/routes/<root>/<group...>/*`
+- `<package>/<root>/transports/http/*`
+
+Markdown Binary Schema bridge 是 route-local 的 `GenBinary.java`，与 route API / service 位于同一 package，不再生成 `routes/.../binary/GenBinary.java` 子包。
+
+Java client 生成 transport-neutral route surface、`ApiTransport`、默认 JDK HTTP adapter 和 `GenApiClient`。用户保留文件包括 `runtime/ApiClient.java`、`routes/<root>/<group...>/<Group>Api.java`、`transports/http/HttpApiClient.java`；其他 `Gen*.java` 与 runtime generated 文件由生成器覆盖。默认 HTTP adapter 实现 RPC query/json/form/binary/binary-schema 请求，legacy WS / STREAM / CHANNEL surface 默认抛明确 unsupported。
+
+Java server 生成 route service interface、stub、runtime 与 Spring controller。用户保留文件是 `routes/<root>/<group...>/<Group>Service.java`；`Gen<Group>Service.java`、`Gen<Group>ServiceStub.java`、`Gen<Group>ServiceModels.java` 与 `transports/http/<root>/<group...>/Gen<Group>Controller.java` 由生成器覆盖。RPC HTTP controller 可用，非 RPC connection route 先保留 service surface，HTTP adapter 返回明确 501。
+
+DTO 使用 Java 17 `record`；字段带 Jackson `@JsonProperty`；enum 使用 `@JsonCreator` / `@JsonValue` 保留 wire value。`module` 只作为快捷表 alias normalize 到 `package`，不会生成 JPMS `module-info.java`。
 
 ## Python Client
 
@@ -160,6 +188,8 @@ Python client 使用 `python_package_root` 作为包根，输出 async-first HTT
 - `<python_package_root>/<root>/transports/http/*`
 
 `routes/<root>/<group...>/gen_client.py` 是生成 route client，`routes/<root>/<group...>/client.py` 是保留的 passthrough 入口，`transports/http/gen_client.py` 提供默认 httpx adapter。root-level route 直接生成在 `routes/<root>`，不生成 `routes/root`。该 adapter 实现 RPC 请求；WS/STREAM/CHANNEL bridge interface 会生成，但连接 transport 需要项目自定义或后续扩展。`base_url` / `base_url_expr` 由 HTTP transport adapter 使用。
+
+Markdown Binary Schema helper 是 route-local 的 `gen_binary.py` sibling module，不再生成 `routes/.../binary/` 子 package。
 
 ## Python Server
 
@@ -177,7 +207,7 @@ Python server 同样使用 `python_package_root` 作为包根，输出 route ser
 
 ## examples 快照
 
-`examples/golang/server/`、`examples/golang/client/`、`examples/typescript/` 与 `examples/kotlin/` 是生成快照，不是业务真源。Go client、Kotlin/Python contract / agent artifact 索引会使用新的 route 输出路径。需要接受预期生成变化时，使用：
+`examples/golang/server/`、`examples/golang/client/`、`examples/typescript/`、`examples/kotlin/` 与 `examples/java/client` / `examples/java/server` 是生成快照，不是业务真源；`examples/java/suite` 是手写运行时验证项目。Go client、Kotlin/Java/Python contract / agent artifact 索引会使用新的 route 输出路径。需要接受预期生成变化时，使用：
 
 ```sh
 make example-refresh

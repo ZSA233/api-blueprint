@@ -1,0 +1,13 @@
+package {{ bp.root_package }}.transports.http;
+
+import {{ bp.root_package }}.runtime.ApiClient;
+
+public class HttpApiClient extends ApiClient {
+    public HttpApiClient() {
+        this(new GenHttpApiConfig());
+    }
+
+    public HttpApiClient(GenHttpApiConfig config) {
+        super(new GenJdkHttpApiTransport(config));
+    }
+}

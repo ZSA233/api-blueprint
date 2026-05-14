@@ -5,7 +5,7 @@ from typing import Any
 from {{ group.runtime_import_prefix }}runtime.client import ApiChannelBridge, ApiClientTransport, ApiSocketBridge, ApiStreamBridge
 {% if group.binary_schemas() %}
 from {{ group.runtime_import_prefix }}runtime.binary import ApiBinaryBody
-from .binary.gen_binary import (
+from .gen_binary import (
 {% for schema in group.binary_schemas() %}    {{ schema.py_type }},
     {{ schema.py_type }}Wire,
 {% endfor %})

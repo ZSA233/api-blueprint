@@ -36,6 +36,7 @@ class KotlinRouteGroupPlan:
     client_file: Path
     facade_file: Path
     binary_file: Path
+    legacy_binary_directory: Path
     protos: tuple[KotlinProto, ...]
 
 
@@ -59,7 +60,8 @@ def build_kotlin_blueprint_plan(writer: "KotlinWriter", bp: "KotlinBlueprint") -
             models_file=routes_dir / group.package_path / f"Gen{group.class_name}Models.kt",
             client_file=routes_dir / group.package_path / f"Gen{group.class_name}.kt",
             facade_file=routes_dir / group.package_path / f"{group.class_name}.kt",
-            binary_file=routes_dir / group.package_path / "binary" / "GenBinary.kt",
+            binary_file=routes_dir / group.package_path / "GenBinary.kt",
+            legacy_binary_directory=routes_dir / group.package_path / "binary",
             protos=tuple(bp.registry.filter(module=group.slug)),
         )
         for group in bp.groups.values()

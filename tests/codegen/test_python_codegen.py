@@ -543,7 +543,6 @@ endian: little
         / "routes"
         / "api"
         / "binary"
-        / "binary"
         / "gen_binary.py"
     ).read_text(encoding="utf-8")
     runtime_text = (

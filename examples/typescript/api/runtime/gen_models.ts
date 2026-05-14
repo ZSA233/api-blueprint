@@ -78,7 +78,6 @@ export interface AssistantOpen {
   session_id: string;
 }
 
-
 export enum ColorEnum {
   RED = "red",
   GREEN = "green",
@@ -99,17 +98,14 @@ export interface FieldWrappedModel {
   [key: string]: never;
 }
 
-
 export enum HelloWayEnum {
   ASD = "ASD",
 }
-
 
 export enum MapEnum {
   A = "a",
   B = "b",
 }
-
 
 export enum StatusEnum {
   PENDING = 1,
@@ -179,7 +175,6 @@ export interface WsMessage {
   data: any;
 }
 
-
 export enum WsMsgTypeEnum {
   PING = "ping",
   PONG = "pong",
@@ -188,7 +183,6 @@ export enum WsMsgTypeEnum {
   FORGEROUND = "forgeround",
   UPGRADE = "upgrade",
 }
-
 
 // Response Wrappers
 

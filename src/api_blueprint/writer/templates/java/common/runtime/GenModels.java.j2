@@ -1,0 +1,57 @@
+{% autoescape false %}package {{ bp.root_package }}.runtime;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonValue;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+public final class GenModels {
+    private GenModels() {
+    }
+{% for enum in writer.enums() %}
+
+    public enum {{ enum.name }} {
+{%- for member in enum.values %}
+        {{ member.java_name }}({{ member.literal }}){% if not loop.last %},{% else %};{% endif %}
+{%- endfor %}
+{% if not enum.values %}
+        ;
+{% endif %}
+
+        private final {{ enum.java_type }} value;
+
+        {{ enum.name }}({{ enum.java_type }} value) {
+            this.value = value;
+        }
+
+        @JsonValue
+        public {{ enum.java_type }} value() {
+            return value;
+        }
+
+        @JsonCreator
+        public static {{ enum.name }} fromValue({{ enum.java_type }} value) {
+            for ({{ enum.name }} item : values()) {
+                if (Objects.equals(item.value, value)) {
+                    return item;
+                }
+            }
+            throw new IllegalArgumentException("Unknown {{ enum.name }} value: " + value);
+        }
+    }
+{% endfor %}
+{% for schema in writer.shared_schemas() %}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record {{ schema.name }}(
+{%- for field in schema.fields %}
+        @JsonProperty({{ field.wire_name | code_literal }}) {{ field.java_type }} {{ field.java_name }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ) {
+    }
+{% endfor %}
+}
+{% endautoescape %}

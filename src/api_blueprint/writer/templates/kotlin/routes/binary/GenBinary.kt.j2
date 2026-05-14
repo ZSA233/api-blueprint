@@ -1,4 +1,4 @@
-{% autoescape false %}package {{ bp.root_package }}.routes.{{ group.package_suffix }}.binary
+{% autoescape false %}package {{ bp.root_package }}.routes.{{ group.package_suffix }}
 
 import {{ bp.root_package }}.runtime.binary.ApiBinaryBody
 import {{ bp.root_package }}.runtime.binary.BinaryEndian
@@ -10,6 +10,8 @@ import {{ bp.root_package }}.runtime.binary.requireBinary
 import {{ bp.root_package }}.runtime.binary.requireRange
 import {{ bp.root_package }}.runtime.binary.requireSize
 import okio.ByteString
+
+public object GenBinary {
 
 {% macro check_expr(field, receiver, long_expr, path) -%}
 {% if field.const_value %}
@@ -187,8 +189,6 @@ import okio.ByteString
 
 {% for schema in binary_schemas %}
 {% for value_set in schema.value_sets %}
-public typealias {{ value_set.name }} = {{ value_set.kotlin_type }}
-
 public object {{ value_set.values_object }} {
 {%- for value in value_set.values %}
     public const val {{ value_set.value_name(value.name) }}: {{ value_set.kotlin_type }} = {{ value_set.value_literal(value.value) }}
@@ -293,4 +293,5 @@ public object {{ schema.name }}Wire {
 }
 
 {% endfor %}
+}
 {% endautoescape %}

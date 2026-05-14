@@ -6,9 +6,7 @@ import type { ApiClientConfig } from "../../../../runtime/client";
 import { WailsV3Transport } from "../../transport";
 import { HelloClient as SharedHelloClient } from "../../../../routes/api/hello/client";
 
-
 export type HelloClient = SharedHelloClient;
-
 
 export function createClient(config: ApiClientConfig = {}): HelloClient {
   return new SharedHelloClient({

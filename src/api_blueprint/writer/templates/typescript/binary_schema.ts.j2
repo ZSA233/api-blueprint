@@ -90,6 +90,13 @@ import {
 {% endif %}
 {%- endmacro %}
 
+{% macro write_block_tail(byte_size_expr) -%}
+{% if byte_size_expr %}
+requireSize(`${path}.bytes`, block.byteSize, {{ byte_size_expr }});
+{% endif %}
+writer.writeBlock(path, block);
+{%- endmacro %}
+
 {% macro block_helpers(field, object) -%}
 {% set path = object.block_path(field) %}
 {% set byte_size_expr = field.block_byte_size_expr %}
@@ -106,10 +113,7 @@ export function {{ object.block_writer_name(field) }}(
   const expectedCount = {{ field.count_expr }};
   requireBinary(path, block.field === {{ path | code_literal }}, `block field ${block.field} does not match {{ path }}`);
   requireSize(`${path}.count`, block.count, expectedCount);
-{% if byte_size_expr %}
-  requireSize(`${path}.bytes`, block.byteSize, {{ byte_size_expr }});
-{% endif %}
-  writer.writeBlock(path, block);
+{{ write_block_tail(byte_size_expr) | compact_code_block | indent(2, true) }}
 }
 
 export function {{ object.fragment_writer_name(field) }}(
@@ -121,10 +125,7 @@ export function {{ object.fragment_writer_name(field) }}(
   const expectedCount = {{ field.count_expr }};
   requireBinary(path, block.field === {{ path | code_literal }}, `block field ${block.field} does not match {{ path }}`);
   requireRange(`${path}.count`, block.count, 0, expectedCount);
-{% if byte_size_expr %}
-  requireSize(`${path}.bytes`, block.byteSize, {{ byte_size_expr }});
-{% endif %}
-  writer.writeBlock(path, block);
+{{ write_block_tail(byte_size_expr) | compact_code_block | indent(2, true) }}
 }
 {%- endmacro %}
 
@@ -204,9 +205,9 @@ export function {{ object.writer_name }}(
   state: BinaryState = newBinaryState(),
   path = "{{ object.name }}",
 ): void {
-{%- for field in object.fields %}
-{{ write_field(field, object) | indent(2, false) }}
-{%- endfor %}
+{% for field in object.fields -%}
+{{ write_field(field, object) | compact_code_block | indent(2, true) }}
+{% endfor -%}
 }
 
 {% for field in object.fields if field.supports_binary_block %}

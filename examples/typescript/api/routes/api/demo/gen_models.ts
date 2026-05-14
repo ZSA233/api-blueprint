@@ -17,21 +17,16 @@ import type {
   SweepState,
 } from "../../../runtime/models";
 
-
 // Route Contracts
 
 export type AssistantClientMessage =
   | { type: "input"; data: AssistantInput }
   | { type: "cancel"; data: AssistantCancel };
 
-
-
 export type AssistantServerMessage =
   | { type: "delta"; data: AssistantDelta }
   | { type: "done"; data: AssistantDone }
   | { type: "log"; data: SweepLog };
-
-
 
 export interface ReqAbcQuery {
   /** arg1 */
@@ -138,8 +133,6 @@ export type SweepStreamMessage =
   | { type: "state"; data: SweepState }
   | { type: "progress"; data: SweepProgress }
   | { type: "log"; data: SweepLog };
-
-
 
 export interface WsWsSend<T = any> {
 

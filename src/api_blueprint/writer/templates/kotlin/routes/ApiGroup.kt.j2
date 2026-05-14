@@ -3,7 +3,6 @@
 import {{ bp.root_package }}.runtime.*
 {% if group.binary_schemas() %}
 import {{ bp.root_package }}.runtime.binary.ApiBinaryBody
-import {{ bp.root_package }}.routes.{{ group.package_suffix }}.binary.*
 {% endif %}
 import kotlinx.serialization.builtins.*
 
@@ -49,7 +48,7 @@ public open class Gen{{ group.class_name }} internal constructor(
                 formSerializer = {{ route.form_type }}.serializer(),
 {%- endif %}
 {%- if route.binary_type %}
-                binary = {% if route.has_binary_schema %}binary.toBinaryBody(){% else %}binary{% endif %},
+                binary = {% if route.has_binary_schema %}{{ route.binary_wire_type }}.toBinaryBody(binary){% else %}binary{% endif %},
 {%- endif %}
                 responseSerializer = {{ route.response_serializer_expr }},
                 responseMediaType = "{{ route.response_media_type }}",

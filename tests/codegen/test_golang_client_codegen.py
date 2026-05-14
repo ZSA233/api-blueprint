@@ -290,7 +290,7 @@ endian: little
 
     route_text = (output_dir / "routes" / "api" / "binary" / "gen_client.go").read_text(encoding="utf-8")
     schema_text = (
-        output_dir / "routes" / "api" / "binary" / "binary" / "gen_binary.go"
+        output_dir / "routes" / "api" / "binary" / "_gen_binary" / "gen_binary.go"
     ).read_text(encoding="utf-8")
     runtime_text = (output_dir / "runtime" / "binary" / "gen_runtime.go").read_text(encoding="utf-8")
     transport_text = (output_dir / "transports" / "http" / "gen_transport.go").read_text(encoding="utf-8")

@@ -28,6 +28,8 @@ KOTLIN_VERSION = "2.1.21"
 KOTLINX_COROUTINES_VERSION = "1.10.2"
 KOTLINX_SERIALIZATION_JSON_VERSION = "1.8.1"
 OKHTTP_VERSION = "4.12.0"
+JACKSON_DATABIND_VERSION = "2.17.2"
+SPRING_BOOT_VERSION = "3.3.6"
 GRADLE_BIN_ENV = "API_BLUEPRINT_GRADLE_BIN"
 WAILS_V2_BIN_ENV = "API_BLUEPRINT_WAILS_V2_BIN"
 WAILS_V3_BIN_ENV = "API_BLUEPRINT_WAILS_V3_BIN"
@@ -55,6 +57,30 @@ BLUEPRINT_TYPESCRIPT_PRESERVED = (
     "tsconfig.json",
 )
 BLUEPRINT_KOTLIN_PRESERVED = ()
+BLUEPRINT_JAVA_CLIENT_PRESERVED = (
+    "com/example/apiblueprint/api/runtime/ApiClient.java",
+    "com/example/apiblueprint/api/transports/http/HttpApiClient.java",
+    "com/example/apiblueprint/api/routes/api/ApiApi.java",
+    "com/example/apiblueprint/api/routes/api/binary/BinaryApi.java",
+    "com/example/apiblueprint/api/routes/api/demo/DemoApi.java",
+    "com/example/apiblueprint/api/routes/api/hello/HelloApi.java",
+    "com/example/apiblueprint/static_/runtime/ApiClient.java",
+    "com/example/apiblueprint/static_/transports/http/HttpApiClient.java",
+    "com/example/apiblueprint/static_/routes/static_/StaticApi.java",
+)
+BLUEPRINT_JAVA_SERVER_PRESERVED = (
+    "com/example/apiblueprint/api/routes/api/ApiService.java",
+    "com/example/apiblueprint/api/routes/api/binary/BinaryService.java",
+    "com/example/apiblueprint/api/routes/api/demo/DemoService.java",
+    "com/example/apiblueprint/api/routes/api/hello/HelloService.java",
+    "com/example/apiblueprint/static_/routes/static_/StaticService.java",
+)
+BLUEPRINT_JAVA_SUITE_PRESERVED = (
+    ".gitignore",
+    "build.gradle.kts",
+    "settings.gradle.kts",
+    "src/main/java/com/example/apiblueprint/suite/JavaExampleSuite.java",
+)
 BLUEPRINT_PYTHON_PRESERVED = ("client/suite.py",)
 WAILS_HELLO_GOLANG_PRESERVED = (
     "go.mod",
@@ -75,6 +101,7 @@ class ExampleValidationMode(StrEnum):
     COMPILE = "compile"
     REFRESH = "refresh"
     GOLANG_SUITE = "golang-suite"
+    JAVA_SUITE = "java-suite"
 
 
 class ExampleValidationScope(StrEnum):
@@ -94,6 +121,10 @@ class BlueprintExampleWorkspace:
     golang_suite_dir: Path
     typescript_dir: Path
     kotlin_dir: Path
+    java_dir: Path
+    java_client_dir: Path
+    java_server_dir: Path
+    java_suite_dir: Path
     python_dir: Path
     wails_v2_dir: Path
     wails_v3_dir: Path
@@ -278,6 +309,10 @@ def _blueprint_workspace(root: Path) -> BlueprintExampleWorkspace:
         golang_suite_dir=root / "golang" / "suite",
         typescript_dir=root / "typescript",
         kotlin_dir=root / "kotlin",
+        java_dir=root / "java",
+        java_client_dir=root / "java" / "client",
+        java_server_dir=root / "java" / "server",
+        java_suite_dir=root / "java" / "suite",
         python_dir=root / "python",
         wails_v2_dir=root / "wails-harness" / "v2",
         wails_v3_dir=root / "wails-harness" / "v3",
@@ -368,6 +403,18 @@ def _prepare_blueprint_outputs(*, source_root: Path, target_root: Path) -> None:
         _capture_relative_files(source_root / "kotlin", BLUEPRINT_KOTLIN_PRESERVED),
     )
     _prepare_output_dir(
+        target_root / "java" / "client",
+        _capture_relative_files(source_root / "java" / "client", BLUEPRINT_JAVA_CLIENT_PRESERVED),
+    )
+    _prepare_output_dir(
+        target_root / "java" / "server",
+        _capture_relative_files(source_root / "java" / "server", BLUEPRINT_JAVA_SERVER_PRESERVED),
+    )
+    _prepare_output_dir(
+        target_root / "java" / "suite",
+        _capture_relative_files(source_root / "java" / "suite", BLUEPRINT_JAVA_SUITE_PRESERVED),
+    )
+    _prepare_output_dir(
         target_root / "python",
         _capture_relative_files(source_root / "python", BLUEPRINT_PYTHON_PRESERVED),
     )
@@ -452,7 +499,10 @@ def _prepare_output_dir(root: Path, preserved_files: Mapping[Path, bytes]) -> No
 
 
 def regenerate_blueprint_examples(workspace: BlueprintExampleWorkspace) -> None:
-    generator.generate(workspace.config_path, target_ids=("contract", "http", "http.python", "wails.v2", "wails.v3"))
+    generator.generate(
+        workspace.config_path,
+        target_ids=("contract", "http", "http.python", "http.java", "wails.v2", "wails.v3"),
+    )
     _tidy_go_module(workspace.golang_server_dir)
     _tidy_go_module(workspace.golang_client_dir)
 
@@ -461,6 +511,10 @@ def regenerate_blueprint_golang_suite_examples(workspace: BlueprintExampleWorksp
     generator.generate(workspace.config_path, target_ids=("go.server", "go.client", "typescript.client", "python.client"))
     _tidy_go_module(workspace.golang_server_dir)
     _tidy_go_module(workspace.golang_client_dir)
+
+
+def regenerate_blueprint_java_suite_examples(workspace: BlueprintExampleWorkspace) -> None:
+    generator.generate(workspace.config_path, target_ids=("http.java",))
 
 
 def regenerate_grpc_examples(workspace: GrpcExampleWorkspace) -> None:
@@ -500,6 +554,7 @@ def validate_example_snapshots(repo_root: Path, workspace: BlueprintExampleWorks
             (examples_root / "golang", workspace.golang_dir, "blueprint/golang"),
             (examples_root / "typescript", workspace.typescript_dir, "blueprint/typescript"),
             (examples_root / "kotlin", workspace.kotlin_dir, "blueprint/kotlin"),
+            (examples_root / "java", workspace.java_dir, "blueprint/java"),
             (examples_root / "python", workspace.python_dir, "blueprint/python"),
         )
     )
@@ -679,6 +734,7 @@ def compile_generated_examples(workspace: BlueprintExampleWorkspace) -> None:
     subprocess.run(["go", "test", "./..."], cwd=workspace.golang_server_dir, check=True)
     subprocess.run(["go", "test", "./..."], cwd=workspace.golang_client_dir, check=True)
     _validate_kotlin_sources(workspace.kotlin_dir)
+    _validate_java_sources(workspace.java_dir)
     _validate_python_sources(workspace.python_dir)
     _compile_wails_harness(workspace.wails_v2_dir, version="v2")
     _compile_wails_harness(workspace.wails_v3_dir, version="v3")
@@ -735,6 +791,7 @@ def compile_repo_examples(repo_root: Path) -> None:
     subprocess.run(["go", "test", "./..."], cwd=workspace.golang_server_dir, check=True)
     subprocess.run(["go", "test", "./..."], cwd=workspace.golang_client_dir, check=True)
     _validate_kotlin_sources(workspace.kotlin_dir)
+    _validate_java_sources(workspace.java_dir)
     _validate_python_sources(workspace.python_dir)
 
 
@@ -831,6 +888,58 @@ def _validate_kotlin_sources(kotlin_dir: Path) -> None:
     _compile_kotlin_sources(kotlin_dir)
 
 
+def _validate_java_sources(java_dir: Path) -> None:
+    expected = (
+        "client/com/example/apiblueprint/api/runtime/ApiClient.java",
+        "client/com/example/apiblueprint/api/runtime/GenApiClient.java",
+        "client/com/example/apiblueprint/api/routes/api/demo/DemoApi.java",
+        "client/com/example/apiblueprint/api/routes/api/demo/GenDemoApi.java",
+        "client/com/example/apiblueprint/api/routes/api/demo/GenDemoApiModels.java",
+        "client/com/example/apiblueprint/api/transports/http/GenJdkHttpApiTransport.java",
+        "client/com/example/apiblueprint/api/transports/http/HttpApiClient.java",
+        "server/com/example/apiblueprint/api/routes/api/demo/DemoService.java",
+        "server/com/example/apiblueprint/api/routes/api/demo/GenDemoService.java",
+        "server/com/example/apiblueprint/api/routes/api/demo/GenDemoServiceModels.java",
+        "server/com/example/apiblueprint/api/transports/http/api/demo/GenDemoController.java",
+    )
+    missing = [path for path in expected if not (java_dir / path).is_file()]
+    if missing:
+        raise ExampleValidationError("java example missing generated files:\n" + "\n".join(missing))
+
+    snippets = {
+        "client route": (
+            java_dir / "client/com/example/apiblueprint/api/routes/api/demo/GenDemoApi.java",
+            "public GenModels.ApiDemoA abc(",
+        ),
+        "client transport": (
+            java_dir / "client/com/example/apiblueprint/api/transports/http/GenJdkHttpApiTransport.java",
+            "public class GenJdkHttpApiTransport implements ApiTransport",
+        ),
+        "server service": (
+            java_dir / "server/com/example/apiblueprint/api/routes/api/demo/GenDemoService.java",
+            "public interface GenDemoService",
+        ),
+        "server controller": (
+            java_dir / "server/com/example/apiblueprint/api/transports/http/api/demo/GenDemoController.java",
+            "@RestController",
+        ),
+        "error catalog": (
+            java_dir / "client/com/example/apiblueprint/api/runtime/GenApiErrorCatalog.java",
+            "COMMONERR_TOKEN_EXPIRE",
+        ),
+        "binary schema": (
+            java_dir / "client/com/example/apiblueprint/api/routes/api/binary/GenBinary.java",
+            "DemoPacketWire",
+        ),
+    }
+    missing_snippets = [
+        label for label, (path, snippet) in snippets.items() if snippet not in path.read_text(encoding="utf-8")
+    ]
+    if missing_snippets:
+        raise ExampleValidationError("java example missing expected snippets:\n" + "\n".join(missing_snippets))
+    _compile_java_sources(java_dir)
+
+
 def _validate_python_sources(python_dir: Path) -> None:
     expected = (
         "client/api_blueprint_example_client/api/runtime/gen_client.py",
@@ -920,6 +1029,50 @@ kotlin {{
             encoding="utf-8",
         )
         subprocess.run([gradle_bin, "--no-daemon", "compileKotlin"], cwd=project_dir, check=True)
+
+
+def _compile_java_sources(java_dir: Path) -> None:
+    gradle_bin = resolve_gradle_bin()
+    if gradle_bin is None:
+        raise ExampleValidationError(
+            "missing Java compile requirement: Gradle is required; "
+            f"install `gradle` or set `{GRADLE_BIN_ENV}`."
+        )
+
+    with tempfile.TemporaryDirectory(prefix="api-blueprint-java-") as temp_dir:
+        project_dir = Path(temp_dir)
+        source_dir = project_dir / "src/main/java"
+        source_dir.mkdir(parents=True)
+        for source_root in (java_dir / "client", java_dir / "server"):
+            if source_root.is_dir():
+                shutil.copytree(source_root / "com", source_dir / "com", dirs_exist_ok=True)
+        (project_dir / "settings.gradle.kts").write_text(
+            'pluginManagement { repositories { gradlePluginPortal(); mavenCentral() } }\n'
+            "dependencyResolutionManagement { "
+            "repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); "
+            "repositories { mavenCentral() } "
+            "}\n"
+            'rootProject.name = "api-blueprint-java-example"\n',
+            encoding="utf-8",
+        )
+        (project_dir / "build.gradle.kts").write_text(
+            f"""
+plugins {{ java }}
+
+dependencies {{
+    implementation("com.fasterxml.jackson.core:jackson-databind:{JACKSON_DATABIND_VERSION}")
+    implementation("org.springframework.boot:spring-boot-starter-web:{SPRING_BOOT_VERSION}")
+}}
+
+java {{
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}}
+            """.strip()
+            + "\n",
+            encoding="utf-8",
+        )
+        subprocess.run([gradle_bin, "--no-daemon", "compileJava"], cwd=project_dir, check=True)
 
 
 def validate_examples(repo_root: Path, scope: ExampleValidationScope = ExampleValidationScope.ALL) -> None:
@@ -1063,6 +1216,23 @@ def run_golang_suite_examples(repo_root: Path, scope: ExampleValidationScope = E
         shutil.rmtree(blueprint_workspace.root, ignore_errors=True)
 
 
+def run_java_suite_examples(repo_root: Path, scope: ExampleValidationScope = ExampleValidationScope.BLUEPRINT) -> None:
+    if scope not in (ExampleValidationScope.ALL, ExampleValidationScope.BLUEPRINT):
+        raise ExampleValidationError("java-suite mode only supports --scope blueprint")
+    gradle_bin = resolve_gradle_bin()
+    if gradle_bin is None:
+        raise ExampleValidationError(
+            "java-suite mode requires Gradle; "
+            f"install `gradle` or set `{GRADLE_BIN_ENV}` to an executable Gradle binary."
+        )
+    blueprint_workspace = prepare_blueprint_workspace(repo_root)
+    try:
+        regenerate_blueprint_java_suite_examples(blueprint_workspace)
+        subprocess.run([gradle_bin, "--no-daemon", "run"], cwd=blueprint_workspace.java_suite_dir, check=True)
+    finally:
+        shutil.rmtree(blueprint_workspace.root, ignore_errors=True)
+
+
 def refresh_examples(repo_root: Path, scope: ExampleValidationScope = ExampleValidationScope.ALL) -> None:
     ensure_validation_requirements(scope)
     if scope in (ExampleValidationScope.ALL, ExampleValidationScope.BLUEPRINT):
@@ -1104,7 +1274,8 @@ def build_parser() -> argparse.ArgumentParser:
             "Validation mode: `check` fails on snapshot drift, "
             "`compile` skips snapshot diff and only checks regenerated outputs compile, "
             "`refresh` regenerates examples in-place and compiles them, "
-            "and `golang-suite` runs the manual generated Go client/server round-trip suite."
+            "`golang-suite` runs the manual generated Go client/server round-trip suite, "
+            "and `java-suite` runs the manual generated Java client/server round-trip suite."
         ),
     )
     parser.add_argument(
@@ -1132,6 +1303,8 @@ def main(argv: list[str] | None = None) -> int:
             compile_examples(repo_root, scope=scope)
         elif mode is ExampleValidationMode.GOLANG_SUITE:
             run_golang_suite_examples(repo_root, scope=scope)
+        elif mode is ExampleValidationMode.JAVA_SUITE:
+            run_java_suite_examples(repo_root, scope=scope)
         else:
             refresh_examples(repo_root, scope=scope)
     except (ExampleValidationError, FileNotFoundError, ModuleNotFoundError, subprocess.CalledProcessError) as exc:

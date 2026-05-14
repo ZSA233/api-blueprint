@@ -13,7 +13,6 @@ import { DemoClient as DemoClientImpl } from "../../../routes/api/demo/client";
 import type { HelloClient } from "../../../routes/api/hello/client";
 import { HelloClient as HelloClientImpl } from "../../../routes/api/hello/client";
 
-
 export interface GeneratedClients {
   apiClient: ApiClient;
   binaryClient: BinaryClient;

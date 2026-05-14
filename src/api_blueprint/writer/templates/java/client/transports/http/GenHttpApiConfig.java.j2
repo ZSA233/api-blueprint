@@ -1,0 +1,13 @@
+package {{ bp.root_package }}.transports.http;
+
+public record GenHttpApiConfig(
+    String baseUrl
+) {
+    public GenHttpApiConfig() {
+        this({{ writer.rendered_base_url | safe }});
+    }
+
+    public GenHttpApiConfig {
+        baseUrl = baseUrl == null ? "" : baseUrl;
+    }
+}

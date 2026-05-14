@@ -190,6 +190,11 @@ class KotlinWriter(BaseWriter[KotlinBlueprint]):
                                 )
                             )
                         )
+                self._cleanup_legacy_binary_dir(route_group.legacy_binary_directory)
+            else:
+                if route_group.binary_file.exists():
+                    route_group.binary_file.unlink()
+                self._cleanup_legacy_binary_dir(route_group.legacy_binary_directory)
 
             with self.write_file(route_group.facade_file, overwrite=False) as handle:
                 if handle:
@@ -216,8 +221,20 @@ class KotlinWriter(BaseWriter[KotlinBlueprint]):
             branch_only_dir = routes_dir / route_group.group.slug
             if branch_only_dir != route_group.directory and branch_only_dir.exists():
                 shutil.rmtree(branch_only_dir)
-            if not route_group.group.binary_schemas() and route_group.binary_file.parent.exists():
-                shutil.rmtree(route_group.binary_file.parent)
+            if not route_group.group.binary_schemas() and route_group.binary_file.exists():
+                route_group.binary_file.unlink()
+            self._cleanup_legacy_binary_dir(route_group.legacy_binary_directory)
+
+    def _cleanup_legacy_binary_dir(self, binary_dir: Path) -> None:
+        if not binary_dir.exists():
+            return
+        generated_file = binary_dir / "GenBinary.kt"
+        if generated_file.exists():
+            generated_file.unlink()
+        try:
+            binary_dir.rmdir()
+        except OSError:
+            return
 
     def _is_stale_generated_runtime_client(self, path: Path) -> bool:
         if not path.exists():

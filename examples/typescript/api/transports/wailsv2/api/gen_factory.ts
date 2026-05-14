@@ -10,7 +10,6 @@ import { createClient as createDemoClient } from "./demo/client";
 import type { HelloClient } from "./hello/client";
 import { createClient as createHelloClient } from "./hello/client";
 
-
 export interface GeneratedClients {
   apiClient: ApiClient;
   demoClient: DemoClient;

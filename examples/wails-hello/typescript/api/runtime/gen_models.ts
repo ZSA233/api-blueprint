@@ -8,7 +8,6 @@ export interface GreetResponse {
   message: string;
 }
 
-
 // Response Wrappers
 
 export interface NoneWrapper {

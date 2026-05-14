@@ -5,7 +5,6 @@ import com.example.apiblueprint.api.routes.api.binary.BinaryApi
 import com.example.apiblueprint.api.routes.api.demo.DemoApi
 import com.example.apiblueprint.api.routes.api.hello.HelloApi
 
-
 public open class GenApiClient(
     private val transport: ApiTransport,
 ) {

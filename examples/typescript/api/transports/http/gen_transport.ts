@@ -20,10 +20,7 @@ import type {
 
 import { binaryBodyToUint8Array } from "../../runtime/binary/index";
 
-
-
 type RequestBody = RequestInit["body"];
-
 
 export interface ApiHttpTransportConfig extends ApiClientConfig {
   baseUrl?: string;

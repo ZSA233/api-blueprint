@@ -1,6 +1,6 @@
 # Configuration
 
-`api-blueprint.toml` is the main config file for the documentation service and the unified generator. The 1.0 mainline uses `Blueprint -> ContractGraph -> targets`; `[[targets]]` is the canonical entrypoint, and shortcut tables such as `[[contract]]`, `[[go.server]]`, `[[go.client]]`, `[[python.server]]`, `[[transport.http]]`, `[[grpc.proto]]`, and `[[grpc.go]]` are normalized into the same target list when config is loaded.
+`api-blueprint.toml` is the main config file for the documentation service and the unified generator. The 1.0 mainline uses `Blueprint -> ContractGraph -> targets`; `[[targets]]` is the canonical entrypoint, and shortcut tables such as `[[contract]]`, `[[go.server]]`, `[[go.client]]`, `[[java.server]]`, `[[java.client]]`, `[[python.server]]`, `[[transport.http]]`, `[[grpc.proto]]`, and `[[grpc.go]]` are normalized into the same target list when config is loaded.
 
 ## blueprint
 
@@ -45,6 +45,17 @@ id = "kotlin.client"
 out_dir = "kotlin"
 module = "com.example.apiblueprint"
 
+[[java.server]]
+id = "java.server"
+out_dir = "java/server"
+module = "com.example.apiblueprint"
+
+[[java.client]]
+id = "java.client"
+out_dir = "java/client"
+module = "com.example.apiblueprint"
+base_url = "http://localhost:2333"
+
 [[python.server]]
 id = "python.server"
 out_dir = "python/server"
@@ -60,6 +71,11 @@ base_url = "http://localhost:2333"
 id = "http"
 server = "go.server"
 clients = ["go.client", "typescript.client", "kotlin.client", "python.client"]
+
+[[transport.http]]
+id = "http.java"
+server = "java.server"
+clients = ["java.client"]
 
 [[transport.wails]]
 id = "wails.v3"
@@ -103,28 +119,32 @@ Common fields:
 - `kind`: target type.
 - `out_dir`: generated output directory. For Go server it is the generated package root and no longer appends `views` implicitly; transport targets usually do not need one.
 
-Shortcut tables infer `kind`, so they must not include an explicit `kind`. `id` is still required. In shortcut tables, Go `module` remains the Go module; Python `module` maps to `python_package_root`; Kotlin `module` maps to `package`, and explicit `package` is still accepted; `[[grpc.python]] module` also maps to `python_package_root`.
+Shortcut tables infer `kind`, so they must not include an explicit `kind`. `id` is still required. In shortcut tables, Go `module` remains the Go module; Python `module` maps to `python_package_root`; Kotlin / Java `module` maps to `package`, and explicit `package` is still accepted; Java does not generate a JPMS `module-info.java`, and the canonical field is `package`; `[[grpc.python]] module` also maps to `python_package_root`.
 
 Core targets:
 
 - `contract`: when `formats` is omitted, emits only lightweight `api-blueprint.index.json` with the service / route / target catalog plus recommended `api-gen inspect` query commands. It does not inline schemas, the error catalog, route artifacts, or shard details. `formats = ["json"]` emits full `api-blueprint.contract.json` for diffs, archiving, or exhaustive fallback inspection; `markdown`, `agent-*`, and `shards` are useful for offline navigation bundles, archives, or shard snapshots.
 - `go-server`: emits Go server core. `out_dir` is the package root; route/provider/transport/error artifacts live under `routes`, `providers`, `transports`, and `runtime/errors`. Markdown Binary Schema parsers live in route-group-local `routes/<root>/<group...>/_gen_binary` packages, with shared binary runtime helpers in `runtime/binary`. If a project wants `/views` in the package path, set `out_dir` explicitly to `.../views`.
-- `go-client`: emits a preview Go client. RPC/query/json/form/binary HTTP calls are usable; legacy WS / STREAM / CHANNEL generate transport-neutral surfaces, and the default HTTP adapter returns an explicit unsupported error so projects can swap in a custom transport.
-- `typescript-client`: emits TypeScript client core that depends only on `ApiTransport`; `base_url` / `base_url_expr` are injected by transport facades.
-- `kotlin-client`: emits an OkHttp + kotlinx.serialization Android client. Through the shared transport abstraction it generates RPC, legacy WS, STREAM, and CHANNEL route surfaces, and supports query/json/form/binary/open request kinds plus none/general/custom response wrappers. `base_url` / `base_url_expr` are used by the generated OkHttp HTTP adapter config, while route/runtime clients stay transport-neutral. The built-in OkHttp adapter is RPC-first; long-connection bridges are preview/custom transport surfaces.
+- `go-client`: emits a preview Go client. RPC/query/json/form/binary HTTP calls are usable; binary schema writers live in route-local `_gen_binary` packages; legacy WS / STREAM / CHANNEL generate transport-neutral surfaces, and the default HTTP adapter returns an explicit unsupported error so projects can swap in a custom transport.
+- `typescript-client`: emits TypeScript client core that depends only on `ApiTransport`; binary schema helpers are route-local `gen_binary.ts` sibling modules; `base_url` / `base_url_expr` are injected by transport facades.
+- `kotlin-client`: emits an OkHttp + kotlinx.serialization Android client. Through the shared transport abstraction it generates RPC, legacy WS, STREAM, and CHANNEL route surfaces, and supports query/json/form/binary/open request kinds plus none/general/custom response wrappers. Binary schema helpers are same-route-package `GenBinary.kt` files. `base_url` / `base_url_expr` are used by the generated OkHttp HTTP adapter config, while route/runtime clients stay transport-neutral. The built-in OkHttp adapter is RPC-first; long-connection bridges are preview/custom transport surfaces.
+- `java-client`: emits a preview Java 17 client using `java.net.http.HttpClient` and Jackson, with transport-neutral route surfaces and a default JDK HTTP adapter. RPC query/json/form/binary/binary-schema calls are usable; binary schema bridges are same-route-package `GenBinary.java` files; legacy WS / STREAM / CHANNEL default to explicit unsupported errors so projects can swap in custom transports.
+- `java-server`: emits a preview Spring MVC server scaffold with route service interfaces, stubs, runtime, and Spring controllers. Binary schema bridges are same-route-package `GenBinary.java` files. RPC HTTP controllers are usable; non-RPC connection routes keep the service surface while the HTTP adapter returns explicit 501 responses.
 - `python-server`: emits Python route service contracts/stubs and a FastAPI HTTP adapter scaffold. `python_package_root` controls the generated package root.
-- `python-client`: emits an async-first Python HTTP client. `python_package_root` controls the generated package root, and `base_url` / `base_url_expr` are used by the HTTP transport adapter. The default httpx adapter implements RPC requests; WS/STREAM/CHANNEL connection transports are preview/custom extension points.
+- `python-client`: emits an async-first Python HTTP client. `python_package_root` controls the generated package root, binary schema helpers are route-local `gen_binary.py` sibling modules, and `base_url` / `base_url_expr` are used by the HTTP transport adapter. The default httpx adapter implements RPC requests; WS/STREAM/CHANNEL connection transports are preview/custom extension points.
 - `grpc-proto`: emits `.proto` files and service definitions from ContractGraph. `[[targets.proto_files]]` or the `[[grpc.proto.proto_files]]` shortcut can map DSL schema module/name plus route path/id/service to a specific proto file/package/go_package/service.
 - `grpc-go`: consumes a `grpc-proto` target in the same config, or handwritten proto files directly, and calls `protoc` / `protoc-gen-go` / `protoc-gen-go-grpc` to generate Go protobuf/gRPC stubs.
 - `grpc-python`: consumes a `grpc-proto` target in the same config, or handwritten proto files directly, and calls `grpcio-tools` to generate Python protobuf/gRPC stubs. `python_package_root` places generated files under a package root and rewrites generated imports.
 
-Kotlin / Python client/server, `api-gen check`, and contract / agent artifact projection use the same planner / capability metadata. If a target capability does not support a route, request kind, or wrapper, generation should fail before writing a partial output tree.
+Kotlin / Java / Python client/server, `api-gen check`, and contract / agent artifact projection use the same planner / capability metadata. If a target capability does not support a route, request kind, or wrapper, generation should fail before writing a partial output tree.
 
-ContractGraph collects a language-agnostic error catalog from `Blueprint(errors=...)` and route `.ERR(...)`. Each error carries a protocol-level `message` plus user-facing `toast.key/default/level`; generators emit only these stable fields and do not generate built-in locale tables. Business i18n resolves the current language by toast key, and client helpers fall back through `toast.text`, external i18n, `toast.default`, then `message`. Main generators emit typed error constants/catalogs; Go server business error implementations live under `runtime/errors`, and Go client, TypeScript, Kotlin, and Python client/server expose corresponding runtime catalogs. Business error codes are not forced to equal HTTP status codes and wrapper codes are not automatically converted into thrown exceptions.
+ContractGraph collects a language-agnostic error catalog from `Blueprint(errors=...)` and route `.ERR(...)`. Each error carries a protocol-level `message` plus user-facing `toast.key/default/level`; generators emit only these stable fields and do not generate built-in locale tables. Business i18n resolves the current language by toast key, and client helpers fall back through `toast.text`, external i18n, `toast.default`, then `message`. Main generators emit typed error constants/catalogs; Go server business error implementations live under `runtime/errors`, and Go client, TypeScript, Kotlin, Java, and Python client/server expose corresponding runtime catalogs. Business error codes are not forced to equal HTTP status codes and wrapper codes are not automatically converted into thrown exceptions.
 
 The Kotlin client output layout is `<package>/<root>/runtime/*`, `<package>/<root>/routes/<root>/<group...>/*`, and `<package>/<root>/transports/http/*`. `Gen*.kt` files are generator-owned; non-`Gen*` façade / extension files are user-owned. This is a breaking layout change from the old `<package>/ApiClient.kt`, `endpoints/`, `models/`, and `internal/` layout.
 
 The Go client output layout is `runtime/*`, `routes/<root>/<group...>/*`, and `transports/http/*`. `gen_*.go` files are generator-owned, while `client.go` façades are user-owned and preserved during regeneration. `base_url` / `base_url_expr` are written only to the HTTP transport config, not route/runtime clients.
+
+The Java client/server output layout is `<package>/<root>/runtime/*`, `<package>/<root>/routes/<root>/<group...>/*`, and `<package>/<root>/transports/http/*`. `out_dir` is the package root and does not include `src/main/java`. The client preserves `ApiClient.java`, `<Group>Api.java`, and `HttpApiClient.java`; the server preserves `<Group>Service.java`. DTOs use Java 17 `record`, fields use Jackson `@JsonProperty`, and enums use `@JsonCreator` / `@JsonValue` to preserve wire values.
 
 The Python client/server output layout is `<python_package_root>/<root>/runtime/*`, `<python_package_root>/<root>/routes/<root>/<group...>/*`, and `<python_package_root>/<root>/transports/http/*`. Root-level routes are emitted under `routes/<root>`, not `routes/root`. If `python_package_root` is omitted, the generator uses its default package root.
 
@@ -140,8 +160,8 @@ gRPC stub target fields:
 
 Transport targets:
 
-- `http-transport`: declares an HTTP server/client combination. `server` can reference a `go-server` or `python-server`; `clients` can reference Go, TypeScript, Kotlin, or Python clients.
-- `wails-transport`: declares a Wails overlay and must set `version`, `server`, and `clients`. Wails remains Go + TypeScript only and does not attach Kotlin / Python clients.
+- `http-transport`: declares an HTTP server/client combination. `server` can reference a `go-server`, `java-server`, or `python-server`; `clients` can reference Go, TypeScript, Kotlin, Java, or Python clients.
+- `wails-transport`: declares a Wails overlay and must set `version`, `server`, and `clients`. Wails remains Go + TypeScript only and does not attach Kotlin / Java / Python clients.
 - `frontend_mode = "external"` emits Wails TypeScript facades for external frontends; `none` emits only the Go overlay.
 - `include` / `exclude` can trim the Wails target overlay / facade.
 

@@ -6,12 +6,10 @@ import type * as Models from "./models";
 import type * as Shared from "../../../runtime/models";
 import { ApiChannelBridge, ApiClientConfig, ApiSocketBridge, ApiStreamBridge, BaseClient } from "../../../runtime/client";
 
-
 export class DemoClient extends BaseClient {
   constructor(config: ApiClientConfig = {}) {
     super(config);
   }
-
 
   /**
    * 这是abc的summary
@@ -40,7 +38,6 @@ export class DemoClient extends BaseClient {
       timeoutMs,
     });
   }
-
 
   /**
    * 这是post的summary
@@ -71,7 +68,6 @@ export class DemoClient extends BaseClient {
       timeoutMs,
     });
   }
-
 
   /**
    * 这是put的summary
@@ -105,7 +101,6 @@ export class DemoClient extends BaseClient {
     });
   }
 
-
   /**
    * 这是delete的summary
    * 这是delete的description
@@ -133,7 +128,6 @@ export class DemoClient extends BaseClient {
       timeoutMs,
     });
   }
-
 
   /**
    * 这是ws的summary
@@ -164,7 +158,6 @@ export class DemoClient extends BaseClient {
     });
   }
 
-
   connectWsRaw(
     request: {
       query?: Shared.ApiDemoSubA;
@@ -188,7 +181,6 @@ export class DemoClient extends BaseClient {
       protocols,
     });
   }
-
 
   /**
    * Sweep event stream
@@ -216,7 +208,6 @@ export class DemoClient extends BaseClient {
       headers: request.headers,
     });
   }
-
 
   /**
    * Assistant channel
@@ -248,7 +239,6 @@ export class DemoClient extends BaseClient {
     });
   }
 
-
   /**
    * 这是一个summary
    * 这是一个description
@@ -279,7 +269,6 @@ export class DemoClient extends BaseClient {
     });
   }
 
-
   /**
    * 这是一个raw
    * 这是一个raw description
@@ -305,7 +294,6 @@ export class DemoClient extends BaseClient {
       timeoutMs,
     });
   }
-
 
   /**
    * 这是一个raw

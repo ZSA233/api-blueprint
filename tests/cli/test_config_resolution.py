@@ -38,10 +38,13 @@ def test_example_config_loads_vnext_targets() -> None:
         "go.client",
         "typescript.client",
         "kotlin.client",
+        "java.server",
+        "java.client",
         "python.server",
         "python.client",
         "http",
         "http.python",
+        "http.java",
         "wails.v3",
         "wails.v2",
         "grpc.proto",
@@ -54,8 +57,11 @@ def test_example_config_loads_vnext_targets() -> None:
         "go-client",
         "typescript-client",
         "kotlin-client",
+        "java-server",
+        "java-client",
         "python-server",
         "python-client",
+        "http-transport",
         "http-transport",
         "http-transport",
         "wails-transport",
@@ -119,6 +125,17 @@ id = "kotlin.client"
 out_dir = "kotlin"
 module = "com.example.generated"
 
+[[java.server]]
+id = "java.server"
+out_dir = "java/server"
+module = "com.example.generated"
+
+[[java.client]]
+id = "java.client"
+out_dir = "java/client"
+module = "com.example.generated"
+base_url = "http://localhost:2333"
+
 [[python.server]]
 id = "python.server"
 out_dir = "python/server"
@@ -133,6 +150,11 @@ python_package_root = "client_app"
 id = "http"
 server = "python.server"
 clients = ["python.client"]
+
+[[transport.http]]
+id = "http.java"
+server = "java.server"
+clients = ["java.client"]
 
 [[transport.wails]]
 id = "wails.v3"
@@ -177,9 +199,12 @@ module = "pb"
         "go.client",
         "typescript.client",
         "kotlin.client",
+        "java.server",
+        "java.client",
         "python.server",
         "python.client",
         "http",
+        "http.java",
         "wails.v3",
         "grpc.proto",
         "grpc.go",
@@ -191,8 +216,11 @@ module = "pb"
         "go-client",
         "typescript-client",
         "kotlin-client",
+        "java-server",
+        "java-client",
         "python-server",
         "python-client",
+        "http-transport",
         "http-transport",
         "wails-transport",
         "grpc-proto",
@@ -203,12 +231,16 @@ module = "pb"
     assert config.targets[4].module is None
     assert config.targets[4].package == "com.example.generated"
     assert config.targets[5].module is None
-    assert config.targets[5].python_package_root == "server_app"
-    assert config.targets[6].python_package_root == "client_app"
-    assert len(config.targets[9].proto_files) == 1
-    assert config.targets[9].proto_files[0].file == "api/demo.proto"
-    assert config.targets[9].proto_files[0].service == "DemoService"
-    assert config.targets[11].python_package_root == "pb"
+    assert config.targets[5].package == "com.example.generated"
+    assert config.targets[6].module is None
+    assert config.targets[6].package == "com.example.generated"
+    assert config.targets[7].module is None
+    assert config.targets[7].python_package_root == "server_app"
+    assert config.targets[8].python_package_root == "client_app"
+    assert len(config.targets[12].proto_files) == 1
+    assert config.targets[12].proto_files[0].file == "api/demo.proto"
+    assert config.targets[12].proto_files[0].service == "DemoService"
+    assert config.targets[14].python_package_root == "pb"
 
 
 def test_contract_alias_table_normalizes_to_contract_target(tmp_path) -> None:
@@ -285,6 +317,25 @@ package = "com.example.other"
         Config.load(config_path)
 
 
+@pytest.mark.parametrize("alias", ["java.client", "java.server"])
+def test_java_alias_rejects_conflicting_module_and_package(tmp_path, alias: str) -> None:
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        f"""
+[[{alias}]]
+id = "{alias}"
+out_dir = "java"
+module = "com.example.generated"
+package = "com.example.other"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match=rf"\[\[{alias}\]\].*module and package must match"):
+        Config.load(config_path)
+
+
 def test_alias_target_tables_reject_unknown_alias_table(tmp_path) -> None:
     config_path = tmp_path / "api-blueprint.toml"
     config_path.write_text(
@@ -335,6 +386,11 @@ def test_resolve_config_converts_vnext_target_outputs_to_absolute_paths() -> Non
     assert targets["kotlin.client"].base_url == "http://localhost:2333"
     assert targets["kotlin.client"].include == ("tag:api",)
     assert "path:/api/demo/ws" in targets["kotlin.client"].exclude
+    assert targets["java.server"].out_dir == (EXAMPLE_CONFIG.parent / "java" / "server").resolve()
+    assert targets["java.server"].package == "com.example.apiblueprint"
+    assert targets["java.client"].out_dir == (EXAMPLE_CONFIG.parent / "java" / "client").resolve()
+    assert targets["java.client"].package == "com.example.apiblueprint"
+    assert targets["java.client"].base_url == "http://localhost:2333"
     assert targets["wails.v3"].overlay_name == "wailsv3"
     assert targets["wails.v2"].overlay_name == "wailsv2"
     assert targets["grpc.proto"].out_dir == (EXAMPLE_CONFIG.parent / "grpc" / "protos").resolve()

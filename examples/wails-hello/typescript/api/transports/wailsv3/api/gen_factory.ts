@@ -6,7 +6,6 @@ import type { ApiClientConfig } from "../../../runtime/client";
 import type { HelloClient } from "./hello/client";
 import { createClient as createHelloClient } from "./hello/client";
 
-
 export interface GeneratedClients {
   helloClient: HelloClient;
 }

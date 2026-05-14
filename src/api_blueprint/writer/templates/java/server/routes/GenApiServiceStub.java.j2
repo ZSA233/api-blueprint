@@ -1,0 +1,29 @@
+{% autoescape false %}package {{ bp.root_package }}.routes.{{ group.package_suffix }};
+
+import {{ bp.root_package }}.runtime.GenModels;
+import {{ bp.root_package }}.runtime.binary.ApiBinaryBody;
+
+public class {{ group.stub_class }} implements {{ group.service_class }} {
+{% for route in group.routes %}
+{% if route.is_rpc %}
+    @Override
+    public {{ writer.response_type(route, group) }} {{ route.method_name }}(
+{%- for type_name, name in writer.route_params(route, group) %}
+        {{ type_name }} {{ name }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ) {
+        throw new UnsupportedOperationException({{ route.method_name | code_literal }});
+    }
+{% else %}
+    @Override
+    public Object {{ route.method_name }}(
+{%- for type_name, name in writer.route_params(route, group) %}
+        {{ type_name }} {{ name }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ) {
+        throw new UnsupportedOperationException({{ route.method_name | code_literal }});
+    }
+{% endif %}
+{% endfor %}
+}
+{% endautoescape %}

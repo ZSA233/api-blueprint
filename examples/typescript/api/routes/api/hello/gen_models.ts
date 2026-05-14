@@ -10,7 +10,6 @@ import type {
   WsMsgTypeEnum,
 } from "../../../runtime/models";
 
-
 // Route Contracts
 
 export interface ReqAbcQuery {

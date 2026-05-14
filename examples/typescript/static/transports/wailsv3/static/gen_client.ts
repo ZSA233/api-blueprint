@@ -6,9 +6,7 @@ import type { ApiClientConfig } from "../../../runtime/client";
 import { WailsV3Transport } from "../transport";
 import { StaticClient as SharedStaticClient } from "../../../routes/static/client";
 
-
 export type StaticClient = SharedStaticClient;
-
 
 export function createClient(config: ApiClientConfig = {}): StaticClient {
   return new SharedStaticClient({

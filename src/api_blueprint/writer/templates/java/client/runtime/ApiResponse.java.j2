@@ -1,0 +1,14 @@
+package {{ bp.root_package }}.runtime;
+
+import java.util.Map;
+
+public record ApiResponse(
+    int statusCode,
+    String body,
+    Map<String, String> headers
+) {
+    public ApiResponse {
+        body = body == null ? "" : body;
+        headers = headers == null ? Map.of() : Map.copyOf(headers);
+    }
+}

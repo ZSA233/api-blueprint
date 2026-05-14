@@ -92,8 +92,14 @@ class KotlinRoute:
     @property
     def binary_type(self) -> str | None:
         if self.binary_schema is not None:
-            return self.binary_schema.name
+            return f"GenBinary.{self.binary_schema.name}"
         return self.binary_proto.name if self.binary_proto else None
+
+    @property
+    def binary_wire_type(self) -> str | None:
+        if self.binary_schema is None:
+            return None
+        return f"GenBinary.{self.binary_schema.name}Wire"
 
     @property
     def has_binary_schema(self) -> bool:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 import json
 import os
 from pathlib import Path
@@ -15,11 +16,17 @@ _TEMPLATE_CACHE: dict[str, Jinja2Templates] = {}
 def load_templates(directory: str | None) -> Jinja2Templates:
     templates = Jinja2Templates(directory=directory)
     templates.env.filters["code_literal"] = code_literal
+    templates.env.filters["compact_code_block"] = compact_code_block
     return templates
 
 
 def code_literal(value: Any) -> Markup:
     return Markup(json.dumps(value, ensure_ascii=False))
+
+
+def compact_code_block(value: Any) -> Markup:
+    lines = [line.strip() for line in str(value).splitlines() if line.strip()]
+    return Markup("\n".join(lines))
 
 
 def _template_root(lang: str) -> Path:
@@ -41,7 +48,8 @@ def render(lang: str, name: str, context: dict[str, Any], relative_path: str = "
         path = _template_root(lang)
         templates = load_templates(str(path))
         _TEMPLATE_CACHE[lang] = templates
-    return templates.get_template(_template_lookup_name(relative_path, f"{name}.j2")).render(context)
+    text = templates.get_template(_template_lookup_name(relative_path, f"{name}.j2")).render(context)
+    return normalize_generated_source(lang, text)
 
 
 def iter_render(
@@ -49,7 +57,7 @@ def iter_render(
     context: dict[str, Any],
     relative_path: str = "",
     exclusives: tuple[str, ...] = (),
-):
+) -> Iterator[tuple[str, str]]:
     templates = _TEMPLATE_CACHE.get(lang)
     path = _template_root(lang)
     if templates is None:
@@ -65,4 +73,29 @@ def iter_render(
             continue
         if orig_name in exclusives or orig_name.startswith("__"):
             continue
-        yield orig_name, templates.get_template(_template_lookup_name(relative_path, filename)).render(context)
+        text = templates.get_template(_template_lookup_name(relative_path, filename)).render(context)
+        yield orig_name, normalize_generated_source(lang, text)
+
+
+def normalize_generated_source(lang: str, text: str) -> str:
+    if lang not in {"java", "kotlin", "typescript"}:
+        return text
+    return _collapse_blank_line_runs(text, max_blank_lines=1)
+
+
+def _collapse_blank_line_runs(text: str, *, max_blank_lines: int) -> str:
+    trailing_newline = text.endswith("\n")
+    lines: list[str] = []
+    blank_count = 0
+    for line in text.splitlines():
+        if line.strip():
+            blank_count = 0
+            lines.append(line)
+            continue
+        blank_count += 1
+        if blank_count <= max_blank_lines:
+            lines.append("")
+    result = "\n".join(lines)
+    if trailing_newline:
+        result += "\n"
+    return result

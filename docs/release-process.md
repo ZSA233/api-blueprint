@@ -125,7 +125,7 @@ make example-refresh
 
 这里需要明确区分：
 
-- `example-validation` 把 snapshot drift 视为仓库尚未收敛，因此适合小改动回归检查、CI 和 release gate；它会同时验证 Blueprint examples、Kotlin `compileKotlin` 与 `examples/grpc/` 的 Go / Python gRPC snapshots。
+- `example-validation` 把 snapshot drift 视为仓库尚未收敛，因此适合小改动回归检查、CI 和 release gate；它会同时验证 Blueprint examples、Kotlin `compileKotlin`、Java generated examples compile 与 `examples/grpc/` 的 Go / Python gRPC snapshots。
 - `example-compile-check` 不要求 snapshots 不变，只要求新生成结果仍然可编译或可导入。
 - `example-refresh` 用于接受预期变化；执行后应 review diff、提交 snapshots，再重新跑 `example-validation` 或 `release-preflight`。
 
@@ -157,7 +157,7 @@ make example-refresh
 这里要注意当前 CI 的职责边界：
 
 - 常规 `pull_request` 与 `main` push 主要跑 `release-contract` + `python-tests`，不再默认阻塞在严格 `example-validation` 上。
-- `example-validation` 只在 `release/*` push 与手动 `workflow_dispatch` 时运行；它会通过共享的 `.github/actions/setup-example-toolchains` 安装 Go、Node 24、TypeScript、`go-enum` 与 pinned `protoc` 工具链。
+- `example-validation` 只在 `release/*` push 与手动 `workflow_dispatch` 时运行；它会通过共享的 `.github/actions/setup-example-toolchains` 准备 Java 17、Go、Node 24、TypeScript、`go-enum` 与 pinned `protoc` 工具链；Java / Kotlin 编译还要求环境里有 Gradle。
 - `python-tests` 会通过 `pytest -m "not example_validation"` 排除 `tests/integration/examples/` 里的专用外部工具链校验，避免在通用 Python matrix 中重复跑这类重型检查。
 - `release.yml` / `release-rc.yml` 的 `release-bundle` 仍复用同一套 examples toolchain setup，但 tag workflow 只跑 release metadata check、构建与 install check，不再重复完整 `make release-preflight`。
 - 因此判断 release ref 是否“CI 全绿”时，必须看 release branch 上的 `example-validation` 与三个 `python-tests` matrix，不能只看 pytest matrix。

@@ -6,12 +6,10 @@ import type * as Models from "./models";
 import type * as Shared from "../../runtime/models";
 import { ApiChannelBridge, ApiClientConfig, ApiSocketBridge, ApiStreamBridge, BaseClient } from "../../runtime/client";
 
-
 export class StaticClient extends BaseClient {
   constructor(config: ApiClientConfig = {}) {
     super(config);
   }
-
 
   /**
    * Route: /static/doc.json
@@ -38,7 +36,6 @@ export class StaticClient extends BaseClient {
       timeoutMs,
     });
   }
-
 
   /**
    * Route: /static/dochaha

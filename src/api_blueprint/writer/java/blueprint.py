@@ -1,0 +1,245 @@
+from __future__ import annotations
+
+from collections import OrderedDict
+from dataclasses import dataclass, field
+from typing import Any, Mapping
+
+from api_blueprint.writer.core.base import BaseBlueprint
+
+from .binary_schema import JavaBinarySchema, unique_java_binary_schemas
+from .naming import to_java_member_name, to_java_package_path, to_java_package_suffix, to_java_type_name
+
+
+JsonObject = dict[str, Any]
+
+
+@dataclass(frozen=True)
+class JavaRouteParam:
+    name: str
+    java_type: str
+    required: bool = True
+
+
+class JavaRoute:
+    def __init__(self, route: Mapping[str, Any]):
+        self.route = dict(route)
+        self.route_id = str(route.get("id") or "")
+        self.kind = str(route.get("kind") or "rpc")
+        self.operation = str(route.get("operation") or "Call")
+        self.method_name = to_java_member_name(str(route.get("method_name") or self.operation), fallback="call")
+        self.url = str(route.get("url") or "")
+        raw_methods = route.get("methods")
+        self.methods = tuple(str(method).upper() for method in raw_methods) if isinstance(raw_methods, list) else ("GET",)
+        self.request = _mapping(route.get("request"))
+        self.response = _mapping(route.get("response"))
+        self.connection = _mapping(route.get("connection"))
+        self.binary_schema = _mapping(self.request.get("binary_schema")) or None
+
+    @property
+    def is_rpc(self) -> bool:
+        return self.kind == "rpc"
+
+    @property
+    def http_method(self) -> str:
+        return self.methods[0] if self.methods else "GET"
+
+    @property
+    def response_wrapper(self) -> str:
+        return str(self.response.get("wrapper") or "NoneWrapper")
+
+    @property
+    def response_model(self) -> str | None:
+        value = self.response.get("model")
+        return value if isinstance(value, str) and value else None
+
+    @property
+    def response_media_type(self) -> str:
+        return str(self.response.get("media_type") or "application/json")
+
+    @property
+    def query_model(self) -> str | None:
+        return _model_name(self.request.get("query_model"))
+
+    @property
+    def json_model(self) -> str | None:
+        return _model_name(self.request.get("json_model"))
+
+    @property
+    def form_model(self) -> str | None:
+        return _model_name(self.request.get("form_model"))
+
+    @property
+    def binary_model(self) -> str | None:
+        if self.binary_schema is not None:
+            return None
+        return _model_name(self.request.get("binary_model"))
+
+    @property
+    def open_model(self) -> str | None:
+        return _model_name(self.connection.get("open_model"))
+
+    @property
+    def close_model(self) -> str | None:
+        return _model_name(self.connection.get("close_model"))
+
+    @property
+    def connection_method_name(self) -> str:
+        if self.kind == "legacy_ws":
+            return to_java_member_name(f"connect {self.operation}", fallback="connect")
+        if self.kind == "stream":
+            return to_java_member_name(f"subscribe {self.operation}", fallback="subscribe")
+        if self.kind == "channel":
+            return to_java_member_name(f"open {self.operation}", fallback="open")
+        return self.method_name
+
+    def model_names(self) -> set[str]:
+        names = {
+            name
+            for name in (
+                self.query_model,
+                self.json_model,
+                self.form_model,
+                self.binary_model,
+                self.open_model,
+                self.close_model,
+                self.response_model,
+            )
+            if name
+        }
+        for message_key in ("server_message", "client_message"):
+            message = self.connection.get(message_key)
+            if isinstance(message, Mapping):
+                single = _model_name(message.get("model"))
+                if single:
+                    names.add(single)
+                variants = message.get("variants")
+                if isinstance(variants, list):
+                    for variant in variants:
+                        if isinstance(variant, Mapping):
+                            model = _model_name(variant.get("model"))
+                            if model:
+                                names.add(model)
+        return names
+
+
+@dataclass
+class JavaApiGroup:
+    root: str
+    group: str
+    route_path: str
+    package_path: str
+    package_suffix: str
+    class_name: str
+    service_class: str
+    models_class: str
+    property_name: str
+    routes: list[JavaRoute] = field(default_factory=list)
+
+    @property
+    def controller_class(self) -> str:
+        return f"Gen{self.class_name.removesuffix('Api')}Controller"
+
+    @property
+    def generated_client_class(self) -> str:
+        return f"Gen{self.class_name}"
+
+    @property
+    def generated_service_class(self) -> str:
+        return f"Gen{self.service_class}"
+
+    @property
+    def stub_class(self) -> str:
+        return f"Gen{self.service_class}Stub"
+
+    def model_names(self) -> set[str]:
+        names: set[str] = set()
+        for route in self.routes:
+            names.update(route.model_names())
+        return names
+
+    def binary_schemas(self) -> tuple[JavaBinarySchema, ...]:
+        return unique_java_binary_schemas(
+            [route.binary_schema for route in self.routes if route.binary_schema is not None]
+        )
+
+
+class JavaBlueprint(BaseBlueprint["JavaBaseWriter"]):
+    def __init__(self, writer: "JavaBaseWriter", bp: Any):
+        super().__init__(writer, bp)
+        self.routes: list[JavaRoute] = []
+        self.groups: "OrderedDict[str, JavaApiGroup]" = OrderedDict()
+
+    @property
+    def root_slug(self) -> str:
+        return self.bp.root.strip("/") or "root"
+
+    @property
+    def root_package_path(self) -> str:
+        return to_java_package_path(self.root_slug, fallback="api")
+
+    @property
+    def root_package_suffix(self) -> str:
+        return to_java_package_suffix(self.root_slug, fallback="api")
+
+    @property
+    def root_package(self) -> str:
+        return f"{self.writer.package}.{self.root_package_suffix}"
+
+    def collect_from_manifest(self, routes: list[Mapping[str, Any]], services: Mapping[str, Mapping[str, Any]]) -> None:
+        self.routes = []
+        self.groups = OrderedDict()
+        for route_manifest in routes:
+            route = JavaRoute(route_manifest)
+            root, group = _route_root_group(route_manifest, services)
+            if root != self.root_slug:
+                continue
+            self.routes.append(route)
+            group_obj = self.groups.get(group)
+            if group_obj is None:
+                route_path = root if group == root else f"{root}/{group}"
+                package_path = to_java_package_path(route_path, fallback="api")
+                package_suffix = to_java_package_suffix(route_path, fallback="api")
+                base_name = to_java_type_name(group, fallback="Root")
+                models_suffix = "ServiceModels" if self.writer.server_mode else "ApiModels"
+                group_obj = JavaApiGroup(
+                    root=root,
+                    group=group,
+                    route_path=route_path,
+                    package_path=package_path,
+                    package_suffix=package_suffix,
+                    class_name=f"{base_name}Api",
+                    service_class=f"{base_name}Service",
+                    models_class=f"Gen{base_name}{models_suffix}",
+                    property_name=to_java_member_name(group, fallback="api"),
+                )
+                self.groups[group] = group_obj
+            group_obj.routes.append(route)
+
+
+def _mapping(value: object) -> dict[str, Any]:
+    return dict(value) if isinstance(value, Mapping) else {}
+
+
+def _model_name(value: object) -> str | None:
+    return value if isinstance(value, str) and value else None
+
+
+def _route_root_group(
+    route: Mapping[str, Any],
+    services: Mapping[str, Mapping[str, Any]],
+) -> tuple[str, str]:
+    service = services.get(str(route.get("service_id") or ""), {})
+    root = str(service.get("root") or _service_root(route) or "api").strip("/") or "api"
+    group = str(service.get("group") or root).strip("/") or root
+    return root, group
+
+
+def _service_root(route: Mapping[str, Any]) -> str:
+    service_id = str(route.get("service_id") or "api")
+    return service_id.split(".", 1)[0]
+
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .writer import JavaBaseWriter

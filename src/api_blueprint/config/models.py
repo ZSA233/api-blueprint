@@ -17,6 +17,8 @@ TargetKind = Literal[
     "go-client",
     "typescript-client",
     "kotlin-client",
+    "java-server",
+    "java-client",
     "python-server",
     "python-client",
     "http-transport",
@@ -74,6 +76,8 @@ class TargetConfig(BaseModel):
                 )
         if self.kind == "kotlin-client" and not self.package:
             raise ValueError(f"target[{self.id}] kotlin-client requires package")
+        if self.kind in {"java-client", "java-server"} and not self.package:
+            raise ValueError(f"target[{self.id}] {self.kind} requires package")
         if self.kind == "grpc-proto" and not self.package:
             raise ValueError(f"target[{self.id}] grpc-proto requires package")
         if self.kind != "grpc-proto" and self.proto_files:

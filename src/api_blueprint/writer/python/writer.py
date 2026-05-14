@@ -31,6 +31,10 @@ logger = logging.getLogger("PythonWriter")
 logger.setLevel(logging.INFO)
 
 
+ROUTE_BINARY_MODULE = "gen_binary.py"
+LEGACY_ROUTE_BINARY_DIR = "binary"
+
+
 class PythonBaseWriter(BaseWriter[PythonBlueprint]):
     runtime_template: str
     route_template: str
@@ -168,10 +172,10 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
             if handle:
                 handle.write(_render_python(self.route_template, {"group": group_plan.group}, "routes"))
         binary_schemas = group_plan.group.binary_schemas()
-        binary_dir = group_plan.directory / "binary"
+        binary_file = group_plan.directory / ROUTE_BINARY_MODULE
+        legacy_binary_dir = group_plan.directory / LEGACY_ROUTE_BINARY_DIR
         if binary_schemas:
-            self._ensure_package_markers(binary_dir)
-            with self.write_file(binary_dir / "gen_binary.py", overwrite=True) as handle:
+            with self.write_file(binary_file, overwrite=True) as handle:
                 if handle:
                     handle.write(
                         _render_python(
@@ -183,11 +187,11 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
                             "routes/binary",
                         )
                     )
-            with self.write_file(binary_dir / "__init__.py", overwrite=True) as handle:
-                if handle:
-                    handle.write("from .gen_binary import *\n")
-        elif binary_dir.exists():
-            shutil.rmtree(binary_dir)
+            self._cleanup_legacy_binary_dir(legacy_binary_dir)
+        else:
+            if binary_file.exists():
+                binary_file.unlink()
+            self._cleanup_legacy_binary_dir(legacy_binary_dir)
         self._cleanup_legacy_route_dir(group_plan)
 
     def _migrate_legacy_public_file(self, group_plan: "PythonRouteGroupPlan") -> None:
@@ -205,6 +209,23 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
         if self._is_default_only_legacy_route_dir(legacy_dir):
             shutil.rmtree(legacy_dir)
             logger.info("[-] Removed stale legacy route dir: %s", legacy_dir)
+
+    def _cleanup_legacy_binary_dir(self, binary_dir: Path) -> None:
+        if not binary_dir.exists():
+            return
+        generated_file = binary_dir / "gen_binary.py"
+        if generated_file.exists():
+            generated_file.unlink()
+        init_file = binary_dir / "__init__.py"
+        if init_file.exists() and init_file.read_text(encoding="utf-8").strip() == "from .gen_binary import *":
+            init_file.unlink()
+        pycache = binary_dir / "__pycache__"
+        if pycache.is_dir():
+            shutil.rmtree(pycache)
+        try:
+            binary_dir.rmdir()
+        except OSError:
+            return
 
     def _is_default_only_legacy_route_dir(self, legacy_dir: Path) -> bool:
         public_name = self.route_template.replace("gen_", "")

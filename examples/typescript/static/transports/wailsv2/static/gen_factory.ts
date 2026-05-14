@@ -6,7 +6,6 @@ import type { ApiClientConfig } from "../../../runtime/client";
 import type { StaticClient } from "./client";
 import { createClient as createStaticClient } from "./client";
 
-
 export interface GeneratedClients {
   staticClient: StaticClient;
 }

@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from api_blueprint_example_client.api.routes.api.binary.client import BinaryClient
-from api_blueprint_example_client.api.routes.api.binary.binary.gen_binary import (
+from api_blueprint_example_client.api.routes.api.binary.gen_binary import (
     DemoFlags,
     DemoPacket,
     DemoPacketBody,

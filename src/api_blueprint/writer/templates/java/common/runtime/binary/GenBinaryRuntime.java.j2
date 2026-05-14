@@ -1,0 +1,26 @@
+package {{ bp.root_package }}.runtime.binary;
+
+import java.io.ByteArrayOutputStream;
+
+public final class GenBinaryRuntime {
+    private GenBinaryRuntime() {
+    }
+
+    public static ApiBinaryBody emptyBody(String contentType) {
+        return ApiBinaryBody.of(new byte[0], contentType);
+    }
+
+    public static final class BinaryWriter {
+        private final ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        public void write(byte[] bytes) {
+            if (bytes != null) {
+                out.writeBytes(bytes);
+            }
+        }
+
+        public byte[] toByteArray() {
+            return out.toByteArray();
+        }
+    }
+}

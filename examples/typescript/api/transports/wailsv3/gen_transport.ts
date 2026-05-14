@@ -18,12 +18,9 @@ import type {
   StreamConnectOptions,
 } from "../../runtime/client";
 
-
 import { WAILS_V3_BINDINGS } from "./gen_bindings";
 
-
 type RequestBody = RequestInit["body"];
-
 
 type WailsEventHandler = (payload?: unknown) => void;
 
@@ -38,7 +35,6 @@ type WailsV3Runtime = {
     Off?: (name: string, handler?: WailsV3EventHandler) => void;
   };
 };
-
 
 type WailsSocketSession = {
   id: string;
@@ -112,7 +108,6 @@ declare global {
   }
 }
 
-
 let importedWailsV3Runtime: WailsV3Runtime | null = null;
 let wailsRuntimeLoadPromise: Promise<void> | null = null;
 
@@ -164,7 +159,6 @@ function unwrapWailsV3Event(event?: unknown): unknown {
   }
   return event;
 }
-
 
 class WailsStreamBridge<Recv, Close = SocketCloseInfo> implements ApiStreamBridge<Recv, Close> {
   readonly mode = "wails-v3";

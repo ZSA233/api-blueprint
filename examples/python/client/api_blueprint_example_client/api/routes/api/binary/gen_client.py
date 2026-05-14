@@ -5,7 +5,7 @@ from typing import Any
 from ....runtime.client import ApiChannelBridge, ApiClientTransport, ApiSocketBridge, ApiStreamBridge
 
 from ....runtime.binary import ApiBinaryBody
-from .binary.gen_binary import (
+from .gen_binary import (
     DemoPacket,
     DemoPacketWire,
 )

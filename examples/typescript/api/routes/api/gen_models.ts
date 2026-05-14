@@ -6,7 +6,6 @@ import type {
   GeneralWrapper,
 } from "../../runtime/models";
 
-
 // Route Contracts
 
 export type RspWs = GeneralWrapper<void>;

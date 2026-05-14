@@ -398,7 +398,7 @@ content-encoding: identity,gzip
     root_dir = tmp_path / "kotlin" / "com" / "example" / "generated" / "api"
     runtime_binary_text = (root_dir / "runtime" / "binary" / "GenBinaryRuntime.kt").read_text(encoding="utf-8")
     route_text = (root_dir / "routes" / "api" / "binary" / "GenBinaryApi.kt").read_text(encoding="utf-8")
-    binary_text = (root_dir / "routes" / "api" / "binary" / "binary" / "GenBinary.kt").read_text(encoding="utf-8")
+    binary_text = (root_dir / "routes" / "api" / "binary" / "GenBinary.kt").read_text(encoding="utf-8")
     runtime_models_text = (root_dir / "runtime" / "GenModels.kt").read_text(encoding="utf-8")
     http_text = (root_dir / "transports" / "http" / "GenOkHttpApiTransport.kt").read_text(encoding="utf-8")
 
@@ -406,6 +406,7 @@ content-encoding: identity,gzip
     assert "public data class EncodedBinaryBlock(" in runtime_binary_text
     assert "public class BinaryWriter" in runtime_binary_text
     assert "public fun writeBlock(path: String, block: EncodedBinaryBlock)" in runtime_binary_text
+    assert "public object GenBinary {" in binary_text
     assert "public data class DemoPacket(" in binary_text
     assert "public object DemoFlagsValues" in binary_text
     assert "reserved bits must be zero" in binary_text
@@ -420,8 +421,8 @@ content-encoding: identity,gzip
     assert "requireSize(\"DemoPacketItem.label_len.label\", binarySize(value.label), value.labelLen.toLong())" in binary_text
     assert "writer.writeF64(\"DemoPacketItem.score\", value.score)" in binary_text
     assert "public open suspend fun packet(" in route_text
-    assert "binary: DemoPacket," in route_text
-    assert "binary = binary.toBinaryBody()" in route_text
+    assert "binary: GenBinary.DemoPacket," in route_text
+    assert "binary = GenBinary.DemoPacketWire.toBinaryBody(binary)" in route_text
     assert route_text.count("public open suspend fun packet(") == 2
     assert "binary: ApiBinaryBody," in route_text
     assert "binarySerializer" not in route_text

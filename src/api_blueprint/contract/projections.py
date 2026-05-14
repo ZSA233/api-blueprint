@@ -416,6 +416,7 @@ def _artifact_for_route(
     python_route_package = route_path.replace("/", ".")
     kotlin_route_package = route_path.replace("/", ".")
     pascal_group = _pascal(group)
+    has_binary_schema = _binary_schema_name(route) is not None
     files: list[str] = []
     imports: list[str] = []
     handled = True
@@ -423,6 +424,8 @@ def _artifact_for_route(
     if kind == "go-server":
         base = _join(out_dir, "routes", root, "" if root == group else group)
         files = [_join(base, "gen_interface.go"), _join(base, "gen_protos.go")]
+        if has_binary_schema:
+            files.append(_join(base, "_gen_binary", "gen_binary.go"))
         import_root = _string(target.get("go_import_root")) or _string(target.get("module"))
         if import_root:
             imports = [_join(import_root, "routes", root, "" if root == group else group)]
@@ -436,12 +439,16 @@ def _artifact_for_route(
             _join(transport_base, "gen_transport.go"),
             _join(transport_base, "client.go"),
         ]
+        if has_binary_schema:
+            files.append(_join(base, "_gen_binary", "gen_binary.go"))
         module = _string(target.get("go_import_root")) or _string(target.get("module"))
         if module:
             imports = [_join(module, "routes", route_path)]
     elif kind == "typescript-client":
         base = _join(out_dir, root, "routes", root, "" if root == group else group)
         files = [_join(base, "client.ts"), _join(base, "models.ts")]
+        if has_binary_schema:
+            files.append(_join(base, "gen_binary.ts"))
         imports = [_posix_without_suffix(base)]
     elif kind == "kotlin-client":
         package = _string(target.get("package"))
@@ -452,6 +459,24 @@ def _artifact_for_route(
             _join(base, f"Gen{pascal_group}Api.kt"),
             _join(base, f"{pascal_group}Api.kt"),
         ]
+        if has_binary_schema:
+            files.append(_join(base, "GenBinary.kt"))
+        if package:
+            imports = [f"{package}.{root}.routes.{kotlin_route_package}.{pascal_group}Api"]
+    elif kind == "java-client":
+        package = _string(target.get("package"))
+        package_path = package.replace(".", "/")
+        base = _join(out_dir, package_path, root, "routes", route_path)
+        transport_base = _join(out_dir, package_path, root, "transports", "http")
+        files = [
+            _join(base, f"Gen{pascal_group}ApiModels.java"),
+            _join(base, f"Gen{pascal_group}Api.java"),
+            _join(base, f"{pascal_group}Api.java"),
+            _join(transport_base, "GenJdkHttpApiTransport.java"),
+            _join(transport_base, "HttpApiClient.java"),
+        ]
+        if has_binary_schema:
+            files.append(_join(base, "GenBinary.java"))
         if package:
             imports = [f"{package}.{root}.routes.{kotlin_route_package}.{pascal_group}Api"]
     elif kind == "python-client":
@@ -464,6 +489,8 @@ def _artifact_for_route(
             _join(base, "client.py"),
             _join(transport_base, "gen_client.py"),
         ]
+        if has_binary_schema:
+            files.append(_join(base, "gen_binary.py"))
         imports = [f"{package_root}.{root}.routes.{python_route_package}.client"]
     elif kind == "python-server":
         package_root = _string(target.get("python_package_root")) or "api_blueprint_generated"
@@ -476,10 +503,30 @@ def _artifact_for_route(
             _join(transport_base, "gen_server.py"),
             _join(transport_base, "server.py"),
         ]
+        if has_binary_schema:
+            files.append(_join(route_base, "gen_binary.py"))
         imports = [
             f"{package_root}.{root}.routes.{python_route_package}.service",
             f"{package_root}.{root}.transports.http.server",
         ]
+    elif kind == "java-server":
+        package = _string(target.get("package"))
+        package_path = package.replace(".", "/")
+        route_base = _join(out_dir, package_path, root, "routes", route_path)
+        transport_base = _join(out_dir, package_path, root, "transports", "http")
+        files = [
+            _join(route_base, f"Gen{pascal_group}Service.java"),
+            _join(route_base, f"Gen{pascal_group}ServiceStub.java"),
+            _join(route_base, f"{pascal_group}Service.java"),
+            _join(transport_base, route_path, f"Gen{pascal_group}Controller.java"),
+        ]
+        if has_binary_schema:
+            files.append(_join(route_base, "GenBinary.java"))
+        if package:
+            imports = [
+                f"{package}.{root}.routes.{kotlin_route_package}.{pascal_group}Service",
+                f"{package}.{root}.transports.http.{kotlin_route_package}.Gen{pascal_group}Controller",
+            ]
     elif kind == "wails-transport":
         overlay = _string(target.get("overlay_name")) or "wails"
         server_target = (

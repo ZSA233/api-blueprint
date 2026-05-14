@@ -6,12 +6,10 @@ import type { ApiClientConfig } from "../../../runtime/client";
 import { WailsV2Transport } from "../transport";
 import { ApiClient as SharedApiClient } from "../../../routes/api/client";
 
-
 type HiddenRawWebSocketMethods =
    "connectWsRaw";
 
 export type ApiClient = Omit<SharedApiClient, HiddenRawWebSocketMethods>;
-
 
 export function createClient(config: ApiClientConfig = {}): ApiClient {
   return new SharedApiClient({

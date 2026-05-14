@@ -6,7 +6,6 @@ import type {
   GreetResponse,
 } from "../../../runtime/models";
 
-
 // Route Contracts
 
 export interface ReqGreetQuery {

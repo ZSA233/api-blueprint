@@ -6,12 +6,10 @@ import type * as Models from "./models";
 import type * as Shared from "../../../runtime/models";
 import { ApiChannelBridge, ApiClientConfig, ApiSocketBridge, ApiStreamBridge, BaseClient } from "../../../runtime/client";
 
-
 export class HelloClient extends BaseClient {
   constructor(config: ApiClientConfig = {}) {
     super(config);
   }
-
 
   /**
    * 这是abc的summary
@@ -41,7 +39,6 @@ export class HelloClient extends BaseClient {
     });
   }
 
-
   /**
    * map-enum
    * map-enum
@@ -67,7 +64,6 @@ export class HelloClient extends BaseClient {
       timeoutMs,
     });
   }
-
 
   /**
    * list-enum
@@ -95,7 +91,6 @@ export class HelloClient extends BaseClient {
     });
   }
 
-
   /**
    * string
    * string
@@ -121,7 +116,6 @@ export class HelloClient extends BaseClient {
       timeoutMs,
     });
   }
-
 
   /**
    * uint64
@@ -149,7 +143,6 @@ export class HelloClient extends BaseClient {
     });
   }
 
-
   /**
    * string-enum
    * string-enum
@@ -175,7 +168,6 @@ export class HelloClient extends BaseClient {
       timeoutMs,
     });
   }
-
 
   /**
    * hello-way
