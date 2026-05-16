@@ -1,7 +1,7 @@
 package hello
 
 import (
-	protos "example.com/project/golang/server/views/routes/api/_gen_protos"
+	types "example.com/project/golang/server/views/routes/api/_gen_types"
 )
 
 type Router struct {
@@ -50,4 +50,4 @@ func (impl *Router) HelloWay(ctx *CTX_HelloWay, req *REQ_HelloWay) (rsp *RSP_Hel
 	return &value, nil
 }
 
-var _ = protos.ApiHelloMap{}
+var _ = types.ApiHelloMap{}

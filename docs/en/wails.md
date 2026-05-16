@@ -53,7 +53,7 @@ transports/
         impl_service.go
 ```
 
-`routes/<go-root-segment>/<go-group-segment>` is the transport-neutral core; `providers` is the shared provider runtime; `runtime/errors` is the generated business error catalog; `transports/<overlay_name>/<go-root-segment>/<go-group-segment>` is the Wails Go target. Go-safe segments write `/api-v1` as `api_v1` and `/admin/v1` as the single segment `admin_v1`, so Go directories do not guarantee one directory per URL slash segment. The route-local `impl_service.go` is a user-owned bootstrap constructor entry and is preserved across regeneration. If you want a `views/...` package path, configure the referenced Go server target with `out_dir = ".../views"`; Wails does not append it implicitly.
+`routes/<go-root-segment>/<go-group-segment>` is the transport-neutral core; `providers` is the shared provider runtime; `runtime/errors` is the generated typed error runtime; `transports/<overlay_name>/<go-root-segment>/<go-group-segment>` is the Wails Go target. Go-safe segments write `/api-v1` as `api_v1` and `/admin/v1` as the single segment `admin_v1`, so Go directories do not guarantee one directory per URL slash segment. The route-local `impl_service.go` is a user-owned bootstrap constructor entry and is preserved across regeneration. If you want a `views/...` package path, configure the referenced Go server target with `out_dir = ".../views"`; Wails does not append it implicitly.
 
 ## TypeScript Output Layout
 
@@ -63,7 +63,7 @@ Wails TypeScript overlays are generated inside the TypeScript target output tree
 api/
   runtime/
     gen_client.ts
-    gen_models.ts
+    gen_types.ts
   routes/
     api/
       demo/gen_client.ts

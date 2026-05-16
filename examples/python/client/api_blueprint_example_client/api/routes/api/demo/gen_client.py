@@ -1,8 +1,48 @@
 from __future__ import annotations
 
-from typing import Any
+from dataclasses import asdict, is_dataclass
+from typing import Any, Mapping
 
 from ....runtime.client import ApiChannelBridge, ApiClientTransport, ApiSocketBridge, ApiStreamBridge
+
+
+from .gen_types import (
+    AbcQuery,
+    AbcResponse,
+    TestPostJSON,
+    TestPostResponse,
+    PutDemoQuery,
+    PutDemoJSON,
+    PutDemoResponse,
+    DeleteQuery,
+    DeleteResponse,
+    WsQuery,
+    SweepEventsOpen,
+    AssistantSessionOpen,
+    PostDeprecatedJSON,
+    PostDeprecatedResponse,
+    RawResponse,
+    ErrorDemoQuery,
+    ErrorDemoResponse,
+)
+
+
+def _to_mapping(value: object) -> Mapping[str, Any] | None:
+    if value is None:
+        return None
+    if isinstance(value, Mapping):
+        return value
+    if is_dataclass(value):
+        return {key: item for key, item in asdict(value).items() if item is not None}
+    raise TypeError(f"expected mapping or dataclass request model, got {type(value).__name__}")
+
+
+def _from_mapping(model_type, value):
+    if value is None or isinstance(value, model_type):
+        return value
+    if isinstance(value, Mapping):
+        return model_type(**{key: value.get(key) for key in model_type.__dataclass_fields__})
+    return value
 
 
 class DemoClient:
@@ -11,53 +51,65 @@ class DemoClient:
 
     async def abc(
         self,
-        query: dict[str, Any] | None = None,
+        query: AbcQuery | Mapping[str, Any] | None = None,
     ) -> Any:
-        response_type: str | None = 'ApiDemoA'
-        return await self._transport.request(
+        response_type: str | None = 'AbcResponse'
+        payload = await self._transport.request(
             "GET",
             "/api/demo/abc",
-            query=query,
+            route_id="api.demo.get.abc",
+            query=_to_mapping(query),
             response_type=response_type,
+            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
         )
+        return _from_mapping(AbcResponse, payload)
 
     async def test_post(
         self,
-        json: dict[str, Any] | None = None,
+        json: TestPostJSON | Mapping[str, Any] | None = None,
     ) -> Any:
-        response_type: str | None = 'RSP_TestPost'
-        return await self._transport.request(
+        response_type: str | None = 'TestPostResponse'
+        payload = await self._transport.request(
             "POST",
             "/api/demo/test_post",
-            json=json,
+            route_id="api.demo.post.testpost",
+            json=_to_mapping(json),
             response_type=response_type,
+            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
         )
+        return _from_mapping(TestPostResponse, payload)
 
-    async def z1put(
+    async def put_demo(
         self,
-        query: dict[str, Any] | None = None,
-        json: dict[str, Any] | None = None,
+        query: PutDemoQuery | Mapping[str, Any] | None = None,
+        json: PutDemoJSON | Mapping[str, Any] | None = None,
     ) -> Any:
-        response_type: str | None = 'RSP_Func1put'
-        return await self._transport.request(
+        response_type: str | None = 'PutDemoResponse'
+        payload = await self._transport.request(
             "PUT",
             "/api/demo/1put",
-            query=query,
-            json=json,
+            route_id="api.demo.put.z1put",
+            query=_to_mapping(query),
+            json=_to_mapping(json),
             response_type=response_type,
+            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
         )
+        return _from_mapping(PutDemoResponse, payload)
 
     async def delete(
         self,
-        query: dict[str, Any] | None = None,
+        query: DeleteQuery | Mapping[str, Any] | None = None,
     ) -> Any:
-        response_type: str | None = 'RSP_Delete'
-        return await self._transport.request(
+        response_type: str | None = 'DeleteResponse'
+        payload = await self._transport.request(
             "DELETE",
             "/api/demo/delete$",
-            query=query,
+            route_id="api.demo.delete.delete",
+            query=_to_mapping(query),
             response_type=response_type,
+            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
         )
+        return _from_mapping(DeleteResponse, payload)
 
     def connect_ws(
         self,
@@ -101,28 +153,52 @@ class DemoClient:
 
     async def post_deprecated(
         self,
-        json: dict[str, Any] | None = None,
+        json: PostDeprecatedJSON | Mapping[str, Any] | None = None,
     ) -> Any:
-        response_type: str | None = 'RSP_PostDeprecated'
-        return await self._transport.request(
+        response_type: str | None = 'PostDeprecatedResponse'
+        payload = await self._transport.request(
             "POST",
             "/api/demo/post_deprecated",
-            json=json,
+            route_id="api.demo.post.postdeprecated",
+            json=_to_mapping(json),
             response_type=response_type,
+            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
         )
+        return _from_mapping(PostDeprecatedResponse, payload)
 
     async def raw(self) -> Any:
-        response_type: str | None = 'RSP_Raw'
-        return await self._transport.request(
+        response_type: str | None = 'RawResponse'
+        payload = await self._transport.request(
             "POST",
             "/api/demo/raw",
+            route_id="api.demo.post.raw",
             response_type=response_type,
+            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
         )
+        return _from_mapping(RawResponse, payload)
 
     async def map_model(self) -> Any:
         response_type: str | None = 'RSP_MapModel'
-        return await self._transport.request(
+        payload = await self._transport.request(
             "POST",
             "/api/demo/map_model",
+            route_id="api.demo.post.mapmodel",
             response_type=response_type,
+            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
         )
+        return payload
+
+    async def error_demo(
+        self,
+        query: ErrorDemoQuery | Mapping[str, Any] | None = None,
+    ) -> Any:
+        response_type: str | None = 'ErrorDemoResponse'
+        payload = await self._transport.request(
+            "GET",
+            "/api/demo/error-demo",
+            route_id="api.demo.get.errordemo",
+            query=_to_mapping(query),
+            response_type=response_type,
+            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+        )
+        return _from_mapping(ErrorDemoResponse, payload)

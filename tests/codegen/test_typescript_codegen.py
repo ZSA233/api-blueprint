@@ -8,7 +8,7 @@ from api_blueprint.contract import build_contract_graph
 from api_blueprint.engine.binary_schema import parse_binary_schema
 from api_blueprint.engine.model import Enum, Model, String
 from api_blueprint.engine import Blueprint, ConnectionDelivery, Error, Toast
-from api_blueprint.engine.wrapper import GeneralWrapper
+from api_blueprint.engine.envelope import CodeMessageDataEnvelope
 from api_blueprint.writer.core.contracts import route_contract
 from api_blueprint.writer.typescript import TypeScriptProtoRegistry, to_ts_identifier, to_ts_name
 from api_blueprint.writer.typescript.writer import TypeScriptWriter
@@ -25,9 +25,9 @@ def test_typescript_name_helpers_preserve_expected_output():
 
 def test_typescript_registry_builds_wrapper_alias_with_generics():
     registry = TypeScriptProtoRegistry()
-    proto = registry.ensure(GeneralWrapper, tag="wrapper")
+    proto = registry.ensure(CodeMessageDataEnvelope, tag="wrapper")
     assert proto is not None
-    assert proto.type_reference(["Payload"]) == "GeneralWrapper<Payload>"
+    assert proto.type_reference(["Payload"]) == "CodeMessageDataEnvelope<Payload>"
 
 
 def test_route_contract_assigns_stable_service_and_event_names():
@@ -135,21 +135,26 @@ def test_typescript_writer_generates_error_catalog_runtime(tmp_path: Path):
     writer.gen()
 
     errors_text = (output_dir / "api" / "runtime" / "gen_errors.ts").read_text(encoding="utf-8")
-    catalog_text = (output_dir / "api" / "runtime" / "gen_error_catalog.ts").read_text(encoding="utf-8")
+    catalog_text = (output_dir / "api" / "runtime" / "gen_error_lookup.ts").read_text(encoding="utf-8")
     public_errors = (output_dir / "api" / "runtime" / "errors.ts").read_text(encoding="utf-8")
     runtime_index = (output_dir / "api" / "runtime" / "gen_index.ts").read_text(encoding="utf-8")
-    assert "export class ApiCodeError extends Error" in errors_text
+    assert "export class ApiError extends Error" in errors_text
+    assert "export interface ApiErrorPayload" in errors_text
+    assert "export function isApiError(" in errors_text
     assert "export interface ApiToastSpec" in errors_text
     assert "export function resolveApiToast(" in errors_text
     assert "ErrorCatalogByID" not in errors_text
     assert '"CommonErr.UNKNOWN"' not in errors_text
     assert '"CommonErr.UNKNOWN"' in catalog_text
+    assert "ApiErrorsByID" in catalog_text
+    assert "RouteApiErrorsByCode" in catalog_text
+    assert "lookupApiError(payload" in catalog_text
     assert "TOKEN_EXPIRE: 55555" in catalog_text
     assert 'default: "登录状态已失效，请重新登录"' in catalog_text
     assert "\\u767b" not in catalog_text
     assert "locales" not in catalog_text
     assert 'export * from "./gen_errors";' in public_errors
-    assert 'export * from "./gen_error_catalog";' in public_errors
+    assert 'export * from "./gen_error_lookup";' in public_errors
     assert 'export * from "./errors";' in runtime_index
 
 
@@ -177,11 +182,11 @@ def test_typescript_contract_graph_adapter_owns_request_and_response_models(tmp_
     writer.gen()
 
     client_text = (output_dir / "api" / "routes" / "api" / "demo" / "gen_client.ts").read_text(encoding="utf-8")
-    models_text = (output_dir / "api" / "routes" / "api" / "demo" / "gen_models.ts").read_text(encoding="utf-8")
-    assert "query?: Models.ReqSubmitQuery;" in client_text
+    models_text = (output_dir / "api" / "routes" / "api" / "demo" / "gen_types.ts").read_text(encoding="utf-8")
+    assert "query?: Types.SubmitQuery;" in client_text
     assert "json?: Shared.SubmitJson;" in client_text
-    assert "Promise<Models.RspSubmit>" in client_text
-    assert "export type RspSubmit = SubmitResponse;" in models_text
+    assert "Promise<Shared.SubmitResponse>" in client_text
+    assert "export type SubmitResponse = SubmitResponse;" not in models_text
 
 
 def test_typescript_generates_stream_and_channel_contracts(tmp_path: Path):
@@ -217,7 +222,7 @@ def test_typescript_generates_stream_and_channel_contracts(tmp_path: Path):
     writer.gen()
 
     runtime_client = (output_dir / "api" / "runtime" / "gen_client.ts").read_text(encoding="utf-8")
-    models_text = (output_dir / "api" / "routes" / "api" / "runs" / "gen_models.ts").read_text(encoding="utf-8")
+    models_text = (output_dir / "api" / "routes" / "api" / "runs" / "gen_types.ts").read_text(encoding="utf-8")
     client_text = (output_dir / "api" / "routes" / "api" / "runs" / "gen_client.ts").read_text(encoding="utf-8")
     transport_text = (output_dir / "api" / "transports" / "http" / "gen_transport.ts").read_text(encoding="utf-8")
 
@@ -232,9 +237,9 @@ def test_typescript_generates_stream_and_channel_contracts(tmp_path: Path):
     )
     assert "subscribeEvents(" in client_text
     assert "openChat(" in client_text
-    assert "ApiStreamBridge<Models.TaskStreamMessage, Shared.CloseInfo>" in client_text
+    assert "ApiStreamBridge<Types.TaskStreamMessage, Shared.CloseInfo>" in client_text
     assert "ApiChannelBridge<Shared.TaskState, Shared.ClientInput, Shared.CloseInfo>" in client_text
-    assert "openStream<Models.TaskStreamMessage, Shared.CloseInfo>" in client_text
+    assert "openStream<Types.TaskStreamMessage, Shared.CloseInfo>" in client_text
     assert "openChannel<Shared.TaskState, Shared.ClientInput, Shared.CloseInfo>" in client_text
     assert 'connectionKind: "stream"' in client_text
     assert 'connectionKind: "channel"' in client_text
@@ -366,7 +371,7 @@ endian: little
 """.strip(),
         source_path="demo_packet.md",
     )
-    bp = Blueprint(root="/api", response_wrapper=GeneralWrapper)
+    bp = Blueprint(root="/api", response_envelope=CodeMessageDataEnvelope)
     with bp.group("/binary") as views:
         views.POST("/packet").REQ_BINARY(schema).RSP(message=String(description="message"))
 
@@ -382,13 +387,19 @@ endian: little
     schema_text = (
         output_dir / "api" / "routes" / "api" / "binary" / "gen_binary.ts"
     ).read_text(encoding="utf-8")
+    index_text = (output_dir / "api" / "routes" / "api" / "binary" / "gen_index.ts").read_text(
+        encoding="utf-8"
+    )
     runtime_text = (output_dir / "api" / "runtime" / "binary" / "gen_runtime.ts").read_text(encoding="utf-8")
     transport_text = (output_dir / "api" / "transports" / "http" / "gen_transport.ts").read_text(encoding="utf-8")
 
-    assert "binary: GenBinary.DemoPacket;" in route_text
+    assert "binary: Types.DemoPacket;" in route_text
     assert "binary: ApiBinaryBody;" in route_text
-    assert "binary: GenBinary.DemoPacket | ApiBinaryBody;" in route_text
-    assert "GenBinary.DemoPacketWire.toBinaryBody(request.binary)" in route_text
+    assert "binary: Types.DemoPacket | ApiBinaryBody;" in route_text
+    assert "DemoPacketWire.toBinaryBody(request.binary)" in route_text
+    assert 'export * as Wire from "./wire";' not in index_text
+    assert 'export * from "./types";' in index_text
+    assert not (output_dir / "api" / "routes" / "api" / "binary" / "wire.ts").exists()
     assert "export const DemoFlagsValues" in schema_text
     assert "HasPayload: 1" in schema_text
     assert "reserved bits must be zero" in schema_text

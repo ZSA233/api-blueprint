@@ -30,6 +30,10 @@ func NewHttpTransport(config HttpConfig) *HttpTransport {
 	return &HttpTransport{config: config, client: client}
 }
 
+func NewClient(config HttpConfig) runtime.Transport {
+	return NewHttpTransport(config)
+}
+
 var _ = runtime.UnsupportedConnectionError{}
 
 func (transport *HttpTransport) Do(ctx context.Context, request runtime.Request, response any) error {
@@ -69,12 +73,15 @@ func (transport *HttpTransport) Do(ctx context.Context, request runtime.Request,
 
 	if httpResponse.StatusCode >= 400 {
 		data, _ := io.ReadAll(httpResponse.Body)
+		if apiErr := decodeHTTPApiError(data, request.RouteID, request.ResponseEnvelope); apiErr != nil {
+			return apiErr
+		}
 		return runtime.HTTPError{StatusCode: httpResponse.StatusCode, Body: string(data)}
 	}
 	if response == nil || httpResponse.StatusCode == nethttp.StatusNoContent {
 		return nil
 	}
-	return decodeResponse(httpResponse.Body, request.ResponseWrapper, response)
+	return decodeResponse(httpResponse.Body, request.ResponseEnvelope, request.RouteID, response)
 }
 
 func (transport *HttpTransport) ConnectUnsupported(ctx context.Context, request runtime.ConnectionRequest) error {
@@ -127,30 +134,164 @@ func encodeBody(request runtime.Request) (io.Reader, string, int64, error) {
 	}
 }
 
-func decodeResponse(reader io.Reader, wrapper string, response any) error {
-	if wrapper == "" || wrapper == "NoneWrapper" {
+func decodeResponse(reader io.Reader, envelope runtime.ApiResponseEnvelope, routeID string, response any) error {
+	if envelope.Kind == "" || envelope.Kind == "none" {
 		return json.NewDecoder(reader).Decode(response)
 	}
-	if wrapper != "GeneralWrapper" {
-		return fmt.Errorf("api-blueprint http transport unsupported response wrapper %q", wrapper)
+	if envelope.Kind != "code_message_data" && envelope.Kind != "ok_data_error" {
+		return fmt.Errorf("api-blueprint http transport unsupported response envelope %q", envelope.Kind)
 	}
-
-	var envelope struct {
-		Code    int               `json:"code"`
-		Message string            `json:"message,omitempty"`
-		Toast   map[string]string `json:"toast,omitempty"`
-		Data    json.RawMessage   `json:"data,omitempty"`
-	}
-	if err := json.NewDecoder(reader).Decode(&envelope); err != nil {
+	data, err := io.ReadAll(reader)
+	if err != nil {
 		return err
 	}
-	if envelope.Code != 0 {
-		return runtime.NewApiCodeError(runtime.ApiErrorCode(envelope.Code), envelope.Message)
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
+		return err
 	}
-	if response == nil || len(envelope.Data) == 0 || string(envelope.Data) == "null" {
+	switch envelope.Kind {
+	case "code_message_data":
+		code, _ := decodeEnvelopeCode(object, fieldName(envelope.Fields.Code, "code"))
+		if code == envelope.SuccessCode {
+			return decodeEnvelopeData(object, fieldName(envelope.Fields.Data, "data"), response)
+		}
+		payload := payloadFromCodeMessageEnvelope(object, envelope)
+		return newApiErrorFromPayload(payload, routeID, string(data))
+	case "ok_data_error":
+		ok, _ := decodeEnvelopeBool(object, fieldName(envelope.Fields.Ok, "ok"))
+		if ok {
+			return decodeEnvelopeData(object, fieldName(envelope.Fields.Data, "data"), response)
+		}
+		payload := payloadFromNestedError(object, fieldName(envelope.Fields.Error, "error"))
+		return newApiErrorFromPayload(payload, routeID, string(data))
+	default:
+		return fmt.Errorf("api-blueprint http transport unsupported response envelope %q", envelope.Kind)
+	}
+}
+
+func decodeEnvelopeData(object map[string]json.RawMessage, field string, response any) error {
+	raw := object[field]
+	if response == nil || len(raw) == 0 || string(raw) == "null" {
 		return nil
 	}
-	return json.Unmarshal(envelope.Data, response)
+	return json.Unmarshal(raw, response)
+}
+
+func decodeHTTPApiError(data []byte, routeID string, envelope runtime.ApiResponseEnvelope) error {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err == nil && object != nil {
+		switch envelope.Kind {
+		case "code_message_data":
+			payload := payloadFromCodeMessageEnvelope(object, envelope)
+			if payload.Code != 0 || payload.ID != "" || payload.Message != "" {
+				return newApiErrorFromPayload(payload, routeID, string(data))
+			}
+		case "ok_data_error":
+			payload := payloadFromNestedError(object, fieldName(envelope.Fields.Error, "error"))
+			if payload.Code != 0 || payload.ID != "" || payload.Message != "" {
+				return newApiErrorFromPayload(payload, routeID, string(data))
+			}
+		}
+	}
+	var genericEnvelope struct {
+		Error runtime.ApiErrorPayload `json:"error,omitempty"`
+	}
+	if err := json.Unmarshal(data, &genericEnvelope); err == nil && (genericEnvelope.Error.Code != 0 || genericEnvelope.Error.ID != "") {
+		return newApiErrorFromPayload(genericEnvelope.Error, routeID, string(data))
+	}
+	var payload runtime.ApiErrorPayload
+	if err := json.Unmarshal(data, &payload); err == nil && (payload.Code != 0 || payload.ID != "") {
+		return newApiErrorFromPayload(payload, routeID, string(data))
+	}
+	return nil
+}
+
+func payloadFromCodeMessageEnvelope(object map[string]json.RawMessage, envelope runtime.ApiResponseEnvelope) runtime.ApiErrorPayload {
+	code, _ := decodeEnvelopeCode(object, fieldName(envelope.Fields.Code, "code"))
+	message, _ := decodeEnvelopeString(object, fieldName(envelope.Fields.Message, "message"))
+	payload := payloadFromNestedError(object, fieldName(envelope.Fields.Error, "error"))
+	if payload.Code == 0 {
+		payload.Code = code
+	}
+	if payload.Message == "" {
+		payload.Message = message
+	}
+	if payload.Toast.Level == "" {
+		payload.Toast.Level = "error"
+	}
+	if payload.Toast.Default == "" {
+		payload.Toast.Default = payload.Message
+	}
+	return payload
+}
+
+func payloadFromNestedError(object map[string]json.RawMessage, field string) runtime.ApiErrorPayload {
+	raw := object[field]
+	if len(raw) == 0 || string(raw) == "null" {
+		return runtime.ApiErrorPayload{}
+	}
+	var payload runtime.ApiErrorPayload
+	_ = json.Unmarshal(raw, &payload)
+	return payload
+}
+
+func newApiErrorFromPayload(payload runtime.ApiErrorPayload, routeID string, raw string) *runtime.ApiError {
+	if entry, ok := runtime.LookupApiError(payload, routeID); ok {
+		payload = runtime.NormalizeApiErrorPayload(payload, entry)
+	}
+	if payload.Message == "" {
+		payload.Message = fmt.Sprintf("API error %d", payload.Code)
+	}
+	if payload.Toast.Level == "" {
+		payload.Toast.Level = "error"
+	}
+	if payload.Toast.Default == "" {
+		payload.Toast.Default = payload.Message
+	}
+	return runtime.NewApiError(payload, routeID, raw)
+}
+
+func decodeEnvelopeCode(object map[string]json.RawMessage, field string) (runtime.ApiErrorCode, bool) {
+	raw := object[field]
+	if len(raw) == 0 {
+		return 0, false
+	}
+	var code runtime.ApiErrorCode
+	if err := json.Unmarshal(raw, &code); err == nil {
+		return code, true
+	}
+	return 0, false
+}
+
+func decodeEnvelopeBool(object map[string]json.RawMessage, field string) (bool, bool) {
+	raw := object[field]
+	if len(raw) == 0 {
+		return false, false
+	}
+	var value bool
+	if err := json.Unmarshal(raw, &value); err == nil {
+		return value, true
+	}
+	return false, false
+}
+
+func decodeEnvelopeString(object map[string]json.RawMessage, field string) (string, bool) {
+	raw := object[field]
+	if len(raw) == 0 {
+		return "", false
+	}
+	var value string
+	if err := json.Unmarshal(raw, &value); err == nil {
+		return value, true
+	}
+	return "", false
+}
+
+func fieldName(value string, fallback string) string {
+	if value != "" {
+		return value
+	}
+	return fallback
 }
 
 func encodeValues(input any) (url.Values, error) {

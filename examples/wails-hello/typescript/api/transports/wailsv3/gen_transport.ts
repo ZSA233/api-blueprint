@@ -8,6 +8,7 @@ import type {
   ApiSocketBridge,
   ApiStreamBridge,
   ApiTransport,
+  ApiResponseEnvelope,
   ChannelConnectOptions,
   RequestOptions,
   SocketCloseHandler,
@@ -17,10 +18,108 @@ import type {
   SocketConnectOptions,
   StreamConnectOptions,
 } from "../../runtime/client";
+import { ApiError, lookupApiError } from "../../runtime/client";
+import type { ApiErrorEntry, ApiErrorPayload, ApiToastPayload } from "../../runtime/client";
 
 import { WAILS_V3_BINDINGS } from "./gen_bindings";
 
 type RequestBody = RequestInit["body"];
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object";
+}
+
+function normalizeToast(value: unknown, entry?: ApiErrorEntry): ApiToastPayload {
+  const source = isRecord(value) ? value : {};
+  return {
+    key: typeof source.key === "string" ? source.key : entry?.toast.key ?? "",
+    level: typeof source.level === "string" ? source.level : entry?.toast.level ?? "error",
+    default: typeof source.default === "string" ? source.default : entry?.toast.default ?? entry?.message ?? "",
+    text: typeof source.text === "string" ? source.text : undefined,
+  };
+}
+
+function normalizeApiErrorPayload(value: unknown, routeId?: string): ApiErrorPayload {
+  const source = isRecord(value) ? value : {};
+  const entry = lookupApiError(source as Partial<ApiErrorPayload>, routeId);
+  const code = typeof source.code === "number" ? source.code : entry?.code ?? 0;
+  return {
+    id: typeof source.id === "string" ? source.id : entry?.id ?? "",
+    group: typeof source.group === "string" ? source.group : entry?.group ?? "",
+    key: typeof source.key === "string" ? source.key : entry?.key ?? "",
+    code,
+    message: typeof source.message === "string" ? source.message : entry?.message ?? `API error ${code}`,
+    toast: normalizeToast(source.toast, entry),
+  };
+}
+
+function extractApiErrorPayload(value: unknown, envelope?: ApiResponseEnvelope): unknown | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const errorField = envelope?.fields?.error ?? "error";
+  if (isRecord(value[errorField])) {
+    return normalizeEnvelopeErrorPayload(value[errorField], value, envelope);
+  }
+  if ("code" in value && ("id" in value || "message" in value || "toast" in value)) {
+    return value;
+  }
+  return undefined;
+}
+
+function normalizeEnvelopeErrorPayload(error: unknown, envelopeBody: Record<string, unknown>, envelope?: ApiResponseEnvelope): unknown {
+  if (!isRecord(error)) {
+    return error;
+  }
+  const codeField = envelope?.fields?.code ?? "code";
+  const messageField = envelope?.fields?.message ?? "message";
+  return {
+    ...error,
+    code: typeof error.code === "number" ? error.code : envelopeBody[codeField],
+    message: typeof error.message === "string" ? error.message : envelopeBody[messageField],
+  };
+}
+
+function tryParseJson(text: string): unknown | undefined {
+  if (!text) {
+    return undefined;
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+}
+
+function unwrapResponseEnvelope<R>(payload: unknown, routeId: string, envelope?: ApiResponseEnvelope): R {
+  if (!envelope || envelope.kind === "none") {
+    return payload as R;
+  }
+  if (!isRecord(payload)) {
+    return payload as R;
+  }
+  if (envelope.kind === "code_message_data") {
+    const codeField = envelope.fields?.code ?? "code";
+    const dataField = envelope.fields?.data ?? "data";
+    const code = typeof payload[codeField] === "number" ? payload[codeField] as number : 0;
+    if (code === envelope.success_code) {
+      return payload[dataField] as R;
+    }
+    const errorPayload = normalizeApiErrorPayload(extractApiErrorPayload(payload, envelope) ?? payload, routeId);
+    throw new ApiError(errorPayload, { routeId, raw: payload });
+  }
+  if (envelope.kind === "ok_data_error") {
+    const okField = envelope.fields?.ok ?? "ok";
+    const dataField = envelope.fields?.data ?? "data";
+    const errorField = envelope.fields?.error ?? "error";
+    if (payload[okField] === true) {
+      return payload[dataField] as R;
+    }
+    const errorPayload = normalizeApiErrorPayload(payload[errorField], routeId);
+    throw new ApiError(errorPayload, { routeId, raw: payload });
+  }
+  throw new Error(`Unsupported response envelope: ${envelope.kind}`);
+}
 
 type WailsEventHandler = (payload?: unknown) => void;
 
@@ -496,7 +595,7 @@ export class WailsV3Transport implements ApiTransport {
   constructor(protected readonly config: ApiClientConfig = {}, _defaultBaseUrl: string = "") {}
 
   async request<R>(options: RequestOptions<R>): Promise<R> {
-    return this.invokeOperation<R>(
+    const payload = await this.invokeOperation<unknown>(
       options.namespace,
       options.service,
       options.operation,
@@ -506,6 +605,7 @@ export class WailsV3Transport implements ApiTransport {
         options.headers,
       ),
     );
+    return unwrapResponseEnvelope<R>(payload, options.routeId, options.responseEnvelope);
   }
 
   openStream<Recv, Close = SocketCloseInfo>(

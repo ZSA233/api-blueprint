@@ -12,7 +12,13 @@ from api_blueprint.engine.router import Router
 from api_blueprint.route_selection import normalize_selection_rules
 from api_blueprint.writer.core.base import BaseWriter
 from api_blueprint.writer.core.contract_adapters import RouteContractIndex, RouteProtocolContract
-from api_blueprint.writer.core.errors import ErrorCatalogEntry, ErrorCatalogGroup, error_catalog_from_manifest, group_error_catalog
+from api_blueprint.writer.core.errors import (
+    ApiErrorEntry,
+    ApiErrorGroup,
+    api_errors_from_manifest,
+    group_api_errors,
+    route_api_errors_from_manifest,
+)
 from api_blueprint.writer.core.files import ensure_filepath_open
 from api_blueprint.writer.core.planning import route_matches_rule
 from api_blueprint.writer.core.templates import render
@@ -32,7 +38,9 @@ logger.setLevel(logging.INFO)
 
 
 ROUTE_BINARY_MODULE = "gen_binary.py"
+LEGACY_ROUTE_BINARY_MODULES = ("wire.py",)
 LEGACY_ROUTE_BINARY_DIR = "binary"
+ROUTE_TYPES_MODULE = "gen_types.py"
 
 
 class PythonBaseWriter(BaseWriter[PythonBlueprint]):
@@ -92,26 +100,39 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
             self.route_contract_index = RouteContractIndex.from_graph(self.contract_graph)
         return self.route_contract_index
 
-    def error_catalog(self) -> tuple[ErrorCatalogEntry, ...]:
+    def api_errors(self) -> tuple[ApiErrorEntry, ...]:
         if self.contract_graph is None:
             from api_blueprint.contract import build_contract_graph
 
             self.contract_graph = build_contract_graph([bp.bp for bp in self.bps])
             if self.route_contract_index is None:
                 self.route_contract_index = RouteContractIndex.from_graph(self.contract_graph)
-        return error_catalog_from_manifest(self.contract_graph.to_manifest())
+        return api_errors_from_manifest(self.contract_graph.to_manifest())
 
-    def error_groups(self) -> tuple[ErrorCatalogGroup, ...]:
-        return group_error_catalog(self.error_catalog())
+    def manifest_schemas(self) -> dict[str, object]:
+        if self.contract_graph is None:
+            self._ensure_route_contract_index()
+        manifest = self.contract_graph.to_manifest()
+        schemas = manifest.get("schemas")
+        return dict(schemas) if isinstance(schemas, dict) else {}
 
-    def error_catalog_for_bp(self, bp: PythonBlueprint) -> tuple[ErrorCatalogEntry, ...]:
+    def api_error_groups(self) -> tuple[ApiErrorGroup, ...]:
+        return group_api_errors(self.api_errors())
+
+    def api_errors_for_bp(self, bp: PythonBlueprint) -> tuple[ApiErrorEntry, ...]:
         if self.contract_graph is None:
             self._ensure_route_contract_index()
         route_ids = [route.contract.route_id for route in bp.routes]
-        return error_catalog_from_manifest(self.contract_graph.to_manifest(), route_ids=route_ids)
+        return api_errors_from_manifest(self.contract_graph.to_manifest(), route_ids=route_ids)
 
-    def error_groups_for_bp(self, bp: PythonBlueprint) -> tuple[ErrorCatalogGroup, ...]:
-        return group_error_catalog(self.error_catalog_for_bp(bp))
+    def api_error_groups_for_bp(self, bp: PythonBlueprint) -> tuple[ApiErrorGroup, ...]:
+        return group_api_errors(self.api_errors_for_bp(bp))
+
+    def route_api_errors_for_bp(self, bp: PythonBlueprint) -> dict[str, tuple[ApiErrorEntry, ...]]:
+        if self.contract_graph is None:
+            self._ensure_route_contract_index()
+        route_ids = [route.contract.route_id for route in bp.routes]
+        return route_api_errors_from_manifest(self.contract_graph.to_manifest(), route_ids=route_ids)
 
     def _gen_blueprint(self, bp: PythonBlueprint) -> None:
         context = {"writer": self, "bp": bp}
@@ -142,9 +163,10 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
         with self.write_file(plan.runtime.directory / "gen_errors.py", overwrite=True) as handle:
             if handle:
                 handle.write(_render_python("gen_errors.py", context, "runtime"))
-        with self.write_file(plan.runtime.directory / "gen_error_catalog.py", overwrite=True) as handle:
+        with self.write_file(plan.runtime.directory / "gen_error_lookup.py", overwrite=True) as handle:
             if handle:
-                handle.write(_render_python("gen_error_catalog.py", context, "runtime"))
+                handle.write(_render_python("gen_error_lookup.py", context, "runtime"))
+        self._cleanup_stale_generated(plan.runtime.directory / "gen_error_catalog.py")
 
         for group_plan in plan.route_groups:
             self._gen_group(group_plan)
@@ -155,6 +177,7 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
         with self.write_file(plan.http_transport.generated_file, overwrite=True) as handle:
             if handle:
                 handle.write(_render_python(self.transport_template, context, "transports/http"))
+        self._write_client_facade(bp, plan)
 
     def root_dir(self, bp: PythonBlueprint) -> Path:
         root_dir = self.package_dir
@@ -165,7 +188,10 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
     def _gen_group(self, group_plan: "PythonRouteGroupPlan") -> None:
         self._ensure_package_tree(group_plan.directory)
         self._migrate_legacy_public_file(group_plan)
-        with self.write_file(group_plan.public_file, overwrite=False) as handle:
+        with self.write_file(
+            group_plan.public_file,
+            overwrite=self._should_refresh_public_import(group_plan.public_file),
+        ) as handle:
             if handle:
                 handle.write(self._default_public_import())
         with self.write_file(group_plan.generated_file, overwrite=True) as handle:
@@ -179,20 +205,42 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
                 if handle:
                     handle.write(
                         _render_python(
-                            "gen_binary.py",
-                            {
-                                "binary_schemas": binary_schemas,
-                                "runtime_import_prefix": group_plan.group.runtime_import_prefix + ".",
-                            },
-                            "routes/binary",
+                                "gen_binary.py",
+                                {
+                                    "binary_schemas": binary_schemas,
+                                    "runtime_import_prefix": group_plan.group.runtime_import_prefix,
+                                },
+                                "routes/binary",
+                            )
                         )
-                    )
             self._cleanup_legacy_binary_dir(legacy_binary_dir)
+            for legacy_name in LEGACY_ROUTE_BINARY_MODULES:
+                legacy_file = group_plan.directory / legacy_name
+                if legacy_file.exists():
+                    legacy_file.unlink()
         else:
             if binary_file.exists():
                 binary_file.unlink()
+            for legacy_name in LEGACY_ROUTE_BINARY_MODULES:
+                legacy_file = group_plan.directory / legacy_name
+                if legacy_file.exists():
+                    legacy_file.unlink()
             self._cleanup_legacy_binary_dir(legacy_binary_dir)
+        if isinstance(self, PythonClientWriter):
+            with self.write_file(group_plan.directory / ROUTE_TYPES_MODULE, overwrite=True) as handle:
+                if handle:
+                    handle.write(_render_python("gen_types.py", {"group": group_plan.group}, "routes"))
         self._cleanup_legacy_route_dir(group_plan)
+
+    def _write_client_facade(self, bp: PythonBlueprint, plan) -> None:
+        if not isinstance(self, PythonClientWriter):
+            return
+        with self.write_file(plan.root_directory / "gen_client.py", overwrite=True) as handle:
+            if handle:
+                handle.write(_render_python("gen_root_client.py", {"writer": self, "bp": bp, "plan": plan}, ""))
+        with self.write_file(plan.root_directory / "client.py", overwrite=False) as handle:
+            if handle:
+                handle.write("from .gen_client import *\n")
 
     def _migrate_legacy_public_file(self, group_plan: "PythonRouteGroupPlan") -> None:
         legacy_file = group_plan.legacy_public_file
@@ -240,16 +288,36 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
         return True
 
     def _default_public_import(self) -> str:
+        if isinstance(self, PythonClientWriter):
+            return (
+                f"from .{self.route_template.removesuffix('.py')} import *\n"
+                f"from .{ROUTE_TYPES_MODULE.removesuffix('.py')} import *\n"
+            )
         return f"from .{self.route_template.removesuffix('.py')} import *\n"
+
+    def _legacy_default_public_import(self) -> str:
+        return f"from .{self.route_template.removesuffix('.py')} import *\n"
+
+    def _should_refresh_public_import(self, public_file: Path) -> bool:
+        return (
+            isinstance(self, PythonClientWriter)
+            and public_file.is_file()
+            and public_file.read_text(encoding="utf-8") == self._legacy_default_public_import()
+        )
 
     def _write_runtime_errors_facade(self, runtime_dir: Path) -> None:
         path = runtime_dir / "errors.py"
         legacy_source = "from .gen_errors import *\n"
-        source = legacy_source + "from .gen_error_catalog import *\n"
-        overwrite = path.is_file() and path.read_text(encoding="utf-8") == legacy_source
+        source = legacy_source + "from .gen_error_lookup import *\n"
+        old_source = legacy_source + "from .gen_error_catalog import *\n"
+        overwrite = path.is_file() and path.read_text(encoding="utf-8") in {legacy_source, old_source}
         with self.write_file(path, overwrite=overwrite) as handle:
             if handle:
                 handle.write(source)
+
+    def _cleanup_stale_generated(self, path: Path) -> None:
+        if path.exists():
+            path.unlink()
 
     def _ensure_package_tree(self, package_dir: Path) -> None:
         package_dirs: list[Path] = []

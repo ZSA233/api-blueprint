@@ -13,130 +13,116 @@ public open class GenHelloApi internal constructor(
         query: HelloAbcQuery,
         headers: Map<String, String> = emptyMap(),
     ): HelloAbcResponse {
-        val envelope = transport.request(
+        return transport.request(
             ApiRequest(
+                routeId = "api.hello.get.abc",
                 method = "GET",
                 path = "/api/hello/abc",
                 query = query.toQueryMap(),
                 headers = headers,
-                responseSerializer = GeneralResponse.serializer(MapSerializer(String.serializer(), ApiHelloMap.serializer())),
+                responseSerializer = MapSerializer(String.serializer(), ApiHelloMap.serializer()),
                 responseMediaType = "application/json",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
             )
         )
-        if (envelope.code != 0) {
-            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
-        }
-        return envelope.data ?: throw ApiException(200, "Missing response data for /api/hello/abc")
     }
 
     public open suspend fun mapEnum(
         headers: Map<String, String> = emptyMap(),
     ): HelloMapEnumResponse {
-        val envelope = transport.request(
+        return transport.request(
             ApiRequest(
+                routeId = "api.hello.get.mapenum",
                 method = "GET",
                 path = "/api/hello/map-enum",
                 headers = headers,
-                responseSerializer = GeneralResponse.serializer(MapSerializer(String.serializer(), ApiHelloMap.serializer())),
+                responseSerializer = MapSerializer(String.serializer(), ApiHelloMap.serializer()),
                 responseMediaType = "application/json",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
             )
         )
-        if (envelope.code != 0) {
-            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
-        }
-        return envelope.data ?: throw ApiException(200, "Missing response data for /api/hello/map-enum")
     }
 
     public open suspend fun listEnum(
         headers: Map<String, String> = emptyMap(),
     ): HelloListEnumResponse {
-        val envelope = transport.request(
+        return transport.request(
             ApiRequest(
+                routeId = "api.hello.get.listenum",
                 method = "GET",
                 path = "/api/hello/list-enum",
                 headers = headers,
-                responseSerializer = GeneralResponse.serializer(ListSerializer(MapEnum.serializer())),
+                responseSerializer = ListSerializer(MapEnum.serializer()),
                 responseMediaType = "application/json",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
             )
         )
-        if (envelope.code != 0) {
-            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
-        }
-        return envelope.data ?: throw ApiException(200, "Missing response data for /api/hello/list-enum")
     }
 
     public open suspend fun string(
         headers: Map<String, String> = emptyMap(),
     ): HelloStringResponse {
-        val envelope = transport.request(
+        return transport.request(
             ApiRequest(
+                routeId = "api.hello.get.string",
                 method = "GET",
                 path = "/api/hello/string",
                 headers = headers,
-                responseSerializer = GeneralResponse.serializer(String.serializer()),
+                responseSerializer = String.serializer(),
                 responseMediaType = "application/json",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
             )
         )
-        if (envelope.code != 0) {
-            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
-        }
-        return envelope.data ?: throw ApiException(200, "Missing response data for /api/hello/string")
     }
 
     public open suspend fun uint64(
         headers: Map<String, String> = emptyMap(),
     ): HelloUint64Response {
-        val envelope = transport.request(
+        return transport.request(
             ApiRequest(
+                routeId = "api.hello.get.uint64",
                 method = "GET",
                 path = "/api/hello/uint64",
                 headers = headers,
-                responseSerializer = GeneralResponse.serializer(Long.serializer()),
+                responseSerializer = Long.serializer(),
                 responseMediaType = "application/json",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
             )
         )
-        if (envelope.code != 0) {
-            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
-        }
-        return envelope.data ?: throw ApiException(200, "Missing response data for /api/hello/uint64")
     }
 
     public open suspend fun stringEmun(
         headers: Map<String, String> = emptyMap(),
     ): HelloStringEmunResponse {
-        val envelope = transport.request(
+        return transport.request(
             ApiRequest(
+                routeId = "api.hello.get.stringemun",
                 method = "GET",
                 path = "/api/hello/string-emun",
                 headers = headers,
-                responseSerializer = GeneralResponse.serializer(MapEnum.serializer()),
+                responseSerializer = MapEnum.serializer(),
                 responseMediaType = "application/json",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
             )
         )
-        if (envelope.code != 0) {
-            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
-        }
-        return envelope.data ?: throw ApiException(200, "Missing response data for /api/hello/string-emun")
     }
 
     public open suspend fun helloWay(
         query: HelloHelloWayQuery,
         headers: Map<String, String> = emptyMap(),
     ): Unit {
-        val envelope = transport.request(
+        return transport.request(
             ApiRequest(
+                routeId = "api.hello.get.helloway",
                 method = "GET",
                 path = "/api/hello/hello-way",
                 query = query.toQueryMap(),
                 headers = headers,
-                responseSerializer = GeneralResponse.serializer(Unit.serializer()),
+                responseSerializer = Unit.serializer(),
                 responseMediaType = "application/json",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
             )
         )
-        if (envelope.code != 0) {
-            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
-        }
-        return envelope.data ?: throw ApiException(200, "Missing response data for /api/hello/hello-way")
     }
 
     private fun HelloAbcQuery.toQueryMap(): Map<String, String?> = mapOf(

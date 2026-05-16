@@ -21,13 +21,14 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	DemoService_Abc_FullMethodName              = "/example.api.demo.DemoService/Abc"
 	DemoService_TestPost_FullMethodName         = "/example.api.demo.DemoService/TestPost"
-	DemoService_Z1Put_FullMethodName            = "/example.api.demo.DemoService/Z1put"
+	DemoService_PutDemo_FullMethodName          = "/example.api.demo.DemoService/PutDemo"
 	DemoService_Delete_FullMethodName           = "/example.api.demo.DemoService/Delete"
 	DemoService_SweepEvents_FullMethodName      = "/example.api.demo.DemoService/SweepEvents"
 	DemoService_AssistantSession_FullMethodName = "/example.api.demo.DemoService/AssistantSession"
 	DemoService_PostDeprecated_FullMethodName   = "/example.api.demo.DemoService/PostDeprecated"
 	DemoService_Raw_FullMethodName              = "/example.api.demo.DemoService/Raw"
 	DemoService_MapModel_FullMethodName         = "/example.api.demo.DemoService/MapModel"
+	DemoService_ErrorDemo_FullMethodName        = "/example.api.demo.DemoService/ErrorDemo"
 )
 
 // DemoServiceClient is the client API for DemoService service.
@@ -36,13 +37,14 @@ const (
 type DemoServiceClient interface {
 	Abc(ctx context.Context, in *AbcRequest, opts ...grpc.CallOption) (*AbcResponse, error)
 	TestPost(ctx context.Context, in *TestPostRequest, opts ...grpc.CallOption) (*TestPostResponse, error)
-	Z1Put(ctx context.Context, in *Z1PutRequest, opts ...grpc.CallOption) (*Z1PutResponse, error)
+	PutDemo(ctx context.Context, in *PutDemoRequest, opts ...grpc.CallOption) (*PutDemoResponse, error)
 	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	SweepEvents(ctx context.Context, in *SweepEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[SweepStreamMessage], error)
 	AssistantSession(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[AssistantClientMessage, AssistantServerMessage], error)
 	PostDeprecated(ctx context.Context, in *PostDeprecatedRequest, opts ...grpc.CallOption) (*PostDeprecatedResponse, error)
 	Raw(ctx context.Context, in *RawRequest, opts ...grpc.CallOption) (*RawResponse, error)
 	MapModel(ctx context.Context, in *MapModelRequest, opts ...grpc.CallOption) (*MapModelResponse, error)
+	ErrorDemo(ctx context.Context, in *ErrorDemoRequest, opts ...grpc.CallOption) (*ErrorDemoResponse, error)
 }
 
 type demoServiceClient struct {
@@ -73,10 +75,10 @@ func (c *demoServiceClient) TestPost(ctx context.Context, in *TestPostRequest, o
 	return out, nil
 }
 
-func (c *demoServiceClient) Z1Put(ctx context.Context, in *Z1PutRequest, opts ...grpc.CallOption) (*Z1PutResponse, error) {
+func (c *demoServiceClient) PutDemo(ctx context.Context, in *PutDemoRequest, opts ...grpc.CallOption) (*PutDemoResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Z1PutResponse)
-	err := c.cc.Invoke(ctx, DemoService_Z1Put_FullMethodName, in, out, cOpts...)
+	out := new(PutDemoResponse)
+	err := c.cc.Invoke(ctx, DemoService_PutDemo_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -155,19 +157,30 @@ func (c *demoServiceClient) MapModel(ctx context.Context, in *MapModelRequest, o
 	return out, nil
 }
 
+func (c *demoServiceClient) ErrorDemo(ctx context.Context, in *ErrorDemoRequest, opts ...grpc.CallOption) (*ErrorDemoResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ErrorDemoResponse)
+	err := c.cc.Invoke(ctx, DemoService_ErrorDemo_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DemoServiceServer is the server API for DemoService service.
 // All implementations must embed UnimplementedDemoServiceServer
 // for forward compatibility.
 type DemoServiceServer interface {
 	Abc(context.Context, *AbcRequest) (*AbcResponse, error)
 	TestPost(context.Context, *TestPostRequest) (*TestPostResponse, error)
-	Z1Put(context.Context, *Z1PutRequest) (*Z1PutResponse, error)
+	PutDemo(context.Context, *PutDemoRequest) (*PutDemoResponse, error)
 	Delete(context.Context, *DeleteRequest) (*DeleteResponse, error)
 	SweepEvents(*SweepEventsRequest, grpc.ServerStreamingServer[SweepStreamMessage]) error
 	AssistantSession(grpc.BidiStreamingServer[AssistantClientMessage, AssistantServerMessage]) error
 	PostDeprecated(context.Context, *PostDeprecatedRequest) (*PostDeprecatedResponse, error)
 	Raw(context.Context, *RawRequest) (*RawResponse, error)
 	MapModel(context.Context, *MapModelRequest) (*MapModelResponse, error)
+	ErrorDemo(context.Context, *ErrorDemoRequest) (*ErrorDemoResponse, error)
 	mustEmbedUnimplementedDemoServiceServer()
 }
 
@@ -184,8 +197,8 @@ func (UnimplementedDemoServiceServer) Abc(context.Context, *AbcRequest) (*AbcRes
 func (UnimplementedDemoServiceServer) TestPost(context.Context, *TestPostRequest) (*TestPostResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method TestPost not implemented")
 }
-func (UnimplementedDemoServiceServer) Z1Put(context.Context, *Z1PutRequest) (*Z1PutResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method Z1Put not implemented")
+func (UnimplementedDemoServiceServer) PutDemo(context.Context, *PutDemoRequest) (*PutDemoResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PutDemo not implemented")
 }
 func (UnimplementedDemoServiceServer) Delete(context.Context, *DeleteRequest) (*DeleteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Delete not implemented")
@@ -204,6 +217,9 @@ func (UnimplementedDemoServiceServer) Raw(context.Context, *RawRequest) (*RawRes
 }
 func (UnimplementedDemoServiceServer) MapModel(context.Context, *MapModelRequest) (*MapModelResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method MapModel not implemented")
+}
+func (UnimplementedDemoServiceServer) ErrorDemo(context.Context, *ErrorDemoRequest) (*ErrorDemoResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ErrorDemo not implemented")
 }
 func (UnimplementedDemoServiceServer) mustEmbedUnimplementedDemoServiceServer() {}
 func (UnimplementedDemoServiceServer) testEmbeddedByValue()                     {}
@@ -262,20 +278,20 @@ func _DemoService_TestPost_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
-func _DemoService_Z1Put_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Z1PutRequest)
+func _DemoService_PutDemo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PutDemoRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DemoServiceServer).Z1Put(ctx, in)
+		return srv.(DemoServiceServer).PutDemo(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: DemoService_Z1Put_FullMethodName,
+		FullMethod: DemoService_PutDemo_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DemoServiceServer).Z1Put(ctx, req.(*Z1PutRequest))
+		return srv.(DemoServiceServer).PutDemo(ctx, req.(*PutDemoRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -370,6 +386,24 @@ func _DemoService_MapModel_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DemoService_ErrorDemo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ErrorDemoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DemoServiceServer).ErrorDemo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DemoService_ErrorDemo_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DemoServiceServer).ErrorDemo(ctx, req.(*ErrorDemoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // DemoService_ServiceDesc is the grpc.ServiceDesc for DemoService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -386,8 +420,8 @@ var DemoService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _DemoService_TestPost_Handler,
 		},
 		{
-			MethodName: "Z1put",
-			Handler:    _DemoService_Z1Put_Handler,
+			MethodName: "PutDemo",
+			Handler:    _DemoService_PutDemo_Handler,
 		},
 		{
 			MethodName: "Delete",
@@ -404,6 +438,10 @@ var DemoService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MapModel",
 			Handler:    _DemoService_MapModel_Handler,
+		},
+		{
+			MethodName: "ErrorDemo",
+			Handler:    _DemoService_ErrorDemo_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

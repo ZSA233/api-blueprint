@@ -3,9 +3,15 @@ package com.example.apiblueprint.api.transports.http.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.apiblueprint.api.routes.api.ApiService;
-import com.example.apiblueprint.api.routes.api.GenApiServiceStub;
-import com.example.apiblueprint.api.routes.api.GenApiServiceModels;
-import com.example.apiblueprint.api.runtime.GenModels;
+import com.example.apiblueprint.api.routes.api.ApiServiceStub;
+import com.example.apiblueprint.api.routes.api.ApiTypes;
+import com.example.apiblueprint.api.runtime.ApiError;
+import com.example.apiblueprint.api.runtime.ApiErrorEntry;
+import com.example.apiblueprint.api.runtime.ApiErrorPayload;
+import com.example.apiblueprint.api.runtime.ApiErrors;
+import com.example.apiblueprint.api.runtime.ApiResponseEnvelope;
+import com.example.apiblueprint.api.runtime.ApiToastPayload;
+
 import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -27,7 +33,7 @@ public class GenApiController {
         @Autowired(required = false) ApiService service,
         ObjectMapper objectMapper
     ) {
-        this.service = service == null ? new GenApiServiceStub() : service;
+        this.service = service == null ? new ApiServiceStub() : service;
         this.objectMapper = objectMapper;
     }
 
@@ -36,14 +42,74 @@ public class GenApiController {
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body("legacy_ws route is not implemented by the generated Spring MVC adapter");
     }
 
-    private Object wrapResponse(String wrapper, Object data) {
-        if (!"GeneralWrapper".equals(wrapper)) {
+    private Object wrapResponse(ApiResponseEnvelope envelopeSpec, Object data) {
+        if ("none".equals(envelopeSpec.kind())) {
             return data;
         }
         Map<String, Object> envelope = new LinkedHashMap<>();
-        envelope.put("code", 0);
-        envelope.put("message", "");
-        envelope.put("data", data);
+        if ("code_message_data".equals(envelopeSpec.kind())) {
+            envelope.put(envelopeSpec.fields().code(), envelopeSpec.successCode());
+            envelope.put(envelopeSpec.fields().message(), envelopeSpec.successMessage());
+            envelope.put(envelopeSpec.fields().data(), data);
+            return envelope;
+        }
+        if ("ok_data_error".equals(envelopeSpec.kind())) {
+            envelope.put(envelopeSpec.fields().ok(), true);
+            envelope.put(envelopeSpec.fields().data(), data);
+            return envelope;
+        }
         return envelope;
+    }
+
+    private Object wrapApiErrorResponse(ApiResponseEnvelope envelopeSpec, ApiError error, String routeId) {
+        ApiErrorPayload payload = normalizeApiErrorPayload(error.payload(), routeId);
+        if ("none".equals(envelopeSpec.kind())) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(payload);
+        }
+        Map<String, Object> envelope = new LinkedHashMap<>();
+        if ("code_message_data".equals(envelopeSpec.kind())) {
+            envelope.put(envelopeSpec.fields().code(), payload.code());
+            envelope.put(envelopeSpec.fields().message(), payload.message());
+            envelope.put(envelopeSpec.fields().data(), null);
+            if (!"none".equals(envelopeSpec.errorIdentity())) {
+                envelope.put(envelopeSpec.fields().error(), payload);
+            }
+            return envelope;
+        }
+        if ("ok_data_error".equals(envelopeSpec.kind())) {
+            envelope.put(envelopeSpec.fields().ok(), false);
+            envelope.put(envelopeSpec.fields().error(), payload);
+            return envelope;
+        }
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(payload);
+    }
+
+    private ApiErrorPayload normalizeApiErrorPayload(ApiErrorPayload payload, String routeId) {
+        if (payload == null) {
+            payload = new ApiErrorPayload("", "", "", 0, "", new ApiToastPayload("", "error", "", ""));
+        }
+        ApiErrorEntry entry = ApiErrors.lookup(payload, routeId).orElse(null);
+        int code = payload.code() != 0 ? payload.code() : entry == null ? 0 : entry.code();
+        String message = !payload.message().isBlank()
+            ? payload.message()
+            : entry == null ? "API error " + code : entry.message();
+        ApiToastPayload toast = payload.toast() == null
+            ? new ApiToastPayload("", "error", "", "")
+            : payload.toast();
+        return new ApiErrorPayload(
+            payload.id().isBlank() && entry != null ? entry.id() : payload.id(),
+            payload.group().isBlank() && entry != null ? entry.group() : payload.group(),
+            payload.key().isBlank() && entry != null ? entry.key() : payload.key(),
+            code,
+            message,
+            new ApiToastPayload(
+                toast.key().isBlank() && entry != null ? entry.toast().key() : toast.key(),
+                toast.level().isBlank() ? (entry == null ? "error" : entry.toast().level()) : toast.level(),
+                toast.defaultMessage().isBlank()
+                    ? (entry == null ? message : entry.toast().defaultMessage())
+                    : toast.defaultMessage(),
+                toast.text()
+            )
+        );
     }
 }

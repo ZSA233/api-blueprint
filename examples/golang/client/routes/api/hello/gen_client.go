@@ -15,91 +15,106 @@ func NewGenHelloClient(transport runtime.Transport) *GenHelloClient {
 	return &GenHelloClient{transport: transport}
 }
 
-func (client *GenHelloClient) Abc(ctx context.Context, query *REQ_Abc_QUERY) (*RSP_Abc_BODY, error) {
+type Client = GenHelloClient
+
+var NewClient = NewGenHelloClient
+
+type HelloClient = GenHelloClient
+
+var NewHelloClient = NewGenHelloClient
+
+func (client *GenHelloClient) Abc(ctx context.Context, query AbcQuery) (*AbcResponse, error) {
 	request := runtime.Request{
-		Method:          "GET",
-		Path:            "/api/hello/abc",
-		ResponseWrapper: "GeneralWrapper",
-		Query:           query,
+		RouteID:          "api.hello.get.abc",
+		Method:           "GET",
+		Path:             "/api/hello/abc",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		Query:            query,
 	}
-	var response RSP_Abc_BODY
+	var response AbcResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
 	}
 	return &response, nil
 }
 
-func (client *GenHelloClient) MapEnum(ctx context.Context) (*RSP_MapEnum_BODY, error) {
+func (client *GenHelloClient) MapEnum(ctx context.Context) (*MapEnumResponse, error) {
 	request := runtime.Request{
-		Method:          "GET",
-		Path:            "/api/hello/map-enum",
-		ResponseWrapper: "GeneralWrapper",
+		RouteID:          "api.hello.get.mapenum",
+		Method:           "GET",
+		Path:             "/api/hello/map-enum",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 	}
-	var response RSP_MapEnum_BODY
+	var response MapEnumResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
 	}
 	return &response, nil
 }
 
-func (client *GenHelloClient) ListEnum(ctx context.Context) (*RSP_ListEnum_BODY, error) {
+func (client *GenHelloClient) ListEnum(ctx context.Context) (*ListEnumResponse, error) {
 	request := runtime.Request{
-		Method:          "GET",
-		Path:            "/api/hello/list-enum",
-		ResponseWrapper: "GeneralWrapper",
+		RouteID:          "api.hello.get.listenum",
+		Method:           "GET",
+		Path:             "/api/hello/list-enum",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 	}
-	var response RSP_ListEnum_BODY
+	var response ListEnumResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
 	}
 	return &response, nil
 }
 
-func (client *GenHelloClient) String(ctx context.Context) (*RSP_String_BODY, error) {
+func (client *GenHelloClient) String(ctx context.Context) (*StringResponse, error) {
 	request := runtime.Request{
-		Method:          "GET",
-		Path:            "/api/hello/string",
-		ResponseWrapper: "GeneralWrapper",
+		RouteID:          "api.hello.get.string",
+		Method:           "GET",
+		Path:             "/api/hello/string",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 	}
-	var response RSP_String_BODY
+	var response StringResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
 	}
 	return &response, nil
 }
 
-func (client *GenHelloClient) Uint64(ctx context.Context) (*RSP_Uint64_BODY, error) {
+func (client *GenHelloClient) Uint64(ctx context.Context) (*Uint64Response, error) {
 	request := runtime.Request{
-		Method:          "GET",
-		Path:            "/api/hello/uint64",
-		ResponseWrapper: "GeneralWrapper",
+		RouteID:          "api.hello.get.uint64",
+		Method:           "GET",
+		Path:             "/api/hello/uint64",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 	}
-	var response RSP_Uint64_BODY
+	var response Uint64Response
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
 	}
 	return &response, nil
 }
 
-func (client *GenHelloClient) StringEmun(ctx context.Context) (*RSP_StringEmun_BODY, error) {
+func (client *GenHelloClient) StringEmun(ctx context.Context) (*StringEmunResponse, error) {
 	request := runtime.Request{
-		Method:          "GET",
-		Path:            "/api/hello/string-emun",
-		ResponseWrapper: "GeneralWrapper",
+		RouteID:          "api.hello.get.stringemun",
+		Method:           "GET",
+		Path:             "/api/hello/string-emun",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 	}
-	var response RSP_StringEmun_BODY
+	var response StringEmunResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
 	}
 	return &response, nil
 }
 
-func (client *GenHelloClient) HelloWay(ctx context.Context, query *REQ_HelloWay_QUERY) (any, error) {
+func (client *GenHelloClient) HelloWay(ctx context.Context, query HelloWayQuery) (any, error) {
 	request := runtime.Request{
-		Method:          "GET",
-		Path:            "/api/hello/hello-way",
-		ResponseWrapper: "NoneWrapper",
-		Query:           query,
+		RouteID:          "api.hello.get.helloway",
+		Method:           "GET",
+		Path:             "/api/hello/hello-way",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "NoEnvelope", Kind: "none", ErrorIdentity: "none", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		Query:            query,
 	}
 	var response any
 	if err := client.transport.Do(ctx, request, &response); err != nil {

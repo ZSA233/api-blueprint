@@ -30,7 +30,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req|auth|ws_handle|rsp=json@GeneralWrapper",
+			"req|auth|ws_handle|rsp=json@CodeMessageDataEnvelope",
 			impl.Ws,
 		),
 		eng,

@@ -3,9 +3,17 @@ package com.example.apiblueprint.api.transports.http.api.demo;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.apiblueprint.api.routes.api.demo.DemoService;
-import com.example.apiblueprint.api.routes.api.demo.GenDemoServiceStub;
-import com.example.apiblueprint.api.routes.api.demo.GenDemoServiceModels;
-import com.example.apiblueprint.api.runtime.GenModels;
+import com.example.apiblueprint.api.routes.api.demo.DemoServiceStub;
+import com.example.apiblueprint.api.routes.api.demo.DemoTypes;
+import com.example.apiblueprint.api.runtime.ApiError;
+import com.example.apiblueprint.api.runtime.ApiErrorEntry;
+import com.example.apiblueprint.api.runtime.ApiErrorPayload;
+import com.example.apiblueprint.api.runtime.ApiErrors;
+import com.example.apiblueprint.api.runtime.ApiResponseEnvelope;
+import com.example.apiblueprint.api.runtime.ApiToastPayload;
+
+import com.example.apiblueprint.api.runtime.ApiTypes;
+
 import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -27,7 +35,7 @@ public class GenDemoController {
         @Autowired(required = false) DemoService service,
         ObjectMapper objectMapper
     ) {
-        this.service = service == null ? new GenDemoServiceStub() : service;
+        this.service = service == null ? new DemoServiceStub() : service;
         this.objectMapper = objectMapper;
     }
 
@@ -35,46 +43,62 @@ public class GenDemoController {
     public Object abc(
         @RequestParam Map<String, String> queryParams
     ) throws Exception {
-        GenDemoServiceModels.ReqAbcQuery query = objectMapper.convertValue(queryParams, GenDemoServiceModels.ReqAbcQuery.class);
-        Object result = service.abc(
-            query
-        );
-        return wrapResponse("GeneralWrapper", result);
+        DemoTypes.AbcQuery query = objectMapper.convertValue(queryParams, DemoTypes.AbcQuery.class);
+        try {
+            Object result = service.abc(
+                query
+            );
+            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (ApiError error) {
+            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.get.abc");
+        }
     }
 
     @RequestMapping(path = "/api/demo/test_post", method = RequestMethod.POST)
     public Object testPost(
         @RequestParam Map<String, String> queryParams,
-        @RequestBody(required = false) GenDemoServiceModels.ReqTestPostJson json
+        @RequestBody(required = false) DemoTypes.TestPostJSON json
     ) throws Exception {
-        Object result = service.testPost(
-            json
-        );
-        return wrapResponse("GeneralWrapper", result);
+        try {
+            Object result = service.testPost(
+                json
+            );
+            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (ApiError error) {
+            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.post.testpost");
+        }
     }
 
     @RequestMapping(path = "/api/demo/1put", method = RequestMethod.PUT)
-    public Object z1put(
+    public Object putDemo(
         @RequestParam Map<String, String> queryParams,
-        @RequestBody(required = false) GenDemoServiceModels.ReqFunc1putJson json
+        @RequestBody(required = false) DemoTypes.PutDemoJSON json
     ) throws Exception {
-        GenDemoServiceModels.ReqFunc1putQuery query = objectMapper.convertValue(queryParams, GenDemoServiceModels.ReqFunc1putQuery.class);
-        Object result = service.z1put(
-            query,
-            json
-        );
-        return wrapResponse("GeneralWrapper", result);
+        DemoTypes.PutDemoQuery query = objectMapper.convertValue(queryParams, DemoTypes.PutDemoQuery.class);
+        try {
+            Object result = service.putDemo(
+                query,
+                json
+            );
+            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (ApiError error) {
+            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.put.z1put");
+        }
     }
 
     @RequestMapping(path = "/api/demo/delete$", method = RequestMethod.DELETE)
     public Object delete(
         @RequestParam Map<String, String> queryParams
     ) throws Exception {
-        GenDemoServiceModels.ReqDeleteQuery query = objectMapper.convertValue(queryParams, GenDemoServiceModels.ReqDeleteQuery.class);
-        Object result = service.delete(
-            query
-        );
-        return wrapResponse("GeneralWrapper", result);
+        DemoTypes.DeleteQuery query = objectMapper.convertValue(queryParams, DemoTypes.DeleteQuery.class);
+        try {
+            Object result = service.delete(
+                query
+            );
+            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (ApiError error) {
+            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.delete.delete");
+        }
     }
 
     @RequestMapping(path = "/api/demo/ws", method = RequestMethod.GET)
@@ -95,40 +119,127 @@ public class GenDemoController {
     @RequestMapping(path = "/api/demo/post_deprecated", method = RequestMethod.POST)
     public Object postDeprecated(
         @RequestParam Map<String, String> queryParams,
-        @RequestBody(required = false) GenDemoServiceModels.ReqPostDeprecatedJson json
+        @RequestBody(required = false) DemoTypes.PostDeprecatedJSON json
     ) throws Exception {
-        Object result = service.postDeprecated(
-            json
-        );
-        return wrapResponse("GeneralWrapper", result);
+        try {
+            Object result = service.postDeprecated(
+                json
+            );
+            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (ApiError error) {
+            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.post.postdeprecated");
+        }
     }
 
     @RequestMapping(path = "/api/demo/raw", method = RequestMethod.POST)
     public Object raw(
         @RequestParam Map<String, String> queryParams
     ) throws Exception {
-        Object result = service.raw(
-        );
-        return wrapResponse("GeneralWrapper", result);
+        try {
+            Object result = service.raw(
+            );
+            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (ApiError error) {
+            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.post.raw");
+        }
     }
 
     @RequestMapping(path = "/api/demo/map_model", method = RequestMethod.POST)
     public Object mapModel(
         @RequestParam Map<String, String> queryParams
     ) throws Exception {
-        Object result = service.mapModel(
-        );
-        return wrapResponse("GeneralWrapper", result);
+        try {
+            Object result = service.mapModel(
+            );
+            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (ApiError error) {
+            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.post.mapmodel");
+        }
     }
 
-    private Object wrapResponse(String wrapper, Object data) {
-        if (!"GeneralWrapper".equals(wrapper)) {
+    @RequestMapping(path = "/api/demo/error-demo", method = RequestMethod.GET)
+    public Object errorDemo(
+        @RequestParam Map<String, String> queryParams
+    ) throws Exception {
+        DemoTypes.ErrorDemoQuery query = objectMapper.convertValue(queryParams, DemoTypes.ErrorDemoQuery.class);
+        try {
+            Object result = service.errorDemo(
+                query
+            );
+            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (ApiError error) {
+            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.get.errordemo");
+        }
+    }
+
+    private Object wrapResponse(ApiResponseEnvelope envelopeSpec, Object data) {
+        if ("none".equals(envelopeSpec.kind())) {
             return data;
         }
         Map<String, Object> envelope = new LinkedHashMap<>();
-        envelope.put("code", 0);
-        envelope.put("message", "");
-        envelope.put("data", data);
+        if ("code_message_data".equals(envelopeSpec.kind())) {
+            envelope.put(envelopeSpec.fields().code(), envelopeSpec.successCode());
+            envelope.put(envelopeSpec.fields().message(), envelopeSpec.successMessage());
+            envelope.put(envelopeSpec.fields().data(), data);
+            return envelope;
+        }
+        if ("ok_data_error".equals(envelopeSpec.kind())) {
+            envelope.put(envelopeSpec.fields().ok(), true);
+            envelope.put(envelopeSpec.fields().data(), data);
+            return envelope;
+        }
         return envelope;
+    }
+
+    private Object wrapApiErrorResponse(ApiResponseEnvelope envelopeSpec, ApiError error, String routeId) {
+        ApiErrorPayload payload = normalizeApiErrorPayload(error.payload(), routeId);
+        if ("none".equals(envelopeSpec.kind())) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(payload);
+        }
+        Map<String, Object> envelope = new LinkedHashMap<>();
+        if ("code_message_data".equals(envelopeSpec.kind())) {
+            envelope.put(envelopeSpec.fields().code(), payload.code());
+            envelope.put(envelopeSpec.fields().message(), payload.message());
+            envelope.put(envelopeSpec.fields().data(), null);
+            if (!"none".equals(envelopeSpec.errorIdentity())) {
+                envelope.put(envelopeSpec.fields().error(), payload);
+            }
+            return envelope;
+        }
+        if ("ok_data_error".equals(envelopeSpec.kind())) {
+            envelope.put(envelopeSpec.fields().ok(), false);
+            envelope.put(envelopeSpec.fields().error(), payload);
+            return envelope;
+        }
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(payload);
+    }
+
+    private ApiErrorPayload normalizeApiErrorPayload(ApiErrorPayload payload, String routeId) {
+        if (payload == null) {
+            payload = new ApiErrorPayload("", "", "", 0, "", new ApiToastPayload("", "error", "", ""));
+        }
+        ApiErrorEntry entry = ApiErrors.lookup(payload, routeId).orElse(null);
+        int code = payload.code() != 0 ? payload.code() : entry == null ? 0 : entry.code();
+        String message = !payload.message().isBlank()
+            ? payload.message()
+            : entry == null ? "API error " + code : entry.message();
+        ApiToastPayload toast = payload.toast() == null
+            ? new ApiToastPayload("", "error", "", "")
+            : payload.toast();
+        return new ApiErrorPayload(
+            payload.id().isBlank() && entry != null ? entry.id() : payload.id(),
+            payload.group().isBlank() && entry != null ? entry.group() : payload.group(),
+            payload.key().isBlank() && entry != null ? entry.key() : payload.key(),
+            code,
+            message,
+            new ApiToastPayload(
+                toast.key().isBlank() && entry != null ? entry.toast().key() : toast.key(),
+                toast.level().isBlank() ? (entry == null ? "error" : entry.toast().level()) : toast.level(),
+                toast.defaultMessage().isBlank()
+                    ? (entry == null ? message : entry.toast().defaultMessage())
+                    : toast.defaultMessage(),
+                toast.text()
+            )
+        );
     }
 }

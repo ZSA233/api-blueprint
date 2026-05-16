@@ -1,15 +1,37 @@
 from __future__ import annotations
 
-from typing import Any
+from dataclasses import asdict, is_dataclass
+from typing import Any, Mapping
 
 from {{ group.runtime_import_prefix }}runtime.client import ApiChannelBridge, ApiClientTransport, ApiSocketBridge, ApiStreamBridge
 {% if group.binary_schemas() %}
 from {{ group.runtime_import_prefix }}runtime.binary import ApiBinaryBody
-from .gen_binary import (
-{% for schema in group.binary_schemas() %}    {{ schema.py_type }},
+{% endif %}
+{% if group.route_models() or group.binary_schemas() %}
+from .gen_types import (
+{% for model in group.route_models() %}    {{ model.class_name }},
+{% endfor %}{% for schema in group.binary_schemas() %}    {{ schema.py_type }},
     {{ schema.py_type }}Wire,
 {% endfor %})
 {% endif %}
+
+
+def _to_mapping(value: object) -> Mapping[str, Any] | None:
+    if value is None:
+        return None
+    if isinstance(value, Mapping):
+        return value
+    if is_dataclass(value):
+        return {key: item for key, item in asdict(value).items() if item is not None}
+    raise TypeError(f"expected mapping or dataclass request model, got {type(value).__name__}")
+
+
+def _from_mapping(model_type, value):
+    if value is None or isinstance(value, model_type):
+        return value
+    if isinstance(value, Mapping):
+        return model_type(**{key: value.get(key) for key in model_type.__dataclass_fields__})
+    return value
 
 
 class {{ group.client_class }}:
@@ -27,14 +49,19 @@ class {{ group.client_class }}:
     async def {{ route.method_name }}(self) -> Any:
 {% endif %}
         response_type: str | None = {{ route.response_type_literal | safe }}
-        return await self._transport.request(
+        payload = await self._transport.request(
             {{ route.http_method_literal | safe }},
             {{ route.url_literal | safe }},
+            route_id={{ route.route_id_literal | safe }},
 {% for param in route.params %}
-            {{ param.call_name }}={% if param.call_name == "binary" and route.has_binary_schema %}{{ route.binary_wire_name }}.to_binary_body({{ param.name }}){% else %}{{ param.name }}{% endif %},
+            {{ param.call_name }}={% if param.call_name == "binary" and route.has_binary_schema %}{{ route.binary_wire_name }}.to_binary_body({{ param.name }}){% elif param.converter %}{{ param.converter }}({{ param.name }}){% else %}{{ param.name }}{% endif %},
 {% endfor %}
             response_type=response_type,
+            response_envelope={{ route.response_envelope_literal | safe }},
         )
+{% if route.response_class_name %}        return _from_mapping({{ route.response_class_name }}, payload)
+{% else %}        return payload
+{% endif %}
 {% elif route.supports_ws %}
 
     def {{ route.connect_method_name }}(

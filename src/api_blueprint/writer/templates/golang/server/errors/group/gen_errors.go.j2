@@ -9,15 +9,16 @@ import (
 
 var (
 	{% for var in error_group.error_vars() %}
-	{{ var.key }} = e.NewCatalogError(
-		{{ var.id | code_literal }},
-		{{ var.key | code_literal }},
-		{{ var.code }},
-		{{ var.message | code_literal }},
-		e.ToastSpec{
+	{{ var.key }} = e.NewApiError(e.ErrorMeta{
+		ID:      {{ var.id | code_literal }},
+		Group:   {{ var.group | code_literal }},
+		Key:     {{ var.raw_key | code_literal }},
+		Code:    {{ var.code }},
+		Message: {{ var.message | code_literal }},
+		Toast: e.ToastSpec{
 			Key:     {{ var.toast_key | code_literal }},
 			Level:   {{ var.toast_level | code_literal }},
 			Default: {{ var.toast_default | code_literal }},
 		},
-	){% endfor %}
+	}){% endfor %}
 )

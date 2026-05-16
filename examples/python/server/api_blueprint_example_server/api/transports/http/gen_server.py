@@ -46,12 +46,12 @@ def create_router(
         )
 
     @router.api_route("/api/demo/1put", methods=["PUT"])
-    async def demo_z1put(
+    async def demo_put_demo(
         query: dict[str, Any] | None = None,
         json: dict[str, Any] | None = None,
     ) -> Any:
         service = demo_service_impl
-        return await service.z1put(
+        return await service.put_demo(
             query=query,
             json=json,
         )
@@ -109,6 +109,15 @@ def create_router(
     async def demo_map_model() -> Any:
         service = demo_service_impl
         return await service.map_model()
+
+    @router.api_route("/api/demo/error-demo", methods=["GET"])
+    async def demo_error_demo(
+        query: dict[str, Any] | None = None,
+    ) -> Any:
+        service = demo_service_impl
+        return await service.error_demo(
+            query=query,
+        )
 
     @router.api_route("/api/hello/abc", methods=["GET"])
     async def hello_abc(

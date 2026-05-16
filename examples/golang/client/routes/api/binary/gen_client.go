@@ -16,15 +16,24 @@ func NewGenBinaryClient(transport runtime.Transport) *GenBinaryClient {
 	return &GenBinaryClient{transport: transport}
 }
 
-func (client *GenBinaryClient) Packet(ctx context.Context, query *REQ_Packet_QUERY, binaryBody runtimebinary.Body) (*RSP_Packet_BODY, error) {
+type Client = GenBinaryClient
+
+var NewClient = NewGenBinaryClient
+
+type BinaryClient = GenBinaryClient
+
+var NewBinaryClient = NewGenBinaryClient
+
+func (client *GenBinaryClient) Packet(ctx context.Context, query PacketQuery, binaryBody runtimebinary.Body) (*PacketResponse, error) {
 	request := runtime.Request{
-		Method:          "POST",
-		Path:            "/api/binary/packet",
-		ResponseWrapper: "GeneralWrapper",
-		Query:           query,
-		Binary:          binaryBody,
+		RouteID:          "api.binary.post.packet",
+		Method:           "POST",
+		Path:             "/api/binary/packet",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		Query:            query,
+		Binary:           binaryBody,
 	}
-	var response RSP_Packet_BODY
+	var response PacketResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
 	}

@@ -9,7 +9,7 @@ from typing import IO, Any, Generator, Mapping, Sequence
 
 from api_blueprint.contract import ContractGraph, build_contract_graph
 from api_blueprint.writer.core.base import BaseWriter
-from api_blueprint.writer.core.errors import ErrorCatalogEntry, error_catalog_from_manifest
+from api_blueprint.writer.core.errors import ApiErrorEntry, api_errors_from_manifest, route_api_errors_from_manifest
 from api_blueprint.writer.core.files import ensure_filepath_open
 from api_blueprint.writer.core.templates import render
 
@@ -73,7 +73,8 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
         self.catalog = JavaModelCatalog(schemas)
         routes = [route for route in _list_of_maps(manifest.get("routes")) if self._route_selected(route)]
         services = _mapping_of_maps_by_id(manifest.get("services"))
-        errors = error_catalog_from_manifest(manifest)
+        errors = api_errors_from_manifest(manifest)
+        route_errors = route_api_errors_from_manifest(manifest, route_ids=[str(route.get("id") or "") for route in routes])
 
         total_routes = 0
         for bp in self.bps:
@@ -82,7 +83,7 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
             total_routes += len(bp.routes)
             if not bp.routes:
                 continue
-            self._gen_blueprint(bp, schemas, errors)
+            self._gen_blueprint(bp, schemas, errors, route_errors)
         if total_routes == 0 and not self.allow_empty:
             raise ValueError(f"[{self.target_label}] Java include/exclude 过滤后没有可生成的 route")
 
@@ -93,11 +94,12 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
         self,
         bp: JavaBlueprint,
         schemas: Mapping[str, JsonObject],
-        errors: tuple[ErrorCatalogEntry, ...],
+        errors: tuple[ApiErrorEntry, ...],
+        route_errors: dict[str, tuple[ApiErrorEntry, ...]],
     ) -> None:
         plan = build_java_blueprint_plan(self, bp)
         self._cleanup_empty_binary_dirs(plan)
-        context = {"writer": self, "bp": bp, "schemas": schemas, "errors": errors}
+        context = {"writer": self, "bp": bp, "schemas": schemas, "errors": errors, "route_errors": route_errors}
         self._write_common_runtime(plan, context)
         if self.client_mode:
             self._write_client_runtime(plan, context)
@@ -115,14 +117,20 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
             self._write_group_binary(group_plan, context)
 
     def _write_common_runtime(self, plan: JavaBlueprintPlan, context: dict[str, object]) -> None:
+        for stale_name in ("ApiCodeError.java", "ApiErrorCatalogEntry.java", "GenApiErrorCatalog.java", "GenModels.java"):
+            stale_path = plan.runtime.directory / stale_name
+            if stale_path.exists():
+                stale_path.unlink()
         for output_name, template_path in (
             ("ApiException.java", "ApiException.java"),
-            ("ApiCodeError.java", "ApiCodeError.java"),
+            ("ApiError.java", "ApiError.java"),
             ("ApiToastSpec.java", "ApiToastSpec.java"),
             ("ApiToastPayload.java", "ApiToastPayload.java"),
-            ("ApiErrorCatalogEntry.java", "ApiErrorCatalogEntry.java"),
-            ("GenApiErrorCatalog.java", "GenApiErrorCatalog.java"),
-            ("GenModels.java", "GenModels.java"),
+            ("ApiErrorEntry.java", "ApiErrorEntry.java"),
+            ("ApiErrorPayload.java", "ApiErrorPayload.java"),
+            ("ApiResponseEnvelope.java", "ApiResponseEnvelope.java"),
+            ("ApiErrors.java", "ApiErrors.java"),
+            ("ApiTypes.java", "ApiTypes.java"),
         ):
             self._write_generated(plan.runtime.directory / output_name, template_path, context, "common/runtime")
         self._write_generated(
@@ -202,9 +210,13 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
 
     def _write_group_models(self, group_plan: JavaRouteGroupPlan, context: dict[str, object]) -> None:
         group = group_plan.group
+        for stale_file in (*group_plan.directory.glob("Gen*ApiModels.java"), *group_plan.directory.glob("Gen*ServiceModels.java")):
+            self._unlink_generated_file(stale_file)
+        stale_models_file = group_plan.directory / f"{group.types_class.removesuffix('Types')}Models.java"
+        self._unlink_generated_file(stale_models_file)
         self._write_generated(
-            group_plan.directory / f"{group.models_class}.java",
-            "GenApiGroupModels.java",
+            group_plan.directory / f"{group.types_class}.java",
+            "ApiGroupTypes.java",
             {**context, "group": group},
             "client/routes" if self.client_mode else "server/routes",
         )
@@ -237,24 +249,12 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
                 self._write_user_file(group_plan.directory / output_name, template_name, {**context, "group": group}, "server/routes")
 
     def _write_group_binary(self, group_plan: JavaRouteGroupPlan, context: dict[str, object]) -> None:
-        group = group_plan.group
-        if not group.binary_schemas():
-            if group_plan.binary_file.exists():
-                group_plan.binary_file.unlink()
-            self._cleanup_legacy_binary_dir(group_plan.legacy_binary_directory)
-            return
-        self._write_generated(
-            group_plan.binary_file,
-            "GenBinary.java",
-            {**context, "group": group, "binary_schemas": group.binary_schemas()},
-            "client/routes/binary" if self.client_mode else "server/routes/binary",
-        )
+        self._unlink_generated_file(group_plan.stale_binary_file)
         self._cleanup_legacy_binary_dir(group_plan.legacy_binary_directory)
 
     def _cleanup_empty_binary_dirs(self, plan: JavaBlueprintPlan) -> None:
         for group_plan in plan.route_groups:
-            if not group_plan.group.binary_schemas() and group_plan.binary_file.exists():
-                group_plan.binary_file.unlink()
+            self._unlink_generated_file(group_plan.stale_binary_file)
             self._cleanup_legacy_binary_dir(group_plan.legacy_binary_directory)
 
     def _cleanup_legacy_binary_dir(self, binary_dir: Path) -> None:
@@ -267,6 +267,16 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
             binary_dir.rmdir()
         except OSError:
             return
+
+    def _unlink_generated_file(self, path: Path) -> None:
+        if not path.exists():
+            return
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            return
+        if text.startswith(JAVA_GENERATED_HEADER):
+            path.unlink()
 
     def route_params(self, route: JavaRoute, group: JavaApiGroup) -> list[tuple[str, str]]:
         params: list[tuple[str, str]] = []

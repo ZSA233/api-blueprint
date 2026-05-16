@@ -24,7 +24,7 @@ class JavaHttpTransportPlan:
 class JavaRouteGroupPlan:
     group: "JavaApiGroup"
     directory: Path
-    binary_file: Path
+    stale_binary_file: Path
     legacy_binary_directory: Path
 
 
@@ -52,7 +52,7 @@ def build_java_blueprint_plan(writer: "JavaBaseWriter", bp: "JavaBlueprint") -> 
             JavaRouteGroupPlan(
                 group=group,
                 directory=routes_dir / group.package_path,
-                binary_file=routes_dir / group.package_path / "GenBinary.java",
+                stale_binary_file=routes_dir / group.package_path / "GenBinary.java",
                 legacy_binary_directory=routes_dir / group.package_path / "binary",
             )
             for group in bp.groups.values()

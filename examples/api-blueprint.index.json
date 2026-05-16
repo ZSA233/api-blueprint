@@ -6,9 +6,9 @@
   ],
   "counts": {
     "connections": 2,
-    "errors": 2,
-    "routes": 21,
-    "schemas": 39,
+    "errors": 3,
+    "routes": 22,
+    "schemas": 41,
     "services": 5,
     "targets": 17
   },
@@ -98,7 +98,7 @@
       "methods": [
         "PUT"
       ],
-      "operation": "Z1put",
+      "operation": "PutDemo",
       "service_id": "api.demo",
       "url": "/api/demo/1put"
     },
@@ -165,6 +165,16 @@
       "operation": "MapModel",
       "service_id": "api.demo",
       "url": "/api/demo/map_model"
+    },
+    {
+      "id": "api.demo.get.errordemo",
+      "kind": "rpc",
+      "methods": [
+        "GET"
+      ],
+      "operation": "ErrorDemo",
+      "service_id": "api.demo",
+      "url": "/api/demo/error-demo"
     },
     {
       "id": "api.hello.get.abc",
@@ -280,7 +290,7 @@
       "name": "DemoService",
       "path": "/api/demo",
       "root": "api",
-      "route_count": 10
+      "route_count": 11
     },
     {
       "group": "hello",
@@ -305,120 +315,120 @@
       "kind": "contract",
       "out_dir": ".",
       "role": "contract",
-      "route_count": 21
+      "route_count": 22
     },
     {
       "id": "go.server",
       "kind": "go-server",
       "out_dir": "golang/server/views",
       "role": "server",
-      "route_count": 21
+      "route_count": 22
     },
     {
       "id": "go.client",
       "kind": "go-client",
       "out_dir": "golang/client",
       "role": "client",
-      "route_count": 21
+      "route_count": 22
     },
     {
       "id": "typescript.client",
       "kind": "typescript-client",
       "out_dir": "typescript",
       "role": "client",
-      "route_count": 21
+      "route_count": 22
     },
     {
       "id": "kotlin.client",
       "kind": "kotlin-client",
       "out_dir": "kotlin",
       "role": "client",
-      "route_count": 14
+      "route_count": 15
     },
     {
       "id": "java.server",
       "kind": "java-server",
       "out_dir": "java/server",
       "role": "server",
-      "route_count": 21
+      "route_count": 22
     },
     {
       "id": "java.client",
       "kind": "java-client",
       "out_dir": "java/client",
       "role": "client",
-      "route_count": 21
+      "route_count": 22
     },
     {
       "id": "python.server",
       "kind": "python-server",
       "out_dir": "python/server",
       "role": "server",
-      "route_count": 20
+      "route_count": 21
     },
     {
       "id": "python.client",
       "kind": "python-client",
       "out_dir": "python/client",
       "role": "client",
-      "route_count": 21
+      "route_count": 22
     },
     {
       "id": "http",
       "kind": "http-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 21
+      "route_count": 22
     },
     {
       "id": "http.python",
       "kind": "http-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 21
+      "route_count": 22
     },
     {
       "id": "http.java",
       "kind": "http-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 21
+      "route_count": 22
     },
     {
       "id": "wails.v3",
       "kind": "wails-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 20
+      "route_count": 21
     },
     {
       "id": "wails.v2",
       "kind": "wails-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 20
+      "route_count": 21
     },
     {
       "id": "grpc.proto",
       "kind": "grpc-proto",
       "out_dir": "grpc/protos",
       "role": "grpc",
-      "route_count": 20
+      "route_count": 21
     },
     {
       "id": "grpc.go",
       "kind": "grpc-go",
       "out_dir": "grpc/go",
       "role": "grpc",
-      "route_count": 20
+      "route_count": 21
     },
     {
       "id": "grpc.python",
       "kind": "grpc-python",
       "out_dir": "grpc/python",
       "role": "grpc",
-      "route_count": 20
+      "route_count": 21
     }
   ],
-  "version": "1.0"
+  "version": "2.0"
 }

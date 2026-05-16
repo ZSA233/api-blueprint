@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .....runtime.binary import (
+from ....runtime.binary import (
     ApiBinaryBody,
     BinaryWriter,
     EncodedBinaryBlock,

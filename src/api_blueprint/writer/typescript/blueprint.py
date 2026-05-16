@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import re
 import shutil
+import json
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -12,12 +13,12 @@ from api_blueprint.engine.group import RouterGroup
 from api_blueprint.engine.model import FieldWrappedModel, Model, iter_field_model_type, unwrap_model_type
 from api_blueprint.engine.router import Router
 from api_blueprint.engine.utils import is_parametrized, snake_to_pascal_case
-from api_blueprint.engine.wrapper import NoneWrapper
 from api_blueprint.engine.connection import MessageContract
 from api_blueprint.route_selection import matches_selection_rule
 from api_blueprint.writer.core.base import BaseBlueprint
 from api_blueprint.writer.core.contract_adapters import RouteProtocolContract, route_protocol_from_router
 from api_blueprint.writer.core.contracts import RouteContract
+from api_blueprint.writer.core.sdk_names import RoutePublicNames
 from api_blueprint.writer.core.templates import render
 
 from .binary_schema import TypeScriptBinarySchema, unique_typescript_binary_schemas
@@ -29,10 +30,12 @@ if TYPE_CHECKING:
 
 SHARED_MODULE = RUNTIME_MODULE
 ROUTE_BINARY_MODULE = "gen_binary"
+LEGACY_ROUTE_BINARY_MODULES = ("wire",)
 LEGACY_ROUTE_BINARY_DIR = "binary"
 _SAFE_LEGACY_TS_PASSTHROUGHS: dict[str, set[str]] = {
     "client.ts": {"export * from './gen_client';", 'export * from "./gen_client";'},
     "models.ts": {"export * from './gen_models';", 'export * from "./gen_models";'},
+    "types.ts": {"export * from './gen_types';", 'export * from "./gen_types";'},
     "index.ts": {"export * from './gen_index';", 'export * from "./gen_index";'},
 }
 
@@ -57,6 +60,7 @@ class TypeScriptRoute:
         self.route_prefix = route_prefix
         self.protocol = protocol or route_protocol_from_router(router, contract=contract)
         self.contract: RouteContract = self.protocol.route
+        self.public_names = RoutePublicNames.from_operation(self.contract.func_name, fallback="Call")
         branch = (router.group.branch or "").strip("/")
 
         self.func_name = self.contract.func_name
@@ -89,9 +93,12 @@ class TypeScriptRoute:
         self.bin_proto = self.binary_schema is None and self.protocol.request.binary.model is not None
 
         self.response_media_type = self.protocol.response.media_type
-        self.response_payload_proto = self._ensure_model(self.protocol.response.model.model, "RSP", "JSON")
-        wrapper_cls = self.protocol.response.wrapper or NoneWrapper
-        self.wrapper_proto = self.registry.ensure(wrapper_cls, tag="wrapper")
+        self.response_payload_proto = (
+            self._ensure_model(self.protocol.response.model.model, "RSP", "JSON")
+            if self.response_media_type == "application/json"
+            else None
+        )
+        self.response_envelope = self.protocol.response.envelope
         self.response_alias = self._ensure_response_alias()
         self.ws_recv_alias = self._ensure_ws_message_alias("WS", "RECV", list(self.protocol.recvs))
         self.ws_send_alias = self._ensure_ws_message_alias("WS", "SEND", list(self.protocol.sends))
@@ -119,13 +126,13 @@ class TypeScriptRoute:
     def binary_type_expr(self) -> str | None:
         if self.binary_schema is None:
             return None
-        return f"GenBinary.{self.binary_schema.name}"
+        return f"Types.{self.binary_schema.name}"
 
     @property
     def binary_wire_expr(self) -> str | None:
         if self.binary_schema is None:
             return None
-        return f"GenBinary.{self.binary_schema.name}Wire"
+        return f"{self.binary_schema.name}Wire"
 
     @property
     def query_type_expr(self) -> str | None:
@@ -151,6 +158,10 @@ class TypeScriptRoute:
     def response_type_name(self) -> str:
         return self.response_alias.name if self.response_alias else "void"
 
+    @property
+    def response_envelope_literal(self) -> str:
+        return json.dumps(self.response_envelope.envelope_spec(), ensure_ascii=False)
+
     def _ensure_model(self, model: Optional[Union[Type[Model], Model]], prefix: str, suffix: str) -> Optional[TypeScriptProto]:
         if model is None:
             return None
@@ -167,6 +178,19 @@ class TypeScriptRoute:
         return self.registry.ensure(model, name=explicit, tag=tag, route=self.func_name, module=module)
 
     def _route_model_name(self, prefix: str, suffix: str) -> str:
+        suffix_map = {
+            ("REQ", "QUERY"): "Query",
+            ("REQ", "JSON"): "JSON",
+            ("REQ", "FORM"): "Form",
+            ("REQ", "BINARY"): "Binary",
+            ("RSP", ""): "Response",
+            ("RSP", "JSON"): "Response",
+            ("OPEN", ""): "Open",
+            ("CLOSE", ""): "Close",
+        }
+        public_suffix = suffix_map.get((prefix, suffix))
+        if public_suffix is not None:
+            return getattr(self.public_names, public_suffix.lower())
         parts = [prefix, self.func_name]
         if suffix:
             parts.append(suffix)
@@ -175,7 +199,7 @@ class TypeScriptRoute:
     def _type_expr(self, proto: Optional[TypeScriptProto]) -> str | None:
         if proto is None:
             return None
-        namespace = "Models" if proto.module == self.group_module else "Shared"
+        namespace = "Types" if proto.module == self.group_module else "Shared"
         return f"{namespace}.{proto.name}"
 
     def _ensure_response_alias(self) -> Optional[TypeScriptProto]:
@@ -187,15 +211,12 @@ class TypeScriptRoute:
             payload_type = "void"
             payload_deps: set[TypeScriptProto] = set()
             if payload_proto:
+                if payload_proto.name == alias_base:
+                    return payload_proto
                 payload_type = payload_proto.name
                 payload_deps.add(payload_proto)
 
-            alias_text = payload_type
-            deps = set(payload_deps)
-            if self.wrapper_proto and self.wrapper_proto.fields:
-                alias_text = self.wrapper_proto.type_reference([payload_type])
-                deps.add(self.wrapper_proto)
-            alias_type = TypeScriptResolvedType(alias_text, deps)
+            alias_type = TypeScriptResolvedType(payload_type, set(payload_deps))
         return self.registry.register_alias(alias_base, alias_type, tag="route", route=self.func_name, module=self.group_module)
 
     @property
@@ -495,12 +516,9 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
 
     def shared_sections(self) -> list[tuple[str, list[TypeScriptProto]]]:
         sections = []
-        shared_models = [proto for proto in self.registry.filter(module=SHARED_MODULE) if "wrapper" not in proto.tags]
+        shared_models = self.registry.filter(module=SHARED_MODULE)
         if shared_models:
             sections.append(("Shared Models", shared_models))
-        wrappers = self.registry.filter(tag="wrapper", module=SHARED_MODULE)
-        if wrappers:
-            sections.append(("Response Wrappers", wrappers))
         return sections
 
     def group_sections(self, module: str) -> list[tuple[str, list[TypeScriptProto]]]:
@@ -532,7 +550,7 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                 dep_module = dep.module
                 if dep_module == module or dep_module not in module_dirs:
                     continue
-                path = self._relative_import_path(current_dir, module_dirs[dep_module] / "models.ts")
+                path = self._relative_import_path(current_dir, module_dirs[dep_module] / "types.ts")
                 deps_map.setdefault(path, set()).add(dep.name)
         return [{"path": path, "names": sorted(names)} for path, names in sorted(deps_map.items(), key=lambda item: item[0])]
 
@@ -558,13 +576,14 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
         return f'export * from "{target}";\n'
 
     def render_errors_passthrough(self) -> str:
-        return 'export * from "./gen_errors";\nexport * from "./gen_error_catalog";\n'
+        return 'export * from "./gen_errors";\nexport * from "./gen_error_lookup";\n'
 
     def write_errors_passthrough(self, shared_dir: Path) -> None:
         path = shared_dir / "errors.ts"
         source = self.render_errors_passthrough()
         legacy_source = self.render_passthrough("./gen_errors")
-        overwrite = path.is_file() and path.read_text(encoding="utf-8") == legacy_source
+        old_source = 'export * from "./gen_errors";\nexport * from "./gen_error_catalog";\n'
+        overwrite = path.is_file() and path.read_text(encoding="utf-8") in {legacy_source, old_source}
         with self.writer.write_file(path, overwrite=overwrite) as handle:
             if handle:
                 handle.write(source)
@@ -585,6 +604,17 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
             binary_dir.rmdir()
         except OSError:
             return
+
+    def _cleanup_legacy_type_files(self, directory: Path) -> None:
+        stale_generated = directory / "gen_models.ts"
+        if stale_generated.exists():
+            stale_generated.unlink()
+        stale_public = directory / "models.ts"
+        if stale_public.exists() and stale_public.read_text(encoding="utf-8").strip() in {
+            "export * from './gen_models';",
+            'export * from "./gen_models";',
+        }:
+            stale_public.unlink()
 
     def transport_root_exports(self, root_dir: Path, *extra_transports: str) -> list[dict[str, str]]:
         transports_dir = root_dir / self.writer.transports_dir_name
@@ -977,16 +1007,21 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
         shared_sections = self.shared_sections()
         shared_imports = self.build_imports(SHARED_MODULE, module_dirs)
         shared_context = {"sections": shared_sections, "imports": shared_imports, "exports": []}
-        for tmpl in ["gen_models.ts", "models.ts"]:
+        shared_context["binary_schemas"] = []
+        for tmpl in ["gen_types.ts", "types.ts"]:
             with self.writer.write_file(shared_dir / tmpl, overwrite=tmpl.startswith("gen_")) as handle:
                 if handle:
                     handle.write(render(self.writer.template_lang, tmpl, shared_context))
+        self._cleanup_legacy_type_files(shared_dir)
         with self.writer.write_file(shared_dir / "gen_errors.ts", overwrite=True) as handle:
             if handle:
                 handle.write(render(self.writer.template_lang, "gen_errors.ts", {"writer": self.writer, "bp": self}))
-        with self.writer.write_file(shared_dir / "gen_error_catalog.ts", overwrite=True) as handle:
+        with self.writer.write_file(shared_dir / "gen_error_lookup.ts", overwrite=True) as handle:
             if handle:
-                handle.write(render(self.writer.template_lang, "gen_error_catalog.ts", {"writer": self.writer, "bp": self}))
+                handle.write(render(self.writer.template_lang, "gen_error_lookup.ts", {"writer": self.writer, "bp": self}))
+        stale_error_lookup_legacy = shared_dir / "gen_error_catalog.ts"
+        if stale_error_lookup_legacy.exists():
+            stale_error_lookup_legacy.unlink()
         self.write_errors_passthrough(shared_dir)
 
         has_binary_schemas = self.has_binary_schemas()
@@ -1042,26 +1077,29 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                 "imports": self.build_imports(group.module_key, module_dirs),
                 "exports": [],
             }
-            for tmpl in ["gen_models.ts", "models.ts"]:
+            binary_schemas = group.binary_schemas()
+            models_context["binary_schemas"] = binary_schemas
+            for tmpl in ["gen_types.ts", "types.ts"]:
                 with self.writer.write_file(group_dir / tmpl, overwrite=tmpl.startswith("gen_")) as handle:
                     if handle:
                         handle.write(render(self.writer.template_lang, tmpl, models_context))
+            self._cleanup_legacy_type_files(group_dir)
 
             client_context = {
                 "routes": group.routes,
                 "writer": self.writer,
                 "client_class": group.client_class,
-                "shared_models_path": self._relative_import_path(group_dir, shared_dir / "models.ts"),
+                "shared_models_path": self._relative_import_path(group_dir, shared_dir / "types.ts"),
                 "shared_client_path": self._relative_import_path(group_dir, shared_dir / "client.ts"),
                 "binary_runtime_path": self._relative_import_path(group_dir, binary_runtime_dir / "index.ts"),
-                "has_binary_schemas": bool(group.binary_schemas()),
+                "binary_schemas": binary_schemas,
+                "has_binary_schemas": bool(binary_schemas),
             }
             for tmpl in ["gen_client.ts", "client.ts"]:
                 with self.writer.write_file(group_dir / tmpl, overwrite=tmpl.startswith("gen_")) as handle:
                     if handle:
                         handle.write(render(self.writer.template_lang, tmpl, client_context))
 
-            binary_schemas = group.binary_schemas()
             binary_file = group_dir / f"{ROUTE_BINARY_MODULE}.ts"
             legacy_binary_dir = group_dir / LEGACY_ROUTE_BINARY_DIR
             if binary_schemas:
@@ -1079,9 +1117,17 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                             )
                         )
                 self._cleanup_legacy_binary_dir(legacy_binary_dir)
+                for legacy_module in LEGACY_ROUTE_BINARY_MODULES:
+                    legacy_file = group_dir / f"{legacy_module}.ts"
+                    if legacy_file.exists():
+                        legacy_file.unlink()
             else:
                 if binary_file.exists():
                     binary_file.unlink()
+                for legacy_module in LEGACY_ROUTE_BINARY_MODULES:
+                    legacy_file = group_dir / f"{legacy_module}.ts"
+                    if legacy_file.exists():
+                        legacy_file.unlink()
                 self._cleanup_legacy_binary_dir(legacy_binary_dir)
 
             for tmpl in ["gen_index.ts", "index.ts"]:
@@ -1093,7 +1139,7 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                                 tmpl,
                                 {
                                     "client_class": group.client_class,
-                                    "extra_exports": [f'export * as GenBinary from "./{ROUTE_BINARY_MODULE}";'] if binary_schemas else [],
+                                    "extra_exports": [],
                                 },
                             )
                         )

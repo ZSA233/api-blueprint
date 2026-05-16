@@ -69,7 +69,7 @@ def _write_blueprint_package(tmp_path: Path) -> None:
         """
 from api_blueprint.engine import Blueprint, ConnectionDelivery, provider
 from api_blueprint.engine.model import Model, String
-from api_blueprint.engine.wrapper import GeneralWrapper
+from api_blueprint.engine.envelope import CodeMessageDataEnvelope
 
 class WSRecv(Model):
     message = String(description="message")
@@ -91,7 +91,7 @@ class CloseInfo(Model):
 
 bp = Blueprint(
     root="/api",
-    response_wrapper=GeneralWrapper,
+    response_envelope=CodeMessageDataEnvelope,
     providers=[
         provider.Req(),
         provider.Auth(),
@@ -340,8 +340,8 @@ go 1.23.8
     ts_overlay_index = (shared_ts / "api" / "transports" / "wailsv3" / "api" / "gen_index.ts").read_text(encoding="utf-8")
     ts_overlay_factory = (shared_ts / "api" / "transports" / "wailsv3" / "api" / "gen_factory.ts").read_text(encoding="utf-8")
 
-    assert "WrapRSP_JSON_GeneralWrapper" in go_overlay_service
-    assert "WrapRSP_JSON_GeneralWrapper[" not in go_overlay_service
+    assert "WrapRSP_JSON_CodeMessageDataEnvelope" in go_overlay_service
+    assert "WrapRSP_JSON_CodeMessageDataEnvelope[" not in go_overlay_service
     assert "func (svc *DemoService) ConnectWs" in go_overlay_service
     assert "func (svc *DemoService) SubscribeEvents" in go_overlay_service
     assert "func (svc *DemoService) OpenChat" in go_overlay_service
@@ -375,8 +375,8 @@ go 1.23.8
     assert 'Methods:   []string{"CHANNEL"}' in go_overlay_service
     assert "Transport: sharedprovider.TransportWails" in go_overlay_service
     assert 'Scope:     sharedprovider.ConnectionScope("session")' in go_overlay_service
-    assert '"req=Q|auth|handle|rsp=json@GeneralWrapper"' in go_overlay_service
-    assert '"req|auth|ws_handle|rsp=json@GeneralWrapper"' in go_overlay_service
+    assert '"req=Q|auth|handle|rsp=json@CodeMessageDataEnvelope"' in go_overlay_service
+    assert '"req|auth|ws_handle|rsp=json@CodeMessageDataEnvelope"' in go_overlay_service
     assert "ResolveProvider[" not in go_overlay_service
     assert not re.search(r"Executor \*sharedprovider[^\n]*\n\n\s*\w+Executor", go_overlay_service)
     assert not re.search(r"NewRouteExecutor[^\n]*\n\n\s*\w+Executor:", go_overlay_service)
@@ -678,7 +678,7 @@ go 1.23.8
     assert result.exit_code == 0, result.output
 
     provider_file = shared_go / "providers" / "gen_provider.go"
-    route_file = shared_go / "routes" / "api" / "demo" / "gen_protos.go"
+    route_file = shared_go / "routes" / "api" / "demo" / "gen_types.go"
     overlay_service = shared_go / "transports" / "wailsv3" / "api" / "demo" / "gen_service.go"
     runtime_file = shared_go / "transports" / "wailsv3" / "gen_runtime.go"
     binding_impl = shared_go / "transports" / "wailsv3" / "api" / "demo" / "impl_service.go"

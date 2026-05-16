@@ -2,71 +2,127 @@
 
 package runtime
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 type ApiErrorCode int
 
-type ApiCodeError struct {
+type ApiError struct {
 	IDValue      string
+	GroupValue   string
 	KeyValue     string
 	CodeValue    ApiErrorCode
 	MessageValue string
 	ToastValue   ApiToastPayload
+	RouteIDValue string
+	RawValue     string
 }
 
-func NewApiCodeError(code ApiErrorCode, message string) ApiCodeError {
-	return ApiCodeError{CodeValue: code, MessageValue: message}
-}
-
-func NewApiCatalogError(entry ErrorCatalogEntry) ApiCodeError {
-	return ApiCodeError{
-		IDValue:      entry.ID,
-		KeyValue:     entry.Key,
-		CodeValue:    entry.Code,
-		MessageValue: entry.Message,
-		ToastValue: ApiToastPayload{
-			Key:     entry.Toast.Key,
-			Level:   entry.Toast.Level,
-			Default: entry.Toast.Default,
-		},
+func NewApiError(payload ApiErrorPayload, routeID string, raw string) *ApiError {
+	return &ApiError{
+		IDValue:      payload.ID,
+		GroupValue:   payload.Group,
+		KeyValue:     payload.Key,
+		CodeValue:    payload.Code,
+		MessageValue: payload.Message,
+		ToastValue:   payload.Toast,
+		RouteIDValue: routeID,
+		RawValue:     raw,
 	}
 }
 
-func (err ApiCodeError) ID() string {
+func NewApiUnknownError(code ApiErrorCode, message string, routeID string, raw string) *ApiError {
+	return NewApiError(ApiErrorPayload{
+		Code:    code,
+		Message: message,
+		Toast: ApiToastPayload{
+			Level:   "error",
+			Default: message,
+		},
+	}, routeID, raw)
+}
+
+func NewApiLookupError(entry ApiErrorEntry, routeID string, raw string) *ApiError {
+	return NewApiError(NormalizeApiErrorPayload(ApiErrorPayload{}, entry), routeID, raw)
+}
+
+func NormalizeApiErrorPayload(payload ApiErrorPayload, entry ApiErrorEntry) ApiErrorPayload {
+	if payload.ID == "" {
+		payload.ID = entry.ID
+	}
+	if payload.Group == "" {
+		payload.Group = entry.Group
+	}
+	if payload.Key == "" {
+		payload.Key = entry.Key
+	}
+	if payload.Code == 0 {
+		payload.Code = entry.Code
+	}
+	if payload.Message == "" {
+		payload.Message = entry.Message
+	}
+	if payload.Toast.Key == "" {
+		payload.Toast.Key = entry.Toast.Key
+	}
+	if payload.Toast.Level == "" {
+		payload.Toast.Level = entry.Toast.Level
+	}
+	if payload.Toast.Default == "" {
+		payload.Toast.Default = entry.Toast.Default
+	}
+	return payload
+}
+
+func (err ApiError) ID() string {
 	return err.IDValue
 }
 
-func (err ApiCodeError) Key() string {
+func (err ApiError) Group() string {
+	return err.GroupValue
+}
+
+func (err ApiError) Key() string {
 	return err.KeyValue
 }
 
-func (err ApiCodeError) Code() int {
+func (err ApiError) Code() int {
 	return int(err.CodeValue)
 }
 
-func (err ApiCodeError) Error() string {
+func (err ApiError) Error() string {
 	return err.Message()
 }
 
-func (err ApiCodeError) Message() string {
+func (err ApiError) Message() string {
 	return err.MessageValue
 }
 
-func (err ApiCodeError) Toast() ApiToastPayload {
+func (err ApiError) Toast() ApiToastPayload {
 	return err.ToastValue
 }
 
+func (err ApiError) RouteID() string {
+	return err.RouteIDValue
+}
+
+func (err ApiError) Raw() string {
+	return err.RawValue
+}
+
 type ApiToastSpec struct {
-	Key     string
-	Level   string
-	Default string
+	Key     string `json:"key,omitempty"`
+	Level   string `json:"level,omitempty"`
+	Default string `json:"default,omitempty"`
 }
 
 type ApiToastPayload struct {
-	Key     string
-	Level   string
-	Default string
-	Text    string
+	Key     string `json:"key,omitempty"`
+	Level   string `json:"level,omitempty"`
+	Default string `json:"default,omitempty"`
+	Text    string `json:"text,omitempty"`
 }
 
 func ResolveApiToast(payload ApiToastPayload, translate func(string) (string, bool), fallbackMessage string) string {
@@ -84,13 +140,33 @@ func ResolveApiToast(payload ApiToastPayload, translate func(string) (string, bo
 	return fallbackMessage
 }
 
-type ErrorCatalogEntry struct {
+func IsApiError(err error, entry ApiErrorEntry) bool {
+	var apiErr *ApiError
+	if !errors.As(err, &apiErr) {
+		return false
+	}
+	if entry.ID != "" && apiErr.ID() == entry.ID {
+		return true
+	}
+	return entry.Code != 0 && ApiErrorCode(apiErr.Code()) == entry.Code
+}
+
+type ApiErrorEntry struct {
 	ID      string
 	Group   string
 	Key     string
 	Code    ApiErrorCode
 	Message string
 	Toast   ApiToastSpec
+}
+
+type ApiErrorPayload struct {
+	ID      string          `json:"id"`
+	Group   string          `json:"group"`
+	Key     string          `json:"key"`
+	Code    ApiErrorCode    `json:"code"`
+	Message string          `json:"message"`
+	Toast   ApiToastPayload `json:"toast"`
 }
 
 type UnsupportedTransportError struct {

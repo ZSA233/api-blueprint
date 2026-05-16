@@ -420,7 +420,7 @@ out_dir = "typescript"
     assert result.exit_code == 0, result.output
     agent = json.loads(out_path.read_text(encoding="utf-8"))
     assert agent["kind"] == "api-blueprint.agent"
-    assert agent["version"] == "1.0"
+    assert agent["version"] == "2.0"
     assert agent["generator"]["version"] == __version__
     assert agent["counts"]["routes"] == 1
     assert agent["routes"][0]["shard"] == "api-blueprint.contract.d/routes/api.demo.get.ping.json"
@@ -498,12 +498,12 @@ overlay_name = "wailsv3"
     artifacts = agent["routes"][0]["artifacts"]
     assert artifacts["go.server"]["files"] == [
         "../internal/views/routes/api/demo/gen_interface.go",
-        "../internal/views/routes/api/demo/gen_protos.go",
+        "../internal/views/routes/api/demo/gen_types.go",
     ]
     assert artifacts["go.server"]["imports"] == ["example.com/agent/internal/views/routes/api/demo"]
     assert artifacts["typescript.client"]["files"] == [
         "../../../webui/src/lib/api/api/routes/api/demo/client.ts",
-        "../../../webui/src/lib/api/api/routes/api/demo/models.ts",
+        "../../../webui/src/lib/api/api/routes/api/demo/types.ts",
     ]
     assert artifacts["gui.v3"]["files"] == [
         "../internal/views/transports/wailsv3/api/demo/gen_service.go",

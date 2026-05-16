@@ -2,7 +2,11 @@
 
 package errors
 
-type CodeError interface {
+type ApiErrorCarrier interface {
+	ApiErrorPayload() ApiErrorPayload
+}
+
+type ApiErrorCodeCarrier interface {
 	Code() int
 	Error() string
 	Message() string
@@ -13,16 +17,16 @@ type ToastProvider interface {
 }
 
 type ToastSpec struct {
-	Key     string
-	Level   string
-	Default string
+	Key     string `json:"key,omitempty" xml:"key,omitempty"`
+	Level   string `json:"level,omitempty" xml:"level,omitempty"`
+	Default string `json:"default,omitempty" xml:"default,omitempty"`
 }
 
 type ToastPayload struct {
-	Key     string
-	Level   string
-	Default string
-	Text    string
+	Key     string `json:"key,omitempty" xml:"key,omitempty"`
+	Level   string `json:"level,omitempty" xml:"level,omitempty"`
+	Default string `json:"default,omitempty" xml:"default,omitempty"`
+	Text    string `json:"text,omitempty" xml:"text,omitempty"`
 }
 
 func (toast ToastPayload) Map() map[string]string {
@@ -42,67 +46,105 @@ func (toast ToastPayload) Map() map[string]string {
 	return result
 }
 
-type Error struct {
-	id      string
-	key     string
-	code    int
-	message string
-	toast   ToastPayload
+type ErrorMeta struct {
+	ID      string
+	Group   string
+	Key     string
+	Code    int
+	Message string
+	Toast   ToastSpec
 }
 
-func New(code int, message string) *Error {
-	return NewCatalogError("", "", code, message, ToastSpec{Default: message, Level: "error"})
+type ApiErrorPayload struct {
+	ID      string       `json:"id"`
+	Group   string       `json:"group"`
+	Key     string       `json:"key"`
+	Code    int          `json:"code"`
+	Message string       `json:"message"`
+	Toast   ToastPayload `json:"toast"`
 }
 
-func NewCatalogError(id string, key string, code int, message string, toast ToastSpec) *Error {
+func (payload ApiErrorPayload) Map() map[string]any {
+	return map[string]any{
+		"id":      payload.ID,
+		"group":   payload.Group,
+		"key":     payload.Key,
+		"code":    payload.Code,
+		"message": payload.Message,
+		"toast":   payload.Toast.Map(),
+	}
+}
+
+type ApiError struct {
+	meta  ErrorMeta
+	toast ToastPayload
+}
+
+func New(code int, message string) *ApiError {
+	return NewApiError(ErrorMeta{Code: code, Message: message, Toast: ToastSpec{Default: message, Level: "error"}})
+}
+
+func NewApiError(meta ErrorMeta) *ApiError {
 	payload := ToastPayload{
-		Key:     toast.Key,
-		Level:   toast.Level,
-		Default: toast.Default,
+		Key:     meta.Toast.Key,
+		Level:   meta.Toast.Level,
+		Default: meta.Toast.Default,
 	}
 	if payload.Key == "" {
-		payload.Key = id
+		payload.Key = meta.ID
 	}
 	if payload.Level == "" {
 		payload.Level = "error"
 	}
 	if payload.Default == "" {
-		payload.Default = message
+		payload.Default = meta.Message
 	}
-	return &Error{
-		id:      id,
-		key:     key,
-		code:    code,
-		message: message,
-		toast:   payload,
+	return &ApiError{
+		meta:  meta,
+		toast: payload,
 	}
 }
 
-func (e Error) ID() string {
-	return e.id
+func (e ApiError) ID() string {
+	return e.meta.ID
 }
 
-func (e Error) Key() string {
-	return e.key
+func (e ApiError) Group() string {
+	return e.meta.Group
 }
 
-func (e Error) Code() int {
-	return e.code
+func (e ApiError) Key() string {
+	return e.meta.Key
 }
 
-func (e Error) Error() string {
+func (e ApiError) Code() int {
+	return e.meta.Code
+}
+
+func (e ApiError) Error() string {
 	return e.Message()
 }
 
-func (e Error) Message() string {
-	return e.message
+func (e ApiError) Message() string {
+	return e.meta.Message
 }
 
-func (e Error) Toast() ToastPayload {
+func (e ApiError) Toast() ToastPayload {
 	return e.toast
 }
 
-func (e Error) WithToast(toast ToastPayload) *Error {
+func (e ApiError) ApiErrorPayload() ApiErrorPayload {
+	return ApiErrorPayload{
+		ID:      e.ID(),
+		Group:   e.Group(),
+		Key:     e.Key(),
+		Code:    e.Code(),
+		Message: e.Message(),
+		Toast:   e.Toast(),
+	}
+}
+
+func (e ApiError) WithToast(toast ToastPayload) *ApiError {
 	clone := e
 	if toast.Key == "" {
 		toast.Key = clone.toast.Key

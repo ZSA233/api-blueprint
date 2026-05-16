@@ -12,6 +12,7 @@ type RequestBody = RequestInit["body"];
 type RequestBinaryBody = ApiBinaryBody;
 
 export interface RequestOptions<R> {
+  routeId: string;
   method: string;
   path: string;
   service: string;
@@ -25,7 +26,25 @@ export interface RequestOptions<R> {
   headers?: Record<string, string>;
   init?: RequestInit;
   responseType?: "json" | "text";
+  responseEnvelope?: ApiResponseEnvelope;
   timeoutMs?: number;
+}
+
+export interface ApiResponseEnvelope {
+  name: string;
+  kind: "none" | "code_message_data" | "ok_data_error" | string;
+  error_identity: "nested" | "none" | string;
+  success_code: number;
+  success_message: string;
+  fields: ApiResponseEnvelopeFields;
+}
+
+export interface ApiResponseEnvelopeFields {
+  code?: string;
+  message?: string;
+  data?: string;
+  error?: string;
+  ok?: string;
 }
 
 export interface StreamConnectOptions<Recv, Close = SocketCloseInfo> {
@@ -126,3 +145,5 @@ export class BaseClient {
     return rawConnector.call(this.transport, options);
   }
 }
+
+export * from "./errors";

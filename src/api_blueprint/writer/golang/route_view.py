@@ -7,7 +7,7 @@ from api_blueprint.engine.model import Null, create_model
 from api_blueprint.engine.provider import ProviderName
 from api_blueprint.engine.router import Router
 from api_blueprint.engine.utils import snake_to_pascal_case
-from api_blueprint.engine.wrapper import NoneWrapper
+from api_blueprint.engine.envelope import NoEnvelope
 from api_blueprint.writer.core.contract_adapters import RouteProtocolContract, route_protocol_from_router
 from api_blueprint.writer.core.contracts import RouteContract
 
@@ -141,12 +141,12 @@ class GoRouteProtocolView:
         return not self.is_json_response
 
     @property
-    def response_wrapper_name(self) -> str:
-        return self.protocol.response.wrapper.__name__
+    def response_envelope_name(self) -> str:
+        return self.protocol.response.envelope.__name__
 
     @property
     def has_wrapped_json_response(self) -> bool:
-        return self.is_json_response and self.protocol.response.wrapper is not NoneWrapper
+        return self.is_json_response and self.protocol.response.envelope is not NoEnvelope
 
     @property
     def req_provider(self) -> str:
@@ -167,7 +167,7 @@ class GoRouteProtocolView:
         }
         return "@".join([
             media_type_mapping[self.protocol.response.media_type],
-            self.protocol.response.wrapper.__name__,
+            self.protocol.response.envelope.__name__,
         ])
 
     @property

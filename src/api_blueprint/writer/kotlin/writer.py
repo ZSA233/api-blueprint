@@ -10,11 +10,16 @@ from typing import IO, TYPE_CHECKING, Generator, Optional, Sequence
 from api_blueprint.engine.router import Router
 from api_blueprint.writer.core.base import BaseWriter
 from api_blueprint.writer.core.contract_adapters import RouteContractIndex, RouteProtocolContract
-from api_blueprint.writer.core.errors import ErrorCatalogEntry, ErrorCatalogGroup, error_catalog_from_manifest, group_error_catalog
+from api_blueprint.writer.core.errors import (
+    ApiErrorEntry,
+    ApiErrorGroup,
+    api_errors_from_manifest,
+    group_api_errors,
+    route_api_errors_from_manifest,
+)
 from api_blueprint.writer.core.files import ensure_filepath_open
 from api_blueprint.writer.core.templates import render
 
-from .binary_schema import compact_kotlin_binary_source
 from .blueprint import KotlinBlueprint
 from .naming import to_package_path
 from .planner import build_kotlin_blueprint_plan
@@ -28,7 +33,7 @@ logger.setLevel(logging.INFO)
 
 if TYPE_CHECKING:
     from api_blueprint.contract import ContractGraph
-    from .planner import KotlinBlueprintPlan
+    from .planner import KotlinBlueprintPlan, KotlinRouteGroupPlan
 
 
 class KotlinWriter(BaseWriter[KotlinBlueprint]):
@@ -84,26 +89,32 @@ class KotlinWriter(BaseWriter[KotlinBlueprint]):
             self.route_contract_index = RouteContractIndex.from_graph(self.contract_graph)
         return self.route_contract_index
 
-    def error_catalog(self) -> tuple[ErrorCatalogEntry, ...]:
+    def api_errors(self) -> tuple[ApiErrorEntry, ...]:
         if self.contract_graph is None:
             from api_blueprint.contract import build_contract_graph
 
             self.contract_graph = build_contract_graph([bp.bp for bp in self.bps])
             if self.route_contract_index is None:
                 self.route_contract_index = RouteContractIndex.from_graph(self.contract_graph)
-        return error_catalog_from_manifest(self.contract_graph.to_manifest())
+        return api_errors_from_manifest(self.contract_graph.to_manifest())
 
-    def error_groups(self) -> tuple[ErrorCatalogGroup, ...]:
-        return group_error_catalog(self.error_catalog())
+    def api_error_groups(self) -> tuple[ApiErrorGroup, ...]:
+        return group_api_errors(self.api_errors())
 
-    def error_catalog_for_bp(self, bp: KotlinBlueprint) -> tuple[ErrorCatalogEntry, ...]:
+    def api_errors_for_bp(self, bp: KotlinBlueprint) -> tuple[ApiErrorEntry, ...]:
         if self.contract_graph is None:
             self._ensure_route_contract_index()
         route_ids = [route.protocol.route.route_id for route in bp.routes]
-        return error_catalog_from_manifest(self.contract_graph.to_manifest(), route_ids=route_ids)
+        return api_errors_from_manifest(self.contract_graph.to_manifest(), route_ids=route_ids)
 
-    def error_groups_for_bp(self, bp: KotlinBlueprint) -> tuple[ErrorCatalogGroup, ...]:
-        return group_error_catalog(self.error_catalog_for_bp(bp))
+    def api_error_groups_for_bp(self, bp: KotlinBlueprint) -> tuple[ApiErrorGroup, ...]:
+        return group_api_errors(self.api_errors_for_bp(bp))
+
+    def route_api_errors_for_bp(self, bp: KotlinBlueprint) -> dict[str, tuple[ApiErrorEntry, ...]]:
+        if self.contract_graph is None:
+            self._ensure_route_contract_index()
+        route_ids = [route.protocol.route.route_id for route in bp.routes]
+        return route_api_errors_from_manifest(self.contract_graph.to_manifest(), route_ids=route_ids)
 
     def route_protocol_for(self, router: Router) -> RouteProtocolContract:
         return self._ensure_route_contract_index().protocol_for_router(router)
@@ -156,18 +167,24 @@ class KotlinWriter(BaseWriter[KotlinBlueprint]):
                 if handle:
                     handle.write(render("kotlin", template_name, context, "transports/http"))
 
-        with self.write_file(plan.runtime.models_file, overwrite=True) as handle:
+        with self.write_file(plan.runtime.types_file, overwrite=True) as handle:
             if handle:
                 handle.write(KOTLIN_GENERATED_HEADER)
-                handle.write(render("kotlin", "Models.kt", {**context, "protos": plan.runtime.shared_protos}, "runtime"))
+                handle.write(render("kotlin", "Types.kt", {**context, "protos": plan.runtime.shared_protos}, "runtime"))
 
         for route_group in plan.route_groups:
             route_group.directory.mkdir(parents=True, exist_ok=True)
-            group_models_context = {**context, "group": route_group.group, "protos": route_group.protos}
-            with self.write_file(route_group.models_file, overwrite=True) as handle:
+            group_models_context = {
+                **context,
+                "group": route_group.group,
+                "protos": route_group.protos,
+                "binary_schemas": route_group.group.binary_schemas(),
+            }
+            self._cleanup_stale_route_models(route_group)
+            with self.write_file(route_group.types_file, overwrite=True) as handle:
                 if handle:
                     handle.write(KOTLIN_GENERATED_HEADER)
-                    handle.write(render("kotlin", "Models.kt", group_models_context, "routes"))
+                    handle.write(render("kotlin", "Types.kt", group_models_context, "routes"))
 
             with self.write_file(route_group.client_file, overwrite=True) as handle:
                 if handle:
@@ -176,25 +193,8 @@ class KotlinWriter(BaseWriter[KotlinBlueprint]):
 
             binary_schemas = route_group.group.binary_schemas()
             if binary_schemas:
-                route_group.binary_file.parent.mkdir(parents=True, exist_ok=True)
-                with self.write_file(route_group.binary_file, overwrite=True) as handle:
-                    if handle:
-                        handle.write(KOTLIN_GENERATED_HEADER)
-                        handle.write(
-                            compact_kotlin_binary_source(
-                                render(
-                                    "kotlin",
-                                    "GenBinary.kt",
-                                    {**context, "group": route_group.group, "binary_schemas": binary_schemas},
-                                    "routes/binary",
-                                )
-                            )
-                        )
-                self._cleanup_legacy_binary_dir(route_group.legacy_binary_directory)
-            else:
-                if route_group.binary_file.exists():
-                    route_group.binary_file.unlink()
-                self._cleanup_legacy_binary_dir(route_group.legacy_binary_directory)
+                self._unlink_generated_file(route_group.stale_binary_file)
+            self._cleanup_legacy_binary_dir(route_group.legacy_binary_directory)
 
             with self.write_file(route_group.facade_file, overwrite=False) as handle:
                 if handle:
@@ -209,6 +209,8 @@ class KotlinWriter(BaseWriter[KotlinBlueprint]):
             plan.runtime.directory / "ApiConfig.kt",
             plan.runtime.directory / "ApiException.kt",
             plan.runtime.directory / "ApiTransport.kt",
+            plan.runtime.directory / "GenApiErrorCatalog.kt",
+            plan.runtime.directory / "GenModels.kt",
             plan.runtime.directory / "Models.kt",
             plan.http_transport.directory / "HttpApiConfig.kt",
             plan.http_transport.directory / "OkHttpApiTransport.kt",
@@ -221,8 +223,7 @@ class KotlinWriter(BaseWriter[KotlinBlueprint]):
             branch_only_dir = routes_dir / route_group.group.slug
             if branch_only_dir != route_group.directory and branch_only_dir.exists():
                 shutil.rmtree(branch_only_dir)
-            if not route_group.group.binary_schemas() and route_group.binary_file.exists():
-                route_group.binary_file.unlink()
+            self._unlink_generated_file(route_group.stale_binary_file)
             self._cleanup_legacy_binary_dir(route_group.legacy_binary_directory)
 
     def _cleanup_legacy_binary_dir(self, binary_dir: Path) -> None:
@@ -235,6 +236,23 @@ class KotlinWriter(BaseWriter[KotlinBlueprint]):
             binary_dir.rmdir()
         except OSError:
             return
+
+    def _cleanup_stale_route_models(self, route_group: "KotlinRouteGroupPlan") -> None:
+        directory = route_group.directory
+        for stale_file in directory.glob("Gen*ApiModels.kt"):
+            self._unlink_generated_file(stale_file)
+        stale_models_file = directory / f"{route_group.group.class_name.removesuffix('Api')}Models.kt"
+        self._unlink_generated_file(stale_models_file)
+
+    def _unlink_generated_file(self, path: Path) -> None:
+        if not path.exists():
+            return
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            return
+        if text.startswith(KOTLIN_GENERATED_HEADER):
+            path.unlink()
 
     def _is_stale_generated_runtime_client(self, path: Path) -> bool:
         if not path.exists():

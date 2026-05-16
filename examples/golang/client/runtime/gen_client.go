@@ -5,13 +5,31 @@ package runtime
 import "context"
 
 type Request struct {
-	Method          string
-	Path            string
-	Query           any
-	JSON            any
-	Form            any
-	Binary          any
-	ResponseWrapper string
+	RouteID          string
+	Method           string
+	Path             string
+	Query            any
+	JSON             any
+	Form             any
+	Binary           any
+	ResponseEnvelope ApiResponseEnvelope
+}
+
+type ApiResponseEnvelope struct {
+	Name           string
+	Kind           string
+	ErrorIdentity  string
+	SuccessCode    ApiErrorCode
+	SuccessMessage string
+	Fields         ApiResponseEnvelopeFields
+}
+
+type ApiResponseEnvelopeFields struct {
+	Code    string
+	Message string
+	Data    string
+	Error   string
+	Ok      string
 }
 
 type ConnectionRequest struct {

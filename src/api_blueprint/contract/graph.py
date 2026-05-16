@@ -29,7 +29,7 @@ from .route import RouteContract, resolve_route_contracts, route_contract
 from .runtime import ContractRouteRuntime
 
 
-MANIFEST_VERSION = "1.0"
+MANIFEST_VERSION = "2.0"
 
 
 JsonObject = dict[str, Any]
@@ -167,7 +167,7 @@ class ContractGraphBuilder:
             response = {
                 "media_type": router.rsp_media_type,
                 "model": self._schema_ref(router.rsp_model),
-                "wrapper": getattr(router.response_wrapper, "__name__", None),
+                "envelope": router.response_envelope.envelope_spec(),
             }
 
         connection = None
@@ -185,7 +185,7 @@ class ContractGraphBuilder:
             "url": router.url,
             "tags": list(router.tags),
             "deprecated": router.is_deprecated,
-            "errors": self._route_error_ids(router),
+            "errors": self._route_error_refs(router),
             "request": request,
             "response": response,
             "connection": connection,
@@ -194,9 +194,9 @@ class ContractGraphBuilder:
         self._apply_schema_ref_rewrites(route)
         return route
 
-    def _route_error_ids(self, router: Router) -> list[str]:
+    def _route_error_refs(self, router: Router) -> list[JsonObject]:
         seen: set[str] = set()
-        result: list[str] = []
+        result: list[JsonObject] = []
         for errors_by_code in (router.bp.errors, router.errors):
             for err in _iter_declared_errors(errors_by_code):
                 manifest = _error_manifest(err)
@@ -204,7 +204,7 @@ class ContractGraphBuilder:
                 if manifest["id"] in seen:
                     continue
                 seen.add(manifest["id"])
-                result.append(manifest["id"])
+                result.append(dict(manifest))
         return result
 
     def _connection_manifest(self, router: Router) -> JsonObject:
@@ -229,7 +229,7 @@ class ContractGraphBuilder:
             open_model=router.open_model,
             response_model=router.rsp_model,
             response_media_type=router.rsp_media_type,
-            response_wrapper=router.response_wrapper,
+            response_envelope=router.response_envelope,
             recvs=tuple(router.recvs),
             sends=tuple(router.sends),
             server_message=router.server_message,

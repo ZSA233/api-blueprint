@@ -44,10 +44,10 @@ class DemoServiceStub(object):
                 request_serializer=api_dot_demo__pb2.TestPostRequest.SerializeToString,
                 response_deserializer=api_dot_demo__pb2.TestPostResponse.FromString,
                 _registered_method=True)
-        self.Z1put = channel.unary_unary(
-                '/example.api.demo.DemoService/Z1put',
-                request_serializer=api_dot_demo__pb2.Z1putRequest.SerializeToString,
-                response_deserializer=api_dot_demo__pb2.Z1putResponse.FromString,
+        self.PutDemo = channel.unary_unary(
+                '/example.api.demo.DemoService/PutDemo',
+                request_serializer=api_dot_demo__pb2.PutDemoRequest.SerializeToString,
+                response_deserializer=api_dot_demo__pb2.PutDemoResponse.FromString,
                 _registered_method=True)
         self.Delete = channel.unary_unary(
                 '/example.api.demo.DemoService/Delete',
@@ -79,6 +79,11 @@ class DemoServiceStub(object):
                 request_serializer=api_dot_demo__pb2.MapModelRequest.SerializeToString,
                 response_deserializer=api_dot_demo__pb2.MapModelResponse.FromString,
                 _registered_method=True)
+        self.ErrorDemo = channel.unary_unary(
+                '/example.api.demo.DemoService/ErrorDemo',
+                request_serializer=api_dot_demo__pb2.ErrorDemoRequest.SerializeToString,
+                response_deserializer=api_dot_demo__pb2.ErrorDemoResponse.FromString,
+                _registered_method=True)
 
 
 class DemoServiceServicer(object):
@@ -96,7 +101,7 @@ class DemoServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def Z1put(self, request, context):
+    def PutDemo(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -138,6 +143,12 @@ class DemoServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ErrorDemo(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_DemoServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -151,10 +162,10 @@ def add_DemoServiceServicer_to_server(servicer, server):
                     request_deserializer=api_dot_demo__pb2.TestPostRequest.FromString,
                     response_serializer=api_dot_demo__pb2.TestPostResponse.SerializeToString,
             ),
-            'Z1put': grpc.unary_unary_rpc_method_handler(
-                    servicer.Z1put,
-                    request_deserializer=api_dot_demo__pb2.Z1putRequest.FromString,
-                    response_serializer=api_dot_demo__pb2.Z1putResponse.SerializeToString,
+            'PutDemo': grpc.unary_unary_rpc_method_handler(
+                    servicer.PutDemo,
+                    request_deserializer=api_dot_demo__pb2.PutDemoRequest.FromString,
+                    response_serializer=api_dot_demo__pb2.PutDemoResponse.SerializeToString,
             ),
             'Delete': grpc.unary_unary_rpc_method_handler(
                     servicer.Delete,
@@ -185,6 +196,11 @@ def add_DemoServiceServicer_to_server(servicer, server):
                     servicer.MapModel,
                     request_deserializer=api_dot_demo__pb2.MapModelRequest.FromString,
                     response_serializer=api_dot_demo__pb2.MapModelResponse.SerializeToString,
+            ),
+            'ErrorDemo': grpc.unary_unary_rpc_method_handler(
+                    servicer.ErrorDemo,
+                    request_deserializer=api_dot_demo__pb2.ErrorDemoRequest.FromString,
+                    response_serializer=api_dot_demo__pb2.ErrorDemoResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -252,7 +268,7 @@ class DemoService(object):
             _registered_method=True)
 
     @staticmethod
-    def Z1put(request,
+    def PutDemo(request,
             target,
             options=(),
             channel_credentials=None,
@@ -265,9 +281,9 @@ class DemoService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/example.api.demo.DemoService/Z1put',
-            api_dot_demo__pb2.Z1putRequest.SerializeToString,
-            api_dot_demo__pb2.Z1putResponse.FromString,
+            '/example.api.demo.DemoService/PutDemo',
+            api_dot_demo__pb2.PutDemoRequest.SerializeToString,
+            api_dot_demo__pb2.PutDemoResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -430,6 +446,33 @@ class DemoService(object):
             '/example.api.demo.DemoService/MapModel',
             api_dot_demo__pb2.MapModelRequest.SerializeToString,
             api_dot_demo__pb2.MapModelResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ErrorDemo(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/example.api.demo.DemoService/ErrorDemo',
+            api_dot_demo__pb2.ErrorDemoRequest.SerializeToString,
+            api_dot_demo__pb2.ErrorDemoResponse.FromString,
             options,
             channel_credentials,
             insecure,

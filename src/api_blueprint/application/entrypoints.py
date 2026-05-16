@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Generator
 
 from api_blueprint.engine import Blueprint
-from api_blueprint.engine.runtime import reset_response_wrapper_cache, reset_shared_app
+from api_blueprint.engine.runtime import reset_response_envelope_cache, reset_shared_app
 from api_blueprint.engine.schema import reset_pydantic_model_cache
 
 
@@ -35,7 +35,7 @@ def load_entrypoints(specs: list[str] | None, relative_path: Path | None = None)
         return []
 
     reset_shared_app()
-    reset_response_wrapper_cache()
+    reset_response_envelope_cache()
     reset_pydantic_model_cache()
 
     entrypoints: list[Blueprint] = []

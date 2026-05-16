@@ -14,7 +14,7 @@ from .protos import (
     GolangProtoFieldView,
     GolangProtoGeneric,
     GolangProtoStruct,
-    GolangResponseWrapper,
+    GolangResponseEnvelope,
     ensure_model,
 )
 from .toolchain import GolangToolchain
@@ -44,7 +44,7 @@ __all__ = (
     "GolangProtoFieldView",
     "GolangProtoGeneric",
     "GolangProtoStruct",
-    "GolangResponseWrapper",
+    "GolangResponseEnvelope",
     "GolangRouter",
     "GolangRouterGroup",
     "GolangTagBuilder",

@@ -3,9 +3,17 @@ package com.example.apiblueprint.static_.transports.http.static_;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.apiblueprint.static_.routes.static_.StaticService;
-import com.example.apiblueprint.static_.routes.static_.GenStaticServiceStub;
-import com.example.apiblueprint.static_.routes.static_.GenStaticServiceModels;
-import com.example.apiblueprint.static_.runtime.GenModels;
+import com.example.apiblueprint.static_.routes.static_.StaticServiceStub;
+import com.example.apiblueprint.static_.routes.static_.StaticTypes;
+import com.example.apiblueprint.static_.runtime.ApiError;
+import com.example.apiblueprint.static_.runtime.ApiErrorEntry;
+import com.example.apiblueprint.static_.runtime.ApiErrorPayload;
+import com.example.apiblueprint.static_.runtime.ApiErrors;
+import com.example.apiblueprint.static_.runtime.ApiResponseEnvelope;
+import com.example.apiblueprint.static_.runtime.ApiToastPayload;
+
+import com.example.apiblueprint.static_.runtime.ApiTypes;
+
 import com.example.apiblueprint.static_.runtime.binary.ApiBinaryBody;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -27,7 +35,7 @@ public class GenStaticController {
         @Autowired(required = false) StaticService service,
         ObjectMapper objectMapper
     ) {
-        this.service = service == null ? new GenStaticServiceStub() : service;
+        this.service = service == null ? new StaticServiceStub() : service;
         this.objectMapper = objectMapper;
     }
 
@@ -35,28 +43,96 @@ public class GenStaticController {
     public Object docJson(
         @RequestParam Map<String, String> queryParams
     ) throws Exception {
-        Object result = service.docJson(
-        );
-        return wrapResponse("NoneWrapper", result);
+        try {
+            Object result = service.docJson(
+            );
+            return wrapResponse(ApiResponseEnvelope.of("NoEnvelope", "none", "none", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (ApiError error) {
+            return wrapApiErrorResponse(ApiResponseEnvelope.of("NoEnvelope", "none", "none", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "static.static.get.docjson");
+        }
     }
 
     @RequestMapping(path = "/static/dochaha", method = RequestMethod.GET)
     public Object dochaha(
         @RequestParam Map<String, String> queryParams
     ) throws Exception {
-        Object result = service.dochaha(
-        );
-        return wrapResponse("NoneWrapper", result);
+        try {
+            Object result = service.dochaha(
+            );
+            return wrapResponse(ApiResponseEnvelope.of("NoEnvelope", "none", "none", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (ApiError error) {
+            return wrapApiErrorResponse(ApiResponseEnvelope.of("NoEnvelope", "none", "none", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "static.static.get.dochaha");
+        }
     }
 
-    private Object wrapResponse(String wrapper, Object data) {
-        if (!"GeneralWrapper".equals(wrapper)) {
+    private Object wrapResponse(ApiResponseEnvelope envelopeSpec, Object data) {
+        if ("none".equals(envelopeSpec.kind())) {
             return data;
         }
         Map<String, Object> envelope = new LinkedHashMap<>();
-        envelope.put("code", 0);
-        envelope.put("message", "");
-        envelope.put("data", data);
+        if ("code_message_data".equals(envelopeSpec.kind())) {
+            envelope.put(envelopeSpec.fields().code(), envelopeSpec.successCode());
+            envelope.put(envelopeSpec.fields().message(), envelopeSpec.successMessage());
+            envelope.put(envelopeSpec.fields().data(), data);
+            return envelope;
+        }
+        if ("ok_data_error".equals(envelopeSpec.kind())) {
+            envelope.put(envelopeSpec.fields().ok(), true);
+            envelope.put(envelopeSpec.fields().data(), data);
+            return envelope;
+        }
         return envelope;
+    }
+
+    private Object wrapApiErrorResponse(ApiResponseEnvelope envelopeSpec, ApiError error, String routeId) {
+        ApiErrorPayload payload = normalizeApiErrorPayload(error.payload(), routeId);
+        if ("none".equals(envelopeSpec.kind())) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(payload);
+        }
+        Map<String, Object> envelope = new LinkedHashMap<>();
+        if ("code_message_data".equals(envelopeSpec.kind())) {
+            envelope.put(envelopeSpec.fields().code(), payload.code());
+            envelope.put(envelopeSpec.fields().message(), payload.message());
+            envelope.put(envelopeSpec.fields().data(), null);
+            if (!"none".equals(envelopeSpec.errorIdentity())) {
+                envelope.put(envelopeSpec.fields().error(), payload);
+            }
+            return envelope;
+        }
+        if ("ok_data_error".equals(envelopeSpec.kind())) {
+            envelope.put(envelopeSpec.fields().ok(), false);
+            envelope.put(envelopeSpec.fields().error(), payload);
+            return envelope;
+        }
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(payload);
+    }
+
+    private ApiErrorPayload normalizeApiErrorPayload(ApiErrorPayload payload, String routeId) {
+        if (payload == null) {
+            payload = new ApiErrorPayload("", "", "", 0, "", new ApiToastPayload("", "error", "", ""));
+        }
+        ApiErrorEntry entry = ApiErrors.lookup(payload, routeId).orElse(null);
+        int code = payload.code() != 0 ? payload.code() : entry == null ? 0 : entry.code();
+        String message = !payload.message().isBlank()
+            ? payload.message()
+            : entry == null ? "API error " + code : entry.message();
+        ApiToastPayload toast = payload.toast() == null
+            ? new ApiToastPayload("", "error", "", "")
+            : payload.toast();
+        return new ApiErrorPayload(
+            payload.id().isBlank() && entry != null ? entry.id() : payload.id(),
+            payload.group().isBlank() && entry != null ? entry.group() : payload.group(),
+            payload.key().isBlank() && entry != null ? entry.key() : payload.key(),
+            code,
+            message,
+            new ApiToastPayload(
+                toast.key().isBlank() && entry != null ? entry.toast().key() : toast.key(),
+                toast.level().isBlank() ? (entry == null ? "error" : entry.toast().level()) : toast.level(),
+                toast.defaultMessage().isBlank()
+                    ? (entry == null ? message : entry.toast().defaultMessage())
+                    : toast.defaultMessage(),
+                toast.text()
+            )
+        );
     }
 }

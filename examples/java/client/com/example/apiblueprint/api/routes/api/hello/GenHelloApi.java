@@ -3,10 +3,13 @@ package com.example.apiblueprint.api.routes.api.hello;
 
 import com.example.apiblueprint.api.runtime.ApiChannelBridge;
 import com.example.apiblueprint.api.runtime.ApiRequest;
+import com.example.apiblueprint.api.runtime.ApiResponseEnvelope;
 import com.example.apiblueprint.api.runtime.ApiSocketBridge;
 import com.example.apiblueprint.api.runtime.ApiStreamBridge;
 import com.example.apiblueprint.api.runtime.ApiTransport;
-import com.example.apiblueprint.api.runtime.GenModels;
+
+import com.example.apiblueprint.api.runtime.ApiTypes;
+
 import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
 import java.util.Map;
 
@@ -17,103 +20,109 @@ public class GenHelloApi {
         this.transport = transport;
     }
 
-    public GenHelloApiModels.RspAbc abc(
-        GenHelloApiModels.ReqAbcQuery query
+    public HelloTypes.AbcResponse abc(
+        HelloTypes.AbcQuery query
     ) throws Exception {
-        ApiRequest<GenHelloApiModels.RspAbc> request = new ApiRequest<>(
+        ApiRequest<HelloTypes.AbcResponse> request = new ApiRequest<>(
+            "api.hello.get.abc",
             "GET",
             "/api/hello/abc",
             query,
             null,
             null,
             null,
-            "GeneralWrapper",
-            GenHelloApiModels.RspAbc.class,
+            ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+            HelloTypes.AbcResponse.class,
             "application/json",
             Map.of()
         );
         return transport.execute(request);
     }
 
-    public GenHelloApiModels.RspMapEnum mapEnum(
+    public HelloTypes.MapEnumResponse mapEnum(
     ) throws Exception {
-        ApiRequest<GenHelloApiModels.RspMapEnum> request = new ApiRequest<>(
+        ApiRequest<HelloTypes.MapEnumResponse> request = new ApiRequest<>(
+            "api.hello.get.mapenum",
             "GET",
             "/api/hello/map-enum",
             null,
             null,
             null,
             null,
-            "GeneralWrapper",
-            GenHelloApiModels.RspMapEnum.class,
+            ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+            HelloTypes.MapEnumResponse.class,
             "application/json",
             Map.of()
         );
         return transport.execute(request);
     }
 
-    public GenHelloApiModels.RspListEnum listEnum(
+    public HelloTypes.ListEnumResponse listEnum(
     ) throws Exception {
-        ApiRequest<GenHelloApiModels.RspListEnum> request = new ApiRequest<>(
+        ApiRequest<HelloTypes.ListEnumResponse> request = new ApiRequest<>(
+            "api.hello.get.listenum",
             "GET",
             "/api/hello/list-enum",
             null,
             null,
             null,
             null,
-            "GeneralWrapper",
-            GenHelloApiModels.RspListEnum.class,
+            ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+            HelloTypes.ListEnumResponse.class,
             "application/json",
             Map.of()
         );
         return transport.execute(request);
     }
 
-    public GenHelloApiModels.RspString string(
+    public HelloTypes.StringResponse string(
     ) throws Exception {
-        ApiRequest<GenHelloApiModels.RspString> request = new ApiRequest<>(
+        ApiRequest<HelloTypes.StringResponse> request = new ApiRequest<>(
+            "api.hello.get.string",
             "GET",
             "/api/hello/string",
             null,
             null,
             null,
             null,
-            "GeneralWrapper",
-            GenHelloApiModels.RspString.class,
+            ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+            HelloTypes.StringResponse.class,
             "application/json",
             Map.of()
         );
         return transport.execute(request);
     }
 
-    public GenHelloApiModels.RspUint64 uint64(
+    public HelloTypes.Uint64Response uint64(
     ) throws Exception {
-        ApiRequest<GenHelloApiModels.RspUint64> request = new ApiRequest<>(
+        ApiRequest<HelloTypes.Uint64Response> request = new ApiRequest<>(
+            "api.hello.get.uint64",
             "GET",
             "/api/hello/uint64",
             null,
             null,
             null,
             null,
-            "GeneralWrapper",
-            GenHelloApiModels.RspUint64.class,
+            ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+            HelloTypes.Uint64Response.class,
             "application/json",
             Map.of()
         );
         return transport.execute(request);
     }
 
-    public GenHelloApiModels.RspStringEmun stringEmun(
+    public HelloTypes.StringEmunResponse stringEmun(
     ) throws Exception {
-        ApiRequest<GenHelloApiModels.RspStringEmun> request = new ApiRequest<>(
+        ApiRequest<HelloTypes.StringEmunResponse> request = new ApiRequest<>(
+            "api.hello.get.stringemun",
             "GET",
             "/api/hello/string-emun",
             null,
             null,
             null,
             null,
-            "GeneralWrapper",
-            GenHelloApiModels.RspStringEmun.class,
+            ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+            HelloTypes.StringEmunResponse.class,
             "application/json",
             Map.of()
         );
@@ -121,16 +130,17 @@ public class GenHelloApi {
     }
 
     public Object helloWay(
-        GenHelloApiModels.ReqHelloWayQuery query
+        HelloTypes.HelloWayQuery query
     ) throws Exception {
         ApiRequest<Object> request = new ApiRequest<>(
+            "api.hello.get.helloway",
             "GET",
             "/api/hello/hello-way",
             query,
             null,
             null,
             null,
-            "NoneWrapper",
+            ApiResponseEnvelope.of("NoEnvelope", "none", "none", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
             Object.class,
             "application/json",
             Map.of()

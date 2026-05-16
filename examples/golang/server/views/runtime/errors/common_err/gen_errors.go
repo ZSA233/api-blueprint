@@ -7,26 +7,28 @@ import (
 )
 
 var (
-	UNKNOWN = e.NewCatalogError(
-		"CommonErr.UNKNOWN",
-		"UNKNOWN",
-		-1,
-		"未知错误",
-		e.ToastSpec{
+	UNKNOWN = e.NewApiError(e.ErrorMeta{
+		ID:      "CommonErr.UNKNOWN",
+		Group:   "CommonErr",
+		Key:     "UNKNOWN",
+		Code:    -1,
+		Message: "未知错误",
+		Toast: e.ToastSpec{
 			Key:     "CommonErr.UNKNOWN",
 			Level:   "error",
 			Default: "未知错误",
 		},
-	)
-	TOKEN_EXPIRE = e.NewCatalogError(
-		"CommonErr.TOKEN_EXPIRE",
-		"TOKEN_EXPIRE",
-		55555,
-		"token登录态失效",
-		e.ToastSpec{
+	})
+	TOKEN_EXPIRE = e.NewApiError(e.ErrorMeta{
+		ID:      "CommonErr.TOKEN_EXPIRE",
+		Group:   "CommonErr",
+		Key:     "TOKEN_EXPIRE",
+		Code:    55555,
+		Message: "token登录态失效",
+		Toast: e.ToastSpec{
 			Key:     "auth.token_expire",
 			Level:   "warning",
 			Default: "登录状态已失效，请重新登录",
 		},
-	)
+	})
 )

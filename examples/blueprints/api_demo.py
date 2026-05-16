@@ -1,5 +1,6 @@
 from api_blueprint.includes import *
 from blueprints.app import apibp
+from blueprints.errors import DemoErr
 import enum
 
 
@@ -117,7 +118,7 @@ with apibp.group('/demo') as views:
     )
 
     views.PUT(
-        '/1put', summary='这是put的summary', description='这是put的description'
+        '/1put', operation_id='putDemo', summary='这是put的summary', description='这是put的description'
     ).ARGS(
         arg1    = String(description='arg1', default='put-arg1'),
         arg2    = Float(description='arg2', default=6.666),
@@ -209,4 +210,16 @@ with apibp.group('/demo') as views:
         '/map_model', summary='这是一个raw', description='这是一个raw description', headers=NoneHeader,
     ).RSP(
         Map[Int, ApiDemoMap](description='rsp')
+    )
+
+    views.GET(
+        '/error-demo',
+        summary='Typed error example',
+        description='Shows declared, route-local and unknown business errors',
+    ).ARGS(
+        mode=String(description='ok/token/rate_limit/unknown', default='ok'),
+    ).ERR(
+        DemoErr,
+    ).RSP(
+        status=String(description='status'),
     )

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, AsyncIterator, Generic, Mapping, Protocol, TypeVar
+from typing import Any, AsyncIterator, Generic, Mapping, Protocol, TypedDict, TypeVar
 
 from .binary import ApiBinaryBody
 
@@ -10,18 +10,37 @@ SendT = TypeVar("SendT")
 CloseT = TypeVar("CloseT")
 
 
+class ApiResponseEnvelopeFields(TypedDict, total=False):
+    code: str
+    message: str
+    data: str
+    error: str
+    ok: str
+
+
+class ApiResponseEnvelope(TypedDict):
+    name: str
+    kind: str
+    error_identity: str
+    success_code: int
+    success_message: str
+    fields: ApiResponseEnvelopeFields
+
+
 class ApiClientTransport(Protocol):
     async def request(
         self,
         method: str,
         path: str,
         *,
+        route_id: str = "",
         query: Mapping[str, Any] | None = None,
         json: Any = None,
         form: Mapping[str, Any] | None = None,
         binary: bytes | ApiBinaryBody | None = None,
         open_data: Mapping[str, Any] | None = None,
         response_type: str | None = None,
+        response_envelope: ApiResponseEnvelope | None = None,
     ) -> Any:
         ...
 

@@ -9,15 +9,15 @@ from api_blueprint.contract import build_contract_graph
 from api_blueprint.engine import Blueprint, Error, Model, Toast, provider
 from api_blueprint.engine.binary_schema import parse_binary_schema
 from api_blueprint.engine.model import String
-from api_blueprint.engine.wrapper import GeneralWrapper
-from api_blueprint.writer.golang import GolangResponseWrapper
+from api_blueprint.engine.envelope import CodeMessageDataEnvelope
+from api_blueprint.writer.golang import GolangResponseEnvelope
 from api_blueprint.writer.golang import GolangWriter
 
 
-def test_golang_response_wrapper_preserves_generic_type_parameters():
-    wrapper = GolangResponseWrapper("RSP_JSON", GeneralWrapper)
-    assert wrapper.proto_def_name == "RSP_JSON_GeneralWrapper[T any]"
-    assert wrapper.generic_types(True) == "[T any]"
+def test_golang_response_envelope_preserves_generic_type_parameters():
+    envelope = GolangResponseEnvelope("RSP_JSON", CodeMessageDataEnvelope)
+    assert envelope.proto_def_name == "RSP_JSON_CodeMessageDataEnvelope[T any]"
+    assert envelope.generic_types(True) == "[T any]"
 
 
 def test_golang_writer_uses_go_safe_route_package_segments(tmp_path):
@@ -81,7 +81,7 @@ go 1.23.8
     provider_impl = output_dir / "providers" / "impl_provider.go"
     provider_context = output_dir / "providers" / "gen_context.go"
     provider_executor = output_dir / "providers" / "gen_executor.go"
-    route_file = output_dir / "routes" / "api" / "demo" / "gen_protos.go"
+    route_file = output_dir / "routes" / "api" / "demo" / "gen_types.go"
     expected_provider_import = f'providers "example.com/generated/{output_dir.name}/providers"'
 
     assert provider_file.is_file()
@@ -188,19 +188,19 @@ go 1.23.8
     writer.register(bp)
     writer.gen()
 
-    route_models = (output_dir / "routes" / "api" / "demo" / "gen_protos.go").read_text(
+    route_models = (output_dir / "routes" / "api" / "demo" / "gen_types.go").read_text(
         encoding="utf-8"
     )
     shared_models = (
         output_dir
         / "routes"
         / "api"
-        / "_gen_protos"
-        / "protos.go"
+        / "_gen_types"
+        / "types.go"
     ).read_text(encoding="utf-8")
     assert "type REQ_Submit_QUERY struct" in route_models
-    assert "type REQ_Submit_JSON = protos.SubmitJson" in route_models
-    assert "type RSP_Submit_BODY = protos.SubmitResponse" in route_models
+    assert "type REQ_Submit_JSON = types.SubmitJson" in route_models
+    assert "type RSP_Submit_BODY = types.SubmitResponse" in route_models
     assert "type SubmitJson struct" in shared_models
     assert "type SubmitResponse struct" in shared_models
 
@@ -280,7 +280,7 @@ content-encoding: identity,gzip
     binary_runtime = (output_dir / "runtime" / "binary" / "gen_runtime.go").read_text(
         encoding="utf-8"
     )
-    route_models = (output_dir / "routes" / "api" / "demo" / "gen_protos.go").read_text(
+    route_models = (output_dir / "routes" / "api" / "demo" / "gen_types.go").read_text(
         encoding="utf-8"
     )
     req_provider = (output_dir / "providers" / "gen_req.go").read_text(encoding="utf-8")
@@ -319,7 +319,7 @@ content-encoding: identity,gzip
     assert 'strings.Contains(data, "B")' in req_provider
     assert "gzip.NewReader" in http_runtime
     assert "decoder.DecodeBinary(reader)" in http_runtime
-    assert '"req=QB|handle|rsp=json@NoneWrapper"' in http_route
+    assert '"req=QB|handle|rsp=json@CodeMessageDataEnvelope"' in http_route
 
     if shutil.which("go") is None:
         pytest.skip("go toolchain is not available")
@@ -552,7 +552,7 @@ go 1.23.8
     writer.gen()
 
     core_interface = (output_dir / "routes" / "api" / "runs" / "gen_interface.go").read_text(encoding="utf-8")
-    core_models = (output_dir / "routes" / "api" / "runs" / "gen_protos.go").read_text(encoding="utf-8")
+    core_models = (output_dir / "routes" / "api" / "runs" / "gen_types.go").read_text(encoding="utf-8")
     provider_connection = (output_dir / "providers" / "gen_connection.go").read_text(encoding="utf-8")
     http_adapter = (output_dir / "transports" / "http" / "api" / "runs" / "gen_interface.go").read_text(encoding="utf-8")
     impl = (output_dir / "routes" / "api" / "runs" / "impl.go").read_text(encoding="utf-8")
@@ -573,8 +573,8 @@ go 1.23.8
         in core_interface
     )
     assert "type TaskStreamMessage struct" in core_models
-    assert "type CLOSE_Events = protos.DefaultConnectionClose" in core_models
-    assert "type CLOSE_Chat = protos.DefaultConnectionClose" in core_models
+    assert "type CLOSE_Events = types.DefaultConnectionClose" in core_models
+    assert "type CLOSE_Chat = types.DefaultConnectionClose" in core_models
     assert 'const TaskStreamMessageTypeState = "state"' in core_models
     assert "type Stream[O, S, CL any] interface" in provider_connection
     assert "Close(*CL) error" in provider_connection
@@ -661,7 +661,7 @@ go 1.23.8
     )
     assert 'Root:      "static"' in route_adapter
     assert 'RouteID:   "static.static.get.doc"' in route_adapter
-    assert '"req|cache=ttl=60s|handle|rsp=json@NoneWrapper"' in route_adapter
+    assert '"req|cache=ttl=60s|handle|rsp=json@CodeMessageDataEnvelope"' in route_adapter
 
 
 def test_golang_route_aware_provider_factory_runs_at_executor_creation(tmp_path):
@@ -826,7 +826,7 @@ go 1.23.8
     with bp.group("/demo") as views:
         views.GET("/ping").RSP()
 
-    stale_catalog = output_dir / "runtime" / "errors" / "gen_error_catalog.go"
+    stale_catalog = output_dir / "runtime" / "errors" / "gen_error_lookup.go"
     stale_catalog.parent.mkdir(parents=True)
     stale_catalog.write_text(
         "// Code generated by api-blueprint (Golang); DO NOT EDIT.\n\npackage errors\n\nvar CatalogByID = map[string]CatalogEntry{}\n",
@@ -839,18 +839,24 @@ go 1.23.8
 
     group_errors = (output_dir / "runtime" / "errors" / "used_err" / "gen_errors.go").read_text(encoding="utf-8")
     runtime_errors = (output_dir / "runtime" / "errors" / "gen_errors.go").read_text(encoding="utf-8")
-    assert "BOOM = e.NewCatalogError(" in group_errors
+    assert "BOOM = e.NewApiError(e.ErrorMeta{" in group_errors
+    assert 'ID:      "UsedErr.BOOM",' in group_errors
+    assert 'Group:   "UsedErr",' in group_errors
+    assert 'Key:     "BOOM",' in group_errors
     assert "e.ToastSpec{\n" in group_errors
     assert 'Key:     "demo.boom",' in group_errors
     assert 'Default: "操作失败，请稍后再试",' in group_errors
-    assert "type CodeError interface" in runtime_errors
+    assert "type ApiError struct" in runtime_errors
+    assert "type ErrorMeta struct" in runtime_errors
+    assert "type ApiErrorPayload struct" in runtime_errors
+    assert "type ApiErrorCodeCarrier interface" in runtime_errors
     assert "type ToastProvider interface" in runtime_errors
-    assert "func (e Error) WithToast(toast ToastPayload) *Error" in runtime_errors
+    assert "func (e ApiError) WithToast(toast ToastPayload) *ApiError" in runtime_errors
     assert "CatalogByID" not in runtime_errors
     assert "CatalogEntry" not in runtime_errors
     assert "\\u64cd" not in group_errors
     assert (output_dir / "runtime" / "errors" / "errors.go").is_file()
-    assert not (output_dir / "runtime" / "errors" / "gen_error_catalog.go").exists()
+    assert not (output_dir / "runtime" / "errors" / "gen_error_lookup.go").exists()
     assert not (output_dir / "runtime" / "errors" / "unused_err").exists()
 
     if shutil.which("go") is not None:
@@ -861,10 +867,17 @@ package errors
 import "testing"
 
 func TestWithToastDoesNotMutateOriginal(t *testing.T) {
-	original := NewCatalogError("UsedErr.BOOM", "BOOM", 1001, "boom", ToastSpec{
-		Key:     "demo.boom",
-		Level:   "warning",
-		Default: "操作失败，请稍后再试",
+	original := NewApiError(ErrorMeta{
+		ID:      "UsedErr.BOOM",
+		Group:   "UsedErr",
+		Key:     "BOOM",
+		Code:    1001,
+		Message: "boom",
+		Toast: ToastSpec{
+			Key:     "demo.boom",
+			Level:   "warning",
+			Default: "操作失败，请稍后再试",
+		},
 	})
 	override := original.WithToast(ToastPayload{
 		Key:  "demo.boom.enterprise",

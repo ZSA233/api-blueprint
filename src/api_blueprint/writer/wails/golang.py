@@ -9,14 +9,14 @@ from typing import IO, TYPE_CHECKING, Generator, Optional, Set
 from api_blueprint.engine.group import RouterGroup
 from api_blueprint.engine.router import Router
 from api_blueprint.engine.utils import join_path_imports
-from api_blueprint.engine.wrapper import NoneWrapper
+from api_blueprint.engine.envelope import NoEnvelope
 from api_blueprint.writer.core.base import BaseBlueprint, BaseWriter
 from api_blueprint.writer.core.contract_adapters import RouteContractIndex, RouteProtocolContract, route_protocol_from_router
 from api_blueprint.writer.core.files import ensure_filepath_open
 from api_blueprint.writer.core.templates import render
 from api_blueprint.writer.golang.common import PackageName, internal_codegen_dir
 from api_blueprint.writer.golang.naming import to_go_package_path
-from api_blueprint.writer.golang.protos import GolangPackageLayout, GolangProto, GolangResponseWrapper, ensure_model
+from api_blueprint.writer.golang.protos import GolangPackageLayout, GolangProto, GolangResponseEnvelope, ensure_model
 from api_blueprint.writer.golang.route_view import GoRouteProtocolView
 from api_blueprint.writer.golang.toolchain import GolangToolchain
 
@@ -46,7 +46,7 @@ class WailsRouter:
         self.protocol = protocol or route_protocol_from_router(router)
         self.go = GoRouteProtocolView(router, protocol=self.protocol)
         self.contract = self.protocol.route
-        self.json_wrapper = GolangResponseWrapper("RSP_JSON", self.protocol.response.wrapper)
+        self.json_envelope = GolangResponseEnvelope("RSP_JSON", self.protocol.response.envelope)
 
     @property
     def func_name(self) -> str:
@@ -295,24 +295,24 @@ class WailsRouter:
         return self.is_text_response and not self.is_xml_response
 
     @property
-    def response_wrapper_name(self) -> str:
-        return self.protocol.response.wrapper.__name__
+    def response_envelope_name(self) -> str:
+        return self.protocol.response.envelope.__name__
 
     @property
     def has_wrapped_json_response(self) -> bool:
-        return self.is_json_response and self.protocol.response.wrapper is not NoneWrapper
+        return self.is_json_response and self.protocol.response.envelope is not NoEnvelope
 
     @property
     def service_response_type_expr(self) -> str:
         if self.has_wrapped_json_response:
-            return self.json_wrapper.type_reference(self.rsp_type, package="sharedprovider")
+            return self.json_envelope.type_reference(self.rsp_type, package="sharedprovider")
         if self.is_json_response:
             return f"*{self.rsp_type}"
         return "string"
 
     @property
     def shared_json_wrap_call(self) -> str:
-        return f"sharedprovider.WrapRSP_JSON_{self.response_wrapper_name}(response, invokeErr)"
+        return f"sharedprovider.WrapRSP_JSON_{self.response_envelope_name}(response, invokeErr)"
 
 
 class WailsRouterGroup:
@@ -391,12 +391,12 @@ class WailsBlueprint(BaseBlueprint["WailsGoWriter"]):
         return join_path_imports(self.writer.shared_routes_imports, self.package)
 
     @property
-    def shared_protos_imports(self) -> str:
+    def shared_types_imports(self) -> str:
         return join_path_imports(self.shared_root_imports, internal_codegen_dir(PackageName.COM_PROTOS))
 
     def shared_common_proto_ref(self, model: object) -> str:
         proto = GolangProto.from_model(ensure_model(model))
-        return f"sharedprotos.{proto.name}"
+        return f"sharedtypes.{proto.name}"
 
     def protocol_for_router(self, router: Router) -> RouteProtocolContract:
         return self.writer.route_protocol_for(router)

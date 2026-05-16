@@ -16,7 +16,7 @@ class KotlinRuntimePlan:
     directory: Path
     generated_files: tuple[tuple[str, str], ...]
     user_files: tuple[tuple[str, str], ...]
-    models_file: Path
+    types_file: Path
     shared_protos: tuple[KotlinProto, ...]
     binary_runtime_file: Path
 
@@ -32,10 +32,10 @@ class KotlinHttpTransportPlan:
 class KotlinRouteGroupPlan:
     group: "KotlinApiGroup"
     directory: Path
-    models_file: Path
+    types_file: Path
     client_file: Path
     facade_file: Path
-    binary_file: Path
+    stale_binary_file: Path
     legacy_binary_directory: Path
     protos: tuple[KotlinProto, ...]
 
@@ -57,10 +57,10 @@ def build_kotlin_blueprint_plan(writer: "KotlinWriter", bp: "KotlinBlueprint") -
         KotlinRouteGroupPlan(
             group=group,
             directory=routes_dir / group.package_path,
-            models_file=routes_dir / group.package_path / f"Gen{group.class_name}Models.kt",
+            types_file=routes_dir / group.package_path / f"{group.class_name.removesuffix('Api')}Types.kt",
             client_file=routes_dir / group.package_path / f"Gen{group.class_name}.kt",
             facade_file=routes_dir / group.package_path / f"{group.class_name}.kt",
-            binary_file=routes_dir / group.package_path / "GenBinary.kt",
+            stale_binary_file=routes_dir / group.package_path / "GenBinary.kt",
             legacy_binary_directory=routes_dir / group.package_path / "binary",
             protos=tuple(bp.registry.filter(module=group.slug)),
         )
@@ -73,12 +73,12 @@ def build_kotlin_blueprint_plan(writer: "KotlinWriter", bp: "KotlinBlueprint") -
             generated_files=(
                 ("GenApiException.kt", "ApiException.kt"),
                 ("GenApiErrors.kt", "ApiErrors.kt"),
-                ("GenApiErrorCatalog.kt", "ApiErrorCatalog.kt"),
+                ("GenApiErrorLookup.kt", "ApiErrorLookup.kt"),
                 ("GenApiTransport.kt", "ApiTransport.kt"),
                 ("GenApiClient.kt", "GenApiClient.kt"),
             ),
             user_files=(("ApiClient.kt", "ApiClient.kt"),),
-            models_file=runtime_dir / "GenModels.kt",
+            types_file=runtime_dir / "ApiTypes.kt",
             shared_protos=tuple(bp.registry.filter(module="shared")),
             binary_runtime_file=runtime_dir / "binary" / "GenBinaryRuntime.kt",
         ),

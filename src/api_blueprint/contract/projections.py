@@ -427,7 +427,7 @@ def _artifact_for_route(
 
     if kind == "go-server":
         base = _join(out_dir, "routes", go_route_path)
-        files = [_join(base, "gen_interface.go"), _join(base, "gen_protos.go")]
+        files = [_join(base, "gen_interface.go"), _join(base, "gen_types.go")]
         if has_binary_schema:
             files.append(_join(base, "_gen_binary", "gen_binary.go"))
         import_root = _string(target.get("go_import_root")) or _string(target.get("module"))
@@ -437,20 +437,20 @@ def _artifact_for_route(
         base = _join(out_dir, "routes", go_route_path)
         transport_base = _join(out_dir, "transports", "http")
         files = [
-            _join(base, "gen_models.go"),
+            _join(base, "gen_types.go"),
             _join(base, "gen_client.go"),
             _join(base, "client.go"),
             _join(transport_base, "gen_transport.go"),
             _join(transport_base, "client.go"),
         ]
         if has_binary_schema:
-            files.append(_join(base, "_gen_binary", "gen_binary.go"))
+            files.append(_join(base, "gen_binary.go"))
         module = _string(target.get("go_import_root")) or _string(target.get("module"))
         if module:
             imports = [_join(module, "routes", go_route_path)]
     elif kind == "typescript-client":
         base = _join(out_dir, root, "routes", root, "" if root == group else group)
-        files = [_join(base, "client.ts"), _join(base, "models.ts")]
+        files = [_join(base, "client.ts"), _join(base, "types.ts")]
         if has_binary_schema:
             files.append(_join(base, "gen_binary.ts"))
         imports = [_posix_without_suffix(base)]
@@ -459,12 +459,10 @@ def _artifact_for_route(
         package_path = package.replace(".", "/")
         base = _join(out_dir, package_path, root, "routes", route_path)
         files = [
-            _join(base, f"Gen{pascal_group}ApiModels.kt"),
+            _join(base, f"{pascal_group}Types.kt"),
             _join(base, f"Gen{pascal_group}Api.kt"),
             _join(base, f"{pascal_group}Api.kt"),
         ]
-        if has_binary_schema:
-            files.append(_join(base, "GenBinary.kt"))
         if package:
             imports = [f"{package}.{root}.routes.{kotlin_route_package}.{pascal_group}Api"]
     elif kind == "java-client":
@@ -473,14 +471,12 @@ def _artifact_for_route(
         base = _join(out_dir, package_path, root, "routes", route_path)
         transport_base = _join(out_dir, package_path, root, "transports", "http")
         files = [
-            _join(base, f"Gen{pascal_group}ApiModels.java"),
+            _join(base, f"{pascal_group}Types.java"),
             _join(base, f"Gen{pascal_group}Api.java"),
             _join(base, f"{pascal_group}Api.java"),
             _join(transport_base, "GenJdkHttpApiTransport.java"),
             _join(transport_base, "HttpApiClient.java"),
         ]
-        if has_binary_schema:
-            files.append(_join(base, "GenBinary.java"))
         if package:
             imports = [f"{package}.{root}.routes.{kotlin_route_package}.{pascal_group}Api"]
     elif kind == "python-client":
@@ -490,6 +486,7 @@ def _artifact_for_route(
         transport_base = _join(out_dir, *package_parts, root, "transports", "http")
         files = [
             _join(base, "gen_client.py"),
+            _join(base, "gen_types.py"),
             _join(base, "client.py"),
             _join(transport_base, "gen_client.py"),
         ]
@@ -520,12 +517,11 @@ def _artifact_for_route(
         transport_base = _join(out_dir, package_path, root, "transports", "http")
         files = [
             _join(route_base, f"Gen{pascal_group}Service.java"),
-            _join(route_base, f"Gen{pascal_group}ServiceStub.java"),
+            _join(route_base, f"{pascal_group}Types.java"),
+            _join(route_base, f"{pascal_group}ServiceStub.java"),
             _join(route_base, f"{pascal_group}Service.java"),
             _join(transport_base, route_path, f"Gen{pascal_group}Controller.java"),
         ]
-        if has_binary_schema:
-            files.append(_join(route_base, "GenBinary.java"))
         if package:
             imports = [
                 f"{package}.{root}.routes.{kotlin_route_package}.{pascal_group}Service",

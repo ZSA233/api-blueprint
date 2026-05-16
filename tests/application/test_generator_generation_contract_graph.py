@@ -70,7 +70,7 @@ module = "example.com/generated"
 
     generator.generate(config_path, target_ids=("go.server",))
 
-    assert (tmp_path / "golang" / "routes" / "api" / "demo" / "gen_protos.go").is_file()
+    assert (tmp_path / "golang" / "routes" / "api" / "demo" / "gen_types.go").is_file()
 
 
 def test_vnext_generate_typescript_uses_contract_graph_adapter(

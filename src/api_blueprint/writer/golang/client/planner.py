@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from typing import Any, Mapping, Sequence
 
 from api_blueprint.writer.core.go_naming import to_go_exported_name, to_go_package_name, to_go_package_path
+from api_blueprint.writer.core.sdk_names import RoutePublicNames
 
 from .binary_schema import GoClientBinarySchema, unique_go_client_binary_schemas
 
@@ -17,7 +19,39 @@ class GoClientRoute:
 
     @property
     def operation(self) -> str:
-        return to_go_exported_name(str(self.route.get("operation") or "Call"), fallback="Call")
+        return self.public_names.operation
+
+    @property
+    def public_names(self) -> RoutePublicNames:
+        return RoutePublicNames.from_operation(self.route.get("operation"), fallback="Call")
+
+    @property
+    def query_type(self) -> str:
+        return self.public_names.query
+
+    @property
+    def json_type(self) -> str:
+        return self.public_names.json
+
+    @property
+    def form_type(self) -> str:
+        return self.public_names.form
+
+    @property
+    def binary_type(self) -> str:
+        return self.public_names.binary
+
+    @property
+    def open_type(self) -> str:
+        return self.public_names.open
+
+    @property
+    def close_type(self) -> str:
+        return self.public_names.close
+
+    @property
+    def response_type(self) -> str:
+        return self.public_names.response
 
     @property
     def method(self) -> str:
@@ -54,9 +88,40 @@ class GoClientRoute:
         return connection if isinstance(connection, Mapping) else {}
 
     @property
-    def response_wrapper(self) -> str:
-        wrapper = self.response.get("wrapper")
-        return str(wrapper or "NoneWrapper")
+    def response_envelope(self) -> Mapping[str, Any]:
+        envelope = self.response.get("envelope")
+        if isinstance(envelope, Mapping):
+            return envelope
+        return {
+            "name": "NoEnvelope",
+            "kind": "none",
+            "error_identity": "none",
+            "success_code": 0,
+            "success_message": "ok",
+            "fields": {},
+        }
+
+    @property
+    def response_envelope_go_literal(self) -> str:
+        spec = self.response_envelope
+        fields = spec.get("fields")
+        field_map = fields if isinstance(fields, Mapping) else {}
+        return (
+            "runtime.ApiResponseEnvelope{"
+            f"Name: {_code_literal(str(spec.get('name') or 'NoEnvelope'))}, "
+            f"Kind: {_code_literal(str(spec.get('kind') or 'none'))}, "
+            f"ErrorIdentity: {_code_literal(str(spec.get('error_identity') or 'none'))}, "
+            f"SuccessCode: runtime.ApiErrorCode({int(spec.get('success_code') or 0)}), "
+            f"SuccessMessage: {_code_literal(str(spec.get('success_message') or 'ok'))}, "
+            "Fields: runtime.ApiResponseEnvelopeFields{"
+            f"Code: {_code_literal(str(field_map.get('code') or 'code'))}, "
+            f"Message: {_code_literal(str(field_map.get('message') or 'message'))}, "
+            f"Data: {_code_literal(str(field_map.get('data') or 'data'))}, "
+            f"Error: {_code_literal(str(field_map.get('error') or 'error'))}, "
+            f"Ok: {_code_literal(str(field_map.get('ok') or 'ok'))}, "
+            "}, "
+            "}"
+        )
 
     @property
     def binary_schema(self) -> Mapping[str, Any] | None:
@@ -107,3 +172,7 @@ def build_go_client_groups(
 def _service_root(route: Mapping[str, Any]) -> str:
     service_id = str(route.get("service_id") or "api")
     return service_id.split(".", 1)[0]
+
+
+def _code_literal(value: object) -> str:
+    return json.dumps(value, ensure_ascii=False)

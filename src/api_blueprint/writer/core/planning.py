@@ -19,7 +19,7 @@ class TargetCapability:
     routes: tuple[str, ...] = ()
     ignored_routes: tuple[str, ...] = ()
     requests: tuple[str, ...] = ()
-    wrappers: tuple[str, ...] = ()
+    envelopes: tuple[str, ...] = ()
     reserved: bool = False
     transport: str | None = None
     outputs: tuple[str, ...] = ()
@@ -32,8 +32,8 @@ class TargetCapability:
             manifest["ignored_routes"] = list(self.ignored_routes)
         if self.requests:
             manifest["requests"] = list(self.requests)
-        if self.wrappers:
-            manifest["wrappers"] = list(self.wrappers)
+        if self.envelopes:
+            manifest["envelopes"] = list(self.envelopes)
         if self.reserved:
             manifest["reserved"] = True
         if self.transport is not None:
@@ -53,53 +53,53 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
         implemented=True,
         routes=("rpc", "legacy_ws", "stream", "channel"),
         requests=("query", "json", "form", "binary", "binary-schema", "open"),
-        wrappers=("none", "general", "custom"),
+        envelopes=("none", "code_message_data", "ok_data_error"),
     ),
     "go-client": TargetCapability(
         implemented=True,
         routes=("rpc", "legacy_ws", "stream", "channel"),
         requests=("query", "json", "form", "binary", "binary-schema", "open"),
-        wrappers=("none", "general", "custom"),
+        envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
     ),
     "typescript-client": TargetCapability(
         implemented=True,
         routes=("rpc", "legacy_ws", "stream", "channel"),
         requests=("query", "json", "form", "binary", "binary-schema", "open"),
-        wrappers=("none", "general", "custom"),
+        envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
     ),
     "kotlin-client": TargetCapability(
         implemented=True,
         routes=("rpc", "legacy_ws", "stream", "channel"),
         requests=("query", "json", "form", "binary", "binary-schema", "open"),
-        wrappers=("none", "general", "custom"),
+        envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
     ),
     "java-server": TargetCapability(
         implemented=True,
         routes=("rpc", "legacy_ws", "stream", "channel"),
         requests=("query", "json", "form", "binary", "binary-schema", "open"),
-        wrappers=("none", "general", "custom"),
+        envelopes=("none", "code_message_data", "ok_data_error"),
     ),
     "java-client": TargetCapability(
         implemented=True,
         routes=("rpc", "legacy_ws", "stream", "channel"),
         requests=("query", "json", "form", "binary", "binary-schema", "open"),
-        wrappers=("none", "general", "custom"),
+        envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
     ),
     "python-server": TargetCapability(
         implemented=True,
         routes=("rpc", "legacy_ws", "stream", "channel"),
         requests=("query", "json", "form", "binary", "open"),
-        wrappers=("none", "general", "custom"),
+        envelopes=("none", "code_message_data", "ok_data_error"),
     ),
     "python-client": TargetCapability(
         implemented=True,
         routes=("rpc", "legacy_ws", "stream", "channel"),
         requests=("query", "json", "form", "binary", "binary-schema", "open"),
-        wrappers=("none", "general", "custom"),
+        envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
     ),
     "http-transport": TargetCapability(implemented=True, routes=("rpc", "legacy_ws", "stream", "channel")),
@@ -203,19 +203,49 @@ def _route_capability_errors(
                 errors.append(f"{target.kind} does not support {request_kind} request route: {route_id}")
 
     response = route.get("response") or {}
-    if capability.wrappers and isinstance(response, Mapping):
-        wrapper = _wrapper_kind(response.get("wrapper"))
-        if wrapper not in capability.wrappers:
-            errors.append(f"{target.kind} does not support {wrapper} response wrapper route: {route_id}")
+    if capability.envelopes and isinstance(response, Mapping):
+        response_envelope = response.get("envelope")
+        envelope = _envelope_kind(response_envelope)
+        if envelope not in capability.envelopes:
+            errors.append(f"{target.kind} does not support {envelope} response envelope route: {route_id}")
+        if _envelope_error_identity(response_envelope) == "none":
+            duplicate_codes = _duplicate_route_error_codes(route)
+            if duplicate_codes:
+                rendered = ", ".join(str(code) for code in duplicate_codes)
+                errors.append(
+                    f"{target.kind} route {route_id} uses a no-id response envelope with duplicate error code(s): {rendered}"
+                )
     return errors
 
 
-def _wrapper_kind(wrapper: object) -> str:
-    if wrapper in {None, "NoneWrapper"}:
+def _envelope_kind(envelope: object) -> str:
+    if not isinstance(envelope, Mapping):
         return "none"
-    if wrapper == "GeneralWrapper":
-        return "general"
-    return "custom"
+    return str(envelope.get("kind") or "custom")
+
+
+def _envelope_error_identity(envelope: object) -> str:
+    if not isinstance(envelope, Mapping):
+        return "none"
+    return str(envelope.get("error_identity") or "nested")
+
+
+def _duplicate_route_error_codes(route: RouteManifest) -> tuple[int, ...]:
+    raw_errors = route.get("errors")
+    if not isinstance(raw_errors, list):
+        return ()
+    seen: set[int] = set()
+    duplicates: set[int] = set()
+    for raw_error in raw_errors:
+        if not isinstance(raw_error, Mapping):
+            continue
+        code = raw_error.get("code")
+        if not isinstance(code, int):
+            continue
+        if code in seen:
+            duplicates.add(code)
+        seen.add(code)
+    return tuple(sorted(duplicates))
 
 
 def _route_str(route: RouteManifest, key: str) -> str:

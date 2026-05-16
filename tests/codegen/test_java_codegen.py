@@ -55,7 +55,7 @@ def test_java_model_catalog_builds_record_fields_and_enum_metadata() -> None:
     assert schema.name == "Payload"
     assert [field.java_name for field in schema.fields] == ["userId", "scores", "kind"]
     assert [field.wire_name for field in schema.fields] == ["user_id", "scores", "kind"]
-    assert [field.java_type for field in schema.fields] == ["String", "List<Long>", "GenModels.WireEnum"]
+    assert [field.java_type for field in schema.fields] == ["String", "List<Long>", "ApiTypes.WireEnum"]
     assert enum_type.name == "WireEnum"
     assert [member.java_name for member in enum_type.values] == ["FIRST", "SECOND"]
     assert [member.literal for member in enum_type.values] == ['"first"', '"second"']
@@ -159,15 +159,14 @@ content-type: application/octet-stream
     server_writer.gen()
 
     runtime_text = (client_runtime_dir / "GenApiClient.java").read_text(encoding="utf-8")
-    models_text = (client_runtime_dir / "GenModels.java").read_text(encoding="utf-8")
-    catalog_text = (client_runtime_dir / "GenApiErrorCatalog.java").read_text(encoding="utf-8")
+    types_text = (client_runtime_dir / "ApiTypes.java").read_text(encoding="utf-8")
+    catalog_text = (client_runtime_dir / "ApiErrors.java").read_text(encoding="utf-8")
+    api_error_text = (client_runtime_dir / "ApiError.java").read_text(encoding="utf-8")
     route_text = (client_route_dir / "GenDemoApi.java").read_text(encoding="utf-8")
-    route_models_text = (client_route_dir / "GenDemoApiModels.java").read_text(encoding="utf-8")
+    route_types_text = (client_route_dir / "DemoTypes.java").read_text(encoding="utf-8")
     transport_text = (client_http_dir / "GenJdkHttpApiTransport.java").read_text(encoding="utf-8")
     config_text = (client_http_dir / "GenHttpApiConfig.java").read_text(encoding="utf-8")
-    binary_text = (
-        client_dir / package_root / "routes/api/binary/GenBinary.java"
-    ).read_text(encoding="utf-8")
+    binary_text = (client_dir / package_root / "routes/api/binary/BinaryTypes.java").read_text(encoding="utf-8")
     service_text = (server_route_dir / "GenDemoService.java").read_text(encoding="utf-8")
     controller_text = (
         server_dir / package_root / "transports/http/api/demo/GenDemoController.java"
@@ -175,10 +174,11 @@ content-type: application/octet-stream
 
     for generated_text in (
         runtime_text,
-        models_text,
+        types_text,
         catalog_text,
+        api_error_text,
         route_text,
-        route_models_text,
+        route_types_text,
         transport_text,
         config_text,
         binary_text,
@@ -192,17 +192,23 @@ content-type: application/octet-stream
     assert (client_http_dir / "HttpApiClient.java").read_text(encoding="utf-8") == "// USER HTTP FACADE\n"
     assert (server_route_dir / "DemoService.java").read_text(encoding="utf-8") == "// USER SERVICE\n"
 
-    assert "public record Result(" in models_text
-    assert '@JsonProperty("status") String status' in models_text
-    assert "public enum" not in route_models_text
-    assert "public record ReqPingQuery(" in route_models_text
-    assert '@JsonProperty("q") String q' in route_models_text
+    assert "public record Result(" in types_text
+    assert '@JsonProperty("status") String status' in types_text
+    assert "public enum" not in route_types_text
+    assert "public record PingQuery(" in route_types_text
+    assert '@JsonProperty("q") String q' in route_types_text
     assert "public class GenApiClient" in runtime_text
     assert "public final DemoApi demo;" in runtime_text
-    assert "public GenModels.Result ping(" in route_text
-    assert "GenDemoApiModels.ReqPingQuery query" in route_text
-    assert "GenModels.SubmitJson json" in route_text
-    assert "GenModels.FormPayload form" in route_text
+    assert "public ApiTypes.Result ping(" in route_text
+    assert "DemoTypes.PingQuery query" in route_text
+    assert "ApiTypes.SubmitJson json" in route_text
+    assert "ApiTypes.FormPayload form" in route_text
+    assert "BinaryTypes.DemoPacket binary" in (client_dir / package_root / "routes/api/binary/GenBinaryApi.java").read_text(
+        encoding="utf-8"
+    )
+    assert "BinaryTypes.DemoPacketWire.toBinaryBody(binary)" in (
+        client_dir / package_root / "routes/api/binary/GenBinaryApi.java"
+    ).read_text(encoding="utf-8")
     assert "ApiBinaryBody binaryBody" in (client_dir / package_root / "routes/api/binary/GenBinaryApi.java").read_text(
         encoding="utf-8"
     )
@@ -211,18 +217,23 @@ content-type: application/octet-stream
     assert "openChat(" in route_text
     assert "public class GenJdkHttpApiTransport implements ApiTransport" in transport_text
     assert "HttpClient.newHttpClient()" in transport_text
+    assert "throw new ApiError(payload" in transport_text
     assert "throw new ApiException(response.statusCode(), body)" in transport_text
     assert "UnsupportedOperationException" in (client_runtime_dir / "ApiTransport.java").read_text(encoding="utf-8")
     assert 'this("http://localhost:2333");' in config_text
     assert '"CommonErr.UNKNOWN"' in catalog_text
     assert "COMMONERR_TOKEN_EXPIRE" in catalog_text
+    assert "public final class ApiErrors" in catalog_text
+    assert "ROUTE_API_ERRORS_BY_CODE" in catalog_text
     assert '"登录状态已失效，请重新登录"' in catalog_text
+    assert "public class ApiError extends RuntimeException" in api_error_text
     assert "\\u767b" not in catalog_text
+    assert "public final class BinaryTypes" in binary_text
     assert "public record DemoPacket(ApiBinaryBody body)" in binary_text
     assert "public static final String CONTENT_TYPE = \"application/octet-stream\"" in binary_text
 
     assert "public interface GenDemoService" in service_text
-    assert "GenModels.Result ping(" in service_text
+    assert "ApiTypes.Result ping(" in service_text
     assert "Object ws(" in service_text
     assert "@RestController" in controller_text
     assert "@RequestMapping(path = \"/api/demo/ping\", method = RequestMethod.GET)" in controller_text

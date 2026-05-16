@@ -30,7 +30,7 @@ func newGeneratedApiService(impl RouterInterface, dispatcher wailstransport.Even
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req|auth|ws_handle|rsp=json@GeneralWrapper",
+			"req|auth|ws_handle|rsp=json@CodeMessageDataEnvelope",
 			impl.Ws,
 		),
 	}

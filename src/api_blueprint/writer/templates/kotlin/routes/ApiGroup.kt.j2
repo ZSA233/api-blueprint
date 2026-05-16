@@ -27,12 +27,9 @@ public open class Gen{{ group.class_name }} internal constructor(
 {%- endif %}
         headers: Map<String, String> = emptyMap(),
     ): {{ route.response_type.text }} {
-{%- if route.unwrap_general_wrapper %}
-        val envelope = transport.request(
-{%- else %}
         return transport.request(
-{%- endif %}
             ApiRequest(
+                routeId = "{{ route.protocol.route.route_id }}",
                 method = "{{ route.http_method }}",
                 path = "{{ route.url }}",
 {%- if route.query_type %}
@@ -52,14 +49,9 @@ public open class Gen{{ group.class_name }} internal constructor(
 {%- endif %}
                 responseSerializer = {{ route.response_serializer_expr }},
                 responseMediaType = "{{ route.response_media_type }}",
+                responseEnvelope = {{ route.response_envelope_literal | safe }},
             )
         )
-{%- if route.unwrap_general_wrapper %}
-        if (envelope.code != 0) {
-            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
-        }
-        return envelope.data ?: throw ApiException(200, "Missing response data for {{ route.url }}")
-{%- endif %}
     }
 {%- if route.has_binary_schema %}
 
@@ -70,12 +62,9 @@ public open class Gen{{ group.class_name }} internal constructor(
         binary: ApiBinaryBody,
         headers: Map<String, String> = emptyMap(),
     ): {{ route.response_type.text }} {
-{%- if route.unwrap_general_wrapper %}
-        val envelope = transport.request(
-{%- else %}
         return transport.request(
-{%- endif %}
             ApiRequest(
+                routeId = "{{ route.protocol.route.route_id }}",
                 method = "{{ route.http_method }}",
                 path = "{{ route.url }}",
 {%- if route.query_type %}
@@ -85,14 +74,9 @@ public open class Gen{{ group.class_name }} internal constructor(
                 binary = binary,
                 responseSerializer = {{ route.response_serializer_expr }},
                 responseMediaType = "{{ route.response_media_type }}",
+                responseEnvelope = {{ route.response_envelope_literal | safe }},
             )
         )
-{%- if route.unwrap_general_wrapper %}
-        if (envelope.code != 0) {
-            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
-        }
-        return envelope.data ?: throw ApiException(200, "Missing response data for {{ route.url }}")
-{%- endif %}
     }
 {%- endif %}
 {%- elif route.supports_ws %}

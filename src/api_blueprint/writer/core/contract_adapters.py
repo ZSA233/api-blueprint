@@ -15,7 +15,7 @@ from api_blueprint.engine.connection import (
 from api_blueprint.engine.binary_schema import BinarySchema
 from api_blueprint.engine.router import Router
 from api_blueprint.engine.utils import snake_to_pascal_case
-from api_blueprint.engine.wrapper import NoneWrapper, ResponseWrapper
+from api_blueprint.engine.envelope import NoEnvelope, ResponseEnvelope
 from api_blueprint.writer.core.contracts import ConnectionBridgeContract, RouteContract, WsBridgeContract, route_id_for_router
 
 if TYPE_CHECKING:
@@ -36,7 +36,7 @@ class RouteRuntimeSnapshot:
     open_model: ModelRef | None
     response_model: ModelRef | None
     response_media_type: str
-    response_wrapper: type[ResponseWrapper]
+    response_envelope: type[ResponseEnvelope]
     recvs: tuple[ModelRef, ...]
     sends: tuple[ModelRef, ...]
     server_message: MessageContract | None
@@ -64,7 +64,7 @@ class RouteRequestContract:
 class RouteResponseContract:
     media_type: str
     model: RouteModelSlot
-    wrapper: type[ResponseWrapper]
+    envelope: type[ResponseEnvelope]
 
 
 @dataclass(frozen=True)
@@ -266,7 +266,7 @@ def _route_protocol_from_contract(
         response=RouteResponseContract(
             media_type=str(response_manifest.get("media_type") or runtime.response_media_type or "application/json"),
             model=RouteModelSlot(_optional_str(response_manifest.get("model")), runtime.response_model),
-            wrapper=runtime.response_wrapper or NoneWrapper,
+            envelope=runtime.response_envelope or NoEnvelope,
         ),
         recvs=tuple(runtime.recvs),
         sends=tuple(runtime.sends),
@@ -286,7 +286,7 @@ def _runtime_from_router(router: Router) -> RouteRuntimeSnapshot:
         open_model=router.open_model,
         response_model=router.rsp_model,
         response_media_type=router.rsp_media_type,
-        response_wrapper=router.response_wrapper,
+        response_envelope=router.response_envelope,
         recvs=tuple(router.recvs),
         sends=tuple(router.sends),
         server_message=router.server_message,

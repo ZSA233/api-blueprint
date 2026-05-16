@@ -90,6 +90,9 @@ WAILS_HELLO_GOLANG_PRESERVED = (
 WAILS_HELLO_TYPESCRIPT_PRESERVED = ("tsconfig.json",)
 GRPC_GO_PRESERVED = ("go.mod", "go.sum")
 GRPC_PYTHON_PRESERVED = ()
+EXAMPLE_SNAPSHOT_IGNORES: Mapping[str, frozenset[str]] = {
+    "blueprint/java/suite": frozenset((".gradle", "bin", "build")),
+}
 
 
 class ExampleValidationError(RuntimeError):
@@ -569,6 +572,7 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         "go_http_adapter": workspace.golang_server_dir / "views" / "transports" / "http" / "api" / "demo" / "gen_interface.go",
         "go_client_route": workspace.golang_client_dir / "routes" / "api" / "demo" / "gen_client.go",
         "go_client_http": workspace.golang_client_dir / "transports" / "http" / "gen_transport.go",
+        "go_error_lookup": workspace.golang_client_dir / "runtime" / "gen_error_lookup.go",
         "go_wails_v3_service": workspace.golang_server_dir
         / "views"
         / "transports"
@@ -586,8 +590,24 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         / "transports"
         / "wailsv3"
         / "gen_bindings.ts",
+        "index": workspace.root / "api-blueprint.index.json",
         "ts_route_client": workspace.typescript_dir / "api" / "routes" / "api" / "demo" / "gen_client.ts",
-        "ts_route_models": workspace.typescript_dir / "api" / "routes" / "api" / "demo" / "gen_models.ts",
+        "ts_route_types": workspace.typescript_dir / "api" / "routes" / "api" / "demo" / "gen_types.ts",
+        "ts_error_lookup": workspace.typescript_dir / "api" / "runtime" / "gen_error_lookup.ts",
+        "python_binary_route": workspace.python_dir
+        / "client"
+        / "api_blueprint_example_client"
+        / "api"
+        / "routes"
+        / "api"
+        / "binary"
+        / "gen_types.py",
+        "python_error_lookup": workspace.python_dir
+        / "client"
+        / "api_blueprint_example_client"
+        / "api"
+        / "runtime"
+        / "gen_error_lookup.py",
     }
     missing_files = [label for label, path in files.items() if not path.is_file()]
     if missing_files:
@@ -613,6 +633,18 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
             "serverMessage, err := NewSweepStreamMessageState(&serverData)",
         ),
         "go channel manual example": (files["go_route_impl"], "clientMessage, err := channel.Recv(ctx)"),
+        "go typed error return example": (files["go_route_impl"], "return nil, demo_err.RATE_LIMITED.WithToast("),
+        "go typed error dynamic toast": (files["go_route_impl"], 'Text:    "请等待 30 秒后重试",'),
+        "go unknown typed error example": (
+            files["go_route_impl"],
+            'return nil, apperrors.New(70001, "example undefined business error")',
+        ),
+        "go error demo client": (files["go_client_route"], "ErrorDemo("),
+        "go error demo route lookup": (
+            files["go_error_lookup"],
+            'DemoErrRateLimited:   ApiErrorsByID["DemoErr.RATE_LIMITED"],',
+        ),
+        "go error demo constant": (files["go_error_lookup"], "DemoErrRateLimited   ApiErrorCode = 42901"),
         "go client unsupported connection": (files["go_client_http"], "UnsupportedConnectionError"),
         "http stream adapter": (files["go_http_adapter"], "httptransport.STREAM("),
         "http channel adapter": (files["go_http_adapter"], "httptransport.CHANNEL("),
@@ -626,15 +658,21 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         ),
         "typescript stream client": (files["ts_route_client"], "subscribeSweepEvents("),
         "typescript channel client": (files["ts_route_client"], "openAssistantSession("),
+        "typescript error demo client": (files["ts_route_client"], "errorDemo("),
+        "typescript error demo constant": (files["ts_error_lookup"], "export const DemoErr = {"),
+        "typescript error demo route lookup": (
+            files["ts_error_lookup"],
+            '"42901": ApiErrorsByID["DemoErr.RATE_LIMITED"],',
+        ),
         "typescript stream union": (
-            files["ts_route_models"],
+            files["ts_route_types"],
             "export type SweepStreamMessage =\n"
             '  | { type: "state"; data: SweepState }\n'
             '  | { type: "progress"; data: SweepProgress }\n'
             '  | { type: "log"; data: SweepLog };',
         ),
         "typescript channel union": (
-            files["ts_route_models"],
+            files["ts_route_types"],
             "export type AssistantClientMessage =\n"
             '  | { type: "input"; data: AssistantInput }\n'
             '  | { type: "cancel"; data: AssistantCancel };',
@@ -647,6 +685,11 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
             files["ts_wails_v3_bindings"],
             '"demo.DemoService.OpenAssistantSession": "example.com/project/golang/server/views/transports/wailsv3/api/demo.DemoService.OpenAssistantSession",',
         ),
+        "index error demo route": (files["index"], '"id": "api.demo.get.errordemo"'),
+        "index error demo url": (files["index"], '"url": "/api/demo/error-demo"'),
+        "python binary public types export": (files["python_binary_route"], "from .gen_binary import *"),
+        "python error demo constant": (files["python_error_lookup"], "class DemoErr:"),
+        "python error demo route lookup": (files["python_error_lookup"], '42901: API_ERRORS_BY_ID["DemoErr.RATE_LIMITED"],'),
     }
     validation_errors = []
     for label, (path, snippet) in checks.items():
@@ -656,7 +699,10 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         "http stream explicit type args": (files["go_http_adapter"], "httptransport.STREAM["),
         "http channel explicit type args": (files["go_http_adapter"], "httptransport.CHANNEL["),
         "wails envelope explicit type args": (files["go_wails_v3_service"], "wailstransport.EnvelopeToReq["),
-        "wails response wrapper explicit type args": (files["go_wails_v3_service"], "WrapRSP_JSON_GeneralWrapper["),
+        "wails response envelope explicit type args": (
+            files["go_wails_v3_service"],
+            "WrapRSP_JSON_CodeMessageDataEnvelope[",
+        ),
         "inline wails v3 bindings manifest": (files["ts_wails_v3_transport"], "const WAILS_V3_BINDINGS"),
         "generated stream scaffold": (
             files["go_route_gen_impl"],
@@ -841,12 +887,12 @@ def _validate_kotlin_sources(kotlin_dir: Path) -> None:
         "com/example/apiblueprint/api/runtime/GenApiClient.kt",
         "com/example/apiblueprint/api/runtime/GenApiException.kt",
         "com/example/apiblueprint/api/runtime/GenApiTransport.kt",
-        "com/example/apiblueprint/api/runtime/GenModels.kt",
+        "com/example/apiblueprint/api/runtime/ApiTypes.kt",
         "com/example/apiblueprint/api/routes/api/demo/DemoApi.kt",
         "com/example/apiblueprint/api/routes/api/demo/GenDemoApi.kt",
-        "com/example/apiblueprint/api/routes/api/demo/GenDemoApiModels.kt",
+        "com/example/apiblueprint/api/routes/api/demo/DemoTypes.kt",
         "com/example/apiblueprint/api/routes/api/hello/GenHelloApi.kt",
-        "com/example/apiblueprint/api/routes/api/hello/GenHelloApiModels.kt",
+        "com/example/apiblueprint/api/routes/api/hello/HelloTypes.kt",
         "com/example/apiblueprint/api/routes/api/hello/HelloApi.kt",
         "com/example/apiblueprint/api/transports/http/GenHttpApiConfig.kt",
         "com/example/apiblueprint/api/transports/http/GenOkHttpApiTransport.kt",
@@ -856,11 +902,11 @@ def _validate_kotlin_sources(kotlin_dir: Path) -> None:
     if missing:
         raise ExampleValidationError("kotlin example missing generated files:\n" + "\n".join(missing))
 
-    models = (kotlin_dir / "com/example/apiblueprint/api/runtime/GenModels.kt").read_text(encoding="utf-8")
-    demo_models = (kotlin_dir / "com/example/apiblueprint/api/routes/api/demo/GenDemoApiModels.kt").read_text(
+    types = (kotlin_dir / "com/example/apiblueprint/api/runtime/ApiTypes.kt").read_text(encoding="utf-8")
+    demo_types = (kotlin_dir / "com/example/apiblueprint/api/routes/api/demo/DemoTypes.kt").read_text(
         encoding="utf-8"
     )
-    hello_models = (kotlin_dir / "com/example/apiblueprint/api/routes/api/hello/GenHelloApiModels.kt").read_text(
+    hello_types = (kotlin_dir / "com/example/apiblueprint/api/routes/api/hello/HelloTypes.kt").read_text(
         encoding="utf-8"
     )
     demo_api = (kotlin_dir / "com/example/apiblueprint/api/routes/api/demo/GenDemoApi.kt").read_text(encoding="utf-8")
@@ -877,11 +923,12 @@ def _validate_kotlin_sources(kotlin_dir: Path) -> None:
         "@Serializable(with = StatusEnumSerializer::class)",
         "public open suspend fun abc",
         "path = \"/api/demo/abc\"",
-        "responseSerializer = GeneralResponse.serializer(MapSerializer(String.serializer(), ApiHelloMap.serializer()))",
+        "responseSerializer = MapSerializer(String.serializer(), ApiHelloMap.serializer())",
+        'responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data"',
         '"type" to type.wireValue.toString()',
         "public open suspend fun helloWay",
     )
-    haystack = "\n".join((models, demo_api, hello_api, demo_models, hello_models))
+    haystack = "\n".join((types, demo_api, hello_api, demo_types, hello_types))
     missing_snippets = [snippet for snippet in required_snippets if snippet not in haystack]
     if missing_snippets:
         raise ExampleValidationError("kotlin example missing expected snippets:\n" + "\n".join(missing_snippets))
@@ -894,12 +941,13 @@ def _validate_java_sources(java_dir: Path) -> None:
         "client/com/example/apiblueprint/api/runtime/GenApiClient.java",
         "client/com/example/apiblueprint/api/routes/api/demo/DemoApi.java",
         "client/com/example/apiblueprint/api/routes/api/demo/GenDemoApi.java",
-        "client/com/example/apiblueprint/api/routes/api/demo/GenDemoApiModels.java",
+        "client/com/example/apiblueprint/api/routes/api/demo/DemoTypes.java",
         "client/com/example/apiblueprint/api/transports/http/GenJdkHttpApiTransport.java",
         "client/com/example/apiblueprint/api/transports/http/HttpApiClient.java",
         "server/com/example/apiblueprint/api/routes/api/demo/DemoService.java",
         "server/com/example/apiblueprint/api/routes/api/demo/GenDemoService.java",
-        "server/com/example/apiblueprint/api/routes/api/demo/GenDemoServiceModels.java",
+        "server/com/example/apiblueprint/api/routes/api/demo/DemoTypes.java",
+        "server/com/example/apiblueprint/api/routes/api/demo/DemoServiceStub.java",
         "server/com/example/apiblueprint/api/transports/http/api/demo/GenDemoController.java",
     )
     missing = [path for path in expected if not (java_dir / path).is_file()]
@@ -909,7 +957,7 @@ def _validate_java_sources(java_dir: Path) -> None:
     snippets = {
         "client route": (
             java_dir / "client/com/example/apiblueprint/api/routes/api/demo/GenDemoApi.java",
-            "public GenModels.ApiDemoA abc(",
+            "public ApiTypes.ApiDemoA abc(",
         ),
         "client transport": (
             java_dir / "client/com/example/apiblueprint/api/transports/http/GenJdkHttpApiTransport.java",
@@ -923,12 +971,12 @@ def _validate_java_sources(java_dir: Path) -> None:
             java_dir / "server/com/example/apiblueprint/api/transports/http/api/demo/GenDemoController.java",
             "@RestController",
         ),
-        "error catalog": (
-            java_dir / "client/com/example/apiblueprint/api/runtime/GenApiErrorCatalog.java",
+        "api error lookup": (
+            java_dir / "client/com/example/apiblueprint/api/runtime/ApiErrors.java",
             "COMMONERR_TOKEN_EXPIRE",
         ),
         "binary schema": (
-            java_dir / "client/com/example/apiblueprint/api/routes/api/binary/GenBinary.java",
+            java_dir / "client/com/example/apiblueprint/api/routes/api/binary/BinaryTypes.java",
             "DemoPacketWire",
         ),
     }
@@ -1247,11 +1295,16 @@ def refresh_examples(repo_root: Path, scope: ExampleValidationScope = ExampleVal
 def _collect_dir_diff(expected: Path, actual: Path, prefix: str = "") -> list[str]:
     comparison = filecmp.dircmp(expected, actual)
     label = prefix or expected.name
-    problems = [f"{label}: missing {name}" for name in comparison.left_only]
-    problems += [f"{label}: unexpected {name}" for name in comparison.right_only]
+    ignored = EXAMPLE_SNAPSHOT_IGNORES.get(label, frozenset())
+    left_only = [name for name in comparison.left_only if name not in ignored]
+    right_only = [name for name in comparison.right_only if name not in ignored]
+    problems = [f"{label}: missing {name}" for name in left_only]
+    problems += [f"{label}: unexpected {name}" for name in right_only]
     problems += [f"{label}: changed {name}" for name in comparison.diff_files]
     problems += [f"{label}: unreadable {name}" for name in comparison.funny_files]
     for child in comparison.common_dirs:
+        if child in ignored:
+            continue
         child_prefix = f"{label}/{child}" if label else child
         problems.extend(_collect_dir_diff(expected / child, actual / child, child_prefix))
     return problems

@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from api_blueprint.engine import Blueprint, reset_shared_app
+from api_blueprint.engine.model import String
 
 
 def test_example_blueprints_build_into_shared_fastapi_app(example_entrypoints):
@@ -20,12 +21,13 @@ def test_example_blueprints_build_into_shared_fastapi_app(example_entrypoints):
     assert "/redoc" in paths
     assert "/openapi.json" in paths
     assert "/api/demo/abc" in paths
+    assert "/api/demo/error-demo" in paths
     assert "/api/demo/sweep-events" in paths
     assert "/api/demo/assistant-session" in paths
     assert "/api/binary/packet" in paths
     assert "/api/hello/hello-way" in paths
     assert "/static/doc.json" in paths
-    assert len(paths) == 25
+    assert len(paths) == 26
 
     openapi = app.openapi()
     assert "text/event-stream" in openapi["paths"]["/api/demo/sweep-events"]["get"]["responses"]["200"]["content"]
@@ -48,3 +50,23 @@ def test_explicit_fastapi_app_breaks_default_shared_app_behavior():
     assert bp_a.app is app_a
     assert bp_b.app is app_b
     assert bp_a.app is not bp_b.app
+
+
+def test_response_envelope_omitempty_fields_are_optional_in_openapi():
+    app = FastAPI()
+    bp = Blueprint(root="/api", app=app)
+    with bp.group("/demo") as views:
+        views.GET("/ping").RSP(message=String(description="message"))
+
+    bp.build()
+    openapi = app.openapi()
+    path_spec = openapi["paths"]["/api/demo/ping"]["get"]
+    response_schema = path_spec["responses"]["200"]["content"]["application/json"]["schema"]
+    rsp_schema_ref = response_schema["$ref"]
+    rsp_schema_name = rsp_schema_ref.rsplit("/", 1)[-1]
+    required = openapi["components"]["schemas"][rsp_schema_name]["required"]
+
+    assert "code" in required
+    assert "message" in required
+    assert "data" not in required
+    assert "error" not in required

@@ -7,13 +7,14 @@ option go_package = "example.com/project/grpc/go/api/demo;demo";
 service DemoService {
   rpc Abc (AbcRequest) returns (AbcResponse);
   rpc TestPost (TestPostRequest) returns (TestPostResponse);
-  rpc Z1put (Z1putRequest) returns (Z1putResponse);
+  rpc PutDemo (PutDemoRequest) returns (PutDemoResponse);
   rpc Delete (DeleteRequest) returns (DeleteResponse);
   rpc SweepEvents (SweepEventsRequest) returns (stream SweepStreamMessage);
   rpc AssistantSession (stream AssistantClientMessage) returns (stream AssistantServerMessage);
   rpc PostDeprecated (PostDeprecatedRequest) returns (PostDeprecatedResponse);
   rpc Raw (RawRequest) returns (RawResponse);
   rpc MapModel (MapModelRequest) returns (MapModelResponse);
+  rpc ErrorDemo (ErrorDemoRequest) returns (ErrorDemoResponse);
 }
 
 message AbcRequest {
@@ -52,7 +53,7 @@ message TestPostResponse {
   map<string, ApiDemoMap> map = 2;
 }
 
-message Z1putRequest {
+message PutDemoRequest {
   REQFunc1putQUERY query = 1;
   REQFunc1putJSON json = 2;
 }
@@ -68,7 +69,7 @@ message REQFunc1putJSON {
   int64 req2 = 2;
 }
 
-message Z1putResponse {
+message PutDemoResponse {
   repeated string list = 1;
   ANONFunc1putAnonKv anon_kv = 2;
 }
@@ -188,6 +189,14 @@ message MapModelRequest {
 
 message MapModelResponse {
   map<string, ApiDemoMap> value = 1;
+}
+
+message ErrorDemoRequest {
+  string mode = 1;
+}
+
+message ErrorDemoResponse {
+  string status = 1;
 }
 
 enum ColorEnum {

@@ -117,12 +117,19 @@ def test_python_client_generates_package_root_layout_and_preserves_user_files(tm
     assert "class ApiStreamBridge(Protocol" in runtime_text
     assert "class ApiChannelBridge(ApiStreamBridge" in runtime_text
     assert "ApiClientTransport" in route_text
+    types_text = (package_root / "routes" / "api" / "demo" / "gen_types.py").read_text(encoding="utf-8")
+
     assert "class DemoClient:" in route_text
+    assert "from .gen_types import (" in route_text
+    assert "class PingQuery:" in types_text
     assert "async def ping(" in route_text
-    assert "query: dict[str, Any] | None = None" in route_text
-    assert "return await self._transport.request(" in route_text
+    assert "query: PingQuery | Mapping[str, Any] | None = None" in route_text
+    assert "query=_to_mapping(query)" in route_text
+    assert "return _from_mapping(PingResponse, payload)" in route_text
     assert "class HttpClientTransport(ApiClientTransport):" in transport_text
     assert "async def request(" in transport_text
+    assert (package_root / "client.py").read_text(encoding="utf-8") == "from .gen_client import *\n"
+    assert "def create_client(" in (package_root / "gen_client.py").read_text(encoding="utf-8")
     assert user_client.read_text(encoding="utf-8") == "# user-owned client extension\n"
     _compile_generated_files(output_dir)
 
@@ -152,23 +159,29 @@ def test_python_client_and_server_generate_error_catalog_runtime(tmp_path: Path)
         client_dir / "api_blueprint_generated" / "api" / "runtime" / "gen_errors.py"
     ).read_text(encoding="utf-8")
     client_catalog = (
-        client_dir / "api_blueprint_generated" / "api" / "runtime" / "gen_error_catalog.py"
+        client_dir / "api_blueprint_generated" / "api" / "runtime" / "gen_error_lookup.py"
     ).read_text(encoding="utf-8")
     client_public_errors = (
         client_dir / "api_blueprint_generated" / "api" / "runtime" / "errors.py"
     ).read_text(encoding="utf-8")
-    assert "class ApiCodeError(Exception):" in client_errors
+    assert "class ApiError(Exception):" in client_errors
+    assert "class ApiErrorPayload:" in client_errors
+    assert "def is_api_error(" in client_errors
     assert "class ApiToastSpec:" in client_errors
     assert "def resolve_api_toast(" in client_errors
     assert "ERROR_CATALOG_BY_ID" not in client_errors
     assert '"CommonErr.UNKNOWN"' not in client_errors
     assert '"CommonErr.UNKNOWN"' in client_catalog
-    assert "TOKEN_EXPIRE: ApiErrorCode = 55555" in client_catalog
+    assert "API_ERRORS_BY_ID" in client_catalog
+    assert "ROUTE_API_ERRORS_BY_CODE" in client_catalog
+    assert "def lookup_api_error(" in client_catalog
+    assert "TOKEN_EXPIRE: ApiErrorEntry = API_ERRORS_BY_ID[\"CommonErr.TOKEN_EXPIRE\"]" in client_catalog
+    assert "class ApiErrors:" in client_catalog
     assert 'default="登录状态已失效，请重新登录"' in client_catalog
     assert "\\u767b" not in client_catalog
     assert "locales" not in client_catalog
     assert "from .gen_errors import *" in client_public_errors
-    assert "from .gen_error_catalog import *" in client_public_errors
+    assert "from .gen_error_lookup import *" in client_public_errors
     client_errors_module = _import_generated_module(
         client_dir,
         "api_blueprint_generated.api.runtime.gen_errors",
@@ -262,7 +275,8 @@ def test_python_generated_files_use_pep8_blank_line_spacing(tmp_path: Path):
     ).read_text(encoding="utf-8")
     assert client_text.startswith(
         "from __future__ import annotations\n\n"
-        "from typing import Any\n\n"
+        "from dataclasses import asdict, is_dataclass\n"
+        "from typing import Any, Mapping\n\n"
         "from ....runtime.client import"
     )
     assert "\n\nclass DemoClient:" in client_text
@@ -416,8 +430,9 @@ def test_python_client_uses_contract_graph_route_protocol_models(tmp_path: Path)
     route_text = (
         output_dir / "api_blueprint_generated" / "api" / "routes" / "api" / "demo" / "gen_client.py"
     ).read_text(encoding="utf-8")
-    assert "json: dict[str, Any] | None = None" in route_text
-    assert "response_type: str | None = 'Result'" in route_text
+    assert "json: SubmitJSON | Mapping[str, Any] | None = None" in route_text
+    assert "response_type: str | None = 'SubmitResponse'" in route_text
+    assert "return _from_mapping(SubmitResponse, payload)" in route_text
 
 
 def test_python_client_writer_disambiguates_same_path_http_methods_with_contract_graph(tmp_path: Path):
@@ -545,6 +560,15 @@ endian: little
         / "binary"
         / "gen_binary.py"
     ).read_text(encoding="utf-8")
+    types_text = (
+        output_dir
+        / "api_blueprint_generated"
+        / "api"
+        / "routes"
+        / "api"
+        / "binary"
+        / "gen_types.py"
+    ).read_text(encoding="utf-8")
     runtime_text = (
         output_dir / "api_blueprint_generated" / "api" / "runtime" / "binary" / "gen_runtime.py"
     ).read_text(encoding="utf-8")
@@ -554,6 +578,8 @@ endian: little
 
     assert "binary: DemoPacket | ApiBinaryBody" in route_text
     assert "binary=DemoPacketWire.to_binary_body(binary)" in route_text
+    assert "from .gen_types import (" in route_text
+    assert "from .gen_binary import *" in types_text
     assert "class DemoKind:" in schema_text
     assert "class DemoFlags:" in schema_text
     assert "reserved bits must be zero" in schema_text
@@ -562,4 +588,13 @@ endian: little
     assert "writer.write_zeroes" in schema_text
     assert "class RawBinaryBody" in runtime_text
     assert "binary.to_bytes()" in transport_text
+    assert not (
+        output_dir
+        / "api_blueprint_generated"
+        / "api"
+        / "routes"
+        / "api"
+        / "binary"
+        / "wire.py"
+    ).exists()
     _compile_generated_files(output_dir)

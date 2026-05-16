@@ -53,6 +53,16 @@ class GolangError:
         return key.upper()
 
     @property
+    def group(self) -> str:
+        cls_name, _key = self._err.__key__
+        return cls_name
+
+    @property
+    def raw_key(self) -> str:
+        _cls_name, key = self._err.__key__
+        return key
+
+    @property
     def toast_key(self) -> str:
         toast = getattr(self._err, "toast", None)
         return str(getattr(toast, "key", "") or self.id)
@@ -401,11 +411,12 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
         ctx = {"writer": self.writer, "bp": self}
 
         self.cleanup_legacy_http_files()
+        self.cleanup_legacy_type_files(view_dir)
         self.cleanup_binary_codegen_dirs(view_dir)
 
-        with self.writer.write_file(view_dir / self.com_proto_gen_path / "protos.go", overwrite=True) as handle:
+        with self.writer.write_file(view_dir / self.com_proto_gen_path / "types.go", overwrite=True) as handle:
             if handle:
-                handle.write(render(LANG, "protos.go", ctx, "server/views/_gen_protos"))
+                handle.write(render(LANG, "types.go", ctx, "server/views/_gen_types"))
 
         enums_path = view_dir / self.com_enum_gen_path / "enums.go"
         with self.writer.write_file(enums_path, overwrite=True) as handle:
@@ -470,6 +481,16 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
         legacy_runtime_dir = view_dir / "_gen_binary_runtime"
         if legacy_runtime_dir.exists():
             shutil.rmtree(legacy_runtime_dir)
+
+    def cleanup_legacy_type_files(self, view_dir: Path) -> None:
+        legacy_shared_dir = view_dir / "_gen_protos"
+        if legacy_shared_dir.exists():
+            shutil.rmtree(legacy_shared_dir)
+        if not view_dir.exists():
+            return
+        for legacy_file in view_dir.rglob("gen_protos.go"):
+            if legacy_file.is_file():
+                legacy_file.unlink()
 
     def gen_http_adapter(self) -> None:
         ctx = {"writer": self.writer, "bp": self}

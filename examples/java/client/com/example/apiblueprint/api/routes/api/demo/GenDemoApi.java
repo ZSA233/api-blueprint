@@ -3,10 +3,13 @@ package com.example.apiblueprint.api.routes.api.demo;
 
 import com.example.apiblueprint.api.runtime.ApiChannelBridge;
 import com.example.apiblueprint.api.runtime.ApiRequest;
+import com.example.apiblueprint.api.runtime.ApiResponseEnvelope;
 import com.example.apiblueprint.api.runtime.ApiSocketBridge;
 import com.example.apiblueprint.api.runtime.ApiStreamBridge;
 import com.example.apiblueprint.api.runtime.ApiTransport;
-import com.example.apiblueprint.api.runtime.GenModels;
+
+import com.example.apiblueprint.api.runtime.ApiTypes;
+
 import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
 import java.util.Map;
 
@@ -17,73 +20,77 @@ public class GenDemoApi {
         this.transport = transport;
     }
 
-    public GenModels.ApiDemoA abc(
-        GenDemoApiModels.ReqAbcQuery query
+    public ApiTypes.ApiDemoA abc(
+        DemoTypes.AbcQuery query
     ) throws Exception {
-        ApiRequest<GenModels.ApiDemoA> request = new ApiRequest<>(
+        ApiRequest<ApiTypes.ApiDemoA> request = new ApiRequest<>(
+            "api.demo.get.abc",
             "GET",
             "/api/demo/abc",
             query,
             null,
             null,
             null,
-            "GeneralWrapper",
-            GenModels.ApiDemoA.class,
+            ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+            ApiTypes.ApiDemoA.class,
             "application/json",
             Map.of()
         );
         return transport.execute(request);
     }
 
-    public GenDemoApiModels.RspTestPost testPost(
-        GenDemoApiModels.ReqTestPostJson json
+    public DemoTypes.TestPostResponse testPost(
+        DemoTypes.TestPostJSON json
     ) throws Exception {
-        ApiRequest<GenDemoApiModels.RspTestPost> request = new ApiRequest<>(
+        ApiRequest<DemoTypes.TestPostResponse> request = new ApiRequest<>(
+            "api.demo.post.testpost",
             "POST",
             "/api/demo/test_post",
             null,
             json,
             null,
             null,
-            "GeneralWrapper",
-            GenDemoApiModels.RspTestPost.class,
+            ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+            DemoTypes.TestPostResponse.class,
             "application/json",
             Map.of()
         );
         return transport.execute(request);
     }
 
-    public GenDemoApiModels.RspFunc1put z1put(
-        GenDemoApiModels.ReqFunc1putQuery query,
-        GenDemoApiModels.ReqFunc1putJson json
+    public DemoTypes.PutDemoResponse putDemo(
+        DemoTypes.PutDemoQuery query,
+        DemoTypes.PutDemoJSON json
     ) throws Exception {
-        ApiRequest<GenDemoApiModels.RspFunc1put> request = new ApiRequest<>(
+        ApiRequest<DemoTypes.PutDemoResponse> request = new ApiRequest<>(
+            "api.demo.put.z1put",
             "PUT",
             "/api/demo/1put",
             query,
             json,
             null,
             null,
-            "GeneralWrapper",
-            GenDemoApiModels.RspFunc1put.class,
+            ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+            DemoTypes.PutDemoResponse.class,
             "application/json",
             Map.of()
         );
         return transport.execute(request);
     }
 
-    public GenDemoApiModels.RspDelete delete(
-        GenDemoApiModels.ReqDeleteQuery query
+    public DemoTypes.DeleteResponse delete(
+        DemoTypes.DeleteQuery query
     ) throws Exception {
-        ApiRequest<GenDemoApiModels.RspDelete> request = new ApiRequest<>(
+        ApiRequest<DemoTypes.DeleteResponse> request = new ApiRequest<>(
+            "api.demo.delete.delete",
             "DELETE",
             "/api/demo/delete$",
             query,
             null,
             null,
             null,
-            "GeneralWrapper",
-            GenDemoApiModels.RspDelete.class,
+            ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+            DemoTypes.DeleteResponse.class,
             "application/xml",
             Map.of()
         );
@@ -91,16 +98,17 @@ public class GenDemoApi {
     }
 
     public ApiSocketBridge<Object, Object> connectWs(
-        GenModels.ApiDemoSubA query
+        ApiTypes.ApiDemoSubA query
     ) {
         ApiRequest<Object> request = new ApiRequest<>(
+            "api.demo.ws.ws",
             "WS",
             "/api/demo/ws",
             query,
             null,
             null,
             null,
-            "NoneWrapper",
+            ApiResponseEnvelope.none(),
             Object.class,
             "application/json",
             Map.of()
@@ -109,16 +117,17 @@ public class GenDemoApi {
     }
 
     public ApiStreamBridge<Object, Object> subscribeSweepEvents(
-        GenModels.SweepOpen openData
+        ApiTypes.SweepOpen openData
     ) {
         ApiRequest<Object> request = new ApiRequest<>(
+            "api.demo.stream.sweepevents",
             "STREAM",
             "/api/demo/sweep-events",
             null,
             openData,
             null,
             null,
-            "NoneWrapper",
+            ApiResponseEnvelope.none(),
             Object.class,
             "application/json",
             Map.of()
@@ -127,16 +136,17 @@ public class GenDemoApi {
     }
 
     public ApiChannelBridge<Object, Object, Object> openAssistantSession(
-        GenModels.AssistantOpen openData
+        ApiTypes.AssistantOpen openData
     ) {
         ApiRequest<Object> request = new ApiRequest<>(
+            "api.demo.channel.assistantsession",
             "CHANNEL",
             "/api/demo/assistant-session",
             null,
             openData,
             null,
             null,
-            "NoneWrapper",
+            ApiResponseEnvelope.none(),
             Object.class,
             "application/json",
             Map.of()
@@ -144,52 +154,74 @@ public class GenDemoApi {
         return transport.openChannel(request);
     }
 
-    public GenDemoApiModels.RspPostDeprecated postDeprecated(
-        GenDemoApiModels.ReqPostDeprecatedJson json
+    public DemoTypes.PostDeprecatedResponse postDeprecated(
+        DemoTypes.PostDeprecatedJSON json
     ) throws Exception {
-        ApiRequest<GenDemoApiModels.RspPostDeprecated> request = new ApiRequest<>(
+        ApiRequest<DemoTypes.PostDeprecatedResponse> request = new ApiRequest<>(
+            "api.demo.post.postdeprecated",
             "POST",
             "/api/demo/post_deprecated",
             null,
             json,
             null,
             null,
-            "GeneralWrapper",
-            GenDemoApiModels.RspPostDeprecated.class,
+            ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+            DemoTypes.PostDeprecatedResponse.class,
             "application/json",
             Map.of()
         );
         return transport.execute(request);
     }
 
-    public GenDemoApiModels.RspRaw raw(
+    public DemoTypes.RawResponse raw(
     ) throws Exception {
-        ApiRequest<GenDemoApiModels.RspRaw> request = new ApiRequest<>(
+        ApiRequest<DemoTypes.RawResponse> request = new ApiRequest<>(
+            "api.demo.post.raw",
             "POST",
             "/api/demo/raw",
             null,
             null,
             null,
             null,
-            "GeneralWrapper",
-            GenDemoApiModels.RspRaw.class,
+            ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+            DemoTypes.RawResponse.class,
             "application/json",
             Map.of()
         );
         return transport.execute(request);
     }
 
-    public GenDemoApiModels.RspMapModel mapModel(
+    public DemoTypes.MapModelResponse mapModel(
     ) throws Exception {
-        ApiRequest<GenDemoApiModels.RspMapModel> request = new ApiRequest<>(
+        ApiRequest<DemoTypes.MapModelResponse> request = new ApiRequest<>(
+            "api.demo.post.mapmodel",
             "POST",
             "/api/demo/map_model",
             null,
             null,
             null,
             null,
-            "GeneralWrapper",
-            GenDemoApiModels.RspMapModel.class,
+            ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+            DemoTypes.MapModelResponse.class,
+            "application/json",
+            Map.of()
+        );
+        return transport.execute(request);
+    }
+
+    public DemoTypes.ErrorDemoResponse errorDemo(
+        DemoTypes.ErrorDemoQuery query
+    ) throws Exception {
+        ApiRequest<DemoTypes.ErrorDemoResponse> request = new ApiRequest<>(
+            "api.demo.get.errordemo",
+            "GET",
+            "/api/demo/error-demo",
+            query,
+            null,
+            null,
+            null,
+            ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+            DemoTypes.ErrorDemoResponse.class,
             "application/json",
             Map.of()
         );

@@ -3,10 +3,13 @@ package com.example.apiblueprint.static_.routes.static_;
 
 import com.example.apiblueprint.static_.runtime.ApiChannelBridge;
 import com.example.apiblueprint.static_.runtime.ApiRequest;
+import com.example.apiblueprint.static_.runtime.ApiResponseEnvelope;
 import com.example.apiblueprint.static_.runtime.ApiSocketBridge;
 import com.example.apiblueprint.static_.runtime.ApiStreamBridge;
 import com.example.apiblueprint.static_.runtime.ApiTransport;
-import com.example.apiblueprint.static_.runtime.GenModels;
+
+import com.example.apiblueprint.static_.runtime.ApiTypes;
+
 import com.example.apiblueprint.static_.runtime.binary.ApiBinaryBody;
 import java.util.Map;
 
@@ -17,34 +20,36 @@ public class GenStaticApi {
         this.transport = transport;
     }
 
-    public GenStaticApiModels.RspDocJson docJson(
+    public StaticTypes.DocJsonResponse docJson(
     ) throws Exception {
-        ApiRequest<GenStaticApiModels.RspDocJson> request = new ApiRequest<>(
+        ApiRequest<StaticTypes.DocJsonResponse> request = new ApiRequest<>(
+            "static.static.get.docjson",
             "GET",
             "/static/doc.json",
             null,
             null,
             null,
             null,
-            "NoneWrapper",
-            GenStaticApiModels.RspDocJson.class,
+            ApiResponseEnvelope.of("NoEnvelope", "none", "none", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+            StaticTypes.DocJsonResponse.class,
             "application/json",
             Map.of()
         );
         return transport.execute(request);
     }
 
-    public GenStaticApiModels.RspDochaha dochaha(
+    public StaticTypes.DochahaResponse dochaha(
     ) throws Exception {
-        ApiRequest<GenStaticApiModels.RspDochaha> request = new ApiRequest<>(
+        ApiRequest<StaticTypes.DochahaResponse> request = new ApiRequest<>(
+            "static.static.get.dochaha",
             "GET",
             "/static/dochaha",
             null,
             null,
             null,
             null,
-            "NoneWrapper",
-            GenStaticApiModels.RspDochaha.class,
+            ApiResponseEnvelope.of("NoEnvelope", "none", "none", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+            StaticTypes.DochahaResponse.class,
             "application/json",
             Map.of()
         );

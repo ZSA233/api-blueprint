@@ -24,7 +24,7 @@ from api_blueprint.engine.model import (
     model_to_pydantic,
 )
 from api_blueprint.engine.utils import inc_to_letters, is_parametrized, join_path_imports, snake_to_pascal_case
-from api_blueprint.engine.wrapper import ResponseWrapper
+from api_blueprint.engine.envelope import ResponseEnvelope
 
 from .common import (
     PROTO_STRUCT_TYPE,
@@ -206,14 +206,14 @@ class GolangFieldWrappedModel(FieldWrappedModel):
         return None
 
 
-class GolangResponseWrapper:
+class GolangResponseEnvelope:
     prefix: str
-    response_wrapper: type[ResponseWrapper]
+    response_envelope: type[ResponseEnvelope]
     _proto: Optional["GolangProto"] = None
 
-    def __init__(self, prefix: str, response_wrapper: type[ResponseWrapper]):
+    def __init__(self, prefix: str, response_envelope: type[ResponseEnvelope]):
         self.prefix = prefix
-        self.response_wrapper = response_wrapper
+        self.response_envelope = response_envelope
 
     @property
     def proto_def_name(self) -> str:
@@ -226,7 +226,7 @@ class GolangResponseWrapper:
         if self._proto is not None:
             return self._proto
 
-        fields = [value for _key, value in iter_model_vars(self.response_wrapper) if isinstance(value, (Model, Field))]
+        fields = [value for _key, value in iter_model_vars(self.response_envelope) if isinstance(value, (Model, Field))]
         alias: Optional[GolangProtoAlias] = None
         struct: Optional[GolangProtoStruct] = None
         if fields:
@@ -238,7 +238,7 @@ class GolangResponseWrapper:
 
         self._proto = GolangProto(
             name=self.prefix,
-            model=self.response_wrapper,
+            model=self.response_envelope,
             struct_type=struct_type,
             struct=struct,
             alias=alias,
@@ -247,7 +247,7 @@ class GolangResponseWrapper:
 
     @property
     def proto_name(self) -> str:
-        return f"{self.prefix}_{self.response_wrapper.__name__}"
+        return f"{self.prefix}_{self.response_envelope.__name__}"
 
     @property
     def proto_type(self) -> PROTO_STRUCT_TYPE:
@@ -261,7 +261,7 @@ class GolangResponseWrapper:
 
     @property
     def class_name(self) -> str:
-        return self.response_wrapper.__name__
+        return self.response_envelope.__name__
 
     def generic_types(self, with_any: bool = False) -> str:
         generic_types = self.proto.generic_types()
@@ -292,7 +292,100 @@ class GolangResponseWrapper:
         return self.response_factory("xml", **kwargs)
 
     def response_factory(self, typ: str, **kwargs: Any) -> str:
-        return self.response_wrapper.golang_factory(typ).format(**kwargs)
+        spec = self.response_envelope.envelope_spec()
+        kind = str(spec.get("kind") or "custom")
+        error_identity = str(spec.get("error_identity") or "nested")
+        wrapper_name = str(kwargs["wrapper_name"])
+        generic_types = str(kwargs.get("generic_types") or "")
+        data = str(kwargs.get("data") or "nil")
+        error = str(kwargs.get("error") or "nil")
+        success_code = int(spec.get("success_code") or 0)
+        success_message = go_literal(str(spec.get("success_message") or "ok"))
+
+        if kind == "none":
+            if typ == "json":
+                return f"""
+                if {error} != nil {{
+                    return http.StatusInternalServerError, nil
+                }}
+                return 0, {data}"""
+            return f"""
+                if {error} != nil {{
+                    return http.StatusInternalServerError, nil
+                }}
+                inner := ({wrapper_name}_INNER)({data})
+                return 0, &{wrapper_name}{{
+                    XMLName: xml.Name{{Local: "{self.response_envelope.get_xml_root_name()}"}},
+                    Inner:   &inner,
+                }}"""
+
+        if kind == "code_message_data":
+            error_value = "newEnvelopeErrorIdentity({error})" if error_identity != "none" else "nil"
+            error_field = f"\n                        Error:   {error_value.format(error=error)}," if error_identity != "none" else ""
+            if typ == "json":
+                return f"""
+                if {error} != nil {{
+                    return 0, &{wrapper_name}{generic_types}{{
+                        Code:    {error}.Code,
+                        Message: {error}.Message,{error_field}
+                    }}
+                }}
+                return 0, &{wrapper_name}{generic_types}{{
+                    Code:    {success_code},
+                    Message: {success_message},
+                    Data:    {data},
+                }}"""
+            return f"""
+                if {error} != nil {{
+                    return 0, &{wrapper_name}{generic_types}{{
+                        XMLName: xml.Name{{Local: "{self.response_envelope.get_xml_root_name()}"}},
+                        Inner: &{wrapper_name}_INNER{generic_types}{{
+                            Code:    {error}.Code,
+                            Message: {error}.Message,{error_field}
+                        }},
+                    }}
+                }}
+                return 0, &{wrapper_name}{generic_types}{{
+                    XMLName: xml.Name{{Local: "{self.response_envelope.get_xml_root_name()}"}},
+                    Inner: &{wrapper_name}_INNER{generic_types}{{
+                        Code:    {success_code},
+                        Message: {success_message},
+                        Data:    {data},
+                    }},
+                }}"""
+
+        if kind == "ok_data_error":
+            if typ == "json":
+                return f"""
+                if {error} != nil {{
+                    return 0, &{wrapper_name}{generic_types}{{
+                        Ok:    false,
+                        Error: {error},
+                    }}
+                }}
+                return 0, &{wrapper_name}{generic_types}{{
+                    Ok:   true,
+                    Data: {data},
+                }}"""
+            return f"""
+                if {error} != nil {{
+                    return 0, &{wrapper_name}{generic_types}{{
+                        XMLName: xml.Name{{Local: "{self.response_envelope.get_xml_root_name()}"}},
+                        Inner: &{wrapper_name}_INNER{generic_types}{{
+                            Ok:    false,
+                            Error: {error},
+                        }},
+                    }}
+                }}
+                return 0, &{wrapper_name}{generic_types}{{
+                    XMLName: xml.Name{{Local: "{self.response_envelope.get_xml_root_name()}"}},
+                    Inner: &{wrapper_name}_INNER{generic_types}{{
+                        Ok:   true,
+                        Data: {data},
+                    }},
+                }}"""
+
+        raise ValueError(f"unsupported Go response envelope kind: {kind}")
 
 
 class GolangProto(Proto):

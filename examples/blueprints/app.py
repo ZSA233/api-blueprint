@@ -16,7 +16,7 @@ apibp = Blueprint(
     errors=[
         CommonErr,
     ],
-    response_wrapper=GeneralWrapper,
+    response_envelope=CodeMessageDataEnvelope,
     headers=GeneralHeader,
 )
 
@@ -29,5 +29,5 @@ staticbp = Blueprint(
         provider.Handle(),
         provider.Rsp(),
     ],
-    response_wrapper=NoneWrapper,
+    response_envelope=NoEnvelope,
 )

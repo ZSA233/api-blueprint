@@ -1,6 +1,8 @@
 {% autoescape false %}package {{ bp.root_package }}.routes.{{ group.package_suffix }};
 
-import {{ bp.root_package }}.runtime.GenModels;
+{% if group.runtime_types_ref == "ApiTypes" %}
+import {{ bp.root_package }}.runtime.ApiTypes;
+{% endif %}
 import {{ bp.root_package }}.runtime.binary.ApiBinaryBody;
 
 public interface {{ group.generated_service_class }} {

@@ -15,6 +15,14 @@ func NewGenApiClient(transport runtime.Transport) *GenApiClient {
 	return &GenApiClient{transport: transport}
 }
 
+type Client = GenApiClient
+
+var NewClient = NewGenApiClient
+
+type ApiClient = GenApiClient
+
+var NewApiClient = NewGenApiClient
+
 func (client *GenApiClient) ConnectWs(ctx context.Context) error {
 	request := runtime.ConnectionRequest{
 		Kind:    "legacy_ws",

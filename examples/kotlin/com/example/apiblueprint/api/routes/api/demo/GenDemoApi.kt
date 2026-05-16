@@ -13,121 +13,127 @@ public open class GenDemoApi internal constructor(
         query: DemoAbcQuery,
         headers: Map<String, String> = emptyMap(),
     ): ApiDemoA {
-        val envelope = transport.request(
+        return transport.request(
             ApiRequest(
+                routeId = "api.demo.get.abc",
                 method = "GET",
                 path = "/api/demo/abc",
                 query = query.toQueryMap(),
                 headers = headers,
-                responseSerializer = GeneralResponse.serializer(ApiDemoA.serializer()),
+                responseSerializer = ApiDemoA.serializer(),
                 responseMediaType = "application/json",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
             )
         )
-        if (envelope.code != 0) {
-            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
-        }
-        return envelope.data ?: throw ApiException(200, "Missing response data for /api/demo/abc")
     }
 
     public open suspend fun testPost(
         json: DemoTestPostJson,
         headers: Map<String, String> = emptyMap(),
     ): DemoTestPostResponse {
-        val envelope = transport.request(
+        return transport.request(
             ApiRequest(
+                routeId = "api.demo.post.testpost",
                 method = "POST",
                 path = "/api/demo/test_post",
                 headers = headers,
                 json = json,
                 jsonSerializer = DemoTestPostJson.serializer(),
-                responseSerializer = GeneralResponse.serializer(DemoTestPostResponse.serializer()),
+                responseSerializer = DemoTestPostResponse.serializer(),
                 responseMediaType = "application/json",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
             )
         )
-        if (envelope.code != 0) {
-            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
-        }
-        return envelope.data ?: throw ApiException(200, "Missing response data for /api/demo/test_post")
     }
 
-    public open suspend fun z1put(
-        query: DemoZ1putQuery,
-        json: DemoZ1putJson,
+    public open suspend fun putDemo(
+        query: DemoPutDemoQuery,
+        json: DemoPutDemoJson,
         headers: Map<String, String> = emptyMap(),
-    ): DemoZ1putResponse {
-        val envelope = transport.request(
+    ): DemoPutDemoResponse {
+        return transport.request(
             ApiRequest(
+                routeId = "api.demo.put.z1put",
                 method = "PUT",
                 path = "/api/demo/1put",
                 query = query.toQueryMap(),
                 headers = headers,
                 json = json,
-                jsonSerializer = DemoZ1putJson.serializer(),
-                responseSerializer = GeneralResponse.serializer(DemoZ1putResponse.serializer()),
+                jsonSerializer = DemoPutDemoJson.serializer(),
+                responseSerializer = DemoPutDemoResponse.serializer(),
                 responseMediaType = "application/json",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
             )
         )
-        if (envelope.code != 0) {
-            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
-        }
-        return envelope.data ?: throw ApiException(200, "Missing response data for /api/demo/1put")
     }
 
     public open suspend fun postDeprecated(
         json: DemoPostDeprecatedJson,
         headers: Map<String, String> = emptyMap(),
     ): DemoPostDeprecatedResponse {
-        val envelope = transport.request(
+        return transport.request(
             ApiRequest(
+                routeId = "api.demo.post.postdeprecated",
                 method = "POST",
                 path = "/api/demo/post_deprecated",
                 headers = headers,
                 json = json,
                 jsonSerializer = DemoPostDeprecatedJson.serializer(),
-                responseSerializer = GeneralResponse.serializer(DemoPostDeprecatedResponse.serializer()),
+                responseSerializer = DemoPostDeprecatedResponse.serializer(),
                 responseMediaType = "application/json",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
             )
         )
-        if (envelope.code != 0) {
-            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
-        }
-        return envelope.data ?: throw ApiException(200, "Missing response data for /api/demo/post_deprecated")
     }
 
     public open suspend fun raw(
         headers: Map<String, String> = emptyMap(),
     ): DemoRawResponse {
-        val envelope = transport.request(
+        return transport.request(
             ApiRequest(
+                routeId = "api.demo.post.raw",
                 method = "POST",
                 path = "/api/demo/raw",
                 headers = headers,
-                responseSerializer = GeneralResponse.serializer(DemoRawResponse.serializer()),
+                responseSerializer = DemoRawResponse.serializer(),
                 responseMediaType = "application/json",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
             )
         )
-        if (envelope.code != 0) {
-            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
-        }
-        return envelope.data ?: throw ApiException(200, "Missing response data for /api/demo/raw")
     }
 
     public open suspend fun mapModel(
         headers: Map<String, String> = emptyMap(),
     ): DemoMapModelResponse {
-        val envelope = transport.request(
+        return transport.request(
             ApiRequest(
+                routeId = "api.demo.post.mapmodel",
                 method = "POST",
                 path = "/api/demo/map_model",
                 headers = headers,
-                responseSerializer = GeneralResponse.serializer(MapSerializer(Int.serializer(), ApiDemoMap.serializer())),
+                responseSerializer = MapSerializer(Int.serializer(), ApiDemoMap.serializer()),
                 responseMediaType = "application/json",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
             )
         )
-        if (envelope.code != 0) {
-            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
-        }
-        return envelope.data ?: throw ApiException(200, "Missing response data for /api/demo/map_model")
+    }
+
+    public open suspend fun errorDemo(
+        query: DemoErrorDemoQuery,
+        headers: Map<String, String> = emptyMap(),
+    ): DemoErrorDemoResponse {
+        return transport.request(
+            ApiRequest(
+                routeId = "api.demo.get.errordemo",
+                method = "GET",
+                path = "/api/demo/error-demo",
+                query = query.toQueryMap(),
+                headers = headers,
+                responseSerializer = DemoErrorDemoResponse.serializer(),
+                responseMediaType = "application/json",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+            )
+        )
     }
 
     private fun DemoAbcQuery.toQueryMap(): Map<String, String?> = mapOf(
@@ -136,9 +142,13 @@ public open class GenDemoApi internal constructor(
         "arg2" to arg2?.toString()
     )
 
-    private fun DemoZ1putQuery.toQueryMap(): Map<String, String?> = mapOf(
+    private fun DemoPutDemoQuery.toQueryMap(): Map<String, String?> = mapOf(
         "arg1" to arg1?.toString(),
         "arg2" to arg2?.toString(),
         "arg3" to arg3?.toString()
+    )
+
+    private fun DemoErrorDemoQuery.toQueryMap(): Map<String, String?> = mapOf(
+        "mode" to mode?.toString()
     )
 }

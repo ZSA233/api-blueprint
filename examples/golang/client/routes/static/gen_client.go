@@ -15,26 +15,36 @@ func NewGenStaticClient(transport runtime.Transport) *GenStaticClient {
 	return &GenStaticClient{transport: transport}
 }
 
-func (client *GenStaticClient) DocJson(ctx context.Context) (*RSP_DocJson_BODY, error) {
+type Client = GenStaticClient
+
+var NewClient = NewGenStaticClient
+
+type StaticClient = GenStaticClient
+
+var NewStaticClient = NewGenStaticClient
+
+func (client *GenStaticClient) DocJson(ctx context.Context) (*DocJsonResponse, error) {
 	request := runtime.Request{
-		Method:          "GET",
-		Path:            "/static/doc.json",
-		ResponseWrapper: "NoneWrapper",
+		RouteID:          "static.static.get.docjson",
+		Method:           "GET",
+		Path:             "/static/doc.json",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "NoEnvelope", Kind: "none", ErrorIdentity: "none", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 	}
-	var response RSP_DocJson_BODY
+	var response DocJsonResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
 	}
 	return &response, nil
 }
 
-func (client *GenStaticClient) Dochaha(ctx context.Context) (*RSP_Dochaha_BODY, error) {
+func (client *GenStaticClient) Dochaha(ctx context.Context) (*DochahaResponse, error) {
 	request := runtime.Request{
-		Method:          "GET",
-		Path:            "/static/dochaha",
-		ResponseWrapper: "NoneWrapper",
+		RouteID:          "static.static.get.dochaha",
+		Method:           "GET",
+		Path:             "/static/dochaha",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "NoEnvelope", Kind: "none", ErrorIdentity: "none", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 	}
-	var response RSP_Dochaha_BODY
+	var response DochahaResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
 	}

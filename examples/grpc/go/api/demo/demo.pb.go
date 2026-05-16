@@ -485,7 +485,7 @@ func (x *TestPostResponse) GetMap() map[string]*ApiDemoMap {
 	return nil
 }
 
-type Z1PutRequest struct {
+type PutDemoRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Query         *REQFunc1PutQUERY      `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
 	Json          *REQFunc1PutJSON       `protobuf:"bytes,2,opt,name=json,proto3" json:"json,omitempty"`
@@ -493,20 +493,20 @@ type Z1PutRequest struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Z1PutRequest) Reset() {
-	*x = Z1PutRequest{}
+func (x *PutDemoRequest) Reset() {
+	*x = PutDemoRequest{}
 	mi := &file_api_demo_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Z1PutRequest) String() string {
+func (x *PutDemoRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Z1PutRequest) ProtoMessage() {}
+func (*PutDemoRequest) ProtoMessage() {}
 
-func (x *Z1PutRequest) ProtoReflect() protoreflect.Message {
+func (x *PutDemoRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_api_demo_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -518,19 +518,19 @@ func (x *Z1PutRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Z1PutRequest.ProtoReflect.Descriptor instead.
-func (*Z1PutRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use PutDemoRequest.ProtoReflect.Descriptor instead.
+func (*PutDemoRequest) Descriptor() ([]byte, []int) {
 	return file_api_demo_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *Z1PutRequest) GetQuery() *REQFunc1PutQUERY {
+func (x *PutDemoRequest) GetQuery() *REQFunc1PutQUERY {
 	if x != nil {
 		return x.Query
 	}
 	return nil
 }
 
-func (x *Z1PutRequest) GetJson() *REQFunc1PutJSON {
+func (x *PutDemoRequest) GetJson() *REQFunc1PutJSON {
 	if x != nil {
 		return x.Json
 	}
@@ -649,7 +649,7 @@ func (x *REQFunc1PutJSON) GetReq2() int64 {
 	return 0
 }
 
-type Z1PutResponse struct {
+type PutDemoResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	List          []string               `protobuf:"bytes,1,rep,name=list,proto3" json:"list,omitempty"`
 	AnonKv        *ANONFunc1PutAnonKv    `protobuf:"bytes,2,opt,name=anon_kv,json=anonKv,proto3" json:"anon_kv,omitempty"`
@@ -657,20 +657,20 @@ type Z1PutResponse struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Z1PutResponse) Reset() {
-	*x = Z1PutResponse{}
+func (x *PutDemoResponse) Reset() {
+	*x = PutDemoResponse{}
 	mi := &file_api_demo_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Z1PutResponse) String() string {
+func (x *PutDemoResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Z1PutResponse) ProtoMessage() {}
+func (*PutDemoResponse) ProtoMessage() {}
 
-func (x *Z1PutResponse) ProtoReflect() protoreflect.Message {
+func (x *PutDemoResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_api_demo_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -682,19 +682,19 @@ func (x *Z1PutResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Z1PutResponse.ProtoReflect.Descriptor instead.
-func (*Z1PutResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use PutDemoResponse.ProtoReflect.Descriptor instead.
+func (*PutDemoResponse) Descriptor() ([]byte, []int) {
 	return file_api_demo_proto_rawDescGZIP(), []int{9}
 }
 
-func (x *Z1PutResponse) GetList() []string {
+func (x *PutDemoResponse) GetList() []string {
 	if x != nil {
 		return x.List
 	}
 	return nil
 }
 
-func (x *Z1PutResponse) GetAnonKv() *ANONFunc1PutAnonKv {
+func (x *PutDemoResponse) GetAnonKv() *ANONFunc1PutAnonKv {
 	if x != nil {
 		return x.AnonKv
 	}
@@ -1971,6 +1971,94 @@ func (x *MapModelResponse) GetValue() map[string]*ApiDemoMap {
 	return nil
 }
 
+type ErrorDemoRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Mode          string                 `protobuf:"bytes,1,opt,name=mode,proto3" json:"mode,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ErrorDemoRequest) Reset() {
+	*x = ErrorDemoRequest{}
+	mi := &file_api_demo_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ErrorDemoRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ErrorDemoRequest) ProtoMessage() {}
+
+func (x *ErrorDemoRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_demo_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ErrorDemoRequest.ProtoReflect.Descriptor instead.
+func (*ErrorDemoRequest) Descriptor() ([]byte, []int) {
+	return file_api_demo_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *ErrorDemoRequest) GetMode() string {
+	if x != nil {
+		return x.Mode
+	}
+	return ""
+}
+
+type ErrorDemoResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ErrorDemoResponse) Reset() {
+	*x = ErrorDemoResponse{}
+	mi := &file_api_demo_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ErrorDemoResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ErrorDemoResponse) ProtoMessage() {}
+
+func (x *ErrorDemoResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_demo_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ErrorDemoResponse.ProtoReflect.Descriptor instead.
+func (*ErrorDemoResponse) Descriptor() ([]byte, []int) {
+	return file_api_demo_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *ErrorDemoResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
 var File_api_demo_proto protoreflect.FileDescriptor
 
 const file_api_demo_proto_rawDesc = "" +
@@ -2010,8 +2098,8 @@ const file_api_demo_proto_rawDesc = "" +
 	"\x03map\x18\x02 \x03(\v2+.example.api.demo.TestPostResponse.MapEntryR\x03map\x1aT\n" +
 	"\bMapEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x122\n" +
-	"\x05value\x18\x02 \x01(\v2\x1c.example.api.demo.ApiDemoMapR\x05value:\x028\x01\"\x7f\n" +
-	"\fZ1putRequest\x128\n" +
+	"\x05value\x18\x02 \x01(\v2\x1c.example.api.demo.ApiDemoMapR\x05value:\x028\x01\"\x81\x01\n" +
+	"\x0ePutDemoRequest\x128\n" +
 	"\x05query\x18\x01 \x01(\v2\".example.api.demo.REQFunc1putQUERYR\x05query\x125\n" +
 	"\x04json\x18\x02 \x01(\v2!.example.api.demo.REQFunc1putJSONR\x04json\"N\n" +
 	"\x10REQFunc1putQUERY\x12\x12\n" +
@@ -2020,8 +2108,8 @@ const file_api_demo_proto_rawDesc = "" +
 	"\x04arg3\x18\x03 \x01(\tR\x04arg3\"9\n" +
 	"\x0fREQFunc1putJSON\x12\x12\n" +
 	"\x04req1\x18\x01 \x01(\tR\x04req1\x12\x12\n" +
-	"\x04req2\x18\x02 \x01(\x03R\x04req2\"b\n" +
-	"\rZ1putResponse\x12\x12\n" +
+	"\x04req2\x18\x02 \x01(\x03R\x04req2\"d\n" +
+	"\x0fPutDemoResponse\x12\x12\n" +
 	"\x04list\x18\x01 \x03(\tR\x04list\x12=\n" +
 	"\aanon_kv\x18\x02 \x01(\v2$.example.api.demo.ANONFunc1putAnonKvR\x06anonKv\"8\n" +
 	"\x12ANONFunc1putAnonKv\x12\x10\n" +
@@ -2105,7 +2193,11 @@ const file_api_demo_proto_rawDesc = "" +
 	"\n" +
 	"ValueEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x122\n" +
-	"\x05value\x18\x02 \x01(\v2\x1c.example.api.demo.ApiDemoMapR\x05value:\x028\x01*b\n" +
+	"\x05value\x18\x02 \x01(\v2\x1c.example.api.demo.ApiDemoMapR\x05value:\x028\x01\"&\n" +
+	"\x10ErrorDemoRequest\x12\x12\n" +
+	"\x04mode\x18\x01 \x01(\tR\x04mode\"+\n" +
+	"\x11ErrorDemoResponse\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status*b\n" +
 	"\tColorEnum\x12\x19\n" +
 	"\x15COLORENUM_UNSPECIFIED\x10\x00\x12\x11\n" +
 	"\rCOLORENUM_RED\x10\x01\x12\x13\n" +
@@ -2116,17 +2208,18 @@ const file_api_demo_proto_rawDesc = "" +
 	"\x16STATUSENUM_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12STATUSENUM_PENDING\x10\x01\x12\x16\n" +
 	"\x12STATUSENUM_RUNNING\x10\x02\x12\x17\n" +
-	"\x13STATUSENUM_FINISHED\x10\x032\x80\x06\n" +
+	"\x13STATUSENUM_FINISHED\x10\x032\xdc\x06\n" +
 	"\vDemoService\x12B\n" +
 	"\x03Abc\x12\x1c.example.api.demo.AbcRequest\x1a\x1d.example.api.demo.AbcResponse\x12Q\n" +
-	"\bTestPost\x12!.example.api.demo.TestPostRequest\x1a\".example.api.demo.TestPostResponse\x12H\n" +
-	"\x05Z1put\x12\x1e.example.api.demo.Z1putRequest\x1a\x1f.example.api.demo.Z1putResponse\x12K\n" +
+	"\bTestPost\x12!.example.api.demo.TestPostRequest\x1a\".example.api.demo.TestPostResponse\x12N\n" +
+	"\aPutDemo\x12 .example.api.demo.PutDemoRequest\x1a!.example.api.demo.PutDemoResponse\x12K\n" +
 	"\x06Delete\x12\x1f.example.api.demo.DeleteRequest\x1a .example.api.demo.DeleteResponse\x12[\n" +
 	"\vSweepEvents\x12$.example.api.demo.SweepEventsRequest\x1a$.example.api.demo.SweepStreamMessage0\x01\x12j\n" +
 	"\x10AssistantSession\x12(.example.api.demo.AssistantClientMessage\x1a(.example.api.demo.AssistantServerMessage(\x010\x01\x12c\n" +
 	"\x0ePostDeprecated\x12'.example.api.demo.PostDeprecatedRequest\x1a(.example.api.demo.PostDeprecatedResponse\x12B\n" +
 	"\x03Raw\x12\x1c.example.api.demo.RawRequest\x1a\x1d.example.api.demo.RawResponse\x12Q\n" +
-	"\bMapModel\x12!.example.api.demo.MapModelRequest\x1a\".example.api.demo.MapModelResponseB+Z)example.com/project/grpc/go/api/demo;demob\x06proto3"
+	"\bMapModel\x12!.example.api.demo.MapModelRequest\x1a\".example.api.demo.MapModelResponse\x12T\n" +
+	"\tErrorDemo\x12\".example.api.demo.ErrorDemoRequest\x1a#.example.api.demo.ErrorDemoResponseB+Z)example.com/project/grpc/go/api/demo;demob\x06proto3"
 
 var (
 	file_api_demo_proto_rawDescOnce sync.Once
@@ -2141,7 +2234,7 @@ func file_api_demo_proto_rawDescGZIP() []byte {
 }
 
 var file_api_demo_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_api_demo_proto_msgTypes = make([]protoimpl.MessageInfo, 37)
+var file_api_demo_proto_msgTypes = make([]protoimpl.MessageInfo, 39)
 var file_api_demo_proto_goTypes = []any{
 	(ColorEnum)(0),                 // 0: example.api.demo.ColorEnum
 	(StatusEnum)(0),                // 1: example.api.demo.StatusEnum
@@ -2151,10 +2244,10 @@ var file_api_demo_proto_goTypes = []any{
 	(*ApiDemoMap)(nil),             // 5: example.api.demo.ApiDemoMap
 	(*TestPostRequest)(nil),        // 6: example.api.demo.TestPostRequest
 	(*TestPostResponse)(nil),       // 7: example.api.demo.TestPostResponse
-	(*Z1PutRequest)(nil),           // 8: example.api.demo.Z1putRequest
+	(*PutDemoRequest)(nil),         // 8: example.api.demo.PutDemoRequest
 	(*REQFunc1PutQUERY)(nil),       // 9: example.api.demo.REQFunc1putQUERY
 	(*REQFunc1PutJSON)(nil),        // 10: example.api.demo.REQFunc1putJSON
-	(*Z1PutResponse)(nil),          // 11: example.api.demo.Z1putResponse
+	(*PutDemoResponse)(nil),        // 11: example.api.demo.PutDemoResponse
 	(*ANONFunc1PutAnonKv)(nil),     // 12: example.api.demo.ANONFunc1putAnonKv
 	(*DeleteRequest)(nil),          // 13: example.api.demo.DeleteRequest
 	(*DeleteResponse)(nil),         // 14: example.api.demo.DeleteResponse
@@ -2178,22 +2271,24 @@ var file_api_demo_proto_goTypes = []any{
 	(*ApiDemoA)(nil),               // 32: example.api.demo.ApiDemoA
 	(*MapModelRequest)(nil),        // 33: example.api.demo.MapModelRequest
 	(*MapModelResponse)(nil),       // 34: example.api.demo.MapModelResponse
-	nil,                            // 35: example.api.demo.ApiDemoSubA.HelloEntry
-	nil,                            // 36: example.api.demo.TestPostResponse.MapEntry
-	nil,                            // 37: example.api.demo.RawResponse.List2Entry
-	nil,                            // 38: example.api.demo.MapModelResponse.ValueEntry
+	(*ErrorDemoRequest)(nil),       // 35: example.api.demo.ErrorDemoRequest
+	(*ErrorDemoResponse)(nil),      // 36: example.api.demo.ErrorDemoResponse
+	nil,                            // 37: example.api.demo.ApiDemoSubA.HelloEntry
+	nil,                            // 38: example.api.demo.TestPostResponse.MapEntry
+	nil,                            // 39: example.api.demo.RawResponse.List2Entry
+	nil,                            // 40: example.api.demo.MapModelResponse.ValueEntry
 }
 var file_api_demo_proto_depIdxs = []int32{
 	4,  // 0: example.api.demo.AbcResponse.lmnop:type_name -> example.api.demo.ApiDemoSubA
 	0,  // 1: example.api.demo.AbcResponse.enum_color:type_name -> example.api.demo.ColorEnum
 	1,  // 2: example.api.demo.AbcResponse.enum_status:type_name -> example.api.demo.StatusEnum
 	1,  // 3: example.api.demo.AbcResponse.enum_list:type_name -> example.api.demo.StatusEnum
-	35, // 4: example.api.demo.ApiDemoSubA.hello:type_name -> example.api.demo.ApiDemoSubA.HelloEntry
+	37, // 4: example.api.demo.ApiDemoSubA.hello:type_name -> example.api.demo.ApiDemoSubA.HelloEntry
 	5,  // 5: example.api.demo.ApiDemoSubA.amap:type_name -> example.api.demo.ApiDemoMap
-	36, // 6: example.api.demo.TestPostResponse.map:type_name -> example.api.demo.TestPostResponse.MapEntry
-	9,  // 7: example.api.demo.Z1putRequest.query:type_name -> example.api.demo.REQFunc1putQUERY
-	10, // 8: example.api.demo.Z1putRequest.json:type_name -> example.api.demo.REQFunc1putJSON
-	12, // 9: example.api.demo.Z1putResponse.anon_kv:type_name -> example.api.demo.ANONFunc1putAnonKv
+	38, // 6: example.api.demo.TestPostResponse.map:type_name -> example.api.demo.TestPostResponse.MapEntry
+	9,  // 7: example.api.demo.PutDemoRequest.query:type_name -> example.api.demo.REQFunc1putQUERY
+	10, // 8: example.api.demo.PutDemoRequest.json:type_name -> example.api.demo.REQFunc1putJSON
+	12, // 9: example.api.demo.PutDemoResponse.anon_kv:type_name -> example.api.demo.ANONFunc1putAnonKv
 	15, // 10: example.api.demo.DeleteResponse.anon_list:type_name -> example.api.demo.ANONDeleteAnonList
 	18, // 11: example.api.demo.SweepStreamMessage.state:type_name -> example.api.demo.SweepState
 	19, // 12: example.api.demo.SweepStreamMessage.progress:type_name -> example.api.demo.SweepProgress
@@ -2203,36 +2298,38 @@ var file_api_demo_proto_depIdxs = []int32{
 	25, // 16: example.api.demo.AssistantServerMessage.delta:type_name -> example.api.demo.AssistantDelta
 	26, // 17: example.api.demo.AssistantServerMessage.done:type_name -> example.api.demo.AssistantDone
 	20, // 18: example.api.demo.AssistantServerMessage.log:type_name -> example.api.demo.SweepLog
-	37, // 19: example.api.demo.RawResponse.list2:type_name -> example.api.demo.RawResponse.List2Entry
+	39, // 19: example.api.demo.RawResponse.list2:type_name -> example.api.demo.RawResponse.List2Entry
 	32, // 20: example.api.demo.RawResponseList2Value.value:type_name -> example.api.demo.ApiDemoA
 	4,  // 21: example.api.demo.ApiDemoA.lmnop:type_name -> example.api.demo.ApiDemoSubA
 	0,  // 22: example.api.demo.ApiDemoA.enum_color:type_name -> example.api.demo.ColorEnum
 	1,  // 23: example.api.demo.ApiDemoA.enum_status:type_name -> example.api.demo.StatusEnum
 	1,  // 24: example.api.demo.ApiDemoA.enum_list:type_name -> example.api.demo.StatusEnum
-	38, // 25: example.api.demo.MapModelResponse.value:type_name -> example.api.demo.MapModelResponse.ValueEntry
+	40, // 25: example.api.demo.MapModelResponse.value:type_name -> example.api.demo.MapModelResponse.ValueEntry
 	5,  // 26: example.api.demo.TestPostResponse.MapEntry.value:type_name -> example.api.demo.ApiDemoMap
 	31, // 27: example.api.demo.RawResponse.List2Entry.value:type_name -> example.api.demo.RawResponseList2Value
 	5,  // 28: example.api.demo.MapModelResponse.ValueEntry.value:type_name -> example.api.demo.ApiDemoMap
 	2,  // 29: example.api.demo.DemoService.Abc:input_type -> example.api.demo.AbcRequest
 	6,  // 30: example.api.demo.DemoService.TestPost:input_type -> example.api.demo.TestPostRequest
-	8,  // 31: example.api.demo.DemoService.Z1put:input_type -> example.api.demo.Z1putRequest
+	8,  // 31: example.api.demo.DemoService.PutDemo:input_type -> example.api.demo.PutDemoRequest
 	13, // 32: example.api.demo.DemoService.Delete:input_type -> example.api.demo.DeleteRequest
 	16, // 33: example.api.demo.DemoService.SweepEvents:input_type -> example.api.demo.SweepEventsRequest
 	21, // 34: example.api.demo.DemoService.AssistantSession:input_type -> example.api.demo.AssistantClientMessage
 	27, // 35: example.api.demo.DemoService.PostDeprecated:input_type -> example.api.demo.PostDeprecatedRequest
 	29, // 36: example.api.demo.DemoService.Raw:input_type -> example.api.demo.RawRequest
 	33, // 37: example.api.demo.DemoService.MapModel:input_type -> example.api.demo.MapModelRequest
-	3,  // 38: example.api.demo.DemoService.Abc:output_type -> example.api.demo.AbcResponse
-	7,  // 39: example.api.demo.DemoService.TestPost:output_type -> example.api.demo.TestPostResponse
-	11, // 40: example.api.demo.DemoService.Z1put:output_type -> example.api.demo.Z1putResponse
-	14, // 41: example.api.demo.DemoService.Delete:output_type -> example.api.demo.DeleteResponse
-	17, // 42: example.api.demo.DemoService.SweepEvents:output_type -> example.api.demo.SweepStreamMessage
-	24, // 43: example.api.demo.DemoService.AssistantSession:output_type -> example.api.demo.AssistantServerMessage
-	28, // 44: example.api.demo.DemoService.PostDeprecated:output_type -> example.api.demo.PostDeprecatedResponse
-	30, // 45: example.api.demo.DemoService.Raw:output_type -> example.api.demo.RawResponse
-	34, // 46: example.api.demo.DemoService.MapModel:output_type -> example.api.demo.MapModelResponse
-	38, // [38:47] is the sub-list for method output_type
-	29, // [29:38] is the sub-list for method input_type
+	35, // 38: example.api.demo.DemoService.ErrorDemo:input_type -> example.api.demo.ErrorDemoRequest
+	3,  // 39: example.api.demo.DemoService.Abc:output_type -> example.api.demo.AbcResponse
+	7,  // 40: example.api.demo.DemoService.TestPost:output_type -> example.api.demo.TestPostResponse
+	11, // 41: example.api.demo.DemoService.PutDemo:output_type -> example.api.demo.PutDemoResponse
+	14, // 42: example.api.demo.DemoService.Delete:output_type -> example.api.demo.DeleteResponse
+	17, // 43: example.api.demo.DemoService.SweepEvents:output_type -> example.api.demo.SweepStreamMessage
+	24, // 44: example.api.demo.DemoService.AssistantSession:output_type -> example.api.demo.AssistantServerMessage
+	28, // 45: example.api.demo.DemoService.PostDeprecated:output_type -> example.api.demo.PostDeprecatedResponse
+	30, // 46: example.api.demo.DemoService.Raw:output_type -> example.api.demo.RawResponse
+	34, // 47: example.api.demo.DemoService.MapModel:output_type -> example.api.demo.MapModelResponse
+	36, // 48: example.api.demo.DemoService.ErrorDemo:output_type -> example.api.demo.ErrorDemoResponse
+	39, // [39:49] is the sub-list for method output_type
+	29, // [29:39] is the sub-list for method input_type
 	29, // [29:29] is the sub-list for extension type_name
 	29, // [29:29] is the sub-list for extension extendee
 	0,  // [0:29] is the sub-list for field type_name
@@ -2263,7 +2360,7 @@ func file_api_demo_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_demo_proto_rawDesc), len(file_api_demo_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   37,
+			NumMessages:   39,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

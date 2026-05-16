@@ -15,64 +15,76 @@ func NewGenDemoClient(transport runtime.Transport) *GenDemoClient {
 	return &GenDemoClient{transport: transport}
 }
 
-func (client *GenDemoClient) Abc(ctx context.Context, query *REQ_Abc_QUERY) (*RSP_Abc_BODY, error) {
+type Client = GenDemoClient
+
+var NewClient = NewGenDemoClient
+
+type DemoClient = GenDemoClient
+
+var NewDemoClient = NewGenDemoClient
+
+func (client *GenDemoClient) Abc(ctx context.Context, query AbcQuery) (*AbcResponse, error) {
 	request := runtime.Request{
-		Method:          "GET",
-		Path:            "/api/demo/abc",
-		ResponseWrapper: "GeneralWrapper",
-		Query:           query,
+		RouteID:          "api.demo.get.abc",
+		Method:           "GET",
+		Path:             "/api/demo/abc",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		Query:            query,
 	}
-	var response RSP_Abc_BODY
+	var response AbcResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
 	}
 	return &response, nil
 }
 
-func (client *GenDemoClient) TestPost(ctx context.Context, jsonBody *REQ_TestPost_JSON) (*RSP_TestPost_BODY, error) {
+func (client *GenDemoClient) TestPost(ctx context.Context, jsonBody TestPostJSON) (*TestPostResponse, error) {
 	request := runtime.Request{
-		Method:          "POST",
-		Path:            "/api/demo/test_post",
-		ResponseWrapper: "GeneralWrapper",
-		JSON:            jsonBody,
+		RouteID:          "api.demo.post.testpost",
+		Method:           "POST",
+		Path:             "/api/demo/test_post",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		JSON:             jsonBody,
 	}
-	var response RSP_TestPost_BODY
+	var response TestPostResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
 	}
 	return &response, nil
 }
 
-func (client *GenDemoClient) Z1put(ctx context.Context, query *REQ_Z1put_QUERY, jsonBody *REQ_Z1put_JSON) (*RSP_Z1put_BODY, error) {
+func (client *GenDemoClient) PutDemo(ctx context.Context, query PutDemoQuery, jsonBody PutDemoJSON) (*PutDemoResponse, error) {
 	request := runtime.Request{
-		Method:          "PUT",
-		Path:            "/api/demo/1put",
-		ResponseWrapper: "GeneralWrapper",
-		Query:           query,
-		JSON:            jsonBody,
+		RouteID:          "api.demo.put.z1put",
+		Method:           "PUT",
+		Path:             "/api/demo/1put",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		Query:            query,
+		JSON:             jsonBody,
 	}
-	var response RSP_Z1put_BODY
+	var response PutDemoResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
 	}
 	return &response, nil
 }
 
-func (client *GenDemoClient) Delete(ctx context.Context, query *REQ_Delete_QUERY) (*RSP_Delete_BODY, error) {
+func (client *GenDemoClient) Delete(ctx context.Context, query DeleteQuery) (*DeleteResponse, error) {
 	request := runtime.Request{
-		Method:          "DELETE",
-		Path:            "/api/demo/delete$",
-		ResponseWrapper: "GeneralWrapper",
-		Query:           query,
+		RouteID:          "api.demo.delete.delete",
+		Method:           "DELETE",
+		Path:             "/api/demo/delete$",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		Query:            query,
 	}
-	var response RSP_Delete_BODY
+	var response DeleteResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
 	}
 	return &response, nil
 }
 
-func (client *GenDemoClient) ConnectWs(ctx context.Context, query *REQ_Ws_QUERY) error {
+func (client *GenDemoClient) ConnectWs(ctx context.Context, query WsQuery) error {
 	request := runtime.ConnectionRequest{
 		Kind:    "legacy_ws",
 		RouteID: "api.demo.ws.ws",
@@ -82,7 +94,7 @@ func (client *GenDemoClient) ConnectWs(ctx context.Context, query *REQ_Ws_QUERY)
 	return client.transport.ConnectUnsupported(ctx, request)
 }
 
-func (client *GenDemoClient) SubscribeSweepEvents(ctx context.Context, openData *OPEN_SweepEvents) error {
+func (client *GenDemoClient) SubscribeSweepEvents(ctx context.Context, openData SweepEventsOpen) error {
 	request := runtime.ConnectionRequest{
 		Kind:    "stream",
 		RouteID: "api.demo.stream.sweepevents",
@@ -92,7 +104,7 @@ func (client *GenDemoClient) SubscribeSweepEvents(ctx context.Context, openData 
 	return client.transport.StreamUnsupported(ctx, request)
 }
 
-func (client *GenDemoClient) OpenAssistantSession(ctx context.Context, openData *OPEN_AssistantSession) error {
+func (client *GenDemoClient) OpenAssistantSession(ctx context.Context, openData AssistantSessionOpen) error {
 	request := runtime.ConnectionRequest{
 		Kind:    "channel",
 		RouteID: "api.demo.channel.assistantsession",
@@ -102,40 +114,58 @@ func (client *GenDemoClient) OpenAssistantSession(ctx context.Context, openData 
 	return client.transport.ChannelUnsupported(ctx, request)
 }
 
-func (client *GenDemoClient) PostDeprecated(ctx context.Context, jsonBody *REQ_PostDeprecated_JSON) (*RSP_PostDeprecated_BODY, error) {
+func (client *GenDemoClient) PostDeprecated(ctx context.Context, jsonBody PostDeprecatedJSON) (*PostDeprecatedResponse, error) {
 	request := runtime.Request{
-		Method:          "POST",
-		Path:            "/api/demo/post_deprecated",
-		ResponseWrapper: "GeneralWrapper",
-		JSON:            jsonBody,
+		RouteID:          "api.demo.post.postdeprecated",
+		Method:           "POST",
+		Path:             "/api/demo/post_deprecated",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		JSON:             jsonBody,
 	}
-	var response RSP_PostDeprecated_BODY
+	var response PostDeprecatedResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
 	}
 	return &response, nil
 }
 
-func (client *GenDemoClient) Raw(ctx context.Context) (*RSP_Raw_BODY, error) {
+func (client *GenDemoClient) Raw(ctx context.Context) (*RawResponse, error) {
 	request := runtime.Request{
-		Method:          "POST",
-		Path:            "/api/demo/raw",
-		ResponseWrapper: "GeneralWrapper",
+		RouteID:          "api.demo.post.raw",
+		Method:           "POST",
+		Path:             "/api/demo/raw",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 	}
-	var response RSP_Raw_BODY
+	var response RawResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
 	}
 	return &response, nil
 }
 
-func (client *GenDemoClient) MapModel(ctx context.Context) (*RSP_MapModel_BODY, error) {
+func (client *GenDemoClient) MapModel(ctx context.Context) (*MapModelResponse, error) {
 	request := runtime.Request{
-		Method:          "POST",
-		Path:            "/api/demo/map_model",
-		ResponseWrapper: "GeneralWrapper",
+		RouteID:          "api.demo.post.mapmodel",
+		Method:           "POST",
+		Path:             "/api/demo/map_model",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 	}
-	var response RSP_MapModel_BODY
+	var response MapModelResponse
+	if err := client.transport.Do(ctx, request, &response); err != nil {
+		return nil, err
+	}
+	return &response, nil
+}
+
+func (client *GenDemoClient) ErrorDemo(ctx context.Context, query ErrorDemoQuery) (*ErrorDemoResponse, error) {
+	request := runtime.Request{
+		RouteID:          "api.demo.get.errordemo",
+		Method:           "GET",
+		Path:             "/api/demo/error-demo",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		Query:            query,
+	}
+	var response ErrorDemoResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
 	}

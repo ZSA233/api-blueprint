@@ -36,7 +36,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req=Q|auth|handle|rsp=json@GeneralWrapper",
+			"req=Q|auth|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.Abc,
 		),
 		mapEnumExecutor: sharedprovider.NewRouteExecutor(
@@ -52,7 +52,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req|auth|handle|rsp=json@GeneralWrapper",
+			"req|auth|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.MapEnum,
 		),
 		listEnumExecutor: sharedprovider.NewRouteExecutor(
@@ -68,7 +68,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req|auth|handle|rsp=json@GeneralWrapper",
+			"req|auth|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.ListEnum,
 		),
 		stringExecutor: sharedprovider.NewRouteExecutor(
@@ -84,7 +84,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req|auth|handle|rsp=json@GeneralWrapper",
+			"req|auth|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.String,
 		),
 		uint64Executor: sharedprovider.NewRouteExecutor(
@@ -100,7 +100,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req|auth|handle|rsp=json@GeneralWrapper",
+			"req|auth|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.Uint64,
 		),
 		stringEmunExecutor: sharedprovider.NewRouteExecutor(
@@ -116,7 +116,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req|auth|handle|rsp=json@GeneralWrapper",
+			"req|auth|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.StringEmun,
 		),
 		helloWayExecutor: sharedprovider.NewRouteExecutor(
@@ -132,7 +132,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req=Q|auth|handle|rsp=json@GeneralWrapper",
+			"req=Q|auth|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.HelloWay,
 		),
 	}
@@ -147,7 +147,7 @@ func (svc *HelloService) SetConnectionHub(hub wailstransport.ConnectionHub) {
 
 func (svc *HelloService) Abc(
 	envelope *INVOKE_Abc,
-) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_Abc], err error) {
+) (rsp *sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_Abc], err error) {
 	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
 		BindQuery: true,
 		BindJSON:  false,
@@ -169,12 +169,12 @@ func (svc *HelloService) Abc(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_GeneralWrapper(response, invokeErr), nil
+	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
 }
 
 func (svc *HelloService) MapEnum(
 	envelope *INVOKE_MapEnum,
-) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_MapEnum], err error) {
+) (rsp *sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_MapEnum], err error) {
 	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
 		BindQuery: false,
 		BindJSON:  false,
@@ -196,12 +196,12 @@ func (svc *HelloService) MapEnum(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_GeneralWrapper(response, invokeErr), nil
+	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
 }
 
 func (svc *HelloService) ListEnum(
 	envelope *INVOKE_ListEnum,
-) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_ListEnum], err error) {
+) (rsp *sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_ListEnum], err error) {
 	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
 		BindQuery: false,
 		BindJSON:  false,
@@ -223,12 +223,12 @@ func (svc *HelloService) ListEnum(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_GeneralWrapper(response, invokeErr), nil
+	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
 }
 
 func (svc *HelloService) String(
 	envelope *INVOKE_String,
-) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_String], err error) {
+) (rsp *sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_String], err error) {
 	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
 		BindQuery: false,
 		BindJSON:  false,
@@ -250,12 +250,12 @@ func (svc *HelloService) String(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_GeneralWrapper(response, invokeErr), nil
+	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
 }
 
 func (svc *HelloService) Uint64(
 	envelope *INVOKE_Uint64,
-) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_Uint64], err error) {
+) (rsp *sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_Uint64], err error) {
 	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
 		BindQuery: false,
 		BindJSON:  false,
@@ -277,12 +277,12 @@ func (svc *HelloService) Uint64(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_GeneralWrapper(response, invokeErr), nil
+	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
 }
 
 func (svc *HelloService) StringEmun(
 	envelope *INVOKE_StringEmun,
-) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_StringEmun], err error) {
+) (rsp *sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_StringEmun], err error) {
 	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
 		BindQuery: false,
 		BindJSON:  false,
@@ -304,12 +304,12 @@ func (svc *HelloService) StringEmun(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_GeneralWrapper(response, invokeErr), nil
+	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
 }
 
 func (svc *HelloService) HelloWay(
 	envelope *INVOKE_HelloWay,
-) (rsp *sharedprovider.RSP_JSON_GeneralWrapper[RSP_HelloWay], err error) {
+) (rsp *sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_HelloWay], err error) {
 	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
 		BindQuery: true,
 		BindJSON:  false,
@@ -331,5 +331,5 @@ func (svc *HelloService) HelloWay(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_GeneralWrapper(response, invokeErr), nil
+	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
 }

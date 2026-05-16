@@ -187,8 +187,11 @@ def inspect_errors_many(config_path: str | Path | None, route_queries: Sequence[
 
 def _inspect_route_errors(context: InspectionContext, errors: list[JsonObject], route_query: str) -> JsonObject:
     route = _find_route(context.agent, route_query)
-    route_error_ids = {str(error_id) for error_id in route.get("errors", []) if error_id is not None}
-    selected = [error for error in errors if _string(error.get("id")) in route_error_ids]
+    raw_route_errors = route.get("errors", [])
+    selected = _list_of_maps(raw_route_errors)
+    if not selected:
+        route_error_ids = {str(error_id) for error_id in raw_route_errors if error_id is not None}
+        selected = [error for error in errors if _string(error.get("id")) in route_error_ids]
     return {
         "route": route.get("id"),
         "count": len(selected),

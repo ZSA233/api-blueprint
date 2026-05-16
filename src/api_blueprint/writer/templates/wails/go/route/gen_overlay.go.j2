@@ -3,10 +3,10 @@
 package {{ router_group.binding_package }}
 
 {% set routes = router_group.views() | list %}
-{% set needs_shared_protos = routes | selectattr("ws_payload_alias_name") | list | length > 0 %}
+{% set needs_shared_types = routes | selectattr("ws_payload_alias_name") | list | length > 0 %}
 import (
 	sharedroutes "{{ router_group.shared_imports | safe }}"
-	{% if needs_shared_protos %}sharedprotos "{{ bp.shared_protos_imports | safe }}"
+	{% if needs_shared_types %}sharedtypes "{{ bp.shared_types_imports | safe }}"
 	{% endif %}
 	wailstransport "{{ writer.runtime_imports | safe }}"
 )

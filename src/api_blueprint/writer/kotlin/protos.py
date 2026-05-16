@@ -36,7 +36,6 @@ from api_blueprint.engine.model import (
     model_to_pydantic,
     unwrap_model_type,
 )
-from api_blueprint.engine.runtime.wrappers import GeneralWrapper
 from api_blueprint.engine.utils import is_parametrized
 
 from .naming import to_kotlin_property_name, to_kotlin_type_name
@@ -325,57 +324,6 @@ class KotlinProtoRegistry:
         )
         proto.add_tag("shared")
         self._enums[enum_cls] = proto
-        return proto
-
-    def register_wrapper(self, wrapper_cls: type[Model]) -> KotlinProto:
-        """Register a generic response wrapper as a shared serializable model."""
-        wrapper_name = "GeneralResponse" if wrapper_cls is GeneralWrapper else to_kotlin_type_name(
-            getattr(wrapper_cls, "__name__", "ResponseWrapper")
-        )
-        proto = self._protos.get((wrapper_cls, None))
-        if proto is not None:
-            return proto
-
-        proto = KotlinProto(
-            name=wrapper_name,
-            model=wrapper_cls,
-            kind="wrapper",
-            module="shared",
-        )
-        proto.add_tag("wrapper")
-        pyd_model = model_to_pydantic(wrapper_cls)
-        for field_name, model_field in iter_model_vars(wrapper_cls):
-            if not isinstance(model_field, (Field, Model)):
-                continue
-            field_info = pyd_model.model_fields[field_name]
-            extra = getattr(model_field, "__extra__", {}) or {}
-            serial_name = extra.get("alias") or field_name
-            optional = (not field_info.is_required()) or bool(extra.get("omitempty", False))
-
-            is_generic = type(model_field) is Field
-            if is_generic:
-                resolved = KotlinResolvedType("T")
-                if wrapper_cls is GeneralWrapper and serial_name == "data":
-                    resolved = KotlinResolvedType("T?")
-                    optional = True
-                else:
-                    optional = False
-            else:
-                resolved = self._resolver.resolve(model_field, module=proto.module)
-                if optional and not resolved.text.endswith("?"):
-                    resolved = resolved.as_nullable()
-
-            proto.fields.append(
-                KotlinProtoField(
-                    name=to_kotlin_property_name(serial_name),
-                    serial_name=serial_name,
-                    type=resolved,
-                    optional=optional,
-                    description=field_info.description or "",
-                )
-            )
-
-        self._protos[(wrapper_cls, None)] = proto
         return proto
 
     def _build_proto(self, proto: KotlinProto) -> None:

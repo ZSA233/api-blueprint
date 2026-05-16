@@ -53,7 +53,7 @@ go_package_prefix = "example.com/project/grpc/go"
     generator.generate(config_path, target_ids=("contract", "grpc.proto"))
 
     manifest = json.loads((tmp_path / "api-blueprint.contract.json").read_text(encoding="utf-8"))
-    assert manifest["version"] == "1.0"
+    assert manifest["version"] == "2.0"
     assert manifest["generator"]["version"] == __version__
     assert manifest["routes"][0]["id"] == "api.demo.get.ping"
     proto = tmp_path / "grpc" / "protos" / "api" / "demo.proto"

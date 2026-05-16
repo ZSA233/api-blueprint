@@ -43,7 +43,7 @@ from .modeling import AnyModel, Field, Model, iter_model_vars
 
 if TYPE_CHECKING:
     from api_blueprint.engine.blueprint.router import Router
-    from api_blueprint.engine.runtime.wrappers import ResponseWrapper
+    from api_blueprint.engine.runtime.wrappers import ResponseEnvelope
 
 
 _PYDANTIC_MODEL_CACHE: dict[type[Model] | Map, Any] = {}
@@ -78,21 +78,22 @@ def model_to_pydantic(
             nested = model_to_pydantic(attr.__class__, name=field_name, router=router)
             py_type = nested
             description = attr.__extra__.get("description", "")
-            copy_extra = _field_factory_extra(attr.__extra__)
-            optional = bool(copy_extra.pop("optional", False))
-            copy_extra["description"] = f"[{attr.__class__.__name__}] {description}"
-            if optional and copy_extra.get("default", ...) is ...:
-                copy_extra["default"] = None
+            copy_extra = _normalize_field_factory_kwargs(
+                attr.__extra__,
+                description=f"[{attr.__class__.__name__}] {description}",
+            )
             info = field_factory(**copy_extra)
+            if copy_extra.get("default", ...) is not ... and py_type is not Any:
+                py_type = Optional[py_type]
         else:
             continue
 
         annotations[field_name] = py_type
         namespace[field_name] = info
 
-    wrapper: type["ResponseWrapper"] | None = getattr(cls, "__wrapper__", None)
-    if wrapper is not None:
-        namespace["model_config"] = ConfigDict(json_schema_extra=wrapper.json_schema_extra())
+    envelope: type["ResponseEnvelope"] | None = getattr(cls, "__envelope__", None)
+    if envelope is not None:
+        namespace["model_config"] = ConfigDict(json_schema_extra=envelope.json_schema_extra())
         annotations["model_config"] = ClassVar[ConfigDict]
 
     namespace["__annotations__"] = annotations
@@ -223,7 +224,7 @@ def _normalize_field_factory_kwargs(extra: dict[str, Any], *, description: str) 
     if merged_schema_extra:
         copy_extra["json_schema_extra"] = merged_schema_extra
 
-    if optional and copy_extra.get("default", ...) is ...:
+    if (optional or omitempty) and copy_extra.get("default", ...) is ...:
         copy_extra["default"] = None
 
     copy_extra["description"] = description

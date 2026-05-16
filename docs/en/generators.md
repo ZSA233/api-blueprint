@@ -4,7 +4,7 @@ This page covers the main non-Wails, non-gRPC generators. See [Wails](wails.md) 
 
 ## Shared Planning And Capabilities
 
-`api-gen check`, contract / agent artifact projection, and language writers use the same planner / capability metadata. Before generation, target dependencies, route kinds, request kinds, and response wrappers are validated consistently, avoiding cases where check passes and a writer later discovers unsupported input.
+`api-gen check`, contract / agent artifact projection, and language writers use the same planner / capability metadata. Before generation, target dependencies, route kinds, request kinds, and response envelopes are validated consistently, avoiding cases where check passes and a writer later discovers unsupported input.
 
 Go client, Kotlin, Java, and Python are newly implemented generator surfaces and should currently be treated as preview. Go server / Go client / Wails Go contract / agent artifact paths use Go-safe route package segments, for example `/api-v1` -> `api_v1` and `/admin/v1` -> `admin_v1`; Kotlin / Java / Python still point to outputs that mirror the full route path, for example `routes/api/demo`; Python no longer uses a `routes/root` sentinel.
 
@@ -18,7 +18,7 @@ The Go generator emits:
 
 - Route interfaces and default `impl.go`.
 - Request / response / context structures.
-- Provider runtime and wrappers.
+- Provider runtime and response envelope codecs.
 - Transport-neutral Go core.
 - Optional HTTP/Gin adapter.
 
@@ -26,7 +26,7 @@ The Go generator emits:
 
 `go-server` owns only the Go server core. Its `out_dir` is the generated package root and no longer appends `views` implicitly. HTTP / Wails output is attached explicitly by `http-transport` / `wails-transport` targets through `server = "go.server"`. The HTTP entrypoint is generated under `<out_dir>/transports/http/<go-root-segment>`, for example `transports/http/api.NewBlueprint(engine)`.
 
-Go route core is generated under `<out_dir>/routes/<go-root-segment>/**`, provider runtime under `<out_dir>/providers`, transport adapters under `<out_dir>/transports/**`, and error catalog implementations under `<out_dir>/runtime/errors/**`. Go-safe segments replace non-`[0-9A-Za-z_]` characters with `_`, trim leading/trailing `_`, prefix digit-leading names with `p_`, and suffix Go keywords with `_pkg`; URLs, route paths, and selection/filter semantics stay unchanged, so Go directories do not guarantee one directory per URL slash segment. If you want the import path to include `/views`, set `out_dir = ".../views"` explicitly.
+Go route core is generated under `<out_dir>/routes/<go-root-segment>/**`, provider runtime under `<out_dir>/providers`, transport adapters under `<out_dir>/transports/**`, and typed error runtime under `<out_dir>/runtime/errors/**`. Go-safe segments replace non-`[0-9A-Za-z_]` characters with `_`, trim leading/trailing `_`, prefix digit-leading names with `p_`, and suffix Go keywords with `_pkg`; URLs, route paths, and selection/filter semantics stay unchanged, so Go directories do not guarantee one directory per URL slash segment. If you want the import path to include `/views`, set `out_dir = ".../views"` explicitly.
 
 `providers` is a global transport-neutral runtime under the generated package root and is not split per blueprint root. TypeScript's per-root `runtime` mainly isolates model and client names; it is not the same responsibility as Go provider hooks.
 
@@ -85,9 +85,55 @@ The default HTTP/Wails runtimes fully implement only `ConnectionScope.SESSION`. 
 
 Generated connection handlers still default to `not implemented`, so example business logic is not written into every user project. The repository example hand-writes the minimal usage in the user-owned `examples/golang/server/views/routes/api/demo/impl.go`: `STREAM` shows `Open()`, server message construction, `Send()`, and typed `Close()`; `CHANNEL` also shows `Recv(ctx)` for client messages.
 
-### Error Catalog
+### Typed Errors
 
-ContractGraph collects `Blueprint(errors=...)` and route `.ERR(...)` declarations into a language-agnostic error catalog. `message` is the protocol-level default description, while `toast.key/default/level` is the user-facing fallback surface; generators do not emit built-in locale tables or `locales/*.json`. Go client, TypeScript, Kotlin, Java, and Python client/server split runtime error types/helpers from static catalog data into separate generated files such as `gen_error_catalog.*`, `GenApiErrorCatalog.kt`, or `GenApiErrorCatalog.java`; Go server emits runtime types under `runtime/errors` and grouped error values under packages such as `runtime/errors/common_err`, avoiding a duplicate root catalog. Business i18n resolves the current language by toast key, and client helpers resolve display text in the order `toast.text`, external i18n, `toast.default`, then `message`. Generated group errors implement `CodeError`, and `WithToast(...)` returns an immutable override copy for request-language, tenant, or rollout-specific dynamic `toast.text`. The HTTP transport still represents transport failures separately, and business wrapper codes are not automatically converted into thrown exceptions.
+ContractGraph collects `Blueprint(errors=...)` and route `.ERR(...)` declarations into language-agnostic typed errors. Manifest `2.0` keeps a global `errors` definition table and writes compact route-local refs (`id/group/key/code/message/toast`) into `routes[].errors`, so generated clients and `api-gen inspect errors --route ...` can show the error surface from the route being called. `id` is the public protocol error identity; `code` is only a business code and may be reused across groups or routes. `ResponseEnvelope` decides the wire shape: the default `CodeMessageDataEnvelope` uses `{ code, message, data, error? }`, strict legacy output can opt into `LegacyCodeMessageDataEnvelope`, and `{ ok, data/error }` is available only when selecting `OkDataErrorEnvelope`.
+
+Generated runtime APIs use user-facing names such as `ApiError`, `ApiErrors`, `ApiErrorsByID`, `lookupApiError`, and `isApiError` instead of exposing catalog dictionaries as the primary surface. Default Go, TypeScript, Python, Kotlin, and Java client transports unwrap by the route envelope spec, resolve the payload by `id`, then by `(route_id, code)`, then by global code fallback, and throw or return a typed `ApiError`. Go server grouped errors under packages such as `runtime/errors/common_err` return typed `ApiError` values; `WithToast(...)` returns an immutable override copy for request-language, tenant, or rollout-specific dynamic `toast.text`. Business i18n resolves the current language by toast key, and client helpers resolve display text in the order `toast.text`, external i18n, `toast.default`, then `message`. HTTP status remains transport state and is not derived from business error codes.
+
+A Go server handler can return generated typed errors directly, or return an undeclared business code to exercise client unknown fallback:
+
+```go
+switch req.Q.Mode {
+case "token":
+    return nil, common_err.TOKEN_EXPIRE
+case "rate_limit":
+    return nil, demo_err.RATE_LIMITED.WithToast(apperrors.ToastPayload{
+        Key: "demo.rate_limited", Level: "warning",
+        Default: "Too many requests. Please try again later.", Text: "Please retry in 30 seconds.",
+    })
+case "unknown":
+    return nil, apperrors.New(70001, "example undefined business error")
+}
+```
+
+The TypeScript client throws `ApiError` from the default HTTP transport. Business code usually checks the type, branches by `id/code`, and uses the toast helper to resolve display text:
+
+```ts
+try {
+  await demoClient.errorDemo({ query: { mode: "rate_limit" } });
+} catch (error) {
+  if (isApiError(error) && error.id === "DemoErr.RATE_LIMITED") {
+    const text = resolveApiToast(error.toast, translate, error.message);
+    showToast(text);
+  }
+}
+```
+
+Kotlin currently has generated snapshots and compile validation but no standalone runnable example app; the catch shape is the same as other clients:
+
+```kotlin
+try {
+    apiClient.demo.errorDemo(DemoErrorDemoQuery(mode = "rate_limit"))
+} catch (error: ApiError) {
+    if (error.id == "DemoErr.RATE_LIMITED") {
+        val text = resolveApiToast(error.toast, translate = ::translate, fallbackMessage = error.message.orEmpty())
+        showToast(text)
+    }
+}
+```
+
+The repository’s `/api/demo/error-demo` example and Go / TypeScript / Python / Java suites cover declared errors, route-local errors, dynamic `toast.text`, and fallback for undeclared error codes.
 
 ## Go Client
 
@@ -98,16 +144,18 @@ api-gen generate -c api-blueprint.toml --target go.client
 The Go client target emits a preview HTTP client:
 
 - `runtime/gen_*.go`
+- `runtime/gen_types.go`
 - `runtime/binary/gen_runtime.go`
+- `gen_client.go` / `client.go` at the target root for the aggregate public facade
 - `routes/<go-root-segment>/<go-group-segment>/gen_client.go`
-- `routes/<go-root-segment>/<go-group-segment>/gen_models.go`
-- `routes/<go-root-segment>/<go-group-segment>/_gen_binary/gen_binary.go`, generated only for binary schema route groups
+- `routes/<go-root-segment>/<go-group-segment>/gen_types.go`
+- `routes/<go-root-segment>/<go-group-segment>/gen_binary.go`, generated only for binary schema route groups
 - `routes/<go-root-segment>/<go-group-segment>/client.go`
 - `transports/http/gen_config.go`
 - `transports/http/gen_transport.go`
 - `transports/http/client.go`
 
-`gen_*.go` files are generator-owned and overwritten; `client.go` façades are user-owned and preserved. Route/runtime clients depend only on the transport abstraction, while `base_url` / `base_url_expr` are written only to the HTTP transport config. The default HTTP adapter implements RPC query/json/form/binary requests. Legacy WS / STREAM / CHANNEL methods are generated, but the default HTTP adapter returns an explicit unsupported error so projects can swap in a custom transport.
+`gen_*.go` files are generator-owned and overwritten; `client.go` façades are user-owned and preserved. The recommended entrypoint is `apiclient.NewHTTP(apiclient.HTTPConfig{BaseURL: baseURL})`, then route calls such as `api.Demo.ErrorDemo(ctx, demo.ErrorDemoQuery{Mode: "token"})`. Route/runtime clients depend only on the transport abstraction, while `base_url` / `base_url_expr` are written only to the HTTP transport config. The default HTTP adapter implements RPC query/json/form/binary requests. Legacy WS / STREAM / CHANNEL methods are generated, but the default HTTP adapter returns an explicit unsupported error so projects can swap in a custom transport.
 
 ## TypeScript
 
@@ -117,7 +165,7 @@ api-gen generate -c api-blueprint.toml --target typescript.client
 
 The TypeScript client target emits:
 
-- `models.ts` / `gen_models.ts`.
+- `types.ts` / `gen_types.ts`.
 - Request client classes.
 - Transport-neutral `ApiClientConfig`.
 - `createClients(config)` facades injected by transport targets.
@@ -127,7 +175,7 @@ The TypeScript client target emits:
 
 `STREAM` / `CHANNEL` generate `ApiStreamBridge<Recv, Close>` and `ApiChannelBridge<Recv, Send, Close>`. Single-message directions use the model type directly; multi-message directions generate discriminated union types such as `{ type: "progress"; data: TaskProgress }`. The HTTP transport stream bridge uses SSE, the channel bridge uses WebSocket with an internal envelope to distinguish normal messages from close lifecycle payloads, and the Wails transport uses generated runtime events without exposing event names to business clients.
 
-Markdown Binary Schema helpers are route-local `gen_binary.ts` sibling modules. Route clients use `GenBinary.<Packet>` / `GenBinary.<Packet>Wire`, and no `routes/.../binary/` subdirectory is emitted.
+Markdown Binary Schema helpers are route-local `gen_binary.ts` implementation files and are re-exported through `types.ts`. Route clients import packet helpers from the route types surface, so there is no public `wire` namespace.
 
 ## Kotlin Android
 
@@ -147,9 +195,9 @@ This is a breaking layout change from the old `<package>/ApiClient.kt`, `endpoin
 
 Kotlin generator-owned files are named `Gen*.kt`, for example `routes/api/demo/GenDemoApi.kt` and `runtime/GenApiClient.kt`, and include a generated header. Non-`Gen*` façade files such as `DemoApi.kt`, `runtime/ApiClient.kt`, and `transports/http/HttpApiClient.kt` are preserved user extension points.
 
-Markdown Binary Schema helpers are route-local `GenBinary.kt` files in the same package as the route API. Generated types are exposed as `GenBinary.<Packet>` / `GenBinary.<Packet>Wire`, so no `routes/.../binary/` subpackage is emitted.
+Route DTOs are emitted as `<Group>Types.kt`. Markdown Binary Schema helpers are route-local packet / wire helper types in `BinaryTypes.kt` in the same package as the route API, so no `GenBinary` public object or `routes/.../binary/` subpackage is emitted.
 
-Through the transport abstraction, Kotlin generates `rpc`, `legacy_ws`, `stream`, and `channel` route surfaces, and supports query/json/form/binary/open request kinds plus none/general/custom response wrappers. The built-in OkHttp adapter is RPC-first; long-connection bridges are preview/custom transport surfaces, so validate with `api-gen check` and target-platform smoke tests before putting them on a production call path.
+Through the transport abstraction, Kotlin generates `rpc`, `legacy_ws`, `stream`, and `channel` route surfaces, and supports query/json/form/binary/open request kinds plus `none` / `code_message_data` / `ok_data_error` response envelopes. The built-in OkHttp adapter is RPC-first; long-connection bridges are preview/custom transport surfaces, so validate with `api-gen check` and target-platform smoke tests before putting them on a production call path.
 
 `base_url` / `base_url_expr` are written into the generated `transports/http/HttpApiConfig.kt` default, not into the transport-neutral runtime client.
 
@@ -167,11 +215,11 @@ Java client/server use a package-first layout whose route directory mirrors the 
 - `<package>/<root>/routes/<root>/<group...>/*`
 - `<package>/<root>/transports/http/*`
 
-The Markdown Binary Schema bridge is route-local `GenBinary.java` in the same package as the route API / service; `routes/.../binary/GenBinary.java` subpackages are no longer emitted.
+Route DTOs are emitted as `<Group>Types.java`. The Markdown Binary Schema bridge is also folded into that route types container, for example `BinaryTypes.DemoPacket` / `BinaryTypes.DemoPacketWire`; `GenBinary.java` and `routes/.../binary/GenBinary.java` are no longer emitted.
 
-The Java client emits transport-neutral route surfaces, `ApiTransport`, the default JDK HTTP adapter, and `GenApiClient`. Preserved user files are `runtime/ApiClient.java`, `routes/<root>/<group...>/<Group>Api.java`, and `transports/http/HttpApiClient.java`; other `Gen*.java` and runtime generated files are overwritten. The default HTTP adapter implements RPC query/json/form/binary/binary-schema requests, while legacy WS / STREAM / CHANNEL surfaces default to explicit unsupported errors.
+The Java client emits transport-neutral route surfaces, `ApiTransport`, the default JDK HTTP adapter, and `GenApiClient`. Preserved user files are `runtime/ApiClient.java`, `routes/<root>/<group...>/<Group>Api.java`, and `transports/http/HttpApiClient.java`; other `Gen*.java` and runtime generated files are overwritten. The recommended entrypoint is `HttpApiClient.create(baseUrl)`, with public DTOs such as `DemoTypes.ErrorDemoQuery` / `DemoTypes.ErrorDemoResponse`. The default HTTP adapter implements RPC query/json/form/binary/binary-schema requests, while legacy WS / STREAM / CHANNEL surfaces default to explicit unsupported errors.
 
-The Java server emits route service interfaces, stubs, runtime, and Spring controllers. The preserved user file is `routes/<root>/<group...>/<Group>Service.java`; `Gen<Group>Service.java`, `Gen<Group>ServiceStub.java`, `Gen<Group>ServiceModels.java`, and `transports/http/<root>/<group...>/Gen<Group>Controller.java` are generator-owned. RPC HTTP controllers are usable, while non-RPC connection routes keep the service surface and the HTTP adapter returns explicit 501 responses.
+The Java server emits route service interfaces, public stubs, runtime, route types, and Spring controllers. The preserved user file is `routes/<root>/<group...>/<Group>Service.java`; `<Group>Types.java`, `<Group>ServiceStub.java`, `Gen<Group>Service.java`, and `transports/http/<root>/<group...>/Gen<Group>Controller.java` are generator-owned. RPC HTTP controllers are usable, while non-RPC connection routes keep the service surface and the HTTP adapter returns explicit 501 responses.
 
 DTOs use Java 17 `record`; fields use Jackson `@JsonProperty`; enums use `@JsonCreator` / `@JsonValue` to preserve wire values. `module` is only a shortcut-table alias normalized to `package`; no JPMS `module-info.java` is generated.
 
@@ -187,9 +235,9 @@ Python client uses `python_package_root` as its package root and emits an async-
 - `<python_package_root>/<root>/routes/<root>/<group...>/*`
 - `<python_package_root>/<root>/transports/http/*`
 
-`routes/<root>/<group...>/gen_client.py` is the generated route client, `routes/<root>/<group...>/client.py` is the preserved passthrough entrypoint, and `transports/http/gen_client.py` provides the default httpx adapter. Root-level routes are emitted directly under `routes/<root>`, not `routes/root`. That adapter implements RPC requests; WS/STREAM/CHANNEL bridge interfaces are generated, but connection transports need project-specific customization or later extension. `base_url` / `base_url_expr` are used by the HTTP transport adapter.
+`gen_client.py` / `client.py` at the root provide the aggregate facade, and the recommended entrypoint is `async with create_client(base_url) as api`. Route methods accept dataclass instances or mappings and return dataclass responses by default. `routes/<root>/<group...>/gen_client.py` is the generated route client, `routes/<root>/<group...>/gen_types.py` is the route DTO and binary public export surface, `routes/<root>/<group...>/client.py` is the preserved passthrough entrypoint, and `transports/http/gen_client.py` provides the default httpx adapter. Root-level routes are emitted directly under `routes/<root>`, not `routes/root`. That adapter implements RPC requests; WS/STREAM/CHANNEL bridge interfaces are generated, but connection transports need project-specific customization or later extension. `base_url` / `base_url_expr` are used by the HTTP transport adapter.
 
-Markdown Binary Schema helpers are route-local `gen_binary.py` sibling modules; `routes/.../binary/` subpackages are no longer emitted.
+Markdown Binary Schema codecs are route-local `gen_binary.py` implementation modules; public packet and writer helpers are re-exported from `gen_types.py`, so there is no public `wire.py` module.
 
 ## Python Server
 

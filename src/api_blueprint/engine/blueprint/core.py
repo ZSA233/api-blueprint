@@ -6,7 +6,7 @@ from fastapi import FastAPI
 
 from api_blueprint.engine.blueprint.group import RouterGroup
 from api_blueprint.engine.blueprint.router import Router
-from api_blueprint.engine.runtime import NoneWrapper, Provider, ResponseWrapper, get_shared_app
+from api_blueprint.engine.runtime import CodeMessageDataEnvelope, Provider, ResponseEnvelope, get_shared_app
 from api_blueprint.engine.schema import Error, HeaderModel, Model, unwrap_errors
 
 
@@ -18,7 +18,7 @@ class Blueprint:
     root_group: RouterGroup
     providers: list["Provider"]
     errors: DefaultDict[int, list["Error"]]
-    response_wrapper: type[ResponseWrapper] = ResponseWrapper
+    response_envelope: type[ResponseEnvelope] = ResponseEnvelope
     headers: Optional[Union[HeaderModel, type[HeaderModel]]] = None
     app: FastAPI
 
@@ -31,7 +31,7 @@ class Blueprint:
         tags: list[str] | None = None,
         providers: Optional[list["Provider"]] = None,
         errors: Optional[list[Union[Model, Error]]] = None,
-        response_wrapper: type[ResponseWrapper] = NoneWrapper,
+        response_envelope: type[ResponseEnvelope] = CodeMessageDataEnvelope,
         headers: Optional[Union[HeaderModel, type[HeaderModel]]] = None,
         app: FastAPI | None = None,
     ):
@@ -41,7 +41,7 @@ class Blueprint:
         self.pending_groups = [self.root_group]
         self.providers = providers or []
         self.errors = unwrap_errors(errors or [])
-        self.response_wrapper = response_wrapper
+        self.response_envelope = response_envelope
         self.headers = headers
         self.app = app or get_shared_app(root.strip("/"))
 

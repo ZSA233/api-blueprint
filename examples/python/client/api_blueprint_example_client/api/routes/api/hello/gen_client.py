@@ -1,8 +1,33 @@
 from __future__ import annotations
 
-from typing import Any
+from dataclasses import asdict, is_dataclass
+from typing import Any, Mapping
 
 from ....runtime.client import ApiChannelBridge, ApiClientTransport, ApiSocketBridge, ApiStreamBridge
+
+
+from .gen_types import (
+    AbcQuery,
+    HelloWayQuery,
+)
+
+
+def _to_mapping(value: object) -> Mapping[str, Any] | None:
+    if value is None:
+        return None
+    if isinstance(value, Mapping):
+        return value
+    if is_dataclass(value):
+        return {key: item for key, item in asdict(value).items() if item is not None}
+    raise TypeError(f"expected mapping or dataclass request model, got {type(value).__name__}")
+
+
+def _from_mapping(model_type, value):
+    if value is None or isinstance(value, model_type):
+        return value
+    if isinstance(value, Mapping):
+        return model_type(**{key: value.get(key) for key in model_type.__dataclass_fields__})
+    return value
 
 
 class HelloClient:
@@ -11,64 +36,85 @@ class HelloClient:
 
     async def abc(
         self,
-        query: dict[str, Any] | None = None,
+        query: AbcQuery | Mapping[str, Any] | None = None,
     ) -> Any:
         response_type: str | None = 'RSP_Abc'
-        return await self._transport.request(
+        payload = await self._transport.request(
             "GET",
             "/api/hello/abc",
-            query=query,
+            route_id="api.hello.get.abc",
+            query=_to_mapping(query),
             response_type=response_type,
+            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
         )
+        return payload
 
     async def map_enum(self) -> Any:
         response_type: str | None = 'RSP_MapEnum'
-        return await self._transport.request(
+        payload = await self._transport.request(
             "GET",
             "/api/hello/map-enum",
+            route_id="api.hello.get.mapenum",
             response_type=response_type,
+            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
         )
+        return payload
 
     async def list_enum(self) -> Any:
         response_type: str | None = 'RSP_ListEnum'
-        return await self._transport.request(
+        payload = await self._transport.request(
             "GET",
             "/api/hello/list-enum",
+            route_id="api.hello.get.listenum",
             response_type=response_type,
+            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
         )
+        return payload
 
     async def string(self) -> Any:
         response_type: str | None = 'RSP_String'
-        return await self._transport.request(
+        payload = await self._transport.request(
             "GET",
             "/api/hello/string",
+            route_id="api.hello.get.string",
             response_type=response_type,
+            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
         )
+        return payload
 
     async def uint64(self) -> Any:
         response_type: str | None = 'RSP_Uint64'
-        return await self._transport.request(
+        payload = await self._transport.request(
             "GET",
             "/api/hello/uint64",
+            route_id="api.hello.get.uint64",
             response_type=response_type,
+            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
         )
+        return payload
 
     async def string_emun(self) -> Any:
         response_type: str | None = 'RSP_StringEmun'
-        return await self._transport.request(
+        payload = await self._transport.request(
             "GET",
             "/api/hello/string-emun",
+            route_id="api.hello.get.stringemun",
             response_type=response_type,
+            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
         )
+        return payload
 
     async def hello_way(
         self,
-        query: dict[str, Any] | None = None,
+        query: HelloWayQuery | Mapping[str, Any] | None = None,
     ) -> Any:
         response_type: str | None = None
-        return await self._transport.request(
+        payload = await self._transport.request(
             "GET",
             "/api/hello/hello-way",
-            query=query,
+            route_id="api.hello.get.helloway",
+            query=_to_mapping(query),
             response_type=response_type,
+            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
         )
+        return payload

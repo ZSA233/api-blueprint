@@ -106,19 +106,19 @@ def register_router(router: "Router", app: FastAPI) -> None:
 
     rsp_model = None
     rsp_class: type[Response] = JSONResponse
-    response_wrapper = router.response_wrapper
+    response_envelope = router.response_envelope
     if router.rsp_media_type == "application/xml":
         rsp_class = XMLResponse
 
     if router.rsp_model is not None:
-        rsp_model = model_to_pydantic(response_wrapper.create(router.rsp_model), router=router)
+        rsp_model = model_to_pydantic(response_envelope.create(router.rsp_model), router=router)
 
     responses = {}
     for code, errs in (router.bp.errors | router.errors).items():
         examples = {}
         for err in errs:
             extra = err.__extra__
-            key, value = response_wrapper.on_error(err)
+            key, value = response_envelope.on_error(err)
             examples[key] = {
                 "summary": extra.get("description", key),
                 "value": value,

@@ -120,16 +120,17 @@ class JavaModelCatalog:
                     )
                 )
         return JavaSchema(
-            name=self.schema_class_name(schema_name),
+            name=self._schema_class_name_for_owner(schema_name, owner_group=owner_group),
             raw_name=schema_name,
             fields=tuple(rendered_fields),
         )
 
     def type_for_schema_name(self, schema_name: str, *, owner_group: object | None = None) -> str:
         if self.is_auto_schema(schema_name) and owner_group is not None:
-            models_class = str(getattr(owner_group, "models_class", "GenRouteModels"))
-            return f"{models_class}.{self.schema_class_name(schema_name)}"
-        return f"GenModels.{self.schema_class_name(schema_name)}"
+            types_class = str(getattr(owner_group, "types_class", "RouteTypes"))
+            return f"{types_class}.{self._schema_class_name_for_owner(schema_name, owner_group=owner_group)}"
+        runtime_types_ref = str(getattr(owner_group, "runtime_types_ref", "ApiTypes"))
+        return f"{runtime_types_ref}.{self.schema_class_name(schema_name)}"
 
     def class_literal_for_schema_name(self, schema_name: str, *, owner_group: object | None = None) -> str:
         return f"{self.type_for_schema_name(schema_name, owner_group=owner_group)}.class"
@@ -140,7 +141,8 @@ class JavaModelCatalog:
         if isinstance(ref, str) and ref:
             return self.type_for_schema_name(ref, owner_group=owner_group)
         if value_type == "enum":
-            return f"GenModels.{self.enum_class_name(str(value.get('enum') or 'EnumValue'))}"
+            runtime_types_ref = str(getattr(owner_group, "runtime_types_ref", "ApiTypes"))
+            return f"{runtime_types_ref}.{self.enum_class_name(str(value.get('enum') or 'EnumValue'))}"
         if value_type == "array":
             items = value.get("items")
             if isinstance(items, Mapping):
@@ -182,6 +184,11 @@ class JavaModelCatalog:
             "any": "Object",
             "null": "Object",
         }.get(value_type, "Object")
+
+    def _schema_class_name_for_owner(self, schema_name: str, *, owner_group: object | None) -> str:
+        if self.is_auto_schema(schema_name) and owner_group is not None and hasattr(owner_group, "schema_type_name"):
+            return str(owner_group.schema_type_name(schema_name))
+        return self.schema_class_name(schema_name)
 
     @staticmethod
     def _build_type_names(schemas: Mapping[str, JsonObject]) -> dict[str, str]:

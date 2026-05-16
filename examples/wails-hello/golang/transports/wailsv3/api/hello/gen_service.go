@@ -30,7 +30,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req=Q|handle|rsp=json@NoneWrapper",
+			"req=Q|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.Greet,
 		),
 	}
@@ -45,7 +45,7 @@ func (svc *HelloService) SetConnectionHub(hub wailstransport.ConnectionHub) {
 
 func (svc *HelloService) Greet(
 	envelope *INVOKE_Greet,
-) (rsp *RSP_Greet, err error) {
+) (rsp *sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_Greet], err error) {
 	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
 		BindQuery: true,
 		BindJSON:  false,
@@ -67,5 +67,5 @@ func (svc *HelloService) Greet(
 		invokeErr = execErr
 	}
 
-	return response, invokeErr
+	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
 }

@@ -103,7 +103,7 @@ class TestPostResponse(_message.Message):
     map: _containers.MessageMap[str, ApiDemoMap]
     def __init__(self, list: _Optional[_Iterable[str]] = ..., map: _Optional[_Mapping[str, ApiDemoMap]] = ...) -> None: ...
 
-class Z1putRequest(_message.Message):
+class PutDemoRequest(_message.Message):
     __slots__ = ("query", "json")
     QUERY_FIELD_NUMBER: _ClassVar[int]
     JSON_FIELD_NUMBER: _ClassVar[int]
@@ -129,7 +129,7 @@ class REQFunc1putJSON(_message.Message):
     req2: int
     def __init__(self, req1: _Optional[str] = ..., req2: _Optional[int] = ...) -> None: ...
 
-class Z1putResponse(_message.Message):
+class PutDemoResponse(_message.Message):
     __slots__ = ("list", "anon_kv")
     LIST_FIELD_NUMBER: _ClassVar[int]
     ANON_KV_FIELD_NUMBER: _ClassVar[int]
@@ -326,3 +326,15 @@ class MapModelResponse(_message.Message):
     VALUE_FIELD_NUMBER: _ClassVar[int]
     value: _containers.MessageMap[str, ApiDemoMap]
     def __init__(self, value: _Optional[_Mapping[str, ApiDemoMap]] = ...) -> None: ...
+
+class ErrorDemoRequest(_message.Message):
+    __slots__ = ("mode",)
+    MODE_FIELD_NUMBER: _ClassVar[int]
+    mode: str
+    def __init__(self, mode: _Optional[str] = ...) -> None: ...
+
+class ErrorDemoResponse(_message.Message):
+    __slots__ = ("status",)
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    status: str
+    def __init__(self, status: _Optional[str] = ...) -> None: ...
