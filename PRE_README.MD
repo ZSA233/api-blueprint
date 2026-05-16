@@ -1,8 +1,15 @@
 # API Blueprint README Fact Base
 
-## README 定位
+## 文档分层
 
-`README.md` 与 `README_EN.md` 是用户入口页，不是完整参考手册。
+`PRE_README.MD` 是 README 与用户文档收束的事实基线，不是直接面向用户的教程。它记录项目事实、文档边界和发版前文档检查项。
+
+文档分层固定为：
+
+- `README.md` / `README_EN.md`：首次用户入口页，只保留项目定位、安装、最小示例、目标概览和文档导航。
+- `docs/zh/*` / `docs/en/*`：专题手册，承载 DSL、配置、生成器、二进制协议、Wails、gRPC、examples 验证等完整说明。
+- `docs/release-process.md`：发布流程手册。
+- `.plans/`：内部实施记录，不作为 README 用户主路径。
 
 README 只回答：
 
@@ -13,50 +20,7 @@ README 只回答：
 - 常用生成目标分别负责什么。
 - 更详细的配置、生成器、Wails、gRPC、DSL、examples 验证与发布说明去哪里看。
 
-详细语义、目录布局、迁移规则、generator ownership、provider pipeline、Wails socket bridge、gRPC target 推导、example drift 处理等内容必须放到 `docs/` 下的专题文档中，再由 README 链接过去。
-
-## 项目定位
-
-`api-blueprint` 是一个面向 API 契约定义与多语言代码生成的 Python 项目。
-
-主线能力是：
-
-1. 用 Python DSL 定义 `Blueprint`、路由、请求模型、响应模型与错误结构。
-2. 在运行时构建 FastAPI/OpenAPI 文档服务。
-3. 从 Blueprint 构建唯一协议真源 `ContractGraph`，并通过 `api-gen inspect` 按需查询 routes、schema、errors 和 target artifacts；默认可输出轻量 `api-blueprint.index.json` 接口目录，帮助先定位 route，再用 inspect 查询细节；同时可选输出完整 JSON manifest、AI agent compact manifest、Markdown agent guide、contract shards 与 breaking-change diff。
-4. 基于同一份 `ContractGraph` 和共享 planner / capability metadata 输出 Go server/client、TypeScript client、Kotlin Android client、Java client/server、Python client/server、Wails v2/v3 overlay、gRPC proto/service 定义，以及 protoc-backed Go/Python gRPC stub。
-
-当前对外公开统一 `api-gen` 主命令；Go client 是 preview target，HTTP RPC 可用，legacy WS / STREAM / CHANNEL 先生成 transport-neutral surface 并由默认 HTTP adapter 返回明确 unsupported error。`api-gen check` 与各语言 writer 共享同一份 target capability metadata，避免 check 与生成器支持面漂移。Kotlin / Java / Python / Go client 以及 Java / Python server 是新实现的生成器表面，文档应避免把它们描述为完全成熟的生产 SDK。Java client 使用 Java 17 `java.net.http.HttpClient` + Jackson，Java server 使用 Spring MVC + Jackson；首版 RPC HTTP 可用，legacy WS / STREAM / CHANNEL 先生成 surface 并由默认 adapter 返回明确 unsupported/501。gRPC 产物链路包含 `grpc-proto`、`grpc-go` 与 `grpc-python` targets，其中 Go/Python targets 只编译 protobuf/gRPC stub，不生成业务服务实现。`grpc-go` / `grpc-python` 也可省略 `proto` 并直接使用 `source_root` / `files` 编译手写 proto。
-
-`api-doc-server` 继续使用 `[blueprint].docs_server = "host:port"` 配置监听地址；当端口写成 `0` 时，会先绑定系统分配的空闲端口，再打印实际 docs / hub 入口 URL，而不是把 `:0` 原样显示给用户。
-
-## 仓库事实
-
-- 包名：`api-blueprint`
-- 当前对外 CLI：
-  - `api-doc-server`
-  - `api-gen`
-- GitHub-only 稳定安装入口固定为：
-  - `git+https://github.com/zsa233/api-blueprint@stable`
-- 版本真源：
-  - `release-version.toml`
-  - `src/api_blueprint/_version.py`
-
-## 用户文档结构
-
-README 应链接到以下用户文档：
-
-- `docs/zh/getting-started.md` / `docs/en/getting-started.md`：完整快速开始。
-- `docs/zh/configuration.md` / `docs/en/configuration.md`：配置文件字段说明。
-- `docs/zh/blueprint-dsl.md` / `docs/en/blueprint-dsl.md`：Blueprint DSL 与模型写法。
-- `docs/zh/binary-schema.md` / `docs/en/binary-schema.md`：Markdown Binary Schema、表格格式、字段类型、规则、enum/bitflags、生成输出与检查命令。
-- `docs/zh/generators.md` / `docs/en/generators.md`：Go / TypeScript / Kotlin / Java / Python 输出说明。
-- `docs/zh/wails.md` / `docs/en/wails.md`：Wails target、overlay service、provider hook、socket bridge。
-- `docs/zh/grpc.md` / `docs/en/grpc.md`：`grpc-proto`、`grpc-go`、`grpc-python` targets、proto/service 输出、工具链。
-- `docs/zh/examples-validation.md` / `docs/en/examples-validation.md`：example refresh、validation 与 drift 语义。
-- `docs/release-process.md`：发布流程。
-
-`.plans/` 是内部实施记录，不作为 README 用户主路径。
+README 不承载 changelog、设计记录、迁移说明、wire shape 细节、目录布局细节、generator ownership、provider pipeline、Wails socket bridge、gRPC target 推导、example drift 处理或单次需求的实现背景。
 
 ## README 推荐结构
 
@@ -68,83 +32,122 @@ README 应链接到以下用户文档：
 6. 下一步文档索引
 7. 开发和发布
 
-README 必须保持简洁。常用命令只保留能帮助新用户跑通的最短路径；完整 CLI、Wails 的 RouteExecutor、provider pipeline、Go/TypeScript 内部保留目录、Markdown Binary Schema 表格细节、gRPC module 推导等内容不应直接堆在 README 中。
+README 必须保持简洁。新增公共能力时，README 最多增加入口级一句话或文档链接；详细事实必须先落到对应 `docs/` 专题页。
+
+## 用户文档索引
+
+README 应链接到以下用户文档：
+
+- `docs/zh/getting-started.md` / `docs/en/getting-started.md`：完整快速开始。
+- `docs/zh/configuration.md` / `docs/en/configuration.md`：配置文件字段说明。
+- `docs/zh/blueprint-dsl.md` / `docs/en/blueprint-dsl.md`：Blueprint DSL、模型、请求、响应、错误和长连接写法。
+- `docs/zh/binary-schema.md` / `docs/en/binary-schema.md`：Markdown Binary Schema、字段表、规则、生成输出与检查命令。
+- `docs/zh/generators.md` / `docs/en/generators.md`：Go / TypeScript / Kotlin / Java / Python 输出说明。
+- `docs/zh/wails.md` / `docs/en/wails.md`：Wails target、overlay service、provider hook、transport bridge。
+- `docs/zh/grpc.md` / `docs/en/grpc.md`：`grpc-proto`、`grpc-go`、`grpc-python` targets、proto/service 输出、工具链。
+- `docs/zh/examples-validation.md` / `docs/en/examples-validation.md`：example refresh、validation 与 drift 语义。
+- `docs/release-process.md`：发布流程。
+
+## 项目定位
+
+`api-blueprint` 是一个面向 API 契约定义与多语言代码生成的 Python 项目。
+
+主线能力是：
+
+1. 用 Python DSL 定义 `Blueprint`、路由、请求模型、响应模型与错误结构。
+2. 在运行时构建 FastAPI/OpenAPI 文档服务。
+3. 从 Blueprint 构建唯一协议真源 `ContractGraph`。
+4. 通过 `api-gen check`、`api-gen inspect`、`api-gen manifest`、`api-gen diff` 和 `api-gen generate` 检查、查询、归档和生成代码。
+5. 基于同一份 `ContractGraph` 输出 Go server/client、TypeScript client、Kotlin Android client、Java client/server、Python client/server、Wails v2/v3 overlay、gRPC proto/service 定义，以及 protoc-backed Go/Python gRPC stub。
+
+仓库事实：
+
+- 包名：`api-blueprint`
+- 对外 CLI：`api-doc-server`、`api-gen`
+- GitHub-only 稳定安装入口：`git+https://github.com/zsa233/api-blueprint@stable`
+- 版本真源：`release-version.toml`、`src/api_blueprint/_version.py`
 
 ## 结构事实
 
 - `src/api_blueprint/engine/`：DSL、模型、Blueprint、路由与 FastAPI/OpenAPI 语义。
 - `src/api_blueprint/contract/`：Blueprint -> ContractGraph 的协议 IR、manifest 与 diff。
 - `src/api_blueprint/writer/`：Go / TypeScript / Kotlin / Java / Python / Wails / gRPC proto 与 protoc-backed stub 代码生成。
-- `src/api_blueprint/application/`：entrypoint 加载、项目装配、docs server 启动与 1.0 generator 调度。
+- `src/api_blueprint/application/`：entrypoint 加载、项目装配、docs server 启动与 generator 调度。
 - `src/api_blueprint/hub/` 与 `src/api_blueprint/static/`：文档服务 UI 资源。
 - `examples/blueprints/`：示例蓝图真源。
-- `examples/blueprints/api_demo.py`：包含 `STREAM` / `CHANNEL` 长连接 DSL 示例，以及 `/api/demo/error-demo` typed error 示例。
-- `examples/blueprints/errors.py`：包含全局 `CommonErr` 与 route-local `DemoErr`，用于展示 declared、route-local 与 unknown typed error 行为。
-- `examples/golang/server/`、`examples/golang/client/`、`examples/typescript/`、`examples/kotlin/` 与 `examples/java/`：Blueprint 生成产物快照；Go server 的 `out_dir` 是生成包根，示例选择 `golang/server/views`，因此 route/provider/transport/error 产物位于 `views/routes/**`、`views/providers`、`views/transports/**`、`views/runtime/errors/**`，生成器不再隐式追加 `views`。Go client 按 `runtime/**`、`routes/<go-root-segment>/<go-group-segment>/**`、`transports/http/**` 输出，Wails Go overlay 生成在 `transports/<overlay>/<go-root-segment>/<go-group-segment>`，TypeScript transport 目录仍按 TypeScript 生成器规则输出。Kotlin 新布局按 `<package>/<root>/runtime/*`、`<package>/<root>/routes/<root>/<group...>/*`、`<package>/<root>/transports/http/*` 输出，旧 `<package>/ApiClient.kt`、`endpoints/`、`models/`、`internal/` 属于兼容清理对象。Java client/server 按 `<package>/<root>/runtime/*`、`<package>/<root>/routes/<root>/<group...>/*`、`<package>/<root>/transports/http/*` 输出，`out_dir` 是 package root，不包含 `src/main/java`。
-- `examples/wails-harness/v2/` 与 `examples/wails-harness/v3/`：repo-owned 的最小 Wails harness 示例工程；app shell 手写维护，但直接消费共享树里生成的 Wails services 与 TypeScript API 产物。
-- `examples/wails-hello/`：独立 Wails v3 hello world 示例；包含自己的 Blueprint、生成快照和手写 Wails app shell，用于演示不开 HTTP 服务的 Wails-only GUI 闭环。
-- `examples/grpc/protos/`、`examples/grpc/go/` 与 `examples/grpc/python/`：gRPC proto 与 Go/Python protobuf/gRPC stub 输出快照。
+- `examples/golang/`、`examples/typescript/`、`examples/kotlin/`、`examples/java/`、`examples/python/`、`examples/grpc/`、`examples/wails-*`：生成快照、验证工程和示例 app shell。
 - `tests/`：单元测试、CLI 测试、codegen 测试、example 集成验证、打包与 release contract 测试。
 
-## 用户文档必须覆盖的事实
+## DSL 与契约事实
 
-- 项目主链路是 `Blueprint -> ContractGraph -> shared target planner -> writers`；ContractGraph 是 Go / TypeScript / Kotlin / Java / Python / Wails / gRPC proto 的唯一协议真源。
-- Blueprint DSL 把长连接消息流作为与 RPC 并列的一等契约：`STREAM` 表示服务端持续推送，`CHANNEL` 表示双向消息通道；legacy `WS/RECV/SEND` 不属于 1.0 公共主线。
-- `STREAM` / `CHANNEL` 使用 `OPEN`、`SERVER_MESSAGE`、`CLIENT_MESSAGE`、typed `CLOSE`、`ConnectionScope` 与 `ConnectionDelivery` 描述 transport-neutral 连接语义；多消息类型必须通过单个判别联合消息契约声明，避免多个裸 event 名。
-- Markdown Binary Schema 是 HTTP 二进制请求体的一等契约：route 使用 `.REQ_BINARY("./binary/packet.md")` 绑定严格 `# packet` + metadata + `## section` / `## struct` + 固定列 Markdown table；旧 `.REQ_BIN(Model)` 不再作为正式能力，应报错提示迁移到 `.REQ_BINARY(path)`。Schema 源文件同时可由 Markdown parser 渲染文档，ContractGraph route manifest 使用 `request.binary_schema` 保存 schema AST / HTML / source path。字段类型支持 `u8/u16/u24/u32/u64/i8/i16/i24/i32/i64/f32/f64/bool/bytes/string/padding/reserved/<StructName>/<EnumName>/<BitflagsName>`；`enum` 表继续使用 `name/value/comment`，`bitflags` 推荐使用 `name/bits/rule/comment`，其中 `bits` 可写单 bit 或 `start..end` 位段，`rule=const=0` 表示这些位是必须为 0 的保留位，`rule=enum=<EnumName>` 表示位段按 enum 解释；旧 `name/value/comment` bitflags 表仍作为兼容形式保留。Go bitflags 生成物底层保持整数别名，并为单 bit、enum 位段和 reserved mask 生成 `HasXxx` / `WithXxx`、`Xxx` / `WithXxx`、`ReservedMask` / `HasReservedBits` / `Validate` helper。Go server 按 route group 生成局部 `_gen_binary` parser，并在 `runtime/binary` 下生成共享 binary runtime 复用 reader、bytes/unsafe 批量读取和错误路径 helper；HTTP adapter 在 query/form/json 之外支持 `BindBinary`，按 `identity` / `gzip` 解码后调用 `DecodeBinary(io.Reader)` 填充 `req.B`。Go / Java server 与 Go / TypeScript / Kotlin / Java / Python client 对同一 schema 生成 route-local binary surface 与共享 binary runtime；client 侧不再暴露 `wire` namespace：Go client 在 route package 直接生成 `gen_binary.go`，TypeScript 生成 `gen_binary.ts` 并通过 `types.ts` 出口公开类型，Python 生成 `gen_binary.py` 并通过 `gen_types.py` 出口公开类型，Java 使用 `<Group>Types.<Packet>` / `<Group>Types.<Packet>Wire`，Kotlin 在 `BinaryTypes.kt` 中生成 route-local top-level packet / wire helper。Go / TypeScript / Kotlin / Python 保留 typed packet / streaming body / writer helper，Java 首版提供 `ApiBinaryBody` 和 route-local `<Group>Types` binary helper，HTTP adapter 直接发送或接收 `application/octet-stream` body，响应 body 由 route 的 `ResponseEnvelope` codec 解包。
-- `operation_id` 是 RPC / `STREAM` / `CHANNEL` 的正式主线能力，用于稳定生成出来的 handler / client / transport 命名；显式值会规范化为稳定 PascalCase 标识符，但不压平 token 内部大小写，例如 `TaskEvents` / `taskEvents` / `task_events` 都稳定到 `TaskEvents`。它改变 operation-derived surface，但不改变 route id、path 或 ContractGraph 中的连接语义。未显式设置 `operation_id` 且同 group 下发生同 path 多路由自动命名冲突时，生成器会按 method / connection kind 自动消歧，例如 `CurrentGet` / `CurrentPut`；若显式 `operation_id` 归一化后仍冲突，则 `api-gen check` / `generate` 会直接失败并要求用户提供唯一名称。
-- 当前公开 target kind：`contract`、`go-server`、`go-client`、`typescript-client`、`kotlin-client`、`java-server`、`java-client`、`python-server`、`python-client`、`http-transport`、`wails-transport`、`grpc-proto`、`grpc-go`、`grpc-python`。
-- AI agent 与人类维护者应优先使用 `api-gen inspect routes/route/files/schema/binary-schema/errors` 按需查询 ContractGraph，而不是先读生成物、完整 `contract.json` 或庞大的 `contract.d/`。`route` / `schema` 子命令必须支持一次传多个查询，`binary-schema` 可按 schema name 或 source path 查询，`files` / `errors` 必须支持重复 `--route`，让 agent 能批量取得相关接口细节。`inspect` 只返回 live ContractGraph 查询结果，不暗示 shard 文件存在，也不返回默认 shard 路径；离线 shard 入口只存在于显式生成的 `api-blueprint.agent.json`、`api-blueprint.agent.md` 与 `api-blueprint.contract.d/`。默认 contract target 只生成轻量 `api-blueprint.index.json`，它只包含 service / route / target 目录和 inspect 命令模板，不内联 schema、typed error refs、route artifact 或 shard 明细；完整 `api-blueprint.contract.json` 只在显式 `formats = ["json"]` 或 `api-gen manifest --profile full` 时生成，用于 diff、归档或兜底全量检查。Go server / Go client / Wails Go artifact/import 索引必须使用 Go-safe route package segment；Kotlin / Java / Python 的 artifact/import 索引必须指向完整镜像 route path 的输出路径，例如 `routes/api/demo`；Python 不再使用 `routes/root` sentinel。
-- ContractGraph manifest v2 从 `Blueprint(errors=...)` 和 route `.ERR(...)` 收集语言无关 typed errors：全局 `errors` 保留完整定义表，`routes[].errors` 直接输出 route-oriented refs（`id/group/key/code/message/toast`），让 agent 和客户端能从 route 视角看到可抛错误。`id` 是公开协议错误身份，`code` 只是业务码，可跨 group/route 复用；HTTP status 与业务 code 解耦。`ResponseEnvelope` 决定 wire shape，manifest 在 `response.envelope` 输出 `name/kind/error_identity/success_code/success_message/fields`。默认 `CodeMessageDataEnvelope` 成功返回 `{ code: 0, message: "ok", data }`，失败返回 `{ code, message, data: null, error: { id, group, key, toast } }`；严格旧形态用 `LegacyCodeMessageDataEnvelope` 返回 `{ code, message, data }` 且不暴露 `id`；显式选择 `OkDataErrorEnvelope` 才使用 `{ ok, data/error }`；`NoEnvelope` 不承诺业务 envelope。生成物暴露 `ApiError` / `ApiErrors` / `lookupApiError` 这类 route-aware runtime API，不再把 catalog 字典作为用户主入口。默认 Go / TypeScript / Python / Kotlin / Java client transport 会按 envelope spec 自动解包，lookup 顺序为 `id`、`(route_id, code)`、global code fallback、unknown `ApiError`。业务 i18n 系统按 toast key 查找当前语言，客户端 helper 的展示优先级是服务端 `toast.text` 覆盖、外部 i18n、`toast.default`、`message`。仓库示例的 `/api/demo/error-demo` 必须展示 `CommonErr.TOKEN_EXPIRE`、`DemoErr.RATE_LIMITED.WithToast(...)` 与未声明业务错误码的 fallback；Go / TypeScript / Python / Java suite 必须覆盖对应 client catch 行为。
-- 生成物 SDK 的推荐入口是 public facade 和 route-local public type name，而不是 `gen_*` / `_gen_*` 实现文件。公开 operation 名优先来自 `operation_id`；route-local 请求/响应类型统一为 `<Operation>Query`、`<Operation>JSON`、`<Operation>Form`、`<Operation>Headers`、`<Operation>Response`，Go 字段使用 idiomatic exported name（例如 `AnonKV`、`ItemIDs`）。Go client 推荐 `apiclient.NewHTTP(apiclient.HTTPConfig{BaseURL: baseURL})` 后通过 `api.Demo.ErrorDemo(ctx, demo.ErrorDemoQuery{...})` 调用；Python client 推荐 `async with create_client(base_url) as api`，route 方法接受 dataclass 或 mapping 并默认返回 dataclass response；Java client 推荐 `HttpApiClient.create(baseUrl)` 与 `DemoTypes.ErrorDemoQuery` / `DemoTypes.ErrorDemoResponse`。业务错误判断推荐使用 grouped error entries，例如 Go `runtime.IsApiError(err, runtime.ApiErrors.DemoErr.RateLimited)`、TypeScript `isApiError(error, ApiErrors.DemoErr.RateLimited)`、Python `is_api_error(error, ApiErrors.DemoErr.RATE_LIMITED)`、Java `error.is(ApiErrors.DemoErr.RATE_LIMITED)`；code 常量保留给日志、埋点和 switch。
-- `manifest.version` 是 manifest schema 兼容版本，typed error v2 后为 `2.0`；`manifest.generator.version` 来自包版本真源 `release-version.toml` / `src/api_blueprint/_version.py`，例如 `1.0.0`。
-- Wails v3 标记为 experimental，Wails v2 标记为 preview。
-- `api-gen generate` 从统一 `[[targets]]` 规划依赖；快捷表如 `[[contract]]`、`[[go.server]]`、`[[go.client]]`、`[[java.server]]`、`[[java.client]]`、`[[python.server]]`、`[[transport.http]]` 会在加载时 normalize 成 canonical targets。生成器拥有的文件会直接写出并记录进度，用户拥有的保留文件才使用 skip 语义。Wails target 只消费已规划的 server/client target 产物并生成 overlay/runtime/binding manifest。
-- `api-gen explain-target --target <id>` 输出 effective target summary，而不是原始 TOML 片段；至少要显示当前 target kind 的关键字段和关键生效值，例如 contract target 省略 `formats` 时仍显示 `formats = ["index"]`，Java target 需显示 `package` / `base_url` / `include` / `exclude`，Wails target 需显示 `version`、`overlay_name`、`frontend_mode`、`include`、`exclude`。
-- `api-gen check` 与 writer 共享 planner / capability metadata；Kotlin / Java / Python 当前 capability 覆盖 `rpc`、`legacy_ws`、`stream`、`channel`，request kinds 覆盖 query/json/form/binary/open，response envelopes 覆盖 `none` / `code_message_data` / `ok_data_error`。自定义 envelope 需要声明式 spec，但默认 client/server codec 不自动承诺支持 `kind="custom"`。Markdown Binary Schema 使用独立 request kind `binary-schema`，当前声明 Go / Java server 与 Go / TypeScript / Kotlin / Java / Python client 支持，Wails / gRPC 继续通过 include/exclude 避开 binary route。
-- Wails `frontend_mode = "external"` 只生成 API artifacts；外部 frontend 需要在挂载应用前加载 Wails runtime，可使用生成的 `ensureWailsRuntime()` helper。
-- Wails target 保持 Go + TypeScript only；不要把 Kotlin / Python client 加入 Wails `clients`。
-- Wails target 的 `include` / `exclude` 只裁剪 target overlay / facade；未选中 route 的 root 不生成 `transports/<overlay_name>`，但共享 Go / TypeScript 契约层仍完整生成。
-- `[[targets]]` 是 canonical target 配置；快捷表会推导 `kind`，`id` 仍必填。`[[contract]]` 是 contract target 快捷表；快捷表中的 Python `module` 映射到 `python_package_root`，Kotlin / Java `module` 映射到 `package`，Go `module` 保持 Go module。Java 不生成 JPMS `module-info.java`；canonical 字段是 `package`。transport target 使用 `kind = "http-transport"` / `kind = "wails-transport"` 或 `[[transport.http]]` / `[[transport.wails]]` 并显式声明 `server` 与 `clients`；gRPC 可使用 `[[grpc.proto]]`、`[[grpc.proto.proto_files]]`、`[[grpc.go]]`、`[[grpc.python]]`，也继续兼容 canonical `[[targets]]`。
-- Go / Wails Go 生成物的 root/group 目录、Go import path 和 `package` 声明使用 Go-safe route package segment：小写，非 `[0-9A-Za-z_]` 转 `_`，去首尾 `_`，数字开头加 `p_`，Go keyword 加 `_pkg`。例如 `/api-v1` 输出为 `api_v1`，`/admin/v1` 输出为单段 `admin_v1`，`/1api` 输出为 `p_1api`。这只影响 Go/Wails Go 生成目录、import 和 binding manifest 中的 Go import path；URL、route path、selection/filter 语义不按本规则改写，因此 Go 目录不保证逐级镜像 URL slash 层级。
-- Go client 输出为 `runtime/gen_*.go`、`runtime/gen_types.go`、`runtime/binary/gen_runtime.go`、`routes/<go-root-segment>/<go-group-segment>/gen_client.go`、`routes/<go-root-segment>/<go-group-segment>/gen_types.go`、binary route 的同包 `gen_binary.go`、根包 `gen_client.go` / `client.go` façade，以及 `transports/http/gen_config.go` / `gen_transport.go` / 保留的 `client.go`。`base_url` / `base_url_expr` 只进入 HTTP transport config，不进入 route/runtime client。默认 HTTP adapter 实现 RPC query/json/form/binary-schema 请求，连接类 route 返回明确 unsupported error 以便项目替换自定义 transport。
-- Go server 的 `out_dir` 是生成包根，不再隐式追加 `views`；core 生成在 `<out_dir>/routes/<go-root-segment>/**`，route 协议类型文件是 `gen_types.go`，共享类型包是 `_gen_types`，Markdown Binary Schema parser 按 route group 生成在 `<out_dir>/routes/<go-root-segment>/<go-group-segment>/_gen_binary`，共享二进制 runtime 生成在 `<out_dir>/runtime/binary`，provider runtime 在 `<out_dir>/providers`，error runtime 与分组错误值生成在 `<out_dir>/runtime/errors/**`，HTTP/Wails adapter 在 `<out_dir>/transports/**`。如果项目需要 import path 包含 `/views`，应把 `out_dir` 显式设置为 `.../views`。TypeScript 输出为 `api/runtime/**`、`api/routes/**`、`api/transports/**`。
-- Kotlin client 输出为 `<package>/<root>/runtime/*`、`<package>/<root>/routes/<root>/<group...>/*`、`<package>/<root>/transports/http/*`；第一个 `<root>` 是生成包分段，`routes/<root>/<group...>` 镜像真实 route path。Kotlin 通过 transport abstraction 生成 RPC、legacy WS、STREAM、CHANNEL route surface，支持 query/json/form/binary/binary-schema/open request kind 以及 `none` / `code_message_data` / `ok_data_error` response envelope。协议类型输出到 `ApiTypes.kt` / `<Group>Types.kt`；Markdown Binary Schema 额外输出 route-local `BinaryTypes.kt` 和 `runtime/binary/GenBinaryRuntime.kt`，typed overload 使用同 route package 的 `<Packet>` / `<Packet>Wire` 把 packet 编码成 `ApiBinaryBody`，`ApiBinaryBody` overload 允许已有高性能 streaming body 直接接入；生成的 `EncodedBinaryBlock` helper 允许业务把已缓存或压缩的字段片段按 schema 字段、count 和 byte size 校验后写入。内置 OkHttp adapter 以 RPC 为主，长连接 bridge 属于 preview surface，接入生产前必须用目标平台 smoke 或自定义 transport 验证。旧 `<package>/ApiClient.kt`、`endpoints/`、`models/`、`internal/` 是破坏性旧布局，不再作为文档入口。
-- Java client/server 输出为 `<package>/<root>/runtime/*`、`<package>/<root>/routes/<root>/<group...>/*`、`<package>/<root>/transports/http/*`；`out_dir` 是 package root，不追加 `src/main/java`。client 使用 Java 17 `HttpClient` + Jackson，生成 `ApiClient.java`、`<Group>Api.java`、`HttpApiClient.java` 三类用户保留 facade，推荐从 `HttpApiClient.create(baseUrl)` 进入；public DTO 统一放在 `<Group>Types.java`，runtime 共享类型放在 `ApiTypes.java`，其余 `Gen*.java` / runtime 文件覆盖；server 使用 Spring MVC + Jackson，生成 service interface、`<Group>ServiceStub.java` 与 controller，用户保留 `<Group>Service.java`。Markdown Binary Schema 的 route-local 类型也收束到 `<Group>Types.<Packet>` / `<Group>Types.<Packet>Wire`，不再生成 `GenBinary.java`。DTO 使用 Java 17 `record`，字段带 `@JsonProperty`，enum 使用 `@JsonCreator` / `@JsonValue` 保留 wire value。首版 HTTP adapter 支持 RPC query/json/form/binary/binary-schema，legacy WS / STREAM / CHANNEL 只生成 transport-neutral surface，默认 client 抛 unsupported，server controller 返回明确 501。
-- Python client/server 使用 `python_package_root` 作为包根；client 是 async-first，按 `<package_root>/<root>/runtime/*`、`<package_root>/<root>/runtime/binary/*`、`<package_root>/<root>/routes/<root>/<group...>/*`、route-local `gen_client.py` / `gen_types.py` / binary route 的 `gen_binary.py`、根包 `gen_client.py` / `client.py` façade、`<package_root>/<root>/transports/http/*` 输出；root-level route 直接位于 `routes/<root>`，不生成 `routes/root`。推荐从 `create_client(base_url)` 进入聚合 client，route 方法接受 dataclass 或 mapping 并默认返回 dataclass response；业务代码优先从 `gen_types.py` / route `client.py` 触达 DTO 和 binary public types，`gen_binary.py` 是 codec 实现层。默认 httpx adapter 实现 RPC query/json/form/binary-schema 请求，WS/STREAM/CHANNEL 暴露 bridge interface 但默认 adapter 明确要求自定义连接 transport；server 输出 route service contracts/stubs 与 FastAPI HTTP adapter scaffold。Python 生成器属于新实现表面，应按 preview 口径描述。
-- Go `providers` 是生成包根下的全局 transport-neutral runtime，不按 root 拆分；需要按 root/route/transport 切换同名 provider 实现时，使用 route-scoped provider factory，用户自定义 hook 为 `SelectProvider(spec, handler)`，详见 `docs/*/generators.md`。
-- Go HTTP adapter 不会覆盖 Gin handler 已经写出的响应；`HTTP_RAW_RESPONSE()` 表示 handler owns HTTP success response，只影响 HTTP adapter finalization。
-- Wails 可以运行在不启动 HTTP 服务的 app shell 中；只声明 Wails target 时，Wails app 的 Go import graph 不需要包含 Gin HTTP adapter。
-- Wails `STREAM` / `CHANNEL` 默认通过 session-scoped runtime events 实现，event name 只存在于 generated transport/runtime 内部；HTTP `STREAM` 映射到 SSE，HTTP `CHANNEL` 映射到带内部 envelope 的 WebSocket；默认 runtime 只完整支持 `ConnectionScope.SESSION`，`APP` / `TOPIC` 通过自定义 connection hub / manager 扩展。HTTP 的 ordered 语义依赖原生 SSE / WebSocket 的单连接顺序，不额外叠加 Wails 那套 seq/reorder overlay，因此 `delivery = "unordered"` 当前主要是 Wails transport 的显式 opt-out，不会让 HTTP transport 主动走一条不同的乱序交付路径。Wails connection open 现在使用 client-allocated `session_id` + deterministic event naming 契约：前端先按 route/eventBase/sessionId 订阅，再发 connect RPC；自定义 `ConnectionHub` 通过 `Open(ConnectionOpenSpec)` 接口接收请求，并必须返回符合该命名规则的 descriptor。`ConnectionDelivery` 默认是 ordered，Wails transport 会在 transport 层做 session 级 seq + reorder；如果 ordered route 出现长期不闭合的 seq gap、非法 envelope 或重排缓冲溢出，前端 bridge 会 fail-fast 触发结构化 close/error，是否 reopen 由业务在 `onClose` 中决定。必要时 route 可显式切到 `unordered`，但默认不引入 ack/sync 或隐式自动重连。
-- Go server 默认生成的连接 handler 仍保持 `not implemented`；仓库示例在用户拥有的 `examples/golang/server/views/routes/api/demo/impl.go` 中手写了 `STREAM` / `CHANNEL` 最小用法，展示 `Open()`、`Send()`、`Recv()`、typed `Close()` 与异常 `Abort()`。
-- Wails hello 示例有独立短命令：`make wails-hello-dev` 手动启动，`make wails-hello-check` 严格验证，`make wails-hello-compile-check` 快速编译验证。
-- gRPC proto 可由 `grpc-proto` target 从 ContractGraph 输出；`grpc-proto` 支持 `[[targets.proto_files]]` / `[[grpc.proto.proto_files]]` 规则，把 schema module/name 与 route path/id/service 映射到 proto file/package/go_package/service，让 Blueprint DSL 不需要写 `__proto_file__` / `__proto_package__` / `__proto_go_package__`。
-- DSL 主线不承载 gRPC/proto/Go/TypeScript/Kotlin 等 target-specific metadata；稳定字段身份使用 `field(number, Field(...), optional=True)`，互斥选择使用 `choice="..."`，通用语义类型使用 `DateTime`、`JSONValue`、`AnyValue`。
-- gRPC writer 把 `field()` 的 stable contract field id 映射为 proto field number，把 `choice` 映射为 `oneof`，把 `DateTime` / `JSONValue` / `AnyValue` 映射为 protobuf well-known types；legacy `proto_*` 仅作为迁移逃生口保留，不作为新 DSL 推荐写法。
-- `grpc-go` / `grpc-python` targets 可以消费同配置内的 `grpc-proto`，也可以在省略 `proto` 时直接通过 `source_root` / `files` 编译手写 proto。仓库提交 `examples/grpc/protos/`、`examples/grpc/go/` 与 `examples/grpc/python/` 快照，用来展示实际 proto 与 Go/Python stub 产物；旧 raw proto targets/jobs 不属于 1.0 公共主线。
-- TypeScript / Kotlin / Java / Python 的 `base_url` / `base_url_expr` 只属于 HTTP transport adapter / factory 默认配置，不应出现在 transport-neutral route/runtime client 中；`base_url_expr` 会原样输出到生成代码，并与 `base_url` 互斥。
-- `examples/blueprints/` 是 Blueprint 真源；各 language examples、`examples/api-blueprint.index.json`、可选 full contract/agent/shards 快照与 `examples/grpc/{protos,go,python}/` 是生成快照。主 Go 示例拆分为 `examples/golang/server` 与 `examples/golang/client` 两个 Go module；Java 示例拆分为 `examples/java/client` 与 `examples/java/server`，编译验证由临时 Gradle Java 17 项目完成；`examples/java/suite` 是手写 Gradle Java 17 application，用于运行 generated Java client/server 的核心 round-trip。
-- snapshot drift 是“生成结果发生变化”的信号，不自动等于 bug。
-- Go / TypeScript / Python 的 `gen_*` 文件由生成器拥有；Kotlin 的 `Gen*.kt` 与 Java 的 `Gen*.java` / runtime generated 文件由生成器拥有，并带 `Code generated by api-blueprint; DO NOT EDIT.` header。`impl_*`、Python `client.py` / `service.py`、Kotlin 非 `Gen*` facade / extension 文件、Java `ApiClient.java` / `<Group>Api.java` / `HttpApiClient.java` / `<Group>Service.java` 是用户扩展点并在重生成时保留。
-- `main.py` 与 `debug.py` 仅作为本地辅助脚本保留，不属于公共发布面。
-- `make example-golang-suite` 是手动增强验证：它在临时 workspace 重生成 Go server、Go client、TypeScript client 与 Python client，启动真实 Go server 进程，再通过 generated Go / TypeScript / Python client 与原生 HTTP binary 请求验证端到端回路。`make example-java-suite` 是 Java preview target 的手动增强验证：它在临时 workspace 重生成 `http.java` 产物，启动真实 Spring Boot server，再用 generated Java 17 JDK HTTP client 验证核心 RPC/binary/static/unsupported 回路。这两个命令不接入默认 `test`、`example-validation`、`release-preflight` 或 CI。
+- Blueprint DSL 把 RPC、`STREAM`、`CHANNEL` 作为同一套 route contract 中的一等能力。
+- `STREAM` 表示服务端持续推送，`CHANNEL` 表示双向消息通道；长连接语义通过 `OPEN`、`SERVER_MESSAGE`、`CLIENT_MESSAGE`、typed `CLOSE`、`ConnectionScope` 与 `ConnectionDelivery` 描述。
+- 多消息类型必须通过单个判别联合消息契约声明，避免多个裸 event 名。
+- Markdown Binary Schema 是 HTTP 二进制请求体的一等契约，route 使用 `.REQ_BINARY(path)` 绑定 Markdown schema。
+- 稳定字段身份使用 `field(number, Field(...), optional=True)`，互斥选择使用 `choice="..."`，通用语义类型使用 `DateTime`、`JSONValue`、`AnyValue`。
+- `operation_id` 是 RPC / `STREAM` / `CHANNEL` 的稳定 operation 命名能力；它改变 generated operation surface，不改变 route id、path 或 ContractGraph 连接语义。
+
+## Contract 与 CLI 事实
+
+- 公开 target kind：`contract`、`go-server`、`go-client`、`typescript-client`、`kotlin-client`、`java-server`、`java-client`、`python-server`、`python-client`、`http-transport`、`wails-transport`、`grpc-proto`、`grpc-go`、`grpc-python`。
+- `api-gen check` 与 writer 共享 planner / capability metadata，生成前校验 target dependency、route kind、request kind 与 response envelope。
+- `api-gen inspect routes/route/files/schema/binary-schema/errors` 是人类和 AI agent 查询 ContractGraph 的主入口；应优先按需查询，而不是先读生成物、完整 manifest 或 shards。
+- 默认 contract target 生成轻量 `api-blueprint.index.json`；完整 JSON manifest、agent manifest、Markdown agent guide、contract shards 和 diff 通过显式命令或 formats/profile 生成。
+- `manifest.version` 是 manifest schema 兼容版本；`manifest.generator.version` 来自包版本真源。
+
+## Typed Error 与 Response Envelope 事实
+
+- ContractGraph 从 `Blueprint(errors=...)` 和 route `.ERR(...)` 收集语言无关 typed errors。
+- 全局 `errors` 保留完整定义表，`routes[].errors` 输出 route-oriented refs：`id/group/key/code/message/toast`。
+- `id` 是公开协议错误身份，`code` 是业务码，可跨 group/route 复用；HTTP status 与业务 code 解耦。
+- `ResponseEnvelope` 决定外部响应结构；默认 `CodeMessageDataEnvelope` 是 `{ code, message, data, error? }` 形态，`LegacyCodeMessageDataEnvelope` 保留严格 `{ code, message, data }` 形态，`OkDataErrorEnvelope` 显式选择 `{ ok, data/error }` 形态。
+- 生成物公开错误 API 使用 `ApiError`、`ApiErrors`、`lookupApiError` / 语言惯用变体；catalog 字典不是用户主入口。
+- 默认 Go / TypeScript / Python / Kotlin / Java client transport 会按 envelope spec 自动还原 typed error，lookup 顺序为 `id`、`(route_id, code)`、global code fallback、unknown `ApiError`。
+
+## 生成器事实
+
+- 生成物 ownership 必须在 docs 中按长期规则描述：生成器拥有 `gen_*` / `Gen*` 文件，用户拥有保留的 facade、impl、service、client 扩展点。
+- Go / Wails Go 生成物的 root/group 目录、Go import path 和 `package` 声明使用 Go-safe route package segment；URL、route path、selection/filter 语义不受影响。
+- Go server 的 `out_dir` 是生成包根；route/provider/transport/error/binary runtime 按生成器布局输出，不隐式追加 `views`。
+- Go client 输出 runtime、routes、transports/http、根 facade；推荐从 `apiclient.NewHTTP(...)` 进入。
+- TypeScript client 输出 runtime、routes、transports，并通过 transport facade 注入 HTTP/Wails 能力。
+- Kotlin / Java / Python 采用各自语言的 package-first 输出布局；这些 target 按 preview 口径描述，文档应要求使用方把生成结果纳入自身类型检查、lint、编译或 smoke。
+- Java client 使用 Java 17 `HttpClient` + Jackson，Java server 使用 Spring MVC + Jackson；不生成 Gradle/Maven 工程，也不生成 JPMS `module-info.java`。
+- Python client 是 async-first，推荐从 `create_client(base_url)` 聚合 facade 进入；Python server 输出 service contract/stub 与 FastAPI HTTP adapter scaffold。
+- Wails target 保持 Go + TypeScript only；`frontend_mode = "external"` 只生成 API artifacts，外部 frontend 需要加载 Wails runtime。
+- gRPC proto 可由 `grpc-proto` target 从 ContractGraph 输出；`grpc-go` / `grpc-python` 可消费同配置内的 `grpc-proto`，也可直接编译手写 proto。
+
+## Examples 与验证事实
+
+- `examples/blueprints/` 是 Blueprint 真源。
+- 语言 examples、`examples/api-blueprint.index.json`、可选 full contract/agent/shards 快照与 `examples/grpc/{protos,go,python}/` 是生成快照。
+- snapshot drift 表示生成结果变化，不自动等于 bug。
+- `make example-golang-suite` 和 `make example-java-suite` 是手动增强验证，不进入默认 `test`、`example-validation`、`release-preflight` 或 CI。
+- `main.py` 与 `debug.py` 是本地辅助脚本，不属于公共发布面。
 
 ## 文档维护规则
 
 - 用户可见能力、CLI、配置、生成目录、安装方式或发布方式变化时，先更新本文件。
 - 然后同步更新 `README.md` 与 `README_EN.md`，并保持二者标题层级、表格数量、代码块数量一致。
 - 如果细节超过 README 的用户入口边界，优先新增或更新 `docs/zh/*` 与 `docs/en/*`。
+- 用户文档应按长期概念组织，不按单次需求变更堆叠补丁式说明。
+- 兼容、迁移、legacy 信息只放在明确的 `兼容性说明` / `Compatibility` / `Migration Notes` 段落中。
 - 发布流程细节继续维护在 `docs/release-process.md`。
 
 ## 发布口径
 
-- 默认发布路线是 direct stable。
-- 只有在用户明确要求时才走 RC。
+- 默认发布路线是 direct stable；只有在用户明确要求时才走 RC。
 - stable GitHub Release workflow 的正式发布 job 绑定 `production` environment，可配合 required reviewers 做人工审核。
 - 发版前文档收束顺序固定为：
   - `PRE_README.MD`
   - `README.md`
   - `README_EN.md`
+  - `docs/zh/*` / `docs/en/*`
+- 发版前 editorial cleanup 固定检查：
+  - README 是否仍像入门页，而不是专题手册。
+  - docs 是否按主题结构承载细节，而不是散落单次变更说明。
+  - 兼容/legacy 说明是否位于明确段落。
+  - 中英文 README 与中英文 docs 对应专题是否保持结构和语义一致。
 - 发布前检查主线命令：
   - `make example-compile-check`
   - `make example-refresh`

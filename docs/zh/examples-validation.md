@@ -26,7 +26,7 @@ make wails-hello-check
 
 - `example-compile-check`：功能开发期使用，允许 snapshot drift，只验证重生成产物仍可编译或导入。
 - `example-refresh`：接受预期生成变化，刷新仓库里的 snapshots。
-- `example-validation`：严格模式，要求当前生成器输出与已提交 snapshots 收敛。
+- `example-validation`：严格模式，要求本地生成器输出与已提交 snapshots 收敛。
 - `example-golang-suite`：手动端到端增强验证；它在临时 workspace 重生成 Go server/client，启动真实 Go server 进程，再通过 generated Go client 和原生 HTTP binary 请求验证回路。它不接入默认 `test`、`example-validation`、`release-preflight` 或 CI。
 - `example-java-suite`：手动端到端增强验证；它在临时 workspace 重生成 `http.java` 所需 Java client/server，运行 `examples/java/suite`，启动真实 Spring Boot server，再通过 generated Java 17 JDK HTTP client 验证核心 RPC、binary、static 和 unsupported 回路。它不接入默认 `test`、`example-validation`、`release-preflight` 或 CI。
 - `wails-hello-compile-check`：只验证独立 Wails hello 示例，允许 snapshot drift，适合快速开发验证。
@@ -44,7 +44,7 @@ uv run python scripts/example_validation.py --scope blueprint --mode java-suite
 
 ## Drift 语义
 
-snapshot drift 表示“当前生成器输出和已提交快照不一致”。它是变更信号，不自动等于 bug。
+snapshot drift 表示“本地生成器输出和已提交快照不一致”。它是变更信号，不自动等于 bug。
 
 如果 drift 是预期行为：
 

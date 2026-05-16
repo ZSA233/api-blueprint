@@ -2,7 +2,7 @@
 
 Markdown Binary Schema describes HTTP binary request bodies with `.md` files. The same source can render as Markdown documentation, pass `api-gen check`, and generate server parsers plus client writers.
 
-The first version targets fixed-width binary protocols: explicit endian, explicit length fields, validated dynamic arrays, struct arrays, reserved bytes, and bitflags. It is not a general Markdown document parser; schema content must use the documented heading and table shapes.
+The schema format targets fixed-width binary protocols: explicit endian, explicit length fields, validated dynamic arrays, struct arrays, reserved bytes, and bitflags. It is not a general Markdown document parser; schema content must use the documented heading and table shapes.
 
 ## Route Usage
 
@@ -22,7 +22,7 @@ with bp.group("/binary") as views:
     ).REQ_BINARY("./binary/demo_packet.md").RSP(UploadResult)
 ```
 
-`.REQ_BINARY(path)` can coexist with `.ARGS(...)` query parameters, but cannot coexist with JSON or form request bodies. Legacy `.REQ_BIN(Model)` is no longer a formal capability.
+`.REQ_BINARY(path)` can coexist with `.ARGS(...)` query parameters, but cannot coexist with JSON or form request bodies.
 
 ## File Shape
 
@@ -94,7 +94,7 @@ padding/reserved
 
 ## Rules
 
-The first version supports these rules:
+Supported rules:
 
 | Rule | Purpose |
 |:---|:---|
@@ -102,7 +102,7 @@ The first version supports these rules:
 | `min=...` / `max=...` | Range constraint for integers or dynamic lengths |
 | `sizeof=field` | Current field stores the length of another array or bytes field |
 | `assert=expr` | Current field must equal an expression result |
-| `layout=...` | Documents linearized layout; currently display-oriented |
+| `layout=...` | Documents display-oriented linearized layout |
 | `encoding=utf-8` | Encoding hint for bytes/string fields |
 
 Dynamic arrays or dynamic bytes must have a derivable upper bound. The common shape is `max=...` on the length field, or `max=...` on the array field itself. If no upper bound can be proven, `api-gen check` fails to avoid hostile packets causing large allocations.
@@ -135,11 +135,13 @@ Dynamic arrays or dynamic bytes must have a derivable upper bound. The common sh
 
 `bits=0` means bit 0. `bits=2..3` means a continuous range. `enum=DemoKind` interprets the range as an enum value, and Go output generates helpers such as `Mode()` / `WithMode(...)`. `const=0` marks those bits as reserved; generated Go server parsers and Go / TypeScript / Kotlin / Python client writers validate that they stay zero.
 
-Legacy `name/value/comment` bitflags tables remain compatible, but new schemas should prefer `bits` because it reads more like a protocol blueprint and expresses reserved ranges more directly.
+### Compatibility
+
+The older `.REQ_BIN(Model)` route API and `name/value/comment` bitflags tables remain compatibility paths. New schemas should use `.REQ_BINARY(path)` and `bits` / `rule` bitflags tables because they express protocol layout and reserved ranges more directly.
 
 ## Generated Output
 
-Generators emit route-group-local binary helpers and reuse the shared runtime. Go server keeps a separate `_gen_binary` parser package because it is an internal request parser. Client SDKs expose binary packet and writer helpers from the route-local public types surface instead of a separate public `wire` namespace. For example:
+Generators emit route-group-local binary helpers and reuse the shared runtime. Go server keeps a separate `_gen_binary` parser package because it is an internal request parser. Client SDKs expose binary packet and writer helpers from the route-local public types surface. For example:
 
 ```text
 routes/api/binary/_gen_binary/gen_binary.go   # Go server

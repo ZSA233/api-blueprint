@@ -2,7 +2,7 @@
 
 Markdown Binary Schema 用 `.md` 文件描述 HTTP 二进制请求体。它的目标是让协议源文件既能被 Markdown 渲染成文档，也能被 `api-gen check` 校验并生成服务端 parser 与客户端 writer。
 
-第一版定位是固定宽度二进制协议：显式字节序、显式长度字段、可验证的动态数组、结构体数组、保留字节和 bitflags。它不是通用 Markdown 文档解析器；参与 schema 的内容必须使用约定的 heading 和 table。
+Schema 格式面向固定宽度二进制协议：显式字节序、显式长度字段、可验证的动态数组、结构体数组、保留字节和 bitflags。它不是通用 Markdown 文档解析器；参与 schema 的内容必须使用约定的 heading 和 table。
 
 ## 路由接入
 
@@ -22,7 +22,7 @@ with bp.group("/binary") as views:
     ).REQ_BINARY("./binary/demo_packet.md").RSP(UploadResult)
 ```
 
-`.REQ_BINARY(path)` 可以和 `.ARGS(...)` query 参数共存，但不能和 JSON / form 请求体共存。旧 `.REQ_BIN(Model)` 不再作为正式能力使用。
+`.REQ_BINARY(path)` 可以和 `.ARGS(...)` query 参数共存，但不能和 JSON / form 请求体共存。
 
 ## 文件结构
 
@@ -94,15 +94,15 @@ padding/reserved
 
 ## 规则
 
-第一版支持的规则：
+支持的规则：
 
 | 规则 | 用途 |
 |:---|:---|
 | `const=...` | 字段必须等于固定值 |
 | `min=...` / `max=...` | 整数字段或动态长度的范围约束 |
-| `sizeof=field` | 当前字段表示另一个数组或 bytes 字段的长度 |
-| `assert=expr` | 当前字段必须等于表达式结果 |
-| `layout=...` | 文档化线性布局，当前主要用于展示 |
+| `sizeof=field` | 该字段表示另一个数组或 bytes 字段的长度 |
+| `assert=expr` | 该字段必须等于表达式结果 |
+| `layout=...` | 文档化线性布局，用于展示 |
 | `encoding=utf-8` | bytes/string 的文本编码说明 |
 
 动态数组或动态 bytes 必须能推导最大上限。常见写法是在长度字段上写 `max=...`，或在数组字段本身写 `max=...`。如果无法证明上限，`api-gen check` 会失败，避免坏包触发大内存分配。
@@ -135,11 +135,13 @@ padding/reserved
 
 `bits=0` 表示第 0 位，`bits=2..3` 表示连续位段。`enum=DemoKind` 表示该位段按枚举值解释，Go 生成物会提供 `Mode()` / `WithMode(...)` 这类 helper。`const=0` 表示这些位是保留位，生成的 Go server parser 与 Go / TypeScript / Kotlin / Python client writer 都会校验这些位必须为 0。
 
-旧的 `name/value/comment` bitflags 表仍兼容，但新 schema 优先使用 `bits`，因为它更接近协议蓝图，也更容易表达保留位范围。
+### 兼容性说明
+
+较早的 `.REQ_BIN(Model)` 路由 API 和 `name/value/comment` bitflags 表仍作为兼容路径保留。新 schema 应使用 `.REQ_BINARY(path)` 以及 `bits` / `rule` bitflags 表，因为它们更适合表达协议布局和保留位范围。
 
 ## 生成结果
 
-生成器会按 route group 输出局部 binary helper，并复用共享 runtime。Go server 保留独立 `_gen_binary` parser package，因为它是服务端内部 request parser。Client SDK 的 binary packet 与 writer helper 从 route-local public types surface 暴露，不再使用单独的 public `wire` namespace。例如：
+生成器会按 route group 输出局部 binary helper，并复用共享 runtime。Go server 保留独立 `_gen_binary` parser package，因为它是服务端内部 request parser。Client SDK 的 binary packet 与 writer helper 从 route-local public types surface 暴露。例如：
 
 ```text
 routes/api/binary/_gen_binary/gen_binary.go   # Go server

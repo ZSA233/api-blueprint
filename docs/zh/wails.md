@@ -23,7 +23,7 @@ frontend_mode = "external"
 - `kind`：Wails target 固定为 `wails-transport`。
 - `version`：支持 `v3` 和 `v2`。
 - `server`：引用一个 `go-server` target。
-- `clients`：引用一个或多个 client target；当前 Wails TypeScript facade 使用 `typescript-client`。
+- `clients`：引用一个或多个 client target；Wails TypeScript facade 使用 `typescript-client`。
 - `overlay_name`：默认 `wailsv3` / `wailsv2`，必须唯一。
 - `frontend_mode`：默认 `external`；`none` 跳过 Wails TypeScript overlay。
 - `include` / `exclude`：裁剪 Wails target overlay / facade。没有任何 selected route 的 root 不会生成 `transports/<overlay_name>`；共享 Go / TypeScript 主契约层仍完整生成。
@@ -53,7 +53,7 @@ transports/
         impl_service.go
 ```
 
-`routes/<go-root-segment>/<go-group-segment>` 是 transport-neutral core；`providers` 是共享 provider runtime；`runtime/errors` 是生成的 typed error runtime；`transports/<overlay_name>/<go-root-segment>/<go-group-segment>` 是 Wails Go target。Go-safe segment 会把 `/api-v1` 写成 `api_v1`，把 `/admin/v1` 写成单段 `admin_v1`，不保证逐级镜像 URL slash 层级。route 目录中的 `impl_service.go` 是用户拥有的 bootstrap 构造入口，重生成时保留。如果希望包路径包含 `views/...`，应在被引用的 Go server target 上显式设置 `out_dir = ".../views"`；Wails 不再隐式追加。
+`routes/<go-root-segment>/<go-group-segment>` 是 transport-neutral core；`providers` 是共享 provider runtime；`runtime/errors` 是生成的 typed error runtime；`transports/<overlay_name>/<go-root-segment>/<go-group-segment>` 是 Wails Go target。Go-safe segment 会把 `/api-v1` 写成 `api_v1`，把 `/admin/v1` 写成单段 `admin_v1`，不保证逐级镜像 URL slash 层级。route 目录中的 `impl_service.go` 是用户拥有的 bootstrap 构造入口，重生成时保留。如果希望包路径包含 `views/...`，应在被引用的 Go server target 上显式设置 `out_dir = ".../views"`；Wails 沿用该 server target 的 `out_dir`。
 
 ## TypeScript 输出布局
 
@@ -182,13 +182,15 @@ make wails-hello-compile-check
 
 ## 长连接 bridge
 
-Wails TypeScript 不暴露 raw WebSocket，也不要求业务代码手写 runtime event name。`STREAM` / `CHANNEL` 在默认 Wails transport 中会映射成 session-scoped runtime events，事件名只存在于 generated Go runtime 与 generated TypeScript transport 内部。现在建连会使用前端预分配的 `session_id`：生成的 TypeScript bridge 会先按 route/eventBase/sessionId 计算 deterministic event name 并完成订阅，再发送 connect RPC，从而避免 ordered 交付丢掉 `seq=1`。生成的 service 仍暴露轻量 `ConnectionHub` 替换点；自定义 hub 现在通过 `Open(ConnectionOpenSpec)` 接收请求，并必须返回符合生成器命名规则的 descriptor。默认 hub 只完整支持 `ConnectionScope.SESSION`，`APP` / `TOPIC` 的广播或 topic routing 策略仍应由自定义 hub 实现。
+Wails TypeScript 不暴露 raw WebSocket，也不要求业务代码手写 runtime event name。`STREAM` / `CHANNEL` 在默认 Wails transport 中会映射成 session-scoped runtime events，事件名只存在于 generated Go runtime 与 generated TypeScript transport 内部。建连使用前端预分配的 `session_id`：生成的 TypeScript bridge 会先按 route/eventBase/sessionId 计算 deterministic event name 并完成订阅，再发送 connect RPC，从而避免 ordered 交付丢掉 `seq=1`。生成的 service 仍暴露轻量 `ConnectionHub` 替换点；自定义 hub 通过 `Open(ConnectionOpenSpec)` 接收请求，并必须返回符合生成器命名规则的 descriptor。默认 hub 只完整支持 `ConnectionScope.SESSION`，`APP` / `TOPIC` 的广播或 topic routing 策略仍应由自定义 hub 实现。
 
-生成的 Wails `STREAM` / `CHANNEL` 默认是“有序异步”交付：Go runtime 会补 session 级 `seq` envelope，生成的 TypeScript bridge 会在交给业务 `onMessage` / `onClose` 前完成重排。这与 HTTP 不同：HTTP `STREAM` / `CHANNEL` 本身就依赖 SSE / WebSocket 的单连接原生顺序，不额外叠加 Wails 这套 seq/reorder overlay。只有 arrival order 不值得缓冲成本的 telemetry 一类场景，才建议 route 显式切到 `delivery=ConnectionDelivery.UNORDERED`；这个 opt-out 当前主要对 Wails transport 有实际差异。
+生成的 Wails `STREAM` / `CHANNEL` 默认是“有序异步”交付：Go runtime 会补 session 级 `seq` envelope，生成的 TypeScript bridge 会在交给业务 `onMessage` / `onClose` 前完成重排。这与 HTTP 不同：HTTP `STREAM` / `CHANNEL` 本身就依赖 SSE / WebSocket 的单连接原生顺序，不额外叠加 Wails 这套 seq/reorder overlay。只有 arrival order 不值得缓冲成本的 telemetry 一类场景，才建议 route 显式切到 `delivery=ConnectionDelivery.UNORDERED`；这个 opt-out 主要对 Wails transport 有实际差异。
 
 ordered 交付不是“容忍丢帧后无限等待”，而是 fail-fast。若 ordered route 的 `seq` gap 在生成器内置超时内一直无法闭合、收到非法 ordered envelope，或重排缓冲超过上限，bridge 会本地关闭，并通过结构化 `onClose` 暴露 `error: "ordered_delivery_gap"`、`error: "ordered_delivery_protocol_error"`、`error: "ordered_delivery_buffer_overflow"`。生成 transport 不做隐式自动重连；需要重试时，应由业务在自己的 `onClose` 策略里决定是否 reopen。
 
-这次对自定义 Wails hub 属于 breaking contract 更新：`ConnectionHub.Open(...)` 现在接收单个 `ConnectionOpenSpec`，不再使用位置参数 route/eventBase。若项目重写了生成 hub，需要同步消费请求中的 `session_id`，并复用生成器提供的 descriptor / event-name helper，而不是再发明另一套 event naming 规则。
+### 兼容性说明
+
+自定义 Wails hub 必须实现 `ConnectionHub.Open(ConnectionOpenSpec)`，并从请求中读取 `session_id`，复用生成器提供的 descriptor / event-name helper。基于位置参数 route/eventBase 的 hub 签名属于迁移入口，不作为长期推荐接口。
 
 `STREAM` 返回 `ApiStreamBridge<ServerMessage, CloseMessage>`：
 
@@ -226,7 +228,7 @@ await bridge.close(1000, "done");
 offMessage();
 ```
 
-legacy `WS().RECV().SEND()` 不进入 1.0 ContractGraph 主线。新蓝图应使用 `STREAM` / `CHANNEL`，避免把多个逻辑消息误建模成多个裸 event。
+`WS().RECV().SEND()` 是兼容 surface，不进入 1.0 ContractGraph 主线。新蓝图应使用 `STREAM` / `CHANNEL`，避免把多个逻辑消息误建模成多个裸 event。
 
 ## Harness 示例
 

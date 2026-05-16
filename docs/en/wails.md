@@ -23,7 +23,7 @@ frontend_mode = "external"
 - `kind`: Wails targets use `wails-transport`.
 - `version`: supports `v3` and `v2`.
 - `server`: references a `go-server` target.
-- `clients`: references one or more client targets; the current Wails TypeScript facade uses `typescript-client`.
+- `clients`: references one or more client targets; the Wails TypeScript facade uses `typescript-client`.
 - `overlay_name`: defaults to `wailsv3` / `wailsv2` and must be unique.
 - `frontend_mode`: defaults to `external`; `none` skips the Wails TypeScript overlay.
 - `include` / `exclude`: trim the Wails target overlay / facade. Roots with no selected routes do not get `transports/<overlay_name>` output; the shared Go / TypeScript contract layers are still generated in full.
@@ -182,13 +182,15 @@ make wails-hello-compile-check
 
 ## Long-Connection Bridge
 
-Wails TypeScript does not expose raw WebSocket and does not require business code to hand-write runtime event names. In the default Wails transport, `STREAM` / `CHANNEL` map to session-scoped runtime events, and event names exist only inside the generated Go runtime and generated TypeScript transport. Connection setup now uses a client-allocated `session_id`: the generated TypeScript bridge computes deterministic per-session event names, subscribes first, and then sends the connect RPC so ordered delivery cannot miss `seq=1`. The generated service still exposes a lightweight `ConnectionHub` replacement point; custom hubs now receive `Open(ConnectionOpenSpec)` and must return a descriptor that preserves the generated event naming contract. The default hub fully supports only `ConnectionScope.SESSION`, and `APP` / `TOPIC` broadcast or topic routing policy still belongs in a custom hub.
+Wails TypeScript does not expose raw WebSocket and does not require business code to hand-write runtime event names. In the default Wails transport, `STREAM` / `CHANNEL` map to session-scoped runtime events, and event names exist only inside the generated Go runtime and generated TypeScript transport. Connection setup uses a client-allocated `session_id`: the generated TypeScript bridge computes deterministic per-session event names, subscribes first, and then sends the connect RPC so ordered delivery cannot miss `seq=1`. The generated service still exposes a lightweight `ConnectionHub` replacement point; custom hubs receive `Open(ConnectionOpenSpec)` and must return a descriptor that preserves the generated event naming contract. The default hub fully supports only `ConnectionScope.SESSION`, and `APP` / `TOPIC` broadcast or topic routing policy still belongs in a custom hub.
 
-Generated Wails `STREAM` / `CHANNEL` delivery is ordered-async by default: the Go runtime adds per-session `seq` envelopes, and the generated TypeScript bridge reorders messages before business `onMessage` / `onClose`. This is intentionally different from HTTP, where `STREAM`/`CHANNEL` already rely on native per-connection SSE / WebSocket ordering and do not add the Wails seq/reorder overlay. Routes can opt into `delivery=ConnectionDelivery.UNORDERED` for telemetry-style flows where arrival order is not worth the buffering cost; that opt-out currently has transport-specific meaning mainly on Wails.
+Generated Wails `STREAM` / `CHANNEL` delivery is ordered-async by default: the Go runtime adds per-session `seq` envelopes, and the generated TypeScript bridge reorders messages before business `onMessage` / `onClose`. This is intentionally different from HTTP, where `STREAM`/`CHANNEL` already rely on native per-connection SSE / WebSocket ordering and do not add the Wails seq/reorder overlay. Routes can opt into `delivery=ConnectionDelivery.UNORDERED` for telemetry-style flows where arrival order is not worth the buffering cost; that opt-out has transport-specific meaning mainly on Wails.
 
 Ordered delivery is fail-fast rather than loss-tolerant. If an ordered route sees a `seq` gap that does not drain within the generated timeout, receives an invalid ordered envelope, or exceeds the pending reorder buffer, the bridge closes locally with structured `onClose` info such as `error: "ordered_delivery_gap"`, `error: "ordered_delivery_protocol_error"`, or `error: "ordered_delivery_buffer_overflow"`. The generated transport does not auto-reconnect; applications that want retry should reopen the stream or channel from their own `onClose` policy.
 
-This is a breaking contract update for custom Wails hubs: `ConnectionHub.Open(...)` now takes a single `ConnectionOpenSpec` instead of positional route/event arguments. If a project overrides the generated hub, update it to consume the requested `session_id` and reuse the generated descriptor/event-name helper logic rather than inventing a different event naming scheme.
+### Compatibility
+
+Custom Wails hubs must implement `ConnectionHub.Open(ConnectionOpenSpec)`, consume the requested `session_id`, and reuse the generated descriptor/event-name helper logic. Hub signatures based on positional route/event arguments are migration entrypoints, not the recommended long-term interface.
 
 `STREAM` returns `ApiStreamBridge<ServerMessage, CloseMessage>`:
 
@@ -226,7 +228,7 @@ await bridge.close(1000, "done");
 offMessage();
 ```
 
-Legacy `WS().RECV().SEND()` is outside the 1.0 ContractGraph mainline. New blueprints should use `STREAM` / `CHANNEL` so multiple logical messages are not modeled as multiple raw events.
+`WS().RECV().SEND()` is a compatibility surface outside the 1.0 ContractGraph mainline. New blueprints should use `STREAM` / `CHANNEL` so multiple logical messages are not modeled as multiple raw events.
 
 ## Harness Examples
 

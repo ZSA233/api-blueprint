@@ -84,15 +84,7 @@ api-gen check -c api-blueprint.toml
 api-gen generate -c api-blueprint.toml
 ```
 
-更完整的项目目录、Go client、Kotlin、Java、Python、Wails 和 gRPC 配置见 [快速开始](docs/zh/getting-started.md) 与 [配置说明](docs/zh/configuration.md)。
-
-Go / Wails Go 的 route 目录、Go import path 和 `package` 声明使用 Go-safe route package segment，例如 `/api-v1` -> `api_v1`、`/admin/v1` -> `admin_v1`；它们不保证逐级镜像 URL slash 层级，URL、route path 和 selection/filter 语义不变。
-
-默认 `CodeMessageDataEnvelope` 使用企业/APP 常见 `{ code, message, data, error? }` wire shape：成功为 `{ code: 0, message: "ok", data }`，失败携带 `{ code, message, data: null, error: { id, group, key, toast } }`。ContractGraph manifest `2.0` 会在 route 上直接输出 `id/group/key/code/message/toast` error refs，默认客户端 transport 按 envelope spec 自动还原并抛出/返回 `ApiError`；严格 `{ code, message, data }` 旧形态可显式选择 `LegacyCodeMessageDataEnvelope`。
-
-示例工程的 `/api/demo/error-demo` 展示了全局错误、route-local 错误、动态 `toast.text` 覆盖和未声明错误码 fallback；Go / TypeScript / Python / Java suite 都包含 generated client catch `ApiError` 的用法。
-
-生成物 SDK 的推荐入口是 public facade：Go 使用 `apiclient.NewHTTP(...)` 和 `demo.ErrorDemoQuery`，Python 使用 `async with create_client(base_url) as api` 并返回 dataclass response，Java 使用 `HttpApiClient.create(baseUrl)` 和 `DemoTypes.ErrorDemoQuery`。协议类型统一使用 `types` 命名：Go `gen_types.go`、TypeScript `types.ts` / `gen_types.ts`、Python `gen_types.py`、Java/Kotlin `<Group>Types`；二进制 schema 不再公开 `wire` namespace，业务代码从同 route package/module 的 public types 入口使用 packet / writer helper。业务错误判断推荐使用 grouped `ApiErrors` entry，而不是直接 switch catalog 表。
+更完整的项目目录、配置字段、DSL、生成器输出、typed error、Response Envelope、Markdown Binary Schema、Wails 和 gRPC 说明见 [快速开始](docs/zh/getting-started.md)、[配置说明](docs/zh/configuration.md) 与下面的专题文档。
 
 ## 常用目标
 

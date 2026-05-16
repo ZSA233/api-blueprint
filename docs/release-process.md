@@ -1,11 +1,11 @@
 # 发布流程
 
-每个 release tag 当前会产出以下发布物：
+每个 release tag 产出以下发布物：
 
 - 1 个 Python 源码包 `sdist`
 - 1 个 Python wheel
 
-本仓库当前只维护 GitHub Release / Tag 发布面，不接入 PyPI。
+本仓库维护 GitHub Release / Tag 发布面，不接入 PyPI。
 
 稳定安装入口默认固定为：
 
@@ -18,7 +18,7 @@
 推荐约定：
 
 1. 日常开发继续在 `main` 或其他开发分支推进。
-2. 准备某个具体版本发布时，从当前冻结代码线切出或继续使用 `release/vX.Y.Z`。
+2. 准备某个具体版本发布时，从冻结代码线切出或继续使用 `release/vX.Y.Z`。
 3. RC 与 stable 的版本切换、文档收束、校验、commit 与 tag 都在 `release/vX.Y.Z` 上完成。
 4. 远端 `stable` 分支固定指向“最新 stable GitHub Release 对应代码”，不承载日常开发提交。
 5. stable 发布完成后，必须确认远端 `stable` 已同步到对应 stable tag 的提交。
@@ -31,14 +31,14 @@
 执行前应先确认：
 
 1. 用户已经明确说明这次要发布的目标版本号。
-2. 目标版本号与当前 release 分支、当前版本真源、当前已发布 stable 之间不存在明显冲突。
+2. 目标版本号与 release 分支、版本真源、已发布 stable 之间不存在明显冲突。
 3. 如果用户给出的版本号不符合正常递增关系，应先确认版本号是否有误，而不是直接继续。
 
 这里的“先确认”优先于后续所有版本切换、preflight、dry-run、RC 或 stable 步骤。
 
 ## 发版前文档收束
 
-正式进入 release-version、preflight、RC 或 stable 之前，必须先基于 `PRE_README.MD` 收束对外文档。
+正式进入 release-version、preflight、RC 或 stable 之前，必须先基于 `PRE_README.MD` 收束对外文档。根 README 只保留入门内容；专题细节应归入 `docs/` 的对应页面。
 
 固定顺序：
 
@@ -46,6 +46,7 @@
 2. 收束 `README.md`
 3. 收束 `README_EN.md`
 4. 对 `README.md` / `README_EN.md` 做一次双语镜像二次校对
+5. 对 `docs/zh/*` / `docs/en/*` 做一次 editorial cleanup，确认专题正文按长期概念组织，而不是堆叠单次变更说明
 
 双语镜像二次校对至少要检查：
 
@@ -54,6 +55,8 @@
 - 表格数量和顺序是否一致
 - 代码块数量、顺序和参数是否一致
 - 提示项、限制说明、示例数量是否一致
+- README 是否仍是入口页，而不是生成器参考、迁移说明或变更日志
+- `docs/` 中的兼容、legacy、迁移说明是否位于明确小节中
 
 如果中英 README 任一边存在漏段、漏表示例、漏限制说明，视为文档收束未完成，不允许进入 release-version / preflight / RC / stable。
 
@@ -61,7 +64,7 @@
 
 版本切换统一通过 `scripts/release_version.py` 和 `Makefile` 完成，不手改版本文件。
 
-查看当前版本派生结果：
+查看版本派生结果：
 
 ```sh
 make release-version-show
@@ -79,14 +82,14 @@ make release-version-rc BASE_VERSION=X.Y.Z RC=N CHECK=1
 make release-version-stable BASE_VERSION=X.Y.Z CHECK=1
 ```
 
-这些命令当前只会同步：
+这些命令只会同步：
 
 - `release-version.toml`
 - `src/api_blueprint/_version.py`
 
 需要特别明确：
 
-- `CHECK=1` 当前只会执行版本同步校验，不会自动代替完整的 `make release-preflight`。
+- `CHECK=1` 只会执行版本同步校验，不会自动代替完整的 `make release-preflight`。
 - `make release-version-rc` / `make release-version-stable` 不会自动创建 git commit 或 tag。
 - release commit 与 tag 必须由发布操作者按顺序显式执行，不要并行。
 - 不要把 `git commit` 和 `git tag` 放进并行任务，否则 tag 很容易落到错误提交上。
@@ -105,13 +108,13 @@ make release-install-check RELEASE_TAG=vX.Y.Z[-rc.N]
 make example-validation
 ```
 
-如果当前处于功能开发期，预计 generator 会产生新快照，而你只想先确认生成结果仍可编译，可运行：
+如果处于功能开发期，预计 generator 会产生新快照，而你只想先确认生成结果仍可编译，可运行：
 
 ```sh
 make example-compile-check
 ```
 
-如果确认这些 snapshots 变化就是本次功能的一部分，需要正式接受并刷新仓库中的快照，可运行：
+如果确认这些 snapshots 变化属于预期功能结果，需要正式接受并刷新仓库中的快照，可运行：
 
 ```sh
 make example-refresh
@@ -131,16 +134,16 @@ make example-refresh
 
 ## 远端 CI 校验
 
-在进入 release dry-run、push release tag 或继续 RC/stable 后续步骤之前，必须先确认当前 release ref 的 GitHub Actions `CI` 已经通过。
+在进入 release dry-run、push release tag 或继续 RC/stable 后续步骤之前，必须先确认 release ref 的 GitHub Actions `CI` 已经通过。
 
-当前仓库的 `CI` workflow 具备两种入口：
+`CI` workflow 具备两种入口：
 
 - push 到 `main` 或 `release/*` 时自动触发
 - 手动 `workflow_dispatch` 触发
 
 推荐规则：
 
-1. 先把当前 release 分支 push 到远端，例如 `release/vX.Y.Z`。
+1. 先把 release 分支 push 到远端，例如 `release/vX.Y.Z`。
 2. 优先复用这次 push 自动触发的 `CI` 结果。
 3. 如果需要补跑，可以再手动触发一次 `CI` workflow。
 
@@ -154,17 +157,17 @@ make example-refresh
 
 其中 `python-tests (windows-latest, 3.11)` 最容易暴露路径、shell 和平台差异回归；如果它失败，不要继续发版。
 
-这里要注意当前 CI 的职责边界：
+CI 职责边界：
 
-- 常规 `pull_request` 与 `main` push 主要跑 `release-contract` + `python-tests`，不再默认阻塞在严格 `example-validation` 上。
+- 常规 `pull_request` 与 `main` push 主要跑 `release-contract` + `python-tests`；严格 `example-validation` 由 release branch 与手动 workflow 承担。
 - `example-validation` 只在 `release/*` push 与手动 `workflow_dispatch` 时运行；它会通过共享的 `.github/actions/setup-example-toolchains` 准备 Java 17、Go、Node 24、TypeScript、`go-enum` 与 pinned `protoc` 工具链；Java / Kotlin 编译还要求环境里有 Gradle。
 - `python-tests` 会通过 `pytest -m "not example_validation"` 排除 `tests/integration/examples/` 里的专用外部工具链校验，避免在通用 Python matrix 中重复跑这类重型检查。
-- `release.yml` / `release-rc.yml` 的 `release-bundle` 仍复用同一套 examples toolchain setup，但 tag workflow 只跑 release metadata check、构建与 install check，不再重复完整 `make release-preflight`。
+- `release.yml` / `release-rc.yml` 的 `release-bundle` 复用同一套 examples toolchain setup，但 tag workflow 只跑 release metadata check、构建与 install check；完整 `make release-preflight` 属于本地发布准备步骤。
 - 因此判断 release ref 是否“CI 全绿”时，必须看 release branch 上的 `example-validation` 与三个 `python-tests` matrix，不能只看 pytest matrix。
 
 CI 未通过时的固定处理原则：
 
-- 立即停止当前 release 流程
+- 立即停止 release 流程
 - 优先定位并修复 CI 红项
 - 修复后重新 push release 分支，或重新触发 `CI`
 - 只有 CI 全绿后，才允许继续 dry-run、打 tag 或 publish
@@ -176,7 +179,7 @@ git rev-parse HEAD
 git rev-parse vX.Y.Z[-rc.N]
 ```
 
-这两个值必须完全一致；如果不一致，说明 tag 没有打在当前 release commit 上，应先修正 tag，再继续后续发布流程。
+这两个值必须完全一致；如果不一致，说明 tag 没有打在 release commit 上，应先修正 tag，再继续后续发布流程。
 
 ## GitHub Release Dry-Run
 

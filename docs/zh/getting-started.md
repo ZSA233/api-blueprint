@@ -4,7 +4,7 @@
 
 ## 安装
 
-当前稳定安装入口固定指向 GitHub `stable` 分支：
+稳定安装入口固定使用 GitHub `stable` 分支：
 
 ```sh
 uv pip install "git+https://github.com/zsa233/api-blueprint@stable"

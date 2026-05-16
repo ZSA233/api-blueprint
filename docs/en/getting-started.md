@@ -4,7 +4,7 @@ This guide is for first-time `api-blueprint` users. It walks from a Python Bluep
 
 ## Installation
 
-The stable installation entrypoint currently points to the GitHub `stable` branch:
+The stable installation entrypoint uses the GitHub `stable` branch:
 
 ```sh
 uv pip install "git+https://github.com/zsa233/api-blueprint@stable"

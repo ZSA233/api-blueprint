@@ -44,7 +44,7 @@ uv run python scripts/example_validation.py --scope blueprint --mode java-suite
 
 ## Drift Meaning
 
-Snapshot drift means the current generator output differs from committed snapshots. It is a change signal, not an automatic bug.
+Snapshot drift means local generator output differs from committed snapshots. It is a change signal, not an automatic bug.
 
 If the drift is intentional:
 

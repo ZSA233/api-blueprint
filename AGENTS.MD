@@ -137,6 +137,12 @@
   - 提示项和限制说明一致
 - 文档示例、路径示例和配置示例默认使用中性命名；不要写入具体业务仓库、业务域或项目私有名词。
 - `main.py` 与 `debug.py` 是本地辅助脚本，不属于对外公共文档主线，不应在 README 中当作正式接口推广。
+- 根 `README.md` / `README_EN.md` 只作为首次用户入口页，不作为 changelog、设计记录、迁移说明或生成器参考手册。
+- README 只能回答项目是什么、适合什么、如何安装、如何跑通最小示例、支持哪些目标、下一步去哪里看；不要把单次需求的实现细节、命名调整、wire shape、目录布局或迁移说明塞进 README。
+- 详细说明必须先放入对应专题文档：DSL 放 `docs/*/blueprint-dsl.md`，配置放 `docs/*/configuration.md`，生成目录和 SDK API 放 `docs/*/generators.md`，二进制协议放 `docs/*/binary-schema.md`，Wails / gRPC 放各自专题。
+- 所有用户文档都应按长期概念组织，而不是按“本次新增/本次修改”插入补丁式段落；正文应先讲稳定概念，再讲配置/API，再讲生成结果，最后讲限制或兼容。
+- 迁移、旧行为、legacy 说明只允许放在明确的 `兼容性说明` / `Compatibility` / `Migration Notes` 小节中，不能散落在流程正文里。
+- 发版前必须做一次 editorial cleanup：检查 README 和 `docs/` 是否存在突兀插入、重复解释、旧命名作为推荐入口、单次需求痕迹或与整体文档结构不协调的说明。
 
 ## 发布规则
 
