@@ -9,13 +9,13 @@ import (
 
 type Blueprint struct {
 	{% for group in bp.get_router_groups() %}{% if group.branch %}
-	{{ group.package.capitalize() | safe }}Router *{{ group.package | safe }}.Router{% else %}
+	{{ group.export_name | safe }}Router *{{ group.package | safe }}.Router{% else %}
 	Router *Router{% endif %}{% endfor %}
 }
 
 func NewBlueprint() *Blueprint {
 	return &Blueprint{ {% for group in bp.get_router_groups() %}{% if group.branch %}
-		{{ group.package.capitalize() ~ "Router" | safe }}: {{ group.package ~ ".NewRouter()" | safe }},{% else %}
+		{{ group.export_name ~ "Router" | safe }}: {{ group.package ~ ".NewRouter()" | safe }},{% else %}
 		Router: NewRouter(),{% endif %}{% endfor %}
 	}
 }

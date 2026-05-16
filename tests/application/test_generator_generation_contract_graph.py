@@ -66,7 +66,7 @@ module = "example.com/generated"
         + "\n",
         encoding="utf-8",
     )
-    monkeypatch.setattr("api_blueprint.writer.golang.blueprint.route_protocol_from_router", _reject_router_fallback)
+    monkeypatch.setattr("api_blueprint.writer.golang.route_view.route_protocol_from_router", _reject_router_fallback)
 
     generator.generate(config_path, target_ids=("go.server",))
 
@@ -213,7 +213,7 @@ frontend_mode = "external"
         + "\n",
         encoding="utf-8",
     )
-    monkeypatch.setattr("api_blueprint.writer.golang.blueprint.route_protocol_from_router", _reject_router_fallback)
+    monkeypatch.setattr("api_blueprint.writer.golang.route_view.route_protocol_from_router", _reject_router_fallback)
     monkeypatch.setattr("api_blueprint.writer.typescript.blueprint.route_protocol_from_router", _reject_router_fallback)
     monkeypatch.setattr("api_blueprint.writer.wails.golang.route_protocol_from_router", _reject_router_fallback)
 

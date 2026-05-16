@@ -86,6 +86,8 @@ api-gen generate -c api-blueprint.toml
 
 For fuller project layout, Go client, Kotlin, Java, Python, Wails, and gRPC configuration, see [Getting Started](docs/en/getting-started.md) and [Configuration](docs/en/configuration.md).
 
+Go / Wails Go route directories, Go import paths, and `package` declarations use Go-safe route package segments, for example `/api-v1` -> `api_v1` and `/admin/v1` -> `admin_v1`; they do not guarantee one directory per URL slash segment, while URLs, route paths, and selection/filter semantics stay unchanged.
+
 ## Common Targets
 
 | Target | Status | Purpose |

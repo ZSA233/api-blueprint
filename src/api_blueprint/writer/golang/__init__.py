@@ -1,7 +1,8 @@
 from api_blueprint.writer.core.registry import GeneratorTargetSpec, register_target
 
-from .blueprint import GolangBlueprint, GolangError, GolangErrorGroup, GolangRouter, GolangRouterGroup
 from .common import GolangTagBuilder, GolangType, GolangTypeResolver, PackageName
+from .route_view import GoRouteProtocolView, GolangRouter
+from .server import GolangBlueprint, GolangError, GolangErrorGroup, GolangRouterGroup, GolangWriter
 from .protos import (
     GolangEnum,
     GolangEnumMember,
@@ -17,7 +18,6 @@ from .protos import (
     ensure_model,
 )
 from .toolchain import GolangToolchain
-from .writer import GolangWriter
 from .client import GolangClientWriter
 
 register_target(
@@ -52,6 +52,7 @@ __all__ = (
     "GolangType",
     "GolangTypeResolver",
     "GolangWriter",
+    "GoRouteProtocolView",
     "PackageName",
     "ensure_model",
 )

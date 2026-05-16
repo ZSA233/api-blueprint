@@ -14,9 +14,10 @@ from api_blueprint.writer.core.base import BaseBlueprint, BaseWriter
 from api_blueprint.writer.core.contract_adapters import RouteContractIndex, RouteProtocolContract, route_protocol_from_router
 from api_blueprint.writer.core.files import ensure_filepath_open
 from api_blueprint.writer.core.templates import render
-from api_blueprint.writer.golang.blueprint import GolangRouter
 from api_blueprint.writer.golang.common import PackageName, internal_codegen_dir
+from api_blueprint.writer.golang.naming import to_go_package_path
 from api_blueprint.writer.golang.protos import GolangPackageLayout, GolangProto, GolangResponseWrapper, ensure_model
+from api_blueprint.writer.golang.route_view import GoRouteProtocolView
 from api_blueprint.writer.golang.toolchain import GolangToolchain
 
 from .selection import WailsRouteSelection
@@ -43,7 +44,7 @@ class WailsRouter:
         self.group = group
         self.router = router
         self.protocol = protocol or route_protocol_from_router(router)
-        self.go = GolangRouter(router, protocol=self.protocol)
+        self.go = GoRouteProtocolView(router, protocol=self.protocol)
         self.contract = self.protocol.route
         self.json_wrapper = GolangResponseWrapper("RSP_JSON", self.protocol.response.wrapper)
 
@@ -328,8 +329,8 @@ class WailsRouterGroup:
     def package(self) -> str:
         branch = self.group.branch.strip("/")
         if branch:
-            return branch
-        return self.group.bp.root.strip("/")
+            return to_go_package_path(branch, fallback="root")
+        return self.bp.root_package
 
     @property
     def branch(self) -> str:
@@ -379,7 +380,11 @@ class WailsBlueprint(BaseBlueprint["WailsGoWriter"]):
 
     @property
     def package(self) -> str:
-        return self.bp.root.strip("/")
+        return self.root_package
+
+    @property
+    def root_package(self) -> str:
+        return to_go_package_path(self.bp.root.strip("/"), fallback="root")
 
     @property
     def shared_root_imports(self) -> str:

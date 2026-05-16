@@ -53,7 +53,7 @@ transports/
         impl_service.go
 ```
 
-`routes/<root>/<group>` 是 transport-neutral core；`providers` 是共享 provider runtime；`runtime/errors` 是生成的业务 error catalog；`transports/<overlay_name>` 是 Wails target。route 目录中的 `impl_service.go` 是用户拥有的 bootstrap 构造入口，重生成时保留。如果希望包路径包含 `views/...`，应在被引用的 Go server target 上显式设置 `out_dir = ".../views"`；Wails 不再隐式追加。
+`routes/<go-root-segment>/<go-group-segment>` 是 transport-neutral core；`providers` 是共享 provider runtime；`runtime/errors` 是生成的业务 error catalog；`transports/<overlay_name>/<go-root-segment>/<go-group-segment>` 是 Wails Go target。Go-safe segment 会把 `/api-v1` 写成 `api_v1`，把 `/admin/v1` 写成单段 `admin_v1`，不保证逐级镜像 URL slash 层级。route 目录中的 `impl_service.go` 是用户拥有的 bootstrap 构造入口，重生成时保留。如果希望包路径包含 `views/...`，应在被引用的 Go server target 上显式设置 `out_dir = ".../views"`；Wails 不再隐式追加。
 
 ## TypeScript 输出布局
 
@@ -125,7 +125,7 @@ const clients = createClients({
 });
 ```
 
-Wails v3 transport 使用官方 runtime 的 `Call.ByName(...)` 并由生成器内置 binding manifest；业务项目不需要手写 Go service 包路径。Wails v2 transport 继续使用官方 `window.go.<package>.<service>.<method>` 运行时形态。
+Wails v3 transport 使用官方 runtime 的 `Call.ByName(...)` 并由生成器内置 binding manifest；binding manifest 中的 Go import path 使用同一套 Go-safe segment，业务项目不需要手写 Go service 包路径。Wails v2 transport 继续使用官方 `window.go.<package>.<service>.<method>` 运行时形态。
 
 ## Wails-only app
 

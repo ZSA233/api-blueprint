@@ -6,7 +6,6 @@ import re
 import shutil
 import subprocess
 from contextlib import contextmanager
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import IO, Any, Generator, Mapping, Sequence
 
@@ -18,7 +17,7 @@ from api_blueprint.writer.core.files import ensure_filepath_open
 from api_blueprint.writer.core.planning import route_matches_rule
 from api_blueprint.writer.core.templates import render
 
-from .binary_schema import GoClientBinarySchema, unique_go_client_binary_schemas
+from .planner import GoClientGroup, GoClientRoute, build_go_client_groups
 
 
 logger = logging.getLogger("GolangClientWriter")
@@ -28,72 +27,6 @@ logger.setLevel(logging.INFO)
 JsonObject = dict[str, Any]
 ROUTE_BINARY_DIR = "_gen_binary"
 LEGACY_ROUTE_BINARY_DIR = "binary"
-
-
-@dataclass(frozen=True)
-class GoClientRoute:
-    route: JsonObject
-
-    @property
-    def operation(self) -> str:
-        return _go_exported(str(self.route.get("operation") or "Call"))
-
-    @property
-    def method(self) -> str:
-        methods = self.route.get("methods")
-        if isinstance(methods, list) and methods:
-            return str(methods[0]).upper()
-        return "GET"
-
-    @property
-    def url(self) -> str:
-        return str(self.route.get("url") or "")
-
-    @property
-    def route_id(self) -> str:
-        return str(self.route.get("id") or "")
-
-    @property
-    def kind(self) -> str:
-        return str(self.route.get("kind") or "rpc")
-
-    @property
-    def request(self) -> Mapping[str, Any]:
-        request = self.route.get("request")
-        return request if isinstance(request, Mapping) else {}
-
-    @property
-    def response(self) -> Mapping[str, Any]:
-        response = self.route.get("response")
-        return response if isinstance(response, Mapping) else {}
-
-    @property
-    def connection(self) -> Mapping[str, Any]:
-        connection = self.route.get("connection")
-        return connection if isinstance(connection, Mapping) else {}
-
-    @property
-    def response_wrapper(self) -> str:
-        wrapper = self.response.get("wrapper")
-        return str(wrapper or "NoneWrapper")
-
-    @property
-    def binary_schema(self) -> Mapping[str, Any] | None:
-        schema = self.request.get("binary_schema")
-        return schema if isinstance(schema, Mapping) else None
-
-    @property
-    def has_binary_schema(self) -> bool:
-        return self.binary_schema is not None
-
-
-@dataclass
-class GoClientGroup:
-    segments: tuple[str, ...]
-    package: str
-    client_class: str
-    routes: list[GoClientRoute] = field(default_factory=list)
-    binary_schemas: list[GoClientBinarySchema] = field(default_factory=list)
 
 
 class GolangClientBlueprint(BaseBlueprint["GolangClientWriter"]):
@@ -129,7 +62,7 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
         errors = error_catalog_from_manifest(manifest, route_ids=[str(route.get("id") or "") for route in routes])
         services = _mapping_of_maps_by_id(manifest.get("services"))
         type_names = _TypeNames(schemas)
-        groups = _build_groups(routes, services)
+        groups = build_go_client_groups(routes, services)
 
         self._write_runtime_files(schemas, type_names, errors, groups)
         for group in groups:
@@ -200,7 +133,6 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
                 "golang",
                 "gen_client.go",
                 {
-                    "client_class_for_route": _client_class_for_route,
                     "connection_method_name": _connection_method_name,
                     "connection_transport_method": _connection_transport_method,
                     "group": group,
@@ -489,12 +421,6 @@ def _response_wrapper_name(route: GoClientRoute) -> str:
     return route.response_wrapper
 
 
-def _client_class_for_route(route: GoClientRoute) -> str:
-    service_id = str(route.route.get("service_id") or "api")
-    group = service_id.split(".", 1)[1] if "." in service_id else service_id
-    return f"{_go_exported(group or service_id)}Client"
-
-
 def _route_params(route: GoClientRoute, *, include_open: bool) -> list[str]:
     params: list[str] = []
     if isinstance(route.request.get("query_model"), str):
@@ -618,36 +544,6 @@ def _enum_base_type(enum: Mapping[str, Any]) -> str:
     return "string"
 
 
-def _build_groups(routes: Sequence[JsonObject], services: Mapping[str, JsonObject]) -> tuple[GoClientGroup, ...]:
-    groups: dict[tuple[str, ...], GoClientGroup] = {}
-    for route in routes:
-        service = services.get(str(route.get("service_id") or ""), {})
-        root = _path_segment(str(service.get("root") or _service_root(route)), default="api")
-        group_name = _path_segment(str(service.get("group") or root), default=root)
-        segments = (root,) if group_name == root else (root, group_name)
-        group = groups.get(segments)
-        if group is None:
-            package = _go_package_name(segments[-1])
-            group = GoClientGroup(
-                segments=segments,
-                package=package,
-                client_class=f"{_go_exported(group_name)}Client",
-            )
-            groups[segments] = group
-        client_route = GoClientRoute(route)
-        group.routes.append(client_route)
-        if client_route.binary_schema is not None:
-            group.binary_schemas = unique_go_client_binary_schemas(
-                [schema.raw for schema in group.binary_schemas] + [client_route.binary_schema]
-            )
-    return tuple(groups.values())
-
-
-def _service_root(route: Mapping[str, Any]) -> str:
-    service_id = str(route.get("service_id") or "api")
-    return service_id.split(".", 1)[0]
-
-
 def _list_of_maps(value: object) -> list[JsonObject]:
     if not isinstance(value, list):
         return []
@@ -683,20 +579,6 @@ def _go_exported(value: str) -> str:
     if result[:1].isdigit():
         result = "Value" + result
     return result
-
-
-def _go_package_name(value: str) -> str:
-    package = re.sub(r"[^0-9A-Za-z_]+", "_", value.lower()).strip("_")
-    if not package:
-        return "api"
-    if package[0].isdigit():
-        package = "p_" + package
-    return package
-
-
-def _path_segment(value: str, *, default: str) -> str:
-    segment = re.sub(r"[^0-9A-Za-z_]+", "_", value.strip("/").lower()).strip("_")
-    return segment or default
 
 
 def _join_import(*parts: str) -> str:

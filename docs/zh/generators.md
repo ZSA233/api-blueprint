@@ -6,7 +6,7 @@
 
 `api-gen check`、contract / agent artifact projection 和各语言 writer 使用同一份 planner / capability metadata。生成前会统一校验 target 依赖、route kind、request kind 与 response wrapper，避免 check 通过但 writer 才发现不支持的情况。
 
-Go client、Kotlin / Java / Python 是新实现的生成器表面，当前按 preview 口径使用。它们的 contract / agent artifact path 指向完整镜像 route path 的输出路径，例如 `routes/api/demo`；Python 不再使用 `routes/root` sentinel。
+Go client、Kotlin / Java / Python 是新实现的生成器表面，当前按 preview 口径使用。Go server / Go client / Wails Go 的 contract / agent artifact path 使用 Go-safe route package segment，例如 `/api-v1` -> `api_v1`、`/admin/v1` -> `admin_v1`；Kotlin / Java / Python 继续指向完整镜像 route path 的输出路径，例如 `routes/api/demo`；Python 不再使用 `routes/root` sentinel。
 
 ## Go
 
@@ -24,9 +24,9 @@ Go 生成器输出：
 
 `gen_*` 文件由生成器拥有，重生成会覆盖。`impl_*` 与非 `gen_*` 文件是用户拥有扩展点，重生成时保留。Kotlin / Java 使用相同 ownership 模型，Kotlin 生成器拥有文件命名为 `Gen*.kt`，Java 生成器拥有文件命名为 `Gen*.java` 以及 runtime generated 文件，非 `Gen*` façade / extension 文件由用户拥有。
 
-`go-server` 只负责 Go 服务端 core。它的 `out_dir` 是生成包根，不再隐式追加 `views`。HTTP / Wails 输出由 `http-transport` / `wails-transport` target 通过 `server = "go.server"` 显式挂接。HTTP 入口生成在 `<out_dir>/transports/http/<root>` 中，例如 `transports/http/api.NewBlueprint(engine)`。
+`go-server` 只负责 Go 服务端 core。它的 `out_dir` 是生成包根，不再隐式追加 `views`。HTTP / Wails 输出由 `http-transport` / `wails-transport` target 通过 `server = "go.server"` 显式挂接。HTTP 入口生成在 `<out_dir>/transports/http/<go-root-segment>` 中，例如 `transports/http/api.NewBlueprint(engine)`。
 
-Go route core 生成在 `<out_dir>/routes/**`，provider runtime 生成在 `<out_dir>/providers`，transport adapter 生成在 `<out_dir>/transports/**`，error catalog 实现生成在 `<out_dir>/runtime/errors/**`。如果希望 import path 包含 `/views`，应显式设置 `out_dir = ".../views"`。
+Go route core 生成在 `<out_dir>/routes/<go-root-segment>/**`，provider runtime 生成在 `<out_dir>/providers`，transport adapter 生成在 `<out_dir>/transports/**`，error catalog 实现生成在 `<out_dir>/runtime/errors/**`。Go-safe segment 会把非 `[0-9A-Za-z_]` 转成 `_`、去首尾 `_`，数字开头补 `p_`，Go keyword 补 `_pkg`；URL、route path 和 selection/filter 语义不变，因此 Go 目录不保证逐级镜像 URL slash 层级。如果希望 import path 包含 `/views`，应显式设置 `out_dir = ".../views"`。
 
 `providers` 是生成包根下的全局 transport-neutral runtime，不按 blueprint root 拆分。TypeScript 的 per-root `runtime` 主要服务模型和 client 命名隔离，和 Go provider hook 不是同一类职责。
 
@@ -99,10 +99,10 @@ Go client target 输出 preview HTTP client：
 
 - `runtime/gen_*.go`
 - `runtime/binary/gen_runtime.go`
-- `routes/<root>/<group...>/gen_client.go`
-- `routes/<root>/<group...>/gen_models.go`
-- `routes/<root>/<group...>/_gen_binary/gen_binary.go`，仅 binary schema route group 生成
-- `routes/<root>/<group...>/client.go`
+- `routes/<go-root-segment>/<go-group-segment>/gen_client.go`
+- `routes/<go-root-segment>/<go-group-segment>/gen_models.go`
+- `routes/<go-root-segment>/<go-group-segment>/_gen_binary/gen_binary.go`，仅 binary schema route group 生成
+- `routes/<go-root-segment>/<go-group-segment>/client.go`
 - `transports/http/gen_config.go`
 - `transports/http/gen_transport.go`
 - `transports/http/client.go`
@@ -207,7 +207,7 @@ Python server 同样使用 `python_package_root` 作为包根，输出 route ser
 
 ## examples 快照
 
-`examples/golang/server/`、`examples/golang/client/`、`examples/typescript/`、`examples/kotlin/` 与 `examples/java/client` / `examples/java/server` 是生成快照，不是业务真源；`examples/java/suite` 是手写运行时验证项目。Go client、Kotlin/Java/Python contract / agent artifact 索引会使用新的 route 输出路径。需要接受预期生成变化时，使用：
+`examples/golang/server/`、`examples/golang/client/`、`examples/typescript/`、`examples/kotlin/` 与 `examples/java/client` / `examples/java/server` 是生成快照，不是业务真源；`examples/java/suite` 是手写运行时验证项目。Go server / Go client / Wails Go contract / agent artifact 索引使用 Go-safe route package segment，Kotlin / Java / Python artifact 索引继续使用各自的 route 输出路径。需要接受预期生成变化时，使用：
 
 ```sh
 make example-refresh

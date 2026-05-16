@@ -53,7 +53,7 @@ transports/
         impl_service.go
 ```
 
-`routes/<root>/<group>` is the transport-neutral core; `providers` is the shared provider runtime; `runtime/errors` is the generated business error catalog; `transports/<overlay_name>` is the Wails target. The route-local `impl_service.go` is a user-owned bootstrap constructor entry and is preserved across regeneration. If you want a `views/...` package path, configure the referenced Go server target with `out_dir = ".../views"`; Wails does not append it implicitly.
+`routes/<go-root-segment>/<go-group-segment>` is the transport-neutral core; `providers` is the shared provider runtime; `runtime/errors` is the generated business error catalog; `transports/<overlay_name>/<go-root-segment>/<go-group-segment>` is the Wails Go target. Go-safe segments write `/api-v1` as `api_v1` and `/admin/v1` as the single segment `admin_v1`, so Go directories do not guarantee one directory per URL slash segment. The route-local `impl_service.go` is a user-owned bootstrap constructor entry and is preserved across regeneration. If you want a `views/...` package path, configure the referenced Go server target with `out_dir = ".../views"`; Wails does not append it implicitly.
 
 ## TypeScript Output Layout
 
@@ -125,7 +125,7 @@ const clients = createClients({
 });
 ```
 
-The Wails v3 transport uses the official runtime `Call.ByName(...)` contract and a generated binding manifest; projects do not need to hand-code Go service package paths. The Wails v2 transport continues to use the official `window.go.<package>.<service>.<method>` runtime shape.
+The Wails v3 transport uses the official runtime `Call.ByName(...)` contract and a generated binding manifest; Go import paths in that binding manifest use the same Go-safe segments, so projects do not need to hand-code Go service package paths. The Wails v2 transport continues to use the official `window.go.<package>.<service>.<method>` runtime shape.
 
 ## Wails-only App
 

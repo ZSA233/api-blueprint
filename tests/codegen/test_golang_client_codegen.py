@@ -10,6 +10,26 @@ from api_blueprint.engine.model import String
 from api_blueprint.writer.golang.client import GolangClientWriter
 
 
+def test_golang_client_writer_uses_go_safe_route_package_segments(tmp_path):
+    bp = Blueprint(root="/api-v1")
+    with bp.group("/admin/v1") as views:
+        views.GET("/ping").RSP()
+
+    graph = build_contract_graph([bp])
+    output_dir = tmp_path / "client"
+
+    writer = GolangClientWriter(output_dir, module="example.com/generated/client", contract_graph=graph)
+    writer.register(bp)
+    writer.gen()
+
+    route_dir = output_dir / "routes" / "api_v1" / "admin_v1"
+    assert (route_dir / "gen_client.go").is_file()
+    assert "package admin_v1" in (route_dir / "gen_client.go").read_text(encoding="utf-8")
+    assert "func (client *GenAdminV1Client) Ping(ctx context.Context" in (route_dir / "gen_client.go").read_text(
+        encoding="utf-8"
+    )
+
+
 def test_golang_client_writer_generates_layout_preserves_user_files_and_compiles(tmp_path):
     class CommonErr(Model):
         UNKNOWN = Error(-1, "unknown")

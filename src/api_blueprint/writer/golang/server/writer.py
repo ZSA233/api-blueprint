@@ -18,9 +18,9 @@ from api_blueprint.writer.core.files import ensure_filepath_open
 from api_blueprint.writer.core.templates import iter_render
 
 from .blueprint import GolangBlueprint, GolangErrorGroup
-from .common import LANG, PackageName
-from .protos import GolangPackageLayout, GolangResponseWrapper
-from .toolchain import GolangToolchain
+from ..common import LANG, PackageName
+from ..protos import GolangPackageLayout, GolangResponseWrapper
+from ..toolchain import GolangToolchain
 
 if TYPE_CHECKING:
     from api_blueprint.contract import ContractGraph
@@ -303,7 +303,7 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
 
     def gen_errors(self) -> None:
         for error_group in self.error_vars():
-            for name, text in iter_render(LANG, {"writer": self, "error_group": error_group}, "errors/group"):
+            for name, text in iter_render(LANG, {"writer": self, "error_group": error_group}, "server/errors/group"):
                 overwrite = name.startswith("gen_")
                 with self.write_file(error_group.gen_dir / name, overwrite=overwrite) as handle:
                     if handle:
@@ -311,7 +311,7 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
 
         errors_dir = self.working_dir / self.errors_package
         self.cleanup_stale_root_error_catalog(errors_dir)
-        for name, text in iter_render(LANG, {"writer": self}, "errors"):
+        for name, text in iter_render(LANG, {"writer": self}, "server/errors"):
             overwrite = name.startswith("gen_")
             with self.write_file(errors_dir / name, overwrite=overwrite) as handle:
                 if handle:
@@ -328,7 +328,7 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
 
     def gen_providers(self) -> None:
         provider_dir = self.working_dir / self.views_package / self.provider_package
-        for name, text in iter_render(LANG, {"writer": self}, "provider"):
+        for name, text in iter_render(LANG, {"writer": self}, "server/provider"):
             overwrite = name.startswith("gen_")
             with self.write_file(provider_dir / name, overwrite=overwrite) as handle:
                 if handle:

@@ -11,13 +11,49 @@ from api_blueprint.engine.binary_schema import parse_binary_schema
 from api_blueprint.engine.model import String
 from api_blueprint.engine.wrapper import GeneralWrapper
 from api_blueprint.writer.golang import GolangResponseWrapper
-from api_blueprint.writer.golang.writer import GolangWriter
+from api_blueprint.writer.golang import GolangWriter
 
 
 def test_golang_response_wrapper_preserves_generic_type_parameters():
     wrapper = GolangResponseWrapper("RSP_JSON", GeneralWrapper)
     assert wrapper.proto_def_name == "RSP_JSON_GeneralWrapper[T any]"
     assert wrapper.generic_types(True) == "[T any]"
+
+
+def test_golang_writer_uses_go_safe_route_package_segments(tmp_path):
+    output_dir = tmp_path / "golang"
+    output_dir.mkdir()
+    (tmp_path / "go.mod").write_text(
+        """
+module example.com/generated
+
+go 1.23.8
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    bp = Blueprint(root="/api-v1")
+    with bp.group("/admin/v1") as views:
+        views.GET("/ping").RSP()
+
+    writer = GolangWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    root_blueprint = (output_dir / "routes" / "api_v1" / "gen_blueprint.go").read_text(encoding="utf-8")
+    group_interface = (output_dir / "routes" / "api_v1" / "admin_v1" / "gen_interface.go").read_text(
+        encoding="utf-8"
+    )
+    http_blueprint = (output_dir / "transports" / "http" / "api_v1" / "gen_blueprint.go").read_text(
+        encoding="utf-8"
+    )
+
+    assert "package api_v1" in root_blueprint
+    assert '"example.com/generated/golang/routes/api_v1/admin_v1"' in root_blueprint
+    assert "AdminV1Router *admin_v1.Router" in root_blueprint
+    assert "package admin_v1" in group_interface
+    assert 'sharedAdminV1 "example.com/generated/golang/routes/api_v1/admin_v1"' in http_blueprint
 
 
 def test_golang_writer_uses_fixed_providers_package(tmp_path):

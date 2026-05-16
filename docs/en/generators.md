@@ -6,7 +6,7 @@ This page covers the main non-Wails, non-gRPC generators. See [Wails](wails.md) 
 
 `api-gen check`, contract / agent artifact projection, and language writers use the same planner / capability metadata. Before generation, target dependencies, route kinds, request kinds, and response wrappers are validated consistently, avoiding cases where check passes and a writer later discovers unsupported input.
 
-Go client, Kotlin, Java, and Python are newly implemented generator surfaces and should currently be treated as preview. Their contract / agent artifact paths point to outputs that mirror the full route path, for example `routes/api/demo`; Python no longer uses a `routes/root` sentinel.
+Go client, Kotlin, Java, and Python are newly implemented generator surfaces and should currently be treated as preview. Go server / Go client / Wails Go contract / agent artifact paths use Go-safe route package segments, for example `/api-v1` -> `api_v1` and `/admin/v1` -> `admin_v1`; Kotlin / Java / Python still point to outputs that mirror the full route path, for example `routes/api/demo`; Python no longer uses a `routes/root` sentinel.
 
 ## Go
 
@@ -24,9 +24,9 @@ The Go generator emits:
 
 `gen_*` files are generator-owned and overwritten during regeneration. `impl_*` and non-`gen_*` files are user-owned extension points and are preserved. Kotlin / Java follow the same ownership model: Kotlin uses `Gen*.kt` for generator-owned files, Java uses `Gen*.java` plus runtime generated files, and non-`Gen*` façade / extension files are user-owned.
 
-`go-server` owns only the Go server core. Its `out_dir` is the generated package root and no longer appends `views` implicitly. HTTP / Wails output is attached explicitly by `http-transport` / `wails-transport` targets through `server = "go.server"`. The HTTP entrypoint is generated under `<out_dir>/transports/http/<root>`, for example `transports/http/api.NewBlueprint(engine)`.
+`go-server` owns only the Go server core. Its `out_dir` is the generated package root and no longer appends `views` implicitly. HTTP / Wails output is attached explicitly by `http-transport` / `wails-transport` targets through `server = "go.server"`. The HTTP entrypoint is generated under `<out_dir>/transports/http/<go-root-segment>`, for example `transports/http/api.NewBlueprint(engine)`.
 
-Go route core is generated under `<out_dir>/routes/**`, provider runtime under `<out_dir>/providers`, transport adapters under `<out_dir>/transports/**`, and error catalog implementations under `<out_dir>/runtime/errors/**`. If you want the import path to include `/views`, set `out_dir = ".../views"` explicitly.
+Go route core is generated under `<out_dir>/routes/<go-root-segment>/**`, provider runtime under `<out_dir>/providers`, transport adapters under `<out_dir>/transports/**`, and error catalog implementations under `<out_dir>/runtime/errors/**`. Go-safe segments replace non-`[0-9A-Za-z_]` characters with `_`, trim leading/trailing `_`, prefix digit-leading names with `p_`, and suffix Go keywords with `_pkg`; URLs, route paths, and selection/filter semantics stay unchanged, so Go directories do not guarantee one directory per URL slash segment. If you want the import path to include `/views`, set `out_dir = ".../views"` explicitly.
 
 `providers` is a global transport-neutral runtime under the generated package root and is not split per blueprint root. TypeScript's per-root `runtime` mainly isolates model and client names; it is not the same responsibility as Go provider hooks.
 
@@ -99,10 +99,10 @@ The Go client target emits a preview HTTP client:
 
 - `runtime/gen_*.go`
 - `runtime/binary/gen_runtime.go`
-- `routes/<root>/<group...>/gen_client.go`
-- `routes/<root>/<group...>/gen_models.go`
-- `routes/<root>/<group...>/_gen_binary/gen_binary.go`, generated only for binary schema route groups
-- `routes/<root>/<group...>/client.go`
+- `routes/<go-root-segment>/<go-group-segment>/gen_client.go`
+- `routes/<go-root-segment>/<go-group-segment>/gen_models.go`
+- `routes/<go-root-segment>/<go-group-segment>/_gen_binary/gen_binary.go`, generated only for binary schema route groups
+- `routes/<go-root-segment>/<go-group-segment>/client.go`
 - `transports/http/gen_config.go`
 - `transports/http/gen_transport.go`
 - `transports/http/client.go`
@@ -207,7 +207,7 @@ Python server also uses `python_package_root` as its package root and emits rout
 
 ## Example Snapshots
 
-`examples/golang/server/`, `examples/golang/client/`, `examples/typescript/`, `examples/kotlin/`, and `examples/java/client` / `examples/java/server` are generated snapshots, not business sources; `examples/java/suite` is a handwritten runtime validation project. Go client and Kotlin/Java/Python contract / agent artifact indexes use the new route output paths. To accept intentional generation changes, use:
+`examples/golang/server/`, `examples/golang/client/`, `examples/typescript/`, `examples/kotlin/`, and `examples/java/client` / `examples/java/server` are generated snapshots, not business sources; `examples/java/suite` is a handwritten runtime validation project. Go server / Go client / Wails Go contract / agent artifact indexes use Go-safe route package segments, while Kotlin / Java / Python artifact indexes keep their language-specific route output paths. To accept intentional generation changes, use:
 
 ```sh
 make example-refresh

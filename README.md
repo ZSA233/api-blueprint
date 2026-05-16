@@ -86,6 +86,8 @@ api-gen generate -c api-blueprint.toml
 
 更完整的项目目录、Go client、Kotlin、Java、Python、Wails 和 gRPC 配置见 [快速开始](docs/zh/getting-started.md) 与 [配置说明](docs/zh/configuration.md)。
 
+Go / Wails Go 的 route 目录、Go import path 和 `package` 声明使用 Go-safe route package segment，例如 `/api-v1` -> `api_v1`、`/admin/v1` -> `admin_v1`；它们不保证逐级镜像 URL slash 层级，URL、route path 和 selection/filter 语义不变。
+
 ## 常用目标
 
 | 目标 | 状态 | 用途 |
