@@ -367,9 +367,19 @@ def _format_artifacts(value: object) -> list[str]:
 
 
 def _append_optional_list(lines: list[str], label: str, values: object) -> None:
-    items = [str(item) for item in values] if isinstance(values, Sequence) and not isinstance(values, (str, bytes)) else []
+    items = [_format_list_item(item) for item in values] if isinstance(values, Sequence) and not isinstance(values, (str, bytes)) else []
     if items:
         lines.append(f"{label}: {', '.join(items)}")
+
+
+def _format_list_item(value: object) -> str:
+    if isinstance(value, Mapping):
+        item_id = value.get("id")
+        if item_id is not None:
+            code = value.get("code")
+            return f"{item_id}({code})" if code is not None else str(item_id)
+        return json.dumps(value, ensure_ascii=False, sort_keys=True)
+    return str(value)
 
 
 def _schema_value_type(value: object) -> str:

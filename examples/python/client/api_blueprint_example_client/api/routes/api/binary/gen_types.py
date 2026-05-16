@@ -1,0 +1,22 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from .gen_binary import *
+
+
+@dataclass
+class PacketQuery:
+    trace: str | None = None
+
+
+@dataclass
+class PacketResponse:
+    trace: str | None = None
+    version: int | None = None
+    item_count: int | None = None
+    payload: str | None = None
+    score_sum: float | None = None
+    first_label: str | None = None
+    item_ids: list[Any] | None = None
+    checksum: int | None = None

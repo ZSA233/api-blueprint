@@ -16,7 +16,7 @@ class DemoService(Protocol):
     ) -> Any:
         ...
 
-    async def z1put(
+    async def put_demo(
         self,
         query: dict[str, Any] | None = None,
         json: dict[str, Any] | None = None,
@@ -59,6 +59,12 @@ class DemoService(Protocol):
     async def map_model(self) -> Any:
         ...
 
+    async def error_demo(
+        self,
+        query: dict[str, Any] | None = None,
+    ) -> Any:
+        ...
+
 
 class DemoServiceStub:
     async def abc(
@@ -73,12 +79,12 @@ class DemoServiceStub:
     ) -> Any:
         raise NotImplementedError("test_post")
 
-    async def z1put(
+    async def put_demo(
         self,
         query: dict[str, Any] | None = None,
         json: dict[str, Any] | None = None,
     ) -> Any:
-        raise NotImplementedError("z1put")
+        raise NotImplementedError("put_demo")
 
     async def delete(
         self,
@@ -115,3 +121,9 @@ class DemoServiceStub:
 
     async def map_model(self) -> Any:
         raise NotImplementedError("map_model")
+
+    async def error_demo(
+        self,
+        query: dict[str, Any] | None = None,
+    ) -> Any:
+        raise NotImplementedError("error_demo")

@@ -73,7 +73,32 @@ class CommonErr(Model):
     )
 ```
 
-When `toast` is omitted, the default is equivalent to `key="<Group>.<KEY>"`, `default=message`, and `level="error"`. Response wrappers carry an optional `toast` field; clients resolve display text through `toast.text`, business i18n, `toast.default`, then `message`. When the server must override display text by request language, tenant, or rollout, return an immutable override result instead of mutating generated global error values or catalog entries.
+When `toast` is omitted, the default is equivalent to `key="<Group>.<KEY>"`, `default=message`, and `level="error"`. Response envelopes can expose nested error identity and `toast` according to their `error_identity` policy; clients resolve display text through `toast.text`, business i18n, `toast.default`, then `message`. When the server must override display text by request language, tenant, or rollout, return an immutable override result instead of mutating generated global error values or lookup entries.
+
+Routes can add local error groups. The manifest and client lookup merge global errors with `.ERR(...)` declarations for the current route error surface:
+
+```python
+class DemoErr(Model):
+    RATE_LIMITED = Error(
+        42901,
+        "too many requests",
+        toast=Toast(
+            key="demo.rate_limited",
+            default="Too many requests. Please try again later.",
+            level="warning",
+        ),
+    )
+
+
+with bp.group("/demo") as views:
+    views.GET("/error-demo").ARGS(
+        mode=String(description="ok/token/rate_limit/unknown", default="ok"),
+    ).ERR(DemoErr).RSP(
+        status=String(description="status"),
+    )
+```
+
+See `examples/blueprints/errors.py` and `examples/blueprints/api_demo.py` for the full example. Generated clients prefer `error.id`, then `(route_id, code)` lookup for that route; undeclared error codes still produce a usable `ApiError`.
 
 ## Long-Connection Message Flows
 

@@ -5,21 +5,23 @@ import com.example.apiblueprint.static_.runtime.binary.ApiBinaryBody;
 import java.util.Map;
 
 public record ApiRequest<T>(
+    String routeId,
     String method,
     String path,
     Object query,
     Object json,
     Object form,
     ApiBinaryBody binary,
-    String responseWrapper,
+    ApiResponseEnvelope responseEnvelope,
     Class<T> responseClass,
     String responseMediaType,
     Map<String, String> headers
 ) {
     public ApiRequest {
+        routeId = routeId == null ? "" : routeId;
         method = method == null ? "GET" : method;
         path = path == null ? "" : path;
-        responseWrapper = responseWrapper == null ? "NoneWrapper" : responseWrapper;
+        responseEnvelope = responseEnvelope == null ? ApiResponseEnvelope.none() : responseEnvelope;
         responseMediaType = responseMediaType == null ? "application/json" : responseMediaType;
         headers = headers == null ? Map.of() : Map.copyOf(headers);
     }

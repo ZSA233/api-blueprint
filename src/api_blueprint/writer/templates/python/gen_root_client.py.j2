@@ -1,0 +1,27 @@
+from __future__ import annotations
+
+from .transports.http.client import HttpClientTransport
+{% for group_plan in plan.route_groups %}from .routes.{{ group_plan.group.package_path }}.gen_client import {{ group_plan.group.client_class }} as _Route{{ loop.index }}Client
+{% endfor %}
+
+
+class ApiClient:
+    def __init__(self, transport):
+        self._transport = transport
+{% for group_plan in plan.route_groups %}        self.{{ group_plan.group.alias }} = _Route{{ loop.index }}Client(transport)
+{% endfor %}
+
+    async def aclose(self) -> None:
+        close = getattr(self._transport, "aclose", None)
+        if close is not None:
+            await close()
+
+    async def __aenter__(self) -> "ApiClient":
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb) -> None:
+        await self.aclose()
+
+
+def create_client(base_url: str = {{ writer.rendered_base_url | safe }}) -> ApiClient:
+    return ApiClient(HttpClientTransport(base_url))

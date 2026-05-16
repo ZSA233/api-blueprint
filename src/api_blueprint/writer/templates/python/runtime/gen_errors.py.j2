@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, TypeAlias
+from typing import Any, Callable, TypeAlias
 
 
 ApiErrorCode: TypeAlias = int
@@ -25,7 +25,7 @@ class ApiToastPayload:
 
 
 @dataclass(frozen=True)
-class ApiErrorCatalogEntry:
+class ApiErrorEntry:
     id: str
     group: str
     key: str
@@ -35,16 +35,56 @@ class ApiErrorCatalogEntry:
 
 
 @dataclass(frozen=True)
-class ApiCodeError(Exception):
-    entry: ApiErrorCatalogEntry
-    toast: ApiToastPayload | None = None
+class ApiErrorPayload:
+    id: str
+    group: str
+    key: str
+    code: ApiErrorCode
+    message: str
+    toast: ApiToastPayload
+
+
+@dataclass(frozen=True)
+class ApiError(Exception):
+    payload: ApiErrorPayload
+    route_id: str | None = None
+    raw: Any = None
 
     @property
     def code(self) -> ApiErrorCode:
-        return self.entry.code
+        return self.payload.code
+
+    @property
+    def id(self) -> str:
+        return self.payload.id
+
+    @property
+    def group(self) -> str:
+        return self.payload.group
+
+    @property
+    def key(self) -> str:
+        return self.payload.key
+
+    @property
+    def toast(self) -> ApiToastPayload:
+        return self.payload.toast
 
     def __str__(self) -> str:
-        return self.entry.message
+        return self.payload.message
+
+    def is_(self, entry: ApiErrorEntry) -> bool:
+        if entry.id and self.id == entry.id:
+            return True
+        return entry.code != 0 and self.code == entry.code
+
+
+def is_api_error(error: object, entry: ApiErrorEntry | None = None) -> bool:
+    if not isinstance(error, ApiError):
+        return False
+    if entry is None:
+        return True
+    return error.is_(entry)
 
 
 def resolve_api_toast(

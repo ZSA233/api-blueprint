@@ -13,24 +13,22 @@ public open class GenBinaryApi internal constructor(
 
     public open suspend fun packet(
         query: BinaryPacketQuery,
-        binary: GenBinary.DemoPacket,
+        binary: DemoPacket,
         headers: Map<String, String> = emptyMap(),
     ): BinaryPacketResponse {
-        val envelope = transport.request(
+        return transport.request(
             ApiRequest(
+                routeId = "api.binary.post.packet",
                 method = "POST",
                 path = "/api/binary/packet",
                 query = query.toQueryMap(),
                 headers = headers,
-                binary = GenBinary.DemoPacketWire.toBinaryBody(binary),
-                responseSerializer = GeneralResponse.serializer(BinaryPacketResponse.serializer()),
+                binary = DemoPacketWire.toBinaryBody(binary),
+                responseSerializer = BinaryPacketResponse.serializer(),
                 responseMediaType = "application/json",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
             )
         )
-        if (envelope.code != 0) {
-            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
-        }
-        return envelope.data ?: throw ApiException(200, "Missing response data for /api/binary/packet")
     }
 
     public open suspend fun packet(
@@ -38,21 +36,19 @@ public open class GenBinaryApi internal constructor(
         binary: ApiBinaryBody,
         headers: Map<String, String> = emptyMap(),
     ): BinaryPacketResponse {
-        val envelope = transport.request(
+        return transport.request(
             ApiRequest(
+                routeId = "api.binary.post.packet",
                 method = "POST",
                 path = "/api/binary/packet",
                 query = query.toQueryMap(),
                 headers = headers,
                 binary = binary,
-                responseSerializer = GeneralResponse.serializer(BinaryPacketResponse.serializer()),
+                responseSerializer = BinaryPacketResponse.serializer(),
                 responseMediaType = "application/json",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
             )
         )
-        if (envelope.code != 0) {
-            throw ApiCodeError(envelope.code, envelope.message, envelope.toast)
-        }
-        return envelope.data ?: throw ApiException(200, "Missing response data for /api/binary/packet")
     }
 
     private fun BinaryPacketQuery.toQueryMap(): Map<String, String?> = mapOf(

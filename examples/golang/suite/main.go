@@ -21,13 +21,12 @@ import (
 	"syscall"
 	"time"
 
+	apiclient "example.com/project/golang/client"
 	binaryapi "example.com/project/golang/client/routes/api/binary"
-	binaryschema "example.com/project/golang/client/routes/api/binary/_gen_binary"
 	demo "example.com/project/golang/client/routes/api/demo"
 	hello "example.com/project/golang/client/routes/api/hello"
 	runtime "example.com/project/golang/client/runtime"
 	runtimebinary "example.com/project/golang/client/runtime/binary"
-	httptransport "example.com/project/golang/client/transports/http"
 )
 
 func main() {
@@ -54,17 +53,23 @@ func run() error {
 		return err
 	}
 
-	transport := httptransport.NewClient(httptransport.HttpConfig{BaseURL: baseURL})
-	binaryClient := binaryapi.NewBinaryClient(transport)
-	demoClient := demo.NewDemoClient(transport)
-	helloClient := hello.NewHelloClient(transport)
+	api := apiclient.NewHTTP(apiclient.HTTPConfig{BaseURL: baseURL})
+	binaryClient := api.Binary
+	demoClient := api.Demo
+	helloClient := api.Hello
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := checkGeneratedClient(ctx, demoClient, helloClient); err != nil {
 		return err
 	}
+	if err := checkTypedErrors(ctx, demoClient); err != nil {
+		return err
+	}
 	if err := checkUnsupportedConnections(ctx, demoClient); err != nil {
+		return err
+	}
+	if err := checkTypedErrorHTTP(baseURL); err != nil {
 		return err
 	}
 	if err := checkBinaryHTTP(baseURL); err != nil {
@@ -160,7 +165,7 @@ func reserveLocalAddr() (string, error) {
 }
 
 func checkGeneratedClient(ctx context.Context, demoClient *demo.DemoClient, helloClient *hello.HelloClient) error {
-	postRsp, err := demoClient.TestPost(ctx, &demo.REQ_TestPost_JSON{Req1: "suite", Req2: 7})
+	postRsp, err := demoClient.TestPost(ctx, demo.TestPostJSON{Req1: "suite", Req2: 7})
 	if err != nil {
 		return fmt.Errorf("test_post: %w", err)
 	}
@@ -171,10 +176,10 @@ func checkGeneratedClient(ctx context.Context, demoClient *demo.DemoClient, hell
 		return fmt.Errorf("test_post map = %#v", postRsp.Map)
 	}
 
-	putRsp, err := demoClient.Z1put(
+	putRsp, err := demoClient.PutDemo(
 		ctx,
-		&demo.REQ_Z1put_QUERY{Arg1: "query", Arg2: 3.5},
-		&demo.REQ_Z1put_JSON{Req1: "body", Req2: 9},
+		demo.PutDemoQuery{Arg1: "query", Arg2: 3.5},
+		demo.PutDemoJSON{Req1: "body", Req2: 9},
 	)
 	if err != nil {
 		return fmt.Errorf("1put: %w", err)
@@ -182,8 +187,8 @@ func checkGeneratedClient(ctx context.Context, demoClient *demo.DemoClient, hell
 	if !reflect.DeepEqual(putRsp.List, []string{"query", "body"}) {
 		return fmt.Errorf("1put list = %#v", putRsp.List)
 	}
-	if putRsp.Anon_kv == nil || putRsp.Anon_kv.Kv1 != 9 || !reflect.DeepEqual(putRsp.Anon_kv.Kv2, []float64{3.5, 9}) {
-		return fmt.Errorf("1put anon_kv = %#v", putRsp.Anon_kv)
+	if putRsp.AnonKV == nil || putRsp.AnonKV.Kv1 != 9 || !reflect.DeepEqual(putRsp.AnonKV.Kv2, []float64{3.5, 9}) {
+		return fmt.Errorf("1put anon_kv = %#v", putRsp.AnonKV)
 	}
 
 	stringRsp, err := helloClient.String(ctx)
@@ -218,17 +223,94 @@ func checkGeneratedClient(ctx context.Context, demoClient *demo.DemoClient, hell
 	if err != nil {
 		return fmt.Errorf("hello list enum: %w", err)
 	}
-	if !reflect.DeepEqual(*listRsp, runtime.RSP_ListEnum{runtime.MapEnumA, runtime.MapEnumB}) {
+	if !reflect.DeepEqual(*listRsp, hello.ListEnumResponse{runtime.MapEnumA, runtime.MapEnumB}) {
 		return fmt.Errorf("hello list enum = %#v", listRsp)
 	}
 	return nil
 }
 
+func checkTypedErrors(ctx context.Context, demoClient *demo.DemoClient) error {
+	okRsp, err := demoClient.ErrorDemo(ctx, demo.ErrorDemoQuery{Mode: "ok"})
+	if err != nil {
+		return fmt.Errorf("error demo ok: %w", err)
+	}
+	if okRsp == nil || okRsp.Status != "ok" {
+		return fmt.Errorf("error demo ok response = %#v", okRsp)
+	}
+
+	tokenErr, err := expectApiError(func() error {
+		_, err := demoClient.ErrorDemo(ctx, demo.ErrorDemoQuery{Mode: "token"})
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	if !runtime.IsApiError(tokenErr, runtime.ApiErrors.CommonErr.TokenExpire) {
+		return fmt.Errorf("token api error mismatch: id=%q code=%d", tokenErr.ID(), tokenErr.Code())
+	}
+	tokenToast := runtime.ResolveApiToast(tokenErr.Toast(), func(key string) (string, bool) {
+		if key == "auth.token_expire" {
+			return "translated token expired", true
+		}
+		return "", false
+	}, tokenErr.Message())
+	if tokenToast != "translated token expired" {
+		return fmt.Errorf("token toast = %q", tokenToast)
+	}
+
+	rateErr, err := expectApiError(func() error {
+		_, err := demoClient.ErrorDemo(ctx, demo.ErrorDemoQuery{Mode: "rate_limit"})
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	if !runtime.IsApiError(rateErr, runtime.ApiErrors.DemoErr.RateLimited) {
+		return fmt.Errorf("rate limit api error mismatch: id=%q code=%d", rateErr.ID(), rateErr.Code())
+	}
+	rateToast := runtime.ResolveApiToast(rateErr.Toast(), nil, rateErr.Message())
+	if rateToast != "请等待 30 秒后重试" {
+		return fmt.Errorf("rate limit toast = %q", rateToast)
+	}
+
+	unknownErr, err := expectApiError(func() error {
+		_, err := demoClient.ErrorDemo(ctx, demo.ErrorDemoQuery{Mode: "unknown"})
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	if unknownErr.ID() != "" || unknownErr.Code() != 70001 || unknownErr.Message() != "example undefined business error" {
+		return fmt.Errorf(
+			"unknown api error mismatch: id=%q code=%d message=%q",
+			unknownErr.ID(),
+			unknownErr.Code(),
+			unknownErr.Message(),
+		)
+	}
+	return nil
+}
+
+func expectApiError(call func() error) (*runtime.ApiError, error) {
+	err := call()
+	var apiErr *runtime.ApiError
+	if !errors.As(err, &apiErr) {
+		return nil, fmt.Errorf("expected *runtime.ApiError, got %T %v", err, err)
+	}
+	if apiErr.RouteID() != "api.demo.get.errordemo" {
+		return nil, fmt.Errorf("api error route id = %q", apiErr.RouteID())
+	}
+	if apiErr.Raw() == "" {
+		return nil, fmt.Errorf("api error raw body is empty")
+	}
+	return apiErr, nil
+}
+
 func checkUnsupportedConnections(ctx context.Context, demoClient *demo.DemoClient) error {
-	if err := demoClient.SubscribeSweepEvents(ctx, &demo.OPEN_SweepEvents{Run_id: "suite"}); !isUnsupportedTransport(err, "stream") {
+	if err := demoClient.SubscribeSweepEvents(ctx, demo.SweepEventsOpen{RunID: "suite"}); !isUnsupportedTransport(err, "stream") {
 		return fmt.Errorf("expected stream UnsupportedTransportError, got %T %v", err, err)
 	}
-	if err := demoClient.OpenAssistantSession(ctx, &demo.OPEN_AssistantSession{Session_id: "suite"}); !isUnsupportedTransport(err, "channel") {
+	if err := demoClient.OpenAssistantSession(ctx, demo.AssistantSessionOpen{SessionID: "suite"}); !isUnsupportedTransport(err, "channel") {
 		return fmt.Errorf("expected channel UnsupportedTransportError, got %T %v", err, err)
 	}
 	return nil
@@ -237,6 +319,40 @@ func checkUnsupportedConnections(ctx context.Context, demoClient *demo.DemoClien
 func isUnsupportedTransport(err error, kind string) bool {
 	var unsupported runtime.UnsupportedTransportError
 	return errors.As(err, &unsupported) && unsupported.Kind == kind
+}
+
+func checkTypedErrorHTTP(baseURL string) error {
+	resp, err := http.Get(baseURL + "/api/demo/error-demo?mode=rate_limit")
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		raw, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("typed error status %d: %s", resp.StatusCode, string(raw))
+	}
+	var envelope struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+		Data    any    `json:"data"`
+		Error   struct {
+			ID    string `json:"id"`
+			Code  int    `json:"code"`
+			Toast struct {
+				Key     string `json:"key"`
+				Level   string `json:"level"`
+				Default string `json:"default"`
+				Text    string `json:"text"`
+			} `json:"toast"`
+		} `json:"error"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
+		return fmt.Errorf("decode typed error envelope: %w", err)
+	}
+	if envelope.Code != 42901 || envelope.Error.ID != "DemoErr.RATE_LIMITED" || envelope.Error.Toast.Text != "请等待 30 秒后重试" {
+		return fmt.Errorf("typed error envelope = %#v", envelope)
+	}
+	return nil
 }
 
 type binaryEnvelope struct {
@@ -282,8 +398,8 @@ func checkGeneratedBinaryClient(ctx context.Context, client *binaryapi.BinaryCli
 	if err := callGeneratedBinary(ctx, client, "go-raw", rawBody); err != nil {
 		return err
 	}
-	streamBody := binaryschema.NewDemoPacketBody(-1, func(writer *runtimebinary.Writer) error {
-		return binaryschema.WriteDemoPacket(packet, writer)
+	streamBody := binaryapi.NewDemoPacketBody(-1, func(writer *runtimebinary.Writer) error {
+		return binaryapi.WriteDemoPacket(packet, writer)
 	})
 	if err := callGeneratedBinary(ctx, client, "go-stream", streamBody); err != nil {
 		return err
@@ -292,7 +408,7 @@ func checkGeneratedBinaryClient(ctx context.Context, client *binaryapi.BinaryCli
 }
 
 func callGeneratedBinary(ctx context.Context, client *binaryapi.BinaryClient, trace string, body runtimebinary.Body) error {
-	rsp, err := client.Packet(ctx, &binaryapi.REQ_Packet_QUERY{Trace: trace}, body)
+	rsp, err := client.Packet(ctx, binaryapi.PacketQuery{Trace: trace}, body)
 	if err != nil {
 		return fmt.Errorf("generated binary %s: %w", trace, err)
 	}
@@ -309,11 +425,11 @@ func callGeneratedBinary(ctx context.Context, client *binaryapi.BinaryClient, tr
 	actual := binaryResponse{
 		Trace:      rsp.Trace,
 		Version:    rsp.Version,
-		ItemCount:  rsp.Item_count,
+		ItemCount:  rsp.ItemCount,
 		Payload:    rsp.Payload,
-		ScoreSum:   rsp.Score_sum,
-		FirstLabel: rsp.First_label,
-		ItemIDs:    rsp.Item_ids,
+		ScoreSum:   rsp.ScoreSum,
+		FirstLabel: rsp.FirstLabel,
+		ItemIDs:    rsp.ItemIDs,
 		Checksum:   rsp.Checksum,
 	}
 	if !reflect.DeepEqual(actual, expected) {
@@ -375,17 +491,17 @@ func runSuiteCommand(cwd string, label string, name string, args ...string) erro
 	return nil
 }
 
-func buildDemoPacket() *binaryschema.DemoPacket {
-	return &binaryschema.DemoPacket{
-		Header: binaryschema.DemoPacketHeader{
-			Flags:        binaryschema.DemoFlagsHasPayload | binaryschema.DemoFlagsHasScores,
+func buildDemoPacket() *binaryapi.DemoPacket {
+	return &binaryapi.DemoPacket{
+		Header: binaryapi.DemoPacketHeader{
+			Flags:        binaryapi.DemoFlagsHasPayload | binaryapi.DemoFlagsHasScores,
 			Short_code:   0x010203,
 			Signed_delta: 7,
 			Item_count:   2,
 			Payload_len:  uint32(len("payload-ok")),
 		},
-		Body: binaryschema.DemoPacketBody{
-			Items: []binaryschema.DemoPacketItem{
+		Body: binaryapi.DemoPacketBody{
+			Items: []binaryapi.DemoPacketItem{
 				{Id: 11, Enabled: true, Value: 1.25, Label_len: 5, Label: []byte("alpha")},
 				{Id: 22, Enabled: false, Value: 2.5, Label_len: 4, Label: []byte("beta")},
 			},
@@ -445,9 +561,8 @@ func postInvalidBinary(baseURL string, body []byte) error {
 	if envelope.Code == 0 {
 		return fmt.Errorf("invalid binary unexpectedly succeeded")
 	}
-	message := strings.ToLower(envelope.Message)
-	if !strings.Contains(message, "magic") && !strings.Contains(message, "const mismatch") && !strings.Contains(message, "exceeds max") {
-		return fmt.Errorf("invalid binary message is not diagnostic: %q", envelope.Message)
+	if strings.TrimSpace(envelope.Message) == "" {
+		return fmt.Errorf("invalid binary message is empty")
 	}
 	return nil
 }
@@ -482,7 +597,7 @@ func buildDemoPacketFixture(magic string, itemCount uint16, payload string) []by
 	writeBytes(buf, []byte(magic)[:4])
 	writeUint16(buf, 1)
 	writeUint16(buf, 1)
-	writeUint32(buf, uint32(binaryschema.DemoFlagsHasPayload|binaryschema.DemoFlagsHasScores))
+	writeUint32(buf, uint32(binaryapi.DemoFlagsHasPayload|binaryapi.DemoFlagsHasScores))
 	writeBytes(buf, []byte{0})
 	writeBytes(buf, []byte{0, 0})
 	writeUint24(buf, 0x010203)

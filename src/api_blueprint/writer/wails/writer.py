@@ -8,6 +8,7 @@ from api_blueprint.contract import build_contract_graph
 from api_blueprint.engine import Blueprint
 from api_blueprint.engine.utils import join_path_imports
 from api_blueprint.writer.core.contract_adapters import RouteContractIndex
+from api_blueprint.writer.core.go_naming import to_go_package_path
 from api_blueprint.writer.typescript.writer import TypeScriptWriter
 
 from .golang import WailsGoWriter
@@ -111,20 +112,22 @@ class WailsWriter:
 
         manifest: dict[str, str] = {}
         for blueprint in entrypoints:
-            root_package = blueprint.root.strip("/")
-            if not root_package:
+            raw_root = blueprint.root.strip("/")
+            if not raw_root:
                 continue
+            root_package = to_go_package_path(raw_root, fallback="root")
             for group, router in blueprint.iter_router():
                 contract = go_writer.route_protocol_for(router).route
                 if not selection.includes_route(router, route_name=contract.func_name):
                     continue
                 branch = group.branch.strip("/")
+                branch_package = to_go_package_path(branch, fallback="root") if branch else ""
                 binding_import = join_path_imports(
                     go_writer.shared_views_imports,
                     "transports",
                     go_writer.overlay_dir_name,
                     root_package,
-                    branch,
+                    branch_package,
                 )
 
                 def add_method(method_name: str) -> None:

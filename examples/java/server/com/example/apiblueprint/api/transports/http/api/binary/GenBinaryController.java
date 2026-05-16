@@ -3,9 +3,17 @@ package com.example.apiblueprint.api.transports.http.api.binary;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.apiblueprint.api.routes.api.binary.BinaryService;
-import com.example.apiblueprint.api.routes.api.binary.GenBinaryServiceStub;
-import com.example.apiblueprint.api.routes.api.binary.GenBinaryServiceModels;
-import com.example.apiblueprint.api.runtime.GenModels;
+import com.example.apiblueprint.api.routes.api.binary.BinaryServiceStub;
+import com.example.apiblueprint.api.routes.api.binary.BinaryTypes;
+import com.example.apiblueprint.api.runtime.ApiError;
+import com.example.apiblueprint.api.runtime.ApiErrorEntry;
+import com.example.apiblueprint.api.runtime.ApiErrorPayload;
+import com.example.apiblueprint.api.runtime.ApiErrors;
+import com.example.apiblueprint.api.runtime.ApiResponseEnvelope;
+import com.example.apiblueprint.api.runtime.ApiToastPayload;
+
+import com.example.apiblueprint.api.runtime.ApiTypes;
+
 import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -27,7 +35,7 @@ public class GenBinaryController {
         @Autowired(required = false) BinaryService service,
         ObjectMapper objectMapper
     ) {
-        this.service = service == null ? new GenBinaryServiceStub() : service;
+        this.service = service == null ? new BinaryServiceStub() : service;
         this.objectMapper = objectMapper;
     }
 
@@ -36,23 +44,87 @@ public class GenBinaryController {
         @RequestParam Map<String, String> queryParams,
         @RequestBody(required = false) byte[] binaryBody
     ) throws Exception {
-        GenBinaryServiceModels.ReqPacketQuery query = objectMapper.convertValue(queryParams, GenBinaryServiceModels.ReqPacketQuery.class);
+        BinaryTypes.PacketQuery query = objectMapper.convertValue(queryParams, BinaryTypes.PacketQuery.class);
         ApiBinaryBody binary = ApiBinaryBody.of(binaryBody == null ? new byte[0] : binaryBody);
-        Object result = service.packet(
-            query,
-            binary
-        );
-        return wrapResponse("GeneralWrapper", result);
+        try {
+            Object result = service.packet(
+                query,
+                binary
+            );
+            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (ApiError error) {
+            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.binary.post.packet");
+        }
     }
 
-    private Object wrapResponse(String wrapper, Object data) {
-        if (!"GeneralWrapper".equals(wrapper)) {
+    private Object wrapResponse(ApiResponseEnvelope envelopeSpec, Object data) {
+        if ("none".equals(envelopeSpec.kind())) {
             return data;
         }
         Map<String, Object> envelope = new LinkedHashMap<>();
-        envelope.put("code", 0);
-        envelope.put("message", "");
-        envelope.put("data", data);
+        if ("code_message_data".equals(envelopeSpec.kind())) {
+            envelope.put(envelopeSpec.fields().code(), envelopeSpec.successCode());
+            envelope.put(envelopeSpec.fields().message(), envelopeSpec.successMessage());
+            envelope.put(envelopeSpec.fields().data(), data);
+            return envelope;
+        }
+        if ("ok_data_error".equals(envelopeSpec.kind())) {
+            envelope.put(envelopeSpec.fields().ok(), true);
+            envelope.put(envelopeSpec.fields().data(), data);
+            return envelope;
+        }
         return envelope;
+    }
+
+    private Object wrapApiErrorResponse(ApiResponseEnvelope envelopeSpec, ApiError error, String routeId) {
+        ApiErrorPayload payload = normalizeApiErrorPayload(error.payload(), routeId);
+        if ("none".equals(envelopeSpec.kind())) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(payload);
+        }
+        Map<String, Object> envelope = new LinkedHashMap<>();
+        if ("code_message_data".equals(envelopeSpec.kind())) {
+            envelope.put(envelopeSpec.fields().code(), payload.code());
+            envelope.put(envelopeSpec.fields().message(), payload.message());
+            envelope.put(envelopeSpec.fields().data(), null);
+            if (!"none".equals(envelopeSpec.errorIdentity())) {
+                envelope.put(envelopeSpec.fields().error(), payload);
+            }
+            return envelope;
+        }
+        if ("ok_data_error".equals(envelopeSpec.kind())) {
+            envelope.put(envelopeSpec.fields().ok(), false);
+            envelope.put(envelopeSpec.fields().error(), payload);
+            return envelope;
+        }
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(payload);
+    }
+
+    private ApiErrorPayload normalizeApiErrorPayload(ApiErrorPayload payload, String routeId) {
+        if (payload == null) {
+            payload = new ApiErrorPayload("", "", "", 0, "", new ApiToastPayload("", "error", "", ""));
+        }
+        ApiErrorEntry entry = ApiErrors.lookup(payload, routeId).orElse(null);
+        int code = payload.code() != 0 ? payload.code() : entry == null ? 0 : entry.code();
+        String message = !payload.message().isBlank()
+            ? payload.message()
+            : entry == null ? "API error " + code : entry.message();
+        ApiToastPayload toast = payload.toast() == null
+            ? new ApiToastPayload("", "error", "", "")
+            : payload.toast();
+        return new ApiErrorPayload(
+            payload.id().isBlank() && entry != null ? entry.id() : payload.id(),
+            payload.group().isBlank() && entry != null ? entry.group() : payload.group(),
+            payload.key().isBlank() && entry != null ? entry.key() : payload.key(),
+            code,
+            message,
+            new ApiToastPayload(
+                toast.key().isBlank() && entry != null ? entry.toast().key() : toast.key(),
+                toast.level().isBlank() ? (entry == null ? "error" : entry.toast().level()) : toast.level(),
+                toast.defaultMessage().isBlank()
+                    ? (entry == null ? message : entry.toast().defaultMessage())
+                    : toast.defaultMessage(),
+                toast.text()
+            )
+        );
     }
 }

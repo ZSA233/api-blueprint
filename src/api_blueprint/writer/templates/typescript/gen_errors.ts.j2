@@ -13,7 +13,7 @@ export interface ApiToastPayload extends ApiToastSpec {
   readonly text?: string;
 }
 
-export interface ApiErrorCatalogEntry {
+export interface ApiErrorEntry {
   readonly id: string;
   readonly group: string;
   readonly key: string;
@@ -22,20 +22,54 @@ export interface ApiErrorCatalogEntry {
   readonly toast: ApiToastSpec;
 }
 
-export class ApiCodeError extends Error {
+export interface ApiErrorPayload {
   readonly id: string;
+  readonly group: string;
+  readonly key: string;
+  readonly code: ApiErrorCode;
+  readonly message: string;
+  readonly toast: ApiToastPayload;
+}
+
+export class ApiError extends Error {
+  readonly id: string;
+  readonly group: string;
   readonly key: string;
   readonly code: ApiErrorCode;
   readonly toast: ApiToastPayload;
+  readonly routeId?: string;
+  readonly raw?: unknown;
 
-  constructor(entry: ApiErrorCatalogEntry, toast: ApiToastPayload = entry.toast) {
-    super(entry.message);
-    this.name = "ApiCodeError";
-    this.id = entry.id;
-    this.key = entry.key;
-    this.code = entry.code;
-    this.toast = toast;
+  constructor(payload: ApiErrorPayload | ApiErrorEntry, options: { routeId?: string; raw?: unknown } = {}) {
+    super(payload.message);
+    this.name = "ApiError";
+    this.id = payload.id;
+    this.group = payload.group;
+    this.key = payload.key;
+    this.code = payload.code;
+    this.toast = {
+      key: payload.toast.key,
+      level: payload.toast.level,
+      default: payload.toast.default,
+      text: "text" in payload.toast ? payload.toast.text : undefined,
+    };
+    this.routeId = options.routeId;
+    this.raw = options.raw;
   }
+
+  is(entry: ApiErrorEntry): boolean {
+    if (entry.id && this.id === entry.id) {
+      return true;
+    }
+    return entry.code !== 0 && this.code === entry.code;
+  }
+}
+
+export function isApiError(error: unknown, entry?: ApiErrorEntry): error is ApiError {
+  if (!(error instanceof ApiError)) {
+    return false;
+  }
+  return entry ? error.is(entry) : true;
 }
 
 export function resolveApiToast(

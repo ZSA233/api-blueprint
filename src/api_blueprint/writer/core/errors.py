@@ -14,7 +14,7 @@ class ErrorToastSpec:
 
 
 @dataclass(frozen=True)
-class ErrorCatalogEntry:
+class ApiErrorEntry:
     id: str
     group: str
     key: str
@@ -34,26 +34,30 @@ class ErrorCatalogEntry:
     def go_const_symbol(self) -> str:
         return f"{self.group_symbol}{_pascal_identifier(self.key, default='Code')}"
 
+    @property
+    def go_field_symbol(self) -> str:
+        return _pascal_identifier(self.key, default="Code")
+
 
 @dataclass(frozen=True)
-class ErrorCatalogGroup:
+class ApiErrorGroup:
     symbol: str
     name: str
-    entries: tuple[ErrorCatalogEntry, ...]
+    entries: tuple[ApiErrorEntry, ...]
 
 
-def error_catalog_from_manifest(
+def api_errors_from_manifest(
     manifest: Mapping[str, Any],
     *,
     route_ids: Iterable[str] | None = None,
     error_ids: Iterable[str] | None = None,
     root: str | None = None,
-) -> tuple[ErrorCatalogEntry, ...]:
+) -> tuple[ApiErrorEntry, ...]:
     raw_errors = manifest.get("errors")
     if not isinstance(raw_errors, list):
         return ()
     selected_error_ids = _selected_error_ids(manifest, route_ids=route_ids, error_ids=error_ids, root=root)
-    entries: list[ErrorCatalogEntry] = []
+    entries: list[ApiErrorEntry] = []
     for raw_error in raw_errors:
         if not isinstance(raw_error, Mapping):
             continue
@@ -62,7 +66,7 @@ def error_catalog_from_manifest(
             continue
         raw_toast = raw_error.get("toast")
         entries.append(
-            ErrorCatalogEntry(
+            ApiErrorEntry(
                 id=raw_id,
                 group=str(raw_error.get("group") or "ApiErrors"),
                 key=str(raw_error.get("key") or "CODE"),
@@ -74,15 +78,73 @@ def error_catalog_from_manifest(
     return tuple(entries)
 
 
-def group_error_catalog(entries: tuple[ErrorCatalogEntry, ...]) -> tuple[ErrorCatalogGroup, ...]:
-    grouped: "OrderedDict[str, list[ErrorCatalogEntry]]" = OrderedDict()
+def route_api_errors_from_manifest(
+    manifest: Mapping[str, Any],
+    *,
+    route_ids: Iterable[str] | None = None,
+    root: str | None = None,
+) -> dict[str, tuple[ApiErrorEntry, ...]]:
+    route_filter = {str(route_id) for route_id in route_ids} if route_ids is not None else None
+    root_filter = root.strip("/") if isinstance(root, str) and root.strip("/") else None
+    raw_routes = manifest.get("routes")
+    if not isinstance(raw_routes, list):
+        return {}
+
+    result: dict[str, tuple[ApiErrorEntry, ...]] = {}
+    global_errors = {
+        str(error.get("id") or ""): error
+        for error in _iter_error_maps(manifest.get("errors"))
+        if str(error.get("id") or "")
+    }
+    for raw_route in raw_routes:
+        if not isinstance(raw_route, Mapping):
+            continue
+        route_id = str(raw_route.get("id") or "")
+        if route_filter is not None and route_id not in route_filter:
+            continue
+        if root_filter is not None and route_id.split(".", 1)[0] != root_filter:
+            continue
+        entries: list[ApiErrorEntry] = []
+        for raw_error in raw_route.get("errors") if isinstance(raw_route.get("errors"), list) else []:
+            error_map: Mapping[str, Any] | None = None
+            if isinstance(raw_error, Mapping):
+                error_map = raw_error
+            elif raw_error is not None:
+                error_map = global_errors.get(str(raw_error))
+            if error_map is None:
+                continue
+            entries.append(_entry_from_manifest(error_map))
+        result[route_id] = tuple(entries)
+    return result
+
+
+def group_api_errors(entries: tuple[ApiErrorEntry, ...]) -> tuple[ApiErrorGroup, ...]:
+    grouped: "OrderedDict[str, list[ApiErrorEntry]]" = OrderedDict()
     names: dict[str, str] = {}
     for entry in entries:
         grouped.setdefault(entry.group, []).append(entry)
         names.setdefault(entry.group, entry.group_symbol)
     return tuple(
-        ErrorCatalogGroup(symbol=names[group], name=group, entries=tuple(group_entries))
+        ApiErrorGroup(symbol=names[group], name=group, entries=tuple(group_entries))
         for group, group_entries in grouped.items()
+    )
+
+
+def _iter_error_maps(value: object) -> Iterable[Mapping[str, Any]]:
+    if not isinstance(value, list):
+        return ()
+    return (item for item in value if isinstance(item, Mapping))
+
+
+def _entry_from_manifest(raw_error: Mapping[str, Any]) -> ApiErrorEntry:
+    raw_id = str(raw_error.get("id") or "")
+    return ApiErrorEntry(
+        id=raw_id,
+        group=str(raw_error.get("group") or "ApiErrors"),
+        key=str(raw_error.get("key") or "CODE"),
+        code=int(raw_error.get("code") or 0),
+        message=str(raw_error.get("message") or ""),
+        toast=_toast_from_manifest(raw_error.get("toast"), fallback_key=raw_id, fallback_default=str(raw_error.get("message") or "")),
     )
 
 
@@ -129,7 +191,13 @@ def _selected_error_ids(
             continue
         raw_route_errors = raw_route.get("errors")
         if isinstance(raw_route_errors, list):
-            selected.update(str(error_id) for error_id in raw_route_errors)
+            for raw_error in raw_route_errors:
+                if isinstance(raw_error, Mapping):
+                    raw_id = raw_error.get("id")
+                    if raw_id is not None:
+                        selected.add(str(raw_id))
+                elif raw_error is not None:
+                    selected.add(str(raw_error))
     return selected
 
 

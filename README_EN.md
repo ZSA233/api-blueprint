@@ -86,6 +86,14 @@ api-gen generate -c api-blueprint.toml
 
 For fuller project layout, Go client, Kotlin, Java, Python, Wails, and gRPC configuration, see [Getting Started](docs/en/getting-started.md) and [Configuration](docs/en/configuration.md).
 
+Go / Wails Go route directories, Go import paths, and `package` declarations use Go-safe route package segments, for example `/api-v1` -> `api_v1` and `/admin/v1` -> `admin_v1`; they do not guarantee one directory per URL slash segment, while URLs, route paths, and selection/filter semantics stay unchanged.
+
+The default `CodeMessageDataEnvelope` uses the common app/API `{ code, message, data, error? }` wire shape: success is `{ code: 0, message: "ok", data }`, and failure carries `{ code, message, data: null, error: { id, group, key, toast } }`. ContractGraph manifest `2.0` exposes route-local `id/group/key/code/message/toast` error refs directly on each route, and default client transports restore and throw or return `ApiError` from the envelope spec; strict legacy `{ code, message, data }` output is available through `LegacyCodeMessageDataEnvelope`.
+
+The example project’s `/api/demo/error-demo` route shows global errors, route-local errors, dynamic `toast.text` overrides, and fallback for undeclared error codes; the Go / TypeScript / Python / Java suites include generated-client `ApiError` catch examples.
+
+The recommended SDK entrypoint is the public facade: Go uses `apiclient.NewHTTP(...)` with route types such as `demo.ErrorDemoQuery`, Python uses `async with create_client(base_url) as api` and returns dataclass responses, and Java uses `HttpApiClient.create(baseUrl)` with `DemoTypes.ErrorDemoQuery`. Protocol types now consistently use `types` names: Go `gen_types.go`, TypeScript `types.ts` / `gen_types.ts`, Python `gen_types.py`, and Java/Kotlin `<Group>Types`; binary schema helpers no longer expose a public `wire` namespace, so business code uses packet / writer helpers from the route-local public types entrypoint. Business error matching should use grouped `ApiErrors` entries instead of switching on a catalog table.
+
 ## Common Targets
 
 | Target | Status | Purpose |

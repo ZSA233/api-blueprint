@@ -20,7 +20,7 @@ from api_blueprint.engine.runtime import (
     Handle,
     Provider,
     ProviderName,
-    ResponseWrapper,
+    ResponseEnvelope,
     ellipsis_replaces,
     proxy_upstream_request,
     register_router,
@@ -64,7 +64,7 @@ class Router:
     req_binary_schema: Optional[BinarySchema]
 
     rsp_model: Optional[Model]
-    rsp_wrapper: Optional[ResponseWrapper]
+    rsp_envelope: Optional[ResponseEnvelope]
 
     recvs: list[Model]
     sends: list[Model]
@@ -89,7 +89,7 @@ class Router:
         group: "RouterGroup",
         methods: list[METHOD_ENUM],
         api: str,
-        response_wrapper: Optional[ResponseWrapper] = None,
+        response_envelope: Optional[ResponseEnvelope] = None,
         headers: Optional[Union[HeaderModel, type[HeaderModel]]] = None,
         providers: Optional[list[Provider]] = None,
         tags: Optional[list[str]] = None,
@@ -109,7 +109,9 @@ class Router:
         self.req_binary_schema = None
         self.rsp_model = None
 
-        self.rsp_wrapper = response_wrapper
+        if "response_wrapper" in kwargs:
+            raise TypeError("response_wrapper is removed; use response_envelope")
+        self.rsp_envelope = response_envelope
         self._headers = headers
 
         self._handle = handle
@@ -172,11 +174,11 @@ class Router:
         return self._headers or self.bp.headers
 
     @property
-    def response_wrapper(self) -> type[ResponseWrapper]:
-        response_wrapper = self.rsp_wrapper
-        if response_wrapper is None:
-            response_wrapper = self.bp.response_wrapper
-        return response_wrapper
+    def response_envelope(self) -> type[ResponseEnvelope]:
+        response_envelope = self.rsp_envelope
+        if response_envelope is None:
+            response_envelope = self.bp.response_envelope
+        return response_envelope
 
     @property
     def tags(self) -> list[str]:

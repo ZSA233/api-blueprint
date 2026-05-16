@@ -3,7 +3,7 @@
 package demo
 
 import (
-	sharedprotos "example.com/project/golang/server/views/routes/api/_gen_protos"
+	sharedtypes "example.com/project/golang/server/views/routes/api/_gen_types"
 	sharedroutes "example.com/project/golang/server/views/routes/api/demo"
 
 	wailstransport "example.com/project/golang/server/views/transports/wailsv2"
@@ -26,14 +26,14 @@ type REQ_TestPost_JSON = sharedroutes.REQ_TestPost_JSON
 
 type INVOKE_TestPost = wailstransport.InvokeEnvelope[any, REQ_TestPost_JSON]
 
-type REQ_Z1put = sharedroutes.REQ_Z1put
-type RSP_Z1put = sharedroutes.RSP_Z1put
-type CTX_Z1put = sharedroutes.CTX_Z1put
-type REQ_Z1put_QUERY = sharedroutes.REQ_Z1put_QUERY
+type REQ_PutDemo = sharedroutes.REQ_PutDemo
+type RSP_PutDemo = sharedroutes.RSP_PutDemo
+type CTX_PutDemo = sharedroutes.CTX_PutDemo
+type REQ_PutDemo_QUERY = sharedroutes.REQ_PutDemo_QUERY
 
-type REQ_Z1put_JSON = sharedroutes.REQ_Z1put_JSON
+type REQ_PutDemo_JSON = sharedroutes.REQ_PutDemo_JSON
 
-type INVOKE_Z1put = wailstransport.InvokeEnvelope[REQ_Z1put_QUERY, REQ_Z1put_JSON]
+type INVOKE_PutDemo = wailstransport.InvokeEnvelope[REQ_PutDemo_QUERY, REQ_PutDemo_JSON]
 
 type REQ_Delete = sharedroutes.REQ_Delete
 type RSP_Delete = sharedroutes.RSP_Delete
@@ -47,7 +47,7 @@ type RSP_Ws = sharedroutes.RSP_Ws
 type CTX_Ws = sharedroutes.CTX_Ws
 type REQ_Ws_QUERY = sharedroutes.REQ_Ws_QUERY
 
-type WS_SEND_Ws_BODY = sharedprotos.WSRecv
+type WS_SEND_Ws_BODY = sharedtypes.WSRecv
 
 type INVOKE_Ws = wailstransport.InvokeEnvelope[REQ_Ws_QUERY, any]
 type WS_CONNECT_Ws = wailstransport.InvokeEnvelope[REQ_Ws_QUERY, any]
@@ -104,3 +104,10 @@ type RSP_MapModel = sharedroutes.RSP_MapModel
 type CTX_MapModel = sharedroutes.CTX_MapModel
 
 type INVOKE_MapModel = wailstransport.InvokeEnvelope[any, any]
+
+type REQ_ErrorDemo = sharedroutes.REQ_ErrorDemo
+type RSP_ErrorDemo = sharedroutes.RSP_ErrorDemo
+type CTX_ErrorDemo = sharedroutes.CTX_ErrorDemo
+type REQ_ErrorDemo_QUERY = sharedroutes.REQ_ErrorDemo_QUERY
+
+type INVOKE_ErrorDemo = wailstransport.InvokeEnvelope[REQ_ErrorDemo_QUERY, any]

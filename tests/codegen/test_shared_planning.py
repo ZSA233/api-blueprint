@@ -12,10 +12,33 @@ from api_blueprint.writer.core.planning import (
     target_selects_route,
     target_capability_manifest,
 )
+from api_blueprint.writer.core.sdk_names import RoutePublicNames, go_exported_field_name
 
 
 class Event(Model):
     value = String(description="value")
+
+
+def test_route_public_names_use_operation_id_and_route_local_suffixes() -> None:
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.PUT("/1put", operation_id="putDemo").RSP()
+
+    route = build_contract_graph([bp]).to_manifest()["routes"][0]
+    names = RoutePublicNames.from_operation(route["operation"])
+
+    assert names.operation == "PutDemo"
+    assert names.query == "PutDemoQuery"
+    assert names.json == "PutDemoJSON"
+    assert names.form == "PutDemoForm"
+    assert names.headers == "PutDemoHeaders"
+    assert names.response == "PutDemoResponse"
+
+
+def test_go_public_field_names_preserve_common_initialisms() -> None:
+    assert go_exported_field_name("anon_kv") == "AnonKV"
+    assert go_exported_field_name("item_ids") == "ItemIDs"
+    assert go_exported_field_name("api_url") == "APIURL"
 
 
 def _route(url: str, *, route_id: str = "api.demo.get.ping") -> dict[str, object]:
@@ -79,7 +102,13 @@ def test_client_capabilities_accept_binary_schema_rpc_routes(kind: str, target_k
                         "methods": ["POST"],
                         "url": "/api/binary/packet",
                         "request": {"query_model": "Query", "binary_schema": {"name": "DemoPacket"}},
-                        "response": {"wrapper": "GeneralWrapper"},
+                        "response": {
+                            "envelope": {
+                                "name": "CodeMessageDataEnvelope",
+                                "kind": "code_message_data",
+                                "error_identity": "nested",
+                            }
+                        },
                     }
                 ]
             }
@@ -111,7 +140,13 @@ def test_capability_validation_checks_only_declared_dimensions() -> None:
                         "methods": ["GET"],
                         "url": "/api/demo/future",
                         "request": {"query_model": "Query"},
-                        "response": {"wrapper": "NoneWrapper"},
+                        "response": {
+                            "envelope": {
+                                "name": "NoEnvelope",
+                                "kind": "none",
+                                "error_identity": "none",
+                            }
+                        },
                     }
                 ]
             }

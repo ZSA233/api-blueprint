@@ -3,10 +3,13 @@ package com.example.apiblueprint.api.routes.api.binary;
 
 import com.example.apiblueprint.api.runtime.ApiChannelBridge;
 import com.example.apiblueprint.api.runtime.ApiRequest;
+import com.example.apiblueprint.api.runtime.ApiResponseEnvelope;
 import com.example.apiblueprint.api.runtime.ApiSocketBridge;
 import com.example.apiblueprint.api.runtime.ApiStreamBridge;
 import com.example.apiblueprint.api.runtime.ApiTransport;
-import com.example.apiblueprint.api.runtime.GenModels;
+
+import com.example.apiblueprint.api.runtime.ApiTypes;
+
 import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
 import java.util.Map;
 
@@ -17,19 +20,30 @@ public class GenBinaryApi {
         this.transport = transport;
     }
 
-    public GenBinaryApiModels.RspPacket packet(
-        GenBinaryApiModels.ReqPacketQuery query,
+    public BinaryTypes.PacketResponse packet(
+        BinaryTypes.PacketQuery query,
+        BinaryTypes.DemoPacket binary
+    ) throws Exception {
+        return packet(
+            query,
+            BinaryTypes.DemoPacketWire.toBinaryBody(binary)
+        );
+    }
+
+    public BinaryTypes.PacketResponse packet(
+        BinaryTypes.PacketQuery query,
         ApiBinaryBody binaryBody
     ) throws Exception {
-        ApiRequest<GenBinaryApiModels.RspPacket> request = new ApiRequest<>(
+        ApiRequest<BinaryTypes.PacketResponse> request = new ApiRequest<>(
+            "api.binary.post.packet",
             "POST",
             "/api/binary/packet",
             query,
             null,
             null,
             binaryBody,
-            "GeneralWrapper",
-            GenBinaryApiModels.RspPacket.class,
+            ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+            BinaryTypes.PacketResponse.class,
             "application/json",
             Map.of()
         );

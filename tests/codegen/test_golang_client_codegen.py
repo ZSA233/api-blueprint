@@ -4,10 +4,30 @@ import shutil
 import subprocess
 
 from api_blueprint.contract import build_contract_graph
-from api_blueprint.engine import Blueprint, Error, GeneralWrapper, Model, Toast
+from api_blueprint.engine import Blueprint, Error, CodeMessageDataEnvelope, Model, Toast
 from api_blueprint.engine.binary_schema import parse_binary_schema
 from api_blueprint.engine.model import String
 from api_blueprint.writer.golang.client import GolangClientWriter
+
+
+def test_golang_client_writer_uses_go_safe_route_package_segments(tmp_path):
+    bp = Blueprint(root="/api-v1")
+    with bp.group("/admin/v1") as views:
+        views.GET("/ping").RSP()
+
+    graph = build_contract_graph([bp])
+    output_dir = tmp_path / "client"
+
+    writer = GolangClientWriter(output_dir, module="example.com/generated/client", contract_graph=graph)
+    writer.register(bp)
+    writer.gen()
+
+    route_dir = output_dir / "routes" / "api_v1" / "admin_v1"
+    assert (route_dir / "gen_client.go").is_file()
+    assert "package admin_v1" in (route_dir / "gen_client.go").read_text(encoding="utf-8")
+    assert "func (client *GenAdminV1Client) Ping(ctx context.Context" in (route_dir / "gen_client.go").read_text(
+        encoding="utf-8"
+    )
 
 
 def test_golang_client_writer_generates_layout_preserves_user_files_and_compiles(tmp_path):
@@ -41,7 +61,7 @@ def test_golang_client_writer_generates_layout_preserves_user_files_and_compiles
     class ClientMessage(Model):
         text = String(description="text")
 
-    bp = Blueprint(root="/api", errors=[CommonErr], response_wrapper=GeneralWrapper)
+    bp = Blueprint(root="/api", errors=[CommonErr], response_envelope=CodeMessageDataEnvelope)
     views = bp.group("/demo")
     views.GET("/ping").ARGS(q=String(description="q")).RSP(SubmitResponse)
     views.POST("/submit").REQ(SubmitJson).RSP(SubmitResponse)
@@ -68,9 +88,9 @@ def test_golang_client_writer_generates_layout_preserves_user_files_and_compiles
 
     assert (output_dir / "runtime" / "gen_client.go").is_file()
     assert (output_dir / "runtime" / "gen_errors.go").is_file()
-    assert (output_dir / "runtime" / "gen_error_catalog.go").is_file()
+    assert (output_dir / "runtime" / "gen_error_lookup.go").is_file()
     assert (route_dir / "gen_client.go").is_file()
-    assert (route_dir / "gen_models.go").is_file()
+    assert (route_dir / "gen_types.go").is_file()
     assert (http_dir / "gen_config.go").is_file()
     assert (http_dir / "gen_transport.go").is_file()
     assert route_client.read_text(encoding="utf-8") == "package demo\n\n// USER ROUTE CLIENT\n"
@@ -78,31 +98,37 @@ def test_golang_client_writer_generates_layout_preserves_user_files_and_compiles
 
     runtime_text = (output_dir / "runtime" / "gen_client.go").read_text(encoding="utf-8")
     errors_text = (output_dir / "runtime" / "gen_errors.go").read_text(encoding="utf-8")
-    catalog_text = (output_dir / "runtime" / "gen_error_catalog.go").read_text(encoding="utf-8")
+    catalog_text = (output_dir / "runtime" / "gen_error_lookup.go").read_text(encoding="utf-8")
     route_text = (route_dir / "gen_client.go").read_text(encoding="utf-8")
-    models_text = (route_dir / "gen_models.go").read_text(encoding="utf-8")
+    models_text = (route_dir / "gen_types.go").read_text(encoding="utf-8")
     config_text = (http_dir / "gen_config.go").read_text(encoding="utf-8")
     transport_text = (http_dir / "gen_transport.go").read_text(encoding="utf-8")
 
     assert "BaseURL" not in runtime_text
     assert "base_url" not in runtime_text
     assert "baseUrl" not in runtime_text
-    assert "ResponseWrapper string" in runtime_text
+    assert "ResponseEnvelope ApiResponseEnvelope" in runtime_text
+    assert "RouteID          string" in runtime_text
     assert 'BaseURL string' in config_text
     assert '"http://localhost:2333"' in config_text
     assert "context.Context" in route_text
     assert "func (client *GenDemoClient) Ping(ctx context.Context" in route_text
-    assert 'ResponseWrapper: "GeneralWrapper"' in route_text
+    assert "type Client = GenDemoClient" in route_text
+    assert "var NewClient = NewGenDemoClient" in route_text
+    assert 'ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope"' in route_text
     assert "func (client *GenDemoClient) ConnectWs(ctx context.Context" in route_text
     assert "func (client *GenDemoClient) SubscribeEvents(ctx context.Context" in route_text
     assert "func (client *GenDemoClient) OpenChat(ctx context.Context" in route_text
     assert "UnsupportedTransportError" in runtime_text
-    assert "type ApiCodeError struct" in errors_text
+    assert "type ApiError struct" in errors_text
+    assert "type ApiErrorPayload struct" in errors_text
     assert "type ApiToastSpec struct" in errors_text
     assert "func ResolveApiToast(" in errors_text
     assert "ErrorCatalogByID" not in errors_text
     assert '"CommonErr.UNKNOWN"' not in errors_text
     assert '"CommonErr.UNKNOWN"' in catalog_text
+    assert "ApiErrorsByID" in catalog_text
+    assert "routeApiErrorsByCode" in catalog_text
     assert "CommonErrTokenExpire ApiErrorCode = 55555" in catalog_text
     assert '"CommonErr.TOKEN_EXPIRE": {\n' in catalog_text
     assert 'ID:      "CommonErr.TOKEN_EXPIRE",' in catalog_text
@@ -111,16 +137,17 @@ def test_golang_client_writer_generates_layout_preserves_user_files_and_compiles
     assert "\\u767b" not in catalog_text
     assert "locales" not in catalog_text
     assert "UnsupportedTransportError" in transport_text
-    assert "decodeResponse(httpResponse.Body, request.ResponseWrapper, response)" in transport_text
-    assert 'wrapper == "" || wrapper == "NoneWrapper"' in transport_text
-    assert 'wrapper != "GeneralWrapper"' in transport_text
-    assert "runtime.NewApiCodeError" in transport_text
+    assert "decodeResponse(httpResponse.Body, request.ResponseEnvelope, request.RouteID, response)" in transport_text
+    assert 'envelope.Kind == "" || envelope.Kind == "none"' in transport_text
+    assert 'envelope.Kind != "code_message_data" && envelope.Kind != "ok_data_error"' in transport_text
+    assert "runtime.NewApiError" in transport_text
     assert "ConnectUnsupported" in transport_text
     assert "StreamUnsupported" in transport_text
     assert "ChannelUnsupported" in transport_text
-    assert "type REQ_Ping_QUERY struct" in models_text
-    assert "type REQ_Submit_JSON = runtime.SubmitJson" in models_text
-    assert "type RSP_Submit_BODY = runtime.SubmitResponse" in models_text
+    assert "type PingQuery struct" in models_text
+    assert "type SubmitJSON = runtime.SubmitJson" in models_text
+    assert "type SubmitResponse = runtime.SubmitResponse" in models_text
+    assert "type ChatOpen = runtime.OpenPayload" in models_text
 
     if shutil.which("go") is None:
         return
@@ -178,9 +205,9 @@ import (
 	httptransport "example.com/generated/client/transports/http"
 )
 
-func TestGeneralWrapperRoundTrip(t *testing.T) {
+func TestCodeMessageDataEnvelopeRoundTrip(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var body demo.REQ_Submit_JSON
+		var body demo.SubmitJSON
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			t.Fatalf("decode request: %v", err)
 		}
@@ -188,19 +215,25 @@ func TestGeneralWrapperRoundTrip(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"code":    55555,
 				"message": "expired",
+				"error": map[string]any{
+					"id":      "CommonErr.TOKEN_EXPIRE",
+					"group":   "CommonErr",
+					"key":     "TOKEN_EXPIRE",
+				},
 			})
 			return
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{
-			"code": 0,
-			"data": map[string]any{"status": "ok"},
+			"code":    0,
+			"message": "ok",
+			"data":    map[string]any{"status": "ok"},
 		})
 	}))
 	defer server.Close()
 
 	transport := httptransport.NewHttpTransport(httptransport.HttpConfig{BaseURL: server.URL})
-	client := demo.NewGenDemoClient(transport)
-	rsp, err := client.Submit(context.Background(), &demo.REQ_Submit_JSON{Value: "good"})
+	client := demo.NewClient(transport)
+	rsp, err := client.Submit(context.Background(), demo.SubmitJSON{Value: "good"})
 	if err != nil {
 		t.Fatalf("submit returned error: %v", err)
 	}
@@ -208,13 +241,13 @@ func TestGeneralWrapperRoundTrip(t *testing.T) {
 		t.Fatalf("unexpected response: %#v", rsp)
 	}
 
-	_, err = client.Submit(context.Background(), &demo.REQ_Submit_JSON{Value: "bad"})
-	var codeErr runtime.ApiCodeError
-	if !errors.As(err, &codeErr) {
-		t.Fatalf("expected ApiCodeError, got %T %v", err, err)
+	_, err = client.Submit(context.Background(), demo.SubmitJSON{Value: "bad"})
+	var apiErr *runtime.ApiError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("expected ApiError, got %T %v", err, err)
 	}
-	if codeErr.Code() != 55555 || codeErr.Message() != "expired" {
-		t.Fatalf("unexpected api code error: code=%d message=%q", codeErr.Code(), codeErr.Message())
+	if apiErr.Code() != 55555 || apiErr.Message() != "expired" || apiErr.ID() != "CommonErr.TOKEN_EXPIRE" {
+		t.Fatalf("unexpected api error: id=%s code=%d message=%q", apiErr.ID(), apiErr.Code(), apiErr.Message())
 	}
 }
         """.strip()
@@ -279,7 +312,7 @@ endian: little
 """.strip(),
         source_path="demo_packet.md",
     )
-    bp = Blueprint(root="/api", response_wrapper=GeneralWrapper)
+    bp = Blueprint(root="/api", response_envelope=CodeMessageDataEnvelope)
     with bp.group("/binary") as views:
         views.POST("/packet").REQ_BINARY(schema).RSP(SubmitResponse)
 
@@ -289,14 +322,14 @@ endian: little
     writer.gen()
 
     route_text = (output_dir / "routes" / "api" / "binary" / "gen_client.go").read_text(encoding="utf-8")
-    schema_text = (
-        output_dir / "routes" / "api" / "binary" / "_gen_binary" / "gen_binary.go"
-    ).read_text(encoding="utf-8")
+    schema_text = (output_dir / "routes" / "api" / "binary" / "gen_binary.go").read_text(encoding="utf-8")
     runtime_text = (output_dir / "runtime" / "binary" / "gen_runtime.go").read_text(encoding="utf-8")
     transport_text = (output_dir / "transports" / "http" / "gen_transport.go").read_text(encoding="utf-8")
 
     assert "binaryBody runtimebinary.Body" in route_text
-    assert "Binary:          binaryBody" in route_text
+    assert "Binary:           binaryBody" in route_text
+    assert "package binary" in schema_text
+    assert not (output_dir / "routes" / "api" / "binary" / "wire").exists()
     assert "type DemoKind uint16" in schema_text
     assert "type DemoFlags uint32" in schema_text
     assert "func (f DemoFlags) HasPayload() bool" in schema_text

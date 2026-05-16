@@ -279,7 +279,7 @@ func (svc *{{ route.service_name }}) {{ route.func_name }}(
 	}
 	xmlProvider := &sharedprovider.RspProvider[{{ route.local_query_type_expr }}, {{ route.local_body_type_expr }}, {{ route.rsp_type }}]{
 		Type:    "xml",
-		Options: {{ route.response_wrapper_name | tojson }},
+		Options: {{ route.response_envelope_name | tojson }},
 	}
 	return sharedprovider.MarshalXMLResponse(xmlProvider, response)
 {% elif route.is_text_response %}

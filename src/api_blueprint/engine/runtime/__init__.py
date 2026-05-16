@@ -14,22 +14,26 @@ from api_blueprint.engine.runtime.registration import proxy_upstream_request, re
 from api_blueprint.engine.runtime.responses import XMLResponse
 from api_blueprint.engine.runtime.shared_app import build_default_app, get_shared_app, reset_shared_app
 from api_blueprint.engine.runtime.wrappers import (
-    GeneralWrapper,
-    NoneWrapper,
-    ResponseWrapper,
-    reset_response_wrapper_cache,
+    CodeMessageDataEnvelope,
+    LegacyCodeMessageDataEnvelope,
+    NoEnvelope,
+    OkDataErrorEnvelope,
+    ResponseEnvelope,
+    reset_response_envelope_cache,
 )
 
 __all__ = (
     "Auth",
     "Custom",
-    "GeneralWrapper",
+    "CodeMessageDataEnvelope",
     "Handle",
-    "NoneWrapper",
+    "LegacyCodeMessageDataEnvelope",
+    "NoEnvelope",
+    "OkDataErrorEnvelope",
     "Provider",
     "ProviderName",
     "Req",
-    "ResponseWrapper",
+    "ResponseEnvelope",
     "Rsp",
     "WsHandle",
     "XMLResponse",
@@ -39,6 +43,6 @@ __all__ = (
     "make_endpoint",
     "proxy_upstream_request",
     "register_router",
-    "reset_response_wrapper_cache",
+    "reset_response_envelope_cache",
     "reset_shared_app",
 )

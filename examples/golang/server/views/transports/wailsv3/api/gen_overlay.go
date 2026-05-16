@@ -4,7 +4,7 @@ package api
 
 import (
 	sharedroutes "example.com/project/golang/server/views/routes/api"
-	sharedprotos "example.com/project/golang/server/views/routes/api/_gen_protos"
+	sharedtypes "example.com/project/golang/server/views/routes/api/_gen_types"
 
 	wailstransport "example.com/project/golang/server/views/transports/wailsv3"
 )
@@ -15,7 +15,7 @@ type REQ_Ws = sharedroutes.REQ_Ws
 type RSP_Ws = sharedroutes.RSP_Ws
 type CTX_Ws = sharedroutes.CTX_Ws
 
-type WS_SEND_Ws_BODY = sharedprotos.WsMessage
+type WS_SEND_Ws_BODY = sharedtypes.WsMessage
 
 type INVOKE_Ws = wailstransport.InvokeEnvelope[any, any]
 type WS_CONNECT_Ws = wailstransport.InvokeEnvelope[any, any]

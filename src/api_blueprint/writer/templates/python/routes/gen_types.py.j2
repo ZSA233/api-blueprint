@@ -1,0 +1,17 @@
+from __future__ import annotations
+
+{% if group.route_models() %}from dataclasses import dataclass
+{% endif %}{% if group.binary_schemas() %}
+from .gen_binary import *
+{% endif %}
+
+
+{% for model in group.route_models() %}
+@dataclass
+class {{ model.class_name }}:
+{% if model.fields %}{% for field in model.fields %}    {{ field.name }}: {{ field.type_expr }} | None = None
+{% endfor %}{% else %}    pass
+{% endif %}
+
+
+{% endfor %}

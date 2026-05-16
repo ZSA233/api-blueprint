@@ -17,7 +17,7 @@ func (impl *_GenRouter) TestPost(ctx *CTX_TestPost, req *REQ_TestPost) (rsp *RSP
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (impl *_GenRouter) Z1put(ctx *CTX_Z1put, req *REQ_Z1put) (rsp *RSP_Z1put, err error) {
+func (impl *_GenRouter) PutDemo(ctx *CTX_PutDemo, req *REQ_PutDemo) (rsp *RSP_PutDemo, err error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
@@ -52,5 +52,9 @@ func (impl *_GenRouter) Raw(ctx *CTX_Raw, req *REQ_Raw) (rsp *RSP_Raw, err error
 }
 
 func (impl *_GenRouter) MapModel(ctx *CTX_MapModel, req *REQ_MapModel) (rsp *RSP_MapModel, err error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (impl *_GenRouter) ErrorDemo(ctx *CTX_ErrorDemo, req *REQ_ErrorDemo) (rsp *RSP_ErrorDemo, err error) {
 	return nil, fmt.Errorf("not implemented")
 }

@@ -6,19 +6,19 @@ import re
 import shutil
 import subprocess
 from contextlib import contextmanager
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import IO, Any, Generator, Mapping, Sequence
 
 from api_blueprint.contract import ContractGraph, build_contract_graph
 from api_blueprint.route_selection import normalize_selection_rules
 from api_blueprint.writer.core.base import BaseBlueprint, BaseWriter
-from api_blueprint.writer.core.errors import ErrorCatalogEntry, error_catalog_from_manifest
+from api_blueprint.writer.core.errors import ApiErrorEntry, api_errors_from_manifest, route_api_errors_from_manifest
 from api_blueprint.writer.core.files import ensure_filepath_open
 from api_blueprint.writer.core.planning import route_matches_rule
+from api_blueprint.writer.core.sdk_names import go_exported_field_name
 from api_blueprint.writer.core.templates import render
 
-from .binary_schema import GoClientBinarySchema, unique_go_client_binary_schemas
+from .planner import GoClientGroup, GoClientRoute, build_go_client_groups
 
 
 logger = logging.getLogger("GolangClientWriter")
@@ -26,74 +26,7 @@ logger.setLevel(logging.INFO)
 
 
 JsonObject = dict[str, Any]
-ROUTE_BINARY_DIR = "_gen_binary"
-LEGACY_ROUTE_BINARY_DIR = "binary"
-
-
-@dataclass(frozen=True)
-class GoClientRoute:
-    route: JsonObject
-
-    @property
-    def operation(self) -> str:
-        return _go_exported(str(self.route.get("operation") or "Call"))
-
-    @property
-    def method(self) -> str:
-        methods = self.route.get("methods")
-        if isinstance(methods, list) and methods:
-            return str(methods[0]).upper()
-        return "GET"
-
-    @property
-    def url(self) -> str:
-        return str(self.route.get("url") or "")
-
-    @property
-    def route_id(self) -> str:
-        return str(self.route.get("id") or "")
-
-    @property
-    def kind(self) -> str:
-        return str(self.route.get("kind") or "rpc")
-
-    @property
-    def request(self) -> Mapping[str, Any]:
-        request = self.route.get("request")
-        return request if isinstance(request, Mapping) else {}
-
-    @property
-    def response(self) -> Mapping[str, Any]:
-        response = self.route.get("response")
-        return response if isinstance(response, Mapping) else {}
-
-    @property
-    def connection(self) -> Mapping[str, Any]:
-        connection = self.route.get("connection")
-        return connection if isinstance(connection, Mapping) else {}
-
-    @property
-    def response_wrapper(self) -> str:
-        wrapper = self.response.get("wrapper")
-        return str(wrapper or "NoneWrapper")
-
-    @property
-    def binary_schema(self) -> Mapping[str, Any] | None:
-        schema = self.request.get("binary_schema")
-        return schema if isinstance(schema, Mapping) else None
-
-    @property
-    def has_binary_schema(self) -> bool:
-        return self.binary_schema is not None
-
-
-@dataclass
-class GoClientGroup:
-    segments: tuple[str, ...]
-    package: str
-    client_class: str
-    routes: list[GoClientRoute] = field(default_factory=list)
-    binary_schemas: list[GoClientBinarySchema] = field(default_factory=list)
+LEGACY_ROUTE_BINARY_DIRS = ("wire", "_gen_binary", "binary")
 
 
 class GolangClientBlueprint(BaseBlueprint["GolangClientWriter"]):
@@ -126,15 +59,17 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
         manifest = graph.to_manifest()
         routes = [dict(route) for route in _list_of_maps(manifest.get("routes")) if self._route_selected(route)]
         schemas = _mapping_of_maps(manifest.get("schemas"))
-        errors = error_catalog_from_manifest(manifest, route_ids=[str(route.get("id") or "") for route in routes])
+        errors = api_errors_from_manifest(manifest, route_ids=[str(route.get("id") or "") for route in routes])
         services = _mapping_of_maps_by_id(manifest.get("services"))
         type_names = _TypeNames(schemas)
-        groups = _build_groups(routes, services)
+        groups = build_go_client_groups(routes, services)
 
-        self._write_runtime_files(schemas, type_names, errors, groups)
+        route_errors = route_api_errors_from_manifest(manifest, route_ids=[str(route.get("id") or "") for route in routes])
+        self._write_runtime_files(schemas, type_names, errors, route_errors, groups)
         for group in groups:
             self._write_group_files(group, schemas, type_names)
         self._write_http_files()
+        self._write_root_facade(groups)
         self._format_written_files()
 
     def _route_selected(self, route: Mapping[str, Any]) -> bool:
@@ -146,7 +81,8 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
         self,
         schemas: Mapping[str, JsonObject],
         type_names: "_TypeNames",
-        errors: tuple[ErrorCatalogEntry, ...],
+        errors: tuple[ApiErrorEntry, ...],
+        route_errors: dict[str, tuple[ApiErrorEntry, ...]],
         groups: tuple[GoClientGroup, ...],
     ) -> None:
         self._write_generated("runtime/gen_client.go", render("golang", "gen_client.go", {}, "client/runtime"))
@@ -155,18 +91,20 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
             render("golang", "gen_errors.go", {"errors": errors}, "client/runtime"),
         )
         self._write_generated(
-            "runtime/gen_error_catalog.go",
-            render("golang", "gen_error_catalog.go", {"errors": errors}, "client/runtime"),
+            "runtime/gen_error_lookup.go",
+            render("golang", "gen_error_lookup.go", {"errors": errors, "route_errors": route_errors}, "client/runtime"),
         )
+        self._cleanup_stale_generated(self.working_dir / "runtime" / "gen_error_catalog.go")
         self._write_generated(
-            "runtime/gen_models.go",
+            "runtime/gen_types.go",
             render(
                 "golang",
-                "gen_models.go",
+                "gen_types.go",
                 {"lines": _runtime_model_lines(schemas, type_names)},
                 "client/runtime",
             ),
         )
+        self._cleanup_stale_generated(self.working_dir / "runtime" / "gen_models.go")
         self._write_generated(
             "runtime/binary/gen_runtime.go",
             render("golang", "gen_runtime.go", {}, "client/runtime/binary"),
@@ -181,10 +119,10 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
         route_dir = Path("routes").joinpath(*group.segments)
         model_lines = _group_model_lines(group, schemas, type_names)
         self._write_generated(
-            route_dir / "gen_models.go",
+            route_dir / "gen_types.go",
             render(
                 "golang",
-                "gen_models.go",
+                "gen_types.go",
                 {
                     "group": group,
                     "has_runtime_import": any("runtime." in line for line in model_lines),
@@ -194,20 +132,19 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
                 "client/routes",
             ),
         )
+        self._cleanup_stale_generated(self.working_dir / route_dir / "gen_models.go")
         self._write_generated(
             route_dir / "gen_client.go",
             render(
                 "golang",
                 "gen_client.go",
                 {
-                    "client_class_for_route": _client_class_for_route,
                     "connection_method_name": _connection_method_name,
                     "connection_transport_method": _connection_transport_method,
                     "group": group,
                     "has_binary_schemas": any(route.has_binary_schema for route in group.routes),
                     "route_params": _route_params,
                     "route_response_type": _route_response_type,
-                    "response_wrapper_name": _response_wrapper_name,
                     "runtime_binary_import": self.runtime_binary_import,
                     "runtime_import": self.runtime_import,
                     "runtime_request_fields": _runtime_request_fields,
@@ -217,27 +154,52 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
         )
         if group.binary_schemas:
             self._write_generated(
-                route_dir / ROUTE_BINARY_DIR / "gen_binary.go",
+                route_dir / "gen_binary.go",
                 render(
                     "golang",
                     "gen_binary.go",
                     {
                         "binary_schemas": group.binary_schemas,
+                        "group": group,
                         "runtime_binary_import": self.runtime_binary_import,
                     },
                     "client/routes/binary",
                 ),
             )
-            self._cleanup_legacy_binary_dir(self.working_dir / route_dir / LEGACY_ROUTE_BINARY_DIR)
+            for legacy_dir in LEGACY_ROUTE_BINARY_DIRS:
+                self._cleanup_legacy_binary_dir(self.working_dir / route_dir / legacy_dir)
         else:
+            self._cleanup_stale_generated(self.working_dir / route_dir / "gen_binary.go")
             for stale_binary_dir in (
-                self.working_dir / route_dir / ROUTE_BINARY_DIR,
-                self.working_dir / route_dir / LEGACY_ROUTE_BINARY_DIR,
+                *(self.working_dir / route_dir / legacy_dir for legacy_dir in LEGACY_ROUTE_BINARY_DIRS),
             ):
                 self._cleanup_legacy_binary_dir(stale_binary_dir)
         self._write_user_file(
             route_dir / "client.go",
             render("golang", "client.go", {"group": group}, "client/routes"),
+        )
+
+    def _write_root_facade(self, groups: tuple[GoClientGroup, ...]) -> None:
+        root_package = _root_package_name(self.module)
+        self._write_generated(
+            "gen_client.go",
+            render(
+                "golang",
+                "gen_client.go",
+                {
+                    "groups": groups,
+                    "http_import": _join_import(self.module, "transports", "http"),
+                    "module": self.module,
+                    "runtime_import": self.runtime_import,
+                    "route_import": _route_import,
+                    "root_package": root_package,
+                },
+                "client",
+            ),
+        )
+        self._write_user_file(
+            "client.go",
+            render("golang", "client.go", {"root_package": root_package}, "client"),
         )
 
     def _cleanup_legacy_binary_dir(self, binary_dir: Path) -> None:
@@ -306,6 +268,10 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
         with self.write_file(path, overwrite=False) as handle:
             if handle:
                 handle.write(source)
+
+    def _cleanup_stale_generated(self, path: Path) -> None:
+        if path.exists():
+            path.unlink()
 
     def _format_written_files(self) -> None:
         if not self._written_files or shutil.which("gofmt") is None:
@@ -410,13 +376,13 @@ def _route_aliases(
     lines: list[str] = []
     operation = route.operation
     aliases = (
-        (f"REQ_{operation}_QUERY", route.request.get("query_model")),
-        (f"REQ_{operation}_JSON", route.request.get("json_model")),
-        (f"REQ_{operation}_FORM", route.request.get("form_model")),
-        (f"REQ_{operation}_BINARY", None if route.has_binary_schema else route.request.get("binary_model")),
-        (f"OPEN_{operation}", route.connection.get("open_model")),
-        (f"CLOSE_{operation}", route.connection.get("close_model")),
-        (f"RSP_{operation}_BODY", route.response.get("model")),
+        (route.query_type, route.request.get("query_model")),
+        (route.json_type, route.request.get("json_model")),
+        (route.form_type, route.request.get("form_model")),
+        (route.binary_type, None if route.has_binary_schema else route.request.get("binary_model")),
+        (route.open_type, route.connection.get("open_model")),
+        (route.close_type, route.connection.get("close_model")),
+        (route.response_type, route.response.get("model")),
     )
     for alias, schema_name in aliases:
         if isinstance(schema_name, str) and schema_name:
@@ -481,34 +447,24 @@ def _connection_transport_method(route: GoClientRoute) -> str:
 def _route_response_type(route: GoClientRoute) -> str:
     response_model = route.response.get("model")
     if isinstance(response_model, str) and response_model:
-        return f"*RSP_{route.operation}_BODY"
+        return f"*{route.response_type}"
     return "any"
-
-
-def _response_wrapper_name(route: GoClientRoute) -> str:
-    return route.response_wrapper
-
-
-def _client_class_for_route(route: GoClientRoute) -> str:
-    service_id = str(route.route.get("service_id") or "api")
-    group = service_id.split(".", 1)[1] if "." in service_id else service_id
-    return f"{_go_exported(group or service_id)}Client"
 
 
 def _route_params(route: GoClientRoute, *, include_open: bool) -> list[str]:
     params: list[str] = []
     if isinstance(route.request.get("query_model"), str):
-        params.append(f"query *REQ_{route.operation}_QUERY")
+        params.append(f"query {route.query_type}")
     if isinstance(route.request.get("json_model"), str):
-        params.append(f"jsonBody *REQ_{route.operation}_JSON")
+        params.append(f"jsonBody {route.json_type}")
     if isinstance(route.request.get("form_model"), str):
-        params.append(f"formBody *REQ_{route.operation}_FORM")
+        params.append(f"formBody {route.form_type}")
     if route.has_binary_schema:
         params.append("binaryBody runtimebinary.Body")
     elif isinstance(route.request.get("binary_model"), str):
-        params.append(f"binaryBody *REQ_{route.operation}_BINARY")
+        params.append(f"binaryBody {route.binary_type}")
     if include_open and isinstance(route.connection.get("open_model"), str):
-        params.append(f"openData *OPEN_{route.operation}")
+        params.append(f"openData {route.open_type}")
     return params
 
 
@@ -618,36 +574,6 @@ def _enum_base_type(enum: Mapping[str, Any]) -> str:
     return "string"
 
 
-def _build_groups(routes: Sequence[JsonObject], services: Mapping[str, JsonObject]) -> tuple[GoClientGroup, ...]:
-    groups: dict[tuple[str, ...], GoClientGroup] = {}
-    for route in routes:
-        service = services.get(str(route.get("service_id") or ""), {})
-        root = _path_segment(str(service.get("root") or _service_root(route)), default="api")
-        group_name = _path_segment(str(service.get("group") or root), default=root)
-        segments = (root,) if group_name == root else (root, group_name)
-        group = groups.get(segments)
-        if group is None:
-            package = _go_package_name(segments[-1])
-            group = GoClientGroup(
-                segments=segments,
-                package=package,
-                client_class=f"{_go_exported(group_name)}Client",
-            )
-            groups[segments] = group
-        client_route = GoClientRoute(route)
-        group.routes.append(client_route)
-        if client_route.binary_schema is not None:
-            group.binary_schemas = unique_go_client_binary_schemas(
-                [schema.raw for schema in group.binary_schemas] + [client_route.binary_schema]
-            )
-    return tuple(groups.values())
-
-
-def _service_root(route: Mapping[str, Any]) -> str:
-    service_id = str(route.get("service_id") or "api")
-    return service_id.split(".", 1)[0]
-
-
 def _list_of_maps(value: object) -> list[JsonObject]:
     if not isinstance(value, list):
         return []
@@ -676,31 +602,21 @@ def _go_type_name(value: str) -> str:
 
 
 def _go_exported(value: str) -> str:
-    parts = [part for part in re.split(r"[^0-9A-Za-z_]+", value) if part]
-    if not parts:
-        return "Value"
-    result = "".join(part[:1].upper() + part[1:] for part in parts)
-    if result[:1].isdigit():
-        result = "Value" + result
-    return result
-
-
-def _go_package_name(value: str) -> str:
-    package = re.sub(r"[^0-9A-Za-z_]+", "_", value.lower()).strip("_")
-    if not package:
-        return "api"
-    if package[0].isdigit():
-        package = "p_" + package
-    return package
-
-
-def _path_segment(value: str, *, default: str) -> str:
-    segment = re.sub(r"[^0-9A-Za-z_]+", "_", value.strip("/").lower()).strip("_")
-    return segment or default
+    return go_exported_field_name(value, fallback="Value")
 
 
 def _join_import(*parts: str) -> str:
     return "/".join(part.strip("/") for part in parts if part.strip("/"))
+
+
+def _route_import(module: str, group: GoClientGroup) -> str:
+    return _join_import(module, "routes", *group.segments)
+
+
+def _root_package_name(module: str) -> str:
+    if not module:
+        return "client"
+    return re.sub(r"[^0-9A-Za-z_]+", "_", module.rstrip("/").rsplit("/", 1)[-1]) or "client"
 
 
 def _code_literal(value: object) -> str:

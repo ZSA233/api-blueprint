@@ -10,4 +10,4 @@ from api_blueprint.engine.model import (
     KV, ArrayKV, field,
 )
 from api_blueprint.engine import Blueprint, ConnectionScope, DefaultConnectionClose, provider
-from api_blueprint.engine.wrapper import GeneralWrapper, NoneWrapper
+from api_blueprint.engine.envelope import CodeMessageDataEnvelope, LegacyCodeMessageDataEnvelope, NoEnvelope, OkDataErrorEnvelope

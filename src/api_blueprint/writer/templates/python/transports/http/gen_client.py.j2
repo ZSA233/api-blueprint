@@ -4,8 +4,10 @@ from typing import Any, Mapping
 
 import httpx
 
-from ...runtime.client import ApiChannelBridge, ApiClientTransport, ApiSocketBridge, ApiStreamBridge
+from ...runtime.client import ApiChannelBridge, ApiClientTransport, ApiResponseEnvelope, ApiSocketBridge, ApiStreamBridge
 from ...runtime.binary import ApiBinaryBody, is_api_binary_body
+from ...runtime.errors import ApiError
+from ...runtime.gen_error_lookup import make_api_error_payload
 
 
 class HttpClientTransport(ApiClientTransport):
@@ -28,12 +30,14 @@ class HttpClientTransport(ApiClientTransport):
         method: str,
         path: str,
         *,
+        route_id: str = "",
         query: Mapping[str, Any] | None = None,
         json: Any = None,
         form: Mapping[str, Any] | None = None,
         binary: bytes | ApiBinaryBody | None = None,
         open_data: Mapping[str, Any] | None = None,
         response_type: str | None = None,
+        response_envelope: ApiResponseEnvelope | None = None,
     ) -> Any:
         request_kwargs: dict[str, Any] = {}
         if query:
@@ -51,13 +55,18 @@ class HttpClientTransport(ApiClientTransport):
             request_kwargs["json"] = open_data
 
         response = await self._client.request(method, self._url(path), **request_kwargs)
-        response.raise_for_status()
+        if response.is_error:
+            payload = self._extract_error_payload(response, response_envelope)
+            if payload is not None:
+                raise ApiError(make_api_error_payload(payload, route_id), route_id=route_id, raw=payload)
+            response.raise_for_status()
         if not response.content:
             return None
 
         content_type = response.headers.get("content-type", "").split(";", 1)[0].lower()
         if content_type == "application/json" or content_type.endswith("+json"):
-            return response.json()
+            payload = response.json()
+            return self._unwrap_response_envelope(payload, route_id, response_envelope)
         if response_type == "bytes":
             return response.content
         return response.text
@@ -101,3 +110,74 @@ class HttpClientTransport(ApiClientTransport):
         if not self.base_url:
             return normalized_path
         return f"{self.base_url}{normalized_path}"
+
+    def _unwrap_response_envelope(
+        self,
+        payload: Any,
+        route_id: str,
+        response_envelope: ApiResponseEnvelope | None,
+    ) -> Any:
+        if response_envelope is None or response_envelope.get("kind") == "none":
+            return payload
+        if not isinstance(payload, dict):
+            return payload
+        kind = response_envelope.get("kind")
+        fields = response_envelope.get("fields", {})
+        if kind == "code_message_data":
+            code_field = fields.get("code") or "code"
+            data_field = fields.get("data") or "data"
+            if payload.get(code_field) == response_envelope.get("success_code", 0):
+                return payload.get(data_field)
+            error_payload = self._payload_from_code_message_envelope(payload, response_envelope)
+            raise ApiError(make_api_error_payload(error_payload, route_id), route_id=route_id, raw=payload)
+        if kind == "ok_data_error":
+            ok_field = fields.get("ok") or "ok"
+            data_field = fields.get("data") or "data"
+            error_field = fields.get("error") or "error"
+            if payload.get(ok_field) is True:
+                return payload.get(data_field)
+            error_payload = payload.get(error_field) if isinstance(payload.get(error_field), dict) else {}
+            raise ApiError(make_api_error_payload(error_payload, route_id), route_id=route_id, raw=payload)
+        raise RuntimeError(f"Unsupported response envelope: {kind}")
+
+    def _extract_error_payload(
+        self,
+        response: httpx.Response,
+        response_envelope: ApiResponseEnvelope | None,
+    ) -> dict[str, object] | None:
+        content_type = response.headers.get("content-type", "").split(";", 1)[0].lower()
+        if content_type != "application/json" and not content_type.endswith("+json"):
+            return None
+        try:
+            payload = response.json()
+        except ValueError:
+            return None
+        if not isinstance(payload, dict):
+            return None
+        if response_envelope is not None and response_envelope.get("kind") == "code_message_data":
+            return self._payload_from_code_message_envelope(payload, response_envelope)
+        fields = response_envelope.get("fields", {}) if response_envelope is not None else {}
+        error = payload.get(fields.get("error") or "error")
+        if isinstance(error, dict):
+            return error
+        if "code" in payload and ("id" in payload or "message" in payload or "toast" in payload):
+            return payload
+        return None
+
+    def _payload_from_code_message_envelope(
+        self,
+        payload: dict[str, Any],
+        response_envelope: ApiResponseEnvelope,
+    ) -> dict[str, object]:
+        fields = response_envelope.get("fields", {})
+        code_field = fields.get("code") or "code"
+        message_field = fields.get("message") or "message"
+        error_field = fields.get("error") or "error"
+        nested = payload.get(error_field)
+        if not isinstance(nested, dict):
+            nested = {}
+        return {
+            **nested,
+            "code": nested.get("code", payload.get(code_field, 0)),
+            "message": nested.get("message", payload.get(message_field, "")),
+        }

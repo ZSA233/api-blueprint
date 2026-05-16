@@ -1,12 +1,16 @@
 package com.example.apiblueprint.suite;
 
 import com.example.apiblueprint.api.routes.api.binary.BinaryService;
-import com.example.apiblueprint.api.routes.api.binary.GenBinaryServiceModels;
-import com.example.apiblueprint.api.routes.api.binary.GenBinaryServiceStub;
+import com.example.apiblueprint.api.routes.api.binary.BinaryTypes;
+import com.example.apiblueprint.api.routes.api.binary.BinaryServiceStub;
 import com.example.apiblueprint.api.routes.api.demo.DemoService;
-import com.example.apiblueprint.api.routes.api.demo.GenDemoServiceModels;
-import com.example.apiblueprint.api.routes.api.demo.GenDemoServiceStub;
-import com.example.apiblueprint.api.runtime.GenModels;
+import com.example.apiblueprint.api.routes.api.demo.DemoTypes;
+import com.example.apiblueprint.api.routes.api.demo.DemoServiceStub;
+import com.example.apiblueprint.api.runtime.ApiError;
+import com.example.apiblueprint.api.runtime.ApiErrorPayload;
+import com.example.apiblueprint.api.runtime.ApiErrors;
+import com.example.apiblueprint.api.runtime.ApiToastPayload;
+import com.example.apiblueprint.api.runtime.ApiTypes;
 import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
 import com.example.apiblueprint.api.transports.http.api.GenApiController;
 import com.example.apiblueprint.api.transports.http.api.binary.GenBinaryController;
@@ -85,12 +89,10 @@ public class JavaExampleSuite {
     }
 
     private static void checkGeneratedApiClient(String baseUrl) throws Exception {
-        var apiClient = new com.example.apiblueprint.api.transports.http.HttpApiClient(
-            new com.example.apiblueprint.api.transports.http.GenHttpApiConfig(baseUrl)
-        );
+        var apiClient = com.example.apiblueprint.api.transports.http.HttpApiClient.create(baseUrl);
 
         var post = apiClient.demo.testPost(
-            new com.example.apiblueprint.api.routes.api.demo.GenDemoApiModels.ReqTestPostJson("suite", 7)
+            new DemoTypes.TestPostJSON("suite", 7)
         );
         require(Objects.equals(List.of("test_post", "suite"), post.list()), "demo.testPost list mismatch: " + post);
         require(
@@ -100,17 +102,17 @@ public class JavaExampleSuite {
             "demo.testPost map mismatch: " + post
         );
 
-        var put = apiClient.demo.z1put(
-            new com.example.apiblueprint.api.routes.api.demo.GenDemoApiModels.ReqFunc1putQuery("query", 3.5f, null),
-            new com.example.apiblueprint.api.routes.api.demo.GenDemoApiModels.ReqFunc1putJson("body", 9)
+        var put = apiClient.demo.putDemo(
+            new DemoTypes.PutDemoQuery("query", 3.5f, null),
+            new DemoTypes.PutDemoJSON("body", 9)
         );
-        require(Objects.equals(List.of("query", "body"), put.list()), "demo.z1put list mismatch: " + put);
-        require(put.anonKv() != null, "demo.z1put anonKv missing");
-        require(Objects.equals(9L, put.anonKv().kv1()), "demo.z1put kv1 mismatch: " + put.anonKv());
-        require(Objects.equals(List.of(3.5d, 9.0d), put.anonKv().kv2()), "demo.z1put kv2 mismatch: " + put.anonKv());
+        require(Objects.equals(List.of("query", "body"), put.list()), "demo.putDemo list mismatch: " + put);
+        require(put.anonKv() != null, "demo.putDemo anonKv missing");
+        require(Objects.equals(9L, put.anonKv().kv1()), "demo.putDemo kv1 mismatch: " + put.anonKv());
+        require(Objects.equals(List.of(3.5d, 9.0d), put.anonKv().kv2()), "demo.putDemo kv2 mismatch: " + put.anonKv());
 
         var binary = apiClient.binary.packet(
-            new com.example.apiblueprint.api.routes.api.binary.GenBinaryApiModels.ReqPacketQuery("java-binary"),
+            new BinaryTypes.PacketQuery("java-binary"),
             ApiBinaryBody.of(buildDemoPacketFixture("ABP1", 2, "payload-ok"))
         );
         require(Objects.equals("java-binary", binary.trace()), "binary trace mismatch: " + binary);
@@ -121,23 +123,52 @@ public class JavaExampleSuite {
         require(Objects.equals("alpha", binary.firstLabel()), "binary firstLabel mismatch: " + binary);
         require(Objects.equals(List.of(11L, 22L), binary.itemIds()), "binary itemIds mismatch: " + binary);
         require(Objects.equals(12L, binary.checksum()), "binary checksum mismatch: " + binary);
+
+        var ok = apiClient.demo.errorDemo(new DemoTypes.ErrorDemoQuery("ok"));
+        require(Objects.equals("ok", ok.status()), "error-demo ok mismatch: " + ok);
+
+        ApiError token = expectApiError(() ->
+            apiClient.demo.errorDemo(new DemoTypes.ErrorDemoQuery("token"))
+        );
+        require(token.is(ApiErrors.CommonErr.TOKEN_EXPIRE), "token error entry mismatch: " + token.id());
+        require(token.code() == ApiErrors.COMMONERR_TOKEN_EXPIRE, "token error code mismatch: " + token.code());
+        String tokenToast = ApiError.resolveApiToast(
+            token.toast(),
+            key -> Objects.equals("auth.token_expire", key) ? "translated token expired" : null,
+            token.getMessage()
+        );
+        require(Objects.equals("translated token expired", tokenToast), "token toast mismatch: " + tokenToast);
+
+        ApiError rateLimited = expectApiError(() ->
+            apiClient.demo.errorDemo(new DemoTypes.ErrorDemoQuery("rate_limit"))
+        );
+        require(rateLimited.is(ApiErrors.DemoErr.RATE_LIMITED), "rate limit error entry mismatch: " + rateLimited.id());
+        require(rateLimited.code() == ApiErrors.DEMOERR_RATE_LIMITED, "rate limit error code mismatch: " + rateLimited.code());
+        String rateToast = ApiError.resolveApiToast(rateLimited.toast(), null, rateLimited.getMessage());
+        require(Objects.equals("请等待 30 秒后重试", rateToast), "rate limit toast mismatch: " + rateToast);
+
+        ApiError unknown = expectApiError(() ->
+            apiClient.demo.errorDemo(new DemoTypes.ErrorDemoQuery("unknown"))
+        );
+        require(Objects.equals("", unknown.id()), "unknown error id mismatch: " + unknown.id());
+        require(unknown.code() == 70001, "unknown error code mismatch: " + unknown.code());
+        require(
+            Objects.equals("example undefined business error", unknown.apiMessage()),
+            "unknown error message mismatch: " + unknown.apiMessage()
+        );
     }
 
     private static void checkGeneratedStaticClient(String baseUrl) throws Exception {
-        var staticClient = new com.example.apiblueprint.static_.transports.http.HttpApiClient(
-            new com.example.apiblueprint.static_.transports.http.GenHttpApiConfig(baseUrl)
-        );
+        var staticClient = com.example.apiblueprint.static_.transports.http.HttpApiClient.create(baseUrl);
         var response = staticClient.staticValue.dochaha();
         require(Objects.equals("suite-static", response.a()), "static.dochaha mismatch: " + response);
     }
 
     private static void checkUnsupportedConnections(String baseUrl) throws Exception {
-        var apiClient = new com.example.apiblueprint.api.transports.http.HttpApiClient(
-            new com.example.apiblueprint.api.transports.http.GenHttpApiConfig(baseUrl)
-        );
+        var apiClient = com.example.apiblueprint.api.transports.http.HttpApiClient.create(baseUrl);
         expectUnsupported(apiClient.api::connectWs, "WebSocket");
-        expectUnsupported(() -> apiClient.demo.subscribeSweepEvents(new GenModels.SweepOpen("suite", null)), "stream");
-        expectUnsupported(() -> apiClient.demo.openAssistantSession(new GenModels.AssistantOpen("suite")), "channel");
+        expectUnsupported(() -> apiClient.demo.subscribeSweepEvents(new ApiTypes.SweepOpen("suite", null)), "stream");
+        expectUnsupported(() -> apiClient.demo.openAssistantSession(new ApiTypes.AssistantOpen("suite")), "channel");
 
         HttpClient httpClient = HttpClient.newHttpClient();
         requireStatus(httpClient, baseUrl + "/api/ws", 501, "legacy_ws route is not implemented");
@@ -161,6 +192,17 @@ public class JavaExampleSuite {
         throw new IllegalStateException("expected UnsupportedOperationException containing " + snippet);
     }
 
+    private static ApiError expectApiError(ThrowingRunnable action) throws Exception {
+        try {
+            action.run();
+        } catch (ApiError error) {
+            require(Objects.equals("api.demo.get.errordemo", error.routeId()), "ApiError routeId mismatch: " + error.routeId());
+            require(error.rawBody() != null && !error.rawBody().isBlank(), "ApiError raw body is empty");
+            return error;
+        }
+        throw new IllegalStateException("expected ApiError");
+    }
+
     private static void require(boolean condition, String message) {
         if (!condition) {
             throw new IllegalStateException(message);
@@ -171,38 +213,74 @@ public class JavaExampleSuite {
         void run() throws Exception;
     }
 
-    private static final class DemoServiceImpl extends GenDemoServiceStub {
+    private static final class DemoServiceImpl extends DemoServiceStub {
         @Override
-        public GenDemoServiceModels.RspTestPost testPost(GenDemoServiceModels.ReqTestPostJson json) {
-            return new GenDemoServiceModels.RspTestPost(
+        public DemoTypes.TestPostResponse testPost(DemoTypes.TestPostJSON json) {
+            return new DemoTypes.TestPostResponse(
                 List.of("test_post", json.req1()),
-                Map.of("req2", new com.example.apiblueprint.api.runtime.GenModels.ApiDemoMap(json.req2().longValue()))
+                Map.of("req2", new com.example.apiblueprint.api.runtime.ApiTypes.ApiDemoMap(json.req2().longValue()))
             );
         }
 
         @Override
-        public GenDemoServiceModels.RspFunc1put z1put(
-            GenDemoServiceModels.ReqFunc1putQuery query,
-            GenDemoServiceModels.ReqFunc1putJson json
+        public DemoTypes.PutDemoResponse putDemo(
+            DemoTypes.PutDemoQuery query,
+            DemoTypes.PutDemoJSON json
         ) {
-            return new GenDemoServiceModels.RspFunc1put(
+            return new DemoTypes.PutDemoResponse(
                 List.of(query.arg1(), json.req1()),
-                new GenDemoServiceModels.AnonFunc1putAnonKv(
+                new DemoTypes.AnonFunc1putAnonKv(
                     json.req2().longValue(),
                     List.of(query.arg2().doubleValue(), json.req2().doubleValue())
                 )
             );
         }
+
+        @Override
+        public DemoTypes.ErrorDemoResponse errorDemo(DemoTypes.ErrorDemoQuery query) {
+            String mode = query == null || query.mode() == null ? "ok" : query.mode();
+            return switch (mode) {
+                case "token" -> throwApiError(new ApiErrorPayload(
+                    "CommonErr.TOKEN_EXPIRE",
+                    "",
+                    "",
+                    0,
+                    "",
+                    new ApiToastPayload("", "", "", "")
+                ));
+                case "rate_limit" -> throwApiError(new ApiErrorPayload(
+                    "DemoErr.RATE_LIMITED",
+                    "",
+                    "",
+                    ApiErrors.DEMOERR_RATE_LIMITED,
+                    "",
+                    new ApiToastPayload("demo.rate_limited", "warning", "请求过于频繁，请稍后再试", "请等待 30 秒后重试")
+                ));
+                case "unknown" -> throwApiError(new ApiErrorPayload(
+                    "",
+                    "",
+                    "",
+                    70001,
+                    "example undefined business error",
+                    new ApiToastPayload("", "error", "", "")
+                ));
+                default -> new DemoTypes.ErrorDemoResponse("ok");
+            };
+        }
+
+        private static DemoTypes.ErrorDemoResponse throwApiError(ApiErrorPayload payload) {
+            throw new ApiError(payload, "api.demo.get.errordemo", "", null);
+        }
     }
 
-    private static final class BinaryServiceImpl extends GenBinaryServiceStub {
+    private static final class BinaryServiceImpl extends BinaryServiceStub {
         @Override
-        public GenBinaryServiceModels.RspPacket packet(
-            GenBinaryServiceModels.ReqPacketQuery query,
+        public BinaryTypes.PacketResponse packet(
+            BinaryTypes.PacketQuery query,
             ApiBinaryBody binaryBody
         ) {
             ParsedDemoPacket packet = parseDemoPacket(binaryBody.toBytes());
-            return new GenBinaryServiceModels.RspPacket(
+            return new BinaryTypes.PacketResponse(
                 query.trace(),
                 packet.version(),
                 packet.itemCount(),
@@ -216,10 +294,10 @@ public class JavaExampleSuite {
     }
 
     private static final class StaticServiceImpl
-        extends com.example.apiblueprint.static_.routes.static_.GenStaticServiceStub {
+        extends com.example.apiblueprint.static_.routes.static_.StaticServiceStub {
         @Override
-        public com.example.apiblueprint.static_.routes.static_.GenStaticServiceModels.RspDochaha dochaha() {
-            return new com.example.apiblueprint.static_.routes.static_.GenStaticServiceModels.RspDochaha("suite-static");
+        public com.example.apiblueprint.static_.routes.static_.StaticTypes.DochahaResponse dochaha() {
+            return new com.example.apiblueprint.static_.routes.static_.StaticTypes.DochahaResponse("suite-static");
         }
     }
 

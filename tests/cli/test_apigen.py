@@ -87,6 +87,62 @@ out_dir = "typescript"
     return config_path
 
 
+def _write_go_safe_inspect_blueprint(tmp_path: Path) -> None:
+    pkg = tmp_path / "blueprints"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text("", encoding="utf-8")
+    (pkg / "app.py").write_text(
+        """
+from api_blueprint.engine import Blueprint
+from api_blueprint.engine.model import String
+
+bp = Blueprint(root="/api-v1")
+with bp.group("/admin/v1") as views:
+    views.GET("/ping").RSP(message=String(description="message"))
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def _write_go_safe_inspect_config(tmp_path: Path) -> Path:
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[blueprint]
+entrypoints = ["blueprints.app:bp"]
+
+[[targets]]
+id = "go.server"
+kind = "go-server"
+out_dir = "golang/server"
+module = "example.com/generated/server"
+
+[[targets]]
+id = "go.client"
+kind = "go-client"
+out_dir = "golang/client"
+module = "example.com/generated/client"
+
+[[targets]]
+id = "typescript.client"
+kind = "typescript-client"
+out_dir = "typescript"
+
+[[targets]]
+id = "desktop.v3"
+kind = "wails-transport"
+version = "v3"
+server = "go.server"
+clients = ["typescript.client"]
+overlay_name = "wailsv3"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    return config_path
+
+
 def _write_binary_inspect_blueprint(tmp_path: Path) -> None:
     pkg = tmp_path / "blueprints"
     binary_dir = pkg / "binary"
@@ -364,7 +420,7 @@ out_dir = "typescript"
     assert result.exit_code == 0, result.output
     agent = json.loads(out_path.read_text(encoding="utf-8"))
     assert agent["kind"] == "api-blueprint.agent"
-    assert agent["version"] == "1.0"
+    assert agent["version"] == "2.0"
     assert agent["generator"]["version"] == __version__
     assert agent["counts"]["routes"] == 1
     assert agent["routes"][0]["shard"] == "api-blueprint.contract.d/routes/api.demo.get.ping.json"
@@ -442,12 +498,12 @@ overlay_name = "wailsv3"
     artifacts = agent["routes"][0]["artifacts"]
     assert artifacts["go.server"]["files"] == [
         "../internal/views/routes/api/demo/gen_interface.go",
-        "../internal/views/routes/api/demo/gen_protos.go",
+        "../internal/views/routes/api/demo/gen_types.go",
     ]
     assert artifacts["go.server"]["imports"] == ["example.com/agent/internal/views/routes/api/demo"]
     assert artifacts["typescript.client"]["files"] == [
         "../../../webui/src/lib/api/api/routes/api/demo/client.ts",
-        "../../../webui/src/lib/api/api/routes/api/demo/models.ts",
+        "../../../webui/src/lib/api/api/routes/api/demo/types.ts",
     ]
     assert artifacts["gui.v3"]["files"] == [
         "../internal/views/transports/wailsv3/api/demo/gen_service.go",
@@ -483,6 +539,38 @@ def test_api_gen_inspect_routes_route_and_files(tmp_path):
     assert "[typescript.client]" in files.output
     assert "typescript/api/routes/api/demo/client.ts" in files.output
     assert "go.server" not in files.output
+
+
+def test_api_gen_inspect_files_uses_go_safe_route_package_segments(tmp_path):
+    _write_go_safe_inspect_blueprint(tmp_path)
+    config_path = _write_go_safe_inspect_config(tmp_path)
+    route_id = "api_v1.admin_v1.get.ping"
+
+    go_server = CliRunner().invoke(
+        api_gen,
+        ["inspect", "files", "-c", str(config_path), "--route", route_id, "--target", "go.server"],
+    )
+    assert go_server.exit_code == 0, go_server.output
+    assert "golang/server/routes/api_v1/admin_v1/gen_interface.go" in go_server.output
+    assert "example.com/generated/server/golang/server/routes/api_v1/admin_v1" in go_server.output
+    assert "routes/api-v1/admin/v1" not in go_server.output
+
+    go_client = CliRunner().invoke(
+        api_gen,
+        ["inspect", "files", "-c", str(config_path), "--route", route_id, "--target", "go.client"],
+    )
+    assert go_client.exit_code == 0, go_client.output
+    assert "golang/client/routes/api_v1/admin_v1/gen_client.go" in go_client.output
+    assert "example.com/generated/client/golang/client/routes/api_v1/admin_v1" in go_client.output
+    assert "routes/api-v1/admin/v1" not in go_client.output
+
+    wails = CliRunner().invoke(
+        api_gen,
+        ["inspect", "files", "-c", str(config_path), "--route", route_id, "--target", "desktop.v3"],
+    )
+    assert wails.exit_code == 0, wails.output
+    assert "golang/server/transports/wailsv3/api_v1/admin_v1/gen_service.go" in wails.output
+    assert "transports/wailsv3/api-v1/admin/v1" not in wails.output
 
 
 def test_api_gen_inspect_files_reports_java_artifacts(tmp_path):

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Any, Mapping
 
 from api_blueprint.writer.core.base import BaseBlueprint
+from api_blueprint.writer.core.sdk_names import RoutePublicNames
 
 from .binary_schema import JavaBinarySchema, unique_java_binary_schemas
 from .naming import to_java_member_name, to_java_package_path, to_java_package_suffix, to_java_type_name
@@ -34,6 +36,11 @@ class JavaRoute:
         self.response = _mapping(route.get("response"))
         self.connection = _mapping(route.get("connection"))
         self.binary_schema = _mapping(self.request.get("binary_schema")) or None
+        self.public_names = RoutePublicNames.from_operation(self.operation, fallback="Call")
+
+    @property
+    def operation_type_name(self) -> str:
+        return self.public_names.operation
 
     @property
     def is_rpc(self) -> bool:
@@ -44,8 +51,25 @@ class JavaRoute:
         return self.methods[0] if self.methods else "GET"
 
     @property
-    def response_wrapper(self) -> str:
-        return str(self.response.get("wrapper") or "NoneWrapper")
+    def response_envelope_literal(self) -> str:
+        envelope = _mapping(self.response.get("envelope"))
+        fields = _mapping(envelope.get("fields"))
+        return (
+            "ApiResponseEnvelope.of("
+            f"{_java_string(envelope.get('name') or 'NoEnvelope')}, "
+            f"{_java_string(envelope.get('kind') or 'none')}, "
+            f"{_java_string(envelope.get('error_identity') or 'none')}, "
+            f"{int(envelope.get('success_code') or 0)}, "
+            f"{_java_string(envelope.get('success_message') or 'ok')}, "
+            "new ApiResponseEnvelope.Fields("
+            f"{_java_string(fields.get('code') or 'code')}, "
+            f"{_java_string(fields.get('message') or 'message')}, "
+            f"{_java_string(fields.get('data') or 'data')}, "
+            f"{_java_string(fields.get('error') or 'error')}, "
+            f"{_java_string(fields.get('ok') or 'ok')}"
+            ")"
+            ")"
+        )
 
     @property
     def response_model(self) -> str | None:
@@ -73,6 +97,12 @@ class JavaRoute:
         if self.binary_schema is not None:
             return None
         return _model_name(self.request.get("binary_model"))
+
+    @property
+    def binary_schema_type(self) -> str | None:
+        if self.binary_schema is None:
+            return None
+        return JavaBinarySchema(self.binary_schema).name
 
     @property
     def open_model(self) -> str | None:
@@ -131,9 +161,11 @@ class JavaApiGroup:
     package_suffix: str
     class_name: str
     service_class: str
-    models_class: str
+    types_class: str
+    runtime_types_ref: str
     property_name: str
     routes: list[JavaRoute] = field(default_factory=list)
+    schema_type_names: dict[str, str] = field(default_factory=dict)
 
     @property
     def controller_class(self) -> str:
@@ -149,7 +181,24 @@ class JavaApiGroup:
 
     @property
     def stub_class(self) -> str:
-        return f"Gen{self.service_class}Stub"
+        return f"{self.service_class}Stub"
+
+    def schema_type_name(self, schema_name: str) -> str:
+        return self.schema_type_names.get(schema_name, to_java_type_name(schema_name.rsplit(".", 1)[-1], fallback="Model"))
+
+    def register_route_model_names(self, route: JavaRoute, *, is_auto_schema) -> None:
+        slots = (
+            (route.query_model, route.public_names.query),
+            (route.json_model, route.public_names.json),
+            (route.form_model, route.public_names.form),
+            (route.binary_model, route.public_names.binary),
+            (route.open_model, route.public_names.open),
+            (route.close_model, route.public_names.close),
+            (route.response_model, route.public_names.response),
+        )
+        for schema_name, type_name in slots:
+            if schema_name and is_auto_schema(schema_name):
+                self.schema_type_names.setdefault(schema_name, type_name)
 
     def model_names(self) -> set[str]:
         names: set[str] = set()
@@ -200,7 +249,6 @@ class JavaBlueprint(BaseBlueprint["JavaBaseWriter"]):
                 package_path = to_java_package_path(route_path, fallback="api")
                 package_suffix = to_java_package_suffix(route_path, fallback="api")
                 base_name = to_java_type_name(group, fallback="Root")
-                models_suffix = "ServiceModels" if self.writer.server_mode else "ApiModels"
                 group_obj = JavaApiGroup(
                     root=root,
                     group=group,
@@ -209,11 +257,15 @@ class JavaBlueprint(BaseBlueprint["JavaBaseWriter"]):
                     package_suffix=package_suffix,
                     class_name=f"{base_name}Api",
                     service_class=f"{base_name}Service",
-                    models_class=f"Gen{base_name}{models_suffix}",
+                    types_class=f"{base_name}Types",
+                    runtime_types_ref=(
+                        f"{self.root_package}.runtime.ApiTypes" if base_name == "Api" else "ApiTypes"
+                    ),
                     property_name=to_java_member_name(group, fallback="api"),
                 )
                 self.groups[group] = group_obj
             group_obj.routes.append(route)
+            group_obj.register_route_model_names(route, is_auto_schema=self.writer.catalog.is_auto_schema)
 
 
 def _mapping(value: object) -> dict[str, Any]:
@@ -222,6 +274,10 @@ def _mapping(value: object) -> dict[str, Any]:
 
 def _model_name(value: object) -> str | None:
     return value if isinstance(value, str) and value else None
+
+
+def _java_string(value: object) -> str:
+    return json.dumps(str(value), ensure_ascii=False)
 
 
 def _route_root_group(

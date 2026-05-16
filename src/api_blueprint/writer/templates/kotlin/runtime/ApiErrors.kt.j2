@@ -15,29 +15,28 @@ data class ApiToastPayload(
     val text: String = "",
 )
 
-class ApiCodeError(
-    val code: ApiErrorCode,
-    val apiMessage: String? = null,
-    val toastPayload: Any? = null,
+data class ApiErrorPayload(
+    val id: String = "",
+    val group: String = "",
+    val key: String = "",
+    val code: ApiErrorCode = 0,
+    val message: String = "",
+    val toast: ApiToastPayload = ApiToastPayload(),
+)
+
+class ApiError(
+    val payload: ApiErrorPayload,
+    val routeId: String? = null,
     val rawBody: String? = null,
-    val entry: ApiErrorCatalogEntry? = null,
-) : RuntimeException(apiMessage ?: entry?.message ?: "API error $code") {
-    constructor(
-        entry: ApiErrorCatalogEntry,
-        toast: ApiToastPayload = ApiToastPayload(
-            key = entry.toast.key,
-            level = entry.toast.level,
-            default = entry.toast.default,
-        ),
-    ) : this(
-        code = entry.code,
-        apiMessage = entry.message,
-        toastPayload = toast,
-        entry = entry,
-    )
+) : RuntimeException(payload.message.ifEmpty { "API error ${payload.code}" }) {
+    val id: String get() = payload.id
+    val group: String get() = payload.group
+    val key: String get() = payload.key
+    val code: ApiErrorCode get() = payload.code
+    val toast: ApiToastPayload get() = payload.toast
 }
 
-data class ApiErrorCatalogEntry(
+data class ApiErrorEntry(
     val id: String,
     val group: String,
     val key: String,

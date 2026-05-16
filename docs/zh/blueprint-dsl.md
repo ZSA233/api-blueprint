@@ -73,7 +73,32 @@ class CommonErr(Model):
     )
 ```
 
-不写 `toast` 时默认等价于 `key="<Group>.<KEY>"`、`default=message`、`level="error"`。响应 wrapper 会携带可选 `toast` 字段；客户端展示文案按 `toast.text`、业务 i18n、`toast.default`、`message` 兜底。服务端需要按请求语言、租户或灰度覆盖展示文案时，应返回不可变覆盖结果，不修改生成的全局错误值或 catalog entry。
+不写 `toast` 时默认等价于 `key="<Group>.<KEY>"`、`default=message`、`level="error"`。响应 envelope 可按自身 `error_identity` 暴露 nested error identity 与 `toast`；客户端展示文案按 `toast.text`、业务 i18n、`toast.default`、`message` 兜底。服务端需要按请求语言、租户或灰度覆盖展示文案时，应返回不可变覆盖结果，不修改生成的全局错误值或 lookup entry。
+
+route 可以继续追加局部错误组，生成 manifest 和 client lookup 时会把全局错误与 `.ERR(...)` 声明合并到当前 route 的错误面：
+
+```python
+class DemoErr(Model):
+    RATE_LIMITED = Error(
+        42901,
+        "请求过于频繁",
+        toast=Toast(
+            key="demo.rate_limited",
+            default="请求过于频繁，请稍后再试",
+            level="warning",
+        ),
+    )
+
+
+with bp.group("/demo") as views:
+    views.GET("/error-demo").ARGS(
+        mode=String(description="ok/token/rate_limit/unknown", default="ok"),
+    ).ERR(DemoErr).RSP(
+        status=String(description="status"),
+    )
+```
+
+完整示例见 `examples/blueprints/errors.py` 与 `examples/blueprints/api_demo.py`。生成后的客户端会在该 route 上优先按 `error.id` 匹配，再按 `(route_id, code)` 匹配；未声明错误码仍会得到可用的 `ApiError`。
 
 ## 长连接消息流
 

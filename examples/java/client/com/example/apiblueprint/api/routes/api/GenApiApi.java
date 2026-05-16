@@ -3,10 +3,11 @@ package com.example.apiblueprint.api.routes.api;
 
 import com.example.apiblueprint.api.runtime.ApiChannelBridge;
 import com.example.apiblueprint.api.runtime.ApiRequest;
+import com.example.apiblueprint.api.runtime.ApiResponseEnvelope;
 import com.example.apiblueprint.api.runtime.ApiSocketBridge;
 import com.example.apiblueprint.api.runtime.ApiStreamBridge;
 import com.example.apiblueprint.api.runtime.ApiTransport;
-import com.example.apiblueprint.api.runtime.GenModels;
+
 import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
 import java.util.Map;
 
@@ -20,13 +21,14 @@ public class GenApiApi {
     public ApiSocketBridge<Object, Object> connectWs(
     ) {
         ApiRequest<Object> request = new ApiRequest<>(
+            "api.api.ws.ws",
             "WS",
             "/api/ws",
             null,
             null,
             null,
             null,
-            "NoneWrapper",
+            ApiResponseEnvelope.none(),
             Object.class,
             "application/json",
             Map.of()

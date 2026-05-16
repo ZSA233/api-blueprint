@@ -31,7 +31,7 @@ func newGeneratedStaticService(impl RouterInterface, dispatcher wailstransport.E
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req|handle|rsp=json@NoneWrapper",
+			"req|handle|rsp=json@NoEnvelope",
 			impl.DocJson,
 		),
 		dochahaExecutor: sharedprovider.NewRouteExecutor(
@@ -47,7 +47,7 @@ func newGeneratedStaticService(impl RouterInterface, dispatcher wailstransport.E
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req|handle|rsp=json@NoneWrapper",
+			"req|handle|rsp=json@NoEnvelope",
 			impl.Dochaha,
 		),
 	}

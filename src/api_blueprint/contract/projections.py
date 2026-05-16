@@ -4,6 +4,7 @@ import re
 from collections.abc import Mapping
 from typing import Any
 
+from api_blueprint.writer.core.go_naming import to_go_package_path
 from api_blueprint.writer.core.planning import route_matches_rule
 
 
@@ -413,6 +414,9 @@ def _artifact_for_route(
     service_id = _string(route.get("service_id"))
     root, group = _split_service_id(service_id)
     route_path = _route_path(root, group)
+    go_root_segment = to_go_package_path(root, fallback="root")
+    go_group_segment = to_go_package_path(group, fallback=go_root_segment)
+    go_route_path = _route_path(go_root_segment, go_group_segment)
     python_route_package = route_path.replace("/", ".")
     kotlin_route_package = route_path.replace("/", ".")
     pascal_group = _pascal(group)
@@ -422,31 +426,31 @@ def _artifact_for_route(
     handled = True
 
     if kind == "go-server":
-        base = _join(out_dir, "routes", root, "" if root == group else group)
-        files = [_join(base, "gen_interface.go"), _join(base, "gen_protos.go")]
+        base = _join(out_dir, "routes", go_route_path)
+        files = [_join(base, "gen_interface.go"), _join(base, "gen_types.go")]
         if has_binary_schema:
             files.append(_join(base, "_gen_binary", "gen_binary.go"))
         import_root = _string(target.get("go_import_root")) or _string(target.get("module"))
         if import_root:
-            imports = [_join(import_root, "routes", root, "" if root == group else group)]
+            imports = [_join(import_root, "routes", go_route_path)]
     elif kind == "go-client":
-        base = _join(out_dir, "routes", route_path)
+        base = _join(out_dir, "routes", go_route_path)
         transport_base = _join(out_dir, "transports", "http")
         files = [
-            _join(base, "gen_models.go"),
+            _join(base, "gen_types.go"),
             _join(base, "gen_client.go"),
             _join(base, "client.go"),
             _join(transport_base, "gen_transport.go"),
             _join(transport_base, "client.go"),
         ]
         if has_binary_schema:
-            files.append(_join(base, "_gen_binary", "gen_binary.go"))
+            files.append(_join(base, "gen_binary.go"))
         module = _string(target.get("go_import_root")) or _string(target.get("module"))
         if module:
-            imports = [_join(module, "routes", route_path)]
+            imports = [_join(module, "routes", go_route_path)]
     elif kind == "typescript-client":
         base = _join(out_dir, root, "routes", root, "" if root == group else group)
-        files = [_join(base, "client.ts"), _join(base, "models.ts")]
+        files = [_join(base, "client.ts"), _join(base, "types.ts")]
         if has_binary_schema:
             files.append(_join(base, "gen_binary.ts"))
         imports = [_posix_without_suffix(base)]
@@ -455,12 +459,10 @@ def _artifact_for_route(
         package_path = package.replace(".", "/")
         base = _join(out_dir, package_path, root, "routes", route_path)
         files = [
-            _join(base, f"Gen{pascal_group}ApiModels.kt"),
+            _join(base, f"{pascal_group}Types.kt"),
             _join(base, f"Gen{pascal_group}Api.kt"),
             _join(base, f"{pascal_group}Api.kt"),
         ]
-        if has_binary_schema:
-            files.append(_join(base, "GenBinary.kt"))
         if package:
             imports = [f"{package}.{root}.routes.{kotlin_route_package}.{pascal_group}Api"]
     elif kind == "java-client":
@@ -469,14 +471,12 @@ def _artifact_for_route(
         base = _join(out_dir, package_path, root, "routes", route_path)
         transport_base = _join(out_dir, package_path, root, "transports", "http")
         files = [
-            _join(base, f"Gen{pascal_group}ApiModels.java"),
+            _join(base, f"{pascal_group}Types.java"),
             _join(base, f"Gen{pascal_group}Api.java"),
             _join(base, f"{pascal_group}Api.java"),
             _join(transport_base, "GenJdkHttpApiTransport.java"),
             _join(transport_base, "HttpApiClient.java"),
         ]
-        if has_binary_schema:
-            files.append(_join(base, "GenBinary.java"))
         if package:
             imports = [f"{package}.{root}.routes.{kotlin_route_package}.{pascal_group}Api"]
     elif kind == "python-client":
@@ -486,6 +486,7 @@ def _artifact_for_route(
         transport_base = _join(out_dir, *package_parts, root, "transports", "http")
         files = [
             _join(base, "gen_client.py"),
+            _join(base, "gen_types.py"),
             _join(base, "client.py"),
             _join(transport_base, "gen_client.py"),
         ]
@@ -516,12 +517,11 @@ def _artifact_for_route(
         transport_base = _join(out_dir, package_path, root, "transports", "http")
         files = [
             _join(route_base, f"Gen{pascal_group}Service.java"),
-            _join(route_base, f"Gen{pascal_group}ServiceStub.java"),
+            _join(route_base, f"{pascal_group}Types.java"),
+            _join(route_base, f"{pascal_group}ServiceStub.java"),
             _join(route_base, f"{pascal_group}Service.java"),
             _join(transport_base, route_path, f"Gen{pascal_group}Controller.java"),
         ]
-        if has_binary_schema:
-            files.append(_join(route_base, "GenBinary.java"))
         if package:
             imports = [
                 f"{package}.{root}.routes.{kotlin_route_package}.{pascal_group}Service",
@@ -536,11 +536,11 @@ def _artifact_for_route(
         client_target = (
             targets_by_id.get(_string(client_ids[0])) if targets_by_id is not None and client_ids else None
         )
-        go_root = _string(server_target.get("out_dir")) if server_target is not None else "golang"
-        ts_root = _string(client_target.get("out_dir")) if client_target is not None else "typescript"
+        go_out_dir = _string(server_target.get("out_dir")) if server_target is not None else "golang"
+        ts_out_dir = _string(client_target.get("out_dir")) if client_target is not None else "typescript"
         files = [
-            _join(go_root, "transports", overlay, root, "" if root == group else group, "gen_service.go"),
-            _join(ts_root, root, "transports", overlay, root, "" if root == group else group, "client.ts"),
+            _join(go_out_dir, "transports", overlay, go_route_path, "gen_service.go"),
+            _join(ts_out_dir, root, "transports", overlay, root, "" if root == group else group, "client.ts"),
         ]
     elif kind == "grpc-proto":
         if _string(route.get("kind")) == "legacy_ws":

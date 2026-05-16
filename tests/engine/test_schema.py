@@ -19,7 +19,7 @@ from api_blueprint.engine.model import (
     iter_enum_classes,
     model_to_pydantic,
 )
-from api_blueprint.engine.wrapper import GeneralWrapper
+from api_blueprint.engine.envelope import CodeMessageDataEnvelope
 
 
 class Color(enum.StrEnum):
@@ -49,6 +49,19 @@ def test_model_to_pydantic_marks_default_fields_optional():
     assert not field.is_required()
 
 
+def test_model_to_pydantic_marks_omitempty_fields_optional():
+    class OptionalPayload(Model):
+        required = String(description="required")
+        maybe = String(description="maybe", omitempty=True)
+
+    pydantic_model = model_to_pydantic(OptionalPayload)
+    schema = pydantic_model.model_json_schema()
+
+    assert "required" in schema["required"]
+    assert "maybe" not in schema.get("required", [])
+    assert not pydantic_model.model_fields["maybe"].is_required()
+
+
 def test_model_to_pydantic_allows_basemodel_shadow_field_without_warning():
     class SchemaPayload(Model):
         schema = String(description="schema")
@@ -64,23 +77,29 @@ def test_model_to_pydantic_allows_basemodel_shadow_field_without_warning():
     assert pydantic_model.model_validate({"schema": "value"}).schema == "value"
 
 
-def test_response_wrapper_create_keeps_generic_data_field():
-    wrapped = GeneralWrapper.create(Payload)
+def test_response_envelope_create_keeps_generic_data_field():
+    wrapped = CodeMessageDataEnvelope.create(Payload)
     pydantic_model = model_to_pydantic(wrapped)
+    schema = pydantic_model.model_json_schema()
+
     assert "data" in pydantic_model.model_fields
     assert pydantic_model.model_config.get("json_schema_extra") == {"xml": {"name": "response"}}
+    assert "code" in schema["required"]
+    assert "message" in schema["required"]
+    assert "data" not in schema.get("required", [])
+    assert "error" not in schema.get("required", [])
 
 
-def test_response_wrapper_cache_is_scoped_to_model_identity():
+def test_response_envelope_cache_is_scoped_to_model_identity():
     first_model = create_model("Payload", {"name": String(description="name")}).__class__
     second_model = create_model("Payload", {"count": Int(description="count")}).__class__
 
-    first_wrapper = GeneralWrapper.create(first_model)
-    second_wrapper = GeneralWrapper.create(second_model)
+    first_envelope = CodeMessageDataEnvelope.create(first_model)
+    second_envelope = CodeMessageDataEnvelope.create(second_model)
 
-    assert first_wrapper is not second_wrapper
-    assert first_wrapper.data.__class__ is first_model
-    assert second_wrapper.data.__class__ is second_model
+    assert first_envelope is not second_envelope
+    assert first_envelope.data.__class__ is first_model
+    assert second_envelope.data.__class__ is second_model
 
 
 def test_model_to_pydantic_keeps_route_named_anon_models_after_build():

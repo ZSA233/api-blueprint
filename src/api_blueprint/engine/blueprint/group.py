@@ -8,7 +8,7 @@ from fastapi.types import IncEx
 
 from api_blueprint.engine.blueprint.router import Router
 from api_blueprint.engine.connection import ConnectionDelivery, ConnectionScope
-from api_blueprint.engine.runtime import Handle, Provider, ResponseWrapper, WsHandle
+from api_blueprint.engine.runtime import Handle, Provider, ResponseEnvelope, WsHandle
 from api_blueprint.engine.schema import HeaderModel
 from api_blueprint.engine.utils import join_url_path
 
@@ -77,7 +77,7 @@ class RouterGroup(Generic[T]):
         handle_data: str = None,
         providers: Optional[list[Provider]] = None,
         headers: Optional[Union[HeaderModel, type[HeaderModel]]] = None,
-        response_wrapper: Optional[ResponseWrapper] = None,
+        response_envelope: Optional[ResponseEnvelope] = None,
         status_code: Optional[int] = None,
         tags: Optional[list[Union[str, Enum]]] = None,
         summary: Optional[str] = None,
@@ -109,7 +109,7 @@ class RouterGroup(Generic[T]):
         handle_data: str = None,
         providers: Optional[list[Provider]] = None,
         headers: Optional[Union[HeaderModel, type[HeaderModel]]] = None,
-        response_wrapper: Optional[ResponseWrapper] = None,
+        response_envelope: Optional[ResponseEnvelope] = None,
         status_code: Optional[int] = None,
         tags: Optional[list[Union[str, Enum]]] = None,
         summary: Optional[str] = None,
@@ -141,7 +141,7 @@ class RouterGroup(Generic[T]):
         handle_data: str = None,
         providers: Optional[list[Provider]] = None,
         headers: Optional[Union[HeaderModel, type[HeaderModel]]] = None,
-        response_wrapper: Optional[ResponseWrapper] = None,
+        response_envelope: Optional[ResponseEnvelope] = None,
         status_code: Optional[int] = None,
         tags: Optional[list[Union[str, Enum]]] = None,
         summary: Optional[str] = None,
@@ -173,7 +173,7 @@ class RouterGroup(Generic[T]):
         handle_data: str = None,
         providers: Optional[list[Provider]] = None,
         headers: Optional[Union[HeaderModel, type[HeaderModel]]] = None,
-        response_wrapper: Optional[ResponseWrapper] = None,
+        response_envelope: Optional[ResponseEnvelope] = None,
         status_code: Optional[int] = None,
         tags: Optional[list[Union[str, Enum]]] = None,
         summary: Optional[str] = None,
@@ -205,7 +205,7 @@ class RouterGroup(Generic[T]):
         handle_data: list[str] = [],
         providers: Optional[list[Provider]] = None,
         headers: Optional[Union[HeaderModel, type[HeaderModel]]] = None,
-        response_wrapper: Optional[ResponseWrapper] = None,
+        response_envelope: Optional[ResponseEnvelope] = None,
         status_code: Optional[int] = None,
         tags: Optional[list[Union[str, Enum]]] = None,
         summary: Optional[str] = None,

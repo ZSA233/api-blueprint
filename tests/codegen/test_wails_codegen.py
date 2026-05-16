@@ -69,7 +69,7 @@ def _write_blueprint_package(tmp_path: Path) -> None:
         """
 from api_blueprint.engine import Blueprint, ConnectionDelivery, provider
 from api_blueprint.engine.model import Model, String
-from api_blueprint.engine.wrapper import GeneralWrapper
+from api_blueprint.engine.envelope import CodeMessageDataEnvelope
 
 class WSRecv(Model):
     message = String(description="message")
@@ -91,7 +91,7 @@ class CloseInfo(Model):
 
 bp = Blueprint(
     root="/api",
-    response_wrapper=GeneralWrapper,
+    response_envelope=CodeMessageDataEnvelope,
     providers=[
         provider.Req(),
         provider.Auth(),
@@ -166,6 +166,24 @@ bp = Blueprint(root="/api")
 with bp.group("/settings") as views:
     views.GET("/current").RSP(message=String(description="message"))
     views.PUT("/current").RSP(message=String(description="message"))
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def _write_go_safe_route_blueprint_package(tmp_path: Path) -> None:
+    pkg = tmp_path / "blueprints"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text("", encoding="utf-8")
+    (pkg / "app.py").write_text(
+        """
+from api_blueprint.engine import Blueprint
+from api_blueprint.engine.model import String
+
+bp = Blueprint(root="/api-v1")
+with bp.group("/admin/v1") as views:
+    views.GET("/ping").RSP(message=String(description="message"))
         """.strip()
         + "\n",
         encoding="utf-8",
@@ -253,6 +271,35 @@ go 1.23.8
     assert "CurrentPut" not in ts_bindings
 
 
+def test_wails_codegen_uses_go_safe_route_package_segments(tmp_path: Path):
+    config = tmp_path / "api-blueprint.toml"
+    shared_go = tmp_path / "golang"
+    shared_ts = tmp_path / "typescript"
+    for path in (shared_go, shared_ts):
+        path.mkdir()
+    (tmp_path / "go.mod").write_text(
+        """
+module example.com/generated
+
+go 1.23.8
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    _write_wails_vnext_config(config, go_out=shared_go.name, ts_out=shared_ts.name)
+    _write_go_safe_route_blueprint_package(tmp_path)
+
+    result = _invoke_wails_generate(config)
+    assert result.exit_code == 0, result.output
+
+    assert (shared_go / "routes" / "api_v1" / "admin_v1" / "gen_interface.go").is_file()
+    assert (shared_go / "transports" / "wailsv3" / "api_v1" / "admin_v1" / "gen_service.go").is_file()
+    bindings = (shared_ts / "api-v1" / "transports" / "wailsv3" / "gen_bindings.ts").read_text(
+        encoding="utf-8"
+    )
+    assert "example.com/generated/golang/transports/wailsv3/api_v1/admin_v1.AdminV1Service.Ping" in bindings
+
+
 def test_wails_codegen_generates_shared_contracts_and_overlays(tmp_path: Path):
     config = tmp_path / "api-blueprint.toml"
     shared_go = tmp_path / "golang"
@@ -293,8 +340,8 @@ go 1.23.8
     ts_overlay_index = (shared_ts / "api" / "transports" / "wailsv3" / "api" / "gen_index.ts").read_text(encoding="utf-8")
     ts_overlay_factory = (shared_ts / "api" / "transports" / "wailsv3" / "api" / "gen_factory.ts").read_text(encoding="utf-8")
 
-    assert "WrapRSP_JSON_GeneralWrapper" in go_overlay_service
-    assert "WrapRSP_JSON_GeneralWrapper[" not in go_overlay_service
+    assert "WrapRSP_JSON_CodeMessageDataEnvelope" in go_overlay_service
+    assert "WrapRSP_JSON_CodeMessageDataEnvelope[" not in go_overlay_service
     assert "func (svc *DemoService) ConnectWs" in go_overlay_service
     assert "func (svc *DemoService) SubscribeEvents" in go_overlay_service
     assert "func (svc *DemoService) OpenChat" in go_overlay_service
@@ -328,8 +375,8 @@ go 1.23.8
     assert 'Methods:   []string{"CHANNEL"}' in go_overlay_service
     assert "Transport: sharedprovider.TransportWails" in go_overlay_service
     assert 'Scope:     sharedprovider.ConnectionScope("session")' in go_overlay_service
-    assert '"req=Q|auth|handle|rsp=json@GeneralWrapper"' in go_overlay_service
-    assert '"req|auth|ws_handle|rsp=json@GeneralWrapper"' in go_overlay_service
+    assert '"req=Q|auth|handle|rsp=json@CodeMessageDataEnvelope"' in go_overlay_service
+    assert '"req|auth|ws_handle|rsp=json@CodeMessageDataEnvelope"' in go_overlay_service
     assert "ResolveProvider[" not in go_overlay_service
     assert not re.search(r"Executor \*sharedprovider[^\n]*\n\n\s*\w+Executor", go_overlay_service)
     assert not re.search(r"NewRouteExecutor[^\n]*\n\n\s*\w+Executor:", go_overlay_service)
@@ -631,7 +678,7 @@ go 1.23.8
     assert result.exit_code == 0, result.output
 
     provider_file = shared_go / "providers" / "gen_provider.go"
-    route_file = shared_go / "routes" / "api" / "demo" / "gen_protos.go"
+    route_file = shared_go / "routes" / "api" / "demo" / "gen_types.go"
     overlay_service = shared_go / "transports" / "wailsv3" / "api" / "demo" / "gen_service.go"
     runtime_file = shared_go / "transports" / "wailsv3" / "gen_runtime.go"
     binding_impl = shared_go / "transports" / "wailsv3" / "api" / "demo" / "impl_service.go"
@@ -717,7 +764,7 @@ func NewService(dispatcher wailstransport.EventDispatcher) *DemoService {
 
 
 def test_golang_provider_impl_files_are_preserved_on_regeneration(tmp_path: Path):
-    from api_blueprint.writer.golang.writer import GolangWriter
+    from api_blueprint.writer.golang import GolangWriter
     from api_blueprint.engine import Blueprint
 
     output_dir = tmp_path / "golang"

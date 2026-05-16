@@ -53,7 +53,7 @@ def test_contract_graph_manifest_captures_rpc_and_connection_routes():
     graph = build_contract_graph([bp])
     manifest = graph.to_manifest()
 
-    assert manifest["version"] == "1.0"
+    assert manifest["version"] == "2.0"
     assert manifest["generator"]["name"] == "api-blueprint"
     assert [service["id"] for service in manifest["services"]] == ["api.runs"]
     route_ids = [route["id"] for route in manifest["routes"]]
@@ -200,7 +200,12 @@ def test_contract_graph_manifest_captures_error_catalog_and_route_visibility():
         },
     ]
     assert "translations" not in manifest["errors"][1]["toast"]
-    assert manifest["routes"][0]["errors"] == ["CommonErr.UNKNOWN", "CommonErr.TOKEN_EXPIRE", "DemoErr.BOOM"]
+    assert [error["id"] for error in manifest["routes"][0]["errors"]] == [
+        "CommonErr.UNKNOWN",
+        "CommonErr.TOKEN_EXPIRE",
+        "DemoErr.BOOM",
+    ]
+    assert manifest["routes"][0]["errors"][1] == manifest["errors"][1]
     assert agent["counts"]["errors"] == 3
     assert agent["errors"] == manifest["errors"]
     assert agent["routes"][0]["errors"] == manifest["routes"][0]["errors"]
@@ -379,7 +384,7 @@ def test_agent_manifest_and_shards_are_compact_navigation_layers():
     shards = build_contract_shards(manifest)
     markdown = render_agent_markdown(manifest)
 
-    assert agent["version"] == "1.0"
+    assert agent["version"] == "2.0"
     assert agent["generator"]["name"] == "api-blueprint"
     assert agent["counts"] == {
         "services": 1,
@@ -396,13 +401,13 @@ def test_agent_manifest_and_shards_are_compact_navigation_layers():
     assert stream_summary["schemas"] == ["CloseInfo", "OpenRequest", "StreamDone", "StreamState"]
     assert stream_summary["artifacts"]["go.server"]["files"] == [
         "golang/routes/api/runs/gen_interface.go",
-        "golang/routes/api/runs/gen_protos.go",
+        "golang/routes/api/runs/gen_types.go",
     ]
     assert stream_summary["artifacts"]["go.server"]["imports"] == [
         "example.com/project/golang/routes/api/runs",
     ]
     assert stream_summary["artifacts"]["go.client"]["files"] == [
-        "golang/client/routes/api/runs/gen_models.go",
+        "golang/client/routes/api/runs/gen_types.go",
         "golang/client/routes/api/runs/gen_client.go",
         "golang/client/routes/api/runs/client.go",
         "golang/client/transports/http/gen_transport.go",
@@ -416,12 +421,12 @@ def test_agent_manifest_and_shards_are_compact_navigation_layers():
         "pb.api.runs_pb2_grpc",
     ]
     assert stream_summary["artifacts"]["kotlin.client"]["files"] == [
-        "kotlin/com/example/generated/api/routes/api/runs/GenRunsApiModels.kt",
+        "kotlin/com/example/generated/api/routes/api/runs/RunsTypes.kt",
         "kotlin/com/example/generated/api/routes/api/runs/GenRunsApi.kt",
         "kotlin/com/example/generated/api/routes/api/runs/RunsApi.kt",
     ]
     assert stream_summary["artifacts"]["java.client"]["files"] == [
-        "java/client/com/example/generated/api/routes/api/runs/GenRunsApiModels.java",
+        "java/client/com/example/generated/api/routes/api/runs/RunsTypes.java",
         "java/client/com/example/generated/api/routes/api/runs/GenRunsApi.java",
         "java/client/com/example/generated/api/routes/api/runs/RunsApi.java",
         "java/client/com/example/generated/api/transports/http/GenJdkHttpApiTransport.java",
@@ -432,7 +437,8 @@ def test_agent_manifest_and_shards_are_compact_navigation_layers():
     ]
     assert stream_summary["artifacts"]["java.server"]["files"] == [
         "java/server/com/example/generated/api/routes/api/runs/GenRunsService.java",
-        "java/server/com/example/generated/api/routes/api/runs/GenRunsServiceStub.java",
+        "java/server/com/example/generated/api/routes/api/runs/RunsTypes.java",
+        "java/server/com/example/generated/api/routes/api/runs/RunsServiceStub.java",
         "java/server/com/example/generated/api/routes/api/runs/RunsService.java",
         "java/server/com/example/generated/api/transports/http/api/runs/GenRunsController.java",
     ]
@@ -442,6 +448,7 @@ def test_agent_manifest_and_shards_are_compact_navigation_layers():
     ]
     assert stream_summary["artifacts"]["python.client"]["files"] == [
         "python/client/client_app/api/routes/api/runs/gen_client.py",
+        "python/client/client_app/api/routes/api/runs/gen_types.py",
         "python/client/client_app/api/routes/api/runs/client.py",
         "python/client/client_app/api/transports/http/gen_client.py",
     ]
@@ -505,12 +512,12 @@ def test_contract_artifacts_use_shared_selection_and_python_root_group_paths():
     route_summary = agent["routes"][0]
 
     assert route_summary["artifacts"]["kotlin.client"]["files"] == [
-        "kotlin/com/example/generated/api/routes/api/GenApiApiModels.kt",
+        "kotlin/com/example/generated/api/routes/api/ApiTypes.kt",
         "kotlin/com/example/generated/api/routes/api/GenApiApi.kt",
         "kotlin/com/example/generated/api/routes/api/ApiApi.kt",
     ]
     assert route_summary["artifacts"]["java.client"]["files"] == [
-        "java/client/com/example/generated/api/routes/api/GenApiApiModels.java",
+        "java/client/com/example/generated/api/routes/api/ApiTypes.java",
         "java/client/com/example/generated/api/routes/api/GenApiApi.java",
         "java/client/com/example/generated/api/routes/api/ApiApi.java",
         "java/client/com/example/generated/api/transports/http/GenJdkHttpApiTransport.java",
@@ -521,7 +528,8 @@ def test_contract_artifacts_use_shared_selection_and_python_root_group_paths():
     ]
     assert route_summary["artifacts"]["java.server"]["files"] == [
         "java/server/com/example/generated/api/routes/api/GenApiService.java",
-        "java/server/com/example/generated/api/routes/api/GenApiServiceStub.java",
+        "java/server/com/example/generated/api/routes/api/ApiTypes.java",
+        "java/server/com/example/generated/api/routes/api/ApiServiceStub.java",
         "java/server/com/example/generated/api/routes/api/ApiService.java",
         "java/server/com/example/generated/api/transports/http/api/GenApiController.java",
     ]
@@ -531,6 +539,7 @@ def test_contract_artifacts_use_shared_selection_and_python_root_group_paths():
     ]
     assert route_summary["artifacts"]["python.client"]["files"] == [
         "python/client/client_app/api/routes/api/gen_client.py",
+        "python/client/client_app/api/routes/api/gen_types.py",
         "python/client/client_app/api/routes/api/client.py",
         "python/client/client_app/api/transports/http/gen_client.py",
     ]

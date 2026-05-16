@@ -65,18 +65,44 @@ func (prov *RspProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
 	ctx.Next()
 }
 
-func unwrapError(err error) (code int, message string, toast map[string]string) {
+func unwrapError(err error) (code int, message string, toast map[string]string, payload *errors.ApiErrorPayload) {
 	switch e := err.(type) {
-	case errors.CodeError:
+	case errors.ApiErrorCarrier:
+		apiPayload := e.ApiErrorPayload()
+		payload = &apiPayload
+		code = apiPayload.Code
+		message = apiPayload.Message
+		toast = apiPayload.Toast.Map()
+	case errors.ApiErrorCodeCarrier:
 		code = e.Code()
 		message = e.Message()
 	case nil:
 	default:
-		message = fmt.Sprintf("%v", e)
+		_ = fmt.Sprintf("%v", e)
+		message = "internal server error"
 		code = -1
 	}
 	if e, ok := err.(errors.ToastProvider); ok {
 		toast = e.Toast().Map()
+	}
+	if payload == nil && code != 0 {
+		payload = &errors.ApiErrorPayload{
+			ID:      "",
+			Group:   "",
+			Key:     "",
+			Code:    code,
+			Message: message,
+			Toast: errors.ToastPayload{
+				Level:   "error",
+				Default: message,
+			},
+		}
+		if toast != nil {
+			payload.Toast.Key = toast["key"]
+			payload.Toast.Level = toast["level"]
+			payload.Toast.Default = toast["default"]
+			payload.Toast.Text = toast["text"]
+		}
 	}
 	return
 }
@@ -89,24 +115,12 @@ func marshalXML[P any](enc *xml.Encoder, start xml.StartElement, xmlName xml.Nam
 	return enc.EncodeElement(inner, start)
 }
 
-func ensureValidStatusCode(code int, rsp any, err error) (int, any) {
-	if code != 0 && (code < 100 || code > 599) {
-		code = 400
-		if err != nil {
-			rsp = fmt.Sprintf("%v", err)
-		}
-	}
-	return code, rsp
-}
-
 func NewRSP_JSON[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (code int, rsp any) {
-	code, rsp = NewRSP_JSON_Entry(prov, data, err)
-	return ensureValidStatusCode(code, rsp, err)
+	return NewRSP_JSON_Entry(prov, data, err)
 }
 
 func NewRSP_XML[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (code int, rsp any) {
-	code, rsp = NewRSP_XML_Entry(prov, data, err)
-	return ensureValidStatusCode(code, rsp, err)
+	return NewRSP_XML_Entry(prov, data, err)
 }
 
 func MarshalXMLResponse[Q, B, P any](prov *RspProvider[Q, B, P], data *P) (string, error) {

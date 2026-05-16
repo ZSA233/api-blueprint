@@ -1,0 +1,51 @@
+{% autoescape false %}package {{ bp.root_package }}.routes.{{ group.package_suffix }};
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+{% if group.runtime_types_ref == "ApiTypes" %}
+import {{ bp.root_package }}.runtime.ApiTypes;
+{% endif %}
+{% if group.binary_schemas() %}
+import {{ bp.root_package }}.runtime.binary.ApiBinaryBody;
+{% endif %}
+import java.util.List;
+import java.util.Map;
+
+public final class {{ group.types_class }} {
+    private {{ group.types_class }}() {
+    }
+{% for schema in writer.model_schemas_for_group(group) %}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record {{ schema.name }}(
+{%- for field in schema.fields %}
+        @JsonProperty({{ field.wire_name | code_literal }}) {{ field.java_type }} {{ field.java_name }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ) {
+    }
+{% endfor %}
+{% for schema in group.binary_schemas() %}
+
+    public record {{ schema.name }}(ApiBinaryBody body) {
+        public ApiBinaryBody toBinaryBody() {
+            return body;
+        }
+    }
+
+    public static final class {{ schema.name }}Wire {
+        public static final String CONTENT_TYPE = {{ schema.content_type | code_literal }};
+
+        private {{ schema.name }}Wire() {
+        }
+
+        public static ApiBinaryBody toBinaryBody({{ schema.name }} value) {
+            return value.body();
+        }
+
+        public static ApiBinaryBody toBinaryBody(byte[] bytes) {
+            return ApiBinaryBody.of(bytes, CONTENT_TYPE);
+        }
+    }
+{% endfor %}
+}
+{% endautoescape %}

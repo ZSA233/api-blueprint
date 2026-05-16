@@ -17,7 +17,7 @@ PROTO_STRUCT_TYPE = Literal["struct", "generic", "alias"]
 
 
 class PackageName(str, enum.Enum):
-    COM_PROTOS = "protos"
+    COM_PROTOS = "types"
     COM_ENUMS = "enums"
     PROVIDER = "providers"
     ERROR = "errors"

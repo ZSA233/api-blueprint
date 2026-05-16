@@ -1,14 +1,37 @@
 from __future__ import annotations
 
-from typing import Any
+from dataclasses import asdict, is_dataclass
+from typing import Any, Mapping
 
 from ....runtime.client import ApiChannelBridge, ApiClientTransport, ApiSocketBridge, ApiStreamBridge
 
 from ....runtime.binary import ApiBinaryBody
-from .gen_binary import (
+
+
+from .gen_types import (
+    PacketQuery,
+    PacketResponse,
     DemoPacket,
     DemoPacketWire,
 )
+
+
+def _to_mapping(value: object) -> Mapping[str, Any] | None:
+    if value is None:
+        return None
+    if isinstance(value, Mapping):
+        return value
+    if is_dataclass(value):
+        return {key: item for key, item in asdict(value).items() if item is not None}
+    raise TypeError(f"expected mapping or dataclass request model, got {type(value).__name__}")
+
+
+def _from_mapping(model_type, value):
+    if value is None or isinstance(value, model_type):
+        return value
+    if isinstance(value, Mapping):
+        return model_type(**{key: value.get(key) for key in model_type.__dataclass_fields__})
+    return value
 
 
 class BinaryClient:
@@ -17,14 +40,17 @@ class BinaryClient:
 
     async def packet(
         self,
-        query: dict[str, Any] | None = None,
+        query: PacketQuery | Mapping[str, Any] | None = None,
         binary: DemoPacket | ApiBinaryBody = ...,
     ) -> Any:
-        response_type: str | None = 'RSP_Packet'
-        return await self._transport.request(
+        response_type: str | None = 'PacketResponse'
+        payload = await self._transport.request(
             "POST",
             "/api/binary/packet",
-            query=query,
+            route_id="api.binary.post.packet",
+            query=_to_mapping(query),
             binary=DemoPacketWire.to_binary_body(binary),
             response_type=response_type,
+            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
         )
+        return _from_mapping(PacketResponse, payload)

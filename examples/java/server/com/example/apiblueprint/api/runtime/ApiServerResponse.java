@@ -2,12 +2,15 @@
 package com.example.apiblueprint.api.runtime;
 
 public record ApiServerResponse<T>(
-    int code,
-    String message,
+    boolean ok,
     T data,
-    ApiToastPayload toast
+    ApiErrorPayload error
 ) {
     public static <T> ApiServerResponse<T> ok(T data) {
-        return new ApiServerResponse<>(0, "", data, null);
+        return new ApiServerResponse<>(true, data, null);
+    }
+
+    public static <T> ApiServerResponse<T> error(ApiErrorPayload error) {
+        return new ApiServerResponse<>(false, null, error);
     }
 }

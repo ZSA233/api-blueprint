@@ -139,14 +139,16 @@ Legacy `name/value/comment` bitflags tables remain compatible, but new schemas s
 
 ## Generated Output
 
-Generators emit route-group-local binary helpers and reuse the shared runtime. Go server / Go client use a separate `_gen_binary` package; Java/Kotlin emit `GenBinary` in the route package; TypeScript/Python emit a sibling `gen_binary` module. For example:
+Generators emit route-group-local binary helpers and reuse the shared runtime. Go server keeps a separate `_gen_binary` parser package because it is an internal request parser. Client SDKs expose binary packet and writer helpers from the route-local public types surface instead of a separate public `wire` namespace. For example:
 
 ```text
-routes/api/binary/_gen_binary/gen_binary.go
-routes/api/binary/GenBinary.java
-routes/api/binary/GenBinary.kt
+routes/api/binary/_gen_binary/gen_binary.go   # Go server
+routes/api/binary/gen_binary.go               # Go client
+routes/api/binary/BinaryTypes.java
+routes/api/binary/BinaryTypes.kt
 routes/api/binary/gen_binary.ts
 routes/api/binary/gen_binary.py
+routes/api/binary/gen_types.py
 runtime/binary/gen_runtime.go
 ```
 

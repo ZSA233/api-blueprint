@@ -4,13 +4,15 @@ package com.example.apiblueprint.api.transports.http;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.example.apiblueprint.api.runtime.ApiCodeError;
-import com.example.apiblueprint.api.runtime.ApiErrorCatalogEntry;
+import com.example.apiblueprint.api.runtime.ApiError;
+import com.example.apiblueprint.api.runtime.ApiErrorEntry;
+import com.example.apiblueprint.api.runtime.ApiErrorPayload;
 import com.example.apiblueprint.api.runtime.ApiException;
 import com.example.apiblueprint.api.runtime.ApiRequest;
+import com.example.apiblueprint.api.runtime.ApiResponseEnvelope;
+import com.example.apiblueprint.api.runtime.ApiErrors;
 import com.example.apiblueprint.api.runtime.ApiToastPayload;
 import com.example.apiblueprint.api.runtime.ApiTransport;
-import com.example.apiblueprint.api.runtime.GenApiErrorCatalog;
 import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
 import java.io.IOException;
 import java.net.URI;
@@ -51,13 +53,17 @@ public class GenJdkHttpApiTransport implements ApiTransport {
         HttpResponse<String> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         String body = response.body() == null ? "" : response.body();
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            Optional<ApiError> apiError = decodeApiError(request.routeId(), body, request.responseEnvelope());
+            if (apiError.isPresent()) {
+                throw apiError.get();
+            }
             throw new ApiException(response.statusCode(), body);
         }
         if (body.isBlank()) {
             return null;
         }
-        if ("GeneralWrapper".equals(request.responseWrapper())) {
-            return decodeGeneralWrapper(request, body);
+        if (!"none".equals(request.responseEnvelope().kind())) {
+            return decodeEnvelope(request, body);
         }
         if (!isJson(request.responseMediaType())) {
             return request.responseClass().cast(body);
@@ -126,30 +132,141 @@ public class GenJdkHttpApiTransport implements ApiTransport {
         return normalized.equals("application/json") || normalized.endsWith("+json");
     }
 
-    private <T> T decodeGeneralWrapper(ApiRequest<T> request, String body) throws IOException {
+    private <T> T decodeEnvelope(ApiRequest<T> request, String body) throws IOException {
         JsonNode root = objectMapper.readTree(body);
-        int code = root.path("code").asInt(0);
-        if (code != 0) {
-            Optional<ApiErrorCatalogEntry> entry = GenApiErrorCatalog.ERROR_CATALOG_BY_ID.values()
-                .stream()
-                .filter(item -> item.code() == code)
-                .findFirst();
-            ApiToastPayload toast = null;
-            JsonNode toastNode = root.get("toast");
-            if (toastNode != null && toastNode.isObject()) {
-                toast = new ApiToastPayload(
-                    toastNode.path("key").asText(""),
-                    toastNode.path("level").asText(""),
-                    toastNode.path("default").asText(""),
-                    toastNode.path("text").asText("")
-                );
+        ApiResponseEnvelope envelope = request.responseEnvelope();
+        if ("code_message_data".equals(envelope.kind())) {
+            int code = root.path(envelope.fields().code()).asInt(0);
+            if (code == envelope.successCode()) {
+                JsonNode data = root.get(envelope.fields().data());
+                if (data == null || data.isNull()) {
+                    return null;
+                }
+                return objectMapper.convertValue(data, request.responseClass());
             }
-            throw new ApiCodeError(code, root.path("message").asText(null), toast, body, entry.orElse(null));
+            ApiErrorPayload payload = parseCodeMessageEnvelopePayload(root, envelope, request.routeId());
+            Optional<ApiErrorEntry> entry = ApiErrors.lookup(payload, request.routeId());
+            throw new ApiError(payload, request.routeId(), body, entry.orElse(null));
         }
-        JsonNode data = root.get("data");
-        if (data == null || data.isNull()) {
-            return null;
+        if ("ok_data_error".equals(envelope.kind())) {
+            if (root.path(envelope.fields().ok()).asBoolean(false)) {
+                JsonNode data = root.get(envelope.fields().data());
+                if (data == null || data.isNull()) {
+                    return null;
+                }
+                return objectMapper.convertValue(data, request.responseClass());
+            }
+            ApiErrorPayload payload = parseApiErrorPayload(root.path(envelope.fields().error()), request.routeId());
+            Optional<ApiErrorEntry> entry = ApiErrors.lookup(payload, request.routeId());
+            throw new ApiError(payload, request.routeId(), body, entry.orElse(null));
         }
-        return objectMapper.convertValue(data, request.responseClass());
+        throw new IOException("Unsupported response envelope: " + envelope.kind());
+    }
+
+    private Optional<ApiError> decodeApiError(String routeId, String body, ApiResponseEnvelope envelope) {
+        if (body == null || body.isBlank()) {
+            return Optional.empty();
+        }
+        JsonNode root;
+        try {
+            root = objectMapper.readTree(body);
+        } catch (IOException ignored) {
+            return Optional.empty();
+        }
+        if ("code_message_data".equals(envelope.kind())) {
+            ApiErrorPayload payload = parseCodeMessageEnvelopePayload(root, envelope, routeId);
+            Optional<ApiErrorEntry> entry = ApiErrors.lookup(payload, routeId);
+            return Optional.of(new ApiError(payload, routeId, body, entry.orElse(null)));
+        }
+        JsonNode errorNode = root.path(envelope.fields().error());
+        JsonNode node = errorNode.isObject() ? errorNode : root.has("error") && root.get("error").isObject() ? root.get("error") : root;
+        if (!node.has("id") && !node.has("code")) {
+            return Optional.empty();
+        }
+        ApiErrorPayload payload = parseApiErrorPayload(node, routeId);
+        Optional<ApiErrorEntry> entry = ApiErrors.lookup(payload, routeId);
+        return Optional.of(new ApiError(payload, routeId, body, entry.orElse(null)));
+    }
+
+    private ApiErrorPayload parseCodeMessageEnvelopePayload(JsonNode root, ApiResponseEnvelope envelope, String routeId) {
+        JsonNode nested = root.path(envelope.fields().error());
+        ApiErrorPayload payload = nested.isObject()
+            ? parseApiErrorPayload(nested, routeId)
+            : new ApiErrorPayload("", "", "", 0, "", new ApiToastPayload("", "error", "", ""));
+        int code = payload.code() == 0 ? root.path(envelope.fields().code()).asInt(0) : payload.code();
+        String message = payload.message().isBlank() ? root.path(envelope.fields().message()).asText("") : payload.message();
+        ApiErrorPayload merged = new ApiErrorPayload(
+            payload.id(),
+            payload.group(),
+            payload.key(),
+            code,
+            message,
+            payload.toast()
+        );
+        Optional<ApiErrorEntry> entry = ApiErrors.lookup(merged, routeId);
+        if (entry.isEmpty()) {
+            return merged.message().isBlank()
+                ? new ApiErrorPayload(merged.id(), merged.group(), merged.key(), merged.code(), "API error " + merged.code(), merged.toast())
+                : merged;
+        }
+        ApiErrorEntry meta = entry.get();
+        return new ApiErrorPayload(
+            merged.id().isBlank() ? meta.id() : merged.id(),
+            merged.group().isBlank() ? meta.group() : merged.group(),
+            merged.key().isBlank() ? meta.key() : merged.key(),
+            merged.code() == 0 ? meta.code() : merged.code(),
+            merged.message().isBlank() ? meta.message() : merged.message(),
+            new ApiToastPayload(
+                merged.toast().key().isBlank() ? meta.toast().key() : merged.toast().key(),
+                merged.toast().level().isBlank() ? meta.toast().level() : merged.toast().level(),
+                merged.toast().defaultMessage().isBlank() ? meta.toast().defaultMessage() : merged.toast().defaultMessage(),
+                merged.toast().text()
+            )
+        );
+    }
+
+    private ApiErrorPayload parseApiErrorPayload(JsonNode node, String routeId) {
+        ApiToastPayload toast = parseToast(node.path("toast"));
+        int code = node.path("code").asInt(0);
+        ApiErrorPayload payload = new ApiErrorPayload(
+            node.path("id").asText(""),
+            node.path("group").asText(""),
+            node.path("key").asText(""),
+            code,
+            node.path("message").asText(""),
+            toast
+        );
+        Optional<ApiErrorEntry> entry = ApiErrors.lookup(payload, routeId);
+        if (entry.isEmpty()) {
+            return payload.message().isBlank()
+                ? new ApiErrorPayload(payload.id(), payload.group(), payload.key(), payload.code(), "API error " + payload.code(), payload.toast())
+                : payload;
+        }
+        ApiErrorEntry meta = entry.get();
+        return new ApiErrorPayload(
+            payload.id().isBlank() ? meta.id() : payload.id(),
+            payload.group().isBlank() ? meta.group() : payload.group(),
+            payload.key().isBlank() ? meta.key() : payload.key(),
+            payload.code() == 0 ? meta.code() : payload.code(),
+            payload.message().isBlank() ? meta.message() : payload.message(),
+            new ApiToastPayload(
+                payload.toast().key().isBlank() ? meta.toast().key() : payload.toast().key(),
+                payload.toast().level().isBlank() ? meta.toast().level() : payload.toast().level(),
+                payload.toast().defaultMessage().isBlank() ? meta.toast().defaultMessage() : payload.toast().defaultMessage(),
+                payload.toast().text()
+            )
+        );
+    }
+
+    private ApiToastPayload parseToast(JsonNode toastNode) {
+        if (toastNode == null || !toastNode.isObject()) {
+            return new ApiToastPayload("", "error", "", "");
+        }
+        return new ApiToastPayload(
+            toastNode.path("key").asText(""),
+            toastNode.path("level").asText(""),
+            toastNode.path("default").asText(""),
+            toastNode.path("text").asText("")
+        );
     }
 }

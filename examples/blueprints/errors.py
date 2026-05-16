@@ -13,3 +13,15 @@ class CommonErr(Model):
             level='warning',
         ),
     )
+
+
+class DemoErr(Model):
+    RATE_LIMITED = Error(
+        42901,
+        '请求过于频繁',
+        toast=Toast(
+            key='demo.rate_limited',
+            default='请求过于频繁，请稍后再试',
+            level='warning',
+        ),
+    )

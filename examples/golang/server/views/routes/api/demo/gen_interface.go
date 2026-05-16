@@ -9,7 +9,7 @@ import (
 type RouterInterface interface {
 	Abc(ctx *CTX_Abc, req *REQ_Abc) (rsp *RSP_Abc, err error)
 	TestPost(ctx *CTX_TestPost, req *REQ_TestPost) (rsp *RSP_TestPost, err error)
-	Z1put(ctx *CTX_Z1put, req *REQ_Z1put) (rsp *RSP_Z1put, err error)
+	PutDemo(ctx *CTX_PutDemo, req *REQ_PutDemo) (rsp *RSP_PutDemo, err error)
 	Delete(ctx *CTX_Delete, req *REQ_Delete) (rsp *RSP_Delete, err error)
 	Ws(ctx *CTX_Ws, req *REQ_Ws) (rsp *RSP_Ws, err error)
 	SweepEvents(
@@ -23,4 +23,5 @@ type RouterInterface interface {
 	PostDeprecated(ctx *CTX_PostDeprecated, req *REQ_PostDeprecated) (rsp *RSP_PostDeprecated, err error)
 	Raw(ctx *CTX_Raw, req *REQ_Raw) (rsp *RSP_Raw, err error)
 	MapModel(ctx *CTX_MapModel, req *REQ_MapModel) (rsp *RSP_MapModel, err error)
+	ErrorDemo(ctx *CTX_ErrorDemo, req *REQ_ErrorDemo) (rsp *RSP_ErrorDemo, err error)
 }

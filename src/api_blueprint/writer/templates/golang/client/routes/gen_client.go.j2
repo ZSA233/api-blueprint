@@ -16,11 +16,19 @@ type Gen{{ group.client_class }} struct {
 func NewGen{{ group.client_class }}(transport runtime.Transport) *Gen{{ group.client_class }} {
 	return &Gen{{ group.client_class }}{transport: transport}
 }
+
+type Client = Gen{{ group.client_class }}
+
+var NewClient = NewGen{{ group.client_class }}
+
+type {{ group.client_class }} = Gen{{ group.client_class }}
+
+var New{{ group.client_class }} = NewGen{{ group.client_class }}
 {% for route in group.routes %}
 {% set params = route_params(route, include_open=(route.kind in ["stream", "channel"])) %}
 {% if route.kind == "legacy_ws" or route.kind == "stream" or route.kind == "channel" %}
 
-func (client *Gen{{ client_class_for_route(route) }}) {{ connection_method_name(route) }}(ctx context.Context{% for param in params %}, {{ param }}{% endfor %}) error {
+func (client *Gen{{ group.client_class }}) {{ connection_method_name(route) }}(ctx context.Context{% for param in params %}, {{ param }}{% endfor %}) error {
 	request := runtime.ConnectionRequest{
 		Kind:    {{ route.kind | code_literal }},
 		RouteID: {{ route.route_id | code_literal }},
@@ -33,15 +41,16 @@ func (client *Gen{{ client_class_for_route(route) }}) {{ connection_method_name(
 {% else %}
 {% set response_type = route_response_type(route) %}
 
-func (client *Gen{{ client_class_for_route(route) }}) {{ route.operation }}(ctx context.Context{% for param in params %}, {{ param }}{% endfor %}) ({{ response_type }}, error) {
+func (client *Gen{{ group.client_class }}) {{ route.operation }}(ctx context.Context{% for param in params %}, {{ param }}{% endfor %}) ({{ response_type }}, error) {
 	request := runtime.Request{
-		Method:          {{ route.method | code_literal }},
-		Path:            {{ route.url | code_literal }},
-		ResponseWrapper: {{ response_wrapper_name(route) | code_literal }},
+		RouteID:          {{ route.route_id | code_literal }},
+		Method:           {{ route.method | code_literal }},
+		Path:             {{ route.url | code_literal }},
+		ResponseEnvelope: {{ route.response_envelope_go_literal | safe }},
 {% for field, value in runtime_request_fields(route) %}		{{ field }}: {{ value }},
 {% endfor %}	}
 {% if response_type == "any" %}	var response any
-{% else %}	var response RSP_{{ route.operation }}_BODY
+{% else %}	var response {{ route.response_type }}
 {% endif %}	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
 	}
