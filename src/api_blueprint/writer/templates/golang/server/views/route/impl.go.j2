@@ -1,10 +1,11 @@
 package {{ router_group.package }}
 
+{% set user_implements = router_group.user_implements() | list %}
+{% if user_implements %}
 import (
 	"fmt"
-	{% if router_group.uses_connection_runtime %}providers "{{ bp.writer.provider_imports | safe }}"
-	{% endif %}
 )
+{% endif %}
 
 type Router struct{
 	_GenRouter
@@ -14,7 +15,7 @@ func NewRouter() *Router {
 	return &Router{}
 }
 
-{% for impl in router_group.implements() %}
+{% for impl in user_implements %}
 func (impl *Router) {{ impl.signature | safe }} {
 	{{ impl.default_body | safe }}
 }

@@ -204,6 +204,9 @@ def test_typescript_generates_stream_and_channel_contracts(tmp_path: Path):
     class ClientInput(Model):
         text = String(description="text")
 
+    class ClientCancel(Model):
+        reason = String(description="reason")
+
     class CloseInfo(Model):
         reason = String(description="reason")
 
@@ -214,6 +217,14 @@ def test_typescript_generates_stream_and_channel_contracts(tmp_path: Path):
             progress=TaskProgress,
         ).CLOSE(CloseInfo)
         views.CHANNEL("/chat", delivery=ConnectionDelivery.UNORDERED).OPEN(Open).CLIENT_MESSAGE(ClientInput).SERVER_MESSAGE(TaskState).CLOSE(CloseInfo)
+        views.CHANNEL("/assistant").OPEN(Open).CLIENT_MESSAGE(
+            "AssistantClientMessage",
+            input=ClientInput,
+            cancel=ClientCancel,
+        ).SERVER_MESSAGE(
+            "AssistantServerMessage",
+            state=TaskState,
+        ).CLOSE(CloseInfo)
 
     output_dir = tmp_path / "typescript"
     output_dir.mkdir()
@@ -235,12 +246,38 @@ def test_typescript_generates_stream_and_channel_contracts(tmp_path: Path):
         '  | { type: "progress"; data: TaskProgress };'
         in models_text
     )
+    assert "export const TaskStreamMessageVariants = {" in models_text
+    assert "state(data: TaskState): TaskStreamMessage {" in models_text
+    assert 'return { type: "state", data };' in models_text
+    assert "export type TaskStreamMessageDispatchErrorKind = \"unknown_type\";" in models_text
+    assert "export class TaskStreamMessageDispatchError extends Error {" in models_text
+    assert "export function isTaskStreamMessageDispatchError(error: unknown): error is TaskStreamMessageDispatchError {" in models_text
+    assert "export type TaskStreamMessageHandlers<R> = {" in models_text
+    assert 'state: (data: TaskState, message: Extract<TaskStreamMessage, { type: "state" }>) => R;' in models_text
+    assert "export function dispatchTaskStreamMessage<R>(" in models_text
+    assert 'case "state": return handlers.state(message.data, message);' in models_text
+    assert 'throw new TaskStreamMessageDispatchError("unknown_type", message);' in models_text
+    assert (
+        "export type AssistantClientMessage =\n"
+        '  | { type: "input"; data: ClientInput }\n'
+        '  | { type: "cancel"; data: ClientCancel };'
+        in models_text
+    )
+    assert "export const AssistantClientMessageVariants = {" in models_text
+    assert "input(data: ClientInput): AssistantClientMessage {" in models_text
+    assert "export class AssistantClientMessageDispatchError extends Error {" in models_text
+    assert "export function isAssistantClientMessageDispatchError(error: unknown): error is AssistantClientMessageDispatchError {" in models_text
+    assert "export type AssistantClientMessageHandlers<R> = {" in models_text
+    assert "export function dispatchAssistantClientMessage<R>(" in models_text
     assert "subscribeEvents(" in client_text
     assert "openChat(" in client_text
+    assert "openAssistant(" in client_text
     assert "ApiStreamBridge<Types.TaskStreamMessage, Shared.CloseInfo>" in client_text
     assert "ApiChannelBridge<Shared.TaskState, Shared.ClientInput, Shared.CloseInfo>" in client_text
+    assert "ApiChannelBridge<Types.AssistantServerMessage, Types.AssistantClientMessage, Shared.CloseInfo>" in client_text
     assert "openStream<Types.TaskStreamMessage, Shared.CloseInfo>" in client_text
     assert "openChannel<Shared.TaskState, Shared.ClientInput, Shared.CloseInfo>" in client_text
+    assert "openChannel<Types.AssistantServerMessage, Types.AssistantClientMessage, Shared.CloseInfo>" in client_text
     assert 'connectionKind: "stream"' in client_text
     assert 'connectionKind: "channel"' in client_text
     assert 'scope: "session"' in client_text

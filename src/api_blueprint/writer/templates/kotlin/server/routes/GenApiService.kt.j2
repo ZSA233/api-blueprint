@@ -1,0 +1,20 @@
+{% autoescape false %}package {{ bp.root_package }}.routes.{{ group.package_suffix }}
+
+import {{ bp.root_package }}.runtime.*
+{% if group.routes | selectattr("has_binary_schema") | list %}
+import {{ bp.root_package }}.runtime.binary.ApiBinaryBody
+{% endif %}
+
+public interface Gen{{ writer.service_base_name(group) }}Service {
+{% for route in group.routes %}
+    public suspend fun {{ route.method_name }}(
+{%- for type_name, name in writer.server_route_params(route) %}
+        {{ name }}: {{ type_name }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ): {{ writer.server_response_type(route) }}
+{% if not loop.last %}
+
+{% endif %}
+{% endfor %}
+}
+{% endautoescape %}

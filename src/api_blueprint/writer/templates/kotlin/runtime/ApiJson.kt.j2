@@ -1,0 +1,8 @@
+{% autoescape false %}package {{ bp.root_package }}.runtime
+
+import kotlinx.serialization.json.Json
+
+public val ApiJson: Json = Json {
+    ignoreUnknownKeys = true
+}
+{% endautoescape %}

@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any, Mapping
 
 from api_blueprint.writer.core.base import BaseBlueprint
+from api_blueprint.writer.core.message_helpers import unique_named_message_helpers
 from api_blueprint.writer.core.sdk_names import RoutePublicNames
 
 from .binary_schema import JavaBinarySchema, unique_java_binary_schemas
@@ -20,6 +21,24 @@ class JavaRouteParam:
     name: str
     java_type: str
     required: bool = True
+
+
+@dataclass(frozen=True)
+class JavaMessageVariant:
+    key: str
+    method_name: str
+    data_type: str
+    data_class: str
+
+
+@dataclass(frozen=True)
+class JavaMessageHelper:
+    name: str
+    variants_class: str
+    handlers_interface: str
+    exception_class: str
+    dispatch_method: str
+    variants: tuple[JavaMessageVariant, ...]
 
 
 class JavaRoute:
@@ -122,6 +141,14 @@ class JavaRoute:
             return to_java_member_name(f"open {self.operation}", fallback="open")
         return self.method_name
 
+    @property
+    def server_message_name(self) -> str | None:
+        return _message_name(self.connection.get("server_message"))
+
+    @property
+    def client_message_name(self) -> str | None:
+        return _message_name(self.connection.get("client_message"))
+
     def model_names(self) -> set[str]:
         names = {
             name
@@ -211,6 +238,30 @@ class JavaApiGroup:
             [route.binary_schema for route in self.routes if route.binary_schema is not None]
         )
 
+    def message_helpers(self, writer: "JavaBaseWriter") -> tuple[JavaMessageHelper, ...]:
+        helpers: list[JavaMessageHelper] = []
+        for descriptor in unique_named_message_helpers([route.route for route in self.routes]):
+            variants = tuple(
+                JavaMessageVariant(
+                    key=variant.key,
+                    method_name=to_java_member_name(variant.key, fallback="variant"),
+                    data_type=writer.schema_type(variant.model, self),
+                    data_class=writer.schema_class_literal(variant.model, self),
+                )
+                for variant in descriptor.variants
+            )
+            helpers.append(
+                JavaMessageHelper(
+                    name=descriptor.name,
+                    variants_class=f"{descriptor.name}Variants",
+                    handlers_interface=f"{descriptor.name}Handlers",
+                    exception_class=f"{descriptor.name}DispatchException",
+                    dispatch_method=to_java_member_name(f"dispatch {descriptor.name}", fallback="dispatchMessage"),
+                    variants=variants,
+                )
+            )
+        return tuple(helpers)
+
 
 class JavaBlueprint(BaseBlueprint["JavaBaseWriter"]):
     def __init__(self, writer: "JavaBaseWriter", bp: Any):
@@ -274,6 +325,12 @@ def _mapping(value: object) -> dict[str, Any]:
 
 def _model_name(value: object) -> str | None:
     return value if isinstance(value, str) and value else None
+
+
+def _message_name(value: object) -> str | None:
+    if not isinstance(value, Mapping):
+        return None
+    return _model_name(value.get("name"))
 
 
 def _java_string(value: object) -> str:

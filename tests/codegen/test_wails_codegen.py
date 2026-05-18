@@ -417,7 +417,7 @@ go 1.23.8
     assert "func ConnectionOpenHeaders[Q any]" in go_runtime
     assert "func ConnectionOpenEnvelopeSessionID[Q any](envelope *ConnectionOpenEnvelope[Q]) string" in go_runtime
     assert "func BuildConnectionDescriptor(spec ConnectionOpenSpec, sessionID string) SocketSessionDescriptor" in go_runtime
-    assert "CloseJSON(payload any) error" in go_runtime
+    assert "CloseJSON(ctx context.Context, payload any) error" in go_runtime
     assert "connection scope[%s] is not supported by the default SocketHub" in go_runtime
     assert "if options.BindQuery" in go_runtime
     assert 'return nil, fmt.Errorf("[WailsReq] json body is required")' in go_runtime

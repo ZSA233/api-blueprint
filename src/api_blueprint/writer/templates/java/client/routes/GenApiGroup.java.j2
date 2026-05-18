@@ -81,7 +81,7 @@ public class {{ group.generated_client_class }} {
     }
 {% elif route.kind == "stream" %}
 
-    public ApiStreamBridge<Object, Object> {{ route.connection_method_name }}(
+    public ApiStreamBridge<{{ writer.server_message_type(route, group) }}, Object> {{ route.connection_method_name }}(
 {%- for type_name, name in writer.route_params(route, group) %}
         {{ type_name }} {{ name }}{% if not loop.last %},{% endif %}
 {%- endfor %}
@@ -103,7 +103,7 @@ public class {{ group.generated_client_class }} {
     }
 {% elif route.kind == "channel" %}
 
-    public ApiChannelBridge<Object, Object, Object> {{ route.connection_method_name }}(
+    public ApiChannelBridge<{{ writer.server_message_type(route, group) }}, {{ writer.client_message_type(route, group) }}, Object> {{ route.connection_method_name }}(
 {%- for type_name, name in writer.route_params(route, group) %}
         {{ type_name }} {{ name }}{% if not loop.last %},{% endif %}
 {%- endfor %}

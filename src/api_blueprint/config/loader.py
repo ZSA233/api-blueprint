@@ -27,6 +27,7 @@ AliasTargetKind = Literal[
     "go-client",
     "typescript-client",
     "kotlin-client",
+    "kotlin-server",
     "java-server",
     "java-client",
     "python-server",
@@ -46,6 +47,7 @@ ALIAS_TARGET_KINDS: dict[AliasTable, AliasTargetKind] = {
     ("go", "client"): "go-client",
     ("typescript", "client"): "typescript-client",
     ("kotlin", "client"): "kotlin-client",
+    ("kotlin", "server"): "kotlin-server",
     ("java", "server"): "java-server",
     ("java", "client"): "java-client",
     ("python", "server"): "python-server",
@@ -117,7 +119,7 @@ def _normalize_alias_target(label: str, kind: AliasTargetKind, item: TargetPaylo
 def _normalize_contextual_module(label: str, kind: AliasTargetKind, target: TargetPayload) -> None:
     if kind in {"python-server", "python-client", "grpc-python"}:
         _move_matching_alias_field(label, target, source="module", destination="python_package_root")
-    if kind in {"kotlin-client", "java-client", "java-server"}:
+    if kind in {"kotlin-client", "kotlin-server", "java-client", "java-server"}:
         _move_matching_alias_field(label, target, source="module", destination="package")
 
 

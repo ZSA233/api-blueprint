@@ -58,7 +58,7 @@ README 应链接到以下用户文档：
 2. 在运行时构建 FastAPI/OpenAPI 文档服务。
 3. 从 Blueprint 构建唯一协议真源 `ContractGraph`。
 4. 通过 `api-gen check`、`api-gen inspect`、`api-gen manifest`、`api-gen diff` 和 `api-gen generate` 检查、查询、归档和生成代码。
-5. 基于同一份 `ContractGraph` 输出 Go server/client、TypeScript client、Kotlin Android client、Java client/server、Python client/server、Wails v2/v3 overlay、gRPC proto/service 定义，以及 protoc-backed Go/Python gRPC stub。
+5. 基于同一份 `ContractGraph` 输出 Go server/client、TypeScript client、Kotlin client/server、Java client/server、Python client/server、Wails v2/v3 overlay、gRPC proto/service 定义，以及 protoc-backed Go/Python gRPC stub。
 
 仓库事实：
 
@@ -83,13 +83,14 @@ README 应链接到以下用户文档：
 - Blueprint DSL 把 RPC、`STREAM`、`CHANNEL` 作为同一套 route contract 中的一等能力。
 - `STREAM` 表示服务端持续推送，`CHANNEL` 表示双向消息通道；长连接语义通过 `OPEN`、`SERVER_MESSAGE`、`CLIENT_MESSAGE`、typed `CLOSE`、`ConnectionScope` 与 `ConnectionDelivery` 描述。
 - 多消息类型必须通过单个判别联合消息契约声明，避免多个裸 event 名。
+- 具名 variant 消息联合在 Go、TypeScript、Python、Kotlin、Java 中生成构造、解码或分发关键帧 helper，并保持 `{ type, data }` wire shape；Go server 额外为带具名 client message 的 `CHANNEL` 首次生成用户拥有的 `<leaf>_session.go` / `<leaf>_processor.go` / `<leaf>_error.go` scaffold，后续不覆盖；长连接 `Send`、`Close`、`Abort` 为 context-first API。详细使用方式放在 generators 专题文档，不写入 README 首页。
 - Markdown Binary Schema 是 HTTP 二进制请求体的一等契约，route 使用 `.REQ_BINARY(path)` 绑定 Markdown schema。
 - 稳定字段身份使用 `field(number, Field(...), optional=True)`，互斥选择使用 `choice="..."`，通用语义类型使用 `DateTime`、`JSONValue`、`AnyValue`。
 - `operation_id` 是 RPC / `STREAM` / `CHANNEL` 的稳定 operation 命名能力；它改变 generated operation surface，不改变 route id、path 或 ContractGraph 连接语义。
 
 ## Contract 与 CLI 事实
 
-- 公开 target kind：`contract`、`go-server`、`go-client`、`typescript-client`、`kotlin-client`、`java-server`、`java-client`、`python-server`、`python-client`、`http-transport`、`wails-transport`、`grpc-proto`、`grpc-go`、`grpc-python`。
+- 公开 target kind：`contract`、`go-server`、`go-client`、`typescript-client`、`kotlin-server`、`kotlin-client`、`java-server`、`java-client`、`python-server`、`python-client`、`http-transport`、`wails-transport`、`grpc-proto`、`grpc-go`、`grpc-python`。
 - `api-gen check` 与 writer 共享 planner / capability metadata，生成前校验 target dependency、route kind、request kind 与 response envelope。
 - `api-gen inspect routes/route/files/schema/binary-schema/errors` 是人类和 AI agent 查询 ContractGraph 的主入口；应优先按需查询，而不是先读生成物、完整 manifest 或 shards。
 - 默认 contract target 生成轻量 `api-blueprint.index.json`；完整 JSON manifest、agent manifest、Markdown agent guide、contract shards 和 diff 通过显式命令或 formats/profile 生成。
@@ -112,6 +113,7 @@ README 应链接到以下用户文档：
 - Go client 输出 runtime、routes、transports/http、根 facade；推荐从 `apiclient.NewHTTP(...)` 进入。
 - TypeScript client 输出 runtime、routes、transports，并通过 transport facade 注入 HTTP/Wails 能力。
 - Kotlin / Java / Python 采用各自语言的 package-first 输出布局；这些 target 按 preview 口径描述，文档应要求使用方把生成结果纳入自身类型检查、lint、编译或 smoke。
+- Kotlin client 使用 OkHttp + kotlinx.serialization；Kotlin server 使用 Ktor + kotlinx.serialization，生成 service contract/stub、HTTP RPC adapter 和协议关键帧 helper。Kotlin server 不生成 WebSocket/SSE/session engine；非 RPC 连接 route 的 Ktor adapter 返回明确 501。
 - Java client 使用 Java 17 `HttpClient` + Jackson，Java server 使用 Spring MVC + Jackson；不生成 Gradle/Maven 工程，也不生成 JPMS `module-info.java`。
 - Python client 是 async-first，推荐从 `create_client(base_url)` 聚合 facade 进入；Python server 输出 service contract/stub 与 FastAPI HTTP adapter scaffold。
 - Wails target 保持 Go + TypeScript only；`frontend_mode = "external"` 只生成 API artifacts，外部 frontend 需要加载 Wails runtime。

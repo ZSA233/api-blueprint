@@ -2,7 +2,6 @@
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationStrategy
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.JsonObject
@@ -111,10 +110,6 @@ public interface ApiTransport {
     public fun openChannel(options: ChannelConnectOptions): ApiChannelBridge<*, *, *>
 }
 
-private val apiJson = Json {
-    ignoreUnknownKeys = true
-}
-
 public suspend fun <T> ApiTransport.request(request: ApiRequest<T>): T {
     val response = execute(request)
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -132,14 +127,14 @@ public suspend fun <T> ApiTransport.request(request: ApiRequest<T>): T {
         @Suppress("UNCHECKED_CAST")
         return body as T
     }
-    return apiJson.decodeFromString(request.responseSerializer, body)
+    return ApiJson.decodeFromString(request.responseSerializer, body)
 }
 
 private fun unwrapResponseEnvelope(body: String, envelope: ApiResponseEnvelope, routeId: String): String {
     if (envelope.kind == "none" || body.isBlank()) {
         return body
     }
-    val root = runCatching { apiJson.parseToJsonElement(body).jsonObject }.getOrNull() ?: return body
+    val root = runCatching { ApiJson.parseToJsonElement(body).jsonObject }.getOrNull() ?: return body
     if (envelope.kind == "code_message_data") {
         val code = root[envelope.fields.code]?.jsonPrimitive?.intOrNull ?: 0
         if (code == envelope.successCode) {
@@ -167,7 +162,7 @@ private fun unwrapResponseEnvelope(body: String, envelope: ApiResponseEnvelope, 
 }
 
 private fun decodeApiErrorPayload(body: String, routeId: String, envelope: ApiResponseEnvelope): ApiErrorPayload? {
-    val root = runCatching { apiJson.parseToJsonElement(body).jsonObject }.getOrNull() ?: return null
+    val root = runCatching { ApiJson.parseToJsonElement(body).jsonObject }.getOrNull() ?: return null
     if (envelope.kind == "code_message_data") {
         return codeMessageEnvelopePayload(root, envelope, routeId)
     }

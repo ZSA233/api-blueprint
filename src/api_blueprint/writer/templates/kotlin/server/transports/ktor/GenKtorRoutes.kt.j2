@@ -1,0 +1,187 @@
+{% autoescape false %}package {{ bp.root_package }}.transports.ktor.{{ group.package_suffix }}
+
+import {{ bp.root_package }}.routes.{{ group.package_suffix }}.*
+import {{ bp.root_package }}.runtime.*
+{% if group.binary_schemas() %}
+import {{ bp.root_package }}.runtime.binary.ApiBinaryBody
+import {{ bp.root_package }}.runtime.binary.RawBinaryBody
+{% endif %}
+import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.Parameters
+import io.ktor.server.application.ApplicationCall
+import io.ktor.server.request.receive
+import io.ktor.server.request.receiveParameters
+import io.ktor.server.request.receiveText
+import io.ktor.server.response.respondText
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.delete
+import io.ktor.server.routing.get
+import io.ktor.server.routing.patch
+import io.ktor.server.routing.post
+import io.ktor.server.routing.put
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.builtins.*
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+
+public fun Route.register{{ writer.service_base_name(group) }}Routes(
+    service: Gen{{ writer.service_base_name(group) }}Service = {{ writer.service_base_name(group) }}ServiceStub(),
+) {
+{% for route in group.routes %}
+{%- if route.is_rpc %}
+    {{ route.http_method | lower }}({{ route.url | code_literal }}) {
+{%- if route.query_type %}
+        val query = decodeParameters(call.request.queryParameters, {{ route.query_type }}.serializer())
+{%- endif %}
+{%- if route.json_type %}
+        val json = ApiJson.decodeFromString({{ route.json_type }}.serializer(), call.receiveText().ifBlank { "{}" })
+{%- endif %}
+{%- if route.form_type %}
+        val form = decodeParameters(call.receiveParameters(), {{ route.form_type }}.serializer())
+{%- endif %}
+{%- if route.has_binary_schema %}
+        val binaryBody = RawBinaryBody(call.receive<ByteArray>())
+{%- elif route.binary_type %}
+        val binaryBody = call.receive<ByteArray>()
+{%- endif %}
+        try {
+            val result = service.{{ route.method_name }}(
+{%- for type_name, name in writer.server_route_params(route) %}
+                {{ name }} = {{ name }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+            )
+            respondSuccess(call, result, {{ route.response_serializer_expr }}, {{ route.response_envelope_literal | safe }}, {{ route.response_media_type | code_literal }})
+        } catch (error: ApiError) {
+            respondApiError(call, error, {{ route.response_envelope_literal | safe }}, {{ route.protocol.route.route_id | code_literal }})
+        }
+    }
+{%- else %}
+    {{ route.http_method | lower }}({{ route.url | code_literal }}) {
+        call.respondText(
+            {{ (writer.route_kind(route) ~ " route is not implemented by the generated Ktor adapter") | code_literal }},
+            status = HttpStatusCode.NotImplemented,
+        )
+    }
+{%- endif %}
+{% if not loop.last %}
+
+{% endif %}
+{% endfor %}
+}
+
+private fun <T> decodeParameters(parameters: Parameters, serializer: KSerializer<T>): T {
+    val element = buildJsonObject {
+        parameters.entries().forEach { entry ->
+            entry.value.firstOrNull()?.let { value ->
+                put(entry.key, JsonPrimitive(value))
+            }
+        }
+    }
+    return ApiJson.decodeFromJsonElement(serializer, element)
+}
+
+private suspend fun <T> respondSuccess(
+    call: ApplicationCall,
+    data: T,
+    serializer: KSerializer<T>,
+    envelope: ApiResponseEnvelope,
+    mediaType: String,
+) {
+    val body = encodeSuccessBody(data, serializer, envelope, mediaType)
+    call.respondText(body, contentType = contentType(mediaType))
+}
+
+private fun <T> encodeSuccessBody(
+    data: T,
+    serializer: KSerializer<T>,
+    envelope: ApiResponseEnvelope,
+    mediaType: String,
+): String {
+    if (mediaType != "application/json") {
+        return data?.toString().orEmpty()
+    }
+    val payload = if (serializer.descriptor.serialName == "kotlin.Unit") {
+        JsonNull
+    } else {
+        ApiJson.encodeToJsonElement(serializer, data)
+    }
+    if (envelope.kind == "none") {
+        return payload.toString()
+    }
+    if (envelope.kind == "code_message_data") {
+        return buildJsonObject {
+            put(envelope.fields.code, JsonPrimitive(envelope.successCode))
+            put(envelope.fields.message, JsonPrimitive(envelope.successMessage))
+            put(envelope.fields.data, payload)
+        }.toString()
+    }
+    if (envelope.kind == "ok_data_error") {
+        return buildJsonObject {
+            put(envelope.fields.ok, JsonPrimitive(true))
+            put(envelope.fields.data, payload)
+        }.toString()
+    }
+    return payload.toString()
+}
+
+private suspend fun respondApiError(
+    call: ApplicationCall,
+    error: ApiError,
+    envelope: ApiResponseEnvelope,
+    routeId: String,
+) {
+    val payload = normalizeApiErrorPayload(error.payload, routeId)
+    val body = encodeErrorBody(payload, envelope)
+    val status = if (envelope.kind == "none") HttpStatusCode.InternalServerError else HttpStatusCode.OK
+    call.respondText(body, contentType = ContentType.Application.Json, status = status)
+}
+
+private fun encodeErrorBody(payload: ApiErrorPayload, envelope: ApiResponseEnvelope): String {
+    val payloadElement = ApiJson.encodeToJsonElement(ApiErrorPayload.serializer(), payload)
+    if (envelope.kind == "code_message_data") {
+        return buildJsonObject {
+            put(envelope.fields.code, JsonPrimitive(payload.code))
+            put(envelope.fields.message, JsonPrimitive(payload.message))
+            put(envelope.fields.data, JsonNull)
+            if (envelope.errorIdentity != "none") {
+                put(envelope.fields.error, payloadElement)
+            }
+        }.toString()
+    }
+    if (envelope.kind == "ok_data_error") {
+        return buildJsonObject {
+            put(envelope.fields.ok, JsonPrimitive(false))
+            put(envelope.fields.error, payloadElement)
+        }.toString()
+    }
+    return payloadElement.toString()
+}
+
+private fun normalizeApiErrorPayload(payload: ApiErrorPayload, routeId: String): ApiErrorPayload {
+    val entry = lookupApiError(payload, routeId)
+    val code = if (payload.code != 0) payload.code else entry?.code ?: 0
+    val message = payload.message.ifBlank { entry?.message ?: "API error $code" }
+    val toast = payload.toast
+    return ApiErrorPayload(
+        id = payload.id.ifBlank { entry?.id.orEmpty() },
+        group = payload.group.ifBlank { entry?.group.orEmpty() },
+        key = payload.key.ifBlank { entry?.key.orEmpty() },
+        code = code,
+        message = message,
+        toast = ApiToastPayload(
+            key = toast.key.ifBlank { entry?.toast?.key.orEmpty() },
+            level = toast.level.ifBlank { entry?.toast?.level ?: "error" },
+            default = toast.default.ifBlank { entry?.toast?.default ?: message },
+            text = toast.text,
+        ),
+    )
+}
+
+private fun contentType(mediaType: String): ContentType =
+    if (mediaType == "application/json") ContentType.Application.Json else ContentType.parse(mediaType)
+{% endautoescape %}

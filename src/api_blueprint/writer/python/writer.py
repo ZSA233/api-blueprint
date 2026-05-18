@@ -48,6 +48,7 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
     route_template: str
     transport_template: str
     target_label: str
+    generated_header: str
 
     def __init__(
         self,
@@ -150,11 +151,13 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
                 handle.write(f"from .{self.runtime_template.removesuffix('.py')} import *\n")
         with self.write_file(plan.runtime.generated_file, overwrite=True) as handle:
             if handle:
+                handle.write(self.generated_header)
                 handle.write(_render_python(self.runtime_template, context, "runtime"))
         binary_runtime_dir = plan.runtime.directory / "binary"
         self._ensure_package_markers(binary_runtime_dir)
         with self.write_file(binary_runtime_dir / "gen_runtime.py", overwrite=True) as handle:
             if handle:
+                handle.write(self.generated_header)
                 handle.write(_render_python("gen_runtime.py", context, "runtime/binary"))
         with self.write_file(binary_runtime_dir / "__init__.py", overwrite=True) as handle:
             if handle:
@@ -162,9 +165,11 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
         self._write_runtime_errors_facade(plan.runtime.directory)
         with self.write_file(plan.runtime.directory / "gen_errors.py", overwrite=True) as handle:
             if handle:
+                handle.write(self.generated_header)
                 handle.write(_render_python("gen_errors.py", context, "runtime"))
         with self.write_file(plan.runtime.directory / "gen_error_lookup.py", overwrite=True) as handle:
             if handle:
+                handle.write(self.generated_header)
                 handle.write(_render_python("gen_error_lookup.py", context, "runtime"))
         self._cleanup_stale_generated(plan.runtime.directory / "gen_error_catalog.py")
 
@@ -176,6 +181,7 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
                 handle.write(f"from .{self.transport_template.removesuffix('.py')} import *\n")
         with self.write_file(plan.http_transport.generated_file, overwrite=True) as handle:
             if handle:
+                handle.write(self.generated_header)
                 handle.write(_render_python(self.transport_template, context, "transports/http"))
         self._write_client_facade(bp, plan)
 
@@ -196,23 +202,25 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
                 handle.write(self._default_public_import())
         with self.write_file(group_plan.generated_file, overwrite=True) as handle:
             if handle:
-                handle.write(_render_python(self.route_template, {"group": group_plan.group}, "routes"))
+                handle.write(self.generated_header)
+                handle.write(_render_python(self.route_template, {"writer": self, "group": group_plan.group}, "routes"))
         binary_schemas = group_plan.group.binary_schemas()
         binary_file = group_plan.directory / ROUTE_BINARY_MODULE
         legacy_binary_dir = group_plan.directory / LEGACY_ROUTE_BINARY_DIR
         if binary_schemas:
             with self.write_file(binary_file, overwrite=True) as handle:
                 if handle:
+                    handle.write(self.generated_header)
                     handle.write(
                         _render_python(
-                                "gen_binary.py",
-                                {
-                                    "binary_schemas": binary_schemas,
-                                    "runtime_import_prefix": group_plan.group.runtime_import_prefix,
-                                },
-                                "routes/binary",
-                            )
+                            "gen_binary.py",
+                            {
+                                "binary_schemas": binary_schemas,
+                                "runtime_import_prefix": group_plan.group.runtime_import_prefix,
+                            },
+                            "routes/binary",
                         )
+                    )
             self._cleanup_legacy_binary_dir(legacy_binary_dir)
             for legacy_name in LEGACY_ROUTE_BINARY_MODULES:
                 legacy_file = group_plan.directory / legacy_name
@@ -226,10 +234,10 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
                 if legacy_file.exists():
                     legacy_file.unlink()
             self._cleanup_legacy_binary_dir(legacy_binary_dir)
-        if isinstance(self, PythonClientWriter):
-            with self.write_file(group_plan.directory / ROUTE_TYPES_MODULE, overwrite=True) as handle:
-                if handle:
-                    handle.write(_render_python("gen_types.py", {"group": group_plan.group}, "routes"))
+        with self.write_file(group_plan.directory / ROUTE_TYPES_MODULE, overwrite=True) as handle:
+            if handle:
+                handle.write(self.generated_header)
+                handle.write(_render_python("gen_types.py", {"writer": self, "group": group_plan.group}, "routes"))
         self._cleanup_legacy_route_dir(group_plan)
 
     def _write_client_facade(self, bp: PythonBlueprint, plan) -> None:
@@ -237,6 +245,7 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
             return
         with self.write_file(plan.root_directory / "gen_client.py", overwrite=True) as handle:
             if handle:
+                handle.write(self.generated_header)
                 handle.write(_render_python("gen_root_client.py", {"writer": self, "bp": bp, "plan": plan}, ""))
         with self.write_file(plan.root_directory / "client.py", overwrite=False) as handle:
             if handle:
@@ -288,20 +297,17 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
         return True
 
     def _default_public_import(self) -> str:
-        if isinstance(self, PythonClientWriter):
-            return (
-                f"from .{self.route_template.removesuffix('.py')} import *\n"
-                f"from .{ROUTE_TYPES_MODULE.removesuffix('.py')} import *\n"
-            )
-        return f"from .{self.route_template.removesuffix('.py')} import *\n"
+        return (
+            f"from .{self.route_template.removesuffix('.py')} import *\n"
+            f"from .{ROUTE_TYPES_MODULE.removesuffix('.py')} import *\n"
+        )
 
     def _legacy_default_public_import(self) -> str:
         return f"from .{self.route_template.removesuffix('.py')} import *\n"
 
     def _should_refresh_public_import(self, public_file: Path) -> bool:
         return (
-            isinstance(self, PythonClientWriter)
-            and public_file.is_file()
+            public_file.is_file()
             and public_file.read_text(encoding="utf-8") == self._legacy_default_public_import()
         )
 
@@ -354,6 +360,7 @@ class PythonClientWriter(PythonBaseWriter):
     route_template = "gen_client.py"
     transport_template = "gen_client.py"
     target_label = "Python client"
+    generated_header = "# Code generated by api-blueprint (Python client); DO NOT EDIT.\n"
 
 
 class PythonServerWriter(PythonBaseWriter):
@@ -361,6 +368,7 @@ class PythonServerWriter(PythonBaseWriter):
     route_template = "gen_service.py"
     transport_template = "gen_server.py"
     target_label = "Python server"
+    generated_header = "# Code generated by api-blueprint (Python server); DO NOT EDIT.\n"
 
 
 def _route_manifest(router: Router, protocol: RouteProtocolContract) -> dict[str, object]:

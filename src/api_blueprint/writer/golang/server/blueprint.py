@@ -248,11 +248,48 @@ class GolangRouterGroup:
                 "signature": view.interface_signature,
                 "default_body": view.default_body,
                 "is_connection": view.is_connection,
+                "connection_scaffold": view.connection_scaffold() is not None,
             }
 
+    def user_implements(self) -> Generator[dict[str, Any], None, None]:
+        for impl in self.implements():
+            if impl["connection_scaffold"]:
+                continue
+            yield impl
+
     def message_unions(self) -> Generator[dict[str, Any], None, None]:
+        seen: set[str] = set()
         for router in self.group:
-            yield from self._router_view(router).message_unions()
+            for union in self._router_view(router).message_unions():
+                name = union["name"]
+                if name in seen:
+                    continue
+                seen.add(name)
+                yield union
+
+    def connection_aliases(self) -> Generator[dict[str, str], None, None]:
+        for router in self.group:
+            alias = self._router_view(router).connection_alias()
+            if alias is not None:
+                yield alias
+
+    def client_message_cases(self) -> Generator[dict[str, Any], None, None]:
+        seen: set[str] = set()
+        for router in self.group:
+            cases = self._router_view(router).client_message_cases()
+            if cases is None:
+                continue
+            name = cases["name"]
+            if name in seen:
+                continue
+            seen.add(name)
+            yield cases
+
+    def connection_scaffolds(self) -> Generator[dict[str, Any], None, None]:
+        for router in self.group:
+            scaffold = self._router_view(router).connection_scaffold()
+            if scaffold is not None:
+                yield scaffold
 
     @property
     def uses_connection_runtime(self) -> bool:
@@ -523,13 +560,37 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
 
     def gen_routers(self, group: GolangRouterGroup) -> None:
         plan = build_go_server_route_group_plan(self.writer, self, group)
-        ctx = {"writer": self.writer, "bp": self, "router_group": group}
+        message_unions = list(group.message_unions())
+        client_message_cases = list(group.client_message_cases())
+        connection_scaffolds = list(group.connection_scaffolds())
+        ctx = {
+            "writer": self.writer,
+            "bp": self,
+            "router_group": group,
+            "message_unions": message_unions,
+            "client_message_cases": client_message_cases,
+            "connection_scaffolds": connection_scaffolds,
+        }
         self.gen_binary_router(group, plan.route_dir)
         for name, text in iter_render(LANG, ctx, "server/views/route"):
+            if name == "gen_messages.go" and not message_unions:
+                continue
+            if name == "gen_message_cases.go" and not client_message_cases:
+                continue
             overwrite = name.startswith("gen_")
             with self.writer.write_file(plan.route_dir / name, overwrite=overwrite) as handle:
                 if handle:
                     handle.write(text)
+        for scaffold in connection_scaffolds:
+            scaffold_ctx = {**ctx, "scaffold": scaffold}
+            for template_name, output_name in (
+                ("session.go", scaffold["session_file"]),
+                ("processor.go", scaffold["processor_file"]),
+                ("error.go", scaffold["error_file"]),
+            ):
+                with self.writer.write_file(plan.route_dir / output_name, overwrite=False) as handle:
+                    if handle:
+                        handle.write(render(LANG, template_name, scaffold_ctx, "server/views/route/scaffold"))
 
     def gen_binary_router(self, group: GolangRouterGroup, view_dir: Path) -> None:
         binary_schemas = group.binary_schemas()

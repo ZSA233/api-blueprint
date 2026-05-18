@@ -28,6 +28,8 @@ KOTLIN_VERSION = "2.1.21"
 KOTLINX_COROUTINES_VERSION = "1.10.2"
 KOTLINX_SERIALIZATION_JSON_VERSION = "1.8.1"
 OKHTTP_VERSION = "4.12.0"
+OKIO_VERSION = "3.9.1"
+KTOR_VERSION = "3.1.3"
 JACKSON_DATABIND_VERSION = "2.17.2"
 SPRING_BOOT_VERSION = "3.3.6"
 GRADLE_BIN_ENV = "API_BLUEPRINT_GRADLE_BIN"
@@ -39,6 +41,9 @@ BLUEPRINT_GOLANG_SERVER_PRESERVED = (
     "go.sum",
     "main.go",
     "views/routes/api/binary/impl.go",
+    "views/routes/api/demo/assistant_session_error.go",
+    "views/routes/api/demo/assistant_session_processor.go",
+    "views/routes/api/demo/assistant_session_session.go",
     "views/routes/api/demo/impl.go",
     "views/routes/api/hello/impl.go",
 )
@@ -124,6 +129,8 @@ class BlueprintExampleWorkspace:
     golang_suite_dir: Path
     typescript_dir: Path
     kotlin_dir: Path
+    kotlin_client_dir: Path
+    kotlin_server_dir: Path
     java_dir: Path
     java_client_dir: Path
     java_server_dir: Path
@@ -312,6 +319,8 @@ def _blueprint_workspace(root: Path) -> BlueprintExampleWorkspace:
         golang_suite_dir=root / "golang" / "suite",
         typescript_dir=root / "typescript",
         kotlin_dir=root / "kotlin",
+        kotlin_client_dir=root / "kotlin" / "client",
+        kotlin_server_dir=root / "kotlin" / "server",
         java_dir=root / "java",
         java_client_dir=root / "java" / "client",
         java_server_dir=root / "java" / "server",
@@ -401,9 +410,14 @@ def _prepare_blueprint_outputs(*, source_root: Path, target_root: Path) -> None:
         target_root / "typescript",
         _capture_relative_files(source_root / "typescript", BLUEPRINT_TYPESCRIPT_PRESERVED),
     )
+    shutil.rmtree(target_root / "kotlin", ignore_errors=True)
     _prepare_output_dir(
-        target_root / "kotlin",
-        _capture_relative_files(source_root / "kotlin", BLUEPRINT_KOTLIN_PRESERVED),
+        target_root / "kotlin" / "client",
+        _capture_relative_files(source_root / "kotlin" / "client", BLUEPRINT_KOTLIN_PRESERVED),
+    )
+    _prepare_output_dir(
+        target_root / "kotlin" / "server",
+        _capture_relative_files(source_root / "kotlin" / "server", BLUEPRINT_KOTLIN_PRESERVED),
     )
     _prepare_output_dir(
         target_root / "java" / "client",
@@ -504,7 +518,7 @@ def _prepare_output_dir(root: Path, preserved_files: Mapping[Path, bytes]) -> No
 def regenerate_blueprint_examples(workspace: BlueprintExampleWorkspace) -> None:
     generator.generate(
         workspace.config_path,
-        target_ids=("contract", "http", "http.python", "http.java", "wails.v2", "wails.v3"),
+        target_ids=("contract", "http", "http.kotlin", "http.python", "http.java", "wails.v2", "wails.v3"),
     )
     _tidy_go_module(workspace.golang_server_dir)
     _tidy_go_module(workspace.golang_client_dir)
@@ -568,9 +582,42 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
     files = {
         "go_route_interface": workspace.golang_server_dir / "views" / "routes" / "api" / "demo" / "gen_interface.go",
         "go_route_gen_impl": workspace.golang_server_dir / "views" / "routes" / "api" / "demo" / "gen_impl.go",
+        "go_route_types": workspace.golang_server_dir / "views" / "routes" / "api" / "demo" / "gen_types.go",
+        "go_route_messages": workspace.golang_server_dir
+        / "views"
+        / "routes"
+        / "api"
+        / "demo"
+        / "gen_messages.go",
+        "go_route_message_cases": workspace.golang_server_dir
+        / "views"
+        / "routes"
+        / "api"
+        / "demo"
+        / "gen_message_cases.go",
         "go_route_impl": workspace.golang_server_dir / "views" / "routes" / "api" / "demo" / "impl.go",
+        "go_route_assistant_session": workspace.golang_server_dir
+        / "views"
+        / "routes"
+        / "api"
+        / "demo"
+        / "assistant_session_session.go",
+        "go_route_assistant_processor": workspace.golang_server_dir
+        / "views"
+        / "routes"
+        / "api"
+        / "demo"
+        / "assistant_session_processor.go",
+        "go_route_assistant_error": workspace.golang_server_dir
+        / "views"
+        / "routes"
+        / "api"
+        / "demo"
+        / "assistant_session_error.go",
         "go_http_adapter": workspace.golang_server_dir / "views" / "transports" / "http" / "api" / "demo" / "gen_interface.go",
         "go_client_route": workspace.golang_client_dir / "routes" / "api" / "demo" / "gen_client.go",
+        "go_client_messages": workspace.golang_client_dir / "routes" / "api" / "demo" / "gen_messages.go",
+        "go_client_message_cases": workspace.golang_client_dir / "routes" / "api" / "demo" / "gen_message_cases.go",
         "go_client_http": workspace.golang_client_dir / "transports" / "http" / "gen_transport.go",
         "go_error_lookup": workspace.golang_client_dir / "runtime" / "gen_error_lookup.go",
         "go_wails_v3_service": workspace.golang_server_dir
@@ -591,6 +638,7 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         / "wailsv3"
         / "gen_bindings.ts",
         "index": workspace.root / "api-blueprint.index.json",
+        "ts_suite": workspace.typescript_dir / "suite.ts",
         "ts_route_client": workspace.typescript_dir / "api" / "routes" / "api" / "demo" / "gen_client.ts",
         "ts_route_types": workspace.typescript_dir / "api" / "routes" / "api" / "demo" / "gen_types.ts",
         "ts_error_lookup": workspace.typescript_dir / "api" / "runtime" / "gen_error_lookup.ts",
@@ -608,6 +656,109 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         / "api"
         / "runtime"
         / "gen_error_lookup.py",
+        "python_client_demo_types": workspace.python_dir
+        / "client"
+        / "api_blueprint_example_client"
+        / "api"
+        / "routes"
+        / "api"
+        / "demo"
+        / "gen_types.py",
+        "python_server_demo_types": workspace.python_dir
+        / "server"
+        / "api_blueprint_example_server"
+        / "api"
+        / "routes"
+        / "api"
+        / "demo"
+        / "gen_types.py",
+        "kotlin_client_api_json": workspace.kotlin_client_dir
+        / "com"
+        / "example"
+        / "apiblueprint"
+        / "api"
+        / "runtime"
+        / "ApiJson.kt",
+        "kotlin_client_route": workspace.kotlin_client_dir
+        / "com"
+        / "example"
+        / "apiblueprint"
+        / "api"
+        / "routes"
+        / "api"
+        / "demo"
+        / "GenDemoApi.kt",
+        "kotlin_client_demo_types": workspace.kotlin_client_dir
+        / "com"
+        / "example"
+        / "apiblueprint"
+        / "api"
+        / "routes"
+        / "api"
+        / "demo"
+        / "DemoTypes.kt",
+        "kotlin_server_demo_types": workspace.kotlin_server_dir
+        / "com"
+        / "example"
+        / "apiblueprint"
+        / "api"
+        / "routes"
+        / "api"
+        / "demo"
+        / "DemoTypes.kt",
+        "kotlin_server_service": workspace.kotlin_server_dir
+        / "com"
+        / "example"
+        / "apiblueprint"
+        / "api"
+        / "routes"
+        / "api"
+        / "demo"
+        / "GenDemoService.kt",
+        "kotlin_server_ktor": workspace.kotlin_server_dir
+        / "com"
+        / "example"
+        / "apiblueprint"
+        / "api"
+        / "transports"
+        / "ktor"
+        / "api"
+        / "demo"
+        / "GenDemoKtorRoutes.kt",
+        "java_client_demo_types": workspace.java_client_dir
+        / "com"
+        / "example"
+        / "apiblueprint"
+        / "api"
+        / "routes"
+        / "api"
+        / "demo"
+        / "DemoTypes.java",
+        "java_client_route": workspace.java_client_dir
+        / "com"
+        / "example"
+        / "apiblueprint"
+        / "api"
+        / "routes"
+        / "api"
+        / "demo"
+        / "GenDemoApi.java",
+        "java_client_api_json": workspace.java_client_dir
+        / "com"
+        / "example"
+        / "apiblueprint"
+        / "api"
+        / "runtime"
+        / "ApiJson.java",
+        "java_server_demo_types": workspace.java_server_dir
+        / "com"
+        / "example"
+        / "apiblueprint"
+        / "api"
+        / "routes"
+        / "api"
+        / "demo"
+        / "DemoTypes.java",
     }
     missing_files = [label for label, path in files.items() if not path.is_file()]
     if missing_files:
@@ -618,21 +769,95 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
             files["go_route_interface"],
             "SweepEvents(\n"
             "\t\tctx *CTX_SweepEvents,\n"
-            "\t\tstream providers.Stream[OPEN_SweepEvents, SweepStreamMessage, CLOSE_SweepEvents],\n"
+            "\t\tstream STREAM_SweepEvents,\n"
             "\t) error",
         ),
         "go channel handler": (
             files["go_route_interface"],
             "AssistantSession(\n"
             "\t\tctx *CTX_AssistantSession,\n"
-            "\t\tchannel providers.Channel[OPEN_AssistantSession, AssistantServerMessage, AssistantClientMessage, CLOSE_AssistantSession],\n"
+            "\t\tchannel CHANNEL_AssistantSession,\n"
             "\t) error",
         ),
-        "go stream manual example": (
+        "go stream message constructor example": (
             files["go_route_impl"],
-            "serverMessage, err := NewSweepStreamMessageState(&serverData)",
+            "message, err := NewSweepStreamMessageState(&SweepStreamMessage_State_DATA{",
         ),
-        "go channel manual example": (files["go_route_impl"], "clientMessage, err := channel.Recv(ctx)"),
+        "go stream context send example": (files["go_route_impl"], "if err := stream.Send(ctx, message); err != nil {"),
+        "go stream context close example": (
+            files["go_route_impl"],
+            'return stream.Close(ctx, &CLOSE_SweepEvents{Code: 1000, Reason: "example stream complete"})',
+        ),
+        "go channel scaffold route": (
+            files["go_route_assistant_session"],
+            "session := newAssistantSessionRouteSession(impl, ctx, channel, &assistantSessionMessageProcessor{})",
+        ),
+        "go channel scaffold serve loop": (
+            files["go_route_assistant_session"],
+            "message, err := session.channel.Recv(session.Context())",
+        ),
+        "go channel scaffold visitor": (
+            files["go_route_assistant_session"],
+            "if err := VisitAssistantClientMessage(session.messageScope(), message, session.processor); err != nil {",
+        ),
+        "go channel scaffold scope channel": (
+            files["go_route_assistant_session"],
+            "Channel CHANNEL_AssistantSession",
+        ),
+        "go channel processor example": (
+            files["go_route_assistant_processor"],
+            "type assistantSessionMessageProcessor struct{}",
+        ),
+        "go channel processor contract": (
+            files["go_route_assistant_processor"],
+            "var _ AssistantClientMessageProcessor[assistantSessionMessageScope] = (*assistantSessionMessageProcessor)(nil)",
+        ),
+        "go channel processor input": (
+            files["go_route_assistant_processor"],
+            "func (processor *assistantSessionMessageProcessor) OnInput(",
+        ),
+        "go channel processor cancel": (
+            files["go_route_assistant_processor"],
+            "func (processor *assistantSessionMessageProcessor) OnCancel(",
+        ),
+        "go channel processor constructor": (
+            files["go_route_assistant_processor"],
+            "message, err := NewAssistantServerMessageDelta(&AssistantServerMessage_Delta_DATA{",
+        ),
+        "go channel processor context send": (
+            files["go_route_assistant_processor"],
+            "return scope.Channel.Send(scope.Context, message)",
+        ),
+        "go channel processor context close": (
+            files["go_route_assistant_processor"],
+            "return scope.Channel.Close(scope.Context, &CLOSE_AssistantSession{Code: 1000, Reason: reason})",
+        ),
+        "go channel error scaffold": (
+            files["go_route_assistant_error"],
+            "func (session *assistantSessionRouteSession) handleMessageError(",
+        ),
+        "go channel error typed helper": (
+            files["go_route_assistant_error"],
+            "IsAssistantClientMessageErrorKind(err, AssistantClientMessageErrorNilProcessor)",
+        ),
+        "go channel error message type helper": (
+            files["go_route_assistant_error"],
+            "messageErr.MessageType()",
+        ),
+        "go generated channel processor": (
+            files["go_route_message_cases"],
+            "type AssistantClientMessageProcessor[C any] interface {",
+        ),
+        "go generated channel visitor": (files["go_route_message_cases"], "func VisitAssistantClientMessage[C any]("),
+        "go generated channel case": (files["go_route_message_cases"], "type AssistantClientMessageInputCase struct {"),
+        "go generated channel decode error": (files["go_route_message_cases"], "AssistantClientMessageErrorDecodeFailed"),
+        "go generated channel handler error": (files["go_route_message_cases"], "AssistantClientMessageErrorHandlerFailed"),
+        "go generated channel error helper": (
+            files["go_route_message_cases"],
+            "func IsAssistantClientMessageErrorKind(err error, kinds ...AssistantClientMessageErrorKind) bool",
+        ),
+        "go generated connection messages": (files["go_route_messages"], "type AssistantClientMessage struct {"),
+        "go generated message constructor": (files["go_route_messages"], "func NewAssistantClientMessageCancel("),
         "go typed error return example": (files["go_route_impl"], "return nil, demo_err.RATE_LIMITED.WithToast("),
         "go typed error dynamic toast": (files["go_route_impl"], 'Text:    "请等待 30 秒后重试",'),
         "go unknown typed error example": (
@@ -646,6 +871,18 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         ),
         "go error demo constant": (files["go_error_lookup"], "DemoErrRateLimited   ApiErrorCode = 42901"),
         "go client unsupported connection": (files["go_client_http"], "UnsupportedConnectionError"),
+        "go client generated connection messages": (
+            files["go_client_messages"],
+            "func NewAssistantClientMessageCancel(data *AssistantClientMessage_Cancel_DATA)",
+        ),
+        "go client generated stream visitor": (
+            files["go_client_message_cases"],
+            "func VisitSweepStreamMessage[C any](",
+        ),
+        "go client generated channel visitor": (
+            files["go_client_message_cases"],
+            "func VisitAssistantServerMessage[C any](",
+        ),
         "http stream adapter": (files["go_http_adapter"], "httptransport.STREAM("),
         "http channel adapter": (files["go_http_adapter"], "httptransport.CHANNEL("),
         "wails stream event base": (
@@ -677,6 +914,10 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
             '  | { type: "input"; data: AssistantInput }\n'
             '  | { type: "cancel"; data: AssistantCancel };',
         ),
+        "typescript channel variants helper": (files["ts_route_types"], "export const AssistantClientMessageVariants = {"),
+        "typescript server dispatcher helper": (files["ts_route_types"], "export function dispatchAssistantServerMessage<R>("),
+        "typescript suite client message helper": (files["ts_suite"], "AssistantClientMessageVariants.cancel({ reason: \"suite\" })"),
+        "typescript suite server dispatcher helper": (files["ts_suite"], "dispatchAssistantServerMessage(serverMessage, {"),
         "wails v3 bindings import": (
             files["ts_wails_v3_transport"],
             'import { WAILS_V3_BINDINGS } from "./gen_bindings";',
@@ -690,6 +931,61 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         "python binary public types export": (files["python_binary_route"], "from .gen_binary import *"),
         "python error demo constant": (files["python_error_lookup"], "class DemoErr:"),
         "python error demo route lookup": (files["python_error_lookup"], '42901: API_ERRORS_BY_ID["DemoErr.RATE_LIMITED"],'),
+        "python client message variants": (
+            files["python_client_demo_types"],
+            "class AssistantClientMessageVariants:",
+        ),
+        "python client server dispatcher": (
+            files["python_client_demo_types"],
+            "def dispatch_assistant_server_message(",
+        ),
+        "python server client dispatcher": (
+            files["python_server_demo_types"],
+            "def dispatch_assistant_client_message(",
+        ),
+        "python typed dispatch error": (
+            files["python_client_demo_types"],
+            "class AssistantServerMessageDispatchError(Exception):",
+        ),
+        "kotlin client api json helper": (files["kotlin_client_api_json"], "public val ApiJson: Json = Json"),
+        "kotlin channel bridge message types": (
+            files["kotlin_client_route"],
+            "ApiChannelBridge<AssistantServerMessage, AssistantClientMessage, ConnectionClose>",
+        ),
+        "kotlin client message variants": (
+            files["kotlin_client_demo_types"],
+            "public object AssistantClientMessageVariants",
+        ),
+        "kotlin client server dispatcher": (
+            files["kotlin_client_demo_types"],
+            "public fun <R> dispatchAssistantServerMessage(",
+        ),
+        "kotlin server service": (files["kotlin_server_service"], "public interface GenDemoService"),
+        "kotlin server client dispatcher": (
+            files["kotlin_server_demo_types"],
+            "public fun <R> dispatchAssistantClientMessage(",
+        ),
+        "kotlin server connection unsupported": (
+            files["kotlin_server_ktor"],
+            '"channel route is not implemented by the generated Ktor adapter"',
+        ),
+        "java api json helper": (files["java_client_api_json"], "public static final ObjectMapper MAPPER"),
+        "java client message variants": (
+            files["java_client_demo_types"],
+            "public static final class AssistantClientMessageVariants",
+        ),
+        "java client server dispatcher": (
+            files["java_client_demo_types"],
+            "public static <R> R dispatchAssistantServerMessage(",
+        ),
+        "java client channel bridge message types": (
+            files["java_client_route"],
+            "ApiChannelBridge<DemoTypes.AssistantServerMessage, DemoTypes.AssistantClientMessage, Object>",
+        ),
+        "java server client dispatcher": (
+            files["java_server_demo_types"],
+            "public static <R> R dispatchAssistantClientMessage(",
+        ),
     }
     validation_errors = []
     for label, (path, snippet) in checks.items():
@@ -709,9 +1005,32 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
             "serverMessage, err := NewSweepStreamMessageState(&serverData)",
         ),
         "generated channel scaffold": (files["go_route_gen_impl"], "clientMessage, err := channel.Recv(ctx)"),
+        "generated router option": (files["go_route_gen_impl"], "type GenRouterOption func(router *_GenRouter)"),
+        "generated flow option": (files["go_route_gen_impl"], "func WithAssistantSessionFlow("),
+        "generated flow route": (files["go_route_gen_impl"], "return flow.Serve(ctx, channel)"),
+        "generated stream sender": (files["go_route_impl"], "NewSweepEventsSender("),
+        "manual assistant route in impl": (files["go_route_impl"], "func (impl *Router) AssistantSession("),
+        "old channel dispatcher example": (files["go_route_impl"], "DispatchAssistantClientMessage("),
+        "old generated channel dispatcher": (files["go_route_messages"], "func DispatchAssistantClientMessage("),
+        "old generated channel handlers": (files["go_route_messages"], "type AssistantClientMessageHandlers struct {"),
+        "message union in gen_types": (files["go_route_types"], "type AssistantClientMessage struct {"),
+        "user router flow field": (files["go_route_impl"], "assistantSessionFlow *AssistantSessionFlow"),
+        "user router flow delegate": (files["go_route_impl"], "return flow.Serve(ctx, channel)"),
+        "generated flow file": (
+            workspace.golang_server_dir / "views" / "routes" / "api" / "demo" / "gen_assistant_session_flow.go",
+            "type AssistantSessionFlow struct {",
+        ),
+        "generated stream sender file": (
+            workspace.golang_server_dir / "views" / "routes" / "api" / "demo" / "gen_sweep_events_stream.go",
+            "type SweepEventsSender struct {",
+        ),
+        "old exported assistant processor": (files["go_route_assistant_processor"], "type AssistantSessionProcessor struct{}"),
+        "old exported assistant scope": (files["go_route_assistant_processor"], "type AssistantSessionScope struct {"),
+        "route-prefixed input processor": (files["go_route_assistant_processor"], "OnAssistantSessionInput"),
+        "route-prefixed cancel processor": (files["go_route_assistant_processor"], "OnAssistantSessionCancel"),
     }
     for label, (path, snippet) in forbidden_checks.items():
-        if snippet in path.read_text(encoding="utf-8"):
+        if path.is_file() and snippet in path.read_text(encoding="utf-8"):
             validation_errors.append(label)
     if validation_errors:
         raise ExampleValidationError(
@@ -882,11 +1201,21 @@ def _compile_wails_harness(harness_dir: Path, *, version: str) -> None:
 
 
 def _validate_kotlin_sources(kotlin_dir: Path) -> None:
+    client_dir = kotlin_dir / "client"
+    server_dir = kotlin_dir / "server"
+    _validate_kotlin_client_sources(client_dir)
+    _validate_kotlin_server_sources(server_dir)
+    _compile_kotlin_sources(client_dir, include_okhttp=True, include_ktor=False)
+    _compile_kotlin_sources(server_dir, include_okhttp=False, include_ktor=True)
+
+
+def _validate_kotlin_client_sources(kotlin_dir: Path) -> None:
     expected = (
         "com/example/apiblueprint/api/runtime/ApiClient.kt",
         "com/example/apiblueprint/api/runtime/GenApiClient.kt",
         "com/example/apiblueprint/api/runtime/GenApiException.kt",
         "com/example/apiblueprint/api/runtime/GenApiTransport.kt",
+        "com/example/apiblueprint/api/runtime/ApiJson.kt",
         "com/example/apiblueprint/api/runtime/ApiTypes.kt",
         "com/example/apiblueprint/api/routes/api/demo/DemoApi.kt",
         "com/example/apiblueprint/api/routes/api/demo/GenDemoApi.kt",
@@ -900,7 +1229,7 @@ def _validate_kotlin_sources(kotlin_dir: Path) -> None:
     )
     missing = [path for path in expected if not (kotlin_dir / path).is_file()]
     if missing:
-        raise ExampleValidationError("kotlin example missing generated files:\n" + "\n".join(missing))
+        raise ExampleValidationError("kotlin client example missing generated files:\n" + "\n".join(missing))
 
     types = (kotlin_dir / "com/example/apiblueprint/api/runtime/ApiTypes.kt").read_text(encoding="utf-8")
     demo_types = (kotlin_dir / "com/example/apiblueprint/api/routes/api/demo/DemoTypes.kt").read_text(
@@ -914,7 +1243,7 @@ def _validate_kotlin_sources(kotlin_dir: Path) -> None:
         encoding="utf-8"
     )
     required_snippets = (
-        "// Code generated by api-blueprint; DO NOT EDIT.",
+        "// Code generated by api-blueprint (Kotlin client); DO NOT EDIT.",
         "@Serializable",
         "public data class DemoAbcQuery",
         "public data class ApiDemoA",
@@ -931,8 +1260,48 @@ def _validate_kotlin_sources(kotlin_dir: Path) -> None:
     haystack = "\n".join((types, demo_api, hello_api, demo_types, hello_types))
     missing_snippets = [snippet for snippet in required_snippets if snippet not in haystack]
     if missing_snippets:
-        raise ExampleValidationError("kotlin example missing expected snippets:\n" + "\n".join(missing_snippets))
-    _compile_kotlin_sources(kotlin_dir)
+        raise ExampleValidationError("kotlin client example missing expected snippets:\n" + "\n".join(missing_snippets))
+
+
+def _validate_kotlin_server_sources(kotlin_dir: Path) -> None:
+    expected = (
+        "com/example/apiblueprint/api/runtime/ApiJson.kt",
+        "com/example/apiblueprint/api/runtime/ApiServerContext.kt",
+        "com/example/apiblueprint/api/runtime/ApiServerResponse.kt",
+        "com/example/apiblueprint/api/runtime/GenApiException.kt",
+        "com/example/apiblueprint/api/runtime/GenApiErrors.kt",
+        "com/example/apiblueprint/api/runtime/GenApiErrorLookup.kt",
+        "com/example/apiblueprint/api/runtime/ApiTypes.kt",
+        "com/example/apiblueprint/api/routes/api/demo/DemoService.kt",
+        "com/example/apiblueprint/api/routes/api/demo/DemoServiceStub.kt",
+        "com/example/apiblueprint/api/routes/api/demo/GenDemoService.kt",
+        "com/example/apiblueprint/api/routes/api/demo/DemoTypes.kt",
+        "com/example/apiblueprint/api/transports/ktor/api/demo/GenDemoKtorRoutes.kt",
+    )
+    missing = [path for path in expected if not (kotlin_dir / path).is_file()]
+    if missing:
+        raise ExampleValidationError("kotlin server example missing generated files:\n" + "\n".join(missing))
+
+    service = (kotlin_dir / "com/example/apiblueprint/api/routes/api/demo/GenDemoService.kt").read_text(
+        encoding="utf-8"
+    )
+    types = (kotlin_dir / "com/example/apiblueprint/api/routes/api/demo/DemoTypes.kt").read_text(encoding="utf-8")
+    ktor = (
+        kotlin_dir / "com/example/apiblueprint/api/transports/ktor/api/demo/GenDemoKtorRoutes.kt"
+    ).read_text(encoding="utf-8")
+    haystack = "\n".join((service, types, ktor))
+    required_snippets = (
+        "// Code generated by api-blueprint (Kotlin server); DO NOT EDIT.",
+        "public interface GenDemoService",
+        "public suspend fun abc(",
+        "public object AssistantClientMessageVariants",
+        "public fun <R> dispatchAssistantClientMessage(",
+        "public fun Route.registerDemoRoutes(",
+        '"channel route is not implemented by the generated Ktor adapter"',
+    )
+    missing_snippets = [snippet for snippet in required_snippets if snippet not in haystack]
+    if missing_snippets:
+        raise ExampleValidationError("kotlin server example missing expected snippets:\n" + "\n".join(missing_snippets))
 
 
 def _validate_java_sources(java_dir: Path) -> None:
@@ -1028,7 +1397,7 @@ def _validate_python_sources(python_dir: Path) -> None:
         compile(path.read_text(encoding="utf-8"), str(path), "exec")
 
 
-def _compile_kotlin_sources(kotlin_dir: Path) -> None:
+def _compile_kotlin_sources(kotlin_dir: Path, *, include_okhttp: bool, include_ktor: bool) -> None:
     gradle_bin = resolve_gradle_bin()
     if gradle_bin is None:
         raise ExampleValidationError(
@@ -1049,6 +1418,15 @@ def _compile_kotlin_sources(kotlin_dir: Path) -> None:
             'rootProject.name = "api-blueprint-kotlin-example"\n',
             encoding="utf-8",
         )
+        dependencies = [
+            f'    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:{KOTLINX_COROUTINES_VERSION}")',
+            f'    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:{KOTLINX_SERIALIZATION_JSON_VERSION}")',
+            f'    implementation("com.squareup.okio:okio:{OKIO_VERSION}")',
+        ]
+        if include_okhttp:
+            dependencies.append(f'    implementation("com.squareup.okhttp3:okhttp:{OKHTTP_VERSION}")')
+        if include_ktor:
+            dependencies.append(f'    implementation("io.ktor:ktor-server-core-jvm:{KTOR_VERSION}")')
         (project_dir / "build.gradle.kts").write_text(
             f"""
 plugins {{
@@ -1057,9 +1435,7 @@ plugins {{
 }}
 
 dependencies {{
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:{KOTLINX_COROUTINES_VERSION}")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:{KOTLINX_SERIALIZATION_JSON_VERSION}")
-    implementation("com.squareup.okhttp3:okhttp:{OKHTTP_VERSION}")
+{chr(10).join(dependencies)}
 }}
 
 java {{

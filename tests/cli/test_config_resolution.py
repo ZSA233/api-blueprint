@@ -38,11 +38,13 @@ def test_example_config_loads_vnext_targets() -> None:
         "go.client",
         "typescript.client",
         "kotlin.client",
+        "kotlin.server",
         "java.server",
         "java.client",
         "python.server",
         "python.client",
         "http",
+        "http.kotlin",
         "http.python",
         "http.java",
         "wails.v3",
@@ -57,10 +59,12 @@ def test_example_config_loads_vnext_targets() -> None:
         "go-client",
         "typescript-client",
         "kotlin-client",
+        "kotlin-server",
         "java-server",
         "java-client",
         "python-server",
         "python-client",
+        "http-transport",
         "http-transport",
         "http-transport",
         "http-transport",
@@ -123,6 +127,11 @@ base_url = "http://localhost:2333"
 [[kotlin.client]]
 id = "kotlin.client"
 out_dir = "kotlin"
+module = "com.example.generated"
+
+[[kotlin.server]]
+id = "kotlin.server"
+out_dir = "kotlin/server"
 module = "com.example.generated"
 
 [[java.server]]
@@ -199,6 +208,7 @@ module = "pb"
         "go.client",
         "typescript.client",
         "kotlin.client",
+        "kotlin.server",
         "java.server",
         "java.client",
         "python.server",
@@ -216,6 +226,7 @@ module = "pb"
         "go-client",
         "typescript-client",
         "kotlin-client",
+        "kotlin-server",
         "java-server",
         "java-client",
         "python-server",
@@ -235,12 +246,14 @@ module = "pb"
     assert config.targets[6].module is None
     assert config.targets[6].package == "com.example.generated"
     assert config.targets[7].module is None
-    assert config.targets[7].python_package_root == "server_app"
-    assert config.targets[8].python_package_root == "client_app"
-    assert len(config.targets[12].proto_files) == 1
-    assert config.targets[12].proto_files[0].file == "api/demo.proto"
-    assert config.targets[12].proto_files[0].service == "DemoService"
-    assert config.targets[14].python_package_root == "pb"
+    assert config.targets[7].package == "com.example.generated"
+    assert config.targets[8].module is None
+    assert config.targets[8].python_package_root == "server_app"
+    assert config.targets[9].python_package_root == "client_app"
+    assert len(config.targets[13].proto_files) == 1
+    assert config.targets[13].proto_files[0].file == "api/demo.proto"
+    assert config.targets[13].proto_files[0].service == "DemoService"
+    assert config.targets[15].python_package_root == "pb"
 
 
 def test_contract_alias_table_normalizes_to_contract_target(tmp_path) -> None:
@@ -299,12 +312,13 @@ python_package_root = "generated_client"
         Config.load(config_path)
 
 
-def test_kotlin_alias_rejects_conflicting_module_and_package(tmp_path) -> None:
+@pytest.mark.parametrize("alias", ["kotlin.client", "kotlin.server"])
+def test_kotlin_alias_rejects_conflicting_module_and_package(tmp_path, alias: str) -> None:
     config_path = tmp_path / "api-blueprint.toml"
     config_path.write_text(
-        """
-[[kotlin.client]]
-id = "kotlin.client"
+        f"""
+[[{alias}]]
+id = "{alias}"
 out_dir = "kotlin"
 module = "com.example.generated"
 package = "com.example.other"
@@ -313,7 +327,7 @@ package = "com.example.other"
         encoding="utf-8",
     )
 
-    with pytest.raises(ValueError, match=r"\[\[kotlin.client\]\].*module and package must match"):
+    with pytest.raises(ValueError, match=rf"\[\[{alias}\]\].*module and package must match"):
         Config.load(config_path)
 
 
@@ -381,11 +395,13 @@ def test_resolve_config_converts_vnext_target_outputs_to_absolute_paths() -> Non
     assert targets["contract"].out_dir == EXAMPLE_CONFIG.parent.resolve()
     assert targets["go.server"].out_dir == (EXAMPLE_CONFIG.parent / "golang" / "server" / "views").resolve()
     assert targets["typescript.client"].out_dir == (EXAMPLE_CONFIG.parent / "typescript").resolve()
-    assert targets["kotlin.client"].out_dir == (EXAMPLE_CONFIG.parent / "kotlin").resolve()
+    assert targets["kotlin.client"].out_dir == (EXAMPLE_CONFIG.parent / "kotlin" / "client").resolve()
     assert targets["kotlin.client"].package == "com.example.apiblueprint"
     assert targets["kotlin.client"].base_url == "http://localhost:2333"
     assert targets["kotlin.client"].include == ("tag:api",)
     assert "path:/api/demo/ws" in targets["kotlin.client"].exclude
+    assert targets["kotlin.server"].out_dir == (EXAMPLE_CONFIG.parent / "kotlin" / "server").resolve()
+    assert targets["kotlin.server"].package == "com.example.apiblueprint"
     assert targets["java.server"].out_dir == (EXAMPLE_CONFIG.parent / "java" / "server").resolve()
     assert targets["java.server"].package == "com.example.apiblueprint"
     assert targets["java.client"].out_dir == (EXAMPLE_CONFIG.parent / "java" / "client").resolve()

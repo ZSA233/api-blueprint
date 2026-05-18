@@ -1,10 +1,43 @@
 from __future__ import annotations
 
-{% if group.route_models() %}from dataclasses import dataclass
+{% if group.message_helpers() %}from dataclasses import asdict, dataclass, is_dataclass
+from typing import Any, Callable, Generic, Mapping, TypeVar
+{% elif group.route_models() %}from dataclasses import dataclass
 {% endif %}{% if group.binary_schemas() %}
 from .gen_binary import *
 {% endif %}
 
+{% if group.message_helpers() %}
+R = TypeVar("R")
+
+
+def _to_mapping(value: object) -> Mapping[str, Any] | None:
+    if value is None:
+        return None
+    if isinstance(value, Mapping):
+        return value
+    if is_dataclass(value):
+        return {key: item for key, item in asdict(value).items() if item is not None}
+    raise TypeError(f"expected mapping or dataclass message data, got {type(value).__name__}")
+
+
+def _from_mapping(model_type, value):
+    if value is None or isinstance(value, model_type):
+        return value
+    if isinstance(value, Mapping):
+        return model_type(**{key: value.get(key) for key in model_type.__dataclass_fields__})
+    return value
+
+
+def _coerce_message(model_type, value):
+    if isinstance(value, model_type):
+        return value
+    if isinstance(value, Mapping):
+        return model_type(type=str(value.get("type", "")), data=value.get("data"))
+    raise TypeError(f"expected mapping or {model_type.__name__}, got {type(value).__name__}")
+
+
+{% endif %}
 
 {% for model in group.route_models() %}
 @dataclass
@@ -12,6 +45,55 @@ class {{ model.class_name }}:
 {% if model.fields %}{% for field in model.fields %}    {{ field.name }}: {{ field.type_expr }} | None = None
 {% endfor %}{% else %}    pass
 {% endif %}
+
+
+{% endfor %}
+{% for helper in group.message_helpers() %}
+@dataclass
+class {{ helper.name }}:
+    type: str
+    data: Mapping[str, Any] | None = None
+
+
+class {{ helper.variants_class }}:
+{% for variant in helper.variants %}    @staticmethod
+    def {{ variant.method_name }}(data: {{ variant.data_type }} | Mapping[str, Any]) -> {{ helper.name }}:
+        return {{ helper.name }}(type={{ variant.key | tojson }}, data=_to_mapping(data))
+
+{% endfor %}
+
+@dataclass
+class {{ helper.handlers_class }}(Generic[R]):
+{% for variant in helper.variants %}    {{ variant.method_name }}: Callable[[{{ variant.data_type }}, {{ helper.name }}], R]
+{% endfor %}
+
+
+class {{ helper.error_class }}(Exception):
+    def __init__(self, kind: str = "unknown_type", raw_message: {{ helper.name }} | None = None):
+        message_type = "" if raw_message is None else raw_message.type
+        super().__init__(f"unsupported {{ helper.name }} type {message_type}")
+        self.kind = kind
+        self.type = message_type
+        self.raw_message = raw_message
+
+
+def {{ helper.is_error_func }}(error: BaseException) -> bool:
+    return isinstance(error, {{ helper.error_class }})
+
+
+def {{ helper.dispatch_func }}(
+    message: {{ helper.name }} | Mapping[str, Any],
+    handlers: {{ helper.handlers_class }}[R],
+) -> R:
+    typed_message = _coerce_message({{ helper.name }}, message)
+    match typed_message.type:
+{% for variant in helper.variants %}        case {{ variant.key | tojson }}:
+            return handlers.{{ variant.method_name }}(
+                _from_mapping({{ variant.data_type }}, typed_message.data),
+                typed_message,
+            )
+{% endfor %}        case _:
+            raise {{ helper.error_class }}("unknown_type", typed_message)
 
 
 {% endfor %}

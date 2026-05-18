@@ -3,6 +3,8 @@
 package api
 
 import (
+	"context"
+
 	sharedprovider "example.com/project/golang/server/views/providers"
 	wailstransport "example.com/project/golang/server/views/transports/wailsv2"
 )
@@ -79,7 +81,7 @@ func (svc *ApiService) ConnectWs(
 	go func() {
 		if runErr := svc.wsExecutor.RunWSHandler(ctx); runErr != nil {
 			ctx.WsHandle.Error = runErr
-			_ = session.Abort(1011, runErr.Error())
+			_ = session.Abort(ctx.Base, 1011, runErr.Error())
 		}
 	}()
 
@@ -104,5 +106,5 @@ func (svc *ApiService) CloseWs(request *WS_CLOSE_Ws) error {
 	if code == 0 {
 		code = 1000
 	}
-	return session.Abort(code, request.Reason)
+	return session.Abort(context.Background(), code, request.Reason)
 }

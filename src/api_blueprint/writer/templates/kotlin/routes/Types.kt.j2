@@ -11,6 +11,10 @@ import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+{% if group.message_helpers() %}
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+{% endif %}
 {% if binary_schemas %}
 import {{ bp.root_package }}.runtime.binary.ApiBinaryBody
 import {{ bp.root_package }}.runtime.binary.BinaryEndian
@@ -64,6 +68,42 @@ public object {{ proto.name }}Serializer : KSerializer<{{ proto.name }}> {
 {%- endif %}
 {%- endif %}
 {%- endfor %}
+{% for helper in group.message_helpers() %}
+
+@Serializable
+public data class {{ helper.name }}(
+    public val type: String,
+    public val data: JsonElement? = null,
+)
+
+public object {{ helper.variants_object }} {
+{% for variant in helper.variants %}    public fun {{ variant.method_name }}(data: {{ variant.data_type }}): {{ helper.name }} =
+        {{ helper.name }}({{ variant.key | tojson }}, ApiJson.encodeToJsonElement({{ variant.data_type }}.serializer(), data))
+
+{% endfor %}}
+
+public interface {{ helper.handlers_interface }}<R> {
+{% for variant in helper.variants %}    public fun {{ variant.method_name }}(data: {{ variant.data_type }}, message: {{ helper.name }}): R
+{% endfor %}}
+
+public class {{ helper.dispatch_exception }}(
+    public val kind: String,
+    public val type: String,
+    public val rawMessage: {{ helper.name }},
+) : RuntimeException("unsupported {{ helper.name }} type $type")
+
+public fun <R> {{ helper.dispatch_func }}(
+    message: {{ helper.name }},
+    handlers: {{ helper.handlers_interface }}<R>,
+): R =
+    when (message.type) {
+{% for variant in helper.variants %}        {{ variant.key | tojson }} -> handlers.{{ variant.method_name }}(
+            ApiJson.decodeFromJsonElement({{ variant.data_type }}.serializer(), message.data ?: JsonNull),
+            message,
+        )
+{% endfor %}        else -> throw {{ helper.dispatch_exception }}("unknown_type", message.type, message)
+    }
+{% endfor %}
 {% if binary_schemas %}
 
 {% include "routes/binary/BinaryTypes.kt.j2" %}

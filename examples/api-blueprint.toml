@@ -29,7 +29,7 @@ base_url = 'http://localhost:2333'
 
 [[kotlin.client]]
 id = 'kotlin.client'
-out_dir = 'kotlin'
+out_dir = 'kotlin/client'
 module = 'com.example.apiblueprint'
 base_url = 'http://localhost:2333'
 include = ['tag:api']
@@ -37,9 +37,16 @@ exclude = [
     'path:/static/**',
     'path:/api/ws',
     'path:/api/demo/ws',
-    'path:/api/demo/sweep-events',
-    'path:/api/demo/assistant-session',
     'path:/api/demo/delete$',
+]
+
+[[kotlin.server]]
+id = 'kotlin.server'
+out_dir = 'kotlin/server'
+module = 'com.example.apiblueprint'
+include = ['tag:api']
+exclude = [
+    'path:/static/**',
 ]
 
 [[java.server]]
@@ -69,6 +76,11 @@ base_url = 'http://localhost:2333'
 id = 'http'
 server = 'go.server'
 clients = ['go.client', 'typescript.client', 'kotlin.client']
+
+[[transport.http]]
+id = 'http.kotlin'
+server = 'kotlin.server'
+clients = ['kotlin.client']
 
 [[transport.http]]
 id = 'http.python'

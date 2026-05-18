@@ -1,7 +1,6 @@
 package demo
 
 import (
-	providers "example.com/project/golang/server/views/providers"
 	types "example.com/project/golang/server/views/routes/api/_gen_types"
 	apperrors "example.com/project/golang/server/views/runtime/errors"
 	"example.com/project/golang/server/views/runtime/errors/common_err"
@@ -57,68 +56,19 @@ func (impl *Router) Ws(ctx *CTX_Ws, req *REQ_Ws) (rsp *RSP_Ws, err error) {
 
 func (impl *Router) SweepEvents(
 	ctx *CTX_SweepEvents,
-	stream providers.Stream[OPEN_SweepEvents, SweepStreamMessage, CLOSE_SweepEvents],
+	stream STREAM_SweepEvents,
 ) error {
 	open := stream.Open()
-	serverData := SweepStreamMessage_State_DATA{
+	message, err := NewSweepStreamMessageState(&SweepStreamMessage_State_DATA{
 		Status: "sweep " + open.RunId + " started",
-	}
-	serverMessage, err := NewSweepStreamMessageState(&serverData)
+	})
 	if err != nil {
 		return err
 	}
-	if err := stream.Send(serverMessage); err != nil {
+	if err := stream.Send(ctx, message); err != nil {
 		return err
 	}
-	return stream.Close(&CLOSE_SweepEvents{Code: 1000, Reason: "example stream complete"})
-}
-
-func (impl *Router) AssistantSession(
-	ctx *CTX_AssistantSession,
-	channel providers.Channel[OPEN_AssistantSession, AssistantServerMessage, AssistantClientMessage, CLOSE_AssistantSession],
-) error {
-	open := channel.Open()
-	clientMessage, err := channel.Recv(ctx)
-	if err != nil {
-		return err
-	}
-	if clientMessage == nil {
-		return channel.Abort(1003, "empty client message")
-	}
-
-	replyText := "session " + open.SessionId + " received a message"
-	switch clientMessage.Type {
-	case AssistantClientMessageTypeInput:
-		input, err := clientMessage.DecodeInput()
-		if err != nil {
-			return err
-		}
-		replyText = "session " + open.SessionId + ": " + input.Text
-	case AssistantClientMessageTypeCancel:
-		cancel, err := clientMessage.DecodeCancel()
-		if err != nil {
-			return err
-		}
-		reason := cancel.Reason
-		if reason == "" {
-			reason = "client cancelled"
-		}
-		return channel.Close(&CLOSE_AssistantSession{Code: 1000, Reason: reason})
-	default:
-		return channel.Abort(1003, "unsupported client message type")
-	}
-
-	serverData := AssistantServerMessage_Delta_DATA{
-		Text: replyText,
-	}
-	serverMessage, err := NewAssistantServerMessageDelta(&serverData)
-	if err != nil {
-		return err
-	}
-	if err := channel.Send(serverMessage); err != nil {
-		return err
-	}
-	return channel.Close(&CLOSE_AssistantSession{Code: 1000, Reason: "example channel complete"})
+	return stream.Close(ctx, &CLOSE_SweepEvents{Code: 1000, Reason: "example stream complete"})
 }
 
 func (impl *Router) PostDeprecated(ctx *CTX_PostDeprecated, req *REQ_PostDeprecated) (rsp *RSP_PostDeprecated, err error) {

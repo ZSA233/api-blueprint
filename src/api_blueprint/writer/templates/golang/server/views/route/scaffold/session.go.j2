@@ -1,0 +1,71 @@
+package {{ router_group.package }}
+
+import "context"
+
+func (impl *Router) {{ scaffold.func_name }}(ctx *{{ scaffold.ctx_type }}, channel {{ scaffold.channel_alias }}) error {
+	session := {{ scaffold.new_session }}(impl, ctx, channel, &{{ scaffold.processor_struct }}{})
+	return session.Serve()
+}
+
+type {{ scaffold.session_type }} struct {
+	impl      *Router
+	routeCtx  *{{ scaffold.ctx_type }}
+	channel   {{ scaffold.channel_alias }}
+	processor {{ scaffold.processor_interface }}[{{ scaffold.scope_type }}]
+}
+
+type {{ scaffold.scope_type }} struct {
+	Context context.Context
+	Route   *{{ scaffold.ctx_type }}
+	Channel {{ scaffold.channel_alias }}
+}
+
+func {{ scaffold.new_session }}(
+	impl *Router,
+	ctx *{{ scaffold.ctx_type }},
+	channel {{ scaffold.channel_alias }},
+	processor {{ scaffold.processor_interface }}[{{ scaffold.scope_type }}],
+) *{{ scaffold.session_type }} {
+	return &{{ scaffold.session_type }}{
+		impl:      impl,
+		routeCtx:  ctx,
+		channel:   channel,
+		processor: processor,
+	}
+}
+
+func (session *{{ scaffold.session_type }}) Serve() error {
+	if session == nil {
+		return nil
+	}
+	for {
+		message, err := session.channel.Recv(session.Context())
+		if err != nil {
+			return session.normalizeTransportError(err)
+		}
+		if err := {{ scaffold.visitor }}(session.messageScope(), message, session.processor); err != nil {
+			if handled := session.handleMessageError(message, err); handled != nil {
+				return handled
+			}
+		}
+	}
+}
+
+func (session *{{ scaffold.session_type }}) Context() context.Context {
+	if session == nil || session.routeCtx == nil {
+		return context.Background()
+	}
+	return session.routeCtx
+}
+
+func (session *{{ scaffold.session_type }}) messageScope() {{ scaffold.scope_type }} {
+	return {{ scaffold.scope_type }}{
+		Context: session.Context(),
+		Route:   session.routeCtx,
+		Channel: session.channel,
+	}
+}
+
+func (session *{{ scaffold.session_type }}) normalizeTransportError(err error) error {
+	return err
+}
