@@ -91,8 +91,8 @@ api-gen generate -c api-blueprint.toml
 | 目标 | 状态 | 用途 |
 |:---|:---:|:---|
 | Contract / inspect | 可用 | 输出契约索引，并按 route、schema、error、文件归属查询协议细节 |
-| Go server | 可用 | 生成 Go 路由、provider、HTTP/Wails adapter 和 runtime |
-| TypeScript client | 预览 | 生成 transport-neutral client、HTTP adapter 和 Wails facade |
+| Go server | 可用 | 生成 Go 路由、provider、长连接 message helper、HTTP/Wails adapter 和 runtime |
+| TypeScript client | 预览 | 生成 transport-neutral client、长连接 message helper、HTTP adapter 和 Wails facade |
 | Kotlin Android client | 预览 | 生成 OkHttp client、模型、binary writer 和 route facade |
 | Java client/server | 预览 | 生成 Java 17 HttpClient client、Spring MVC server scaffold、record DTO 和 HTTP adapter |
 | Go / Python client | 预览 | 生成服务端之外的脚本或工具侧客户端 |

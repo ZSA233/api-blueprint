@@ -7,6 +7,11 @@ import {
   DemoPacket,
   DemoPacketWire,
 } from "./api/routes/api/binary/types";
+import {
+  AssistantClientMessageVariants,
+  AssistantServerMessage,
+  dispatchAssistantServerMessage,
+} from "./api/routes/api/demo/types";
 
 declare const process: {
   argv: string[];
@@ -94,6 +99,23 @@ async function callTypedErrors(baseUrl: string): Promise<void> {
   }
 }
 
+function checkConnectionMessageHelpers(): void {
+  const cancel = AssistantClientMessageVariants.cancel({ reason: "suite" });
+  if (cancel.type !== "cancel" || cancel.data.reason !== "suite") {
+    throw new Error(`assistant cancel helper produced ${JSON.stringify(cancel)}`);
+  }
+
+  const serverMessage: AssistantServerMessage = { type: "delta", data: { text: "hello" } };
+  const text = dispatchAssistantServerMessage(serverMessage, {
+    delta: (data) => data.text,
+    done: (data) => data.message_id,
+    log: (data) => `${data.level}:${data.message}`,
+  });
+  if (text !== "hello") {
+    throw new Error(`assistant dispatch helper returned ${text}`);
+  }
+}
+
 async function expectApiError(action: () => Promise<unknown>): Promise<ApiError> {
   try {
     await action();
@@ -123,6 +145,7 @@ async function main(): Promise<void> {
   await callBinary(baseUrl, "ts-raw", raw);
   const streaming = DemoPacketWire.body({ write: (writer) => DemoPacketWire.write(packet, writer) });
   await callBinary(baseUrl, "ts-stream", streaming);
+  checkConnectionMessageHelpers();
   await callTypedErrors(baseUrl);
 }
 

@@ -1,0 +1,20 @@
+package {{ router_group.package }}
+
+import "fmt"
+
+type {{ scaffold.processor_struct }} struct{}
+
+var _ {{ scaffold.processor_interface }}[{{ scaffold.scope_type }}] = (*{{ scaffold.processor_struct }})(nil)
+
+{% for variant in scaffold.variants %}
+func (processor *{{ scaffold.processor_struct }}) {{ variant.handler }}(
+	scope {{ scaffold.scope_type }},
+	msg *{{ variant.case_type }},
+) error {
+	_ = processor
+	_ = scope
+	_ = msg
+	return fmt.Errorf("TODO: implement {{ variant.message_label }} message")
+}
+
+{% endfor %}

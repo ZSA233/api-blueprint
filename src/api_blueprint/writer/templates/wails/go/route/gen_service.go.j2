@@ -4,7 +4,10 @@ package {{ router_group.binding_package }}
 
 {% set routes = router_group.views() | list %}
 {% set needs_fmt = routes | selectattr("uses_fmt_text_response") | list | length > 0 %}
+{% set needs_context = routes | selectattr("is_connection") | list | length > 0 or routes | selectattr("has_ws") | list | length > 0 %}
 import (
+	{% if needs_context %}"context"
+	{% endif %}
 	{% if needs_fmt %}"fmt"
 	{% endif %}
 	sharedprovider "{{ writer.shared_provider_imports | safe }}"
@@ -94,7 +97,7 @@ func (svc *{{ route.service_name }}) {{ route.connection_connect_func }}(
 	)
 	go func() {
 		if runErr := svc.impl.{{ route.func_name }}(ctx, stream); runErr != nil {
-			_ = session.Abort(1011, runErr.Error())
+			_ = session.Abort(ctx.Base, 1011, runErr.Error())
 		}
 	}()
 
@@ -112,7 +115,7 @@ func (svc *{{ route.service_name }}) {{ route.connection_close_func }}(request *
 	if code == 0 {
 		code = 1000
 	}
-	return session.Abort(code, request.Reason)
+	return session.Abort(context.Background(), code, request.Reason)
 }
 
 {% elif route.is_channel %}
@@ -152,7 +155,7 @@ func (svc *{{ route.service_name }}) {{ route.connection_connect_func }}(
 	)
 	go func() {
 		if runErr := svc.impl.{{ route.func_name }}(ctx, channel); runErr != nil {
-			_ = session.Abort(1011, runErr.Error())
+			_ = session.Abort(ctx.Base, 1011, runErr.Error())
 		}
 	}()
 
@@ -178,7 +181,7 @@ func (svc *{{ route.service_name }}) {{ route.connection_close_func }}(request *
 	if code == 0 {
 		code = 1000
 	}
-	return session.Abort(code, request.Reason)
+	return session.Abort(context.Background(), code, request.Reason)
 }
 
 {% elif route.has_ws %}
@@ -218,7 +221,7 @@ func (svc *{{ route.service_name }}) {{ route.connect_func }}(
 	go func() {
 		if runErr := svc.{{ route.executor_field_name }}.RunWSHandler(ctx); runErr != nil {
 			ctx.WsHandle.Error = runErr
-			_ = session.Abort(1011, runErr.Error())
+			_ = session.Abort(ctx.Base, 1011, runErr.Error())
 		}
 	}()
 
@@ -243,7 +246,7 @@ func (svc *{{ route.service_name }}) {{ route.close_func }}(request *{{ route.ws
 	if code == 0 {
 		code = 1000
 	}
-	return session.Abort(code, request.Reason)
+	return session.Abort(context.Background(), code, request.Reason)
 }
 
 {% else %}

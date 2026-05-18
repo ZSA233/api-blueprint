@@ -75,19 +75,23 @@ Go core generates transport-neutral handler interfaces for `STREAM` / `CHANNEL`.
 ```go
 Events(
 	ctx *CTX_Events,
-	stream providers.Stream[OPEN_Events, TaskStreamMessage, CLOSE_Events],
+	stream STREAM_Events,
 ) error
 Chat(
 	ctx *CTX_Chat,
-	channel providers.Channel[OPEN_Chat, AssistantServerMessage, AssistantClientMessage, CLOSE_Chat],
+	channel CHANNEL_Chat,
 ) error
 ```
 
-In the HTTP transport, `STREAM` generates an SSE adapter and `CHANNEL` generates a WebSocket adapter. In the Wails transport, both are backed by session-scoped runtime events by default. Multi-message variants generate one shared union schema with a `type` discriminator; do not split variants into multiple transport events. `.CLOSE(Model)` is part of the Go handler generic and the TypeScript `onClose` type; server business closures use `Close(&CLOSE_...{...})`, while exceptional or protocol failures use `Abort(code, reason)`.
+In the HTTP transport, `STREAM` generates an SSE adapter and `CHANNEL` generates a WebSocket adapter. In the Wails transport, both are backed by session-scoped runtime events by default. Multi-message variants generate one shared union schema with a `type` discriminator; do not split variants into multiple transport events. `.CLOSE(Model)` is part of the Go handler generic and the TypeScript `onClose` type; server business writes and closures are context-first (`Send(ctx, msg)`, `Close(ctx, close)`, `Abort(ctx, code, reason)`).
 
 The default HTTP/Wails runtimes fully implement only `ConnectionScope.SESSION`. `APP` / `TOPIC` remain in the route contract and can be implemented later through a custom connection hub / manager for broadcast or topic routing; the generator does not bake in business fan-out policy.
 
-Generated connection handlers still default to `not implemented`, so example business logic is not written into every user project. The repository example hand-writes the minimal usage in the user-owned `examples/golang/server/views/routes/api/demo/impl.go`: `STREAM` shows `Open()`, server message construction, `Send()`, and typed `Close()`; `CHANNEL` also shows `Recv(ctx)` for client messages.
+Named multi-variant messages generate stable helpers while keeping the same `{ type, data }` wire shape. Go server output places message unions, `NewXxxMessageVariant(...)`, and `DecodeVariant()` in `gen_messages.go`; a `CHANNEL` with a named client message also gets protocol keyframes in `gen_message_cases.go`: `XxxMessageProcessor[C]`, `VisitXxxMessage(ctx, message, processor)`, lazy `XxxMessageVariantCase.Decode()`, and typed helpers such as `AsXxxMessageError(...)` / `IsXxxMessageErrorKind(...)`. The visitor handles only one message and does not own the `Recv` loop, middleware, close/abort decisions, write path, or error policy; applications keep those runtime decisions in their route/app layer. TypeScript output generates `XxxMessageVariants.variant(data)` constructors, `dispatchXxxMessage(message, handlers)` dispatchers, and typed unknown-message dispatch errors for sending `CHANNEL` messages and consuming server pushes.
+
+Go server also creates three user-owned scaffold files the first time it sees a `CHANNEL` with a named client message: `<leaf>_session.go`, `<leaf>_processor.go`, and `<leaf>_error.go`. These files do not carry a `Code generated` marker, and later generations create them only when missing instead of overwriting user edits. The default shell gives humans and AI agents stable places for the route handler, `Recv` loop, `VisitXxxMessage(...)`, `OnXxx` processor methods, and message error policy; it is still an editable starting point, not a generator-owned session engine, and it does not bind the route to appkit, a hub, middleware, or a close policy.
+
+Non-scaffold generated connection handlers still default to `not implemented`, so example business logic is not written into every user project. The repository example keeps the `STREAM` usage in the user-owned `examples/golang/server/views/routes/api/demo/impl.go`, showing `Open()`, message constructors, context-aware `Send(...)`, and typed `Close(...)`; the `CHANNEL` example lives in `assistant_session_session.go`, `assistant_session_processor.go`, and `assistant_session_error.go`, where `OnXxx` methods use the scaffold scope's `Context`, route `CTX_*`, and channel.
 
 ### Typed Errors
 

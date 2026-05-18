@@ -74,9 +74,9 @@ func (prov *WsHandleProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
 	ctx.WsHandle.Response = rsp
 	ctx.WsHandle.Error = err
 	if err != nil {
-		_ = ctx.WsHandle.Conn.Abort(1011, err.Error())
+		_ = ctx.WsHandle.Conn.Abort(context.Background(), 1011, err.Error())
 	} else {
-		_ = ctx.WsHandle.Conn.Abort(1000, "")
+		_ = ctx.WsHandle.Conn.Abort(context.Background(), 1000, "")
 	}
 }
 

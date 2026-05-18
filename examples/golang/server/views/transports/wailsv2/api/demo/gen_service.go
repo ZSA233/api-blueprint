@@ -3,6 +3,8 @@
 package demo
 
 import (
+	"context"
+
 	sharedprovider "example.com/project/golang/server/views/providers"
 	wailstransport "example.com/project/golang/server/views/transports/wailsv2"
 )
@@ -372,7 +374,7 @@ func (svc *DemoService) ConnectWs(
 	go func() {
 		if runErr := svc.wsExecutor.RunWSHandler(ctx); runErr != nil {
 			ctx.WsHandle.Error = runErr
-			_ = session.Abort(1011, runErr.Error())
+			_ = session.Abort(ctx.Base, 1011, runErr.Error())
 		}
 	}()
 
@@ -397,7 +399,7 @@ func (svc *DemoService) CloseWs(request *WS_CLOSE_Ws) error {
 	if code == 0 {
 		code = 1000
 	}
-	return session.Abort(code, request.Reason)
+	return session.Abort(context.Background(), code, request.Reason)
 }
 
 func (svc *DemoService) SubscribeSweepEvents(
@@ -436,7 +438,7 @@ func (svc *DemoService) SubscribeSweepEvents(
 	)
 	go func() {
 		if runErr := svc.impl.SweepEvents(ctx, stream); runErr != nil {
-			_ = session.Abort(1011, runErr.Error())
+			_ = session.Abort(ctx.Base, 1011, runErr.Error())
 		}
 	}()
 
@@ -454,7 +456,7 @@ func (svc *DemoService) CloseSweepEvents(request *CONNECTION_CLOSE_SweepEvents) 
 	if code == 0 {
 		code = 1000
 	}
-	return session.Abort(code, request.Reason)
+	return session.Abort(context.Background(), code, request.Reason)
 }
 
 func (svc *DemoService) OpenAssistantSession(
@@ -493,7 +495,7 @@ func (svc *DemoService) OpenAssistantSession(
 	)
 	go func() {
 		if runErr := svc.impl.AssistantSession(ctx, channel); runErr != nil {
-			_ = session.Abort(1011, runErr.Error())
+			_ = session.Abort(ctx.Base, 1011, runErr.Error())
 		}
 	}()
 
@@ -519,7 +521,7 @@ func (svc *DemoService) CloseAssistantSession(request *CONNECTION_CLOSE_Assistan
 	if code == 0 {
 		code = 1000
 	}
-	return session.Abort(code, request.Reason)
+	return session.Abort(context.Background(), code, request.Reason)
 }
 
 func (svc *DemoService) PostDeprecated(

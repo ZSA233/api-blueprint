@@ -39,6 +39,9 @@ BLUEPRINT_GOLANG_SERVER_PRESERVED = (
     "go.sum",
     "main.go",
     "views/routes/api/binary/impl.go",
+    "views/routes/api/demo/assistant_session_error.go",
+    "views/routes/api/demo/assistant_session_processor.go",
+    "views/routes/api/demo/assistant_session_session.go",
     "views/routes/api/demo/impl.go",
     "views/routes/api/hello/impl.go",
 )
@@ -568,7 +571,38 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
     files = {
         "go_route_interface": workspace.golang_server_dir / "views" / "routes" / "api" / "demo" / "gen_interface.go",
         "go_route_gen_impl": workspace.golang_server_dir / "views" / "routes" / "api" / "demo" / "gen_impl.go",
+        "go_route_types": workspace.golang_server_dir / "views" / "routes" / "api" / "demo" / "gen_types.go",
+        "go_route_messages": workspace.golang_server_dir
+        / "views"
+        / "routes"
+        / "api"
+        / "demo"
+        / "gen_messages.go",
+        "go_route_message_cases": workspace.golang_server_dir
+        / "views"
+        / "routes"
+        / "api"
+        / "demo"
+        / "gen_message_cases.go",
         "go_route_impl": workspace.golang_server_dir / "views" / "routes" / "api" / "demo" / "impl.go",
+        "go_route_assistant_session": workspace.golang_server_dir
+        / "views"
+        / "routes"
+        / "api"
+        / "demo"
+        / "assistant_session_session.go",
+        "go_route_assistant_processor": workspace.golang_server_dir
+        / "views"
+        / "routes"
+        / "api"
+        / "demo"
+        / "assistant_session_processor.go",
+        "go_route_assistant_error": workspace.golang_server_dir
+        / "views"
+        / "routes"
+        / "api"
+        / "demo"
+        / "assistant_session_error.go",
         "go_http_adapter": workspace.golang_server_dir / "views" / "transports" / "http" / "api" / "demo" / "gen_interface.go",
         "go_client_route": workspace.golang_client_dir / "routes" / "api" / "demo" / "gen_client.go",
         "go_client_http": workspace.golang_client_dir / "transports" / "http" / "gen_transport.go",
@@ -591,6 +625,7 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         / "wailsv3"
         / "gen_bindings.ts",
         "index": workspace.root / "api-blueprint.index.json",
+        "ts_suite": workspace.typescript_dir / "suite.ts",
         "ts_route_client": workspace.typescript_dir / "api" / "routes" / "api" / "demo" / "gen_client.ts",
         "ts_route_types": workspace.typescript_dir / "api" / "routes" / "api" / "demo" / "gen_types.ts",
         "ts_error_lookup": workspace.typescript_dir / "api" / "runtime" / "gen_error_lookup.ts",
@@ -618,21 +653,95 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
             files["go_route_interface"],
             "SweepEvents(\n"
             "\t\tctx *CTX_SweepEvents,\n"
-            "\t\tstream providers.Stream[OPEN_SweepEvents, SweepStreamMessage, CLOSE_SweepEvents],\n"
+            "\t\tstream STREAM_SweepEvents,\n"
             "\t) error",
         ),
         "go channel handler": (
             files["go_route_interface"],
             "AssistantSession(\n"
             "\t\tctx *CTX_AssistantSession,\n"
-            "\t\tchannel providers.Channel[OPEN_AssistantSession, AssistantServerMessage, AssistantClientMessage, CLOSE_AssistantSession],\n"
+            "\t\tchannel CHANNEL_AssistantSession,\n"
             "\t) error",
         ),
-        "go stream manual example": (
+        "go stream message constructor example": (
             files["go_route_impl"],
-            "serverMessage, err := NewSweepStreamMessageState(&serverData)",
+            "message, err := NewSweepStreamMessageState(&SweepStreamMessage_State_DATA{",
         ),
-        "go channel manual example": (files["go_route_impl"], "clientMessage, err := channel.Recv(ctx)"),
+        "go stream context send example": (files["go_route_impl"], "if err := stream.Send(ctx, message); err != nil {"),
+        "go stream context close example": (
+            files["go_route_impl"],
+            'return stream.Close(ctx, &CLOSE_SweepEvents{Code: 1000, Reason: "example stream complete"})',
+        ),
+        "go channel scaffold route": (
+            files["go_route_assistant_session"],
+            "session := newAssistantSessionRouteSession(impl, ctx, channel, &assistantSessionMessageProcessor{})",
+        ),
+        "go channel scaffold serve loop": (
+            files["go_route_assistant_session"],
+            "message, err := session.channel.Recv(session.Context())",
+        ),
+        "go channel scaffold visitor": (
+            files["go_route_assistant_session"],
+            "if err := VisitAssistantClientMessage(session.messageScope(), message, session.processor); err != nil {",
+        ),
+        "go channel scaffold scope channel": (
+            files["go_route_assistant_session"],
+            "Channel CHANNEL_AssistantSession",
+        ),
+        "go channel processor example": (
+            files["go_route_assistant_processor"],
+            "type assistantSessionMessageProcessor struct{}",
+        ),
+        "go channel processor contract": (
+            files["go_route_assistant_processor"],
+            "var _ AssistantClientMessageProcessor[assistantSessionMessageScope] = (*assistantSessionMessageProcessor)(nil)",
+        ),
+        "go channel processor input": (
+            files["go_route_assistant_processor"],
+            "func (processor *assistantSessionMessageProcessor) OnInput(",
+        ),
+        "go channel processor cancel": (
+            files["go_route_assistant_processor"],
+            "func (processor *assistantSessionMessageProcessor) OnCancel(",
+        ),
+        "go channel processor constructor": (
+            files["go_route_assistant_processor"],
+            "message, err := NewAssistantServerMessageDelta(&AssistantServerMessage_Delta_DATA{",
+        ),
+        "go channel processor context send": (
+            files["go_route_assistant_processor"],
+            "return scope.Channel.Send(scope.Context, message)",
+        ),
+        "go channel processor context close": (
+            files["go_route_assistant_processor"],
+            "return scope.Channel.Close(scope.Context, &CLOSE_AssistantSession{Code: 1000, Reason: reason})",
+        ),
+        "go channel error scaffold": (
+            files["go_route_assistant_error"],
+            "func (session *assistantSessionRouteSession) handleMessageError(",
+        ),
+        "go channel error typed helper": (
+            files["go_route_assistant_error"],
+            "IsAssistantClientMessageErrorKind(err, AssistantClientMessageErrorNilProcessor)",
+        ),
+        "go channel error message type helper": (
+            files["go_route_assistant_error"],
+            "messageErr.MessageType()",
+        ),
+        "go generated channel processor": (
+            files["go_route_message_cases"],
+            "type AssistantClientMessageProcessor[C any] interface {",
+        ),
+        "go generated channel visitor": (files["go_route_message_cases"], "func VisitAssistantClientMessage[C any]("),
+        "go generated channel case": (files["go_route_message_cases"], "type AssistantClientMessageInputCase struct {"),
+        "go generated channel decode error": (files["go_route_message_cases"], "AssistantClientMessageErrorDecodeFailed"),
+        "go generated channel handler error": (files["go_route_message_cases"], "AssistantClientMessageErrorHandlerFailed"),
+        "go generated channel error helper": (
+            files["go_route_message_cases"],
+            "func IsAssistantClientMessageErrorKind(err error, kinds ...AssistantClientMessageErrorKind) bool",
+        ),
+        "go generated connection messages": (files["go_route_messages"], "type AssistantClientMessage struct {"),
+        "go generated message constructor": (files["go_route_messages"], "func NewAssistantClientMessageCancel("),
         "go typed error return example": (files["go_route_impl"], "return nil, demo_err.RATE_LIMITED.WithToast("),
         "go typed error dynamic toast": (files["go_route_impl"], 'Text:    "请等待 30 秒后重试",'),
         "go unknown typed error example": (
@@ -677,6 +786,10 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
             '  | { type: "input"; data: AssistantInput }\n'
             '  | { type: "cancel"; data: AssistantCancel };',
         ),
+        "typescript channel variants helper": (files["ts_route_types"], "export const AssistantClientMessageVariants = {"),
+        "typescript server dispatcher helper": (files["ts_route_types"], "export function dispatchAssistantServerMessage<R>("),
+        "typescript suite client message helper": (files["ts_suite"], "AssistantClientMessageVariants.cancel({ reason: \"suite\" })"),
+        "typescript suite server dispatcher helper": (files["ts_suite"], "dispatchAssistantServerMessage(serverMessage, {"),
         "wails v3 bindings import": (
             files["ts_wails_v3_transport"],
             'import { WAILS_V3_BINDINGS } from "./gen_bindings";',
@@ -709,9 +822,32 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
             "serverMessage, err := NewSweepStreamMessageState(&serverData)",
         ),
         "generated channel scaffold": (files["go_route_gen_impl"], "clientMessage, err := channel.Recv(ctx)"),
+        "generated router option": (files["go_route_gen_impl"], "type GenRouterOption func(router *_GenRouter)"),
+        "generated flow option": (files["go_route_gen_impl"], "func WithAssistantSessionFlow("),
+        "generated flow route": (files["go_route_gen_impl"], "return flow.Serve(ctx, channel)"),
+        "generated stream sender": (files["go_route_impl"], "NewSweepEventsSender("),
+        "manual assistant route in impl": (files["go_route_impl"], "func (impl *Router) AssistantSession("),
+        "old channel dispatcher example": (files["go_route_impl"], "DispatchAssistantClientMessage("),
+        "old generated channel dispatcher": (files["go_route_messages"], "func DispatchAssistantClientMessage("),
+        "old generated channel handlers": (files["go_route_messages"], "type AssistantClientMessageHandlers struct {"),
+        "message union in gen_types": (files["go_route_types"], "type AssistantClientMessage struct {"),
+        "user router flow field": (files["go_route_impl"], "assistantSessionFlow *AssistantSessionFlow"),
+        "user router flow delegate": (files["go_route_impl"], "return flow.Serve(ctx, channel)"),
+        "generated flow file": (
+            workspace.golang_server_dir / "views" / "routes" / "api" / "demo" / "gen_assistant_session_flow.go",
+            "type AssistantSessionFlow struct {",
+        ),
+        "generated stream sender file": (
+            workspace.golang_server_dir / "views" / "routes" / "api" / "demo" / "gen_sweep_events_stream.go",
+            "type SweepEventsSender struct {",
+        ),
+        "old exported assistant processor": (files["go_route_assistant_processor"], "type AssistantSessionProcessor struct{}"),
+        "old exported assistant scope": (files["go_route_assistant_processor"], "type AssistantSessionScope struct {"),
+        "route-prefixed input processor": (files["go_route_assistant_processor"], "OnAssistantSessionInput"),
+        "route-prefixed cancel processor": (files["go_route_assistant_processor"], "OnAssistantSessionCancel"),
     }
     for label, (path, snippet) in forbidden_checks.items():
-        if snippet in path.read_text(encoding="utf-8"):
+        if path.is_file() and snippet in path.read_text(encoding="utf-8"):
             validation_errors.append(label)
     if validation_errors:
         raise ExampleValidationError(

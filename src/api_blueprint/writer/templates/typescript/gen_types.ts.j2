@@ -62,4 +62,49 @@ export enum {{ proto.name }} {
 {% endif -%}
 {% endfor -%}
 {% endfor -%}
+{% for helper in message_helpers or [] %}
+export const {{ helper.variants_const }} = {
+{% for variant in helper.variants %}  {{ variant.method }}(data: {{ variant.data_type }}): {{ helper.name }} {
+    return { type: {{ variant.key | tojson }}, data };
+  },
+{% endfor %}} as const;
+
+export type {{ helper.handlers_type }}<R> = {
+{% for variant in helper.variants %}  {{ variant.method }}: (data: {{ variant.data_type }}, message: Extract<{{ helper.name }}, { type: {{ variant.key | tojson }} }>) => R;
+{% endfor %}};
+
+export type {{ helper.name }}DispatchErrorKind = "unknown_type";
+
+export class {{ helper.name }}DispatchError extends Error {
+  readonly kind: {{ helper.name }}DispatchErrorKind;
+  readonly type: string;
+  readonly rawMessage: {{ helper.name }};
+
+  constructor(kind: {{ helper.name }}DispatchErrorKind, rawMessage: {{ helper.name }}) {
+    const type = String((rawMessage as { type?: unknown }).type);
+    super(`unsupported {{ helper.name }} type ${type}`);
+    this.name = "{{ helper.name }}DispatchError";
+    this.kind = kind;
+    this.type = type;
+    this.rawMessage = rawMessage;
+    Object.setPrototypeOf(this, {{ helper.name }}DispatchError.prototype);
+  }
+}
+
+export function is{{ helper.name }}DispatchError(error: unknown): error is {{ helper.name }}DispatchError {
+  return error instanceof {{ helper.name }}DispatchError;
+}
+
+export function {{ helper.dispatch_func }}<R>(
+  message: {{ helper.name }},
+  handlers: {{ helper.handlers_type }}<R>,
+): R {
+  switch (message.type) {
+{% for variant in helper.variants %}    case {{ variant.key | tojson }}: return handlers.{{ variant.method }}(message.data, message);
+{% endfor %}    default:
+      throw new {{ helper.name }}DispatchError("unknown_type", message);
+  }
+}
+
+{% endfor -%}
 {% endautoescape %}

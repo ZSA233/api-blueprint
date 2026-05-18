@@ -4,8 +4,6 @@ package {{ router_group.package }}
 
 import (
 	"fmt"
-	{% if router_group.uses_connection_runtime %}providers "{{ bp.writer.provider_imports | safe }}"
-	{% endif %}
 )
 
 type _GenRouter struct{}

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -12,6 +13,8 @@ from api_blueprint.engine.model import String
 from api_blueprint.engine.envelope import CodeMessageDataEnvelope
 from api_blueprint.writer.golang import GolangResponseEnvelope
 from api_blueprint.writer.golang import GolangWriter
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_golang_response_envelope_preserves_generic_type_parameters():
@@ -203,6 +206,256 @@ go 1.23.8
     assert "type RSP_Submit_BODY = types.SubmitResponse" in route_models
     assert "type SubmitJson struct" in shared_models
     assert "type SubmitResponse struct" in shared_models
+
+
+def test_golang_writer_generates_message_case_visitors(tmp_path):
+    output_dir = tmp_path / "golang"
+    output_dir.mkdir()
+    (tmp_path / "go.mod").write_text(
+        """
+module example.com/generated
+
+go 1.23.8
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    class Open(Model):
+        session_id = String(description="session id")
+
+    class ServerDelta(Model):
+        text = String(description="text")
+
+    class ClientInput(Model):
+        text = String(description="text")
+
+    class ClientCancel(Model):
+        reason = String(description="reason")
+
+    class CloseInfo(Model):
+        reason = String(description="reason")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.CHANNEL("/assistant").OPEN(Open).CLIENT_MESSAGE(
+            "AssistantClientMessage",
+            input=ClientInput,
+            cancel=ClientCancel,
+        ).SERVER_MESSAGE(
+            "AssistantServerMessage",
+            delta=ServerDelta,
+        ).CLOSE(CloseInfo)
+
+    writer = GolangWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    route_models = (output_dir / "routes" / "api" / "demo" / "gen_types.go").read_text(
+        encoding="utf-8"
+    )
+    route_messages = (output_dir / "routes" / "api" / "demo" / "gen_messages.go").read_text(
+        encoding="utf-8"
+    )
+    route_cases = (output_dir / "routes" / "api" / "demo" / "gen_message_cases.go").read_text(
+        encoding="utf-8"
+    )
+    route_impl = (output_dir / "routes" / "api" / "demo" / "gen_impl.go").read_text(encoding="utf-8")
+    provider_connection = (output_dir / "providers" / "gen_connection.go").read_text(encoding="utf-8")
+
+    assert "type AssistantClientMessage struct" not in route_models
+    assert "func NewAssistantClientMessageCancel" not in route_models
+    assert "func DispatchAssistantClientMessage" not in route_models
+    assert "type AssistantClientMessageHandlers" not in route_models
+
+    assert '"encoding/json"' in route_messages
+    assert "type AssistantClientMessage struct" in route_messages
+    assert "func NewAssistantClientMessageCancel(data *AssistantClientMessage_Cancel_DATA) (*AssistantClientMessage, error)" in route_messages
+    assert "func (msg *AssistantClientMessage) DecodeCancel() (*AssistantClientMessage_Cancel_DATA, error)" in route_messages
+    assert "func DispatchAssistantClientMessage" not in route_messages
+    assert (
+        "type CHANNEL_Assistant = providers.Channel[\n"
+        "\tOPEN_Assistant,\n"
+        "\tAssistantServerMessage,\n"
+        "\tAssistantClientMessage,\n"
+        "\tCLOSE_Assistant,\n"
+        "]"
+        in route_models
+    )
+    assert (
+        "type AssistantClientMessageProcessor[C any] interface {\n"
+        "\tOnInput(ctx C, msg *AssistantClientMessageInputCase) error\n"
+        "\tOnCancel(ctx C, msg *AssistantClientMessageCancelCase) error\n"
+        "}"
+        in route_cases
+    )
+    assert "OnAssistantInput" not in route_cases
+    assert "OnAssistantCancel" not in route_cases
+    assert "type AssistantClientMessageCase interface {" in route_cases
+    assert "func VisitAssistantClientMessage[C any](" in route_cases
+    assert "processor AssistantClientMessageProcessor[C]," in route_cases
+    assert "return wrapAssistantClientMessageHandlerError(message.Type, processor.OnInput(ctx, &AssistantClientMessageInputCase{message: message}))" in route_cases
+    assert 'newAssistantClientMessageError(AssistantClientMessageErrorUnknownType, message.Type, fmt.Errorf("unsupported AssistantClientMessage type %q", message.Type))' in route_cases
+    assert "type AssistantClientMessageInputCase struct {" in route_cases
+    assert "func (msg *AssistantClientMessageInputCase) RawData() []byte" in route_cases
+    assert "func (msg *AssistantClientMessageInputCase) Decode() (*AssistantClientMessage_Input_DATA, error)" in route_cases
+    assert "data, err := msg.message.DecodeInput()" in route_cases
+    assert "return nil, newAssistantClientMessageError(AssistantClientMessageErrorDecodeFailed, msg.Type(), err)" in route_cases
+    assert "type AssistantClientMessageError struct {" in route_cases
+    assert "Kind AssistantClientMessageErrorKind" in route_cases
+    assert "Type string" in route_cases
+    assert "Err  error" in route_cases
+    assert "AssistantClientMessageErrorNilMessage" in route_cases and '"nil_message"' in route_cases
+    assert "AssistantClientMessageErrorNilProcessor" in route_cases and '"nil_processor"' in route_cases
+    assert "AssistantClientMessageErrorUnknownType" in route_cases and '"unknown_type"' in route_cases
+    assert "AssistantClientMessageErrorDecodeFailed" in route_cases and '"decode_failed"' in route_cases
+    assert "AssistantClientMessageErrorHandlerFailed" in route_cases and '"handler_failed"' in route_cases
+    assert "func AsAssistantClientMessageError(err error) (*AssistantClientMessageError, bool)" in route_cases
+    assert "func IsAssistantClientMessageErrorKind(err error, kinds ...AssistantClientMessageErrorKind) bool" in route_cases
+    assert "func (err *AssistantClientMessageError) IsKind(kinds ...AssistantClientMessageErrorKind) bool" in route_cases
+    assert "func (err *AssistantClientMessageError) MessageType() string" in route_cases
+    assert "func (err *AssistantClientMessageError) Cause() error" in route_cases
+    assert 'return fmt.Sprintf("%s: %s: %v", err.Kind, err.Type, err.Err)' in route_cases
+    assert "func wrapAssistantClientMessageHandlerError(typ string, err error) error" in route_cases
+    assert "return newAssistantClientMessageError(AssistantClientMessageErrorHandlerFailed, typ, err)" in route_cases
+    assert "MessageMiddleware" not in provider_connection
+    assert "MessageMiddlewareChain" not in provider_connection
+    assert "type GenRouterOption func(router *_GenRouter)" not in route_impl
+    assert "func NewGenRouter(opts ...GenRouterOption) _GenRouter" not in route_impl
+    assert "assistantFlow *AssistantFlow" not in route_impl
+    assert "func WithAssistantFlow(flow *AssistantFlow) GenRouterOption" not in route_impl
+    assert "return flow.Serve(ctx, channel)" not in route_impl
+    assert 'return fmt.Errorf("not implemented")' in route_impl
+    assert not (output_dir / "routes" / "api" / "demo" / "gen_assistant_flow.go").exists()
+
+    template_dir = PROJECT_ROOT / "src" / "api_blueprint" / "writer" / "templates" / "golang" / "server" / "views" / "route"
+    assert not (template_dir / "__gen_channel_flow.go.j2").exists()
+    assert not (template_dir / "__gen_stream_sender.go.j2").exists()
+    assert not (template_dir / "dynamic" / "channel_flow.go.j2").exists()
+    assert not (template_dir / "dynamic" / "stream_sender.go.j2").exists()
+
+
+def test_golang_writer_generates_preserved_connection_scaffold(tmp_path):
+    output_dir = tmp_path / "golang"
+    output_dir.mkdir()
+    (tmp_path / "go.mod").write_text(
+        """
+module example.com/generated
+
+go 1.23.8
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    class Open(Model):
+        session_id = String(description="session id")
+
+    class ServerDelta(Model):
+        text = String(description="text")
+
+    class ClientInput(Model):
+        text = String(description="text")
+
+    class ClientCancel(Model):
+        reason = String(description="reason")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.CHANNEL("/assistant-session").OPEN(Open).CLIENT_MESSAGE(
+            "AssistantClientMessage",
+            input=ClientInput,
+            cancel=ClientCancel,
+        ).SERVER_MESSAGE(
+            "AssistantServerMessage",
+            delta=ServerDelta,
+        )
+
+    writer = GolangWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    route_dir = output_dir / "routes" / "api" / "demo"
+    session_text = (route_dir / "assistant_session_session.go").read_text(encoding="utf-8")
+    processor_text = (route_dir / "assistant_session_processor.go").read_text(encoding="utf-8")
+    error_text = (route_dir / "assistant_session_error.go").read_text(encoding="utf-8")
+
+    assert "Code generated by api-blueprint" not in session_text
+    assert "func (impl *Router) AssistantSession(ctx *CTX_AssistantSession, channel CHANNEL_AssistantSession) error" in session_text
+    assert "session := newAssistantSessionRouteSession(impl, ctx, channel, &assistantSessionMessageProcessor{})" in session_text
+    assert "type assistantSessionRouteSession struct {" in session_text
+    assert "type assistantSessionMessageScope struct {" in session_text
+    assert "Channel CHANNEL_AssistantSession" in session_text
+    assert "func (session *assistantSessionRouteSession) Serve() error {" in session_text
+    assert "message, err := session.channel.Recv(session.Context())" in session_text
+    assert "VisitAssistantClientMessage(session.messageScope(), message, session.processor)" in session_text
+    assert "session.handleMessageError(message, err)" in session_text
+
+    assert "Code generated by api-blueprint" not in processor_text
+    assert "type assistantSessionMessageProcessor struct{}" in processor_text
+    assert "var _ AssistantClientMessageProcessor[assistantSessionMessageScope] = (*assistantSessionMessageProcessor)(nil)" in processor_text
+    assert "func (processor *assistantSessionMessageProcessor) OnInput(" in processor_text
+    assert "func (processor *assistantSessionMessageProcessor) OnCancel(" in processor_text
+    assert 'return fmt.Errorf("TODO: implement assistant session input message")' in processor_text
+
+    assert "Code generated by api-blueprint" not in error_text
+    assert "func (session *assistantSessionRouteSession) handleMessageError(" in error_text
+    assert "IsAssistantClientMessageErrorKind(err, AssistantClientMessageErrorNilProcessor)" in error_text
+    assert "AssistantClientMessageErrorUnknownType" in error_text
+    assert "AsAssistantClientMessageError(err)" in error_text
+    assert "messageErr.MessageType()" in error_text
+
+
+def test_golang_writer_preserves_existing_connection_scaffold_files(tmp_path):
+    output_dir = tmp_path / "golang"
+    route_dir = output_dir / "routes" / "api" / "demo"
+    route_dir.mkdir(parents=True)
+    (tmp_path / "go.mod").write_text(
+        """
+module example.com/generated
+
+go 1.23.8
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    sentinel = "package demo\n\nconst userOwnedScaffold = true\n"
+    for filename in (
+        "assistant_session_session.go",
+        "assistant_session_processor.go",
+        "assistant_session_error.go",
+    ):
+        (route_dir / filename).write_text(sentinel, encoding="utf-8")
+
+    class Open(Model):
+        session_id = String(description="session id")
+
+    class ServerDelta(Model):
+        text = String(description="text")
+
+    class ClientInput(Model):
+        text = String(description="text")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.CHANNEL("/assistant-session").OPEN(Open).CLIENT_MESSAGE(
+            "AssistantClientMessage",
+            input=ClientInput,
+        ).SERVER_MESSAGE(
+            "AssistantServerMessage",
+            delta=ServerDelta,
+        )
+
+    writer = GolangWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    for filename in (
+        "assistant_session_session.go",
+        "assistant_session_processor.go",
+        "assistant_session_error.go",
+    ):
+        assert (route_dir / filename).read_text(encoding="utf-8") == sentinel
 
 
 def test_golang_writer_generates_binary_schema_parser_and_http_binding(tmp_path):
@@ -553,6 +806,7 @@ go 1.23.8
 
     core_interface = (output_dir / "routes" / "api" / "runs" / "gen_interface.go").read_text(encoding="utf-8")
     core_models = (output_dir / "routes" / "api" / "runs" / "gen_types.go").read_text(encoding="utf-8")
+    core_messages = (output_dir / "routes" / "api" / "runs" / "gen_messages.go").read_text(encoding="utf-8")
     provider_connection = (output_dir / "providers" / "gen_connection.go").read_text(encoding="utf-8")
     http_adapter = (output_dir / "transports" / "http" / "api" / "runs" / "gen_interface.go").read_text(encoding="utf-8")
     impl = (output_dir / "routes" / "api" / "runs" / "impl.go").read_text(encoding="utf-8")
@@ -561,25 +815,48 @@ go 1.23.8
     assert (
         "Events(\n"
         "\t\tctx *CTX_Events,\n"
-        "\t\tstream providers.Stream[OPEN_Events, TaskStreamMessage, CLOSE_Events],\n"
+        "\t\tstream STREAM_Events,\n"
         "\t) error"
         in core_interface
     )
     assert (
         "Chat(\n"
         "\t\tctx *CTX_Chat,\n"
-        "\t\tchannel providers.Channel[OPEN_Chat, SERVER_Chat_MESSAGE, CLIENT_Chat_MESSAGE, CLOSE_Chat],\n"
+        "\t\tchannel CHANNEL_Chat,\n"
         "\t) error"
         in core_interface
     )
-    assert "type TaskStreamMessage struct" in core_models
+    assert "type TaskStreamMessage struct" not in core_models
+    assert "type TaskStreamMessage struct" in core_messages
+    assert (
+        "type STREAM_Events = providers.Stream[\n"
+        "\tOPEN_Events,\n"
+        "\tTaskStreamMessage,\n"
+        "\tCLOSE_Events,\n"
+        "]"
+        in core_models
+    )
+    assert (
+        "type CHANNEL_Chat = providers.Channel[\n"
+        "\tOPEN_Chat,\n"
+        "\tSERVER_Chat_MESSAGE,\n"
+        "\tCLIENT_Chat_MESSAGE,\n"
+        "\tCLOSE_Chat,\n"
+        "]"
+        in core_models
+    )
     assert "type CLOSE_Events = types.DefaultConnectionClose" in core_models
     assert "type CLOSE_Chat = types.DefaultConnectionClose" in core_models
-    assert 'const TaskStreamMessageTypeState = "state"' in core_models
+    assert 'const TaskStreamMessageTypeState = "state"' in core_messages
+    assert not (output_dir / "routes" / "api" / "runs" / "gen_events_stream.go").exists()
     assert "type Stream[O, S, CL any] interface" in provider_connection
-    assert "Close(*CL) error" in provider_connection
-    assert "Abort(code int, reason string) error" in provider_connection
+    assert "Send(ctx context.Context, payload *S) error" in provider_connection
+    assert "Close(ctx context.Context, payload *CL) error" in provider_connection
+    assert "Abort(ctx context.Context, code int, reason string) error" in provider_connection
+    assert "CloseJSON(ctx context.Context, payload any) error" in provider_connection
+    assert "Close(ctx context.Context, code int, reason string) error" in provider_connection
     assert "type Channel[O, S, C, CL any] interface" in provider_connection
+    assert "MessageMiddleware" not in provider_connection
     assert 'Scope:     sharedprovider.ConnectionScope("session")' in http_adapter
     assert "httptransport.STREAM(" in http_adapter
     assert "httptransport.STREAM[" not in http_adapter
@@ -590,9 +867,11 @@ go 1.23.8
     ).read_text(encoding="utf-8")
     assert "serverMessage, err := NewTaskStreamMessageState(&serverData)" not in gen_impl
     assert "clientMessage, err := channel.Recv(ctx)" not in gen_impl
+    assert "NewEventsSender(" not in gen_impl
     assert 'return fmt.Errorf("not implemented")' in gen_impl
     assert "serverMessage, err := NewTaskStreamMessageState(&serverData)" not in impl
     assert "clientMessage, err := channel.Recv(ctx)" not in impl
+    assert "NewEventsSender(" not in impl
 
 
 def test_golang_http_adapter_respects_already_written_gin_response(tmp_path):

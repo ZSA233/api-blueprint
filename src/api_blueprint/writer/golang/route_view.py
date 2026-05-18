@@ -6,7 +6,7 @@ from api_blueprint.engine.connection import ConnectionKind, DefaultConnectionClo
 from api_blueprint.engine.model import Null, create_model
 from api_blueprint.engine.provider import ProviderName
 from api_blueprint.engine.router import Router
-from api_blueprint.engine.utils import snake_to_pascal_case
+from api_blueprint.engine.utils import pascal_to_snake_case, snake_to_pascal_case
 from api_blueprint.engine.envelope import NoEnvelope
 from api_blueprint.writer.core.contract_adapters import RouteProtocolContract, route_protocol_from_router
 from api_blueprint.writer.core.contracts import RouteContract
@@ -344,7 +344,7 @@ class GoRouteProtocolView:
         return (
             f"{self.func_name}(\n"
             f"\tctx *{self.ctx_type},\n"
-            f"\tstream providers.Stream[{self.local_query_type_expr}, {self.server_message_type}, {self.close_message_type}],\n"
+            f"\tstream STREAM_{self.func_name},\n"
             ") error"
         )
 
@@ -353,7 +353,7 @@ class GoRouteProtocolView:
         return (
             f"{self.func_name}(\n"
             f"\tctx *{self.ctx_type},\n"
-            f"\tchannel providers.Channel[{self.local_query_type_expr}, {self.server_message_type}, {self.client_message_type}, {self.close_message_type}],\n"
+            f"\tchannel CHANNEL_{self.func_name},\n"
             ") error"
         )
 
@@ -391,22 +391,134 @@ class GoRouteProtocolView:
     def message_unions(self) -> list[dict[str, Any]]:
         unions: list[dict[str, Any]] = []
         for contract in (self.protocol.server_message, self.protocol.client_message):
-            if contract is None or not contract.is_union:
+            if contract is None or not contract.is_union or contract.name is None:
                 continue
-            variants = []
-            for variant in contract.variants:
-                data_type = self._variant_alias_name(contract, variant.key)
-                variants.append(
-                    {
-                        "key": variant.key,
-                        "const": f"{contract.name}Type{snake_to_pascal_case(variant.key)}",
-                        "ctor": f"New{contract.name}{snake_to_pascal_case(variant.key)}",
-                        "decode": f"Decode{snake_to_pascal_case(variant.key)}",
-                        "data_type": data_type,
-                    }
-                )
-            unions.append({"name": contract.name, "variants": variants})
+            unions.append(self._message_union(contract))
         return unions
+
+    def connection_alias(self) -> dict[str, str] | None:
+        if self.is_stream:
+            return {
+                "name": f"STREAM_{self.func_name}",
+                "kind": "stream",
+                "open_type": self.local_query_type_expr,
+                "server_message_type": self.server_message_type,
+                "close_type": self.close_message_type,
+            }
+        if self.is_channel:
+            return {
+                "name": f"CHANNEL_{self.func_name}",
+                "kind": "channel",
+                "open_type": self.local_query_type_expr,
+                "server_message_type": self.server_message_type,
+                "client_message_type": self.client_message_type,
+                "close_type": self.close_message_type,
+            }
+        return None
+
+    def client_message_cases(self) -> dict[str, Any] | None:
+        contract = self._named_union(self.protocol.client_message)
+        if contract is None:
+            return None
+        return {
+            "name": contract.name,
+            "case_interface": f"{contract.name}Case",
+            "processor_type": f"{contract.name}Processor",
+            "visitor": f"Visit{contract.name}",
+            "error_type": f"{contract.name}Error",
+            "error_kind_type": f"{contract.name}ErrorKind",
+            "new_error": f"new{contract.name}Error",
+            "wrap_error": f"wrap{contract.name}HandlerError",
+            "variants": self._case_variants(contract),
+        }
+
+    def connection_scaffold(self) -> dict[str, Any] | None:
+        if not self.is_channel:
+            return None
+        cases = self.client_message_cases()
+        if cases is None:
+            return None
+        base_name = pascal_to_snake_case(self.func_name)
+        lower_name = self._lower_camel(self.func_name)
+        route_label = base_name.replace("_", " ")
+        return {
+            "base_name": base_name,
+            "session_file": f"{base_name}_session.go",
+            "processor_file": f"{base_name}_processor.go",
+            "error_file": f"{base_name}_error.go",
+            "func_name": self.func_name,
+            "route_label": route_label,
+            "ctx_type": self.ctx_type,
+            "channel_alias": f"CHANNEL_{self.func_name}",
+            "client_message_type": self.client_message_type,
+            "session_type": f"{lower_name}RouteSession",
+            "new_session": f"new{self.func_name}RouteSession",
+            "scope_type": f"{lower_name}MessageScope",
+            "processor_struct": f"{lower_name}MessageProcessor",
+            "processor_interface": cases["processor_type"],
+            "visitor": cases["visitor"],
+            "error_type": cases["error_type"],
+            "error_kind_type": cases["error_kind_type"],
+            "as_error": f"As{cases['name']}Error",
+            "is_error_kind": f"Is{cases['name']}ErrorKind",
+            "error_kinds": {
+                "nil_message": f"{cases['error_type']}NilMessage",
+                "nil_processor": f"{cases['error_type']}NilProcessor",
+                "unknown_type": f"{cases['error_type']}UnknownType",
+                "decode_failed": f"{cases['error_type']}DecodeFailed",
+                "handler_failed": f"{cases['error_type']}HandlerFailed",
+            },
+            "variants": [
+                {
+                    **variant,
+                    "message_label": f"{route_label} {pascal_to_snake_case(variant['name']).replace('_', ' ')}",
+                }
+                for variant in cases["variants"]
+            ],
+        }
+
+    def _named_union(self, contract: MessageContract | None) -> MessageContract | None:
+        if contract is None or not contract.is_union or contract.name is None:
+            return None
+        return contract
+
+    def _message_union(self, contract: MessageContract) -> dict[str, Any]:
+        return {
+            "name": contract.name,
+            "variants": self._message_variants(contract),
+        }
+
+    def _message_variants(self, contract: MessageContract) -> list[dict[str, Any]]:
+        variants = []
+        for variant in contract.variants:
+            variant_name = snake_to_pascal_case(variant.key)
+            variants.append(
+                {
+                    "key": variant.key,
+                    "name": variant_name,
+                    "const": f"{contract.name}Type{variant_name}",
+                    "ctor": f"New{contract.name}{variant_name}",
+                    "decode": f"Decode{variant_name}",
+                    "data_type": self._variant_alias_name(contract, variant.key),
+                }
+            )
+        return variants
+
+    def _case_variants(self, contract: MessageContract) -> list[dict[str, Any]]:
+        return [
+            {
+                **variant,
+                "case_type": f"{contract.name}{variant['name']}Case",
+                "handler": f"On{variant['name']}",
+            }
+            for variant in self._message_variants(contract)
+        ]
+
+    @staticmethod
+    def _lower_camel(name: str) -> str:
+        if not name:
+            return name
+        return name[:1].lower() + name[1:]
 
     def _message_contract_protos(
         self,

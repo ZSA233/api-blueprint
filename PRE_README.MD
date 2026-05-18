@@ -83,6 +83,7 @@ README 应链接到以下用户文档：
 - Blueprint DSL 把 RPC、`STREAM`、`CHANNEL` 作为同一套 route contract 中的一等能力。
 - `STREAM` 表示服务端持续推送，`CHANNEL` 表示双向消息通道；长连接语义通过 `OPEN`、`SERVER_MESSAGE`、`CLIENT_MESSAGE`、typed `CLOSE`、`ConnectionScope` 与 `ConnectionDelivery` 描述。
 - 多消息类型必须通过单个判别联合消息契约声明，避免多个裸 event 名。
+- Go server 为具名多消息联合生成消息构造、解码 helper、client message case/visitor 关键帧和 typed message error helper；带具名 client message 的 `CHANNEL` 首次生成用户拥有的 `<leaf>_session.go` / `<leaf>_processor.go` / `<leaf>_error.go` scaffold，后续不覆盖；长连接 `Send`、`Close`、`Abort` 为 context-first API。TypeScript client 生成消息构造、分发 helper 和 unknown message typed dispatch error；详细使用方式放在 generators 专题文档，不写入 README 首页。
 - Markdown Binary Schema 是 HTTP 二进制请求体的一等契约，route 使用 `.REQ_BINARY(path)` 绑定 Markdown schema。
 - 稳定字段身份使用 `field(number, Field(...), optional=True)`，互斥选择使用 `choice="..."`，通用语义类型使用 `DateTime`、`JSONValue`、`AnyValue`。
 - `operation_id` 是 RPC / `STREAM` / `CHANNEL` 的稳定 operation 命名能力；它改变 generated operation surface，不改变 route id、path 或 ContractGraph 连接语义。

@@ -3,7 +3,6 @@
 package demo
 
 import (
-	providers "example.com/project/golang/server/views/providers"
 	"fmt"
 )
 
@@ -31,14 +30,14 @@ func (impl *_GenRouter) Ws(ctx *CTX_Ws, req *REQ_Ws) (rsp *RSP_Ws, err error) {
 
 func (impl *_GenRouter) SweepEvents(
 	ctx *CTX_SweepEvents,
-	stream providers.Stream[OPEN_SweepEvents, SweepStreamMessage, CLOSE_SweepEvents],
+	stream STREAM_SweepEvents,
 ) error {
 	return fmt.Errorf("not implemented")
 }
 
 func (impl *_GenRouter) AssistantSession(
 	ctx *CTX_AssistantSession,
-	channel providers.Channel[OPEN_AssistantSession, AssistantServerMessage, AssistantClientMessage, CLOSE_AssistantSession],
+	channel CHANNEL_AssistantSession,
 ) error {
 	return fmt.Errorf("not implemented")
 }

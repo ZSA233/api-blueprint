@@ -91,8 +91,8 @@ For fuller project layout, config fields, DSL, generator output, typed errors, R
 | Target | Status | Purpose |
 |:---|:---:|:---|
 | Contract / inspect | Available | Emit a contract index and query route, schema, error, or file ownership details |
-| Go server | Available | Generate Go routes, providers, HTTP/Wails adapters, and runtime |
-| TypeScript client | Preview | Generate transport-neutral clients, HTTP adapters, and Wails facades |
+| Go server | Available | Generate Go routes, providers, long-connection message helpers, HTTP/Wails adapters, and runtime |
+| TypeScript client | Preview | Generate transport-neutral clients, long-connection message helpers, HTTP adapters, and Wails facades |
 | Kotlin Android client | Preview | Generate OkHttp clients, models, binary writers, and route facades |
 | Java client/server | Preview | Generate Java 17 HttpClient clients, Spring MVC server scaffolds, record DTOs, and HTTP adapters |
 | Go / Python client | Preview | Generate non-server clients for scripts, tools, or services |

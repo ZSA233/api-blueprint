@@ -3,10 +3,13 @@
 package {{ router_group.package }}
 
 {% set protos_list = router_group.protos() | list %}
-{% set message_unions = router_group.message_unions() | list %}
+{% set connection_aliases = router_group.connection_aliases() | list %}
 {% set fmts = router_group.formatters() %}
 
 {% set ns = namespace(imports=[]) %}
+{% if connection_aliases %}
+	{% set ns.imports = ns.imports + ['providers "' ~ bp.writer.provider_imports ~ '"'] %}
+{% endif %}
 
 {% set gen_proto_block %}
 {% for proto in protos_list %}
@@ -31,44 +34,29 @@ type {{ proto.def_name }} = {{ proto.generic.type_reference(fmts) }}[
 type {{ proto.def_name }} {% if not proto.alias.new_type %}={% endif %} {{ proto.alias.type_reference(fmts) | safe }}
 {% endif %}
 {% endfor %}
-{% for union in message_unions %}
-
-type {{ union.name }} struct {
-	Type string `json:"type"`
-	Data json.RawMessage `json:"data,omitempty"`
-}
-
-{% for variant in union.variants %}
-const {{ variant.const }} = {{ variant.key | tojson }}
-
-func {{ variant.ctor }}(data *{{ variant.data_type }}) (*{{ union.name }}, error) {
-	raw, err := json.Marshal(data)
-	if err != nil {
-		return nil, err
-	}
-	return &{{ union.name }}{Type: {{ variant.const }}, Data: raw}, nil
-}
-
-func (msg *{{ union.name }}) {{ variant.decode }}() (*{{ variant.data_type }}, error) {
-	if msg == nil {
-		return nil, nil
-	}
-	var data {{ variant.data_type }}
-	if err := json.Unmarshal(msg.Data, &data); err != nil {
-		return nil, err
-	}
-	return &data, nil
-}
-{% endfor %}
-{% endfor %}
 {% endset %}
 
 
 import (
-	{% if message_unions %}"encoding/json"
-	{% endif %}
 	{% for imp in ns.imports | unique | list %}{% if imp %}{{ imp | safe }}
 	{% endif %}{% endfor %}
 )
 
 {{ gen_proto_block }}
+
+{% for alias in connection_aliases %}
+{% if alias.kind == 'stream' %}
+type {{ alias.name }} = providers.Stream[
+	{{ alias.open_type }},
+	{{ alias.server_message_type }},
+	{{ alias.close_type }},
+]
+{% elif alias.kind == 'channel' %}
+type {{ alias.name }} = providers.Channel[
+	{{ alias.open_type }},
+	{{ alias.server_message_type }},
+	{{ alias.client_message_type }},
+	{{ alias.close_type }},
+]
+{% endif %}
+{% endfor %}

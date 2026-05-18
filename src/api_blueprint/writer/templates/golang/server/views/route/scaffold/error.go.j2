@@ -1,0 +1,33 @@
+package {{ router_group.package }}
+
+import "fmt"
+
+func (session *{{ scaffold.session_type }}) handleMessageError(message *{{ scaffold.client_message_type }}, err error) error {
+	if err == nil {
+		return nil
+	}
+	if {{ scaffold.is_error_kind }}(err, {{ scaffold.error_kinds.nil_processor }}) {
+		return err
+	}
+	if {{ scaffold.is_error_kind }}(
+		err,
+		{{ scaffold.error_kinds.nil_message }},
+		{{ scaffold.error_kinds.unknown_type }},
+		{{ scaffold.error_kinds.decode_failed }},
+		{{ scaffold.error_kinds.handler_failed }},
+	) {
+		return fmt.Errorf("%s message failed: %w", session.messageType(message, err), err)
+	}
+	return err
+}
+
+func (session *{{ scaffold.session_type }}) messageType(message *{{ scaffold.client_message_type }}, err error) string {
+	_ = session
+	if messageErr, ok := {{ scaffold.as_error }}(err); ok && messageErr.MessageType() != "" {
+		return messageErr.MessageType()
+	}
+	if message != nil {
+		return message.Type
+	}
+	return "unknown"
+}

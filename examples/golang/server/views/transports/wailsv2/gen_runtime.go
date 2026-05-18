@@ -240,25 +240,25 @@ func (session *orderedConnectionSession) WriteJSON(ctx context.Context, payload 
 	return session.ConnectionSession.WriteJSON(ctx, session.nextEnvelope(payload))
 }
 
-func (session *orderedConnectionSession) CloseJSON(payload any) error {
+func (session *orderedConnectionSession) CloseJSON(ctx context.Context, payload any) error {
 	session.state.mu.Lock()
 	defer session.state.mu.Unlock()
 	if session.state.closed {
 		return nil
 	}
 	session.state.closed = true
-	return session.ConnectionSession.CloseJSON(session.nextEnvelope(payload))
+	return session.ConnectionSession.CloseJSON(ctx, session.nextEnvelope(payload))
 }
 
-func (session *orderedConnectionSession) Abort(code int, reason string) error {
+func (session *orderedConnectionSession) Abort(ctx context.Context, code int, reason string) error {
 	if code == 0 {
 		code = 1000
 	}
-	return session.CloseJSON(&sharedprovider.ConnectionClose{Code: code, Reason: reason})
+	return session.CloseJSON(ctx, &sharedprovider.ConnectionClose{Code: code, Reason: reason})
 }
 
-func (session *orderedConnectionSession) Close(code int, reason string) error {
-	return session.Abort(code, reason)
+func (session *orderedConnectionSession) Close(ctx context.Context, code int, reason string) error {
+	return session.Abort(ctx, code, reason)
 }
 
 func (session *orderedConnectionSession) nextEnvelope(payload any) *OrderedConnectionEnvelope {
@@ -420,7 +420,13 @@ func assignPayload(payload any, target any) error {
 	return json.Unmarshal(raw, target)
 }
 
-func (session *SocketSession) WriteJSON(_ context.Context, payload any) error {
+func (session *SocketSession) WriteJSON(ctx context.Context, payload any) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	if session.dispatcher == nil {
 		return fmt.Errorf("[wails] websocket session[%s] dispatcher is nil", session.id)
 	}
@@ -442,7 +448,13 @@ func (session *SocketSession) Push(payload any) error {
 	}
 }
 
-func (session *SocketSession) CloseJSON(payload any) error {
+func (session *SocketSession) CloseJSON(ctx context.Context, payload any) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	var closeErr error
 	session.closeOnce.Do(func() {
 		close(session.closed)
@@ -460,12 +472,12 @@ func (session *SocketSession) CloseJSON(payload any) error {
 	return closeErr
 }
 
-func (session *SocketSession) Abort(code int, reason string) error {
-	return session.CloseJSON(&sharedprovider.ConnectionClose{Code: code, Reason: reason})
+func (session *SocketSession) Abort(ctx context.Context, code int, reason string) error {
+	return session.CloseJSON(ctx, &sharedprovider.ConnectionClose{Code: code, Reason: reason})
 }
 
-func (session *SocketSession) Close(code int, reason string) error {
-	return session.Abort(code, reason)
+func (session *SocketSession) Close(ctx context.Context, code int, reason string) error {
+	return session.Abort(ctx, code, reason)
 }
 
 func (session *SocketSession) Done() <-chan struct{} {
