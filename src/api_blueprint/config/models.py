@@ -17,6 +17,7 @@ TargetKind = Literal[
     "go-client",
     "typescript-client",
     "kotlin-client",
+    "kotlin-server",
     "java-server",
     "java-client",
     "python-server",
@@ -74,8 +75,8 @@ class TargetConfig(BaseModel):
                     f"target[{self.id}] overlay_name must be Go package-safe: "
                     "lowercase letters, digits, and underscores, and it cannot start with a digit"
                 )
-        if self.kind == "kotlin-client" and not self.package:
-            raise ValueError(f"target[{self.id}] kotlin-client requires package")
+        if self.kind in {"kotlin-client", "kotlin-server"} and not self.package:
+            raise ValueError(f"target[{self.id}] {self.kind} requires package")
         if self.kind in {"java-client", "java-server"} and not self.package:
             raise ValueError(f"target[{self.id}] {self.kind} requires package")
         if self.kind == "grpc-proto" and not self.package:

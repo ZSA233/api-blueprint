@@ -142,7 +142,12 @@ def resolve_api_targets(config_path: Path, raw: Config) -> tuple[ResolvedApiTarg
                 raise ValueError(f"target[{target.id}] references unknown server target: {target.server}")
             if target.kind == "wails-transport" and server.kind != "go-server":
                 raise ValueError(f"target[{target.id}] wails-transport server must reference a go-server target")
-            if target.kind == "http-transport" and server.kind not in {"go-server", "python-server", "java-server"}:
+            if target.kind == "http-transport" and server.kind not in {
+                "go-server",
+                "python-server",
+                "java-server",
+                "kotlin-server",
+            }:
                 raise ValueError(f"target[{target.id}] http-transport server must reference a server target")
 
             for client_id in target.clients:

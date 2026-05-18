@@ -1,13 +1,17 @@
 package {{ bp.root_package }}.runtime
 
+import kotlinx.serialization.Serializable
+
 typealias ApiErrorCode = Int
 
+@Serializable
 data class ApiToastSpec(
     val key: String,
     val level: String,
     val default: String,
 )
 
+@Serializable
 data class ApiToastPayload(
     val key: String = "",
     val level: String = "",
@@ -15,6 +19,7 @@ data class ApiToastPayload(
     val text: String = "",
 )
 
+@Serializable
 data class ApiErrorPayload(
     val id: String = "",
     val group: String = "",
@@ -36,6 +41,7 @@ class ApiError(
     val toast: ApiToastPayload get() = payload.toast
 }
 
+@Serializable
 data class ApiErrorEntry(
     val id: String,
     val group: String,

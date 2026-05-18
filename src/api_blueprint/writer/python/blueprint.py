@@ -9,6 +9,7 @@ from api_blueprint.engine.model import Model
 from api_blueprint.engine.router import Router
 from api_blueprint.writer.core.base import BaseBlueprint
 from api_blueprint.writer.core.contract_adapters import RouteProtocolContract
+from api_blueprint.writer.core.message_helpers import MessageHelperDescriptor
 from api_blueprint.writer.core.sdk_names import RoutePublicNames
 
 from .naming import to_path_segments, to_py_class_name, to_py_identifier
@@ -39,6 +40,24 @@ class PythonRouteModel:
     fields: tuple[PythonRouteModelField, ...]
 
 
+@dataclass(frozen=True)
+class PythonMessageVariant:
+    key: str
+    method_name: str
+    data_type: str
+
+
+@dataclass(frozen=True)
+class PythonMessageHelper:
+    name: str
+    variants_class: str
+    handlers_class: str
+    error_class: str
+    dispatch_func: str
+    is_error_func: str
+    variants: tuple[PythonMessageVariant, ...]
+
+
 class PythonRoute:
     def __init__(self, router: Router, protocol: RouteProtocolContract, *, schemas: Mapping[str, Any]):
         self.router = router
@@ -57,6 +76,7 @@ class PythonRoute:
         self.form_model = _route_model(schemas, protocol.request.form.schema, self.public_names.form)
         self.open_model = _route_model(schemas, protocol.request.open.schema, self.public_names.open)
         self.response_model = _route_model(schemas, protocol.response.model.schema, self.public_names.response)
+        self.message_payload_models = self._message_payload_models(schemas)
         self.params = self._request_params()
 
     @property
@@ -184,6 +204,50 @@ class PythonRoute:
             params.append(PythonRequestParam("open_data", "open_data", annotation))
         return params
 
+    def message_helpers(self) -> tuple[PythonMessageHelper, ...]:
+        helpers: list[PythonMessageHelper] = []
+        for contract in (self.protocol.server_message, self.protocol.client_message):
+            descriptor = _descriptor_from_contract(contract)
+            if descriptor is None:
+                continue
+            variants: list[PythonMessageVariant] = []
+            for variant in descriptor.variants:
+                variants.append(
+                    PythonMessageVariant(
+                        key=variant.key,
+                        method_name=to_py_identifier(variant.key, default="variant"),
+                        data_type=_message_payload_type(variant.model),
+                    )
+                )
+            helpers.append(
+                PythonMessageHelper(
+                    name=descriptor.name,
+                    variants_class=f"{descriptor.name}Variants",
+                    handlers_class=f"{descriptor.name}Handlers",
+                    error_class=f"{descriptor.name}DispatchError",
+                    dispatch_func=f"dispatch_{to_py_identifier(descriptor.name, default='message')}",
+                    is_error_func=f"is_{to_py_identifier(descriptor.name, default='message')}_dispatch_error",
+                    variants=tuple(variants),
+                )
+            )
+        return tuple(helpers)
+
+    def _message_payload_models(self, schemas: Mapping[str, Any]) -> tuple[PythonRouteModel, ...]:
+        models: list[PythonRouteModel] = []
+        seen: set[str] = set()
+        for contract in (self.protocol.server_message, self.protocol.client_message):
+            descriptor = _descriptor_from_contract(contract)
+            if descriptor is None:
+                continue
+            for variant in descriptor.variants:
+                if variant.model in seen:
+                    continue
+                seen.add(variant.model)
+                model = _route_model(schemas, variant.model, _message_payload_type(variant.model))
+                if model is not None:
+                    models.append(model)
+        return tuple(models)
+
 
 @dataclass
 class PythonRouteGroup:
@@ -210,12 +274,26 @@ class PythonRouteGroup:
         result: list[PythonRouteModel] = []
         seen: set[str] = set()
         for route in self.routes:
-            for model in (route.query_model, route.json_model, route.form_model, route.open_model, route.response_model):
+            for model in (
+                route.query_model,
+                route.json_model,
+                route.form_model,
+                route.open_model,
+                route.response_model,
+                *route.message_payload_models,
+            ):
                 if model is None or model.class_name in seen:
                     continue
                 seen.add(model.class_name)
                 result.append(model)
         return tuple(result)
+
+    def message_helpers(self) -> tuple[PythonMessageHelper, ...]:
+        helpers: "OrderedDict[str, PythonMessageHelper]" = OrderedDict()
+        for route in self.routes:
+            for helper in route.message_helpers():
+                helpers.setdefault(helper.name, helper)
+        return tuple(helpers.values())
 
 
 class PythonBlueprint(BaseBlueprint["PythonBaseWriter"]):
@@ -276,6 +354,31 @@ def _model_name(model: type[Model] | Model | None) -> str | None:
         return name
     cls_name = model.__class__.__name__
     return cls_name if cls_name != "FieldWrappedModel" else None
+
+
+def _message_payload_type(schema_name: str) -> str:
+    return to_py_class_name(schema_name.rsplit(".", 1)[-1], default="MessageData")
+
+
+def _descriptor_from_contract(contract: object) -> MessageHelperDescriptor | None:
+    from api_blueprint.engine.connection import MessageContract
+    from api_blueprint.writer.core.message_helpers import MessageVariantDescriptor
+
+    if not isinstance(contract, MessageContract):
+        return None
+    if not contract.is_union or contract.name is None or not contract.variants:
+        return None
+    return MessageHelperDescriptor(
+        name=contract.name,
+        direction="server",
+        variants=tuple(
+            MessageVariantDescriptor(
+                key=variant.key,
+                model=_model_name(variant.model) or variant.key,
+            )
+            for variant in contract.variants
+        ),
+    )
 
 
 def _route_model(schemas: Mapping[str, Any], schema_name: str | None, class_name: str) -> PythonRouteModel | None:

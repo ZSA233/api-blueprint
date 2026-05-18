@@ -87,7 +87,9 @@ HTTP transport 中，`STREAM` 生成 SSE adapter，`CHANNEL` 生成 WebSocket ad
 
 默认 HTTP/Wails runtime 只完整实现 `ConnectionScope.SESSION`。`APP` / `TOPIC` 会保留在 route contract 中，后续可通过自定义 connection hub / manager 实现广播或 topic 路由，不由生成器内置业务 fan-out 策略。
 
-具名多 variant message 会生成稳定 helper，继续使用同一个 `{ type, data }` wire shape。Go server 将 message union、`NewXxxMessageVariant(...)` 与 `DecodeVariant()` 放入 `gen_messages.go`；带具名 client message 的 `CHANNEL` 额外在 `gen_message_cases.go` 生成 `XxxMessageProcessor[C]`、`VisitXxxMessage(ctx, message, processor)`、`XxxMessageVariantCase.Decode()` 以及 `AsXxxMessageError(...)` / `IsXxxMessageErrorKind(...)` 等 typed error helper。visitor 只处理单条消息，不接管 `Recv` loop、middleware、close/abort、写出通道或错误策略；这些运行时决策由用户在自己的 route/app 层实现。TypeScript 侧生成 `XxxMessageVariants.variant(data)` 构造函数、`dispatchXxxMessage(message, handlers)` 分发函数，以及 unknown message 的 typed dispatch error，适合客户端发送 `CHANNEL` 消息和消费服务端推送。
+具名 variant union message 会生成稳定 helper，继续使用同一个 `{ type, data }` wire shape。Go server 与 Go client 会把 message union、`NewXxxMessageVariant(...)` 与 `DecodeVariant()` 放入 `gen_messages.go`；消息关键帧放在 `gen_message_cases.go`：`XxxMessageProcessor[C]`、`VisitXxxMessage(ctx, message, processor)`、`XxxMessageVariantCase.Decode()` 以及 `AsXxxMessageError(...)` / `IsXxxMessageErrorKind(...)` 等 typed error helper。visitor 只处理单条消息，不接管 `Recv` loop、middleware、close/abort、写出通道或错误策略；这些运行时决策由用户在自己的 route/app 层实现。
+
+TypeScript、Python、Kotlin、Java 使用各自语言习惯的轻量 helper，而不是照搬 Go visitor 形态。TypeScript 生成 `XxxMessageVariants.variant(data)`、`dispatchXxxMessage(message, handlers)` 与 unknown message typed dispatch error。Python client/server 的 route `gen_types.py` 生成 dataclass `XxxMessage`、`XxxMessageVariants`、`XxxMessageHandlers`、`dispatch_xxx_message(...)` 与 `XxxMessageDispatchError`。Kotlin 生成 `@Serializable data class XxxMessage(type, data)`、`object XxxMessageVariants`、`XxxMessageHandlers<R>`、`dispatchXxxMessage(...)` 与 `XxxMessageDispatchException`，runtime 暴露 `ApiJson` 供生成 helper 编解码。Java 在 route `<Group>Types.java` 中生成 nested `record XxxMessage(String type, JsonNode data)`、variants、handlers、dispatch 与 dispatch exception，并通过 `ApiJson.MAPPER` 共享 Jackson。它们适合构造 `CHANNEL` client message 和分发 server push，但仍不实现 WebSocket/SSE engine。
 
 Go server 还会为每个带具名 client message 的 `CHANNEL` 首次生成一组三个用户拥有的 scaffold 文件：`<leaf>_session.go`、`<leaf>_processor.go`、`<leaf>_error.go`。它们不带 `Code generated` 标记，后续生成时只在文件缺失时补齐，不覆盖用户修改。默认壳把 route handler、`Recv` loop、`VisitXxxMessage(...)`、`OnXxx` processor 和 message error policy 分到稳定落点，方便人和 AI agent 增量维护；但它仍只是可编辑起点，不是生成器拥有的 session engine，也不绑定具体 appkit、hub、middleware 或 close policy。
 
@@ -185,13 +187,17 @@ TypeScript client target 输出：
 
 Markdown Binary Schema helper 是 route-local 的 `gen_binary.ts` 实现文件，并通过 `types.ts` re-export。route client 从 route types surface 使用 packet helper。
 
-## Kotlin Android
+## Kotlin Client / Server
+
+Kotlin target 仍按 preview 口径使用，并用 kotlinx.serialization 承载 DTO、typed error 和消息关键帧 helper。`kotlin-client` 侧重 OkHttp client；`kotlin-server` 侧重 Ktor HTTP RPC adapter 与 service scaffold。
+
+### Kotlin Client
 
 ```sh
 api-gen generate -c api-blueprint.toml --target kotlin.client
 ```
 
-Kotlin target 输出 OkHttp + kotlinx.serialization Android 客户端。
+Kotlin client target 输出 OkHttp + kotlinx.serialization 客户端。
 
 Kotlin 输出为 package-first layout，route 目录完整镜像真实 route path：
 
@@ -206,6 +212,25 @@ Route DTO 输出为 `<Group>Types.kt`。Markdown Binary Schema helper 是 `Binar
 Kotlin 通过 transport abstraction 生成 `rpc`、WS 兼容、`stream`、`channel` route surface，支持 query/json/form/binary/open request kind，并支持 `none` / `code_message_data` / `ok_data_error` response envelope。内置 OkHttp adapter 以 RPC 为主；长连接 bridge 属于 preview/custom transport surface，建议先用 `api-gen check` 和目标平台 smoke 验证后再接入生产调用路径。
 
 `base_url` / `base_url_expr` 会写入生成的 `transports/http/HttpApiConfig.kt` 默认值，不进入 transport-neutral runtime client。
+
+### Kotlin Server
+
+```sh
+api-gen generate -c api-blueprint.toml --target kotlin.server
+```
+
+Kotlin server target 输出面向 Ktor 的 scaffold：
+
+- `<package>/<root>/runtime/*`
+- `<package>/<root>/routes/<root>/<group...>/<Group>Types.kt`
+- `<package>/<root>/routes/<root>/<group...>/Gen<Group>Service.kt`
+- `<package>/<root>/routes/<root>/<group...>/<Group>ServiceStub.kt`
+- `<package>/<root>/routes/<root>/<group...>/<Group>Service.kt`
+- `<package>/<root>/transports/ktor/<root>/<group...>/Gen<Group>KtorRoutes.kt`
+
+`Gen<Group>Service.kt`、`<Group>ServiceStub.kt`、`<Group>Types.kt`、runtime `Gen*.kt` 文件与 `Gen<Group>KtorRoutes.kt` 由生成器拥有。`<Group>Service.kt` 是保留的用户文件，默认继承 generated stub。
+
+RPC Ktor route 会 decode query/json/form/binary 输入，调用 generated service interface，并按 route response envelope 包装成功结果或 generated `ApiError`。`STREAM`、`CHANNEL` 和 legacy WS route 保留类型和关键帧 helper surface，但 generated Ktor adapter 返回明确 501；它不实现 WebSocket/SSE/session engine。
 
 ### Kotlin 兼容性说明
 
@@ -265,7 +290,7 @@ Python server 同样使用 `python_package_root` 作为包根，输出 route ser
 
 ## examples 快照
 
-`examples/golang/server/`、`examples/golang/client/`、`examples/typescript/`、`examples/kotlin/` 与 `examples/java/client` / `examples/java/server` 是生成快照，不是业务真源；`examples/java/suite` 是手写运行时验证项目。Go server / Go client / Wails Go contract / agent artifact 索引使用 Go-safe route package segment，Kotlin / Java / Python artifact 索引继续使用各自的 route 输出路径。需要接受预期生成变化时，使用：
+`examples/golang/server/`、`examples/golang/client/`、`examples/typescript/`、`examples/kotlin/client`、`examples/kotlin/server` 与 `examples/java/client` / `examples/java/server` 是生成快照，不是业务真源；`examples/java/suite` 是手写运行时验证项目。Go server / Go client / Wails Go contract / agent artifact 索引使用 Go-safe route package segment，Kotlin / Java / Python artifact 索引继续使用各自的 route 输出路径。需要接受预期生成变化时，使用：
 
 ```sh
 make example-refresh

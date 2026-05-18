@@ -87,7 +87,9 @@ In the HTTP transport, `STREAM` generates an SSE adapter and `CHANNEL` generates
 
 The default HTTP/Wails runtimes fully implement only `ConnectionScope.SESSION`. `APP` / `TOPIC` remain in the route contract and can be implemented later through a custom connection hub / manager for broadcast or topic routing; the generator does not bake in business fan-out policy.
 
-Named multi-variant messages generate stable helpers while keeping the same `{ type, data }` wire shape. Go server output places message unions, `NewXxxMessageVariant(...)`, and `DecodeVariant()` in `gen_messages.go`; a `CHANNEL` with a named client message also gets protocol keyframes in `gen_message_cases.go`: `XxxMessageProcessor[C]`, `VisitXxxMessage(ctx, message, processor)`, lazy `XxxMessageVariantCase.Decode()`, and typed helpers such as `AsXxxMessageError(...)` / `IsXxxMessageErrorKind(...)`. The visitor handles only one message and does not own the `Recv` loop, middleware, close/abort decisions, write path, or error policy; applications keep those runtime decisions in their route/app layer. TypeScript output generates `XxxMessageVariants.variant(data)` constructors, `dispatchXxxMessage(message, handlers)` dispatchers, and typed unknown-message dispatch errors for sending `CHANNEL` messages and consuming server pushes.
+Named variant-union messages generate stable helpers while keeping the same `{ type, data }` wire shape. Go server and Go client output place message unions, `NewXxxMessageVariant(...)`, and `DecodeVariant()` in `gen_messages.go`; message keyframes live in `gen_message_cases.go`: `XxxMessageProcessor[C]`, `VisitXxxMessage(ctx, message, processor)`, lazy `XxxMessageVariantCase.Decode()`, and typed helpers such as `AsXxxMessageError(...)` / `IsXxxMessageErrorKind(...)`. The visitor handles only one message and does not own the `Recv` loop, middleware, close/abort decisions, write path, or error policy; applications keep those runtime decisions in their route/app layer.
+
+TypeScript, Python, Kotlin, and Java use language-native lightweight helpers instead of copying the Go visitor shape. TypeScript emits `XxxMessageVariants.variant(data)`, `dispatchXxxMessage(message, handlers)`, and typed unknown-message dispatch errors. Python emits dataclass `XxxMessage`, `XxxMessageVariants`, `XxxMessageHandlers`, `dispatch_xxx_message(...)`, and `XxxMessageDispatchError` in route `gen_types.py` for both client and server output. Kotlin emits `@Serializable data class XxxMessage(type, data)`, `object XxxMessageVariants`, `XxxMessageHandlers<R>`, `dispatchXxxMessage(...)`, and `XxxMessageDispatchException`; the runtime exposes `ApiJson` for generated encode/decode. Java emits nested `record XxxMessage(String type, JsonNode data)`, variants, handlers, dispatch, and dispatch exception helpers inside the route `<Group>Types.java`, with `ApiJson.MAPPER` as the shared Jackson holder. These helpers support constructing `CHANNEL` client messages and dispatching server pushes, but they still do not implement a WebSocket/SSE engine.
 
 Go server also creates three user-owned scaffold files the first time it sees a `CHANNEL` with a named client message: `<leaf>_session.go`, `<leaf>_processor.go`, and `<leaf>_error.go`. These files do not carry a `Code generated` marker, and later generations create them only when missing instead of overwriting user edits. The default shell gives humans and AI agents stable places for the route handler, `Recv` loop, `VisitXxxMessage(...)`, `OnXxx` processor methods, and message error policy; it is still an editable starting point, not a generator-owned session engine, and it does not bind the route to appkit, a hub, middleware, or a close policy.
 
@@ -185,13 +187,17 @@ The TypeScript client target emits:
 
 Markdown Binary Schema helpers are route-local `gen_binary.ts` implementation files and are re-exported through `types.ts`. Route clients import packet helpers from the route types surface.
 
-## Kotlin Android
+## Kotlin Client / Server
+
+Kotlin targets are preview surfaces and use kotlinx.serialization for DTOs, typed errors, and message keyframe helpers. `kotlin-client` focuses on the OkHttp client path; `kotlin-server` focuses on a Ktor HTTP RPC adapter and service scaffold.
+
+### Kotlin Client
 
 ```sh
 api-gen generate -c api-blueprint.toml --target kotlin.client
 ```
 
-The Kotlin target emits an OkHttp + kotlinx.serialization Android client.
+The Kotlin client target emits an OkHttp + kotlinx.serialization client.
 
 Kotlin emits a package-first layout whose route directory mirrors the full route path:
 
@@ -206,6 +212,25 @@ Route DTOs are emitted as `<Group>Types.kt`. Markdown Binary Schema helpers are 
 Through the transport abstraction, Kotlin generates `rpc`, WS compatibility, `stream`, and `channel` route surfaces, and supports query/json/form/binary/open request kinds plus `none` / `code_message_data` / `ok_data_error` response envelopes. The built-in OkHttp adapter is RPC-first; long-connection bridges are preview/custom transport surfaces, so validate with `api-gen check` and target-platform smoke tests before putting them on a production call path.
 
 `base_url` / `base_url_expr` are written into the generated `transports/http/HttpApiConfig.kt` default, not into the transport-neutral runtime client.
+
+### Kotlin Server
+
+```sh
+api-gen generate -c api-blueprint.toml --target kotlin.server
+```
+
+The Kotlin server target emits a Ktor-oriented scaffold:
+
+- `<package>/<root>/runtime/*`
+- `<package>/<root>/routes/<root>/<group...>/<Group>Types.kt`
+- `<package>/<root>/routes/<root>/<group...>/Gen<Group>Service.kt`
+- `<package>/<root>/routes/<root>/<group...>/<Group>ServiceStub.kt`
+- `<package>/<root>/routes/<root>/<group...>/<Group>Service.kt`
+- `<package>/<root>/transports/ktor/<root>/<group...>/Gen<Group>KtorRoutes.kt`
+
+`Gen<Group>Service.kt`, `<Group>ServiceStub.kt`, `<Group>Types.kt`, runtime `Gen*.kt` files, and `Gen<Group>KtorRoutes.kt` are generator-owned. `<Group>Service.kt` is a preserved user file and defaults to extending the generated stub.
+
+RPC Ktor routes decode query/json/form/binary inputs, call the generated service interface, and wrap success or generated `ApiError` values through the route response envelope. `STREAM`, `CHANNEL`, and legacy WS routes keep their type and keyframe helper surface, but the generated Ktor adapter returns a clear 501 response; it does not implement a WebSocket/SSE/session engine.
 
 ### Kotlin Compatibility
 
@@ -265,7 +290,7 @@ Python server also uses `python_package_root` as its package root and emits rout
 
 ## Example Snapshots
 
-`examples/golang/server/`, `examples/golang/client/`, `examples/typescript/`, `examples/kotlin/`, and `examples/java/client` / `examples/java/server` are generated snapshots, not business sources; `examples/java/suite` is a handwritten runtime validation project. Go server / Go client / Wails Go contract / agent artifact indexes use Go-safe route package segments, while Kotlin / Java / Python artifact indexes keep their language-specific route output paths. To accept intentional generation changes, use:
+`examples/golang/server/`, `examples/golang/client/`, `examples/typescript/`, `examples/kotlin/client`, `examples/kotlin/server`, and `examples/java/client` / `examples/java/server` are generated snapshots, not business sources; `examples/java/suite` is a handwritten runtime validation project. Go server / Go client / Wails Go contract / agent artifact indexes use Go-safe route package segments, while Kotlin / Java / Python artifact indexes keep their language-specific route output paths. To accept intentional generation changes, use:
 
 ```sh
 make example-refresh

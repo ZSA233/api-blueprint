@@ -1,0 +1,10 @@
+{% autoescape false %}package {{ bp.root_package }}.runtime
+
+public data class ApiServerContext(
+    public val routeId: String,
+    public val method: String,
+    public val path: String,
+    public val headers: Map<String, String> = emptyMap(),
+    public val query: Map<String, List<String>> = emptyMap(),
+)
+{% endautoescape %}

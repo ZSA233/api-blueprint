@@ -47,21 +47,17 @@ type WsQuery = runtime.ApiDemoSubA
 
 type SweepEventsOpen = runtime.SweepOpen
 type SweepEventsClose = runtime.ConnectionClose
-type SweepStreamMessage struct {
-	Type string `json:"type"`
-	Data any    `json:"data,omitempty"`
-}
+type SweepStreamMessage_State_DATA = runtime.SweepState
+type SweepStreamMessage_Progress_DATA = runtime.SweepProgress
+type SweepStreamMessage_Log_DATA = runtime.SweepLog
 
 type AssistantSessionOpen = runtime.AssistantOpen
 type AssistantSessionClose = runtime.ConnectionClose
-type AssistantServerMessage struct {
-	Type string `json:"type"`
-	Data any    `json:"data,omitempty"`
-}
-type AssistantClientMessage struct {
-	Type string `json:"type"`
-	Data any    `json:"data,omitempty"`
-}
+type AssistantServerMessage_Delta_DATA = runtime.AssistantDelta
+type AssistantServerMessage_Done_DATA = runtime.AssistantDone
+type AssistantServerMessage_Log_DATA = runtime.SweepLog
+type AssistantClientMessage_Input_DATA = runtime.AssistantInput
+type AssistantClientMessage_Cancel_DATA = runtime.AssistantCancel
 
 type PostDeprecatedJSON struct {
 	Req1 string `json:"req1" form:"req1"`

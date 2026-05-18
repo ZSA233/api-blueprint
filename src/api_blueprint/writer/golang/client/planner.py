@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any, Mapping, Sequence
 
 from api_blueprint.writer.core.go_naming import to_go_exported_name, to_go_package_name, to_go_package_path
+from api_blueprint.writer.core.message_helpers import MessageHelperDescriptor, unique_named_message_helpers
 from api_blueprint.writer.core.sdk_names import RoutePublicNames
 
 from .binary_schema import GoClientBinarySchema, unique_go_client_binary_schemas
@@ -140,6 +141,9 @@ class GoClientGroup:
     client_class: str
     routes: list[GoClientRoute] = field(default_factory=list)
     binary_schemas: list[GoClientBinarySchema] = field(default_factory=list)
+
+    def message_helpers(self) -> tuple[MessageHelperDescriptor, ...]:
+        return unique_named_message_helpers([route.route for route in self.routes])
 
 
 def build_go_client_groups(

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from collections import OrderedDict
 from dataclasses import dataclass, field
-from typing import Optional, Type, Union
+from typing import Optional, Type, Union, get_origin
 
 from api_blueprint.engine.model import FieldWrappedModel, Model, iter_field_model_type, unwrap_model_type
 from api_blueprint.engine.router import Router
@@ -15,6 +15,28 @@ from .binary_schema import KotlinBinarySchema, unique_kotlin_binary_schemas
 from .naming import to_kotlin_package_path, to_kotlin_package_suffix, to_kotlin_property_name, to_kotlin_type_name
 from .protos import KotlinProto, KotlinProtoRegistry, KotlinResolvedType
 from .selection import KotlinRouteSelection
+
+
+@dataclass(frozen=True)
+class KotlinMessageRef:
+    name: str
+
+
+@dataclass(frozen=True)
+class KotlinMessageVariant:
+    key: str
+    method_name: str
+    data_type: str
+
+
+@dataclass(frozen=True)
+class KotlinMessageHelper:
+    name: str
+    variants_object: str
+    handlers_interface: str
+    dispatch_exception: str
+    dispatch_func: str
+    variants: tuple[KotlinMessageVariant, ...]
 
 
 class KotlinRoute:
@@ -62,6 +84,7 @@ class KotlinRoute:
         self.server_message_proto = self._ensure_message_contract(self.protocol.server_message, "ServerMessage")
         self.client_message_proto = self._ensure_message_contract(self.protocol.client_message, "ClientMessage")
         self.close_proto = self._ensure_model(self.protocol.close_model, "Close")
+        self._message_helpers = self._build_message_helpers()
 
     @property
     def is_rpc(self) -> bool:
@@ -207,12 +230,51 @@ class KotlinRoute:
             return self._ensure_model(contract.single_model, suffix)
         for variant in contract.variants:
             self._ensure_model(variant.model, f"{suffix}{variant.key.capitalize()}")
+        if contract.name:
+            return KotlinMessageRef(contract.name)  # type: ignore[return-value]
         return self.registry.register_alias(
             contract.name or f"{self.group_class.removesuffix('Api')}{self.func_name}{suffix}",
             KotlinResolvedType("kotlinx.serialization.json.JsonElement"),
             tag="route",
             module=self.group_slug,
         )
+
+    def message_helpers(self) -> tuple[KotlinMessageHelper, ...]:
+        return self._message_helpers
+
+    def _build_message_helpers(self) -> tuple[KotlinMessageHelper, ...]:
+        helpers: list[KotlinMessageHelper] = []
+        for contract, suffix in (
+            (self.protocol.server_message, "ServerMessage"),
+            (self.protocol.client_message, "ClientMessage"),
+        ):
+            if contract is None or not contract.is_union or contract.name is None or not contract.variants:
+                continue
+            variants: list[KotlinMessageVariant] = []
+            for variant in contract.variants:
+                proto = self._ensure_model(variant.model, f"{suffix}{variant.key.capitalize()}")
+                if proto is None:
+                    continue
+                variants.append(
+                    KotlinMessageVariant(
+                        key=variant.key,
+                        method_name=to_kotlin_property_name(variant.key),
+                        data_type=proto.name,
+                    )
+                )
+            if not variants:
+                continue
+            helpers.append(
+                KotlinMessageHelper(
+                    name=contract.name,
+                    variants_object=f"{contract.name}Variants",
+                    handlers_interface=f"{contract.name}Handlers",
+                    dispatch_exception=f"{contract.name}DispatchException",
+                    dispatch_func=f"dispatch{contract.name}",
+                    variants=tuple(variants),
+                )
+            )
+        return tuple(helpers)
 
     def _payload_response_type(self) -> KotlinResolvedType:
         if self.response_media_type != "application/json":
@@ -238,6 +300,13 @@ class KotlinApiGroup:
     def binary_schemas(self) -> list[KotlinBinarySchema]:
         schemas = [route.binary_schema for route in self.routes if route.binary_schema is not None]
         return unique_kotlin_binary_schemas(schemas)
+
+    def message_helpers(self) -> tuple[KotlinMessageHelper, ...]:
+        helpers: "OrderedDict[str, KotlinMessageHelper]" = OrderedDict()
+        for route in self.routes:
+            for helper in route.message_helpers():
+                helpers.setdefault(helper.name, helper)
+        return tuple(helpers.values())
 
 
 class KotlinBlueprint(BaseBlueprint["KotlinWriter"]):
@@ -301,6 +370,13 @@ class KotlinBlueprint(BaseBlueprint["KotlinWriter"]):
             if model is None:
                 return
             model_cls = unwrap_model_type(model)
+            origin = get_origin(model_cls)
+            if origin is not None:
+                try:
+                    if issubclass(origin, Model):
+                        model_cls = origin
+                except TypeError:
+                    pass
             for nested in iter_field_model_type(model):
                 if nested is model_cls:
                     continue

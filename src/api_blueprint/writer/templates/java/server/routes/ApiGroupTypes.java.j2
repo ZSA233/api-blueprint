@@ -2,8 +2,14 @@
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+{% if group.message_helpers(writer) %}
+import com.fasterxml.jackson.databind.JsonNode;
+{% endif %}
 {% if group.runtime_types_ref == "ApiTypes" %}
 import {{ bp.root_package }}.runtime.ApiTypes;
+{% endif %}
+{% if group.message_helpers(writer) %}
+import {{ bp.root_package }}.runtime.ApiJson;
 {% endif %}
 {% if group.binary_schemas() %}
 import {{ bp.root_package }}.runtime.binary.ApiBinaryBody;
@@ -22,6 +28,64 @@ public final class {{ group.types_class }} {
         @JsonProperty({{ field.wire_name | code_literal }}) {{ field.java_type }} {{ field.java_name }}{% if not loop.last %},{% endif %}
 {%- endfor %}
     ) {
+    }
+{% endfor %}
+{% for helper in group.message_helpers(writer) %}
+
+    public record {{ helper.name }}(String type, JsonNode data) {
+    }
+
+    public static final class {{ helper.variants_class }} {
+        private {{ helper.variants_class }}() {
+        }
+{% for variant in helper.variants %}
+
+        public static {{ helper.name }} {{ variant.method_name }}({{ variant.data_type }} data) {
+            return new {{ helper.name }}({{ variant.key | code_literal }}, ApiJson.MAPPER.valueToTree(data));
+        }
+{% endfor %}
+    }
+
+    public interface {{ helper.handlers_interface }}<R> {
+{% for variant in helper.variants %}        R {{ variant.method_name }}({{ variant.data_type }} data, {{ helper.name }} message) throws Exception;
+{% endfor %}    }
+
+    public static final class {{ helper.exception_class }} extends RuntimeException {
+        private final String kind;
+        private final String type;
+        private final {{ helper.name }} rawMessage;
+
+        public {{ helper.exception_class }}(String kind, {{ helper.name }} rawMessage) {
+            super("unsupported {{ helper.name }} type " + (rawMessage == null ? "" : rawMessage.type()));
+            this.kind = kind;
+            this.type = rawMessage == null ? "" : rawMessage.type();
+            this.rawMessage = rawMessage;
+        }
+
+        public String kind() {
+            return kind;
+        }
+
+        public String type() {
+            return type;
+        }
+
+        public {{ helper.name }} rawMessage() {
+            return rawMessage;
+        }
+    }
+
+    public static <R> R {{ helper.dispatch_method }}(
+        {{ helper.name }} message,
+        {{ helper.handlers_interface }}<R> handlers
+    ) throws Exception {
+        return switch (message.type()) {
+{% for variant in helper.variants %}            case {{ variant.key | code_literal }} -> handlers.{{ variant.method_name }}(
+                ApiJson.MAPPER.treeToValue(message.data(), {{ variant.data_class }}),
+                message
+            );
+{% endfor %}            default -> throw new {{ helper.exception_class }}("unknown_type", message);
+        };
     }
 {% endfor %}
 {% for schema in group.binary_schemas() %}

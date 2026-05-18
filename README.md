@@ -17,8 +17,8 @@ Blueprint DSL -> ContractGraph -> api-gen check / inspect / generate -> generate
 
 ## 适合什么场景
 
-- 后端、Web、Android、脚本客户端需要共享同一份 API 契约。
-- 希望先从协议生成 Go server，再生成 TypeScript、Kotlin、Java、Go、Python client。
+- 后端、Web、Kotlin、脚本客户端需要共享同一份 API 契约。
+- 希望先从协议生成 Go server，再生成 TypeScript、Kotlin、Java、Go、Python client，或生成 Kotlin/Java/Python server scaffold。
 - 需要文档服务、契约检查、生成快照和端到端示例一起维护。
 - 需要把 Markdown Binary Schema、Wails 或 gRPC 纳入同一套生成流程。
 
@@ -93,10 +93,10 @@ api-gen generate -c api-blueprint.toml
 | Contract / inspect | 可用 | 输出契约索引，并按 route、schema、error、文件归属查询协议细节 |
 | Go server | 可用 | 生成 Go 路由、provider、长连接 message helper、HTTP/Wails adapter 和 runtime |
 | TypeScript client | 预览 | 生成 transport-neutral client、长连接 message helper、HTTP adapter 和 Wails facade |
-| Kotlin Android client | 预览 | 生成 OkHttp client、模型、binary writer 和 route facade |
-| Java client/server | 预览 | 生成 Java 17 HttpClient client、Spring MVC server scaffold、record DTO 和 HTTP adapter |
-| Go / Python client | 预览 | 生成服务端之外的脚本或工具侧客户端 |
-| Python server | 预览 | 生成 FastAPI server scaffold 和 service contract |
+| Kotlin client/server | 预览 | 生成 OkHttp client、Ktor server scaffold、模型、长连接 message helper、binary writer 和 HTTP adapter |
+| Java client/server | 预览 | 生成 Java 17 HttpClient client、Spring MVC server scaffold、record DTO、长连接 message helper 和 HTTP adapter |
+| Go / Python client | 预览 | 生成服务端之外的脚本或工具侧客户端，并提供长连接 message helper |
+| Python server | 预览 | 生成 FastAPI server scaffold、service contract 和长连接 message helper |
 | Wails v2/v3 | 预览 / 实验性 | 生成 Go + TypeScript overlay，用于桌面 GUI |
 | gRPC proto / stubs | 可用 | 从 ContractGraph 输出 proto，并生成 Go/Python stub |
 

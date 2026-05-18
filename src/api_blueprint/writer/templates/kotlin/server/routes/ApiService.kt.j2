@@ -1,0 +1,4 @@
+{% autoescape false %}package {{ bp.root_package }}.routes.{{ group.package_suffix }}
+
+public class {{ writer.service_base_name(group) }}Service : {{ writer.service_base_name(group) }}ServiceStub()
+{% endautoescape %}

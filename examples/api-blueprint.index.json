@@ -10,7 +10,7 @@
     "routes": 22,
     "schemas": 41,
     "services": 5,
-    "targets": 17
+    "targets": 19
   },
   "generator": {
     "name": "api-blueprint",
@@ -341,9 +341,16 @@
     {
       "id": "kotlin.client",
       "kind": "kotlin-client",
-      "out_dir": "kotlin",
+      "out_dir": "kotlin/client",
       "role": "client",
-      "route_count": 15
+      "route_count": 17
+    },
+    {
+      "id": "kotlin.server",
+      "kind": "kotlin-server",
+      "out_dir": "kotlin/server",
+      "role": "server",
+      "route_count": 20
     },
     {
       "id": "java.server",
@@ -375,6 +382,13 @@
     },
     {
       "id": "http",
+      "kind": "http-transport",
+      "out_dir": null,
+      "role": "transport",
+      "route_count": 22
+    },
+    {
+      "id": "http.kotlin",
       "kind": "http-transport",
       "out_dir": null,
       "role": "transport",

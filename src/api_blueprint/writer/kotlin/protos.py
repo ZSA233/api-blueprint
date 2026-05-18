@@ -272,6 +272,13 @@ class KotlinProtoRegistry:
             return proto
 
         cls = unwrap_model_type(model)
+        origin = get_origin(cls)
+        if origin is not None:
+            try:
+                if issubclass(origin, Model):
+                    cls = origin
+            except TypeError:
+                pass
         auto_flag = bool(getattr(cls, "__auto__", False))
         proto_key = (cls, name if auto_flag else None)
         proto = self._protos.get(proto_key)

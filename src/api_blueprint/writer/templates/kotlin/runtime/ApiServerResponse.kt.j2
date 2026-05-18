@@ -1,0 +1,30 @@
+{% autoescape false %}package {{ bp.root_package }}.runtime
+
+public data class ApiServerResponse(
+    public val statusCode: Int,
+    public val body: String,
+    public val contentType: String = "application/json",
+    public val headers: Map<String, String> = emptyMap(),
+)
+
+public data class ApiResponseEnvelope(
+    public val name: String = "NoEnvelope",
+    public val kind: String = "none",
+    public val errorIdentity: String = "none",
+    public val successCode: Int = 0,
+    public val successMessage: String = "ok",
+    public val fields: ApiResponseEnvelopeFields = ApiResponseEnvelopeFields(),
+) {
+    public companion object {
+        public fun none(): ApiResponseEnvelope = ApiResponseEnvelope()
+    }
+}
+
+public data class ApiResponseEnvelopeFields(
+    public val code: String = "code",
+    public val message: String = "message",
+    public val data: String = "data",
+    public val error: String = "error",
+    public val ok: String = "ok",
+)
+{% endautoescape %}

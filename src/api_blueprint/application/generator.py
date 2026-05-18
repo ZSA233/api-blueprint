@@ -205,6 +205,18 @@ def generate(config_path: str | Path | None, target_ids: Sequence[str] = ()) -> 
             )
             writer.register(*project.entrypoints)
             writer.gen()
+        elif target.kind == "kotlin-server":
+            output = require_out_dir(target)
+            output.mkdir(parents=True, exist_ok=True)
+            writer = kotlin.KotlinServerWriter(
+                output,
+                package=target.package or "",
+                include=target.include,
+                exclude=target.exclude,
+                contract_graph=graph,
+            )
+            writer.register(*project.entrypoints)
+            writer.gen()
         elif target.kind == "java-client":
             output = require_out_dir(target)
             output.mkdir(parents=True, exist_ok=True)

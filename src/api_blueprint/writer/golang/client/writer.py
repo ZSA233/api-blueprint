@@ -133,6 +133,29 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
             ),
         )
         self._cleanup_stale_generated(self.working_dir / route_dir / "gen_models.go")
+        message_unions = _message_unions(group, type_names)
+        if message_unions:
+            self._write_generated(
+                route_dir / "gen_messages.go",
+                render(
+                    "golang",
+                    "gen_messages.go",
+                    {"group": group, "message_unions": message_unions},
+                    "client/routes",
+                ),
+            )
+            self._write_generated(
+                route_dir / "gen_message_cases.go",
+                render(
+                    "golang",
+                    "gen_message_cases.go",
+                    {"group": group, "message_cases": _message_cases(group, type_names)},
+                    "client/routes",
+                ),
+            )
+        else:
+            self._cleanup_stale_generated(self.working_dir / route_dir / "gen_messages.go")
+            self._cleanup_stale_generated(self.working_dir / route_dir / "gen_message_cases.go")
         self._write_generated(
             route_dir / "gen_client.go",
             render(
@@ -394,16 +417,75 @@ def _route_aliases(
     for message_key in ("server_message", "client_message"):
         message = route.connection.get(message_key)
         if isinstance(message, Mapping) and isinstance(message.get("name"), str):
-            if message["name"] in emitted_messages:
+            message_name = str(message["name"])
+            if message_name in emitted_messages:
                 continue
-            emitted_messages.add(str(message["name"]))
-            lines.append(f"type {message['name']} struct {{")
-            lines.append("\tType string `json:\"type\"`")
-            lines.append("\tData any `json:\"data,omitempty\"`")
-            lines.append("}")
+            emitted_messages.add(message_name)
+            variants = message.get("variants")
+            if isinstance(variants, list):
+                for variant in variants:
+                    if not isinstance(variant, Mapping):
+                        continue
+                    key = variant.get("key")
+                    model = variant.get("model")
+                    if isinstance(key, str) and key and isinstance(model, str) and model:
+                        lines.append(f"type {_variant_alias_name(message_name, key)} = runtime.{type_names.schema(model)}")
     if lines:
         lines.append("")
     return lines
+
+
+def _message_unions(group: GoClientGroup, type_names: _TypeNames) -> list[dict[str, Any]]:
+    return [
+        {
+            "name": helper.name,
+            "variants": [_message_variant(helper.name, variant.key, variant.model, type_names) for variant in helper.variants],
+        }
+        for helper in group.message_helpers()
+    ]
+
+
+def _message_cases(group: GoClientGroup, type_names: _TypeNames) -> list[dict[str, Any]]:
+    cases = []
+    for helper in group.message_helpers():
+        variants = [_message_variant(helper.name, variant.key, variant.model, type_names) for variant in helper.variants]
+        cases.append(
+            {
+                "name": helper.name,
+                "case_interface": f"{helper.name}Case",
+                "processor_type": f"{helper.name}Processor",
+                "visitor": f"Visit{helper.name}",
+                "error_type": f"{helper.name}Error",
+                "error_kind_type": f"{helper.name}ErrorKind",
+                "new_error": f"new{helper.name}Error",
+                "wrap_error": f"wrap{helper.name}HandlerError",
+                "variants": [
+                    {
+                        **variant,
+                        "case_type": f"{helper.name}{variant['name']}Case",
+                        "handler": f"On{variant['name']}",
+                    }
+                    for variant in variants
+                ],
+            }
+        )
+    return cases
+
+
+def _message_variant(message_name: str, key: str, model: str, type_names: _TypeNames) -> dict[str, str]:
+    variant_name = _go_exported(key)
+    return {
+        "key": key,
+        "name": variant_name,
+        "const": f"{message_name}Type{variant_name}",
+        "ctor": f"New{message_name}{variant_name}",
+        "decode": f"Decode{variant_name}",
+        "data_type": _variant_alias_name(message_name, key),
+    }
+
+
+def _variant_alias_name(message_name: str, key: str) -> str:
+    return f"{message_name}_{_go_exported(key)}_DATA"
 
 
 def _render_route_schema(alias: str, schema: Mapping[str, Any], type_names: _TypeNames) -> list[str]:

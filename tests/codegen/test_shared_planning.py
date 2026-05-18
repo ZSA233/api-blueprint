@@ -66,7 +66,8 @@ def test_manifest_selection_uses_path_for_unprefixed_rules() -> None:
     assert target_selects_route(target, route)
 
 
-def test_kotlin_capability_accepts_connection_routes() -> None:
+@pytest.mark.parametrize("kind", ["kotlin-client", "kotlin-server"])
+def test_kotlin_capability_accepts_connection_routes(kind: str) -> None:
     bp = Blueprint(root="/api")
     with bp.group("/demo") as views:
         views.STREAM("/events").SERVER_MESSAGE(Event)
@@ -74,7 +75,7 @@ def test_kotlin_capability_accepts_connection_routes() -> None:
         views.WS("/ws").SEND(Event).RECV(Event)
 
     graph = build_contract_graph([bp])
-    target = ResolvedApiTargetConfig(id="kotlin.client", kind="kotlin-client", out_dir=None, package="com.example")
+    target = ResolvedApiTargetConfig(id=kind, kind=kind, out_dir=None, package="com.example")
 
     assert capability_errors(graph, (target,)) == []
 
@@ -85,6 +86,7 @@ def test_kotlin_capability_accepts_connection_routes() -> None:
         ("go-client", {"module": "example.com/client"}),
         ("typescript-client", {}),
         ("kotlin-client", {"package": "com.example"}),
+        ("kotlin-server", {"package": "com.example"}),
         ("java-client", {"package": "com.example"}),
         ("python-client", {}),
     ],
@@ -187,3 +189,11 @@ def test_java_targets_are_real_generation_capabilities(kind: str) -> None:
     assert manifest[kind]["implemented"] is True
     assert manifest[kind]["routes"] == ["rpc", "legacy_ws", "stream", "channel"]
     assert "binary-schema" in manifest[kind]["requests"]
+
+
+def test_kotlin_server_is_real_generation_capability() -> None:
+    manifest = target_capability_manifest()
+
+    assert manifest["kotlin-server"]["implemented"] is True
+    assert manifest["kotlin-server"]["routes"] == ["rpc", "legacy_ws", "stream", "channel"]
+    assert "binary-schema" in manifest["kotlin-server"]["requests"]
