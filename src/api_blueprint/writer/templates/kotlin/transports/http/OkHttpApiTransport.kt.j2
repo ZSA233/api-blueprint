@@ -46,10 +46,6 @@ public class OkHttpApiTransport(
         }
     }
 
-    public override fun connectSocket(options: SocketConnectOptions): ApiSocketBridge<*, *> {
-        return InMemorySocketBridge<Any?, Any?>()
-    }
-
     public override fun openStream(options: StreamConnectOptions): ApiStreamBridge<*, *> {
         return InMemoryStreamBridge<Any?, SocketCloseInfo>()
     }
@@ -100,18 +96,6 @@ private open class InMemoryStreamBridge<Recv, Close> : ApiStreamBridge<Recv, Clo
 
     public override fun onClose(listener: (Close) -> Unit) {
         closeListeners += listener
-    }
-}
-
-private class InMemorySocketBridge<Send, Recv> : ApiSocketBridge<Send, Recv> {
-    private val messageListeners = mutableListOf<(Recv) -> Unit>()
-
-    public override fun send(message: Send) {}
-
-    public override fun close(code: Int?, reason: String?) {}
-
-    public override fun onMessage(listener: (Recv) -> Unit) {
-        messageListeners += listener
     }
 }
 

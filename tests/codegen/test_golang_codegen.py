@@ -458,6 +458,171 @@ go 1.23.8
         assert (route_dir / filename).read_text(encoding="utf-8") == sentinel
 
 
+def test_golang_http_rpc_only_engine_does_not_import_connection_runtime(tmp_path):
+    output_dir = tmp_path / "golang"
+    output_dir.mkdir()
+    (tmp_path / "go.mod").write_text(
+        """
+module example.com/generated
+
+go 1.23.8
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.GET("/ping").RSP()
+
+    writer = GolangWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    http_dir = output_dir / "transports" / "http"
+    engine_text = (http_dir / "gen_engine.go").read_text(encoding="utf-8")
+
+    assert '"context"' not in engine_text
+    assert '"github.com/coder/websocket"' not in engine_text
+    assert "HTTPEventStreamConnection" not in engine_text
+    assert "HTTPWebSocketConnection" not in engine_text
+    assert not (http_dir / "gen_stream.go").exists()
+    assert not (http_dir / "gen_channel.go").exists()
+    assert not (output_dir / "providers" / "gen_wshandle.go").exists()
+
+
+def test_golang_http_stream_and_channel_runtime_are_split_by_need(tmp_path):
+    output_dir = tmp_path / "golang"
+    output_dir.mkdir()
+    (tmp_path / "go.mod").write_text(
+        """
+module example.com/generated
+
+go 1.23.8
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    class ServerMessage(Model):
+        value = String(description="value")
+
+    class ClientMessage(Model):
+        value = String(description="value")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.STREAM("/events").SERVER_MESSAGE(ServerMessage)
+        views.CHANNEL("/chat").SERVER_MESSAGE(ServerMessage).CLIENT_MESSAGE(ClientMessage)
+
+    writer = GolangWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    http_dir = output_dir / "transports" / "http"
+    engine_text = (http_dir / "gen_engine.go").read_text(encoding="utf-8")
+    stream_text = (http_dir / "gen_stream.go").read_text(encoding="utf-8")
+    channel_text = (http_dir / "gen_channel.go").read_text(encoding="utf-8")
+    generated_hook_text = (http_dir / "gen_connection_hooks.go").read_text(encoding="utf-8")
+    hook_text = (http_dir / "connection_hooks.go").read_text(encoding="utf-8")
+
+    assert "func STREAM[" not in engine_text
+    assert "func CHANNEL[" not in engine_text
+    assert "func WS[" not in engine_text
+    assert "func STREAM[" in stream_text
+    assert "HTTPEventStreamConnection" in stream_text
+    assert "func CHANNEL[" in channel_text
+    assert "HTTPWebSocketConnection" in channel_text
+    assert "func WS[" not in channel_text
+    assert "RunWS" not in channel_text
+    assert "return newDefaultHTTPEventStreamConnection(ginCtx)" in generated_hook_text
+    assert "return acceptDefaultHTTPChannel(ginCtx)" in generated_hook_text
+    assert "func newDefaultHTTPEventStreamConnection(" in stream_text
+    assert "func acceptDefaultHTTPChannel(" in channel_text
+    assert "defaultHTTPNewEventStreamConnection" not in generated_hook_text
+    assert "defaultHTTPAcceptChannel" not in generated_hook_text
+    assert "func init()" not in stream_text
+    assert "func init()" not in channel_text
+    assert "HTTPConnectionHooks" in hook_text
+    assert not (output_dir / "providers" / "gen_wshandle.go").exists()
+
+
+def test_golang_http_stream_only_does_not_generate_channel_runtime(tmp_path):
+    output_dir = tmp_path / "golang"
+    output_dir.mkdir()
+    (tmp_path / "go.mod").write_text(
+        """
+module example.com/generated
+
+go 1.23.8
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    class ServerMessage(Model):
+        value = String(description="value")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.STREAM("/events").SERVER_MESSAGE(ServerMessage)
+
+    writer = GolangWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    http_dir = output_dir / "transports" / "http"
+
+    assert (http_dir / "gen_stream.go").exists()
+    assert not (http_dir / "gen_channel.go").exists()
+    generated_hook_text = (http_dir / "gen_connection_hooks.go").read_text(encoding="utf-8")
+    stream_text = (http_dir / "gen_stream.go").read_text(encoding="utf-8")
+
+    assert "HTTPWebSocketConnection" not in (http_dir / "connection_hooks.go").read_text(encoding="utf-8")
+    assert "return newDefaultHTTPEventStreamConnection(ginCtx)" in generated_hook_text
+    assert "acceptDefaultHTTPChannel" not in generated_hook_text
+    assert "func newDefaultHTTPEventStreamConnection(" in stream_text
+    assert "func init()" not in stream_text
+
+
+def test_golang_http_channel_only_does_not_reference_stream_runtime(tmp_path):
+    output_dir = tmp_path / "golang"
+    output_dir.mkdir()
+    (tmp_path / "go.mod").write_text(
+        """
+module example.com/generated
+
+go 1.23.8
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    class ServerMessage(Model):
+        value = String(description="value")
+
+    class ClientMessage(Model):
+        value = String(description="value")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.CHANNEL("/chat").SERVER_MESSAGE(ServerMessage).CLIENT_MESSAGE(ClientMessage)
+
+    writer = GolangWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    http_dir = output_dir / "transports" / "http"
+    generated_hook_text = (http_dir / "gen_connection_hooks.go").read_text(encoding="utf-8")
+    channel_text = (http_dir / "gen_channel.go").read_text(encoding="utf-8")
+
+    assert not (http_dir / "gen_stream.go").exists()
+    assert "newDefaultHTTPEventStreamConnection" not in generated_hook_text
+    assert "return acceptDefaultHTTPChannel(ginCtx)" in generated_hook_text
+    assert "func acceptDefaultHTTPChannel(" in channel_text
+    assert "func init()" not in channel_text
+
+
 def test_golang_writer_generates_binary_schema_parser_and_http_binding(tmp_path):
     output_dir = tmp_path / "golang"
     output_dir.mkdir()
@@ -484,7 +649,7 @@ content-encoding: identity,gzip
 | field | type | count | rule | comment |
 |---|---|---:|---|---|
 | magic | bytes | 4 | const="DEMO" | magic |
-| flags | DemoFlags | 1 | min=0 | flags |
+| flags | Flags | 1 | min=0 | flags |
 | item_num | u32 | 1 | min=1,max=8,sizeof=items | item count |
 
 ## body
@@ -493,27 +658,27 @@ content-encoding: identity,gzip
 |---|---|---:|---|---|
 | session_id_len | u32 | 1 | max=128,sizeof=session_id | session id length |
 | session_id | string | session_id_len | encoding=utf8 | session id |
-| items | DemoItem | item_num | | items |
+| items | Item | item_num | | items |
 
-## struct DemoItem
+## struct Item
 
 | field | type | count | rule | comment |
 |---|---|---:|---|---|
 | value | u32 | 1 | max=100 | value |
 
-## enum DemoMode : u8
+## enum Mode : u8
 
 | name | value | comment |
 |---|---:|---|
 | Normal | 0 | normal |
 | Fast | 1 | fast |
 
-## bitflags DemoFlags : u32
+## bitflags Flags : u32
 
 | name | bits | rule | comment |
 |---|---:|---|---|
 | HasItems | 0 | | has items |
-| Mode | 1..2 | enum=DemoMode | mode |
+| Mode | 1..2 | enum=Mode | mode |
 | Reserved | 3..31 | const=0 | reserved |
         """.strip(),
         source_path=tmp_path / "demo_packet.md",
@@ -553,15 +718,15 @@ content-encoding: identity,gzip
     assert "if out.Magic != [4]byte{68, 69, 77, 79}" in binary_parser
     assert "var fixed [12]byte" in binary_parser
     assert "&4294967288 != 0" in binary_parser
-    assert "func (f DemoFlags) HasItems() bool" in binary_parser
-    assert "func (f DemoFlags) WithHasItems(enabled bool) DemoFlags" in binary_parser
-    assert "func (f DemoFlags) Mode() DemoMode" in binary_parser
-    assert "func (f DemoFlags) WithMode(value DemoMode) DemoFlags" in binary_parser
-    assert "DemoFlagsReservedMask DemoFlags = 4294967288" in binary_parser
-    assert "func (f DemoFlags) HasReservedBits() bool" in binary_parser
-    assert "func (f DemoFlags) Validate() error" in binary_parser
+    assert "func (f DemoPacketFlags) HasItems() bool" in binary_parser
+    assert "func (f DemoPacketFlags) WithHasItems(enabled bool) DemoPacketFlags" in binary_parser
+    assert "func (f DemoPacketFlags) Mode() DemoPacketMode" in binary_parser
+    assert "func (f DemoPacketFlags) WithMode(value DemoPacketMode) DemoPacketFlags" in binary_parser
+    assert "DemoPacketFlagsReservedMask DemoPacketFlags = 4294967288" in binary_parser
+    assert "func (f DemoPacketFlags) HasReservedBits() bool" in binary_parser
+    assert "func (f DemoPacketFlags) Validate() error" in binary_parser
     assert "ClearReservedBits" not in binary_parser
-    assert "DemoFlagsReserved   DemoFlags" not in binary_parser
+    assert "DemoPacketFlagsReserved   DemoPacketFlags" not in binary_parser
     assert "func BytesOf" not in binary_parser
     assert "func BytesOf" in binary_runtime
     assert "binaryruntime.UnsafeString(sessionIDValue)" in binary_parser

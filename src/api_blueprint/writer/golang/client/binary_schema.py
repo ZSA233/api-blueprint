@@ -5,6 +5,8 @@ import re
 from dataclasses import dataclass
 from typing import Any, Iterable, Mapping
 
+from api_blueprint.writer.core.sdk_names import go_exported_field_name
+
 
 JsonObject = dict[str, Any]
 
@@ -45,11 +47,21 @@ EXPR_TOKEN_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*|\d+|[()+\-*/]")
 
 
 def go_name(value: str) -> str:
-    parts = [part for part in re.split(r"[^0-9A-Za-z_]+", value) if part]
-    if not parts:
-        return "Value"
-    rendered = "".join(part[:1].upper() + part[1:] for part in parts)
-    return f"Value{rendered}" if rendered[:1].isdigit() else rendered
+    return go_exported_field_name(value, fallback="Value")
+
+
+def _scope_go_name(schema_name: str, raw_name: str) -> str:
+    schema_type = go_name(schema_name)
+    raw_type = go_name(raw_name)
+    return raw_type if raw_type.startswith(schema_type) else f"{schema_type}{raw_type}"
+
+
+def _unexported_go_name(name: str) -> str:
+    return name[:1].lower() + name[1:] if name else "value"
+
+
+def _generated_name_key(value: str) -> str:
+    return re.sub(r"[^0-9a-z]+", "", value.lower())
 
 
 def compile_go_uint_expr(expr: str) -> str:
@@ -125,7 +137,7 @@ class GoClientBinaryValue:
     @property
     def enum_name(self) -> str | None:
         value = self.rule.get("enum")
-        return str(value) if value else None
+        return self.value_set.schema.value_set_type_name(str(value)) if value else None
 
     @property
     def is_reserved_zero(self) -> bool:
@@ -167,6 +179,7 @@ class GoClientBinaryValue:
 @dataclass(frozen=True)
 class GoClientBinaryValueSet:
     raw: Mapping[str, Any]
+    schema: "GoClientBinarySchema"
 
     @property
     def name(self) -> str:
@@ -174,7 +187,7 @@ class GoClientBinaryValueSet:
 
     @property
     def go_type(self) -> str:
-        return go_name(self.name)
+        return self.schema.value_set_type_name(self.name)
 
     @property
     def wire_type(self) -> str:
@@ -316,7 +329,7 @@ class GoClientBinaryField:
     def single_go_type(self) -> str:
         if self.value_type is not None:
             return self.value_type.go_type
-        return GO_SCALAR_TYPES.get(self.typ, go_name(self.typ))
+        return GO_SCALAR_TYPES.get(self.typ, self.schema.object_type_name(self.typ))
 
     @property
     def value_expr(self) -> str:
@@ -399,7 +412,7 @@ class GoClientBinaryObject:
 
     @property
     def go_type(self) -> str:
-        return go_name(self.name)
+        return self.schema.object_type_name(self.name)
 
     @property
     def fields(self) -> list[GoClientBinaryField]:
@@ -428,6 +441,10 @@ class GoClientBinarySchema:
         return go_name(self.name)
 
     @property
+    def state_type(self) -> str:
+        return f"{_unexported_go_name(self.go_type)}BinaryState"
+
+    @property
     def content_type(self) -> str:
         return str(self.raw.get("content_type") or "application/octet-stream")
 
@@ -450,7 +467,7 @@ class GoClientBinarySchema:
     @property
     def value_sets(self) -> list[GoClientBinaryValueSet]:
         raw = [*_list_of_maps(self.raw.get("enums")), *_list_of_maps(self.raw.get("bitflags"))]
-        return [GoClientBinaryValueSet(item) for item in raw]
+        return [GoClientBinaryValueSet(item, self) for item in raw]
 
     @property
     def value_type_map(self) -> dict[str, GoClientBinaryValueSet]:
@@ -476,13 +493,26 @@ class GoClientBinarySchema:
         suffix = section_name.removeprefix(self.name)
         return go_name(suffix or section_name)
 
+    def object_type_name(self, object_name: str) -> str:
+        return _scope_go_name(self.name, object_name)
+
+    def value_set_type_name(self, value_set_name: str) -> str:
+        return _scope_go_name(self.name, value_set_name)
+
 
 def unique_go_client_binary_schemas(schemas: Iterable[Mapping[str, Any]]) -> list[GoClientBinarySchema]:
     unique: dict[str, Mapping[str, Any]] = {}
+    generated_names: dict[str, str] = {}
     for schema in schemas:
         name = str(schema.get("name") or "")
-        if name:
-            unique.setdefault(name, schema)
+        if not name:
+            continue
+        generated_name = _generated_name_key(name)
+        previous = generated_names.get(generated_name)
+        if previous is not None and previous != name:
+            raise ValueError(f"duplicate binary schema generated name {go_name(name)}: {previous}, {name}")
+        generated_names[generated_name] = name
+        unique.setdefault(name, schema)
     return [GoClientBinarySchema(schema) for schema in unique.values()]
 
 

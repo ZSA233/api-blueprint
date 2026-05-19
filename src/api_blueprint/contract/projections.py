@@ -543,12 +543,8 @@ def _artifact_for_route(
             _join(ts_out_dir, root, "transports", overlay, root, "" if root == group else group, "client.ts"),
         ]
     elif kind == "grpc-proto":
-        if _string(route.get("kind")) == "legacy_ws":
-            return {}
         files = [_join(out_dir, root, f"{group}.proto")]
     elif kind == "grpc-go":
-        if _string(route.get("kind")) == "legacy_ws":
-            return {}
         module = _string(target.get("module"))
         package_path = _join(root, group)
         files = [
@@ -558,8 +554,6 @@ def _artifact_for_route(
         if module:
             imports = [_join(module, package_path)]
     elif kind == "grpc-python":
-        if _string(route.get("kind")) == "legacy_ws":
-            return {}
         package_root = _string(target.get("python_package_root"))
         import_prefix = f"{package_root}." if package_root else ""
         files = [

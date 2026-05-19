@@ -8,7 +8,7 @@ from fastapi.types import IncEx
 
 from api_blueprint.engine.blueprint.router import Router
 from api_blueprint.engine.connection import ConnectionDelivery, ConnectionScope
-from api_blueprint.engine.runtime import Handle, Provider, ResponseEnvelope, WsHandle
+from api_blueprint.engine.runtime import Handle, Provider, ResponseEnvelope
 from api_blueprint.engine.schema import HeaderModel
 from api_blueprint.engine.utils import join_url_path
 
@@ -194,38 +194,6 @@ class RouterGroup(Generic[T]):
 
     def DELETE(self, path: str = "", *, handle_data: str = None, **kwargs: dict[str, Any]):
         router = Router(self, ["DELETE"], path, handle=Handle(handle_data), **kwargs)
-        self.pending_routers.append(router)
-        return router
-
-    @overload
-    def WS(
-        self,
-        path: str = "",
-        *,
-        handle_data: list[str] = [],
-        providers: Optional[list[Provider]] = None,
-        headers: Optional[Union[HeaderModel, type[HeaderModel]]] = None,
-        response_envelope: Optional[ResponseEnvelope] = None,
-        status_code: Optional[int] = None,
-        tags: Optional[list[Union[str, Enum]]] = None,
-        summary: Optional[str] = None,
-        description: Optional[str] = None,
-        response_description: str = "Successful Response",
-        responses: Optional[dict[Union[int, str], dict[str, Any]]] = None,
-        deprecated: Optional[bool] = None,
-        operation_id: Optional[str] = None,
-        response_model_include: Optional[IncEx] = None,
-        response_model_exclude: Optional[IncEx] = None,
-        response_model_by_alias: bool = True,
-        response_model_exclude_unset: bool = False,
-        response_model_exclude_defaults: bool = False,
-        response_model_exclude_none: bool = False,
-        include_in_schema: bool = True,
-        openapi_extra: Optional[dict[str, Any]] = None,
-    ) -> Router: ...
-
-    def WS(self, path: str = "", *, handle_data: list[str] = [], **kwargs: dict[str, Any]):
-        router = Router(self, ["WS"], path, handle=WsHandle(handle_data), **kwargs)
         self.pending_routers.append(router)
         return router
 

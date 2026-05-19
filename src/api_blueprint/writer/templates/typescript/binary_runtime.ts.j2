@@ -5,10 +5,38 @@
 export type BinaryEndian = "little" | "big";
 
 export class BinaryEncodeError extends Error {
-  constructor(readonly fieldPath: string, message: string) {
-    super(fieldPath ? `${fieldPath}: ${message}` : message);
+  constructor(readonly fieldPath: string, readonly detail: string) {
+    super(fieldPath ? `${fieldPath}: ${detail}` : detail);
     this.name = "BinaryEncodeError";
   }
+}
+
+export function joinBinaryPath(parent: string, child: string): string {
+  if (!parent) {
+    return child;
+  }
+  if (!child) {
+    return parent;
+  }
+  if (child.startsWith("[")) {
+    return `${parent}${child}`;
+  }
+  return `${parent}.${child}`;
+}
+
+export function indexBinaryPath(path: string, index: number): string {
+  return `${path}[${index}]`;
+}
+
+export function wrapBinaryField(path: string, error: unknown): unknown {
+  if (error instanceof BinaryEncodeError) {
+    return new BinaryEncodeError(joinBinaryPath(path, error.fieldPath), error.detail);
+  }
+  return error;
+}
+
+export function wrapBinaryIndex(path: string, index: number, error: unknown): unknown {
+  return wrapBinaryField(indexBinaryPath(path, index), error);
 }
 
 export interface ApiBinaryBody {

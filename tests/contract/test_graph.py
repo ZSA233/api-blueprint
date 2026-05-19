@@ -554,33 +554,6 @@ def test_contract_artifacts_use_shared_selection_and_python_root_group_paths():
     ]
 
 
-def test_contract_artifacts_do_not_claim_grpc_outputs_for_legacy_ws_routes():
-    bp = Blueprint(root="/api")
-    with bp.group("/demo") as views:
-        views.WS("/ws").SEND(StreamState).RECV(StreamDone)
-
-    manifest = build_contract_graph([bp]).to_manifest()
-    manifest["targets"] = [
-        {
-            "id": "grpc.proto",
-            "kind": "grpc-proto",
-            "out_dir": "grpc/protos",
-        },
-        {
-            "id": "grpc.python",
-            "kind": "grpc-python",
-            "out_dir": "grpc/python",
-            "python_package_root": "pb",
-        },
-    ]
-
-    agent = build_agent_manifest(manifest)
-
-    assert agent["routes"][0]["kind"] == "legacy_ws"
-    assert "grpc.proto" not in agent["routes"][0]["artifacts"]
-    assert "grpc.python" not in agent["routes"][0]["artifacts"]
-
-
 def test_contract_route_contract_is_the_writer_core_compat_source():
     bp = Blueprint(root="/api")
     with bp.group("/demo") as views:

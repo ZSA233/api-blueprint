@@ -68,6 +68,8 @@ api/
     api/
       demo/gen_client.ts
   transports/
+    gen_clients.ts
+    clients.ts
     http/
       gen_transport.ts        # only when an HTTP target is also declared
       api/gen_factory.ts
@@ -80,9 +82,11 @@ api/
 
 `api/runtime` is the shared transport-neutral runtime; `api/routes/<root>` contains route core clients; `api/transports/http/<root>` and `api/transports/<overlay_name>/<root>` are scenario facades. Wails route overlays expose `createClient(config)` plus the narrow `type <Group>Client`, and the root overlay exposes `createClients(config)`.
 
+When the same TypeScript output tree has both HTTP and Wails transports, `api/transports/clients` exports a stable aggregate entrypoint: `createHttpClients`, `createWailsV3Clients` / `createWailsV2Clients`, each transport's `GeneratedClients` type alias, and `CommonGeneratedClients`, the client subset shared by all generated transports. `createClientsForTransport({ transport })` creates only that common subset, which is useful for a project-owned GUI/Web client wrapper. Routes excluded from the Wails target by `include` / `exclude` do not appear in the common subset. Use the transport-specific `api/transports/http/<root>` or `api/transports/<overlay_name>/<root>` factory when a full transport-specific client set is needed.
+
 ## Provider Hooks
 
-Go HTTP and Wails share the generated `RouteExecutor` provider pipeline. Wails services run `req/auth/handle/rsp` and WS preflight providers by default, so projects do not need a handwritten per-route adapter just to restore auth/provider behavior.
+Go HTTP and Wails share the generated `RouteExecutor` provider pipeline. Wails services run `req/auth/handle/rsp` and connection preflight providers by default, so projects do not need a handwritten per-route adapter just to restore auth/provider behavior.
 
 Long-term ownership boundary:
 
@@ -123,6 +127,19 @@ import { WailsV3Transport } from "./api/transports/wailsv3/transport";
 const clients = createClients({
     transport: new WailsV3Transport(),
 });
+```
+
+Projects that run both HTTP and Wails can import the common factory and type from one path, then keep auth, error handling, or specific client overrides in their own wrapper:
+
+```ts
+import {
+    createClientsForTransport,
+    type CommonGeneratedClients,
+} from "./api/transports/clients";
+import { WailsV3Transport } from "./api/transports/wailsv3/transport";
+
+const transport = new WailsV3Transport();
+const clients: CommonGeneratedClients = createClientsForTransport({ transport });
 ```
 
 The Wails v3 transport uses the official runtime `Call.ByName(...)` contract and a generated binding manifest; Go import paths in that binding manifest use the same Go-safe segments, so projects do not need to hand-code Go service package paths. The Wails v2 transport continues to use the official `window.go.<package>.<service>.<method>` runtime shape.
@@ -228,7 +245,7 @@ await bridge.close(1000, "done");
 offMessage();
 ```
 
-`WS().RECV().SEND()` is a compatibility surface outside the 1.0 ContractGraph mainline. New blueprints should use `STREAM` / `CHANNEL` so multiple logical messages are not modeled as multiple raw events.
+`WS().RECV().SEND()` has been removed from the blueprint DSL. Use `CHANNEL` for bidirectional WebSocket-style contracts and `STREAM` for server-only event streams.
 
 ## Harness Examples
 

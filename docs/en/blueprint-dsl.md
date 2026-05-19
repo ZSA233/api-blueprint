@@ -188,7 +188,7 @@ API rules:
 - When `operation_id` is omitted and auto-generated names collide inside the same group for the same path, the generator disambiguates them by method or connection kind, for example `CurrentGet` / `CurrentPut` or `EventsStream` / `EventsChannel`.
 - If multiple explicit `operation_id` values still collide after normalization, `api-gen check` / `api-gen generate` fail and require unique `operation_id` values for the conflicting routes.
 - `scope` supports `ConnectionScope.SESSION`, `ConnectionScope.APP`, and `ConnectionScope.TOPIC`; each transport can map it according to its own capabilities. The default HTTP/Wails runtimes fully support `SESSION`.
-- `delivery` supports `ConnectionDelivery.ORDERED` and `ConnectionDelivery.UNORDERED`; `STREAM` / `CHANNEL` default to `ORDERED`. On HTTP, ordered delivery relies on native per-connection SSE / WebSocket ordering and does not add a generator-owned sequence overlay. The default Wails transport keeps ordered delivery asynchronous by adding transport-level sequence envelopes and a reorder buffer. The `WS` compatibility form does not adopt this surface.
+- `delivery` supports `ConnectionDelivery.ORDERED` and `ConnectionDelivery.UNORDERED`; `STREAM` / `CHANNEL` default to `ORDERED`. On HTTP, ordered delivery relies on native per-connection SSE / WebSocket ordering and does not add a generator-owned sequence overlay. The default Wails transport keeps ordered delivery asynchronous by adding transport-level sequence envelopes and a reorder buffer.
 - HTTP `STREAM` maps to SSE, and HTTP `CHANNEL` maps to WebSocket.
 - `delivery=ConnectionDelivery.UNORDERED` mainly affects Wails routes. HTTP transports still follow the native ordering behavior of SSE / WebSocket rather than intentionally switching to a separate unordered path.
 - Wails `STREAM` / `CHANNEL` map to session-scoped runtime events; event names exist only inside the generated transport/runtime.
@@ -197,22 +197,9 @@ API rules:
 
 For complete generated examples, see `/api/demo/sweep-events` and `/api/demo/assistant-session` in `examples/blueprints/api_demo.py`.
 
-## Legacy WebSocket
+## Migration Note
 
-```python
-class ClientMessage(Model):
-    message = String(description="client message")
-
-
-class ServerMessage(Model):
-    message = String(description="server message")
-
-
-with bp.group("/demo") as views:
-    views.WS("/ws").RECV(ClientMessage).SEND(ServerMessage)
-```
-
-`WS().RECV().SEND()` is a compatibility form outside the ContractGraph mainline. Prefer `STREAM` / `CHANNEL` so multiple logical messages are not modeled as multiple raw events.
+`WS().RECV().SEND()` has been removed from the blueprint DSL. Use `CHANNEL` for bidirectional WebSocket-style contracts and `STREAM` for server-only event streams.
 
 ## Documentation Output
 

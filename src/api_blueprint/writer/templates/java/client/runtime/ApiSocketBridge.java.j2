@@ -1,9 +1,0 @@
-package {{ bp.root_package }}.runtime;
-
-public interface ApiSocketBridge<Send, Recv> {
-    void send(Send message);
-
-    void close(Integer code, String reason);
-
-    void onMessage(java.util.function.Consumer<Recv> listener);
-}

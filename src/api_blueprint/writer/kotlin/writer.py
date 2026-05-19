@@ -333,8 +333,6 @@ class KotlinBaseWriter(BaseWriter[KotlinBlueprint]):
             return "channel"
         if route.supports_stream:
             return "stream"
-        if route.supports_ws:
-            return "legacy_ws"
         return "rpc"
 
     def service_base_name(self, group: "KotlinApiGroup") -> str:

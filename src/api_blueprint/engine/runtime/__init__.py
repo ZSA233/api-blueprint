@@ -7,7 +7,6 @@ from api_blueprint.engine.runtime.providers import (
     ProviderName,
     Req,
     Rsp,
-    WsHandle,
     ellipsis_replaces,
 )
 from api_blueprint.engine.runtime.registration import proxy_upstream_request, register_router
@@ -35,7 +34,6 @@ __all__ = (
     "Req",
     "ResponseEnvelope",
     "Rsp",
-    "WsHandle",
     "XMLResponse",
     "build_default_app",
     "ellipsis_replaces",

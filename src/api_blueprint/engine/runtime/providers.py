@@ -12,7 +12,6 @@ class ProviderName(str, Enum):
     RSP = "rsp"
     AUTH = "auth"
     HANDLE = "handle"
-    WS_HANDLE = "ws_handle"
 
 
 class Provider:
@@ -40,11 +39,6 @@ class Auth(Provider):
 
 class Handle(Provider):
     name = ProviderName.HANDLE.value
-
-
-class WsHandle(Provider):
-    name = ProviderName.WS_HANDLE.value
-    data: list[str] = []
 
 
 class Custom(Provider):

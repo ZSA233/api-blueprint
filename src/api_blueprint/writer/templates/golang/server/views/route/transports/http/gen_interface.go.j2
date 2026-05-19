@@ -79,9 +79,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 			impl.{{ register.func }},
 		),
 		eng,
-{% if register.method != "WS" -%}
 		{{ register.raw_response | tojson }},
-{% endif %}
 	)
 	{% endif %}
 {% endfor %}

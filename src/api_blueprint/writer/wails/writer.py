@@ -134,11 +134,7 @@ class WailsWriter:
                     key = f"{contract.namespace}.{contract.service_name}.{method_name}"
                     manifest[key] = f"{binding_import}.{contract.service_name}.{method_name}"
 
-                if contract.ws is not None:
-                    add_method(contract.ws.connect_method)
-                    add_method(contract.ws.send_method)
-                    add_method(contract.ws.close_method)
-                elif contract.stream is not None:
+                if contract.stream is not None:
                     add_method(contract.stream.connect_method)
                     add_method(contract.stream.close_method)
                 elif contract.channel is not None:

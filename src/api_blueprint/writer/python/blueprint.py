@@ -81,11 +81,7 @@ class PythonRoute:
 
     @property
     def is_rpc(self) -> bool:
-        return not (self.supports_ws or self.supports_stream or self.supports_channel)
-
-    @property
-    def supports_ws(self) -> bool:
-        return self.contract.supports_ws
+        return not (self.supports_stream or self.supports_channel)
 
     @property
     def supports_stream(self) -> bool:
@@ -94,11 +90,6 @@ class PythonRoute:
     @property
     def supports_channel(self) -> bool:
         return self.contract.supports_channel
-
-    @property
-    def connect_method_name(self) -> str:
-        method = self.contract.ws.connect_method if self.contract.ws is not None else f"connect_{self.method_name}"
-        return to_py_identifier(method, default=f"connect_{self.method_name}")
 
     @property
     def subscribe_method_name(self) -> str:
@@ -112,8 +103,6 @@ class PythonRoute:
 
     @property
     def connection_kind_literal(self) -> str:
-        if self.supports_ws:
-            return json.dumps("legacy_ws")
         if self.supports_stream:
             return json.dumps("stream")
         if self.supports_channel:
@@ -130,9 +119,7 @@ class PythonRoute:
 
     @property
     def websocket_endpoint_name(self) -> str:
-        if self.supports_channel:
-            return f"{self.open_channel_method_name}_socket"
-        return f"{self.connect_method_name}_socket"
+        return f"{self.open_channel_method_name}_socket"
 
     @property
     def response_type_literal(self) -> str:

@@ -25,6 +25,7 @@ def test_makefile_exposes_example_validation_and_release_preflight_uses_it():
     refresh_block = _target_block(text, "example-refresh")
     golang_suite_block = _target_block(text, "example-golang-suite")
     java_suite_block = _target_block(text, "example-java-suite")
+    benchmark_binary_block = _target_block(text, "benchmark-binary")
     preflight_block = _target_block(text, "release-preflight")
     tag_check_block = _target_block(text, "release-tag-check")
 
@@ -33,6 +34,7 @@ def test_makefile_exposes_example_validation_and_release_preflight_uses_it():
     assert "uv run python scripts/example_validation.py --mode refresh" in refresh_block
     assert "uv run python scripts/example_validation.py --scope blueprint --mode golang-suite" in golang_suite_block
     assert "uv run python scripts/example_validation.py --scope blueprint --mode java-suite" in java_suite_block
+    assert 'uv run python scripts/benchmark_binary.py --target "$(BINARY_BENCH_TARGET)" --count "$(BINARY_BENCH_COUNT)"' in benchmark_binary_block
     assert "$(MAKE) example-validation" in preflight_block
     assert 'uv run python scripts/release_version.py check-sync --tag "$(RELEASE_TAG)"' in tag_check_block
     assert "uv run python scripts/release_assets.py validate-config" in tag_check_block

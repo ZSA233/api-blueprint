@@ -53,12 +53,12 @@ public class {{ group.controller_class }} {
         {{ writer.schema_type(route.form_model, group) }} form = objectMapper.convertValue(queryParams, {{ writer.schema_class_literal(route.form_model, group) }});
 {%- endif %}
 {%- if route.binary_schema %}
-        ApiBinaryBody binary = ApiBinaryBody.of(binaryBody == null ? new byte[0] : binaryBody);
+        {{ group.types_class }}.{{ route.binary_schema_type }} binary = {{ group.types_class }}.{{ route.binary_schema_type }}Wire.parse(binaryBody == null ? new byte[0] : binaryBody);
 {%- endif %}
         try {
             Object result = service.{{ route.method_name }}(
 {%- for type_name, name in writer.route_params(route, group) %}
-                {{ "binary" if name == "binaryBody" and route.binary_schema else name }}{% if not loop.last %},{% endif %}
+                {{ name }}{% if not loop.last %},{% endif %}
 {%- endfor %}
             );
             return wrapResponse({{ route.response_envelope_literal | safe }}, result);

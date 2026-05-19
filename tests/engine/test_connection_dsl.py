@@ -156,3 +156,14 @@ def test_connection_route_contract_carries_declared_close_model():
     assert contract.connection_close_model is CloseMessage
     assert contract.channel is not None
     assert contract.channel.close_model is CloseMessage
+
+
+def test_legacy_ws_dsl_is_not_exposed():
+    bp = Blueprint(root="/api")
+    group = bp.group("/demo")
+    route = bp.CHANNEL("/chat")
+
+    assert not hasattr(bp, "WS")
+    assert not hasattr(group, "WS")
+    assert not hasattr(route, "RECV")
+    assert not hasattr(route, "SEND")

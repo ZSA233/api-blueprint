@@ -54,8 +54,6 @@ func (prov *RspProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
 	var err error
 	if handled := ctx.Handle; handled != nil {
 		err = handled.Error
-	} else if handled := ctx.WsHandle; handled != nil {
-		err = handled.Error
 	} else {
 		err = fmt.Errorf("[RspProvider] fail to get Handle")
 		ctx.Abort(err)

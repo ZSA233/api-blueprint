@@ -68,6 +68,16 @@ def kotlin_type_name(name: str) -> str:
     return to_kotlin_type_name(name)
 
 
+def _scope_kotlin_type_name(schema_name: str, raw_name: str) -> str:
+    schema_type = kotlin_type_name(schema_name)
+    raw_type = kotlin_type_name(raw_name)
+    return raw_type if raw_type.startswith(schema_type) else f"{schema_type}{raw_type}"
+
+
+def _generated_name_key(value: str) -> str:
+    return re.sub(r"[^0-9a-z]+", "", value.lower())
+
+
 def kotlin_string(value: str) -> str:
     escaped = value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
     return f'"{escaped}"'
@@ -126,7 +136,7 @@ class KotlinBinaryStateField:
 @dataclass(frozen=True)
 class KotlinBinaryField:
     field: BinaryField
-    schema: BinarySchema
+    schema: "KotlinBinarySchema"
 
     @property
     def name(self) -> str:
@@ -142,7 +152,7 @@ class KotlinBinaryField:
 
     @property
     def value_type(self):
-        return self.schema.value_type_map().get(self.typ)
+        return self.schema.schema.value_type_map().get(self.typ)
 
     @property
     def wire_type(self) -> str:
@@ -210,8 +220,8 @@ class KotlinBinaryField:
     @property
     def single_kotlin_type(self) -> str:
         if self.value_type is not None:
-            return KOTLIN_SCALAR_TYPES[self.wire_type]
-        return KOTLIN_SCALAR_TYPES.get(self.typ, self.typ)
+            return KOTLIN_SCALAR_TYPES[self.value_type.base_type]
+        return KOTLIN_SCALAR_TYPES.get(self.typ, self.schema.object_type_name(self.typ))
 
     @property
     def write_method(self) -> str:
@@ -367,10 +377,14 @@ class KotlinBinaryField:
 @dataclass(frozen=True)
 class KotlinBinaryObject:
     obj: BinaryObject
-    schema: BinarySchema
+    schema: "KotlinBinarySchema"
 
     @property
     def name(self) -> str:
+        return self.schema.object_type_name(self.obj.name)
+
+    @property
+    def path_name(self) -> str:
         return self.obj.name
 
     @property
@@ -409,7 +423,7 @@ class KotlinBinaryObject:
         return "write" + kotlin_type_name(f"{self.name}_{field.name}_fragment")
 
     def block_path(self, field: KotlinBinaryField) -> str:
-        return f"{self.name}.{field.name}"
+        return f"{self.path_name}.{field.name}"
 
     def has_field(self, name: str | None) -> bool:
         if name is None:
@@ -420,9 +434,14 @@ class KotlinBinaryObject:
 @dataclass(frozen=True)
 class KotlinBinaryValueSet:
     value_set: object
+    schema: "KotlinBinarySchema"
 
     @property
     def name(self) -> str:
+        return self.schema.value_set_type_name(self.value_set.name)
+
+    @property
+    def raw_name(self) -> str:
         return self.value_set.name
 
     @property
@@ -464,11 +483,11 @@ class KotlinBinarySchema:
 
     @property
     def sections(self) -> list[KotlinBinaryObject]:
-        return [KotlinBinaryObject(section, self.schema) for section in self.schema.sections]
+        return [KotlinBinaryObject(section, self) for section in self.schema.sections]
 
     @property
     def structs(self) -> list[KotlinBinaryObject]:
-        return [KotlinBinaryObject(struct, self.schema) for struct in self.schema.structs.values()]
+        return [KotlinBinaryObject(struct, self) for struct in self.schema.structs.values()]
 
     @property
     def objects(self) -> list[KotlinBinaryObject]:
@@ -477,7 +496,7 @@ class KotlinBinarySchema:
     @property
     def value_sets(self) -> list[KotlinBinaryValueSet]:
         values = [*self.schema.enums.values(), *self.schema.bitflags.values()]
-        return [KotlinBinaryValueSet(value) for value in values]
+        return [KotlinBinaryValueSet(value, self) for value in values]
 
     def packet_field_name(self, section_name: str) -> str:
         suffix = section_name.removeprefix(self.name)
@@ -499,10 +518,24 @@ class KotlinBinarySchema:
                 fields.append(KotlinBinaryStateField(field.name))
         return fields
 
+    def object_type_name(self, object_name: str) -> str:
+        return _scope_kotlin_type_name(self.name, object_name)
+
+    def value_set_type_name(self, value_set_name: str) -> str:
+        return _scope_kotlin_type_name(self.name, value_set_name)
+
 
 def unique_kotlin_binary_schemas(schemas: Iterable[BinarySchema]) -> list[KotlinBinarySchema]:
     unique: dict[str, BinarySchema] = {}
+    generated_names: dict[str, str] = {}
     for schema in schemas:
+        generated_name = _generated_name_key(schema.name)
+        previous = generated_names.get(generated_name)
+        if previous is not None and previous != schema.name:
+            raise ValueError(
+                f"duplicate binary schema generated name {kotlin_type_name(schema.name)}: {previous}, {schema.name}"
+            )
+        generated_names[generated_name] = schema.name
         unique.setdefault(schema.name, schema)
     return [KotlinBinarySchema(schema) for schema in unique.values()]
 

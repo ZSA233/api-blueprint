@@ -4,7 +4,7 @@
 
 import type * as Types from "./types";
 import type * as Shared from "{{ shared_models_path }}";
-import { ApiChannelBridge, ApiClientConfig, ApiSocketBridge, ApiStreamBridge, BaseClient } from "{{ shared_client_path }}";
+import { ApiChannelBridge, ApiClientConfig, ApiStreamBridge, BaseClient } from "{{ shared_client_path }}";
 {% if has_binary_schemas %}
 import type { ApiBinaryBody } from "{{ binary_runtime_path }}";
 import {
@@ -129,58 +129,6 @@ export class {{ client_class }} extends BaseClient {
     });
   }
 
-{% endif -%}
-{% if route.supports_ws %}
-  {{ route.connect_method_name }}(
-    request: {
-{% if route.query_type_expr %}      query?: {{ route.query_type_expr }};
-{% endif %}      headers?: Record<string, string>;
-    } = {},
-    protocols?: string | string[],
-  ): ApiSocketBridge<{{ route.ws_send_type_expr }}, {{ route.ws_recv_type_expr }}> {
-    return this.connectBridge<{{ route.ws_send_type_expr }}, {{ route.ws_recv_type_expr }}>({
-      routeId: "{{ route.route_id }}",
-      connectionKind: "legacy_ws",
-      scope: "",
-      path: "{{ route.url }}",
-      service: "{{ route.service_name }}",
-      namespace: "{{ route.namespace }}",
-      connectMethod: "{{ route.contract.ws.connect_method if route.contract.ws else '' }}",
-      sendMethod: "{{ route.contract.ws.send_method if route.contract.ws else '' }}",
-      closeMethod: "{{ route.contract.ws.close_method if route.contract.ws else '' }}",
-      eventBase: "{{ route.contract.ws.event_base if route.contract.ws else '' }}",
-{% if route.query_type_expr %}      query: request.query as unknown as Record<string, unknown> | undefined,
-{% endif %}      headers: request.headers,
-      protocols,
-    });
-  }
-
-{% if writer.allow_raw_ws %}
-  {{ route.connect_raw_method_name }}(
-    request: {
-{% if route.query_type_expr %}      query?: {{ route.query_type_expr }};
-{% endif %}      headers?: Record<string, string>;
-    } = {},
-    protocols?: string | string[],
-  ): WebSocket {
-    return this.connectRaw({
-      routeId: "{{ route.route_id }}",
-      connectionKind: "legacy_ws",
-      scope: "",
-      path: "{{ route.url }}",
-      service: "{{ route.service_name }}",
-      namespace: "{{ route.namespace }}",
-      connectMethod: "{{ route.contract.ws.connect_method if route.contract.ws else '' }}",
-      sendMethod: "{{ route.contract.ws.send_method if route.contract.ws else '' }}",
-      closeMethod: "{{ route.contract.ws.close_method if route.contract.ws else '' }}",
-      eventBase: "{{ route.contract.ws.event_base if route.contract.ws else '' }}",
-{% if route.query_type_expr %}      query: request.query as unknown as Record<string, unknown> | undefined,
-{% endif %}      headers: request.headers,
-      protocols,
-    });
-  }
-
-{% endif -%}
 {% endif -%}
 {% endfor -%}
 }

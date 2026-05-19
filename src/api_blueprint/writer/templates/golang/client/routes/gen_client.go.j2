@@ -26,7 +26,7 @@ type {{ group.client_class }} = Gen{{ group.client_class }}
 var New{{ group.client_class }} = NewGen{{ group.client_class }}
 {% for route in group.routes %}
 {% set params = route_params(route, include_open=(route.kind in ["stream", "channel"])) %}
-{% if route.kind == "legacy_ws" or route.kind == "stream" or route.kind == "channel" %}
+{% if route.kind == "stream" or route.kind == "channel" %}
 
 func (client *Gen{{ group.client_class }}) {{ connection_method_name(route) }}(ctx context.Context{% for param in params %}, {{ param }}{% endfor %}) error {
 	request := runtime.ConnectionRequest{

@@ -13,6 +13,8 @@ import {
   requireBinary,
   requireRange,
   requireSize,
+  wrapBinaryField,
+  wrapBinaryIndex,
 } from "{{ runtime_binary_path }}";
 
 {% macro check_field(field, receiver, number_expr, path) -%}
@@ -42,51 +44,67 @@ import {
 {%- endmacro %}
 
 {% macro write_field(field, object) -%}
-{% set path = object.name ~ "." ~ field.name %}
+{% set field_path = field.name %}
 {% if field.is_hidden %}
-  writer.writeZeroes({{ path | code_literal }}, {{ field.count_expr }});
+  writer.writeZeroes({{ field_path | code_literal }}, {{ field.count_expr }});
 {% elif field.is_bytes %}
 {% if field.fixed_bytes %}
-{{ check_field(field, field.value_expr, field.value_expr, path) }}
-  requireSize({{ path | code_literal }}, binarySize({{ field.value_expr }}), {{ field.count_expr }});
-  writer.writeBytes({{ path | code_literal }}, {{ field.value_expr }});
+{{ check_field(field, field.value_expr, field.value_expr, field_path) }}
+  requireSize({{ field_path | code_literal }}, binarySize({{ field.value_expr }}), {{ field.count_expr }});
+  writer.writeBytes({{ field_path | code_literal }}, {{ field.value_expr }});
 {% else %}
   const {{ field.ts_name }}Count = {{ field.count_expr }};
 {% if field.max_value %}
-  requireRange({{ path | code_literal }}, {{ field.ts_name }}Count, 0, {{ field.max_expr }});
+  requireRange({{ field_path | code_literal }}, {{ field.ts_name }}Count, 0, {{ field.max_expr }});
 {% endif %}
-  requireSize({{ path | code_literal }}, binarySize({{ field.value_expr }}), {{ field.ts_name }}Count);
-  writer.writeBytes({{ path | code_literal }}, {{ field.value_expr }});
+  requireSize({{ field_path | code_literal }}, binarySize({{ field.value_expr }}), {{ field.ts_name }}Count);
+  writer.writeBytes({{ field_path | code_literal }}, {{ field.value_expr }});
 {% endif %}
 {% elif field.is_string %}
   const {{ field.ts_name }}Count = {{ field.count_expr }};
 {% if field.max_value %}
-  requireRange({{ path | code_literal }}, {{ field.ts_name }}Count, 0, {{ field.max_expr }});
+  requireRange({{ field_path | code_literal }}, {{ field.ts_name }}Count, 0, {{ field.max_expr }});
 {% endif %}
-  requireSize({{ path | code_literal }}, binarySize({{ field.value_expr }}), {{ field.ts_name }}Count);
-  writer.writeUtf8String({{ path | code_literal }}, {{ field.value_expr }});
+  requireSize({{ field_path | code_literal }}, binarySize({{ field.value_expr }}), {{ field.ts_name }}Count);
+  writer.writeUtf8String({{ field_path | code_literal }}, {{ field.value_expr }});
 {% elif field.is_array %}
   const {{ field.ts_name }}Count = {{ field.count_expr }};
 {% if field.max_value %}
-  requireRange({{ path | code_literal }}, {{ field.ts_name }}Count, 0, {{ field.max_expr }});
+  requireRange({{ field_path | code_literal }}, {{ field.ts_name }}Count, 0, {{ field.max_expr }});
 {% endif %}
-  requireSize({{ path | code_literal }}, binarySize({{ field.value_expr }}), {{ field.ts_name }}Count);
+  requireSize({{ field_path | code_literal }}, binarySize({{ field.value_expr }}), {{ field.ts_name }}Count);
 {% if field.is_scalar %}
-  {{ field.value_expr }}.forEach((item, index) => writer.{{ field.write_method }}({{ path | code_literal }} + `[${index}]`, item));
+  {{ field.value_expr }}.forEach((item, index) => {
+    try {
+      writer.{{ field.write_method }}("", item);
+    } catch (error) {
+      throw wrapBinaryIndex({{ field_path | code_literal }}, index, error);
+    }
+  });
 {% else %}
-  {{ field.value_expr }}.forEach((item, index) => write{{ field.typ }}(item, writer, state, {{ path | code_literal }} + `[${index}]`));
+  {{ field.value_expr }}.forEach((item, index) => {
+    try {
+      write{{ field.single_ts_type }}(item, writer, state, "");
+    } catch (error) {
+      throw wrapBinaryIndex({{ field_path | code_literal }}, index, error);
+    }
+  });
 {% endif %}
 {% elif field.is_scalar %}
-{{ check_field(field, field.value_expr, field.value_expr, path) }}
+{{ check_field(field, field.value_expr, field.value_expr, field_path) }}
 {% if field.sizeof_value and object.has_field(field.sizeof_value) %}
-  requireSize({{ (path ~ "." ~ field.sizeof_value) | code_literal }}, binarySize(value.{{ field.sizeof_ts_name }}), {{ field.value_expr }});
+  requireSize({{ (field_path ~ "." ~ field.sizeof_value) | code_literal }}, binarySize(value.{{ field.sizeof_ts_name }}), {{ field.value_expr }});
 {% endif %}
-  writer.{{ field.write_method }}({{ path | code_literal }}, {{ field.value_expr }});
+  writer.{{ field.write_method }}({{ field_path | code_literal }}, {{ field.value_expr }});
 {% if field.is_integer_scalar %}
   state.{{ field.ts_name }} = Number({{ field.value_expr }});
 {% endif %}
 {% else %}
-  write{{ field.typ }}({{ field.value_expr }}, writer, state, {{ path | code_literal }});
+  try {
+    write{{ field.single_ts_type }}({{ field.value_expr }}, writer, state, "");
+  } catch (error) {
+    throw wrapBinaryField({{ field_path | code_literal }}, error);
+  }
 {% endif %}
 {%- endmacro %}
 
@@ -107,7 +125,7 @@ export function {{ object.block_factory_name(field) }}(bytes: Uint8Array, count:
 export function {{ object.block_writer_name(field) }}(
   writer: BinaryWriter,
   block: EncodedBinaryBlock,
-  state: BinaryState,
+  state: {{ object.schema.state_type }},
   path = {{ path | code_literal }},
 ): void {
   const expectedCount = {{ field.count_expr }};
@@ -119,7 +137,7 @@ export function {{ object.block_writer_name(field) }}(
 export function {{ object.fragment_writer_name(field) }}(
   writer: BinaryWriter,
   block: EncodedBinaryBlock,
-  state: BinaryState,
+  state: {{ object.schema.state_type }},
   path = {{ path | code_literal }},
 ): void {
   const expectedCount = {{ field.count_expr }};
@@ -149,13 +167,13 @@ export function {{ schema.name }}ToBinaryBody(value: {{ schema.name }} | ApiBina
   return {{ schema.name }}Wire.toBinaryBody(value);
 }
 
-interface BinaryState {
+interface {{ schema.state_type }} {
 {%- for field_name in schema.state_fields_ts %}
   {{ field_name }}: number;
 {%- endfor %}
 }
 
-function newBinaryState(): BinaryState {
+function {{ schema.state_factory }}(): {{ schema.state_type }} {
   return {
 {%- for field_name in schema.state_fields_ts %}
     {{ field_name }}: 0,
@@ -191,7 +209,7 @@ export const {{ schema.name }}Wire = {
   },
 
   write(value: {{ schema.name }}, writer: BinaryWriter): void {
-    const state = newBinaryState();
+    const state = {{ schema.state_factory }}();
 {%- for section in schema.sections %}
     write{{ section.name }}(value.{{ schema.packet_field_name(section.name) }}, writer, state, "{{ schema.name }}.{{ schema.packet_field_name(section.name) }}");
 {%- endfor %}
@@ -202,12 +220,16 @@ export const {{ schema.name }}Wire = {
 export function {{ object.writer_name }}(
   value: {{ object.name }},
   writer: BinaryWriter,
-  state: BinaryState = newBinaryState(),
-  path = "{{ object.name }}",
+  state: {{ schema.state_type }} = {{ schema.state_factory }}(),
+  path = "{{ object.path_name }}",
 ): void {
-{% for field in object.fields -%}
-{{ write_field(field, object) | compact_code_block | indent(2, true) }}
-{% endfor -%}
+  try {
+{% for field in object.fields %}
+{{ write_field(field, object) | compact_code_block | indent(4, true) }}
+{% endfor %}
+  } catch (error) {
+    throw wrapBinaryField(path, error);
+  }
 }
 
 {% for field in object.fields if field.supports_binary_block %}

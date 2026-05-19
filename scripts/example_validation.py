@@ -632,6 +632,11 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         / "transports"
         / "wailsv3"
         / "gen_transport.ts",
+        "ts_wails_v3_runtime": workspace.typescript_dir
+        / "api"
+        / "transports"
+        / "wailsv3"
+        / "gen_runtime.ts",
         "ts_wails_v3_bindings": workspace.typescript_dir
         / "api"
         / "transports"
@@ -919,7 +924,7 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         "typescript suite client message helper": (files["ts_suite"], "AssistantClientMessageVariants.cancel({ reason: \"suite\" })"),
         "typescript suite server dispatcher helper": (files["ts_suite"], "dispatchAssistantServerMessage(serverMessage, {"),
         "wails v3 bindings import": (
-            files["ts_wails_v3_transport"],
+            files["ts_wails_v3_runtime"],
             'import { WAILS_V3_BINDINGS } from "./gen_bindings";',
         ),
         "wails v3 bindings manifest": (

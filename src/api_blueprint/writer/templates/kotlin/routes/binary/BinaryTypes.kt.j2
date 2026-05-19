@@ -26,8 +26,7 @@
 {%- endmacro %}
 
 {% macro write_field(field, object) -%}
-{% set object_name = object.name %}
-{% set path = object_name ~ "." ~ field.name %}
+{% set path = field.name %}
 {% if field.is_hidden %}
     writer.writeZeroes({{ path | code_literal }}, {{ field.count_expr }})
 {% elif field.is_bytes %}
@@ -59,11 +58,19 @@
     requireSize({{ path | code_literal }}, binarySize({{ field.value_expr }}), {{ field.count_var }})
 {% if field.is_scalar %}
     {{ field.value_expr }}.forEachIndexed { index, item ->
-        writer.{{ field.write_method }}({{ path | code_literal }} + "[$index]", item)
+        try {
+            writer.{{ field.write_method }}("", item)
+        } catch (error: BinaryEncodeException) {
+            throw wrapBinaryIndex({{ path | code_literal }}, index, error)
+        }
     }
 {% else %}
     {{ field.value_expr }}.forEachIndexed { index, item ->
-        write{{ field.typ }}(item, writer, state, {{ path | code_literal }} + "[$index]")
+        try {
+            write{{ field.single_kotlin_type }}(item, writer, state, "")
+        } catch (error: BinaryEncodeException) {
+            throw wrapBinaryIndex({{ path | code_literal }}, index, error)
+        }
     }
 {% endif %}
 {{ check_expr(field, field.value_expr, field.value_long_expr, path) }}
@@ -77,13 +84,17 @@
     state.{{ field.kotlin_name }} = {{ field.value_long_expr }}
 {% endif %}
 {% else %}
-    write{{ field.typ }}({{ field.value_expr }}, writer, state, {{ path | code_literal }})
+    try {
+        write{{ field.single_kotlin_type }}({{ field.value_expr }}, writer, state, "")
+    } catch (error: BinaryEncodeException) {
+        throw wrapBinaryField({{ path | code_literal }}, error)
+    }
 {{ check_expr(field, field.value_expr, field.value_long_expr, path) }}
 {% endif %}
 {%- endmacro %}
 
 {% macro write_param_field(field, object, bytes_as_byte_string=False) -%}
-{% set path = object.name ~ "." ~ field.name %}
+{% set path = field.name %}
 {% set receiver = field.kotlin_name %}
 {% set long_expr = field.param_long_expr %}
 {% set byte_string_bytes = bytes_as_byte_string and field.has_dynamic_byte_string_param %}
@@ -124,7 +135,11 @@
     state.{{ field.kotlin_name }} = {{ long_expr }}
 {% endif %}
 {% else %}
-    write{{ field.typ }}({{ receiver }}, writer, state, {{ path | code_literal }})
+    try {
+        write{{ field.single_kotlin_type }}({{ receiver }}, writer, state, "")
+    } catch (error: BinaryEncodeException) {
+        throw wrapBinaryField({{ path | code_literal }}, error)
+    }
 {{ check_expr(field, receiver, long_expr, path) }}
 {% endif %}
 {%- endmacro %}
@@ -236,11 +251,15 @@ public object {{ schema.name }}Wire {
         value: {{ object.name }},
         writer: BinaryWriter,
         state: {{ schema.state_type }} = {{ schema.state_type }}(),
-        path: String = "{{ object.name }}",
+        path: String = "{{ object.path_name }}",
     ) {
+        try {
 {%- for field in object.fields %}
-{{ write_field(field, object) | indent(4, false) }}
+{{ write_field(field, object) | indent(8, false) }}
 {%- endfor %}
+        } catch (error: BinaryEncodeException) {
+            throw wrapBinaryField(path, error)
+        }
     }
 
 {% if object.can_generate_param_writer %}
@@ -250,11 +269,15 @@ public object {{ schema.name }}Wire {
         {{ field.param_declaration }},
 {%- endfor %}
         state: {{ schema.state_type }} = {{ schema.state_type }}(),
-        path: String = "{{ object.name }}",
+        path: String = "{{ object.path_name }}",
     ) {
+        try {
 {%- for field in object.fields %}
-{{ write_param_field(field, object) | indent(4, false) }}
+{{ write_param_field(field, object) | indent(8, false) }}
 {%- endfor %}
+        } catch (error: BinaryEncodeException) {
+            throw wrapBinaryField(path, error)
+        }
     }
 
 {% if object.has_dynamic_bytes_param %}
@@ -264,11 +287,15 @@ public object {{ schema.name }}Wire {
         {{ field.byte_string_param_declaration }},
 {%- endfor %}
         state: {{ schema.state_type }} = {{ schema.state_type }}(),
-        path: String = "{{ object.name }}",
+        path: String = "{{ object.path_name }}",
     ) {
+        try {
 {%- for field in object.fields %}
-{{ write_param_field(field, object, bytes_as_byte_string=True) | indent(4, false) }}
+{{ write_param_field(field, object, bytes_as_byte_string=True) | indent(8, false) }}
 {%- endfor %}
+        } catch (error: BinaryEncodeException) {
+            throw wrapBinaryField(path, error)
+        }
     }
 
 {% endif %}

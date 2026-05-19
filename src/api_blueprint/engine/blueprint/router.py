@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     from api_blueprint.engine.blueprint.group import RouterGroup
 
 
-METHOD_ENUM = Literal["GET", "POST", "PUT", "DELETE", "HEAD", "WS", "STREAM", "CHANNEL"]
+METHOD_ENUM = Literal["GET", "POST", "PUT", "DELETE", "HEAD", "STREAM", "CHANNEL"]
 ModelOrField = Union[Model, Field]
 
 
@@ -285,14 +285,6 @@ class Router:
         self.validate_connection_contract()
         register_router(self, app)
 
-    def RECV(self, *models: list[Model]) -> Self:
-        self.recvs.extend(models)
-        return self
-
-    def SEND(self, *models: list[Model]) -> Self:
-        self.sends.extend(models)
-        return self
-
     def OPEN(self, model: ModelRef) -> Self:
         if self.connection_kind not in {ConnectionKind.STREAM, ConnectionKind.CHANNEL}:
             raise ValueError("OPEN() is only supported by STREAM() and CHANNEL() routes")
@@ -366,8 +358,6 @@ class Router:
             return ConnectionKind.STREAM
         if any(method == "CHANNEL" for method in methods):
             return ConnectionKind.CHANNEL
-        if any(method == "WS" for method in methods):
-            return ConnectionKind.LEGACY_WS
         return ConnectionKind.RPC
 
     @staticmethod

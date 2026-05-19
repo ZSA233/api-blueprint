@@ -108,7 +108,7 @@ class GoRouteProtocolView:
 
     @property
     def executor_body_type_expr(self) -> str:
-        if "WS" in self.methods or self.is_connection:
+        if self.is_connection:
             return "any"
         return self.local_body_type_expr
 
@@ -177,7 +177,6 @@ class GoRouteProtocolView:
             if self.is_connection and provider.name in {
                 ProviderName.HANDLE.value,
                 ProviderName.RSP.value,
-                ProviderName.WS_HANDLE.value,
             }:
                 continue
             data = provider.data
@@ -185,9 +184,6 @@ class GoRouteProtocolView:
                 data = self.req_provider
             elif provider.name == ProviderName.RSP.value:
                 data = self.rsp_provider
-            elif provider.name == ProviderName.WS_HANDLE.value:
-                data = ",".join(data)
-
             key = provider.name
             if data:
                 key += f"={data}"
