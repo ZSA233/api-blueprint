@@ -79,6 +79,8 @@ clients = ["typescript.client"]
 启动文档服务、检查契约并生成代码：
 
 ```sh
+api-doc-server --version
+api-gen --version
 api-doc-server -c api-blueprint.toml
 api-gen check -c api-blueprint.toml
 api-gen generate -c api-blueprint.toml

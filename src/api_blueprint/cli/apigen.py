@@ -8,9 +8,11 @@ import click
 
 from api_blueprint.application import generator
 from api_blueprint.application import inspection
+from api_blueprint.cli.version import api_blueprint_version_option
 
 
 @click.group()
+@api_blueprint_version_option("api-gen")
 def api_gen() -> None:
     """Unified api-blueprint 1.0 generator."""
 

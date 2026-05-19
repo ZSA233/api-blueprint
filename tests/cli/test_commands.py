@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from click.testing import CliRunner
 
+from api_blueprint import __version__
 from api_blueprint.application.entrypoints import load_entrypoints
 from api_blueprint.application.project import build_entrypoints
 from api_blueprint.cli.apidoc import apidoc_server
@@ -13,6 +14,28 @@ def test_cli_help_smoke():
     for cli in (apidoc_server, api_gen):
         result = runner.invoke(cli, ["--help"])
         assert result.exit_code == 0
+
+
+def test_cli_commands_report_version() -> None:
+    runner = CliRunner()
+
+    api_gen_result = runner.invoke(api_gen, ["--version"])
+    api_doc_result = runner.invoke(apidoc_server, ["--version"])
+
+    assert api_gen_result.exit_code == 0
+    assert api_gen_result.output.strip() == f"api-gen, api-blueprint {__version__}"
+    assert api_doc_result.exit_code == 0
+    assert api_doc_result.output.strip() == f"api-doc-server, api-blueprint {__version__}"
+
+
+def test_cli_help_displays_current_version() -> None:
+    runner = CliRunner()
+
+    for cli in (apidoc_server, api_gen):
+        result = runner.invoke(cli, ["--help"])
+
+        assert result.exit_code == 0
+        assert f"api-blueprint {__version__}" in result.output
 
 
 def test_load_entrypoints_uses_temporary_import_path_scope(tmp_path):

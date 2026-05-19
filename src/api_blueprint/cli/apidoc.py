@@ -2,9 +2,11 @@ import click
 
 from api_blueprint.application.docs import run_docs_server as run_apidoc_server
 from api_blueprint.application.project import build_entrypoints, load_project
+from api_blueprint.cli.version import api_blueprint_version_option
 
 
 @click.command()
+@api_blueprint_version_option("api-doc-server")
 @click.option('-c', '--config', default='./api-blueprint.toml', help='配置文件')
 def apidoc_server(config: str = './api-blueprint.toml'):
     project = load_project(config, command="apidoc_server")
