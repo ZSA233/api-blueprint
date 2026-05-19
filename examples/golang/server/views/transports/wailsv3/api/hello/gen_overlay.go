@@ -4,7 +4,6 @@ package hello
 
 import (
 	sharedroutes "example.com/project/golang/server/views/routes/api/hello"
-
 	wailstransport "example.com/project/golang/server/views/transports/wailsv3"
 )
 

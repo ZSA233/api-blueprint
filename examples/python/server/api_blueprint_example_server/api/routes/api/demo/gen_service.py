@@ -30,12 +30,6 @@ class DemoService(Protocol):
     ) -> Any:
         ...
 
-    async def ws(
-        self,
-        query: dict[str, Any] | None = None,
-    ) -> Any:
-        ...
-
     async def sweep_events(
         self,
         open_data: dict[str, Any] | None = None,
@@ -92,12 +86,6 @@ class DemoServiceStub:
         query: dict[str, Any] | None = None,
     ) -> Any:
         raise NotImplementedError("delete")
-
-    async def ws(
-        self,
-        query: dict[str, Any] | None = None,
-    ) -> Any:
-        raise NotImplementedError("ws")
 
     async def sweep_events(
         self,

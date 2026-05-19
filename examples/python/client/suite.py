@@ -8,9 +8,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from api_blueprint_example_client.api.client import create_client
 from api_blueprint_example_client.api.routes.api.binary.gen_types import (
-    DemoFlags,
     DemoPacket,
     DemoPacketBody,
+    DemoPacketFlags,
     DemoPacketHeader,
     DemoPacketItem,
     DemoPacketWire,
@@ -30,7 +30,7 @@ from api_blueprint_example_client.api.runtime.errors import (
 def build_packet() -> DemoPacket:
     return DemoPacket(
         header=DemoPacketHeader(
-            flags=DemoFlags.HasPayload | DemoFlags.HasScores,
+            flags=DemoPacketFlags.HasPayload | DemoPacketFlags.HasScores,
             short_code=0x010203,
             signed_delta=7,
             item_count=2,

@@ -24,10 +24,6 @@ public interface GenDemoService {
         DemoTypes.DeleteQuery query
     ) throws Exception;
 
-    Object ws(
-        ApiTypes.ApiDemoSubA query
-    ) throws Exception;
-
     Object sweepEvents(
         ApiTypes.SweepOpen openData
     ) throws Exception;

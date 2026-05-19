@@ -50,10 +50,6 @@ func (impl *Router) Delete(ctx *CTX_Delete, req *REQ_Delete) (rsp *RSP_Delete, e
 	}, nil
 }
 
-func (impl *Router) Ws(ctx *CTX_Ws, req *REQ_Ws) (rsp *RSP_Ws, err error) {
-	return nil, nil
-}
-
 func (impl *Router) SweepEvents(
 	ctx *CTX_SweepEvents,
 	stream STREAM_SweepEvents,

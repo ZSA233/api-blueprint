@@ -4,7 +4,6 @@ package com.example.apiblueprint.api.routes.api.demo;
 import com.example.apiblueprint.api.runtime.ApiChannelBridge;
 import com.example.apiblueprint.api.runtime.ApiRequest;
 import com.example.apiblueprint.api.runtime.ApiResponseEnvelope;
-import com.example.apiblueprint.api.runtime.ApiSocketBridge;
 import com.example.apiblueprint.api.runtime.ApiStreamBridge;
 import com.example.apiblueprint.api.runtime.ApiTransport;
 
@@ -95,25 +94,6 @@ public class GenDemoApi {
             Map.of()
         );
         return transport.execute(request);
-    }
-
-    public ApiSocketBridge<Object, Object> connectWs(
-        ApiTypes.ApiDemoSubA query
-    ) {
-        ApiRequest<Object> request = new ApiRequest<>(
-            "api.demo.ws.ws",
-            "WS",
-            "/api/demo/ws",
-            query,
-            null,
-            null,
-            null,
-            ApiResponseEnvelope.none(),
-            Object.class,
-            "application/json",
-            Map.of()
-        );
-        return transport.connectSocket(request);
     }
 
     public ApiStreamBridge<DemoTypes.SweepStreamMessage, Object> subscribeSweepEvents(

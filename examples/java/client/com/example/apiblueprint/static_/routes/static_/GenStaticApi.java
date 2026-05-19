@@ -4,7 +4,6 @@ package com.example.apiblueprint.static_.routes.static_;
 import com.example.apiblueprint.static_.runtime.ApiChannelBridge;
 import com.example.apiblueprint.static_.runtime.ApiRequest;
 import com.example.apiblueprint.static_.runtime.ApiResponseEnvelope;
-import com.example.apiblueprint.static_.runtime.ApiSocketBridge;
 import com.example.apiblueprint.static_.runtime.ApiStreamBridge;
 import com.example.apiblueprint.static_.runtime.ApiTransport;
 

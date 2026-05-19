@@ -48,6 +48,20 @@ public fun Route.registerBinaryRoutes(
         }
     }
 
+    post("/api/binary/audit-packet") {
+        val query = decodeParameters(call.request.queryParameters, BinaryAuditPacketQuery.serializer())
+        val binaryBody = RawBinaryBody(call.receive<ByteArray>())
+        try {
+            val result = service.auditPacket(
+                query = query,
+                binaryBody = binaryBody
+            )
+            respondSuccess(call, result, BinaryAuditPacketResponse.serializer(), ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "application/json")
+        } catch (error: ApiError) {
+            respondApiError(call, error, ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "api.binary.post.auditpacket")
+        }
+    }
+
 }
 
 private fun <T> decodeParameters(parameters: Parameters, serializer: KSerializer<T>): T {

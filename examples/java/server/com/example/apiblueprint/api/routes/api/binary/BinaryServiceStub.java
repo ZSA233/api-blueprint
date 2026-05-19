@@ -10,9 +10,17 @@ public class BinaryServiceStub implements BinaryService {
     @Override
     public BinaryTypes.PacketResponse packet(
         BinaryTypes.PacketQuery query,
-        ApiBinaryBody binaryBody
+        BinaryTypes.DemoPacket binary
     ) {
         throw new UnsupportedOperationException("packet");
+    }
+
+    @Override
+    public BinaryTypes.AuditPacketResponse auditPacket(
+        BinaryTypes.AuditPacketQuery query,
+        BinaryTypes.AuditPacket binary
+    ) {
+        throw new UnsupportedOperationException("auditPacket");
     }
 
 }

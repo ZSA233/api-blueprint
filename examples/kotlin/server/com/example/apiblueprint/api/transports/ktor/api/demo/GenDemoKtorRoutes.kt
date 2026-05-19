@@ -81,13 +81,6 @@ public fun Route.registerDemoRoutes(
         }
     }
 
-    get("/api/demo/ws") {
-        call.respondText(
-            "legacy_ws route is not implemented by the generated Ktor adapter",
-            status = HttpStatusCode.NotImplemented,
-        )
-    }
-
     get("/api/demo/sweep-events") {
         call.respondText(
             "stream route is not implemented by the generated Ktor adapter",

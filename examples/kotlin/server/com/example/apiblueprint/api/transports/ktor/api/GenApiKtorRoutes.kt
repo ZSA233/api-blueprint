@@ -33,7 +33,7 @@ public fun Route.registerApiRoutes(
 
     get("/api/ws") {
         call.respondText(
-            "legacy_ws route is not implemented by the generated Ktor adapter",
+            "channel route is not implemented by the generated Ktor adapter",
             status = HttpStatusCode.NotImplemented,
         )
     }

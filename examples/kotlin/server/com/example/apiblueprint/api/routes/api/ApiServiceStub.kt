@@ -5,9 +5,9 @@ import com.example.apiblueprint.api.runtime.*
 
 public open class ApiServiceStub : GenApiService {
 
-    public override suspend fun ws(
+    public override suspend fun helloChannel(
     ): Any {
-        throw NotImplementedError("api.api.ws.ws is not implemented")
+        throw NotImplementedError("api.api.channel.ws is not implemented")
     }
 
 }

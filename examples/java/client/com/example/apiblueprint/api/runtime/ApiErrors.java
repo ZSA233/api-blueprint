@@ -84,7 +84,7 @@ public final class ApiErrors {
 
     private static final Map<String, Map<Integer, ApiErrorEntry>> ROUTE_API_ERRORS_BY_CODE = Map.ofEntries(
         Map.entry(
-            "api.api.ws.ws",
+            "api.api.channel.ws",
             Map.ofEntries(
                 Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
                 Map.entry(55555, API_ERRORS_BY_ID.get("CommonErr.TOKEN_EXPIRE"))
@@ -92,6 +92,13 @@ public final class ApiErrors {
         ),
         Map.entry(
             "api.binary.post.packet",
+            Map.ofEntries(
+                Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
+                Map.entry(55555, API_ERRORS_BY_ID.get("CommonErr.TOKEN_EXPIRE"))
+            )
+        ),
+        Map.entry(
+            "api.binary.post.auditpacket",
             Map.ofEntries(
                 Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
                 Map.entry(55555, API_ERRORS_BY_ID.get("CommonErr.TOKEN_EXPIRE"))
@@ -120,13 +127,6 @@ public final class ApiErrors {
         ),
         Map.entry(
             "api.demo.delete.delete",
-            Map.ofEntries(
-                Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
-                Map.entry(55555, API_ERRORS_BY_ID.get("CommonErr.TOKEN_EXPIRE"))
-            )
-        ),
-        Map.entry(
-            "api.demo.ws.ws",
             Map.ofEntries(
                 Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
                 Map.entry(55555, API_ERRORS_BY_ID.get("CommonErr.TOKEN_EXPIRE"))

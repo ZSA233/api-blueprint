@@ -3,9 +3,7 @@
 package demo
 
 import (
-	sharedtypes "example.com/project/golang/server/views/routes/api/_gen_types"
 	sharedroutes "example.com/project/golang/server/views/routes/api/demo"
-
 	wailstransport "example.com/project/golang/server/views/transports/wailsv2"
 )
 
@@ -42,18 +40,6 @@ type REQ_Delete_QUERY = sharedroutes.REQ_Delete_QUERY
 
 type INVOKE_Delete = wailstransport.InvokeEnvelope[REQ_Delete_QUERY, any]
 
-type REQ_Ws = sharedroutes.REQ_Ws
-type RSP_Ws = sharedroutes.RSP_Ws
-type CTX_Ws = sharedroutes.CTX_Ws
-type REQ_Ws_QUERY = sharedroutes.REQ_Ws_QUERY
-
-type WS_SEND_Ws_BODY = sharedtypes.WSRecv
-
-type INVOKE_Ws = wailstransport.InvokeEnvelope[REQ_Ws_QUERY, any]
-type WS_CONNECT_Ws = wailstransport.InvokeEnvelope[REQ_Ws_QUERY, any]
-type WS_SEND_Ws = wailstransport.SocketSendEnvelope[WS_SEND_Ws_BODY]
-type WS_CLOSE_Ws = wailstransport.SocketCloseEnvelope
-
 type REQ_SweepEvents = sharedroutes.REQ_SweepEvents
 type RSP_SweepEvents = sharedroutes.RSP_SweepEvents
 type CTX_SweepEvents = sharedroutes.CTX_SweepEvents
@@ -64,7 +50,6 @@ type SweepStreamMessage = sharedroutes.SweepStreamMessage
 type CLOSE_SweepEvents = sharedroutes.CLOSE_SweepEvents
 
 type INVOKE_SweepEvents = wailstransport.InvokeEnvelope[OPEN_SweepEvents, any]
-
 type CONNECTION_CONNECT_SweepEvents = wailstransport.ConnectionOpenEnvelope[OPEN_SweepEvents]
 type CONNECTION_CLOSE_SweepEvents = wailstransport.SocketCloseEnvelope
 
@@ -79,7 +64,6 @@ type CLOSE_AssistantSession = sharedroutes.CLOSE_AssistantSession
 
 type AssistantClientMessage = sharedroutes.AssistantClientMessage
 type INVOKE_AssistantSession = wailstransport.InvokeEnvelope[OPEN_AssistantSession, any]
-
 type CONNECTION_CONNECT_AssistantSession = wailstransport.ConnectionOpenEnvelope[OPEN_AssistantSession]
 type CONNECTION_CLOSE_AssistantSession = wailstransport.SocketCloseEnvelope
 

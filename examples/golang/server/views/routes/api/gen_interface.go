@@ -3,5 +3,8 @@
 package api
 
 type RouterInterface interface {
-	Ws(ctx *CTX_Ws, req *REQ_Ws) (rsp *RSP_Ws, err error)
+	HelloChannel(
+		ctx *CTX_HelloChannel,
+		channel CHANNEL_HelloChannel,
+	) error
 }

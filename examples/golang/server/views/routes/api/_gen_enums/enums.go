@@ -7,6 +7,20 @@ package enums
 /*
 ENUM(
 
+	PING = "ping"
+	PONG = "pong"
+	JOIN = "join"
+	LEAVE = "leave"
+	FORGEROUND = "forgeround"
+	UPGRADE = "upgrade"
+
+)
+*/
+type HelloChannelMsgTypeEnum string
+
+/*
+ENUM(
+
 	RED = "red"
 	GREEN = "green"
 	BLUE = "blue"
@@ -44,17 +58,3 @@ ENUM(
 )
 */
 type HelloWayEnum string
-
-/*
-ENUM(
-
-	PING = "ping"
-	PONG = "pong"
-	JOIN = "join"
-	LEAVE = "leave"
-	FORGEROUND = "forgeround"
-	UPGRADE = "upgrade"
-
-)
-*/
-type WsMsgTypeEnum string

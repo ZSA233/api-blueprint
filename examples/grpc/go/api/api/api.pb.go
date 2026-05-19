@@ -10,6 +10,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
+	sync "sync"
 	unsafe "unsafe"
 )
 
@@ -20,21 +21,166 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type HelloChannelMsgTypeEnum int32
+
+const (
+	HelloChannelMsgTypeEnum_HELLOCHANNELMSGTYPEENUM_UNSPECIFIED HelloChannelMsgTypeEnum = 0
+	HelloChannelMsgTypeEnum_HELLOCHANNELMSGTYPEENUM_PING        HelloChannelMsgTypeEnum = 1
+	HelloChannelMsgTypeEnum_HELLOCHANNELMSGTYPEENUM_PONG        HelloChannelMsgTypeEnum = 2
+	HelloChannelMsgTypeEnum_HELLOCHANNELMSGTYPEENUM_JOIN        HelloChannelMsgTypeEnum = 3
+	HelloChannelMsgTypeEnum_HELLOCHANNELMSGTYPEENUM_LEAVE       HelloChannelMsgTypeEnum = 4
+	HelloChannelMsgTypeEnum_HELLOCHANNELMSGTYPEENUM_FORGEROUND  HelloChannelMsgTypeEnum = 5
+	HelloChannelMsgTypeEnum_HELLOCHANNELMSGTYPEENUM_UPGRADE     HelloChannelMsgTypeEnum = 6
+)
+
+// Enum value maps for HelloChannelMsgTypeEnum.
+var (
+	HelloChannelMsgTypeEnum_name = map[int32]string{
+		0: "HELLOCHANNELMSGTYPEENUM_UNSPECIFIED",
+		1: "HELLOCHANNELMSGTYPEENUM_PING",
+		2: "HELLOCHANNELMSGTYPEENUM_PONG",
+		3: "HELLOCHANNELMSGTYPEENUM_JOIN",
+		4: "HELLOCHANNELMSGTYPEENUM_LEAVE",
+		5: "HELLOCHANNELMSGTYPEENUM_FORGEROUND",
+		6: "HELLOCHANNELMSGTYPEENUM_UPGRADE",
+	}
+	HelloChannelMsgTypeEnum_value = map[string]int32{
+		"HELLOCHANNELMSGTYPEENUM_UNSPECIFIED": 0,
+		"HELLOCHANNELMSGTYPEENUM_PING":        1,
+		"HELLOCHANNELMSGTYPEENUM_PONG":        2,
+		"HELLOCHANNELMSGTYPEENUM_JOIN":        3,
+		"HELLOCHANNELMSGTYPEENUM_LEAVE":       4,
+		"HELLOCHANNELMSGTYPEENUM_FORGEROUND":  5,
+		"HELLOCHANNELMSGTYPEENUM_UPGRADE":     6,
+	}
+)
+
+func (x HelloChannelMsgTypeEnum) Enum() *HelloChannelMsgTypeEnum {
+	p := new(HelloChannelMsgTypeEnum)
+	*p = x
+	return p
+}
+
+func (x HelloChannelMsgTypeEnum) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (HelloChannelMsgTypeEnum) Descriptor() protoreflect.EnumDescriptor {
+	return file_api_api_proto_enumTypes[0].Descriptor()
+}
+
+func (HelloChannelMsgTypeEnum) Type() protoreflect.EnumType {
+	return &file_api_api_proto_enumTypes[0]
+}
+
+func (x HelloChannelMsgTypeEnum) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use HelloChannelMsgTypeEnum.Descriptor instead.
+func (HelloChannelMsgTypeEnum) EnumDescriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{0}
+}
+
+type HelloChannelMessage struct {
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	Type          HelloChannelMsgTypeEnum `protobuf:"varint,1,opt,name=type,proto3,enum=example.api.api.HelloChannelMsgTypeEnum" json:"type,omitempty"`
+	Data          string                  `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HelloChannelMessage) Reset() {
+	*x = HelloChannelMessage{}
+	mi := &file_api_api_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HelloChannelMessage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HelloChannelMessage) ProtoMessage() {}
+
+func (x *HelloChannelMessage) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HelloChannelMessage.ProtoReflect.Descriptor instead.
+func (*HelloChannelMessage) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *HelloChannelMessage) GetType() HelloChannelMsgTypeEnum {
+	if x != nil {
+		return x.Type
+	}
+	return HelloChannelMsgTypeEnum_HELLOCHANNELMSGTYPEENUM_UNSPECIFIED
+}
+
+func (x *HelloChannelMessage) GetData() string {
+	if x != nil {
+		return x.Data
+	}
+	return ""
+}
+
 var File_api_api_proto protoreflect.FileDescriptor
 
 const file_api_api_proto_rawDesc = "" +
 	"\n" +
-	"\rapi/api.proto\x12\x0fexample.api.api2\f\n" +
+	"\rapi/api.proto\x12\x0fexample.api.api\"g\n" +
+	"\x13HelloChannelMessage\x12<\n" +
+	"\x04type\x18\x01 \x01(\x0e2(.example.api.api.HelloChannelMsgTypeEnumR\x04type\x12\x12\n" +
+	"\x04data\x18\x02 \x01(\tR\x04data*\x98\x02\n" +
+	"\x17HelloChannelMsgTypeEnum\x12'\n" +
+	"#HELLOCHANNELMSGTYPEENUM_UNSPECIFIED\x10\x00\x12 \n" +
+	"\x1cHELLOCHANNELMSGTYPEENUM_PING\x10\x01\x12 \n" +
+	"\x1cHELLOCHANNELMSGTYPEENUM_PONG\x10\x02\x12 \n" +
+	"\x1cHELLOCHANNELMSGTYPEENUM_JOIN\x10\x03\x12!\n" +
+	"\x1dHELLOCHANNELMSGTYPEENUM_LEAVE\x10\x04\x12&\n" +
+	"\"HELLOCHANNELMSGTYPEENUM_FORGEROUND\x10\x05\x12#\n" +
+	"\x1fHELLOCHANNELMSGTYPEENUM_UPGRADE\x10\x062l\n" +
 	"\n" +
-	"ApiServiceB)Z'example.com/project/grpc/go/api/api;apib\x06proto3"
+	"ApiService\x12^\n" +
+	"\fHelloChannel\x12$.example.api.api.HelloChannelMessage\x1a$.example.api.api.HelloChannelMessage(\x010\x01B)Z'example.com/project/grpc/go/api/api;apib\x06proto3"
 
-var file_api_api_proto_goTypes = []any{}
+var (
+	file_api_api_proto_rawDescOnce sync.Once
+	file_api_api_proto_rawDescData []byte
+)
+
+func file_api_api_proto_rawDescGZIP() []byte {
+	file_api_api_proto_rawDescOnce.Do(func() {
+		file_api_api_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_api_api_proto_rawDesc), len(file_api_api_proto_rawDesc)))
+	})
+	return file_api_api_proto_rawDescData
+}
+
+var file_api_api_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_api_api_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_api_api_proto_goTypes = []any{
+	(HelloChannelMsgTypeEnum)(0), // 0: example.api.api.HelloChannelMsgTypeEnum
+	(*HelloChannelMessage)(nil),  // 1: example.api.api.HelloChannelMessage
+}
 var file_api_api_proto_depIdxs = []int32{
-	0, // [0:0] is the sub-list for method output_type
-	0, // [0:0] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	0, // 0: example.api.api.HelloChannelMessage.type:type_name -> example.api.api.HelloChannelMsgTypeEnum
+	1, // 1: example.api.api.ApiService.HelloChannel:input_type -> example.api.api.HelloChannelMessage
+	1, // 2: example.api.api.ApiService.HelloChannel:output_type -> example.api.api.HelloChannelMessage
+	2, // [2:3] is the sub-list for method output_type
+	1, // [1:2] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_api_api_proto_init() }
@@ -47,13 +193,15 @@ func file_api_api_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_api_proto_rawDesc), len(file_api_api_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   0,
+			NumEnums:      1,
+			NumMessages:   1,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_api_api_proto_goTypes,
 		DependencyIndexes: file_api_api_proto_depIdxs,
+		EnumInfos:         file_api_api_proto_enumTypes,
+		MessageInfos:      file_api_api_proto_msgTypes,
 	}.Build()
 	File_api_api_proto = out.File
 	file_api_api_proto_goTypes = nil

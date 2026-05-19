@@ -124,13 +124,6 @@ export interface TestPostResponse {
   map: Record<string, ApiDemoMap>;
 }
 
-export type WsResponse = void;
-
-export interface WsWsSend<T = any> {
-
-  [key: string]: never;
-}
-
 export const SweepStreamMessageVariants = {
   state(data: SweepState): SweepStreamMessage {
     return { type: "state", data };

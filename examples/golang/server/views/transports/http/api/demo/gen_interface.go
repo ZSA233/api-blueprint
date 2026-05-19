@@ -103,27 +103,6 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		false,
 	)
 
-	httptransport.WS(
-		"/api/demo/ws",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "demo",
-				Namespace: "demo",
-				Service:   "DemoService",
-				Operation: "Ws",
-				RouteID:   "api.demo.ws.ws",
-				Path:      "/api/demo/ws",
-				Methods:   []string{"WS"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-			},
-			"req=Q|auth|ws_handle|rsp=json@CodeMessageDataEnvelope",
-			impl.Ws,
-		),
-		eng,
-	)
-
 	httptransport.STREAM(
 		"/api/demo/sweep-events",
 		sharedprovider.NewRouteExecutor[shared.OPEN_SweepEvents, any, shared.RSP_SweepEvents](

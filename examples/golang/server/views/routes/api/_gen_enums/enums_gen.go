@@ -106,6 +106,116 @@ func (x *ColorEnum) AppendText(b []byte) ([]byte, error) {
 }
 
 const (
+	// HelloChannelMsgTypeEnumPING is a HelloChannelMsgTypeEnum of type PING.
+	HelloChannelMsgTypeEnumPING HelloChannelMsgTypeEnum = "ping"
+	// HelloChannelMsgTypeEnumPONG is a HelloChannelMsgTypeEnum of type PONG.
+	HelloChannelMsgTypeEnumPONG HelloChannelMsgTypeEnum = "pong"
+	// HelloChannelMsgTypeEnumJOIN is a HelloChannelMsgTypeEnum of type JOIN.
+	HelloChannelMsgTypeEnumJOIN HelloChannelMsgTypeEnum = "join"
+	// HelloChannelMsgTypeEnumLEAVE is a HelloChannelMsgTypeEnum of type LEAVE.
+	HelloChannelMsgTypeEnumLEAVE HelloChannelMsgTypeEnum = "leave"
+	// HelloChannelMsgTypeEnumFORGEROUND is a HelloChannelMsgTypeEnum of type FORGEROUND.
+	HelloChannelMsgTypeEnumFORGEROUND HelloChannelMsgTypeEnum = "forgeround"
+	// HelloChannelMsgTypeEnumUPGRADE is a HelloChannelMsgTypeEnum of type UPGRADE.
+	HelloChannelMsgTypeEnumUPGRADE HelloChannelMsgTypeEnum = "upgrade"
+)
+
+var ErrInvalidHelloChannelMsgTypeEnum = fmt.Errorf("not a valid HelloChannelMsgTypeEnum, try [%s]", strings.Join(_HelloChannelMsgTypeEnumNames, ", "))
+
+var _HelloChannelMsgTypeEnumNames = []string{
+	string(HelloChannelMsgTypeEnumPING),
+	string(HelloChannelMsgTypeEnumPONG),
+	string(HelloChannelMsgTypeEnumJOIN),
+	string(HelloChannelMsgTypeEnumLEAVE),
+	string(HelloChannelMsgTypeEnumFORGEROUND),
+	string(HelloChannelMsgTypeEnumUPGRADE),
+}
+
+// HelloChannelMsgTypeEnumNames returns a list of possible string values of HelloChannelMsgTypeEnum.
+func HelloChannelMsgTypeEnumNames() []string {
+	tmp := make([]string, len(_HelloChannelMsgTypeEnumNames))
+	copy(tmp, _HelloChannelMsgTypeEnumNames)
+	return tmp
+}
+
+// HelloChannelMsgTypeEnumValues returns a list of the values for HelloChannelMsgTypeEnum
+func HelloChannelMsgTypeEnumValues() []HelloChannelMsgTypeEnum {
+	return []HelloChannelMsgTypeEnum{
+		HelloChannelMsgTypeEnumPING,
+		HelloChannelMsgTypeEnumPONG,
+		HelloChannelMsgTypeEnumJOIN,
+		HelloChannelMsgTypeEnumLEAVE,
+		HelloChannelMsgTypeEnumFORGEROUND,
+		HelloChannelMsgTypeEnumUPGRADE,
+	}
+}
+
+// String implements the Stringer interface.
+func (x HelloChannelMsgTypeEnum) String() string {
+	return string(x)
+}
+
+// IsValid provides a quick way to determine if the typed value is
+// part of the allowed enumerated values
+func (x HelloChannelMsgTypeEnum) IsValid() bool {
+	_, err := ParseHelloChannelMsgTypeEnum(string(x))
+	return err == nil
+}
+
+var _HelloChannelMsgTypeEnumValue = map[string]HelloChannelMsgTypeEnum{
+	"ping":       HelloChannelMsgTypeEnumPING,
+	"pong":       HelloChannelMsgTypeEnumPONG,
+	"join":       HelloChannelMsgTypeEnumJOIN,
+	"leave":      HelloChannelMsgTypeEnumLEAVE,
+	"forgeround": HelloChannelMsgTypeEnumFORGEROUND,
+	"upgrade":    HelloChannelMsgTypeEnumUPGRADE,
+}
+
+// ParseHelloChannelMsgTypeEnum attempts to convert a string to a HelloChannelMsgTypeEnum.
+func ParseHelloChannelMsgTypeEnum(name string) (HelloChannelMsgTypeEnum, error) {
+	if x, ok := _HelloChannelMsgTypeEnumValue[name]; ok {
+		return x, nil
+	}
+	// Case insensitive parse, do a separate lookup to prevent unnecessary cost of lowercasing a string if we don't need to.
+	if x, ok := _HelloChannelMsgTypeEnumValue[strings.ToLower(name)]; ok {
+		return x, nil
+	}
+	return HelloChannelMsgTypeEnum(""), fmt.Errorf("%s is %w", name, ErrInvalidHelloChannelMsgTypeEnum)
+}
+
+// MustParseHelloChannelMsgTypeEnum converts a string to a HelloChannelMsgTypeEnum, and panics if is not valid.
+func MustParseHelloChannelMsgTypeEnum(name string) HelloChannelMsgTypeEnum {
+	val, err := ParseHelloChannelMsgTypeEnum(name)
+	if err != nil {
+		panic(err)
+	}
+	return val
+}
+
+// MarshalText implements the text marshaller method.
+func (x HelloChannelMsgTypeEnum) MarshalText() ([]byte, error) {
+	return []byte(string(x)), nil
+}
+
+// UnmarshalText implements the text unmarshaller method.
+func (x *HelloChannelMsgTypeEnum) UnmarshalText(text []byte) error {
+	tmp, err := ParseHelloChannelMsgTypeEnum(string(text))
+	if err != nil {
+		return err
+	}
+	*x = tmp
+	return nil
+}
+
+// AppendText appends the textual representation of itself to the end of b
+// (allocating a larger slice if necessary) and returns the updated slice.
+//
+// Implementations must not retain b, nor mutate any bytes within b[:len(b)].
+func (x *HelloChannelMsgTypeEnum) AppendText(b []byte) ([]byte, error) {
+	return append(b, x.String()...), nil
+}
+
+const (
 	// HelloWayEnumASD is a HelloWayEnum of type ASD.
 	HelloWayEnumASD HelloWayEnum = "ASD"
 )
@@ -388,115 +498,5 @@ func (x *StatusEnum) UnmarshalText(text []byte) error {
 //
 // Implementations must not retain b, nor mutate any bytes within b[:len(b)].
 func (x *StatusEnum) AppendText(b []byte) ([]byte, error) {
-	return append(b, x.String()...), nil
-}
-
-const (
-	// WsMsgTypeEnumPING is a WsMsgTypeEnum of type PING.
-	WsMsgTypeEnumPING WsMsgTypeEnum = "ping"
-	// WsMsgTypeEnumPONG is a WsMsgTypeEnum of type PONG.
-	WsMsgTypeEnumPONG WsMsgTypeEnum = "pong"
-	// WsMsgTypeEnumJOIN is a WsMsgTypeEnum of type JOIN.
-	WsMsgTypeEnumJOIN WsMsgTypeEnum = "join"
-	// WsMsgTypeEnumLEAVE is a WsMsgTypeEnum of type LEAVE.
-	WsMsgTypeEnumLEAVE WsMsgTypeEnum = "leave"
-	// WsMsgTypeEnumFORGEROUND is a WsMsgTypeEnum of type FORGEROUND.
-	WsMsgTypeEnumFORGEROUND WsMsgTypeEnum = "forgeround"
-	// WsMsgTypeEnumUPGRADE is a WsMsgTypeEnum of type UPGRADE.
-	WsMsgTypeEnumUPGRADE WsMsgTypeEnum = "upgrade"
-)
-
-var ErrInvalidWsMsgTypeEnum = fmt.Errorf("not a valid WsMsgTypeEnum, try [%s]", strings.Join(_WsMsgTypeEnumNames, ", "))
-
-var _WsMsgTypeEnumNames = []string{
-	string(WsMsgTypeEnumPING),
-	string(WsMsgTypeEnumPONG),
-	string(WsMsgTypeEnumJOIN),
-	string(WsMsgTypeEnumLEAVE),
-	string(WsMsgTypeEnumFORGEROUND),
-	string(WsMsgTypeEnumUPGRADE),
-}
-
-// WsMsgTypeEnumNames returns a list of possible string values of WsMsgTypeEnum.
-func WsMsgTypeEnumNames() []string {
-	tmp := make([]string, len(_WsMsgTypeEnumNames))
-	copy(tmp, _WsMsgTypeEnumNames)
-	return tmp
-}
-
-// WsMsgTypeEnumValues returns a list of the values for WsMsgTypeEnum
-func WsMsgTypeEnumValues() []WsMsgTypeEnum {
-	return []WsMsgTypeEnum{
-		WsMsgTypeEnumPING,
-		WsMsgTypeEnumPONG,
-		WsMsgTypeEnumJOIN,
-		WsMsgTypeEnumLEAVE,
-		WsMsgTypeEnumFORGEROUND,
-		WsMsgTypeEnumUPGRADE,
-	}
-}
-
-// String implements the Stringer interface.
-func (x WsMsgTypeEnum) String() string {
-	return string(x)
-}
-
-// IsValid provides a quick way to determine if the typed value is
-// part of the allowed enumerated values
-func (x WsMsgTypeEnum) IsValid() bool {
-	_, err := ParseWsMsgTypeEnum(string(x))
-	return err == nil
-}
-
-var _WsMsgTypeEnumValue = map[string]WsMsgTypeEnum{
-	"ping":       WsMsgTypeEnumPING,
-	"pong":       WsMsgTypeEnumPONG,
-	"join":       WsMsgTypeEnumJOIN,
-	"leave":      WsMsgTypeEnumLEAVE,
-	"forgeround": WsMsgTypeEnumFORGEROUND,
-	"upgrade":    WsMsgTypeEnumUPGRADE,
-}
-
-// ParseWsMsgTypeEnum attempts to convert a string to a WsMsgTypeEnum.
-func ParseWsMsgTypeEnum(name string) (WsMsgTypeEnum, error) {
-	if x, ok := _WsMsgTypeEnumValue[name]; ok {
-		return x, nil
-	}
-	// Case insensitive parse, do a separate lookup to prevent unnecessary cost of lowercasing a string if we don't need to.
-	if x, ok := _WsMsgTypeEnumValue[strings.ToLower(name)]; ok {
-		return x, nil
-	}
-	return WsMsgTypeEnum(""), fmt.Errorf("%s is %w", name, ErrInvalidWsMsgTypeEnum)
-}
-
-// MustParseWsMsgTypeEnum converts a string to a WsMsgTypeEnum, and panics if is not valid.
-func MustParseWsMsgTypeEnum(name string) WsMsgTypeEnum {
-	val, err := ParseWsMsgTypeEnum(name)
-	if err != nil {
-		panic(err)
-	}
-	return val
-}
-
-// MarshalText implements the text marshaller method.
-func (x WsMsgTypeEnum) MarshalText() ([]byte, error) {
-	return []byte(string(x)), nil
-}
-
-// UnmarshalText implements the text unmarshaller method.
-func (x *WsMsgTypeEnum) UnmarshalText(text []byte) error {
-	tmp, err := ParseWsMsgTypeEnum(string(text))
-	if err != nil {
-		return err
-	}
-	*x = tmp
-	return nil
-}
-
-// AppendText appends the textual representation of itself to the end of b
-// (allocating a larger slice if necessary) and returns the updated slice.
-//
-// Implementations must not retain b, nor mutate any bytes within b[:len(b)].
-func (x *WsMsgTypeEnum) AppendText(b []byte) ([]byte, error) {
 	return append(b, x.String()...), nil
 }

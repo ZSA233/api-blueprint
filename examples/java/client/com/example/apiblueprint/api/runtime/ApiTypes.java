@@ -40,6 +40,36 @@ public final class ApiTypes {
         }
     }
 
+    public enum HelloChannelMsgTypeEnum {
+        PING("ping"),
+        PONG("pong"),
+        JOIN("join"),
+        LEAVE("leave"),
+        FORGEROUND("forgeround"),
+        UPGRADE("upgrade");
+
+        private final String value;
+
+        HelloChannelMsgTypeEnum(String value) {
+            this.value = value;
+        }
+
+        @JsonValue
+        public String value() {
+            return value;
+        }
+
+        @JsonCreator
+        public static HelloChannelMsgTypeEnum fromValue(String value) {
+            for (HelloChannelMsgTypeEnum item : values()) {
+                if (Objects.equals(item.value, value)) {
+                    return item;
+                }
+            }
+            throw new IllegalArgumentException("Unknown HelloChannelMsgTypeEnum value: " + value);
+        }
+    }
+
     public enum HelloWayEnum {
         ASD("ASD");
 
@@ -116,6 +146,21 @@ public final class ApiTypes {
             }
             throw new IllegalArgumentException("Unknown StatusEnum value: " + value);
         }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record DefaultConnectionClose(
+        @JsonProperty("code") Integer code,
+        @JsonProperty("reason") String reason,
+        @JsonProperty("error") String error
+    ) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record HelloChannelMessage(
+        @JsonProperty("type") ApiTypes.HelloChannelMsgTypeEnum type,
+        @JsonProperty("data") Object data
+    ) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

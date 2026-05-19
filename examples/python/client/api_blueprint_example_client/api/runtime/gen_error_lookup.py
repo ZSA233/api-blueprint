@@ -44,11 +44,15 @@ API_ERRORS_BY_ID: dict[str, ApiErrorEntry] = {
 }
 
 ROUTE_API_ERRORS_BY_CODE: dict[str, dict[int, ApiErrorEntry]] = {
-    "api.api.ws.ws": {
+    "api.api.channel.ws": {
         -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
         55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
     },
     "api.binary.post.packet": {
+        -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
+        55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
+    },
+    "api.binary.post.auditpacket": {
         -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
         55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
     },
@@ -65,10 +69,6 @@ ROUTE_API_ERRORS_BY_CODE: dict[str, dict[int, ApiErrorEntry]] = {
         55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
     },
     "api.demo.delete.delete": {
-        -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
-        55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
-    },
-    "api.demo.ws.ws": {
         -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
         55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
     },

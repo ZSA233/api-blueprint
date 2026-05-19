@@ -15,3 +15,12 @@ type PacketResponse struct {
 	ItemIDs    []uint  `json:"item_ids" form:"item_ids"`
 	Checksum   uint    `json:"checksum" form:"checksum"`
 }
+
+type AuditPacketQuery struct {
+	Trace string `json:"trace,omitempty" form:"trace,omitempty"`
+}
+type AuditPacketResponse struct {
+	Trace     string `json:"trace" form:"trace"`
+	ItemCount uint   `json:"item_count" form:"item_count"`
+	Checksum  uint   `json:"checksum" form:"checksum"`
+}

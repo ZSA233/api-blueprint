@@ -6,9 +6,9 @@ import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
 public class ApiServiceStub implements ApiService {
 
     @Override
-    public Object ws(
+    public Object helloChannel(
     ) {
-        throw new UnsupportedOperationException("ws");
+        throw new UnsupportedOperationException("helloChannel");
     }
 
 }

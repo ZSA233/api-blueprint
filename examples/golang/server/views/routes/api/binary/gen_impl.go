@@ -11,3 +11,7 @@ type _GenRouter struct{}
 func (impl *_GenRouter) Packet(ctx *CTX_Packet, req *REQ_Packet) (rsp *RSP_Packet, err error) {
 	return nil, fmt.Errorf("not implemented")
 }
+
+func (impl *_GenRouter) AuditPacket(ctx *CTX_AuditPacket, req *REQ_AuditPacket) (rsp *RSP_AuditPacket, err error) {
+	return nil, fmt.Errorf("not implemented")
+}

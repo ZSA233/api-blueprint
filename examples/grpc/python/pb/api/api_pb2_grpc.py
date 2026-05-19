@@ -3,6 +3,7 @@
 import grpc
 import warnings
 
+from pb.api import api_pb2 as api_dot_api__pb2
 
 GRPC_GENERATED_VERSION = '1.80.0'
 GRPC_VERSION = grpc.__version__
@@ -33,14 +34,30 @@ class ApiServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
+        self.HelloChannel = channel.stream_stream(
+                '/example.api.api.ApiService/HelloChannel',
+                request_serializer=api_dot_api__pb2.HelloChannelMessage.SerializeToString,
+                response_deserializer=api_dot_api__pb2.HelloChannelMessage.FromString,
+                _registered_method=True)
 
 
 class ApiServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
+    def HelloChannel(self, request_iterator, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_ApiServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
+            'HelloChannel': grpc.stream_stream_rpc_method_handler(
+                    servicer.HelloChannel,
+                    request_deserializer=api_dot_api__pb2.HelloChannelMessage.FromString,
+                    response_serializer=api_dot_api__pb2.HelloChannelMessage.SerializeToString,
+            ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
             'example.api.api.ApiService', rpc_method_handlers)
@@ -51,3 +68,30 @@ def add_ApiServiceServicer_to_server(servicer, server):
  # This class is part of an EXPERIMENTAL API.
 class ApiService(object):
     """Missing associated documentation comment in .proto file."""
+
+    @staticmethod
+    def HelloChannel(request_iterator,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.stream_stream(
+            request_iterator,
+            target,
+            '/example.api.api.ApiService/HelloChannel',
+            api_dot_api__pb2.HelloChannelMessage.SerializeToString,
+            api_dot_api__pb2.HelloChannelMessage.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)

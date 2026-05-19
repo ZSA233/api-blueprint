@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import asdict, is_dataclass
 from typing import Any, Mapping
 
-from ....runtime.client import ApiChannelBridge, ApiClientTransport, ApiSocketBridge, ApiStreamBridge
+from ....runtime.client import ApiChannelBridge, ApiClientTransport, ApiStreamBridge
 
 from ....runtime.binary import ApiBinaryBody
 
@@ -12,8 +12,12 @@ from ....runtime.binary import ApiBinaryBody
 from .gen_types import (
     PacketQuery,
     PacketResponse,
+    AuditPacketQuery,
+    AuditPacketResponse,
     DemoPacket,
     DemoPacketWire,
+    AuditPacket,
+    AuditPacketWire,
 )
 
 
@@ -55,3 +59,20 @@ class BinaryClient:
             response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
         )
         return _from_mapping(PacketResponse, payload)
+
+    async def audit_packet(
+        self,
+        query: AuditPacketQuery | Mapping[str, Any] | None = None,
+        binary: AuditPacket | ApiBinaryBody = ...,
+    ) -> Any:
+        response_type: str | None = 'AuditPacketResponse'
+        payload = await self._transport.request(
+            "POST",
+            "/api/binary/audit-packet",
+            route_id="api.binary.post.auditpacket",
+            query=_to_mapping(query),
+            binary=AuditPacketWire.to_binary_body(binary),
+            response_type=response_type,
+            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+        )
+        return _from_mapping(AuditPacketResponse, payload)

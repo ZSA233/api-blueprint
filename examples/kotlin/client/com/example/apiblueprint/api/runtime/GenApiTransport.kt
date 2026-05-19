@@ -59,16 +59,6 @@ public data class SocketCloseInfo(
     public val error: String? = null,
 )
 
-public data class SocketConnectOptions(
-    public val routeId: String,
-    public val connectionKind: String,
-    public val path: String,
-    public val query: Map<String, String?> = emptyMap(),
-    public val open: Any? = null,
-    public val headers: Map<String, String> = emptyMap(),
-    public val protocols: List<String> = emptyList(),
-)
-
 public data class StreamConnectOptions(
     public val routeId: String,
     public val connectionKind: String,
@@ -88,12 +78,6 @@ public data class ChannelConnectOptions(
     public val protocols: List<String> = emptyList(),
 )
 
-public interface ApiSocketBridge<Send, Recv> {
-    public fun send(message: Send)
-    public fun close(code: Int? = null, reason: String? = null)
-    public fun onMessage(listener: (Recv) -> Unit)
-}
-
 public interface ApiStreamBridge<Recv, Close> {
     public fun close(code: Int? = null, reason: String? = null)
     public fun onMessage(listener: (Recv) -> Unit)
@@ -106,7 +90,6 @@ public interface ApiChannelBridge<Recv, Send, Close> : ApiStreamBridge<Recv, Clo
 
 public interface ApiTransport {
     public suspend fun execute(request: ApiRequest<*>): ApiResponse
-    public fun connectSocket(options: SocketConnectOptions): ApiSocketBridge<*, *>
     public fun openStream(options: StreamConnectOptions): ApiStreamBridge<*, *>
     public fun openChannel(options: ChannelConnectOptions): ApiChannelBridge<*, *, *>
 }

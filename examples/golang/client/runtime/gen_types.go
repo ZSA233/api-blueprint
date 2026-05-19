@@ -2,6 +2,17 @@
 
 package runtime
 
+type HelloChannelMsgTypeEnum string
+
+const (
+	HelloChannelMsgTypeEnumPING       HelloChannelMsgTypeEnum = "ping"
+	HelloChannelMsgTypeEnumPONG       HelloChannelMsgTypeEnum = "pong"
+	HelloChannelMsgTypeEnumJOIN       HelloChannelMsgTypeEnum = "join"
+	HelloChannelMsgTypeEnumLEAVE      HelloChannelMsgTypeEnum = "leave"
+	HelloChannelMsgTypeEnumFORGEROUND HelloChannelMsgTypeEnum = "forgeround"
+	HelloChannelMsgTypeEnumUPGRADE    HelloChannelMsgTypeEnum = "upgrade"
+)
+
 type ColorEnum string
 
 const (
@@ -31,6 +42,17 @@ const (
 	HelloWayEnumASD HelloWayEnum = "ASD"
 )
 
+type DefaultConnectionClose struct {
+	Code   int    `json:"code,omitempty" form:"code,omitempty"`
+	Reason string `json:"reason,omitempty" form:"reason,omitempty"`
+	Error  string `json:"error,omitempty" form:"error,omitempty"`
+}
+
+type HelloChannelMessage struct {
+	Type HelloChannelMsgTypeEnum `json:"type" form:"type"`
+	Data any                     `json:"data" form:"data"`
+}
+
 type REQPacketQUERY struct {
 	Trace string `json:"trace,omitempty" form:"trace,omitempty"`
 }
@@ -44,6 +66,16 @@ type RSPPacket struct {
 	FirstLabel string  `json:"first_label" form:"first_label"`
 	ItemIDs    []uint  `json:"item_ids" form:"item_ids"`
 	Checksum   uint    `json:"checksum" form:"checksum"`
+}
+
+type REQAuditPacketQUERY struct {
+	Trace string `json:"trace,omitempty" form:"trace,omitempty"`
+}
+
+type RSPAuditPacket struct {
+	Trace     string `json:"trace" form:"trace"`
+	ItemCount uint   `json:"item_count" form:"item_count"`
+	Checksum  uint   `json:"checksum" form:"checksum"`
 }
 
 type REQAbcQUERY struct {

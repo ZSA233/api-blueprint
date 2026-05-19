@@ -4,3 +4,5 @@ export * as Http from "./http";
 export * as Wailsv2 from "./wailsv2";
 export * as Wailsv3 from "./wailsv3";
 
+export * from "./clients";
+

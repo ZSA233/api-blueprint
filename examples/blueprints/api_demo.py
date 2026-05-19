@@ -38,13 +38,6 @@ class ApiDemoMap(Model):
     haha    = Int64(description='haha')
 
 
-class WSRecv(Model):
-    data    = String(description='data')
-
-class WSSend(Model):
-    ws_recv = WSRecv(description='ws_recv')
-
-
 class SweepOpen(Model):
     run_id = String(description='run id')
     replay_from = String(description='optional replay cursor', omitempty=True)
@@ -88,14 +81,6 @@ class AssistantDelta(Model):
 
 class AssistantDone(Model):
     message_id = String(description='final message id')
-
-
-T = TypeVar('T')
-
-class WSResponse(Model, Generic[T]):
-    code        = Int(description='code')
-    msg         = String(description='msg')
-    data: T     = Field(description='data')
 
 
 with apibp.group('/demo') as views:
@@ -145,16 +130,6 @@ with apibp.group('/demo') as views:
             kv1 = Int64(description='kv1'),
             kv2 = Array[String](description='kv2'),
         ),
-    )
-
-    views.WS(
-        '/ws', summary='这是ws的summary', description='这是ws的description'
-    ).ARGS(
-        ApiDemoSubA
-    ).RECV(
-        WSRecv,
-    ).SEND(
-        WSResponse[WSSend],
     )
 
     views.STREAM(

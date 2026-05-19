@@ -53,11 +53,15 @@ export const ApiErrors = {
 } as const;
 
 const RouteApiErrorsByCode = {
-  "api.api.ws.ws": {
+  "api.api.channel.ws": {
     "-1": ApiErrorsByID["CommonErr.UNKNOWN"],
     "55555": ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
   },
   "api.binary.post.packet": {
+    "-1": ApiErrorsByID["CommonErr.UNKNOWN"],
+    "55555": ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
+  },
+  "api.binary.post.auditpacket": {
     "-1": ApiErrorsByID["CommonErr.UNKNOWN"],
     "55555": ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
   },
@@ -74,10 +78,6 @@ const RouteApiErrorsByCode = {
     "55555": ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
   },
   "api.demo.delete.delete": {
-    "-1": ApiErrorsByID["CommonErr.UNKNOWN"],
-    "55555": ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
-  },
-  "api.demo.ws.ws": {
     "-1": ApiErrorsByID["CommonErr.UNKNOWN"],
     "55555": ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
   },

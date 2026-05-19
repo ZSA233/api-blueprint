@@ -84,16 +84,6 @@ func (client *GenDemoClient) Delete(ctx context.Context, query DeleteQuery) (*De
 	return &response, nil
 }
 
-func (client *GenDemoClient) ConnectWs(ctx context.Context, query WsQuery) error {
-	request := runtime.ConnectionRequest{
-		Kind:    "legacy_ws",
-		RouteID: "api.demo.ws.ws",
-		Path:    "/api/demo/ws",
-		Query:   query,
-	}
-	return client.transport.ConnectUnsupported(ctx, request)
-}
-
 func (client *GenDemoClient) SubscribeSweepEvents(ctx context.Context, openData SweepEventsOpen) error {
 	request := runtime.ConnectionRequest{
 		Kind:    "stream",

@@ -4,7 +4,6 @@ package com.example.apiblueprint.api.routes.api.binary;
 import com.example.apiblueprint.api.runtime.ApiChannelBridge;
 import com.example.apiblueprint.api.runtime.ApiRequest;
 import com.example.apiblueprint.api.runtime.ApiResponseEnvelope;
-import com.example.apiblueprint.api.runtime.ApiSocketBridge;
 import com.example.apiblueprint.api.runtime.ApiStreamBridge;
 import com.example.apiblueprint.api.runtime.ApiTransport;
 
@@ -44,6 +43,36 @@ public class GenBinaryApi {
             binaryBody,
             ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
             BinaryTypes.PacketResponse.class,
+            "application/json",
+            Map.of()
+        );
+        return transport.execute(request);
+    }
+
+    public BinaryTypes.AuditPacketResponse auditPacket(
+        BinaryTypes.AuditPacketQuery query,
+        BinaryTypes.AuditPacket binary
+    ) throws Exception {
+        return auditPacket(
+            query,
+            BinaryTypes.AuditPacketWire.toBinaryBody(binary)
+        );
+    }
+
+    public BinaryTypes.AuditPacketResponse auditPacket(
+        BinaryTypes.AuditPacketQuery query,
+        ApiBinaryBody binaryBody
+    ) throws Exception {
+        ApiRequest<BinaryTypes.AuditPacketResponse> request = new ApiRequest<>(
+            "api.binary.post.auditpacket",
+            "POST",
+            "/api/binary/audit-packet",
+            query,
+            null,
+            null,
+            binaryBody,
+            ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+            BinaryTypes.AuditPacketResponse.class,
             "application/json",
             Map.of()
         );

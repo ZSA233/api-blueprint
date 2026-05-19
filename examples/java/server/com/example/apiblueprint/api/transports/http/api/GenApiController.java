@@ -38,8 +38,8 @@ public class GenApiController {
     }
 
     @RequestMapping(path = "/api/ws", method = RequestMethod.GET)
-    public ResponseEntity<String> wsUnsupported() {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body("legacy_ws route is not implemented by the generated Spring MVC adapter");
+    public ResponseEntity<String> helloChannelUnsupported() {
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body("channel route is not implemented by the generated Spring MVC adapter");
     }
 
     private Object wrapResponse(ApiResponseEnvelope envelopeSpec, Object data) {

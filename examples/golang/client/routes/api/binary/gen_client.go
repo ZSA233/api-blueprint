@@ -39,3 +39,19 @@ func (client *GenBinaryClient) Packet(ctx context.Context, query PacketQuery, bi
 	}
 	return &response, nil
 }
+
+func (client *GenBinaryClient) AuditPacket(ctx context.Context, query AuditPacketQuery, binaryBody runtimebinary.Body) (*AuditPacketResponse, error) {
+	request := runtime.Request{
+		RouteID:          "api.binary.post.auditpacket",
+		Method:           "POST",
+		Path:             "/api/binary/audit-packet",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		Query:            query,
+		Binary:           binaryBody,
+	}
+	var response AuditPacketResponse
+	if err := client.transport.Do(ctx, request, &response); err != nil {
+		return nil, err
+	}
+	return &response, nil
+}

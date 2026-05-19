@@ -10,6 +10,7 @@ import com.example.apiblueprint.api.runtime.ApiTypes;
 
 import com.example.apiblueprint.api.runtime.ApiJson;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 

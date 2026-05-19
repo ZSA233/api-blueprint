@@ -9,7 +9,12 @@ public interface GenBinaryService {
 
     BinaryTypes.PacketResponse packet(
         BinaryTypes.PacketQuery query,
-        ApiBinaryBody binaryBody
+        BinaryTypes.DemoPacket binary
+    ) throws Exception;
+
+    BinaryTypes.AuditPacketResponse auditPacket(
+        BinaryTypes.AuditPacketQuery query,
+        BinaryTypes.AuditPacket binary
     ) throws Exception;
 
 }

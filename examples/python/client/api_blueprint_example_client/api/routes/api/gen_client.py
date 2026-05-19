@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import asdict, is_dataclass
 from typing import Any, Mapping
 
-from ...runtime.client import ApiChannelBridge, ApiClientTransport, ApiSocketBridge, ApiStreamBridge
+from ...runtime.client import ApiChannelBridge, ApiClientTransport, ApiStreamBridge
 
 
 def _to_mapping(value: object) -> Mapping[str, Any] | None:
@@ -29,13 +29,13 @@ class ApiClient:
     def __init__(self, transport: ApiClientTransport):
         self._transport = transport
 
-    def connect_ws(
+    def open_hello_channel(
         self,
         headers: dict[str, str] | None = None,
         protocols: tuple[str, ...] = (),
-    ) -> ApiSocketBridge[Any, Any]:
-        return self._transport.connect_socket(
-            route_id="api.api.ws.ws",
+    ) -> ApiChannelBridge[Any, Any, Any]:
+        return self._transport.open_channel(
+            route_id="api.api.channel.ws",
             path="/api/ws",
             headers=headers,
             protocols=protocols,

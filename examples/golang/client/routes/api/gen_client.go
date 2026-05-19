@@ -23,11 +23,11 @@ type ApiClient = GenApiClient
 
 var NewApiClient = NewGenApiClient
 
-func (client *GenApiClient) ConnectWs(ctx context.Context) error {
+func (client *GenApiClient) OpenHelloChannel(ctx context.Context) error {
 	request := runtime.ConnectionRequest{
-		Kind:    "legacy_ws",
-		RouteID: "api.api.ws.ws",
+		Kind:    "channel",
+		RouteID: "api.api.channel.ws",
 		Path:    "/api/ws",
 	}
-	return client.transport.ConnectUnsupported(ctx, request)
+	return client.transport.ChannelUnsupported(ctx, request)
 }

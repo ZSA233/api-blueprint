@@ -3,8 +3,8 @@ import { ApiErrors, isApiError, resolveApiToast } from "./api/runtime/client";
 import type { ApiError } from "./api/runtime/client";
 import { createClients } from "./api/transports/http/api/factory";
 import {
-  DemoFlagsValues,
   DemoPacket,
+  DemoPacketFlagsValues,
   DemoPacketWire,
 } from "./api/routes/api/binary/types";
 import {
@@ -21,7 +21,7 @@ declare const process: {
 function buildPacket(): DemoPacket {
   return {
     header: {
-      flags: DemoFlagsValues.HasPayload | DemoFlagsValues.HasScores,
+      flags: DemoPacketFlagsValues.HasPayload | DemoPacketFlagsValues.HasScores,
       short_code: 0x010203,
       signed_delta: 7,
       item_count: 2,

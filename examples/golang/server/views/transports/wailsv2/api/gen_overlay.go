@@ -4,20 +4,22 @@ package api
 
 import (
 	sharedroutes "example.com/project/golang/server/views/routes/api"
-	sharedtypes "example.com/project/golang/server/views/routes/api/_gen_types"
-
 	wailstransport "example.com/project/golang/server/views/transports/wailsv2"
 )
 
 type RouterInterface = sharedroutes.RouterInterface
 
-type REQ_Ws = sharedroutes.REQ_Ws
-type RSP_Ws = sharedroutes.RSP_Ws
-type CTX_Ws = sharedroutes.CTX_Ws
+type REQ_HelloChannel = sharedroutes.REQ_HelloChannel
+type RSP_HelloChannel = sharedroutes.RSP_HelloChannel
+type CTX_HelloChannel = sharedroutes.CTX_HelloChannel
 
-type WS_SEND_Ws_BODY = sharedtypes.WsMessage
+type SERVER_HelloChannel_MESSAGE = sharedroutes.SERVER_HelloChannel_MESSAGE
 
-type INVOKE_Ws = wailstransport.InvokeEnvelope[any, any]
-type WS_CONNECT_Ws = wailstransport.InvokeEnvelope[any, any]
-type WS_SEND_Ws = wailstransport.SocketSendEnvelope[WS_SEND_Ws_BODY]
-type WS_CLOSE_Ws = wailstransport.SocketCloseEnvelope
+type CLOSE_HelloChannel = sharedroutes.CLOSE_HelloChannel
+
+type CLIENT_HelloChannel_MESSAGE = sharedroutes.CLIENT_HelloChannel_MESSAGE
+type INVOKE_HelloChannel = wailstransport.InvokeEnvelope[any, any]
+type CONNECTION_CONNECT_HelloChannel = wailstransport.ConnectionOpenEnvelope[any]
+type CONNECTION_CLOSE_HelloChannel = wailstransport.SocketCloseEnvelope
+
+type CHANNEL_SEND_HelloChannel = wailstransport.SocketSendEnvelope[CLIENT_HelloChannel_MESSAGE]
