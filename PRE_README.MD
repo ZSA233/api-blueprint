@@ -63,7 +63,7 @@ README 应链接到以下用户文档：
 仓库事实：
 
 - 包名：`api-blueprint`
-- 对外 CLI：`api-doc-server`、`api-gen`
+- 对外 CLI：`api-doc-server`、`api-gen`；二者都支持 `--version` 查询当前包版本。
 - GitHub-only 稳定安装入口：`git+https://github.com/zsa233/api-blueprint@stable`
 - 版本真源：`release-version.toml`、`src/api_blueprint/_version.py`
 

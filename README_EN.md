@@ -79,6 +79,8 @@ clients = ["typescript.client"]
 Start the docs server, check the contract, and generate code:
 
 ```sh
+api-doc-server --version
+api-gen --version
 api-doc-server -c api-blueprint.toml
 api-gen check -c api-blueprint.toml
 api-gen generate -c api-blueprint.toml
