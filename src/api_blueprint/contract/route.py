@@ -11,18 +11,6 @@ from api_blueprint.engine.utils import snake_to_pascal_case
 
 
 @dataclass(frozen=True)
-class WsBridgeContract:
-    route_id: str
-    connect_method: str
-    connect_raw_method: str
-    send_method: str
-    close_method: str
-    event_base: str
-    message_event_prefix: str
-    close_event_prefix: str
-
-
-@dataclass(frozen=True)
 class ConnectionBridgeContract:
     route_id: str
     kind: ConnectionKind
@@ -51,14 +39,12 @@ class RouteContract:
     service_name: str
     namespace: str
     http_methods: tuple[str, ...]
-    supports_ws: bool
     supports_stream: bool
     supports_channel: bool
     connection_delivery: ConnectionDelivery | None
     connection_scope: ConnectionScope | None
     connection_close_model: ModelRef | None
     url: str
-    ws: WsBridgeContract | None = None
     stream: ConnectionBridgeContract | None = None
     channel: ConnectionBridgeContract | None = None
 
@@ -117,25 +103,11 @@ def _build_route_contract(
         service_name += "Service"
 
     route_id = route_id or route_id_for_router(router)
-    supports_ws = router.connection_kind == ConnectionKind.LEGACY_WS
     supports_stream = router.connection_kind == ConnectionKind.STREAM
     supports_channel = router.connection_kind == ConnectionKind.CHANNEL
     connection_close_model = router.effective_close_model
     if (supports_stream or supports_channel) and connection_close_model is None:
         raise RuntimeError(f"connection route[{router.url}] does not have an effective close model")
-    ws = None
-    if supports_ws:
-        event_base = f"api_blueprint.ws.{route_id}"
-        ws = WsBridgeContract(
-            route_id=route_id,
-            connect_method=f"Connect{func_name}",
-            connect_raw_method=f"Connect{func_name}Raw",
-            send_method=f"Send{func_name}",
-            close_method=f"Close{func_name}",
-            event_base=event_base,
-            message_event_prefix=f"{event_base}.message",
-            close_event_prefix=f"{event_base}.closed",
-        )
     stream = None
     if supports_stream:
         event_base = f"api_blueprint.stream.{route_id}"
@@ -181,14 +153,12 @@ def _build_route_contract(
         service_name=service_name,
         namespace=group_alias,
         http_methods=tuple(method for method in router.methods if method in {"GET", "POST", "PUT", "DELETE", "HEAD"}),
-        supports_ws=supports_ws,
         supports_stream=supports_stream,
         supports_channel=supports_channel,
         connection_delivery=router.connection_delivery,
         connection_scope=router.connection_scope,
         connection_close_model=connection_close_model,
         url=router.url,
-        ws=ws,
         stream=stream,
         channel=channel,
     )
@@ -296,8 +266,6 @@ def _route_method_slug(router: Router) -> str:
 
 
 def _operation_disambiguator(router: Router) -> str:
-    if router.connection_kind == ConnectionKind.LEGACY_WS:
-        return "Ws"
     if router.connection_kind == ConnectionKind.STREAM:
         return "Stream"
     if router.connection_kind == ConnectionKind.CHANNEL:

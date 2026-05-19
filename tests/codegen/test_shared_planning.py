@@ -72,7 +72,6 @@ def test_kotlin_capability_accepts_connection_routes(kind: str) -> None:
     with bp.group("/demo") as views:
         views.STREAM("/events").SERVER_MESSAGE(Event)
         views.CHANNEL("/chat").SERVER_MESSAGE(Event).CLIENT_MESSAGE(Event)
-        views.WS("/ws").SEND(Event).RECV(Event)
 
     graph = build_contract_graph([bp])
     target = ResolvedApiTargetConfig(id=kind, kind=kind, out_dir=None, package="com.example")
@@ -123,7 +122,7 @@ def test_client_capabilities_accept_binary_schema_rpc_routes(kind: str, target_k
 def test_capability_validation_checks_only_declared_dimensions() -> None:
     bp = Blueprint(root="/api")
     with bp.group("/demo") as views:
-        views.WS("/ws").SEND(Event).RECV(Event)
+        views.CHANNEL("/chat").SERVER_MESSAGE(Event).CLIENT_MESSAGE(Event)
 
     graph = build_contract_graph([bp])
     target = ResolvedApiTargetConfig(id="grpc.proto", kind="grpc-proto", out_dir=None, package="example.api")
@@ -158,18 +157,11 @@ def test_capability_validation_checks_only_declared_dimensions() -> None:
     ]
 
 
-def test_grpc_proto_capability_ignores_legacy_ws_without_advertising_output_support() -> None:
-    bp = Blueprint(root="/api")
-    with bp.group("/demo") as views:
-        views.WS("/ws").SEND(Event).RECV(Event)
-
-    graph = build_contract_graph([bp])
-    target = ResolvedApiTargetConfig(id="grpc.proto", kind="grpc-proto", out_dir=None, package="example.api")
+def test_grpc_proto_capability_declares_connection_routes_without_legacy_ws() -> None:
     manifest = target_capability_manifest()
 
-    assert "legacy_ws" not in manifest["grpc-proto"]["routes"]
-    assert manifest["grpc-proto"]["ignored_routes"] == ["legacy_ws"]
-    assert capability_errors(graph, (target,)) == []
+    assert manifest["grpc-proto"]["routes"] == ["rpc", "stream", "channel"]
+    assert "ignored_routes" not in manifest["grpc-proto"]
 
 
 @pytest.mark.parametrize("kind", ["python-client", "python-server"])
@@ -177,7 +169,7 @@ def test_python_targets_are_real_generation_capabilities(kind: str) -> None:
     manifest = target_capability_manifest()
 
     assert manifest[kind]["implemented"] is True
-    assert manifest[kind]["routes"] == ["rpc", "legacy_ws", "stream", "channel"]
+    assert manifest[kind]["routes"] == ["rpc", "stream", "channel"]
     if kind == "python-client":
         assert "binary-schema" in manifest[kind]["requests"]
 
@@ -187,7 +179,7 @@ def test_java_targets_are_real_generation_capabilities(kind: str) -> None:
     manifest = target_capability_manifest()
 
     assert manifest[kind]["implemented"] is True
-    assert manifest[kind]["routes"] == ["rpc", "legacy_ws", "stream", "channel"]
+    assert manifest[kind]["routes"] == ["rpc", "stream", "channel"]
     assert "binary-schema" in manifest[kind]["requests"]
 
 
@@ -195,5 +187,5 @@ def test_kotlin_server_is_real_generation_capability() -> None:
     manifest = target_capability_manifest()
 
     assert manifest["kotlin-server"]["implemented"] is True
-    assert manifest["kotlin-server"]["routes"] == ["rpc", "legacy_ws", "stream", "channel"]
+    assert manifest["kotlin-server"]["routes"] == ["rpc", "stream", "channel"]
     assert "binary-schema" in manifest["kotlin-server"]["requests"]

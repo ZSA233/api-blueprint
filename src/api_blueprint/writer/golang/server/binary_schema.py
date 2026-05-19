@@ -87,6 +87,20 @@ def binary_go_field_name(name: str) -> str:
     return candidate
 
 
+def _scope_go_name(schema_name: str, raw_name: str) -> str:
+    schema_type = binary_go_field_name(schema_name)
+    raw_type = binary_go_field_name(raw_name)
+    return raw_type if raw_type.startswith(schema_type) else f"{schema_type}{raw_type}"
+
+
+def _unexported_go_name(name: str) -> str:
+    return name[:1].lower() + name[1:] if name else "value"
+
+
+def _generated_name_key(value: str) -> str:
+    return re.sub(r"[^0-9a-z]+", "", value.lower())
+
+
 def compile_go_binary_uint_expr(expr: str) -> str:
     tokens = EXPR_TOKEN_RE.findall(expr)
     compact = "".join(tokens)
@@ -142,7 +156,7 @@ class GoBinaryFixedPrefixField:
             return ""
         target = f"out.{field.go_name}"
         source = self.fixed_source
-        cast = field.typ if field.value_type is not None else ""
+        cast = field.go_type if field.value_type is not None else ""
 
         def assign(expr: str) -> str:
             return f"{target} = {cast}({expr})" if cast else f"{target} = {expr}"
@@ -181,7 +195,7 @@ class GoBinaryFixedPrefixField:
 @dataclass(frozen=True)
 class GoBinaryField:
     field: BinaryField
-    schema: BinarySchema
+    schema: "GoBinarySchema"
 
     @property
     def name(self) -> str:
@@ -197,7 +211,7 @@ class GoBinaryField:
 
     @property
     def value_type(self):
-        return self.schema.value_type_map().get(self.typ)
+        return self.schema.schema.value_type_map().get(self.typ)
 
     @property
     def wire_type(self) -> str:
@@ -257,7 +271,7 @@ class GoBinaryField:
         if self.is_hidden:
             return ""
         if self.value_type is not None:
-            return self.typ
+            return self.schema.value_set_type_name(self.typ)
         if self.is_string:
             return "string"
         if self.fixed_bytes:
@@ -269,10 +283,10 @@ class GoBinaryField:
     @property
     def single_go_type(self) -> str:
         if self.value_type is not None:
-            return self.typ
+            return self.schema.value_set_type_name(self.typ)
         if self.is_bytes:
             return "byte"
-        return GO_SCALAR_TYPES.get(self.typ, self.typ)
+        return GO_SCALAR_TYPES.get(self.typ, self.schema.object_type_name(self.typ))
 
     @property
     def read_method(self) -> str:
@@ -393,17 +407,21 @@ class GoBinaryField:
     @property
     def scalar_assignment(self) -> str:
         if self.value_type is not None:
-            return f"{self.typ}({self.value_var})"
+            return f"{self.go_type}({self.value_var})"
         return self.value_var
 
 
 @dataclass(frozen=True)
 class GoBinaryObject:
     obj: BinaryObject
-    schema: BinarySchema
+    schema: "GoBinarySchema"
 
     @property
     def name(self) -> str:
+        return self.schema.object_type_name(self.obj.name)
+
+    @property
+    def raw_name(self) -> str:
         return self.obj.name
 
     @property
@@ -445,7 +463,7 @@ class GoBinaryObject:
 @dataclass(frozen=True)
 class GoBinaryValue:
     value: BinaryValue
-    value_set: BinaryValueSet
+    value_set: "GoBinaryValueSet"
 
     @property
     def name(self) -> str:
@@ -469,7 +487,7 @@ class GoBinaryValue:
 
     @property
     def enum_name(self) -> str | None:
-        return self.value.enum_name
+        return self.value_set.schema.value_set_type_name(self.value.enum_name) if self.value.enum_name else None
 
     @property
     def go_name(self) -> str:
@@ -502,9 +520,14 @@ class GoBinaryValue:
 @dataclass(frozen=True)
 class GoBinaryValueSet:
     value_set: BinaryValueSet
+    schema: "GoBinarySchema"
 
     @property
     def name(self) -> str:
+        return self.schema.value_set_type_name(self.value_set.name)
+
+    @property
+    def raw_name(self) -> str:
         return self.value_set.name
 
     @property
@@ -517,7 +540,7 @@ class GoBinaryValueSet:
 
     @property
     def values(self) -> list[GoBinaryValue]:
-        return [GoBinaryValue(value, self.value_set) for value in self.value_set.values]
+        return [GoBinaryValue(value, self) for value in self.value_set.values]
 
     @property
     def const_values(self) -> list[GoBinaryValue]:
@@ -563,11 +586,11 @@ class GoBinarySchema:
 
     @property
     def sections(self) -> list[GoBinaryObject]:
-        return [GoBinaryObject(section, self.schema) for section in self.schema.sections]
+        return [GoBinaryObject(section, self) for section in self.schema.sections]
 
     @property
     def structs(self) -> list[GoBinaryObject]:
-        return [GoBinaryObject(struct, self.schema) for struct in self.schema.structs.values()]
+        return [GoBinaryObject(struct, self) for struct in self.schema.structs.values()]
 
     @property
     def objects(self) -> list[GoBinaryObject]:
@@ -576,11 +599,21 @@ class GoBinarySchema:
     @property
     def value_sets(self) -> list[GoBinaryValueSet]:
         values = [*self.schema.enums.values(), *self.schema.bitflags.values()]
-        return [GoBinaryValueSet(value) for value in values]
+        return [GoBinaryValueSet(value, self) for value in values]
 
     def packet_field_name(self, section_name: str) -> str:
         suffix = section_name.removeprefix(self.name)
         return suffix or section_name
+
+    @property
+    def state_type(self) -> str:
+        return f"{_unexported_go_name(binary_go_field_name(self.name))}BinaryState"
+
+    def object_type_name(self, object_name: str) -> str:
+        return _scope_go_name(self.name, object_name)
+
+    def value_set_type_name(self, value_set_name: str) -> str:
+        return _scope_go_name(self.name, value_set_name)
 
     @property
     def needs_math(self) -> bool:
@@ -605,7 +638,16 @@ class GoBinarySchema:
 
 def unique_go_binary_schemas(schemas: Iterable[BinarySchema]) -> list[GoBinarySchema]:
     unique: dict[str, BinarySchema] = {}
+    generated_names: dict[str, str] = {}
     for schema in schemas:
+        generated_name = _generated_name_key(schema.name)
+        previous = generated_names.get(generated_name)
+        if previous is not None and previous != schema.name:
+            raise ValueError(
+                f"duplicate binary schema generated name {binary_go_field_name(schema.name)}: "
+                f"{previous}, {schema.name}"
+            )
+        generated_names[generated_name] = schema.name
         unique.setdefault(schema.name, schema)
     return [GoBinarySchema(schema) for schema in unique.values()]
 

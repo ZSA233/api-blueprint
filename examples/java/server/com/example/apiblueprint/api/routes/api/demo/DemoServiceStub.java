@@ -37,13 +37,6 @@ public class DemoServiceStub implements DemoService {
     }
 
     @Override
-    public Object ws(
-        ApiTypes.ApiDemoSubA query
-    ) {
-        throw new UnsupportedOperationException("ws");
-    }
-
-    @Override
     public Object sweepEvents(
         ApiTypes.SweepOpen openData
     ) {

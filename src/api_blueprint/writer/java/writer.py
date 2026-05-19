@@ -151,11 +151,13 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
         )
 
     def _write_client_runtime(self, plan: JavaBlueprintPlan, context: dict[str, object]) -> None:
+        stale_socket_bridge = plan.runtime.directory / "ApiSocketBridge.java"
+        if stale_socket_bridge.exists():
+            stale_socket_bridge.unlink()
         for output_name, template_path in (
             ("ApiRequest.java", "ApiRequest.java"),
             ("ApiResponse.java", "ApiResponse.java"),
             ("ApiTransport.java", "ApiTransport.java"),
-            ("ApiSocketBridge.java", "ApiSocketBridge.java"),
             ("ApiStreamBridge.java", "ApiStreamBridge.java"),
             ("ApiChannelBridge.java", "ApiChannelBridge.java"),
             ("GenApiClient.java", "GenApiClient.java"),
@@ -291,7 +293,10 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
         if route.form_model:
             params.append((self.schema_type(route.form_model, group), "form"))
         if route.binary_schema is not None:
-            params.append(("ApiBinaryBody", "binaryBody"))
+            if self.server_mode:
+                params.append((f"{group.types_class}.{route.binary_schema_type}", "binary"))
+            else:
+                params.append(("ApiBinaryBody", "binaryBody"))
         elif route.binary_model:
             params.append(("byte[]", "binaryBody") if self.server_mode else (self.schema_type(route.binary_model, group), "binaryBody"))
         if route.open_model:
@@ -319,13 +324,34 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
         return "Object.class"
 
     def server_message_type(self, route: JavaRoute, group: JavaApiGroup) -> str:
-        if route.server_message_name:
-            return f"{group.types_class}.{route.server_message_name}"
-        return "Object"
+        return self._connection_message_type(route, group, "server_message")
 
     def client_message_type(self, route: JavaRoute, group: JavaApiGroup) -> str:
-        if route.client_message_name:
-            return f"{group.types_class}.{route.client_message_name}"
+        return self._connection_message_type(route, group, "client_message")
+
+    def _connection_message_type(self, route: JavaRoute, group: JavaApiGroup, key: str) -> str:
+        message = route.connection.get(key)
+        if not isinstance(message, Mapping):
+            return "Object"
+        variants = message.get("variants")
+        if isinstance(variants, list) and variants:
+            has_named_variants = any(
+                isinstance(variant, Mapping) and bool(str(variant.get("key") or ""))
+                for variant in variants
+            )
+            if has_named_variants:
+                name = route.server_message_name if key == "server_message" else route.client_message_name
+                if name:
+                    return f"{group.types_class}.{name}"
+                return "Object"
+            first_variant = variants[0]
+            if isinstance(first_variant, Mapping):
+                model = first_variant.get("model")
+                if isinstance(model, str) and model:
+                    return self.schema_type(model, group)
+        model = message.get("model")
+        if isinstance(model, str) and model:
+            return self.schema_type(model, group)
         return "Object"
 
     def model_schemas_for_group(self, group: JavaApiGroup) -> tuple[object, ...]:

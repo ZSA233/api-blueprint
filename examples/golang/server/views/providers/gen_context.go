@@ -64,7 +64,6 @@ type Context[Q, B, P any] struct {
 	Req      *ReqContext[Q, B, P]
 	Auth     *AuthContext[Q, B, P]
 	Handle   *HandleContext[Q, B, P]
-	WsHandle *WsHandleContext[Q, B, P]
 
 	executor        *RouteExecutor[Q, B, P]
 	pipelineNext    int
@@ -106,13 +105,6 @@ func (ctx *Context[Q, B, P]) PipelineError() error {
 func (ctx *Context[Q, B, P]) HandleResult() (*P, error) {
 	if ctx.Handle != nil {
 		return ctx.Handle.Response, ctx.Handle.Error
-	}
-	return nil, ctx.PipelineError()
-}
-
-func (ctx *Context[Q, B, P]) WsHandleResult() (*P, error) {
-	if ctx.WsHandle != nil {
-		return ctx.WsHandle.Response, ctx.WsHandle.Error
 	}
 	return nil, ctx.PipelineError()
 }

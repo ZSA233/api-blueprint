@@ -47,6 +47,10 @@ private val routeApiErrorsByCode: Map<String, Map<ApiErrorCode, ApiErrorEntry>> 
         -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
         55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
     ),
+    "api.binary.post.auditpacket" to mapOf(
+        -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
+        55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
+    ),
     "api.demo.get.abc" to mapOf(
         -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
         55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),

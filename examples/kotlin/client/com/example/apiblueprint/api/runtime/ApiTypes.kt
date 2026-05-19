@@ -88,6 +88,22 @@ public data class ConnectionClose(
 )
 
 @Serializable
+public enum class HelloChannelMsgTypeEnum(public val wireValue: String) {
+    @SerialName("ping")
+    PING("ping"),
+    @SerialName("pong")
+    PONG("pong"),
+    @SerialName("join")
+    JOIN("join"),
+    @SerialName("leave")
+    LEAVE("leave"),
+    @SerialName("forgeround")
+    FORGEROUND("forgeround"),
+    @SerialName("upgrade")
+    UPGRADE("upgrade")
+}
+
+@Serializable
 public enum class HelloWayEnum(public val wireValue: String) {
     @SerialName("ASD")
     ASD("ASD")
@@ -146,19 +162,3 @@ public data class SweepProgress(
 public data class SweepState(
     public val status: String
 )
-
-@Serializable
-public enum class WsMsgTypeEnum(public val wireValue: String) {
-    @SerialName("ping")
-    PING("ping"),
-    @SerialName("pong")
-    PONG("pong"),
-    @SerialName("join")
-    JOIN("join"),
-    @SerialName("leave")
-    LEAVE("leave"),
-    @SerialName("forgeround")
-    FORGEROUND("forgeround"),
-    @SerialName("upgrade")
-    UPGRADE("upgrade")
-}

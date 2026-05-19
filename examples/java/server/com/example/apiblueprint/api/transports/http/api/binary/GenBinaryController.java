@@ -45,7 +45,7 @@ public class GenBinaryController {
         @RequestBody(required = false) byte[] binaryBody
     ) throws Exception {
         BinaryTypes.PacketQuery query = objectMapper.convertValue(queryParams, BinaryTypes.PacketQuery.class);
-        ApiBinaryBody binary = ApiBinaryBody.of(binaryBody == null ? new byte[0] : binaryBody);
+        BinaryTypes.DemoPacket binary = BinaryTypes.DemoPacketWire.parse(binaryBody == null ? new byte[0] : binaryBody);
         try {
             Object result = service.packet(
                 query,
@@ -54,6 +54,24 @@ public class GenBinaryController {
             return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
         } catch (ApiError error) {
             return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.binary.post.packet");
+        }
+    }
+
+    @RequestMapping(path = "/api/binary/audit-packet", method = RequestMethod.POST)
+    public Object auditPacket(
+        @RequestParam Map<String, String> queryParams,
+        @RequestBody(required = false) byte[] binaryBody
+    ) throws Exception {
+        BinaryTypes.AuditPacketQuery query = objectMapper.convertValue(queryParams, BinaryTypes.AuditPacketQuery.class);
+        BinaryTypes.AuditPacket binary = BinaryTypes.AuditPacketWire.parse(binaryBody == null ? new byte[0] : binaryBody);
+        try {
+            Object result = service.auditPacket(
+                query,
+                binary
+            );
+            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (ApiError error) {
+            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.binary.post.auditpacket");
         }
     }
 

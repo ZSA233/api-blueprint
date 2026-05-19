@@ -12,6 +12,9 @@ func NewRouter() *Router {
 	return &Router{}
 }
 
-func (impl *Router) Ws(ctx *CTX_Ws, req *REQ_Ws) (rsp *RSP_Ws, err error) {
-	return nil, fmt.Errorf("not implemented")
+func (impl *Router) HelloChannel(
+	ctx *CTX_HelloChannel,
+	channel CHANNEL_HelloChannel,
+) error {
+	return fmt.Errorf("not implemented")
 }

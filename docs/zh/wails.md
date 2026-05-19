@@ -68,6 +68,8 @@ api/
     api/
       demo/gen_client.ts
   transports/
+    gen_clients.ts
+    clients.ts
     http/
       gen_transport.ts        # 仅当同时声明 HTTP target
       api/gen_factory.ts
@@ -80,9 +82,11 @@ api/
 
 `api/runtime` 是共享 transport-neutral runtime；`api/routes/<root>` 是 route core client；`api/transports/http/<root>` 与 `api/transports/<overlay_name>/<root>` 是场景 facade。Wails route overlay 暴露 `createClient(config)` 与窄类型 `type <Group>Client`，root overlay 暴露 `createClients(config)`。
 
+当同一个 TypeScript 输出树里同时存在 HTTP 与 Wails transport 时，`api/transports/clients` 会导出稳定聚合入口：`createHttpClients`、`createWailsV3Clients` / `createWailsV2Clients`、各 transport 的 `GeneratedClients` 类型别名，以及跨已生成 transport 的共同子集 `CommonGeneratedClients`。`createClientsForTransport({ transport })` 只创建共同子集，适合 GUI/Web 共用一层项目级 client wrapper；被 Wails `include` / `exclude` 裁掉的 route 不会出现在共同子集中。需要某个 transport 的完整 client set 时，继续使用对应的 `api/transports/http/<root>` 或 `api/transports/<overlay_name>/<root>` factory。
+
 ## Provider 与 hook
 
-Go HTTP 与 Wails 共用生成的 `RouteExecutor` provider pipeline。Wails service 默认会执行 `req/auth/handle/rsp` 与 WS preflight provider，不需要项目为每个 route 手写 adapter 来补 auth/provider。
+Go HTTP 与 Wails 共用生成的 `RouteExecutor` provider pipeline。Wails service 默认会执行 `req/auth/handle/rsp` 与连接 preflight provider，不需要项目为每个 route 手写 adapter 来补 auth/provider。
 
 长期 ownership 边界：
 
@@ -123,6 +127,19 @@ import { WailsV3Transport } from "./api/transports/wailsv3/transport";
 const clients = createClients({
     transport: new WailsV3Transport(),
 });
+```
+
+HTTP + Wails 共存项目可以从统一入口导入 factory 与共同类型，项目只需要在自己的 wrapper 中替换 auth、错误处理或个别 client：
+
+```ts
+import {
+    createClientsForTransport,
+    type CommonGeneratedClients,
+} from "./api/transports/clients";
+import { WailsV3Transport } from "./api/transports/wailsv3/transport";
+
+const transport = new WailsV3Transport();
+const clients: CommonGeneratedClients = createClientsForTransport({ transport });
 ```
 
 Wails v3 transport 使用官方 runtime 的 `Call.ByName(...)` 并由生成器内置 binding manifest；binding manifest 中的 Go import path 使用同一套 Go-safe segment，业务项目不需要手写 Go service 包路径。Wails v2 transport 继续使用官方 `window.go.<package>.<service>.<method>` 运行时形态。
@@ -228,7 +245,7 @@ await bridge.close(1000, "done");
 offMessage();
 ```
 
-`WS().RECV().SEND()` 是兼容 surface，不进入 1.0 ContractGraph 主线。新蓝图应使用 `STREAM` / `CHANNEL`，避免把多个逻辑消息误建模成多个裸 event。
+`WS().RECV().SEND()` 已从 blueprint DSL 移除。双向 WebSocket 风格契约请使用 `CHANNEL`，服务端单向事件流请使用 `STREAM`。
 
 ## Harness 示例
 

@@ -84,10 +84,6 @@ func (transport *HttpTransport) Do(ctx context.Context, request runtime.Request,
 	return decodeResponse(httpResponse.Body, request.ResponseEnvelope, request.RouteID, response)
 }
 
-func (transport *HttpTransport) ConnectUnsupported(ctx context.Context, request runtime.ConnectionRequest) error {
-	return runtime.UnsupportedTransportError{Kind: request.Kind, RouteID: request.RouteID, Path: request.Path}
-}
-
 func (transport *HttpTransport) StreamUnsupported(ctx context.Context, request runtime.ConnectionRequest) error {
 	return runtime.UnsupportedTransportError{Kind: request.Kind, RouteID: request.RouteID, Path: request.Path}
 }

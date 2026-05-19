@@ -60,6 +60,24 @@ def py_type_name(value: str) -> str:
     return f"Value{rendered}" if rendered[:1].isdigit() else rendered
 
 
+def _scope_py_type_name(schema_name: str, raw_name: str) -> str:
+    schema_type = py_type_name(schema_name)
+    raw_type = py_type_name(raw_name)
+    return raw_type if raw_type.startswith(schema_type) else f"{schema_type}{raw_type}"
+
+
+def _packet_writer_name(packet_name: str) -> str:
+    return f"write_{py_name(packet_name)}"
+
+
+def _object_writer_name(packet_name: str, object_name: str) -> str:
+    return f"{_packet_writer_name(packet_name)}_{py_name(object_name)}"
+
+
+def _generated_name_key(value: str) -> str:
+    return re.sub(r"[^0-9a-z]+", "", value.lower())
+
+
 def compile_py_int_expr(expr: str) -> str:
     tokens = EXPR_TOKEN_RE.findall(expr)
     compact = "".join(tokens)
@@ -78,7 +96,7 @@ def compile_py_int_expr(expr: str) -> str:
 @dataclass(frozen=True)
 class PythonBinaryField:
     field: BinaryField
-    schema: BinarySchema
+    schema: "PythonBinarySchema"
 
     @property
     def name(self) -> str:
@@ -94,7 +112,7 @@ class PythonBinaryField:
 
     @property
     def value_type(self):
-        return self.schema.value_type_map().get(self.typ)
+        return self.schema.schema.value_type_map().get(self.typ)
 
     @property
     def wire_type(self) -> str:
@@ -158,7 +176,7 @@ class PythonBinaryField:
     def single_py_type(self) -> str:
         if self.value_type is not None:
             return "int"
-        return PY_SCALAR_TYPES.get(self.typ, py_type_name(self.typ))
+        return PY_SCALAR_TYPES.get(self.typ, self.schema.object_type_name(self.typ))
 
     @property
     def value_expr(self) -> str:
@@ -209,7 +227,7 @@ class PythonBinaryField:
 @dataclass(frozen=True)
 class PythonBinaryObject:
     obj: BinaryObject
-    schema: BinarySchema
+    schema: "PythonBinarySchema"
 
     @property
     def name(self) -> str:
@@ -217,7 +235,15 @@ class PythonBinaryObject:
 
     @property
     def py_type(self) -> str:
-        return py_type_name(self.obj.name)
+        return self.schema.object_type_name(self.obj.name)
+
+    @property
+    def path_name(self) -> str:
+        return self.obj.name
+
+    @property
+    def writer_name(self) -> str:
+        return self.schema.object_writer_name(self.obj.name)
 
     @property
     def fields(self) -> list[PythonBinaryField]:
@@ -236,6 +262,7 @@ class PythonBinaryObject:
 @dataclass(frozen=True)
 class PythonBinaryValueSet:
     value_set: object
+    schema: "PythonBinarySchema"
 
     @property
     def name(self) -> str:
@@ -243,7 +270,7 @@ class PythonBinaryValueSet:
 
     @property
     def py_type(self) -> str:
-        return py_type_name(self.name)
+        return self.schema.value_set_type_name(self.name)
 
     @property
     def values(self):
@@ -275,11 +302,11 @@ class PythonBinarySchema:
 
     @property
     def sections(self) -> list[PythonBinaryObject]:
-        return [PythonBinaryObject(section, self.schema) for section in self.schema.sections]
+        return [PythonBinaryObject(section, self) for section in self.schema.sections]
 
     @property
     def structs(self) -> list[PythonBinaryObject]:
-        return [PythonBinaryObject(struct, self.schema) for struct in self.schema.structs.values()]
+        return [PythonBinaryObject(struct, self) for struct in self.schema.structs.values()]
 
     @property
     def objects(self) -> list[PythonBinaryObject]:
@@ -288,7 +315,7 @@ class PythonBinarySchema:
     @property
     def value_sets(self) -> list[PythonBinaryValueSet]:
         values = [*self.schema.enums.values(), *self.schema.bitflags.values()]
-        return [PythonBinaryValueSet(value) for value in values]
+        return [PythonBinaryValueSet(value, self) for value in values]
 
     @property
     def state_fields(self) -> list[str]:
@@ -306,9 +333,28 @@ class PythonBinarySchema:
         suffix = section_name.removeprefix(self.name)
         return py_name(suffix or section_name)
 
+    @property
+    def writer_name(self) -> str:
+        return _packet_writer_name(self.name)
+
+    def object_type_name(self, object_name: str) -> str:
+        return _scope_py_type_name(self.name, object_name)
+
+    def object_writer_name(self, object_name: str) -> str:
+        return _object_writer_name(self.name, object_name)
+
+    def value_set_type_name(self, value_set_name: str) -> str:
+        return _scope_py_type_name(self.name, value_set_name)
+
 
 def unique_python_binary_schemas(schemas: Iterable[BinarySchema]) -> list[PythonBinarySchema]:
     unique: dict[str, BinarySchema] = {}
+    generated_names: dict[str, str] = {}
     for schema in schemas:
+        generated_name = _generated_name_key(schema.name)
+        previous = generated_names.get(generated_name)
+        if previous is not None and previous != schema.name:
+            raise ValueError(f"duplicate binary schema generated name {py_type_name(schema.name)}: {previous}, {schema.name}")
+        generated_names[generated_name] = schema.name
         unique.setdefault(schema.name, schema)
     return [PythonBinarySchema(schema) for schema in unique.values()]

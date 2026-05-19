@@ -22,10 +22,6 @@ public interface GenDemoService {
         query: DemoDeleteQuery
     ): String
 
-    public suspend fun ws(
-        query: ApiDemoSubA
-    ): Any
-
     public suspend fun sweepEvents(
         openData: SweepOpen
     ): Any

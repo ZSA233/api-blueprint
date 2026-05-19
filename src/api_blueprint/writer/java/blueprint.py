@@ -133,8 +133,6 @@ class JavaRoute:
 
     @property
     def connection_method_name(self) -> str:
-        if self.kind == "legacy_ws":
-            return to_java_member_name(f"connect {self.operation}", fallback="connect")
         if self.kind == "stream":
             return to_java_member_name(f"subscribe {self.operation}", fallback="subscribe")
         if self.kind == "channel":

@@ -101,11 +101,6 @@ public class GenDemoController {
         }
     }
 
-    @RequestMapping(path = "/api/demo/ws", method = RequestMethod.GET)
-    public ResponseEntity<String> wsUnsupported() {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body("legacy_ws route is not implemented by the generated Spring MVC adapter");
-    }
-
     @RequestMapping(path = "/api/demo/sweep-events", method = RequestMethod.GET)
     public ResponseEntity<String> sweepEventsUnsupported() {
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body("stream route is not implemented by the generated Spring MVC adapter");

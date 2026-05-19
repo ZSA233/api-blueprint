@@ -67,6 +67,16 @@ def ts_name(value: str) -> str:
     return f"Value{rendered}" if rendered[:1].isdigit() else rendered
 
 
+def _scope_ts_name(schema_name: str, raw_name: str) -> str:
+    schema_type = ts_name(schema_name)
+    raw_type = ts_name(raw_name)
+    return raw_type if raw_type.startswith(schema_type) else f"{schema_type}{raw_type}"
+
+
+def _generated_name_key(value: str) -> str:
+    return re.sub(r"[^0-9a-z]+", "", value.lower())
+
+
 def ts_field_name(value: str) -> str:
     return to_camel(value)
 
@@ -99,7 +109,7 @@ def compile_ts_number_expr(expr: str) -> str:
 @dataclass(frozen=True)
 class TypeScriptBinaryField:
     field: BinaryField
-    schema: BinarySchema
+    schema: "TypeScriptBinarySchema"
 
     @property
     def name(self) -> str:
@@ -115,7 +125,7 @@ class TypeScriptBinaryField:
 
     @property
     def value_type(self):
-        return self.schema.value_type_map().get(self.typ)
+        return self.schema.schema.value_type_map().get(self.typ)
 
     @property
     def wire_type(self) -> str:
@@ -175,14 +185,14 @@ class TypeScriptBinaryField:
         if self.is_array:
             return f"{self.single_ts_type}[]"
         if self.value_type is not None:
-            return self.typ
+            return self.schema.value_set_type_name(self.typ)
         return self.single_ts_type
 
     @property
     def single_ts_type(self) -> str:
         if self.value_type is not None:
-            return self.typ
-        return TS_SCALAR_TYPES.get(self.typ, self.typ)
+            return self.schema.value_set_type_name(self.typ)
+        return TS_SCALAR_TYPES.get(self.typ, self.schema.object_type_name(self.typ))
 
     @property
     def write_method(self) -> str:
@@ -284,10 +294,14 @@ class TypeScriptBinaryField:
 @dataclass(frozen=True)
 class TypeScriptBinaryObject:
     obj: BinaryObject
-    schema: BinarySchema
+    schema: "TypeScriptBinarySchema"
 
     @property
     def name(self) -> str:
+        return self.schema.object_type_name(self.obj.name)
+
+    @property
+    def path_name(self) -> str:
         return self.obj.name
 
     @property
@@ -312,7 +326,7 @@ class TypeScriptBinaryObject:
         return "write" + ts_name(f"{self.name}_{field.name}_fragment")
 
     def block_path(self, field: TypeScriptBinaryField) -> str:
-        return f"{self.name}.{field.name}"
+        return f"{self.path_name}.{field.name}"
 
     def has_field(self, name: str | None) -> bool:
         if name is None:
@@ -323,9 +337,14 @@ class TypeScriptBinaryObject:
 @dataclass(frozen=True)
 class TypeScriptBinaryValueSet:
     value_set: object
+    schema: "TypeScriptBinarySchema"
 
     @property
     def name(self) -> str:
+        return self.schema.value_set_type_name(self.value_set.name)
+
+    @property
+    def raw_name(self) -> str:
         return self.value_set.name
 
     @property
@@ -358,11 +377,11 @@ class TypeScriptBinarySchema:
 
     @property
     def sections(self) -> list[TypeScriptBinaryObject]:
-        return [TypeScriptBinaryObject(section, self.schema) for section in self.schema.sections]
+        return [TypeScriptBinaryObject(section, self) for section in self.schema.sections]
 
     @property
     def structs(self) -> list[TypeScriptBinaryObject]:
-        return [TypeScriptBinaryObject(struct, self.schema) for struct in self.schema.structs.values()]
+        return [TypeScriptBinaryObject(struct, self) for struct in self.schema.structs.values()]
 
     @property
     def objects(self) -> list[TypeScriptBinaryObject]:
@@ -371,7 +390,15 @@ class TypeScriptBinarySchema:
     @property
     def value_sets(self) -> list[TypeScriptBinaryValueSet]:
         values = [*self.schema.enums.values(), *self.schema.bitflags.values()]
-        return [TypeScriptBinaryValueSet(value) for value in values]
+        return [TypeScriptBinaryValueSet(value, self) for value in values]
+
+    @property
+    def state_type(self) -> str:
+        return f"{self.name}BinaryState"
+
+    @property
+    def state_factory(self) -> str:
+        return f"new{self.name}BinaryState"
 
     @property
     def state_fields(self) -> list[str]:
@@ -393,9 +420,21 @@ class TypeScriptBinarySchema:
         suffix = section_name.removeprefix(self.name)
         return ts_field_name(suffix or section_name)
 
+    def object_type_name(self, object_name: str) -> str:
+        return _scope_ts_name(self.name, object_name)
+
+    def value_set_type_name(self, value_set_name: str) -> str:
+        return _scope_ts_name(self.name, value_set_name)
+
 
 def unique_typescript_binary_schemas(schemas: Iterable[BinarySchema]) -> list[TypeScriptBinarySchema]:
     unique: dict[str, BinarySchema] = {}
+    generated_names: dict[str, str] = {}
     for schema in schemas:
+        generated_name = _generated_name_key(schema.name)
+        previous = generated_names.get(generated_name)
+        if previous is not None and previous != schema.name:
+            raise ValueError(f"duplicate binary schema generated name {ts_name(schema.name)}: {previous}, {schema.name}")
+        generated_names[generated_name] = schema.name
         unique.setdefault(schema.name, schema)
     return [TypeScriptBinarySchema(schema) for schema in unique.values()]

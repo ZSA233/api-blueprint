@@ -103,21 +103,6 @@ type CTX_Delete = providers.Context[
 	RSP_Delete_BODY,
 ]
 
-type REQ_Ws_QUERY = types.ApiDemoSubA
-
-type REQ_Ws = providers.REQ[
-	REQ_Ws_QUERY,
-	any,
-]
-
-type RSP_Ws = any
-
-type CTX_Ws = providers.Context[
-	REQ_Ws_QUERY,
-	any,
-	any,
-]
-
 type OPEN_SweepEvents = types.SweepOpen
 
 type REQ_SweepEvents = providers.REQ[

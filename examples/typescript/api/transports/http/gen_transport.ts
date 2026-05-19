@@ -5,121 +5,21 @@
 import type {
   ApiChannelBridge,
   ApiClientConfig,
-  ApiSocketBridge,
   ApiStreamBridge,
   ApiTransport,
-  ApiResponseEnvelope,
   ChannelConnectOptions,
   RequestOptions,
-  SocketCloseHandler,
   SocketCloseInfo,
-  SocketMessageHandler,
-  SocketUnsubscribe,
-  SocketConnectOptions,
   StreamConnectOptions,
 } from "../../runtime/client";
-import { ApiError, lookupApiError } from "../../runtime/client";
-import type { ApiErrorEntry, ApiErrorPayload, ApiToastPayload } from "../../runtime/client";
+
+import { ApiError } from "../../runtime/client";
+import { unwrapResponseEnvelope, extractApiErrorPayload, normalizeApiErrorPayload, tryParseJson } from "./gen_response";
+import { HttpEventStreamBridge, HttpSocketBridge } from "./gen_connection";
 
 import { binaryBodyToUint8Array } from "../../runtime/binary/index";
 
 type RequestBody = RequestInit["body"];
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object";
-}
-
-function normalizeToast(value: unknown, entry?: ApiErrorEntry): ApiToastPayload {
-  const source = isRecord(value) ? value : {};
-  return {
-    key: typeof source.key === "string" ? source.key : entry?.toast.key ?? "",
-    level: typeof source.level === "string" ? source.level : entry?.toast.level ?? "error",
-    default: typeof source.default === "string" ? source.default : entry?.toast.default ?? entry?.message ?? "",
-    text: typeof source.text === "string" ? source.text : undefined,
-  };
-}
-
-function normalizeApiErrorPayload(value: unknown, routeId?: string): ApiErrorPayload {
-  const source = isRecord(value) ? value : {};
-  const entry = lookupApiError(source as Partial<ApiErrorPayload>, routeId);
-  const code = typeof source.code === "number" ? source.code : entry?.code ?? 0;
-  return {
-    id: typeof source.id === "string" ? source.id : entry?.id ?? "",
-    group: typeof source.group === "string" ? source.group : entry?.group ?? "",
-    key: typeof source.key === "string" ? source.key : entry?.key ?? "",
-    code,
-    message: typeof source.message === "string" ? source.message : entry?.message ?? `API error ${code}`,
-    toast: normalizeToast(source.toast, entry),
-  };
-}
-
-function extractApiErrorPayload(value: unknown, envelope?: ApiResponseEnvelope): unknown | undefined {
-  if (!isRecord(value)) {
-    return undefined;
-  }
-  const errorField = envelope?.fields?.error ?? "error";
-  if (isRecord(value[errorField])) {
-    return normalizeEnvelopeErrorPayload(value[errorField], value, envelope);
-  }
-  if ("code" in value && ("id" in value || "message" in value || "toast" in value)) {
-    return value;
-  }
-  return undefined;
-}
-
-function normalizeEnvelopeErrorPayload(error: unknown, envelopeBody: Record<string, unknown>, envelope?: ApiResponseEnvelope): unknown {
-  if (!isRecord(error)) {
-    return error;
-  }
-  const codeField = envelope?.fields?.code ?? "code";
-  const messageField = envelope?.fields?.message ?? "message";
-  return {
-    ...error,
-    code: typeof error.code === "number" ? error.code : envelopeBody[codeField],
-    message: typeof error.message === "string" ? error.message : envelopeBody[messageField],
-  };
-}
-
-function tryParseJson(text: string): unknown | undefined {
-  if (!text) {
-    return undefined;
-  }
-  try {
-    return JSON.parse(text);
-  } catch {
-    return undefined;
-  }
-}
-
-function unwrapResponseEnvelope<R>(payload: unknown, routeId: string, envelope?: ApiResponseEnvelope): R {
-  if (!envelope || envelope.kind === "none") {
-    return payload as R;
-  }
-  if (!isRecord(payload)) {
-    return payload as R;
-  }
-  if (envelope.kind === "code_message_data") {
-    const codeField = envelope.fields?.code ?? "code";
-    const dataField = envelope.fields?.data ?? "data";
-    const code = typeof payload[codeField] === "number" ? payload[codeField] as number : 0;
-    if (code === envelope.success_code) {
-      return payload[dataField] as R;
-    }
-    const errorPayload = normalizeApiErrorPayload(extractApiErrorPayload(payload, envelope) ?? payload, routeId);
-    throw new ApiError(errorPayload, { routeId, raw: payload });
-  }
-  if (envelope.kind === "ok_data_error") {
-    const okField = envelope.fields?.ok ?? "ok";
-    const dataField = envelope.fields?.data ?? "data";
-    const errorField = envelope.fields?.error ?? "error";
-    if (payload[okField] === true) {
-      return payload[dataField] as R;
-    }
-    const errorPayload = normalizeApiErrorPayload(payload[errorField], routeId);
-    throw new ApiError(errorPayload, { routeId, raw: payload });
-  }
-  throw new Error(`Unsupported response envelope: ${envelope.kind}`);
-}
 
 export interface ApiHttpTransportConfig extends ApiClientConfig {
   baseUrl?: string;
@@ -183,191 +83,6 @@ function buildFormData(data: Record<string, unknown>): FormData {
 }
 
 const defaultFetch: typeof fetch = (...args) => fetch(...args);
-
-class HttpEventStreamBridge<Recv, Close = SocketCloseInfo> implements ApiStreamBridge<Recv, Close> {
-  readonly mode = "http";
-  readonly routeId: string;
-  readonly ready: Promise<void>;
-  private readonly messageListeners = new Set<SocketMessageHandler<Recv>>();
-  private readonly closeListeners = new Set<SocketCloseHandler<Close>>();
-  private readonly controller = new AbortController();
-  private closed = false;
-
-  constructor(
-    private readonly start: (signal: AbortSignal) => Promise<Response>,
-    private readonly options: StreamConnectOptions<Recv, Close>,
-  ) {
-    this.routeId = options.routeId;
-    this.ready = this.connect();
-  }
-
-  onMessage(listener: SocketMessageHandler<Recv>): SocketUnsubscribe {
-    this.messageListeners.add(listener);
-    return () => {
-      this.messageListeners.delete(listener);
-    };
-  }
-
-  onClose(listener: SocketCloseHandler<Close>): SocketUnsubscribe {
-    this.closeListeners.add(listener);
-    return () => {
-      this.closeListeners.delete(listener);
-    };
-  }
-
-  async close(code?: number, reason?: string): Promise<void> {
-    this.controller.abort();
-    this.emitClose({ code, reason } as Close);
-  }
-
-  private async connect(): Promise<void> {
-    const response = await this.start(this.controller.signal);
-    if (!response.ok) {
-      throw new Error(`Stream failed: ${response.status} ${response.statusText}`);
-    }
-    void this.readBody(response).catch((error) => {
-      if (!this.closed) {
-        this.emitClose({ error } as Close);
-      }
-    });
-  }
-
-  private async readBody(response: Response): Promise<void> {
-    if (!response.body) {
-      this.emitClose({} as Close);
-      return;
-    }
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) {
-        break;
-      }
-      buffer += decoder.decode(value, { stream: true });
-      let boundary = buffer.indexOf("\n\n");
-      while (boundary >= 0) {
-        const block = buffer.slice(0, boundary);
-        buffer = buffer.slice(boundary + 2);
-        this.dispatchEventBlock(block);
-        boundary = buffer.indexOf("\n\n");
-      }
-    }
-    this.emitClose({} as Close);
-  }
-
-  private dispatchEventBlock(block: string): void {
-    const lines = block.split(/\r?\n/);
-    let eventName = "message";
-    const dataLines: string[] = [];
-    for (const line of lines) {
-      if (line.startsWith("event:")) {
-        eventName = line.slice("event:".length).trim();
-      } else if (line.startsWith("data:")) {
-        dataLines.push(line.slice("data:".length).trimStart());
-      }
-    }
-    const dataText = dataLines.join("\n");
-    const payload = dataText ? JSON.parse(dataText) : undefined;
-    if (eventName === "close") {
-      this.emitClose((payload ?? {}) as Close);
-      return;
-    }
-    this.messageListeners.forEach((listener) => listener(payload as Recv));
-  }
-
-  private emitClose(info: Close): void {
-    if (this.closed) {
-      return;
-    }
-    this.closed = true;
-    this.closeListeners.forEach((listener) => listener(info));
-  }
-}
-
-class HttpSocketBridge<Recv, Send, Close = SocketCloseInfo> implements ApiChannelBridge<Recv, Send, Close> {
-  readonly mode = "http";
-  readonly routeId: string;
-  readonly ready: Promise<void>;
-  private readonly messageListeners = new Set<SocketMessageHandler<Recv>>();
-  private readonly closeListeners = new Set<SocketCloseHandler<Close>>();
-  private closed = false;
-
-  constructor(
-    private readonly rawSocket: WebSocket,
-    private readonly options: ChannelConnectOptions<Recv, Send, Close>,
-  ) {
-    this.routeId = options.routeId;
-    this.ready = new Promise<void>((resolve, reject) => {
-      if (rawSocket.readyState === WebSocket.OPEN) {
-        resolve();
-        return;
-      }
-      rawSocket.addEventListener("open", () => resolve(), { once: true });
-      rawSocket.addEventListener("error", (event) => reject(event), { once: true });
-    });
-
-    rawSocket.addEventListener("message", (event) => {
-      const payload = typeof event.data === "string"
-        ? JSON.parse(event.data)
-        : event.data;
-      if (this.options.connectionKind === "channel" && payload && typeof payload === "object" && "type" in payload) {
-        const envelope = payload as { type?: string; data?: unknown };
-        if (envelope.type === "close") {
-          this.emitClose((envelope.data ?? {}) as Close);
-          return;
-        }
-        if (envelope.type === "message") {
-          this.messageListeners.forEach((listener) => listener(envelope.data as Recv));
-          return;
-        }
-      }
-      this.messageListeners.forEach((listener) => listener(payload as Recv));
-    });
-    rawSocket.addEventListener("close", (event) => {
-      this.emitClose({
-        code: event.code,
-        reason: event.reason,
-      } as Close);
-    });
-    rawSocket.addEventListener("error", (event) => {
-      this.emitClose({ error: event } as Close);
-    });
-  }
-
-  onMessage(listener: SocketMessageHandler<Recv>): SocketUnsubscribe {
-    this.messageListeners.add(listener);
-    return () => {
-      this.messageListeners.delete(listener);
-    };
-  }
-
-  onClose(listener: SocketCloseHandler<Close>): SocketUnsubscribe {
-    this.closeListeners.add(listener);
-    return () => {
-      this.closeListeners.delete(listener);
-    };
-  }
-
-  async send(message: Send): Promise<void> {
-    await this.ready;
-    this.rawSocket.send(JSON.stringify(message));
-  }
-
-  async close(code?: number, reason?: string): Promise<void> {
-    await this.ready.catch(() => undefined);
-    this.rawSocket.close(code, reason);
-  }
-
-  private emitClose(info: Close): void {
-    if (this.closed) {
-      return;
-    }
-    this.closed = true;
-    this.closeListeners.forEach((listener) => listener(info));
-  }
-}
 
 export class DefaultTransport implements ApiTransport {
   protected readonly baseUrl: string;
@@ -528,11 +243,7 @@ export class DefaultTransport implements ApiTransport {
     return new HttpSocketBridge(this.connectRaw({ ...options, query: options.open ?? options.query }), options);
   }
 
-  connectBridge<Recv, Send>(options: SocketConnectOptions<Recv, Send>): ApiSocketBridge<Recv, Send> {
-    return this.openChannel(options);
-  }
-
-  connectRaw(options: SocketConnectOptions<unknown, unknown>): WebSocket {
+  protected connectRaw(options: ChannelConnectOptions<unknown, unknown, SocketCloseInfo>): WebSocket {
     return new WebSocket(this.buildWsUrl(options.path, options.query ?? options.open), options.protocols);
   }
 }

@@ -9,144 +9,144 @@ import (
 )
 
 {% macro check_field(field, receiver, number_expr, path) -%}
-{% if field.rule.get("const") %}
-{% if field.is_bytes %}
-	if err := runtimebinary.Require({{ path | code_literal }}, string({{ receiver }}) == string({{ field.const_expr }}), "const mismatch"); err != nil {
+{% if field.rule.get("const") -%}
+{% if field.is_bytes -%}
+	if err := runtimebinary.Require({{ path }}, string({{ receiver }}) == string({{ field.const_expr }}), "const mismatch"); err != nil {
 		return err
 	}
-{% elif field.is_string %}
-	if err := runtimebinary.Require({{ path | code_literal }}, {{ receiver }} == {{ field.const_expr }}, "const mismatch"); err != nil {
+{% elif field.is_string -%}
+	if err := runtimebinary.Require({{ path }}, {{ receiver }} == {{ field.const_expr }}, "const mismatch"); err != nil {
 		return err
 	}
-{% elif field.wire_type == "bool" %}
-	if err := runtimebinary.Require({{ path | code_literal }}, {{ receiver }} == {{ field.const_expr }}, "const mismatch"); err != nil {
+{% elif field.wire_type == "bool" -%}
+	if err := runtimebinary.Require({{ path }}, {{ receiver }} == {{ field.const_expr }}, "const mismatch"); err != nil {
 		return err
 	}
-{% elif field.is_signed_integer_scalar %}
-	if err := runtimebinary.Require({{ path | code_literal }}, {{ number_expr }} == int64({{ field.const_expr }}), "const mismatch"); err != nil {
+{% elif field.is_signed_integer_scalar -%}
+	if err := runtimebinary.Require({{ path }}, {{ number_expr }} == int64({{ field.const_expr }}), "const mismatch"); err != nil {
 		return err
 	}
-{% else %}
-	if err := runtimebinary.Require({{ path | code_literal }}, {{ number_expr }} == uint64({{ field.const_expr }}), "const mismatch"); err != nil {
+{% else -%}
+	if err := runtimebinary.Require({{ path }}, {{ number_expr }} == uint64({{ field.const_expr }}), "const mismatch"); err != nil {
 		return err
 	}
-{% endif %}
-{% endif %}
-{% if field.rule.get("min") and field.is_integer_scalar %}
-{% if field.is_signed_integer_scalar %}
-	if err := runtimebinary.RequireSignedRange({{ path | code_literal }}, {{ number_expr }}, {{ field.min_expr }}, int64(^uint64(0)>>1)); err != nil {
+{% endif -%}
+{% endif -%}
+{% if field.rule.get("min") and field.is_integer_scalar -%}
+{% if field.is_signed_integer_scalar -%}
+	if err := runtimebinary.RequireSignedRange({{ path }}, {{ number_expr }}, {{ field.min_expr }}, int64(^uint64(0)>>1)); err != nil {
 		return err
 	}
-{% else %}
-	if err := runtimebinary.RequireRange({{ path | code_literal }}, {{ number_expr }}, {{ field.min_expr }}, ^uint64(0)); err != nil {
+{% else -%}
+	if err := runtimebinary.RequireRange({{ path }}, {{ number_expr }}, {{ field.min_expr }}, ^uint64(0)); err != nil {
 		return err
 	}
-{% endif %}
-{% endif %}
-{% if field.rule.get("max") and field.is_integer_scalar %}
-{% if field.is_signed_integer_scalar %}
-	if err := runtimebinary.RequireSignedRange({{ path | code_literal }}, {{ number_expr }}, -int64(^uint64(0)>>1)-1, {{ field.max_expr }}); err != nil {
+{% endif -%}
+{% endif -%}
+{% if field.rule.get("max") and field.is_integer_scalar -%}
+{% if field.is_signed_integer_scalar -%}
+	if err := runtimebinary.RequireSignedRange({{ path }}, {{ number_expr }}, -int64(^uint64(0)>>1)-1, {{ field.max_expr }}); err != nil {
 		return err
 	}
-{% else %}
-	if err := runtimebinary.RequireRange({{ path | code_literal }}, {{ number_expr }}, 0, {{ field.max_expr }}); err != nil {
+{% else -%}
+	if err := runtimebinary.RequireRange({{ path }}, {{ number_expr }}, 0, {{ field.max_expr }}); err != nil {
 		return err
 	}
-{% endif %}
-{% endif %}
-{% if field.rule.get("assert") and field.is_integer_scalar %}
-	if err := runtimebinary.Require({{ path | code_literal }}, {{ number_expr }} == {{ field.assert_expr }}, "assert mismatch"); err != nil {
+{% endif -%}
+{% endif -%}
+{% if field.rule.get("assert") and field.is_integer_scalar -%}
+	if err := runtimebinary.Require({{ path }}, {{ number_expr }} == {{ field.assert_expr }}, "assert mismatch"); err != nil {
 		return err
 	}
-{% endif %}
-{% if field.bitflags_zero_mask %}
-	if err := runtimebinary.Require({{ path | code_literal }}, uint64({{ number_expr }})&{{ field.bitflags_zero_mask }} == 0, "reserved bits must be zero"); err != nil {
+{% endif -%}
+{% if field.bitflags_zero_mask -%}
+	if err := runtimebinary.Require({{ path }}, uint64({{ number_expr }})&{{ field.bitflags_zero_mask }} == 0, "reserved bits must be zero"); err != nil {
 		return err
 	}
-{% endif %}
+{% endif -%}
 {%- endmacro %}
 
 {% macro write_field(field, object) -%}
-{% set path = object.name ~ "." ~ field.name %}
-{% if field.is_hidden %}
-	if err := writer.WriteZeroes({{ path | code_literal }}, {{ field.count_expr }}); err != nil {
+{% set path = field.name | code_literal -%}
+{% if field.is_hidden -%}
+	if err := writer.WriteZeroes({{ path }}, {{ field.count_expr }}); err != nil {
 		return err
 	}
-{% elif field.is_bytes %}
-{% if field.rule.get("const") %}
-	{{ check_field(field, field.value_expr, field.numeric_value_expr, path) }}
-	if err := runtimebinary.RequireSize({{ path | code_literal }}, uint64(len({{ field.value_expr }})), uint64({{ field.count_expr }})); err != nil {
+{% elif field.is_bytes -%}
+{% if field.rule.get("const") -%}
+	{{ check_field(field, field.value_expr, field.numeric_value_expr, path) -}}
+	if err := runtimebinary.RequireSize({{ path }}, uint64(len({{ field.value_expr }})), uint64({{ field.count_expr }})); err != nil {
 		return err
 	}
-	if err := writer.WriteBytes({{ path | code_literal }}, {{ field.value_expr }}); err != nil {
+	if err := writer.WriteBytes({{ path }}, {{ field.value_expr }}); err != nil {
 		return err
 	}
-{% else %}
+{% else -%}
 	{{ field.go_name }}Count := {{ field.count_expr }}
-{% if field.rule.get("max") %}
-	if err := runtimebinary.RequireRange({{ path | code_literal }}, uint64({{ field.go_name }}Count), 0, {{ field.max_expr }}); err != nil {
+{% if field.rule.get("max") -%}
+	if err := runtimebinary.RequireRange({{ path }}, uint64({{ field.go_name }}Count), 0, {{ field.max_expr }}); err != nil {
 		return err
 	}
-{% endif %}
-	if err := runtimebinary.RequireSize({{ path | code_literal }}, uint64(len({{ field.value_expr }})), uint64({{ field.go_name }}Count)); err != nil {
+{% endif -%}
+	if err := runtimebinary.RequireSize({{ path }}, uint64(len({{ field.value_expr }})), uint64({{ field.go_name }}Count)); err != nil {
 		return err
 	}
-	if err := writer.WriteBytes({{ path | code_literal }}, {{ field.value_expr }}); err != nil {
+	if err := writer.WriteBytes({{ path }}, {{ field.value_expr }}); err != nil {
 		return err
 	}
-{% endif %}
-{% elif field.is_string %}
+{% endif -%}
+{% elif field.is_string -%}
 	{{ field.go_name }}Count := {{ field.count_expr }}
-{% if field.rule.get("max") %}
-	if err := runtimebinary.RequireRange({{ path | code_literal }}, uint64({{ field.go_name }}Count), 0, {{ field.max_expr }}); err != nil {
+{% if field.rule.get("max") -%}
+	if err := runtimebinary.RequireRange({{ path }}, uint64({{ field.go_name }}Count), 0, {{ field.max_expr }}); err != nil {
 		return err
 	}
-{% endif %}
-	if err := runtimebinary.RequireSize({{ path | code_literal }}, uint64(len({{ field.value_expr }})), uint64({{ field.go_name }}Count)); err != nil {
+{% endif -%}
+	if err := runtimebinary.RequireSize({{ path }}, uint64(len({{ field.value_expr }})), uint64({{ field.go_name }}Count)); err != nil {
 		return err
 	}
-	if err := writer.WriteString({{ path | code_literal }}, {{ field.value_expr }}); err != nil {
+	if err := writer.WriteString({{ path }}, {{ field.value_expr }}); err != nil {
 		return err
 	}
-{% elif field.is_array %}
+{% elif field.is_array -%}
 	{{ field.go_name }}Count := {{ field.count_expr }}
-{% if field.rule.get("max") %}
-	if err := runtimebinary.RequireRange({{ path | code_literal }}, uint64({{ field.go_name }}Count), 0, {{ field.max_expr }}); err != nil {
+{% if field.rule.get("max") -%}
+	if err := runtimebinary.RequireRange({{ path }}, uint64({{ field.go_name }}Count), 0, {{ field.max_expr }}); err != nil {
 		return err
 	}
-{% endif %}
-	if err := runtimebinary.RequireSize({{ path | code_literal }}, uint64(len({{ field.value_expr }})), uint64({{ field.go_name }}Count)); err != nil {
+{% endif -%}
+	if err := runtimebinary.RequireSize({{ path }}, uint64(len({{ field.value_expr }})), uint64({{ field.go_name }}Count)); err != nil {
 		return err
 	}
 	for index := range {{ field.value_expr }} {
-{% if field.is_scalar %}
-		if err := writer.{{ field.write_method }}({{ path | code_literal }}, {{ field.writer_expr(field.value_expr ~ "[index]") }}); err != nil {
-			return err
+{% if field.is_scalar -%}
+		if err := writer.{{ field.write_method }}("", {{ field.writer_expr(field.value_expr ~ "[index]") }}); err != nil {
+			return runtimebinary.WrapIndex({{ path }}, index, err)
 		}
-{% else %}
-		if err := Write{{ field.typ }}(&{{ field.value_expr }}[index], writer, state); err != nil {
-			return err
+{% else -%}
+		if err := write{{ field.single_go_type }}(&{{ field.value_expr }}[index], writer, state); err != nil {
+			return runtimebinary.WrapIndex({{ path }}, index, err)
 		}
-{% endif %}
+{% endif -%}
 	}
-{% elif field.is_scalar %}
-	{{ check_field(field, field.value_expr, field.numeric_value_expr, path) }}
-{% if field.sizeof_name and object.has_public_field(field.sizeof_name) %}
-	if err := runtimebinary.RequireSize({{ (path ~ "." ~ field.sizeof_name) | code_literal }}, uint64(len(value.{{ field.sizeof_go_name }})), uint64({{ field.value_expr }})); err != nil {
+{% elif field.is_scalar -%}
+	{{ check_field(field, field.value_expr, field.numeric_value_expr, path) -}}
+{% if field.sizeof_name and object.has_public_field(field.sizeof_name) -%}
+	if err := runtimebinary.RequireSize({{ (field.name ~ "." ~ field.sizeof_name) | code_literal }}, uint64(len(value.{{ field.sizeof_go_name }})), uint64({{ field.value_expr }})); err != nil {
 		return err
 	}
-{% endif %}
-	if err := writer.{{ field.write_method }}({{ path | code_literal }}, {{ field.writer_expr(field.value_expr) }}); err != nil {
+{% endif -%}
+	if err := writer.{{ field.write_method }}({{ path }}, {{ field.writer_expr(field.value_expr) }}); err != nil {
 		return err
 	}
-{% if field.is_integer_scalar %}
+{% if field.is_integer_scalar -%}
 	state.{{ field.go_name }} = int64({{ field.value_expr }})
-{% endif %}
-{% else %}
-	if err := Write{{ field.typ }}(&{{ field.value_expr }}, writer, state); err != nil {
-		return err
+{% endif -%}
+{% else -%}
+	if err := write{{ field.single_go_type }}(&{{ field.value_expr }}, writer, state); err != nil {
+		return runtimebinary.WrapField({{ path }}, err)
 	}
-{% endif %}
+{% endif -%}
 {%- endmacro %}
 
 {% for schema in binary_schemas %}
@@ -222,14 +222,14 @@ func New{{ schema.go_type }}Body(contentLength int64, write func(*runtimebinary.
 	return body
 }
 
-type binaryState struct {
+type {{ schema.state_type }} struct {
 {% for field_name in schema.state_fields_go %}	{{ field_name }} int64
 {% endfor %}}
 
 func Write{{ schema.go_type }}(value *{{ schema.go_type }}, writer *runtimebinary.Writer) error {
-	state := &binaryState{}
-{% for section in schema.sections %}	if err := Write{{ section.go_type }}(&value.{{ schema.packet_field_name(section.name) }}, writer, state); err != nil {
-		return err
+	state := &{{ schema.state_type }}{}
+{% for section in schema.sections %}	if err := write{{ section.go_type }}(&value.{{ schema.packet_field_name(section.name) }}, writer, state); err != nil {
+		return runtimebinary.WrapField("{{ schema.name }}.{{ schema.packet_field_name(section.name) | lower }}", err)
 	}
 {% endfor %}	return nil
 }
@@ -239,8 +239,15 @@ type {{ object.go_type }} struct {
 {% for field in object.data_fields %}	{{ field.go_name }} {{ field.go_type }}
 {% endfor %}}
 
-func Write{{ object.go_type }}(value *{{ object.go_type }}, writer *runtimebinary.Writer, state *binaryState) error {
-{% for field in object.fields %}{{ write_field(field, object) }}
+func Write{{ object.go_type }}(value *{{ object.go_type }}, writer *runtimebinary.Writer, state *{{ schema.state_type }}) error {
+	if err := write{{ object.go_type }}(value, writer, state); err != nil {
+		return runtimebinary.WrapField({{ object.name | code_literal }}, err)
+	}
+	return nil
+}
+
+func write{{ object.go_type }}(value *{{ object.go_type }}, writer *runtimebinary.Writer, state *{{ schema.state_type }}) error {
+{% for field in object.fields %}{{ write_field(field, object) -}}
 {% endfor %}	return nil
 }
 

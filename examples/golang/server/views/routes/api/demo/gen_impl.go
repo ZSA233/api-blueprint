@@ -24,10 +24,6 @@ func (impl *_GenRouter) Delete(ctx *CTX_Delete, req *REQ_Delete) (rsp *RSP_Delet
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (impl *_GenRouter) Ws(ctx *CTX_Ws, req *REQ_Ws) (rsp *RSP_Ws, err error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
 func (impl *_GenRouter) SweepEvents(
 	ctx *CTX_SweepEvents,
 	stream STREAM_SweepEvents,

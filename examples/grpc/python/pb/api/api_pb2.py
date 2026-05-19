@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rapi/api.proto\x12\x0f\x65xample.api.api2\x0c\n\nApiServiceB)Z\'example.com/project/grpc/go/api/api;apib\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rapi/api.proto\x12\x0f\x65xample.api.api\"[\n\x13HelloChannelMessage\x12\x36\n\x04type\x18\x01 \x01(\x0e\x32(.example.api.api.HelloChannelMsgTypeEnum\x12\x0c\n\x04\x64\x61ta\x18\x02 \x01(\t*\x98\x02\n\x17HelloChannelMsgTypeEnum\x12\'\n#HELLOCHANNELMSGTYPEENUM_UNSPECIFIED\x10\x00\x12 \n\x1cHELLOCHANNELMSGTYPEENUM_PING\x10\x01\x12 \n\x1cHELLOCHANNELMSGTYPEENUM_PONG\x10\x02\x12 \n\x1cHELLOCHANNELMSGTYPEENUM_JOIN\x10\x03\x12!\n\x1dHELLOCHANNELMSGTYPEENUM_LEAVE\x10\x04\x12&\n\"HELLOCHANNELMSGTYPEENUM_FORGEROUND\x10\x05\x12#\n\x1fHELLOCHANNELMSGTYPEENUM_UPGRADE\x10\x06\x32l\n\nApiService\x12^\n\x0cHelloChannel\x12$.example.api.api.HelloChannelMessage\x1a$.example.api.api.HelloChannelMessage(\x01\x30\x01\x42)Z\'example.com/project/grpc/go/api/api;apib\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -32,6 +32,10 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'api.api_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'Z\'example.com/project/grpc/go/api/api;api'
-  _globals['_APISERVICE']._serialized_start=34
-  _globals['_APISERVICE']._serialized_end=46
+  _globals['_HELLOCHANNELMSGTYPEENUM']._serialized_start=128
+  _globals['_HELLOCHANNELMSGTYPEENUM']._serialized_end=408
+  _globals['_HELLOCHANNELMESSAGE']._serialized_start=34
+  _globals['_HELLOCHANNELMESSAGE']._serialized_end=125
+  _globals['_APISERVICE']._serialized_start=410
+  _globals['_APISERVICE']._serialized_end=518
 # @@protoc_insertion_point(module_scope)

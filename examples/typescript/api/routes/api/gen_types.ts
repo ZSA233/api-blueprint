@@ -4,5 +4,5 @@
 export {};
 // Route Contracts
 
-export type WsResponse = void;
+export type HelloChannelResponse = void;
 

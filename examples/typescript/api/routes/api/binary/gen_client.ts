@@ -4,11 +4,12 @@
 
 import type * as Types from "./types";
 import type * as Shared from "../../../runtime/types";
-import { ApiChannelBridge, ApiClientConfig, ApiSocketBridge, ApiStreamBridge, BaseClient } from "../../../runtime/client";
+import { ApiChannelBridge, ApiClientConfig, ApiStreamBridge, BaseClient } from "../../../runtime/client";
 
 import type { ApiBinaryBody } from "../../../runtime/binary/index";
 import {
   DemoPacketWire,
+  AuditPacketWire,
 } from "./gen_binary";
 
 export class BinaryClient extends BaseClient {
@@ -60,6 +61,58 @@ export class BinaryClient extends BaseClient {
       namespace: "binary",
       query: request.query as unknown as Record<string, unknown> | undefined,
       binary: DemoPacketWire.toBinaryBody(request.binary),
+      headers: request.headers,
+      init,
+      responseType: "json",
+      responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+      timeoutMs,
+    });
+  }
+
+  /**
+   * Binary audit packet example
+
+   * Tags: api
+   */
+
+  async auditPacket(
+    request: {
+      query?: Types.AuditPacketQuery;
+      binary: Types.AuditPacket;
+      headers?: Record<string, string>;
+    },
+    init?: RequestInit,
+    timeoutMs?: number,
+  ): Promise<Types.AuditPacketResponse>;
+
+  async auditPacket(
+    request: {
+      query?: Types.AuditPacketQuery;
+      binary: ApiBinaryBody;
+      headers?: Record<string, string>;
+    },
+    init?: RequestInit,
+    timeoutMs?: number,
+  ): Promise<Types.AuditPacketResponse>;
+
+  async auditPacket(
+    request: {
+      query?: Types.AuditPacketQuery;
+      binary: Types.AuditPacket | ApiBinaryBody;
+      headers?: Record<string, string>;
+    },
+    init: RequestInit = {},
+    timeoutMs?: number,
+  ): Promise<Types.AuditPacketResponse> {
+    return this.request<Types.AuditPacketResponse>({
+      routeId: "api.binary.post.auditpacket",
+      method: "POST",
+      path: "/api/binary/audit-packet",
+      service: "BinaryService",
+      operation: "AuditPacket",
+      namespace: "binary",
+      query: request.query as unknown as Record<string, unknown> | undefined,
+      binary: AuditPacketWire.toBinaryBody(request.binary),
       headers: request.headers,
       init,
       responseType: "json",

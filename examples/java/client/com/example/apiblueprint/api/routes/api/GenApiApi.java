@@ -4,7 +4,6 @@ package com.example.apiblueprint.api.routes.api;
 import com.example.apiblueprint.api.runtime.ApiChannelBridge;
 import com.example.apiblueprint.api.runtime.ApiRequest;
 import com.example.apiblueprint.api.runtime.ApiResponseEnvelope;
-import com.example.apiblueprint.api.runtime.ApiSocketBridge;
 import com.example.apiblueprint.api.runtime.ApiStreamBridge;
 import com.example.apiblueprint.api.runtime.ApiTransport;
 
@@ -18,11 +17,11 @@ public class GenApiApi {
         this.transport = transport;
     }
 
-    public ApiSocketBridge<Object, Object> connectWs(
+    public ApiChannelBridge<com.example.apiblueprint.api.runtime.ApiTypes.HelloChannelMessage, com.example.apiblueprint.api.runtime.ApiTypes.HelloChannelMessage, Object> openHelloChannel(
     ) {
         ApiRequest<Object> request = new ApiRequest<>(
-            "api.api.ws.ws",
-            "WS",
+            "api.api.channel.ws",
+            "CHANNEL",
             "/api/ws",
             null,
             null,
@@ -33,7 +32,7 @@ public class GenApiApi {
             "application/json",
             Map.of()
         );
-        return transport.connectSocket(request);
+        return transport.openChannel(request);
     }
 
 }

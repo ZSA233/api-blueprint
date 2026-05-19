@@ -17,6 +17,7 @@ import kotlinx.serialization.json.JsonNull
 {% endif %}
 {% if binary_schemas %}
 import {{ bp.root_package }}.runtime.binary.ApiBinaryBody
+import {{ bp.root_package }}.runtime.binary.BinaryEncodeException
 import {{ bp.root_package }}.runtime.binary.BinaryEndian
 import {{ bp.root_package }}.runtime.binary.BinaryWriter
 import {{ bp.root_package }}.runtime.binary.EncodedBinaryBlock
@@ -25,6 +26,8 @@ import {{ bp.root_package }}.runtime.binary.binarySize
 import {{ bp.root_package }}.runtime.binary.requireBinary
 import {{ bp.root_package }}.runtime.binary.requireRange
 import {{ bp.root_package }}.runtime.binary.requireSize
+import {{ bp.root_package }}.runtime.binary.wrapBinaryField
+import {{ bp.root_package }}.runtime.binary.wrapBinaryIndex
 import okio.ByteString
 {% endif %}
 {% for proto in protos %}

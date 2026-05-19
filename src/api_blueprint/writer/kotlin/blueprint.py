@@ -56,7 +56,6 @@ class KotlinRoute:
         self.group_class = to_kotlin_type_name(self.group_slug, fallback="Root") + "Api"
         self.url = self.protocol.route.url
         self.http_methods = list(self.protocol.route.http_methods)
-        self.supports_ws = self.protocol.route.supports_ws
         self.supports_stream = self.protocol.route.supports_stream
         self.supports_channel = self.protocol.route.supports_channel
         if self.is_rpc and len(self.http_methods) != 1:
@@ -76,11 +75,6 @@ class KotlinRoute:
         self.response_payload_type = self._payload_response_type()
         self.response_type = self.response_payload_type
         self.transport_response_type = self.response_payload_type
-        self.ws_recv_proto = self._ensure_message_contract(self.protocol.server_message, "WsRecv")
-        self.ws_send_proto = self._ensure_message_contract(self.protocol.client_message, "WsSend")
-        if self.supports_ws:
-            self.ws_recv_proto = self._ensure_ws_models(self.protocol.recvs, "WsRecv") or self.ws_recv_proto
-            self.ws_send_proto = self._ensure_ws_models(self.protocol.sends, "WsSend") or self.ws_send_proto
         self.server_message_proto = self._ensure_message_contract(self.protocol.server_message, "ServerMessage")
         self.client_message_proto = self._ensure_message_contract(self.protocol.client_message, "ClientMessage")
         self.close_proto = self._ensure_model(self.protocol.close_model, "Close")
@@ -88,7 +82,7 @@ class KotlinRoute:
 
     @property
     def is_rpc(self) -> bool:
-        return not (self.supports_ws or self.supports_stream or self.supports_channel)
+        return not (self.supports_stream or self.supports_channel)
 
     @property
     def http_method(self) -> str:
@@ -152,14 +146,6 @@ class KotlinRoute:
         return self.transport_response_type.serializer_expr()
 
     @property
-    def ws_recv_type(self) -> str:
-        return self.ws_recv_proto.name if self.ws_recv_proto else "kotlinx.serialization.json.JsonElement"
-
-    @property
-    def ws_send_type(self) -> str:
-        return self.ws_send_proto.name if self.ws_send_proto else "kotlinx.serialization.json.JsonElement"
-
-    @property
     def server_message_type(self) -> str:
         return self.server_message_proto.name if self.server_message_proto else "kotlinx.serialization.json.JsonElement"
 
@@ -170,10 +156,6 @@ class KotlinRoute:
     @property
     def close_type(self) -> str:
         return self.close_proto.name if self.close_proto else "SocketCloseInfo"
-
-    @property
-    def connect_method_name(self) -> str:
-        return to_kotlin_property_name(self.protocol.route.ws.connect_method if self.protocol.route.ws else f"connect{self.func_name}")
 
     @property
     def subscribe_method_name(self) -> str:
@@ -206,22 +188,6 @@ class KotlinRoute:
         tag = "route" if is_route_model else "shared"
         module = self.group_slug if is_route_model else "shared"
         return self.registry.ensure(model, name=name, tag=tag, module=module)
-
-    def _ensure_ws_models(
-        self,
-        models: tuple[Union[Type[Model], Model], ...],
-        suffix: str,
-    ) -> Optional[KotlinProto]:
-        if not models:
-            return None
-        if len(models) == 1:
-            return self._ensure_model(models[0], suffix)
-        return self.registry.register_alias(
-            f"{self.group_class.removesuffix('Api')}{self.func_name}{suffix}",
-            KotlinResolvedType("kotlinx.serialization.json.JsonElement"),
-            tag="route",
-            module=self.group_slug,
-        )
 
     def _ensure_message_contract(self, contract: MessageContract | None, suffix: str) -> Optional[KotlinProto]:
         if contract is None:

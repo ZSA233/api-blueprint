@@ -1,7 +1,10 @@
-.PHONY: sync test example-validation example-compile-check example-refresh example-golang-suite example-java-suite wails-hello-dev wails-hello-check wails-hello-compile-check wails-hello-refresh build release-tag-check release-preflight release-local release-install-check release-version-show release-version-rc release-version-stable
+.PHONY: sync test example-validation example-compile-check example-refresh example-golang-suite example-java-suite benchmark-binary wails-hello-dev wails-hello-check wails-hello-compile-check wails-hello-refresh build release-tag-check release-preflight release-local release-install-check release-version-show release-version-rc release-version-stable
 
 RELEASE_TAG ?=
 DIST_DIR ?= dist
+BINARY_BENCH_TARGET ?= go
+BINARY_BENCH_COUNT ?= 10000
+BINARY_BENCH_COMPARE_HEAD ?= 0
 
 sync:
 	uv sync --dev
@@ -23,6 +26,9 @@ example-golang-suite:
 
 example-java-suite:
 	uv run python scripts/example_validation.py --scope blueprint --mode java-suite
+
+benchmark-binary:
+	uv run python scripts/benchmark_binary.py --target "$(BINARY_BENCH_TARGET)" --count "$(BINARY_BENCH_COUNT)" $(if $(filter 1,$(BINARY_BENCH_COMPARE_HEAD)),--compare-head)
 
 wails-hello-dev:
 	uv run api-gen generate -c examples/wails-hello/api-blueprint.toml --target hello.v3

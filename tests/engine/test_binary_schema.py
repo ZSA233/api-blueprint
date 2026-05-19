@@ -48,6 +48,21 @@ def test_markdown_binary_schema_parses_strict_heading_tables_and_renders_html() 
     assert "<table>" in schema.rendered_html
 
 
+def test_markdown_binary_schema_parses_fenced_metadata_block() -> None:
+    fenced_schema = VALID_SCHEMA.replace(
+        "endian: little\ncontent-type: application/octet-stream\ncontent-encoding: identity,gzip",
+        "```yaml\nendian: little\ncontent-type: application/octet-stream\ncontent-encoding: identity,gzip\n```",
+    )
+
+    schema = parse_binary_schema(fenced_schema, source_path="demo_packet.md")
+
+    assert schema.name == "DemoPacket"
+    assert schema.endian == "little"
+    assert schema.content_type == "application/octet-stream"
+    assert schema.content_encoding == ("identity", "gzip")
+    assert schema.sections[0].name == "DemoPacketHeader"
+
+
 def test_markdown_binary_schema_rejects_dynamic_count_without_bound() -> None:
     bad_schema = VALID_SCHEMA.replace("max=1024,sizeof=payload", "sizeof=payload")
 

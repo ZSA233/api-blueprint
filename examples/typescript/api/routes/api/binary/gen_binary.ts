@@ -13,16 +13,18 @@ import {
   requireBinary,
   requireRange,
   requireSize,
+  wrapBinaryField,
+  wrapBinaryIndex,
 } from "../../../runtime/binary/index";
 
-export type DemoKind = number;
-export const DemoKindValues = {
+export type DemoPacketKind = number;
+export const DemoPacketKindValues = {
   Metric: 1,
   Debug: 2,
 } as const;
 
-export type DemoFlags = number;
-export const DemoFlagsValues = {
+export type DemoPacketFlags = number;
+export const DemoPacketFlagsValues = {
   HasPayload: 1,
   HasScores: 2,
   FastPath: 4,
@@ -39,7 +41,7 @@ export function DemoPacketToBinaryBody(value: DemoPacket | ApiBinaryBody): ApiBi
   return DemoPacketWire.toBinaryBody(value);
 }
 
-interface BinaryState {
+interface DemoPacketBinaryState {
   version: number;
   kind: number;
   flags: number;
@@ -53,7 +55,7 @@ interface BinaryState {
   label_len: number;
 }
 
-function newBinaryState(): BinaryState {
+function newDemoPacketBinaryState(): DemoPacketBinaryState {
   return {
     version: 0,
     kind: 0,
@@ -70,7 +72,7 @@ function newBinaryState(): BinaryState {
 }
 
 export interface DemoPacketHeader {
-  flags: DemoFlags;
+  flags: DemoPacketFlags;
   short_code: number;
   signed_delta: number;
   item_count: number;
@@ -112,7 +114,7 @@ export const DemoPacketWire = {
   },
 
   write(value: DemoPacket, writer: BinaryWriter): void {
-    const state = newBinaryState();
+    const state = newDemoPacketBinaryState();
     writeDemoPacketHeader(value.header, writer, state, "DemoPacket.header");
     writeDemoPacketBody(value.body, writer, state, "DemoPacket.body");
   },
@@ -121,64 +123,101 @@ export const DemoPacketWire = {
 export function writeDemoPacketHeader(
   value: DemoPacketHeader,
   writer: BinaryWriter,
-  state: BinaryState = newBinaryState(),
+  state: DemoPacketBinaryState = newDemoPacketBinaryState(),
   path = "DemoPacketHeader",
 ): void {
-  requireBinary("DemoPacketHeader.magic", bytesEqual(new Uint8Array([65, 66, 80, 49]), new Uint8Array([65, 66, 80, 49])), "const mismatch");
-  requireSize("DemoPacketHeader.magic", binarySize(new Uint8Array([65, 66, 80, 49])), 4);
-  writer.writeBytes("DemoPacketHeader.magic", new Uint8Array([65, 66, 80, 49]));
-  requireBinary("DemoPacketHeader.version", 1 === 1, "const mismatch");
-  writer.writeU16("DemoPacketHeader.version", 1);
-  state.version = Number(1);
-  requireBinary("DemoPacketHeader.kind", 1 === 1, "const mismatch");
-  writer.writeU16("DemoPacketHeader.kind", 1);
-  state.kind = Number(1);
-  requireRange("DemoPacketHeader.flags", value.flags, 0, Number.MAX_SAFE_INTEGER);
-  requireBinary("DemoPacketHeader.flags", (Number(value.flags) & 4294967264) === 0, "reserved bits must be zero");
-  writer.writeU32("DemoPacketHeader.flags", value.flags);
-  state.flags = Number(value.flags);
-  writer.writeZeroes("DemoPacketHeader.header_pad", 1);
-  writer.writeZeroes("DemoPacketHeader.reserved0", 2);
-  requireRange("DemoPacketHeader.short_code", value.short_code, 1, Number.MAX_SAFE_INTEGER);
-  requireRange("DemoPacketHeader.short_code", value.short_code, Number.MIN_SAFE_INTEGER, 16777215);
-  writer.writeU24("DemoPacketHeader.short_code", value.short_code);
-  state.short_code = Number(value.short_code);
-  requireRange("DemoPacketHeader.signed_delta", value.signed_delta, 0, Number.MAX_SAFE_INTEGER);
-  requireRange("DemoPacketHeader.signed_delta", value.signed_delta, Number.MIN_SAFE_INTEGER, 8388607);
-  writer.writeI24("DemoPacketHeader.signed_delta", value.signed_delta);
-  state.signed_delta = Number(value.signed_delta);
-  requireRange("DemoPacketHeader.item_count", value.item_count, 1, Number.MAX_SAFE_INTEGER);
-  requireRange("DemoPacketHeader.item_count", value.item_count, Number.MIN_SAFE_INTEGER, 8);
-  writer.writeU16("DemoPacketHeader.item_count", value.item_count);
-  state.item_count = Number(value.item_count);
-  requireRange("DemoPacketHeader.payload_len", value.payload_len, 0, Number.MAX_SAFE_INTEGER);
-  requireRange("DemoPacketHeader.payload_len", value.payload_len, Number.MIN_SAFE_INTEGER, 64);
-  writer.writeU32("DemoPacketHeader.payload_len", value.payload_len);
-  state.payload_len = Number(value.payload_len);
-  requireBinary("DemoPacketHeader.score_count", 2 === 2, "const mismatch");
-  requireRange("DemoPacketHeader.score_count", 2, Number.MIN_SAFE_INTEGER, 4);
-  writer.writeU16("DemoPacketHeader.score_count", 2);
-  state.score_count = Number(2);
+  try {
+
+    requireBinary("magic", bytesEqual(new Uint8Array([65, 66, 80, 49]), new Uint8Array([65, 66, 80, 49])), "const mismatch");
+    requireSize("magic", binarySize(new Uint8Array([65, 66, 80, 49])), 4);
+    writer.writeBytes("magic", new Uint8Array([65, 66, 80, 49]));
+
+    requireBinary("version", 1 === 1, "const mismatch");
+    writer.writeU16("version", 1);
+    state.version = Number(1);
+
+    requireBinary("kind", 1 === 1, "const mismatch");
+    writer.writeU16("kind", 1);
+    state.kind = Number(1);
+
+    requireRange("flags", value.flags, 0, Number.MAX_SAFE_INTEGER);
+    requireBinary("flags", (Number(value.flags) & 4294967264) === 0, "reserved bits must be zero");
+    writer.writeU32("flags", value.flags);
+    state.flags = Number(value.flags);
+
+    writer.writeZeroes("header_pad", 1);
+
+    writer.writeZeroes("reserved0", 2);
+
+    requireRange("short_code", value.short_code, 1, Number.MAX_SAFE_INTEGER);
+    requireRange("short_code", value.short_code, Number.MIN_SAFE_INTEGER, 16777215);
+    writer.writeU24("short_code", value.short_code);
+    state.short_code = Number(value.short_code);
+
+    requireRange("signed_delta", value.signed_delta, 0, Number.MAX_SAFE_INTEGER);
+    requireRange("signed_delta", value.signed_delta, Number.MIN_SAFE_INTEGER, 8388607);
+    writer.writeI24("signed_delta", value.signed_delta);
+    state.signed_delta = Number(value.signed_delta);
+
+    requireRange("item_count", value.item_count, 1, Number.MAX_SAFE_INTEGER);
+    requireRange("item_count", value.item_count, Number.MIN_SAFE_INTEGER, 8);
+    writer.writeU16("item_count", value.item_count);
+    state.item_count = Number(value.item_count);
+
+    requireRange("payload_len", value.payload_len, 0, Number.MAX_SAFE_INTEGER);
+    requireRange("payload_len", value.payload_len, Number.MIN_SAFE_INTEGER, 64);
+    writer.writeU32("payload_len", value.payload_len);
+    state.payload_len = Number(value.payload_len);
+
+    requireBinary("score_count", 2 === 2, "const mismatch");
+    requireRange("score_count", 2, Number.MIN_SAFE_INTEGER, 4);
+    writer.writeU16("score_count", 2);
+    state.score_count = Number(2);
+
+  } catch (error) {
+    throw wrapBinaryField(path, error);
+  }
 }
 
 export function writeDemoPacketBody(
   value: DemoPacketBody,
   writer: BinaryWriter,
-  state: BinaryState = newBinaryState(),
+  state: DemoPacketBinaryState = newDemoPacketBinaryState(),
   path = "DemoPacketBody",
 ): void {
-  const itemsCount = state.item_count;
-  requireSize("DemoPacketBody.items", binarySize(value.items), itemsCount);
-  value.items.forEach((item, index) => writeDemoPacketItem(item, writer, state, "DemoPacketBody.items" + `[${index}]`));
-  const payloadCount = state.payload_len;
-  requireSize("DemoPacketBody.payload", binarySize(value.payload), payloadCount);
-  writer.writeBytes("DemoPacketBody.payload", value.payload);
-  const scoresCount = state.score_count;
-  requireSize("DemoPacketBody.scores", binarySize(value.scores), scoresCount);
-  value.scores.forEach((item, index) => writer.writeF64("DemoPacketBody.scores" + `[${index}]`, item));
-  requireBinary("DemoPacketBody.checksum", value.checksum === state.item_count + state.payload_len, "assert mismatch");
-  writer.writeU32("DemoPacketBody.checksum", value.checksum);
-  state.checksum = Number(value.checksum);
+  try {
+
+    const itemsCount = state.item_count;
+    requireSize("items", binarySize(value.items), itemsCount);
+    value.items.forEach((item, index) => {
+    try {
+    writeDemoPacketItem(item, writer, state, "");
+    } catch (error) {
+    throw wrapBinaryIndex("items", index, error);
+    }
+    });
+
+    const payloadCount = state.payload_len;
+    requireSize("payload", binarySize(value.payload), payloadCount);
+    writer.writeBytes("payload", value.payload);
+
+    const scoresCount = state.score_count;
+    requireSize("scores", binarySize(value.scores), scoresCount);
+    value.scores.forEach((item, index) => {
+    try {
+    writer.writeF64("", item);
+    } catch (error) {
+    throw wrapBinaryIndex("scores", index, error);
+    }
+    });
+
+    requireBinary("checksum", value.checksum === state.item_count + state.payload_len, "assert mismatch");
+    writer.writeU32("checksum", value.checksum);
+    state.checksum = Number(value.checksum);
+
+  } catch (error) {
+    throw wrapBinaryField(path, error);
+  }
 }
 
 export function newDemoPacketBody_items_block(bytes: Uint8Array, count: number): EncodedBinaryBlock {
@@ -188,7 +227,7 @@ export function newDemoPacketBody_items_block(bytes: Uint8Array, count: number):
 export function writeDemoPacketBody_items_block(
   writer: BinaryWriter,
   block: EncodedBinaryBlock,
-  state: BinaryState,
+  state: DemoPacketBinaryState,
   path = "DemoPacketBody.items",
 ): void {
   const expectedCount = state.item_count;
@@ -200,7 +239,7 @@ export function writeDemoPacketBody_items_block(
 export function writeDemoPacketBody_items_fragment(
   writer: BinaryWriter,
   block: EncodedBinaryBlock,
-  state: BinaryState,
+  state: DemoPacketBinaryState,
   path = "DemoPacketBody.items",
 ): void {
   const expectedCount = state.item_count;
@@ -216,7 +255,7 @@ export function newDemoPacketBody_payload_block(bytes: Uint8Array, count: number
 export function writeDemoPacketBody_payload_block(
   writer: BinaryWriter,
   block: EncodedBinaryBlock,
-  state: BinaryState,
+  state: DemoPacketBinaryState,
   path = "DemoPacketBody.payload",
 ): void {
   const expectedCount = state.payload_len;
@@ -229,7 +268,7 @@ export function writeDemoPacketBody_payload_block(
 export function writeDemoPacketBody_payload_fragment(
   writer: BinaryWriter,
   block: EncodedBinaryBlock,
-  state: BinaryState,
+  state: DemoPacketBinaryState,
   path = "DemoPacketBody.payload",
 ): void {
   const expectedCount = state.payload_len;
@@ -246,7 +285,7 @@ export function newDemoPacketBody_scores_block(bytes: Uint8Array, count: number)
 export function writeDemoPacketBody_scores_block(
   writer: BinaryWriter,
   block: EncodedBinaryBlock,
-  state: BinaryState,
+  state: DemoPacketBinaryState,
   path = "DemoPacketBody.scores",
 ): void {
   const expectedCount = state.score_count;
@@ -259,7 +298,7 @@ export function writeDemoPacketBody_scores_block(
 export function writeDemoPacketBody_scores_fragment(
   writer: BinaryWriter,
   block: EncodedBinaryBlock,
-  state: BinaryState,
+  state: DemoPacketBinaryState,
   path = "DemoPacketBody.scores",
 ): void {
   const expectedCount = state.score_count;
@@ -272,37 +311,47 @@ export function writeDemoPacketBody_scores_fragment(
 export function writeDemoPacketItem(
   value: DemoPacketItem,
   writer: BinaryWriter,
-  state: BinaryState = newBinaryState(),
-  path = "DemoPacketItem",
+  state: DemoPacketBinaryState = newDemoPacketBinaryState(),
+  path = "Item",
 ): void {
-  requireRange("DemoPacketItem.id", value.id, 1, Number.MAX_SAFE_INTEGER);
-  requireRange("DemoPacketItem.id", value.id, Number.MIN_SAFE_INTEGER, 999);
-  writer.writeU32("DemoPacketItem.id", value.id);
-  state.id = Number(value.id);
-  writer.writeBool("DemoPacketItem.enabled", value.enabled);
-  writer.writeF64("DemoPacketItem.value", value.value);
-  requireRange("DemoPacketItem.label_len", value.label_len, 1, Number.MAX_SAFE_INTEGER);
-  requireRange("DemoPacketItem.label_len", value.label_len, Number.MIN_SAFE_INTEGER, 16);
-  requireSize("DemoPacketItem.label_len.label", binarySize(value.label), value.label_len);
-  writer.writeU8("DemoPacketItem.label_len", value.label_len);
-  state.label_len = Number(value.label_len);
-  const labelCount = state.label_len;
-  requireSize("DemoPacketItem.label", binarySize(value.label), labelCount);
-  writer.writeBytes("DemoPacketItem.label", value.label);
+  try {
+
+    requireRange("id", value.id, 1, Number.MAX_SAFE_INTEGER);
+    requireRange("id", value.id, Number.MIN_SAFE_INTEGER, 999);
+    writer.writeU32("id", value.id);
+    state.id = Number(value.id);
+
+    writer.writeBool("enabled", value.enabled);
+
+    writer.writeF64("value", value.value);
+
+    requireRange("label_len", value.label_len, 1, Number.MAX_SAFE_INTEGER);
+    requireRange("label_len", value.label_len, Number.MIN_SAFE_INTEGER, 16);
+    requireSize("label_len.label", binarySize(value.label), value.label_len);
+    writer.writeU8("label_len", value.label_len);
+    state.label_len = Number(value.label_len);
+
+    const labelCount = state.label_len;
+    requireSize("label", binarySize(value.label), labelCount);
+    writer.writeBytes("label", value.label);
+
+  } catch (error) {
+    throw wrapBinaryField(path, error);
+  }
 }
 
 export function newDemoPacketItem_label_block(bytes: Uint8Array, count: number): EncodedBinaryBlock {
-  return new EncodedBinaryBlock("DemoPacketItem.label", count, bytes);
+  return new EncodedBinaryBlock("Item.label", count, bytes);
 }
 
 export function writeDemoPacketItem_label_block(
   writer: BinaryWriter,
   block: EncodedBinaryBlock,
-  state: BinaryState,
-  path = "DemoPacketItem.label",
+  state: DemoPacketBinaryState,
+  path = "Item.label",
 ): void {
   const expectedCount = state.label_len;
-  requireBinary(path, block.field === "DemoPacketItem.label", `block field ${block.field} does not match DemoPacketItem.label`);
+  requireBinary(path, block.field === "Item.label", `block field ${block.field} does not match Item.label`);
   requireSize(`${path}.count`, block.count, expectedCount);
   requireSize(`${path}.bytes`, block.byteSize, block.count);
   writer.writeBlock(path, block);
@@ -311,13 +360,200 @@ export function writeDemoPacketItem_label_block(
 export function writeDemoPacketItem_label_fragment(
   writer: BinaryWriter,
   block: EncodedBinaryBlock,
-  state: BinaryState,
-  path = "DemoPacketItem.label",
+  state: DemoPacketBinaryState,
+  path = "Item.label",
 ): void {
   const expectedCount = state.label_len;
-  requireBinary(path, block.field === "DemoPacketItem.label", `block field ${block.field} does not match DemoPacketItem.label`);
+  requireBinary(path, block.field === "Item.label", `block field ${block.field} does not match Item.label`);
   requireRange(`${path}.count`, block.count, 0, expectedCount);
   requireSize(`${path}.bytes`, block.byteSize, block.count);
   writer.writeBlock(path, block);
+}
+
+export type AuditPacketKind = number;
+export const AuditPacketKindValues = {
+  Metric: 1,
+  Audit: 2,
+} as const;
+
+export type AuditPacketFlags = number;
+export const AuditPacketFlagsValues = {
+  HasItems: 1,
+  Mode: 6,
+  Reserved: 4294967288,
+} as const;
+
+export interface AuditPacket {
+  header: AuditPacketHeader;
+  body: AuditPacketBody;
+}
+
+export function AuditPacketToBinaryBody(value: AuditPacket | ApiBinaryBody): ApiBinaryBody {
+  return AuditPacketWire.toBinaryBody(value);
+}
+
+interface AuditPacketBinaryState {
+  kind: number;
+  flags: number;
+  item_count: number;
+  checksum: number;
+  id: number;
+  code: number;
+}
+
+function newAuditPacketBinaryState(): AuditPacketBinaryState {
+  return {
+    kind: 0,
+    flags: 0,
+    item_count: 0,
+    checksum: 0,
+    id: 0,
+    code: 0,
+  };
+}
+
+export interface AuditPacketHeader {
+  flags: AuditPacketFlags;
+  item_count: number;
+}
+
+export interface AuditPacketBody {
+  items: AuditPacketItem[];
+  checksum: number;
+}
+
+export interface AuditPacketItem {
+  id: number;
+  code: number;
+}
+
+export const AuditPacketWire = {
+  CONTENT_TYPE: "application/octet-stream",
+
+  body(options: { contentLength?: number; write: (writer: BinaryWriter) => void }): ApiBinaryBody {
+    return new StreamingBinaryBody({
+      contentType: "application/octet-stream",
+      contentLength: options.contentLength,
+      endian: "little",
+      write: options.write,
+    });
+  },
+
+  toBinaryBody(value: AuditPacket | ApiBinaryBody): ApiBinaryBody {
+    if (isApiBinaryBody(value)) {
+      return value;
+    }
+    return this.body({ write: (writer) => this.write(value, writer) });
+  },
+
+  write(value: AuditPacket, writer: BinaryWriter): void {
+    const state = newAuditPacketBinaryState();
+    writeAuditPacketHeader(value.header, writer, state, "AuditPacket.header");
+    writeAuditPacketBody(value.body, writer, state, "AuditPacket.body");
+  },
+};
+
+export function writeAuditPacketHeader(
+  value: AuditPacketHeader,
+  writer: BinaryWriter,
+  state: AuditPacketBinaryState = newAuditPacketBinaryState(),
+  path = "AuditPacketHeader",
+): void {
+  try {
+
+    requireBinary("kind", 2 === 2, "const mismatch");
+    writer.writeU16("kind", 2);
+    state.kind = Number(2);
+
+    requireRange("flags", value.flags, 0, Number.MAX_SAFE_INTEGER);
+    requireBinary("flags", (Number(value.flags) & 4294967288) === 0, "reserved bits must be zero");
+    writer.writeU32("flags", value.flags);
+    state.flags = Number(value.flags);
+
+    requireRange("item_count", value.item_count, 1, Number.MAX_SAFE_INTEGER);
+    requireRange("item_count", value.item_count, Number.MIN_SAFE_INTEGER, 4);
+    writer.writeU16("item_count", value.item_count);
+    state.item_count = Number(value.item_count);
+
+  } catch (error) {
+    throw wrapBinaryField(path, error);
+  }
+}
+
+export function writeAuditPacketBody(
+  value: AuditPacketBody,
+  writer: BinaryWriter,
+  state: AuditPacketBinaryState = newAuditPacketBinaryState(),
+  path = "AuditPacketBody",
+): void {
+  try {
+
+    const itemsCount = state.item_count;
+    requireSize("items", binarySize(value.items), itemsCount);
+    value.items.forEach((item, index) => {
+    try {
+    writeAuditPacketItem(item, writer, state, "");
+    } catch (error) {
+    throw wrapBinaryIndex("items", index, error);
+    }
+    });
+
+    requireBinary("checksum", value.checksum === state.item_count, "assert mismatch");
+    writer.writeU32("checksum", value.checksum);
+    state.checksum = Number(value.checksum);
+
+  } catch (error) {
+    throw wrapBinaryField(path, error);
+  }
+}
+
+export function newAuditPacketBody_items_block(bytes: Uint8Array, count: number): EncodedBinaryBlock {
+  return new EncodedBinaryBlock("AuditPacketBody.items", count, bytes);
+}
+
+export function writeAuditPacketBody_items_block(
+  writer: BinaryWriter,
+  block: EncodedBinaryBlock,
+  state: AuditPacketBinaryState,
+  path = "AuditPacketBody.items",
+): void {
+  const expectedCount = state.item_count;
+  requireBinary(path, block.field === "AuditPacketBody.items", `block field ${block.field} does not match AuditPacketBody.items`);
+  requireSize(`${path}.count`, block.count, expectedCount);
+  writer.writeBlock(path, block);
+}
+
+export function writeAuditPacketBody_items_fragment(
+  writer: BinaryWriter,
+  block: EncodedBinaryBlock,
+  state: AuditPacketBinaryState,
+  path = "AuditPacketBody.items",
+): void {
+  const expectedCount = state.item_count;
+  requireBinary(path, block.field === "AuditPacketBody.items", `block field ${block.field} does not match AuditPacketBody.items`);
+  requireRange(`${path}.count`, block.count, 0, expectedCount);
+  writer.writeBlock(path, block);
+}
+
+export function writeAuditPacketItem(
+  value: AuditPacketItem,
+  writer: BinaryWriter,
+  state: AuditPacketBinaryState = newAuditPacketBinaryState(),
+  path = "Item",
+): void {
+  try {
+
+    requireRange("id", value.id, 1, Number.MAX_SAFE_INTEGER);
+    writer.writeU32("id", value.id);
+    state.id = Number(value.id);
+
+    requireRange("code", value.code, 1, Number.MAX_SAFE_INTEGER);
+    requireRange("code", value.code, Number.MIN_SAFE_INTEGER, 999);
+    writer.writeU16("code", value.code);
+    state.code = Number(value.code);
+
+  } catch (error) {
+    throw wrapBinaryField(path, error);
+  }
 }
 

@@ -5,9 +5,9 @@ export {};
 
 import type {
   ApiHelloMap,
+  HelloChannelMsgTypeEnum,
   HelloWayEnum,
   MapEnum,
-  WsMsgTypeEnum,
 } from "../../../runtime/types";
 
 // Route Contracts
@@ -20,7 +20,7 @@ export interface AbcQuery {
   /** arg2 */
   arg2?: number;
   /** 消息类型 */
-  type: WsMsgTypeEnum;
+  type: HelloChannelMsgTypeEnum;
 }
 
 export type AbcResponse = Record<string, ApiHelloMap>;

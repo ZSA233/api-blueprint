@@ -4,6 +4,20 @@
 export {};
 // Route Contracts
 
+export interface AuditPacketQuery {
+  /** trace id */
+  trace?: string;
+}
+
+export interface AuditPacketResponse {
+  /** trace id */
+  trace: string;
+  /** item count */
+  item_count: number;
+  /** checksum */
+  checksum: number;
+}
+
 export interface PacketQuery {
   /** trace id */
   trace?: string;

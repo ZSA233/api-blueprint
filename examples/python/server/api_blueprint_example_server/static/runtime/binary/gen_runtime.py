@@ -8,9 +8,11 @@ from typing import Protocol
 
 
 class BinaryEncodeError(ValueError):
-    def __init__(self, path: str, message: str):
+    def __init__(self, path: str, message: str, detail: str | None = None):
         self.path = path
-        super().__init__(f"{path}: {message}" if path else message)
+        self.message = message
+        self.detail = detail if detail is not None else f"{path}: {message}" if path else message
+        super().__init__(self.detail)
 
 
 class ApiBinaryBody(Protocol):
@@ -144,6 +146,28 @@ class BinaryWriter:
 
 def is_api_binary_body(value: object) -> bool:
     return hasattr(value, "write_to") and hasattr(value, "to_bytes")
+
+
+def join_binary_path(path: str, field: str) -> str:
+    if not path:
+        return field
+    if not field:
+        return path
+    return f"{path}.{field}"
+
+
+def index_binary_path(path: str, index: int) -> str:
+    return f"{path}[{index}]"
+
+
+def wrap_binary_field(path: str, error: BaseException) -> BinaryEncodeError:
+    if isinstance(error, BinaryEncodeError):
+        return BinaryEncodeError(join_binary_path(path, error.path), error.message)
+    return BinaryEncodeError(path, str(error))
+
+
+def wrap_binary_index(path: str, index: int, error: BaseException) -> BinaryEncodeError:
+    return wrap_binary_field(index_binary_path(path, index), error)
 
 
 def require_binary(path: str, condition: bool, message: str) -> None:

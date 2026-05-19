@@ -9,12 +9,6 @@ import (
 	binaryruntime "{{ binary_runtime_imports | safe }}"
 )
 
-type _binaryState struct {
-{% for field in binary_state_fields %}
-	{{ field.go_name }} uint64
-{% endfor %}
-}
-
 {% macro check_field(field) -%}
 {% if field.const_value %}
 {% if field.is_bytes %}
@@ -125,7 +119,7 @@ type _binaryState struct {
 	}
 {% else %}
 	for i := range out.{{ field.go_name }} {
-		if err := read{{ field.typ }}(reader, state, &out.{{ field.go_name }}[i]); err != nil {
+		if err := read{{ field.single_go_type }}(reader, state, &out.{{ field.go_name }}[i]); err != nil {
 			return binaryruntime.WrapIndex({{ field.name | code_literal }}, i, err)
 		}
 	}
@@ -142,7 +136,7 @@ type _binaryState struct {
 {% endif %}
 {{ check_field(field) }}
 {% else %}
-	if err := read{{ field.typ }}(reader, state, &out.{{ field.go_name }}); err != nil {
+	if err := read{{ field.single_go_type }}(reader, state, &out.{{ field.go_name }}); err != nil {
 		return binaryruntime.WrapField({{ field.name | code_literal }}, err)
 	}
 {{ check_field(field) }}
@@ -207,9 +201,15 @@ type {{ schema.name }} struct {
 {% endfor %}
 }
 
+type {{ schema.state_type }} struct {
+{% for field in schema.state_fields %}
+	{{ field.go_name }} uint64
+{% endfor %}
+}
+
 func Parse{{ schema.name }}(r io.Reader) (*{{ schema.name }}, error) {
 	reader := binaryruntime.NewReader(r, {{ schema.byte_order }})
-	state := &_binaryState{}
+	state := &{{ schema.state_type }}{}
 	var out {{ schema.name }}
 {% for section in schema.sections %}
 	if err := read{{ section.name }}(reader, state, &out.{{ schema.packet_field_name(section.name) }}); err != nil {
@@ -235,7 +235,7 @@ type {{ object.name }} struct {
 {% endfor %}
 }
 
-func read{{ object.name }}(reader *binaryruntime.Reader, state *_binaryState, out *{{ object.name }}) error {
+func read{{ object.name }}(reader *binaryruntime.Reader, state *{{ schema.state_type }}, out *{{ object.name }}) error {
 {% if object.has_fixed_prefix %}
 	var fixed [{{ object.fixed_prefix_size }}]byte
 	if n, err := reader.ReadFullCount(fixed[:]); err != nil {

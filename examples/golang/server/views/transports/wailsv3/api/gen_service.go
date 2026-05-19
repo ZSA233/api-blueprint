@@ -10,30 +10,34 @@ import (
 )
 
 type ApiService struct {
-	impl       RouterInterface
-	sessions   wailstransport.ConnectionHub
-	wsExecutor *sharedprovider.RouteExecutor[any, any, RSP_Ws]
+	impl                 RouterInterface
+	sessions             wailstransport.ConnectionHub
+	helloChannelExecutor *sharedprovider.RouteExecutor[any, any, RSP_HelloChannel]
 }
 
 func newGeneratedApiService(impl RouterInterface, dispatcher wailstransport.EventDispatcher) *ApiService {
 	return &ApiService{
 		impl:     impl,
 		sessions: wailstransport.NewSocketHub(dispatcher),
-		wsExecutor: sharedprovider.NewRouteExecutor(
+		helloChannelExecutor: sharedprovider.NewRouteExecutor[
+			any,
+			any,
+			RSP_HelloChannel,
+		](
 			sharedprovider.RouteInfo{
 				Root:      "api",
 				Group:     "",
 				Namespace: "api",
 				Service:   "ApiService",
-				Operation: "Ws",
-				RouteID:   "api.api.ws.ws",
+				Operation: "HelloChannel",
+				RouteID:   "api.api.channel.ws",
 				Path:      "/api/ws",
-				Methods:   []string{"WS"},
+				Methods:   []string{"CHANNEL"},
 				Transport: sharedprovider.TransportWails,
-				Scope:     sharedprovider.ConnectionScope(""),
+				Scope:     sharedprovider.ConnectionScope("session"),
 			},
-			"req|auth|ws_handle|rsp=json@CodeMessageDataEnvelope",
-			impl.Ws,
+			"req|auth",
+			nil,
 		),
 	}
 }
@@ -45,42 +49,42 @@ func (svc *ApiService) SetConnectionHub(hub wailstransport.ConnectionHub) {
 	svc.sessions = hub
 }
 
-func (svc *ApiService) ConnectWs(
-	envelope *WS_CONNECT_Ws,
+func (svc *ApiService) OpenHelloChannel(
+	envelope *CONNECTION_CONNECT_HelloChannel,
 ) (rsp *wailstransport.SocketSessionDescriptor, err error) {
-	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
-		BindQuery: false,
-		BindJSON:  false,
-		BindForm:  false,
-	})
+	req, reqErr := wailstransport.ConnectionOpenEnvelopeToReq(envelope, false)
 	if reqErr != nil {
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[any, any, RSP_Ws](
+	ctx := sharedprovider.NewWailsContext[any, any, RSP_HelloChannel](
 		"ApiService",
-		"ConnectWs",
-		wailstransport.EnvelopeHeaders(envelope),
+		"OpenHelloChannel",
+		wailstransport.ConnectionOpenHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_Ws]{Request: req}
-	if err := svc.wsExecutor.RunWSPreflight(ctx); err != nil {
+	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_HelloChannel]{Request: req}
+	if err := svc.helloChannelExecutor.Run(ctx); err != nil {
 		return nil, err
 	}
 
-	session, sessionErr := svc.sessions.Open(wailstransport.ConnectionOpenSpec{
-		RouteID:   "api.api.ws.ws",
-		EventBase: "api_blueprint.ws.api.api.ws.ws",
-		Scope:     sharedprovider.ConnectionScopeSession,
-	})
+	openSpec := wailstransport.ConnectionOpenSpec{
+		RouteID:            "api.api.channel.ws",
+		EventBase:          "api_blueprint.channel.api.api.channel.ws",
+		Scope:              sharedprovider.ConnectionScope("session"),
+		RequestedSessionID: wailstransport.ConnectionOpenEnvelopeSessionID(envelope),
+	}
+	session, sessionErr := svc.sessions.Open(openSpec)
 	if sessionErr != nil {
 		err = sessionErr
 		return
 	}
-	ctx.WsHandle = &sharedprovider.WsHandleContext[any, any, RSP_Ws]{Conn: session}
-
+	session = wailstransport.WrapConnectionSession(session, true)
+	channel := sharedprovider.NewChannelSession[any, SERVER_HelloChannel_MESSAGE, CLIENT_HelloChannel_MESSAGE, CLOSE_HelloChannel](
+		req.Q,
+		session,
+	)
 	go func() {
-		if runErr := svc.wsExecutor.RunWSHandler(ctx); runErr != nil {
-			ctx.WsHandle.Error = runErr
+		if runErr := svc.impl.HelloChannel(ctx, channel); runErr != nil {
 			_ = session.Abort(ctx.Base, 1011, runErr.Error())
 		}
 	}()
@@ -89,7 +93,7 @@ func (svc *ApiService) ConnectWs(
 	return &descriptor, nil
 }
 
-func (svc *ApiService) SendWs(request *WS_SEND_Ws) error {
+func (svc *ApiService) SendHelloChannel(request *CHANNEL_SEND_HelloChannel) error {
 	session, err := svc.sessions.Get(request.SessionID)
 	if err != nil {
 		return err
@@ -97,11 +101,12 @@ func (svc *ApiService) SendWs(request *WS_SEND_Ws) error {
 	return session.Push(request.Payload)
 }
 
-func (svc *ApiService) CloseWs(request *WS_CLOSE_Ws) error {
+func (svc *ApiService) CloseHelloChannel(request *CONNECTION_CLOSE_HelloChannel) error {
 	session, err := svc.sessions.Get(request.SessionID)
 	if err != nil {
 		return err
 	}
+	session = wailstransport.WrapConnectionSession(session, true)
 	code := request.Code
 	if code == 0 {
 		code = 1000

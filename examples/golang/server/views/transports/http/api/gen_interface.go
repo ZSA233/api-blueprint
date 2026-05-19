@@ -15,24 +15,25 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		impl = shared.NewRouter()
 	}
 
-	httptransport.WS(
+	httptransport.CHANNEL(
 		"/api/ws",
-		sharedprovider.NewRouteExecutor(
+		sharedprovider.NewRouteExecutor[any, any, shared.RSP_HelloChannel](
 			sharedprovider.RouteInfo{
 				Root:      "api",
 				Group:     "",
 				Namespace: "api",
 				Service:   "ApiService",
-				Operation: "Ws",
-				RouteID:   "api.api.ws.ws",
+				Operation: "HelloChannel",
+				RouteID:   "api.api.channel.ws",
 				Path:      "/api/ws",
-				Methods:   []string{"WS"},
+				Methods:   []string{"CHANNEL"},
 				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
+				Scope:     sharedprovider.ConnectionScope("session"),
 			},
-			"req|auth|ws_handle|rsp=json@CodeMessageDataEnvelope",
-			impl.Ws,
+			"req|auth",
+			nil,
 		),
+		impl.HelloChannel,
 		eng,
 	)
 

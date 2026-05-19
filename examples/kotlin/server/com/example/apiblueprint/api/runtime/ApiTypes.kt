@@ -88,6 +88,35 @@ public data class ConnectionClose(
 )
 
 @Serializable
+public data class DefaultConnectionClose(
+    public val code: Int? = null,
+    public val reason: String? = null,
+    public val error: String? = null
+)
+
+@Serializable
+public data class HelloChannelMessage(
+    public val type: HelloChannelMsgTypeEnum,
+    public val data: kotlinx.serialization.json.JsonElement
+)
+
+@Serializable
+public enum class HelloChannelMsgTypeEnum(public val wireValue: String) {
+    @SerialName("ping")
+    PING("ping"),
+    @SerialName("pong")
+    PONG("pong"),
+    @SerialName("join")
+    JOIN("join"),
+    @SerialName("leave")
+    LEAVE("leave"),
+    @SerialName("forgeround")
+    FORGEROUND("forgeround"),
+    @SerialName("upgrade")
+    UPGRADE("upgrade")
+}
+
+@Serializable
 public enum class HelloWayEnum(public val wireValue: String) {
     @SerialName("ASD")
     ASD("ASD")
@@ -146,43 +175,3 @@ public data class SweepProgress(
 public data class SweepState(
     public val status: String
 )
-
-@Serializable
-public data class WSRecv(
-    public val data: String
-)
-
-@Serializable
-public data class WSResponse(
-    public val code: Int,
-    public val msg: String,
-    public val data: kotlinx.serialization.json.JsonElement
-)
-
-@Serializable
-public data class WSSend(
-    @SerialName("ws_recv")
-    public val wsRecv: WSRecv
-)
-
-@Serializable
-public data class WsMessage(
-    public val type: WsMsgTypeEnum,
-    public val data: kotlinx.serialization.json.JsonElement
-)
-
-@Serializable
-public enum class WsMsgTypeEnum(public val wireValue: String) {
-    @SerialName("ping")
-    PING("ping"),
-    @SerialName("pong")
-    PONG("pong"),
-    @SerialName("join")
-    JOIN("join"),
-    @SerialName("leave")
-    LEAVE("leave"),
-    @SerialName("forgeround")
-    FORGEROUND("forgeround"),
-    @SerialName("upgrade")
-    UPGRADE("upgrade")
-}

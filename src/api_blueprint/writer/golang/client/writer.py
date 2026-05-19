@@ -507,8 +507,6 @@ def _render_route_schema(alias: str, schema: Mapping[str, Any], type_names: _Typ
 
 
 def _connection_method_name(route: GoClientRoute) -> str:
-    if route.kind == "legacy_ws":
-        return f"Connect{route.operation}"
     if route.kind == "stream":
         return f"Subscribe{route.operation}"
     if route.kind == "channel":
@@ -517,8 +515,6 @@ def _connection_method_name(route: GoClientRoute) -> str:
 
 
 def _connection_transport_method(route: GoClientRoute) -> str:
-    if route.kind == "legacy_ws":
-        return "ConnectUnsupported"
     if route.kind == "stream":
         return "StreamUnsupported"
     if route.kind == "channel":

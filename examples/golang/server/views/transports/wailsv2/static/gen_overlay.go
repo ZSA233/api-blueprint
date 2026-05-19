@@ -4,7 +4,6 @@ package static
 
 import (
 	sharedroutes "example.com/project/golang/server/views/routes/static"
-
 	wailstransport "example.com/project/golang/server/views/transports/wailsv2"
 )
 

@@ -47,7 +47,7 @@ export interface ApiResponseEnvelopeFields {
 
 export interface StreamConnectOptions<Recv, Close = SocketCloseInfo> {
   routeId: string;
-  connectionKind: "stream" | "channel" | "legacy_ws";
+  connectionKind: "stream" | "channel";
   scope: "session" | "app" | "topic" | "";
   delivery?: "ordered" | "unordered";
   path: string;
@@ -65,8 +65,6 @@ export interface ChannelConnectOptions<Recv, Send, Close = SocketCloseInfo> exte
   sendMethod: string;
   protocols?: string | string[];
 }
-
-export interface SocketConnectOptions<Recv, Send> extends ChannelConnectOptions<Recv, Send, SocketCloseInfo> {}
 
 export type SocketCloseInfo = {
   code?: number;
@@ -91,8 +89,6 @@ export interface ApiChannelBridge<Recv, Send, Close = SocketCloseInfo> extends A
   send(message: Send): Promise<void>;
 }
 
-export type ApiSocketBridge<Recv, Send> = ApiChannelBridge<Recv, Send>;
-
 export interface ApiTransport {
   request<R>(options: RequestOptions<R>): Promise<R>;
   openStream<Recv, Close = SocketCloseInfo>(
@@ -101,8 +97,6 @@ export interface ApiTransport {
   openChannel<Recv, Send, Close = SocketCloseInfo>(
     options: ChannelConnectOptions<Recv, Send, Close>,
   ): ApiChannelBridge<Recv, Send, Close>;
-  connectBridge<Recv, Send>(options: SocketConnectOptions<Recv, Send>): ApiSocketBridge<Recv, Send>;
-  connectRaw?(options: SocketConnectOptions<unknown, unknown>): WebSocket;
 }
 
 export class BaseClient {
@@ -131,17 +125,6 @@ export class BaseClient {
     return this.transport.openChannel(options);
   }
 
-  protected connectBridge<Recv, Send>(options: SocketConnectOptions<Recv, Send>): ApiSocketBridge<Recv, Send> {
-    return this.transport.connectBridge(options);
-  }
-
-  protected connectRaw(options: SocketConnectOptions<unknown, unknown>): WebSocket {
-    const rawConnector = this.transport.connectRaw;
-    if (typeof rawConnector !== "function") {
-      throw new Error("Raw WebSocket access is only available for transports that support connectRaw().");
-    }
-    return rawConnector.call(this.transport, options);
-  }
 }
 
 export * from "./errors";

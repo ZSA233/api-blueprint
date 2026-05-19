@@ -2,9 +2,15 @@
 
 package types
 
-type WsMessage struct {
+type HelloChannelMessage struct {
 	Type string `json:"type" xml:"type" form:"type" binding:"required"`
 	Data any    `json:"data" xml:"data" form:"data" binding:"required"`
+}
+
+type DefaultConnectionClose struct {
+	Code   int    `json:"code,omitempty" xml:"code,omitempty" form:"code,omitempty" binding:"omitempty"`
+	Reason string `json:"reason,omitempty" xml:"reason,omitempty" form:"reason,omitempty" binding:"omitempty"`
+	Error  string `json:"error,omitempty" xml:"error,omitempty" form:"error,omitempty" binding:"omitempty"`
 }
 
 type ApiDemoMap struct {
@@ -35,20 +41,6 @@ type ANON_Func1put_anon_kv struct {
 type ANON_Delete_anon_list struct {
 	Kv1 int64    `json:"kv1" xml:"kv1" form:"kv1" binding:"required"`
 	Kv2 []string `json:"kv2" xml:"kv2" form:"kv2" binding:"required"`
-}
-
-type WSRecv struct {
-	Data string `json:"data" xml:"data" form:"data" binding:"required"`
-}
-
-type WSResponse[T any] struct {
-	Code int    `json:"code" xml:"code" form:"code" binding:"required"`
-	Msg  string `json:"msg" xml:"msg" form:"msg" binding:"required"`
-	Data *T     `json:"data" xml:"data" form:"data" binding:"required"`
-}
-
-type WSSend struct {
-	WsRecv *WSRecv `json:"ws_recv" xml:"ws_recv" form:"ws_recv" binding:"required"`
 }
 
 type SweepOpen struct {

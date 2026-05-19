@@ -79,29 +79,6 @@ public open class Gen{{ group.class_name }} internal constructor(
         )
     }
 {%- endif %}
-{%- elif route.supports_ws %}
-
-    @Suppress("UNCHECKED_CAST")
-    public open fun {{ route.connect_method_name }}(
-{%- if route.query_type %}
-        query: {{ route.query_type }},
-{%- endif %}
-        headers: Map<String, String> = emptyMap(),
-        protocols: List<String> = emptyList(),
-    ): ApiSocketBridge<{{ route.ws_send_type }}, {{ route.ws_recv_type }}> {
-        return transport.connectSocket(
-            SocketConnectOptions(
-                routeId = "{{ route.protocol.route.route_id }}",
-                connectionKind = "legacy_ws",
-                path = "{{ route.url }}",
-{%- if route.query_type %}
-                query = query.toQueryMap(),
-{%- endif %}
-                headers = headers,
-                protocols = protocols,
-            )
-        ) as ApiSocketBridge<{{ route.ws_send_type }}, {{ route.ws_recv_type }}>
-    }
 {%- elif route.supports_stream %}
 
     @Suppress("UNCHECKED_CAST")

@@ -4,7 +4,7 @@ from typing import Any, Mapping
 
 import httpx
 
-from ...runtime.client import ApiChannelBridge, ApiClientTransport, ApiResponseEnvelope, ApiSocketBridge, ApiStreamBridge
+from ...runtime.client import ApiChannelBridge, ApiClientTransport, ApiResponseEnvelope, ApiStreamBridge
 from ...runtime.binary import ApiBinaryBody, is_api_binary_body
 from ...runtime.errors import ApiError
 from ...runtime.gen_error_lookup import make_api_error_payload
@@ -70,17 +70,6 @@ class HttpClientTransport(ApiClientTransport):
         if response_type == "bytes":
             return response.content
         return response.text
-
-    def connect_socket(
-        self,
-        *,
-        route_id: str,
-        path: str,
-        query: Mapping[str, Any] | None = None,
-        headers: Mapping[str, str] | None = None,
-        protocols: tuple[str, ...] = (),
-    ) -> ApiSocketBridge[Any, Any]:
-        raise NotImplementedError("HTTP WebSocket client transport is not implemented by the default httpx adapter")
 
     def open_stream(
         self,

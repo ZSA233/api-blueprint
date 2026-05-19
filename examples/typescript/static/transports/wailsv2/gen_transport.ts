@@ -5,572 +5,21 @@
 import type {
   ApiChannelBridge,
   ApiClientConfig,
-  ApiSocketBridge,
   ApiStreamBridge,
   ApiTransport,
-  ApiResponseEnvelope,
   ChannelConnectOptions,
   RequestOptions,
-  SocketCloseHandler,
   SocketCloseInfo,
-  SocketMessageHandler,
-  SocketUnsubscribe,
-  SocketConnectOptions,
   StreamConnectOptions,
 } from "../../runtime/client";
-import { ApiError, lookupApiError } from "../../runtime/client";
-import type { ApiErrorEntry, ApiErrorPayload, ApiToastPayload } from "../../runtime/client";
 
-type RequestBody = RequestInit["body"];
+import { WailsStreamBridge, WailsSocketBridge } from "./gen_connection";
+import type { WailsConnectionOpenEnvelope, WailsRuntimeAdapter } from "./gen_connection";
+import { unwrapResponseEnvelope } from "./gen_response";
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object";
-}
+import { ensureWailsRuntime, type WailsEventHandler } from "./gen_runtime";
 
-function normalizeToast(value: unknown, entry?: ApiErrorEntry): ApiToastPayload {
-  const source = isRecord(value) ? value : {};
-  return {
-    key: typeof source.key === "string" ? source.key : entry?.toast.key ?? "",
-    level: typeof source.level === "string" ? source.level : entry?.toast.level ?? "error",
-    default: typeof source.default === "string" ? source.default : entry?.toast.default ?? entry?.message ?? "",
-    text: typeof source.text === "string" ? source.text : undefined,
-  };
-}
-
-function normalizeApiErrorPayload(value: unknown, routeId?: string): ApiErrorPayload {
-  const source = isRecord(value) ? value : {};
-  const entry = lookupApiError(source as Partial<ApiErrorPayload>, routeId);
-  const code = typeof source.code === "number" ? source.code : entry?.code ?? 0;
-  return {
-    id: typeof source.id === "string" ? source.id : entry?.id ?? "",
-    group: typeof source.group === "string" ? source.group : entry?.group ?? "",
-    key: typeof source.key === "string" ? source.key : entry?.key ?? "",
-    code,
-    message: typeof source.message === "string" ? source.message : entry?.message ?? `API error ${code}`,
-    toast: normalizeToast(source.toast, entry),
-  };
-}
-
-function extractApiErrorPayload(value: unknown, envelope?: ApiResponseEnvelope): unknown | undefined {
-  if (!isRecord(value)) {
-    return undefined;
-  }
-  const errorField = envelope?.fields?.error ?? "error";
-  if (isRecord(value[errorField])) {
-    return normalizeEnvelopeErrorPayload(value[errorField], value, envelope);
-  }
-  if ("code" in value && ("id" in value || "message" in value || "toast" in value)) {
-    return value;
-  }
-  return undefined;
-}
-
-function normalizeEnvelopeErrorPayload(error: unknown, envelopeBody: Record<string, unknown>, envelope?: ApiResponseEnvelope): unknown {
-  if (!isRecord(error)) {
-    return error;
-  }
-  const codeField = envelope?.fields?.code ?? "code";
-  const messageField = envelope?.fields?.message ?? "message";
-  return {
-    ...error,
-    code: typeof error.code === "number" ? error.code : envelopeBody[codeField],
-    message: typeof error.message === "string" ? error.message : envelopeBody[messageField],
-  };
-}
-
-function tryParseJson(text: string): unknown | undefined {
-  if (!text) {
-    return undefined;
-  }
-  try {
-    return JSON.parse(text);
-  } catch {
-    return undefined;
-  }
-}
-
-function unwrapResponseEnvelope<R>(payload: unknown, routeId: string, envelope?: ApiResponseEnvelope): R {
-  if (!envelope || envelope.kind === "none") {
-    return payload as R;
-  }
-  if (!isRecord(payload)) {
-    return payload as R;
-  }
-  if (envelope.kind === "code_message_data") {
-    const codeField = envelope.fields?.code ?? "code";
-    const dataField = envelope.fields?.data ?? "data";
-    const code = typeof payload[codeField] === "number" ? payload[codeField] as number : 0;
-    if (code === envelope.success_code) {
-      return payload[dataField] as R;
-    }
-    const errorPayload = normalizeApiErrorPayload(extractApiErrorPayload(payload, envelope) ?? payload, routeId);
-    throw new ApiError(errorPayload, { routeId, raw: payload });
-  }
-  if (envelope.kind === "ok_data_error") {
-    const okField = envelope.fields?.ok ?? "ok";
-    const dataField = envelope.fields?.data ?? "data";
-    const errorField = envelope.fields?.error ?? "error";
-    if (payload[okField] === true) {
-      return payload[dataField] as R;
-    }
-    const errorPayload = normalizeApiErrorPayload(payload[errorField], routeId);
-    throw new ApiError(errorPayload, { routeId, raw: payload });
-  }
-  throw new Error(`Unsupported response envelope: ${envelope.kind}`);
-}
-
-type WailsEventHandler = (payload?: unknown) => void;
-
-type WailsSocketSession = {
-  id: string;
-  route_id?: string;
-  message_event: string;
-  close_event: string;
-};
-
-type WailsSendEnvelope<Payload> = {
-  session_id: string;
-  payload: Payload;
-};
-
-type WailsCloseEnvelope = {
-  session_id: string;
-  code?: number;
-  reason?: string;
-};
-
-type WailsConnectionOpenEnvelope<Query> = {
-  session_id?: string;
-  Q?: Query;
-  Headers?: Record<string, string>;
-};
-
-type WailsOrderedEnvelope<Payload> = {
-  seq: number;
-  payload?: Payload;
-};
-
-const WAILS_ORDERED_DELIVERY_GAP_TIMEOUT_MS = 5000;
-const WAILS_ORDERED_DELIVERY_MAX_PENDING_MESSAGES = 256;
-let wailsConnectionSessionCounter = 0;
-
-function parseWailsOrderedEnvelope<Payload>(payload?: unknown): WailsOrderedEnvelope<Payload> | null {
-  if (payload == null || typeof payload !== "object") {
-    return null;
-  }
-  const seq = (payload as { seq?: unknown }).seq;
-  if (typeof seq !== "number" || !Number.isSafeInteger(seq) || seq < 1) {
-    return null;
-  }
-  return payload as WailsOrderedEnvelope<Payload>;
-}
-
-function generateWailsConnectionSessionId(routeId: string): string {
-  const prefix = routeId || "route";
-  const uuid = globalThis.crypto?.randomUUID?.();
-  if (typeof uuid === "string") {
-    return `${prefix}-${uuid}`;
-  }
-  wailsConnectionSessionCounter += 1;
-  return `${prefix}-${Date.now()}-${wailsConnectionSessionCounter}-${Math.random().toString(16).slice(2)}`;
-}
-
-function buildWailsConnectionEventName(eventBase: string, kind: "message" | "closed", sessionId: string): string {
-  return `${eventBase}.${kind}.${sessionId}`;
-}
-
-declare global {
-  interface Window {
-    WailsInvoke?: (message: string) => void;
-    go?: Record<string, Record<string, Record<string, (payload?: unknown) => Promise<unknown>>>>;
-    runtime?: {
-      EventsOn?: (name: string, handler: WailsEventHandler) => void;
-      EventsOff?: (name: string, ...additionalEventNames: string[]) => void;
-    };
-
-  }
-}
-
-let wailsRuntimeLoadPromise: Promise<void> | null = null;
-const wailsScriptLoads = new Map<string, Promise<void>>();
-
-function hasWailsRuntime(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    typeof window.WailsInvoke === "function" &&
-    window.go != null &&
-    typeof window.runtime?.EventsOn === "function"
-  );
-}
-
-function loadWailsScript(src: string): Promise<void> {
-  if (typeof document === "undefined") {
-    return Promise.reject(new Error(`Cannot load ${src} outside a browser runtime.`));
-  }
-  const existing = document.querySelector<HTMLScriptElement>(`script[src="${src}"]`);
-  if (existing != null) {
-    return Promise.resolve();
-  }
-  const cached = wailsScriptLoads.get(src);
-  if (cached != null) {
-    return cached;
-  }
-  const promise = new Promise<void>((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = src;
-    script.async = false;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error(`Failed to load ${src}.`));
-    document.head.appendChild(script);
-  });
-  wailsScriptLoads.set(src, promise);
-  return promise;
-}
-
-export async function ensureWailsRuntime(): Promise<void> {
-  if (hasWailsRuntime()) {
-    return;
-  }
-  if (wailsRuntimeLoadPromise == null) {
-    wailsRuntimeLoadPromise = (async () => {
-      await loadWailsScript("/wails/ipc.js");
-      await loadWailsScript("/wails/runtime.js");
-      if (!hasWailsRuntime()) {
-        throw new Error("Wails v2 runtime is not available. Load /wails/ipc.js and /wails/runtime.js before using generated Wails clients.");
-      }
-    })();
-  }
-  await wailsRuntimeLoadPromise;
-}
-
-class WailsStreamBridge<Recv, Close = SocketCloseInfo> implements ApiStreamBridge<Recv, Close> {
-  readonly mode = "wails-v2";
-  readonly routeId: string;
-  readonly ready: Promise<void>;
-  protected readonly messageListeners = new Set<SocketMessageHandler<Recv>>();
-  protected readonly closeListeners = new Set<SocketCloseHandler<Close>>();
-  protected session: WailsSocketSession | null = null;
-  private subscribedSession: WailsSocketSession | null = null;
-  private readonly delivery: "ordered" | "unordered";
-  private readonly pendingMessages = new Map<number, Recv>();
-  private pendingClose: WailsOrderedEnvelope<Close> | null = null;
-  private gapTimeoutHandle: ReturnType<typeof setTimeout> | null = null;
-  private nextSequence = 1;
-  private closed = false;
-  private readonly messageHandler: WailsEventHandler;
-  private readonly closeHandler: WailsEventHandler;
-
-  constructor(
-    protected readonly runtime: WailsV2Transport,
-    protected readonly options: StreamConnectOptions<Recv, Close>,
-  ) {
-    this.routeId = options.routeId;
-    this.delivery = options.delivery ?? "unordered";
-    this.messageHandler = (payload?: unknown) => {
-      this.handleMessageEvent(payload);
-    };
-    this.closeHandler = (payload?: unknown) => {
-      this.handleCloseEvent(payload);
-    };
-    this.ready = this.connect();
-  }
-
-  onMessage(listener: SocketMessageHandler<Recv>): SocketUnsubscribe {
-    this.messageListeners.add(listener);
-    return () => {
-      this.messageListeners.delete(listener);
-    };
-  }
-
-  onClose(listener: SocketCloseHandler<Close>): SocketUnsubscribe {
-    this.closeListeners.add(listener);
-    return () => {
-      this.closeListeners.delete(listener);
-    };
-  }
-
-  async close(code?: number, reason?: string): Promise<void> {
-    const session = await this.awaitSession();
-    await this.runtime.invokeOperation<void>(
-      this.options.namespace,
-      this.options.service,
-      this.options.closeMethod,
-      {
-        session_id: session.id,
-        code,
-        reason,
-      } as WailsCloseEnvelope,
-    );
-    this.unsubscribe();
-  }
-
-  protected async connect(): Promise<void> {
-    await ensureWailsRuntime();
-    const sessionId = generateWailsConnectionSessionId(this.routeId);
-    const eventBase = this.options.eventBase || `api_blueprint.connection.${this.routeId}`;
-    const messageEvent = buildWailsConnectionEventName(eventBase, "message", sessionId);
-    const closeEvent = buildWailsConnectionEventName(eventBase, "closed", sessionId);
-    const provisionalSession: WailsSocketSession = {
-      id: sessionId,
-      route_id: this.routeId,
-      message_event: messageEvent,
-      close_event: closeEvent,
-    };
-    this.subscribedSession = provisionalSession;
-    try {
-      this.runtime.subscribeEvent(messageEvent, this.messageHandler);
-      this.runtime.subscribeEvent(closeEvent, this.closeHandler);
-      const session = await this.runtime.invokeOperation<WailsSocketSession>(
-        this.options.namespace,
-        this.options.service,
-        this.options.connectMethod,
-        this.runtime.buildWailsConnectionEnvelope(
-          sessionId,
-          this.options.open ?? this.options.query,
-          this.options.headers,
-        ),
-      );
-      if (session.message_event !== messageEvent || session.close_event !== closeEvent) {
-        throw new Error(
-          `Wails route ${this.routeId} returned unexpected event names for session ${sessionId}.`,
-        );
-      }
-      this.session = session;
-      if (this.subscribedSession === provisionalSession) {
-        this.subscribedSession = session;
-      }
-    } catch (error) {
-      if (this.subscribedSession === provisionalSession) {
-        this.subscribedSession = null;
-        this.runtime.unsubscribeEvent(messageEvent, this.messageHandler);
-        this.runtime.unsubscribeEvent(closeEvent, this.closeHandler);
-      }
-      throw error;
-    }
-  }
-
-  protected async awaitSession(): Promise<WailsSocketSession> {
-    await this.ready;
-    if (this.session == null) {
-      throw new Error(`Wails stream route ${this.routeId} did not establish a session.`);
-    }
-    return this.session;
-  }
-
-  protected emitMessage(message: Recv): void {
-    if (this.closed) {
-      return;
-    }
-    this.messageListeners.forEach((listener) => listener(message));
-  }
-
-  protected emitClose(info: Close): void {
-    if (this.closed) {
-      return;
-    }
-    this.closed = true;
-    this.closeListeners.forEach((listener) => listener(info));
-  }
-
-  protected unsubscribe(): void {
-    this.clearOrderedGapTimer();
-    this.pendingMessages.clear();
-    this.pendingClose = null;
-    const session = this.subscribedSession;
-    if (session == null) {
-      return;
-    }
-    this.subscribedSession = null;
-    this.runtime.unsubscribeEvent(session.message_event, this.messageHandler);
-    this.runtime.unsubscribeEvent(session.close_event, this.closeHandler);
-  }
-
-  private handleMessageEvent(payload?: unknown): void {
-    if (this.closed) {
-      return;
-    }
-    if (this.delivery !== "ordered") {
-      this.emitMessage(payload as Recv);
-      return;
-    }
-    const envelope = parseWailsOrderedEnvelope<Recv>(payload);
-    if (envelope == null) {
-      this.failOrderedDelivery(
-        "ordered_delivery_protocol_error",
-        `Ordered Wails route ${this.routeId} received a message without a valid seq envelope.`,
-      );
-      return;
-    }
-    if (envelope.seq < this.nextSequence) {
-      return;
-    }
-    if (envelope.seq === this.nextSequence) {
-      this.emitMessage(envelope.payload as Recv);
-      this.nextSequence += 1;
-      this.flushOrderedEvents();
-      return;
-    }
-    this.pendingMessages.set(envelope.seq, envelope.payload as Recv);
-    if (this.pendingMessages.size > WAILS_ORDERED_DELIVERY_MAX_PENDING_MESSAGES) {
-      this.failOrderedDelivery(
-        "ordered_delivery_buffer_overflow",
-        `Ordered Wails route ${this.routeId} exceeded the pending message buffer while waiting for seq ${this.nextSequence}.`,
-      );
-      return;
-    }
-    this.flushOrderedEvents();
-  }
-
-  private handleCloseEvent(payload?: unknown): void {
-    if (this.closed) {
-      return;
-    }
-    if (this.delivery !== "ordered") {
-      const info = (payload ?? {}) as Close;
-      this.emitClose(info);
-      this.unsubscribe();
-      return;
-    }
-    const envelope = parseWailsOrderedEnvelope<Close>(payload);
-    if (envelope == null) {
-      this.failOrderedDelivery(
-        "ordered_delivery_protocol_error",
-        `Ordered Wails route ${this.routeId} received a close event without a valid seq envelope.`,
-      );
-      return;
-    }
-    if (envelope.seq < this.nextSequence) {
-      return;
-    }
-    this.pendingClose = envelope;
-    this.flushOrderedEvents();
-  }
-
-  private flushOrderedEvents(): void {
-    while (this.pendingMessages.has(this.nextSequence)) {
-      const payload = this.pendingMessages.get(this.nextSequence);
-      this.pendingMessages.delete(this.nextSequence);
-      this.emitMessage(payload as Recv);
-      this.nextSequence += 1;
-    }
-    if (this.pendingClose != null && this.pendingClose.seq === this.nextSequence) {
-      const envelope = this.pendingClose;
-      this.pendingClose = null;
-      this.clearOrderedGapTimer();
-      this.emitClose((envelope.payload ?? {}) as Close);
-      this.unsubscribe();
-      return;
-    }
-    if (this.hasOrderedGap()) {
-      this.startOrderedGapTimer();
-    } else {
-      this.clearOrderedGapTimer();
-    }
-  }
-
-  private hasOrderedGap(): boolean {
-    return this.pendingMessages.size > 0 || (this.pendingClose != null && this.pendingClose.seq > this.nextSequence);
-  }
-
-  private startOrderedGapTimer(): void {
-    if (this.gapTimeoutHandle != null || this.closed) {
-      return;
-    }
-    this.gapTimeoutHandle = setTimeout(() => {
-      this.gapTimeoutHandle = null;
-      if (!this.hasOrderedGap() || this.closed) {
-        return;
-      }
-      this.failOrderedDelivery(
-        "ordered_delivery_gap",
-        `Ordered Wails route ${this.routeId} timed out while waiting for seq ${this.nextSequence}.`,
-      );
-    }, WAILS_ORDERED_DELIVERY_GAP_TIMEOUT_MS);
-  }
-
-  private clearOrderedGapTimer(): void {
-    if (this.gapTimeoutHandle == null) {
-      return;
-    }
-    clearTimeout(this.gapTimeoutHandle);
-    this.gapTimeoutHandle = null;
-  }
-
-  private failOrderedDelivery(
-    kind: "ordered_delivery_gap" | "ordered_delivery_protocol_error" | "ordered_delivery_buffer_overflow",
-    reason: string,
-  ): void {
-    if (this.closed) {
-      return;
-    }
-    let info: Close;
-    if (kind === "ordered_delivery_gap") {
-      info = {
-        code: 1011,
-        reason,
-        error: "ordered_delivery_gap",
-      } as Close;
-    } else if (kind === "ordered_delivery_protocol_error") {
-      info = {
-        code: 1002,
-        reason,
-        error: "ordered_delivery_protocol_error",
-      } as Close;
-    } else {
-      info = {
-        code: 1009,
-        reason,
-        error: "ordered_delivery_buffer_overflow",
-      } as Close;
-    }
-    this.clearOrderedGapTimer();
-    this.abortOrderedDeliverySession((info as SocketCloseInfo).code, (info as SocketCloseInfo).reason);
-    this.emitClose(info);
-    this.unsubscribe();
-  }
-
-  private abortOrderedDeliverySession(code?: number, reason?: string): void {
-    const session = this.session ?? this.subscribedSession;
-    if (session == null) {
-      return;
-    }
-    void this.runtime.invokeOperation<void>(
-      this.options.namespace,
-      this.options.service,
-      this.options.closeMethod,
-      {
-        session_id: session.id,
-        code,
-        reason,
-      } as WailsCloseEnvelope,
-    ).catch(() => undefined);
-  }
-}
-
-class WailsSocketBridge<Recv, Send, Close = SocketCloseInfo>
-  extends WailsStreamBridge<Recv, Close>
-  implements ApiChannelBridge<Recv, Send, Close>
-{
-  constructor(
-    runtime: WailsV2Transport,
-    private readonly channelOptions: ChannelConnectOptions<Recv, Send, Close>,
-  ) {
-    super(runtime, channelOptions);
-  }
-
-  async send(message: Send): Promise<void> {
-    const session = await this.awaitSession();
-    await this.runtime.invokeOperation<void>(
-      this.options.namespace,
-      this.options.service,
-      this.channelOptions.sendMethod,
-      {
-        session_id: session.id,
-        payload: message,
-      } as WailsSendEnvelope<Send>,
-    );
-  }
-}
+export { ensureWailsRuntime } from "./gen_runtime";
 
 export class WailsV2Transport implements ApiTransport {
 
@@ -581,7 +30,7 @@ export class WailsV2Transport implements ApiTransport {
       options.namespace,
       options.service,
       options.operation,
-      this.buildWailsEnvelope(
+      this.buildEnvelope(
         options.query,
         options.json ?? options.form ?? options.body,
         options.headers,
@@ -593,20 +42,16 @@ export class WailsV2Transport implements ApiTransport {
   openStream<Recv, Close = SocketCloseInfo>(
     options: StreamConnectOptions<Recv, Close>,
   ): ApiStreamBridge<Recv, Close> {
-    return new WailsStreamBridge(this, options);
+    return new WailsStreamBridge(this.createRuntimeAdapter(), options);
   }
 
   openChannel<Recv, Send, Close = SocketCloseInfo>(
     options: ChannelConnectOptions<Recv, Send, Close>,
   ): ApiChannelBridge<Recv, Send, Close> {
-    return new WailsSocketBridge(this, options);
+    return new WailsSocketBridge(this.createRuntimeAdapter(), options);
   }
 
-  connectBridge<Recv, Send>(options: SocketConnectOptions<Recv, Send>): ApiSocketBridge<Recv, Send> {
-    return this.openChannel(options);
-  }
-
-  buildWailsEnvelope(
+  protected buildEnvelope(
     query?: Record<string, unknown>,
     body?: unknown,
     headers?: Record<string, string>,
@@ -618,7 +63,7 @@ export class WailsV2Transport implements ApiTransport {
     };
   }
 
-  buildWailsConnectionEnvelope(
+  protected buildConnectionEnvelope(
     sessionId: string,
     query?: Record<string, unknown>,
     headers?: Record<string, string>,
@@ -630,7 +75,25 @@ export class WailsV2Transport implements ApiTransport {
     } as WailsConnectionOpenEnvelope<Record<string, unknown>>;
   }
 
-  async invokeOperation<R>(
+  private createRuntimeAdapter(): WailsRuntimeAdapter {
+    return {
+      invoke: <R>(
+        namespace: string,
+        service: string,
+        operation: string,
+        payload?: unknown,
+      ) => this.invokeOperation<R>(namespace, service, operation, payload),
+      subscribe: (name: string, handler: WailsEventHandler) => this.subscribeEvent(name, handler),
+      unsubscribe: (name: string, handler: WailsEventHandler) => this.unsubscribeEvent(name, handler),
+      buildConnectionEnvelope: (
+        sessionId: string,
+        query?: Record<string, unknown>,
+        headers?: Record<string, string>,
+      ) => this.buildConnectionEnvelope(sessionId, query, headers),
+    };
+  }
+
+  private async invokeOperation<R>(
     namespace: string,
     service: string,
     operation: string,
@@ -648,7 +111,7 @@ export class WailsV2Transport implements ApiTransport {
 
   }
 
-  subscribeEvent(name: string, handler: WailsEventHandler): void {
+  private subscribeEvent(name: string, handler: WailsEventHandler): void {
 
     const on = window.runtime?.EventsOn;
     if (typeof on !== "function") {
@@ -658,7 +121,7 @@ export class WailsV2Transport implements ApiTransport {
 
   }
 
-  unsubscribeEvent(name: string, handler: WailsEventHandler): void {
+  private unsubscribeEvent(name: string, handler: WailsEventHandler): void {
 
     const off = window.runtime?.EventsOff;
     if (typeof off === "function") {

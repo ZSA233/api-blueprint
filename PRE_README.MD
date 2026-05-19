@@ -85,6 +85,10 @@ README 应链接到以下用户文档：
 - 多消息类型必须通过单个判别联合消息契约声明，避免多个裸 event 名。
 - 具名 variant 消息联合在 Go、TypeScript、Python、Kotlin、Java 中生成构造、解码或分发关键帧 helper，并保持 `{ type, data }` wire shape；Go server 额外为带具名 client message 的 `CHANNEL` 首次生成用户拥有的 `<leaf>_session.go` / `<leaf>_processor.go` / `<leaf>_error.go` scaffold，后续不覆盖；长连接 `Send`、`Close`、`Abort` 为 context-first API。详细使用方式放在 generators 专题文档，不写入 README 首页。
 - Markdown Binary Schema 是 HTTP 二进制请求体的一等契约，route 使用 `.REQ_BINARY(path)` 绑定 Markdown schema。
+- Binary schema metadata 可以写成裸 `key: value` 行，也可以包在 fenced code block 中改善 Markdown 渲染，两种写法解析等价。
+- 同一个 route group 内允许多个 binary schema；packet 入口名保持稳定，schema 内部生成符号按 packet name 作用域输出，归一化后重名的 packet name 在生成阶段报错。
+- Binary schema parser / writer 诊断路径使用 schema 原始 packet、section、object 和 field 名，并在错误发生后按嵌套上下文包装路径，避免成功路径为了诊断信息提前拼接完整 path。
+- Binary schema 生成的公开字段名遵循目标语言习惯：Go / Kotlin / Java 使用导出或 camelCase 字段，TypeScript / Python 保持贴近 wire/JSON 的 snake_case 字段；诊断路径仍使用 schema 原始字段名。
 - 稳定字段身份使用 `field(number, Field(...), optional=True)`，互斥选择使用 `choice="..."`，通用语义类型使用 `DateTime`、`JSONValue`、`AnyValue`。
 - `operation_id` 是 RPC / `STREAM` / `CHANNEL` 的稳定 operation 命名能力；它改变 generated operation surface，不改变 route id、path 或 ContractGraph 连接语义。
 
@@ -114,7 +118,7 @@ README 应链接到以下用户文档：
 - TypeScript client 输出 runtime、routes、transports，并通过 transport facade 注入 HTTP/Wails 能力。
 - Kotlin / Java / Python 采用各自语言的 package-first 输出布局；这些 target 按 preview 口径描述，文档应要求使用方把生成结果纳入自身类型检查、lint、编译或 smoke。
 - Kotlin client 使用 OkHttp + kotlinx.serialization；Kotlin server 使用 Ktor + kotlinx.serialization，生成 service contract/stub、HTTP RPC adapter 和协议关键帧 helper。Kotlin server 不生成 WebSocket/SSE/session engine；非 RPC 连接 route 的 Ktor adapter 返回明确 501。
-- Java client 使用 Java 17 `HttpClient` + Jackson，Java server 使用 Spring MVC + Jackson；不生成 Gradle/Maven 工程，也不生成 JPMS `module-info.java`。
+- Java client 使用 Java 17 `HttpClient` + Jackson，Java server 使用 Spring MVC + Jackson；binary schema 会生成 typed packet writer / parser，server controller 会把 `.REQ_BINARY` body 解析为 typed packet 后交给 service；不生成 Gradle/Maven 工程，也不生成 JPMS `module-info.java`。
 - Python client 是 async-first，推荐从 `create_client(base_url)` 聚合 facade 进入；Python server 输出 service contract/stub 与 FastAPI HTTP adapter scaffold。
 - Wails target 保持 Go + TypeScript only；`frontend_mode = "external"` 只生成 API artifacts，外部 frontend 需要加载 Wails runtime。
 - gRPC proto 可由 `grpc-proto` target 从 ContractGraph 输出；`grpc-go` / `grpc-python` 可消费同配置内的 `grpc-proto`，也可直接编译手写 proto。

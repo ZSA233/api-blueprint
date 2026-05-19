@@ -4,7 +4,7 @@ import html
 import inspect
 import re
 from collections import OrderedDict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field as dataclass_field
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
@@ -72,7 +72,7 @@ class BinaryField:
     name: str
     type: str
     count: str = "1"
-    rule: Mapping[str, str] = field(default_factory=dict)
+    rule: Mapping[str, str] = dataclass_field(default_factory=dict)
     comment: str = ""
 
     @property
@@ -122,7 +122,7 @@ class BinaryValue:
     comment: str = ""
     bit: str | None = None
     bits: str | None = None
-    rule: Mapping[str, str] = field(default_factory=dict)
+    rule: Mapping[str, str] = dataclass_field(default_factory=dict)
 
     @property
     def bit_range(self) -> tuple[int, int] | None:
@@ -434,6 +434,7 @@ def _packet_name(value: str, source: Path) -> str:
 def _parse_metadata(markdown: str, source: Path) -> dict[str, str]:
     lines = markdown.splitlines()
     in_metadata = False
+    in_fence = False
     metadata: dict[str, str] = {}
     for line in lines:
         stripped = line.strip()
@@ -442,7 +443,10 @@ def _parse_metadata(markdown: str, source: Path) -> dict[str, str]:
             continue
         if not in_metadata:
             continue
-        if stripped.startswith("## "):
+        if stripped.startswith("```"):
+            in_fence = not in_fence
+            continue
+        if not in_fence and stripped.startswith("## "):
             break
         if not stripped:
             continue
@@ -450,6 +454,8 @@ def _parse_metadata(markdown: str, source: Path) -> dict[str, str]:
             raise BinarySchemaError(f"{source}: metadata line must be 'key: value': {stripped}")
         key, value = stripped.split(":", 1)
         metadata[key.strip().lower()] = value.strip()
+    if in_fence:
+        raise BinarySchemaError(f"{source}: metadata fence is not closed")
     return metadata
 
 

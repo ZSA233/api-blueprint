@@ -5,7 +5,7 @@ import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
 
 public interface GenApiService {
 
-    Object ws(
+    Object helloChannel(
     ) throws Exception;
 
 }

@@ -166,12 +166,12 @@ public class JavaExampleSuite {
 
     private static void checkUnsupportedConnections(String baseUrl) throws Exception {
         var apiClient = com.example.apiblueprint.api.transports.http.HttpApiClient.create(baseUrl);
-        expectUnsupported(apiClient.api::connectWs, "WebSocket");
+        expectUnsupported(apiClient.api::openHelloChannel, "channel");
         expectUnsupported(() -> apiClient.demo.subscribeSweepEvents(new ApiTypes.SweepOpen("suite", null)), "stream");
         expectUnsupported(() -> apiClient.demo.openAssistantSession(new ApiTypes.AssistantOpen("suite")), "channel");
 
         HttpClient httpClient = HttpClient.newHttpClient();
-        requireStatus(httpClient, baseUrl + "/api/ws", 501, "legacy_ws route is not implemented");
+        requireStatus(httpClient, baseUrl + "/api/ws", 501, "channel route is not implemented");
         requireStatus(httpClient, baseUrl + "/api/demo/sweep-events", 501, "stream route is not implemented");
     }
 

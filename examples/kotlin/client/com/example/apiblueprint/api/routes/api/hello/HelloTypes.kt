@@ -18,7 +18,7 @@ public data class HelloAbcQuery(
     public val arg1: Boolean? = null,
     public val arg3: String? = null,
     public val arg2: Float? = null,
-    public val type: WsMsgTypeEnum
+    public val type: HelloChannelMsgTypeEnum
 )
 
 public typealias HelloAbcResponse = Map<String, ApiHelloMap>

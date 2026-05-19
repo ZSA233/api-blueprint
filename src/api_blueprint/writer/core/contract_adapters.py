@@ -16,7 +16,7 @@ from api_blueprint.engine.binary_schema import BinarySchema
 from api_blueprint.engine.router import Router
 from api_blueprint.engine.utils import snake_to_pascal_case
 from api_blueprint.engine.envelope import NoEnvelope, ResponseEnvelope
-from api_blueprint.writer.core.contracts import ConnectionBridgeContract, RouteContract, WsBridgeContract, route_id_for_router
+from api_blueprint.writer.core.contracts import ConnectionBridgeContract, RouteContract, route_id_for_router
 
 if TYPE_CHECKING:
     from api_blueprint.contract import ContractGraph
@@ -171,20 +171,6 @@ def route_contract_from_manifest(
         if str(method) in {"GET", "POST", "PUT", "DELETE", "HEAD"}
     )
 
-    ws = None
-    if kind == ConnectionKind.LEGACY_WS.value:
-        event_base = f"api_blueprint.ws.{route_id}"
-        ws = WsBridgeContract(
-            route_id=route_id,
-            connect_method=f"Connect{func_name}",
-            connect_raw_method=f"Connect{func_name}Raw",
-            send_method=f"Send{func_name}",
-            close_method=f"Close{func_name}",
-            event_base=event_base,
-            message_event_prefix=f"{event_base}.message",
-            close_event_prefix=f"{event_base}.closed",
-        )
-
     stream = None
     if kind == ConnectionKind.STREAM.value:
         event_base = f"api_blueprint.stream.{route_id}"
@@ -233,14 +219,12 @@ def route_contract_from_manifest(
         service_name=service_name,
         namespace=group_alias,
         http_methods=methods,
-        supports_ws=kind == ConnectionKind.LEGACY_WS.value,
         supports_stream=kind == ConnectionKind.STREAM.value,
         supports_channel=kind == ConnectionKind.CHANNEL.value,
         connection_delivery=connection_delivery,
         connection_scope=connection_scope,
         connection_close_model=close_model,
         url=str(route.get("url") or ""),
-        ws=ws,
         stream=stream,
         channel=channel,
     )

@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import enum
 
-import pytest
-
 from api_blueprint.contract import build_contract_graph
 from api_blueprint.engine import Blueprint, ResponseEnvelope, Toast
 from api_blueprint.engine.binary_schema import parse_binary_schema
@@ -80,8 +78,6 @@ def test_kotlin_uses_declarative_response_envelope_spec():
 
 
 def test_kotlin_registry_filter_by_module():
-    from api_blueprint.engine.model import String
-
     registry = KotlinProtoRegistry()
     shared = registry.ensure(Payload, tag="shared", module="shared")
     # User-defined models always stay in shared, even if re-requested with a route module
@@ -175,7 +171,6 @@ def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full
     views.GET("/ping").ARGS(q=String(description="q")).RSP(SubmitResponse)
     views.POST("/submit").REQ(SubmitJson).RSP(SubmitResponse)
     views.POST("/form").REQ_FORM(FormPayload).RSP(SubmitResponse)
-    views.WS("/ws").ARGS(token=String(description="token")).SEND(ClientMessage).RECV(ServerMessage)
     views.STREAM("/events").OPEN(OpenPayload).SERVER_MESSAGE(ServerMessage).CLOSE(CloseInfo)
     views.CHANNEL("/chat").OPEN(OpenPayload).CLIENT_MESSAGE(ClientMessage).SERVER_MESSAGE(ServerMessage).CLOSE(CloseInfo)
     bp.is_built = True
@@ -252,7 +247,7 @@ def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full
     assert not (tmp_path / "kotlin" / "com" / "example" / "generated" / "internal").exists()
 
     assert "public interface ApiTransport" in runtime_text
-    assert "public interface ApiSocketBridge<Send, Recv>" in runtime_text
+    assert "public interface ApiSocketBridge<Send, Recv>" not in runtime_text
     assert "public interface ApiStreamBridge<Recv, Close>" in runtime_text
     assert "public interface ApiChannelBridge<Recv, Send, Close>" in runtime_text
     assert "class ApiError" in errors_text
@@ -278,10 +273,10 @@ def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full
     assert "query: DemoPingQuery," in route_text
     assert "json: SubmitJson," in route_text
     assert "form: FormPayload," in route_text
-    assert "public open fun connectWs(" in route_text
+    assert "public open fun connectWs(" not in route_text
     assert "public open fun subscribeEvents(" in route_text
     assert "public open fun openChat(" in route_text
-    assert 'connectionKind = "legacy_ws"' in route_text
+    assert 'connectionKind = "legacy_ws"' not in route_text
     assert 'connectionKind = "stream"' in route_text
     assert 'connectionKind = "channel"' in route_text
     assert "open = open" in route_text
@@ -290,7 +285,7 @@ def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full
     assert "public class OkHttpApiTransport" in transport_text
     assert "private val config: HttpApiConfig = HttpApiConfig()" in transport_text
     assert "override suspend fun execute(request: ApiRequest<*>): ApiResponse" in transport_text
-    assert "override fun connectSocket(options: SocketConnectOptions): ApiSocketBridge" in transport_text
+    assert "override fun connectSocket(options: SocketConnectOptions): ApiSocketBridge" not in transport_text
     assert "override fun openStream(options: StreamConnectOptions): ApiStreamBridge" in transport_text
     assert "override fun openChannel(options: ChannelConnectOptions): ApiChannelBridge" in transport_text
     assert "public data class HttpApiConfig" in http_config_text
@@ -511,7 +506,7 @@ content-encoding: identity,gzip
 |---|---|---:|---|---|
 | magic | bytes | 4 | const="ABP1" | magic |
 | version | u16 | 1 | const=1 | protocol version |
-| flags | DemoFlags | 1 | min=0 | flags |
+| flags | Flags | 1 | min=0 | flags |
 | item_count | u16 | 1 | min=1,max=8,sizeof=items | item count |
 | payload_len | u32 | 1 | min=0,max=64,sizeof=payload | payload bytes |
 
@@ -519,11 +514,11 @@ content-encoding: identity,gzip
 
 | field | type | count | rule | comment |
 |---|---|---:|---|---|
-| items | DemoPacketItem | item_count | | items |
+| items | Item | item_count | | items |
 | payload | bytes | payload_len | encoding=utf-8 | payload |
 | checksum | u32 | 1 | assert=item_count + payload_len | checksum |
 
-## struct DemoPacketItem
+## struct Item
 
 | field | type | count | rule | comment |
 |---|---|---:|---|---|
@@ -533,7 +528,7 @@ content-encoding: identity,gzip
 | label_len | u8 | 1 | min=1,max=16,sizeof=label | label bytes |
 | label | bytes | label_len | encoding=utf-8 | label |
 
-## bitflags DemoFlags : u32
+## bitflags Flags : u32
 
 | name | bits | rule | comment |
 |---|---:|---|---|
@@ -567,9 +562,14 @@ content-encoding: identity,gzip
     assert "public data class EncodedBinaryBlock(" in runtime_binary_text
     assert "public class BinaryWriter" in runtime_binary_text
     assert "public fun writeBlock(path: String, block: EncodedBinaryBlock)" in runtime_binary_text
+    assert "public val detail: String = message" in runtime_binary_text
+    assert "public fun joinBinaryPath(path: String, field: String): String" in runtime_binary_text
+    assert "public fun indexBinaryPath(path: String, index: Int): String" in runtime_binary_text
+    assert "public fun wrapBinaryField(path: String, error: BinaryEncodeException): BinaryEncodeException" in runtime_binary_text
+    assert "public fun wrapBinaryIndex(path: String, index: Int, error: BinaryEncodeException): BinaryEncodeException" in runtime_binary_text
     assert "public object GenBinary {" not in binary_text
     assert "public data class DemoPacket(" in binary_text
-    assert "public object DemoFlagsValues" in binary_text
+    assert "public object DemoPacketFlagsValues" in binary_text
     assert "reserved bits must be zero" in binary_text
     assert "public object DemoPacketWire" in binary_text
     assert "public fun writeDemoPacketItem(" in binary_text
@@ -578,9 +578,14 @@ content-encoding: identity,gzip
     assert "public fun writeDemoPacketBodyItemsFragment(" in binary_text
     assert "public fun writeDemoPacketItem(" in binary_text
     assert "label: ByteString," in binary_text
-    assert "writer.writeByteString(\"DemoPacketItem.label\", label)" in binary_text
-    assert "requireSize(\"DemoPacketItem.label_len.label\", binarySize(value.label), value.labelLen.toLong())" in binary_text
-    assert "writer.writeF64(\"DemoPacketItem.score\", value.score)" in binary_text
+    assert "\"Item.id\"" not in binary_text
+    assert "writer.writeU32(\"id\", value.id)" in binary_text
+    assert "writer.writeByteString(\"label\", label)" in binary_text
+    assert "requireSize(\"label_len.label\", binarySize(value.label), value.labelLen.toLong())" in binary_text
+    assert "writer.writeF64(\"score\", value.score)" in binary_text
+    assert "wrapBinaryIndex(\"items\", index, error)" in binary_text
+    assert "wrapBinaryField(path, error)" in binary_text
+    assert "+ \"[$index]\"" not in binary_text
     assert "public open suspend fun packet(" in route_text
     assert "binary: DemoPacket," in route_text
     assert "binary = DemoPacketWire.toBinaryBody(binary)" in route_text

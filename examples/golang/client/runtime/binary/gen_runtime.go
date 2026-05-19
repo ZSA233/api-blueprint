@@ -228,6 +228,38 @@ func NewEncodeError(path string, message string) error {
 	return EncodeError{Path: path, Message: message}
 }
 
+func JoinPath(path string, field string) string {
+	if path == "" {
+		return field
+	}
+	if field == "" {
+		return path
+	}
+	return path + "." + field
+}
+
+func IndexPath(path string, index int) string {
+	return fmt.Sprintf("%s[%d]", path, index)
+}
+
+func WrapField(path string, err error) error {
+	if err == nil {
+		return nil
+	}
+	encodeErr, ok := err.(EncodeError)
+	if !ok {
+		return NewEncodeError(path, err.Error())
+	}
+	return EncodeError{
+		Path:    JoinPath(path, encodeErr.Path),
+		Message: encodeErr.Message,
+	}
+}
+
+func WrapIndex(path string, index int, err error) error {
+	return WrapField(IndexPath(path, index), err)
+}
+
 func Require(path string, ok bool, message string) error {
 	if !ok {
 		return NewEncodeError(path, message)

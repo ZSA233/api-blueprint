@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import httpx
+import pytest
 
 from api_blueprint.contract import build_contract_graph
 from api_blueprint.engine import Blueprint, Error, Toast
@@ -394,7 +395,6 @@ def test_python_server_generates_connection_adapter_scaffolds(tmp_path: Path):
 
     bp = Blueprint(root="/api")
     with bp.group("/demo") as views:
-        views.WS("/ws").SEND(Event).RECV(Event)
         views.STREAM("/events").OPEN(OpenPayload).SERVER_MESSAGE(Event)
         views.CHANNEL("/chat").OPEN(OpenPayload).CLIENT_MESSAGE(Event).SERVER_MESSAGE(Event)
 
@@ -409,7 +409,6 @@ def test_python_server_generates_connection_adapter_scaffolds(tmp_path: Path):
 
     assert "from fastapi import APIRouter, WebSocket" in adapter_text
     assert "from starlette.responses import StreamingResponse" in adapter_text
-    assert "@router.websocket(\"/api/demo/ws\")" in adapter_text
     assert "@router.api_route(\"/api/demo/events\", methods=[\"GET\"])" in adapter_text
     assert "@router.websocket(\"/api/demo/chat\")" in adapter_text
     assert "return StreamingResponse(result)" in adapter_text
@@ -469,7 +468,6 @@ def test_python_client_generates_connection_bridge_methods(tmp_path: Path):
 
     bp = Blueprint(root="/api")
     with bp.group("/demo") as views:
-        views.WS("/ws").SEND(Event).RECV(Event)
         views.STREAM("/events").OPEN(OpenPayload).SERVER_MESSAGE(Event)
         views.CHANNEL("/chat").OPEN(OpenPayload).CLIENT_MESSAGE(Event).SERVER_MESSAGE(Event)
 
@@ -488,12 +486,12 @@ def test_python_client_generates_connection_bridge_methods(tmp_path: Path):
         output_dir / "api_blueprint_generated" / "api" / "transports" / "http" / "gen_client.py"
     ).read_text(encoding="utf-8")
 
-    assert "class ApiSocketBridge(Protocol" in runtime_text
-    assert "def connect_socket(" in runtime_text
+    assert "class ApiSocketBridge(Protocol" not in runtime_text
+    assert "def connect_socket(" not in runtime_text
     assert "def open_stream(" in runtime_text
     assert "def open_channel(" in runtime_text
-    assert "def connect_ws(" in route_text
-    assert "return self._transport.connect_socket(" in route_text
+    assert "def connect_ws(" not in route_text
+    assert "return self._transport.connect_socket(" not in route_text
     assert "def subscribe_events(" in route_text
     assert "return self._transport.open_stream(" in route_text
     assert "def open_chat(" in route_text
@@ -592,8 +590,8 @@ endian: little
 
 | field | type | count | rule | comment |
 |---|---|---:|---|---|
-| kind | DemoKind | 1 | const=1 | kind |
-| flags | DemoFlags | 1 | min=0 | flags |
+| kind | Kind | 1 | const=1 | kind |
+| flags | Flags | 1 | min=0 | flags |
 | pad0 | padding | 1 | | pad |
 | code | u24 | 1 | min=1,max=16777215 | code |
 | delta | i24 | 1 | min=-8,max=8 | delta |
@@ -605,13 +603,13 @@ endian: little
 |---|---|---:|---|---|
 | payload | bytes | payload_len | | payload |
 
-## enum DemoKind : u16
+## enum Kind : u16
 
 | name | value | comment |
 |---|---:|---|
 | Metric | 1 | metric |
 
-## bitflags DemoFlags : u32
+## bitflags Flags : u32
 
 | name | bits | rule | comment |
 |---|---:|---|---|
@@ -661,8 +659,8 @@ endian: little
     assert "binary=DemoPacketWire.to_binary_body(binary)" in route_text
     assert "from .gen_types import (" in route_text
     assert "from .gen_binary import *" in types_text
-    assert "class DemoKind:" in schema_text
-    assert "class DemoFlags:" in schema_text
+    assert "class DemoPacketKind:" in schema_text
+    assert "class DemoPacketFlags:" in schema_text
     assert "reserved bits must be zero" in schema_text
     assert "writer.write_u24" in schema_text
     assert "writer.write_i24" in schema_text
@@ -679,3 +677,122 @@ endian: little
         / "wire.py"
     ).exists()
     _compile_generated_files(output_dir)
+
+
+def test_python_binary_writer_uses_local_paths_and_wraps_boundaries_without_success_path_allocations(tmp_path: Path):
+    schema = parse_binary_schema(
+        """
+# packet DemoPacket
+
+endian: little
+
+## header
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| item_count | u16 | 1 | const=1,max=1,sizeof=items | item count |
+
+## body
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| items | Item | item_count | | items |
+
+## struct Item
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| id | u32 | 1 | min=1 | item id |
+""".strip(),
+        source_path="demo_packet.md",
+    )
+    bp = Blueprint(root="/api")
+    with bp.group("/binary") as views:
+        views.POST("/packet").REQ_BINARY(schema).RSP(Result)
+
+    output_dir = tmp_path / "python"
+    writer = PythonClientWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    schema_text = (
+        output_dir
+        / "api_blueprint_generated"
+        / "api"
+        / "routes"
+        / "api"
+        / "binary"
+        / "gen_binary.py"
+    ).read_text(encoding="utf-8")
+    runtime_text = (
+        output_dir / "api_blueprint_generated" / "api" / "runtime" / "binary" / "gen_runtime.py"
+    ).read_text(encoding="utf-8")
+
+    assert 'raise wrap_binary_field("DemoPacket.header", err) from err' in schema_text
+    assert 'raise wrap_binary_field("DemoPacket.body", err) from err' in schema_text
+    assert 'write_demopacket_item(item, writer, state, path="")' in schema_text
+    assert 'raise wrap_binary_index("items", index, err) from err' in schema_text
+    assert 'path: str = "Item",' in schema_text
+    assert 'require_range("id", int(value.id), 1, 2**63 - 1)' in schema_text
+    assert "Item.id" not in schema_text
+    assert "join_binary_path(" not in schema_text
+    assert "index_binary_path(" not in schema_text
+    assert "def join_binary_path(" in runtime_text
+    assert "def index_binary_path(" in runtime_text
+    assert "def wrap_binary_field(" in runtime_text
+    assert "def wrap_binary_index(" in runtime_text
+    _compile_generated_files(output_dir)
+
+
+def test_python_binary_writer_reports_nested_schema_path(tmp_path: Path):
+    schema = parse_binary_schema(
+        """
+# packet DemoPacket
+
+endian: little
+
+## header
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| item_count | u16 | 1 | const=1,max=1,sizeof=items | item count |
+
+## body
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| items | Item | item_count | | items |
+
+## struct Item
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| id | u32 | 1 | min=1 | item id |
+""".strip(),
+        source_path="demo_packet.md",
+    )
+    bp = Blueprint(root="/api")
+    with bp.group("/binary") as views:
+        views.POST("/packet").REQ_BINARY(schema).RSP(Result)
+
+    output_dir = tmp_path / "python"
+    writer = PythonClientWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    binary_module = _import_generated_module(
+        output_dir,
+        "api_blueprint_generated.api.routes.api.binary.gen_binary",
+    )
+    runtime_module = importlib.import_module("api_blueprint_generated.api.runtime.binary")
+    packet = binary_module.DemoPacket(
+        header=binary_module.DemoPacketHeader(),
+        body=binary_module.DemoPacketBody(items=[binary_module.DemoPacketItem(id=0)]),
+    )
+
+    with pytest.raises(runtime_module.BinaryEncodeError) as caught:
+        binary_module.DemoPacketWire.to_binary_body(packet).to_bytes()
+
+    assert caught.value.path == "DemoPacket.body.items[0].id"
+    assert caught.value.message == "value 0 outside range 1..9223372036854775807"
+    assert caught.value.detail == str(caught.value)

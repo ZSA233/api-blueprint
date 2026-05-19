@@ -4,7 +4,7 @@ import enum
 
 
 
-class WsMsgTypeEnum(enum.StrEnum):
+class HelloChannelMsgTypeEnum(enum.StrEnum):
     PING        = 'ping'
     PONG        = 'pong'
     JOIN        = 'join'
@@ -17,15 +17,15 @@ class ApiHelloMap(Model):
     haha    = Int64(description='haha')
 
 
-class WsMessage(Model):
-    type    = Enum[WsMsgTypeEnum](description='消息类型')
+class HelloChannelMessage(Model):
+    type    = Enum[HelloChannelMsgTypeEnum](description='消息类型')
     data    = Field(description='消息内容')
 
 
-apibp.WS("/ws").SEND(
-    WsMessage,
-).RECV(
-    WsMessage,
+apibp.CHANNEL("/ws", operation_id="HelloChannel").SERVER_MESSAGE(
+    HelloChannelMessage,
+).CLIENT_MESSAGE(
+    HelloChannelMessage,
 )
 
 
@@ -45,7 +45,7 @@ with apibp.group('/hello') as views:
         arg1    = Bool(description='arg1', default=True),
         arg3    = String(description='arg3', omitempty=True),
         arg2    = Float(description='arg2', default=6.666),
-        type    = Enum[WsMsgTypeEnum](description='消息类型'),
+        type    = Enum[HelloChannelMsgTypeEnum](description='消息类型'),
     ).RSP(Map[String, ApiHelloMap](description="map"))
 
 

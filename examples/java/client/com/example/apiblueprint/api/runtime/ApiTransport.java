@@ -4,10 +4,6 @@ package com.example.apiblueprint.api.runtime;
 public interface ApiTransport {
     <T> T execute(ApiRequest<T> request) throws Exception;
 
-    default <Send, Recv> ApiSocketBridge<Send, Recv> connectSocket(ApiRequest<?> request) {
-        throw new UnsupportedOperationException("Java HTTP WebSocket transport is not implemented by the default adapter");
-    }
-
     default <Recv, Close> ApiStreamBridge<Recv, Close> openStream(ApiRequest<?> request) {
         throw new UnsupportedOperationException("Java HTTP stream transport is not implemented by the default adapter");
     }

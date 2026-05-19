@@ -94,9 +94,34 @@ export interface ConnectionClose {
   error?: string;
 }
 
+export interface DefaultConnectionClose {
+  /** logical close code */
+  code?: number;
+  /** close reason */
+  reason?: string;
+  /** machine-readable error key */
+  error?: string;
+}
+
 export interface FieldWrappedModel {
 
   [key: string]: never;
+}
+
+export interface HelloChannelMessage {
+  /** 消息类型 */
+  type: HelloChannelMsgTypeEnum;
+  /** 消息内容 */
+  data: any;
+}
+
+export enum HelloChannelMsgTypeEnum {
+  PING = "ping",
+  PONG = "pong",
+  JOIN = "join",
+  LEAVE = "leave",
+  FORGEROUND = "forgeround",
+  UPGRADE = "upgrade",
 }
 
 export enum HelloWayEnum {
@@ -148,40 +173,5 @@ export interface SweepState {
 export interface Uint64 {
 
   [key: string]: never;
-}
-
-export interface WSRecv {
-  /** data */
-  data: string;
-}
-
-export interface WSResponse<T = any> {
-  /** code */
-  code: number;
-  /** msg */
-  msg: string;
-  /** data */
-  data: T;
-}
-
-export interface WSSend {
-  /** [WSRecv] ws_recv */
-  ws_recv: WSRecv;
-}
-
-export interface WsMessage {
-  /** 消息类型 */
-  type: WsMsgTypeEnum;
-  /** 消息内容 */
-  data: any;
-}
-
-export enum WsMsgTypeEnum {
-  PING = "ping",
-  PONG = "pong",
-  JOIN = "join",
-  LEAVE = "leave",
-  FORGEROUND = "forgeround",
-  UPGRADE = "upgrade",
 }
 

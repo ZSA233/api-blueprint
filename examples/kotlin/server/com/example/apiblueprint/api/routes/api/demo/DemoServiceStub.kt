@@ -30,12 +30,6 @@ public open class DemoServiceStub : GenDemoService {
         throw NotImplementedError("api.demo.delete.delete is not implemented")
     }
 
-    public override suspend fun ws(
-        query: ApiDemoSubA
-    ): Any {
-        throw NotImplementedError("api.demo.ws.ws is not implemented")
-    }
-
     public override suspend fun sweepEvents(
         openData: SweepOpen
     ): Any {

@@ -4,7 +4,7 @@
 
 import type * as Types from "./types";
 import type * as Shared from "../../../runtime/types";
-import { ApiChannelBridge, ApiClientConfig, ApiSocketBridge, ApiStreamBridge, BaseClient } from "../../../runtime/client";
+import { ApiChannelBridge, ApiClientConfig, ApiStreamBridge, BaseClient } from "../../../runtime/client";
 
 export class DemoClient extends BaseClient {
   constructor(config: ApiClientConfig = {}) {
@@ -134,59 +134,6 @@ export class DemoClient extends BaseClient {
       responseType: "text",
       responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
       timeoutMs,
-    });
-  }
-
-  /**
-   * 这是ws的summary
-   * 这是ws的description
-   * Tags: api
-   */
-  connectWs(
-    request: {
-      query?: Shared.ApiDemoSubA;
-      headers?: Record<string, string>;
-    } = {},
-    protocols?: string | string[],
-  ): ApiSocketBridge<Types.WsWsSend, Shared.WSRecv> {
-    return this.connectBridge<Types.WsWsSend, Shared.WSRecv>({
-      routeId: "api.demo.ws.ws",
-      connectionKind: "legacy_ws",
-      scope: "",
-      path: "/api/demo/ws",
-      service: "DemoService",
-      namespace: "demo",
-      connectMethod: "ConnectWs",
-      sendMethod: "SendWs",
-      closeMethod: "CloseWs",
-      eventBase: "api_blueprint.ws.api.demo.ws.ws",
-      query: request.query as unknown as Record<string, unknown> | undefined,
-      headers: request.headers,
-      protocols,
-    });
-  }
-
-  connectWsRaw(
-    request: {
-      query?: Shared.ApiDemoSubA;
-      headers?: Record<string, string>;
-    } = {},
-    protocols?: string | string[],
-  ): WebSocket {
-    return this.connectRaw({
-      routeId: "api.demo.ws.ws",
-      connectionKind: "legacy_ws",
-      scope: "",
-      path: "/api/demo/ws",
-      service: "DemoService",
-      namespace: "demo",
-      connectMethod: "ConnectWs",
-      sendMethod: "SendWs",
-      closeMethod: "CloseWs",
-      eventBase: "api_blueprint.ws.api.demo.ws.ws",
-      query: request.query as unknown as Record<string, unknown> | undefined,
-      headers: request.headers,
-      protocols,
     });
   }
 

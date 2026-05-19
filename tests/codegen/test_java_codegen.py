@@ -121,7 +121,6 @@ content-type: application/octet-stream
     views.GET("/ping").ARGS(q=String(description="q")).RSP(Result)
     views.POST("/submit").REQ(SubmitJson).RSP(Result)
     views.POST("/form").REQ_FORM(FormPayload).RSP(Result)
-    views.WS("/ws").ARGS(token=String(description="token")).SEND(Event).RECV(Event)
     views.STREAM("/events").OPEN(OpenPayload).SERVER_MESSAGE(Event)
     views.CHANNEL("/chat").OPEN(OpenPayload).SERVER_MESSAGE(Event).CLIENT_MESSAGE(Event)
     with bp.group("/binary") as binary:
@@ -168,6 +167,12 @@ content-type: application/octet-stream
     transport_text = (client_http_dir / "GenJdkHttpApiTransport.java").read_text(encoding="utf-8")
     config_text = (client_http_dir / "GenHttpApiConfig.java").read_text(encoding="utf-8")
     binary_text = (client_dir / package_root / "routes/api/binary/BinaryTypes.java").read_text(encoding="utf-8")
+    binary_service_text = (server_dir / package_root / "routes/api/binary/GenBinaryService.java").read_text(
+        encoding="utf-8"
+    )
+    binary_controller_text = (
+        server_dir / package_root / "transports/http/api/binary/GenBinaryController.java"
+    ).read_text(encoding="utf-8")
     service_text = (server_route_dir / "GenDemoService.java").read_text(encoding="utf-8")
     controller_text = (
         server_dir / package_root / "transports/http/api/demo/GenDemoController.java"
@@ -217,9 +222,12 @@ content-type: application/octet-stream
     assert "ApiBinaryBody binaryBody" in (client_dir / package_root / "routes/api/binary/GenBinaryApi.java").read_text(
         encoding="utf-8"
     )
-    assert "connectWs(" in route_text
+    assert "connectWs(" not in route_text
     assert "subscribeEvents(" in route_text
     assert "openChat(" in route_text
+    assert "ApiStreamBridge<ApiTypes.Event, Object> subscribeEvents(" in route_text
+    assert "ApiChannelBridge<ApiTypes.Event, ApiTypes.Event, Object> openChat(" in route_text
+    assert "DemoTypes.Event" not in route_text
     assert "public class GenJdkHttpApiTransport implements ApiTransport" in transport_text
     assert "HttpClient.newHttpClient()" in transport_text
     assert "throw new ApiError(payload" in transport_text
@@ -234,15 +242,95 @@ content-type: application/octet-stream
     assert "public class ApiError extends RuntimeException" in api_error_text
     assert "\\u767b" not in catalog_text
     assert "public final class BinaryTypes" in binary_text
-    assert "public record DemoPacket(ApiBinaryBody body)" in binary_text
+    assert "public record DemoPacket(ApiBinaryBody body)" not in binary_text
+    assert "public record DemoPacket(" in binary_text
+    assert "DemoPacketBody body" in binary_text
+    assert "public record DemoPacketBody(" in binary_text
+    assert "byte[] payload" in binary_text
+    assert "public static ApiBinaryBody toBinaryBody(DemoPacket value)" in binary_text
+    assert "public static DemoPacket parse(byte[] bytes)" in binary_text
+    assert "BinaryTypes.DemoPacket binary" in binary_service_text
+    assert (
+        "BinaryTypes.DemoPacket binary = BinaryTypes.DemoPacketWire.parse(binaryBody == null ? new byte[0] : binaryBody);"
+        in binary_controller_text
+    )
     assert "public static final String CONTENT_TYPE = \"application/octet-stream\"" in binary_text
 
     assert "public interface GenDemoService" in service_text
     assert "ApiTypes.Result ping(" in service_text
-    assert "Object ws(" in service_text
+    assert "Object ws(" not in service_text
     assert "@RestController" in controller_text
     assert "@RequestMapping(path = \"/api/demo/ping\", method = RequestMethod.GET)" in controller_text
     assert "ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)" in controller_text
+
+
+def test_java_generates_typed_binary_writer_parser_and_schema_paths(tmp_path: Path) -> None:
+    schema = parse_binary_schema(
+        """
+# packet DemoPacket
+
+endian: little
+content-type: application/octet-stream
+
+## header
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| item_count | u16 | 1 | max=1,sizeof=items | item count |
+
+## body
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| items | Item | item_count | | items |
+
+## struct Item
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| id | u32 | 1 | min=1 | item id |
+| label_len | u8 | 1 | sizeof=label,max=16 | label length |
+| label | bytes | label_len | | label |
+""".strip(),
+        source_path="demo_packet.md",
+    )
+    bp = Blueprint(root="/api")
+    with bp.group("/binary") as binary:
+        binary.POST("/packet").REQ_BINARY(schema).RSP(Result)
+
+    output_dir = tmp_path / "java"
+    writer = JavaClientWriter(output_dir, package="com.example.generated")
+    writer.register(bp)
+    writer.gen()
+
+    binary_text = (
+        output_dir / "com/example/generated/api/routes/api/binary/BinaryTypes.java"
+    ).read_text(encoding="utf-8")
+    runtime_text = (output_dir / "com/example/generated/api/runtime/binary/GenBinaryRuntime.java").read_text(
+        encoding="utf-8"
+    )
+
+    assert "public record DemoPacket(" in binary_text
+    assert "public record DemoPacketHeader(" in binary_text
+    assert "public record DemoPacketBody(" in binary_text
+    assert "public record DemoPacketItem(" in binary_text
+    assert '@JsonProperty("item_count") Integer itemCount' in binary_text
+    assert '@JsonProperty("label_len") Integer labelLen' in binary_text
+    assert "public static ApiBinaryBody toBinaryBody(DemoPacket value)" in binary_text
+    assert "public static DemoPacket parse(byte[] bytes)" in binary_text
+    assert 'throw GenBinaryRuntime.wrapBinaryField("DemoPacket.body", error);' in binary_text
+    assert 'throw GenBinaryRuntime.wrapBinaryIndex("items", index, error);' in binary_text
+    assert 'GenBinaryRuntime.requireRange("id", value.id().longValue(), 1L, Long.MAX_VALUE);' in binary_text
+    assert (
+        'GenBinaryRuntime.requireSize("label_len.label", GenBinaryRuntime.binarySize(value.label()), value.labelLen().longValue());'
+        in binary_text
+    )
+    assert 'reader.readU32("id")' in binary_text
+    assert "class BinaryEncodeException" in runtime_text
+    assert "class BinaryDecodeException" in runtime_text
+    assert "String path()" in runtime_text
+    assert "wrapBinaryField" in runtime_text
+    assert "wrapBinaryIndex" in runtime_text
 
 
 def test_java_client_and_server_generate_named_message_keyframe_helpers(tmp_path: Path) -> None:

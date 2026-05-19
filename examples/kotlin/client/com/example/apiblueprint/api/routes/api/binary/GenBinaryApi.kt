@@ -51,7 +51,51 @@ public open class GenBinaryApi internal constructor(
         )
     }
 
+    public open suspend fun auditPacket(
+        query: BinaryAuditPacketQuery,
+        binary: AuditPacket,
+        headers: Map<String, String> = emptyMap(),
+    ): BinaryAuditPacketResponse {
+        return transport.request(
+            ApiRequest(
+                routeId = "api.binary.post.auditpacket",
+                method = "POST",
+                path = "/api/binary/audit-packet",
+                query = query.toQueryMap(),
+                headers = headers,
+                binary = AuditPacketWire.toBinaryBody(binary),
+                responseSerializer = BinaryAuditPacketResponse.serializer(),
+                responseMediaType = "application/json",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+            )
+        )
+    }
+
+    public open suspend fun auditPacket(
+        query: BinaryAuditPacketQuery,
+        binary: ApiBinaryBody,
+        headers: Map<String, String> = emptyMap(),
+    ): BinaryAuditPacketResponse {
+        return transport.request(
+            ApiRequest(
+                routeId = "api.binary.post.auditpacket",
+                method = "POST",
+                path = "/api/binary/audit-packet",
+                query = query.toQueryMap(),
+                headers = headers,
+                binary = binary,
+                responseSerializer = BinaryAuditPacketResponse.serializer(),
+                responseMediaType = "application/json",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+            )
+        )
+    }
+
     private fun BinaryPacketQuery.toQueryMap(): Map<String, String?> = mapOf(
+        "trace" to trace?.toString()
+    )
+
+    private fun BinaryAuditPacketQuery.toQueryMap(): Map<String, String?> = mapOf(
         "trace" to trace?.toString()
     )
 }

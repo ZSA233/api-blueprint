@@ -21,3 +21,15 @@ class PacketResponse:
     first_label: str | None = None
     item_ids: list[Any] | None = None
     checksum: int | None = None
+
+
+@dataclass
+class AuditPacketQuery:
+    trace: str | None = None
+
+
+@dataclass
+class AuditPacketResponse:
+    trace: str | None = None
+    item_count: int | None = None
+    checksum: int | None = None

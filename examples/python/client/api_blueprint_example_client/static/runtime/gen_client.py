@@ -45,17 +45,6 @@ class ApiClientTransport(Protocol):
     ) -> Any:
         ...
 
-    def connect_socket(
-        self,
-        *,
-        route_id: str,
-        path: str,
-        query: Mapping[str, Any] | None = None,
-        headers: Mapping[str, str] | None = None,
-        protocols: tuple[str, ...] = (),
-    ) -> "ApiSocketBridge[Any, Any]":
-        ...
-
     def open_stream(
         self,
         *,
@@ -77,17 +66,6 @@ class ApiClientTransport(Protocol):
         headers: Mapping[str, str] | None = None,
         protocols: tuple[str, ...] = (),
     ) -> "ApiChannelBridge[Any, Any, Any]":
-        ...
-
-
-class ApiSocketBridge(Protocol, Generic[SendT, RecvT]):
-    async def send(self, message: SendT) -> None:
-        ...
-
-    def __aiter__(self) -> AsyncIterator[RecvT]:
-        ...
-
-    async def close(self) -> None:
         ...
 
 

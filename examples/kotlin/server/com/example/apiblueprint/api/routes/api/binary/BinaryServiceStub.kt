@@ -14,4 +14,11 @@ public open class BinaryServiceStub : GenBinaryService {
         throw NotImplementedError("api.binary.post.packet is not implemented")
     }
 
+    public override suspend fun auditPacket(
+        query: BinaryAuditPacketQuery,
+        binaryBody: ApiBinaryBody
+    ): BinaryAuditPacketResponse {
+        throw NotImplementedError("api.binary.post.auditpacket is not implemented")
+    }
+
 }

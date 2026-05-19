@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import asdict, is_dataclass
 from typing import Any, Mapping
 
-from ....runtime.client import ApiChannelBridge, ApiClientTransport, ApiSocketBridge, ApiStreamBridge
+from ....runtime.client import ApiChannelBridge, ApiClientTransport, ApiStreamBridge
 
 
 from .gen_types import (
@@ -17,7 +17,6 @@ from .gen_types import (
     PutDemoResponse,
     DeleteQuery,
     DeleteResponse,
-    WsQuery,
     SweepEventsOpen,
     SweepState,
     SweepProgress,
@@ -118,20 +117,6 @@ class DemoClient:
             response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
         )
         return _from_mapping(DeleteResponse, payload)
-
-    def connect_ws(
-        self,
-        query: dict[str, Any] | None = None,
-        headers: dict[str, str] | None = None,
-        protocols: tuple[str, ...] = (),
-    ) -> ApiSocketBridge[Any, Any]:
-        return self._transport.connect_socket(
-            route_id="api.demo.ws.ws",
-            path="/api/demo/ws",
-            query=query,
-            headers=headers,
-            protocols=protocols,
-        )
 
     def subscribe_sweep_events(
         self,

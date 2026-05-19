@@ -16,7 +16,6 @@ type DemoService struct {
 	testPostExecutor         *sharedprovider.RouteExecutor[any, REQ_TestPost_JSON, RSP_TestPost]
 	putDemoExecutor          *sharedprovider.RouteExecutor[REQ_PutDemo_QUERY, REQ_PutDemo_JSON, RSP_PutDemo]
 	deleteExecutor           *sharedprovider.RouteExecutor[REQ_Delete_QUERY, any, RSP_Delete]
-	wsExecutor               *sharedprovider.RouteExecutor[REQ_Ws_QUERY, any, RSP_Ws]
 	sweepEventsExecutor      *sharedprovider.RouteExecutor[OPEN_SweepEvents, any, RSP_SweepEvents]
 	assistantSessionExecutor *sharedprovider.RouteExecutor[OPEN_AssistantSession, any, RSP_AssistantSession]
 	postDeprecatedExecutor   *sharedprovider.RouteExecutor[any, REQ_PostDeprecated_JSON, RSP_PostDeprecated]
@@ -92,22 +91,6 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 			},
 			"req=Q|auth|handle|rsp=xml@CodeMessageDataEnvelope",
 			impl.Delete,
-		),
-		wsExecutor: sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "demo",
-				Namespace: "demo",
-				Service:   "DemoService",
-				Operation: "Ws",
-				RouteID:   "api.demo.ws.ws",
-				Path:      "/api/demo/ws",
-				Methods:   []string{"WS"},
-				Transport: sharedprovider.TransportWails,
-				Scope:     sharedprovider.ConnectionScope(""),
-			},
-			"req=Q|auth|ws_handle|rsp=json@CodeMessageDataEnvelope",
-			impl.Ws,
 		),
 		sweepEventsExecutor: sharedprovider.NewRouteExecutor[
 			OPEN_SweepEvents,
@@ -336,70 +319,6 @@ func (svc *DemoService) Delete(
 		Options: "CodeMessageDataEnvelope",
 	}
 	return sharedprovider.MarshalXMLResponse(xmlProvider, response)
-}
-
-func (svc *DemoService) ConnectWs(
-	envelope *WS_CONNECT_Ws,
-) (rsp *wailstransport.SocketSessionDescriptor, err error) {
-	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
-		BindQuery: true,
-		BindJSON:  false,
-		BindForm:  false,
-	})
-	if reqErr != nil {
-		err = reqErr
-		return
-	}
-	ctx := sharedprovider.NewWailsContext[REQ_Ws_QUERY, any, RSP_Ws](
-		"DemoService",
-		"ConnectWs",
-		wailstransport.EnvelopeHeaders(envelope),
-	)
-	ctx.Req = &sharedprovider.ReqContext[REQ_Ws_QUERY, any, RSP_Ws]{Request: req}
-	if err := svc.wsExecutor.RunWSPreflight(ctx); err != nil {
-		return nil, err
-	}
-
-	session, sessionErr := svc.sessions.Open(wailstransport.ConnectionOpenSpec{
-		RouteID:   "api.demo.ws.ws",
-		EventBase: "api_blueprint.ws.api.demo.ws.ws",
-		Scope:     sharedprovider.ConnectionScopeSession,
-	})
-	if sessionErr != nil {
-		err = sessionErr
-		return
-	}
-	ctx.WsHandle = &sharedprovider.WsHandleContext[REQ_Ws_QUERY, any, RSP_Ws]{Conn: session}
-
-	go func() {
-		if runErr := svc.wsExecutor.RunWSHandler(ctx); runErr != nil {
-			ctx.WsHandle.Error = runErr
-			_ = session.Abort(ctx.Base, 1011, runErr.Error())
-		}
-	}()
-
-	descriptor := session.Descriptor()
-	return &descriptor, nil
-}
-
-func (svc *DemoService) SendWs(request *WS_SEND_Ws) error {
-	session, err := svc.sessions.Get(request.SessionID)
-	if err != nil {
-		return err
-	}
-	return session.Push(request.Payload)
-}
-
-func (svc *DemoService) CloseWs(request *WS_CLOSE_Ws) error {
-	session, err := svc.sessions.Get(request.SessionID)
-	if err != nil {
-		return err
-	}
-	code := request.Code
-	if code == 0 {
-		code = 1000
-	}
-	return session.Abort(context.Background(), code, request.Reason)
 }
 
 func (svc *DemoService) SubscribeSweepEvents(

@@ -42,12 +42,10 @@ type ConnectionRequest struct {
 
 type Transport interface {
 	Do(ctx context.Context, request Request, response any) error
-	ConnectUnsupported(ctx context.Context, request ConnectionRequest) error
 	StreamUnsupported(ctx context.Context, request ConnectionRequest) error
 	ChannelUnsupported(ctx context.Context, request ConnectionRequest) error
 }
 
-type WebSocket[Send any, Recv any] interface{}
 type Stream[Open any, Server any, Close any] interface{}
 type Channel[Open any, Server any, Client any, Close any] interface{}
 

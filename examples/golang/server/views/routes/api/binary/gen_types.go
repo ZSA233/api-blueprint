@@ -34,3 +34,26 @@ type CTX_Packet = providers.Context[
 	binary.DemoPacket,
 	RSP_Packet_BODY,
 ]
+
+type REQ_AuditPacket_QUERY struct {
+	Trace string `json:"trace,omitempty" xml:"trace,omitempty" form:"trace,omitempty" binding:"omitempty"`
+}
+
+type REQ_AuditPacket = providers.REQ[
+	REQ_AuditPacket_QUERY,
+	binary.AuditPacket,
+]
+
+type RSP_AuditPacket_BODY struct {
+	Trace     string `json:"trace" xml:"trace" form:"trace" binding:"required"`
+	ItemCount uint   `json:"item_count" xml:"item_count" form:"item_count" binding:"required"`
+	Checksum  uint   `json:"checksum" xml:"checksum" form:"checksum" binding:"required"`
+}
+
+type RSP_AuditPacket = RSP_AuditPacket_BODY
+
+type CTX_AuditPacket = providers.Context[
+	REQ_AuditPacket_QUERY,
+	binary.AuditPacket,
+	RSP_AuditPacket_BODY,
+]

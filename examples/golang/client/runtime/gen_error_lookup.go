@@ -71,11 +71,15 @@ var ApiErrors = struct {
 }
 
 var routeApiErrorsByCode = map[string]map[ApiErrorCode]ApiErrorEntry{
-	"api.api.ws.ws": {
+	"api.api.channel.ws": {
 		CommonErrUnknown:     ApiErrorsByID["CommonErr.UNKNOWN"],
 		CommonErrTokenExpire: ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
 	},
 	"api.binary.post.packet": {
+		CommonErrUnknown:     ApiErrorsByID["CommonErr.UNKNOWN"],
+		CommonErrTokenExpire: ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
+	},
+	"api.binary.post.auditpacket": {
 		CommonErrUnknown:     ApiErrorsByID["CommonErr.UNKNOWN"],
 		CommonErrTokenExpire: ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
 	},
@@ -92,10 +96,6 @@ var routeApiErrorsByCode = map[string]map[ApiErrorCode]ApiErrorEntry{
 		CommonErrTokenExpire: ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
 	},
 	"api.demo.delete.delete": {
-		CommonErrUnknown:     ApiErrorsByID["CommonErr.UNKNOWN"],
-		CommonErrTokenExpire: ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
-	},
-	"api.demo.ws.ws": {
 		CommonErrUnknown:     ApiErrorsByID["CommonErr.UNKNOWN"],
 		CommonErrTokenExpire: ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
 	},

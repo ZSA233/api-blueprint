@@ -5,10 +5,10 @@ from typing import Any, Protocol
 
 
 class ApiService(Protocol):
-    async def ws(self) -> Any:
+    async def hello_channel(self) -> Any:
         ...
 
 
 class ApiServiceStub:
-    async def ws(self) -> Any:
-        raise NotImplementedError("ws")
+    async def hello_channel(self) -> Any:
+        raise NotImplementedError("hello_channel")

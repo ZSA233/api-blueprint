@@ -154,7 +154,7 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
         return self.has_stream_routes() or self.has_channel_routes()
 
     def needs_websocket_runtime(self) -> bool:
-        return "ws_handle" in self.list_providers() or self.has_channel_routes()
+        return self.has_channel_routes()
 
     def formatters(self, update: Optional[dict[str, str]] = None) -> dict[str, str]:
         return self.packages.formatters(update)
@@ -331,6 +331,9 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
 
     def gen_providers(self) -> None:
         provider_dir = self.working_dir / self.views_package / self.provider_package
+        stale_ws_handle = provider_dir / "gen_wshandle.go"
+        if stale_ws_handle.is_file():
+            stale_ws_handle.unlink()
         for name, text in iter_render(LANG, {"writer": self}, "server/provider"):
             overwrite = name.startswith("gen_")
             with self.write_file(provider_dir / name, overwrite=overwrite) as handle:

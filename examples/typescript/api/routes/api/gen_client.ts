@@ -4,7 +4,7 @@
 
 import type * as Types from "./types";
 import type * as Shared from "../../runtime/types";
-import { ApiChannelBridge, ApiClientConfig, ApiSocketBridge, ApiStreamBridge, BaseClient } from "../../runtime/client";
+import { ApiChannelBridge, ApiClientConfig, ApiStreamBridge, BaseClient } from "../../runtime/client";
 
 export class ApiClient extends BaseClient {
   constructor(config: ApiClientConfig = {}) {
@@ -16,45 +16,24 @@ export class ApiClient extends BaseClient {
 
    * Tags: api
    */
-  connectWs(
+  openHelloChannel(
     request: {
       headers?: Record<string, string>;
     } = {},
     protocols?: string | string[],
-  ): ApiSocketBridge<Shared.WsMessage, Shared.WsMessage> {
-    return this.connectBridge<Shared.WsMessage, Shared.WsMessage>({
-      routeId: "api.api.ws.ws",
-      connectionKind: "legacy_ws",
-      scope: "",
+  ): ApiChannelBridge<Shared.HelloChannelMessage, Shared.HelloChannelMessage, Shared.DefaultConnectionClose> {
+    return this.openChannel<Shared.HelloChannelMessage, Shared.HelloChannelMessage, Shared.DefaultConnectionClose>({
+      routeId: "api.api.channel.ws",
+      connectionKind: "channel",
+      scope: "session",
+      delivery: "ordered",
       path: "/api/ws",
       service: "ApiService",
       namespace: "api",
-      connectMethod: "ConnectWs",
-      sendMethod: "SendWs",
-      closeMethod: "CloseWs",
-      eventBase: "api_blueprint.ws.api.api.ws.ws",
-      headers: request.headers,
-      protocols,
-    });
-  }
-
-  connectWsRaw(
-    request: {
-      headers?: Record<string, string>;
-    } = {},
-    protocols?: string | string[],
-  ): WebSocket {
-    return this.connectRaw({
-      routeId: "api.api.ws.ws",
-      connectionKind: "legacy_ws",
-      scope: "",
-      path: "/api/ws",
-      service: "ApiService",
-      namespace: "api",
-      connectMethod: "ConnectWs",
-      sendMethod: "SendWs",
-      closeMethod: "CloseWs",
-      eventBase: "api_blueprint.ws.api.api.ws.ws",
+      connectMethod: "OpenHelloChannel",
+      sendMethod: "SendHelloChannel",
+      closeMethod: "CloseHelloChannel",
+      eventBase: "api_blueprint.channel.api.api.channel.ws",
       headers: request.headers,
       protocols,
     });

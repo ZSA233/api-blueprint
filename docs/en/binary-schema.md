@@ -26,12 +26,14 @@ with bp.group("/binary") as views:
 
 ## File Shape
 
-```md
+````md
 # packet DemoPacket
 
+```yaml
 endian: little
 content-type: application/octet-stream
 content-encoding: identity,gzip
+```
 
 ## header
 
@@ -63,9 +65,11 @@ content-encoding: identity,gzip
 | FastPath | 1 | | fast path marker |
 | Mode | 2..3 | enum=DemoKind | packet mode |
 | Reserved | 4..31 | const=0 | reserved bits must be zero |
-```
+````
 
 A schema file must contain exactly one `# packet Name`. Normal second-level headings such as `## header` and `## body` become packet sections in order. `## struct Name` defines reusable structs. `## enum Name : u32` and `## bitflags Name : u32` define integer semantic types.
+
+Packet metadata after the top heading can stay as plain `key: value` lines, or be wrapped in a fenced code block such as ```` ```yaml ```` for cleaner Markdown rendering. Both forms parse identically; the fenced block content still uses the same `key: value` rules.
 
 ## Field Tables
 
@@ -154,6 +158,12 @@ routes/api/binary/gen_types.py
 runtime/binary/gen_runtime.go
 ```
 
+When multiple `.REQ_BINARY(...)` routes share the same route group, packet entry names stay packet-based (`DemoPacket`, `DemoPacketWire`, `ParseDemoPacket`, `DemoPacketToBinaryBody`). Schema-internal generated symbols are packet-scoped: a schema `struct Item`, `enum Kind`, `bitflags Flags`, state holder, or writer/parser helper is emitted as names such as `DemoPacketItem`, `DemoPacketKind`, and `DemoPacketFlags`. Packet names that normalize to the same generated symbol, such as `DemoPacket` and `Demo_Packet`, are rejected before files are written.
+
+Binary parser / writer diagnostics use the schema's original packet, section, object, and field names rather than target-language internal generated symbols. Nested objects and array items wrap paths after an error occurs, for example `DemoPacket.body.items[0].id`; successful write paths do not eagerly concatenate full field paths just for diagnostics.
+
+Public packet field names follow each target language's SDK conventions while diagnostics keep schema names. Go / Kotlin / Java expose language-style fields such as `ItemCount` or `itemCount`; TypeScript and Python keep snake_case fields such as `item_count` to stay close to JSON / wire naming.
+
 Go bitflags remain integer aliases to keep wire compatibility and bit-operation performance; helpers provide a clearer access surface:
 
 ```go
@@ -165,11 +175,13 @@ flags.HasReservedBits()
 flags.Validate()
 ```
 
-Go / TypeScript / Kotlin / Python clients generate, from the same schema:
+Go / TypeScript / Kotlin / Python / Java clients generate, from the same schema:
 
 - typed packets for small bodies or tests.
 - streaming/raw binary bodies for large hot paths.
 - writer helpers and block helpers for plugging in cached or pre-encoded field fragments.
+
+Java server controllers parse `.REQ_BINARY(...)` request bytes into the generated typed packet before calling the generated service interface. This is still protocol-contract code; HTTP content-encoding orchestration remains owned by the transport/runtime layer.
 
 HTTP adapters send binary bodies as `application/octet-stream`; server adapters accept `identity` or `gzip` according to the schema.
 

@@ -133,7 +133,7 @@ def register_router(router: "Router", app: FastAPI) -> None:
             },
         }
 
-    ws_methods = [method for method in router.methods if method in {"WS", "CHANNEL"}]
+    ws_methods = [method for method in router.methods if method == "CHANNEL"]
     if ws_methods:
         app.add_api_websocket_route(router.url, endpoint)
 

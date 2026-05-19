@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import asdict, is_dataclass
 from typing import Any, Mapping
 
-from ...runtime.client import ApiChannelBridge, ApiClientTransport, ApiSocketBridge, ApiStreamBridge
+from ...runtime.client import ApiChannelBridge, ApiClientTransport, ApiStreamBridge
 
 
 from .gen_types import (

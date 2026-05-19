@@ -37,6 +37,28 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		false,
 	)
 
+	httptransport.POST(
+		"/api/binary/audit-packet",
+		sharedprovider.NewRouteExecutor(
+			sharedprovider.RouteInfo{
+				Root:      "api",
+				Group:     "binary",
+				Namespace: "binary",
+				Service:   "BinaryService",
+				Operation: "AuditPacket",
+				RouteID:   "api.binary.post.auditpacket",
+				Path:      "/api/binary/audit-packet",
+				Methods:   []string{"POST"},
+				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope(""),
+			},
+			"req=QB|auth|handle|rsp=json@CodeMessageDataEnvelope",
+			impl.AuditPacket,
+		),
+		eng,
+		false,
+	)
+
 	return impl
 }
 

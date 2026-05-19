@@ -12,7 +12,10 @@ public enum class BinaryEndian {
 public class BinaryEncodeException(
     public val fieldPath: String,
     message: String,
-) : IllegalArgumentException(if (fieldPath.isEmpty()) message else "$fieldPath: $message")
+    cause: Throwable? = null,
+) : IllegalArgumentException(if (fieldPath.isEmpty()) message else "$fieldPath: $message", cause) {
+    public val detail: String = message
+}
 
 public data class EncodedBinaryBlock(
     public val field: String,
@@ -212,6 +215,24 @@ public class BinaryWriter(
 }
 
 private val ZERO_CHUNK: ByteArray = ByteArray(8192)
+
+public fun joinBinaryPath(path: String, field: String): String {
+    if (path.isEmpty()) {
+        return field
+    }
+    if (field.isEmpty()) {
+        return path
+    }
+    return "$path.$field"
+}
+
+public fun indexBinaryPath(path: String, index: Int): String = "$path[$index]"
+
+public fun wrapBinaryField(path: String, error: BinaryEncodeException): BinaryEncodeException =
+    BinaryEncodeException(joinBinaryPath(path, error.fieldPath), error.detail, error)
+
+public fun wrapBinaryIndex(path: String, index: Int, error: BinaryEncodeException): BinaryEncodeException =
+    wrapBinaryField(indexBinaryPath(path, index), error)
 
 public fun requireBinary(path: String, condition: Boolean, message: String) {
     if (!condition) {

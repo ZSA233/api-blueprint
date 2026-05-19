@@ -7,7 +7,6 @@ type RouterInterface interface {
 	TestPost(ctx *CTX_TestPost, req *REQ_TestPost) (rsp *RSP_TestPost, err error)
 	PutDemo(ctx *CTX_PutDemo, req *REQ_PutDemo) (rsp *RSP_PutDemo, err error)
 	Delete(ctx *CTX_Delete, req *REQ_Delete) (rsp *RSP_Delete, err error)
-	Ws(ctx *CTX_Ws, req *REQ_Ws) (rsp *RSP_Ws, err error)
 	SweepEvents(
 		ctx *CTX_SweepEvents,
 		stream STREAM_SweepEvents,

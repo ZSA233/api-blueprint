@@ -93,18 +93,6 @@ class WailsRouter:
         return f"INVOKE_{self.func_name}"
 
     @property
-    def ws_connect_type(self) -> str:
-        return f"WS_CONNECT_{self.func_name}"
-
-    @property
-    def ws_send_type(self) -> str:
-        return f"WS_SEND_{self.func_name}"
-
-    @property
-    def ws_close_type(self) -> str:
-        return f"WS_CLOSE_{self.func_name}"
-
-    @property
     def connection_connect_type(self) -> str:
         return f"CONNECTION_CONNECT_{self.func_name}"
 
@@ -115,18 +103,6 @@ class WailsRouter:
     @property
     def connection_close_type(self) -> str:
         return f"CONNECTION_CLOSE_{self.func_name}"
-
-    @property
-    def ws_payload_alias_name(self) -> str | None:
-        if len(self.protocol.recvs) != 1:
-            return None
-        return f"{self.ws_send_type}_BODY"
-
-    @property
-    def ws_payload_target(self) -> str:
-        if len(self.protocol.recvs) != 1:
-            return "any"
-        return self.group.bp.shared_common_proto_ref(self.protocol.recvs[0])
 
     @property
     def server_message_type(self) -> str:
@@ -161,18 +137,6 @@ class WailsRouter:
         return self.contract.namespace
 
     @property
-    def connect_func(self) -> str:
-        return self.contract.ws.connect_method if self.contract.ws is not None else ""
-
-    @property
-    def send_func(self) -> str:
-        return self.contract.ws.send_method if self.contract.ws is not None else ""
-
-    @property
-    def close_func(self) -> str:
-        return self.contract.ws.close_method if self.contract.ws is not None else ""
-
-    @property
     def connection_connect_func(self) -> str:
         if self.contract.stream is not None:
             return self.contract.stream.connect_method
@@ -202,8 +166,6 @@ class WailsRouter:
             return self.contract.stream.event_base
         if self.contract.channel is not None:
             return self.contract.channel.event_base
-        if self.contract.ws is not None:
-            return self.contract.ws.event_base
         return ""
 
     @property
@@ -221,10 +183,6 @@ class WailsRouter:
     @property
     def url(self) -> str:
         return self.contract.url
-
-    @property
-    def has_ws(self) -> bool:
-        return self.contract.ws is not None
 
     @property
     def is_stream(self) -> bool:
@@ -247,10 +205,6 @@ class WailsRouter:
         return self.body_alias_name or "any"
 
     @property
-    def local_ws_payload_type_expr(self) -> str:
-        return self.ws_payload_alias_name or "any"
-
-    @property
     def bind_query(self) -> bool:
         return self.go.bind_query
 
@@ -264,7 +218,7 @@ class WailsRouter:
 
     @property
     def executor_body_type_expr(self) -> str:
-        if self.has_ws or self.is_connection:
+        if self.is_connection:
             return "any"
         return self.local_body_type_expr
 

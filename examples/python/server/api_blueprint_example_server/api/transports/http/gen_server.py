@@ -22,10 +22,10 @@ def create_router(
     hello_service_impl = hello_service or HelloServiceStub()
 
     @router.websocket("/api/ws")
-    async def api_connect_ws_socket(websocket: WebSocket) -> None:
+    async def api_open_hello_channel_socket(websocket: WebSocket) -> None:
         await websocket.accept()
         service = api_service_impl
-        await service.ws()
+        await service.hello_channel()
         await websocket.close()
 
     @router.api_route("/api/demo/abc", methods=["GET"])
@@ -65,13 +65,6 @@ def create_router(
         return await service.delete(
             query=query,
         )
-
-    @router.websocket("/api/demo/ws")
-    async def demo_connect_ws_socket(websocket: WebSocket) -> None:
-        await websocket.accept()
-        service = demo_service_impl
-        await service.ws()
-        await websocket.close()
 
     @router.api_route("/api/demo/sweep-events", methods=["GET"])
     async def demo_subscribe_sweep_events(

@@ -97,12 +97,6 @@ class DeleteResponse:
 
 
 @dataclass
-class WsQuery:
-    hello: dict[Any, Any] | None = None
-    amap: list[Any] | None = None
-
-
-@dataclass
 class SweepEventsOpen:
     run_id: str | None = None
     replay_from: str | None = None

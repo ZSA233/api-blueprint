@@ -8,6 +8,8 @@ This page covers the main non-Wails, non-gRPC generators. See [Wails](wails.md) 
 
 Generator status and path conventions are part of the shared planning surface. Go server is available; Go client, Kotlin, Java, and Python targets are preview surfaces. Go server / Go client / Wails Go contract and agent artifact paths use Go-safe route package segments, for example `/api-v1` -> `api_v1` and `/admin/v1` -> `admin_v1`. Kotlin / Java / Python artifact paths follow their language-specific route output layout, for example `routes/api/demo`.
 
+Markdown Binary Schema generated names use the same collision policy across targets: packet entry names remain packet-based, while schema-internal struct / enum / bitflags / state / helper symbols are scoped by packet name. Packet names that normalize to the same generated symbol are rejected during generation. Public binary packet fields follow target-language conventions: Go / Kotlin / Java use exported or camelCase field names, while TypeScript / Python keep snake_case fields close to the JSON / wire names.
+
 ## Go
 
 ```sh
@@ -165,7 +167,7 @@ The Go client target emits a preview HTTP client:
 - `transports/http/gen_transport.go`
 - `transports/http/client.go`
 
-`gen_*.go` files are generator-owned and overwritten; `client.go` façades are user-owned and preserved. The recommended entrypoint is `apiclient.NewHTTP(apiclient.HTTPConfig{BaseURL: baseURL})`, then route calls such as `api.Demo.ErrorDemo(ctx, demo.ErrorDemoQuery{Mode: "token"})`. Route/runtime clients depend only on the transport abstraction, while `base_url` / `base_url_expr` are written only to the HTTP transport config. The default HTTP adapter implements RPC query/json/form/binary requests. WS compatibility surfaces, STREAM, and CHANNEL methods are generated, but the default HTTP adapter returns an explicit unsupported error so projects can swap in a custom transport.
+`gen_*.go` files are generator-owned and overwritten; `client.go` façades are user-owned and preserved. The recommended entrypoint is `apiclient.NewHTTP(apiclient.HTTPConfig{BaseURL: baseURL})`, then route calls such as `api.Demo.ErrorDemo(ctx, demo.ErrorDemoQuery{Mode: "token"})`. Route/runtime clients depend only on the transport abstraction, while `base_url` / `base_url_expr` are written only to the HTTP transport config. The default HTTP adapter implements RPC query/json/form/binary requests. STREAM and CHANNEL methods are generated, but the default HTTP adapter returns an explicit unsupported error so projects can swap in a custom transport.
 
 ## TypeScript
 
@@ -179,6 +181,7 @@ The TypeScript client target emits:
 - Request client classes.
 - Transport-neutral `ApiClientConfig`.
 - `createClients(config)` facades injected by transport targets.
+- The `api/transports/clients` aggregate entrypoint; when multiple transports are generated it exports the shared client subset as `CommonGeneratedClients` plus `createClientsForTransport({ transport })`.
 - User-owned passthrough files such as `client.ts`, `transport.ts`, and `factory.ts`.
 
 `base_url` / `base_url_expr` are owned by generated HTTP transport facades, not route/runtime clients. `base_url_expr` is emitted verbatim into generated code, which fits runtime configuration in Vite, Next.js, and similar projects. It is mutually exclusive with `base_url`.
@@ -209,7 +212,7 @@ Kotlin generator-owned files are named `Gen*.kt`, for example `routes/api/demo/G
 
 Route DTOs are emitted as `<Group>Types.kt`. Markdown Binary Schema helpers are route-local packet / wire helper types in `BinaryTypes.kt` in the same package as the route API.
 
-Through the transport abstraction, Kotlin generates `rpc`, WS compatibility, `stream`, and `channel` route surfaces, and supports query/json/form/binary/open request kinds plus `none` / `code_message_data` / `ok_data_error` response envelopes. The built-in OkHttp adapter is RPC-first; long-connection bridges are preview/custom transport surfaces, so validate with `api-gen check` and target-platform smoke tests before putting them on a production call path.
+Through the transport abstraction, Kotlin generates `rpc`, `stream`, and `channel` route surfaces, and supports query/json/form/binary/open request kinds plus `none` / `code_message_data` / `ok_data_error` response envelopes. The built-in OkHttp adapter is RPC-first; long-connection bridges are preview/custom transport surfaces, so validate with `api-gen check` and target-platform smoke tests before putting them on a production call path.
 
 `base_url` / `base_url_expr` are written into the generated `transports/http/HttpApiConfig.kt` default, not into the transport-neutral runtime client.
 
@@ -230,7 +233,7 @@ The Kotlin server target emits a Ktor-oriented scaffold:
 
 `Gen<Group>Service.kt`, `<Group>ServiceStub.kt`, `<Group>Types.kt`, runtime `Gen*.kt` files, and `Gen<Group>KtorRoutes.kt` are generator-owned. `<Group>Service.kt` is a preserved user file and defaults to extending the generated stub.
 
-RPC Ktor routes decode query/json/form/binary inputs, call the generated service interface, and wrap success or generated `ApiError` values through the route response envelope. `STREAM`, `CHANNEL`, and legacy WS routes keep their type and keyframe helper surface, but the generated Ktor adapter returns a clear 501 response; it does not implement a WebSocket/SSE/session engine.
+RPC Ktor routes decode query/json/form/binary inputs, call the generated service interface, and wrap success or generated `ApiError` values through the route response envelope. `STREAM` and `CHANNEL` routes keep their type and keyframe helper surface, but the generated Ktor adapter returns a clear 501 response; it does not implement a WebSocket/SSE/session engine.
 
 ### Kotlin Compatibility
 
@@ -250,11 +253,11 @@ Java client/server use a package-first layout whose route directory mirrors the 
 - `<package>/<root>/routes/<root>/<group...>/*`
 - `<package>/<root>/transports/http/*`
 
-Route DTOs are emitted as `<Group>Types.java`. The Markdown Binary Schema bridge is also folded into that route types container, for example `BinaryTypes.DemoPacket` / `BinaryTypes.DemoPacketWire`.
+Route DTOs are emitted as `<Group>Types.java`. Markdown Binary Schema typed packets and wire helpers are also folded into that route types container, for example `BinaryTypes.DemoPacket` / `BinaryTypes.DemoPacketWire`.
 
-The Java client emits transport-neutral route surfaces, `ApiTransport`, the default JDK HTTP adapter, and `GenApiClient`. Preserved user files are `runtime/ApiClient.java`, `routes/<root>/<group...>/<Group>Api.java`, and `transports/http/HttpApiClient.java`; other `Gen*.java` and runtime generated files are overwritten. The recommended entrypoint is `HttpApiClient.create(baseUrl)`, with public DTOs such as `DemoTypes.ErrorDemoQuery` / `DemoTypes.ErrorDemoResponse`. The default HTTP adapter implements RPC query/json/form/binary/binary-schema requests, while WS compatibility surfaces, STREAM, and CHANNEL default to explicit unsupported errors.
+The Java client emits transport-neutral route surfaces, `ApiTransport`, the default JDK HTTP adapter, and `GenApiClient`. Preserved user files are `runtime/ApiClient.java`, `routes/<root>/<group...>/<Group>Api.java`, and `transports/http/HttpApiClient.java`; other `Gen*.java` and runtime generated files are overwritten. The recommended entrypoint is `HttpApiClient.create(baseUrl)`, with public DTOs such as `DemoTypes.ErrorDemoQuery` / `DemoTypes.ErrorDemoResponse`. The default HTTP adapter implements RPC query/json/form/binary/binary-schema requests, while STREAM and CHANNEL default to explicit unsupported errors.
 
-The Java server emits route service interfaces, public stubs, runtime, route types, and Spring controllers. The preserved user file is `routes/<root>/<group...>/<Group>Service.java`; `<Group>Types.java`, `<Group>ServiceStub.java`, `Gen<Group>Service.java`, and `transports/http/<root>/<group...>/Gen<Group>Controller.java` are generator-owned. RPC HTTP controllers are usable, while non-RPC connection routes keep the service surface and the HTTP adapter returns explicit 501 responses.
+The Java server emits route service interfaces, public stubs, runtime, route types, and Spring controllers. For `.REQ_BINARY(...)`, the generated Spring controller parses request bytes into the generated typed packet before calling the service. The preserved user file is `routes/<root>/<group...>/<Group>Service.java`; `<Group>Types.java`, `<Group>ServiceStub.java`, `Gen<Group>Service.java`, and `transports/http/<root>/<group...>/Gen<Group>Controller.java` are generator-owned. RPC HTTP controllers are usable, while non-RPC connection routes keep the service surface and the HTTP adapter returns explicit 501 responses.
 
 DTOs use Java 17 `record`; fields use Jackson `@JsonProperty`; enums use `@JsonCreator` / `@JsonValue` to preserve wire values. `module` is only a shortcut-table alias normalized to `package`; no JPMS `module-info.java` is generated.
 
@@ -270,7 +273,7 @@ Python client uses `python_package_root` as its package root and emits an async-
 - `<python_package_root>/<root>/routes/<root>/<group...>/*`
 - `<python_package_root>/<root>/transports/http/*`
 
-`gen_client.py` / `client.py` at the root provide the aggregate facade, and the recommended entrypoint is `async with create_client(base_url) as api`. Route methods accept dataclass instances or mappings and return dataclass responses by default. `routes/<root>/<group...>/gen_client.py` is the generated route client, `routes/<root>/<group...>/gen_types.py` is the route DTO and binary public export surface, `routes/<root>/<group...>/client.py` is the preserved passthrough entrypoint, and `transports/http/gen_client.py` provides the default httpx adapter. Root-level routes are emitted directly under `routes/<root>`, not `routes/root`. That adapter implements RPC requests; WS/STREAM/CHANNEL bridge interfaces are generated, but connection transports need project-specific customization or later extension. `base_url` / `base_url_expr` are used by the HTTP transport adapter.
+`gen_client.py` / `client.py` at the root provide the aggregate facade, and the recommended entrypoint is `async with create_client(base_url) as api`. Route methods accept dataclass instances or mappings and return dataclass responses by default. `routes/<root>/<group...>/gen_client.py` is the generated route client, `routes/<root>/<group...>/gen_types.py` is the route DTO and binary public export surface, `routes/<root>/<group...>/client.py` is the preserved passthrough entrypoint, and `transports/http/gen_client.py` provides the default httpx adapter. Root-level routes are emitted directly under `routes/<root>`, not `routes/root`. That adapter implements RPC requests; STREAM/CHANNEL bridge interfaces are generated, but connection transports need project-specific customization or later extension. `base_url` / `base_url_expr` are used by the HTTP transport adapter.
 
 Markdown Binary Schema codecs are route-local `gen_binary.py` implementation modules; public packet and writer helpers are re-exported from `gen_types.py`.
 

@@ -373,7 +373,7 @@ package = "com.example.generated"
     manifest = json.loads(out_path.read_text(encoding="utf-8"))
     assert manifest["routes"][0]["id"] == "api.demo.get.ping"
     assert manifest["capabilities"]["kotlin-client"]["implemented"] is True
-    assert manifest["capabilities"]["kotlin-client"]["routes"] == ["rpc", "legacy_ws", "stream", "channel"]
+    assert manifest["capabilities"]["kotlin-client"]["routes"] == ["rpc", "stream", "channel"]
     assert manifest["capabilities"]["python-client"]["implemented"] is True
 
 

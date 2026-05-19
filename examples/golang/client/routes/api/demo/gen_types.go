@@ -43,8 +43,6 @@ type DeleteResponse struct {
 	AnonList []*runtime.ANONDeleteAnonList `json:"anon_list" form:"anon_list"`
 }
 
-type WsQuery = runtime.ApiDemoSubA
-
 type SweepEventsOpen = runtime.SweepOpen
 type SweepEventsClose = runtime.ConnectionClose
 type SweepStreamMessage_State_DATA = runtime.SweepState

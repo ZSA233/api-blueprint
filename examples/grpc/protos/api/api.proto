@@ -5,4 +5,20 @@ package example.api.api;
 option go_package = "example.com/project/grpc/go/api/api;api";
 
 service ApiService {
+  rpc HelloChannel (stream HelloChannelMessage) returns (stream HelloChannelMessage);
+}
+
+message HelloChannelMessage {
+  HelloChannelMsgTypeEnum type = 1;
+  string data = 2;
+}
+
+enum HelloChannelMsgTypeEnum {
+  HELLOCHANNELMSGTYPEENUM_UNSPECIFIED = 0;
+  HELLOCHANNELMSGTYPEENUM_PING = 1;
+  HELLOCHANNELMSGTYPEENUM_PONG = 2;
+  HELLOCHANNELMSGTYPEENUM_JOIN = 3;
+  HELLOCHANNELMSGTYPEENUM_LEAVE = 4;
+  HELLOCHANNELMSGTYPEENUM_FORGEROUND = 5;
+  HELLOCHANNELMSGTYPEENUM_UPGRADE = 6;
 }

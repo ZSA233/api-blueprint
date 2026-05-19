@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from {{ runtime_import_prefix }}runtime.binary import (
     ApiBinaryBody,
+    BinaryEncodeError,
     BinaryWriter,
     EncodedBinaryBlock,
     StreamingBinaryBody,
@@ -11,6 +12,8 @@ from {{ runtime_import_prefix }}runtime.binary import (
     require_binary,
     require_range,
     require_size,
+    wrap_binary_field,
+    wrap_binary_index,
 )
 
 
@@ -37,7 +40,7 @@ from {{ runtime_import_prefix }}runtime.binary import (
 {%- endmacro %}
 
 {% macro write_field(field, object) -%}
-{% set path = object.name ~ "." ~ field.name %}
+{% set path = field.name %}
 {% if field.is_hidden %}
     writer.write_zeroes({{ path | code_literal }}, {{ field.count_expr }})
 {% elif field.is_bytes %}
@@ -66,11 +69,17 @@ from {{ runtime_import_prefix }}runtime.binary import (
     require_range({{ path | code_literal }}, {{ field.py_name }}_count, 0, {{ field.max_expr }})
 {% endif %}
     require_size({{ path | code_literal }}, len({{ field.value_expr }}), {{ field.py_name }}_count)
-    for item in {{ field.value_expr }}:
+    for index, item in enumerate({{ field.value_expr }}):
 {% if field.is_scalar %}
-        writer.{{ field.write_method }}({{ path | code_literal }}, item)
+        try:
+            writer.{{ field.write_method }}("", item)
+        except BinaryEncodeError as err:
+            raise wrap_binary_index({{ path | code_literal }}, index, err) from err
 {% else %}
-        write_{{ field.typ | lower }}(item, writer, state)
+        try:
+            {{ field.schema.object_writer_name(field.typ) }}(item, writer, state, path="")
+        except BinaryEncodeError as err:
+            raise wrap_binary_index({{ path | code_literal }}, index, err) from err
 {% endif %}
 {% elif field.is_scalar %}
 {{ check_field(field, field.value_expr, field.value_expr, path) }}
@@ -82,7 +91,10 @@ from {{ runtime_import_prefix }}runtime.binary import (
     state[{{ field.py_name | code_literal }}] = int({{ field.value_expr }})
 {% endif %}
 {% else %}
-    write_{{ field.typ | lower }}({{ field.value_expr }}, writer, state)
+    try:
+        {{ field.schema.object_writer_name(field.typ) }}({{ field.value_expr }}, writer, state, path="")
+    except BinaryEncodeError as err:
+        raise wrap_binary_field({{ path | code_literal }}, err) from err
 {% endif %}
 {%- endmacro %}
 
@@ -115,14 +127,17 @@ class {{ schema.py_type }}Wire:
     def to_binary_body(value: {{ schema.py_type }} | ApiBinaryBody) -> ApiBinaryBody:
         if is_api_binary_body(value):
             return value
-        return {{ schema.py_type }}Wire.body(lambda writer: write_{{ schema.name | lower }}(value, writer))
+        return {{ schema.py_type }}Wire.body(lambda writer: {{ schema.writer_name }}(value, writer))
 
 
-def write_{{ schema.name | lower }}(value: {{ schema.py_type }}, writer: BinaryWriter) -> None:
+def {{ schema.writer_name }}(value: {{ schema.py_type }}, writer: BinaryWriter) -> None:
     state = {
 {% for field_name in schema.state_fields %}        {{ field_name | code_literal }}: 0,
 {% endfor %}    }
-{% for section in schema.sections %}    write_{{ section.name | lower }}(value.{{ schema.packet_field_name(section.name) }}, writer, state)
+{% for section in schema.sections %}    try:
+        {{ section.writer_name }}(value.{{ schema.packet_field_name(section.name) }}, writer, state, path="")
+    except BinaryEncodeError as err:
+        raise wrap_binary_field({{ (schema.name ~ "." ~ schema.packet_field_name(section.name)) | code_literal }}, err) from err
 {% endfor %}
 
 
@@ -136,9 +151,18 @@ class {{ object.py_type }}:
 {% endif %}
 
 
-def write_{{ object.name | lower }}(value: {{ object.py_type }}, writer: BinaryWriter, state: dict[str, int]) -> None:
-{% for field in object.fields %}{{ write_field(field, object) }}
-{% endfor %}
+def {{ object.writer_name }}(
+    value: {{ object.py_type }},
+    writer: BinaryWriter,
+    state: dict[str, int],
+    path: str = {{ object.path_name | code_literal }},
+) -> None:
+    try:
+{% for field in object.fields %}{{ write_field(field, object) | indent(4, true) }}
+{% endfor %}    except BinaryEncodeError as err:
+        if not path:
+            raise
+        raise wrap_binary_field(path, err) from err
 
 {% endfor %}
 {% endfor %}

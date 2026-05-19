@@ -16,3 +16,10 @@ with apibp.group("/binary") as views:
         item_ids=Array[Uint](description="item ids"),
         checksum=Uint(description="checksum"),
     )
+    views.POST("/audit-packet", summary="Binary audit packet example").ARGS(
+        trace=String(description="trace id", omitempty=True),
+    ).REQ_BINARY("./binary/audit_packet.md").RSP(
+        trace=String(description="trace id"),
+        item_count=Uint(description="item count"),
+        checksum=Uint(description="checksum"),
+    )

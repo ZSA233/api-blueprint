@@ -74,10 +74,6 @@ func selectBuiltinProvider[Q, B, P any](
 		typed := NewHandleProvider(spec.Data, handler)
 		typed.Route = spec.Route
 		prov = typed
-	case PROV_WS_HANDLE:
-		typed := NewWsHandleProvider(spec.Data, handler)
-		typed.Route = spec.Route
-		prov = typed
 	}
 	return prov
 }

@@ -67,7 +67,7 @@ def create_router(
         if hasattr(result, "__aiter__"):
             return StreamingResponse(result)
         return result
-{% elif route.supports_ws or route.supports_channel %}
+{% elif route.supports_channel %}
 
     @router.websocket({{ route.url_literal | safe }})
     async def {{ group.alias }}_{{ route.websocket_endpoint_name }}(websocket: WebSocket) -> None:

@@ -4,17 +4,31 @@ package api
 
 import (
 	providers "example.com/project/golang/server/views/providers"
+	types "example.com/project/golang/server/views/routes/api/_gen_types"
 )
 
-type REQ_Ws = providers.REQ[
+type REQ_HelloChannel = providers.REQ[
 	any,
 	any,
 ]
 
-type RSP_Ws = any
+type RSP_HelloChannel = any
 
-type CTX_Ws = providers.Context[
+type CTX_HelloChannel = providers.Context[
 	any,
 	any,
 	any,
+]
+
+type SERVER_HelloChannel_MESSAGE = types.HelloChannelMessage
+
+type CLIENT_HelloChannel_MESSAGE = types.HelloChannelMessage
+
+type CLOSE_HelloChannel = types.DefaultConnectionClose
+
+type CHANNEL_HelloChannel = providers.Channel[
+	any,
+	SERVER_HelloChannel_MESSAGE,
+	CLIENT_HelloChannel_MESSAGE,
+	CLOSE_HelloChannel,
 ]

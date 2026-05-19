@@ -81,7 +81,6 @@ class TypeScriptRoute:
         self.namespace = self.contract.namespace
 
         self.http_methods = list(self.contract.http_methods)
-        self.supports_ws = self.contract.supports_ws
         self.supports_stream = self.contract.supports_stream
         self.supports_channel = self.contract.supports_channel
 
@@ -100,8 +99,6 @@ class TypeScriptRoute:
         )
         self.response_envelope = self.protocol.response.envelope
         self.response_alias = self._ensure_response_alias()
-        self.ws_recv_alias = self._ensure_ws_message_alias("WS", "RECV", list(self.protocol.recvs))
-        self.ws_send_alias = self._ensure_ws_message_alias("WS", "SEND", list(self.protocol.sends))
         self.server_message_alias = self._ensure_message_contract_alias(self.protocol.server_message)
         self.client_message_alias = self._ensure_message_contract_alias(self.protocol.client_message)
         self.close_proto = self._ensure_model(self.effective_close_model, "CLOSE", "")
@@ -110,8 +107,6 @@ class TypeScriptRoute:
     def http_method(self) -> str:
         if self.http_methods:
             return self.http_methods[0]
-        if self.supports_ws:
-            return "WS"
         return "GET"
 
     @property
@@ -220,14 +215,6 @@ class TypeScriptRoute:
         return self.registry.register_alias(alias_base, alias_type, tag="route", route=self.func_name, module=self.group_module)
 
     @property
-    def ws_recv_type_expr(self) -> str:
-        return self._type_expr(self.ws_recv_alias) or "unknown"
-
-    @property
-    def ws_send_type_expr(self) -> str:
-        return self._type_expr(self.ws_send_alias) or "unknown"
-
-    @property
     def server_message_type_expr(self) -> str:
         return self._type_expr(self.server_message_alias) or "unknown"
 
@@ -284,18 +271,6 @@ class TypeScriptRoute:
         return ", ".join(all_args)
 
     @property
-    def connect_method_name(self) -> str:
-        if self.contract.ws is None:
-            return "connect"
-        return to_camel(self.contract.ws.connect_method)
-
-    @property
-    def connect_raw_method_name(self) -> str:
-        if self.contract.ws is None:
-            return "connectRaw"
-        return to_camel(self.contract.ws.connect_raw_method)
-
-    @property
     def subscribe_method_name(self) -> str:
         if self.contract.stream is None:
             return "subscribe"
@@ -306,38 +281,6 @@ class TypeScriptRoute:
         if self.contract.channel is None:
             return "open"
         return to_camel(self.contract.channel.connect_method)
-
-    def _ensure_ws_message_alias(
-        self,
-        prefix: str,
-        suffix: str,
-        models: list[Union[Type[Model], Model]],
-    ) -> Optional[TypeScriptProto]:
-        if not models:
-            return None
-
-        deps: set[TypeScriptProto] = set()
-        protos: list[TypeScriptProto] = []
-        for index, model in enumerate(models, start=1):
-            explicit = self._route_model_name(prefix, suffix if len(models) == 1 else f"{suffix}{index}")
-            proto = self.registry.ensure(model, name=explicit, tag="route", route=self.func_name, module=self.group_module)
-            if proto is None:
-                continue
-            deps.add(proto)
-            protos.append(proto)
-
-        if not protos:
-            return None
-        if len(protos) == 1:
-            return protos[0]
-
-        return self.registry.register_alias(
-            self._route_model_name(prefix, suffix),
-            TypeScriptResolvedType(" | ".join(proto.name for proto in protos), deps),
-            tag="route",
-            route=self.func_name,
-            module=self.group_module,
-        )
 
     def _ensure_message_contract_alias(self, contract: MessageContract | None) -> Optional[TypeScriptProto]:
         if contract is None:
@@ -477,6 +420,14 @@ class TypeScriptOverlayFactoryEntry:
     type_import_path: str
     factory_import_path: str
     factory_alias: str
+
+
+@dataclass(frozen=True)
+class TypeScriptTransportFactoryExport:
+    name: str
+    type_alias: str
+    create_alias: str
+    factory_import_path: str
 
 
 class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
@@ -692,13 +643,86 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
             exports.append({"alias": snake_to_pascal_case(name, "", "Transport"), "path": f"./{name}"})
         return exports
 
+    def _transport_client_export_name(self, name: str) -> str:
+        match = re.fullmatch(r"wailsv(\d+)", name)
+        if match:
+            return f"WailsV{match.group(1)}"
+        return snake_to_pascal_case(name, "", "")
+
+    def transport_client_factory_exports(
+        self,
+        root_dir: Path,
+        *extra_transports: str,
+    ) -> list[TypeScriptTransportFactoryExport]:
+        transports_dir = root_dir / self.writer.transports_dir_name
+        names = set(extra_transports)
+        if transports_dir.exists():
+            names.update(path.name for path in transports_dir.iterdir() if path.is_dir())
+        exports: list[TypeScriptTransportFactoryExport] = []
+        for name in sorted(names):
+            factory_file = transports_dir / name / self.package / "factory.ts"
+            generated_factory_file = transports_dir / name / self.package / "gen_factory.ts"
+            if not factory_file.exists() and not generated_factory_file.exists():
+                continue
+            alias = self._transport_client_export_name(name)
+            exports.append(
+                TypeScriptTransportFactoryExport(
+                    name=name,
+                    type_alias=f"{alias}GeneratedClients",
+                    create_alias=f"create{alias}Clients",
+                    factory_import_path=f"./{name}/{self.package}/factory",
+                )
+            )
+        return exports
+
+    def write_transport_clients(
+        self,
+        root_dir: Path,
+        transports: list[TypeScriptTransportFactoryExport],
+    ) -> None:
+        transports_dir = root_dir / self.writer.transports_dir_name
+        transports_dir.mkdir(parents=True, exist_ok=True)
+        module_dirs = self.module_dirs(root_dir)
+        clients = self.facade_factory_entries(module_dirs, transports_dir)
+        with self.writer.write_file(transports_dir / "gen_clients.ts", overwrite=True) as handle:
+            if handle:
+                handle.write(
+                    render(
+                        self.writer.template_lang,
+                        "gen_transport_clients.ts",
+                        {
+                            "client_api_path": self._relative_import_path(
+                                transports_dir,
+                                module_dirs[SHARED_MODULE] / "client.ts",
+                            ),
+                            "clients": clients,
+                            "transports": transports,
+                        },
+                    )
+                )
+        with self.writer.write_file(transports_dir / "clients.ts", overwrite=False) as handle:
+            if handle:
+                handle.write(self.render_passthrough("./gen_clients"))
+
     def write_transports_index(self, root_dir: Path, *extra_transports: str) -> None:
         transports_dir = root_dir / self.writer.transports_dir_name
         transports_dir.mkdir(parents=True, exist_ok=True)
         exports = self.transport_root_exports(root_dir, *extra_transports)
+        client_exports = self.transport_client_factory_exports(root_dir, *extra_transports)
+        if client_exports:
+            self.write_transport_clients(root_dir, client_exports)
         with self.writer.write_file(transports_dir / "gen_index.ts", overwrite=True) as handle:
             if handle:
-                handle.write(render(self.writer.template_lang, "gen_root_index.ts", {"modules": exports, "extra_exports": []}))
+                handle.write(
+                    render(
+                        self.writer.template_lang,
+                        "gen_root_index.ts",
+                        {
+                            "modules": exports,
+                            "extra_exports": ['export * from "./clients";'] if client_exports else [],
+                        },
+                    )
+                )
         with self.writer.write_file(transports_dir / "index.ts", overwrite=False) as handle:
             if handle:
                 handle.write(self.render_passthrough("./gen_index"))
@@ -818,20 +842,23 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                     handle.write(render(self.writer.template_lang, "gen_bindings.ts", {"writer": self.writer}))
         elif bindings_path.exists():
             bindings_path.unlink()
+        transport_context = {
+            "writer": self.writer,
+            "client_api_path": self._relative_import_path(transport_dir, module_dirs[SHARED_MODULE] / "client.ts"),
+            "binary_runtime_path": self._relative_import_path(transport_dir, module_dirs[SHARED_MODULE] / "binary" / "index.ts"),
+            "has_binary_schemas": self.has_binary_schemas(),
+        }
+        for filename, template in [
+            ("gen_response.ts", "gen_response.ts"),
+            ("gen_runtime.ts", "gen_wails_runtime.ts"),
+            ("gen_connection.ts", "gen_wails_connection.ts"),
+        ]:
+            with self.writer.write_file(transport_dir / filename, overwrite=True) as handle:
+                if handle:
+                    handle.write(render(self.writer.template_lang, template, transport_context))
         with self.writer.write_file(transport_dir / "gen_transport.ts", overwrite=True) as handle:
             if handle:
-                handle.write(
-                    render(
-                        self.writer.template_lang,
-                        "gen_transport.ts",
-                        {
-                            "writer": self.writer,
-                            "client_api_path": self._relative_import_path(transport_dir, module_dirs[SHARED_MODULE] / "client.ts"),
-                            "binary_runtime_path": self._relative_import_path(transport_dir, module_dirs[SHARED_MODULE] / "binary" / "index.ts"),
-                            "has_binary_schemas": self.has_binary_schemas(),
-                        },
-                    )
-                )
+                handle.write(render(self.writer.template_lang, "gen_transport.ts", transport_context))
         with self.writer.write_file(transport_dir / "transport.ts", overwrite=False) as handle:
             if handle:
                 handle.write(self.render_passthrough("./gen_transport"))
@@ -856,7 +883,7 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                 "shared_client_api_path": self._relative_import_path(group_dir, module_dirs[SHARED_MODULE] / "client.ts"),
                 "transport_path": self._relative_import_path(group_dir, transport_dir / "transport.ts"),
                 "shared_client_path": self._relative_import_path(group_dir, parent_group_dir / "client.ts"),
-                "raw_ws_method_names": [route.connect_raw_method_name for route in group.routes if route.supports_ws],
+                "raw_ws_method_names": [],
             }
             with self.writer.write_file(group_dir / "gen_client.ts", overwrite=True) as handle:
                 if handle:
@@ -978,20 +1005,25 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
     def gen_http_facade(self, root_dir: Path, module_dirs: dict[str, Path]) -> None:
         http_dir = root_dir / self.writer.transports_dir_name / "http"
         http_dir.mkdir(parents=True, exist_ok=True)
+        transport_context = {
+            "writer": self.writer,
+            "client_api_path": self._relative_import_path(http_dir, module_dirs[SHARED_MODULE] / "client.ts"),
+            "binary_runtime_path": self._relative_import_path(http_dir, module_dirs[SHARED_MODULE] / "binary" / "index.ts"),
+            "has_binary_schemas": self.has_binary_schemas(),
+        }
+        for filename, template in [
+            ("gen_response.ts", "gen_response.ts"),
+            ("gen_connection.ts", "gen_http_connection.ts"),
+        ]:
+            with self.writer.write_file(http_dir / filename, overwrite=True) as handle:
+                if handle:
+                    handle.write(render(self.writer.template_lang, template, transport_context))
+        stale_runtime = http_dir / "gen_runtime.ts"
+        if stale_runtime.exists():
+            stale_runtime.unlink()
         with self.writer.write_file(http_dir / "gen_transport.ts", overwrite=True) as handle:
             if handle:
-                handle.write(
-                    render(
-                        self.writer.template_lang,
-                        "gen_transport.ts",
-                        {
-                            "writer": self.writer,
-                            "client_api_path": self._relative_import_path(http_dir, module_dirs[SHARED_MODULE] / "client.ts"),
-                            "binary_runtime_path": self._relative_import_path(http_dir, module_dirs[SHARED_MODULE] / "binary" / "index.ts"),
-                            "has_binary_schemas": self.has_binary_schemas(),
-                        },
-                    )
-                )
+                handle.write(render(self.writer.template_lang, "gen_transport.ts", transport_context))
         with self.writer.write_file(http_dir / "transport.ts", overwrite=False) as handle:
             if handle:
                 handle.write(self.render_passthrough("./gen_transport"))

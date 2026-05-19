@@ -5,7 +5,7 @@ import com.example.apiblueprint.api.runtime.*
 
 public interface GenApiService {
 
-    public suspend fun ws(
+    public suspend fun helloChannel(
     ): Any
 
 }

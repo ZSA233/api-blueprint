@@ -6,7 +6,7 @@ import pytest
 
 from api_blueprint.contract import build_contract_graph
 from api_blueprint.engine.binary_schema import parse_binary_schema
-from api_blueprint.engine.model import Enum, Model, String
+from api_blueprint.engine.model import Model, String
 from api_blueprint.engine import Blueprint, ConnectionDelivery, Error, Toast
 from api_blueprint.engine.envelope import CodeMessageDataEnvelope
 from api_blueprint.writer.core.contracts import route_contract
@@ -30,34 +30,34 @@ def test_typescript_registry_builds_wrapper_alias_with_generics():
     assert proto.type_reference(["Payload"]) == "CodeMessageDataEnvelope<Payload>"
 
 
-def test_route_contract_assigns_stable_service_and_event_names():
+def test_route_contract_assigns_stable_connection_service_and_event_names():
     bp = Blueprint(root="/api")
     with bp.group("/demo") as views:
-        router = views.WS("/ws")
+        router = views.CHANNEL("/chat").SERVER_MESSAGE(Payload).CLIENT_MESSAGE(Payload)
     contract = route_contract(router)
 
-    assert contract.route_id == "api.demo.ws.ws"
+    assert contract.route_id == "api.demo.channel.chat"
     assert contract.service_name == "DemoService"
     assert contract.namespace == "demo"
-    assert contract.ws is not None
-    assert contract.ws.connect_method == "ConnectWs"
-    assert contract.ws.send_method == "SendWs"
-    assert contract.ws.close_method == "CloseWs"
-    assert contract.ws.event_base == "api_blueprint.ws.api.demo.ws.ws"
+    assert contract.channel is not None
+    assert contract.channel.connect_method == "OpenChat"
+    assert contract.channel.send_method == "SendChat"
+    assert contract.channel.close_method == "CloseChat"
+    assert contract.channel.event_base == "api_blueprint.channel.api.demo.channel.chat"
 
 
-def test_typescript_http_generation_uses_transport_bridge_and_raw_ws_escape_hatch(tmp_path: Path):
+def test_typescript_http_generation_uses_stream_and_channel_bridges(tmp_path: Path):
     bp = Blueprint(root="/api")
 
-    class WSRecv(Model):
+    class ServerMessage(Model):
         value = String(description="value")
 
-    class WSSend(Model):
+    class ClientMessage(Model):
         value = String(description="value")
 
     with bp.group("/demo") as views:
         views.GET("/ping").ARGS(q=String(description="q")).RSP(message=String(description="message"))
-        views.WS("/ws").RECV(WSRecv).SEND(WSSend)
+        views.CHANNEL("/chat").SERVER_MESSAGE(ServerMessage).CLIENT_MESSAGE(ClientMessage)
 
     output_dir = tmp_path / "typescript"
     output_dir.mkdir()
@@ -66,11 +66,21 @@ def test_typescript_http_generation_uses_transport_bridge_and_raw_ws_escape_hatc
     writer.gen()
 
     http_transport = (output_dir / "api" / "transports" / "http" / "gen_transport.ts").read_text(encoding="utf-8")
+    http_response = (output_dir / "api" / "transports" / "http" / "gen_response.ts").read_text(encoding="utf-8")
+    http_connection = (output_dir / "api" / "transports" / "http" / "gen_connection.ts").read_text(encoding="utf-8")
     runtime_client = (output_dir / "api" / "runtime" / "gen_client.ts").read_text(encoding="utf-8")
     runtime_index = (output_dir / "api" / "runtime" / "gen_index.ts").read_text(encoding="utf-8")
     http_factory = (output_dir / "api" / "transports" / "http" / "api" / "gen_factory.ts").read_text(encoding="utf-8")
     client_text = (output_dir / "api" / "routes" / "api" / "demo" / "gen_client.ts").read_text(encoding="utf-8")
     assert "export class DefaultTransport implements ApiTransport" in http_transport
+    assert 'import { unwrapResponseEnvelope, extractApiErrorPayload, normalizeApiErrorPayload, tryParseJson } from "./gen_response";' in http_transport
+    assert 'import { HttpEventStreamBridge, HttpSocketBridge } from "./gen_connection";' in http_transport
+    assert "function unwrapResponseEnvelope" not in http_transport
+    assert "class HttpEventStreamBridge" not in http_transport
+    assert "export function unwrapResponseEnvelope" in http_response
+    assert "export class HttpEventStreamBridge" in http_connection
+    assert "export class HttpSocketBridge" in http_connection
+    assert "protected connectRaw(options: ChannelConnectOptions<unknown, unknown, SocketCloseInfo>): WebSocket" in http_transport
     assert "export interface ApiClientConfig {\n  transport?: ApiTransport;\n}" in runtime_client
     assert "export interface ApiHttpTransportConfig extends ApiClientConfig" in http_transport
     assert "baseUrl?: string;" in http_transport
@@ -82,8 +92,10 @@ def test_typescript_http_generation_uses_transport_bridge_and_raw_ws_escape_hatc
     assert "http://localhost:2333" not in client_text
     assert "super(config);" in client_text
     assert "super(config," not in client_text
-    assert "connectBridge<Shared.WSSend, Shared.WSRecv>" in client_text
-    assert "connectWsRaw(" in client_text
+    assert "openChat(" in client_text
+    assert "openChannel<Shared.ServerMessage, Shared.ClientMessage" in client_text
+    assert "connectWsRaw(" not in client_text
+    assert "legacy_ws" not in client_text
 
 
 def test_typescript_writer_can_use_contract_graph_route_adapter(monkeypatch, tmp_path: Path):
@@ -236,6 +248,7 @@ def test_typescript_generates_stream_and_channel_contracts(tmp_path: Path):
     models_text = (output_dir / "api" / "routes" / "api" / "runs" / "gen_types.ts").read_text(encoding="utf-8")
     client_text = (output_dir / "api" / "routes" / "api" / "runs" / "gen_client.ts").read_text(encoding="utf-8")
     transport_text = (output_dir / "api" / "transports" / "http" / "gen_transport.ts").read_text(encoding="utf-8")
+    connection_text = (output_dir / "api" / "transports" / "http" / "gen_connection.ts").read_text(encoding="utf-8")
 
     assert "export interface ApiStreamBridge<Recv, Close = SocketCloseInfo>" in runtime_client
     assert "export interface ApiChannelBridge<Recv, Send, Close = SocketCloseInfo> extends ApiStreamBridge<Recv, Close>" in runtime_client
@@ -283,8 +296,13 @@ def test_typescript_generates_stream_and_channel_contracts(tmp_path: Path):
     assert 'scope: "session"' in client_text
     assert 'delivery: "ordered"' in client_text
     assert 'delivery: "unordered"' in client_text
-    assert "class HttpEventStreamBridge<Recv, Close = SocketCloseInfo> implements ApiStreamBridge<Recv, Close>" in transport_text
-    assert 'envelope.type === "close"' in transport_text
+    assert (
+        "class HttpEventStreamBridge<Recv, Close = SocketCloseInfo> implements ApiStreamBridge<Recv, Close>"
+        in connection_text
+    )
+    assert 'envelope.type === "close"' in connection_text
+    assert "return new HttpEventStreamBridge(" in transport_text
+    assert "return new HttpSocketBridge(" in transport_text
 
 
 def test_typescript_channel_operation_id_changes_generated_method_name(tmp_path: Path):
@@ -387,7 +405,7 @@ endian: little
 
 | field | type | count | rule | comment |
 |---|---|---:|---|---|
-| flags | DemoFlags | 1 | min=0 | flags |
+| flags | Flags | 1 | min=0 | flags |
 | pad0 | padding | 1 | | pad |
 | code | u24 | 1 | min=1,max=16777215 | code |
 | delta | i24 | 1 | min=-8,max=8 | delta |
@@ -399,7 +417,7 @@ endian: little
 |---|---|---:|---|---|
 | payload | bytes | payload_len | | payload |
 
-## bitflags DemoFlags : u32
+## bitflags Flags : u32
 
 | name | bits | rule | comment |
 |---|---:|---|---|
@@ -437,7 +455,7 @@ endian: little
     assert 'export * as Wire from "./wire";' not in index_text
     assert 'export * from "./types";' in index_text
     assert not (output_dir / "api" / "routes" / "api" / "binary" / "wire.ts").exists()
-    assert "export const DemoFlagsValues" in schema_text
+    assert "export const DemoPacketFlagsValues" in schema_text
     assert "HasPayload: 1" in schema_text
     assert "reserved bits must be zero" in schema_text
     assert "writer.writeU24" in schema_text
@@ -448,6 +466,60 @@ endian: little
     assert "private writeScratch" in runtime_text
     assert "this.writeScratch(8);" in runtime_text
     assert "binaryBodyToUint8Array" in transport_text
+
+
+def test_typescript_binary_schema_uses_local_diagnostic_paths_for_nested_writers(tmp_path: Path):
+    schema = parse_binary_schema(
+        """
+# packet Inventory
+
+endian: little
+
+## header
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| item_count | u8 | 1 | max=4 | item count |
+| items | Item | item_count | | items |
+| primary | Item | 1 | | primary item |
+
+## struct Item
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| id | u16 | 1 | min=1 | item id |
+""".strip(),
+        source_path="inventory_packet.md",
+    )
+    bp = Blueprint(root="/api", response_envelope=CodeMessageDataEnvelope)
+    with bp.group("/binary") as views:
+        views.POST("/inventory").REQ_BINARY(schema).RSP(message=String(description="message"))
+
+    output_dir = tmp_path / "typescript"
+    output_dir.mkdir()
+    writer = TypeScriptWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    schema_text = (
+        output_dir / "api" / "routes" / "api" / "binary" / "gen_binary.ts"
+    ).read_text(encoding="utf-8")
+    runtime_text = (output_dir / "api" / "runtime" / "binary" / "gen_runtime.ts").read_text(encoding="utf-8")
+
+    assert "readonly detail: string" in runtime_text
+    assert "export function joinBinaryPath(" in runtime_text
+    assert "export function indexBinaryPath(" in runtime_text
+    assert "export function wrapBinaryField(" in runtime_text
+    assert "export function wrapBinaryIndex(" in runtime_text
+    assert "wrapBinaryPath(indexBinaryPath(path, index), write)" not in runtime_text
+    assert 'throw wrapBinaryField("primary", error);' in schema_text
+    assert 'throw wrapBinaryIndex("items", index, error);' in schema_text
+    assert 'writeInventoryItem(item, writer, state, "");' in schema_text
+    assert "=> wrapBinaryIndex(" not in schema_text
+    assert 'requireRange("id", value.id, 1, Number.MAX_SAFE_INTEGER);' in schema_text
+    assert 'writer.writeU16("id", value.id);' in schema_text
+    assert '"Item.id"' not in schema_text
+    assert "`[${index}]`" not in schema_text
 
 
 def _max_consecutive_blank_lines(text: str) -> int:

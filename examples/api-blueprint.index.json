@@ -5,16 +5,16 @@
     "Do not open api-blueprint.contract.json by default; generate or read it only for diff, archiving, or exhaustive fallback."
   ],
   "counts": {
-    "connections": 2,
+    "connections": 3,
     "errors": 3,
     "routes": 22,
-    "schemas": 41,
+    "schemas": 45,
     "services": 5,
     "targets": 19
   },
   "generator": {
     "name": "api-blueprint",
-    "version": "1.2.2"
+    "version": "1.2.3"
   },
   "kind": "api-blueprint.index",
   "purpose": "Lightweight route catalog. Use inspect commands for route schemas, errors, generated files, and full details.",
@@ -55,10 +55,10 @@
   ],
   "routes": [
     {
-      "id": "api.api.ws.ws",
-      "kind": "legacy_ws",
+      "id": "api.api.channel.ws",
+      "kind": "channel",
       "methods": [],
-      "operation": "Ws",
+      "operation": "HelloChannel",
       "service_id": "api.api",
       "url": "/api/ws"
     },
@@ -71,6 +71,16 @@
       "operation": "Packet",
       "service_id": "api.binary",
       "url": "/api/binary/packet"
+    },
+    {
+      "id": "api.binary.post.auditpacket",
+      "kind": "rpc",
+      "methods": [
+        "POST"
+      ],
+      "operation": "AuditPacket",
+      "service_id": "api.binary",
+      "url": "/api/binary/audit-packet"
     },
     {
       "id": "api.demo.get.abc",
@@ -111,14 +121,6 @@
       "operation": "Delete",
       "service_id": "api.demo",
       "url": "/api/demo/delete$"
-    },
-    {
-      "id": "api.demo.ws.ws",
-      "kind": "legacy_ws",
-      "methods": [],
-      "operation": "Ws",
-      "service_id": "api.demo",
-      "url": "/api/demo/ws"
     },
     {
       "id": "api.demo.stream.sweepevents",
@@ -282,7 +284,7 @@
       "name": "BinaryService",
       "path": "/api/binary",
       "root": "api",
-      "route_count": 1
+      "route_count": 2
     },
     {
       "group": "demo",
@@ -290,7 +292,7 @@
       "name": "DemoService",
       "path": "/api/demo",
       "root": "api",
-      "route_count": 11
+      "route_count": 10
     },
     {
       "group": "hello",
@@ -343,7 +345,7 @@
       "kind": "kotlin-client",
       "out_dir": "kotlin/client",
       "role": "client",
-      "route_count": 17
+      "route_count": 18
     },
     {
       "id": "kotlin.server",
@@ -371,7 +373,7 @@
       "kind": "python-server",
       "out_dir": "python/server",
       "role": "server",
-      "route_count": 21
+      "route_count": 20
     },
     {
       "id": "python.client",
@@ -413,35 +415,35 @@
       "kind": "wails-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 21
+      "route_count": 20
     },
     {
       "id": "wails.v2",
       "kind": "wails-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 21
+      "route_count": 20
     },
     {
       "id": "grpc.proto",
       "kind": "grpc-proto",
       "out_dir": "grpc/protos",
       "role": "grpc",
-      "route_count": 21
+      "route_count": 20
     },
     {
       "id": "grpc.go",
       "kind": "grpc-go",
       "out_dir": "grpc/go",
       "role": "grpc",
-      "route_count": 21
+      "route_count": 20
     },
     {
       "id": "grpc.python",
       "kind": "grpc-python",
       "out_dir": "grpc/python",
       "role": "grpc",
-      "route_count": 21
+      "route_count": 20
     }
   ],
   "version": "2.0"

@@ -494,7 +494,7 @@ func runSuiteCommand(cwd string, label string, name string, args ...string) erro
 func buildDemoPacket() *binaryapi.DemoPacket {
 	return &binaryapi.DemoPacket{
 		Header: binaryapi.DemoPacketHeader{
-			Flags:        binaryapi.DemoFlagsHasPayload | binaryapi.DemoFlagsHasScores,
+			Flags:        binaryapi.DemoPacketFlagsHasPayload | binaryapi.DemoPacketFlagsHasScores,
 			Short_code:   0x010203,
 			Signed_delta: 7,
 			Item_count:   2,
@@ -597,7 +597,7 @@ func buildDemoPacketFixture(magic string, itemCount uint16, payload string) []by
 	writeBytes(buf, []byte(magic)[:4])
 	writeUint16(buf, 1)
 	writeUint16(buf, 1)
-	writeUint32(buf, uint32(binaryapi.DemoFlagsHasPayload|binaryapi.DemoFlagsHasScores))
+	writeUint32(buf, uint32(binaryapi.DemoPacketFlagsHasPayload|binaryapi.DemoPacketFlagsHasScores))
 	writeBytes(buf, []byte{0})
 	writeBytes(buf, []byte{0, 0})
 	writeUint24(buf, 0x010203)

@@ -3,7 +3,6 @@
 import {{ bp.root_package }}.runtime.ApiChannelBridge;
 import {{ bp.root_package }}.runtime.ApiRequest;
 import {{ bp.root_package }}.runtime.ApiResponseEnvelope;
-import {{ bp.root_package }}.runtime.ApiSocketBridge;
 import {{ bp.root_package }}.runtime.ApiStreamBridge;
 import {{ bp.root_package }}.runtime.ApiTransport;
 {% if group.runtime_types_ref == "ApiTypes" %}
@@ -56,28 +55,6 @@ public class {{ group.generated_client_class }} {
             Map.of()
         );
         return transport.execute(request);
-    }
-{% elif route.kind == "legacy_ws" %}
-
-    public ApiSocketBridge<Object, Object> {{ route.connection_method_name }}(
-{%- for type_name, name in writer.route_params(route, group) %}
-        {{ type_name }} {{ name }}{% if not loop.last %},{% endif %}
-{%- endfor %}
-    ) {
-        ApiRequest<Object> request = new ApiRequest<>(
-            {{ route.route_id | code_literal }},
-            "WS",
-            {{ route.url | code_literal }},
-            {% if route.query_model %}query{% else %}null{% endif %},
-            null,
-            null,
-            null,
-            ApiResponseEnvelope.none(),
-            Object.class,
-            "application/json",
-            Map.of()
-        );
-        return transport.connectSocket(request);
     }
 {% elif route.kind == "stream" %}
 

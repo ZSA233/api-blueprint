@@ -188,7 +188,7 @@ API 规则：
 - 如果未显式设置 `operation_id`，且同一个 group 下出现同 path 的自动命名冲突，生成器会按 method 或 connection kind 自动消歧，例如 `CurrentGet` / `CurrentPut`、`EventsStream` / `EventsChannel`。
 - 如果多个 route 的显式 `operation_id` 规范化后仍然冲突，`api-gen check` / `api-gen generate` 会直接失败，并要求为冲突 route 提供唯一的 `operation_id`。
 - `scope` 支持 `ConnectionScope.SESSION`、`ConnectionScope.APP` 与 `ConnectionScope.TOPIC`，transport 可按自身能力映射；默认 HTTP/Wails runtime 完整支持 `SESSION`。
-- `delivery` 支持 `ConnectionDelivery.ORDERED` 与 `ConnectionDelivery.UNORDERED`；`STREAM` / `CHANNEL` 默认是 `ORDERED`。HTTP 下的 ordered 直接依赖 SSE / WebSocket 的单连接顺序，不额外叠加生成器自管的 sequence overlay；默认 Wails transport 会通过 transport-level sequence envelope 与 reorder buffer 保持“有序异步”；`WS` 兼容写法不进入这条 surface。
+- `delivery` 支持 `ConnectionDelivery.ORDERED` 与 `ConnectionDelivery.UNORDERED`；`STREAM` / `CHANNEL` 默认是 `ORDERED`。HTTP 下的 ordered 直接依赖 SSE / WebSocket 的单连接顺序，不额外叠加生成器自管的 sequence overlay；默认 Wails transport 会通过 transport-level sequence envelope 与 reorder buffer 保持“有序异步”。
 - HTTP `STREAM` 映射为 SSE，HTTP `CHANNEL` 映射为 WebSocket。
 - `delivery=ConnectionDelivery.UNORDERED` 主要影响 Wails route；HTTP transport 仍沿用 SSE / WebSocket 的原生顺序行为，不会主动切到另一条乱序交付路径。
 - Wails `STREAM` / `CHANNEL` 映射为 session-scoped runtime events，event name 只存在于 generated transport/runtime 内部。
@@ -197,22 +197,9 @@ API 规则：
 
 完整可生成示例见 `examples/blueprints/api_demo.py` 中的 `/api/demo/sweep-events` 与 `/api/demo/assistant-session`。
 
-## Legacy WebSocket
+## 兼容性说明
 
-```python
-class ClientMessage(Model):
-    message = String(description="client message")
-
-
-class ServerMessage(Model):
-    message = String(description="server message")
-
-
-with bp.group("/demo") as views:
-    views.WS("/ws").RECV(ClientMessage).SEND(ServerMessage)
-```
-
-`WS().RECV().SEND()` 是兼容写法，不进入 ContractGraph 主线。新蓝图优先使用 `STREAM` / `CHANNEL`，避免把多个逻辑消息误建模成多个裸 event。
+`WS().RECV().SEND()` 已从 blueprint DSL 移除。双向 WebSocket 风格契约请使用 `CHANNEL`，服务端单向事件流请使用 `STREAM`。
 
 ## 文档输出
 

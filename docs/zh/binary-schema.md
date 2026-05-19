@@ -26,12 +26,14 @@ with bp.group("/binary") as views:
 
 ## 文件结构
 
-```md
+````md
 # packet DemoPacket
 
+```yaml
 endian: little
 content-type: application/octet-stream
 content-encoding: identity,gzip
+```
 
 ## header
 
@@ -63,9 +65,11 @@ content-encoding: identity,gzip
 | FastPath | 1 | | fast path marker |
 | Mode | 2..3 | enum=DemoKind | packet mode |
 | Reserved | 4..31 | const=0 | reserved bits must be zero |
-```
+````
 
 Schema 文件必须包含一个 `# packet Name`。`## header`、`## body` 等普通二级标题会按顺序组成 packet；`## struct Name` 定义可复用结构体；`## enum Name : u32` 和 `## bitflags Name : u32` 定义整数语义类型。
+
+顶层 heading 后的 packet metadata 可以保持裸 `key: value` 行，也可以用 ```` ```yaml ```` 这类 fenced code block 包起来，改善 Markdown 渲染。两种写法解析结果相同；fenced block 内部仍然使用同一套 `key: value` 规则。
 
 ## 字段表
 
@@ -154,6 +158,12 @@ routes/api/binary/gen_types.py
 runtime/binary/gen_runtime.go
 ```
 
+当多个 `.REQ_BINARY(...)` route 位于同一个 route group 时，packet 入口名仍保持基于 packet 的稳定命名，例如 `DemoPacket`、`DemoPacketWire`、`ParseDemoPacket`、`DemoPacketToBinaryBody`。Schema 内部生成符号会按 packet 作用域输出：`struct Item`、`enum Kind`、`bitflags Flags`、state holder、writer/parser helper 会生成类似 `DemoPacketItem`、`DemoPacketKind`、`DemoPacketFlags` 的名字。`DemoPacket` 与 `Demo_Packet` 这类归一化后生成名相同的 packet name 会在写文件前被明确拒绝。
+
+二进制 parser / writer 的诊断路径使用 schema 原始 packet、section、object 和 field 名，而不是生成语言里的内部符号名。嵌套对象和数组元素会在错误发生后按上下文包装路径，例如 `DemoPacket.body.items[0].id`；成功写入路径不会为了诊断信息提前拼接完整字段路径。
+
+Public packet 字段名遵循目标语言的 SDK 习惯，但诊断路径仍保持 schema 原始名字。Go / Kotlin / Java 暴露 `ItemCount` 或 `itemCount` 这类语言风格字段；TypeScript / Python 保持 `item_count` 这类贴近 JSON / wire 命名的 snake_case 字段。
+
 Go bitflags 仍生成整数别名，便于保持 wire 兼容和位运算性能；额外 helper 只提供更直观的访问方式：
 
 ```go
@@ -165,11 +175,13 @@ flags.HasReservedBits()
 flags.Validate()
 ```
 
-Go / TypeScript / Kotlin / Python client 会为同一 schema 生成：
+Go / TypeScript / Kotlin / Python / Java client 会为同一 schema 生成：
 
 - typed packet，适合小包或测试。
 - streaming/raw binary body，适合大包热路径。
 - writer helper 和 block helper，适合把已经缓存或预编码的字段片段直接接入。
+
+Java server controller 会把 `.REQ_BINARY(...)` 请求字节解析成 generated typed packet 后再调用 generated service interface。这仍然是协议契约代码；HTTP content-encoding 编排仍属于 transport/runtime 层职责。
 
 HTTP adapter 会把 binary body 作为 `application/octet-stream` 发送；服务端 adapter 会按 schema 声明接受 `identity` 或 `gzip`。
 

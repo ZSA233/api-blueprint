@@ -43,11 +43,15 @@ val ApiErrorsByID: Map<String, ApiErrorEntry> = mapOf(
 val ApiErrors: Map<String, ApiErrorEntry> = ApiErrorsByID
 
 private val routeApiErrorsByCode: Map<String, Map<ApiErrorCode, ApiErrorEntry>> = mapOf(
-    "api.api.ws.ws" to mapOf(
+    "api.api.channel.ws" to mapOf(
         -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
         55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
     ),
     "api.binary.post.packet" to mapOf(
+        -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
+        55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
+    ),
+    "api.binary.post.auditpacket" to mapOf(
         -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
         55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
     ),
@@ -64,10 +68,6 @@ private val routeApiErrorsByCode: Map<String, Map<ApiErrorCode, ApiErrorEntry>> 
         55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
     ),
     "api.demo.delete.delete" to mapOf(
-        -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
-        55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
-    ),
-    "api.demo.ws.ws" to mapOf(
         -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
         55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
     ),

@@ -25,7 +25,6 @@ class ConnectionKind(str, Enum):
     RPC = "rpc"
     STREAM = "stream"
     CHANNEL = "channel"
-    LEGACY_WS = "legacy_ws"
 
 
 class DefaultConnectionClose(Model):
