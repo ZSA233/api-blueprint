@@ -138,6 +138,19 @@ def validate_config(repo_root: Path) -> None:
         Path("scripts/release_version.py"),
         Path("scripts/release_assets.py"),
         Path("scripts/example_validation.py"),
+        Path("scripts/example_validation/__init__.py"),
+        Path("scripts/example_validation/__main__.py"),
+        Path("scripts/example_validation/cli.py"),
+        Path("scripts/example_validation/compile.py"),
+        Path("scripts/example_validation/constants.py"),
+        Path("scripts/example_validation/connection_contract.py"),
+        Path("scripts/example_validation/generate.py"),
+        Path("scripts/example_validation/language_checks.py"),
+        Path("scripts/example_validation/models.py"),
+        Path("scripts/example_validation/runner.py"),
+        Path("scripts/example_validation/snapshot.py"),
+        Path("scripts/example_validation/tools.py"),
+        Path("scripts/example_validation/workspace.py"),
     ]
     missing = [str(path) for path in required_paths if not (repo_root / path).exists()]
     if missing:
