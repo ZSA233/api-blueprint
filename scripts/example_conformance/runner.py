@@ -6,9 +6,18 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from typing import Protocol
 
 from scripts import example_validation
 from scripts.example_conformance import manifest, reporter, scenarios, server, tools, workspace
+
+
+class PreparedClientRunner(Protocol):
+    def run(self, base_url: str, scenario_arg: str) -> None:
+        """Run one already-prepared conformance scenario."""
+
+    def close(self) -> None:
+        """Release temporary files or process resources owned by the runner."""
 
 
 def run_conformance(
@@ -129,16 +138,21 @@ def _run_against_workspace(
                 )
                 continue
             reporter.print_group(client)
-            for scenario in client_scenarios:
-                reporter.run_sub_stage(
-                    f"{client}/{scenario.name}",
-                    lambda client=client, scenario=scenario: _run_client(
-                        conf_workspace.blueprint,
-                        client,
-                        active_server.base_url,
-                        (scenario,),
-                    ),
-                )
+            prepared_runner = reporter.run_sub_stage(
+                f"{client}/setup",
+                lambda client=client: _prepare_client_runner(conf_workspace.blueprint, client),
+            )
+            try:
+                for scenario in client_scenarios:
+                    reporter.run_sub_stage(
+                        f"{client}/{scenario.name}",
+                        lambda scenario=scenario, prepared_runner=prepared_runner: prepared_runner.run(
+                            active_server.base_url,
+                            scenario.name,
+                        ),
+                    )
+            finally:
+                prepared_runner.close()
         reporter.print_summary(
             server=server_name,
             clients=clients,
@@ -149,6 +163,18 @@ def _run_against_workspace(
         server.cleanup_server_log(active_server.output_path)
 
 
+def _prepare_client_runner(ws: example_validation.BlueprintExampleWorkspace, client: str) -> PreparedClientRunner:
+    if client == "go":
+        return _prepare_go_runner(ws.golang_dir / "conformance")
+    if client == "typescript":
+        return _prepare_typescript_runner(ws.typescript_dir)
+    if client == "kotlin":
+        return _prepare_kotlin_runner(ws.kotlin_client_dir, ws.kotlin_conformance_dir)
+    if client == "flutter":
+        return _prepare_flutter_runner(ws.flutter_dir)
+    raise ValueError(f"unknown conformance client: {client}")
+
+
 def _run_client(
     ws: example_validation.BlueprintExampleWorkspace,
     client: str,
@@ -156,27 +182,57 @@ def _run_client(
     selected_scenarios: tuple[scenarios.Scenario, ...],
 ) -> None:
     scenario_arg = ",".join(scenario.name for scenario in selected_scenarios)
-    if client == "go":
-        subprocess.run(["go", "run", ".", base_url, scenario_arg], cwd=ws.golang_dir / "conformance", check=True)
-        return
-    if client == "typescript":
-        _run_typescript(ws.typescript_dir, base_url, scenario_arg)
-        return
-    if client == "kotlin":
-        _run_kotlin(ws.kotlin_client_dir, ws.kotlin_conformance_dir, base_url, scenario_arg)
-        return
-    if client == "flutter":
-        env = os.environ.copy()
-        env["API_BLUEPRINT_BASE_URL"] = base_url
-        env["API_BLUEPRINT_SCENARIOS"] = scenario_arg
-        subprocess.run(["dart", "pub", "get"], cwd=ws.flutter_dir, check=True)
-        subprocess.run(["dart", "test", "test/conformance_test.dart"], cwd=ws.flutter_dir, env=env, check=True)
-        return
-    raise ValueError(f"unknown conformance client: {client}")
+    prepared_runner = _prepare_client_runner(ws, client)
+    try:
+        prepared_runner.run(base_url, scenario_arg)
+    finally:
+        prepared_runner.close()
 
 
-def _run_typescript(typescript_dir: Path, base_url: str, scenario_arg: str) -> None:
-    with tempfile.TemporaryDirectory(prefix="api-blueprint-ts-conformance-") as temp_dir:
+class GoConformanceRunner:
+    def __init__(self, conformance_dir: Path, temp_dir: Path, executable: Path) -> None:
+        self.conformance_dir = conformance_dir
+        self.temp_dir = temp_dir
+        self.executable = executable
+
+    def run(self, base_url: str, scenario_arg: str) -> None:
+        subprocess.run([str(self.executable), base_url, scenario_arg], cwd=self.conformance_dir, check=True)
+
+    def close(self) -> None:
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+
+def _prepare_go_runner(conformance_dir: Path) -> GoConformanceRunner:
+    temp_dir = Path(tempfile.mkdtemp(prefix="api-blueprint-go-conformance-"))
+    executable_name = "api-blueprint-go-conformance.exe" if os.name == "nt" else "api-blueprint-go-conformance"
+    executable = temp_dir / executable_name
+    try:
+        subprocess.run(["go", "build", "-o", str(executable), "."], cwd=conformance_dir, check=True)
+        return GoConformanceRunner(conformance_dir, temp_dir, executable)
+    except Exception:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise
+
+
+class TypeScriptConformanceRunner:
+    def __init__(self, typescript_dir: Path, temp_dir: Path) -> None:
+        self.typescript_dir = typescript_dir
+        self.temp_dir = temp_dir
+
+    @property
+    def executable(self) -> Path:
+        return self.temp_dir / "conformance.js"
+
+    def run(self, base_url: str, scenario_arg: str) -> None:
+        subprocess.run(["node", str(self.executable), base_url, scenario_arg], cwd=self.typescript_dir, check=True)
+
+    def close(self) -> None:
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+
+def _prepare_typescript_runner(typescript_dir: Path) -> TypeScriptConformanceRunner:
+    temp_dir = Path(tempfile.mkdtemp(prefix="api-blueprint-ts-conformance-"))
+    try:
         subprocess.run(
             [
                 "tsc",
@@ -187,20 +243,70 @@ def _run_typescript(typescript_dir: Path, base_url: str, scenario_arg: str) -> N
                 "--moduleResolution",
                 "node",
                 "--outDir",
-                temp_dir,
+                str(temp_dir),
             ],
             cwd=typescript_dir,
             check=True,
         )
-        subprocess.run(["node", str(Path(temp_dir) / "conformance.js"), base_url, scenario_arg], cwd=typescript_dir, check=True)
+        return TypeScriptConformanceRunner(typescript_dir, temp_dir)
+    except Exception:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise
+
+
+def _run_typescript(typescript_dir: Path, base_url: str, scenario_arg: str) -> None:
+    typescript_runner = _prepare_typescript_runner(typescript_dir)
+    try:
+        typescript_runner.run(base_url, scenario_arg)
+    finally:
+        typescript_runner.close()
+
+
+class FlutterConformanceRunner:
+    def __init__(self, flutter_dir: Path) -> None:
+        self.flutter_dir = flutter_dir
+
+    def run(self, base_url: str, scenario_arg: str) -> None:
+        env = os.environ.copy()
+        env["API_BLUEPRINT_BASE_URL"] = base_url
+        env["API_BLUEPRINT_SCENARIOS"] = scenario_arg
+        subprocess.run(["dart", "test", "test/conformance_test.dart"], cwd=self.flutter_dir, env=env, check=True)
+
+    def close(self) -> None:
+        return None
+
+
+def _prepare_flutter_runner(flutter_dir: Path) -> FlutterConformanceRunner:
+    subprocess.run(["dart", "pub", "get"], cwd=flutter_dir, check=True)
+    return FlutterConformanceRunner(flutter_dir)
 
 
 def _run_kotlin(kotlin_dir: Path, conformance_dir: Path, base_url: str, scenario_arg: str) -> None:
+    kotlin_runner = _prepare_kotlin_runner(kotlin_dir, conformance_dir)
+    try:
+        kotlin_runner.run(base_url, scenario_arg)
+    finally:
+        kotlin_runner.close()
+
+
+class KotlinConformanceRunner:
+    def __init__(self, project_dir: Path, executable: Path) -> None:
+        self.project_dir = project_dir
+        self.executable = executable
+
+    def run(self, base_url: str, scenario_arg: str) -> None:
+        subprocess.run([str(self.executable), base_url, scenario_arg], cwd=self.project_dir, check=True)
+
+    def close(self) -> None:
+        shutil.rmtree(self.project_dir, ignore_errors=True)
+
+
+def _prepare_kotlin_runner(kotlin_dir: Path, conformance_dir: Path) -> KotlinConformanceRunner:
     gradle_bin = example_validation.resolve_gradle_bin()
     if gradle_bin is None:
         raise RuntimeError("Gradle is required for Kotlin conformance")
-    with tempfile.TemporaryDirectory(prefix="api-blueprint-kotlin-conformance-") as temp_dir:
-        project_dir = Path(temp_dir)
+    project_dir = Path(tempfile.mkdtemp(prefix="api-blueprint-kotlin-conformance-"))
+    try:
         source_dir = project_dir / "src/main/kotlin"
         shutil.copytree(kotlin_dir, source_dir)
         conformance_source = conformance_dir / "Conformance.kt"
@@ -251,4 +357,12 @@ kotlin {{
             + "\n",
             encoding="utf-8",
         )
-        subprocess.run([gradle_bin, "--no-daemon", "run", "--args", f"{base_url} {scenario_arg}"], cwd=project_dir, check=True)
+        subprocess.run([gradle_bin, "--no-daemon", "installDist"], cwd=project_dir, check=True)
+        executable_name = "api-blueprint-kotlin-conformance.bat" if os.name == "nt" else "api-blueprint-kotlin-conformance"
+        executable = project_dir / "build" / "install" / "api-blueprint-kotlin-conformance" / "bin" / executable_name
+        if not executable.is_file():
+            raise RuntimeError(f"Kotlin conformance executable is missing: {executable}")
+        return KotlinConformanceRunner(project_dir, executable)
+    except Exception:
+        shutil.rmtree(project_dir, ignore_errors=True)
+        raise

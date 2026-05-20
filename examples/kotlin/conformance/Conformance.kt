@@ -44,39 +44,53 @@ import com.example.apiblueprint.alt.transports.http.createHttpApiClient as creat
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import okhttp3.OkHttpClient
 
 fun main(args: Array<String>) = runBlocking {
     val baseUrl = args.firstOrNull()?.trimEnd('/') ?: error("base URL argument is required")
     val selected = scenarioSet(args.getOrNull(1) ?: "rpc,binary,form,error,naming,sse,websocket")
-    val client = createHttpApiClient(HttpApiConfig(baseUrl = baseUrl))
-    val altClient = createAltHttpApiClient(AltHttpApiConfig(baseUrl = baseUrl))
+    val httpClient = OkHttpClient()
+    val altHttpClient = OkHttpClient()
+    try {
+        val client = createHttpApiClient(HttpApiConfig(baseUrl = baseUrl), httpClient)
+        val altClient = createAltHttpApiClient(AltHttpApiConfig(baseUrl = baseUrl), altHttpClient)
 
-    if ("rpc" in selected) {
-        checkRpc(client)
+        if ("rpc" in selected) {
+            checkRpc(client)
+        }
+        if ("form" in selected) {
+            checkForm(client)
+        }
+        if ("binary" in selected) {
+            checkBinary(client)
+        }
+        if ("error" in selected) {
+            checkTypedErrors(client)
+        }
+        if ("naming" in selected) {
+            checkNaming(client, altClient)
+        }
+        if ("sse" in selected) {
+            checkSse(client)
+        }
+        if ("websocket" in selected) {
+            checkWebSocket(client)
+        }
+        println("kotlin conformance passed")
+    } finally {
+        shutdownOkHttp(httpClient)
+        shutdownOkHttp(altHttpClient)
     }
-    if ("form" in selected) {
-        checkForm(client)
-    }
-    if ("binary" in selected) {
-        checkBinary(client)
-    }
-    if ("error" in selected) {
-        checkTypedErrors(client)
-    }
-    if ("naming" in selected) {
-        checkNaming(client, altClient)
-    }
-    if ("sse" in selected) {
-        checkSse(client)
-    }
-    if ("websocket" in selected) {
-        checkWebSocket(client)
-    }
-    println("kotlin conformance passed")
 }
 
 private fun scenarioSet(raw: String): Set<String> =
     raw.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+
+private fun shutdownOkHttp(client: OkHttpClient) {
+    client.dispatcher.executorService.shutdown()
+    client.connectionPool.evictAll()
+    client.cache?.close()
+}
 
 private suspend fun checkRpc(client: ApiClient) {
     val post = client.demo.testPost(DemoTestPostJson(req1 = "kotlin", req2 = 7))

@@ -67,6 +67,16 @@ def test_prepare_blueprint_outputs_preserves_kotlin_conformance_source(tmp_path:
     )
 
 
+def test_kotlin_conformance_harness_shuts_down_okhttp_clients() -> None:
+    text = (Path(__file__).resolve().parents[2] / "examples/kotlin/conformance/Conformance.kt").read_text(
+        encoding="utf-8"
+    )
+
+    assert "import okhttp3.OkHttpClient" in text
+    assert "dispatcher.executorService.shutdown()" in text
+    assert "connectionPool.evictAll()" in text
+
+
 def test_reporter_suppresses_success_output_and_reports_stage(capsys: pytest.CaptureFixture[str]) -> None:
     reporter.run_stage("generate examples", lambda: print("generated noisy file list"))
 
@@ -125,13 +135,17 @@ def test_runner_reports_server_and_client_matrix_without_client_noise(
     )
     calls: list[tuple[str, str]] = []
 
-    def fake_run_client(ws: object, client: str, base_url: str, selected_scenarios: tuple[scenarios.Scenario, ...]) -> None:
-        print("client noisy output")
-        calls.append((client, ",".join(scenario.name for scenario in selected_scenarios)))
+    class FakePreparedRunner:
+        def run(self, base_url: str, scenario_arg: str) -> None:
+            print("client noisy output")
+            calls.append((base_url, scenario_arg))
+
+        def close(self) -> None:
+            calls.append(("closed", ""))
 
     monkeypatch.setattr(runner.server, "start_go_server", lambda server_dir: fake_server)
     monkeypatch.setattr(runner.server, "cleanup_server_log", lambda path: None)
-    monkeypatch.setattr(runner, "_run_client", fake_run_client)
+    monkeypatch.setattr(runner, "_prepare_client_runner", lambda ws, client: FakePreparedRunner())
 
     runner._run_against_workspace(
         fake_workspace,  # type: ignore[arg-type]
@@ -143,10 +157,148 @@ def test_runner_reports_server_and_client_matrix_without_client_noise(
     captured = capsys.readouterr()
     assert "server go ... ok http://127.0.0.1:12345" in captured.out
     assert "flutter:" in captured.out
+    assert "  - flutter/setup ... ok" in captured.out
     assert "  - flutter/sse ... ok" in captured.out
     assert "  - flutter/websocket ... ok" in captured.out
     assert "client noisy output" not in captured.out
-    assert calls == [("flutter", "sse"), ("flutter", "websocket")]
+    assert calls == [("http://127.0.0.1:12345", "sse"), ("http://127.0.0.1:12345", "websocket"), ("closed", "")]
+
+
+def test_runner_prepares_each_client_once_and_runs_each_scenario(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    fake_server = SimpleNamespace(
+        base_url="http://127.0.0.1:12345",
+        output_path=Path(".conformance-server.log"),
+        stop=lambda: None,
+    )
+    fake_workspace = SimpleNamespace(
+        blueprint=SimpleNamespace(
+            golang_server_dir=Path("."),
+            kotlin_client_dir=Path("kotlin/client"),
+            kotlin_conformance_dir=Path("kotlin/conformance"),
+        ),
+    )
+    calls: list[tuple[str, str, str]] = []
+
+    class FakePreparedRunner:
+        def __init__(self, client: str):
+            self.client = client
+
+        def run(self, base_url: str, scenario_arg: str) -> None:
+            calls.append((self.client, base_url, scenario_arg))
+
+        def close(self) -> None:
+            calls.append((self.client, "closed", ""))
+
+    monkeypatch.setattr(runner.server, "start_go_server", lambda server_dir: fake_server)
+    monkeypatch.setattr(runner.server, "cleanup_server_log", lambda path: None)
+    monkeypatch.setattr(runner, "_prepare_client_runner", lambda ws, client: FakePreparedRunner(client))
+
+    runner._run_against_workspace(
+        fake_workspace,  # type: ignore[arg-type]
+        server_name="go",
+        clients=("typescript", "kotlin"),
+        selected_scenarios=scenarios.filter_scenarios(("sse", "websocket")),
+    )
+
+    captured = capsys.readouterr()
+    assert "typescript:" in captured.out
+    assert "  - typescript/setup ... ok" in captured.out
+    assert "  - typescript/sse ... ok" in captured.out
+    assert "  - typescript/websocket ... ok" in captured.out
+    assert "kotlin:" in captured.out
+    assert "  - kotlin/setup ... ok" in captured.out
+    assert "  - kotlin/sse ... ok" in captured.out
+    assert "  - kotlin/websocket ... ok" in captured.out
+    assert calls == [
+        ("typescript", "http://127.0.0.1:12345", "sse"),
+        ("typescript", "http://127.0.0.1:12345", "websocket"),
+        ("typescript", "closed", ""),
+        ("kotlin", "http://127.0.0.1:12345", "sse"),
+        ("kotlin", "http://127.0.0.1:12345", "websocket"),
+        ("kotlin", "closed", ""),
+    ]
+
+
+def test_prepare_typescript_runner_compiles_once_and_reuses_output(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    calls: list[tuple[tuple[str, ...], Path | None]] = []
+
+    def fake_run(args: list[str], cwd: Path | None = None, check: bool = False, **kwargs: object) -> None:
+        calls.append((tuple(args), cwd))
+
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+
+    prepared = runner._prepare_typescript_runner(tmp_path)
+    try:
+        prepared.run("http://127.0.0.1:12345", "sse")
+        prepared.run("http://127.0.0.1:12345", "websocket")
+    finally:
+        prepared.close()
+
+    tsc_calls = [call for call in calls if call[0][0] == "tsc"]
+    node_calls = [call for call in calls if call[0][0] == "node"]
+    assert len(tsc_calls) == 1
+    assert [call[0][-2:] for call in node_calls] == [
+        ("http://127.0.0.1:12345", "sse"),
+        ("http://127.0.0.1:12345", "websocket"),
+    ]
+
+
+def test_prepare_go_runner_builds_once_and_reuses_binary(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    calls: list[tuple[tuple[str, ...], Path | None]] = []
+
+    def fake_run(args: list[str], cwd: Path | None = None, check: bool = False, **kwargs: object) -> None:
+        calls.append((tuple(args), cwd))
+
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+
+    prepared = runner._prepare_go_runner(tmp_path)
+    try:
+        prepared.run("http://127.0.0.1:12345", "rpc")
+        prepared.run("http://127.0.0.1:12345", "binary")
+    finally:
+        prepared.close()
+
+    build_calls = [call for call in calls if call[0][:2] == ("go", "build")]
+    scenario_calls = [call for call in calls if call[0][0] != "go"]
+    assert len(build_calls) == 1
+    assert [call[0][-2:] for call in scenario_calls] == [
+        ("http://127.0.0.1:12345", "rpc"),
+        ("http://127.0.0.1:12345", "binary"),
+    ]
+
+
+def test_prepare_flutter_runner_runs_pub_get_once_and_reuses_test_process(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    calls: list[tuple[tuple[str, ...], str | None]] = []
+
+    def fake_run(args: list[str], cwd: Path | None = None, check: bool = False, **kwargs: object) -> None:
+        env = kwargs.get("env")
+        scenario = env.get("API_BLUEPRINT_SCENARIOS") if isinstance(env, dict) else None
+        calls.append((tuple(args), scenario))
+
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+
+    prepared = runner._prepare_flutter_runner(tmp_path)
+    prepared.run("http://127.0.0.1:12345", "sse")
+    prepared.run("http://127.0.0.1:12345", "websocket")
+    prepared.close()
+
+    assert calls[0] == (("dart", "pub", "get"), None)
+    assert calls[1:] == [
+        (("dart", "test", "test/conformance_test.dart"), "sse"),
+        (("dart", "test", "test/conformance_test.dart"), "websocket"),
+    ]
 
 
 def test_cli_list_reports_servers_clients_and_scenarios(capsys: pytest.CaptureFixture[str]) -> None:
