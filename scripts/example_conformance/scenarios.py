@@ -66,6 +66,41 @@ def scenario_registry() -> dict[str, Scenario]:
             route_ids=("api.conflict.get.default", "alt.conflict.get.default"),
             description="reserved names, same model names, and multi-blueprint roots",
         ),
+        "bad-json": Scenario(
+            name="bad-json",
+            categories=("server-safety", "malformed-input", "json"),
+            clients=("server",),
+            route_ids=("api.demo.post.testpost",),
+            description="malformed JSON request body returns a stable non-5xx response",
+        ),
+        "bad-query": Scenario(
+            name="bad-query",
+            categories=("server-safety", "malformed-input", "query"),
+            clients=("server",),
+            route_ids=("api.hello.get.helloway",),
+            description="malformed query value returns a stable non-5xx response",
+        ),
+        "malformed-websocket": Scenario(
+            name="malformed-websocket",
+            categories=("server-safety", "malformed-input", "websocket"),
+            clients=("server",),
+            route_ids=("api.demo.channel.assistantsession",),
+            description="malformed WebSocket frame closes without hanging server tasks",
+        ),
+        "ws-early-close": Scenario(
+            name="ws-early-close",
+            categories=("server-safety", "early-close", "websocket"),
+            clients=("server",),
+            route_ids=("api.demo.channel.assistantsession",),
+            description="client close during channel receive does not hang the server",
+        ),
+        "bad-binary": Scenario(
+            name="bad-binary",
+            categories=("server-safety", "malformed-input", "binary"),
+            clients=("server",),
+            route_ids=("api.binary.post.packet",),
+            description="malformed binary request does not terminate the server process",
+        ),
     }
 
 
@@ -101,6 +136,10 @@ def runnable_scenarios_for_client(client: str, selected: tuple[Scenario, ...]) -
     return tuple(scenario for scenario in selected if client in scenario.clients)
 
 
+def server_safety_scenarios(selected: tuple[Scenario, ...]) -> tuple[Scenario, ...]:
+    return tuple(scenario for scenario in selected if scenario.clients == ("server",))
+
+
 def server_supports_scenario(server: str, scenario: Scenario) -> bool:
     servers = manifest.server_manifest()
     if server not in servers:
@@ -120,4 +159,10 @@ def server_supports_scenario(server: str, scenario: Scenario) -> bool:
         return capability.supports_websocket
     if scenario.name == "naming":
         return capability.supports_naming
+    if scenario.name in {"bad-json", "bad-query"}:
+        return capability.supports_rpc
+    if scenario.name == "bad-binary":
+        return capability.supports_binary
+    if scenario.name in {"malformed-websocket", "ws-early-close"}:
+        return capability.supports_websocket
     return True

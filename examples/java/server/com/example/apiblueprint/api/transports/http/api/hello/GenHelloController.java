@@ -55,7 +55,12 @@ public class GenHelloController {
     public Object abc(
         @RequestParam Map<String, String> queryParams
     ) throws Exception {
-        HelloTypes.AbcQuery query = objectMapper.convertValue(queryParams, HelloTypes.AbcQuery.class);
+        HelloTypes.AbcQuery query;
+        try {
+            query = objectMapper.convertValue(queryParams, HelloTypes.AbcQuery.class);
+        } catch (RuntimeException error) {
+            return badRequestResponse(error);
+        }
         try {
             Object result = service.abc(
                 query
@@ -135,7 +140,12 @@ public class GenHelloController {
     public Object helloWay(
         @RequestParam Map<String, String> queryParams
     ) throws Exception {
-        HelloTypes.HelloWayQuery query = objectMapper.convertValue(queryParams, HelloTypes.HelloWayQuery.class);
+        HelloTypes.HelloWayQuery query;
+        try {
+            query = objectMapper.convertValue(queryParams, HelloTypes.HelloWayQuery.class);
+        } catch (RuntimeException error) {
+            return badRequestResponse(error);
+        }
         try {
             Object result = service.helloWay(
                 query
@@ -230,6 +240,10 @@ public class GenHelloController {
             return envelope;
         }
         return envelope;
+    }
+
+    private ResponseEntity<Map<String, Object>> badRequestResponse(Exception error) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("detail", "invalid request"));
     }
 
     private Object wrapApiErrorResponse(ApiResponseEnvelope envelopeSpec, ApiError error, String routeId) {

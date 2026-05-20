@@ -6,7 +6,7 @@ import json
 from dataclasses import asdict, is_dataclass
 from typing import Any
 
-from fastapi import APIRouter, WebSocket, Request
+from fastapi import APIRouter, WebSocket, Request, HTTPException, WebSocketDisconnect
 from starlette.responses import StreamingResponse, JSONResponse
 
 from ...runtime.errors import ApiError, make_api_error_payload
@@ -43,7 +43,10 @@ async def _json_body(request: Request) -> dict[str, Any] | None:
     body = await request.body()
     if not body:
         return None
-    value = json.loads(body.decode("utf-8"))
+    try:
+        value = json.loads(body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as err:
+        raise HTTPException(status_code=400, detail="invalid JSON body") from err
     return value if isinstance(value, dict) else None
 
 
@@ -149,7 +152,16 @@ class _WebSocketChannel:
         self.closed = False
 
     async def receive(self) -> Any:
-        return json.loads(await self.websocket.receive_text())
+        try:
+            payload = await self.websocket.receive_text()
+        except WebSocketDisconnect as err:
+            self.closed = True
+            raise _WebSocketClosed() from err
+        try:
+            return json.loads(payload)
+        except (UnicodeDecodeError, json.JSONDecodeError) as err:
+            await self.abort(1003, "invalid WebSocket message")
+            raise _WebSocketClosed() from err
 
     async def send(self, message: Any) -> None:
         if self.closed:
@@ -162,10 +174,22 @@ class _WebSocketChannel:
         if self.closed:
             return
         self.closed = True
-        await self.websocket.send_text(
-            json.dumps({"type": "close", "data": _jsonable(close)}, ensure_ascii=False)
-        )
-        await self.websocket.close(code=1000)
+        await self._send_close(close, 1000)
 
     async def abort(self, code: int = 1011, reason: str | None = None) -> None:
-        await self.close({"code": code, "reason": reason or ""})
+        if self.closed:
+            return
+        self.closed = True
+        await self._send_close({"code": code, "reason": reason or ""}, code)
+
+    async def _send_close(self, close: Any, code: int) -> None:
+        try:
+            await self.websocket.send_text(
+                json.dumps({"type": "close", "data": _jsonable(close)}, ensure_ascii=False)
+            )
+        finally:
+            await self.websocket.close(code=code)
+
+
+class _WebSocketClosed(Exception):
+    pass

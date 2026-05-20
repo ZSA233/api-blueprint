@@ -253,10 +253,9 @@ content-type: application/octet-stream
     assert "public static ApiBinaryBody toBinaryBody(DemoPacket value)" in binary_text
     assert "public static DemoPacket parse(byte[] bytes)" in binary_text
     assert "BinaryTypes.DemoPacket binary" in binary_service_text
-    assert (
-        "BinaryTypes.DemoPacket binary = BinaryTypes.DemoPacketWire.parse(binaryBody == null ? new byte[0] : binaryBody);"
-        in binary_controller_text
-    )
+    assert "BinaryTypes.DemoPacket binary;" in binary_controller_text
+    assert "binary = BinaryTypes.DemoPacketWire.parse(binaryBody == null ? new byte[0] : binaryBody);" in binary_controller_text
+    assert "return badRequestResponse(error);" in binary_controller_text
     assert "public static final String CONTENT_TYPE = \"application/octet-stream\"" in binary_text
 
     assert "public interface GenDemoService" in service_text
@@ -275,6 +274,14 @@ content-type: application/octet-stream
     assert "registry.addHandler(new ChatWebSocketHandler(), \"/api/demo/chat\")" in controller_text
     assert "SpringSseStream" in controller_text
     assert "SpringWebSocketChannel" in controller_text
+    assert "private static final Object CLOSED = new Object();" in controller_text
+    assert "private final BlockingQueue<Object> incoming = new LinkedBlockingQueue<>();" in controller_text
+    assert "void markClosed(Exception error)" in controller_text
+    assert "channel.markClosed" in controller_text
+    assert "channel.abortUnchecked(1003, \"invalid WebSocket message\")" in controller_text
+    assert "incoming.take()" in controller_text
+    assert "return badRequestResponse(error);" in controller_text
+    assert "private ResponseEntity<Map<String, Object>> badRequestResponse(Exception error)" in controller_text
     assert "ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)" not in controller_text
 
 
@@ -430,6 +437,9 @@ def test_java_client_and_server_generate_named_message_keyframe_helpers(tmp_path
     assert "SseEmitter" in controller_text
     assert "implements WebSocketConfigurer" in controller_text
     assert "SpringWebSocketChannel" in controller_text
+    assert "private static final Object CLOSED = new Object();" in controller_text
+    assert "void markClosed(Exception error)" in controller_text
+    assert "channel.abortUnchecked(1003, \"invalid WebSocket message\")" in controller_text
     assert "ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)" not in controller_text
 
 

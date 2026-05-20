@@ -55,7 +55,12 @@ public class GenConflictController {
     public Object defaultValue(
         @RequestParam Map<String, String> queryParams
     ) throws Exception {
-        ConflictTypes.DefaultQuery query = objectMapper.convertValue(queryParams, ConflictTypes.DefaultQuery.class);
+        ConflictTypes.DefaultQuery query;
+        try {
+            query = objectMapper.convertValue(queryParams, ConflictTypes.DefaultQuery.class);
+        } catch (RuntimeException error) {
+            return badRequestResponse(error);
+        }
         try {
             Object result = service.defaultValue(
                 query
@@ -150,6 +155,10 @@ public class GenConflictController {
             return envelope;
         }
         return envelope;
+    }
+
+    private ResponseEntity<Map<String, Object>> badRequestResponse(Exception error) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("detail", "invalid request"));
     }
 
     private Object wrapApiErrorResponse(ApiResponseEnvelope envelopeSpec, ApiError error, String routeId) {

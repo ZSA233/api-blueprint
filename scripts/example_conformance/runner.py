@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Protocol
 
 from scripts import example_validation
-from scripts.example_conformance import manifest, reporter, scenarios, server, tools, workspace
+from scripts.example_conformance import manifest, reporter, safety, scenarios, server, tools, workspace
 
 
 class PreparedClientRunner(Protocol):
@@ -134,8 +134,14 @@ def _run_against_workspace(
             success_detail=lambda active: active.base_url,
         )
         try:
+            _run_server_safety_scenarios(active_server.base_url, server_name, selected_scenarios)
+            client_selected_scenarios = tuple(
+                scenario for scenario in selected_scenarios if scenario.clients != ("server",)
+            )
             for client in clients:
-                client_scenarios = scenarios.runnable_scenarios_for_client(client, selected_scenarios)
+                if not client_selected_scenarios:
+                    continue
+                client_scenarios = scenarios.runnable_scenarios_for_client(client, client_selected_scenarios)
                 unsupported_by_server = tuple(
                     scenario for scenario in client_scenarios if not scenarios.server_supports_scenario(server_name, scenario)
                 )
@@ -185,6 +191,38 @@ def _run_against_workspace(
         clients=clients,
         scenarios=tuple(scenario.name for scenario in selected_scenarios),
     )
+
+
+def _run_server_safety_scenarios(
+    base_url: str,
+    server_name: str,
+    selected_scenarios: tuple[scenarios.Scenario, ...],
+) -> None:
+    safety_scenarios = scenarios.server_safety_scenarios(selected_scenarios)
+    if not safety_scenarios:
+        return
+    unsupported_by_server = tuple(
+        scenario for scenario in safety_scenarios if not scenarios.server_supports_scenario(server_name, scenario)
+    )
+    runnable_scenarios = tuple(
+        scenario for scenario in safety_scenarios if scenarios.server_supports_scenario(server_name, scenario)
+    )
+    if unsupported_by_server:
+        reporter.print_skipped(
+            "safety",
+            "no runnable scenarios for server "
+            + server_name
+            + ": "
+            + ",".join(scenario.name for scenario in unsupported_by_server),
+        )
+    if not runnable_scenarios:
+        return
+    reporter.print_group("  safety")
+    for scenario in runnable_scenarios:
+        _run_client_stage(
+            f"safety/{scenario.name}",
+            lambda scenario=scenario: safety.run_probe(base_url, scenario.name),
+        )
 
 
 def _run_client_stage(label: str, action):

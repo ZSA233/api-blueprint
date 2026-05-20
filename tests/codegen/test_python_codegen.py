@@ -12,7 +12,7 @@ import pytest
 from api_blueprint.contract import build_contract_graph
 from api_blueprint.engine import Blueprint, Error, Toast
 from api_blueprint.engine.binary_schema import parse_binary_schema
-from api_blueprint.engine.model import Model, String
+from api_blueprint.engine.model import Array, Map, Model, String
 from api_blueprint.writer.python import PythonClientWriter, PythonServerWriter
 
 
@@ -133,6 +133,52 @@ def test_python_client_generates_package_root_layout_and_preserves_user_files(tm
     assert "def create_client(" in (package_root / "gen_client.py").read_text(encoding="utf-8")
     assert user_client.read_text(encoding="utf-8") == "# user-owned client extension\n"
     _compile_generated_files(output_dir)
+
+
+def test_python_client_characterizes_nested_dto_response_coercion_as_shallow(tmp_path: Path):
+    class NestedItem(Model):
+        value = String(description="value")
+
+    class NestedResponse(Model):
+        item = NestedItem(description="item")
+        items = Array[NestedItem](description="items")
+        item_map = Map[String, NestedItem](description="item map")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.GET("/nested").RSP(NestedResponse)
+
+    output_dir = tmp_path / "python"
+    writer = PythonClientWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+    _compile_generated_files(output_dir)
+
+    package_root = output_dir / "api_blueprint_generated" / "api"
+    types_text = (package_root / "routes" / "api" / "demo" / "gen_types.py").read_text(encoding="utf-8")
+    assert "class NestedItem:" not in types_text
+    assert "class NestedResponse:" in types_text
+    assert "item: dict[str, Any] | None = None" in types_text
+    assert "items: list[Any] | None = None" in types_text
+    assert "item_map: dict[Any, Any] | None = None" in types_text
+
+    client_module = _import_generated_module(
+        output_dir,
+        "api_blueprint_generated.api.routes.api.demo.gen_client",
+    )
+    response = client_module._from_mapping(
+        client_module.NestedResponse,
+        {
+            "item": {"value": "one"},
+            "items": [{"value": "two"}],
+            "item_map": {"three": {"value": "three"}},
+        },
+    )
+
+    assert isinstance(response, client_module.NestedResponse)
+    assert isinstance(response.item, dict)
+    assert isinstance(response.items[0], dict)
+    assert isinstance(response.item_map["three"], dict)
 
 
 def test_python_client_and_server_generate_error_catalog_runtime(tmp_path: Path):
@@ -382,11 +428,50 @@ def test_python_server_generates_service_core_and_fastapi_adapter(tmp_path: Path
     assert "async def submit(" in service_text
     assert "json: dict[str, Any] | None = None" in service_text
     assert "class DemoServiceStub:" in service_text
-    assert "from fastapi import APIRouter" in adapter_text
+    assert "from fastapi import APIRouter, WebSocket, Request, HTTPException, WebSocketDisconnect" in adapter_text
     assert "def create_router(" in adapter_text
     assert "await service.submit(" in adapter_text
     assert "await request.form()" in adapter_text
+    assert "except (UnicodeDecodeError, json.JSONDecodeError) as err:" in adapter_text
+    assert 'raise HTTPException(status_code=400, detail="invalid JSON body") from err' in adapter_text
     assert "parse_qs" not in adapter_text
+    _compile_generated_files(output_dir)
+
+
+def test_python_server_binary_schema_service_contract_uses_raw_bytes(tmp_path: Path):
+    schema = parse_binary_schema(
+        """
+# packet DemoPacket
+
+endian: little
+
+## header
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| magic | bytes | 4 | const="ABP1" | magic |
+""".strip(),
+        source_path="demo_packet.md",
+    )
+    bp = Blueprint(root="/api")
+    with bp.group("/binary") as views:
+        views.POST("/packet").REQ_BINARY(schema).RSP(Result)
+
+    output_dir = tmp_path / "python"
+    writer = PythonServerWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    service_text = (
+        output_dir / "api_blueprint_generated" / "api" / "routes" / "api" / "binary" / "gen_service.py"
+    ).read_text(encoding="utf-8")
+    adapter_text = (
+        output_dir / "api_blueprint_generated" / "api" / "transports" / "http" / "gen_server.py"
+    ).read_text(encoding="utf-8")
+
+    assert "binary: bytes | None = None" in service_text
+    assert "binary: dict[str, Any] | None = None" not in service_text
+    assert "binary = await request.body()" in adapter_text
     _compile_generated_files(output_dir)
 
 
@@ -418,6 +503,9 @@ def test_python_server_generates_connection_adapter_scaffolds(tmp_path: Path):
     assert "stream = _SseStream()" in adapter_text
     assert "async for chunk in stream:" in adapter_text
     assert "channel = _WebSocketChannel(websocket)" in adapter_text
+    assert "except _WebSocketClosed:" in adapter_text
+    assert "except (UnicodeDecodeError, json.JSONDecodeError) as err:" in adapter_text
+    assert 'await self.abort(1003, "invalid WebSocket message")' in adapter_text
     assert "await service.chat(" in adapter_text
     assert "media_type=\"text/event-stream\"" in adapter_text
     service_text = (

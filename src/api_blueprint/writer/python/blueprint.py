@@ -24,8 +24,13 @@ class PythonRequestParam:
     name: str
     call_name: str
     annotation: str = "dict[str, Any] | None"
+    server_annotation: str | None = None
     default: str = "None"
     converter: str = "_to_mapping"
+
+    @property
+    def service_annotation(self) -> str:
+        return self.server_annotation or "dict[str, Any] | None"
 
 
 @dataclass(frozen=True)
@@ -183,9 +188,18 @@ class PythonRoute:
             annotation = _param_annotation(self.form_model)
             params.append(PythonRequestParam("form", "form", annotation))
         if self.binary_schema is not None:
-            params.append(PythonRequestParam("binary", "binary", f"{self.binary_schema.name} | ApiBinaryBody", "...", converter=""))
+            params.append(
+                PythonRequestParam(
+                    "binary",
+                    "binary",
+                    f"{self.binary_schema.name} | ApiBinaryBody",
+                    "bytes | None",
+                    "...",
+                    converter="",
+                )
+            )
         elif self.protocol.request.binary.model is not None:
-            params.append(PythonRequestParam("binary", "binary", "bytes | None", "None", converter=""))
+            params.append(PythonRequestParam("binary", "binary", "bytes | None", "bytes | None", "None", converter=""))
         if self.protocol.request.open.model is not None:
             annotation = _param_annotation(self.open_model)
             params.append(PythonRequestParam("open_data", "open_data", annotation))

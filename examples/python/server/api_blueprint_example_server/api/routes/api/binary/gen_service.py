@@ -10,14 +10,14 @@ class BinaryService(Protocol):
     async def packet(
         self,
         query: dict[str, Any] | None = None,
-        binary: dict[str, Any] | None = None,
+        binary: bytes | None = None,
     ) -> Any:
         ...
 
     async def audit_packet(
         self,
         query: dict[str, Any] | None = None,
-        binary: dict[str, Any] | None = None,
+        binary: bytes | None = None,
     ) -> Any:
         ...
 
@@ -26,13 +26,13 @@ class BinaryServiceStub:
     async def packet(
         self,
         query: dict[str, Any] | None = None,
-        binary: dict[str, Any] | None = None,
+        binary: bytes | None = None,
     ) -> Any:
         raise NotImplementedError("packet")
 
     async def audit_packet(
         self,
         query: dict[str, Any] | None = None,
-        binary: dict[str, Any] | None = None,
+        binary: bytes | None = None,
     ) -> Any:
         raise NotImplementedError("audit_packet")

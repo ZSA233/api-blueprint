@@ -28,6 +28,7 @@ import io.ktor.websocket.Frame
 import io.ktor.websocket.close
 import io.ktor.websocket.readText
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.*
 import kotlinx.serialization.json.JsonElement
@@ -45,13 +46,37 @@ public fun Route.register{{ writer.service_base_name(group) }}Routes(
 {%- if route.is_rpc %}
     {{ route.http_method | lower }}({{ route.url | code_literal }}) {
 {%- if route.query_type %}
-        val query = decodeParameters(call.request.queryParameters, {{ route.query_type }}.serializer())
+        val query = try {
+            decodeParameters(call.request.queryParameters, {{ route.query_type }}.serializer())
+        } catch (_: SerializationException) {
+            respondBadRequest(call)
+            return@{{ route.http_method | lower }}
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@{{ route.http_method | lower }}
+        }
 {%- endif %}
 {%- if route.json_type %}
-        val json = ApiJson.decodeFromString({{ route.json_type }}.serializer(), call.receiveText().ifBlank { "{}" })
+        val json = try {
+            ApiJson.decodeFromString({{ route.json_type }}.serializer(), call.receiveText().ifBlank { "{}" })
+        } catch (_: SerializationException) {
+            respondBadRequest(call)
+            return@{{ route.http_method | lower }}
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@{{ route.http_method | lower }}
+        }
 {%- endif %}
 {%- if route.form_type %}
-        val form = decodeParameters(call.receiveParameters(), {{ route.form_type }}.serializer())
+        val form = try {
+            decodeParameters(call.receiveParameters(), {{ route.form_type }}.serializer())
+        } catch (_: SerializationException) {
+            respondBadRequest(call)
+            return@{{ route.http_method | lower }}
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@{{ route.http_method | lower }}
+        }
 {%- endif %}
 {%- if route.has_binary_schema %}
         val binaryBody = RawBinaryBody(call.receive<ByteArray>())
@@ -170,7 +195,15 @@ private class KtorWebSocketChannel<Recv, Send, Close>(
             while (true) {
                 val frame = session.incoming.receive()
                 if (frame is Frame.Text) {
-                    return ApiJson.decodeFromString(clientMessageSerializer, frame.readText())
+                    return try {
+                        ApiJson.decodeFromString(clientMessageSerializer, frame.readText())
+                    } catch (_: SerializationException) {
+                        abort(code = 1003, reason = "invalid WebSocket message")
+                        null
+                    } catch (_: IllegalArgumentException) {
+                        abort(code = 1003, reason = "invalid WebSocket message")
+                        null
+                    }
                 }
             }
             null
@@ -282,6 +315,14 @@ private suspend fun respondApiError(
     val body = encodeErrorBody(payload, envelope)
     val status = if (envelope.kind == "none") HttpStatusCode.InternalServerError else HttpStatusCode.OK
     call.respondText(body, contentType = ContentType.Application.Json, status = status)
+}
+
+private suspend fun respondBadRequest(call: ApplicationCall) {
+    call.respondText(
+        "{\"detail\":\"invalid request\"}",
+        contentType = ContentType.Application.Json,
+        status = HttpStatusCode.BadRequest,
+    )
 }
 
 private fun encodeErrorBody(payload: ApiErrorPayload, envelope: ApiResponseEnvelope): String {

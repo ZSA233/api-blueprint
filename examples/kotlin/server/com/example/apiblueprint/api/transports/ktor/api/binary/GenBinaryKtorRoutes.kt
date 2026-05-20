@@ -29,6 +29,7 @@ import io.ktor.websocket.Frame
 import io.ktor.websocket.close
 import io.ktor.websocket.readText
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.*
 import kotlinx.serialization.json.JsonElement
@@ -44,7 +45,15 @@ public fun Route.registerBinaryRoutes(
 ) {
 
     post("/api/binary/packet") {
-        val query = decodeParameters(call.request.queryParameters, BinaryPacketQuery.serializer())
+        val query = try {
+            decodeParameters(call.request.queryParameters, BinaryPacketQuery.serializer())
+        } catch (_: SerializationException) {
+            respondBadRequest(call)
+            return@post
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@post
+        }
         val binaryBody = RawBinaryBody(call.receive<ByteArray>())
         try {
             val result = service.packet(
@@ -58,7 +67,15 @@ public fun Route.registerBinaryRoutes(
     }
 
     post("/api/binary/audit-packet") {
-        val query = decodeParameters(call.request.queryParameters, BinaryAuditPacketQuery.serializer())
+        val query = try {
+            decodeParameters(call.request.queryParameters, BinaryAuditPacketQuery.serializer())
+        } catch (_: SerializationException) {
+            respondBadRequest(call)
+            return@post
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@post
+        }
         val binaryBody = RawBinaryBody(call.receive<ByteArray>())
         try {
             val result = service.auditPacket(
@@ -128,7 +145,15 @@ private class KtorWebSocketChannel<Recv, Send, Close>(
             while (true) {
                 val frame = session.incoming.receive()
                 if (frame is Frame.Text) {
-                    return ApiJson.decodeFromString(clientMessageSerializer, frame.readText())
+                    return try {
+                        ApiJson.decodeFromString(clientMessageSerializer, frame.readText())
+                    } catch (_: SerializationException) {
+                        abort(code = 1003, reason = "invalid WebSocket message")
+                        null
+                    } catch (_: IllegalArgumentException) {
+                        abort(code = 1003, reason = "invalid WebSocket message")
+                        null
+                    }
                 }
             }
             null
@@ -240,6 +265,14 @@ private suspend fun respondApiError(
     val body = encodeErrorBody(payload, envelope)
     val status = if (envelope.kind == "none") HttpStatusCode.InternalServerError else HttpStatusCode.OK
     call.respondText(body, contentType = ContentType.Application.Json, status = status)
+}
+
+private suspend fun respondBadRequest(call: ApplicationCall) {
+    call.respondText(
+        "{\"detail\":\"invalid request\"}",
+        contentType = ContentType.Application.Json,
+        status = HttpStatusCode.BadRequest,
+    )
 }
 
 private fun encodeErrorBody(payload: ApiErrorPayload, envelope: ApiResponseEnvelope): String {

@@ -56,8 +56,14 @@ public class GenBinaryController {
         @RequestParam Map<String, String> queryParams,
         @RequestBody(required = false) byte[] binaryBody
     ) throws Exception {
-        BinaryTypes.PacketQuery query = objectMapper.convertValue(queryParams, BinaryTypes.PacketQuery.class);
-        BinaryTypes.DemoPacket binary = BinaryTypes.DemoPacketWire.parse(binaryBody == null ? new byte[0] : binaryBody);
+        BinaryTypes.PacketQuery query;
+        BinaryTypes.DemoPacket binary;
+        try {
+            query = objectMapper.convertValue(queryParams, BinaryTypes.PacketQuery.class);
+            binary = BinaryTypes.DemoPacketWire.parse(binaryBody == null ? new byte[0] : binaryBody);
+        } catch (RuntimeException error) {
+            return badRequestResponse(error);
+        }
         try {
             Object result = service.packet(
                 query,
@@ -74,8 +80,14 @@ public class GenBinaryController {
         @RequestParam Map<String, String> queryParams,
         @RequestBody(required = false) byte[] binaryBody
     ) throws Exception {
-        BinaryTypes.AuditPacketQuery query = objectMapper.convertValue(queryParams, BinaryTypes.AuditPacketQuery.class);
-        BinaryTypes.AuditPacket binary = BinaryTypes.AuditPacketWire.parse(binaryBody == null ? new byte[0] : binaryBody);
+        BinaryTypes.AuditPacketQuery query;
+        BinaryTypes.AuditPacket binary;
+        try {
+            query = objectMapper.convertValue(queryParams, BinaryTypes.AuditPacketQuery.class);
+            binary = BinaryTypes.AuditPacketWire.parse(binaryBody == null ? new byte[0] : binaryBody);
+        } catch (RuntimeException error) {
+            return badRequestResponse(error);
+        }
         try {
             Object result = service.auditPacket(
                 query,
@@ -171,6 +183,10 @@ public class GenBinaryController {
             return envelope;
         }
         return envelope;
+    }
+
+    private ResponseEntity<Map<String, Object>> badRequestResponse(Exception error) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("detail", "invalid request"));
     }
 
     private Object wrapApiErrorResponse(ApiResponseEnvelope envelopeSpec, ApiError error, String routeId) {

@@ -1,7 +1,7 @@
 # examples/conformance 安全审查
 
 - 编号：0001
-- 状态：open
+- 状态：open（高风险服务端稳定性项已修复，仍保留 Python client nested DTO 与普通覆盖缺口追踪）
 - 发现日期：2026-05-21
 - 评估日期：2026-05-21
 - 来源：examples DSL 覆盖面、example conformance 矩阵、生成服务端/客户端接口安全审查
@@ -24,13 +24,13 @@
 
 | 条目 | 性质 | 存在性判断 | 是否建议修复 | 备注 |
 | --- | --- | --- | --- | --- |
-| Python server binary contract 与 adapter 不一致 | 真实 bug | 已确认 | 是 | 契约误导用户实现 |
-| Python server 坏 JSON 未兜底 | 真实 bug | 已确认 | 是 | 需先明确错误响应策略 |
-| Java WebSocket receive 长期阻塞 | 真实 bug | 已确认 | 是 | 修复需定义 close 后 receive 语义 |
-| malformed WebSocket frame | bug + 协议策略 | 已确认风险 | 部分修复 | 至少避免泄漏/未处理异常，close payload 形态需谨慎 |
-| Java/Kotlin decode 在 ApiError 捕获外 | 待验证风险 | 代码形态已确认 | 先补验证 | 不应为了 envelope 一致性强行扩大修复 |
-| Python client 嵌套 DTO 不严格 | 设计/类型一致性问题 | 已确认 | 暂缓或低优先级 | 可能影响依赖 dict 的用户 |
-| conformance 覆盖缺口 | 测试债 | 已确认 | 分阶段补齐 | 不等同于每个路由都有 bug |
+| Python server binary contract 与 adapter 不一致 | 真实 bug | 已确认 | 已修复 | service contract 改为 `bytes | None` |
+| Python server 坏 JSON 未兜底 | 真实 bug | 已确认 | 已修复 | transport input error 返回 HTTP 400 |
+| Java WebSocket receive 长期阻塞 | 真实 bug | 已确认 | 已修复 | close 后唤醒 `receive()` 并抛异常 |
+| malformed WebSocket frame | bug + 协议策略 | 已确认风险 | 已修稳定性 | 三端避免未处理异常/悬挂，close payload 暂不强制统一 |
+| Java/Kotlin decode 在 ApiError 捕获外 | 已验证 bug | conformance 复现 500 | 已修复 | decode 阶段最小返回 HTTP 400，不扩大业务异常捕获 |
+| Python client 嵌套 DTO 不严格 | 设计/类型一致性问题 | 已确认并已补 characterization test | 暂缓或低优先级 | 当前行为是浅层 DTO，可能影响依赖 dict 的用户 |
+| conformance 覆盖缺口 | 测试债 | 已确认 | 分阶段补齐 | 已补高风险 raw safety probes |
 
 ## 评估详情
 
@@ -47,7 +47,7 @@
 - 现象：生成的 `BinaryService` Protocol 声明 `binary: dict[str, Any] | None`，但 HTTP adapter 实际传入原始 `bytes`。当前 conformance preserved server 也按 bytes 实现，因此绕过了生成契约不一致问题。
 - 复现场景：用户按生成的 `BinaryService` Protocol 实现 `packet(query, binary: dict | None)`，随后请求 `POST /api/binary/packet`，服务会收到 bytes 而不是 dict，业务实现容易抛异常并返回 500。
 - 兼容性与修复风险：修复类型契约可能影响已经按当前错误类型提示写出的用户代码，但 Python server 仍是 preview target；保持错误契约会持续误导新实现，风险更高。
-- 处置建议：修复 Python server binary service 类型契约，并补一个 conformance 或单测，确认 generated service contract 与 adapter 传参类型一致。
+- 当前处置：已修复。Python server `.REQ_BINARY` service 边界现在声明 `bytes | None`，不生成 server-side binary schema parser；业务实现继续自行解析原始 bytes。
 
 ### 2. Python server 对坏 JSON 没有协议级兜底
 
@@ -70,7 +70,7 @@ curl -i \
 - 预期：返回稳定的协议错误或明确 4xx。
 - 当前风险：返回未包装的 `JSONDecodeError` 路径，通常表现为 500。
 - 兼容性与修复风险：把 decode 错误统一包成业务 envelope 可能改变调用方对 400/500 的预期；直接返回 400 更符合 HTTP 输入错误，但需要确认各端 client 的错误解析路径。
-- 处置建议：先补坏 JSON conformance，确认当前表现；再选择最小修复策略，优先避免未包装 500，而不是为了所有语言完全一致引入复杂错误策略。
+- 当前处置：已修复。Python FastAPI adapter 对 `UnicodeDecodeError` / `JSONDecodeError` 返回 HTTP 400 `{"detail":"invalid JSON body"}`，不进入业务 envelope。
 
 ### 3. Java server WebSocket receive 可能长期阻塞
 
@@ -84,7 +84,7 @@ curl -i \
 - 现象：`SpringWebSocketChannel.receive()` 使用 `incoming.take()` 无限阻塞。连接关闭时 handler 只移除 channel，没有向队列写入关闭哨兵或中断等待中的业务任务。示例服务端会连续调用两次 `receive()`。
 - 复现场景：连接 `/api/demo/assistant-session?session_id=x`，发送一次 `input` 后直接断开，不发送 `cancel`。第二次 `receive()` 会长期挂住。重复连接可能累积异步任务或线程资源。
 - 兼容性与修复风险：如果让 `receive()` 在关闭后返回 `null`，需要确认 `ApiServerChannel.receive()` 的 Java 契约是否允许空值；如果改成抛异常，需要确认 preserved service 的使用方式。不能为了修复泄漏而破坏用户已有服务代码的控制流。
-- 处置建议：先把“连接关闭后 receive 如何结束”写成 Java server runtime 契约，再实现唤醒机制并补“连接提前断开”conformance。
+- 当前处置：已修复。Java `ApiServerChannel.receive()` 保持非 nullable，连接关闭或 abort 后通过队列哨兵唤醒等待方并抛 `IOException`。
 
 ### 4. Java/Kotlin/Python malformed WebSocket frame 没有稳定 close/error 协议
 
@@ -100,14 +100,14 @@ curl -i \
 - 复现场景：连接 `/api/demo/assistant-session?session_id=x` 后发送 `not-json`。
 - 当前风险：route coroutine/task 异常退出；Java 还可能和 receive 阻塞问题组合导致等待任务残留。
 - 兼容性与修复风险：统一 close payload 是协议设计问题，可能影响已有 client 断言；但避免未处理异常、任务泄漏和连接悬挂属于稳定性修复，收益明确。
-- 处置建议：第一阶段只要求 malformed frame 不造成未处理异常或任务泄漏，并用明确 close/abort 关闭连接；是否统一错误 payload 字段和 code 另行设计。
+- 当前处置：已修复稳定性。Java/Kotlin/Python server 在 malformed WebSocket frame 上执行受控 abort/close；本轮不强制统一所有 close payload 字段。
 
 ### 5. Java/Kotlin 请求 decode 多数发生在 ApiError 捕获范围外
 
 - 风险等级：中
-- 问题性质：待验证风险
-- 存在性判断：代码形态已确认；实际是否违反契约需要运行验证
-- 是否建议修复：先补验证，不直接修
+- 问题性质：已验证 bug
+- 存在性判断：Java bad enum query 与 Kotlin bad JSON 由 conformance 复现 500
+- 是否建议修复：已修复
 - 涉及文件：
   - `examples/java/server/com/example/apiblueprint/api/transports/http/api/demo/GenDemoController.java`
   - `examples/kotlin/server/com/example/apiblueprint/api/transports/ktor/api/demo/GenDemoKtorRoutes.kt`
@@ -120,7 +120,7 @@ curl -i -X POST 'http://127.0.0.1:<port>/api/demo/test_post' -H 'Content-Type: a
 ```
 
 - 兼容性与修复风险：很多 Web 框架本来就把 decode/binding error 映射为 400，这不一定是 bug。强行把所有 decode error 包成业务 envelope 可能混淆“协议输入错误”和“业务错误”，并改变 HTTP 语义。
-- 处置建议：先补 conformance 验证各端状态码和 body 是否稳定、是否 500。只有出现 500、资源泄漏或 client 无法识别的非稳定行为时，再做最小修复。
+- 当前处置：已修复。Java/Kotlin 仅在 request decode 阶段捕获 decode/runtime 失败并返回 HTTP 400，不把业务 service 的普通异常并入协议 envelope。
 
 ### 6. Python client 嵌套 DTO 反序列化不严格
 
@@ -132,10 +132,10 @@ curl -i -X POST 'http://127.0.0.1:<port>/api/demo/test_post' -H 'Content-Type: a
   - `examples/python/client/api_blueprint_example_client/api/routes/api/demo/gen_types.py`
   - `examples/python/client/api_blueprint_example_client/api/routes/api/demo/gen_client.py`
   - `examples/python/conformance/client.py`
-- 现象：Python client 对嵌套 map/model 值没有严格还原为 dataclass。conformance 通过 `field()` helper 同时兼容 dict 和对象，说明类型行为与其他端不一致。
+- 现象：Python client 对嵌套 map/model 值没有严格还原为 dataclass。characterization test 确认：仅作为嵌套字段出现的 model 不会生成独立 dataclass，父 response 字段会降级为 `dict[str, Any]`、`list[Any]` 或 `dict[Any, Any]`，运行时 `_from_mapping()` 也只转换顶层 response。
 - 复现场景：调用 `api.demo.test_post(...)` 后读取 `post.map["req2"]`，该值可能是 dict，而不是生成 DTO。
 - 兼容性与修复风险：把 dict 自动转成 dataclass 会提升类型体验，但可能破坏已经按 dict 使用 nested payload 的用户代码。Python client 是动态语言输出，是否强制深度 DTO 化属于 API 设计选择。
-- 处置建议：先补 Python client nested DTO codec 测试，明确当前行为；后续如果要修，应考虑渐进策略或文档化的 breaking change，而不是直接切换所有 nested map/model 行为。
+- 当前处置：已补 characterization test 固化现状。后续如果要修，应考虑渐进策略或文档化的 breaking change，而不是直接切换所有 nested map/model 行为。
 
 ## 覆盖缺口评估
 
@@ -149,7 +149,7 @@ curl -i -X POST 'http://127.0.0.1:<port>/api/demo/test_post' -H 'Content-Type: a
 - scalar/map/enum routes：`/api/hello/string`、`/api/hello/uint64`、`/api/hello/map-enum`、`/api/hello/list-enum`、`/api/hello/string-emun`、`/api/hello/hello-way` 未真实断言。
 - 第二个 binary schema：`/api/binary/audit-packet` 只生成，未互通验证。
 - `/api/ws` 单模型 channel 未真实互通验证；当前只测 named variant channel `/api/demo/assistant-session`。
-- malformed input：坏 JSON、坏 enum、坏 query、截断 binary、错误 binary magic、WebSocket malformed frame、SSE 中断都未作为 conformance 场景。
+- malformed input：坏 JSON、坏 enum/query、坏 binary、WebSocket malformed frame、WebSocket early close 已进入 server-driven safety probes；截断 binary 的精细协议断言与 SSE 中断仍待后续扩展。
 
 覆盖缺口的处置原则：
 
@@ -159,19 +159,27 @@ curl -i -X POST 'http://127.0.0.1:<port>/api/demo/test_post' -H 'Content-Type: a
 
 ## 后续建议
 
-1. 先补服务端异常输入安全 conformance：坏 JSON、坏 query/enum、截断 binary、坏 WebSocket frame、连接提前断开。
-2. 优先修复 Python server binary service contract，使 generated Protocol 与 HTTP adapter 类型一致。
-3. 优先修复 Java WebSocket receive 阻塞泄漏风险，但先明确 close 后 receive 契约。
-4. 对 malformed WebSocket frame，第一阶段只保证不泄漏、不悬挂、可关闭；错误 payload 是否统一另行设计。
-5. 对 Java/Kotlin decode error，先验证是否 500 或不可预测，再决定是否修。
-6. 对 Python client nested DTO，先作为类型一致性设计问题保留，不列入高优先级 bug 修复。
-7. 扩展 examples conformance 时按风险分阶段覆盖 raw/XML/static/header/audit-packet/scalar/enum/map/`/api/ws`。
+1. Python client nested DTO 继续作为兼容性敏感设计问题保留；characterization test 已确认当前是浅层 DTO，是否深度 DTO 化需要另起兼容性设计。
+2. 扩展 examples conformance 时按风险分阶段覆盖 raw/XML/static/header/audit-packet/scalar/enum/map/`/api/ws`。
+3. 后续如果要统一 WebSocket malformed close payload，需要单独设计跨语言 close/error wire shape，不和稳定性修复混在一起。
 
 ## 修复记录 / Resolution
 
-当前状态为 open，尚未修复。修复闭环后将本文移动到 `docs/reviews/resolved/`，保留文件名，并在本节补充：
+当前状态仍为 open，因为 Python client nested DTO 与普通覆盖缺口仍需追踪；高风险服务端稳定性项已完成第一轮修复。
 
-- 修复日期：
+- 修复日期：2026-05-21
 - 修复摘要：
+  - Python server binary service contract 改为 raw bytes。
+  - Python bad JSON 返回 HTTP 400。
+  - Java WebSocket receive close 后唤醒并抛异常。
+  - Java/Kotlin/Python malformed WebSocket frame 受控 abort/close。
+  - Java/Kotlin request decode 失败返回 HTTP 400。
+  - Python client nested DTO 已补 characterization test，确认当前浅层 DTO 行为并暂缓破坏性修复。
+  - 新增 server-driven safety conformance 场景：`bad-json`、`bad-query`、`malformed-websocket`、`ws-early-close`、`bad-binary`。
 - 验证命令：
-- 相关 commit/PR：
+  - `uv run pytest tests/codegen/test_python_codegen.py tests/codegen/test_java_codegen.py tests/codegen/test_kotlin_codegen.py tests/scripts/test_example_conformance.py -q`
+  - `uv run python scripts/example_validation.py --scope blueprint --mode refresh`
+  - `uv run python scripts/example_validation.py --scope blueprint --mode check`
+  - `uv run python -m scripts.example_conformance run --servers go,java,kotlin,python --scenario bad-json,bad-query,malformed-websocket,ws-early-close,bad-binary`
+  - `uv run python -m scripts.example_conformance run --servers go,java,kotlin,python --clients typescript,kotlin,flutter --scenario sse,websocket`
+- 相关 commit/PR：本提交 `fix: harden example conformance servers`

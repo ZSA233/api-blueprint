@@ -508,7 +508,11 @@ def test_kotlin_server_writer_generates_service_ktor_adapter_and_message_keyfram
     assert "public fun Route.registerDemoRoutes(" in transport_text
     assert "service: GenDemoService = DemoServiceStub()" in transport_text
     assert 'get("/api/demo/ping")' in transport_text
-    assert "val query = decodeParameters(call.request.queryParameters, DemoPingQuery.serializer())" in transport_text
+    assert "val query = try {" in transport_text
+    assert "decodeParameters(call.request.queryParameters, DemoPingQuery.serializer())" in transport_text
+    assert "respondBadRequest(call)" in transport_text
+    assert "return@get" in transport_text
+    assert "return@post" in transport_text
     assert "val result = service.ping(" in transport_text
     assert "respondSuccess(call, result, SubmitResponse.serializer()," in transport_text
     assert "public interface ApiServerStream<Message, Close>" in (
@@ -524,6 +528,10 @@ def test_kotlin_server_writer_generates_service_ktor_adapter_and_message_keyfram
     assert "clientMessageSerializer = AssistantClientMessage.serializer()" in transport_text
     assert "serverMessageSerializer = AssistantServerMessage.serializer()" in transport_text
     assert "closeSerializer = CloseInfo.serializer()" in transport_text
+    assert "import kotlinx.serialization.SerializationException" in transport_text
+    assert "} catch (_: SerializationException) {" in transport_text
+    assert 'abort(code = 1003, reason = "invalid WebSocket message")' in transport_text
+    assert "} catch (_: IllegalArgumentException) {" in transport_text
     assert "HttpStatusCode.NotImplemented" not in transport_text
 
 

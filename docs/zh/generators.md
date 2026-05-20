@@ -326,7 +326,7 @@ Python server 同样使用 `python_package_root` 作为包根，输出 route ser
 - `<python_package_root>/<root>/routes/<root>/<group...>/*`
 - `<python_package_root>/<root>/transports/http/*`
 
-`routes/<root>/<group...>/gen_service.py` 是生成的 service contract，`routes/<root>/<group...>/service.py` 是用户可维护 stub 入口，`transports/http/gen_server.py` 与 `server.py` 提供 FastAPI HTTP adapter scaffold。root-level route 直接生成在 `routes/<root>`。FastAPI adapter 会处理 query/json/form/binary 请求、response envelope、typed error 包装，并为 `STREAM` 生成 `StreamingResponse` SSE bridge、为 `CHANNEL` 生成 WebSocket bridge；Python server WebSocket 运行时需要 `websockets` 或等价 uvicorn WebSocket backend。作为 preview target，Python server 生成结果应纳入项目自己的类型检查、lint 和安装 smoke。
+`routes/<root>/<group...>/gen_service.py` 是生成的 service contract，`routes/<root>/<group...>/service.py` 是用户可维护 stub 入口，`transports/http/gen_server.py` 与 `server.py` 提供 FastAPI HTTP adapter scaffold。root-level route 直接生成在 `routes/<root>`。FastAPI adapter 会处理 query/json/form/binary 请求、response envelope、typed error 包装，并为 `STREAM` 生成 `StreamingResponse` SSE bridge、为 `CHANNEL` 生成 WebSocket bridge；`.REQ_BINARY` 的 Python server service 边界接收原始 `bytes`，不会在 server scaffold 中生成 binary schema parser，业务实现可按项目需要解析。坏 JSON 请求会作为 transport input error 返回 HTTP 400，不进入业务 envelope。Python server WebSocket 运行时需要 `websockets` 或等价 uvicorn WebSocket backend。作为 preview target，Python server 生成结果应纳入项目自己的类型检查、lint 和安装 smoke。
 
 ## examples 快照
 

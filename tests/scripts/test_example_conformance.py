@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from scripts import example_validation
-from scripts.example_conformance import cli, manifest, reporter, runner, scenarios, tools
+from scripts.example_conformance import cli, manifest, reporter, runner, safety, scenarios, tools
 
 
 def test_manifest_marks_matrix_capabilities() -> None:
@@ -51,6 +51,9 @@ def test_scenario_registry_covers_required_dsl_categories() -> None:
         "naming-conflict",
         "multi-blueprint",
         "envelope",
+        "server-safety",
+        "malformed-input",
+        "early-close",
     }
     assert required <= set(coverage)
     assert "go" in coverage["binary"]
@@ -61,6 +64,8 @@ def test_scenario_registry_covers_required_dsl_categories() -> None:
     assert "kotlin" in coverage["sse"]
     assert "kotlin" in coverage["websocket"]
     assert "kotlin" in coverage["form"]
+    assert coverage["server-safety"] == {"server"}
+    assert coverage["malformed-input"] == {"server"}
 
 
 def test_filter_scenarios_rejects_unknown_names() -> None:
@@ -199,6 +204,98 @@ def test_runner_reports_server_and_client_matrix_without_client_noise(
     assert "    - flutter/websocket ... ok" in captured.out
     assert "client noisy output" not in captured.out
     assert calls == [("http://127.0.0.1:12345", "sse"), ("http://127.0.0.1:12345", "websocket"), ("closed", "")]
+
+
+def test_runner_runs_server_safety_scenarios_without_preparing_clients(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    fake_server = SimpleNamespace(
+        base_url="http://127.0.0.1:12345",
+        output_path=Path(".conformance-server.log"),
+        stop=lambda: None,
+    )
+    fake_workspace = SimpleNamespace(blueprint=SimpleNamespace(golang_server_dir=Path(".")))
+    safety_calls: list[tuple[str, str]] = []
+
+    monkeypatch.setattr(runner.server, "start_server", lambda server_name, blueprint: fake_server)
+    monkeypatch.setattr(runner.server, "cleanup_server_log", lambda path: None)
+    monkeypatch.setattr(
+        safety,
+        "run_probe",
+        lambda base_url, scenario_name: safety_calls.append((base_url, scenario_name)),
+    )
+    monkeypatch.setattr(
+        runner,
+        "_prepare_client_runner",
+        lambda ws, client: pytest.fail("client runner should not be prepared for server-only safety scenarios"),
+    )
+
+    runner._run_against_workspace(
+        fake_workspace,  # type: ignore[arg-type]
+        server_names=("go",),
+        clients=("typescript",),
+        selected_scenarios=scenarios.filter_scenarios(("bad-json", "malformed-websocket")),
+    )
+
+    captured = capsys.readouterr()
+    assert "safety:" in captured.out
+    assert "    - safety/bad-json ... ok" in captured.out
+    assert "    - safety/malformed-websocket ... ok" in captured.out
+    assert safety_calls == [
+        ("http://127.0.0.1:12345", "bad-json"),
+        ("http://127.0.0.1:12345", "malformed-websocket"),
+    ]
+
+
+def test_runner_filters_server_safety_scenarios_by_server_capability(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    fake_server = SimpleNamespace(
+        base_url="http://127.0.0.1:12345",
+        output_path=Path(".conformance-server.log"),
+        stop=lambda: None,
+    )
+    fake_workspace = SimpleNamespace(blueprint=SimpleNamespace(golang_server_dir=Path(".")))
+    safety_calls: list[str] = []
+
+    monkeypatch.setattr(runner.server, "start_server", lambda server_name, blueprint: fake_server)
+    monkeypatch.setattr(runner.server, "cleanup_server_log", lambda path: None)
+    monkeypatch.setattr(safety, "run_probe", lambda base_url, scenario_name: safety_calls.append(scenario_name))
+    original_server_manifest = manifest.server_manifest
+    monkeypatch.setattr(
+        manifest,
+        "server_manifest",
+        lambda: {
+            **original_server_manifest(),
+            "python": manifest.ServerCapability(
+                name="python",
+                command_label="Python FastAPI",
+                enabled=True,
+                planned=True,
+                supports_rpc=True,
+                supports_binary=False,
+                supports_form=True,
+                supports_typed_error=True,
+                supports_sse=True,
+                supports_websocket=True,
+                supports_naming=True,
+            ),
+        },
+    )
+
+    runner._run_against_workspace(
+        fake_workspace,  # type: ignore[arg-type]
+        server_names=("python",),
+        clients=("typescript",),
+        selected_scenarios=scenarios.filter_scenarios(("bad-binary", "bad-json")),
+    )
+
+    captured = capsys.readouterr()
+    assert "safety ... skipped no runnable scenarios for server python: bad-binary" in captured.out
+    assert "    - safety/bad-json ... ok" in captured.out
+    assert safety_calls == ["bad-json"]
 
 
 def test_runner_prepares_each_client_once_and_runs_each_scenario(

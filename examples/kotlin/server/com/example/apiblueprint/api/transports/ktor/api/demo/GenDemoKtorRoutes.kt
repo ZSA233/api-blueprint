@@ -26,6 +26,7 @@ import io.ktor.websocket.Frame
 import io.ktor.websocket.close
 import io.ktor.websocket.readText
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.*
 import kotlinx.serialization.json.JsonElement
@@ -41,7 +42,15 @@ public fun Route.registerDemoRoutes(
 ) {
 
     get("/api/demo/abc") {
-        val query = decodeParameters(call.request.queryParameters, DemoAbcQuery.serializer())
+        val query = try {
+            decodeParameters(call.request.queryParameters, DemoAbcQuery.serializer())
+        } catch (_: SerializationException) {
+            respondBadRequest(call)
+            return@get
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@get
+        }
         try {
             val result = service.abc(
                 query = query
@@ -53,7 +62,15 @@ public fun Route.registerDemoRoutes(
     }
 
     post("/api/demo/test_post") {
-        val json = ApiJson.decodeFromString(DemoTestPostJson.serializer(), call.receiveText().ifBlank { "{}" })
+        val json = try {
+            ApiJson.decodeFromString(DemoTestPostJson.serializer(), call.receiveText().ifBlank { "{}" })
+        } catch (_: SerializationException) {
+            respondBadRequest(call)
+            return@post
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@post
+        }
         try {
             val result = service.testPost(
                 json = json
@@ -65,7 +82,15 @@ public fun Route.registerDemoRoutes(
     }
 
     post("/api/demo/form-submit") {
-        val form = decodeParameters(call.receiveParameters(), DemoFormSubmitForm.serializer())
+        val form = try {
+            decodeParameters(call.receiveParameters(), DemoFormSubmitForm.serializer())
+        } catch (_: SerializationException) {
+            respondBadRequest(call)
+            return@post
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@post
+        }
         try {
             val result = service.formSubmit(
                 form = form
@@ -77,8 +102,24 @@ public fun Route.registerDemoRoutes(
     }
 
     put("/api/demo/1put") {
-        val query = decodeParameters(call.request.queryParameters, DemoPutDemoQuery.serializer())
-        val json = ApiJson.decodeFromString(DemoPutDemoJson.serializer(), call.receiveText().ifBlank { "{}" })
+        val query = try {
+            decodeParameters(call.request.queryParameters, DemoPutDemoQuery.serializer())
+        } catch (_: SerializationException) {
+            respondBadRequest(call)
+            return@put
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@put
+        }
+        val json = try {
+            ApiJson.decodeFromString(DemoPutDemoJson.serializer(), call.receiveText().ifBlank { "{}" })
+        } catch (_: SerializationException) {
+            respondBadRequest(call)
+            return@put
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@put
+        }
         try {
             val result = service.putDemo(
                 query = query,
@@ -91,7 +132,15 @@ public fun Route.registerDemoRoutes(
     }
 
     delete("/api/demo/delete$") {
-        val query = decodeParameters(call.request.queryParameters, DemoDeleteQuery.serializer())
+        val query = try {
+            decodeParameters(call.request.queryParameters, DemoDeleteQuery.serializer())
+        } catch (_: SerializationException) {
+            respondBadRequest(call)
+            return@delete
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@delete
+        }
         try {
             val result = service.delete(
                 query = query
@@ -136,7 +185,15 @@ public fun Route.registerDemoRoutes(
     }
 
     post("/api/demo/post_deprecated") {
-        val json = ApiJson.decodeFromString(DemoPostDeprecatedJson.serializer(), call.receiveText().ifBlank { "{}" })
+        val json = try {
+            ApiJson.decodeFromString(DemoPostDeprecatedJson.serializer(), call.receiveText().ifBlank { "{}" })
+        } catch (_: SerializationException) {
+            respondBadRequest(call)
+            return@post
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@post
+        }
         try {
             val result = service.postDeprecated(
                 json = json
@@ -168,7 +225,15 @@ public fun Route.registerDemoRoutes(
     }
 
     get("/api/demo/error-demo") {
-        val query = decodeParameters(call.request.queryParameters, DemoErrorDemoQuery.serializer())
+        val query = try {
+            decodeParameters(call.request.queryParameters, DemoErrorDemoQuery.serializer())
+        } catch (_: SerializationException) {
+            respondBadRequest(call)
+            return@get
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@get
+        }
         try {
             val result = service.errorDemo(
                 query = query
@@ -236,7 +301,15 @@ private class KtorWebSocketChannel<Recv, Send, Close>(
             while (true) {
                 val frame = session.incoming.receive()
                 if (frame is Frame.Text) {
-                    return ApiJson.decodeFromString(clientMessageSerializer, frame.readText())
+                    return try {
+                        ApiJson.decodeFromString(clientMessageSerializer, frame.readText())
+                    } catch (_: SerializationException) {
+                        abort(code = 1003, reason = "invalid WebSocket message")
+                        null
+                    } catch (_: IllegalArgumentException) {
+                        abort(code = 1003, reason = "invalid WebSocket message")
+                        null
+                    }
                 }
             }
             null
@@ -348,6 +421,14 @@ private suspend fun respondApiError(
     val body = encodeErrorBody(payload, envelope)
     val status = if (envelope.kind == "none") HttpStatusCode.InternalServerError else HttpStatusCode.OK
     call.respondText(body, contentType = ContentType.Application.Json, status = status)
+}
+
+private suspend fun respondBadRequest(call: ApplicationCall) {
+    call.respondText(
+        "{\"detail\":\"invalid request\"}",
+        contentType = ContentType.Application.Json,
+        status = HttpStatusCode.BadRequest,
+    )
 }
 
 private fun encodeErrorBody(payload: ApiErrorPayload, envelope: ApiResponseEnvelope): String {

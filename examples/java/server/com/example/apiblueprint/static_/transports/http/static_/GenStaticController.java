@@ -163,6 +163,10 @@ public class GenStaticController {
         return envelope;
     }
 
+    private ResponseEntity<Map<String, Object>> badRequestResponse(Exception error) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("detail", "invalid request"));
+    }
+
     private Object wrapApiErrorResponse(ApiResponseEnvelope envelopeSpec, ApiError error, String routeId) {
         ApiErrorPayload payload = normalizeApiErrorPayload(error.payload(), routeId);
         if ("none".equals(envelopeSpec.kind())) {

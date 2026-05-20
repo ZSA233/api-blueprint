@@ -91,13 +91,21 @@ public class GenApiController implements WebSocketConfigurer {
         protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
             SpringWebSocketChannel<com.example.apiblueprint.api.runtime.ApiTypes.HelloChannelMessage, com.example.apiblueprint.api.runtime.ApiTypes.HelloChannelMessage, Object> channel = channels.get(session.getId());
             if (channel != null) {
-                channel.accept(message.getPayload(), com.example.apiblueprint.api.runtime.ApiTypes.HelloChannelMessage.class);
+                try {
+                    channel.accept(message.getPayload(), com.example.apiblueprint.api.runtime.ApiTypes.HelloChannelMessage.class);
+                } catch (IOException error) {
+                    channel.abortUnchecked(1003, "invalid WebSocket message");
+                    channel.markClosed(error);
+                }
             }
         }
 
         @Override
         public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-            channels.remove(session.getId());
+            SpringWebSocketChannel<com.example.apiblueprint.api.runtime.ApiTypes.HelloChannelMessage, com.example.apiblueprint.api.runtime.ApiTypes.HelloChannelMessage, Object> channel = channels.remove(session.getId());
+            if (channel != null) {
+                channel.markClosed(new IOException("WebSocket closed"));
+            }
         }
     }
 
@@ -149,10 +157,13 @@ public class GenApiController implements WebSocketConfigurer {
     }
 
     private static final class SpringWebSocketChannel<Recv, Send, Close> implements ApiServerChannel<Recv, Send, Close> {
+        private static final Object CLOSED = new Object();
         private final WebSocketSession session;
         private final ObjectMapper objectMapper;
-        private final BlockingQueue<Recv> incoming = new LinkedBlockingQueue<>();
+        private final BlockingQueue<Object> incoming = new LinkedBlockingQueue<>();
         private volatile boolean closed = false;
+        private volatile boolean receiveClosed = false;
+        private volatile Exception closeError = null;
 
         SpringWebSocketChannel(WebSocketSession session, ObjectMapper objectMapper) {
             this.session = session;
@@ -160,12 +171,34 @@ public class GenApiController implements WebSocketConfigurer {
         }
 
         void accept(String payload, Class<Recv> recvClass) throws IOException {
+            if (receiveClosed) {
+                return;
+            }
             incoming.offer(objectMapper.readValue(payload, recvClass));
         }
 
+        void markClosed(Exception error) {
+            if (receiveClosed) {
+                return;
+            }
+            receiveClosed = true;
+            closed = true;
+            closeError = error;
+            incoming.offer(CLOSED);
+        }
+
         @Override
+        @SuppressWarnings("unchecked")
         public Recv receive() throws Exception {
-            return incoming.take();
+            Object item = incoming.take();
+            if (item == CLOSED) {
+                Exception error = closeError;
+                if (error != null) {
+                    throw error;
+                }
+                throw new IOException("WebSocket closed");
+            }
+            return (Recv) item;
         }
 
         @Override
@@ -182,8 +215,12 @@ public class GenApiController implements WebSocketConfigurer {
                 return;
             }
             closed = true;
-            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of("type", "close", "data", close))));
-            session.close(CloseStatus.NORMAL);
+            try {
+                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of("type", "close", "data", close))));
+                session.close(CloseStatus.NORMAL);
+            } finally {
+                markClosed(new IOException("WebSocket closed"));
+            }
         }
 
         @Override
@@ -192,8 +229,12 @@ public class GenApiController implements WebSocketConfigurer {
                 return;
             }
             closed = true;
-            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of("type", "close", "data", Map.of("code", code, "reason", reason == null ? "" : reason)))));
-            session.close(CloseStatus.SERVER_ERROR);
+            try {
+                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of("type", "close", "data", Map.of("code", code, "reason", reason == null ? "" : reason)))));
+                session.close(CloseStatus.SERVER_ERROR);
+            } finally {
+                markClosed(new IOException(reason == null || reason.isBlank() ? "WebSocket closed" : reason));
+            }
         }
 
         void abortUnchecked(int code, String reason) {
@@ -241,6 +282,10 @@ public class GenApiController implements WebSocketConfigurer {
             return envelope;
         }
         return envelope;
+    }
+
+    private ResponseEntity<Map<String, Object>> badRequestResponse(Exception error) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("detail", "invalid request"));
     }
 
     private Object wrapApiErrorResponse(ApiResponseEnvelope envelopeSpec, ApiError error, String routeId) {

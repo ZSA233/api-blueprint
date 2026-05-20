@@ -126,6 +126,9 @@ class HelloService:
     async def string(self) -> dict[str, Any]:
         return {}
 
+    async def hello_way(self, query: dict[str, Any] | None = None) -> dict[str, Any]:
+        return {"echo": (query or {}).get("arg1")}
+
 
 class ConflictService:
     async def default(self, query: dict[str, Any] | None = None) -> dict[str, Any]:

@@ -10,7 +10,7 @@ class {{ group.service_class }}(Protocol):
 {% if route.params %}
     async def {{ route.method_name }}(
         self{% for param in route.params %},
-        {{ param.name }}: dict[str, Any] | None = None{% endfor %}{% if route.supports_stream %},
+        {{ param.name }}: {{ param.service_annotation }} = None{% endfor %}{% if route.supports_stream %},
         stream: ApiServerStream | None = None{% endif %}{% if route.supports_channel %},
         channel: ApiServerChannel | None = None{% endif %},
     ) -> Any:
@@ -28,7 +28,7 @@ class {{ group.service_class }}Stub:
 {% if route.params %}
     async def {{ route.method_name }}(
         self{% for param in route.params %},
-        {{ param.name }}: dict[str, Any] | None = None{% endfor %}{% if route.supports_stream %},
+        {{ param.name }}: {{ param.service_annotation }} = None{% endfor %}{% if route.supports_stream %},
         stream: ApiServerStream | None = None{% endif %}{% if route.supports_channel %},
         channel: ApiServerChannel | None = None{% endif %},
     ) -> Any:
