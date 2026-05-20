@@ -76,7 +76,7 @@ make example-conformance-refresh
 - `EXAMPLE_CONFORMANCE_SCENARIOS`：选择场景矩阵项，空值表示全部场景。
 - `EXAMPLE_CONFORMANCE_KEEP_WORKSPACE=1`：对 `generate`、`run`、`check` 保留临时 workspace，便于排查失败。
 
-conformance 成功时输出按阶段收敛为一行状态，例如生成、snapshot、编译、server 启动和每个 client，并在 client 成功后展开对应 scenario 子项；生成器、`dart pub get`、Gradle、`go test` 等详细输出默认隐藏。某个阶段失败时，runner 会把该阶段捕获到的 stdout/stderr 回放到 stderr，便于直接定位失败工具。状态文本在 TTY 下自动着色；可用 `FORCE_COLOR=1` 强制开启，或用 `NO_COLOR=1` 关闭。
+conformance 成功时输出按阶段收敛为一行状态，例如生成、snapshot、编译和 server 启动；client 作为分组标题，每个 client/scenario 会逐项执行并在该项完成时立即输出结果。生成器、`dart pub get`、Gradle、`go test` 等详细输出默认隐藏。某个阶段失败时，runner 会把该阶段捕获到的 stdout/stderr 回放到 stderr，便于直接定位失败工具。状态文本在 TTY 下自动着色；可用 `FORCE_COLOR=1` 强制开启，或用 `NO_COLOR=1` 关闭。
 
 第一阶段服务端矩阵只启用 Go HTTP server。Go / TypeScript / Kotlin / Flutter client 连接同一 Go server；TypeScript 与 Flutter 覆盖 SSE 和 WebSocket 真实互通；Kotlin 只覆盖 RPC、form、binary、typed error、naming 等 HTTP 场景，并对 stream/channel 保留显式 unsupported/contract 检查。
 

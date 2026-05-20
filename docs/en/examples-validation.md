@@ -76,7 +76,7 @@ make example-conformance-refresh
 - `EXAMPLE_CONFORMANCE_SCENARIOS`: selects scenario matrix items; an empty value means all scenarios.
 - `EXAMPLE_CONFORMANCE_KEEP_WORKSPACE=1`: keeps the temporary workspace for `generate`, `run`, and `check` to debug failures.
 
-Successful conformance output is collapsed into one line per stage, such as generation, snapshot drift, compilation, server startup, and each client, then expands the scenarios covered by that client as subitems. Detailed generator, `dart pub get`, Gradle, `go test`, and similar tool output is hidden by default. If a stage fails, the runner replays that stage's captured stdout/stderr to stderr so the failing tool remains visible. Status text is colored automatically on TTYs; set `FORCE_COLOR=1` to force colors or `NO_COLOR=1` to disable them.
+Successful conformance output is collapsed into one line per stage, such as generation, snapshot drift, compilation, and server startup; each client is printed as a group heading, and each client/scenario item runs and reports as soon as that item finishes. Detailed generator, `dart pub get`, Gradle, `go test`, and similar tool output is hidden by default. If a stage fails, the runner replays that stage's captured stdout/stderr to stderr so the failing tool remains visible. Status text is colored automatically on TTYs; set `FORCE_COLOR=1` to force colors or `NO_COLOR=1` to disable them.
 
 The first server matrix phase enables only the Go HTTP server. Go / TypeScript / Kotlin / Flutter clients connect to the same Go server; TypeScript and Flutter cover real SSE and WebSocket interoperability; Kotlin covers HTTP scenarios such as RPC, form, binary, typed errors, and naming, and keeps stream/channel as explicit unsupported/contract checks.
 

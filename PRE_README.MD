@@ -131,7 +131,7 @@ README 应链接到以下用户文档：
 - 语言 examples、`examples/api-blueprint.index.json`、可选 full contract/agent/shards 快照与 `examples/grpc/{protos,go,python}/` 是生成快照；`examples/flutter/` 是纯 Dart package 快照，验证使用 `dart pub get`、`dart analyze` 和 `dart test`。
 - examples DSL 覆盖 query/json/form/binary/raw/XML、typed error、命名冲突、多 blueprint root、stream、channel、SSE/WebSocket 等公开协议场景；暂不支持的端侧能力必须在 conformance manifest 中显式标注，不静默漏测。
 - `scripts/example_validation.py` 负责 snapshot drift、refresh、compile/analyze/import smoke 和旧增强 suite；`python -m scripts.example_conformance` 负责真实互通验证，Makefile 通过 `make example-conformance-*` 暴露同一能力，并用 `EXAMPLE_CONFORMANCE_SERVER`、`EXAMPLE_CONFORMANCE_CLIENTS`、`EXAMPLE_CONFORMANCE_SCENARIOS`、`EXAMPLE_CONFORMANCE_KEEP_WORKSPACE` 选择矩阵。conformance 第一阶段只启用 Go HTTP server，Go / TypeScript / Kotlin / Flutter client 连接同一服务端；Kotlin 只覆盖 RPC/form/binary/typed-error/naming 等 HTTP 能力，长连接为显式 unsupported/contract 验证。
-- conformance 输出默认采用 stage summary：生成、snapshot、编译、server 启动和各 client 输出一行状态，client 成功后展开 scenario 子项；状态文本在 TTY 下自动着色，支持 `FORCE_COLOR=1` 与 `NO_COLOR=1`。被调用工具的详细 stdout/stderr 成功时隐藏，失败时回放到 stderr。
+- conformance 输出默认采用 stage summary：生成、snapshot、编译、server 启动输出一行状态，client 作为分组标题，每个 client/scenario 逐项执行并在该项完成时立即输出结果；状态文本在 TTY 下自动着色，支持 `FORCE_COLOR=1` 与 `NO_COLOR=1`。被调用工具的详细 stdout/stderr 成功时隐藏，失败时回放到 stderr。
 - conformance harness 位于各语言 preserved 文件中，例如 `examples/golang/conformance/`、`examples/typescript/conformance.ts`、`examples/kotlin/conformance/`、`examples/flutter/test/conformance_test.dart`，刷新生成物不得覆盖这些文件。
 - snapshot drift 表示生成结果变化，不自动等于 bug。
 - `make example-golang-suite` 和 `make example-java-suite` 是手动增强验证，不进入默认 `test`、`example-validation`、`release-preflight` 或 CI。

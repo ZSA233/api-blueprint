@@ -128,16 +128,17 @@ def _run_against_workspace(
                     "no runnable scenarios for client",
                 )
                 continue
-            reporter.run_stage(
-                client,
-                lambda client=client, client_scenarios=client_scenarios: _run_client(
-                    conf_workspace.blueprint,
-                    client,
-                    active_server.base_url,
-                    client_scenarios,
-                ),
-            )
-            reporter.print_scenario_results(client, tuple(scenario.name for scenario in client_scenarios))
+            reporter.print_group(client)
+            for scenario in client_scenarios:
+                reporter.run_sub_stage(
+                    f"{client}/{scenario.name}",
+                    lambda client=client, scenario=scenario: _run_client(
+                        conf_workspace.blueprint,
+                        client,
+                        active_server.base_url,
+                        (scenario,),
+                    ),
+                )
         reporter.print_summary(
             server=server_name,
             clients=clients,

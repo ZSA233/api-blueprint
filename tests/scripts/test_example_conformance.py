@@ -98,9 +98,12 @@ def test_reporter_replays_captured_output_on_failure(capsys: pytest.CaptureFixtu
 
 
 def test_reporter_prints_scenario_subitems(capsys: pytest.CaptureFixture[str]) -> None:
-    reporter.print_scenario_results("flutter", ("sse", "websocket"))
+    reporter.print_group("flutter")
+    reporter.run_sub_stage("flutter/sse", lambda: None)
+    reporter.run_sub_stage("flutter/websocket", lambda: None)
 
     captured = capsys.readouterr()
+    assert "flutter:" in captured.out
     assert "  - flutter/sse ... ok" in captured.out
     assert "  - flutter/websocket ... ok" in captured.out
 
@@ -136,11 +139,11 @@ def test_runner_reports_server_and_client_matrix_without_client_noise(
 
     captured = capsys.readouterr()
     assert "server go ... ok http://127.0.0.1:12345" in captured.out
-    assert "flutter ... ok" in captured.out
+    assert "flutter:" in captured.out
     assert "  - flutter/sse ... ok" in captured.out
     assert "  - flutter/websocket ... ok" in captured.out
     assert "client noisy output" not in captured.out
-    assert calls == [("flutter", "sse,websocket")]
+    assert calls == [("flutter", "sse"), ("flutter", "websocket")]
 
 
 def test_cli_list_reports_servers_clients_and_scenarios(capsys: pytest.CaptureFixture[str]) -> None:

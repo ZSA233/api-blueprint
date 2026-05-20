@@ -48,9 +48,12 @@ def print_skipped(label: str, reason: str) -> None:
     print(f"{label} ... {_paint('skipped', YELLOW)} {reason}", flush=True)
 
 
-def print_scenario_results(client: str, scenario_names: tuple[str, ...]) -> None:
-    for scenario_name in scenario_names:
-        print(f"  - {client}/{scenario_name} ... {_paint('ok', GREEN)}", flush=True)
+def print_group(label: str) -> None:
+    print(f"{label}:", flush=True)
+
+
+def run_sub_stage(label: str, action: Callable[[], T]) -> T:
+    return run_stage(f"  - {label}", action)
 
 
 def print_summary(*, server: str, clients: tuple[str, ...], scenarios: tuple[str, ...]) -> None:
