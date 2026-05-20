@@ -59,6 +59,28 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		false,
 	)
 
+	httptransport.POST(
+		"/api/demo/form-submit",
+		sharedprovider.NewRouteExecutor(
+			sharedprovider.RouteInfo{
+				Root:      "api",
+				Group:     "demo",
+				Namespace: "demo",
+				Service:   "DemoService",
+				Operation: "FormSubmit",
+				RouteID:   "api.demo.post.formsubmit",
+				Path:      "/api/demo/form-submit",
+				Methods:   []string{"POST"},
+				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope(""),
+			},
+			"req=F|auth|handle|rsp=json@CodeMessageDataEnvelope",
+			impl.FormSubmit,
+		),
+		eng,
+		false,
+	)
+
 	httptransport.PUT(
 		"/api/demo/1put",
 		sharedprovider.NewRouteExecutor(

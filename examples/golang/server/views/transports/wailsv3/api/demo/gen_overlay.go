@@ -24,6 +24,14 @@ type REQ_TestPost_JSON = sharedroutes.REQ_TestPost_JSON
 
 type INVOKE_TestPost = wailstransport.InvokeEnvelope[any, REQ_TestPost_JSON]
 
+type REQ_FormSubmit = sharedroutes.REQ_FormSubmit
+type RSP_FormSubmit = sharedroutes.RSP_FormSubmit
+type CTX_FormSubmit = sharedroutes.CTX_FormSubmit
+
+type REQ_FormSubmit_FORM = sharedroutes.REQ_FormSubmit_FORM
+
+type INVOKE_FormSubmit = wailstransport.InvokeEnvelope[any, REQ_FormSubmit_FORM]
+
 type REQ_PutDemo = sharedroutes.REQ_PutDemo
 type RSP_PutDemo = sharedroutes.RSP_PutDemo
 type CTX_PutDemo = sharedroutes.CTX_PutDemo

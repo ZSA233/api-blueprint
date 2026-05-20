@@ -316,6 +316,106 @@ class DemoErrorDemoResponse {
 
 
 
+class DemoFormSubmitForm {
+  final String? title;
+  final int? count;
+  final bool? enabled;
+
+  const DemoFormSubmitForm({
+    this.title,
+    this.count,
+    this.enabled,
+  });
+
+  factory DemoFormSubmitForm.fromJson(Map<String, Object?> json) {
+    return DemoFormSubmitForm(
+      title: apiBlueprintReadString(json["title"]),
+      count: apiBlueprintReadInt(json["count"]),
+      enabled: apiBlueprintReadBool(json["enabled"]),
+    );
+  }
+
+  factory DemoFormSubmitForm.fromJsonValue(Object? value) {
+    final codec = apiJsonCodecs.find<DemoFormSubmitForm>();
+    if (codec != null) {
+      return codec.fromJson(value);
+    }
+    return DemoFormSubmitForm.fromJson(apiBlueprintReadObject(value));
+  }
+
+  Map<String, Object?> toJson() {
+    final codec = apiJsonCodecs.find<DemoFormSubmitForm>();
+    if (codec != null) {
+      return apiBlueprintReadObject(codec.toJson(this));
+    }
+    return {
+      "title": apiBlueprintToJson(title),
+      "count": apiBlueprintToJson(count),
+      "enabled": apiBlueprintToJson(enabled),
+    };
+  }
+
+  Map<String, String?> toQueryMap() {
+    return {
+      "title": apiBlueprintToQueryValue(title),
+      "count": apiBlueprintToQueryValue(count),
+      "enabled": apiBlueprintToQueryValue(enabled),
+    };
+  }
+}
+
+
+
+class DemoFormSubmitResponse {
+  final String? summary;
+  final int? count;
+  final bool? enabled;
+
+  const DemoFormSubmitResponse({
+    this.summary,
+    this.count,
+    this.enabled,
+  });
+
+  factory DemoFormSubmitResponse.fromJson(Map<String, Object?> json) {
+    return DemoFormSubmitResponse(
+      summary: apiBlueprintReadString(json["summary"]),
+      count: apiBlueprintReadInt(json["count"]),
+      enabled: apiBlueprintReadBool(json["enabled"]),
+    );
+  }
+
+  factory DemoFormSubmitResponse.fromJsonValue(Object? value) {
+    final codec = apiJsonCodecs.find<DemoFormSubmitResponse>();
+    if (codec != null) {
+      return codec.fromJson(value);
+    }
+    return DemoFormSubmitResponse.fromJson(apiBlueprintReadObject(value));
+  }
+
+  Map<String, Object?> toJson() {
+    final codec = apiJsonCodecs.find<DemoFormSubmitResponse>();
+    if (codec != null) {
+      return apiBlueprintReadObject(codec.toJson(this));
+    }
+    return {
+      "summary": apiBlueprintToJson(summary),
+      "count": apiBlueprintToJson(count),
+      "enabled": apiBlueprintToJson(enabled),
+    };
+  }
+
+  Map<String, String?> toQueryMap() {
+    return {
+      "summary": apiBlueprintToQueryValue(summary),
+      "count": apiBlueprintToQueryValue(count),
+      "enabled": apiBlueprintToQueryValue(enabled),
+    };
+  }
+}
+
+
+
 typedef DemoMapModelResponse = Map<String, ApiDemoMap>;
 
 DemoMapModelResponse DemoMapModelResponseFromJsonValue(Object? value) {

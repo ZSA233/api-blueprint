@@ -42,6 +42,13 @@ const (
 	HelloWayEnumASD HelloWayEnum = "ASD"
 )
 
+type KeywordEnum string
+
+const (
+	KeywordEnumDEFAULT KeywordEnum = "default"
+	KeywordEnumCLASS   KeywordEnum = "class"
+)
+
 type DefaultConnectionClose struct {
 	Code   int    `json:"code,omitempty" form:"code,omitempty"`
 	Reason string `json:"reason,omitempty" form:"reason,omitempty"`
@@ -78,6 +85,10 @@ type RSPAuditPacket struct {
 	Checksum  uint   `json:"checksum" form:"checksum"`
 }
 
+type REQDefaultQUERY struct {
+	Class string `json:"class_,omitempty" form:"class_,omitempty"`
+}
+
 type REQAbcQUERY struct {
 	Arg1 bool    `json:"arg1,omitempty" form:"arg1,omitempty"`
 	Arg3 string  `json:"arg3,omitempty" form:"arg3,omitempty"`
@@ -112,6 +123,18 @@ type REQTestPostJSON struct {
 type RSPTestPost struct {
 	List []string               `json:"list" form:"list"`
 	Map  map[string]*ApiDemoMap `json:"map" form:"map"`
+}
+
+type REQFormSubmitFORM struct {
+	Title   string `json:"title" form:"title"`
+	Count   int    `json:"count,omitempty" form:"count,omitempty"`
+	Enabled bool   `json:"enabled,omitempty" form:"enabled,omitempty"`
+}
+
+type RSPFormSubmit struct {
+	Summary string `json:"summary" form:"summary"`
+	Count   int    `json:"count" form:"count"`
+	Enabled bool   `json:"enabled" form:"enabled"`
 }
 
 type REQFunc1putQUERY struct {
@@ -243,4 +266,16 @@ type RSPDocJson struct{}
 
 type RSPDochaha struct {
 	A string `json:"a,omitempty" form:"a,omitempty"`
+}
+
+type BlueprintsAPIConflictConflictModel struct {
+	Default string      `json:"default" form:"default"`
+	Class   string      `json:"class_" form:"class_"`
+	Enum    KeywordEnum `json:"enum" form:"enum"`
+}
+
+type BlueprintsAltConflictConflictModel struct {
+	Default string      `json:"default" form:"default"`
+	Class   string      `json:"class_" form:"class_"`
+	Enum    KeywordEnum `json:"enum" form:"enum"`
 }

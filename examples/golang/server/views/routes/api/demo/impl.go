@@ -29,6 +29,15 @@ func (impl *Router) TestPost(ctx *CTX_TestPost, req *REQ_TestPost) (rsp *RSP_Tes
 	}, nil
 }
 
+func (impl *Router) FormSubmit(ctx *CTX_FormSubmit, req *REQ_FormSubmit) (rsp *RSP_FormSubmit, err error) {
+	body := req.B
+	return &RSP_FormSubmit{
+		Summary: body.Title,
+		Count:   body.Count,
+		Enabled: body.Enabled,
+	}, nil
+}
+
 func (impl *Router) PutDemo(ctx *CTX_PutDemo, req *REQ_PutDemo) (rsp *RSP_PutDemo, err error) {
 	query := req.Q
 	body := req.B

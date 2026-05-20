@@ -95,6 +95,32 @@ public final class ApiTypes {
         }
     }
 
+    public enum KeywordEnum {
+        DEFAULT_VALUE("default"),
+        CLASS_VALUE("class");
+
+        private final String value;
+
+        KeywordEnum(String value) {
+            this.value = value;
+        }
+
+        @JsonValue
+        public String value() {
+            return value;
+        }
+
+        @JsonCreator
+        public static KeywordEnum fromValue(String value) {
+            for (KeywordEnum item : values()) {
+                if (Objects.equals(item.value, value)) {
+                    return item;
+                }
+            }
+            throw new IllegalArgumentException("Unknown KeywordEnum value: " + value);
+        }
+    }
+
     public enum MapEnum {
         A("a"),
         B("b");
@@ -257,6 +283,22 @@ public final class ApiTypes {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record ApiHelloMap(
         @JsonProperty("haha") Long haha
+    ) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record BlueprintsApiConflictConflictModel(
+        @JsonProperty("default") String defaultValue,
+        @JsonProperty("class_") String classValue,
+        @JsonProperty("enum") ApiTypes.KeywordEnum enumValue
+    ) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record BlueprintsAltConflictConflictModel(
+        @JsonProperty("default") String defaultValue,
+        @JsonProperty("class_") String classValue,
+        @JsonProperty("enum") ApiTypes.KeywordEnum enumValue
     ) {
     }
 

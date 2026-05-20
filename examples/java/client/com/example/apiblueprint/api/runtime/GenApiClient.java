@@ -3,6 +3,7 @@ package com.example.apiblueprint.api.runtime;
 
 import com.example.apiblueprint.api.routes.api.ApiApi;
 import com.example.apiblueprint.api.routes.api.binary.BinaryApi;
+import com.example.apiblueprint.api.routes.api.conflict.ConflictApi;
 import com.example.apiblueprint.api.routes.api.demo.DemoApi;
 import com.example.apiblueprint.api.routes.api.hello.HelloApi;
 
@@ -12,6 +13,8 @@ public class GenApiClient {
     public final ApiApi api;
 
     public final BinaryApi binary;
+
+    public final ConflictApi conflict;
 
     public final DemoApi demo;
 
@@ -23,6 +26,8 @@ public class GenApiClient {
         this.api = new ApiApi(transport);
 
         this.binary = new BinaryApi(transport);
+
+        this.conflict = new ConflictApi(transport);
 
         this.demo = new DemoApi(transport);
 

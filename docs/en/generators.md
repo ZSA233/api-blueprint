@@ -145,7 +145,7 @@ try {
 }
 ```
 
-The repository’s `/api/demo/error-demo` example and Go / TypeScript / Flutter / Python / Java suites cover declared errors, route-local errors, dynamic `toast.text`, and fallback for undeclared error codes.
+The repository’s `/api/demo/error-demo` example and Go / TypeScript / Kotlin / Flutter / Python / Java validation cover declared errors, route-local errors, dynamic `toast.text`, and fallback for undeclared error codes.
 
 ## Go Client
 
@@ -330,7 +330,7 @@ Python server also uses `python_package_root` as its package root and emits rout
 
 ## Example Snapshots
 
-`examples/golang/server/`, `examples/golang/client/`, `examples/typescript/`, `examples/flutter/`, `examples/kotlin/client`, `examples/kotlin/server`, and `examples/java/client` / `examples/java/server` are generated snapshots, not business sources; `examples/java/suite` is a handwritten runtime validation project. Go server / Go client / Wails Go contract / agent artifact indexes use Go-safe route package segments, while Flutter / Kotlin / Java / Python artifact indexes keep their language-specific route output paths. To accept intentional generation changes, use:
+`examples/golang/server/`, `examples/golang/client/`, `examples/typescript/`, `examples/flutter/`, `examples/kotlin/client`, `examples/kotlin/server`, and `examples/java/client` / `examples/java/server` are generated snapshots, not business sources; `examples/java/suite` is a handwritten runtime validation project. `examples/golang/conformance/`, `examples/typescript/conformance.ts`, `examples/kotlin/conformance/`, and `examples/flutter/test/conformance_test.dart` are preserved conformance files whose job is to call each language's generated artifacts against a real Go HTTP server, covering RPC, form, binary, typed errors, naming conflicts, and supported SSE/WebSocket interoperability; regeneration must not overwrite them. Go server / Go client / Wails Go contract / agent artifact indexes use Go-safe route package segments, while Flutter / Kotlin / Java / Python artifact indexes keep their language-specific route output paths. To accept intentional generation changes, use:
 
 ```sh
 make example-refresh

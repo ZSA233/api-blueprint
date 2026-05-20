@@ -3,8 +3,10 @@
 package client
 
 import (
+	alt_conflict "example.com/project/golang/client/routes/alt/conflict"
 	api "example.com/project/golang/client/routes/api"
 	binary "example.com/project/golang/client/routes/api/binary"
+	api_conflict "example.com/project/golang/client/routes/api/conflict"
 	demo "example.com/project/golang/client/routes/api/demo"
 	hello "example.com/project/golang/client/routes/api/hello"
 	static "example.com/project/golang/client/routes/static"
@@ -15,11 +17,13 @@ import (
 type HTTPConfig = httptransport.HttpConfig
 
 type Client struct {
-	Api    *api.Client
-	Binary *binary.Client
-	Demo   *demo.Client
-	Hello  *hello.Client
-	Static *static.Client
+	Api         *api.Client
+	Binary      *binary.Client
+	APIConflict *api_conflict.Client
+	Demo        *demo.Client
+	Hello       *hello.Client
+	Static      *static.Client
+	AltConflict *alt_conflict.Client
 }
 
 func NewHTTP(config HTTPConfig) *Client {
@@ -29,10 +33,12 @@ func NewHTTP(config HTTPConfig) *Client {
 
 func NewClient(transport runtime.Transport) *Client {
 	return &Client{
-		Api:    api.NewClient(transport),
-		Binary: binary.NewClient(transport),
-		Demo:   demo.NewClient(transport),
-		Hello:  hello.NewClient(transport),
-		Static: static.NewClient(transport),
+		Api:         api.NewClient(transport),
+		Binary:      binary.NewClient(transport),
+		APIConflict: api_conflict.NewClient(transport),
+		Demo:        demo.NewClient(transport),
+		Hello:       hello.NewClient(transport),
+		Static:      static.NewClient(transport),
+		AltConflict: alt_conflict.NewClient(transport),
 	}
 }

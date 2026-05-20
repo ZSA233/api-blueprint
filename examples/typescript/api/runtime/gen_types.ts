@@ -85,6 +85,15 @@ export enum ColorEnum {
   BLUE = "blue",
 }
 
+export interface ConflictModel {
+  /** reserved keyword field */
+  default: string;
+  /** python-safe class field */
+  class_: string;
+  /** reserved enum value */
+  enum: KeywordEnum;
+}
+
 export interface ConnectionClose {
   /** logical close code */
   code: number;
@@ -126,6 +135,11 @@ export enum HelloChannelMsgTypeEnum {
 
 export enum HelloWayEnum {
   ASD = "ASD",
+}
+
+export enum KeywordEnum {
+  DEFAULT = "default",
+  CLASS = "class",
 }
 
 export enum MapEnum {

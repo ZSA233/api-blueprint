@@ -39,6 +39,20 @@ public data class DemoErrorDemoResponse(
     public val status: String
 )
 
+@Serializable
+public data class DemoFormSubmitForm(
+    public val title: String,
+    public val count: Int? = null,
+    public val enabled: Boolean? = null
+)
+
+@Serializable
+public data class DemoFormSubmitResponse(
+    public val summary: String,
+    public val count: Int,
+    public val enabled: Boolean
+)
+
 public typealias DemoMapModelResponse = Map<Int, ApiDemoMap>
 
 @Serializable

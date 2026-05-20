@@ -426,6 +426,56 @@ ColorEnum? ColorEnumFromJson(Object? value) {
 
 
 
+class ConflictModel {
+  final String? default_;
+  final String? class_;
+  final KeywordEnum? enum_;
+
+  const ConflictModel({
+    this.default_,
+    this.class_,
+    this.enum_,
+  });
+
+  factory ConflictModel.fromJson(Map<String, Object?> json) {
+    return ConflictModel(
+      default_: apiBlueprintReadString(json["default"]),
+      class_: apiBlueprintReadString(json["class_"]),
+      enum_: KeywordEnumFromJson(json["enum"]),
+    );
+  }
+
+  factory ConflictModel.fromJsonValue(Object? value) {
+    final codec = apiJsonCodecs.find<ConflictModel>();
+    if (codec != null) {
+      return codec.fromJson(value);
+    }
+    return ConflictModel.fromJson(apiBlueprintReadObject(value));
+  }
+
+  Map<String, Object?> toJson() {
+    final codec = apiJsonCodecs.find<ConflictModel>();
+    if (codec != null) {
+      return apiBlueprintReadObject(codec.toJson(this));
+    }
+    return {
+      "default": apiBlueprintToJson(default_),
+      "class_": apiBlueprintToJson(class_),
+      "enum": apiBlueprintToJson(enum_),
+    };
+  }
+
+  Map<String, String?> toQueryMap() {
+    return {
+      "default": apiBlueprintToQueryValue(default_),
+      "class_": apiBlueprintToQueryValue(class_),
+      "enum": apiBlueprintToQueryValue(enum_),
+    };
+  }
+}
+
+
+
 class ConnectionClose {
   final int? code;
   final String? reason;
@@ -605,6 +655,26 @@ enum HelloWayEnum {
 
 HelloWayEnum? HelloWayEnumFromJson(Object? value) {
   for (final item in HelloWayEnum.values) {
+    if (item.wireValue == value || item.wireValue.toString() == value?.toString()) {
+      return item;
+    }
+  }
+  return null;
+}
+
+
+
+enum KeywordEnum {
+  default_("default"),
+  class_("class"),
+  ;
+
+  final Object wireValue;
+  const KeywordEnum(this.wireValue);
+}
+
+KeywordEnum? KeywordEnumFromJson(Object? value) {
+  for (final item in KeywordEnum.values) {
     if (item.wireValue == value || item.wireValue.toString() == value?.toString()) {
       return item;
     }

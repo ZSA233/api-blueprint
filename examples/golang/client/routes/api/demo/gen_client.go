@@ -53,6 +53,21 @@ func (client *GenDemoClient) TestPost(ctx context.Context, jsonBody TestPostJSON
 	return &response, nil
 }
 
+func (client *GenDemoClient) FormSubmit(ctx context.Context, formBody FormSubmitForm) (*FormSubmitResponse, error) {
+	request := runtime.Request{
+		RouteID:          "api.demo.post.formsubmit",
+		Method:           "POST",
+		Path:             "/api/demo/form-submit",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		Form:             formBody,
+	}
+	var response FormSubmitResponse
+	if err := client.transport.Do(ctx, request, &response); err != nil {
+		return nil, err
+	}
+	return &response, nil
+}
+
 func (client *GenDemoClient) PutDemo(ctx context.Context, query PutDemoQuery, jsonBody PutDemoJSON) (*PutDemoResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.demo.put.z1put",

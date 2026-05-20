@@ -125,8 +125,9 @@ api-gen generate -c api-blueprint.toml
 make test
 make example-compile-check
 make example-validation
+uv run python -m scripts.example_conformance check --server go --clients go,typescript,kotlin,flutter
 make example-golang-suite
 make example-java-suite
 ```
 
-`example-golang-suite` 和 `example-java-suite` 是手动端到端增强验证，不进入默认测试、发布预检或 CI。正式发布前的版本、构建、安装和 GitHub Release 流程见 [发布流程](docs/release-process.md)。
+`scripts.example_conformance` 会启动真实 Go HTTP server，并让 Go / TypeScript / Kotlin / Flutter client 跑协议互通；`example-golang-suite` 和 `example-java-suite` 是保留的手动端到端增强验证。正式发布前的版本、构建、安装和 GitHub Release 流程见 [发布流程](docs/release-process.md)。

@@ -17,6 +17,12 @@ class DemoService(Protocol):
     ) -> Any:
         ...
 
+    async def form_submit(
+        self,
+        form: dict[str, Any] | None = None,
+    ) -> Any:
+        ...
+
     async def put_demo(
         self,
         query: dict[str, Any] | None = None,
@@ -73,6 +79,12 @@ class DemoServiceStub:
         json: dict[str, Any] | None = None,
     ) -> Any:
         raise NotImplementedError("test_post")
+
+    async def form_submit(
+        self,
+        form: dict[str, Any] | None = None,
+    ) -> Any:
+        raise NotImplementedError("form_submit")
 
     async def put_demo(
         self,

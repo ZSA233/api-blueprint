@@ -7,6 +7,7 @@
 - `examples/blueprints/`: Blueprint source of truth.
 - `examples/api-blueprint.index.json`: lightweight route catalog snapshot. Prefer `api-gen inspect` for daily on-demand project understanding; full contract, agent, and shard snapshots are optional outputs mainly for offline navigation, archiving, and drift validation.
 - `examples/golang/server/`, `examples/golang/client/`, `examples/typescript/`, `examples/flutter/`, `examples/kotlin/`, `examples/java/client/`, `examples/java/server/`: Blueprint generated snapshots.
+- `examples/golang/conformance/`, `examples/typescript/conformance.ts`, `examples/kotlin/conformance/`, `examples/flutter/test/conformance_test.dart`: handwritten preserved conformance harnesses that call generated artifacts against a real server; snapshot refresh must preserve them.
 - `examples/java/suite/`: handwritten Gradle Java 17 application that runs core generated Java client/server round-trips.
 - `examples/wails-harness/v2/`, `examples/wails-harness/v3/`: handwritten minimal Wails harnesses that consume shared generated artifacts.
 - `examples/wails-hello/`: standalone Wails v3 hello example; `blueprints/` is the source of truth, `golang/` and `typescript/` are generated snapshots, and `app/` is a handwritten Wails app shell.
@@ -18,6 +19,7 @@
 make example-compile-check
 make example-refresh
 make example-validation
+uv run python -m scripts.example_conformance check --server go --clients go,typescript,kotlin,flutter
 make example-golang-suite
 make example-java-suite
 make wails-hello-compile-check
@@ -27,6 +29,7 @@ make wails-hello-check
 - `example-compile-check`: for feature development; allows snapshot drift and only verifies regenerated artifacts still compile or import.
 - `example-refresh`: accepts intentional generation changes and refreshes committed snapshots.
 - `example-validation`: strict mode; requires generator output and committed snapshots to converge.
+- `scripts.example_conformance check`: real protocol interoperability validation; it regenerates examples in a temporary workspace, checks snapshot drift and language compilation, then starts a Go HTTP server and runs Go / TypeScript / Kotlin / Flutter clients against it.
 - `example-golang-suite`: manual end-to-end validation aid; it regenerates the Go server/client in a temporary workspace, starts a real Go server process, then verifies the loop with the generated Go client and raw HTTP binary requests. It is not part of default `test`, `example-validation`, `release-preflight`, or CI.
 - `example-java-suite`: manual end-to-end validation aid; it regenerates the Java client/server needed by `http.java` in a temporary workspace, runs `examples/java/suite`, starts a real Spring Boot server, then verifies core RPC, binary, static, and unsupported-route loops with the generated Java 17 JDK HTTP client. It is not part of default `test`, `example-validation`, `release-preflight`, or CI.
 - `wails-hello-compile-check`: validates only the standalone Wails hello example, allows snapshot drift, and is useful for fast development checks.
@@ -41,6 +44,28 @@ uv run python scripts/example_validation.py --scope wails-hello --mode refresh
 uv run python scripts/example_validation.py --scope blueprint --mode golang-suite
 uv run python scripts/example_validation.py --scope blueprint --mode java-suite
 ```
+
+## Conformance Interoperability
+
+`scripts/example_conformance/` is a real interoperability manager independent of the older validation scopes:
+
+```sh
+uv run python -m scripts.example_conformance list
+uv run python -m scripts.example_conformance generate --keep-workspace
+uv run python -m scripts.example_conformance run --server go --clients go,typescript,flutter --scenario rpc,binary,sse,websocket
+uv run python -m scripts.example_conformance check --server go --clients go,typescript,kotlin,flutter
+uv run python -m scripts.example_conformance refresh --server go --clients go,typescript,kotlin,flutter
+```
+
+- `list`: prints enabled servers, client capabilities, and scenarios.
+- `generate`: generates all example artifacts in a temporary workspace without changing the repository.
+- `run`: runs only interoperability checks and can be filtered with `--clients` and `--scenario`.
+- `check`: generates in a temporary workspace, checks snapshot drift, compiles/analyzes, then runs interoperability.
+- `refresh`: refreshes repository examples, then compiles/analyzes and runs interoperability.
+
+The first server matrix phase enables only the Go HTTP server. Go / TypeScript / Kotlin / Flutter clients connect to the same Go server; TypeScript and Flutter cover real SSE and WebSocket interoperability; Kotlin covers HTTP scenarios such as RPC, form, binary, typed errors, and naming, and keeps stream/channel as explicit unsupported/contract checks.
+
+The scenario registry maps DSL coverage categories to automated cases: query/json/form/binary/raw/XML, typed errors, naming conflicts, multiple blueprint roots, response envelopes, SSE, and WebSocket. Unsupported client capabilities must be recorded in the manifest instead of being silently skipped.
 
 ## Drift Meaning
 

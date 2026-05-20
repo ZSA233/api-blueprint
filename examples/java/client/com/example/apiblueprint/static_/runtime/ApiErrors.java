@@ -12,6 +12,8 @@ public final class ApiErrors {
 
     public static final int COMMONERR_TOKEN_EXPIRE = 55555;
 
+    public static final int DEMOERR_UNKNOWN = 70002;
+
     public static final int DEMOERR_RATE_LIMITED = 42901;
 
     public static final Map<String, ApiErrorEntry> API_ERRORS_BY_ID = Map.ofEntries(
@@ -42,6 +44,21 @@ public final class ApiErrors {
                     "auth.token_expire",
                     "warning",
                     "登录状态已失效，请重新登录"
+                )
+            )
+        ),
+        Map.entry(
+            "DemoErr.UNKNOWN",
+            new ApiErrorEntry(
+                "DemoErr.UNKNOWN",
+                "DemoErr",
+                "UNKNOWN",
+                70002,
+                "demo unknown error",
+                new ApiToastSpec(
+                    "DemoErr.UNKNOWN",
+                    "error",
+                    "demo unknown error"
                 )
             )
         ),
@@ -78,6 +95,8 @@ public final class ApiErrors {
         private DemoErr() {
         }
 
+        public static final ApiErrorEntry UNKNOWN = API_ERRORS_BY_ID.get("DemoErr.UNKNOWN");
+
         public static final ApiErrorEntry RATE_LIMITED = API_ERRORS_BY_ID.get("DemoErr.RATE_LIMITED");
 
     }
@@ -105,6 +124,13 @@ public final class ApiErrors {
             )
         ),
         Map.entry(
+            "api.conflict.get.default",
+            Map.ofEntries(
+                Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
+                Map.entry(55555, API_ERRORS_BY_ID.get("CommonErr.TOKEN_EXPIRE"))
+            )
+        ),
+        Map.entry(
             "api.demo.get.abc",
             Map.ofEntries(
                 Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
@@ -113,6 +139,13 @@ public final class ApiErrors {
         ),
         Map.entry(
             "api.demo.post.testpost",
+            Map.ofEntries(
+                Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
+                Map.entry(55555, API_ERRORS_BY_ID.get("CommonErr.TOKEN_EXPIRE"))
+            )
+        ),
+        Map.entry(
+            "api.demo.post.formsubmit",
             Map.ofEntries(
                 Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
                 Map.entry(55555, API_ERRORS_BY_ID.get("CommonErr.TOKEN_EXPIRE"))
@@ -172,6 +205,7 @@ public final class ApiErrors {
             Map.ofEntries(
                 Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
                 Map.entry(55555, API_ERRORS_BY_ID.get("CommonErr.TOKEN_EXPIRE")),
+                Map.entry(70002, API_ERRORS_BY_ID.get("DemoErr.UNKNOWN")),
                 Map.entry(42901, API_ERRORS_BY_ID.get("DemoErr.RATE_LIMITED"))
             )
         ),
@@ -231,6 +265,11 @@ public final class ApiErrors {
         ),
         Map.entry(
             "static.static.get.dochaha",
+            Map.ofEntries(
+            )
+        ),
+        Map.entry(
+            "alt.conflict.get.default",
             Map.ofEntries(
             )
         )

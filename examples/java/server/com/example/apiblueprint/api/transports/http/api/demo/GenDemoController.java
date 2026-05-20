@@ -69,6 +69,21 @@ public class GenDemoController {
         }
     }
 
+    @RequestMapping(path = "/api/demo/form-submit", method = RequestMethod.POST)
+    public Object formSubmit(
+        @RequestParam Map<String, String> queryParams
+    ) throws Exception {
+        DemoTypes.FormSubmitForm form = objectMapper.convertValue(queryParams, DemoTypes.FormSubmitForm.class);
+        try {
+            Object result = service.formSubmit(
+                form
+            );
+            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (ApiError error) {
+            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.post.formsubmit");
+        }
+    }
+
     @RequestMapping(path = "/api/demo/1put", method = RequestMethod.PUT)
     public Object putDemo(
         @RequestParam Map<String, String> queryParams,

@@ -6,6 +6,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerializationStrategy
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -60,7 +64,8 @@ public class OkHttpApiTransport(
             return encodePayload(json, jsonSerializer).toRequestBody("application/json; charset=utf-8".toMediaType())
         }
         if (form != null) {
-            return encodePayload(form, formSerializer).toRequestBody("application/json; charset=utf-8".toMediaType())
+            return encodeFormPayload(form, formSerializer)
+                .toRequestBody("application/x-www-form-urlencoded; charset=utf-8".toMediaType())
         }
         if (binary != null) {
             return object : RequestBody() {
@@ -82,6 +87,26 @@ public class OkHttpApiTransport(
             return value?.toString().orEmpty()
         }
         return json.encodeToString(serializer as SerializationStrategy<Any?>, value)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun encodeFormPayload(value: Any?, serializer: SerializationStrategy<*>?): String {
+        if (serializer == null) {
+            return value?.toString().orEmpty()
+        }
+        val element = json.encodeToJsonElement(serializer as SerializationStrategy<Any?>, value)
+        val fields = element as? JsonObject ?: return encode(element.toString())
+        return fields.entries
+            .filter { (_, item) -> item !is JsonNull }
+            .joinToString("&") { (key, item) -> encode(key) + "=" + encode(formValue(item)) }
+    }
+
+    private fun formValue(value: JsonElement): String {
+        return if (value is JsonPrimitive) {
+            value.content
+        } else {
+            value.toString()
+        }
     }
 }
 

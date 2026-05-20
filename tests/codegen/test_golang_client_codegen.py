@@ -30,6 +30,31 @@ def test_golang_client_writer_uses_go_safe_route_package_segments(tmp_path):
     )
 
 
+def test_golang_client_root_facade_disambiguates_same_group_names_across_roots(tmp_path):
+    api_bp = Blueprint(root="/api")
+    alt_bp = Blueprint(root="/alt")
+    with api_bp.group("/conflict") as views:
+        views.GET("/default", operation_id="default").RSP()
+    with alt_bp.group("/conflict") as views:
+        views.GET("/default", operation_id="default").RSP()
+
+    graph = build_contract_graph([api_bp, alt_bp])
+    output_dir = tmp_path / "client"
+
+    writer = GolangClientWriter(output_dir, module="example.com/generated/client", contract_graph=graph)
+    writer.register(api_bp)
+    writer.register(alt_bp)
+    writer.gen()
+
+    root_client = (output_dir / "gen_client.go").read_text(encoding="utf-8")
+    assert 'api_conflict "example.com/generated/client/routes/api/conflict"' in root_client
+    assert 'alt_conflict "example.com/generated/client/routes/alt/conflict"' in root_client
+    assert "APIConflict *api_conflict.Client" in root_client
+    assert "AltConflict *alt_conflict.Client" in root_client
+    assert "APIConflict: api_conflict.NewClient(transport)" in root_client
+    assert "AltConflict: alt_conflict.NewClient(transport)" in root_client
+
+
 def test_golang_client_writer_generates_layout_preserves_user_files_and_compiles(tmp_path):
     class CommonErr(Model):
         UNKNOWN = Error(-1, "unknown")

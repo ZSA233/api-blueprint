@@ -41,6 +41,22 @@ public final class DemoTypes {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
+    public record FormSubmitForm(
+        @JsonProperty("title") String title,
+        @JsonProperty("count") Integer count,
+        @JsonProperty("enabled") Boolean enabled
+    ) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record FormSubmitResponse(
+        @JsonProperty("summary") String summary,
+        @JsonProperty("count") Integer count,
+        @JsonProperty("enabled") Boolean enabled
+    ) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record PutDemoQuery(
         @JsonProperty("arg1") String arg1,
         @JsonProperty("arg2") Float arg2,

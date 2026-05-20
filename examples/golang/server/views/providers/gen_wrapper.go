@@ -50,6 +50,12 @@ type RSP_JSON_CodeMessageDataEnvelope[T any] struct {
 
 type RSP_JSON_NoEnvelope = any
 
+type RSP_JSON_OkDataErrorEnvelope[T any] struct {
+	Ok    bool                     `json:"ok" xml:"ok" form:"ok" binding:"required"`
+	Error *EnvelopeApiErrorPayload `json:"error,omitempty" xml:"error,omitempty" form:"error,omitempty" binding:"omitempty"`
+	Data  *T                       `json:"data,omitempty" xml:"data,omitempty" form:"data,omitempty" binding:"omitempty"`
+}
+
 func NewRSP_JSON_CodeMessageDataEnvelope[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (codeInt int, rsp any) {
 	code, message, toast, apiErrorPayload := unwrapError(err)
 	_, _, _, _ = code, message, toast, apiErrorPayload
@@ -96,6 +102,31 @@ func WrapRSP_JSON_NoEnvelope[P any](data *P, err error) *P {
 	return typed
 }
 
+func NewRSP_JSON_OkDataErrorEnvelope[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (codeInt int, rsp any) {
+	code, message, toast, apiErrorPayload := unwrapError(err)
+	_, _, _, _ = code, message, toast, apiErrorPayload
+
+	if apiErrorPayload != nil {
+		return 0, &RSP_JSON_OkDataErrorEnvelope[P]{
+			Ok:    false,
+			Error: apiErrorPayload,
+		}
+	}
+	return 0, &RSP_JSON_OkDataErrorEnvelope[P]{
+		Ok:   true,
+		Data: data,
+	}
+}
+
+func WrapRSP_JSON_OkDataErrorEnvelope[P any](data *P, err error) *RSP_JSON_OkDataErrorEnvelope[P] {
+	_, rsp := NewRSP_JSON_OkDataErrorEnvelope[any, any, P](nil, data, err)
+	if rsp == nil {
+		return nil
+	}
+	typed, _ := rsp.(*RSP_JSON_OkDataErrorEnvelope[P])
+	return typed
+}
+
 func NewRSP_JSON_Entry[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (code int, rsp any) {
 	switch prov.Options {
 
@@ -103,6 +134,8 @@ func NewRSP_JSON_Entry[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err err
 		code, rsp = NewRSP_JSON_CodeMessageDataEnvelope(prov, data, err)
 	case "NoEnvelope":
 		code, rsp = NewRSP_JSON_NoEnvelope(prov, data, err)
+	case "OkDataErrorEnvelope":
+		code, rsp = NewRSP_JSON_OkDataErrorEnvelope(prov, data, err)
 	default:
 		panic("[NewRS_JSON] should unreachable.")
 	}
@@ -133,6 +166,18 @@ type RSP_XML_NoEnvelope_INNER = any
 type RSP_XML_NoEnvelope RSP_XML[RSP_XML_NoEnvelope_INNER]
 
 func (r RSP_XML_NoEnvelope) MarshalXML(enc *xml.Encoder, start xml.StartElement) error {
+	return marshalXML(enc, start, r.XMLName, r.Inner)
+}
+
+type RSP_XML_OkDataErrorEnvelope_INNER[T any] struct {
+	Ok    bool                     `json:"ok" xml:"ok" form:"ok" binding:"required"`
+	Error *EnvelopeApiErrorPayload `json:"error,omitempty" xml:"error,omitempty" form:"error,omitempty" binding:"omitempty"`
+	Data  *T                       `json:"data,omitempty" xml:"data,omitempty" form:"data,omitempty" binding:"omitempty"`
+}
+
+type RSP_XML_OkDataErrorEnvelope[T any] RSP_XML[RSP_XML_OkDataErrorEnvelope_INNER[T]]
+
+func (r RSP_XML_OkDataErrorEnvelope[T]) MarshalXML(enc *xml.Encoder, start xml.StartElement) error {
 	return marshalXML(enc, start, r.XMLName, r.Inner)
 }
 
@@ -174,6 +219,28 @@ func NewRSP_XML_NoEnvelope[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err
 	}
 }
 
+func NewRSP_XML_OkDataErrorEnvelope[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (codeInt int, rsp any) {
+	code, message, toast, apiErrorPayload := unwrapError(err)
+	_, _, _, _ = code, message, toast, apiErrorPayload
+
+	if apiErrorPayload != nil {
+		return 0, &RSP_XML_OkDataErrorEnvelope[P]{
+			XMLName: xml.Name{Local: "response"},
+			Inner: &RSP_XML_OkDataErrorEnvelope_INNER[P]{
+				Ok:    false,
+				Error: apiErrorPayload,
+			},
+		}
+	}
+	return 0, &RSP_XML_OkDataErrorEnvelope[P]{
+		XMLName: xml.Name{Local: "response"},
+		Inner: &RSP_XML_OkDataErrorEnvelope_INNER[P]{
+			Ok:   true,
+			Data: data,
+		},
+	}
+}
+
 func NewRSP_XML_Entry[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (code int, rsp any) {
 	switch prov.Options {
 
@@ -181,6 +248,8 @@ func NewRSP_XML_Entry[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err erro
 		code, rsp = NewRSP_XML_CodeMessageDataEnvelope(prov, data, err)
 	case "NoEnvelope":
 		code, rsp = NewRSP_XML_NoEnvelope(prov, data, err)
+	case "OkDataErrorEnvelope":
+		code, rsp = NewRSP_XML_OkDataErrorEnvelope(prov, data, err)
 	default:
 		panic("[NewRSP_XML] should unreachable.")
 	}

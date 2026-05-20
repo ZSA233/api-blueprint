@@ -15,6 +15,10 @@ public interface GenDemoService {
         DemoTypes.TestPostJSON json
     ) throws Exception;
 
+    DemoTypes.FormSubmitResponse formSubmit(
+        DemoTypes.FormSubmitForm form
+    ) throws Exception;
+
     DemoTypes.PutDemoResponse putDemo(
         DemoTypes.PutDemoQuery query,
         DemoTypes.PutDemoJSON json

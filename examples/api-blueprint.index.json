@@ -6,10 +6,10 @@
   ],
   "counts": {
     "connections": 3,
-    "errors": 3,
-    "routes": 22,
-    "schemas": 45,
-    "services": 5,
+    "errors": 4,
+    "routes": 25,
+    "schemas": 50,
+    "services": 7,
     "targets": 20
   },
   "generator": {
@@ -83,6 +83,16 @@
       "url": "/api/binary/audit-packet"
     },
     {
+      "id": "api.conflict.get.default",
+      "kind": "rpc",
+      "methods": [
+        "GET"
+      ],
+      "operation": "Default",
+      "service_id": "api.conflict",
+      "url": "/api/conflict/default"
+    },
+    {
       "id": "api.demo.get.abc",
       "kind": "rpc",
       "methods": [
@@ -101,6 +111,16 @@
       "operation": "TestPost",
       "service_id": "api.demo",
       "url": "/api/demo/test_post"
+    },
+    {
+      "id": "api.demo.post.formsubmit",
+      "kind": "rpc",
+      "methods": [
+        "POST"
+      ],
+      "operation": "FormSubmit",
+      "service_id": "api.demo",
+      "url": "/api/demo/form-submit"
     },
     {
       "id": "api.demo.put.z1put",
@@ -267,6 +287,16 @@
       "operation": "Dochaha",
       "service_id": "static.static",
       "url": "/static/dochaha"
+    },
+    {
+      "id": "alt.conflict.get.default",
+      "kind": "rpc",
+      "methods": [
+        "GET"
+      ],
+      "operation": "Default",
+      "service_id": "alt.conflict",
+      "url": "/alt/conflict/default"
     }
   ],
   "services": [
@@ -287,12 +317,20 @@
       "route_count": 2
     },
     {
+      "group": "conflict",
+      "id": "api.conflict",
+      "name": "ConflictService",
+      "path": "/api/conflict",
+      "root": "api",
+      "route_count": 1
+    },
+    {
       "group": "demo",
       "id": "api.demo",
       "name": "DemoService",
       "path": "/api/demo",
       "root": "api",
-      "route_count": 10
+      "route_count": 11
     },
     {
       "group": "hello",
@@ -309,6 +347,14 @@
       "path": "/static",
       "root": "static",
       "route_count": 2
+    },
+    {
+      "group": "conflict",
+      "id": "alt.conflict",
+      "name": "ConflictService",
+      "path": "/alt/conflict",
+      "root": "alt",
+      "route_count": 1
     }
   ],
   "targets": [
@@ -317,140 +363,140 @@
       "kind": "contract",
       "out_dir": ".",
       "role": "contract",
-      "route_count": 22
+      "route_count": 25
     },
     {
       "id": "go.server",
       "kind": "go-server",
       "out_dir": "golang/server/views",
       "role": "server",
-      "route_count": 22
+      "route_count": 25
     },
     {
       "id": "go.client",
       "kind": "go-client",
       "out_dir": "golang/client",
       "role": "client",
-      "route_count": 22
+      "route_count": 25
     },
     {
       "id": "typescript.client",
       "kind": "typescript-client",
       "out_dir": "typescript",
       "role": "client",
-      "route_count": 22
+      "route_count": 25
     },
     {
       "id": "kotlin.client",
       "kind": "kotlin-client",
       "out_dir": "kotlin/client",
       "role": "client",
-      "route_count": 18
+      "route_count": 21
     },
     {
       "id": "kotlin.server",
       "kind": "kotlin-server",
       "out_dir": "kotlin/server",
       "role": "server",
-      "route_count": 20
+      "route_count": 23
     },
     {
       "id": "java.server",
       "kind": "java-server",
       "out_dir": "java/server",
       "role": "server",
-      "route_count": 22
+      "route_count": 25
     },
     {
       "id": "java.client",
       "kind": "java-client",
       "out_dir": "java/client",
       "role": "client",
-      "route_count": 22
+      "route_count": 25
     },
     {
       "id": "flutter.client",
       "kind": "flutter-client",
       "out_dir": "flutter",
       "role": "client",
-      "route_count": 20
+      "route_count": 23
     },
     {
       "id": "python.server",
       "kind": "python-server",
       "out_dir": "python/server",
       "role": "server",
-      "route_count": 20
+      "route_count": 23
     },
     {
       "id": "python.client",
       "kind": "python-client",
       "out_dir": "python/client",
       "role": "client",
-      "route_count": 22
+      "route_count": 25
     },
     {
       "id": "http",
       "kind": "http-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 22
+      "route_count": 25
     },
     {
       "id": "http.kotlin",
       "kind": "http-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 22
+      "route_count": 25
     },
     {
       "id": "http.python",
       "kind": "http-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 22
+      "route_count": 25
     },
     {
       "id": "http.java",
       "kind": "http-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 22
+      "route_count": 25
     },
     {
       "id": "wails.v3",
       "kind": "wails-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 20
+      "route_count": 23
     },
     {
       "id": "wails.v2",
       "kind": "wails-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 20
+      "route_count": 23
     },
     {
       "id": "grpc.proto",
       "kind": "grpc-proto",
       "out_dir": "grpc/protos",
       "role": "grpc",
-      "route_count": 20
+      "route_count": 23
     },
     {
       "id": "grpc.go",
       "kind": "grpc-go",
       "out_dir": "grpc/go",
       "role": "grpc",
-      "route_count": 20
+      "route_count": 23
     },
     {
       "id": "grpc.python",
       "kind": "grpc-python",
       "out_dir": "grpc/python",
       "role": "grpc",
-      "route_count": 20
+      "route_count": 23
     }
   ],
   "version": "2.0"

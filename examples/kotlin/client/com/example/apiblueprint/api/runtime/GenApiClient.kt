@@ -2,6 +2,7 @@
 package com.example.apiblueprint.api.runtime
 
 import com.example.apiblueprint.api.routes.api.binary.BinaryApi
+import com.example.apiblueprint.api.routes.api.conflict.ConflictApi
 import com.example.apiblueprint.api.routes.api.demo.DemoApi
 import com.example.apiblueprint.api.routes.api.hello.HelloApi
 
@@ -9,6 +10,7 @@ public open class GenApiClient(
     private val transport: ApiTransport,
 ) {
     public val binary: BinaryApi = BinaryApi(transport)
+    public val conflict: ConflictApi = ConflictApi(transport)
     public val demo: DemoApi = DemoApi(transport)
     public val hello: HelloApi = HelloApi(transport)
 }

@@ -13,6 +13,10 @@ public interface GenDemoService {
         json: DemoTestPostJson
     ): DemoTestPostResponse
 
+    public suspend fun formSubmit(
+        form: DemoFormSubmitForm
+    ): DemoFormSubmitResponse
+
     public suspend fun putDemo(
         query: DemoPutDemoQuery,
         json: DemoPutDemoJson

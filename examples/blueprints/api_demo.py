@@ -102,6 +102,21 @@ with apibp.group('/demo') as views:
         map     = Map[String, ApiDemoMap](description='map')
     )
 
+    views.POST(
+        '/form-submit',
+        operation_id='formSubmit',
+        summary='Form body example',
+        description='Covers application/x-www-form-urlencoded request generation',
+    ).REQ_FORM(
+        title   = String(description='title'),
+        count   = Int(description='count', default=1),
+        enabled = Bool(description='enabled', default=True),
+    ).RSP(
+        summary = String(description='summary'),
+        count   = Int(description='count'),
+        enabled = Bool(description='enabled'),
+    )
+
     views.PUT(
         '/1put', operation_id='putDemo', summary='这是put的summary', description='这是put的description'
     ).ARGS(

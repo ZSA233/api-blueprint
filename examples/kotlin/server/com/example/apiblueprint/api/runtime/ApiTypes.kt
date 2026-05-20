@@ -81,6 +81,14 @@ public enum class ColorEnum(public val wireValue: String) {
 }
 
 @Serializable
+public data class ConflictModel(
+    public val default: String,
+    @SerialName("class_")
+    public val `class`: String,
+    public val enum: KeywordEnum
+)
+
+@Serializable
 public data class ConnectionClose(
     public val code: Int,
     public val reason: String? = null,
@@ -120,6 +128,14 @@ public enum class HelloChannelMsgTypeEnum(public val wireValue: String) {
 public enum class HelloWayEnum(public val wireValue: String) {
     @SerialName("ASD")
     ASD("ASD")
+}
+
+@Serializable
+public enum class KeywordEnum(public val wireValue: String) {
+    @SerialName("default")
+    DEFAULT("default"),
+    @SerialName("class")
+    CLASS("class")
 }
 
 @Serializable

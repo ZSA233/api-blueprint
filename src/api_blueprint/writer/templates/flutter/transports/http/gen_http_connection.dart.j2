@@ -15,6 +15,7 @@ class HttpEventStreamBridge<Recv, Close> implements ApiStreamBridge<Recv, Close>
   final Close Function(Object? value) decodeClose;
   final _messages = <SocketMessageHandler<Recv>>{};
   final _closes = <SocketCloseHandler<Close>>{};
+  var _didClose = false;
   late final StreamSubscription<String> _subscription;
 
   @override
@@ -83,14 +84,18 @@ class HttpEventStreamBridge<Recv, Close> implements ApiStreamBridge<Recv, Close>
       return;
     }
     final message = decodeMessage(payload);
-    for (final listener in _messages) {
+    for (final listener in List.of(_messages)) {
       listener(message);
     }
   }
 
   void _emitClose(Object? payload) {
+    if (_didClose) {
+      return;
+    }
+    _didClose = true;
     final close = decodeClose(payload);
-    for (final listener in _closes) {
+    for (final listener in List.of(_closes)) {
       listener(close);
     }
   }
@@ -105,6 +110,7 @@ class HttpSocketBridge<Recv, Send, Close> implements ApiChannelBridge<Recv, Send
   final Close Function(Object? value) decodeClose;
   final _messages = <SocketMessageHandler<Recv>>{};
   final _closes = <SocketCloseHandler<Close>>{};
+  var _didClose = false;
 
   @override
   late final Future<void> ready = socket.ready;
@@ -117,7 +123,7 @@ class HttpSocketBridge<Recv, Send, Close> implements ApiChannelBridge<Recv, Send
       return;
     }
     final message = decodeMessage(object['type'] == 'message' ? object['data'] : payload);
-    for (final listener in _messages) {
+    for (final listener in List.of(_messages)) {
       listener(message);
     }
   }, onDone: () => _emitClose(null), onError: (Object error) => _emitClose({'error': error.toString()}));
@@ -157,8 +163,12 @@ class HttpSocketBridge<Recv, Send, Close> implements ApiChannelBridge<Recv, Send
   }
 
   void _emitClose(Object? payload) {
+    if (_didClose) {
+      return;
+    }
+    _didClose = true;
     final close = decodeClose(payload);
-    for (final listener in _closes) {
+    for (final listener in List.of(_closes)) {
       listener(close);
     }
   }

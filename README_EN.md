@@ -125,8 +125,9 @@ Common development commands:
 make test
 make example-compile-check
 make example-validation
+uv run python -m scripts.example_conformance check --server go --clients go,typescript,kotlin,flutter
 make example-golang-suite
 make example-java-suite
 ```
 
-`example-golang-suite` and `example-java-suite` are manual end-to-end validation aids; they are not part of default tests, release preflight, or CI. See [Release Process](docs/release-process.md) for versioning, build, install, and GitHub Release flow.
+`scripts.example_conformance` starts a real Go HTTP server and runs Go / TypeScript / Kotlin / Flutter clients against it; `example-golang-suite` and `example-java-suite` remain manual end-to-end validation aids. See [Release Process](docs/release-process.md) for versioning, build, install, and GitHub Release flow.

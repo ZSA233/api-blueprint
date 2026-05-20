@@ -41,11 +41,13 @@ BLUEPRINT_GOLANG_SERVER_PRESERVED = (
     "go.sum",
     "main.go",
     "views/routes/api/binary/impl.go",
+    "views/routes/api/conflict/impl.go",
     "views/routes/api/demo/assistant_session_error.go",
     "views/routes/api/demo/assistant_session_processor.go",
     "views/routes/api/demo/assistant_session_session.go",
     "views/routes/api/demo/impl.go",
     "views/routes/api/hello/impl.go",
+    "views/routes/alt/conflict/impl.go",
 )
 BLUEPRINT_GOLANG_CLIENT_PRESERVED = (
     "go.mod",
@@ -55,13 +57,20 @@ BLUEPRINT_GOLANG_SUITE_PRESERVED = (
     "go.mod",
     "main.go",
 )
+BLUEPRINT_GOLANG_CONFORMANCE_PRESERVED = (
+    "go.mod",
+    "main.go",
+)
 BLUEPRINT_TYPESCRIPT_PRESERVED = (
     ".vscode/settings.json",
+    "conformance.ts",
     "index.ts",
     "suite.ts",
     "tsconfig.json",
 )
 BLUEPRINT_KOTLIN_PRESERVED = ()
+BLUEPRINT_KOTLIN_CLIENT_PRESERVED = ()
+BLUEPRINT_KOTLIN_CONFORMANCE_PRESERVED = ("Conformance.kt",)
 BLUEPRINT_JAVA_CLIENT_PRESERVED = (
     "com/example/apiblueprint/api/runtime/ApiClient.java",
     "com/example/apiblueprint/api/transports/http/HttpApiClient.java",
@@ -104,6 +113,7 @@ BLUEPRINT_FLUTTER_PRESERVED = (
     "lib/src/api/routes/api/hello/hello_types.dart",
     "test/api_contract_test.dart",
     "test/binary_contract_test.dart",
+    "test/conformance_test.dart",
     "test/http_transport_test.dart",
 )
 WAILS_HELLO_GOLANG_PRESERVED = (
@@ -147,10 +157,12 @@ class BlueprintExampleWorkspace:
     golang_server_dir: Path
     golang_client_dir: Path
     golang_suite_dir: Path
+    golang_conformance_dir: Path
     typescript_dir: Path
     kotlin_dir: Path
     kotlin_client_dir: Path
     kotlin_server_dir: Path
+    kotlin_conformance_dir: Path
     java_dir: Path
     java_client_dir: Path
     java_server_dir: Path
@@ -346,10 +358,12 @@ def _blueprint_workspace(root: Path) -> BlueprintExampleWorkspace:
         golang_server_dir=root / "golang" / "server",
         golang_client_dir=root / "golang" / "client",
         golang_suite_dir=root / "golang" / "suite",
+        golang_conformance_dir=root / "golang" / "conformance",
         typescript_dir=root / "typescript",
         kotlin_dir=root / "kotlin",
         kotlin_client_dir=root / "kotlin" / "client",
         kotlin_server_dir=root / "kotlin" / "server",
+        kotlin_conformance_dir=root / "kotlin" / "conformance",
         java_dir=root / "java",
         java_client_dir=root / "java" / "client",
         java_server_dir=root / "java" / "server",
@@ -423,6 +437,10 @@ def _prepare_blueprint_outputs(*, source_root: Path, target_root: Path) -> None:
     go_server_preserved = _capture_relative_files(source_root / "golang" / "server", BLUEPRINT_GOLANG_SERVER_PRESERVED)
     go_client_preserved = _capture_relative_files(source_root / "golang" / "client", BLUEPRINT_GOLANG_CLIENT_PRESERVED)
     go_suite_preserved = _capture_relative_files(source_root / "golang" / "suite", BLUEPRINT_GOLANG_SUITE_PRESERVED)
+    go_conformance_preserved = _capture_relative_files(
+        source_root / "golang" / "conformance",
+        BLUEPRINT_GOLANG_CONFORMANCE_PRESERVED,
+    )
     shutil.rmtree(target_root / "golang", ignore_errors=True)
     _prepare_output_dir(
         target_root / "golang" / "server",
@@ -437,17 +455,32 @@ def _prepare_blueprint_outputs(*, source_root: Path, target_root: Path) -> None:
         go_suite_preserved,
     )
     _prepare_output_dir(
+        target_root / "golang" / "conformance",
+        go_conformance_preserved,
+    )
+    _prepare_output_dir(
         target_root / "typescript",
         _capture_relative_files(source_root / "typescript", BLUEPRINT_TYPESCRIPT_PRESERVED),
+    )
+    kotlin_conformance_preserved = _capture_relative_files(
+        source_root / "kotlin" / "conformance",
+        BLUEPRINT_KOTLIN_CONFORMANCE_PRESERVED,
     )
     shutil.rmtree(target_root / "kotlin", ignore_errors=True)
     _prepare_output_dir(
         target_root / "kotlin" / "client",
-        _capture_relative_files(source_root / "kotlin" / "client", BLUEPRINT_KOTLIN_PRESERVED),
+        _capture_relative_files(
+            source_root / "kotlin" / "client",
+            (*BLUEPRINT_KOTLIN_PRESERVED, *BLUEPRINT_KOTLIN_CLIENT_PRESERVED),
+        ),
     )
     _prepare_output_dir(
         target_root / "kotlin" / "server",
         _capture_relative_files(source_root / "kotlin" / "server", BLUEPRINT_KOTLIN_PRESERVED),
+    )
+    _prepare_output_dir(
+        target_root / "kotlin" / "conformance",
+        kotlin_conformance_preserved,
     )
     _prepare_output_dir(
         target_root / "java" / "client",

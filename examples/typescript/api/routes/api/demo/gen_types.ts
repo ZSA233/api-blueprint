@@ -59,6 +59,24 @@ export interface ErrorDemoResponse {
   status: string;
 }
 
+export interface FormSubmitForm {
+  /** title */
+  title: string;
+  /** count */
+  count?: number;
+  /** enabled */
+  enabled?: boolean;
+}
+
+export interface FormSubmitResponse {
+  /** summary */
+  summary: string;
+  /** count */
+  count: number;
+  /** enabled */
+  enabled: boolean;
+}
+
 export type MapModelResponse = Record<number, ApiDemoMap>;
 
 export interface PostDeprecatedJSON {

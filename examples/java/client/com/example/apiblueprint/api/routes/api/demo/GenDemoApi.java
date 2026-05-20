@@ -57,6 +57,25 @@ public class GenDemoApi {
         return transport.execute(request);
     }
 
+    public DemoTypes.FormSubmitResponse formSubmit(
+        DemoTypes.FormSubmitForm form
+    ) throws Exception {
+        ApiRequest<DemoTypes.FormSubmitResponse> request = new ApiRequest<>(
+            "api.demo.post.formsubmit",
+            "POST",
+            "/api/demo/form-submit",
+            null,
+            null,
+            form,
+            null,
+            ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+            DemoTypes.FormSubmitResponse.class,
+            "application/json",
+            Map.of()
+        );
+        return transport.execute(request);
+    }
+
     public DemoTypes.PutDemoResponse putDemo(
         DemoTypes.PutDemoQuery query,
         DemoTypes.PutDemoJSON json

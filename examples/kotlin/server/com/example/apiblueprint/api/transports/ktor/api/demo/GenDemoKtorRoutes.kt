@@ -55,6 +55,18 @@ public fun Route.registerDemoRoutes(
         }
     }
 
+    post("/api/demo/form-submit") {
+        val form = decodeParameters(call.receiveParameters(), DemoFormSubmitForm.serializer())
+        try {
+            val result = service.formSubmit(
+                form = form
+            )
+            respondSuccess(call, result, DemoFormSubmitResponse.serializer(), ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "application/json")
+        } catch (error: ApiError) {
+            respondApiError(call, error, ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "api.demo.post.formsubmit")
+        }
+    }
+
     put("/api/demo/1put") {
         val query = decodeParameters(call.request.queryParameters, DemoPutDemoQuery.serializer())
         val json = ApiJson.decodeFromString(DemoPutDemoJson.serializer(), call.receiveText().ifBlank { "{}" })

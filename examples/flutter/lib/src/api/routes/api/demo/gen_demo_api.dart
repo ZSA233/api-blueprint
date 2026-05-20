@@ -57,6 +57,28 @@ class GenDemoApi {
 
 
 
+  Future<DemoFormSubmitResponse> formSubmit({
+    DemoFormSubmitForm? form,
+    Map<String, String> headers = const {},
+  }) {
+    return transport.request(
+      ApiRequest<DemoFormSubmitResponse>(
+        routeId: "api.demo.post.formsubmit",
+        method: "POST",
+        path: "/api/demo/form-submit",
+        query: const <String, String?>{},
+        headers: headers,
+        form: form?.toJson(),
+        responseMediaType: "application/json",
+        responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+        decode: DemoFormSubmitResponse.fromJsonValue,
+      ),
+    );
+  }
+
+
+
+
   Future<DemoPutDemoResponse> putDemo({
     DemoPutDemoQuery? query,
     DemoPutDemoJson? json,

@@ -4,9 +4,11 @@ import 'gen_api_errors.dart';
 class ApiErrorCode {
   const ApiErrorCode._();
 
-  static const unknown = -1;
+  static const commonErrUnknown = -1;
 
   static const tokenExpire = 55555;
+
+  static const demoErrUnknown = 70002;
 
   static const rateLimited = 42901;
 }
@@ -36,6 +38,18 @@ final apiErrorsById = <String, ApiErrorPayload>{
       defaultMessage: "\u767b\u5f55\u72b6\u6001\u5df2\u5931\u6548\uff0c\u8bf7\u91cd\u65b0\u767b\u5f55",
     ),
   ),
+  "DemoErr.UNKNOWN": ApiErrorPayload(
+    id: "DemoErr.UNKNOWN",
+    group: "DemoErr",
+    key: "UNKNOWN",
+    code: 70002,
+    message: "demo unknown error",
+    toast: ApiToastPayload(
+      key: "DemoErr.UNKNOWN",
+      level: "error",
+      defaultMessage: "demo unknown error",
+    ),
+  ),
   "DemoErr.RATE_LIMITED": ApiErrorPayload(
     id: "DemoErr.RATE_LIMITED",
     group: "DemoErr",
@@ -63,11 +77,19 @@ final routeApiErrorsByCode = <String, Map<int, ApiErrorPayload>>{
     -1: apiErrorsById["CommonErr.UNKNOWN"]!,
     55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,
   },
+  "api.conflict.get.default": {
+    -1: apiErrorsById["CommonErr.UNKNOWN"]!,
+    55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,
+  },
   "api.demo.get.abc": {
     -1: apiErrorsById["CommonErr.UNKNOWN"]!,
     55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,
   },
   "api.demo.post.testpost": {
+    -1: apiErrorsById["CommonErr.UNKNOWN"]!,
+    55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,
+  },
+  "api.demo.post.formsubmit": {
     -1: apiErrorsById["CommonErr.UNKNOWN"]!,
     55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,
   },
@@ -102,6 +124,7 @@ final routeApiErrorsByCode = <String, Map<int, ApiErrorPayload>>{
   "api.demo.get.errordemo": {
     -1: apiErrorsById["CommonErr.UNKNOWN"]!,
     55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,
+    70002: apiErrorsById["DemoErr.UNKNOWN"]!,
     42901: apiErrorsById["DemoErr.RATE_LIMITED"]!,
   },
   "api.hello.get.abc": {
@@ -137,6 +160,7 @@ final routeApiErrorsByCode = <String, Map<int, ApiErrorPayload>>{
 final apiErrorsByCode = <int, ApiErrorPayload>{
   -1: apiErrorsById["CommonErr.UNKNOWN"]!,
   55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,
+  70002: apiErrorsById["DemoErr.UNKNOWN"]!,
   42901: apiErrorsById["DemoErr.RATE_LIMITED"]!,
 };
 

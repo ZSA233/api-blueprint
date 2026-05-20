@@ -7,17 +7,20 @@ from fastapi import APIRouter, WebSocket
 from starlette.responses import StreamingResponse
 
 from ...routes.api.service import ApiService, ApiServiceStub
+from ...routes.api.conflict.service import ConflictService, ConflictServiceStub
 from ...routes.api.demo.service import DemoService, DemoServiceStub
 from ...routes.api.hello.service import HelloService, HelloServiceStub
 
 
 def create_router(
     api_service: ApiService | None = None,
+    conflict_service: ConflictService | None = None,
     demo_service: DemoService | None = None,
     hello_service: HelloService | None = None,
 ) -> APIRouter:
     router = APIRouter()
     api_service_impl = api_service or ApiServiceStub()
+    conflict_service_impl = conflict_service or ConflictServiceStub()
     demo_service_impl = demo_service or DemoServiceStub()
     hello_service_impl = hello_service or HelloServiceStub()
 
@@ -27,6 +30,15 @@ def create_router(
         service = api_service_impl
         await service.hello_channel()
         await websocket.close()
+
+    @router.api_route("/api/conflict/default", methods=["GET"])
+    async def conflict_default(
+        query: dict[str, Any] | None = None,
+    ) -> Any:
+        service = conflict_service_impl
+        return await service.default(
+            query=query,
+        )
 
     @router.api_route("/api/demo/abc", methods=["GET"])
     async def demo_abc(
@@ -44,6 +56,15 @@ def create_router(
         service = demo_service_impl
         return await service.test_post(
             json=json,
+        )
+
+    @router.api_route("/api/demo/form-submit", methods=["POST"])
+    async def demo_form_submit(
+        form: dict[str, Any] | None = None,
+    ) -> Any:
+        service = demo_service_impl
+        return await service.form_submit(
+            form=form,
         )
 
     @router.api_route("/api/demo/1put", methods=["PUT"])

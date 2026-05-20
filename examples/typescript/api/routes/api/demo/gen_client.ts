@@ -74,6 +74,38 @@ export class DemoClient extends BaseClient {
   }
 
   /**
+   * Form body example
+   * Covers application/x-www-form-urlencoded request generation
+   * Tags: api
+   */
+
+  async formSubmit(
+    request: {
+      form?: Types.FormSubmitForm;
+      body?: RequestInit["body"];
+      headers?: Record<string, string>;
+    } = {},
+    init: RequestInit = {},
+    timeoutMs?: number,
+  ): Promise<Types.FormSubmitResponse> {
+    return this.request<Types.FormSubmitResponse>({
+      routeId: "api.demo.post.formsubmit",
+      method: "POST",
+      path: "/api/demo/form-submit",
+      service: "DemoService",
+      operation: "FormSubmit",
+      namespace: "demo",
+      form: request.form as unknown as Record<string, unknown> | undefined,
+      body: request.body,
+      headers: request.headers,
+      init,
+      responseType: "json",
+      responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+      timeoutMs,
+    });
+  }
+
+  /**
    * 这是put的summary
    * 这是put的description
    * Tags: api

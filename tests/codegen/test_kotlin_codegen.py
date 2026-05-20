@@ -250,6 +250,11 @@ def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full
     assert "public interface ApiSocketBridge<Send, Recv>" not in runtime_text
     assert "public interface ApiStreamBridge<Recv, Close>" in runtime_text
     assert "public interface ApiChannelBridge<Recv, Send, Close>" in runtime_text
+    assert (
+        'val code = nested["code"]?.jsonPrimitive?.intOrNull ?: '
+        "root[envelope.fields.code]?.jsonPrimitive?.intOrNull ?: 0"
+    ) in runtime_text
+    assert "val message = nestedMessage.ifBlank { root[envelope.fields.message]?.jsonPrimitive?.contentOrNull.orEmpty() }" in runtime_text
     assert "class ApiError" in errors_text
     assert "data class ApiErrorPayload" in errors_text
     assert "data class ApiToastSpec" in errors_text
@@ -285,6 +290,9 @@ def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full
     assert "public class OkHttpApiTransport" in transport_text
     assert "private val config: HttpApiConfig = HttpApiConfig()" in transport_text
     assert "override suspend fun execute(request: ApiRequest<*>): ApiResponse" in transport_text
+    assert 'toRequestBody("application/json; charset=utf-8".toMediaType())' in transport_text
+    assert 'toRequestBody("application/x-www-form-urlencoded; charset=utf-8".toMediaType())' in transport_text
+    assert "private fun encodeFormPayload(" in transport_text
     assert "override fun connectSocket(options: SocketConnectOptions): ApiSocketBridge" not in transport_text
     assert "override fun openStream(options: StreamConnectOptions): ApiStreamBridge" in transport_text
     assert "override fun openChannel(options: ChannelConnectOptions): ApiChannelBridge" in transport_text

@@ -13,6 +13,12 @@ type DefaultConnectionClose struct {
 	Error  string `json:"error,omitempty" xml:"error,omitempty" form:"error,omitempty" binding:"omitempty"`
 }
 
+type ConflictModel struct {
+	Default string `json:"default" xml:"default" form:"default" binding:"required"`
+	Class   string `json:"class_" xml:"class_" form:"class_" binding:"required"`
+	Enum    string `json:"enum" xml:"enum" form:"enum" binding:"required"`
+}
+
 type ApiDemoMap struct {
 	Haha int64 `json:"haha" xml:"haha" form:"haha" binding:"required"`
 }

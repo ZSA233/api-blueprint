@@ -1,0 +1,7 @@
+package com.example.apiblueprint.alt.routes.alt.conflict
+
+import com.example.apiblueprint.alt.runtime.ApiTransport
+
+public class ConflictApi internal constructor(
+    transport: ApiTransport,
+) : GenConflictApi(transport)

@@ -17,6 +17,12 @@ public open class DemoServiceStub : GenDemoService {
         throw NotImplementedError("api.demo.post.testpost is not implemented")
     }
 
+    public override suspend fun formSubmit(
+        form: DemoFormSubmitForm
+    ): DemoFormSubmitResponse {
+        throw NotImplementedError("api.demo.post.formsubmit is not implemented")
+    }
+
     public override suspend fun putDemo(
         query: DemoPutDemoQuery,
         json: DemoPutDemoJson

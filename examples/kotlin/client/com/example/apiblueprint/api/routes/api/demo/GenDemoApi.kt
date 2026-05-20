@@ -46,6 +46,25 @@ public open class GenDemoApi internal constructor(
         )
     }
 
+    public open suspend fun formSubmit(
+        form: DemoFormSubmitForm,
+        headers: Map<String, String> = emptyMap(),
+    ): DemoFormSubmitResponse {
+        return transport.request(
+            ApiRequest(
+                routeId = "api.demo.post.formsubmit",
+                method = "POST",
+                path = "/api/demo/form-submit",
+                headers = headers,
+                form = form,
+                formSerializer = DemoFormSubmitForm.serializer(),
+                responseSerializer = DemoFormSubmitResponse.serializer(),
+                responseMediaType = "application/json",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+            )
+        )
+    }
+
     public open suspend fun putDemo(
         query: DemoPutDemoQuery,
         json: DemoPutDemoJson,

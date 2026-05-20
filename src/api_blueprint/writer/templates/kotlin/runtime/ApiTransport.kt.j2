@@ -162,16 +162,22 @@ private fun decodeApiErrorPayload(body: String, routeId: String, envelope: ApiRe
 
 private fun codeMessageEnvelopePayload(root: JsonObject, envelope: ApiResponseEnvelope, routeId: String): ApiErrorPayload {
     val nested = runCatching { root[envelope.fields.error]?.jsonObject }.getOrNull() ?: JsonObject(emptyMap())
-    val payload = apiErrorPayloadFromNode(nested, routeId)
-    val code = if (payload.code == 0) root[envelope.fields.code]?.jsonPrimitive?.intOrNull ?: 0 else payload.code
-    val message = payload.message.ifBlank { root[envelope.fields.message]?.jsonPrimitive?.contentOrNull.orEmpty() }
+    val code = nested["code"]?.jsonPrimitive?.intOrNull ?: root[envelope.fields.code]?.jsonPrimitive?.intOrNull ?: 0
+    val nestedMessage = nested["message"]?.jsonPrimitive?.contentOrNull.orEmpty()
+    val message = nestedMessage.ifBlank { root[envelope.fields.message]?.jsonPrimitive?.contentOrNull.orEmpty() }
+    val toastNode = runCatching { nested["toast"]?.jsonObject }.getOrNull()
     return apiErrorPayload(
-        id = payload.id,
-        group = payload.group,
-        key = payload.key,
+        id = nested["id"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+        group = nested["group"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+        key = nested["key"]?.jsonPrimitive?.contentOrNull.orEmpty(),
         code = code,
         message = message,
-        toast = payload.toast,
+        toast = ApiToastPayload(
+            key = toastNode?.get("key")?.jsonPrimitive?.contentOrNull.orEmpty(),
+            level = toastNode?.get("level")?.jsonPrimitive?.contentOrNull.orEmpty(),
+            default = toastNode?.get("default")?.jsonPrimitive?.contentOrNull.orEmpty(),
+            text = toastNode?.get("text")?.jsonPrimitive?.contentOrNull.orEmpty(),
+        ),
         routeId = routeId,
     )
 }

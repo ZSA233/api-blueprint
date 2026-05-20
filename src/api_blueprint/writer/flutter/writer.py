@@ -183,7 +183,14 @@ class FlutterWriter(BaseWriter[FlutterBlueprint]):
         with self.write_file(self.lib_dir / f"{self.package}.dart", overwrite=True) as handle:
             if handle:
                 handle.write(FLUTTER_CLIENT_GENERATED_HEADER)
-                handle.write(render("flutter", "public_entry.dart", {"writer": self, "bps": bps}))
+                primary_bp = bps[0] if bps else None
+                handle.write(render("flutter", "public_entry.dart", {"writer": self, "primary_bp": primary_bp}))
+        for bp in bps:
+            public_name = bp.root_path.rsplit("/", 1)[-1]
+            with self.write_file(self.lib_dir / f"{public_name}.dart", overwrite=True) as handle:
+                if handle:
+                    handle.write(FLUTTER_CLIENT_GENERATED_HEADER)
+                    handle.write(render("flutter", "root_public_entry.dart", {"writer": self, "bp": bp}))
 
     def _gen_blueprint(self, bp: FlutterBlueprint) -> None:
         plan = build_flutter_blueprint_plan(self, bp)

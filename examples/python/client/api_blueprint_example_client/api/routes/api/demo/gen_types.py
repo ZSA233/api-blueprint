@@ -66,6 +66,20 @@ class TestPostResponse:
 
 
 @dataclass
+class FormSubmitForm:
+    title: str | None = None
+    count: int | None = None
+    enabled: bool | None = None
+
+
+@dataclass
+class FormSubmitResponse:
+    summary: str | None = None
+    count: int | None = None
+    enabled: bool | None = None
+
+
+@dataclass
 class PutDemoQuery:
     arg1: str | None = None
     arg2: float | None = None

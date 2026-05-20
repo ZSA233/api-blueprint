@@ -22,6 +22,13 @@ public class DemoServiceStub implements DemoService {
     }
 
     @Override
+    public DemoTypes.FormSubmitResponse formSubmit(
+        DemoTypes.FormSubmitForm form
+    ) {
+        throw new UnsupportedOperationException("formSubmit");
+    }
+
+    @Override
     public DemoTypes.PutDemoResponse putDemo(
         DemoTypes.PutDemoQuery query,
         DemoTypes.PutDemoJSON json

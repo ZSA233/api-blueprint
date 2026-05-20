@@ -5,6 +5,8 @@
 import type { ApiClientConfig } from "../../../runtime/client";
 import type { ApiClient } from "./client";
 import { createClient as createApiClient } from "./client";
+import type { ConflictClient } from "./conflict/client";
+import { createClient as createConflictClient } from "./conflict/client";
 import type { DemoClient } from "./demo/client";
 import { createClient as createDemoClient } from "./demo/client";
 import type { HelloClient } from "./hello/client";
@@ -12,6 +14,7 @@ import { createClient as createHelloClient } from "./hello/client";
 
 export interface GeneratedClients {
   apiClient: ApiClient;
+  conflictClient: ConflictClient;
   demoClient: DemoClient;
   helloClient: HelloClient;
 }
@@ -19,6 +22,7 @@ export interface GeneratedClients {
 export function createClients(config: ApiClientConfig = {}): GeneratedClients {
   return {
     apiClient: createApiClient(config),
+    conflictClient: createConflictClient(config),
     demoClient: createDemoClient(config),
     helloClient: createHelloClient(config),
   };

@@ -5,6 +5,8 @@
 import type { ApiClientConfig, ApiTransport } from "../runtime/client";
 import type { ApiClient } from "../routes/api/client";
 import { ApiClient as ApiClientImpl } from "../routes/api/client";
+import type { ConflictClient } from "../routes/api/conflict/client";
+import { ConflictClient as ConflictClientImpl } from "../routes/api/conflict/client";
 import type { DemoClient } from "../routes/api/demo/client";
 import { DemoClient as DemoClientImpl } from "../routes/api/demo/client";
 import type { HelloClient } from "../routes/api/hello/client";
@@ -29,6 +31,7 @@ export interface GeneratedClientsByTransport {
 
 export interface CommonGeneratedClients {
   apiClient: ApiClient;
+  conflictClient: ConflictClient;
   demoClient: DemoClient;
   helloClient: HelloClient;
 }
@@ -40,6 +43,7 @@ export interface ApiTransportClientConfig extends ApiClientConfig {
 export function createClientsForTransport(config: ApiTransportClientConfig): CommonGeneratedClients {
   return {
     apiClient: new ApiClientImpl(config),
+    conflictClient: new ConflictClientImpl(config),
     demoClient: new DemoClientImpl(config),
     helloClient: new HelloClientImpl(config),
   };

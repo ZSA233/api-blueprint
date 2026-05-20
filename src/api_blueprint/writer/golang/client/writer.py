@@ -6,6 +6,7 @@ import re
 import shutil
 import subprocess
 from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from typing import IO, Any, Generator, Mapping, Sequence
 
@@ -14,6 +15,7 @@ from api_blueprint.route_selection import normalize_selection_rules
 from api_blueprint.writer.core.base import BaseBlueprint, BaseWriter
 from api_blueprint.writer.core.errors import ApiErrorEntry, api_errors_from_manifest, route_api_errors_from_manifest
 from api_blueprint.writer.core.files import ensure_filepath_open
+from api_blueprint.writer.core.go_naming import to_go_package_name
 from api_blueprint.writer.core.planning import route_matches_rule
 from api_blueprint.writer.core.sdk_names import go_exported_field_name
 from api_blueprint.writer.core.templates import render
@@ -31,6 +33,13 @@ LEGACY_ROUTE_BINARY_DIRS = ("wire", "_gen_binary", "binary")
 
 class GolangClientBlueprint(BaseBlueprint["GolangClientWriter"]):
     pass
+
+
+@dataclass(frozen=True)
+class RootFacadeGroup:
+    group: GoClientGroup
+    import_alias: str
+    field_name: str
 
 
 class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
@@ -211,6 +220,7 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
                 "gen_client.go",
                 {
                     "groups": groups,
+                    "root_groups": _root_facade_groups(groups),
                     "http_import": _join_import(self.module, "transports", "http"),
                     "module": self.module,
                     "runtime_import": self.runtime_import,
@@ -689,6 +699,26 @@ def _join_import(*parts: str) -> str:
 
 def _route_import(module: str, group: GoClientGroup) -> str:
     return _join_import(module, "routes", *group.segments)
+
+
+def _root_facade_groups(groups: tuple[GoClientGroup, ...]) -> tuple[RootFacadeGroup, ...]:
+    package_counts: dict[str, int] = {}
+    field_counts: dict[str, int] = {}
+    for group in groups:
+        package_counts[group.package] = package_counts.get(group.package, 0) + 1
+        field_name = group.client_class.removesuffix("Client")
+        field_counts[field_name] = field_counts.get(field_name, 0) + 1
+
+    facade_groups: list[RootFacadeGroup] = []
+    for group in groups:
+        import_alias = group.package
+        if package_counts[group.package] > 1:
+            import_alias = to_go_package_name("_".join(group.segments), fallback=group.package)
+        field_name = group.client_class.removesuffix("Client")
+        if field_counts[field_name] > 1:
+            field_name = _go_exported("_".join(group.segments))
+        facade_groups.append(RootFacadeGroup(group=group, import_alias=import_alias, field_name=field_name))
+    return tuple(facade_groups)
 
 
 def _root_package_name(module: str) -> str:

@@ -7,6 +7,18 @@ import (
 )
 
 var (
+	UNKNOWN = e.NewApiError(e.ErrorMeta{
+		ID:      "DemoErr.UNKNOWN",
+		Group:   "DemoErr",
+		Key:     "UNKNOWN",
+		Code:    70002,
+		Message: "demo unknown error",
+		Toast: e.ToastSpec{
+			Key:     "DemoErr.UNKNOWN",
+			Level:   "error",
+			Default: "demo unknown error",
+		},
+	})
 	RATE_LIMITED = e.NewApiError(e.ErrorMeta{
 		ID:      "DemoErr.RATE_LIMITED",
 		Group:   "DemoErr",

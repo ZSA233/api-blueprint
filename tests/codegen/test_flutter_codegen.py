@@ -180,6 +180,9 @@ def test_flutter_writer_generates_dart_package_runtime_routes_transport_and_pres
     assert "text/event-stream" in http_transport
     assert "class HttpEventStreamBridge" in http_connection
     assert "class HttpSocketBridge" in http_connection
+    assert "for (final listener in List.of(_messages))" in http_connection
+    assert "for (final listener in List.of(_closes))" in http_connection
+    assert "var _didClose = false;" in http_connection
     assert "throw ApiException(response.statusCode, body);" in http_connection
     assert "RegExp(r'\\r?\\n\\r?\\n')" in http_connection
     assert "late final Future<void> ready = socket.ready;" in http_connection
@@ -201,9 +204,13 @@ def test_flutter_writer_exports_multiple_roots(tmp_path: Path) -> None:
     writer.gen()
 
     public_entry = (out_dir / "lib" / "api_blueprint_example.dart").read_text(encoding="utf-8")
+    api_entry = (out_dir / "lib" / "api.dart").read_text(encoding="utf-8")
+    static_entry = (out_dir / "lib" / "static_.dart").read_text(encoding="utf-8")
 
     assert "export 'src/api/api.dart';" in public_entry
-    assert "export 'src/static_/static_.dart';" in public_entry
+    assert "export 'src/static_/static_.dart';" not in public_entry
+    assert "export 'src/api/api.dart';" in api_entry
+    assert "export 'src/static_/static_.dart';" in static_entry
 
 
 def test_flutter_error_lookup_preserves_dynamic_payload_and_unique_error_constants(tmp_path: Path) -> None:

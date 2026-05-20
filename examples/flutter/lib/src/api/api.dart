@@ -20,6 +20,10 @@ export 'routes/api/binary/binary_types.dart';
 export 'routes/api/binary/binary.dart';
 
 
+export 'routes/api/conflict/conflict_api.dart';
+export 'routes/api/conflict/conflict_types.dart';
+
+
 export 'routes/api/demo/demo_api.dart';
 export 'routes/api/demo/demo_types.dart';
 

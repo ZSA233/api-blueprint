@@ -12,6 +12,8 @@ from .gen_types import (
     AbcResponse,
     TestPostJSON,
     TestPostResponse,
+    FormSubmitForm,
+    FormSubmitResponse,
     PutDemoQuery,
     PutDemoJSON,
     PutDemoResponse,
@@ -85,6 +87,21 @@ class DemoClient:
             response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
         )
         return _from_mapping(TestPostResponse, payload)
+
+    async def form_submit(
+        self,
+        form: FormSubmitForm | Mapping[str, Any] | None = None,
+    ) -> Any:
+        response_type: str | None = 'FormSubmitResponse'
+        payload = await self._transport.request(
+            "POST",
+            "/api/demo/form-submit",
+            route_id="api.demo.post.formsubmit",
+            form=_to_mapping(form),
+            response_type=response_type,
+            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+        )
+        return _from_mapping(FormSubmitResponse, payload)
 
     async def put_demo(
         self,

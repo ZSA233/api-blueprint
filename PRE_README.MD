@@ -9,7 +9,7 @@
 - `README.md` / `README_EN.md`：首次用户入口页，只保留项目定位、安装、最小示例、目标概览和文档导航。
 - `docs/zh/*` / `docs/en/*`：专题手册，承载 DSL、配置、生成器、二进制协议、Wails、gRPC、examples 验证等完整说明。
 - `docs/release-process.md`：发布流程手册。
-- `.plans/`：内部实施记录，不作为 README 用户主路径。
+- `docs/plans/`：设计方案与实施记录，不作为 README 用户主路径。
 
 README 只回答：
 
@@ -75,7 +75,8 @@ README 应链接到以下用户文档：
 - `src/api_blueprint/application/`：entrypoint 加载、项目装配、docs server 启动与 generator 调度。
 - `src/api_blueprint/hub/` 与 `src/api_blueprint/static/`：文档服务 UI 资源。
 - `examples/blueprints/`：示例蓝图真源。
-- `examples/golang/`、`examples/typescript/`、`examples/flutter/`、`examples/kotlin/`、`examples/java/`、`examples/python/`、`examples/grpc/`、`examples/wails-*`：生成快照、验证工程和示例 app shell。
+- `examples/golang/`、`examples/typescript/`、`examples/flutter/`、`examples/kotlin/`、`examples/java/`、`examples/python/`、`examples/grpc/`、`examples/wails-*`：生成快照、preserved conformance harness、验证工程和示例 app shell。
+- `scripts/example_conformance/`：examples 真实协议互通验证 CLI，第一阶段以 Go HTTP server 为服务端真源，驱动 Go / TypeScript / Kotlin / Flutter client。
 - `tests/`：单元测试、CLI 测试、codegen 测试、example 集成验证、打包与 release contract 测试。
 
 ## DSL 与契约事实
@@ -128,8 +129,12 @@ README 应链接到以下用户文档：
 
 - `examples/blueprints/` 是 Blueprint 真源。
 - 语言 examples、`examples/api-blueprint.index.json`、可选 full contract/agent/shards 快照与 `examples/grpc/{protos,go,python}/` 是生成快照；`examples/flutter/` 是纯 Dart package 快照，验证使用 `dart pub get`、`dart analyze` 和 `dart test`。
+- examples DSL 覆盖 query/json/form/binary/raw/XML、typed error、命名冲突、多 blueprint root、stream、channel、SSE/WebSocket 等公开协议场景；暂不支持的端侧能力必须在 conformance manifest 中显式标注，不静默漏测。
+- `scripts/example_validation.py` 负责 snapshot drift、refresh、compile/analyze/import smoke 和旧增强 suite；`python -m scripts.example_conformance` 负责真实互通验证。conformance 第一阶段只启用 Go HTTP server，Go / TypeScript / Kotlin / Flutter client 连接同一服务端；Kotlin 只覆盖 RPC/form/binary/typed-error/naming 等 HTTP 能力，长连接为显式 unsupported/contract 验证。
+- conformance harness 位于各语言 preserved 文件中，例如 `examples/golang/conformance/`、`examples/typescript/conformance.ts`、`examples/kotlin/conformance/`、`examples/flutter/test/conformance_test.dart`，刷新生成物不得覆盖这些文件。
 - snapshot drift 表示生成结果变化，不自动等于 bug。
 - `make example-golang-suite` 和 `make example-java-suite` 是手动增强验证，不进入默认 `test`、`example-validation`、`release-preflight` 或 CI。
+- generator-owned artifact 的短期逃生口方案记录在 `docs/plans/generated-artifact-escape-hatches.md`：优先通过 preserved facade、transport hook、codec registry、raw body fallback 和 route wrapper 绕过，不在第一阶段做 template partial override 或 post-generate patch hooks。
 - `main.py` 与 `debug.py` 是本地辅助脚本，不属于公共发布面。
 
 ## 文档维护规则
@@ -159,6 +164,7 @@ README 应链接到以下用户文档：
   - `make example-compile-check`
   - `make example-refresh`
   - `make example-validation`
+  - `uv run python -m scripts.example_conformance check --server go --clients go,typescript,kotlin,flutter`
   - 可选手动增强：`make example-golang-suite`
   - 可选手动增强：`make example-java-suite`
   - `make release-version-show`

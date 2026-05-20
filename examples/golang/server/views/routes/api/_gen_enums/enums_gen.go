@@ -302,6 +302,96 @@ func (x *HelloWayEnum) AppendText(b []byte) ([]byte, error) {
 }
 
 const (
+	// KeywordEnumDEFAULT is a KeywordEnum of type DEFAULT.
+	KeywordEnumDEFAULT KeywordEnum = "default"
+	// KeywordEnumCLASS is a KeywordEnum of type CLASS.
+	KeywordEnumCLASS KeywordEnum = "class"
+)
+
+var ErrInvalidKeywordEnum = fmt.Errorf("not a valid KeywordEnum, try [%s]", strings.Join(_KeywordEnumNames, ", "))
+
+var _KeywordEnumNames = []string{
+	string(KeywordEnumDEFAULT),
+	string(KeywordEnumCLASS),
+}
+
+// KeywordEnumNames returns a list of possible string values of KeywordEnum.
+func KeywordEnumNames() []string {
+	tmp := make([]string, len(_KeywordEnumNames))
+	copy(tmp, _KeywordEnumNames)
+	return tmp
+}
+
+// KeywordEnumValues returns a list of the values for KeywordEnum
+func KeywordEnumValues() []KeywordEnum {
+	return []KeywordEnum{
+		KeywordEnumDEFAULT,
+		KeywordEnumCLASS,
+	}
+}
+
+// String implements the Stringer interface.
+func (x KeywordEnum) String() string {
+	return string(x)
+}
+
+// IsValid provides a quick way to determine if the typed value is
+// part of the allowed enumerated values
+func (x KeywordEnum) IsValid() bool {
+	_, err := ParseKeywordEnum(string(x))
+	return err == nil
+}
+
+var _KeywordEnumValue = map[string]KeywordEnum{
+	"default": KeywordEnumDEFAULT,
+	"class":   KeywordEnumCLASS,
+}
+
+// ParseKeywordEnum attempts to convert a string to a KeywordEnum.
+func ParseKeywordEnum(name string) (KeywordEnum, error) {
+	if x, ok := _KeywordEnumValue[name]; ok {
+		return x, nil
+	}
+	// Case insensitive parse, do a separate lookup to prevent unnecessary cost of lowercasing a string if we don't need to.
+	if x, ok := _KeywordEnumValue[strings.ToLower(name)]; ok {
+		return x, nil
+	}
+	return KeywordEnum(""), fmt.Errorf("%s is %w", name, ErrInvalidKeywordEnum)
+}
+
+// MustParseKeywordEnum converts a string to a KeywordEnum, and panics if is not valid.
+func MustParseKeywordEnum(name string) KeywordEnum {
+	val, err := ParseKeywordEnum(name)
+	if err != nil {
+		panic(err)
+	}
+	return val
+}
+
+// MarshalText implements the text marshaller method.
+func (x KeywordEnum) MarshalText() ([]byte, error) {
+	return []byte(string(x)), nil
+}
+
+// UnmarshalText implements the text unmarshaller method.
+func (x *KeywordEnum) UnmarshalText(text []byte) error {
+	tmp, err := ParseKeywordEnum(string(text))
+	if err != nil {
+		return err
+	}
+	*x = tmp
+	return nil
+}
+
+// AppendText appends the textual representation of itself to the end of b
+// (allocating a larger slice if necessary) and returns the updated slice.
+//
+// Implementations must not retain b, nor mutate any bytes within b[:len(b)].
+func (x *KeywordEnum) AppendText(b []byte) ([]byte, error) {
+	return append(b, x.String()...), nil
+}
+
+const (
 	// MapEnumA is a MapEnum of type A.
 	MapEnumA MapEnum = "a"
 	// MapEnumB is a MapEnum of type B.
