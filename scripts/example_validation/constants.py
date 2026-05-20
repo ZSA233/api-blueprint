@@ -33,8 +33,10 @@ BLUEPRINT_GOLANG_SERVER_PRESERVED = (
     "views/routes/api/demo/assistant_session_processor.go",
     "views/routes/api/demo/assistant_session_session.go",
     "views/routes/api/demo/impl.go",
+    "views/routes/api/impl.go",
     "views/routes/api/hello/impl.go",
     "views/routes/alt/conflict/impl.go",
+    "views/routes/static/impl.go",
 )
 BLUEPRINT_GOLANG_CLIENT_PRESERVED = (
     "go.mod",

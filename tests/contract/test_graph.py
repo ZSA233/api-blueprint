@@ -297,6 +297,23 @@ def test_contract_graph_rewrites_same_route_same_named_model_refs():
     }
 
 
+def test_contract_graph_disambiguates_auto_models_with_same_operation_name():
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.GET("/abc").ARGS(arg1=String(description="arg1")).RSP(message=String(description="message"))
+    with bp.group("/hello") as views:
+        views.GET("/abc").ARGS(kind=String(description="kind")).RSP(message=String(description="message"))
+
+    manifest = build_contract_graph([bp]).to_manifest()
+
+    demo_route, hello_route = manifest["routes"]
+    demo_query = demo_route["request"]["query_model"]
+    hello_query = hello_route["request"]["query_model"]
+    assert demo_query != hello_query
+    assert "arg1" in manifest["schemas"][demo_query]["fields"]
+    assert "kind" in manifest["schemas"][hello_query]["fields"]
+
+
 def test_contract_graph_uses_generic_field_contract_metadata():
     bp = Blueprint(root="/api")
     with bp.group("/contract") as views:

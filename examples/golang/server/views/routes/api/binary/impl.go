@@ -40,3 +40,16 @@ func (impl *Router) Packet(ctx *CTX_Packet, req *REQ_Packet) (rsp *RSP_Packet, e
 		Checksum:   uint(packet.Body.Checksum),
 	}, nil
 }
+
+func (impl *Router) AuditPacket(ctx *CTX_AuditPacket, req *REQ_AuditPacket) (rsp *RSP_AuditPacket, err error) {
+	packet := req.B
+	trace := ""
+	if req.Q != nil {
+		trace = req.Q.Trace
+	}
+	return &RSP_AuditPacket{
+		Trace:     trace,
+		ItemCount: uint(packet.Header.ItemCount),
+		Checksum:  uint(packet.Body.Checksum),
+	}, nil
+}

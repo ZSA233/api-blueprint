@@ -17,6 +17,7 @@ import (
 	binaryapi "example.com/project/golang/client/routes/api/binary"
 	apiconflict "example.com/project/golang/client/routes/api/conflict"
 	demo "example.com/project/golang/client/routes/api/demo"
+	hello "example.com/project/golang/client/routes/api/hello"
 	runtime "example.com/project/golang/client/runtime"
 	runtimebinary "example.com/project/golang/client/runtime/binary"
 	httptransport "example.com/project/golang/client/transports/http"
@@ -35,7 +36,7 @@ func run() error {
 		return fmt.Errorf("base URL argument is required")
 	}
 	baseURL := strings.TrimRight(os.Args[1], "/")
-	selected := scenarioSet("rpc,binary,form,error,naming")
+	selected := scenarioSet("rpc,binary,form,error,naming,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,single-channel")
 	if len(os.Args) >= 3 && os.Args[2] != "" {
 		selected = scenarioSet(os.Args[2])
 	}
@@ -49,6 +50,46 @@ func run() error {
 			return err
 		}
 	}
+	if selected["raw"] {
+		if err := checkRaw(ctx, baseURL); err != nil {
+			return err
+		}
+	}
+	if selected["xml"] {
+		if err := checkXML(ctx, baseURL); err != nil {
+			return err
+		}
+	}
+	if selected["static"] {
+		if err := checkStatic(ctx, baseURL); err != nil {
+			return err
+		}
+	}
+	if selected["header"] {
+		if err := checkHeader(ctx, baseURL); err != nil {
+			return err
+		}
+	}
+	if selected["scalar"] {
+		if err := checkScalar(ctx, client.Hello); err != nil {
+			return err
+		}
+	}
+	if selected["enum"] {
+		if err := checkEnum(ctx, client.Hello); err != nil {
+			return err
+		}
+	}
+	if selected["map"] {
+		if err := checkMap(ctx, baseURL, client.Demo, client.Hello); err != nil {
+			return err
+		}
+	}
+	if selected["deprecated"] {
+		if err := checkDeprecated(ctx, client.Demo); err != nil {
+			return err
+		}
+	}
 	if selected["form"] {
 		if err := checkForm(ctx, client.Demo); err != nil {
 			return err
@@ -56,6 +97,11 @@ func run() error {
 	}
 	if selected["binary"] {
 		if err := checkBinary(ctx, client.Binary); err != nil {
+			return err
+		}
+	}
+	if selected["audit-binary"] {
+		if err := checkAuditBinary(ctx, client.Binary); err != nil {
 			return err
 		}
 	}
@@ -67,6 +113,11 @@ func run() error {
 	if selected["naming"] {
 		if err := checkNaming(ctx, baseURL); err != nil {
 			return err
+		}
+	}
+	if selected["single-channel"] {
+		if err := client.Api.OpenHelloChannel(ctx); err == nil {
+			return fmt.Errorf("expected go single-channel transport to be unsupported")
 		}
 	}
 	return nil
@@ -127,6 +178,166 @@ func checkForm(ctx context.Context, demoClient *demo.DemoClient) error {
 	return nil
 }
 
+func checkRaw(ctx context.Context, baseURL string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/api/demo/raw", nil)
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		raw, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("raw status=%d body=%s", resp.StatusCode, string(raw))
+	}
+	return nil
+}
+
+func checkXML(ctx context.Context, baseURL string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, baseURL+"/api/demo/delete$?arg1=go-xml&arg2=7", nil)
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK || !strings.Contains(string(raw), "go-xml") {
+		return fmt.Errorf("xml status=%d body=%s", resp.StatusCode, string(raw))
+	}
+	return nil
+}
+
+func checkStatic(ctx context.Context, baseURL string) error {
+	for _, path := range []string{"/static/doc.json", "/static/dochaha"} {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+path, nil)
+		if err != nil {
+			return err
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return err
+		}
+		raw, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("static %s status=%d body=%s", path, resp.StatusCode, string(raw))
+		}
+	}
+	return nil
+}
+
+func checkHeader(ctx context.Context, baseURL string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/api/demo/abc", nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("x-token", "conformance-token")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		raw, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("header status=%d body=%s", resp.StatusCode, string(raw))
+	}
+	return nil
+}
+
+func checkScalar(ctx context.Context, helloClient *hello.HelloClient) error {
+	text, err := helloClient.String(ctx)
+	if err != nil {
+		return fmt.Errorf("hello string: %w", err)
+	}
+	if *text != "hello-string" {
+		return fmt.Errorf("hello string = %#v", text)
+	}
+	value, err := helloClient.Uint64(ctx)
+	if err != nil {
+		return fmt.Errorf("hello uint64: %w", err)
+	}
+	if *value != 9007199254740991 {
+		return fmt.Errorf("hello uint64 = %#v", value)
+	}
+	return nil
+}
+
+func checkEnum(ctx context.Context, helloClient *hello.HelloClient) error {
+	item, err := helloClient.StringEmun(ctx)
+	if err != nil {
+		return fmt.Errorf("string enum: %w", err)
+	}
+	if *item != runtime.MapEnumA {
+		return fmt.Errorf("string enum = %#v", item)
+	}
+	items, err := helloClient.ListEnum(ctx)
+	if err != nil {
+		return fmt.Errorf("list enum: %w", err)
+	}
+	if !reflect.DeepEqual(*items, []runtime.MapEnum{runtime.MapEnumA, runtime.MapEnumB}) {
+		return fmt.Errorf("list enum = %#v", items)
+	}
+	return nil
+}
+
+func checkMap(ctx context.Context, baseURL string, demoClient *demo.DemoClient, helloClient *hello.HelloClient) error {
+	model, err := demoClient.MapModel(ctx)
+	if err != nil {
+		return fmt.Errorf("map model: %w", err)
+	}
+	if (*model)[1].Haha != 101 {
+		return fmt.Errorf("map model = %#v", model)
+	}
+	if err := checkHelloAbcRaw(ctx, baseURL); err != nil {
+		return err
+	}
+	enumMap, err := helloClient.MapEnum(ctx)
+	if err != nil {
+		return fmt.Errorf("map enum: %w", err)
+	}
+	if (*enumMap)[runtime.MapEnumA].Haha != 11 {
+		return fmt.Errorf("map enum = %#v", enumMap)
+	}
+	return nil
+}
+
+func checkHelloAbcRaw(ctx context.Context, baseURL string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/api/hello/abc?type=ping", nil)
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("hello abc status=%d body=%s", resp.StatusCode, string(raw))
+	}
+	body := string(raw)
+	if !strings.Contains(body, `"hello"`) || !strings.Contains(body, `"ping"`) {
+		return fmt.Errorf("hello abc response missing expected map keys: %s", body)
+	}
+	return nil
+}
+
+func checkDeprecated(ctx context.Context, demoClient *demo.DemoClient) error {
+	rsp, err := demoClient.PostDeprecated(ctx, demo.PostDeprecatedJSON{Req1: "go-deprecated", Req2: 3})
+	if err != nil {
+		return fmt.Errorf("deprecated: %w", err)
+	}
+	if !reflect.DeepEqual(rsp.List, []string{"go-deprecated"}) {
+		return fmt.Errorf("deprecated response = %#v", rsp)
+	}
+	return nil
+}
+
 func checkBinary(ctx context.Context, binaryClient *binaryapi.BinaryClient) error {
 	for _, item := range []struct {
 		trace string
@@ -142,6 +353,17 @@ func checkBinary(ctx context.Context, binaryClient *binaryapi.BinaryClient) erro
 		if err := assertBinaryResponse(item.trace, rsp); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func checkAuditBinary(ctx context.Context, binaryClient *binaryapi.BinaryClient) error {
+	rsp, err := binaryClient.AuditPacket(ctx, binaryapi.AuditPacketQuery{Trace: "go-audit"}, buildAuditPacket())
+	if err != nil {
+		return fmt.Errorf("audit binary: %w", err)
+	}
+	if rsp.Trace != "go-audit" || rsp.ItemCount != 2 || rsp.Checksum != 2 {
+		return fmt.Errorf("audit binary response = %#v", rsp)
 	}
 	return nil
 }
@@ -259,6 +481,22 @@ func buildPacket() *binaryapi.DemoPacket {
 			Payload:  payload,
 			Scores:   []float64{3.5, 4.5},
 			Checksum: 12,
+		},
+	}
+}
+
+func buildAuditPacket() *binaryapi.AuditPacket {
+	return &binaryapi.AuditPacket{
+		Header: binaryapi.AuditPacketHeader{
+			Flags:     binaryapi.AuditPacketFlagsHasItems,
+			ItemCount: 2,
+		},
+		Body: binaryapi.AuditPacketBody{
+			Items: []binaryapi.AuditPacketItem{
+				{ID: 11, Code: 101},
+				{ID: 22, Code: 202},
+			},
+			Checksum: 2,
 		},
 	}
 }

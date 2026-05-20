@@ -15,7 +15,8 @@ class PythonResolvedType:
     decoder: str = "_decode_any"
 
     def decode_expr(self, value_expr: str, path_expr: str) -> str:
-        return f"{self.decoder}({value_expr}, {path_expr})"
+        decoder = f"({self.decoder})" if self.decoder.strip().startswith("lambda ") else self.decoder
+        return f"{decoder}({value_expr}, {path_expr})"
 
 
 @dataclass(frozen=True)

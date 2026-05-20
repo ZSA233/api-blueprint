@@ -10,7 +10,7 @@ import 'package:test/test.dart';
 void main() {
   final baseUrl = Platform.environment['API_BLUEPRINT_BASE_URL'];
   final selected = _scenarioSet(Platform.environment['API_BLUEPRINT_SCENARIOS'] ??
-      'rpc,binary,form,error,sse,websocket,naming');
+      'rpc,binary,form,error,sse,websocket,naming,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,single-channel');
 
   if (baseUrl == null || baseUrl.isEmpty) {
     test('conformance requires API_BLUEPRINT_BASE_URL', () {
@@ -42,6 +42,73 @@ void main() {
     });
   }
 
+  if (selected.contains('raw')) {
+    test('raw response routes interoperate with Go server', () async {
+      await _rawHttp(baseUrl, 'POST', '/api/demo/raw');
+    });
+  }
+
+  if (selected.contains('xml')) {
+    test('XML response route returns a stable payload', () async {
+      final body = await _rawHttp(baseUrl, 'DELETE', '/api/demo/delete\$?arg1=flutter-xml&arg2=7');
+      expect(body, contains('flutter-xml'));
+    });
+  }
+
+  if (selected.contains('static')) {
+    test('static no-envelope routes return stable payloads', () async {
+      await _rawHttp(baseUrl, 'GET', '/static/doc.json');
+      final body = await _rawHttp(baseUrl, 'GET', '/static/dochaha');
+      expect(body, contains('hello world'));
+    });
+  }
+
+  if (selected.contains('header')) {
+    test('header routes receive transport headers', () async {
+      final body = await _rawHttp(
+        baseUrl,
+        'GET',
+        '/api/demo/abc',
+        headers: const {'x-token': 'conformance-token'},
+      );
+      expect(body, contains('header-ok'));
+    });
+  }
+
+  if (selected.contains('scalar')) {
+    test('scalar response routes interoperate with Go server', () async {
+      expect(await client.hello.string(), 'hello-string');
+      expect(await client.hello.uint64(), 9007199254740991);
+    });
+  }
+
+  if (selected.contains('enum')) {
+    test('enum response routes interoperate with Go server', () async {
+      expect(await client.hello.stringEmun(), api.MapEnum.a);
+      expect(await client.hello.listEnum(), [api.MapEnum.a, api.MapEnum.b]);
+    });
+  }
+
+  if (selected.contains('map')) {
+    test('map response routes interoperate with Go server', () async {
+      final model = await client.demo.mapModel();
+      expect(model['1']?.haha, 101);
+      final hello = await client.hello.abc(query: const api.HelloAbcQuery(type_: api.HelloChannelMsgTypeEnum.ping));
+      expect(hello['ping']?.haha, 1);
+      final enumMap = await client.hello.mapEnum();
+      expect(enumMap['a']?.haha, 11);
+    });
+  }
+
+  if (selected.contains('deprecated')) {
+    test('deprecated route remains callable', () async {
+      final rsp = await client.demo.postDeprecated(
+        json: const api.DemoPostDeprecatedJson(req1: 'flutter-deprecated', req2: 3),
+      );
+      expect(rsp.list, ['flutter-deprecated']);
+    });
+  }
+
   if (selected.contains('form')) {
     test('form routes interoperate with Go server', () async {
       final rsp = await client.demo.formSubmit(
@@ -60,6 +127,18 @@ void main() {
         packet: _buildPacket(),
       );
       _expectBinaryResponse(rsp, 'flutter-typed');
+    });
+  }
+
+  if (selected.contains('audit-binary')) {
+    test('audit binary schema routes interoperate with Go server', () async {
+      final rsp = await client.binary.auditPacket(
+        query: const api.BinaryAuditPacketQuery(trace: 'flutter-audit'),
+        auditPacket: _buildAuditPacket(),
+      );
+      expect(rsp.trace, 'flutter-audit');
+      expect(rsp.itemCount, 2);
+      expect(rsp.checksum, 2);
     });
   }
 
@@ -126,6 +205,21 @@ void main() {
     });
   }
 
+  if (selected.contains('single-channel')) {
+    test('single model WebSocket channel interoperates with Go server', () async {
+      final channel = client.api.openHelloChannel();
+      final message = _waitForMessage(channel);
+      final close = _waitForClose(channel);
+      await channel.ready;
+      await channel.send(const api.HelloChannelMessage(type_: api.HelloChannelMsgTypeEnum.ping, data: {'source': 'flutter'}));
+
+      final received = await message;
+      expect(received.type_, api.HelloChannelMsgTypeEnum.pong);
+      final closed = await close;
+      expect(closed.code, 1000);
+    });
+  }
+
   if (selected.contains('naming')) {
     test('naming conflicts and multi-root clients interoperate with Go server', () async {
       final apiRsp = await client.conflict.default_(query: const api.ConflictDefaultQuery(class_: 'flutter-api'));
@@ -175,6 +269,18 @@ api.DemoPacket _buildPacket() {
   );
 }
 
+api.AuditPacket _buildAuditPacket() {
+  return const api.AuditPacket(
+    flags: api.AuditPacketFlagsValues.hasItems,
+    itemCount: 2,
+    items: [
+      api.AuditPacketItem(id: 11, code: 101),
+      api.AuditPacketItem(id: 22, code: 202),
+    ],
+    checksum: 2,
+  );
+}
+
 void _expectBinaryResponse(api.BinaryPacketResponse rsp, String trace) {
   expect(rsp.trace, trace);
   expect(rsp.version, 1);
@@ -184,6 +290,26 @@ void _expectBinaryResponse(api.BinaryPacketResponse rsp, String trace) {
   expect(rsp.firstLabel, 'alpha');
   expect(rsp.itemIds, [11, 22]);
   expect(rsp.checksum, 12);
+}
+
+Future<String> _rawHttp(
+  String baseUrl,
+  String method,
+  String path, {
+  Map<String, String> headers = const {},
+}) async {
+  final uri = Uri.parse('$baseUrl$path');
+  final client = HttpClient();
+  try {
+    final request = await client.openUrl(method, uri);
+    headers.forEach(request.headers.set);
+    final response = await request.close();
+    final body = await utf8.decodeStream(response);
+    expect(response.statusCode, 200, reason: body);
+    return body;
+  } finally {
+    client.close(force: true);
+  }
 }
 
 Future<api.ApiError> _expectApiError(Future<Object?> Function() action) async {

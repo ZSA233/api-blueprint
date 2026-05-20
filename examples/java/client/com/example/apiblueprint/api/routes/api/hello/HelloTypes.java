@@ -18,7 +18,8 @@ public final class HelloTypes {
     public record AbcQuery(
         @JsonProperty("arg1") Boolean arg1,
         @JsonProperty("arg3") String arg3,
-        @JsonProperty("arg2") Float arg2
+        @JsonProperty("arg2") Float arg2,
+        @JsonProperty("type") ApiTypes.HelloChannelMsgTypeEnum type
     ) {
     }
 

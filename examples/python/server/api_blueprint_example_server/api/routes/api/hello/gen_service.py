@@ -9,6 +9,7 @@ from .gen_types import (
     AbcQuery,
     ApiHelloMap,
     HelloWayQuery,
+    HelloChannelMsgTypeEnum,
     MapEnum,
     HelloWayEnum,
 )

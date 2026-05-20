@@ -80,7 +80,9 @@ Successful conformance output is collapsed into one line per stage, such as gene
 
 The active server matrix covers Go HTTP, Java Spring, Kotlin Ktor, and Python FastAPI; the client matrix covers Go, TypeScript, Kotlin, Flutter, Java, and Python. The runner executes the intersection of server capabilities, client capabilities, and scenario registry entries. Unsupported combinations must be recorded in the manifest and reported as skipped or explicit unsupported contracts instead of silently disappearing. TypeScript / Kotlin / Flutter cover real SSE and WebSocket interoperability; Java / Python clients currently cover long-connection scenarios through their default transport's unsupported contract.
 
-The scenario registry maps DSL coverage categories to automated cases: query/json/form/binary/raw/XML, typed errors, naming conflicts, multiple blueprint roots, response envelopes, SSE, and WebSocket.
+The scenario registry maps DSL coverage categories to automated cases: query/json/form/binary/raw/XML, static/no-envelope, headers, scalar values, enums, maps, deprecated routes, typed errors, naming conflicts, multiple blueprint roots, response envelopes, SSE, WebSocket, single-model channels, and the second binary schema. Server-only safety probes cover bad JSON, bad query, malformed WebSocket frames, WebSocket early close, and bad binary input so servers do not 5xx crash, exit, or leave connections hanging.
+
+`docs/reviews/resolved/0001-20260521-examples-conformance安全审查.md` records the closure of this safety review: high-risk server stability items, Python strict DTOs, and ordinary examples conformance coverage gaps have been completed. Future generated-artifact risks should get the next review record instead of reopening the resolved 0001 item.
 
 ## Drift Meaning
 

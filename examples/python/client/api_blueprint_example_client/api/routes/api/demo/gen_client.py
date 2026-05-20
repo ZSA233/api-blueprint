@@ -4,7 +4,18 @@ from __future__ import annotations
 from typing import Any
 
 from ....runtime.client import ApiChannelBridge, ApiClientTransport, ApiStreamBridge
-from ....runtime.gen_codecs import _api_to_json
+from ....runtime.gen_codecs import (
+    _api_to_json,
+    _decode_any,
+    _decode_bool,
+    _decode_bytes,
+    _decode_float,
+    _decode_int,
+    _decode_list,
+    _decode_map,
+    _decode_object,
+    _decode_str,
+)
 
 
 from .gen_types import (
@@ -190,7 +201,7 @@ class DemoClient:
             response_type=response_type,
             response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
         )
-        return lambda item, path: _decode_map(item, path, _decode_int, ApiDemoMap.from_value)(payload, "map_model.response")
+        return (lambda item, path: _decode_map(item, path, _decode_int, ApiDemoMap.from_value))(payload, "map_model.response")
 
     async def error_demo(
         self,

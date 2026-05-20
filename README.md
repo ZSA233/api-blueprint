@@ -116,6 +116,7 @@ api-gen generate -c api-blueprint.toml
 | Wails | [docs/zh/wails.md](docs/zh/wails.md) |
 | gRPC | [docs/zh/grpc.md](docs/zh/grpc.md) |
 | Examples 验证 | [docs/zh/examples-validation.md](docs/zh/examples-validation.md) |
+| Benchmark | [docs/zh/benchmarks.md](docs/zh/benchmarks.md) |
 | 发布流程 | [docs/release-process.md](docs/release-process.md) |
 
 ## 开发和发布
@@ -128,8 +129,9 @@ make test
 make example-compile-check
 make example-validation
 make example-conformance
+make benchmark-list
 make example-golang-suite
 make example-java-suite
 ```
 
-`make example-conformance` 默认从真实 Go HTTP server 开始跑协议互通；可用 `EXAMPLE_CONFORMANCE_SERVERS`、`EXAMPLE_CONFORMANCE_CLIENTS` 和 `EXAMPLE_CONFORMANCE_SCENARIOS` 选择矩阵，完整矩阵可设为 `EXAMPLE_CONFORMANCE_SERVERS=all EXAMPLE_CONFORMANCE_CLIENTS=all`。`example-golang-suite` 和 `example-java-suite` 是保留的手动端到端增强验证。正式发布前的版本、构建、安装和 GitHub Release 流程见 [发布流程](docs/release-process.md)。
+`make example-conformance` 默认从真实 Go HTTP server 开始跑协议互通；可用 `EXAMPLE_CONFORMANCE_SERVERS`、`EXAMPLE_CONFORMANCE_CLIENTS` 和 `EXAMPLE_CONFORMANCE_SCENARIOS` 选择矩阵，完整矩阵可设为 `EXAMPLE_CONFORMANCE_SERVERS=all EXAMPLE_CONFORMANCE_CLIENTS=all`。benchmark 是可选趋势工具，不作为默认 CI 阈值；入口见 [Benchmark](docs/zh/benchmarks.md)。`example-golang-suite` 和 `example-java-suite` 是保留的手动端到端增强验证。正式发布前的版本、构建、安装和 GitHub Release 流程见 [发布流程](docs/release-process.md)。

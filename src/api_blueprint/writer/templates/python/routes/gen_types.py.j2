@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum, IntEnum, StrEnum
-from typing import Any, Callable, Generic, Mapping, TypeVar
+from typing import Any, Callable, Generic, Mapping, Self, TypeVar
 from {{ group.runtime_import_prefix }}runtime.gen_codecs import (
     _MISSING,
     _api_to_json,
@@ -33,7 +33,7 @@ class {{ enum.class_name }}({{ enum.base_class }}):
 {% endfor %}{% else %}    pass
 {% endif %}
     @classmethod
-    def from_value(cls, value: object, path: str = "{{ enum.class_name }}") -> "{{ enum.class_name }}":
+    def from_value(cls, value: object, path: str = "{{ enum.class_name }}") -> Self:
         if isinstance(value, cls):
             return value
         for item in cls:
@@ -54,13 +54,13 @@ class {{ model.class_name }}:
 {% endif %}
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> {{ model.class_name }}:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("{{ model.class_name }}: expected object")
         return cls._from_mapping(value, "{{ model.class_name }}")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "{{ model.class_name }}") -> {{ model.class_name }}:
+    def from_value(cls, value: object, path: str = "{{ model.class_name }}") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -68,7 +68,7 @@ class {{ model.class_name }}:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> {{ model.class_name }}:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
 {% for field in model.fields %}            {{ field.name }}={{ field.decode_expr | safe }},
 {% endfor %}        )
@@ -90,7 +90,7 @@ class {{ helper.name }}:
     data: Any = None
 
     @classmethod
-    def from_value(cls, value: object, path: str = "{{ helper.name }}") -> "{{ helper.name }}":
+    def from_value(cls, value: object, path: str = "{{ helper.name }}") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):

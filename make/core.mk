@@ -1,4 +1,4 @@
-.PHONY: help sync test benchmark-binary build
+.PHONY: help sync test benchmark-list benchmark-binary example-benchmark-protocol example-benchmark build
 
 help:
 	@printf "%s\n" \
@@ -8,7 +8,10 @@ help:
 		"  make sync                    Install development dependencies" \
 		"  make test                    Run Python tests" \
 		"  make build                   Build sdist and wheel" \
+		"  make benchmark-list          List generated example benchmark targets" \
 		"  make benchmark-binary        Run binary codec benchmark" \
+		"  make example-benchmark-protocol" \
+		"  make example-benchmark       Run binary and protocol benchmarks" \
 		"" \
 		"Examples:" \
 		"  make example-compile-check   Compile regenerated examples without drift enforcement" \
@@ -36,8 +39,18 @@ sync:
 test:
 	uv run pytest -q
 
+benchmark-list:
+	uv run python -m scripts.example_benchmark list
+
 benchmark-binary:
 	uv run python scripts/benchmark_binary.py --target "$(BINARY_BENCH_TARGET)" --count "$(BINARY_BENCH_COUNT)" $(if $(filter 1,$(BINARY_BENCH_COMPARE_HEAD)),--compare-head)
+
+example-benchmark-protocol:
+	uv run python -m scripts.example_benchmark protocol --servers "$(EXAMPLE_BENCH_SERVERS)" --scenario "$(EXAMPLE_BENCH_SCENARIOS)" --requests "$(EXAMPLE_BENCH_REQUESTS)" --concurrency "$(EXAMPLE_BENCH_CONCURRENCY)" --warmup "$(EXAMPLE_BENCH_WARMUP)" $(if $(filter 1,$(EXAMPLE_BENCH_KEEP_WORKSPACE)),--keep-workspace)
+
+example-benchmark:
+	$(MAKE) benchmark-binary
+	$(MAKE) example-benchmark-protocol
 
 build:
 	uv build --sdist --wheel

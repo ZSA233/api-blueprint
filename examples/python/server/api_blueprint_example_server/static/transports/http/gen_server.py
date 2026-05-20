@@ -12,10 +12,7 @@ from starlette.responses import StreamingResponse, JSONResponse
 
 from ...runtime.errors import ApiError, make_api_error_payload
 from ...routes.static.service import StaticService, StaticServiceStub
-from ...routes.static.gen_types import (
-    DocJsonResponse,
-    DochahaResponse,
-)
+from ...routes.static import gen_types as static_types
 
 
 def create_router(
@@ -47,9 +44,9 @@ def create_router(
     return router
 
 
-def _query_params(request: Request) -> dict[str, Any] | None:
+def _query_params(request: Request) -> dict[str, Any]:
     values = dict(request.query_params)
-    return values or None
+    return values
 
 
 async def _json_body(request: Request) -> Any:
@@ -63,10 +60,10 @@ async def _json_body(request: Request) -> Any:
     return value
 
 
-async def _form_body(request: Request) -> dict[str, Any] | None:
+async def _form_body(request: Request) -> dict[str, Any]:
     values = await request.form()
     result = {key: value for key, value in values.multi_items()}
-    return result or None
+    return result
 
 
 def _jsonable(value: Any) -> Any:

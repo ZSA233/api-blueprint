@@ -332,7 +332,7 @@ Python server 同样使用 `python_package_root` 作为包根，输出 route ser
 
 ## examples 快照
 
-`examples/golang/server/`、`examples/golang/client/`、`examples/typescript/`、`examples/flutter/`、`examples/kotlin/client`、`examples/kotlin/server`、`examples/java/client` / `examples/java/server` 与 `examples/python/` 是生成快照，不是业务真源；`examples/java/suite` 是手写运行时验证项目。`examples/golang/conformance/`、`examples/typescript/conformance.ts`、`examples/kotlin/conformance/`、`examples/java/conformance/`、`examples/python/conformance/` 与 `examples/flutter/test/conformance_test.dart` 是 preserved conformance 文件，职责是调用对应语言的生成物并连接真实 Go / Java / Kotlin / Python server，验证 RPC、form、binary、typed error、命名冲突以及已支持的 SSE/WebSocket 互通；刷新生成物时不得覆盖这些文件。Go server / Go client / Wails Go contract / agent artifact 索引使用 Go-safe route package segment，Flutter / Kotlin / Java / Python artifact 索引继续使用各自的 route 输出路径。需要接受预期生成变化时，使用：
+`examples/golang/server/`、`examples/golang/client/`、`examples/typescript/`、`examples/flutter/`、`examples/kotlin/client`、`examples/kotlin/server`、`examples/java/client` / `examples/java/server` 与 `examples/python/` 是生成快照，不是业务真源；`examples/java/suite` 是手写运行时验证项目。`examples/golang/conformance/`、`examples/typescript/conformance.ts`、`examples/kotlin/conformance/`、`examples/java/conformance/`、`examples/python/conformance/` 与 `examples/flutter/test/conformance_test.dart` 是 preserved conformance 文件，职责是调用对应语言的生成物并连接真实 Go / Java / Kotlin / Python server，验证 RPC、form、binary、typed error、命名冲突、raw/XML/static/header/scalar/enum/map/deprecated/audit-binary、单模型 channel 以及已支持的 SSE/WebSocket 互通；刷新生成物时不得覆盖这些文件。Go server / Go client / Wails Go contract / agent artifact 索引使用 Go-safe route package segment，Flutter / Kotlin / Java / Python artifact 索引继续使用各自的 route 输出路径。需要接受预期生成变化时，使用：
 
 ```sh
 make example-refresh

@@ -3,7 +3,18 @@ from __future__ import annotations
 from typing import Any
 
 from {{ group.runtime_import_prefix }}runtime.client import ApiChannelBridge, ApiClientTransport, ApiStreamBridge
-from {{ group.runtime_import_prefix }}runtime.gen_codecs import _api_to_json
+from {{ group.runtime_import_prefix }}runtime.gen_codecs import (
+    _api_to_json,
+    _decode_any,
+    _decode_bool,
+    _decode_bytes,
+    _decode_float,
+    _decode_int,
+    _decode_list,
+    _decode_map,
+    _decode_object,
+    _decode_str,
+)
 {% if group.binary_schemas() %}
 from {{ group.runtime_import_prefix }}runtime.binary import ApiBinaryBody
 {% endif %}

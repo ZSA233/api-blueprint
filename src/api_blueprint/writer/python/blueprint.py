@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -308,6 +309,20 @@ class PythonRouteGroup:
         names.extend(enum.class_name for enum in self.enums())
         names.extend(helper.name for helper in self.message_helpers())
         return tuple(dict.fromkeys(names))
+
+    @property
+    def server_type_module_alias(self) -> str:
+        return f"{to_py_identifier('_'.join(self.segments), default='types')}_types"
+
+    def server_type_expr(self, expr: str) -> str:
+        result = expr
+        for name in sorted(self.type_import_names(), key=len, reverse=True):
+            result = re.sub(
+                rf"(?<![\w.]){re.escape(name)}(?=\.)",
+                f"{self.server_type_module_alias}.{name}",
+                result,
+            )
+        return result
 
     def message_helpers(self) -> tuple[PythonMessageHelper, ...]:
         helpers: "OrderedDict[str, PythonMessageHelper]" = OrderedDict()

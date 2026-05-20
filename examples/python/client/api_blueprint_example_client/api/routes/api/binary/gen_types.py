@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum, IntEnum, StrEnum
-from typing import Any, Callable, Generic, Mapping, TypeVar
+from typing import Any, Callable, Generic, Mapping, Self, TypeVar
 from ....runtime.gen_codecs import (
     _MISSING,
     _api_to_json,
@@ -32,13 +32,13 @@ class PacketQuery:
     trace: str | None = None
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> PacketQuery:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("PacketQuery: expected object")
         return cls._from_mapping(value, "PacketQuery")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "PacketQuery") -> PacketQuery:
+    def from_value(cls, value: object, path: str = "PacketQuery") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -46,7 +46,7 @@ class PacketQuery:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> PacketQuery:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             trace=_decode_optional(_decode_str, value.get("trace", _MISSING), _field_path(path, "trace")),
         )
@@ -71,13 +71,13 @@ class PacketResponse:
     checksum: int
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> PacketResponse:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("PacketResponse: expected object")
         return cls._from_mapping(value, "PacketResponse")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "PacketResponse") -> PacketResponse:
+    def from_value(cls, value: object, path: str = "PacketResponse") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -85,7 +85,7 @@ class PacketResponse:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> PacketResponse:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             trace=_decode_required(_decode_str, value.get("trace", _MISSING), _field_path(path, "trace")),
             version=_decode_required(_decode_int, value.get("version", _MISSING), _field_path(path, "version")),
@@ -115,13 +115,13 @@ class AuditPacketQuery:
     trace: str | None = None
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> AuditPacketQuery:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("AuditPacketQuery: expected object")
         return cls._from_mapping(value, "AuditPacketQuery")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "AuditPacketQuery") -> AuditPacketQuery:
+    def from_value(cls, value: object, path: str = "AuditPacketQuery") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -129,7 +129,7 @@ class AuditPacketQuery:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> AuditPacketQuery:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             trace=_decode_optional(_decode_str, value.get("trace", _MISSING), _field_path(path, "trace")),
         )
@@ -149,13 +149,13 @@ class AuditPacketResponse:
     checksum: int
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> AuditPacketResponse:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("AuditPacketResponse: expected object")
         return cls._from_mapping(value, "AuditPacketResponse")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "AuditPacketResponse") -> AuditPacketResponse:
+    def from_value(cls, value: object, path: str = "AuditPacketResponse") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -163,7 +163,7 @@ class AuditPacketResponse:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> AuditPacketResponse:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             trace=_decode_required(_decode_str, value.get("trace", _MISSING), _field_path(path, "trace")),
             item_count=_decode_required(_decode_int, value.get("item_count", _MISSING), _field_path(path, "item_count")),

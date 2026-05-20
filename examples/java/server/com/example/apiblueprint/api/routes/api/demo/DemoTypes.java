@@ -19,14 +19,6 @@ public final class DemoTypes {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public record AbcQuery(
-        @JsonProperty("arg1") Boolean arg1,
-        @JsonProperty("arg3") String arg3,
-        @JsonProperty("arg2") Float arg2
-    ) {
-    }
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
     public record TestPostJSON(
         @JsonProperty("req1") String req1,
         @JsonProperty("req2") Integer req2
@@ -140,6 +132,14 @@ public final class DemoTypes {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record ErrorDemoResponse(
         @JsonProperty("status") String status
+    ) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record AbcQuery(
+        @JsonProperty("arg1") Boolean arg1,
+        @JsonProperty("arg3") String arg3,
+        @JsonProperty("arg2") Float arg2
     ) {
     }
 

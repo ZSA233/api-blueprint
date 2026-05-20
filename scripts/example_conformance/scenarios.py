@@ -19,10 +19,66 @@ def scenario_registry() -> dict[str, Scenario]:
     return {
         "rpc": Scenario(
             name="rpc",
-            categories=("query", "json", "raw", "xml", "envelope"),
+            categories=("query", "json", "envelope"),
             clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
-            route_ids=("api.demo.get.abc", "api.demo.post.testpost", "api.demo.delete.delete"),
-            description="query/json/raw/xml RPC calls",
+            route_ids=("api.demo.post.testpost", "api.demo.put.z1put"),
+            description="query/json RPC calls",
+        ),
+        "raw": Scenario(
+            name="raw",
+            categories=("raw", "envelope"),
+            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            route_ids=("api.demo.post.raw",),
+            description="HTTP raw response JSON payloads",
+        ),
+        "xml": Scenario(
+            name="xml",
+            categories=("xml", "envelope"),
+            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            route_ids=("api.demo.delete.delete",),
+            description="XML response decoding",
+        ),
+        "static": Scenario(
+            name="static",
+            categories=("static", "no-envelope"),
+            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            route_ids=("static.static.get.docjson", "static.static.get.dochaha"),
+            description="static root routes with no response envelope",
+        ),
+        "header": Scenario(
+            name="header",
+            categories=("header", "query", "envelope"),
+            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            route_ids=("api.demo.get.abc",),
+            description="required x-token header handling",
+        ),
+        "scalar": Scenario(
+            name="scalar",
+            categories=("scalar", "envelope"),
+            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            route_ids=("api.hello.get.string", "api.hello.get.uint64"),
+            description="scalar response bodies",
+        ),
+        "enum": Scenario(
+            name="enum",
+            categories=("enum", "envelope"),
+            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            route_ids=("api.hello.get.stringemun", "api.hello.get.listenum"),
+            description="enum response bodies",
+        ),
+        "map": Scenario(
+            name="map",
+            categories=("map", "enum", "envelope"),
+            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            route_ids=("api.demo.post.mapmodel", "api.hello.get.abc", "api.hello.get.mapenum"),
+            description="map and enum-key map response bodies",
+        ),
+        "deprecated": Scenario(
+            name="deprecated",
+            categories=("deprecated", "json", "envelope"),
+            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            route_ids=("api.demo.post.postdeprecated",),
+            description="deprecated route remains callable",
         ),
         "form": Scenario(
             name="form",
@@ -37,6 +93,13 @@ def scenario_registry() -> dict[str, Scenario]:
             clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
             route_ids=("api.binary.post.packet",),
             description="binary schema body calls",
+        ),
+        "audit-binary": Scenario(
+            name="audit-binary",
+            categories=("binary",),
+            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            route_ids=("api.binary.post.auditpacket",),
+            description="second binary schema body calls",
         ),
         "error": Scenario(
             name="error",
@@ -58,6 +121,13 @@ def scenario_registry() -> dict[str, Scenario]:
             clients=("typescript", "kotlin", "flutter", "java", "python"),
             route_ids=("api.demo.channel.assistantsession",),
             description="HTTP WebSocket channel",
+        ),
+        "single-channel": Scenario(
+            name="single-channel",
+            categories=("websocket", "single-channel"),
+            clients=("typescript", "kotlin", "flutter", "java", "python"),
+            route_ids=("api.api.channel.ws",),
+            description="/api/ws single model HTTP WebSocket channel",
         ),
         "naming": Scenario(
             name="naming",
@@ -125,6 +195,10 @@ def coverage_by_category() -> dict[str, set[str]]:
     return coverage
 
 
+def unsupported_route_ids() -> tuple[str, ...]:
+    return ()
+
+
 def scenario_names_from_cli(raw: str | None) -> tuple[str, ...]:
     return parse_csv_filter(raw, set(scenario_registry()), label="conformance scenario")
 
@@ -147,15 +221,26 @@ def server_supports_scenario(server: str, scenario: Scenario) -> bool:
     capability = servers[server]
     if scenario.name == "rpc":
         return capability.supports_rpc
+    if scenario.name in {
+        "raw",
+        "xml",
+        "static",
+        "header",
+        "scalar",
+        "enum",
+        "map",
+        "deprecated",
+    }:
+        return capability.supports_rpc
     if scenario.name == "form":
         return capability.supports_form
-    if scenario.name == "binary":
+    if scenario.name in {"binary", "audit-binary"}:
         return capability.supports_binary
     if scenario.name == "error":
         return capability.supports_typed_error
     if scenario.name == "sse":
         return capability.supports_sse
-    if scenario.name == "websocket":
+    if scenario.name in {"websocket", "single-channel"}:
         return capability.supports_websocket
     if scenario.name == "naming":
         return capability.supports_naming

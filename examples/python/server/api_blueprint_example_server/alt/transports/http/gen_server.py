@@ -12,11 +12,7 @@ from starlette.responses import StreamingResponse, JSONResponse
 
 from ...runtime.errors import ApiError, make_api_error_payload
 from ...routes.alt.conflict.service import ConflictService, ConflictServiceStub
-from ...routes.alt.conflict.gen_types import (
-    DefaultQuery,
-    DefaultResponse,
-    KeywordEnum,
-)
+from ...routes.alt.conflict import gen_types as alt_conflict_types
 
 
 def create_router(
@@ -30,7 +26,7 @@ def create_router(
         service = conflict_service_impl
         query_raw = _query_params(request)
         try:
-            query = DefaultQuery.from_value(query_raw, "query")
+            query = alt_conflict_types.DefaultQuery.from_value(query_raw, "query")
 
         except (TypeError, ValueError) as error:
             return _bad_request_response(error)
@@ -46,9 +42,9 @@ def create_router(
     return router
 
 
-def _query_params(request: Request) -> dict[str, Any] | None:
+def _query_params(request: Request) -> dict[str, Any]:
     values = dict(request.query_params)
-    return values or None
+    return values
 
 
 async def _json_body(request: Request) -> Any:
@@ -62,10 +58,10 @@ async def _json_body(request: Request) -> Any:
     return value
 
 
-async def _form_body(request: Request) -> dict[str, Any] | None:
+async def _form_body(request: Request) -> dict[str, Any]:
     values = await request.form()
     result = {key: value for key, value in values.multi_items()}
-    return result or None
+    return result
 
 
 def _jsonable(value: Any) -> Any:

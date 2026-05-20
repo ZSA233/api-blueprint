@@ -47,6 +47,11 @@ def test_makefile_exposes_example_validation_and_release_preflight_uses_it():
     assert 'EXAMPLE_CONFORMANCE_CLIENTS ?= go,typescript,kotlin,flutter' in text
     assert 'EXAMPLE_CONFORMANCE_SCENARIOS ?=' in text
     assert 'EXAMPLE_CONFORMANCE_KEEP_WORKSPACE ?= 0' in text
+    assert 'EXAMPLE_BENCH_SERVERS ?= go' in text
+    assert 'EXAMPLE_BENCH_SCENARIOS ?= rpc-json,binary' in text
+    assert 'EXAMPLE_BENCH_REQUESTS ?= 1000' in text
+    assert 'EXAMPLE_BENCH_CONCURRENCY ?= 16' in text
+    assert 'EXAMPLE_BENCH_WARMUP ?= 100' in text
     assert "uv run python scripts/example_validation.py" in example_block
     assert "uv run python scripts/example_validation.py --mode compile" in compile_block
     assert "uv run python scripts/example_validation.py --mode refresh" in refresh_block
@@ -60,7 +65,19 @@ def test_makefile_exposes_example_validation_and_release_preflight_uses_it():
     assert "uv run python -m scripts.example_conformance refresh $(EXAMPLE_CONFORMANCE_MATRIX_ARGS)" in conformance_refresh_block
     assert "uv run python scripts/example_validation.py --scope blueprint --mode golang-suite" in golang_suite_block
     assert "uv run python scripts/example_validation.py --scope blueprint --mode java-suite" in java_suite_block
+    benchmark_list_block = _target_block(text, "benchmark-list")
+    benchmark_protocol_block = _target_block(text, "example-benchmark-protocol")
+    benchmark_suite_block = _target_block(text, "example-benchmark")
+    assert "uv run python -m scripts.example_benchmark list" in benchmark_list_block
     assert 'uv run python scripts/benchmark_binary.py --target "$(BINARY_BENCH_TARGET)" --count "$(BINARY_BENCH_COUNT)"' in benchmark_binary_block
+    assert "uv run python -m scripts.example_benchmark protocol" in benchmark_protocol_block
+    assert '--servers "$(EXAMPLE_BENCH_SERVERS)"' in benchmark_protocol_block
+    assert '--scenario "$(EXAMPLE_BENCH_SCENARIOS)"' in benchmark_protocol_block
+    assert '--requests "$(EXAMPLE_BENCH_REQUESTS)"' in benchmark_protocol_block
+    assert '--concurrency "$(EXAMPLE_BENCH_CONCURRENCY)"' in benchmark_protocol_block
+    assert '--warmup "$(EXAMPLE_BENCH_WARMUP)"' in benchmark_protocol_block
+    assert "$(MAKE) benchmark-binary" in benchmark_suite_block
+    assert "$(MAKE) example-benchmark-protocol" in benchmark_suite_block
     assert "$(MAKE) example-validation" in preflight_block
     assert 'uv run python scripts/release_version.py check-sync --tag "$(RELEASE_TAG)"' in tag_check_block
     assert "uv run python scripts/release_assets.py validate-config" in tag_check_block

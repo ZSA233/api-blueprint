@@ -4,13 +4,25 @@ from __future__ import annotations
 from typing import Any
 
 from ....runtime.client import ApiChannelBridge, ApiClientTransport, ApiStreamBridge
-from ....runtime.gen_codecs import _api_to_json
+from ....runtime.gen_codecs import (
+    _api_to_json,
+    _decode_any,
+    _decode_bool,
+    _decode_bytes,
+    _decode_float,
+    _decode_int,
+    _decode_list,
+    _decode_map,
+    _decode_object,
+    _decode_str,
+)
 
 
 from .gen_types import (
     AbcQuery,
     ApiHelloMap,
     HelloWayQuery,
+    HelloChannelMsgTypeEnum,
     MapEnum,
     HelloWayEnum,
 )
@@ -33,7 +45,7 @@ class HelloClient:
             response_type=response_type,
             response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
         )
-        return lambda item, path: _decode_map(item, path, _decode_str, ApiHelloMap.from_value)(payload, "abc.response")
+        return (lambda item, path: _decode_map(item, path, _decode_str, ApiHelloMap.from_value))(payload, "abc.response")
 
     async def map_enum(self) -> dict[MapEnum, ApiHelloMap]:
         response_type: str | None = 'dict[MapEnum, ApiHelloMap]'
@@ -44,7 +56,7 @@ class HelloClient:
             response_type=response_type,
             response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
         )
-        return lambda item, path: _decode_map(item, path, MapEnum.from_value, ApiHelloMap.from_value)(payload, "map_enum.response")
+        return (lambda item, path: _decode_map(item, path, MapEnum.from_value, ApiHelloMap.from_value))(payload, "map_enum.response")
 
     async def list_enum(self) -> list[MapEnum]:
         response_type: str | None = 'list[MapEnum]'
@@ -55,7 +67,7 @@ class HelloClient:
             response_type=response_type,
             response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
         )
-        return lambda item, path: _decode_list(item, path, MapEnum.from_value)(payload, "list_enum.response")
+        return (lambda item, path: _decode_list(item, path, MapEnum.from_value))(payload, "list_enum.response")
 
     async def string(self) -> str:
         response_type: str | None = 'str'

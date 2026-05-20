@@ -4,12 +4,20 @@ import asyncio
 import sys
 from pathlib import Path
 
+import httpx
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "client"))
 
 from api_blueprint_example_client.alt.client import create_client as create_alt_client
 from api_blueprint_example_client.alt.routes.alt.conflict.gen_types import DefaultQuery as AltDefaultQuery
 from api_blueprint_example_client.api.client import create_client
 from api_blueprint_example_client.api.routes.api.binary.gen_types import (
+    AuditPacket,
+    AuditPacketBody,
+    AuditPacketFlags,
+    AuditPacketHeader,
+    AuditPacketItem,
+    AuditPacketQuery,
     DemoPacket,
     DemoPacketBody,
     DemoPacketFlags,
@@ -23,17 +31,22 @@ from api_blueprint_example_client.api.routes.api.demo.gen_types import (
     AssistantSessionOpen,
     ErrorDemoQuery,
     FormSubmitForm,
+    PostDeprecatedJSON,
     PutDemoJSON,
     PutDemoQuery,
     SweepEventsOpen,
     TestPostJSON,
 )
+from api_blueprint_example_client.api.routes.api.gen_types import HelloChannelMsgTypeEnum
+from api_blueprint_example_client.api.routes.api.hello.gen_types import AbcQuery as HelloAbcQuery
+from api_blueprint_example_client.api.routes.api.hello.gen_types import MapEnum
 from api_blueprint_example_client.api.runtime.errors import (
     ApiError,
     ApiErrors,
     is_api_error,
     resolve_api_toast,
 )
+from api_blueprint_example_client.static.client import create_client as create_static_client
 
 
 def scenario_set(raw: str) -> set[str]:
@@ -61,6 +74,22 @@ def build_packet() -> DemoPacket:
     )
 
 
+def build_audit_packet() -> AuditPacket:
+    return AuditPacket(
+        header=AuditPacketHeader(
+            flags=AuditPacketFlags.HasItems,
+            item_count=2,
+        ),
+        body=AuditPacketBody(
+            items=[
+                AuditPacketItem(id=11, code=101),
+                AuditPacketItem(id=22, code=202),
+            ],
+            checksum=2,
+        ),
+    )
+
+
 def field(value, name: str):
     if isinstance(value, dict):
         return value[name]
@@ -78,6 +107,61 @@ async def check_rpc(api) -> None:
     )
     assert put.list == ["query", "body"], put
     assert field(put.anon_kv, "kv1") == 9, put
+
+
+async def check_raw(base_url: str) -> None:
+    async with httpx.AsyncClient(base_url=base_url) as client:
+        response = await client.post("/api/demo/raw")
+    assert response.status_code == 200, response.text
+
+
+async def check_xml(base_url: str) -> None:
+    async with httpx.AsyncClient(base_url=base_url) as client:
+        response = await client.delete("/api/demo/delete$", params={"arg1": "python-xml", "arg2": "7"})
+    assert response.status_code == 200, response.text
+    assert "python-xml" in response.text, response.text
+
+
+async def check_static(base_url: str) -> None:
+    async with create_static_client(base_url) as static_api:
+        await static_api.static.doc_json()
+        response = await static_api.static.dochaha()
+    assert response.a == "hello world", response
+
+
+async def check_header(base_url: str) -> None:
+    async with httpx.AsyncClient(base_url=base_url) as client:
+        response = await client.get("/api/demo/abc", headers={"x-token": "conformance-token"})
+    assert response.status_code == 200, response.text
+    assert "header-ok" in response.text, response.text
+
+
+async def check_scalar(api) -> None:
+    text = await api.hello.string()
+    value = await api.hello.uint64()
+    assert text == "hello-string", text
+    assert value == 9007199254740991, value
+
+
+async def check_enum(api) -> None:
+    item = await api.hello.string_emun()
+    items = await api.hello.list_enum()
+    assert item is MapEnum.A, item
+    assert items == [MapEnum.A, MapEnum.B], items
+
+
+async def check_map(api) -> None:
+    model = await api.demo.map_model()
+    assert model[1].haha == 101, model
+    hello = await api.hello.abc(query=HelloAbcQuery(type=HelloChannelMsgTypeEnum.PING))
+    assert hello["ping"].haha == 1, hello
+    enum_map = await api.hello.map_enum()
+    assert enum_map[MapEnum.A].haha == 11, enum_map
+
+
+async def check_deprecated(api) -> None:
+    response = await api.demo.post_deprecated(json=PostDeprecatedJSON(req1="python-deprecated", req2=3))
+    assert response.list == ["python-deprecated"], response
 
 
 async def check_form(api) -> None:
@@ -101,6 +185,13 @@ async def check_binary(api) -> None:
     }
     actual = response.__dict__ if hasattr(response, "__dict__") else response
     assert actual == expected, actual
+
+
+async def check_audit_binary(api) -> None:
+    response = await api.binary.audit_packet(query=AuditPacketQuery(trace="python-audit"), binary=build_audit_packet())
+    assert response.trace == "python-audit", response
+    assert response.item_count == 2, response
+    assert response.checksum == 2, response
 
 
 async def check_typed_errors(api) -> None:
@@ -153,14 +244,36 @@ def check_unsupported(action, snippet: str) -> None:
 async def main() -> None:
     if len(sys.argv) < 2:
         raise SystemExit("base URL argument is required")
-    selected = scenario_set(sys.argv[2] if len(sys.argv) > 2 else "rpc,binary,form,error,naming,sse,websocket")
+    selected = scenario_set(
+        sys.argv[2]
+        if len(sys.argv) > 2
+        else "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,single-channel"
+    )
     async with create_client(sys.argv[1]) as api, create_alt_client(sys.argv[1]) as alt_api:
         if "rpc" in selected:
             await check_rpc(api)
+        if "raw" in selected:
+            await check_raw(sys.argv[1])
+        if "xml" in selected:
+            await check_xml(sys.argv[1])
+        if "static" in selected:
+            await check_static(sys.argv[1])
+        if "header" in selected:
+            await check_header(sys.argv[1])
+        if "scalar" in selected:
+            await check_scalar(api)
+        if "enum" in selected:
+            await check_enum(api)
+        if "map" in selected:
+            await check_map(api)
+        if "deprecated" in selected:
+            await check_deprecated(api)
         if "form" in selected:
             await check_form(api)
         if "binary" in selected:
             await check_binary(api)
+        if "audit-binary" in selected:
+            await check_audit_binary(api)
         if "error" in selected:
             await check_typed_errors(api)
         if "naming" in selected:
@@ -172,6 +285,8 @@ async def main() -> None:
                 lambda: api.demo.open_assistant_session(open_data=AssistantSessionOpen(session_id="python-ws")),
                 "channel",
             )
+        if "single-channel" in selected:
+            check_unsupported(lambda: api.api.open_hello_channel(), "channel")
     print("python conformance passed")
 
 

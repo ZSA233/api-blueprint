@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum, IntEnum, StrEnum
-from typing import Any, Callable, Generic, Mapping, TypeVar
+from typing import Any, Callable, Generic, Mapping, Self, TypeVar
 from ....runtime.gen_codecs import (
     _MISSING,
     _api_to_json,
@@ -31,7 +31,7 @@ class ColorEnum(StrEnum):
     BLUE = "blue"
 
     @classmethod
-    def from_value(cls, value: object, path: str = "ColorEnum") -> "ColorEnum":
+    def from_value(cls, value: object, path: str = "ColorEnum") -> Self:
         if isinstance(value, cls):
             return value
         for item in cls:
@@ -49,7 +49,7 @@ class StatusEnum(IntEnum):
     FINISHED = 3
 
     @classmethod
-    def from_value(cls, value: object, path: str = "StatusEnum") -> "StatusEnum":
+    def from_value(cls, value: object, path: str = "StatusEnum") -> Self:
         if isinstance(value, cls):
             return value
         for item in cls:
@@ -68,13 +68,13 @@ class AbcQuery:
     arg2: float | None = None
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> AbcQuery:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("AbcQuery: expected object")
         return cls._from_mapping(value, "AbcQuery")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "AbcQuery") -> AbcQuery:
+    def from_value(cls, value: object, path: str = "AbcQuery") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -82,7 +82,7 @@ class AbcQuery:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> AbcQuery:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             arg1=_decode_optional(_decode_bool, value.get("arg1", _MISSING), _field_path(path, "arg1")),
             arg3=_decode_optional(_decode_str, value.get("arg3", _MISSING), _field_path(path, "arg3")),
@@ -115,13 +115,13 @@ class AbcResponse:
     enum_list: list[StatusEnum]
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> AbcResponse:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("AbcResponse: expected object")
         return cls._from_mapping(value, "AbcResponse")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "AbcResponse") -> AbcResponse:
+    def from_value(cls, value: object, path: str = "AbcResponse") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -129,7 +129,7 @@ class AbcResponse:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> AbcResponse:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             bc=_decode_required(_decode_str, value.get("bc", _MISSING), _field_path(path, "bc")),
             a=_decode_required(_decode_int, value.get("a", _MISSING), _field_path(path, "a")),
@@ -164,13 +164,13 @@ class ApiDemoSubA:
     amap: list[ApiDemoMap]
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> ApiDemoSubA:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("ApiDemoSubA: expected object")
         return cls._from_mapping(value, "ApiDemoSubA")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "ApiDemoSubA") -> ApiDemoSubA:
+    def from_value(cls, value: object, path: str = "ApiDemoSubA") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -178,7 +178,7 @@ class ApiDemoSubA:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> ApiDemoSubA:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             hello=_decode_required(lambda item, path: _decode_map(item, path, _decode_str, _decode_int), value.get("hello", _MISSING), _field_path(path, "hello")),
             amap=_decode_required(lambda item, path: _decode_list(item, path, ApiDemoMap.from_value), value.get("amap", _MISSING), _field_path(path, "amap")),
@@ -196,13 +196,13 @@ class ApiDemoMap:
     haha: int
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> ApiDemoMap:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("ApiDemoMap: expected object")
         return cls._from_mapping(value, "ApiDemoMap")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "ApiDemoMap") -> ApiDemoMap:
+    def from_value(cls, value: object, path: str = "ApiDemoMap") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -210,7 +210,7 @@ class ApiDemoMap:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> ApiDemoMap:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             haha=_decode_required(_decode_int, value.get("haha", _MISSING), _field_path(path, "haha")),
         )
@@ -227,13 +227,13 @@ class TestPostJSON:
     req2: int | None = None
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> TestPostJSON:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("TestPostJSON: expected object")
         return cls._from_mapping(value, "TestPostJSON")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "TestPostJSON") -> TestPostJSON:
+    def from_value(cls, value: object, path: str = "TestPostJSON") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -241,7 +241,7 @@ class TestPostJSON:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> TestPostJSON:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             req1=_decode_required(_decode_str, value.get("req1", _MISSING), _field_path(path, "req1")),
             req2=_decode_optional(_decode_int, value.get("req2", _MISSING), _field_path(path, "req2")),
@@ -262,13 +262,13 @@ class TestPostResponse:
     map: dict[str, ApiDemoMap]
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> TestPostResponse:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("TestPostResponse: expected object")
         return cls._from_mapping(value, "TestPostResponse")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "TestPostResponse") -> TestPostResponse:
+    def from_value(cls, value: object, path: str = "TestPostResponse") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -276,7 +276,7 @@ class TestPostResponse:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> TestPostResponse:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             list=_decode_required(lambda item, path: _decode_list(item, path, _decode_str), value.get("list", _MISSING), _field_path(path, "list")),
             map=_decode_required(lambda item, path: _decode_map(item, path, _decode_str, ApiDemoMap.from_value), value.get("map", _MISSING), _field_path(path, "map")),
@@ -296,13 +296,13 @@ class FormSubmitForm:
     enabled: bool | None = None
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> FormSubmitForm:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("FormSubmitForm: expected object")
         return cls._from_mapping(value, "FormSubmitForm")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "FormSubmitForm") -> FormSubmitForm:
+    def from_value(cls, value: object, path: str = "FormSubmitForm") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -310,7 +310,7 @@ class FormSubmitForm:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> FormSubmitForm:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             title=_decode_required(_decode_str, value.get("title", _MISSING), _field_path(path, "title")),
             count=_decode_optional(_decode_int, value.get("count", _MISSING), _field_path(path, "count")),
@@ -336,13 +336,13 @@ class FormSubmitResponse:
     enabled: bool
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> FormSubmitResponse:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("FormSubmitResponse: expected object")
         return cls._from_mapping(value, "FormSubmitResponse")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "FormSubmitResponse") -> FormSubmitResponse:
+    def from_value(cls, value: object, path: str = "FormSubmitResponse") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -350,7 +350,7 @@ class FormSubmitResponse:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> FormSubmitResponse:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             summary=_decode_required(_decode_str, value.get("summary", _MISSING), _field_path(path, "summary")),
             count=_decode_required(_decode_int, value.get("count", _MISSING), _field_path(path, "count")),
@@ -372,13 +372,13 @@ class PutDemoQuery:
     arg3: str | None = None
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> PutDemoQuery:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("PutDemoQuery: expected object")
         return cls._from_mapping(value, "PutDemoQuery")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "PutDemoQuery") -> PutDemoQuery:
+    def from_value(cls, value: object, path: str = "PutDemoQuery") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -386,7 +386,7 @@ class PutDemoQuery:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> PutDemoQuery:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             arg1=_decode_optional(_decode_str, value.get("arg1", _MISSING), _field_path(path, "arg1")),
             arg2=_decode_optional(_decode_float, value.get("arg2", _MISSING), _field_path(path, "arg2")),
@@ -413,13 +413,13 @@ class PutDemoJSON:
     req2: int | None = None
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> PutDemoJSON:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("PutDemoJSON: expected object")
         return cls._from_mapping(value, "PutDemoJSON")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "PutDemoJSON") -> PutDemoJSON:
+    def from_value(cls, value: object, path: str = "PutDemoJSON") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -427,7 +427,7 @@ class PutDemoJSON:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> PutDemoJSON:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             req1=_decode_required(_decode_str, value.get("req1", _MISSING), _field_path(path, "req1")),
             req2=_decode_optional(_decode_int, value.get("req2", _MISSING), _field_path(path, "req2")),
@@ -448,13 +448,13 @@ class PutDemoResponse:
     anon_kv: ANONFunc1putAnonKv
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> PutDemoResponse:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("PutDemoResponse: expected object")
         return cls._from_mapping(value, "PutDemoResponse")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "PutDemoResponse") -> PutDemoResponse:
+    def from_value(cls, value: object, path: str = "PutDemoResponse") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -462,7 +462,7 @@ class PutDemoResponse:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> PutDemoResponse:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             list=_decode_required(lambda item, path: _decode_list(item, path, _decode_str), value.get("list", _MISSING), _field_path(path, "list")),
             anon_kv=_decode_required(ANONFunc1putAnonKv.from_value, value.get("anon_kv", _MISSING), _field_path(path, "anon_kv")),
@@ -481,13 +481,13 @@ class ANONFunc1putAnonKv:
     kv2: list[float]
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> ANONFunc1putAnonKv:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("ANONFunc1putAnonKv: expected object")
         return cls._from_mapping(value, "ANONFunc1putAnonKv")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "ANONFunc1putAnonKv") -> ANONFunc1putAnonKv:
+    def from_value(cls, value: object, path: str = "ANONFunc1putAnonKv") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -495,7 +495,7 @@ class ANONFunc1putAnonKv:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> ANONFunc1putAnonKv:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             kv1=_decode_required(_decode_int, value.get("kv1", _MISSING), _field_path(path, "kv1")),
             kv2=_decode_required(lambda item, path: _decode_list(item, path, _decode_float), value.get("kv2", _MISSING), _field_path(path, "kv2")),
@@ -514,13 +514,13 @@ class DeleteQuery:
     arg2: float | None = None
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> DeleteQuery:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("DeleteQuery: expected object")
         return cls._from_mapping(value, "DeleteQuery")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "DeleteQuery") -> DeleteQuery:
+    def from_value(cls, value: object, path: str = "DeleteQuery") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -528,7 +528,7 @@ class DeleteQuery:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> DeleteQuery:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             arg1=_decode_optional(_decode_str, value.get("arg1", _MISSING), _field_path(path, "arg1")),
             arg2=_decode_optional(_decode_float, value.get("arg2", _MISSING), _field_path(path, "arg2")),
@@ -551,13 +551,13 @@ class DeleteResponse:
     anon_list: list[ANONDeleteAnonList]
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> DeleteResponse:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("DeleteResponse: expected object")
         return cls._from_mapping(value, "DeleteResponse")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "DeleteResponse") -> DeleteResponse:
+    def from_value(cls, value: object, path: str = "DeleteResponse") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -565,7 +565,7 @@ class DeleteResponse:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> DeleteResponse:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             list=_decode_required(lambda item, path: _decode_list(item, path, _decode_str), value.get("list", _MISSING), _field_path(path, "list")),
             anon_list=_decode_required(lambda item, path: _decode_list(item, path, ANONDeleteAnonList.from_value), value.get("anon_list", _MISSING), _field_path(path, "anon_list")),
@@ -584,13 +584,13 @@ class ANONDeleteAnonList:
     kv2: list[str]
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> ANONDeleteAnonList:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("ANONDeleteAnonList: expected object")
         return cls._from_mapping(value, "ANONDeleteAnonList")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "ANONDeleteAnonList") -> ANONDeleteAnonList:
+    def from_value(cls, value: object, path: str = "ANONDeleteAnonList") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -598,7 +598,7 @@ class ANONDeleteAnonList:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> ANONDeleteAnonList:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             kv1=_decode_required(_decode_int, value.get("kv1", _MISSING), _field_path(path, "kv1")),
             kv2=_decode_required(lambda item, path: _decode_list(item, path, _decode_str), value.get("kv2", _MISSING), _field_path(path, "kv2")),
@@ -617,13 +617,13 @@ class SweepEventsOpen:
     replay_from: str | None = None
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> SweepEventsOpen:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("SweepEventsOpen: expected object")
         return cls._from_mapping(value, "SweepEventsOpen")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "SweepEventsOpen") -> SweepEventsOpen:
+    def from_value(cls, value: object, path: str = "SweepEventsOpen") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -631,7 +631,7 @@ class SweepEventsOpen:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> SweepEventsOpen:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             run_id=_decode_required(_decode_str, value.get("run_id", _MISSING), _field_path(path, "run_id")),
             replay_from=_decode_optional(_decode_str, value.get("replay_from", _MISSING), _field_path(path, "replay_from")),
@@ -651,13 +651,13 @@ class SweepState:
     status: str
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> SweepState:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("SweepState: expected object")
         return cls._from_mapping(value, "SweepState")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "SweepState") -> SweepState:
+    def from_value(cls, value: object, path: str = "SweepState") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -665,7 +665,7 @@ class SweepState:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> SweepState:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             status=_decode_required(_decode_str, value.get("status", _MISSING), _field_path(path, "status")),
         )
@@ -682,13 +682,13 @@ class SweepProgress:
     total: int
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> SweepProgress:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("SweepProgress: expected object")
         return cls._from_mapping(value, "SweepProgress")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "SweepProgress") -> SweepProgress:
+    def from_value(cls, value: object, path: str = "SweepProgress") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -696,7 +696,7 @@ class SweepProgress:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> SweepProgress:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             current=_decode_required(_decode_int, value.get("current", _MISSING), _field_path(path, "current")),
             total=_decode_required(_decode_int, value.get("total", _MISSING), _field_path(path, "total")),
@@ -715,13 +715,13 @@ class SweepLog:
     message: str
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> SweepLog:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("SweepLog: expected object")
         return cls._from_mapping(value, "SweepLog")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "SweepLog") -> SweepLog:
+    def from_value(cls, value: object, path: str = "SweepLog") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -729,7 +729,7 @@ class SweepLog:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> SweepLog:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             level=_decode_required(_decode_str, value.get("level", _MISSING), _field_path(path, "level")),
             message=_decode_required(_decode_str, value.get("message", _MISSING), _field_path(path, "message")),
@@ -749,13 +749,13 @@ class SweepEventsClose:
     error: str | None = None
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> SweepEventsClose:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("SweepEventsClose: expected object")
         return cls._from_mapping(value, "SweepEventsClose")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "SweepEventsClose") -> SweepEventsClose:
+    def from_value(cls, value: object, path: str = "SweepEventsClose") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -763,7 +763,7 @@ class SweepEventsClose:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> SweepEventsClose:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             code=_decode_required(_decode_int, value.get("code", _MISSING), _field_path(path, "code")),
             reason=_decode_optional(_decode_str, value.get("reason", _MISSING), _field_path(path, "reason")),
@@ -787,13 +787,13 @@ class AssistantSessionOpen:
     session_id: str
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> AssistantSessionOpen:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("AssistantSessionOpen: expected object")
         return cls._from_mapping(value, "AssistantSessionOpen")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "AssistantSessionOpen") -> AssistantSessionOpen:
+    def from_value(cls, value: object, path: str = "AssistantSessionOpen") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -801,7 +801,7 @@ class AssistantSessionOpen:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> AssistantSessionOpen:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             session_id=_decode_required(_decode_str, value.get("session_id", _MISSING), _field_path(path, "session_id")),
         )
@@ -817,13 +817,13 @@ class AssistantDelta:
     text: str
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> AssistantDelta:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("AssistantDelta: expected object")
         return cls._from_mapping(value, "AssistantDelta")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "AssistantDelta") -> AssistantDelta:
+    def from_value(cls, value: object, path: str = "AssistantDelta") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -831,7 +831,7 @@ class AssistantDelta:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> AssistantDelta:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             text=_decode_required(_decode_str, value.get("text", _MISSING), _field_path(path, "text")),
         )
@@ -847,13 +847,13 @@ class AssistantDone:
     message_id: str
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> AssistantDone:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("AssistantDone: expected object")
         return cls._from_mapping(value, "AssistantDone")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "AssistantDone") -> AssistantDone:
+    def from_value(cls, value: object, path: str = "AssistantDone") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -861,7 +861,7 @@ class AssistantDone:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> AssistantDone:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             message_id=_decode_required(_decode_str, value.get("message_id", _MISSING), _field_path(path, "message_id")),
         )
@@ -877,13 +877,13 @@ class AssistantInput:
     text: str
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> AssistantInput:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("AssistantInput: expected object")
         return cls._from_mapping(value, "AssistantInput")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "AssistantInput") -> AssistantInput:
+    def from_value(cls, value: object, path: str = "AssistantInput") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -891,7 +891,7 @@ class AssistantInput:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> AssistantInput:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             text=_decode_required(_decode_str, value.get("text", _MISSING), _field_path(path, "text")),
         )
@@ -907,13 +907,13 @@ class AssistantCancel:
     reason: str | None = None
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> AssistantCancel:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("AssistantCancel: expected object")
         return cls._from_mapping(value, "AssistantCancel")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "AssistantCancel") -> AssistantCancel:
+    def from_value(cls, value: object, path: str = "AssistantCancel") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -921,7 +921,7 @@ class AssistantCancel:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> AssistantCancel:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             reason=_decode_optional(_decode_str, value.get("reason", _MISSING), _field_path(path, "reason")),
         )
@@ -941,13 +941,13 @@ class AssistantSessionClose:
     error: str | None = None
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> AssistantSessionClose:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("AssistantSessionClose: expected object")
         return cls._from_mapping(value, "AssistantSessionClose")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "AssistantSessionClose") -> AssistantSessionClose:
+    def from_value(cls, value: object, path: str = "AssistantSessionClose") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -955,7 +955,7 @@ class AssistantSessionClose:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> AssistantSessionClose:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             code=_decode_required(_decode_int, value.get("code", _MISSING), _field_path(path, "code")),
             reason=_decode_optional(_decode_str, value.get("reason", _MISSING), _field_path(path, "reason")),
@@ -980,13 +980,13 @@ class PostDeprecatedJSON:
     req2: int | None = None
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> PostDeprecatedJSON:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("PostDeprecatedJSON: expected object")
         return cls._from_mapping(value, "PostDeprecatedJSON")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "PostDeprecatedJSON") -> PostDeprecatedJSON:
+    def from_value(cls, value: object, path: str = "PostDeprecatedJSON") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -994,7 +994,7 @@ class PostDeprecatedJSON:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> PostDeprecatedJSON:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             req1=_decode_required(_decode_str, value.get("req1", _MISSING), _field_path(path, "req1")),
             req2=_decode_optional(_decode_int, value.get("req2", _MISSING), _field_path(path, "req2")),
@@ -1014,13 +1014,13 @@ class PostDeprecatedResponse:
     list: list[str]
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> PostDeprecatedResponse:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("PostDeprecatedResponse: expected object")
         return cls._from_mapping(value, "PostDeprecatedResponse")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "PostDeprecatedResponse") -> PostDeprecatedResponse:
+    def from_value(cls, value: object, path: str = "PostDeprecatedResponse") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -1028,7 +1028,7 @@ class PostDeprecatedResponse:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> PostDeprecatedResponse:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             list=_decode_required(lambda item, path: _decode_list(item, path, _decode_str), value.get("list", _MISSING), _field_path(path, "list")),
         )
@@ -1045,13 +1045,13 @@ class RawResponse:
     list2: dict[int, list[ApiDemoA]]
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> RawResponse:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("RawResponse: expected object")
         return cls._from_mapping(value, "RawResponse")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "RawResponse") -> RawResponse:
+    def from_value(cls, value: object, path: str = "RawResponse") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -1059,7 +1059,7 @@ class RawResponse:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> RawResponse:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             list=_decode_required(lambda item, path: _decode_list(item, path, _decode_str), value.get("list", _MISSING), _field_path(path, "list")),
             list2=_decode_required(lambda item, path: _decode_map(item, path, _decode_int, lambda item, path: _decode_list(item, path, ApiDemoA.from_value)), value.get("list2", _MISSING), _field_path(path, "list2")),
@@ -1084,13 +1084,13 @@ class ApiDemoA:
     enum_list: list[StatusEnum]
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> ApiDemoA:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("ApiDemoA: expected object")
         return cls._from_mapping(value, "ApiDemoA")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "ApiDemoA") -> ApiDemoA:
+    def from_value(cls, value: object, path: str = "ApiDemoA") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -1098,7 +1098,7 @@ class ApiDemoA:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> ApiDemoA:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             bc=_decode_required(_decode_str, value.get("bc", _MISSING), _field_path(path, "bc")),
             a=_decode_required(_decode_int, value.get("a", _MISSING), _field_path(path, "a")),
@@ -1132,13 +1132,13 @@ class ErrorDemoQuery:
     mode: str | None = None
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> ErrorDemoQuery:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("ErrorDemoQuery: expected object")
         return cls._from_mapping(value, "ErrorDemoQuery")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "ErrorDemoQuery") -> ErrorDemoQuery:
+    def from_value(cls, value: object, path: str = "ErrorDemoQuery") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -1146,7 +1146,7 @@ class ErrorDemoQuery:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> ErrorDemoQuery:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             mode=_decode_optional(_decode_str, value.get("mode", _MISSING), _field_path(path, "mode")),
         )
@@ -1164,13 +1164,13 @@ class ErrorDemoResponse:
     status: str
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> ErrorDemoResponse:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("ErrorDemoResponse: expected object")
         return cls._from_mapping(value, "ErrorDemoResponse")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "ErrorDemoResponse") -> ErrorDemoResponse:
+    def from_value(cls, value: object, path: str = "ErrorDemoResponse") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -1178,7 +1178,7 @@ class ErrorDemoResponse:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> ErrorDemoResponse:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             status=_decode_required(_decode_str, value.get("status", _MISSING), _field_path(path, "status")),
         )
@@ -1195,7 +1195,7 @@ class SweepStreamMessage:
     data: Any = None
 
     @classmethod
-    def from_value(cls, value: object, path: str = "SweepStreamMessage") -> "SweepStreamMessage":
+    def from_value(cls, value: object, path: str = "SweepStreamMessage") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -1271,7 +1271,7 @@ class AssistantServerMessage:
     data: Any = None
 
     @classmethod
-    def from_value(cls, value: object, path: str = "AssistantServerMessage") -> "AssistantServerMessage":
+    def from_value(cls, value: object, path: str = "AssistantServerMessage") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -1347,7 +1347,7 @@ class AssistantClientMessage:
     data: Any = None
 
     @classmethod
-    def from_value(cls, value: object, path: str = "AssistantClientMessage") -> "AssistantClientMessage":
+    def from_value(cls, value: object, path: str = "AssistantClientMessage") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum, IntEnum, StrEnum
-from typing import Any, Callable, Generic, Mapping, TypeVar
+from typing import Any, Callable, Generic, Mapping, Self, TypeVar
 from ....runtime.gen_codecs import (
     _MISSING,
     _api_to_json,
@@ -30,7 +30,7 @@ class KeywordEnum(StrEnum):
     CLASS = "class"
 
     @classmethod
-    def from_value(cls, value: object, path: str = "KeywordEnum") -> "KeywordEnum":
+    def from_value(cls, value: object, path: str = "KeywordEnum") -> Self:
         if isinstance(value, cls):
             return value
         for item in cls:
@@ -47,13 +47,13 @@ class DefaultQuery:
     class_: str | None = None
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> DefaultQuery:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("DefaultQuery: expected object")
         return cls._from_mapping(value, "DefaultQuery")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "DefaultQuery") -> DefaultQuery:
+    def from_value(cls, value: object, path: str = "DefaultQuery") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -61,7 +61,7 @@ class DefaultQuery:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> DefaultQuery:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             class_=_decode_optional(_decode_str, value.get("class_", _MISSING), _field_path(path, "class_")),
         )
@@ -81,13 +81,13 @@ class DefaultResponse:
     enum: KeywordEnum
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> DefaultResponse:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("DefaultResponse: expected object")
         return cls._from_mapping(value, "DefaultResponse")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "DefaultResponse") -> DefaultResponse:
+    def from_value(cls, value: object, path: str = "DefaultResponse") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -95,7 +95,7 @@ class DefaultResponse:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> DefaultResponse:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             default=_decode_required(_decode_str, value.get("default", _MISSING), _field_path(path, "default")),
             class_=_decode_required(_decode_str, value.get("class_", _MISSING), _field_path(path, "class_")),

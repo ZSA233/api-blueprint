@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -45,12 +46,20 @@ def test_scenario_registry_covers_required_dsl_categories() -> None:
         "binary",
         "raw",
         "xml",
+        "static",
+        "header",
+        "scalar",
+        "enum",
+        "map",
+        "deprecated",
         "typed-error",
         "sse",
         "websocket",
+        "single-channel",
         "naming-conflict",
         "multi-blueprint",
         "envelope",
+        "no-envelope",
         "server-safety",
         "malformed-input",
         "early-close",
@@ -66,6 +75,97 @@ def test_scenario_registry_covers_required_dsl_categories() -> None:
     assert "kotlin" in coverage["form"]
     assert coverage["server-safety"] == {"server"}
     assert coverage["malformed-input"] == {"server"}
+
+
+def test_scenario_registry_exposes_expanded_examples() -> None:
+    registry = scenarios.scenario_registry()
+
+    expected = {
+        "raw",
+        "xml",
+        "static",
+        "header",
+        "scalar",
+        "enum",
+        "map",
+        "deprecated",
+        "audit-binary",
+        "single-channel",
+    }
+    assert expected <= set(registry)
+    assert registry["raw"].route_ids == ("api.demo.post.raw",)
+    assert registry["xml"].route_ids == ("api.demo.delete.delete",)
+    assert registry["static"].route_ids == ("static.static.get.docjson", "static.static.get.dochaha")
+    assert registry["header"].route_ids == ("api.demo.get.abc",)
+    assert registry["scalar"].route_ids == ("api.hello.get.string", "api.hello.get.uint64")
+    assert registry["enum"].route_ids == ("api.hello.get.stringemun", "api.hello.get.listenum")
+    assert registry["map"].route_ids == (
+        "api.demo.post.mapmodel",
+        "api.hello.get.abc",
+        "api.hello.get.mapenum",
+    )
+    assert registry["deprecated"].route_ids == ("api.demo.post.postdeprecated",)
+    assert registry["audit-binary"].route_ids == ("api.binary.post.auditpacket",)
+    assert registry["single-channel"].route_ids == ("api.api.channel.ws",)
+
+
+def test_user_visible_example_routes_have_conformance_status() -> None:
+    contract = json.loads((Path(__file__).resolve().parents[2] / "examples/api-blueprint.index.json").read_text())
+    route_ids = {route["id"] for route in contract["routes"]}
+    covered_route_ids = {route_id for scenario in scenarios.scenario_registry().values() for route_id in scenario.route_ids}
+    unsupported_route_ids = set(scenarios.unsupported_route_ids())
+
+    assert route_ids <= covered_route_ids | unsupported_route_ids
+    assert covered_route_ids <= route_ids
+
+
+def test_expanded_scenarios_are_gated_by_server_capabilities() -> None:
+    rpc_names = {
+        "raw",
+        "xml",
+        "static",
+        "header",
+        "scalar",
+        "enum",
+        "map",
+        "deprecated",
+        "single-channel",
+    }
+    binary_names = {"audit-binary"}
+
+    for name in rpc_names:
+        assert scenarios.server_supports_scenario("go", scenarios.scenario_registry()[name]) is True
+    for name in binary_names:
+        assert scenarios.server_supports_scenario("go", scenarios.scenario_registry()[name]) is True
+
+
+def test_preserved_harnesses_dispatch_expanded_scenarios() -> None:
+    root = Path(__file__).resolve().parents[2]
+    expected = (
+        "raw",
+        "xml",
+        "static",
+        "header",
+        "scalar",
+        "enum",
+        "map",
+        "deprecated",
+        "audit-binary",
+        "single-channel",
+    )
+
+    harnesses = [
+        root / "examples/golang/conformance/main.go",
+        root / "examples/typescript/conformance.ts",
+        root / "examples/kotlin/conformance/Conformance.kt",
+        root / "examples/flutter/test/conformance_test.dart",
+        root / "examples/java/conformance/Conformance.java",
+        root / "examples/python/conformance/client.py",
+    ]
+    for harness in harnesses:
+        text = harness.read_text(encoding="utf-8")
+        missing = [name for name in expected if name not in text]
+        assert not missing, f"{harness} missing scenarios: {missing}"
 
 
 def test_filter_scenarios_rejects_unknown_names() -> None:

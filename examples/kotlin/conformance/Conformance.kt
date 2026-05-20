@@ -1,6 +1,12 @@
 package com.example.apiblueprint.conformance
 
 import com.example.apiblueprint.api.routes.api.binary.BinaryPacketQuery
+import com.example.apiblueprint.api.routes.api.binary.BinaryAuditPacketQuery
+import com.example.apiblueprint.api.routes.api.binary.AuditPacket
+import com.example.apiblueprint.api.routes.api.binary.AuditPacketBody
+import com.example.apiblueprint.api.routes.api.binary.AuditPacketFlagsValues
+import com.example.apiblueprint.api.routes.api.binary.AuditPacketHeader
+import com.example.apiblueprint.api.routes.api.binary.AuditPacketItem
 import com.example.apiblueprint.api.routes.api.binary.DemoPacket
 import com.example.apiblueprint.api.routes.api.binary.DemoPacketBody
 import com.example.apiblueprint.api.routes.api.binary.DemoPacketFlagsValues
@@ -11,7 +17,9 @@ import com.example.apiblueprint.api.routes.api.demo.DemoErrorDemoQuery
 import com.example.apiblueprint.api.routes.api.demo.DemoFormSubmitForm
 import com.example.apiblueprint.api.routes.api.demo.DemoPutDemoJson
 import com.example.apiblueprint.api.routes.api.demo.DemoPutDemoQuery
+import com.example.apiblueprint.api.routes.api.demo.DemoPostDeprecatedJson
 import com.example.apiblueprint.api.routes.api.demo.DemoTestPostJson
+import com.example.apiblueprint.api.routes.api.hello.HelloAbcQuery
 import com.example.apiblueprint.api.routes.api.demo.AssistantClientMessageVariants
 import com.example.apiblueprint.api.routes.api.demo.AssistantServerMessage
 import com.example.apiblueprint.api.routes.api.demo.AssistantServerMessageHandlers
@@ -28,7 +36,9 @@ import com.example.apiblueprint.api.runtime.AssistantInput
 import com.example.apiblueprint.api.runtime.AssistantOpen
 import com.example.apiblueprint.api.runtime.ConnectionClose
 import com.example.apiblueprint.api.runtime.DemoErr
+import com.example.apiblueprint.api.runtime.HelloChannelMsgTypeEnum
 import com.example.apiblueprint.api.runtime.KeywordEnum
+import com.example.apiblueprint.api.runtime.MapEnum
 import com.example.apiblueprint.api.runtime.SweepLog
 import com.example.apiblueprint.api.runtime.SweepOpen
 import com.example.apiblueprint.api.runtime.SweepProgress
@@ -45,10 +55,12 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 
 fun main(args: Array<String>) = runBlocking {
     val baseUrl = args.firstOrNull()?.trimEnd('/') ?: error("base URL argument is required")
-    val selected = scenarioSet(args.getOrNull(1) ?: "rpc,binary,form,error,naming,sse,websocket")
+    val selected = scenarioSet(args.getOrNull(1) ?: "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,single-channel")
     val httpClient = OkHttpClient()
     val altHttpClient = OkHttpClient()
     try {
@@ -58,11 +70,39 @@ fun main(args: Array<String>) = runBlocking {
         if ("rpc" in selected) {
             checkRpc(client)
         }
+        if ("raw" in selected) {
+            checkRawHttp(httpClient, "$baseUrl/api/demo/raw", "POST", "", "raw")
+        }
+        if ("xml" in selected) {
+            checkRawHttp(httpClient, "$baseUrl/api/demo/delete\$?arg1=kotlin-xml&arg2=7", "DELETE", "kotlin-xml", "xml")
+        }
+        if ("static" in selected) {
+            checkRawHttp(httpClient, "$baseUrl/static/doc.json", "GET", "", "static.doc")
+            checkRawHttp(httpClient, "$baseUrl/static/dochaha", "GET", "hello world", "static")
+        }
+        if ("header" in selected) {
+            checkHeader(httpClient, baseUrl)
+        }
+        if ("scalar" in selected) {
+            checkScalar(client)
+        }
+        if ("enum" in selected) {
+            checkEnum(client)
+        }
+        if ("map" in selected) {
+            checkMap(client)
+        }
+        if ("deprecated" in selected) {
+            checkDeprecated(client)
+        }
         if ("form" in selected) {
             checkForm(client)
         }
         if ("binary" in selected) {
             checkBinary(client)
+        }
+        if ("audit-binary" in selected) {
+            checkAuditBinary(client)
         }
         if ("error" in selected) {
             checkTypedErrors(client)
@@ -75,6 +115,9 @@ fun main(args: Array<String>) = runBlocking {
         }
         if ("websocket" in selected) {
             checkWebSocket(client)
+        }
+        if ("single-channel" in selected) {
+            checkRawSingleChannel(httpClient, baseUrl)
         }
         println("kotlin conformance passed")
     } finally {
@@ -112,6 +155,30 @@ private suspend fun checkForm(client: ApiClient) {
     assertEquals(true, response.enabled, "formSubmit.enabled")
 }
 
+private suspend fun checkScalar(client: ApiClient) {
+    assertEquals("hello-string", client.hello.string(), "hello.string")
+    assertEquals(9007199254740991L, client.hello.uint64(), "hello.uint64")
+}
+
+private suspend fun checkEnum(client: ApiClient) {
+    assertEquals(MapEnum.A, client.hello.stringEmun(), "hello.stringEmun")
+    assertEquals(listOf(MapEnum.A, MapEnum.B), client.hello.listEnum(), "hello.listEnum")
+}
+
+private suspend fun checkMap(client: ApiClient) {
+    val model = client.demo.mapModel()
+    assertEquals(101L, model[1]?.haha, "demo.mapModel")
+    val hello = client.hello.abc(HelloAbcQuery(type = HelloChannelMsgTypeEnum.PING))
+    assertEquals(1L, hello["ping"]?.haha, "hello.abc")
+    val enumMap = client.hello.mapEnum()
+    assertEquals(11L, enumMap["a"]?.haha, "hello.mapEnum")
+}
+
+private suspend fun checkDeprecated(client: ApiClient) {
+    val response = client.demo.postDeprecated(DemoPostDeprecatedJson(req1 = "kotlin-deprecated", req2 = 3))
+    assertEquals(listOf("kotlin-deprecated"), response.list, "deprecated.list")
+}
+
 private suspend fun checkBinary(client: ApiClient) {
     val response = client.binary.packet(BinaryPacketQuery(trace = "kotlin-typed"), buildPacket())
     assertEquals("kotlin-typed", response.trace, "binary.trace")
@@ -122,6 +189,13 @@ private suspend fun checkBinary(client: ApiClient) {
     assertEquals("alpha", response.firstLabel, "binary.firstLabel")
     assertEquals(listOf(11, 22), response.itemIds, "binary.itemIds")
     assertEquals(12, response.checksum, "binary.checksum")
+}
+
+private suspend fun checkAuditBinary(client: ApiClient) {
+    val response = client.binary.auditPacket(BinaryAuditPacketQuery(trace = "kotlin-audit"), buildAuditPacket())
+    assertEquals("kotlin-audit", response.trace, "audit.trace")
+    assertEquals(2, response.itemCount, "audit.itemCount")
+    assertEquals(2, response.checksum, "audit.checksum")
 }
 
 private suspend fun checkTypedErrors(client: ApiClient) {
@@ -235,6 +309,81 @@ private fun buildPacket(): DemoPacket {
             checksum = 12,
         ),
     )
+}
+
+private fun buildAuditPacket(): AuditPacket =
+    AuditPacket(
+        header = AuditPacketHeader(flags = AuditPacketFlagsValues.HasItems, itemCount = 2),
+        body = AuditPacketBody(
+            items = listOf(
+                AuditPacketItem(id = 11, code = 101),
+                AuditPacketItem(id = 22, code = 202),
+            ),
+            checksum = 2L,
+        ),
+    )
+
+private fun checkRawHttp(client: OkHttpClient, url: String, method: String, snippet: String, label: String) {
+    val body = if (method == "POST" || method == "PUT" || method == "PATCH") ByteArray(0).toRequestBody(null) else null
+    val request = Request.Builder().url(url).method(method, body).build()
+    client.newCall(request).execute().use { response ->
+        val body = response.body?.string().orEmpty()
+        assertEquals(true, response.isSuccessful, "$label.status body=$body")
+        assertContains(body, snippet, "$label.body")
+    }
+}
+
+private fun checkHeader(client: OkHttpClient, baseUrl: String) {
+    val request = Request.Builder()
+        .url("$baseUrl/api/demo/abc")
+        .header("x-token", "conformance-token")
+        .build()
+    client.newCall(request).execute().use { response ->
+        val body = response.body?.string().orEmpty()
+        assertEquals(true, response.isSuccessful, "header.status body=$body")
+        assertContains(body, "header-ok", "header.body")
+    }
+}
+
+private fun checkRawSingleChannel(client: OkHttpClient, baseUrl: String) {
+    val request = Request.Builder().url(baseUrl.replace("http://", "ws://").replace("https://", "wss://") + "/api/ws").build()
+    val opened = CompletableDeferred<Unit>()
+    val message = CompletableDeferred<String>()
+    val close = CompletableDeferred<Unit>()
+    val socket = client.newWebSocket(request, object : okhttp3.WebSocketListener() {
+        override fun onOpen(webSocket: okhttp3.WebSocket, response: okhttp3.Response) {
+            opened.complete(Unit)
+            webSocket.send("""{"type":"ping","data":{"source":"kotlin"}}""")
+        }
+
+        override fun onMessage(webSocket: okhttp3.WebSocket, text: String) {
+            if (!message.isCompleted) {
+                message.complete(text)
+            }
+        }
+
+        override fun onClosed(webSocket: okhttp3.WebSocket, code: Int, reason: String) {
+            if (!close.isCompleted) {
+                close.complete(Unit)
+            }
+        }
+
+        override fun onFailure(webSocket: okhttp3.WebSocket, t: Throwable, response: okhttp3.Response?) {
+            if (!message.isCompleted) {
+                message.completeExceptionally(t)
+            }
+            if (!close.isCompleted) {
+                close.completeExceptionally(t)
+            }
+        }
+    })
+    runBlocking {
+        withTimeout(5_000) { opened.await() }
+        val received = withTimeout(5_000) { message.await() }
+        assertContains(received, "pong", "single-channel.message")
+        socket.close(1000, "kotlin complete")
+        withTimeout(5_000) { close.await() }
+    }
 }
 
 private suspend fun expectApiError(action: suspend () -> Unit): ApiError {

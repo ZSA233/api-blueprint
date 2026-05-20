@@ -80,7 +80,9 @@ conformance 成功时输出按阶段收敛为一行状态，例如生成、snaps
 
 当前服务端矩阵启用 Go HTTP、Java Spring、Kotlin Ktor 与 Python FastAPI；客户端矩阵启用 Go、TypeScript、Kotlin、Flutter、Java 与 Python。runner 会按 server capability、client capability 和 scenario registry 的交集执行，暂不支持的组合必须写入 manifest 并输出 skipped 或显式 unsupported，不能静默漏测。TypeScript / Kotlin / Flutter 覆盖 SSE 和 WebSocket 真实互通；Java / Python client 暂以默认 transport 的 unsupported contract 覆盖长连接场景。
 
-场景 registry 会把 DSL 覆盖类别映射到自动化用例：query/json/form/binary/raw/XML、typed error、命名冲突、多 blueprint root、response envelope、SSE 和 WebSocket。
+场景 registry 会把 DSL 覆盖类别映射到自动化用例：query/json/form/binary/raw/XML、static/no-envelope、header、scalar、enum、map、deprecated、typed error、命名冲突、多 blueprint root、response envelope、SSE、WebSocket、单模型 channel 与第二个 binary schema。server-only safety probes 覆盖 bad JSON、bad query、malformed WebSocket frame、WebSocket early close 和 bad binary，目标是确认服务端不会 5xx 崩溃、进程退出或连接悬挂。
+
+`docs/reviews/resolved/0001-20260521-examples-conformance安全审查.md` 记录了本轮安全审查闭环：高风险服务端稳定性项、Python strict DTO 和普通 examples conformance 覆盖缺口已经补齐；后续若发现新的生成器风险，应新建下一条 review 记录，不继续拖住已 resolved 的 0001。
 
 ## Drift 语义
 

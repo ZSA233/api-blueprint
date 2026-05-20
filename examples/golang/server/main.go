@@ -17,6 +17,13 @@ func main() {
 	if addr == "" {
 		addr = "0.0.0.0:2333"
 	}
+	engine.Use(func(ctx *gin.Context) {
+		if ctx.Request.URL.Path == "/api/demo/abc" && ctx.GetHeader("x-token") != "conformance-token" {
+			ctx.AbortWithStatusJSON(418, gin.H{"detail": "missing conformance header"})
+			return
+		}
+		ctx.Next()
+	})
 	altBP := alt.NewBlueprint(engine)
 	apiBP := api.NewBlueprint(engine)
 	staticBP := static.NewBlueprint(engine)

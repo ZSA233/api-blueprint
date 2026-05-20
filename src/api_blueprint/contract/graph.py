@@ -550,7 +550,78 @@ def _model_qualname(model: object) -> str:
 def _model_identity(model: object) -> str:
     module = _model_module(model)
     qualname = _model_qualname(model)
-    return f"{module}.{qualname}" if module else qualname
+    identity = f"{module}.{qualname}" if module else qualname
+    if bool(getattr(model, "__auto__", False)):
+        digest = hashlib.sha256(
+            json.dumps(_auto_model_signature(model), ensure_ascii=False, sort_keys=True, default=repr).encode("utf-8")
+        ).hexdigest()[:12]
+        return f"{identity}#{digest}"
+    return identity
+
+
+def _auto_model_signature(model: object) -> JsonObject:
+    fields: list[JsonObject] = []
+    for field_name, field_value in iter_model_vars(model):
+        if not isinstance(field_value, (Field, Model)):
+            continue
+        fields.append(
+            {
+                "name": field_name,
+                "field": _field_signature(field_value),
+                "extra": _json_safe(getattr(field_value, "__extra__", {}) or {}),
+            }
+        )
+    return {
+        "name": _model_name(model),
+        "fields": sorted(fields, key=lambda item: str(item.get("name"))),
+    }
+
+
+def _field_signature(field_value: object) -> object:
+    if _is_parametrized_field(field_value):
+        field_value = field_value()
+    if isinstance(field_value, type) and issubclass(field_value, Field):
+        field_value = field_value()
+    if isinstance(field_value, AnonKV):
+        obj = field_value.get_obj()
+        return {"type": "anon", "value": _field_signature(obj) if obj is not None else None}
+    if isinstance(field_value, FieldWrappedModel):
+        return {"type": "wrapped", "value": _field_signature(field_value.__field_type__)}
+    if isinstance(field_value, Array):
+        return {"type": "array", "items": _field_signature(field_value.elem_type())}
+    if isinstance(field_value, Map):
+        return {
+            "type": "map",
+            "keys": _field_signature(field_value.key_type()),
+            "values": _field_signature(field_value.value_type()),
+        }
+    if isinstance(field_value, ModelEnum):
+        enum_cls = field_value.enum_type()
+        return {"type": "enum", "identity": _model_identity(enum_cls)}
+    if isinstance(field_value, enum.EnumMeta):
+        return {"type": "enum", "identity": _model_identity(field_value)}
+    if isinstance(field_value, Model) or (isinstance(field_value, type) and issubclass(field_value, Model)):
+        return {"type": "object", "identity": _model_identity(unwrap_model_type(field_value))}
+    field_type = getattr(field_value, "__type__", None)
+    if isinstance(field_type, str) and field_type:
+        return {"type": field_type}
+    if isinstance(field_value, type):
+        return {"type": field_value.__name__.lower()}
+    return {"type": type(field_value).__name__}
+
+
+def _json_safe(value: object) -> object:
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, enum.Enum):
+        return {"enum": _model_identity(value.__class__), "value": value.value}
+    if isinstance(value, Mapping):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple, set, frozenset)):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, type):
+        return _model_identity(value)
+    return repr(value)
 
 
 def _safe_pydantic_fields(model_cls: type[Model]) -> Mapping[str, Any]:

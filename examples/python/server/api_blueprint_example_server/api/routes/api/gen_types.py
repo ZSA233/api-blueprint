@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum, IntEnum, StrEnum
-from typing import Any, Callable, Generic, Mapping, TypeVar
+from typing import Any, Callable, Generic, Mapping, Self, TypeVar
 from ...runtime.gen_codecs import (
     _MISSING,
     _api_to_json,
@@ -34,7 +34,7 @@ class HelloChannelMsgTypeEnum(StrEnum):
     UPGRADE = "upgrade"
 
     @classmethod
-    def from_value(cls, value: object, path: str = "HelloChannelMsgTypeEnum") -> "HelloChannelMsgTypeEnum":
+    def from_value(cls, value: object, path: str = "HelloChannelMsgTypeEnum") -> Self:
         if isinstance(value, cls):
             return value
         for item in cls:
@@ -52,13 +52,13 @@ class HelloChannelMessage:
     data: Any
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> HelloChannelMessage:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("HelloChannelMessage: expected object")
         return cls._from_mapping(value, "HelloChannelMessage")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "HelloChannelMessage") -> HelloChannelMessage:
+    def from_value(cls, value: object, path: str = "HelloChannelMessage") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -66,7 +66,7 @@ class HelloChannelMessage:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> HelloChannelMessage:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             type=_decode_required(HelloChannelMsgTypeEnum.from_value, value.get("type", _MISSING), _field_path(path, "type")),
             data=_decode_required(_decode_any, value.get("data", _MISSING), _field_path(path, "data")),
@@ -86,13 +86,13 @@ class HelloChannelClose:
     error: str | None = None
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> HelloChannelClose:
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
         if not isinstance(value, Mapping):
             raise TypeError("HelloChannelClose: expected object")
         return cls._from_mapping(value, "HelloChannelClose")
 
     @classmethod
-    def from_value(cls, value: object, path: str = "HelloChannelClose") -> HelloChannelClose:
+    def from_value(cls, value: object, path: str = "HelloChannelClose") -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, Mapping):
@@ -100,7 +100,7 @@ class HelloChannelClose:
         return cls._from_mapping(value, path)
 
     @classmethod
-    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> HelloChannelClose:
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
             code=_decode_optional(_decode_int, value.get("code", _MISSING), _field_path(path, "code")),
             reason=_decode_optional(_decode_str, value.get("reason", _MISSING), _field_path(path, "reason")),

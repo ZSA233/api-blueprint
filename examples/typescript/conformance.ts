@@ -3,7 +3,10 @@ import { ApiErrors, isApiError, resolveApiToast } from "./api/runtime/client";
 import type { ApiError } from "./api/runtime/client";
 import { createClients as createApiClients } from "./api/transports/http/api/factory";
 import { createClients as createAltClients } from "./alt/transports/http/alt/factory";
+import { createClients as createStaticClients } from "./static/transports/http/static/factory";
 import {
+  AuditPacket,
+  AuditPacketFlagsValues,
   DemoPacket,
   DemoPacketFlagsValues,
   DemoPacketWire,
@@ -14,6 +17,7 @@ import {
   dispatchAssistantServerMessage,
   SweepStreamMessage,
 } from "./api/routes/api/demo/types";
+import { HelloChannelMsgTypeEnum } from "./api/runtime/types";
 
 declare const process: {
   argv: string[];
@@ -46,6 +50,22 @@ function buildPacket(): DemoPacket {
   };
 }
 
+function buildAuditPacket(): AuditPacket {
+  return {
+    header: {
+      flags: AuditPacketFlagsValues.HasItems,
+      item_count: 2,
+    },
+    body: {
+      items: [
+        { id: 11, code: 101 },
+        { id: 22, code: 202 },
+      ],
+      checksum: 2,
+    },
+  };
+}
+
 async function checkRPC(baseUrl: string): Promise<void> {
   const { demoClient } = createApiClients({ baseUrl });
   const post = await demoClient.testPost({ json: { req1: "ts", req2: 7 } });
@@ -64,6 +84,79 @@ async function checkRPC(baseUrl: string): Promise<void> {
   }
 }
 
+async function checkRaw(baseUrl: string): Promise<void> {
+  const response = await fetch(`${baseUrl}/api/demo/raw`, { method: "POST" });
+  const body = await response.text();
+  if (!response.ok) {
+    throw new Error(`raw status=${response.status} body=${body}`);
+  }
+}
+
+async function checkXML(baseUrl: string): Promise<void> {
+  const response = await fetch(`${baseUrl}/api/demo/delete$?arg1=ts-xml&arg2=7`, { method: "DELETE" });
+  const body = await response.text();
+  if (!response.ok || !body.includes("ts-xml")) {
+    throw new Error(`xml status=${response.status} body=${body}`);
+  }
+}
+
+async function checkStatic(baseUrl: string): Promise<void> {
+  const { staticClient } = createStaticClients({ baseUrl });
+  await staticClient.docJson();
+  const rsp = await staticClient.dochaha();
+  if (rsp.a !== "hello world") {
+    throw new Error(`static.dochaha=${JSON.stringify(rsp)}`);
+  }
+}
+
+async function checkHeader(baseUrl: string): Promise<void> {
+  const { demoClient } = createApiClients({ baseUrl });
+  const rsp = await demoClient.abc({ headers: { "x-token": "conformance-token" } });
+  if (rsp.bc !== "header-ok") {
+    throw new Error(`header=${JSON.stringify(rsp)}`);
+  }
+}
+
+async function checkScalar(baseUrl: string): Promise<void> {
+  const { helloClient } = createApiClients({ baseUrl });
+  const text = await helloClient.string();
+  const value = await helloClient.uint64();
+  if (text !== "hello-string" || value !== 9007199254740991) {
+    throw new Error(`scalar text=${text} value=${value}`);
+  }
+}
+
+async function checkEnum(baseUrl: string): Promise<void> {
+  const { helloClient } = createApiClients({ baseUrl });
+  const item = await helloClient.stringEmun();
+  const items = await helloClient.listEnum();
+  if (item !== "a" || JSON.stringify(items) !== JSON.stringify(["a", "b"])) {
+    throw new Error(`enum item=${item} items=${JSON.stringify(items)}`);
+  }
+}
+
+async function checkMap(baseUrl: string): Promise<void> {
+  const { demoClient, helloClient } = createApiClients({ baseUrl });
+  const model = await demoClient.mapModel();
+  if (model[1]?.haha !== 101) {
+    throw new Error(`map model=${JSON.stringify(model)}`);
+  }
+  const hello = await helloClient.abc({ query: { type: HelloChannelMsgTypeEnum.PING } });
+  if (hello.ping?.haha !== 1) {
+    throw new Error(`hello abc=${JSON.stringify(hello)}`);
+  }
+  const enumMap = await helloClient.mapEnum();
+  if (enumMap.a?.haha !== 11) {
+    throw new Error(`map enum=${JSON.stringify(enumMap)}`);
+  }
+}
+
+async function checkDeprecated(baseUrl: string): Promise<void> {
+  const { demoClient } = createApiClients({ baseUrl });
+  const rsp = await demoClient.postDeprecated({ json: { req1: "ts-deprecated", req2: 3 } });
+  assertArrayEquals(rsp.list, ["ts-deprecated"], "deprecated.list");
+}
+
 async function checkForm(baseUrl: string): Promise<void> {
   const { demoClient } = createApiClients({ baseUrl });
   const rsp = await demoClient.formSubmit({ form: { title: "ts-form", count: 4, enabled: true } });
@@ -77,6 +170,17 @@ async function checkBinary(baseUrl: string): Promise<void> {
   await callBinary(baseUrl, "ts-typed", packet);
   await callBinary(baseUrl, "ts-raw", new RawBinaryBody(binaryBodyToUint8Array(DemoPacketWire.toBinaryBody(packet))));
   await callBinary(baseUrl, "ts-stream", DemoPacketWire.body({ write: (writer) => DemoPacketWire.write(packet, writer) }));
+}
+
+async function checkAuditBinary(baseUrl: string): Promise<void> {
+  const { binaryClient } = createApiClients({ baseUrl });
+  const response = await binaryClient.auditPacket({
+    query: { trace: "ts-audit" },
+    binary: buildAuditPacket(),
+  });
+  if (response.trace !== "ts-audit" || response.item_count !== 2 || response.checksum !== 2) {
+    throw new Error(`audit binary=${JSON.stringify(response)}`);
+  }
 }
 
 async function callBinary(baseUrl: string, trace: string, binary: DemoPacket | ApiBinaryBody): Promise<void> {
@@ -100,6 +204,23 @@ async function callBinary(baseUrl: string, trace: string, binary: DemoPacket | A
     }
   }
   assertArrayEquals(response.item_ids, [11, 22], `binary ${trace}.item_ids`);
+}
+
+async function checkSingleChannel(baseUrl: string): Promise<void> {
+  const { apiClient } = createApiClients({ baseUrl });
+  const channel = apiClient.openHelloChannel();
+  const message = waitForMessage(channel, "single channel message");
+  const close = waitForClose(channel, "single channel close");
+  await channel.ready;
+  await channel.send({ type: HelloChannelMsgTypeEnum.PING, data: { source: "ts" } });
+  const received = await message;
+  if (received.type !== HelloChannelMsgTypeEnum.PONG) {
+    throw new Error(`single channel message=${JSON.stringify(received)}`);
+  }
+  const closed = await close;
+  if (closed.code !== 1000) {
+    throw new Error(`single channel close=${JSON.stringify(closed)}`);
+  }
 }
 
 async function checkTypedErrors(baseUrl: string): Promise<void> {
@@ -243,15 +364,42 @@ async function main(): Promise<void> {
   if (!baseUrl) {
     throw new Error("base URL argument is required");
   }
-  const selected = scenarioSet(process.argv[3] || "rpc,binary,form,error,sse,websocket,naming");
+  const selected = scenarioSet(process.argv[3] || "rpc,binary,form,error,sse,websocket,naming,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,single-channel");
   if (selected.has("rpc")) {
     await checkRPC(baseUrl);
+  }
+  if (selected.has("raw")) {
+    await checkRaw(baseUrl);
+  }
+  if (selected.has("xml")) {
+    await checkXML(baseUrl);
+  }
+  if (selected.has("static")) {
+    await checkStatic(baseUrl);
+  }
+  if (selected.has("header")) {
+    await checkHeader(baseUrl);
+  }
+  if (selected.has("scalar")) {
+    await checkScalar(baseUrl);
+  }
+  if (selected.has("enum")) {
+    await checkEnum(baseUrl);
+  }
+  if (selected.has("map")) {
+    await checkMap(baseUrl);
+  }
+  if (selected.has("deprecated")) {
+    await checkDeprecated(baseUrl);
   }
   if (selected.has("form")) {
     await checkForm(baseUrl);
   }
   if (selected.has("binary")) {
     await checkBinary(baseUrl);
+  }
+  if (selected.has("audit-binary")) {
+    await checkAuditBinary(baseUrl);
   }
   if (selected.has("error")) {
     await checkTypedErrors(baseUrl);
@@ -261,6 +409,9 @@ async function main(): Promise<void> {
   }
   if (selected.has("websocket")) {
     await checkWebSocket(baseUrl);
+  }
+  if (selected.has("single-channel")) {
+    await checkSingleChannel(baseUrl);
   }
   if (selected.has("naming")) {
     await checkNaming(baseUrl);

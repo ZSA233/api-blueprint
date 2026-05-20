@@ -12,9 +12,7 @@ from starlette.responses import StreamingResponse, JSONResponse
 from ...runtime.errors import ApiError, make_api_error_payload
 {% for group in bp.groups.values() -%}
 from ...routes.{{ group.package_path }}.service import {{ group.service_class }}, {{ group.service_class }}Stub
-{% if group.type_import_names() %}from ...routes.{{ group.package_path }}.gen_types import (
-{% for name in group.type_import_names() %}    {{ name }},
-{% endfor %})
+{% if group.type_import_names() %}from ...routes.{{ group.package_path }} import gen_types as {{ group.server_type_module_alias }}
 {% endif %}
 {% endfor %}
 
@@ -49,11 +47,11 @@ def create_router(
         try:
 {% for param in route.params %}
 {% if param.name == "query" %}
-            query = {{ param.decode_expr("query_raw", '"query"') | safe }}
+            query = {{ group.server_type_expr(param.decode_expr("query_raw", '"query"')) | safe }}
 {% elif param.name == "json" %}
-            json_body = {{ param.decode_expr("json_body_raw", '"json"') | safe }}
+            json_body = {{ group.server_type_expr(param.decode_expr("json_body_raw", '"json"')) | safe }}
 {% elif param.name == "form" %}
-            form = {{ param.decode_expr("form_raw", '"form"') | safe }}
+            form = {{ group.server_type_expr(param.decode_expr("form_raw", '"form"')) | safe }}
 {% endif %}
 {% endfor %}
         except (TypeError, ValueError) as error:
@@ -78,7 +76,7 @@ def create_router(
 {% endfor %}
 {% for param in route.params if param.name == "open_data" %}
         try:
-            open_data = {{ param.decode_expr("open_data_raw", '"open_data"') | safe }}
+            open_data = {{ group.server_type_expr(param.decode_expr("open_data_raw", '"open_data"')) | safe }}
         except (TypeError, ValueError) as error:
             return _bad_request_response(error)
 {% endfor %}
@@ -113,12 +111,12 @@ def create_router(
 {% endfor %}
 {% for param in route.params if param.name == "open_data" %}
         try:
-            open_data = {{ param.decode_expr("open_data_raw", '"open_data"') | safe }}
+            open_data = {{ group.server_type_expr(param.decode_expr("open_data_raw", '"open_data"')) | safe }}
         except (TypeError, ValueError):
             await websocket.close(code=1008)
             return
 {% endfor %}
-        channel = _WebSocketChannel(websocket, {{ route.client_message_type.decoder if route.client_message_type else '_identity_decoder' }})
+        channel = _WebSocketChannel(websocket, {{ group.server_type_expr(route.client_message_type.decoder) if route.client_message_type else '_identity_decoder' }})
         try:
             await service.{{ route.method_name }}(
 {% for param in route.params if param.name == "open_data" %}
@@ -137,9 +135,9 @@ def create_router(
     return router
 
 
-def _query_params(request: Request) -> dict[str, Any] | None:
+def _query_params(request: Request) -> dict[str, Any]:
     values = dict(request.query_params)
-    return values or None
+    return values
 
 
 async def _json_body(request: Request) -> Any:
@@ -153,10 +151,10 @@ async def _json_body(request: Request) -> Any:
     return value
 
 
-async def _form_body(request: Request) -> dict[str, Any] | None:
+async def _form_body(request: Request) -> dict[str, Any]:
     values = await request.form()
     result = {key: value for key, value in values.multi_items()}
-    return result or None
+    return result
 
 
 def _jsonable(value: Any) -> Any:

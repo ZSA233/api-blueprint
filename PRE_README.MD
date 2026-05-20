@@ -7,7 +7,7 @@
 文档分层固定为：
 
 - `README.md` / `README_EN.md`：首次用户入口页，只保留项目定位、安装、最小示例、目标概览和文档导航。
-- `docs/zh/*` / `docs/en/*`：专题手册，承载 DSL、配置、生成器、二进制协议、Wails、gRPC、examples 验证等完整说明。
+- `docs/zh/*` / `docs/en/*`：专题手册，承载 DSL、配置、生成器、二进制协议、Wails、gRPC、examples 验证、benchmark 等完整说明。
 - `docs/release-process.md`：发布流程手册。
 - `docs/plans/`：设计方案与实施记录，不作为 README 用户主路径。
 
@@ -18,7 +18,7 @@ README 只回答：
 - 如何安装。
 - 如何用一个最小 Blueprint 与最小配置跑起来。
 - 常用生成目标分别负责什么。
-- 更详细的配置、生成器、Wails、gRPC、DSL、examples 验证与发布说明去哪里看。
+- 更详细的配置、生成器、Wails、gRPC、DSL、examples 验证、benchmark 与发布说明去哪里看。
 
 README 不承载 changelog、设计记录、迁移说明、wire shape 细节、目录布局细节、generator ownership、provider pipeline、Wails socket bridge、gRPC target 推导、example drift 处理或单次需求的实现背景。
 
@@ -46,6 +46,7 @@ README 应链接到以下用户文档：
 - `docs/zh/wails.md` / `docs/en/wails.md`：Wails target、overlay service、provider hook、transport bridge。
 - `docs/zh/grpc.md` / `docs/en/grpc.md`：`grpc-proto`、`grpc-go`、`grpc-python` targets、proto/service 输出、工具链。
 - `docs/zh/examples-validation.md` / `docs/en/examples-validation.md`：example refresh、validation 与 drift 语义。
+- `docs/zh/benchmarks.md` / `docs/en/benchmarks.md`：可选 benchmark runner、binary codec benchmark、examples protocol benchmark 与趋势分析口径。
 - `docs/release-process.md`：发布流程。
 
 ## 项目定位
@@ -77,6 +78,7 @@ README 应链接到以下用户文档：
 - `examples/blueprints/`：示例蓝图真源。
 - `examples/golang/`、`examples/typescript/`、`examples/flutter/`、`examples/kotlin/`、`examples/java/`、`examples/python/`、`examples/grpc/`、`examples/wails-*`：生成快照、preserved conformance harness、验证工程和示例 app shell。
 - `scripts/example_conformance/`：examples 真实协议互通验证 CLI，按 Go / Java / Kotlin / Python server 与 Go / TypeScript / Kotlin / Flutter / Java / Python client 的能力交集执行真实互通矩阵。
+- `scripts/example_benchmark/`：可选 benchmark CLI，复用 examples 与 conformance runner 评估 binary codec 和真实 server protocol 性能趋势，不作为默认 CI 阈值。
 - `tests/`：单元测试、CLI 测试、codegen 测试、example 集成验证、打包与 release contract 测试。
 
 ## DSL 与契约事实
@@ -129,11 +131,12 @@ README 应链接到以下用户文档：
 
 - `examples/blueprints/` 是 Blueprint 真源。
 - 语言 examples、`examples/api-blueprint.index.json`、可选 full contract/agent/shards 快照与 `examples/grpc/{protos,go,python}/` 是生成快照；`examples/flutter/` 是纯 Dart package 快照，验证使用 `dart pub get`、`dart analyze` 和 `dart test`。
-- examples DSL 覆盖 query/json/form/binary/raw/XML、typed error、命名冲突、多 blueprint root、stream、channel、SSE/WebSocket 等公开协议场景；暂不支持的端侧能力必须在 conformance manifest 中显式标注，不静默漏测。
+- examples DSL 覆盖 query/json/form/binary/raw/XML、static/no-envelope、header、scalar、enum、map、deprecated、typed error、命名冲突、多 blueprint root、stream、channel、SSE/WebSocket 等公开协议场景；暂不支持的端侧能力必须在 conformance manifest 中显式标注，不静默漏测。
 - `scripts/example_validation.py` 负责 snapshot drift、refresh、compile/analyze/import smoke 和旧增强 suite；`python -m scripts.example_conformance` 负责真实互通验证，Makefile 通过 `make example-conformance-*` 暴露同一能力，并用 `EXAMPLE_CONFORMANCE_SERVERS`、`EXAMPLE_CONFORMANCE_CLIENTS`、`EXAMPLE_CONFORMANCE_SCENARIOS`、`EXAMPLE_CONFORMANCE_KEEP_WORKSPACE` 选择矩阵。默认服务端矩阵仍建议从 `go` 开始，完整矩阵可设置 `EXAMPLE_CONFORMANCE_SERVERS=all EXAMPLE_CONFORMANCE_CLIENTS=all`。
 - conformance 当前服务端覆盖 Go HTTP、Java Spring、Kotlin Ktor 和 Python FastAPI；客户端覆盖 Go、TypeScript、Kotlin、Flutter、Java 和 Python。runner 按 server/client/scenario 的能力交集执行；Java/Python client 对暂不支持的 SSE/WebSocket 默认 transport 走显式 unsupported-contract，不能静默漏测。
 - conformance 输出默认采用 stage summary：生成、snapshot、编译、server 启动输出一行状态，client 作为分组标题；每个 client 先输出 `client/setup` 表示正在冷启动或准备测试执行环境，再逐个执行 `client/scenario` 并在该项完成时立即输出结果。状态文本在 TTY 下自动着色，支持 `FORCE_COLOR=1` 与 `NO_COLOR=1`。被调用工具的详细 stdout/stderr 成功时隐藏，失败时回放到 stderr；client 场景失败时会额外回放当前 server log。
 - conformance harness 位于各语言 preserved 文件中，例如 `examples/golang/conformance/`、`examples/typescript/conformance.ts`、`examples/kotlin/conformance/`、`examples/java/conformance/`、`examples/python/conformance/`、`examples/flutter/test/conformance_test.dart`，刷新生成物不得覆盖这些文件。
+- `python -m scripts.example_benchmark` 提供可选 benchmark runner：`binary` 迁移旧 binary codec benchmark，`protocol` 复用 conformance workspace 和 server runner，对 Go / Java / Kotlin / Python server 的 `rpc-json`、`form`、`binary`、`typed-error` 做趋势压测。Makefile 暴露 `benchmark-list`、`benchmark-binary`、`example-benchmark-protocol` 与 `example-benchmark`；benchmark 只用于趋势与回归排查，不作为默认 CI 硬阈值。
 - snapshot drift 表示生成结果变化，不自动等于 bug。
 - `make example-golang-suite` 和 `make example-java-suite` 是手动增强验证，不进入默认 `test`、`example-validation`、`release-preflight` 或 CI。
 - generator-owned artifact 的短期逃生口方案记录在 `docs/plans/generated-artifact-escape-hatches.md`：优先通过 preserved facade、transport hook、codec registry、raw body fallback 和 route wrapper 绕过，不在第一阶段做 template partial override 或 post-generate patch hooks。

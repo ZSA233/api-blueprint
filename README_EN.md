@@ -116,6 +116,7 @@ For fuller project layout, config fields, DSL, generator output, typed errors, R
 | Wails | [docs/en/wails.md](docs/en/wails.md) |
 | gRPC | [docs/en/grpc.md](docs/en/grpc.md) |
 | Examples validation | [docs/en/examples-validation.md](docs/en/examples-validation.md) |
+| Benchmarks | [docs/en/benchmarks.md](docs/en/benchmarks.md) |
 | Release process | [docs/release-process.md](docs/release-process.md) |
 
 ## Development And Release
@@ -128,8 +129,9 @@ make test
 make example-compile-check
 make example-validation
 make example-conformance
+make benchmark-list
 make example-golang-suite
 make example-java-suite
 ```
 
-`make example-conformance` starts with a real Go HTTP server by default; use `EXAMPLE_CONFORMANCE_SERVERS`, `EXAMPLE_CONFORMANCE_CLIENTS`, and `EXAMPLE_CONFORMANCE_SCENARIOS` to select the matrix, or set `EXAMPLE_CONFORMANCE_SERVERS=all EXAMPLE_CONFORMANCE_CLIENTS=all` for the full matrix. `example-golang-suite` and `example-java-suite` remain manual end-to-end validation aids. See [Release Process](docs/release-process.md) for versioning, build, install, and GitHub Release flow.
+`make example-conformance` starts with a real Go HTTP server by default; use `EXAMPLE_CONFORMANCE_SERVERS`, `EXAMPLE_CONFORMANCE_CLIENTS`, and `EXAMPLE_CONFORMANCE_SCENARIOS` to select the matrix, or set `EXAMPLE_CONFORMANCE_SERVERS=all EXAMPLE_CONFORMANCE_CLIENTS=all` for the full matrix. Benchmarks are opt-in trend tools, not default CI gates; see [Benchmarks](docs/en/benchmarks.md). `example-golang-suite` and `example-java-suite` remain manual end-to-end validation aids. See [Release Process](docs/release-process.md) for versioning, build, install, and GitHub Release flow.

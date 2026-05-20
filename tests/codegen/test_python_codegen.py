@@ -164,13 +164,20 @@ def test_python_client_generates_recursive_nested_dto_codecs(tmp_path: Path):
 
     package_root = output_dir / "api_blueprint_generated" / "api"
     types_text = (package_root / "routes" / "api" / "demo" / "gen_types.py").read_text(encoding="utf-8")
+    assert "from typing import Any, Callable, Generic, Mapping, Self, TypeVar" in types_text
     assert "@dataclass(kw_only=True)\nclass NestedItem:" in types_text
     assert "class NestedResponse:" in types_text
     assert "item: NestedItem" in types_text
     assert "items: list[NestedItem]" in types_text
     assert "item_map: dict[str, NestedItem]" in types_text
-    assert "def from_mapping(cls, value: Mapping[str, Any]) -> NestedResponse:" in types_text
+    assert "def from_mapping(cls, value: Mapping[str, Any]) -> Self:" in types_text
+    assert 'def from_value(cls, value: object, path: str = "NestedResponse") -> Self:' in types_text
+    assert "def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:" in types_text
+    assert "-> NestedResponse:" not in types_text
     assert "def to_mapping(self) -> dict[str, Any]:" in types_text
+    client_text = (package_root / "routes" / "api" / "demo" / "gen_client.py").read_text(encoding="utf-8")
+    assert "_decode_map," in client_text
+    assert "_decode_list," in client_text
 
     client_module = _import_generated_module(
         output_dir,
@@ -219,6 +226,7 @@ def test_python_client_generates_enum_and_wire_name_codecs(tmp_path: Path):
     bp = Blueprint(root="/api")
     with bp.group("/demo") as views:
         views.POST("/enum").REQ(EnumPayload).RSP(EnumPayload)
+        views.GET("/enum-list").RSP(Array[Enum[StatusEnum]](description="enum list"))
 
     output_dir = tmp_path / "python"
     writer = PythonClientWriter(output_dir)
@@ -228,6 +236,7 @@ def test_python_client_generates_enum_and_wire_name_codecs(tmp_path: Path):
 
     package_root = output_dir / "api_blueprint_generated" / "api"
     types_text = (package_root / "routes" / "api" / "demo" / "gen_types.py").read_text(encoding="utf-8")
+    client_text = (package_root / "routes" / "api" / "demo" / "gen_client.py").read_text(encoding="utf-8")
     assert "class WireEnum(StrEnum):" in types_text
     assert "FIRST = \"first\"" in types_text
     assert "class StatusEnum(IntEnum):" in types_text
@@ -238,6 +247,8 @@ def test_python_client_generates_enum_and_wire_name_codecs(tmp_path: Path):
     assert "status_map: dict[StatusEnum, WireEnum]" in types_text
     assert 'value.get("class", _MISSING)' in types_text
     assert 'result["class"] = _api_to_json(self.class_)' in types_text
+    assert "return lambda item, path:" not in client_text
+    assert "return (lambda item, path: _decode_list" in client_text
 
     client_module = _import_generated_module(
         output_dir,
@@ -591,6 +602,50 @@ endian: little
     _compile_generated_files(output_dir)
 
 
+def test_python_server_query_decoder_treats_empty_query_as_empty_object(tmp_path: Path):
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.GET("/ping").ARGS(trace=String(description="trace", omitempty=True)).RSP(Result)
+
+    output_dir = tmp_path / "python"
+    writer = PythonServerWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    adapter_text = (
+        output_dir / "api_blueprint_generated" / "api" / "transports" / "http" / "gen_server.py"
+    ).read_text(encoding="utf-8")
+
+    assert "def _query_params(request: Request) -> dict[str, Any]:" in adapter_text
+    assert "return values or None" not in adapter_text
+    assert "return values" in adapter_text
+    _compile_generated_files(output_dir)
+
+
+def test_python_server_adapter_qualifies_group_type_imports(tmp_path: Path):
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.GET("/abc").ARGS(arg1=String(description="arg1")).RSP(Result)
+    with bp.group("/hello") as views:
+        views.GET("/abc").ARGS(kind=String(description="kind")).RSP(Result)
+
+    output_dir = tmp_path / "python"
+    writer = PythonServerWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    adapter_text = (
+        output_dir / "api_blueprint_generated" / "api" / "transports" / "http" / "gen_server.py"
+    ).read_text(encoding="utf-8")
+
+    assert "from ...routes.api.demo import gen_types as api_demo_types" in adapter_text
+    assert "from ...routes.api.hello import gen_types as api_hello_types" in adapter_text
+    assert "from ...routes.api.demo.gen_types import" not in adapter_text
+    assert "query = api_demo_types.AbcQuery.from_value(query_raw, \"query\")" in adapter_text
+    assert "query = api_hello_types.AbcQuery.from_value(query_raw, \"query\")" in adapter_text
+    _compile_generated_files(output_dir)
+
+
 def test_python_server_generates_connection_adapter_scaffolds(tmp_path: Path):
     class OpenPayload(Model):
         value = String(description="value")
@@ -618,7 +673,7 @@ def test_python_server_generates_connection_adapter_scaffolds(tmp_path: Path):
     assert "@router.websocket(\"/api/demo/chat\")" in adapter_text
     assert "stream = _SseStream()" in adapter_text
     assert "async for chunk in stream:" in adapter_text
-    assert "channel = _WebSocketChannel(websocket, Event.from_value)" in adapter_text
+    assert "channel = _WebSocketChannel(websocket, api_demo_types.Event.from_value)" in adapter_text
     assert "except _WebSocketClosed:" in adapter_text
     assert "except (UnicodeDecodeError, json.JSONDecodeError) as err:" in adapter_text
     assert 'await self.abort(1003, "invalid WebSocket message")' in adapter_text

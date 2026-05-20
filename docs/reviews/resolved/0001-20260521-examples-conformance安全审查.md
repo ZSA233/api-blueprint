@@ -1,7 +1,7 @@
 # examples/conformance 安全审查
 
 - 编号：0001
-- 状态：open（高风险服务端稳定性项与 Python strict DTO 已修复，仍保留普通覆盖缺口追踪）
+- 状态：resolved
 - 发现日期：2026-05-21
 - 评估日期：2026-05-21
 - 来源：examples DSL 覆盖面、example conformance 矩阵、生成服务端/客户端接口安全审查
@@ -30,7 +30,7 @@
 | malformed WebSocket frame | bug + 协议策略 | 已确认风险 | 已修稳定性 | 三端避免未处理异常/悬挂，close payload 暂不强制统一 |
 | Java/Kotlin decode 在 ApiError 捕获外 | 已验证 bug | conformance 复现 500 | 已修复 | decode 阶段最小返回 HTTP 400，不扩大业务异常捕获 |
 | Python client 嵌套 DTO 不严格 | 协议类型一致性 bug | 已确认 | 已修复（breaking） | Python client/server 改为递归强类型 dataclass DTO |
-| conformance 覆盖缺口 | 测试债 | 已确认 | 分阶段补齐 | 已补高风险 raw safety probes |
+| conformance 覆盖缺口 | 测试债 | 已确认 | 已补齐本轮范围 | 普通 DSL 场景、长连接和 safety probes 已进入矩阵 |
 
 ## 评估详情
 
@@ -141,17 +141,17 @@ curl -i -X POST 'http://127.0.0.1:<port>/api/demo/test_post' -H 'Content-Type: a
 
 ## 覆盖缺口评估
 
-以下 DSL 或生成物场景已经存在，但当前 conformance 没有真实互通或异常路径覆盖。它们先按测试债处理，不默认判断为生成器 bug：
+以下 DSL 或生成物场景在审查时已经存在，但 conformance 没有真实互通或异常路径覆盖。它们按测试债处理，不默认判断为生成器 bug。本轮已补齐到 scenario registry、preserved server/client harness 和 route coverage test：
 
-- header/auth：`GeneralHeader.x_token` 有定义，但没有断言 header 透传或 provider 行为。
-- NoEnvelope static routes：`/static/**` 生成存在，但未进入 conformance。
-- deprecated route：`/api/demo/post_deprecated` 未互通验证。
-- raw response：`/api/demo/raw` 未互通验证。
-- XML route：`/api/demo/delete$` 在 scenario registry 中列入 `rpc`，但多数 harness 没有实际调用。
-- scalar/map/enum routes：`/api/hello/string`、`/api/hello/uint64`、`/api/hello/map-enum`、`/api/hello/list-enum`、`/api/hello/string-emun`、`/api/hello/hello-way` 未真实断言。
-- 第二个 binary schema：`/api/binary/audit-packet` 只生成，未互通验证。
-- `/api/ws` 单模型 channel 未真实互通验证；当前只测 named variant channel `/api/demo/assistant-session`。
-- malformed input：坏 JSON、坏 enum/query、坏 binary、WebSocket malformed frame、WebSocket early close 已进入 server-driven safety probes；截断 binary 的精细协议断言与 SSE 中断仍待后续扩展。
+- header/auth：`GeneralHeader.x_token` 通过 conformance preserved server middleware 验证真实 header 透传。
+- NoEnvelope static routes：`/static/doc.json` 与 `/static/dochaha` 已进入 `static` 场景。
+- deprecated route：`/api/demo/post_deprecated` 已进入 `deprecated` 场景。
+- raw response：`/api/demo/raw` 已进入 `raw` 场景。
+- XML route：`/api/demo/delete$` 已进入独立 `xml` 场景。
+- scalar/map/enum routes：`/api/hello/string`、`/api/hello/uint64`、`/api/hello/map-enum`、`/api/hello/list-enum`、`/api/hello/string-emun`、`/api/hello/abc` 与 `api.demo.mapModel` 已进入 `scalar`、`enum`、`map` 场景。
+- 第二个 binary schema：`/api/binary/audit-packet` 已进入 `audit-binary` 场景。
+- `/api/ws` 单模型 channel 已进入 `single-channel` 场景。
+- malformed input：坏 JSON、坏 enum/query、坏 binary、WebSocket malformed frame、WebSocket early close 已进入 server-driven safety probes。
 
 覆盖缺口的处置原则：
 
@@ -161,12 +161,12 @@ curl -i -X POST 'http://127.0.0.1:<port>/api/demo/test_post' -H 'Content-Type: a
 
 ## 后续建议
 
-1. 扩展 examples conformance 时按风险分阶段覆盖 raw/XML/static/header/audit-packet/scalar/enum/map/`/api/ws`。
-2. 后续如果要统一 WebSocket malformed close payload，需要单独设计跨语言 close/error wire shape，不和稳定性修复混在一起。
+1. 后续如果要统一 WebSocket malformed close payload，需要单独设计跨语言 close/error wire shape，不和稳定性修复混在一起。
+2. 如果未来发现新的生成器缺陷或高风险测试债，按 `AGENTS.MD` 规则新建下一条 `docs/reviews/` 记录，不复用本编号。
 
 ## 修复记录 / Resolution
 
-当前状态仍为 open，因为普通 examples 覆盖缺口仍需追踪；高风险服务端稳定性项与 Python strict DTO 已完成修复。
+当前状态为 resolved。高风险服务端稳定性项、Python strict DTO 和本轮 examples conformance 覆盖缺口已完成修复或纳入明确验证矩阵。
 
 - 修复日期：2026-05-21
 - 修复摘要：
@@ -177,11 +177,16 @@ curl -i -X POST 'http://127.0.0.1:<port>/api/demo/test_post' -H 'Content-Type: a
   - Java/Kotlin request decode 失败返回 HTTP 400。
   - Python client/server nested DTO 已完成破坏性修复：递归生成 dataclass/enum DTO 和 codec，共享 helper 下沉到 runtime `gen_codecs.py`，route facade/service contract 使用强类型 DTO，conformance preserved Python harness 改为 DTO 属性访问和 DTO 返回。
   - 新增 server-driven safety conformance 场景：`bad-json`、`bad-query`、`malformed-websocket`、`ws-early-close`、`bad-binary`。
+  - 新增普通 conformance 场景：`raw`、`xml`、`static`、`header`、`scalar`、`enum`、`map`、`deprecated`、`audit-binary`、`single-channel`。
+  - 新增 route coverage test，要求 examples index 中用户可见 route 绑定到 conformance 场景或显式 unsupported。
+  - 新增 `scripts/example_benchmark/`，把旧 binary benchmark 包化，并增加 opt-in protocol benchmark 作为性能趋势观察工具。
 - 验证命令：
-  - `uv run pytest tests/codegen/test_python_codegen.py tests/codegen/test_java_codegen.py tests/codegen/test_kotlin_codegen.py tests/scripts/test_example_conformance.py -q`
+  - `uv run pytest tests/contract/test_graph.py tests/codegen/test_python_codegen.py tests/scripts/test_example_conformance.py tests/scripts/test_example_benchmark.py tests/scripts/test_benchmark_binary.py tests/release/test_release_assets.py -q`
   - `uv run python scripts/example_validation.py --scope blueprint --mode refresh`
   - `uv run python scripts/example_validation.py --scope blueprint --mode check`
-  - `uv run python -m scripts.example_conformance run --servers go,java,kotlin,python --clients python --scenario rpc,form,binary,error,naming`
   - `uv run python -m scripts.example_conformance run --servers go,java,kotlin,python --scenario bad-json,bad-query,malformed-websocket,ws-early-close,bad-binary`
-  - `uv run python -m scripts.example_conformance run --servers go,java,kotlin,python --clients typescript,kotlin,flutter --scenario sse,websocket`
-- 相关 commit/PR：`fix: harden example conformance servers`；Python strict DTO 修复提交待记录
+  - `uv run python -m scripts.example_conformance run --servers go,java,kotlin,python --clients go,typescript,kotlin,flutter,java,python --scenario raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,naming`
+  - `uv run python -m scripts.example_conformance run --servers go,java,kotlin,python --clients typescript,kotlin,flutter,java,python --scenario sse,websocket,single-channel`
+  - `uv run python -m scripts.example_benchmark binary --target python --count 100`
+  - `uv run python -m scripts.example_benchmark protocol --servers python --scenario rpc-json,binary --requests 20 --concurrency 4 --warmup 2`
+- 相关 commit/PR：本地未记录 commit；随本次变更提交

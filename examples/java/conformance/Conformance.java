@@ -7,6 +7,10 @@ import com.example.apiblueprint.api.runtime.ApiError;
 import com.example.apiblueprint.api.runtime.ApiErrors;
 import com.example.apiblueprint.api.runtime.ApiTypes;
 import com.example.apiblueprint.api.transports.http.HttpApiClient;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
@@ -22,7 +26,7 @@ public final class Conformance {
             throw new IllegalArgumentException("base URL argument is required");
         }
         String baseUrl = args[0];
-        Set<String> selected = scenarioSet(args.length > 1 ? args[1] : "rpc,binary,form,error,naming,sse,websocket");
+        Set<String> selected = scenarioSet(args.length > 1 ? args[1] : "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,single-channel");
         HttpApiClient client = HttpApiClient.create(baseUrl);
         com.example.apiblueprint.alt.transports.http.HttpApiClient altClient =
             com.example.apiblueprint.alt.transports.http.HttpApiClient.create(baseUrl);
@@ -30,11 +34,43 @@ public final class Conformance {
         if (selected.contains("rpc")) {
             checkRpc(client);
         }
+        if (selected.contains("raw")) {
+            checkRawHttp(baseUrl + "/api/demo/raw", "POST", "", "raw");
+        }
+        if (selected.contains("xml")) {
+            checkRawHttp(baseUrl + "/api/demo/delete$?arg1=java-xml&arg2=7", "DELETE", "java-xml", "xml");
+        }
+        if (selected.contains("static")) {
+            checkRawHttp(baseUrl + "/static/doc.json", "GET", "", "static.doc");
+            checkRawHttp(baseUrl + "/static/dochaha", "GET", "hello world", "static");
+        }
+        if (selected.contains("header")) {
+            checkHeader(baseUrl);
+        }
+        if (selected.contains("scalar")) {
+            checkRawHttp(baseUrl + "/api/hello/string", "GET", "hello-string", "scalar.string");
+            checkRawHttp(baseUrl + "/api/hello/uint64", "GET", "9007199254740991", "scalar.uint64");
+        }
+        if (selected.contains("enum")) {
+            checkRawHttp(baseUrl + "/api/hello/string-emun", "GET", "\"a\"", "enum.string");
+            checkRawHttp(baseUrl + "/api/hello/list-enum", "GET", "\"b\"", "enum.list");
+        }
+        if (selected.contains("map")) {
+            checkRawHttp(baseUrl + "/api/demo/map_model", "POST", "101", "map.model");
+            checkRawHttp(baseUrl + "/api/hello/abc?type=ping", "GET", "ping", "map.abc");
+            checkRawHttp(baseUrl + "/api/hello/map-enum", "GET", "11", "map.enum");
+        }
+        if (selected.contains("deprecated")) {
+            checkDeprecated(client);
+        }
         if (selected.contains("form")) {
             checkForm(client);
         }
         if (selected.contains("binary")) {
             checkBinary(client);
+        }
+        if (selected.contains("audit-binary")) {
+            checkAuditBinary(client);
         }
         if (selected.contains("error")) {
             checkTypedErrors(client);
@@ -47,6 +83,9 @@ public final class Conformance {
         }
         if (selected.contains("websocket")) {
             checkUnsupported(() -> client.demo.openAssistantSession(new ApiTypes.AssistantOpen("java-ws")), "channel");
+        }
+        if (selected.contains("single-channel")) {
+            checkUnsupported(() -> client.api.openHelloChannel(), "channel");
         }
         System.out.println("java conformance passed");
     }
@@ -77,6 +116,13 @@ public final class Conformance {
         require(Boolean.TRUE.equals(response.enabled()), "form.enabled mismatch: " + response);
     }
 
+    private static void checkDeprecated(HttpApiClient client) throws Exception {
+        DemoTypes.PostDeprecatedResponse response = client.demo.postDeprecated(
+            new DemoTypes.PostDeprecatedJSON("java-deprecated", 3)
+        );
+        require(Objects.equals(List.of("java-deprecated"), response.list()), "deprecated mismatch: " + response);
+    }
+
     private static void checkBinary(HttpApiClient client) throws Exception {
         BinaryTypes.PacketResponse response = client.binary.packet(
             new BinaryTypes.PacketQuery("java-typed"),
@@ -90,6 +136,16 @@ public final class Conformance {
         require(Objects.equals("alpha", response.firstLabel()), "binary.firstLabel mismatch: " + response);
         require(Objects.equals(List.of(11L, 22L), response.itemIds()), "binary.itemIds mismatch: " + response);
         require(Objects.equals(12L, response.checksum()), "binary.checksum mismatch: " + response);
+    }
+
+    private static void checkAuditBinary(HttpApiClient client) throws Exception {
+        BinaryTypes.AuditPacketResponse response = client.binary.auditPacket(
+            new BinaryTypes.AuditPacketQuery("java-audit"),
+            buildAuditPacket()
+        );
+        require(Objects.equals("java-audit", response.trace()), "audit.trace mismatch: " + response);
+        require(Objects.equals(2L, response.itemCount()), "audit.itemCount mismatch: " + response);
+        require(Objects.equals(2L, response.checksum()), "audit.checksum mismatch: " + response);
     }
 
     private static void checkTypedErrors(HttpApiClient client) throws Exception {
@@ -158,6 +214,42 @@ public final class Conformance {
                 12L
             )
         );
+    }
+
+    private static BinaryTypes.AuditPacket buildAuditPacket() {
+        return new BinaryTypes.AuditPacket(
+            new BinaryTypes.AuditPacketHeader(BinaryTypes.AuditPacketFlagsValues.HASITEMS, 2),
+            new BinaryTypes.AuditPacketBody(
+                List.of(
+                    new BinaryTypes.AuditPacketItem(11L, 101),
+                    new BinaryTypes.AuditPacketItem(22L, 202)
+                ),
+                2L
+            )
+        );
+    }
+
+    private static void checkRawHttp(String url, String method, String snippet, String label) throws Exception {
+        HttpResponse<String> response = HttpClient.newHttpClient().send(
+            HttpRequest.newBuilder(URI.create(url)).method(method, HttpRequest.BodyPublishers.noBody()).build(),
+            HttpResponse.BodyHandlers.ofString()
+        );
+        require(response.statusCode() == 200, label + " status=" + response.statusCode() + " body=" + response.body());
+        if (!snippet.isEmpty()) {
+            require(response.body().contains(snippet), label + " body=" + response.body());
+        }
+    }
+
+    private static void checkHeader(String baseUrl) throws Exception {
+        HttpResponse<String> response = HttpClient.newHttpClient().send(
+            HttpRequest.newBuilder(URI.create(baseUrl + "/api/demo/abc"))
+                .header("x-token", "conformance-token")
+                .GET()
+                .build(),
+            HttpResponse.BodyHandlers.ofString()
+        );
+        require(response.statusCode() == 200, "header status=" + response.statusCode() + " body=" + response.body());
+        require(response.body().contains("header-ok"), "header body=" + response.body());
     }
 
     private static ApiError expectApiError(ThrowingRunnable action) throws Exception {
