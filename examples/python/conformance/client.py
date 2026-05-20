@@ -18,11 +18,14 @@ from api_blueprint_example_client.api.routes.api.binary.gen_types import (
     PacketQuery,
 )
 from api_blueprint_example_client.api.routes.api.conflict.gen_types import DefaultQuery
+from api_blueprint_example_client.api.routes.api.conflict.gen_types import KeywordEnum as ApiKeywordEnum
 from api_blueprint_example_client.api.routes.api.demo.gen_types import (
+    AssistantSessionOpen,
     ErrorDemoQuery,
     FormSubmitForm,
     PutDemoJSON,
     PutDemoQuery,
+    SweepEventsOpen,
     TestPostJSON,
 )
 from api_blueprint_example_client.api.runtime.errors import (
@@ -118,12 +121,12 @@ async def check_naming(api, alt_api) -> None:
     api_response = await api.conflict.default(query=DefaultQuery(class_="python-api"))
     assert api_response.default == "api-default", api_response
     assert api_response.class_ == "python-api", api_response
-    assert api_response.enum == "default", api_response
+    assert api_response.enum is ApiKeywordEnum.DEFAULT, api_response
 
     alt_response = await alt_api.conflict.default(query=AltDefaultQuery(class_="python-alt"))
     assert alt_response.default == "alt-default", alt_response
     assert alt_response.class_ == "python-alt", alt_response
-    assert alt_response.enum == "class", alt_response
+    assert alt_response.enum.value == "class", alt_response
 
 
 async def expect_api_error(action) -> ApiError:
@@ -163,10 +166,10 @@ async def main() -> None:
         if "naming" in selected:
             await check_naming(api, alt_api)
         if "sse" in selected:
-            check_unsupported(lambda: api.demo.subscribe_sweep_events(open_data={"run_id": "python-sse"}), "stream")
+            check_unsupported(lambda: api.demo.subscribe_sweep_events(open_data=SweepEventsOpen(run_id="python-sse")), "stream")
         if "websocket" in selected:
             check_unsupported(
-                lambda: api.demo.open_assistant_session(open_data={"session_id": "python-ws"}),
+                lambda: api.demo.open_assistant_session(open_data=AssistantSessionOpen(session_id="python-ws")),
                 "channel",
             )
     print("python conformance passed")

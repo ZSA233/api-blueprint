@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import enum
 import importlib
 import py_compile
 import sys
@@ -12,7 +13,7 @@ import pytest
 from api_blueprint.contract import build_contract_graph
 from api_blueprint.engine import Blueprint, Error, Toast
 from api_blueprint.engine.binary_schema import parse_binary_schema
-from api_blueprint.engine.model import Array, Map, Model, String
+from api_blueprint.engine.model import Array, Enum, Map, Model, String
 from api_blueprint.writer.python import PythonClientWriter, PythonServerWriter
 
 
@@ -119,14 +120,21 @@ def test_python_client_generates_package_root_layout_and_preserves_user_files(tm
     assert "class ApiChannelBridge(ApiStreamBridge" in runtime_text
     assert "ApiClientTransport" in route_text
     types_text = (package_root / "routes" / "api" / "demo" / "gen_types.py").read_text(encoding="utf-8")
+    codec_text = (package_root / "runtime" / "gen_codecs.py").read_text(encoding="utf-8")
 
     assert "class DemoClient:" in route_text
     assert "from .gen_types import (" in route_text
     assert "class PingQuery:" in types_text
+    assert "from ....runtime.gen_codecs import (" in types_text
+    assert "def _decode_str(" not in types_text
+    assert "def _api_to_json(" not in types_text
+    assert "def _decode_str(" in codec_text
+    assert "def _api_to_json(" in codec_text
     assert "async def ping(" in route_text
-    assert "query: PingQuery | Mapping[str, Any] | None = None" in route_text
-    assert "query=_to_mapping(query)" in route_text
-    assert "return _from_mapping(PingResponse, payload)" in route_text
+    assert "query: PingQuery" in route_text
+    assert "query: PingQuery | None" not in route_text
+    assert "query=_api_to_json(query)" in route_text
+    assert 'return PingResponse.from_value(payload, "ping.response")' in route_text
     assert "class HttpClientTransport(ApiClientTransport):" in transport_text
     assert "async def request(" in transport_text
     assert (package_root / "client.py").read_text(encoding="utf-8") == "from .gen_client import *\n"
@@ -135,7 +143,7 @@ def test_python_client_generates_package_root_layout_and_preserves_user_files(tm
     _compile_generated_files(output_dir)
 
 
-def test_python_client_characterizes_nested_dto_response_coercion_as_shallow(tmp_path: Path):
+def test_python_client_generates_recursive_nested_dto_codecs(tmp_path: Path):
     class NestedItem(Model):
         value = String(description="value")
 
@@ -156,29 +164,134 @@ def test_python_client_characterizes_nested_dto_response_coercion_as_shallow(tmp
 
     package_root = output_dir / "api_blueprint_generated" / "api"
     types_text = (package_root / "routes" / "api" / "demo" / "gen_types.py").read_text(encoding="utf-8")
-    assert "class NestedItem:" not in types_text
+    assert "@dataclass(kw_only=True)\nclass NestedItem:" in types_text
     assert "class NestedResponse:" in types_text
-    assert "item: dict[str, Any] | None = None" in types_text
-    assert "items: list[Any] | None = None" in types_text
-    assert "item_map: dict[Any, Any] | None = None" in types_text
+    assert "item: NestedItem" in types_text
+    assert "items: list[NestedItem]" in types_text
+    assert "item_map: dict[str, NestedItem]" in types_text
+    assert "def from_mapping(cls, value: Mapping[str, Any]) -> NestedResponse:" in types_text
+    assert "def to_mapping(self) -> dict[str, Any]:" in types_text
 
     client_module = _import_generated_module(
         output_dir,
         "api_blueprint_generated.api.routes.api.demo.gen_client",
     )
-    response = client_module._from_mapping(
-        client_module.NestedResponse,
+    response = client_module.NestedResponse.from_value(
         {
             "item": {"value": "one"},
             "items": [{"value": "two"}],
             "item_map": {"three": {"value": "three"}},
-        },
+        }
     )
 
     assert isinstance(response, client_module.NestedResponse)
-    assert isinstance(response.item, dict)
-    assert isinstance(response.items[0], dict)
-    assert isinstance(response.item_map["three"], dict)
+    assert isinstance(response.item, client_module.NestedItem)
+    assert isinstance(response.items[0], client_module.NestedItem)
+    assert isinstance(response.item_map["three"], client_module.NestedItem)
+    assert response.to_mapping() == {
+        "item": {"value": "one"},
+        "items": [{"value": "two"}],
+        "item_map": {"three": {"value": "three"}},
+    }
+
+    with pytest.raises(ValueError, match=r"NestedResponse\.item: missing required field"):
+        client_module.NestedResponse.from_value({"items": [], "item_map": {}})
+
+    with pytest.raises(TypeError, match=r"NestedResponse\.items: expected list"):
+        client_module.NestedResponse.from_value({"item": {"value": "one"}, "items": {}, "item_map": {}})
+
+
+def test_python_client_generates_enum_and_wire_name_codecs(tmp_path: Path):
+    class WireEnum(enum.StrEnum):
+        first = "first"
+        second = "second"
+
+    class StatusEnum(enum.IntEnum):
+        ok = 1
+        fail = 2
+
+    class EnumPayload(Model):
+        class_ = String(alias="class", description="reserved field")
+        kind = Enum[WireEnum](description="kind")
+        statuses = Array[Enum[StatusEnum]](description="statuses")
+        status_map = Map[Enum[StatusEnum], Enum[WireEnum]](description="status map")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.POST("/enum").REQ(EnumPayload).RSP(EnumPayload)
+
+    output_dir = tmp_path / "python"
+    writer = PythonClientWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+    _compile_generated_files(output_dir)
+
+    package_root = output_dir / "api_blueprint_generated" / "api"
+    types_text = (package_root / "routes" / "api" / "demo" / "gen_types.py").read_text(encoding="utf-8")
+    assert "class WireEnum(StrEnum):" in types_text
+    assert "FIRST = \"first\"" in types_text
+    assert "class StatusEnum(IntEnum):" in types_text
+    assert "OK = 1" in types_text
+    assert "class_: str" in types_text
+    assert "kind: WireEnum" in types_text
+    assert "statuses: list[StatusEnum]" in types_text
+    assert "status_map: dict[StatusEnum, WireEnum]" in types_text
+    assert 'value.get("class", _MISSING)' in types_text
+    assert 'result["class"] = _api_to_json(self.class_)' in types_text
+
+    client_module = _import_generated_module(
+        output_dir,
+        "api_blueprint_generated.api.routes.api.demo.gen_types",
+    )
+    payload = client_module.EnumJSON.from_value(
+        {
+            "class": "reserved",
+            "kind": "first",
+            "statuses": [1, "2"],
+            "status_map": {"1": "second"},
+        }
+    )
+    assert payload.kind is client_module.WireEnum.FIRST
+    assert payload.statuses == [client_module.StatusEnum.OK, client_module.StatusEnum.FAIL]
+    assert payload.status_map[client_module.StatusEnum.OK] is client_module.WireEnum.SECOND
+    assert payload.to_mapping() == {
+        "class": "reserved",
+        "kind": "first",
+        "statuses": [1, 2],
+        "status_map": {"1": "second"},
+    }
+
+
+def test_python_server_json_encoder_handles_enum_map_keys_and_nested_dtos(tmp_path: Path):
+    class StatusEnum(enum.IntEnum):
+        ok = 1
+        fail = 2
+
+    class MapItem(Model):
+        value = String(description="value")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.GET("/map").RSP(Map[Enum[StatusEnum], MapItem](description="map"))
+
+    output_dir = tmp_path / "python"
+    writer = PythonServerWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+    _compile_generated_files(output_dir)
+
+    types_module = _import_generated_module(
+        output_dir,
+        "api_blueprint_generated.api.routes.api.demo.gen_types",
+    )
+    adapter_module = _import_generated_module(
+        output_dir,
+        "api_blueprint_generated.api.transports.http.gen_server",
+    )
+
+    assert adapter_module._jsonable(
+        {types_module.StatusEnum.OK: types_module.MapItem(value="ok")}
+    ) == {"1": {"value": "ok"}}
 
 
 def test_python_client_and_server_generate_error_catalog_runtime(tmp_path: Path):
@@ -323,17 +436,16 @@ def test_python_generated_files_use_pep8_blank_line_spacing(tmp_path: Path):
     assert client_text.startswith(
         "# Code generated by api-blueprint (Python client); DO NOT EDIT.\n"
         "from __future__ import annotations\n\n"
-        "from dataclasses import asdict, is_dataclass\n"
-        "from typing import Any, Mapping\n\n"
+        "from typing import Any\n\n"
         "from ....runtime.client import"
     )
     assert service_text.startswith("# Code generated by api-blueprint (Python server); DO NOT EDIT.\n")
     assert adapter_text.startswith("# Code generated by api-blueprint (Python server); DO NOT EDIT.\n")
     assert "\n\nclass DemoClient:" in client_text
-    assert "async def health(self) -> Any:" in client_text
+    assert "async def health(self) -> HealthResponse:" in client_text
     assert "\n    async def submit(" in client_text
-    assert "async def health(self) -> Any:" in service_text
-    assert "class DemoService(Protocol):\n    async def health(self) -> Any:" in service_text
+    assert "async def health(self) -> HealthResponse:" in service_text
+    assert "class DemoService(Protocol):\n    async def health(self) -> HealthResponse:" in service_text
     assert "\n    async def ping(" in service_text
     assert "async def demo_health(request: Request) -> Any:" in adapter_text
     assert "result = await service.health(" in adapter_text
@@ -426,7 +538,10 @@ def test_python_server_generates_service_core_and_fastapi_adapter(tmp_path: Path
     assert "class ApiServerContext:" in runtime_text
     assert "class DemoService(Protocol):" in service_text
     assert "async def submit(" in service_text
-    assert "json: dict[str, Any] | None = None" in service_text
+    assert "from .gen_types import (\n    SubmitJSON,\n    SubmitResponse,\n)" in service_text
+    assert "json: SubmitJSON" in service_text
+    assert "json: SubmitJSON | None" not in service_text
+    assert ") -> SubmitResponse:" in service_text
     assert "class DemoServiceStub:" in service_text
     assert "from fastapi import APIRouter, WebSocket, Request, HTTPException, WebSocketDisconnect" in adapter_text
     assert "def create_router(" in adapter_text
@@ -469,7 +584,8 @@ endian: little
         output_dir / "api_blueprint_generated" / "api" / "transports" / "http" / "gen_server.py"
     ).read_text(encoding="utf-8")
 
-    assert "binary: bytes | None = None" in service_text
+    assert "binary: bytes | None" in service_text
+    assert "binary: bytes | None = None" not in service_text
     assert "binary: dict[str, Any] | None = None" not in service_text
     assert "binary = await request.body()" in adapter_text
     _compile_generated_files(output_dir)
@@ -502,7 +618,7 @@ def test_python_server_generates_connection_adapter_scaffolds(tmp_path: Path):
     assert "@router.websocket(\"/api/demo/chat\")" in adapter_text
     assert "stream = _SseStream()" in adapter_text
     assert "async for chunk in stream:" in adapter_text
-    assert "channel = _WebSocketChannel(websocket)" in adapter_text
+    assert "channel = _WebSocketChannel(websocket, Event.from_value)" in adapter_text
     assert "except _WebSocketClosed:" in adapter_text
     assert "except (UnicodeDecodeError, json.JSONDecodeError) as err:" in adapter_text
     assert 'await self.abort(1003, "invalid WebSocket message")' in adapter_text
@@ -511,8 +627,8 @@ def test_python_server_generates_connection_adapter_scaffolds(tmp_path: Path):
     service_text = (
         output_dir / "api_blueprint_generated" / "api" / "routes" / "api" / "demo" / "gen_service.py"
     ).read_text(encoding="utf-8")
-    assert "stream: ApiServerStream | None = None" in service_text
-    assert "channel: ApiServerChannel | None = None" in service_text
+    assert "stream: ApiServerStream[Event, EventsClose] | None = None" in service_text
+    assert "channel: ApiServerChannel[Event, Event, ChatClose] | None = None" in service_text
     _compile_generated_files(output_dir)
 
 
@@ -533,9 +649,10 @@ def test_python_client_uses_contract_graph_route_protocol_models(tmp_path: Path)
     route_text = (
         output_dir / "api_blueprint_generated" / "api" / "routes" / "api" / "demo" / "gen_client.py"
     ).read_text(encoding="utf-8")
-    assert "json: SubmitJSON | Mapping[str, Any] | None = None" in route_text
+    assert "json: SubmitJSON" in route_text
     assert "response_type: str | None = 'SubmitResponse'" in route_text
-    assert "return _from_mapping(SubmitResponse, payload)" in route_text
+    assert 'return SubmitResponse.from_value(payload, "submit.response")' in route_text
+    assert "json: SubmitJSON | None" not in route_text
 
 
 def test_python_client_writer_disambiguates_same_path_http_methods_with_contract_graph(tmp_path: Path):
@@ -650,12 +767,13 @@ def test_python_client_and_server_generate_named_message_helpers(tmp_path: Path)
         client_dir / "api_blueprint_generated" / "api" / "routes" / "api" / "demo" / "client.py"
     ).read_text(encoding="utf-8")
 
-    assert "@dataclass\nclass AssistantClientMessage:" in client_types
-    assert "@dataclass\nclass AssistantSingleMessage:" in client_types
+    assert "@dataclass(kw_only=True)\nclass AssistantClientMessage:" in client_types
+    assert "data: Any = None" in client_types
+    assert "@dataclass(kw_only=True)\nclass AssistantSingleMessage:" in client_types
     assert "class AssistantSingleMessageVariants:" in client_types
     assert "class AssistantClientMessageVariants:" in client_types
-    assert "def cancel(data: AssistantCancel | Mapping[str, Any]) -> AssistantClientMessage:" in client_types
-    assert "@dataclass\nclass AssistantServerMessageHandlers(Generic[R]):" in client_types
+    assert "def cancel(data: AssistantCancel) -> AssistantClientMessage:" in client_types
+    assert "@dataclass(kw_only=True)\nclass AssistantServerMessageHandlers(Generic[R]):" in client_types
     assert "def dispatch_assistant_server_message(" in client_types
     assert "class AssistantServerMessageDispatchError(Exception):" in client_types
     assert "kind: str = \"unknown_type\"" in client_types

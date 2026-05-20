@@ -2,15 +2,109 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum, IntEnum, StrEnum
+from typing import Any, Callable, Generic, Mapping, TypeVar
+from ....runtime.gen_codecs import (
+    _MISSING,
+    _api_to_json,
+    _decode_any,
+    _decode_bool,
+    _decode_bytes,
+    _decode_float,
+    _decode_int,
+    _decode_list,
+    _decode_map,
+    _decode_object,
+    _decode_optional,
+    _decode_required,
+    _decode_str,
+    _field_path,
+)
 
 
-@dataclass
+R = TypeVar("R")
+
+
+class KeywordEnum(StrEnum):
+    DEFAULT = "default"
+    CLASS = "class"
+
+    @classmethod
+    def from_value(cls, value: object, path: str = "KeywordEnum") -> "KeywordEnum":
+        if isinstance(value, cls):
+            return value
+        for item in cls:
+            if item.value == value or str(item.value) == str(value):
+                return item
+        raise ValueError(f"{path}: expected KeywordEnum value")
+
+    def to_json(self) -> object:
+        return self.value
+
+
+@dataclass(kw_only=True)
 class DefaultQuery:
     class_: str | None = None
 
+    @classmethod
+    def from_mapping(cls, value: Mapping[str, Any]) -> DefaultQuery:
+        if not isinstance(value, Mapping):
+            raise TypeError("DefaultQuery: expected object")
+        return cls._from_mapping(value, "DefaultQuery")
 
-@dataclass
+    @classmethod
+    def from_value(cls, value: object, path: str = "DefaultQuery") -> DefaultQuery:
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, Mapping):
+            raise TypeError(f"{path}: expected object")
+        return cls._from_mapping(value, path)
+
+    @classmethod
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> DefaultQuery:
+        return cls(
+            class_=_decode_optional(_decode_str, value.get("class_", _MISSING), _field_path(path, "class_")),
+        )
+
+    def to_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        if self.class_ is not None:
+            result["class_"] = _api_to_json(self.class_)
+
+        return result
+
+
+@dataclass(kw_only=True)
 class DefaultResponse:
-    default: str | None = None
-    class_: str | None = None
-    enum: Any | None = None
+    default: str
+    class_: str
+    enum: KeywordEnum
+
+    @classmethod
+    def from_mapping(cls, value: Mapping[str, Any]) -> DefaultResponse:
+        if not isinstance(value, Mapping):
+            raise TypeError("DefaultResponse: expected object")
+        return cls._from_mapping(value, "DefaultResponse")
+
+    @classmethod
+    def from_value(cls, value: object, path: str = "DefaultResponse") -> DefaultResponse:
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, Mapping):
+            raise TypeError(f"{path}: expected object")
+        return cls._from_mapping(value, path)
+
+    @classmethod
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> DefaultResponse:
+        return cls(
+            default=_decode_required(_decode_str, value.get("default", _MISSING), _field_path(path, "default")),
+            class_=_decode_required(_decode_str, value.get("class_", _MISSING), _field_path(path, "class_")),
+            enum=_decode_required(KeywordEnum.from_value, value.get("enum", _MISSING), _field_path(path, "enum")),
+        )
+
+    def to_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["default"] = _api_to_json(self.default)
+        result["class_"] = _api_to_json(self.class_)
+        result["enum"] = _api_to_json(self.enum)
+        return result

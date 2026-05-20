@@ -5,18 +5,24 @@ from typing import Any, Protocol
 
 from ....runtime.server import ApiServerChannel, ApiServerStream
 
+from .gen_types import (
+    DefaultQuery,
+    DefaultResponse,
+    KeywordEnum,
+)
+
 
 class ConflictService(Protocol):
     async def default(
         self,
-        query: dict[str, Any] | None = None,
-    ) -> Any:
+        query: DefaultQuery,
+    ) -> DefaultResponse:
         ...
 
 
 class ConflictServiceStub:
     async def default(
         self,
-        query: dict[str, Any] | None = None,
-    ) -> Any:
+        query: DefaultQuery,
+    ) -> DefaultResponse:
         raise NotImplementedError("default")

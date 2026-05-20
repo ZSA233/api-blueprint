@@ -310,7 +310,9 @@ Python client 使用 `python_package_root` 作为包根，输出 async-first HTT
 - `<python_package_root>/<root>/routes/<root>/<group...>/*`
 - `<python_package_root>/<root>/transports/http/*`
 
-根目录的 `gen_client.py` / `client.py` 提供聚合 facade，推荐入口是 `async with create_client(base_url) as api`。route 方法接受 dataclass 或 mapping，默认返回 dataclass response。`routes/<root>/<group...>/gen_client.py` 是生成 route client，`routes/<root>/<group...>/gen_types.py` 是 route DTO 与 binary public export surface，`routes/<root>/<group...>/client.py` 是保留的 passthrough 入口，`transports/http/gen_client.py` 提供默认 httpx adapter。root-level route 直接生成在 `routes/<root>`。该 adapter 实现 RPC 请求；STREAM/CHANNEL bridge interface 会生成，但连接 transport 需要项目自定义或后续扩展。`base_url` / `base_url_expr` 由 HTTP transport adapter 使用。
+根目录的 `gen_client.py` / `client.py` 提供聚合 facade，推荐入口是 `async with create_client(base_url) as api`。route 方法的 public facade 使用 typed dataclass DTO，不再把 `Mapping[str, Any]` 作为普通请求入口；需要原始 dict/body 逃生时应直接使用 transport。`routes/<root>/<group...>/gen_client.py` 是生成 route client，`routes/<root>/<group...>/gen_types.py` 是 route DTO 与 binary public export surface，`routes/<root>/<group...>/client.py` 是保留的 passthrough 入口，`runtime/gen_codecs.py` 收束共享 decode/encode helper，`transports/http/gen_client.py` 提供默认 httpx adapter。root-level route 直接生成在 `routes/<root>`。该 adapter 实现 RPC 请求；STREAM/CHANNEL bridge interface 会生成，但连接 transport 需要项目自定义或后续扩展。`base_url` / `base_url_expr` 由 HTTP transport adapter 使用。
+
+Python DTO 使用 `@dataclass(kw_only=True)`、Python `Enum` / `StrEnum` / `IntEnum` 和生成 codec。显式嵌套 model、数组、map、enum key/value 都会递归生成和解码，例如 response 中的 `dict[str, NestedItem]` 会还原为 `NestedItem` 实例而不是裸 dict。每个 DTO 输出 `from_mapping()`、`from_value()` 和 `to_mapping()`；缺少 required 字段、字段类型错误或 enum 值非法会抛出带字段路径的 `ValueError` / `TypeError`。字段名使用 Python-safe 属性名，JSON/query/form wire name 由 codec 保留。
 
 Markdown Binary Schema codec 是 route-local 的 `gen_binary.py` 实现模块；public packet 与 writer helper 从 `gen_types.py` re-export。
 
@@ -326,7 +328,7 @@ Python server 同样使用 `python_package_root` 作为包根，输出 route ser
 - `<python_package_root>/<root>/routes/<root>/<group...>/*`
 - `<python_package_root>/<root>/transports/http/*`
 
-`routes/<root>/<group...>/gen_service.py` 是生成的 service contract，`routes/<root>/<group...>/service.py` 是用户可维护 stub 入口，`transports/http/gen_server.py` 与 `server.py` 提供 FastAPI HTTP adapter scaffold。root-level route 直接生成在 `routes/<root>`。FastAPI adapter 会处理 query/json/form/binary 请求、response envelope、typed error 包装，并为 `STREAM` 生成 `StreamingResponse` SSE bridge、为 `CHANNEL` 生成 WebSocket bridge；`.REQ_BINARY` 的 Python server service 边界接收原始 `bytes`，不会在 server scaffold 中生成 binary schema parser，业务实现可按项目需要解析。坏 JSON 请求会作为 transport input error 返回 HTTP 400，不进入业务 envelope。Python server WebSocket 运行时需要 `websockets` 或等价 uvicorn WebSocket backend。作为 preview target，Python server 生成结果应纳入项目自己的类型检查、lint 和安装 smoke。
+`routes/<root>/<group...>/gen_service.py` 是生成的 typed service contract，`routes/<root>/<group...>/service.py` 是用户可维护 stub 入口，`transports/http/gen_server.py` 与 `server.py` 提供 FastAPI HTTP adapter scaffold。root-level route 直接生成在 `routes/<root>`。FastAPI adapter 会把 query/json/form/open dict 递归 decode 成 route DTO 后再进入 service，并把 service 返回的 DTO/scalar/list/map 递归 encode 回 JSON；response envelope 与 typed error 包装仍由 adapter 处理。`STREAM` 生成 `StreamingResponse` SSE bridge，`CHANNEL` 生成 WebSocket bridge，message payload 与 close payload 使用 generated DTO codec；`.REQ_BINARY` 的 Python server service 边界接收原始 `bytes`，不会在 server scaffold 中生成 binary schema parser，业务实现可按项目需要解析。坏 JSON 请求会作为 transport input error 返回 HTTP 400，不进入业务 envelope。Python server WebSocket 运行时需要 `websockets` 或等价 uvicorn WebSocket backend。作为 preview target，Python server 生成结果应纳入项目自己的类型检查、lint 和安装 smoke。
 
 ## examples 快照
 

@@ -99,8 +99,8 @@ api-gen generate -c api-blueprint.toml
 | Flutter client | 预览 | 生成纯 Dart package、DTO、typed error、binary codec、HTTP/SSE/WebSocket client |
 | Kotlin client/server | 预览 | 生成 OkHttp HTTP/SSE/WebSocket client、Ktor HTTP/SSE/WebSocket server scaffold、模型、长连接 message helper 和 binary writer |
 | Java client/server | 预览 | 生成 Java 17 HttpClient client、Spring MVC/SSE/WebSocket server scaffold、record DTO、长连接 message helper、binary packet helper 和 HTTP adapter |
-| Go / Python client | 预览 | 生成服务端之外的脚本或工具侧客户端，并提供长连接 message helper 与 binary writer |
-| Python server | 预览 | 生成 FastAPI HTTP/SSE/WebSocket server scaffold、service contract 和长连接 message helper |
+| Go / Python client | 预览 | 生成服务端之外的脚本或工具侧客户端；Python client 使用递归 dataclass DTO、共享 runtime codec，并提供长连接 message helper 与 binary writer |
+| Python server | 预览 | 生成 FastAPI HTTP/SSE/WebSocket server scaffold、typed service contract 和长连接 message helper |
 | Wails v2/v3 | 预览 / 实验性 | 生成 Go + TypeScript overlay，用于桌面 GUI |
 | gRPC proto / stubs | 可用 | 从 ContractGraph 输出 proto，并生成 Go/Python stub |
 

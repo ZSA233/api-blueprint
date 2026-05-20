@@ -2,15 +2,161 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum, IntEnum, StrEnum
+from typing import Any, Callable, Generic, Mapping, TypeVar
+from ....runtime.gen_codecs import (
+    _MISSING,
+    _api_to_json,
+    _decode_any,
+    _decode_bool,
+    _decode_bytes,
+    _decode_float,
+    _decode_int,
+    _decode_list,
+    _decode_map,
+    _decode_object,
+    _decode_optional,
+    _decode_required,
+    _decode_str,
+    _field_path,
+)
 
 
-@dataclass
+R = TypeVar("R")
+
+
+class MapEnum(StrEnum):
+    A = "a"
+    B = "b"
+
+    @classmethod
+    def from_value(cls, value: object, path: str = "MapEnum") -> "MapEnum":
+        if isinstance(value, cls):
+            return value
+        for item in cls:
+            if item.value == value or str(item.value) == str(value):
+                return item
+        raise ValueError(f"{path}: expected MapEnum value")
+
+    def to_json(self) -> object:
+        return self.value
+
+
+class HelloWayEnum(StrEnum):
+    ASD = "ASD"
+
+    @classmethod
+    def from_value(cls, value: object, path: str = "HelloWayEnum") -> "HelloWayEnum":
+        if isinstance(value, cls):
+            return value
+        for item in cls:
+            if item.value == value or str(item.value) == str(value):
+                return item
+        raise ValueError(f"{path}: expected HelloWayEnum value")
+
+    def to_json(self) -> object:
+        return self.value
+
+
+@dataclass(kw_only=True)
 class AbcQuery:
     arg1: bool | None = None
     arg3: str | None = None
     arg2: float | None = None
 
+    @classmethod
+    def from_mapping(cls, value: Mapping[str, Any]) -> AbcQuery:
+        if not isinstance(value, Mapping):
+            raise TypeError("AbcQuery: expected object")
+        return cls._from_mapping(value, "AbcQuery")
 
-@dataclass
+    @classmethod
+    def from_value(cls, value: object, path: str = "AbcQuery") -> AbcQuery:
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, Mapping):
+            raise TypeError(f"{path}: expected object")
+        return cls._from_mapping(value, path)
+
+    @classmethod
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> AbcQuery:
+        return cls(
+            arg1=_decode_optional(_decode_bool, value.get("arg1", _MISSING), _field_path(path, "arg1")),
+            arg3=_decode_optional(_decode_str, value.get("arg3", _MISSING), _field_path(path, "arg3")),
+            arg2=_decode_optional(_decode_float, value.get("arg2", _MISSING), _field_path(path, "arg2")),
+        )
+
+    def to_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        if self.arg1 is not None:
+            result["arg1"] = _api_to_json(self.arg1)
+
+        if self.arg3 is not None:
+            result["arg3"] = _api_to_json(self.arg3)
+
+        if self.arg2 is not None:
+            result["arg2"] = _api_to_json(self.arg2)
+
+        return result
+
+
+@dataclass(kw_only=True)
+class ApiHelloMap:
+    haha: int
+
+    @classmethod
+    def from_mapping(cls, value: Mapping[str, Any]) -> ApiHelloMap:
+        if not isinstance(value, Mapping):
+            raise TypeError("ApiHelloMap: expected object")
+        return cls._from_mapping(value, "ApiHelloMap")
+
+    @classmethod
+    def from_value(cls, value: object, path: str = "ApiHelloMap") -> ApiHelloMap:
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, Mapping):
+            raise TypeError(f"{path}: expected object")
+        return cls._from_mapping(value, path)
+
+    @classmethod
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> ApiHelloMap:
+        return cls(
+            haha=_decode_required(_decode_int, value.get("haha", _MISSING), _field_path(path, "haha")),
+        )
+
+    def to_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["haha"] = _api_to_json(self.haha)
+        return result
+
+
+@dataclass(kw_only=True)
 class HelloWayQuery:
-    arg1: Any | None = None
+    arg1: HelloWayEnum | None = None
+
+    @classmethod
+    def from_mapping(cls, value: Mapping[str, Any]) -> HelloWayQuery:
+        if not isinstance(value, Mapping):
+            raise TypeError("HelloWayQuery: expected object")
+        return cls._from_mapping(value, "HelloWayQuery")
+
+    @classmethod
+    def from_value(cls, value: object, path: str = "HelloWayQuery") -> HelloWayQuery:
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, Mapping):
+            raise TypeError(f"{path}: expected object")
+        return cls._from_mapping(value, path)
+
+    @classmethod
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> HelloWayQuery:
+        return cls(
+            arg1=_decode_optional(HelloWayEnum.from_value, value.get("arg1", _MISSING), _field_path(path, "arg1")),
+        )
+
+    def to_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        if self.arg1 is not None:
+            result["arg1"] = _api_to_json(self.arg1)
+
+        return result

@@ -2,13 +2,84 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum, IntEnum, StrEnum
+from typing import Any, Callable, Generic, Mapping, TypeVar
+from ...runtime.gen_codecs import (
+    _MISSING,
+    _api_to_json,
+    _decode_any,
+    _decode_bool,
+    _decode_bytes,
+    _decode_float,
+    _decode_int,
+    _decode_list,
+    _decode_map,
+    _decode_object,
+    _decode_optional,
+    _decode_required,
+    _decode_str,
+    _field_path,
+)
 
 
-@dataclass
+R = TypeVar("R")
+
+
+@dataclass(kw_only=True)
 class DocJsonResponse:
     pass
 
+    @classmethod
+    def from_mapping(cls, value: Mapping[str, Any]) -> DocJsonResponse:
+        if not isinstance(value, Mapping):
+            raise TypeError("DocJsonResponse: expected object")
+        return cls._from_mapping(value, "DocJsonResponse")
 
-@dataclass
+    @classmethod
+    def from_value(cls, value: object, path: str = "DocJsonResponse") -> DocJsonResponse:
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, Mapping):
+            raise TypeError(f"{path}: expected object")
+        return cls._from_mapping(value, path)
+
+    @classmethod
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> DocJsonResponse:
+        return cls(
+        )
+
+    def to_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        return result
+
+
+@dataclass(kw_only=True)
 class DochahaResponse:
     a: str | None = None
+
+    @classmethod
+    def from_mapping(cls, value: Mapping[str, Any]) -> DochahaResponse:
+        if not isinstance(value, Mapping):
+            raise TypeError("DochahaResponse: expected object")
+        return cls._from_mapping(value, "DochahaResponse")
+
+    @classmethod
+    def from_value(cls, value: object, path: str = "DochahaResponse") -> DochahaResponse:
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, Mapping):
+            raise TypeError(f"{path}: expected object")
+        return cls._from_mapping(value, path)
+
+    @classmethod
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> DochahaResponse:
+        return cls(
+            a=_decode_optional(_decode_str, value.get("a", _MISSING), _field_path(path, "a")),
+        )
+
+    def to_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        if self.a is not None:
+            result["a"] = _api_to_json(self.a)
+
+        return result

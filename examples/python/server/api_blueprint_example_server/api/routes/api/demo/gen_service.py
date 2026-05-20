@@ -5,132 +5,172 @@ from typing import Any, Protocol
 
 from ....runtime.server import ApiServerChannel, ApiServerStream
 
+from .gen_types import (
+    AbcQuery,
+    AbcResponse,
+    ApiDemoSubA,
+    ApiDemoMap,
+    TestPostJSON,
+    TestPostResponse,
+    FormSubmitForm,
+    FormSubmitResponse,
+    PutDemoQuery,
+    PutDemoJSON,
+    PutDemoResponse,
+    ANONFunc1putAnonKv,
+    DeleteQuery,
+    DeleteResponse,
+    ANONDeleteAnonList,
+    SweepEventsOpen,
+    SweepState,
+    SweepProgress,
+    SweepLog,
+    SweepEventsClose,
+    AssistantSessionOpen,
+    AssistantDelta,
+    AssistantDone,
+    AssistantInput,
+    AssistantCancel,
+    AssistantSessionClose,
+    PostDeprecatedJSON,
+    PostDeprecatedResponse,
+    RawResponse,
+    ApiDemoA,
+    ErrorDemoQuery,
+    ErrorDemoResponse,
+    ColorEnum,
+    StatusEnum,
+    SweepStreamMessage,
+    AssistantServerMessage,
+    AssistantClientMessage,
+)
+
 
 class DemoService(Protocol):
     async def abc(
         self,
-        query: dict[str, Any] | None = None,
-    ) -> Any:
+        query: AbcQuery,
+    ) -> AbcResponse:
         ...
 
     async def test_post(
         self,
-        json: dict[str, Any] | None = None,
-    ) -> Any:
+        json: TestPostJSON,
+    ) -> TestPostResponse:
         ...
 
     async def form_submit(
         self,
-        form: dict[str, Any] | None = None,
-    ) -> Any:
+        form: FormSubmitForm,
+    ) -> FormSubmitResponse:
         ...
 
     async def put_demo(
         self,
-        query: dict[str, Any] | None = None,
-        json: dict[str, Any] | None = None,
-    ) -> Any:
+        query: PutDemoQuery,
+        json: PutDemoJSON,
+    ) -> PutDemoResponse:
         ...
 
     async def delete(
         self,
-        query: dict[str, Any] | None = None,
-    ) -> Any:
+        query: DeleteQuery,
+    ) -> DeleteResponse:
         ...
 
     async def sweep_events(
         self,
-        open_data: dict[str, Any] | None = None,
-        stream: ApiServerStream | None = None,
+        open_data: SweepEventsOpen,
+        stream: ApiServerStream[SweepStreamMessage, SweepEventsClose] | None = None,
     ) -> Any:
         ...
 
     async def assistant_session(
         self,
-        open_data: dict[str, Any] | None = None,
-        channel: ApiServerChannel | None = None,
+        open_data: AssistantSessionOpen,
+        channel: ApiServerChannel[AssistantClientMessage, AssistantServerMessage, AssistantSessionClose] | None = None,
     ) -> Any:
         ...
 
     async def post_deprecated(
         self,
-        json: dict[str, Any] | None = None,
-    ) -> Any:
+        json: PostDeprecatedJSON,
+    ) -> PostDeprecatedResponse:
         ...
 
-    async def raw(self) -> Any:
+    async def raw(self) -> RawResponse:
         ...
 
-    async def map_model(self) -> Any:
+    async def map_model(self) -> dict[int, ApiDemoMap]:
         ...
 
     async def error_demo(
         self,
-        query: dict[str, Any] | None = None,
-    ) -> Any:
+        query: ErrorDemoQuery,
+    ) -> ErrorDemoResponse:
         ...
 
 
 class DemoServiceStub:
     async def abc(
         self,
-        query: dict[str, Any] | None = None,
-    ) -> Any:
+        query: AbcQuery,
+    ) -> AbcResponse:
         raise NotImplementedError("abc")
 
     async def test_post(
         self,
-        json: dict[str, Any] | None = None,
-    ) -> Any:
+        json: TestPostJSON,
+    ) -> TestPostResponse:
         raise NotImplementedError("test_post")
 
     async def form_submit(
         self,
-        form: dict[str, Any] | None = None,
-    ) -> Any:
+        form: FormSubmitForm,
+    ) -> FormSubmitResponse:
         raise NotImplementedError("form_submit")
 
     async def put_demo(
         self,
-        query: dict[str, Any] | None = None,
-        json: dict[str, Any] | None = None,
-    ) -> Any:
+        query: PutDemoQuery,
+        json: PutDemoJSON,
+    ) -> PutDemoResponse:
         raise NotImplementedError("put_demo")
 
     async def delete(
         self,
-        query: dict[str, Any] | None = None,
-    ) -> Any:
+        query: DeleteQuery,
+    ) -> DeleteResponse:
         raise NotImplementedError("delete")
 
     async def sweep_events(
         self,
-        open_data: dict[str, Any] | None = None,
-        stream: ApiServerStream | None = None,
+        open_data: SweepEventsOpen,
+        stream: ApiServerStream[SweepStreamMessage, SweepEventsClose] | None = None,
     ) -> Any:
         raise NotImplementedError("sweep_events")
 
     async def assistant_session(
         self,
-        open_data: dict[str, Any] | None = None,
-        channel: ApiServerChannel | None = None,
+        open_data: AssistantSessionOpen,
+        channel: ApiServerChannel[AssistantClientMessage, AssistantServerMessage, AssistantSessionClose] | None = None,
     ) -> Any:
         raise NotImplementedError("assistant_session")
 
     async def post_deprecated(
         self,
-        json: dict[str, Any] | None = None,
-    ) -> Any:
+        json: PostDeprecatedJSON,
+    ) -> PostDeprecatedResponse:
         raise NotImplementedError("post_deprecated")
 
-    async def raw(self) -> Any:
+    async def raw(self) -> RawResponse:
         raise NotImplementedError("raw")
 
-    async def map_model(self) -> Any:
+    async def map_model(self) -> dict[int, ApiDemoMap]:
         raise NotImplementedError("map_model")
 
     async def error_demo(
         self,
-        query: dict[str, Any] | None = None,
-    ) -> Any:
+        query: ErrorDemoQuery,
+    ) -> ErrorDemoResponse:
         raise NotImplementedError("error_demo")

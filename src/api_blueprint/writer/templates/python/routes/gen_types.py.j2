@@ -1,68 +1,114 @@
 from __future__ import annotations
 
-{% if group.message_helpers() %}from dataclasses import asdict, dataclass, is_dataclass
+from dataclasses import dataclass
+from enum import Enum, IntEnum, StrEnum
 from typing import Any, Callable, Generic, Mapping, TypeVar
-{% elif group.route_models() %}from dataclasses import dataclass
-{% endif %}{% if group.binary_schemas() %}
+from {{ group.runtime_import_prefix }}runtime.gen_codecs import (
+    _MISSING,
+    _api_to_json,
+    _decode_any,
+    _decode_bool,
+    _decode_bytes,
+    _decode_float,
+    _decode_int,
+    _decode_list,
+    _decode_map,
+    _decode_object,
+    _decode_optional,
+    _decode_required,
+    _decode_str,
+    _field_path,
+)
+{% if group.binary_schemas() %}
 from .gen_binary import *
 {% endif %}
 
-{% if group.message_helpers() %}
+
 R = TypeVar("R")
 
 
-def _to_mapping(value: object) -> Mapping[str, Any] | None:
-    if value is None:
-        return None
-    if isinstance(value, Mapping):
-        return value
-    if is_dataclass(value):
-        return {key: item for key, item in asdict(value).items() if item is not None}
-    raise TypeError(f"expected mapping or dataclass message data, got {type(value).__name__}")
-
-
-def _from_mapping(model_type, value):
-    if value is None or isinstance(value, model_type):
-        return value
-    if isinstance(value, Mapping):
-        return model_type(**{key: value.get(key) for key in model_type.__dataclass_fields__})
-    return value
-
-
-def _coerce_message(model_type, value):
-    if isinstance(value, model_type):
-        return value
-    if isinstance(value, Mapping):
-        return model_type(type=str(value.get("type", "")), data=value.get("data"))
-    raise TypeError(f"expected mapping or {model_type.__name__}, got {type(value).__name__}")
-
-
-{% endif %}
-
-{% for model in group.route_models() %}
-@dataclass
-class {{ model.class_name }}:
-{% if model.fields %}{% for field in model.fields %}    {{ field.name }}: {{ field.type_expr }} | None = None
+{% for enum in group.enums() %}
+class {{ enum.class_name }}({{ enum.base_class }}):
+{% if enum.members %}{% for member in enum.members %}    {{ member.name }} = {{ member.value_literal | safe }}
 {% endfor %}{% else %}    pass
 {% endif %}
+    @classmethod
+    def from_value(cls, value: object, path: str = "{{ enum.class_name }}") -> "{{ enum.class_name }}":
+        if isinstance(value, cls):
+            return value
+        for item in cls:
+            if item.value == value or str(item.value) == str(value):
+                return item
+        raise ValueError(f"{path}: expected {{ enum.class_name }} value")
+
+    def to_json(self) -> object:
+        return self.value
+
+
+{% endfor %}
+{% for model in group.route_models() %}
+@dataclass(kw_only=True)
+class {{ model.class_name }}:
+{% if model.fields %}{% for field in model.fields %}    {{ field.name }}: {{ field.type.annotation }}{% if field.optional %} | None = None{% endif %}
+{% endfor %}{% else %}    pass
+{% endif %}
+
+    @classmethod
+    def from_mapping(cls, value: Mapping[str, Any]) -> {{ model.class_name }}:
+        if not isinstance(value, Mapping):
+            raise TypeError("{{ model.class_name }}: expected object")
+        return cls._from_mapping(value, "{{ model.class_name }}")
+
+    @classmethod
+    def from_value(cls, value: object, path: str = "{{ model.class_name }}") -> {{ model.class_name }}:
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, Mapping):
+            raise TypeError(f"{path}: expected object")
+        return cls._from_mapping(value, path)
+
+    @classmethod
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> {{ model.class_name }}:
+        return cls(
+{% for field in model.fields %}            {{ field.name }}={{ field.decode_expr | safe }},
+{% endfor %}        )
+
+    def to_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+{% for field in model.fields %}{% if field.optional %}        if self.{{ field.name }} is not None:
+            result[{{ field.wire_literal | safe }}] = _api_to_json(self.{{ field.name }})
+{% else %}        result[{{ field.wire_literal | safe }}] = _api_to_json(self.{{ field.name }})
+{% endif %}
+{% endfor %}        return result
 
 
 {% endfor %}
 {% for helper in group.message_helpers() %}
-@dataclass
+@dataclass(kw_only=True)
 class {{ helper.name }}:
     type: str
-    data: Mapping[str, Any] | None = None
+    data: Any = None
+
+    @classmethod
+    def from_value(cls, value: object, path: str = "{{ helper.name }}") -> "{{ helper.name }}":
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, Mapping):
+            raise TypeError(f"{path}: expected object")
+        return cls(type=_decode_str(value.get("type", ""), _field_path(path, "type")), data=value.get("data"))
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {"type": self.type, "data": _api_to_json(self.data)}
 
 
 class {{ helper.variants_class }}:
 {% for variant in helper.variants %}    @staticmethod
-    def {{ variant.method_name }}(data: {{ variant.data_type }} | Mapping[str, Any]) -> {{ helper.name }}:
-        return {{ helper.name }}(type={{ variant.key | tojson }}, data=_to_mapping(data))
+    def {{ variant.method_name }}(data: {{ variant.data_type }}) -> {{ helper.name }}:
+        return {{ helper.name }}(type={{ variant.key | tojson }}, data=_api_to_json(data))
 
 {% endfor %}
 
-@dataclass
+@dataclass(kw_only=True)
 class {{ helper.handlers_class }}(Generic[R]):
 {% for variant in helper.variants %}    {{ variant.method_name }}: Callable[[{{ variant.data_type }}, {{ helper.name }}], R]
 {% endfor %}
@@ -85,11 +131,11 @@ def {{ helper.dispatch_func }}(
     message: {{ helper.name }} | Mapping[str, Any],
     handlers: {{ helper.handlers_class }}[R],
 ) -> R:
-    typed_message = _coerce_message({{ helper.name }}, message)
+    typed_message = {{ helper.name }}.from_value(message)
     match typed_message.type:
 {% for variant in helper.variants %}        case {{ variant.key | tojson }}:
             return handlers.{{ variant.method_name }}(
-                _from_mapping({{ variant.data_type }}, typed_message.data),
+                {{ variant.data_decode_expr | safe }},
                 typed_message,
             )
 {% endfor %}        case _:

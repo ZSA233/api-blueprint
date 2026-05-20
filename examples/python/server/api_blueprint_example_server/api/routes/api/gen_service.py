@@ -5,6 +5,12 @@ from typing import Any, Protocol
 
 from ...runtime.server import ApiServerChannel, ApiServerStream
 
+from .gen_types import (
+    HelloChannelMessage,
+    HelloChannelClose,
+    HelloChannelMsgTypeEnum,
+)
+
 
 class ApiService(Protocol):
     async def hello_channel(self) -> Any:

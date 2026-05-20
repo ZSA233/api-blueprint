@@ -2,7 +2,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import Any, Generic, Protocol, TypeVar
+
+
+RecvT = TypeVar("RecvT")
+SendT = TypeVar("SendT")
+CloseT = TypeVar("CloseT")
 
 
 @dataclass
@@ -10,17 +15,17 @@ class ApiServerContext:
     state: dict[str, Any] = field(default_factory=dict)
 
 
-class ApiServerStream(Protocol):
-    async def send(self, message: Any) -> None:
+class ApiServerStream(Protocol, Generic[SendT, CloseT]):
+    async def send(self, message: SendT) -> None:
         ...
 
-    async def close(self, close: Any) -> None:
+    async def close(self, close: CloseT) -> None:
         ...
 
     async def abort(self, code: int = 1011, reason: str | None = None) -> None:
         ...
 
 
-class ApiServerChannel(ApiServerStream, Protocol):
-    async def receive(self) -> Any:
+class ApiServerChannel(ApiServerStream[SendT, CloseT], Protocol, Generic[RecvT, SendT, CloseT]):
+    async def receive(self) -> RecvT:
         ...

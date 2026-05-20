@@ -1,37 +1,19 @@
 from __future__ import annotations
 
-from dataclasses import asdict, is_dataclass
-from typing import Any, Mapping
+from typing import Any
 
 from {{ group.runtime_import_prefix }}runtime.client import ApiChannelBridge, ApiClientTransport, ApiStreamBridge
+from {{ group.runtime_import_prefix }}runtime.gen_codecs import _api_to_json
 {% if group.binary_schemas() %}
 from {{ group.runtime_import_prefix }}runtime.binary import ApiBinaryBody
 {% endif %}
-{% if group.route_models() or group.binary_schemas() %}
+{% if group.type_import_names() or group.binary_schemas() %}
 from .gen_types import (
-{% for model in group.route_models() %}    {{ model.class_name }},
+{% for name in group.type_import_names() %}    {{ name }},
 {% endfor %}{% for schema in group.binary_schemas() %}    {{ schema.py_type }},
     {{ schema.py_type }}Wire,
 {% endfor %})
 {% endif %}
-
-
-def _to_mapping(value: object) -> Mapping[str, Any] | None:
-    if value is None:
-        return None
-    if isinstance(value, Mapping):
-        return value
-    if is_dataclass(value):
-        return {key: item for key, item in asdict(value).items() if item is not None}
-    raise TypeError(f"expected mapping or dataclass request model, got {type(value).__name__}")
-
-
-def _from_mapping(model_type, value):
-    if value is None or isinstance(value, model_type):
-        return value
-    if isinstance(value, Mapping):
-        return model_type(**{key: value.get(key) for key in model_type.__dataclass_fields__})
-    return value
 
 
 class {{ group.client_class }}:
@@ -43,10 +25,10 @@ class {{ group.client_class }}:
 {% if route.params %}
     async def {{ route.method_name }}(
         self{% for param in route.params %},
-        {{ param.name }}: {{ param.annotation }} = {{ param.default }}{% endfor %},
-    ) -> Any:
+        {{ param.name }}: {{ param.annotation }}{% if param.default is not none %} = {{ param.default }}{% endif %}{% endfor %},
+    ) -> {{ route.response_annotation }}:
 {% else %}
-    async def {{ route.method_name }}(self) -> Any:
+    async def {{ route.method_name }}(self) -> {{ route.response_annotation }}:
 {% endif %}
         response_type: str | None = {{ route.response_type_literal | safe }}
         payload = await self._transport.request(
@@ -54,29 +36,27 @@ class {{ group.client_class }}:
             {{ route.url_literal | safe }},
             route_id={{ route.route_id_literal | safe }},
 {% for param in route.params %}
-            {{ param.call_name }}={% if param.call_name == "binary" and route.has_binary_schema %}{{ route.binary_wire_name }}.to_binary_body({{ param.name }}){% elif param.converter %}{{ param.converter }}({{ param.name }}){% else %}{{ param.name }}{% endif %},
+            {{ param.call_name }}={% if param.call_name == "binary" and route.has_binary_schema %}{{ route.binary_wire_name }}.to_binary_body({{ param.name }}){% else %}{{ param.encode_expr(param.name) }}{% endif %},
 {% endfor %}
             response_type=response_type,
             response_envelope={{ route.response_envelope_literal | safe }},
         )
-{% if route.response_class_name %}        return _from_mapping({{ route.response_class_name }}, payload)
-{% else %}        return payload
-{% endif %}
+        return {{ route.response_decode_expr("payload") | safe }}
 {% elif route.supports_stream %}
 
     def {{ route.subscribe_method_name }}(
         self{% for param in route.params if param.call_name in ("query", "open_data") %},
-        {{ param.name }}: dict[str, Any] | None = None{% endfor %},
+        {{ param.name }}: {{ param.annotation }}{% if param.default is not none %} = {{ param.default }}{% endif %}{% endfor %},
         headers: dict[str, str] | None = None,
-    ) -> ApiStreamBridge[Any, Any]:
+    ) -> ApiStreamBridge[{{ route.server_message_type.annotation if route.server_message_type else 'Any' }}, {{ route.close_type.annotation if route.close_type else 'Any' }}]:
         return self._transport.open_stream(
             route_id={{ route.route_id_literal | safe }},
             path={{ route.url_literal | safe }},
 {% for param in route.params if param.call_name == "query" %}
-            query={{ param.name }},
+            query={{ param.encode_expr(param.name) }},
 {% endfor %}
 {% for param in route.params if param.call_name == "open_data" %}
-            open_data={{ param.name }},
+            open_data={{ param.encode_expr(param.name) }},
 {% endfor %}
             headers=headers,
         )
@@ -84,18 +64,18 @@ class {{ group.client_class }}:
 
     def {{ route.open_channel_method_name }}(
         self{% for param in route.params if param.call_name in ("query", "open_data") %},
-        {{ param.name }}: dict[str, Any] | None = None{% endfor %},
+        {{ param.name }}: {{ param.annotation }}{% if param.default is not none %} = {{ param.default }}{% endif %}{% endfor %},
         headers: dict[str, str] | None = None,
         protocols: tuple[str, ...] = (),
-    ) -> ApiChannelBridge[Any, Any, Any]:
+    ) -> ApiChannelBridge[{{ route.server_message_type.annotation if route.server_message_type else 'Any' }}, {{ route.client_message_type.annotation if route.client_message_type else 'Any' }}, {{ route.close_type.annotation if route.close_type else 'Any' }}]:
         return self._transport.open_channel(
             route_id={{ route.route_id_literal | safe }},
             path={{ route.url_literal | safe }},
 {% for param in route.params if param.call_name == "query" %}
-            query={{ param.name }},
+            query={{ param.encode_expr(param.name) }},
 {% endfor %}
 {% for param in route.params if param.call_name == "open_data" %}
-            open_data={{ param.name }},
+            open_data={{ param.encode_expr(param.name) }},
 {% endfor %}
             headers=headers,
             protocols=protocols,

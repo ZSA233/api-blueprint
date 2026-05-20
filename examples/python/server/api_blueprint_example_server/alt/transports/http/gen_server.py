@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import json
 from dataclasses import asdict, is_dataclass
+from enum import Enum
 from typing import Any
 
 from fastapi import APIRouter, WebSocket, Request, HTTPException, WebSocketDisconnect
@@ -11,6 +12,11 @@ from starlette.responses import StreamingResponse, JSONResponse
 
 from ...runtime.errors import ApiError, make_api_error_payload
 from ...routes.alt.conflict.service import ConflictService, ConflictServiceStub
+from ...routes.alt.conflict.gen_types import (
+    DefaultQuery,
+    DefaultResponse,
+    KeywordEnum,
+)
 
 
 def create_router(
@@ -22,7 +28,13 @@ def create_router(
     @router.api_route("/alt/conflict/default", methods=["GET"])
     async def conflict_default(request: Request) -> Any:
         service = conflict_service_impl
-        query = _query_params(request)
+        query_raw = _query_params(request)
+        try:
+            query = DefaultQuery.from_value(query_raw, "query")
+
+        except (TypeError, ValueError) as error:
+            return _bad_request_response(error)
+
         try:
             result = await service.default(
                 query=query,
@@ -39,7 +51,7 @@ def _query_params(request: Request) -> dict[str, Any] | None:
     return values or None
 
 
-async def _json_body(request: Request) -> dict[str, Any] | None:
+async def _json_body(request: Request) -> Any:
     body = await request.body()
     if not body:
         return None
@@ -47,7 +59,7 @@ async def _json_body(request: Request) -> dict[str, Any] | None:
         value = json.loads(body.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as err:
         raise HTTPException(status_code=400, detail="invalid JSON body") from err
-    return value if isinstance(value, dict) else None
+    return value
 
 
 async def _form_body(request: Request) -> dict[str, Any] | None:
@@ -57,15 +69,29 @@ async def _form_body(request: Request) -> dict[str, Any] | None:
 
 
 def _jsonable(value: Any) -> Any:
+    if isinstance(value, Enum):
+        return value.value
+    if hasattr(value, "to_mapping"):
+        return value.to_mapping()
     if is_dataclass(value):
-        return {key: item for key, item in asdict(value).items() if item is not None}
+        return _jsonable(asdict(value))
     if isinstance(value, dict):
-        return {key: _jsonable(item) for key, item in value.items() if item is not None}
+        return {_json_key(key): _jsonable(item) for key, item in value.items() if item is not None}
     if isinstance(value, (list, tuple)):
         return [_jsonable(item) for item in value]
     if isinstance(value, bytes):
         return value.decode("utf-8")
     return value
+
+
+def _json_key(value: Any) -> str:
+    if isinstance(value, Enum):
+        return str(value.value)
+    return str(value)
+
+
+def _bad_request_response(error: Exception) -> JSONResponse:
+    return JSONResponse({"detail": str(error) or "invalid request"}, status_code=400)
 
 
 def _wrap_response(envelope: dict[str, Any], data: Any) -> Any:
@@ -146,9 +172,14 @@ class _SseStream:
         await self.close({"code": code, "reason": reason or ""})
 
 
+def _identity_decoder(value: Any, path: str) -> Any:
+    return value
+
+
 class _WebSocketChannel:
-    def __init__(self, websocket: WebSocket) -> None:
+    def __init__(self, websocket: WebSocket, message_decoder=_identity_decoder) -> None:
         self.websocket = websocket
+        self.message_decoder = message_decoder
         self.closed = False
 
     async def receive(self) -> Any:
@@ -158,8 +189,9 @@ class _WebSocketChannel:
             self.closed = True
             raise _WebSocketClosed() from err
         try:
-            return json.loads(payload)
-        except (UnicodeDecodeError, json.JSONDecodeError) as err:
+            value = json.loads(payload)
+            return self.message_decoder(value, "message")
+        except (UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError) as err:
             await self.abort(1003, "invalid WebSocket message")
             raise _WebSocketClosed() from err
 

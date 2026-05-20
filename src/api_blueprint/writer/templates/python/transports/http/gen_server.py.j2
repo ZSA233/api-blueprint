@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 from dataclasses import asdict, is_dataclass
+from enum import Enum
 from typing import Any
 
 from fastapi import APIRouter, WebSocket, Request, HTTPException, WebSocketDisconnect
@@ -11,6 +12,10 @@ from starlette.responses import StreamingResponse, JSONResponse
 from ...runtime.errors import ApiError, make_api_error_payload
 {% for group in bp.groups.values() -%}
 from ...routes.{{ group.package_path }}.service import {{ group.service_class }}, {{ group.service_class }}Stub
+{% if group.type_import_names() %}from ...routes.{{ group.package_path }}.gen_types import (
+{% for name in group.type_import_names() %}    {{ name }},
+{% endfor %})
+{% endif %}
 {% endfor %}
 
 
@@ -31,15 +36,29 @@ def create_router(
         service = {{ group.alias }}_service_impl
 {% for param in route.params %}
 {% if param.name == "query" %}
-        query = _query_params(request)
+        query_raw = _query_params(request)
 {% elif param.name == "json" %}
-        json_body = await _json_body(request)
+        json_body_raw = await _json_body(request)
 {% elif param.name == "form" %}
-        form = await _form_body(request)
+        form_raw = await _form_body(request)
 {% elif param.name == "binary" %}
         binary = await request.body()
 {% endif %}
 {% endfor %}
+{% if route.has_decoded_params %}
+        try:
+{% for param in route.params %}
+{% if param.name == "query" %}
+            query = {{ param.decode_expr("query_raw", '"query"') | safe }}
+{% elif param.name == "json" %}
+            json_body = {{ param.decode_expr("json_body_raw", '"json"') | safe }}
+{% elif param.name == "form" %}
+            form = {{ param.decode_expr("form_raw", '"form"') | safe }}
+{% endif %}
+{% endfor %}
+        except (TypeError, ValueError) as error:
+            return _bad_request_response(error)
+{% endif %}
         try:
             result = await service.{{ route.method_name }}(
 {% for param in route.params %}
@@ -55,7 +74,13 @@ def create_router(
     async def {{ group.alias }}_{{ route.subscribe_method_name }}(request: Request) -> Any:
         service = {{ group.alias }}_service_impl
 {% for param in route.params if param.name == "open_data" %}
-        open_data = _query_params(request)
+        open_data_raw = _query_params(request)
+{% endfor %}
+{% for param in route.params if param.name == "open_data" %}
+        try:
+            open_data = {{ param.decode_expr("open_data_raw", '"open_data"') | safe }}
+        except (TypeError, ValueError) as error:
+            return _bad_request_response(error)
 {% endfor %}
         stream = _SseStream()
 
@@ -84,9 +109,16 @@ def create_router(
         await websocket.accept()
         service = {{ group.alias }}_service_impl
 {% for param in route.params if param.name == "open_data" %}
-        open_data = dict(websocket.query_params)
+        open_data_raw = dict(websocket.query_params)
 {% endfor %}
-        channel = _WebSocketChannel(websocket)
+{% for param in route.params if param.name == "open_data" %}
+        try:
+            open_data = {{ param.decode_expr("open_data_raw", '"open_data"') | safe }}
+        except (TypeError, ValueError):
+            await websocket.close(code=1008)
+            return
+{% endfor %}
+        channel = _WebSocketChannel(websocket, {{ route.client_message_type.decoder if route.client_message_type else '_identity_decoder' }})
         try:
             await service.{{ route.method_name }}(
 {% for param in route.params if param.name == "open_data" %}
@@ -110,7 +142,7 @@ def _query_params(request: Request) -> dict[str, Any] | None:
     return values or None
 
 
-async def _json_body(request: Request) -> dict[str, Any] | None:
+async def _json_body(request: Request) -> Any:
     body = await request.body()
     if not body:
         return None
@@ -118,7 +150,7 @@ async def _json_body(request: Request) -> dict[str, Any] | None:
         value = json.loads(body.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as err:
         raise HTTPException(status_code=400, detail="invalid JSON body") from err
-    return value if isinstance(value, dict) else None
+    return value
 
 
 async def _form_body(request: Request) -> dict[str, Any] | None:
@@ -128,15 +160,29 @@ async def _form_body(request: Request) -> dict[str, Any] | None:
 
 
 def _jsonable(value: Any) -> Any:
+    if isinstance(value, Enum):
+        return value.value
+    if hasattr(value, "to_mapping"):
+        return value.to_mapping()
     if is_dataclass(value):
-        return {key: item for key, item in asdict(value).items() if item is not None}
+        return _jsonable(asdict(value))
     if isinstance(value, dict):
-        return {key: _jsonable(item) for key, item in value.items() if item is not None}
+        return {_json_key(key): _jsonable(item) for key, item in value.items() if item is not None}
     if isinstance(value, (list, tuple)):
         return [_jsonable(item) for item in value]
     if isinstance(value, bytes):
         return value.decode("utf-8")
     return value
+
+
+def _json_key(value: Any) -> str:
+    if isinstance(value, Enum):
+        return str(value.value)
+    return str(value)
+
+
+def _bad_request_response(error: Exception) -> JSONResponse:
+    return JSONResponse({"detail": str(error) or "invalid request"}, status_code=400)
 
 
 def _wrap_response(envelope: dict[str, Any], data: Any) -> Any:
@@ -217,9 +263,14 @@ class _SseStream:
         await self.close({"code": code, "reason": reason or ""})
 
 
+def _identity_decoder(value: Any, path: str) -> Any:
+    return value
+
+
 class _WebSocketChannel:
-    def __init__(self, websocket: WebSocket) -> None:
+    def __init__(self, websocket: WebSocket, message_decoder=_identity_decoder) -> None:
         self.websocket = websocket
+        self.message_decoder = message_decoder
         self.closed = False
 
     async def receive(self) -> Any:
@@ -229,8 +280,9 @@ class _WebSocketChannel:
             self.closed = True
             raise _WebSocketClosed() from err
         try:
-            return json.loads(payload)
-        except (UnicodeDecodeError, json.JSONDecodeError) as err:
+            value = json.loads(payload)
+            return self.message_decoder(value, "message")
+        except (UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError) as err:
             await self.abort(1003, "invalid WebSocket message")
             raise _WebSocketClosed() from err
 

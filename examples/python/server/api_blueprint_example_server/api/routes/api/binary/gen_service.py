@@ -5,34 +5,41 @@ from typing import Any, Protocol
 
 from ....runtime.server import ApiServerChannel, ApiServerStream
 
+from .gen_types import (
+    PacketQuery,
+    PacketResponse,
+    AuditPacketQuery,
+    AuditPacketResponse,
+)
+
 
 class BinaryService(Protocol):
     async def packet(
         self,
-        query: dict[str, Any] | None = None,
-        binary: bytes | None = None,
-    ) -> Any:
+        query: PacketQuery,
+        binary: bytes | None,
+    ) -> PacketResponse:
         ...
 
     async def audit_packet(
         self,
-        query: dict[str, Any] | None = None,
-        binary: bytes | None = None,
-    ) -> Any:
+        query: AuditPacketQuery,
+        binary: bytes | None,
+    ) -> AuditPacketResponse:
         ...
 
 
 class BinaryServiceStub:
     async def packet(
         self,
-        query: dict[str, Any] | None = None,
-        binary: bytes | None = None,
-    ) -> Any:
+        query: PacketQuery,
+        binary: bytes | None,
+    ) -> PacketResponse:
         raise NotImplementedError("packet")
 
     async def audit_packet(
         self,
-        query: dict[str, Any] | None = None,
-        binary: bytes | None = None,
-    ) -> Any:
+        query: AuditPacketQuery,
+        binary: bytes | None,
+    ) -> AuditPacketResponse:
         raise NotImplementedError("audit_packet")

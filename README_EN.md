@@ -99,8 +99,8 @@ For fuller project layout, config fields, DSL, generator output, typed errors, R
 | Flutter client | Preview | Generate a pure Dart package, DTOs, typed errors, binary codecs, and HTTP/SSE/WebSocket clients |
 | Kotlin client/server | Preview | Generate OkHttp HTTP/SSE/WebSocket clients, Ktor HTTP/SSE/WebSocket server scaffolds, models, long-connection message helpers, and binary writers |
 | Java client/server | Preview | Generate Java 17 HttpClient clients, Spring MVC/SSE/WebSocket server scaffolds, record DTOs, long-connection message helpers, binary packet helpers, and HTTP adapters |
-| Go / Python client | Preview | Generate non-server clients for scripts, tools, or services, with long-connection message helpers and binary writers |
-| Python server | Preview | Generate FastAPI HTTP/SSE/WebSocket server scaffolds, service contracts, and long-connection message helpers |
+| Go / Python client | Preview | Generate non-server clients for scripts, tools, or services; the Python client uses recursive dataclass DTOs, shared runtime codecs, long-connection message helpers, and binary writers |
+| Python server | Preview | Generate FastAPI HTTP/SSE/WebSocket server scaffolds, typed service contracts, and long-connection message helpers |
 | Wails v2/v3 | Preview / Experimental | Generate Go + TypeScript overlays for desktop GUIs |
 | gRPC proto / stubs | Available | Emit proto from ContractGraph and generate Go/Python stubs |
 

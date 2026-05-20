@@ -5,18 +5,23 @@ from typing import Any, Protocol
 
 from ...runtime.server import ApiServerChannel, ApiServerStream
 
+from .gen_types import (
+    DocJsonResponse,
+    DochahaResponse,
+)
+
 
 class StaticService(Protocol):
-    async def doc_json(self) -> Any:
+    async def doc_json(self) -> DocJsonResponse:
         ...
 
-    async def dochaha(self) -> Any:
+    async def dochaha(self) -> DochahaResponse:
         ...
 
 
 class StaticServiceStub:
-    async def doc_json(self) -> Any:
+    async def doc_json(self) -> DocJsonResponse:
         raise NotImplementedError("doc_json")
 
-    async def dochaha(self) -> Any:
+    async def dochaha(self) -> DochahaResponse:
         raise NotImplementedError("dochaha")

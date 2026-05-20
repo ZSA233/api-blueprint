@@ -2,34 +2,177 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum, IntEnum, StrEnum
+from typing import Any, Callable, Generic, Mapping, TypeVar
+from ....runtime.gen_codecs import (
+    _MISSING,
+    _api_to_json,
+    _decode_any,
+    _decode_bool,
+    _decode_bytes,
+    _decode_float,
+    _decode_int,
+    _decode_list,
+    _decode_map,
+    _decode_object,
+    _decode_optional,
+    _decode_required,
+    _decode_str,
+    _field_path,
+)
 
 from .gen_binary import *
 
 
-@dataclass
+R = TypeVar("R")
+
+
+@dataclass(kw_only=True)
 class PacketQuery:
     trace: str | None = None
 
+    @classmethod
+    def from_mapping(cls, value: Mapping[str, Any]) -> PacketQuery:
+        if not isinstance(value, Mapping):
+            raise TypeError("PacketQuery: expected object")
+        return cls._from_mapping(value, "PacketQuery")
 
-@dataclass
+    @classmethod
+    def from_value(cls, value: object, path: str = "PacketQuery") -> PacketQuery:
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, Mapping):
+            raise TypeError(f"{path}: expected object")
+        return cls._from_mapping(value, path)
+
+    @classmethod
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> PacketQuery:
+        return cls(
+            trace=_decode_optional(_decode_str, value.get("trace", _MISSING), _field_path(path, "trace")),
+        )
+
+    def to_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        if self.trace is not None:
+            result["trace"] = _api_to_json(self.trace)
+
+        return result
+
+
+@dataclass(kw_only=True)
 class PacketResponse:
-    trace: str | None = None
-    version: int | None = None
-    item_count: int | None = None
-    payload: str | None = None
-    score_sum: float | None = None
-    first_label: str | None = None
-    item_ids: list[Any] | None = None
-    checksum: int | None = None
+    trace: str
+    version: int
+    item_count: int
+    payload: str
+    score_sum: float
+    first_label: str
+    item_ids: list[int]
+    checksum: int
+
+    @classmethod
+    def from_mapping(cls, value: Mapping[str, Any]) -> PacketResponse:
+        if not isinstance(value, Mapping):
+            raise TypeError("PacketResponse: expected object")
+        return cls._from_mapping(value, "PacketResponse")
+
+    @classmethod
+    def from_value(cls, value: object, path: str = "PacketResponse") -> PacketResponse:
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, Mapping):
+            raise TypeError(f"{path}: expected object")
+        return cls._from_mapping(value, path)
+
+    @classmethod
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> PacketResponse:
+        return cls(
+            trace=_decode_required(_decode_str, value.get("trace", _MISSING), _field_path(path, "trace")),
+            version=_decode_required(_decode_int, value.get("version", _MISSING), _field_path(path, "version")),
+            item_count=_decode_required(_decode_int, value.get("item_count", _MISSING), _field_path(path, "item_count")),
+            payload=_decode_required(_decode_str, value.get("payload", _MISSING), _field_path(path, "payload")),
+            score_sum=_decode_required(_decode_float, value.get("score_sum", _MISSING), _field_path(path, "score_sum")),
+            first_label=_decode_required(_decode_str, value.get("first_label", _MISSING), _field_path(path, "first_label")),
+            item_ids=_decode_required(lambda item, path: _decode_list(item, path, _decode_int), value.get("item_ids", _MISSING), _field_path(path, "item_ids")),
+            checksum=_decode_required(_decode_int, value.get("checksum", _MISSING), _field_path(path, "checksum")),
+        )
+
+    def to_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["trace"] = _api_to_json(self.trace)
+        result["version"] = _api_to_json(self.version)
+        result["item_count"] = _api_to_json(self.item_count)
+        result["payload"] = _api_to_json(self.payload)
+        result["score_sum"] = _api_to_json(self.score_sum)
+        result["first_label"] = _api_to_json(self.first_label)
+        result["item_ids"] = _api_to_json(self.item_ids)
+        result["checksum"] = _api_to_json(self.checksum)
+        return result
 
 
-@dataclass
+@dataclass(kw_only=True)
 class AuditPacketQuery:
     trace: str | None = None
 
+    @classmethod
+    def from_mapping(cls, value: Mapping[str, Any]) -> AuditPacketQuery:
+        if not isinstance(value, Mapping):
+            raise TypeError("AuditPacketQuery: expected object")
+        return cls._from_mapping(value, "AuditPacketQuery")
 
-@dataclass
+    @classmethod
+    def from_value(cls, value: object, path: str = "AuditPacketQuery") -> AuditPacketQuery:
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, Mapping):
+            raise TypeError(f"{path}: expected object")
+        return cls._from_mapping(value, path)
+
+    @classmethod
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> AuditPacketQuery:
+        return cls(
+            trace=_decode_optional(_decode_str, value.get("trace", _MISSING), _field_path(path, "trace")),
+        )
+
+    def to_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        if self.trace is not None:
+            result["trace"] = _api_to_json(self.trace)
+
+        return result
+
+
+@dataclass(kw_only=True)
 class AuditPacketResponse:
-    trace: str | None = None
-    item_count: int | None = None
-    checksum: int | None = None
+    trace: str
+    item_count: int
+    checksum: int
+
+    @classmethod
+    def from_mapping(cls, value: Mapping[str, Any]) -> AuditPacketResponse:
+        if not isinstance(value, Mapping):
+            raise TypeError("AuditPacketResponse: expected object")
+        return cls._from_mapping(value, "AuditPacketResponse")
+
+    @classmethod
+    def from_value(cls, value: object, path: str = "AuditPacketResponse") -> AuditPacketResponse:
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, Mapping):
+            raise TypeError(f"{path}: expected object")
+        return cls._from_mapping(value, path)
+
+    @classmethod
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> AuditPacketResponse:
+        return cls(
+            trace=_decode_required(_decode_str, value.get("trace", _MISSING), _field_path(path, "trace")),
+            item_count=_decode_required(_decode_int, value.get("item_count", _MISSING), _field_path(path, "item_count")),
+            checksum=_decode_required(_decode_int, value.get("checksum", _MISSING), _field_path(path, "checksum")),
+        )
+
+    def to_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["trace"] = _api_to_json(self.trace)
+        result["item_count"] = _api_to_json(self.item_count)
+        result["checksum"] = _api_to_json(self.checksum)
+        return result

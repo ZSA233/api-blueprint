@@ -5,32 +5,40 @@ from typing import Any, Protocol
 
 from ....runtime.server import ApiServerChannel, ApiServerStream
 
+from .gen_types import (
+    AbcQuery,
+    ApiHelloMap,
+    HelloWayQuery,
+    MapEnum,
+    HelloWayEnum,
+)
+
 
 class HelloService(Protocol):
     async def abc(
         self,
-        query: dict[str, Any] | None = None,
-    ) -> Any:
+        query: AbcQuery,
+    ) -> dict[str, ApiHelloMap]:
         ...
 
-    async def map_enum(self) -> Any:
+    async def map_enum(self) -> dict[MapEnum, ApiHelloMap]:
         ...
 
-    async def list_enum(self) -> Any:
+    async def list_enum(self) -> list[MapEnum]:
         ...
 
-    async def string(self) -> Any:
+    async def string(self) -> str:
         ...
 
-    async def uint64(self) -> Any:
+    async def uint64(self) -> int:
         ...
 
-    async def string_emun(self) -> Any:
+    async def string_emun(self) -> MapEnum:
         ...
 
     async def hello_way(
         self,
-        query: dict[str, Any] | None = None,
+        query: HelloWayQuery,
     ) -> Any:
         ...
 
@@ -38,27 +46,27 @@ class HelloService(Protocol):
 class HelloServiceStub:
     async def abc(
         self,
-        query: dict[str, Any] | None = None,
-    ) -> Any:
+        query: AbcQuery,
+    ) -> dict[str, ApiHelloMap]:
         raise NotImplementedError("abc")
 
-    async def map_enum(self) -> Any:
+    async def map_enum(self) -> dict[MapEnum, ApiHelloMap]:
         raise NotImplementedError("map_enum")
 
-    async def list_enum(self) -> Any:
+    async def list_enum(self) -> list[MapEnum]:
         raise NotImplementedError("list_enum")
 
-    async def string(self) -> Any:
+    async def string(self) -> str:
         raise NotImplementedError("string")
 
-    async def uint64(self) -> Any:
+    async def uint64(self) -> int:
         raise NotImplementedError("uint64")
 
-    async def string_emun(self) -> Any:
+    async def string_emun(self) -> MapEnum:
         raise NotImplementedError("string_emun")
 
     async def hello_way(
         self,
-        query: dict[str, Any] | None = None,
+        query: HelloWayQuery,
     ) -> Any:
         raise NotImplementedError("hello_way")

@@ -1,7 +1,7 @@
 # examples/conformance 安全审查
 
 - 编号：0001
-- 状态：open（高风险服务端稳定性项已修复，仍保留 Python client nested DTO 与普通覆盖缺口追踪）
+- 状态：open（高风险服务端稳定性项与 Python strict DTO 已修复，仍保留普通覆盖缺口追踪）
 - 发现日期：2026-05-21
 - 评估日期：2026-05-21
 - 来源：examples DSL 覆盖面、example conformance 矩阵、生成服务端/客户端接口安全审查
@@ -29,7 +29,7 @@
 | Java WebSocket receive 长期阻塞 | 真实 bug | 已确认 | 已修复 | close 后唤醒 `receive()` 并抛异常 |
 | malformed WebSocket frame | bug + 协议策略 | 已确认风险 | 已修稳定性 | 三端避免未处理异常/悬挂，close payload 暂不强制统一 |
 | Java/Kotlin decode 在 ApiError 捕获外 | 已验证 bug | conformance 复现 500 | 已修复 | decode 阶段最小返回 HTTP 400，不扩大业务异常捕获 |
-| Python client 嵌套 DTO 不严格 | 设计/类型一致性问题 | 已确认并已补 characterization test | 暂缓或低优先级 | 当前行为是浅层 DTO，可能影响依赖 dict 的用户 |
+| Python client 嵌套 DTO 不严格 | 协议类型一致性 bug | 已确认 | 已修复（breaking） | Python client/server 改为递归强类型 dataclass DTO |
 | conformance 覆盖缺口 | 测试债 | 已确认 | 分阶段补齐 | 已补高风险 raw safety probes |
 
 ## 评估详情
@@ -125,17 +125,19 @@ curl -i -X POST 'http://127.0.0.1:<port>/api/demo/test_post' -H 'Content-Type: a
 ### 6. Python client 嵌套 DTO 反序列化不严格
 
 - 风险等级：中
-- 问题性质：设计/类型一致性问题
+- 问题性质：协议类型一致性 bug
 - 存在性判断：已确认
-- 是否建议修复：暂缓或低优先级，先补测试和兼容评估
+- 是否建议修复：已修复，允许破坏性更新
 - 涉及文件：
   - `examples/python/client/api_blueprint_example_client/api/routes/api/demo/gen_types.py`
   - `examples/python/client/api_blueprint_example_client/api/routes/api/demo/gen_client.py`
+  - `examples/python/server/api_blueprint_example_server/api/routes/api/demo/gen_types.py`
+  - `examples/python/server/api_blueprint_example_server/api/transports/http/gen_server.py`
   - `examples/python/conformance/client.py`
 - 现象：Python client 对嵌套 map/model 值没有严格还原为 dataclass。characterization test 确认：仅作为嵌套字段出现的 model 不会生成独立 dataclass，父 response 字段会降级为 `dict[str, Any]`、`list[Any]` 或 `dict[Any, Any]`，运行时 `_from_mapping()` 也只转换顶层 response。
 - 复现场景：调用 `api.demo.test_post(...)` 后读取 `post.map["req2"]`，该值可能是 dict，而不是生成 DTO。
-- 兼容性与修复风险：把 dict 自动转成 dataclass 会提升类型体验，但可能破坏已经按 dict 使用 nested payload 的用户代码。Python client 是动态语言输出，是否强制深度 DTO 化属于 API 设计选择。
-- 当前处置：已补 characterization test 固化现状。后续如果要修，应考虑渐进策略或文档化的 breaking change，而不是直接切换所有 nested map/model 行为。
+- 兼容性与修复风险：把 dict 自动转成 dataclass 会破坏已经按 dict 使用 nested payload 的用户代码；但本项目目标是用协议层强类型约束 AI agent 和人工实现，浅层 DTO 无法满足这个目标，且 Python target 仍是 preview，因此接受 breaking change。
+- 当前处置：已修复。Python client/server 的 route DTO 改为递归强类型 `dataclass(kw_only=True)`；显式嵌套 model、array/map model、enum 字段、enum key/value、connection message payload 都通过 generated `from_mapping()` / `from_value()` / `to_mapping()` codec 递归解码编码。通用 decode/encode helper 收束到 runtime `gen_codecs.py`，避免每个 route `gen_types.py` 重复生成大段 helper。普通 route facade 不再把 `Mapping[str, Any]` 作为主入口；raw mapping 逃生口保留在 transport 层。Python server HTTP adapter 在进入 service 前 decode typed DTO，service 返回 DTO/scalar/list/map 后由 adapter 递归 JSON encode；`.REQ_BINARY` server 边界仍保持 `bytes | None`。
 
 ## 覆盖缺口评估
 
@@ -159,13 +161,12 @@ curl -i -X POST 'http://127.0.0.1:<port>/api/demo/test_post' -H 'Content-Type: a
 
 ## 后续建议
 
-1. Python client nested DTO 继续作为兼容性敏感设计问题保留；characterization test 已确认当前是浅层 DTO，是否深度 DTO 化需要另起兼容性设计。
-2. 扩展 examples conformance 时按风险分阶段覆盖 raw/XML/static/header/audit-packet/scalar/enum/map/`/api/ws`。
-3. 后续如果要统一 WebSocket malformed close payload，需要单独设计跨语言 close/error wire shape，不和稳定性修复混在一起。
+1. 扩展 examples conformance 时按风险分阶段覆盖 raw/XML/static/header/audit-packet/scalar/enum/map/`/api/ws`。
+2. 后续如果要统一 WebSocket malformed close payload，需要单独设计跨语言 close/error wire shape，不和稳定性修复混在一起。
 
 ## 修复记录 / Resolution
 
-当前状态仍为 open，因为 Python client nested DTO 与普通覆盖缺口仍需追踪；高风险服务端稳定性项已完成第一轮修复。
+当前状态仍为 open，因为普通 examples 覆盖缺口仍需追踪；高风险服务端稳定性项与 Python strict DTO 已完成修复。
 
 - 修复日期：2026-05-21
 - 修复摘要：
@@ -174,12 +175,13 @@ curl -i -X POST 'http://127.0.0.1:<port>/api/demo/test_post' -H 'Content-Type: a
   - Java WebSocket receive close 后唤醒并抛异常。
   - Java/Kotlin/Python malformed WebSocket frame 受控 abort/close。
   - Java/Kotlin request decode 失败返回 HTTP 400。
-  - Python client nested DTO 已补 characterization test，确认当前浅层 DTO 行为并暂缓破坏性修复。
+  - Python client/server nested DTO 已完成破坏性修复：递归生成 dataclass/enum DTO 和 codec，共享 helper 下沉到 runtime `gen_codecs.py`，route facade/service contract 使用强类型 DTO，conformance preserved Python harness 改为 DTO 属性访问和 DTO 返回。
   - 新增 server-driven safety conformance 场景：`bad-json`、`bad-query`、`malformed-websocket`、`ws-early-close`、`bad-binary`。
 - 验证命令：
   - `uv run pytest tests/codegen/test_python_codegen.py tests/codegen/test_java_codegen.py tests/codegen/test_kotlin_codegen.py tests/scripts/test_example_conformance.py -q`
   - `uv run python scripts/example_validation.py --scope blueprint --mode refresh`
   - `uv run python scripts/example_validation.py --scope blueprint --mode check`
+  - `uv run python -m scripts.example_conformance run --servers go,java,kotlin,python --clients python --scenario rpc,form,binary,error,naming`
   - `uv run python -m scripts.example_conformance run --servers go,java,kotlin,python --scenario bad-json,bad-query,malformed-websocket,ws-early-close,bad-binary`
   - `uv run python -m scripts.example_conformance run --servers go,java,kotlin,python --clients typescript,kotlin,flutter --scenario sse,websocket`
-- 相关 commit/PR：本提交 `fix: harden example conformance servers`
+- 相关 commit/PR：`fix: harden example conformance servers`；Python strict DTO 修复提交待记录

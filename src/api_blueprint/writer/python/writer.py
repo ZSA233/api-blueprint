@@ -153,6 +153,10 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
             if handle:
                 handle.write(self.generated_header)
                 handle.write(_render_python(self.runtime_template, context, "runtime"))
+        with self.write_file(plan.runtime.directory / "gen_codecs.py", overwrite=True) as handle:
+            if handle:
+                handle.write(self.generated_header)
+                handle.write(_render_python("gen_codecs.py", context, "runtime"))
         binary_runtime_dir = plan.runtime.directory / "binary"
         self._ensure_package_markers(binary_runtime_dir)
         with self.write_file(binary_runtime_dir / "gen_runtime.py", overwrite=True) as handle:

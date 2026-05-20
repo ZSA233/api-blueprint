@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import json
 from dataclasses import asdict, is_dataclass
+from enum import Enum
 from typing import Any
 
 from fastapi import APIRouter, WebSocket, Request, HTTPException, WebSocketDisconnect
@@ -11,10 +12,76 @@ from starlette.responses import StreamingResponse, JSONResponse
 
 from ...runtime.errors import ApiError, make_api_error_payload
 from ...routes.api.service import ApiService, ApiServiceStub
+from ...routes.api.gen_types import (
+    HelloChannelMessage,
+    HelloChannelClose,
+    HelloChannelMsgTypeEnum,
+)
+
 from ...routes.api.binary.service import BinaryService, BinaryServiceStub
+from ...routes.api.binary.gen_types import (
+    PacketQuery,
+    PacketResponse,
+    AuditPacketQuery,
+    AuditPacketResponse,
+)
+
 from ...routes.api.conflict.service import ConflictService, ConflictServiceStub
+from ...routes.api.conflict.gen_types import (
+    DefaultQuery,
+    DefaultResponse,
+    KeywordEnum,
+)
+
 from ...routes.api.demo.service import DemoService, DemoServiceStub
+from ...routes.api.demo.gen_types import (
+    AbcQuery,
+    AbcResponse,
+    ApiDemoSubA,
+    ApiDemoMap,
+    TestPostJSON,
+    TestPostResponse,
+    FormSubmitForm,
+    FormSubmitResponse,
+    PutDemoQuery,
+    PutDemoJSON,
+    PutDemoResponse,
+    ANONFunc1putAnonKv,
+    DeleteQuery,
+    DeleteResponse,
+    ANONDeleteAnonList,
+    SweepEventsOpen,
+    SweepState,
+    SweepProgress,
+    SweepLog,
+    SweepEventsClose,
+    AssistantSessionOpen,
+    AssistantDelta,
+    AssistantDone,
+    AssistantInput,
+    AssistantCancel,
+    AssistantSessionClose,
+    PostDeprecatedJSON,
+    PostDeprecatedResponse,
+    RawResponse,
+    ApiDemoA,
+    ErrorDemoQuery,
+    ErrorDemoResponse,
+    ColorEnum,
+    StatusEnum,
+    SweepStreamMessage,
+    AssistantServerMessage,
+    AssistantClientMessage,
+)
+
 from ...routes.api.hello.service import HelloService, HelloServiceStub
+from ...routes.api.hello.gen_types import (
+    AbcQuery,
+    ApiHelloMap,
+    HelloWayQuery,
+    MapEnum,
+    HelloWayEnum,
+)
 
 
 def create_router(
@@ -35,7 +102,7 @@ def create_router(
     async def api_open_hello_channel_socket(websocket: WebSocket) -> None:
         await websocket.accept()
         service = api_service_impl
-        channel = _WebSocketChannel(websocket)
+        channel = _WebSocketChannel(websocket, HelloChannelMessage.from_value)
         try:
             await service.hello_channel(
                 channel=channel,
@@ -49,8 +116,14 @@ def create_router(
     @router.api_route("/api/binary/packet", methods=["POST"])
     async def binary_packet(request: Request) -> Any:
         service = binary_service_impl
-        query = _query_params(request)
+        query_raw = _query_params(request)
         binary = await request.body()
+        try:
+            query = PacketQuery.from_value(query_raw, "query")
+
+        except (TypeError, ValueError) as error:
+            return _bad_request_response(error)
+
         try:
             result = await service.packet(
                 query=query,
@@ -63,8 +136,14 @@ def create_router(
     @router.api_route("/api/binary/audit-packet", methods=["POST"])
     async def binary_audit_packet(request: Request) -> Any:
         service = binary_service_impl
-        query = _query_params(request)
+        query_raw = _query_params(request)
         binary = await request.body()
+        try:
+            query = AuditPacketQuery.from_value(query_raw, "query")
+
+        except (TypeError, ValueError) as error:
+            return _bad_request_response(error)
+
         try:
             result = await service.audit_packet(
                 query=query,
@@ -77,7 +156,13 @@ def create_router(
     @router.api_route("/api/conflict/default", methods=["GET"])
     async def conflict_default(request: Request) -> Any:
         service = conflict_service_impl
-        query = _query_params(request)
+        query_raw = _query_params(request)
+        try:
+            query = DefaultQuery.from_value(query_raw, "query")
+
+        except (TypeError, ValueError) as error:
+            return _bad_request_response(error)
+
         try:
             result = await service.default(
                 query=query,
@@ -89,7 +174,13 @@ def create_router(
     @router.api_route("/api/demo/abc", methods=["GET"])
     async def demo_abc(request: Request) -> Any:
         service = demo_service_impl
-        query = _query_params(request)
+        query_raw = _query_params(request)
+        try:
+            query = AbcQuery.from_value(query_raw, "query")
+
+        except (TypeError, ValueError) as error:
+            return _bad_request_response(error)
+
         try:
             result = await service.abc(
                 query=query,
@@ -101,7 +192,13 @@ def create_router(
     @router.api_route("/api/demo/test_post", methods=["POST"])
     async def demo_test_post(request: Request) -> Any:
         service = demo_service_impl
-        json_body = await _json_body(request)
+        json_body_raw = await _json_body(request)
+        try:
+            json_body = TestPostJSON.from_value(json_body_raw, "json")
+
+        except (TypeError, ValueError) as error:
+            return _bad_request_response(error)
+
         try:
             result = await service.test_post(
                 json=json_body,
@@ -113,7 +210,13 @@ def create_router(
     @router.api_route("/api/demo/form-submit", methods=["POST"])
     async def demo_form_submit(request: Request) -> Any:
         service = demo_service_impl
-        form = await _form_body(request)
+        form_raw = await _form_body(request)
+        try:
+            form = FormSubmitForm.from_value(form_raw, "form")
+
+        except (TypeError, ValueError) as error:
+            return _bad_request_response(error)
+
         try:
             result = await service.form_submit(
                 form=form,
@@ -125,8 +228,15 @@ def create_router(
     @router.api_route("/api/demo/1put", methods=["PUT"])
     async def demo_put_demo(request: Request) -> Any:
         service = demo_service_impl
-        query = _query_params(request)
-        json_body = await _json_body(request)
+        query_raw = _query_params(request)
+        json_body_raw = await _json_body(request)
+        try:
+            query = PutDemoQuery.from_value(query_raw, "query")
+            json_body = PutDemoJSON.from_value(json_body_raw, "json")
+
+        except (TypeError, ValueError) as error:
+            return _bad_request_response(error)
+
         try:
             result = await service.put_demo(
                 query=query,
@@ -139,7 +249,13 @@ def create_router(
     @router.api_route("/api/demo/delete$", methods=["DELETE"])
     async def demo_delete(request: Request) -> Any:
         service = demo_service_impl
-        query = _query_params(request)
+        query_raw = _query_params(request)
+        try:
+            query = DeleteQuery.from_value(query_raw, "query")
+
+        except (TypeError, ValueError) as error:
+            return _bad_request_response(error)
+
         try:
             result = await service.delete(
                 query=query,
@@ -151,7 +267,12 @@ def create_router(
     @router.api_route("/api/demo/sweep-events", methods=["GET"])
     async def demo_subscribe_sweep_events(request: Request) -> Any:
         service = demo_service_impl
-        open_data = _query_params(request)
+        open_data_raw = _query_params(request)
+        try:
+            open_data = SweepEventsOpen.from_value(open_data_raw, "open_data")
+        except (TypeError, ValueError) as error:
+            return _bad_request_response(error)
+
         stream = _SseStream()
 
         async def body():
@@ -175,8 +296,14 @@ def create_router(
     async def demo_open_assistant_session_socket(websocket: WebSocket) -> None:
         await websocket.accept()
         service = demo_service_impl
-        open_data = dict(websocket.query_params)
-        channel = _WebSocketChannel(websocket)
+        open_data_raw = dict(websocket.query_params)
+        try:
+            open_data = AssistantSessionOpen.from_value(open_data_raw, "open_data")
+        except (TypeError, ValueError):
+            await websocket.close(code=1008)
+            return
+
+        channel = _WebSocketChannel(websocket, AssistantClientMessage.from_value)
         try:
             await service.assistant_session(
                 open_data=open_data,
@@ -191,7 +318,13 @@ def create_router(
     @router.api_route("/api/demo/post_deprecated", methods=["POST"])
     async def demo_post_deprecated(request: Request) -> Any:
         service = demo_service_impl
-        json_body = await _json_body(request)
+        json_body_raw = await _json_body(request)
+        try:
+            json_body = PostDeprecatedJSON.from_value(json_body_raw, "json")
+
+        except (TypeError, ValueError) as error:
+            return _bad_request_response(error)
+
         try:
             result = await service.post_deprecated(
                 json=json_body,
@@ -223,7 +356,13 @@ def create_router(
     @router.api_route("/api/demo/error-demo", methods=["GET"])
     async def demo_error_demo(request: Request) -> Any:
         service = demo_service_impl
-        query = _query_params(request)
+        query_raw = _query_params(request)
+        try:
+            query = ErrorDemoQuery.from_value(query_raw, "query")
+
+        except (TypeError, ValueError) as error:
+            return _bad_request_response(error)
+
         try:
             result = await service.error_demo(
                 query=query,
@@ -235,7 +374,13 @@ def create_router(
     @router.api_route("/api/hello/abc", methods=["GET"])
     async def hello_abc(request: Request) -> Any:
         service = hello_service_impl
-        query = _query_params(request)
+        query_raw = _query_params(request)
+        try:
+            query = AbcQuery.from_value(query_raw, "query")
+
+        except (TypeError, ValueError) as error:
+            return _bad_request_response(error)
+
         try:
             result = await service.abc(
                 query=query,
@@ -297,7 +442,13 @@ def create_router(
     @router.api_route("/api/hello/hello-way", methods=["GET"])
     async def hello_hello_way(request: Request) -> Any:
         service = hello_service_impl
-        query = _query_params(request)
+        query_raw = _query_params(request)
+        try:
+            query = HelloWayQuery.from_value(query_raw, "query")
+
+        except (TypeError, ValueError) as error:
+            return _bad_request_response(error)
+
         try:
             result = await service.hello_way(
                 query=query,
@@ -314,7 +465,7 @@ def _query_params(request: Request) -> dict[str, Any] | None:
     return values or None
 
 
-async def _json_body(request: Request) -> dict[str, Any] | None:
+async def _json_body(request: Request) -> Any:
     body = await request.body()
     if not body:
         return None
@@ -322,7 +473,7 @@ async def _json_body(request: Request) -> dict[str, Any] | None:
         value = json.loads(body.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as err:
         raise HTTPException(status_code=400, detail="invalid JSON body") from err
-    return value if isinstance(value, dict) else None
+    return value
 
 
 async def _form_body(request: Request) -> dict[str, Any] | None:
@@ -332,15 +483,29 @@ async def _form_body(request: Request) -> dict[str, Any] | None:
 
 
 def _jsonable(value: Any) -> Any:
+    if isinstance(value, Enum):
+        return value.value
+    if hasattr(value, "to_mapping"):
+        return value.to_mapping()
     if is_dataclass(value):
-        return {key: item for key, item in asdict(value).items() if item is not None}
+        return _jsonable(asdict(value))
     if isinstance(value, dict):
-        return {key: _jsonable(item) for key, item in value.items() if item is not None}
+        return {_json_key(key): _jsonable(item) for key, item in value.items() if item is not None}
     if isinstance(value, (list, tuple)):
         return [_jsonable(item) for item in value]
     if isinstance(value, bytes):
         return value.decode("utf-8")
     return value
+
+
+def _json_key(value: Any) -> str:
+    if isinstance(value, Enum):
+        return str(value.value)
+    return str(value)
+
+
+def _bad_request_response(error: Exception) -> JSONResponse:
+    return JSONResponse({"detail": str(error) or "invalid request"}, status_code=400)
 
 
 def _wrap_response(envelope: dict[str, Any], data: Any) -> Any:
@@ -421,9 +586,14 @@ class _SseStream:
         await self.close({"code": code, "reason": reason or ""})
 
 
+def _identity_decoder(value: Any, path: str) -> Any:
+    return value
+
+
 class _WebSocketChannel:
-    def __init__(self, websocket: WebSocket) -> None:
+    def __init__(self, websocket: WebSocket, message_decoder=_identity_decoder) -> None:
         self.websocket = websocket
+        self.message_decoder = message_decoder
         self.closed = False
 
     async def receive(self) -> Any:
@@ -433,8 +603,9 @@ class _WebSocketChannel:
             self.closed = True
             raise _WebSocketClosed() from err
         try:
-            return json.loads(payload)
-        except (UnicodeDecodeError, json.JSONDecodeError) as err:
+            value = json.loads(payload)
+            return self.message_decoder(value, "message")
+        except (UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError) as err:
             await self.abort(1003, "invalid WebSocket message")
             raise _WebSocketClosed() from err
 
