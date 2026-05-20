@@ -3,6 +3,8 @@ package com.example.apiblueprint.api.routes.api.hello;
 
 import com.example.apiblueprint.api.runtime.ApiTypes;
 
+import com.example.apiblueprint.api.runtime.ApiServerChannel;
+import com.example.apiblueprint.api.runtime.ApiServerStream;
 import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
 
 public class HelloServiceStub implements HelloService {
@@ -10,44 +12,44 @@ public class HelloServiceStub implements HelloService {
     @Override
     public HelloTypes.AbcResponse abc(
         HelloTypes.AbcQuery query
-    ) {
+    ) throws Exception {
         throw new UnsupportedOperationException("abc");
     }
 
     @Override
     public HelloTypes.MapEnumResponse mapEnum(
-    ) {
+    ) throws Exception {
         throw new UnsupportedOperationException("mapEnum");
     }
 
     @Override
     public HelloTypes.ListEnumResponse listEnum(
-    ) {
+    ) throws Exception {
         throw new UnsupportedOperationException("listEnum");
     }
 
     @Override
     public HelloTypes.StringResponse string(
-    ) {
+    ) throws Exception {
         throw new UnsupportedOperationException("string");
     }
 
     @Override
     public HelloTypes.Uint64Response uint64(
-    ) {
+    ) throws Exception {
         throw new UnsupportedOperationException("uint64");
     }
 
     @Override
     public HelloTypes.StringEmunResponse stringEmun(
-    ) {
+    ) throws Exception {
         throw new UnsupportedOperationException("stringEmun");
     }
 
     @Override
     public Object helloWay(
         HelloTypes.HelloWayQuery query
-    ) {
+    ) throws Exception {
         throw new UnsupportedOperationException("helloWay");
     }
 

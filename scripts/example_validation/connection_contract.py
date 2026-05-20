@@ -442,9 +442,9 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
             files["kotlin_server_demo_types"],
             "public fun <R> dispatchAssistantClientMessage(",
         ),
-        "kotlin server connection unsupported": (
+        "kotlin server websocket adapter": (
             files["kotlin_server_ktor"],
-            '"channel route is not implemented by the generated Ktor adapter"',
+            'webSocket("/api/demo/assistant-session")',
         ),
         "java api json helper": (files["java_client_api_json"], "public static final ObjectMapper MAPPER"),
         "java client message variants": (

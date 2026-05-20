@@ -12,6 +12,7 @@ from .constants import (
     BLUEPRINT_GOLANG_SERVER_PRESERVED,
     BLUEPRINT_GOLANG_SUITE_PRESERVED,
     BLUEPRINT_JAVA_CLIENT_PRESERVED,
+    BLUEPRINT_JAVA_CONFORMANCE_PRESERVED,
     BLUEPRINT_JAVA_SERVER_PRESERVED,
     BLUEPRINT_JAVA_SUITE_PRESERVED,
     BLUEPRINT_KOTLIN_CLIENT_PRESERVED,
@@ -44,6 +45,7 @@ def _blueprint_workspace(root: Path) -> BlueprintExampleWorkspace:
         java_client_dir=root / "java" / "client",
         java_server_dir=root / "java" / "server",
         java_suite_dir=root / "java" / "suite",
+        java_conformance_dir=root / "java" / "conformance",
         python_dir=root / "python",
         flutter_dir=root / "flutter",
         wails_v2_dir=root / "wails-harness" / "v2",
@@ -169,6 +171,10 @@ def _prepare_blueprint_outputs(*, source_root: Path, target_root: Path) -> None:
     _prepare_output_dir(
         target_root / "java" / "suite",
         _capture_relative_files(source_root / "java" / "suite", BLUEPRINT_JAVA_SUITE_PRESERVED),
+    )
+    _prepare_output_dir(
+        target_root / "java" / "conformance",
+        _capture_relative_files(source_root / "java" / "conformance", BLUEPRINT_JAVA_CONFORMANCE_PRESERVED),
     )
     _prepare_output_dir(
         target_root / "python",

@@ -12,12 +12,20 @@ import io.ktor.server.request.receive
 import io.ktor.server.request.receiveParameters
 import io.ktor.server.request.receiveText
 import io.ktor.server.response.respondText
+import io.ktor.server.response.respondTextWriter
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.patch
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
+import io.ktor.server.websocket.DefaultWebSocketServerSession
+import io.ktor.server.websocket.webSocket
+import io.ktor.websocket.CloseReason
+import io.ktor.websocket.Frame
+import io.ktor.websocket.close
+import io.ktor.websocket.readText
+import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.*
 import kotlinx.serialization.json.JsonElement
@@ -26,6 +34,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import java.io.Writer
 
 public fun Route.registerConflictRoutes(
     service: GenConflictService = ConflictServiceStub(),
@@ -43,6 +52,108 @@ public fun Route.registerConflictRoutes(
         }
     }
 
+}
+
+private class KtorEventStream<Message, Close>(
+    private val writer: Writer,
+    private val messageSerializer: KSerializer<Message>,
+    private val closeSerializer: KSerializer<Close>,
+) : ApiServerStream<Message, Close> {
+    private var closed = false
+
+    override suspend fun send(message: Message) {
+        if (closed) {
+            return
+        }
+        writer.write("data: ")
+        writer.write(ApiJson.encodeToString(messageSerializer, message))
+        writer.write("\n\n")
+        writer.flush()
+    }
+
+    override suspend fun close(close: Close) {
+        if (closed) {
+            return
+        }
+        closed = true
+        writer.write("event: close\n")
+        writer.write("data: ")
+        writer.write(ApiJson.encodeToString(closeSerializer, close))
+        writer.write("\n\n")
+        writer.flush()
+    }
+
+    override suspend fun abort(code: Int, reason: String?) {
+        if (closed) {
+            return
+        }
+        closed = true
+        writer.write("event: close\n")
+        writer.write("data: ")
+        writer.write(closePayload(code = code, reason = reason).toString())
+        writer.write("\n\n")
+        writer.flush()
+    }
+}
+
+private class KtorWebSocketChannel<Recv, Send, Close>(
+    private val session: DefaultWebSocketServerSession,
+    private val clientMessageSerializer: KSerializer<Recv>,
+    private val serverMessageSerializer: KSerializer<Send>,
+    private val closeSerializer: KSerializer<Close>,
+) : ApiServerChannel<Recv, Send, Close> {
+    private var closed = false
+
+    override suspend fun receive(): Recv? {
+        return try {
+            while (true) {
+                val frame = session.incoming.receive()
+                if (frame is Frame.Text) {
+                    return ApiJson.decodeFromString(clientMessageSerializer, frame.readText())
+                }
+            }
+            null
+        } catch (_: ClosedReceiveChannelException) {
+            null
+        }
+    }
+
+    override suspend fun send(message: Send) {
+        if (closed) {
+            return
+        }
+        val body = buildJsonObject {
+            put("type", JsonPrimitive("message"))
+            put("data", ApiJson.encodeToJsonElement(serverMessageSerializer, message))
+        }.toString()
+        session.send(Frame.Text(body))
+    }
+
+    override suspend fun close(close: Close) {
+        if (closed) {
+            return
+        }
+        closed = true
+        val body = buildJsonObject {
+            put("type", JsonPrimitive("close"))
+            put("data", ApiJson.encodeToJsonElement(closeSerializer, close))
+        }.toString()
+        session.send(Frame.Text(body))
+        session.close(CloseReason(CloseReason.Codes.NORMAL, ""))
+    }
+
+    override suspend fun abort(code: Int, reason: String?) {
+        if (closed) {
+            return
+        }
+        closed = true
+        val body = buildJsonObject {
+            put("type", JsonPrimitive("close"))
+            put("data", closePayload(code = code, reason = reason))
+        }.toString()
+        session.send(Frame.Text(body))
+        session.close(CloseReason(CloseReason.Codes.INTERNAL_ERROR, reason.orEmpty()))
+    }
 }
 
 private fun <T> decodeParameters(parameters: Parameters, serializer: KSerializer<T>): T {
@@ -152,6 +263,16 @@ private fun normalizeApiErrorPayload(payload: ApiErrorPayload, routeId: String):
         ),
     )
 }
+
+private fun closePayload(code: Int? = null, reason: String? = null): JsonElement =
+    buildJsonObject {
+        if (code != null) {
+            put("code", JsonPrimitive(code))
+        }
+        if (reason != null) {
+            put("reason", JsonPrimitive(reason))
+        }
+    }
 
 private fun contentType(mediaType: String): ContentType =
     if (mediaType == "application/json") ContentType.Application.Json else ContentType.parse(mediaType)

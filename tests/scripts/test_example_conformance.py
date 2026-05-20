@@ -9,8 +9,9 @@ from scripts import example_validation
 from scripts.example_conformance import cli, manifest, reporter, runner, scenarios, tools
 
 
-def test_manifest_marks_first_phase_capabilities() -> None:
+def test_manifest_marks_matrix_capabilities() -> None:
     clients = manifest.client_manifest()
+    servers = manifest.server_manifest()
 
     assert clients["go"].supports_rpc is True
     assert clients["go"].supports_sse is False
@@ -20,6 +21,18 @@ def test_manifest_marks_first_phase_capabilities() -> None:
     assert clients["kotlin"].supports_sse is True
     assert clients["kotlin"].supports_websocket is True
     assert clients["kotlin"].connection_policy == "native"
+    assert clients["java"].supports_rpc is True
+    assert clients["java"].supports_sse is True
+    assert clients["java"].connection_policy == "unsupported-contract"
+    assert clients["python"].supports_binary is True
+    assert clients["python"].supports_websocket is True
+    assert clients["python"].connection_policy == "unsupported-contract"
+
+    assert servers["go"].enabled is True
+    assert servers["java"].enabled is True
+    assert servers["kotlin"].supports_sse is True
+    assert servers["python"].supports_binary is True
+    assert servers["python"].supports_websocket is True
 
 
 def test_scenario_registry_covers_required_dsl_categories() -> None:
@@ -42,6 +55,8 @@ def test_scenario_registry_covers_required_dsl_categories() -> None:
     assert required <= set(coverage)
     assert "go" in coverage["binary"]
     assert "typescript" in coverage["websocket"]
+    assert "java" in coverage["binary"]
+    assert "python" in coverage["binary"]
     assert "flutter" in coverage["sse"]
     assert "kotlin" in coverage["sse"]
     assert "kotlin" in coverage["websocket"]
@@ -64,6 +79,26 @@ def test_prepare_blueprint_outputs_preserves_kotlin_conformance_source(tmp_path:
 
     assert (target_root / "kotlin" / "conformance" / "Conformance.kt").read_text(encoding="utf-8") == (
         "package com.example.apiblueprint.conformance\n"
+    )
+
+
+def test_prepare_blueprint_outputs_preserves_java_python_conformance_sources(tmp_path: Path) -> None:
+    source_root = tmp_path / "source"
+    target_root = tmp_path / "target"
+    java_file = source_root / "java" / "conformance" / "Conformance.java"
+    python_file = source_root / "python" / "conformance" / "client.py"
+    java_file.parent.mkdir(parents=True)
+    python_file.parent.mkdir(parents=True)
+    java_file.write_text("package com.example.apiblueprint.conformance;\n", encoding="utf-8")
+    python_file.write_text("print('python conformance')\n", encoding="utf-8")
+
+    example_validation._prepare_blueprint_outputs(source_root=source_root, target_root=target_root)
+
+    assert (target_root / "java" / "conformance" / "Conformance.java").read_text(encoding="utf-8") == (
+        "package com.example.apiblueprint.conformance;\n"
+    )
+    assert (target_root / "python" / "conformance" / "client.py").read_text(encoding="utf-8") == (
+        "print('python conformance')\n"
     )
 
 
@@ -144,22 +179,24 @@ def test_runner_reports_server_and_client_matrix_without_client_noise(
             calls.append(("closed", ""))
 
     monkeypatch.setattr(runner.server, "start_go_server", lambda server_dir: fake_server)
+    monkeypatch.setattr(runner.server, "start_server", lambda server_name, blueprint: fake_server)
     monkeypatch.setattr(runner.server, "cleanup_server_log", lambda path: None)
     monkeypatch.setattr(runner, "_prepare_client_runner", lambda ws, client: FakePreparedRunner())
 
     runner._run_against_workspace(
         fake_workspace,  # type: ignore[arg-type]
-        server_name="go",
+        server_names=("go",),
         clients=("flutter",),
         selected_scenarios=scenarios.filter_scenarios(("sse", "websocket")),
     )
 
     captured = capsys.readouterr()
-    assert "server go ... ok http://127.0.0.1:12345" in captured.out
+    assert "go:" in captured.out
+    assert "  - server/setup ... ok http://127.0.0.1:12345" in captured.out
     assert "flutter:" in captured.out
-    assert "  - flutter/setup ... ok" in captured.out
-    assert "  - flutter/sse ... ok" in captured.out
-    assert "  - flutter/websocket ... ok" in captured.out
+    assert "    - flutter/setup ... ok" in captured.out
+    assert "    - flutter/sse ... ok" in captured.out
+    assert "    - flutter/websocket ... ok" in captured.out
     assert "client noisy output" not in captured.out
     assert calls == [("http://127.0.0.1:12345", "sse"), ("http://127.0.0.1:12345", "websocket"), ("closed", "")]
 
@@ -193,25 +230,26 @@ def test_runner_prepares_each_client_once_and_runs_each_scenario(
             calls.append((self.client, "closed", ""))
 
     monkeypatch.setattr(runner.server, "start_go_server", lambda server_dir: fake_server)
+    monkeypatch.setattr(runner.server, "start_server", lambda server_name, blueprint: fake_server)
     monkeypatch.setattr(runner.server, "cleanup_server_log", lambda path: None)
     monkeypatch.setattr(runner, "_prepare_client_runner", lambda ws, client: FakePreparedRunner(client))
 
     runner._run_against_workspace(
         fake_workspace,  # type: ignore[arg-type]
-        server_name="go",
+        server_names=("go",),
         clients=("typescript", "kotlin"),
         selected_scenarios=scenarios.filter_scenarios(("sse", "websocket")),
     )
 
     captured = capsys.readouterr()
     assert "typescript:" in captured.out
-    assert "  - typescript/setup ... ok" in captured.out
-    assert "  - typescript/sse ... ok" in captured.out
-    assert "  - typescript/websocket ... ok" in captured.out
+    assert "    - typescript/setup ... ok" in captured.out
+    assert "    - typescript/sse ... ok" in captured.out
+    assert "    - typescript/websocket ... ok" in captured.out
     assert "kotlin:" in captured.out
-    assert "  - kotlin/setup ... ok" in captured.out
-    assert "  - kotlin/sse ... ok" in captured.out
-    assert "  - kotlin/websocket ... ok" in captured.out
+    assert "    - kotlin/setup ... ok" in captured.out
+    assert "    - kotlin/sse ... ok" in captured.out
+    assert "    - kotlin/websocket ... ok" in captured.out
     assert calls == [
         ("typescript", "http://127.0.0.1:12345", "sse"),
         ("typescript", "http://127.0.0.1:12345", "websocket"),
@@ -220,6 +258,137 @@ def test_runner_prepares_each_client_once_and_runs_each_scenario(
         ("kotlin", "http://127.0.0.1:12345", "websocket"),
         ("kotlin", "closed", ""),
     ]
+
+
+def test_runner_filters_scenarios_by_server_capability(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    fake_server = SimpleNamespace(
+        base_url="http://127.0.0.1:12345",
+        output_path=Path(".conformance-server.log"),
+        stop=lambda: None,
+    )
+    fake_workspace = SimpleNamespace(blueprint=SimpleNamespace(golang_server_dir=Path(".")))
+    calls: list[str] = []
+
+    class FakePreparedRunner:
+        def run(self, base_url: str, scenario_arg: str) -> None:
+            calls.append(scenario_arg)
+
+        def close(self) -> None:
+            calls.append("closed")
+
+    monkeypatch.setattr(runner.server, "start_server", lambda server_name, blueprint: fake_server)
+    monkeypatch.setattr(runner.server, "cleanup_server_log", lambda path: None)
+    monkeypatch.setattr(runner, "_prepare_client_runner", lambda ws, client: FakePreparedRunner())
+    original_server_manifest = manifest.server_manifest
+    monkeypatch.setattr(
+        manifest,
+        "server_manifest",
+        lambda: {
+            **original_server_manifest(),
+            "python": manifest.ServerCapability(
+                name="python",
+                command_label="Python FastAPI",
+                enabled=True,
+                planned=True,
+                supports_rpc=True,
+                supports_binary=False,
+                supports_form=True,
+                supports_typed_error=True,
+                supports_sse=True,
+                supports_websocket=True,
+                supports_naming=True,
+            ),
+        },
+    )
+
+    runner._run_against_workspace(
+        fake_workspace,  # type: ignore[arg-type]
+        server_names=("python",),
+        clients=("typescript",),
+        selected_scenarios=scenarios.filter_scenarios(("binary", "sse")),
+    )
+
+    captured = capsys.readouterr()
+    assert "typescript ... skipped no runnable scenarios for server python: binary" in captured.out
+    assert "    - typescript/sse ... ok" in captured.out
+    assert calls == ["sse", "closed"]
+
+
+def test_runner_prints_summary_once_after_all_servers(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    fake_workspace = SimpleNamespace(blueprint=SimpleNamespace(golang_server_dir=Path(".")))
+
+    class FakePreparedRunner:
+        def run(self, base_url: str, scenario_arg: str) -> None:
+            return None
+
+        def close(self) -> None:
+            return None
+
+    def fake_start_server(server_name: str, blueprint) -> SimpleNamespace:
+        return SimpleNamespace(
+            base_url=f"http://127.0.0.1/{server_name}",
+            output_path=Path(".conformance-server.log"),
+            stop=lambda: None,
+        )
+
+    monkeypatch.setattr(runner.server, "start_server", fake_start_server)
+    monkeypatch.setattr(runner.server, "cleanup_server_log", lambda path: None)
+    monkeypatch.setattr(runner, "_prepare_client_runner", lambda ws, client: FakePreparedRunner())
+
+    runner._run_against_workspace(
+        fake_workspace,  # type: ignore[arg-type]
+        server_names=("go", "python"),
+        clients=("typescript",),
+        selected_scenarios=scenarios.filter_scenarios(("rpc",)),
+    )
+
+    captured = capsys.readouterr()
+    assert captured.out.count("conformance passed:") == 1
+    assert captured.out.rfind("conformance passed:") > captured.out.rfind("python:")
+
+
+def test_runner_replays_server_log_when_client_stage_fails(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    log_path = tmp_path / ".conformance-server.log"
+    log_path.write_text("server traceback\n", encoding="utf-8")
+    fake_server = SimpleNamespace(
+        base_url="http://127.0.0.1:12345",
+        output_path=log_path,
+        stop=lambda: None,
+    )
+    fake_workspace = SimpleNamespace(blueprint=SimpleNamespace(golang_server_dir=Path(".")))
+
+    class FailingPreparedRunner:
+        def run(self, base_url: str, scenario_arg: str) -> None:
+            raise RuntimeError("client failed")
+
+        def close(self) -> None:
+            return None
+
+    monkeypatch.setattr(runner.server, "start_server", lambda server_name, blueprint: fake_server)
+    monkeypatch.setattr(runner.server, "cleanup_server_log", lambda path: None)
+    monkeypatch.setattr(runner, "_prepare_client_runner", lambda ws, client: FailingPreparedRunner())
+
+    with pytest.raises(RuntimeError, match="client failed"):
+        runner._run_against_workspace(
+            fake_workspace,  # type: ignore[arg-type]
+            server_names=("python",),
+            clients=("typescript",),
+            selected_scenarios=scenarios.filter_scenarios(("rpc",)),
+        )
+
+    captured = capsys.readouterr()
+    assert "--- python server log ---" in captured.err
+    assert "server traceback" in captured.err
 
 
 def test_prepare_typescript_runner_compiles_once_and_reuses_output(
@@ -301,31 +470,112 @@ def test_prepare_flutter_runner_runs_pub_get_once_and_reuses_test_process(
     ]
 
 
+def test_prepare_java_runner_builds_once_and_reuses_executable(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    java_client_dir = tmp_path / "java" / "client"
+    conformance_dir = tmp_path / "java" / "conformance"
+    conformance_dir.mkdir(parents=True)
+    (conformance_dir / "Conformance.java").write_text(
+        "package com.example.apiblueprint.conformance; public final class Conformance {}\n",
+        encoding="utf-8",
+    )
+    (java_client_dir / "com").mkdir(parents=True)
+    calls: list[tuple[tuple[str, ...], Path | None]] = []
+
+    def fake_run(args: list[str], cwd: Path | None = None, check: bool = False, **kwargs: object) -> None:
+        calls.append((tuple(args), cwd))
+        if args[-1] == "installDist":
+            executable = (
+                cwd
+                / "build"
+                / "install"
+                / "api-blueprint-java-conformance"
+                / "bin"
+                / ("api-blueprint-java-conformance.bat" if runner.os.name == "nt" else "api-blueprint-java-conformance")
+            )
+            executable.parent.mkdir(parents=True, exist_ok=True)
+            executable.write_text("#!/bin/sh\n", encoding="utf-8")
+
+    monkeypatch.setattr(runner.example_validation, "resolve_gradle_bin", lambda: "gradle")
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+
+    prepared = runner._prepare_java_runner(java_client_dir, conformance_dir)
+    try:
+        prepared.run("http://127.0.0.1:12345", "rpc")
+        prepared.run("http://127.0.0.1:12345", "binary")
+    finally:
+        prepared.close()
+
+    build_calls = [call for call in calls if call[0][-1] == "installDist"]
+    scenario_calls = [call for call in calls if call[0][0] != "gradle"]
+    assert len(build_calls) == 1
+    assert [call[0][-2:] for call in scenario_calls] == [
+        ("http://127.0.0.1:12345", "rpc"),
+        ("http://127.0.0.1:12345", "binary"),
+    ]
+
+
+def test_prepare_python_runner_reuses_preserved_script(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    python_dir = tmp_path / "python"
+    conformance_dir = python_dir / "conformance"
+    conformance_dir.mkdir(parents=True)
+    (conformance_dir / "client.py").write_text("print('client')\n", encoding="utf-8")
+    calls: list[tuple[tuple[str, ...], Path | None]] = []
+
+    def fake_run(args: list[str], cwd: Path | None = None, check: bool = False, **kwargs: object) -> None:
+        calls.append((tuple(args), cwd))
+
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+
+    prepared = runner._prepare_python_runner(python_dir)
+    prepared.run("http://127.0.0.1:12345", "rpc")
+    prepared.run("http://127.0.0.1:12345", "sse")
+    prepared.close()
+
+    assert [call[0][-2:] for call in calls] == [
+        ("http://127.0.0.1:12345", "rpc"),
+        ("http://127.0.0.1:12345", "sse"),
+    ]
+    assert all(call[1] == python_dir for call in calls)
+
+
+def test_parse_csv_filter_accepts_all_keyword() -> None:
+    assert manifest.parse_csv_filter("all", {"go", "java"}, label="target") == ("go", "java")
+    assert manifest.parse_csv_filter("go,all", {"go", "java"}, label="target") == ("go", "java")
+
+
 def test_cli_list_reports_servers_clients_and_scenarios(capsys: pytest.CaptureFixture[str]) -> None:
     result = cli.main(["list"])
 
     assert result == 0
     output = capsys.readouterr().out
     assert "servers:" in output
-    assert "- go" in output
+    assert "- go enabled label=Go HTTP rpc=yes" in output
+    assert "- java enabled label=Java Spring rpc=yes" in output
     assert "clients:" in output
     assert "- kotlin rpc=yes sse=yes websocket=yes" in output
+    assert "- python rpc=yes sse=unsupported-contract websocket=unsupported-contract" in output
     assert "scenarios:" in output
     assert "- binary" in output
 
 
 def test_cli_run_invokes_runner_with_filters(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    calls: list[tuple[Path, str, tuple[str, ...], tuple[str, ...], bool]] = []
+    calls: list[tuple[Path, tuple[str, ...], tuple[str, ...], tuple[str, ...], bool]] = []
 
     def fake_run(
         repo_root: Path,
         *,
-        server: str,
+        servers: tuple[str, ...],
         clients: tuple[str, ...],
         scenario_names: tuple[str, ...],
         keep_workspace: bool,
     ) -> None:
-        calls.append((repo_root, server, clients, scenario_names, keep_workspace))
+        calls.append((repo_root, servers, clients, scenario_names, keep_workspace))
 
     monkeypatch.setattr(cli.runner, "run_conformance", fake_run)
 
@@ -334,8 +584,8 @@ def test_cli_run_invokes_runner_with_filters(monkeypatch: pytest.MonkeyPatch, tm
             "--repo-root",
             str(tmp_path),
             "run",
-            "--server",
-            "go",
+            "--servers",
+            "go,java",
             "--clients",
             "go,flutter",
             "--scenario",
@@ -345,7 +595,7 @@ def test_cli_run_invokes_runner_with_filters(monkeypatch: pytest.MonkeyPatch, tm
     )
 
     assert result == 0
-    assert calls == [(tmp_path.resolve(), "go", ("go", "flutter"), ("rpc", "binary"), True)]
+    assert calls == [(tmp_path.resolve(), ("go", "java"), ("go", "flutter"), ("rpc", "binary"), True)]
 
 
 def test_cli_generate_invokes_runner(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -363,27 +613,27 @@ def test_cli_generate_invokes_runner(monkeypatch: pytest.MonkeyPatch, tmp_path: 
 
 
 def test_cli_check_and_refresh_invoke_runner(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    check_calls: list[tuple[Path, str, tuple[str, ...], tuple[str, ...], bool]] = []
-    refresh_calls: list[tuple[Path, str, tuple[str, ...], tuple[str, ...]]] = []
+    check_calls: list[tuple[Path, tuple[str, ...], tuple[str, ...], tuple[str, ...], bool]] = []
+    refresh_calls: list[tuple[Path, tuple[str, ...], tuple[str, ...], tuple[str, ...]]] = []
 
     def fake_check(
         repo_root: Path,
         *,
-        server_name: str,
+        servers: tuple[str, ...],
         clients: tuple[str, ...],
         scenario_names: tuple[str, ...],
         keep_workspace: bool,
     ) -> None:
-        check_calls.append((repo_root, server_name, clients, scenario_names, keep_workspace))
+        check_calls.append((repo_root, servers, clients, scenario_names, keep_workspace))
 
     def fake_refresh(
         repo_root: Path,
         *,
-        server_name: str,
+        servers: tuple[str, ...],
         clients: tuple[str, ...],
         scenario_names: tuple[str, ...],
     ) -> None:
-        refresh_calls.append((repo_root, server_name, clients, scenario_names))
+        refresh_calls.append((repo_root, servers, clients, scenario_names))
 
     monkeypatch.setattr(cli.runner, "check_conformance", fake_check)
     monkeypatch.setattr(cli.runner, "refresh_and_check", fake_refresh)
@@ -393,6 +643,8 @@ def test_cli_check_and_refresh_invoke_runner(monkeypatch: pytest.MonkeyPatch, tm
             "--repo-root",
             str(tmp_path),
             "check",
+            "--server",
+            "go",
             "--clients",
             "typescript,kotlin",
             "--scenario",
@@ -405,6 +657,8 @@ def test_cli_check_and_refresh_invoke_runner(monkeypatch: pytest.MonkeyPatch, tm
             "--repo-root",
             str(tmp_path),
             "refresh",
+            "--servers",
+            "go,kotlin",
             "--clients",
             "flutter",
             "--scenario",
@@ -414,15 +668,15 @@ def test_cli_check_and_refresh_invoke_runner(monkeypatch: pytest.MonkeyPatch, tm
 
     assert check_result == 0
     assert refresh_result == 0
-    assert check_calls == [(tmp_path.resolve(), "go", ("typescript", "kotlin"), ("form", "error"), True)]
-    assert refresh_calls == [(tmp_path.resolve(), "go", ("flutter",), ("sse",))]
+    assert check_calls == [(tmp_path.resolve(), ("go",), ("typescript", "kotlin"), ("form", "error"), True)]
+    assert refresh_calls == [(tmp_path.resolve(), ("go", "kotlin"), ("flutter",), ("sse",))]
 
 
-def test_cli_rejects_unsupported_server(capsys: pytest.CaptureFixture[str]) -> None:
-    result = cli.main(["run", "--server", "java"])
+def test_cli_rejects_conflicting_server_flags(capsys: pytest.CaptureFixture[str]) -> None:
+    result = cli.main(["run", "--server", "go", "--servers", "java"])
 
     assert result == 1
-    assert "server java is planned but not enabled" in capsys.readouterr().err
+    assert "use either --server or --servers, not both" in capsys.readouterr().err
 
 
 def test_tools_reports_missing_language_binaries(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -432,12 +686,14 @@ def test_tools_reports_missing_language_binaries(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setattr(tools.shutil, "which", fake_which)
     monkeypatch.setattr(tools.example_validation, "resolve_gradle_bin", lambda: None)
 
-    missing = tools.missing_tools_for_clients(("go", "typescript", "kotlin", "flutter"))
+    missing = tools.missing_tools_for_clients(("go", "typescript", "kotlin", "flutter", "java", "python"))
 
     assert "go: required for go conformance" in missing
     assert "tsc: required for typescript conformance" in missing
     assert "gradle: required for kotlin conformance; set API_BLUEPRINT_GRADLE_BIN if needed" in missing
     assert "dart: required for flutter conformance" in missing
+    assert "gradle: required for java conformance; set API_BLUEPRINT_GRADLE_BIN if needed" in missing
+    assert "python: required for python conformance" not in missing
 
 
 def test_tools_reports_go_binary_required_for_go_server(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -446,3 +702,16 @@ def test_tools_reports_go_binary_required_for_go_server(monkeypatch: pytest.Monk
     missing = tools.missing_tools_for_targets("go", ("flutter",))
 
     assert "go: required for go conformance server" in missing
+
+
+def test_tools_reports_python_websocket_runtime_for_python_server(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(tools.shutil, "which", lambda binary: f"/usr/bin/{binary}")
+    monkeypatch.setattr(
+        tools.importlib.util,
+        "find_spec",
+        lambda name: None if name == "websockets" else object(),
+    )
+
+    missing = tools.missing_tools_for_targets("python", ("typescript",))
+
+    assert "websockets: required for python conformance server WebSocket support" in missing

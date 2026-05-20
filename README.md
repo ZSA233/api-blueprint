@@ -97,10 +97,10 @@ api-gen generate -c api-blueprint.toml
 | Go server | 可用 | 生成 Go 路由、provider、长连接 message helper、HTTP/Wails adapter 和 runtime |
 | TypeScript client | 预览 | 生成 transport-neutral client、长连接 message helper、HTTP adapter 和 Wails facade |
 | Flutter client | 预览 | 生成纯 Dart package、DTO、typed error、binary codec、HTTP/SSE/WebSocket client |
-| Kotlin client/server | 预览 | 生成 OkHttp HTTP/SSE/WebSocket client、Ktor server scaffold、模型、长连接 message helper 和 binary writer |
-| Java client/server | 预览 | 生成 Java 17 HttpClient client、Spring MVC server scaffold、record DTO、长连接 message helper、binary packet helper 和 HTTP adapter |
+| Kotlin client/server | 预览 | 生成 OkHttp HTTP/SSE/WebSocket client、Ktor HTTP/SSE/WebSocket server scaffold、模型、长连接 message helper 和 binary writer |
+| Java client/server | 预览 | 生成 Java 17 HttpClient client、Spring MVC/SSE/WebSocket server scaffold、record DTO、长连接 message helper、binary packet helper 和 HTTP adapter |
 | Go / Python client | 预览 | 生成服务端之外的脚本或工具侧客户端，并提供长连接 message helper 与 binary writer |
-| Python server | 预览 | 生成 FastAPI server scaffold、service contract 和长连接 message helper |
+| Python server | 预览 | 生成 FastAPI HTTP/SSE/WebSocket server scaffold、service contract 和长连接 message helper |
 | Wails v2/v3 | 预览 / 实验性 | 生成 Go + TypeScript overlay，用于桌面 GUI |
 | gRPC proto / stubs | 可用 | 从 ContractGraph 输出 proto，并生成 Go/Python stub |
 
@@ -132,4 +132,4 @@ make example-golang-suite
 make example-java-suite
 ```
 
-`make example-conformance` 会启动真实 Go HTTP server，并让 Go / TypeScript / Kotlin / Flutter client 跑协议互通；可用 `EXAMPLE_CONFORMANCE_CLIENTS` 和 `EXAMPLE_CONFORMANCE_SCENARIOS` 选择矩阵。`example-golang-suite` 和 `example-java-suite` 是保留的手动端到端增强验证。正式发布前的版本、构建、安装和 GitHub Release 流程见 [发布流程](docs/release-process.md)。
+`make example-conformance` 默认从真实 Go HTTP server 开始跑协议互通；可用 `EXAMPLE_CONFORMANCE_SERVERS`、`EXAMPLE_CONFORMANCE_CLIENTS` 和 `EXAMPLE_CONFORMANCE_SCENARIOS` 选择矩阵，完整矩阵可设为 `EXAMPLE_CONFORMANCE_SERVERS=all EXAMPLE_CONFORMANCE_CLIENTS=all`。`example-golang-suite` 和 `example-java-suite` 是保留的手动端到端增强验证。正式发布前的版本、构建、安装和 GitHub Release 流程见 [发布流程](docs/release-process.md)。

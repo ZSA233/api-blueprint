@@ -426,7 +426,7 @@
       "kind": "python-server",
       "out_dir": "python/server",
       "role": "server",
-      "route_count": 23
+      "route_count": 25
     },
     {
       "id": "python.client",

@@ -41,6 +41,7 @@ class BlueprintExampleWorkspace:
     java_client_dir: Path
     java_server_dir: Path
     java_suite_dir: Path
+    java_conformance_dir: Path
     python_dir: Path
     flutter_dir: Path
     wails_v2_dir: Path

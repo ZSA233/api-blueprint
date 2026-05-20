@@ -6,7 +6,8 @@ import com.example.apiblueprint.api.runtime.*
 public open class ApiServiceStub : GenApiService {
 
     public override suspend fun helloChannel(
-    ): Any {
+        channel: ApiServerChannel<HelloChannelMessage, HelloChannelMessage, DefaultConnectionClose>
+    ): Unit {
         throw NotImplementedError("api.api.channel.ws is not implemented")
     }
 

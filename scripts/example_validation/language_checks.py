@@ -116,7 +116,9 @@ def _validate_kotlin_server_sources(kotlin_dir: Path) -> None:
         "public object AssistantClientMessageVariants",
         "public fun <R> dispatchAssistantClientMessage(",
         "public fun Route.registerDemoRoutes(",
-        '"channel route is not implemented by the generated Ktor adapter"',
+        "respondTextWriter(contentType = ContentType.Text.EventStream)",
+        "webSocket(\"/api/demo/assistant-session\")",
+        "KtorWebSocketChannel",
     )
     missing_snippets = [snippet for snippet in required_snippets if snippet not in haystack]
     if missing_snippets:
@@ -271,6 +273,7 @@ def _compile_kotlin_sources(kotlin_dir: Path, *, include_okhttp: bool, include_k
             dependencies.append(f'    implementation("com.squareup.okhttp3:okhttp:{OKHTTP_VERSION}")')
         if include_ktor:
             dependencies.append(f'    implementation("io.ktor:ktor-server-core-jvm:{KTOR_VERSION}")')
+            dependencies.append(f'    implementation("io.ktor:ktor-server-websockets-jvm:{KTOR_VERSION}")')
         (project_dir / "build.gradle.kts").write_text(
             f"""
 plugins {{
@@ -330,6 +333,7 @@ plugins {{ java }}
 dependencies {{
     implementation("com.fasterxml.jackson.core:jackson-databind:{JACKSON_DATABIND_VERSION}")
     implementation("org.springframework.boot:spring-boot-starter-web:{SPRING_BOOT_VERSION}")
+    implementation("org.springframework.boot:spring-boot-starter-websocket:{SPRING_BOOT_VERSION}")
 }}
 
 java {{

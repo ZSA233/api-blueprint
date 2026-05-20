@@ -3,6 +3,8 @@ package com.example.apiblueprint.api.routes.api.demo;
 
 import com.example.apiblueprint.api.runtime.ApiTypes;
 
+import com.example.apiblueprint.api.runtime.ApiServerChannel;
+import com.example.apiblueprint.api.runtime.ApiServerStream;
 import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
 
 public class DemoServiceStub implements DemoService {
@@ -10,21 +12,21 @@ public class DemoServiceStub implements DemoService {
     @Override
     public ApiTypes.ApiDemoA abc(
         DemoTypes.AbcQuery query
-    ) {
+    ) throws Exception {
         throw new UnsupportedOperationException("abc");
     }
 
     @Override
     public DemoTypes.TestPostResponse testPost(
         DemoTypes.TestPostJSON json
-    ) {
+    ) throws Exception {
         throw new UnsupportedOperationException("testPost");
     }
 
     @Override
     public DemoTypes.FormSubmitResponse formSubmit(
         DemoTypes.FormSubmitForm form
-    ) {
+    ) throws Exception {
         throw new UnsupportedOperationException("formSubmit");
     }
 
@@ -32,54 +34,56 @@ public class DemoServiceStub implements DemoService {
     public DemoTypes.PutDemoResponse putDemo(
         DemoTypes.PutDemoQuery query,
         DemoTypes.PutDemoJSON json
-    ) {
+    ) throws Exception {
         throw new UnsupportedOperationException("putDemo");
     }
 
     @Override
     public DemoTypes.DeleteResponse delete(
         DemoTypes.DeleteQuery query
-    ) {
+    ) throws Exception {
         throw new UnsupportedOperationException("delete");
     }
 
     @Override
-    public Object sweepEvents(
-        ApiTypes.SweepOpen openData
-    ) {
+    public void sweepEvents(
+        ApiTypes.SweepOpen openData,
+        ApiServerStream<DemoTypes.SweepStreamMessage, ApiTypes.ConnectionClose> stream
+    ) throws Exception {
         throw new UnsupportedOperationException("sweepEvents");
     }
 
     @Override
-    public Object assistantSession(
-        ApiTypes.AssistantOpen openData
-    ) {
+    public void assistantSession(
+        ApiTypes.AssistantOpen openData,
+        ApiServerChannel<DemoTypes.AssistantClientMessage, DemoTypes.AssistantServerMessage, ApiTypes.ConnectionClose> channel
+    ) throws Exception {
         throw new UnsupportedOperationException("assistantSession");
     }
 
     @Override
     public DemoTypes.PostDeprecatedResponse postDeprecated(
         DemoTypes.PostDeprecatedJSON json
-    ) {
+    ) throws Exception {
         throw new UnsupportedOperationException("postDeprecated");
     }
 
     @Override
     public DemoTypes.RawResponse raw(
-    ) {
+    ) throws Exception {
         throw new UnsupportedOperationException("raw");
     }
 
     @Override
     public DemoTypes.MapModelResponse mapModel(
-    ) {
+    ) throws Exception {
         throw new UnsupportedOperationException("mapModel");
     }
 
     @Override
     public DemoTypes.ErrorDemoResponse errorDemo(
         DemoTypes.ErrorDemoQuery query
-    ) {
+    ) throws Exception {
         throw new UnsupportedOperationException("errorDemo");
     }
 

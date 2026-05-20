@@ -174,6 +174,7 @@ content-type: application/octet-stream
         server_dir / package_root / "transports/http/api/binary/GenBinaryController.java"
     ).read_text(encoding="utf-8")
     service_text = (server_route_dir / "GenDemoService.java").read_text(encoding="utf-8")
+    service_stub_text = (server_route_dir / "DemoServiceStub.java").read_text(encoding="utf-8")
     controller_text = (
         server_dir / package_root / "transports/http/api/demo/GenDemoController.java"
     ).read_text(encoding="utf-8")
@@ -232,6 +233,8 @@ content-type: application/octet-stream
     assert "HttpClient.newHttpClient()" in transport_text
     assert "throw new ApiError(payload" in transport_text
     assert "throw new ApiException(response.statusCode(), body)" in transport_text
+    assert "parseApiErrorPayload(nested, routeId, false)" in transport_text
+    assert "parseApiErrorPayload(JsonNode node, String routeId, boolean synthesizeFallbackMessage)" in transport_text
     assert "UnsupportedOperationException" in (client_runtime_dir / "ApiTransport.java").read_text(encoding="utf-8")
     assert 'this("http://localhost:2333");' in config_text
     assert '"CommonErr.UNKNOWN"' in catalog_text
@@ -259,9 +262,20 @@ content-type: application/octet-stream
     assert "public interface GenDemoService" in service_text
     assert "ApiTypes.Result ping(" in service_text
     assert "Object ws(" not in service_text
+    assert "void events(" in service_text
+    assert "ApiServerStream<ApiTypes.Event, Object> stream" in service_text
+    assert "void chat(" in service_text
+    assert "ApiServerChannel<ApiTypes.Event, ApiTypes.Event, Object> channel" in service_text
+    assert "public void events(\n        ApiTypes.OpenPayload openData,\n        ApiServerStream<ApiTypes.Event, Object> stream\n    ) throws Exception" in service_stub_text
+    assert "public void chat(\n        ApiTypes.OpenPayload openData,\n        ApiServerChannel<ApiTypes.Event, ApiTypes.Event, Object> channel\n    ) throws Exception" in service_stub_text
     assert "@RestController" in controller_text
     assert "@RequestMapping(path = \"/api/demo/ping\", method = RequestMethod.GET)" in controller_text
-    assert "ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)" in controller_text
+    assert "SseEmitter" in controller_text
+    assert "implements WebSocketConfigurer" in controller_text
+    assert "registry.addHandler(new ChatWebSocketHandler(), \"/api/demo/chat\")" in controller_text
+    assert "SpringSseStream" in controller_text
+    assert "SpringWebSocketChannel" in controller_text
+    assert "ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)" not in controller_text
 
 
 def test_java_generates_typed_binary_writer_parser_and_schema_paths(tmp_path: Path) -> None:
@@ -411,8 +425,12 @@ def test_java_client_and_server_generate_named_message_keyframe_helpers(tmp_path
 
     assert "public static final class AssistantClientMessageVariants" in server_types
     assert "public static <R> R dispatchAssistantClientMessage(" in server_types
-    assert "Object assistant(" in service_text
-    assert "ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)" in controller_text
+    assert "void assistant(" in service_text
+    assert "ApiServerChannel<DemoTypes.AssistantClientMessage, DemoTypes.AssistantServerMessage, Object> channel" in service_text
+    assert "SseEmitter" in controller_text
+    assert "implements WebSocketConfigurer" in controller_text
+    assert "SpringWebSocketChannel" in controller_text
+    assert "ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)" not in controller_text
 
 
 def _max_consecutive_blank_lines(text: str) -> int:

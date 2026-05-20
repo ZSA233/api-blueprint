@@ -105,7 +105,7 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
     "python-server": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "binary", "open"),
+        requests=("query", "json", "form", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
     ),
     "python-client": TargetCapability(

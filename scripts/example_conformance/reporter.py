@@ -52,8 +52,13 @@ def print_group(label: str) -> None:
     print(f"{label}:", flush=True)
 
 
-def run_sub_stage(label: str, action: Callable[[], T]) -> T:
-    return run_stage(f"  - {label}", action)
+def run_sub_stage(
+    label: str,
+    action: Callable[[], T],
+    *,
+    success_detail: Callable[[T], str] | None = None,
+) -> T:
+    return run_stage(f"  - {label}", action, success_detail=success_detail)
 
 
 def print_summary(*, server: str, clients: tuple[str, ...], scenarios: tuple[str, ...]) -> None:

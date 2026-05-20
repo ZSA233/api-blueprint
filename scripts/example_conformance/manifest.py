@@ -22,6 +22,13 @@ class ServerCapability:
     command_label: str
     enabled: bool
     planned: bool
+    supports_rpc: bool
+    supports_binary: bool
+    supports_form: bool
+    supports_typed_error: bool
+    supports_sse: bool
+    supports_websocket: bool
+    supports_naming: bool
 
 
 def client_manifest() -> dict[str, ClientCapability]:
@@ -67,15 +74,85 @@ def client_manifest() -> dict[str, ClientCapability]:
             supports_sse=True,
             supports_websocket=True,
         ),
+        "java": ClientCapability(
+            name="java",
+            command_label="Java",
+            supports_rpc=True,
+            supports_binary=True,
+            supports_form=True,
+            supports_typed_error=True,
+            supports_sse=True,
+            supports_websocket=True,
+            connection_policy="unsupported-contract",
+        ),
+        "python": ClientCapability(
+            name="python",
+            command_label="Python",
+            supports_rpc=True,
+            supports_binary=True,
+            supports_form=True,
+            supports_typed_error=True,
+            supports_sse=True,
+            supports_websocket=True,
+            connection_policy="unsupported-contract",
+        ),
     }
 
 
 def server_manifest() -> dict[str, ServerCapability]:
     return {
-        "go": ServerCapability("go", "Go HTTP", enabled=True, planned=True),
-        "java": ServerCapability("java", "Java Spring", enabled=False, planned=True),
-        "kotlin": ServerCapability("kotlin", "Kotlin Ktor", enabled=False, planned=True),
-        "python": ServerCapability("python", "Python FastAPI", enabled=False, planned=True),
+        "go": ServerCapability(
+            "go",
+            "Go HTTP",
+            enabled=True,
+            planned=True,
+            supports_rpc=True,
+            supports_binary=True,
+            supports_form=True,
+            supports_typed_error=True,
+            supports_sse=True,
+            supports_websocket=True,
+            supports_naming=True,
+        ),
+        "java": ServerCapability(
+            "java",
+            "Java Spring",
+            enabled=True,
+            planned=True,
+            supports_rpc=True,
+            supports_binary=True,
+            supports_form=True,
+            supports_typed_error=True,
+            supports_sse=True,
+            supports_websocket=True,
+            supports_naming=True,
+        ),
+        "kotlin": ServerCapability(
+            "kotlin",
+            "Kotlin Ktor",
+            enabled=True,
+            planned=True,
+            supports_rpc=True,
+            supports_binary=True,
+            supports_form=True,
+            supports_typed_error=True,
+            supports_sse=True,
+            supports_websocket=True,
+            supports_naming=True,
+        ),
+        "python": ServerCapability(
+            "python",
+            "Python FastAPI",
+            enabled=True,
+            planned=True,
+            supports_rpc=True,
+            supports_binary=True,
+            supports_form=True,
+            supports_typed_error=True,
+            supports_sse=True,
+            supports_websocket=True,
+            supports_naming=True,
+        ),
     }
 
 
@@ -83,6 +160,8 @@ def parse_csv_filter(raw: str | None, available: set[str], *, label: str) -> tup
     if raw is None or raw.strip() == "":
         return tuple(sorted(available))
     values = tuple(item.strip() for item in raw.split(",") if item.strip())
+    if "all" in values:
+        return tuple(sorted(available))
     unknown = [value for value in values if value not in available]
     if unknown:
         raise ValueError(f"unknown {label}: {', '.join(unknown)}")

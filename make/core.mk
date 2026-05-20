@@ -16,7 +16,8 @@ help:
 		"  make example-validation      Run strict example validation" \
 		"  make example-conformance     Run generated example interoperability checks" \
 		"  make example-conformance-list" \
-		"  make example-conformance-run EXAMPLE_CONFORMANCE_CLIENTS=flutter EXAMPLE_CONFORMANCE_SCENARIOS=sse,websocket" \
+		"  make example-conformance-run EXAMPLE_CONFORMANCE_SERVERS=go EXAMPLE_CONFORMANCE_CLIENTS=flutter EXAMPLE_CONFORMANCE_SCENARIOS=sse,websocket" \
+		"  make example-conformance-check EXAMPLE_CONFORMANCE_SERVERS=all EXAMPLE_CONFORMANCE_CLIENTS=all" \
 		"" \
 		"Wails:" \
 		"  make wails-hello-dev" \

@@ -10,21 +10,33 @@ import com.example.apiblueprint.alt.runtime.ApiErrorEntry;
 import com.example.apiblueprint.alt.runtime.ApiErrorPayload;
 import com.example.apiblueprint.alt.runtime.ApiErrors;
 import com.example.apiblueprint.alt.runtime.ApiResponseEnvelope;
+import com.example.apiblueprint.alt.runtime.ApiServerChannel;
+import com.example.apiblueprint.alt.runtime.ApiServerStream;
 import com.example.apiblueprint.alt.runtime.ApiToastPayload;
 
 import com.example.apiblueprint.alt.runtime.ApiTypes;
 
 import com.example.apiblueprint.alt.runtime.binary.ApiBinaryBody;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 public class GenConflictController {
@@ -52,6 +64,73 @@ public class GenConflictController {
         } catch (ApiError error) {
             return wrapApiErrorResponse(ApiResponseEnvelope.of("OkDataErrorEnvelope", "ok_data_error", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "alt.conflict.get.default");
         }
+    }
+
+    private static final class SpringSseStream<Message, Close> implements ApiServerStream<Message, Close> {
+        private final SseEmitter emitter;
+        private final ObjectMapper objectMapper;
+        private volatile boolean closed = false;
+
+        SpringSseStream(SseEmitter emitter, ObjectMapper objectMapper) {
+            this.emitter = emitter;
+            this.objectMapper = objectMapper;
+        }
+
+        @Override
+        public void send(Message message) throws Exception {
+            if (closed) {
+                return;
+            }
+            emitter.send(SseEmitter.event().data(message, MediaType.APPLICATION_JSON));
+        }
+
+        @Override
+        public void close(Close close) throws Exception {
+            if (closed) {
+                return;
+            }
+            closed = true;
+            emitter.send(SseEmitter.event().name("close").data(close, MediaType.APPLICATION_JSON));
+            emitter.complete();
+        }
+
+        @Override
+        public void abort(int code, String reason) throws Exception {
+            if (closed) {
+                return;
+            }
+            closed = true;
+            emitter.send(SseEmitter.event().name("close").data(Map.of("code", code, "reason", reason == null ? "" : reason), MediaType.APPLICATION_JSON));
+            emitter.complete();
+        }
+
+        void abortUnchecked(int code, String reason) {
+            try {
+                abort(code, reason);
+            } catch (Exception error) {
+                emitter.completeWithError(error);
+            }
+        }
+    }
+
+    private static Map<String, String> parseQuery(URI uri) {
+        if (uri == null || uri.getRawQuery() == null || uri.getRawQuery().isBlank()) {
+            return Map.of();
+        }
+        Map<String, String> result = new LinkedHashMap<>();
+        for (String part : uri.getRawQuery().split("&")) {
+            if (part.isBlank()) {
+                continue;
+            }
+            int separator = part.indexOf('=');
+            String key = separator >= 0 ? part.substring(0, separator) : part;
+            String value = separator >= 0 ? part.substring(separator + 1) : "";
+            result.put(
+                URLDecoder.decode(key, StandardCharsets.UTF_8),
+                URLDecoder.decode(value, StandardCharsets.UTF_8)
+            );
+        }
+        return result;
     }
 
     private Object wrapResponse(ApiResponseEnvelope envelopeSpec, Object data) {

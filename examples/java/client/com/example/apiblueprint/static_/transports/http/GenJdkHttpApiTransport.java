@@ -156,7 +156,7 @@ public class GenJdkHttpApiTransport implements ApiTransport {
                 }
                 return objectMapper.convertValue(data, request.responseClass());
             }
-            ApiErrorPayload payload = parseApiErrorPayload(root.path(envelope.fields().error()), request.routeId());
+            ApiErrorPayload payload = parseApiErrorPayload(root.path(envelope.fields().error()), request.routeId(), true);
             Optional<ApiErrorEntry> entry = ApiErrors.lookup(payload, request.routeId());
             throw new ApiError(payload, request.routeId(), body, entry.orElse(null));
         }
@@ -183,7 +183,7 @@ public class GenJdkHttpApiTransport implements ApiTransport {
         if (!node.has("id") && !node.has("code")) {
             return Optional.empty();
         }
-        ApiErrorPayload payload = parseApiErrorPayload(node, routeId);
+        ApiErrorPayload payload = parseApiErrorPayload(node, routeId, true);
         Optional<ApiErrorEntry> entry = ApiErrors.lookup(payload, routeId);
         return Optional.of(new ApiError(payload, routeId, body, entry.orElse(null)));
     }
@@ -191,7 +191,7 @@ public class GenJdkHttpApiTransport implements ApiTransport {
     private ApiErrorPayload parseCodeMessageEnvelopePayload(JsonNode root, ApiResponseEnvelope envelope, String routeId) {
         JsonNode nested = root.path(envelope.fields().error());
         ApiErrorPayload payload = nested.isObject()
-            ? parseApiErrorPayload(nested, routeId)
+            ? parseApiErrorPayload(nested, routeId, false)
             : new ApiErrorPayload("", "", "", 0, "", new ApiToastPayload("", "error", "", ""));
         int code = payload.code() == 0 ? root.path(envelope.fields().code()).asInt(0) : payload.code();
         String message = payload.message().isBlank() ? root.path(envelope.fields().message()).asText("") : payload.message();
@@ -225,7 +225,7 @@ public class GenJdkHttpApiTransport implements ApiTransport {
         );
     }
 
-    private ApiErrorPayload parseApiErrorPayload(JsonNode node, String routeId) {
+    private ApiErrorPayload parseApiErrorPayload(JsonNode node, String routeId, boolean synthesizeFallbackMessage) {
         ApiToastPayload toast = parseToast(node.path("toast"));
         int code = node.path("code").asInt(0);
         ApiErrorPayload payload = new ApiErrorPayload(
@@ -238,7 +238,7 @@ public class GenJdkHttpApiTransport implements ApiTransport {
         );
         Optional<ApiErrorEntry> entry = ApiErrors.lookup(payload, routeId);
         if (entry.isEmpty()) {
-            return payload.message().isBlank()
+            return synthesizeFallbackMessage && payload.message().isBlank()
                 ? new ApiErrorPayload(payload.id(), payload.group(), payload.key(), payload.code(), "API error " + payload.code(), payload.toast())
                 : payload;
         }

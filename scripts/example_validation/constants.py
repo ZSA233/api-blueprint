@@ -57,7 +57,7 @@ BLUEPRINT_TYPESCRIPT_PRESERVED = (
 )
 BLUEPRINT_KOTLIN_PRESERVED = ()
 BLUEPRINT_KOTLIN_CLIENT_PRESERVED = ()
-BLUEPRINT_KOTLIN_CONFORMANCE_PRESERVED = ("Conformance.kt",)
+BLUEPRINT_KOTLIN_CONFORMANCE_PRESERVED = ("Conformance.kt", "Server.kt")
 BLUEPRINT_JAVA_CLIENT_PRESERVED = (
     "com/example/apiblueprint/api/runtime/ApiClient.java",
     "com/example/apiblueprint/api/transports/http/HttpApiClient.java",
@@ -82,7 +82,15 @@ BLUEPRINT_JAVA_SUITE_PRESERVED = (
     "settings.gradle.kts",
     "src/main/java/com/example/apiblueprint/suite/JavaExampleSuite.java",
 )
-BLUEPRINT_PYTHON_PRESERVED = ("client/suite.py",)
+BLUEPRINT_JAVA_CONFORMANCE_PRESERVED = (
+    "Conformance.java",
+    "ServerApp.java",
+)
+BLUEPRINT_PYTHON_PRESERVED = (
+    "client/suite.py",
+    "conformance/client.py",
+    "conformance/server_app.py",
+)
 BLUEPRINT_FLUTTER_PRESERVED = (
     "pubspec.yaml",
     "analysis_options.yaml",

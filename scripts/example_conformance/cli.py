@@ -21,11 +21,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     for name in ("check", "run", "refresh"):
         command = subparsers.add_parser(name, help=f"{name} generated example conformance.")
-        command.add_argument("--server", default="go", help="Server target to start. First phase supports `go`.")
+        command.add_argument("--server", default=None, help="Single server target to start.")
+        command.add_argument(
+            "--servers",
+            default=None,
+            help="Comma-separated servers: go,java,kotlin,python, or all.",
+        )
         command.add_argument(
             "--clients",
             default="go,typescript,kotlin,flutter",
-            help="Comma-separated clients: go,typescript,kotlin,flutter.",
+            help="Comma-separated clients: go,typescript,kotlin,flutter,java,python, or all.",
         )
         command.add_argument(
             "--scenario",
@@ -49,12 +54,13 @@ def main(argv: list[str] | None = None) -> int:
             runner.generate_conformance_workspace(repo_root, keep_workspace=args.keep_workspace)
             return 0
 
+        servers = _parse_servers(args.server, args.servers)
         clients = manifest.parse_csv_filter(args.clients, set(manifest.client_manifest()), label="conformance client")
         scenario_names = scenarios.scenario_names_from_cli(args.scenario)
         if args.command == "run":
             runner.run_conformance(
                 repo_root,
-                server=args.server,
+                servers=servers,
                 clients=clients,
                 scenario_names=scenario_names,
                 keep_workspace=args.keep_workspace,
@@ -63,7 +69,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "check":
             runner.check_conformance(
                 repo_root,
-                server_name=args.server,
+                servers=servers,
                 clients=clients,
                 scenario_names=scenario_names,
                 keep_workspace=args.keep_workspace,
@@ -72,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "refresh":
             runner.refresh_and_check(
                 repo_root,
-                server_name=args.server,
+                servers=servers,
                 clients=clients,
                 scenario_names=scenario_names,
             )
@@ -88,14 +94,21 @@ def _print_list() -> None:
     print("servers:")
     for server in manifest.server_manifest().values():
         marker = "enabled" if server.enabled else "planned"
-        print(f"- {server.name} {marker} label={server.command_label}")
+        print(
+            f"- {server.name} {marker} label={server.command_label} "
+            f"rpc={_yn(server.supports_rpc)} "
+            f"sse={_yn(server.supports_sse)} "
+            f"websocket={_yn(server.supports_websocket)} "
+            f"binary={_yn(server.supports_binary)} "
+            f"form={_yn(server.supports_form)}"
+        )
     print("clients:")
     for client in manifest.client_manifest().values():
         print(
             f"- {client.name} "
             f"rpc={_yn(client.supports_rpc)} "
-            f"sse={_yn(client.supports_sse)} "
-            f"websocket={_yn(client.supports_websocket)} "
+            f"sse={_connection_capability(client, client.supports_sse)} "
+            f"websocket={_connection_capability(client, client.supports_websocket)} "
             f"binary={_yn(client.supports_binary)} "
             f"form={_yn(client.supports_form)} "
             f"connection={client.connection_policy}"
@@ -107,3 +120,23 @@ def _print_list() -> None:
 
 def _yn(value: bool) -> str:
     return "yes" if value else "no"
+
+
+def _connection_capability(client: manifest.ClientCapability, supported: bool) -> str:
+    if not supported:
+        return "no"
+    if client.connection_policy == "unsupported-contract":
+        return "unsupported-contract"
+    return "yes"
+
+
+def _parse_servers(server: str | None, servers: str | None) -> tuple[str, ...]:
+    if server and servers:
+        raise ValueError("use either --server or --servers, not both")
+    raw = servers if servers is not None else server
+    if raw is None:
+        raw = "go"
+    selected = manifest.parse_csv_filter(raw, set(manifest.server_manifest()), label="conformance server")
+    for name in selected:
+        manifest.require_enabled_server(name)
+    return selected

@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
+from ....runtime.server import ApiServerChannel, ApiServerStream
+
 
 class ConflictService(Protocol):
     async def default(

@@ -27,4 +27,16 @@ public data class ApiResponseEnvelopeFields(
     public val error: String = "error",
     public val ok: String = "ok",
 )
+
+public interface ApiServerStream<Message, Close> {
+    public suspend fun send(message: Message)
+
+    public suspend fun close(close: Close)
+
+    public suspend fun abort(code: Int = 1011, reason: String? = null)
+}
+
+public interface ApiServerChannel<Recv, Send, Close> : ApiServerStream<Send, Close> {
+    public suspend fun receive(): Recv?
+}
 {% endautoescape %}

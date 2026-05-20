@@ -3,6 +3,8 @@ package com.example.apiblueprint.api.routes.api.demo;
 
 import com.example.apiblueprint.api.runtime.ApiTypes;
 
+import com.example.apiblueprint.api.runtime.ApiServerChannel;
+import com.example.apiblueprint.api.runtime.ApiServerStream;
 import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
 
 public interface GenDemoService {
@@ -28,12 +30,14 @@ public interface GenDemoService {
         DemoTypes.DeleteQuery query
     ) throws Exception;
 
-    Object sweepEvents(
-        ApiTypes.SweepOpen openData
+    void sweepEvents(
+        ApiTypes.SweepOpen openData,
+        ApiServerStream<DemoTypes.SweepStreamMessage, ApiTypes.ConnectionClose> stream
     ) throws Exception;
 
-    Object assistantSession(
-        ApiTypes.AssistantOpen openData
+    void assistantSession(
+        ApiTypes.AssistantOpen openData,
+        ApiServerChannel<DemoTypes.AssistantClientMessage, DemoTypes.AssistantServerMessage, ApiTypes.ConnectionClose> channel
     ) throws Exception;
 
     DemoTypes.PostDeprecatedResponse postDeprecated(

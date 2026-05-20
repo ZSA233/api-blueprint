@@ -37,14 +37,16 @@ public open class DemoServiceStub : GenDemoService {
     }
 
     public override suspend fun sweepEvents(
-        openData: SweepOpen
-    ): Any {
+        openData: SweepOpen,
+        stream: ApiServerStream<SweepStreamMessage, ConnectionClose>
+    ): Unit {
         throw NotImplementedError("api.demo.stream.sweepevents is not implemented")
     }
 
     public override suspend fun assistantSession(
-        openData: AssistantOpen
-    ): Any {
+        openData: AssistantOpen,
+        channel: ApiServerChannel<AssistantClientMessage, AssistantServerMessage, ConnectionClose>
+    ): Unit {
         throw NotImplementedError("api.demo.channel.assistantsession is not implemented")
     }
 

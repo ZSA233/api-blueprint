@@ -3,6 +3,8 @@ package com.example.apiblueprint.alt.routes.alt.conflict;
 
 import com.example.apiblueprint.alt.runtime.ApiTypes;
 
+import com.example.apiblueprint.alt.runtime.ApiServerChannel;
+import com.example.apiblueprint.alt.runtime.ApiServerStream;
 import com.example.apiblueprint.alt.runtime.binary.ApiBinaryBody;
 
 public class ConflictServiceStub implements ConflictService {
@@ -10,7 +12,7 @@ public class ConflictServiceStub implements ConflictService {
     @Override
     public ApiTypes.BlueprintsAltConflictConflictModel defaultValue(
         ConflictTypes.DefaultQuery query
-    ) {
+    ) throws Exception {
         throw new UnsupportedOperationException("defaultValue");
     }
 

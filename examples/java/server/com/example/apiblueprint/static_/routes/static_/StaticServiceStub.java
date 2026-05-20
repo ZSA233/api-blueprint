@@ -3,19 +3,21 @@ package com.example.apiblueprint.static_.routes.static_;
 
 import com.example.apiblueprint.static_.runtime.ApiTypes;
 
+import com.example.apiblueprint.static_.runtime.ApiServerChannel;
+import com.example.apiblueprint.static_.runtime.ApiServerStream;
 import com.example.apiblueprint.static_.runtime.binary.ApiBinaryBody;
 
 public class StaticServiceStub implements StaticService {
 
     @Override
     public StaticTypes.DocJsonResponse docJson(
-    ) {
+    ) throws Exception {
         throw new UnsupportedOperationException("docJson");
     }
 
     @Override
     public StaticTypes.DochahaResponse dochaha(
-    ) {
+    ) throws Exception {
         throw new UnsupportedOperationException("dochaha");
     }
 

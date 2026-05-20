@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from scripts.example_conformance.manifest import client_manifest, parse_csv_filter
+from scripts.example_conformance import manifest
+from scripts.example_conformance.manifest import parse_csv_filter
 
 
 @dataclass(frozen=True)
@@ -19,49 +20,49 @@ def scenario_registry() -> dict[str, Scenario]:
         "rpc": Scenario(
             name="rpc",
             categories=("query", "json", "raw", "xml", "envelope"),
-            clients=("go", "typescript", "kotlin", "flutter"),
+            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
             route_ids=("api.demo.get.abc", "api.demo.post.testpost", "api.demo.delete.delete"),
             description="query/json/raw/xml RPC calls",
         ),
         "form": Scenario(
             name="form",
             categories=("form", "envelope"),
-            clients=("go", "typescript", "kotlin", "flutter"),
+            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
             route_ids=("api.demo.post.formsubmit",),
             description="application form body calls",
         ),
         "binary": Scenario(
             name="binary",
             categories=("binary",),
-            clients=("go", "typescript", "kotlin", "flutter"),
+            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
             route_ids=("api.binary.post.packet",),
             description="binary schema body calls",
         ),
         "error": Scenario(
             name="error",
             categories=("typed-error", "envelope"),
-            clients=("go", "typescript", "kotlin", "flutter"),
+            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
             route_ids=("api.demo.get.errordemo",),
             description="declared, route-local, and unknown typed errors",
         ),
         "sse": Scenario(
             name="sse",
             categories=("sse",),
-            clients=("typescript", "kotlin", "flutter"),
+            clients=("typescript", "kotlin", "flutter", "java", "python"),
             route_ids=("api.demo.stream.sweepevents",),
             description="HTTP server-sent event stream",
         ),
         "websocket": Scenario(
             name="websocket",
             categories=("websocket",),
-            clients=("typescript", "kotlin", "flutter"),
+            clients=("typescript", "kotlin", "flutter", "java", "python"),
             route_ids=("api.demo.channel.assistantsession",),
             description="HTTP WebSocket channel",
         ),
         "naming": Scenario(
             name="naming",
             categories=("naming-conflict", "multi-blueprint"),
-            clients=("go", "typescript", "kotlin", "flutter"),
+            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
             route_ids=("api.conflict.get.default", "alt.conflict.get.default"),
             description="reserved names, same model names, and multi-blueprint roots",
         ),
@@ -94,7 +95,29 @@ def scenario_names_from_cli(raw: str | None) -> tuple[str, ...]:
 
 
 def runnable_scenarios_for_client(client: str, selected: tuple[Scenario, ...]) -> tuple[Scenario, ...]:
-    clients = client_manifest()
+    clients = manifest.client_manifest()
     if client not in clients:
         raise ValueError(f"unknown conformance client: {client}")
     return tuple(scenario for scenario in selected if client in scenario.clients)
+
+
+def server_supports_scenario(server: str, scenario: Scenario) -> bool:
+    servers = manifest.server_manifest()
+    if server not in servers:
+        raise ValueError(f"unknown conformance server: {server}")
+    capability = servers[server]
+    if scenario.name == "rpc":
+        return capability.supports_rpc
+    if scenario.name == "form":
+        return capability.supports_form
+    if scenario.name == "binary":
+        return capability.supports_binary
+    if scenario.name == "error":
+        return capability.supports_typed_error
+    if scenario.name == "sse":
+        return capability.supports_sse
+    if scenario.name == "websocket":
+        return capability.supports_websocket
+    if scenario.name == "naming":
+        return capability.supports_naming
+    return True

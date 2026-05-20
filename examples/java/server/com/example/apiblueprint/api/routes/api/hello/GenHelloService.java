@@ -3,6 +3,8 @@ package com.example.apiblueprint.api.routes.api.hello;
 
 import com.example.apiblueprint.api.runtime.ApiTypes;
 
+import com.example.apiblueprint.api.runtime.ApiServerChannel;
+import com.example.apiblueprint.api.runtime.ApiServerStream;
 import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
 
 public interface GenHelloService {

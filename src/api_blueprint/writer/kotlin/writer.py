@@ -311,6 +311,21 @@ class KotlinBaseWriter(BaseWriter[KotlinBlueprint]):
 
     def server_route_params(self, route: "KotlinRoute") -> list[tuple[str, str]]:
         params: list[tuple[str, str]] = []
+        if route.supports_stream:
+            if route.open_type:
+                params.append((route.open_type, "openData"))
+            params.append((f"ApiServerStream<{route.server_message_type}, {route.close_type}>", "stream"))
+            return params
+        if route.supports_channel:
+            if route.open_type:
+                params.append((route.open_type, "openData"))
+            params.append(
+                (
+                    f"ApiServerChannel<{route.client_message_type}, {route.server_message_type}, {route.close_type}>",
+                    "channel",
+                )
+            )
+            return params
         if route.query_type:
             params.append((route.query_type, "query"))
         if route.json_type:
@@ -326,7 +341,7 @@ class KotlinBaseWriter(BaseWriter[KotlinBlueprint]):
         return params
 
     def server_response_type(self, route: "KotlinRoute") -> str:
-        return route.response_type.text if route.is_rpc else "Any"
+        return route.response_type.text if route.is_rpc else "Unit"
 
     def route_kind(self, route: "KotlinRoute") -> str:
         if route.supports_channel:

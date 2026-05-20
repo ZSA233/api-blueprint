@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import os
 import shutil
+from pathlib import Path
 
 from .constants import GO_ENUM_VERSION, GRADLE_BIN_ENV, WAILS_V2_BIN_ENV, WAILS_V3_BIN_ENV
 from .models import ExampleValidationError, ExampleValidationScope

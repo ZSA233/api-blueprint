@@ -60,6 +60,14 @@ ROUTE_API_ERRORS_BY_CODE: dict[str, dict[int, ApiErrorEntry]] = {
         -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
         55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
     },
+    "api.binary.post.packet": {
+        -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
+        55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
+    },
+    "api.binary.post.auditpacket": {
+        -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
+        55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
+    },
     "api.conflict.get.default": {
         -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
         55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],

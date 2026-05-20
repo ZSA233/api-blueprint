@@ -23,23 +23,24 @@ class PreparedClientRunner(Protocol):
 def run_conformance(
     repo_root: Path,
     *,
-    server: str,
+    servers: tuple[str, ...],
     clients: tuple[str, ...],
     scenario_names: tuple[str, ...],
     keep_workspace: bool,
 ) -> None:
-    manifest.require_enabled_server(server)
+    for item in servers:
+        manifest.require_enabled_server(item)
     available_clients = set(manifest.client_manifest())
     unknown_clients = [client for client in clients if client not in available_clients]
     if unknown_clients:
         raise ValueError(f"unknown conformance client: {', '.join(unknown_clients)}")
     selected_scenarios = scenarios.filter_scenarios(scenario_names)
-    tools.ensure_tools_for_targets(server, clients)
+    tools.ensure_tools_for_targets(servers, clients)
     conf_workspace = reporter.run_stage("generate examples", lambda: workspace.prepare_generated_workspace(repo_root))
     try:
         _run_against_workspace(
             conf_workspace,
-            server_name=server,
+            server_names=servers,
             clients=clients,
             selected_scenarios=selected_scenarios,
         )
@@ -58,21 +59,22 @@ def run_conformance(
 def check_conformance(
     repo_root: Path,
     *,
-    server_name: str,
+    servers: tuple[str, ...],
     clients: tuple[str, ...],
     scenario_names: tuple[str, ...],
     keep_workspace: bool,
 ) -> None:
-    manifest.require_enabled_server(server_name)
+    for item in servers:
+        manifest.require_enabled_server(item)
     selected_scenarios = scenarios.filter_scenarios(scenario_names)
-    tools.ensure_tools_for_targets(server_name, clients)
+    tools.ensure_tools_for_targets(servers, clients)
     conf_workspace = reporter.run_stage("generate examples", lambda: workspace.prepare_generated_workspace(repo_root))
     try:
         reporter.run_stage("check snapshot drift", lambda: workspace.validate_snapshot(repo_root, conf_workspace))
         reporter.run_stage("compile generated examples", lambda: workspace.compile_workspace(conf_workspace))
         _run_against_workspace(
             conf_workspace,
-            server_name=server_name,
+            server_names=servers,
             clients=clients,
             selected_scenarios=selected_scenarios,
         )
@@ -99,18 +101,19 @@ def generate_conformance_workspace(repo_root: Path, *, keep_workspace: bool) -> 
 def refresh_and_check(
     repo_root: Path,
     *,
-    server_name: str,
+    servers: tuple[str, ...],
     clients: tuple[str, ...],
     scenario_names: tuple[str, ...],
 ) -> None:
-    manifest.require_enabled_server(server_name)
+    for item in servers:
+        manifest.require_enabled_server(item)
     selected_scenarios = scenarios.filter_scenarios(scenario_names)
-    tools.ensure_tools_for_targets(server_name, clients)
+    tools.ensure_tools_for_targets(servers, clients)
     conf_workspace = reporter.run_stage("refresh examples", lambda: workspace.refresh_repo_workspace(repo_root))
     reporter.run_stage("compile generated examples", lambda: workspace.compile_workspace(conf_workspace))
     _run_against_workspace(
         conf_workspace,
-        server_name=server_name,
+        server_names=servers,
         clients=clients,
         selected_scenarios=selected_scenarios,
     )
@@ -119,48 +122,83 @@ def refresh_and_check(
 def _run_against_workspace(
     conf_workspace: workspace.ConformanceWorkspace,
     *,
-    server_name: str,
+    server_names: tuple[str, ...],
     clients: tuple[str, ...],
     selected_scenarios: tuple[scenarios.Scenario, ...],
 ) -> None:
-    active_server = reporter.run_stage(
-        f"server {server_name}",
-        lambda: server.start_go_server(conf_workspace.blueprint.golang_server_dir),
-        success_detail=lambda active: active.base_url,
-    )
-    try:
-        for client in clients:
-            client_scenarios = scenarios.runnable_scenarios_for_client(client, selected_scenarios)
-            if not client_scenarios:
-                reporter.print_skipped(
-                    client,
-                    "no runnable scenarios for client",
-                )
-                continue
-            reporter.print_group(client)
-            prepared_runner = reporter.run_sub_stage(
-                f"{client}/setup",
-                lambda client=client: _prepare_client_runner(conf_workspace.blueprint, client),
-            )
-            try:
-                for scenario in client_scenarios:
-                    reporter.run_sub_stage(
-                        f"{client}/{scenario.name}",
-                        lambda scenario=scenario, prepared_runner=prepared_runner: prepared_runner.run(
-                            active_server.base_url,
-                            scenario.name,
-                        ),
-                    )
-            finally:
-                prepared_runner.close()
-        reporter.print_summary(
-            server=server_name,
-            clients=clients,
-            scenarios=tuple(scenario.name for scenario in selected_scenarios),
+    for server_name in server_names:
+        reporter.print_group(server_name)
+        active_server = reporter.run_sub_stage(
+            "server/setup",
+            lambda server_name=server_name: server.start_server(server_name, conf_workspace.blueprint),
+            success_detail=lambda active: active.base_url,
         )
-    finally:
-        active_server.stop()
-        server.cleanup_server_log(active_server.output_path)
+        try:
+            for client in clients:
+                client_scenarios = scenarios.runnable_scenarios_for_client(client, selected_scenarios)
+                unsupported_by_server = tuple(
+                    scenario for scenario in client_scenarios if not scenarios.server_supports_scenario(server_name, scenario)
+                )
+                client_scenarios = tuple(
+                    scenario for scenario in client_scenarios if scenarios.server_supports_scenario(server_name, scenario)
+                )
+                if unsupported_by_server:
+                    reporter.print_skipped(
+                        client,
+                        "no runnable scenarios for server "
+                        + server_name
+                        + ": "
+                        + ",".join(scenario.name for scenario in unsupported_by_server),
+                    )
+                if unsupported_by_server and not client_scenarios:
+                    continue
+                if not client_scenarios:
+                    reporter.print_skipped(
+                        client,
+                        "no runnable scenarios for client",
+                    )
+                    continue
+                reporter.print_group(f"  {client}")
+                prepared_runner = _run_client_stage(
+                    f"{client}/setup",
+                    lambda client=client: _prepare_client_runner(conf_workspace.blueprint, client),
+                )
+                try:
+                    for scenario in client_scenarios:
+                        _run_client_stage(
+                            f"{client}/{scenario.name}",
+                            lambda scenario=scenario, prepared_runner=prepared_runner: prepared_runner.run(
+                                active_server.base_url,
+                                scenario.name,
+                            ),
+                        )
+                finally:
+                    prepared_runner.close()
+        except Exception:
+            _replay_server_log(server_name, active_server.output_path)
+            raise
+        finally:
+            active_server.stop()
+            server.cleanup_server_log(active_server.output_path)
+    reporter.print_summary(
+        server=",".join(server_names),
+        clients=clients,
+        scenarios=tuple(scenario.name for scenario in selected_scenarios),
+    )
+
+
+def _run_client_stage(label: str, action):
+    return reporter.run_stage(f"    - {label}", action)
+
+
+def _replay_server_log(server_name: str, output_path: Path) -> None:
+    if not output_path.is_file():
+        return
+    text = output_path.read_text(encoding="utf-8", errors="replace").strip()
+    if not text:
+        return
+    print(f"--- {server_name} server log ---", file=sys.stderr)
+    print(text, file=sys.stderr)
 
 
 def _prepare_client_runner(ws: example_validation.BlueprintExampleWorkspace, client: str) -> PreparedClientRunner:
@@ -172,6 +210,10 @@ def _prepare_client_runner(ws: example_validation.BlueprintExampleWorkspace, cli
         return _prepare_kotlin_runner(ws.kotlin_client_dir, ws.kotlin_conformance_dir)
     if client == "flutter":
         return _prepare_flutter_runner(ws.flutter_dir)
+    if client == "java":
+        return _prepare_java_runner(ws.java_client_dir, ws.java_conformance_dir)
+    if client == "python":
+        return _prepare_python_runner(ws.python_dir)
     raise ValueError(f"unknown conformance client: {client}")
 
 
@@ -279,6 +321,100 @@ class FlutterConformanceRunner:
 def _prepare_flutter_runner(flutter_dir: Path) -> FlutterConformanceRunner:
     subprocess.run(["dart", "pub", "get"], cwd=flutter_dir, check=True)
     return FlutterConformanceRunner(flutter_dir)
+
+
+class JavaConformanceRunner:
+    def __init__(self, project_dir: Path, executable: Path) -> None:
+        self.project_dir = project_dir
+        self.executable = executable
+
+    def run(self, base_url: str, scenario_arg: str) -> None:
+        subprocess.run([str(self.executable), base_url, scenario_arg], cwd=self.project_dir, check=True)
+
+    def close(self) -> None:
+        shutil.rmtree(self.project_dir, ignore_errors=True)
+
+
+def _prepare_java_runner(java_client_dir: Path, conformance_dir: Path) -> JavaConformanceRunner:
+    gradle_bin = example_validation.resolve_gradle_bin()
+    if gradle_bin is None:
+        raise RuntimeError("Gradle is required for Java conformance")
+    project_dir = Path(tempfile.mkdtemp(prefix="api-blueprint-java-conformance-"))
+    try:
+        source_dir = project_dir / "src/main/java"
+        source_dir.mkdir(parents=True)
+        client_package = java_client_dir / "com"
+        if not client_package.is_dir():
+            raise RuntimeError(f"Java generated client package is missing: {client_package}")
+        shutil.copytree(client_package, source_dir / "com", dirs_exist_ok=True)
+        conformance_source = conformance_dir / "Conformance.java"
+        if not conformance_source.is_file():
+            raise RuntimeError(f"Java conformance source is missing: {conformance_source}")
+        conformance_target = source_dir / "com/example/apiblueprint/conformance/Conformance.java"
+        conformance_target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(conformance_source, conformance_target)
+        (project_dir / "settings.gradle.kts").write_text(
+            'pluginManagement { repositories { gradlePluginPortal(); mavenCentral() } }\n'
+            "dependencyResolutionManagement { "
+            "repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); "
+            "repositories { mavenCentral() } "
+            "}\n"
+            'rootProject.name = "api-blueprint-java-conformance"\n',
+            encoding="utf-8",
+        )
+        (project_dir / "build.gradle.kts").write_text(
+            f"""
+plugins {{
+    java
+    application
+}}
+
+dependencies {{
+    implementation("com.fasterxml.jackson.core:jackson-databind:{example_validation.JACKSON_DATABIND_VERSION}")
+}}
+
+application {{
+    mainClass.set("com.example.apiblueprint.conformance.Conformance")
+}}
+
+java {{
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}}
+            """.strip()
+            + "\n",
+            encoding="utf-8",
+        )
+        subprocess.run([gradle_bin, "--no-daemon", "installDist"], cwd=project_dir, check=True)
+        executable_name = "api-blueprint-java-conformance.bat" if os.name == "nt" else "api-blueprint-java-conformance"
+        executable = project_dir / "build" / "install" / "api-blueprint-java-conformance" / "bin" / executable_name
+        if not executable.is_file():
+            raise RuntimeError(f"Java conformance executable is missing: {executable}")
+        return JavaConformanceRunner(project_dir, executable)
+    except Exception:
+        shutil.rmtree(project_dir, ignore_errors=True)
+        raise
+
+
+class PythonConformanceRunner:
+    def __init__(self, python_dir: Path) -> None:
+        self.python_dir = python_dir
+
+    def run(self, base_url: str, scenario_arg: str) -> None:
+        script = self.python_dir / "conformance" / "client.py"
+        if not script.is_file():
+            raise RuntimeError(f"Python conformance source is missing: {script}")
+        subprocess.run([sys.executable, str(script), base_url, scenario_arg], cwd=self.python_dir, check=True)
+
+    def close(self) -> None:
+        return None
+
+
+def _prepare_python_runner(python_dir: Path) -> PythonConformanceRunner:
+    script = python_dir / "conformance" / "client.py"
+    if not script.is_file():
+        raise RuntimeError(f"Python conformance source is missing: {script}")
+    return PythonConformanceRunner(python_dir)
 
 
 def _run_kotlin(kotlin_dir: Path, conformance_dir: Path, base_url: str, scenario_arg: str) -> None:

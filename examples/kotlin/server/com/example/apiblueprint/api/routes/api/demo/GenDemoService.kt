@@ -27,12 +27,14 @@ public interface GenDemoService {
     ): String
 
     public suspend fun sweepEvents(
-        openData: SweepOpen
-    ): Any
+        openData: SweepOpen,
+        stream: ApiServerStream<SweepStreamMessage, ConnectionClose>
+    ): Unit
 
     public suspend fun assistantSession(
-        openData: AssistantOpen
-    ): Any
+        openData: AssistantOpen,
+        channel: ApiServerChannel<AssistantClientMessage, AssistantServerMessage, ConnectionClose>
+    ): Unit
 
     public suspend fun postDeprecated(
         json: DemoPostDeprecatedJson

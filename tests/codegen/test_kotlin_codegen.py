@@ -496,7 +496,8 @@ def test_kotlin_server_writer_generates_service_ktor_adapter_and_message_keyfram
     assert "): SubmitResponse" in service_text
     assert "public suspend fun assistant(" in service_text
     assert "openData: OpenPayload" in service_text
-    assert "): Any" in service_text
+    assert "channel: ApiServerChannel<AssistantClientMessage, AssistantServerMessage, CloseInfo>" in service_text
+    assert "): Unit" in service_text
     assert "public open class DemoServiceStub : GenDemoService" in stub_text
     assert 'throw NotImplementedError("api.demo.get.ping is not implemented")' in stub_text
 
@@ -510,9 +511,20 @@ def test_kotlin_server_writer_generates_service_ktor_adapter_and_message_keyfram
     assert "val query = decodeParameters(call.request.queryParameters, DemoPingQuery.serializer())" in transport_text
     assert "val result = service.ping(" in transport_text
     assert "respondSuccess(call, result, SubmitResponse.serializer()," in transport_text
-    assert 'get("/api/demo/assistant")' in transport_text
-    assert "HttpStatusCode.NotImplemented" in transport_text
-    assert '"channel route is not implemented by the generated Ktor adapter"' in transport_text
+    assert "public interface ApiServerStream<Message, Close>" in (
+        root_dir / "runtime" / "ApiServerResponse.kt"
+    ).read_text(encoding="utf-8")
+    assert "public interface ApiServerChannel<Recv, Send, Close>" in (
+        root_dir / "runtime" / "ApiServerResponse.kt"
+    ).read_text(encoding="utf-8")
+    assert 'webSocket("/api/demo/assistant")' in transport_text
+    assert "val openData = decodeParameters(call.request.queryParameters, OpenPayload.serializer())" in transport_text
+    assert "KtorWebSocketChannel(" in transport_text
+    assert "service.assistant(" in transport_text
+    assert "clientMessageSerializer = AssistantClientMessage.serializer()" in transport_text
+    assert "serverMessageSerializer = AssistantServerMessage.serializer()" in transport_text
+    assert "closeSerializer = CloseInfo.serializer()" in transport_text
+    assert "HttpStatusCode.NotImplemented" not in transport_text
 
 
 def test_kotlin_writer_generates_binary_schema_client_and_writer(tmp_path):

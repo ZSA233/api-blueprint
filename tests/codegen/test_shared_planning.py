@@ -171,8 +171,7 @@ def test_python_targets_are_real_generation_capabilities(kind: str) -> None:
 
     assert manifest[kind]["implemented"] is True
     assert manifest[kind]["routes"] == ["rpc", "stream", "channel"]
-    if kind == "python-client":
-        assert "binary-schema" in manifest[kind]["requests"]
+    assert "binary-schema" in manifest[kind]["requests"]
 
 
 @pytest.mark.parametrize("kind", ["java-client", "java-server"])

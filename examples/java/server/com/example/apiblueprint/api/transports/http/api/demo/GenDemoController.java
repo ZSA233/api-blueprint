@@ -10,24 +10,45 @@ import com.example.apiblueprint.api.runtime.ApiErrorEntry;
 import com.example.apiblueprint.api.runtime.ApiErrorPayload;
 import com.example.apiblueprint.api.runtime.ApiErrors;
 import com.example.apiblueprint.api.runtime.ApiResponseEnvelope;
+import com.example.apiblueprint.api.runtime.ApiServerChannel;
+import com.example.apiblueprint.api.runtime.ApiServerStream;
 import com.example.apiblueprint.api.runtime.ApiToastPayload;
 
 import com.example.apiblueprint.api.runtime.ApiTypes;
 
 import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.config.annotation.EnableWebSocket;
+import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
+import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 @RestController
-public class GenDemoController {
+@EnableWebSocket
+public class GenDemoController implements WebSocketConfigurer {
     private final DemoService service;
     private final ObjectMapper objectMapper;
 
@@ -116,14 +137,27 @@ public class GenDemoController {
         }
     }
 
-    @RequestMapping(path = "/api/demo/sweep-events", method = RequestMethod.GET)
-    public ResponseEntity<String> sweepEventsUnsupported() {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body("stream route is not implemented by the generated Spring MVC adapter");
-    }
-
-    @RequestMapping(path = "/api/demo/assistant-session", method = RequestMethod.GET)
-    public ResponseEntity<String> assistantSessionUnsupported() {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body("channel route is not implemented by the generated Spring MVC adapter");
+    @RequestMapping(path = "/api/demo/sweep-events", method = RequestMethod.GET, produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter sweepEvents(
+        @RequestParam Map<String, String> queryParams
+    ) throws Exception {
+        ApiTypes.SweepOpen openData = objectMapper.convertValue(queryParams, ApiTypes.SweepOpen.class);
+        SseEmitter emitter = new SseEmitter(30_000L);
+        SpringSseStream<DemoTypes.SweepStreamMessage, ApiTypes.ConnectionClose> stream = new SpringSseStream<>(
+            emitter,
+            objectMapper
+        );
+        CompletableFuture.runAsync(() -> {
+            try {
+                service.sweepEvents(
+                    openData,
+                    stream
+                );
+            } catch (Exception error) {
+                stream.abortUnchecked(1011, error.getMessage() == null ? error.toString() : error.getMessage());
+            }
+        });
+        return emitter;
     }
 
     @RequestMapping(path = "/api/demo/post_deprecated", method = RequestMethod.POST)
@@ -180,6 +214,174 @@ public class GenDemoController {
         } catch (ApiError error) {
             return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.get.errordemo");
         }
+    }
+
+    @Override
+    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+
+        registry.addHandler(new AssistantSessionWebSocketHandler(), "/api/demo/assistant-session").setAllowedOrigins("*");
+
+    }
+
+    private final class AssistantSessionWebSocketHandler extends TextWebSocketHandler {
+        private final Map<String, SpringWebSocketChannel<DemoTypes.AssistantClientMessage, DemoTypes.AssistantServerMessage, ApiTypes.ConnectionClose>> channels = new ConcurrentHashMap<>();
+
+        @Override
+        public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+            Map<String, String> queryParams = parseQuery(session.getUri());
+            ApiTypes.AssistantOpen openData = objectMapper.convertValue(queryParams, ApiTypes.AssistantOpen.class);
+            SpringWebSocketChannel<DemoTypes.AssistantClientMessage, DemoTypes.AssistantServerMessage, ApiTypes.ConnectionClose> channel = new SpringWebSocketChannel<>(
+                session,
+                objectMapper
+            );
+            channels.put(session.getId(), channel);
+            CompletableFuture.runAsync(() -> {
+                try {
+                    service.assistantSession(
+                        openData,
+                        channel
+                    );
+                } catch (Exception error) {
+                    channel.abortUnchecked(1011, error.getMessage() == null ? error.toString() : error.getMessage());
+                }
+            });
+        }
+
+        @Override
+        protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+            SpringWebSocketChannel<DemoTypes.AssistantClientMessage, DemoTypes.AssistantServerMessage, ApiTypes.ConnectionClose> channel = channels.get(session.getId());
+            if (channel != null) {
+                channel.accept(message.getPayload(), DemoTypes.AssistantClientMessage.class);
+            }
+        }
+
+        @Override
+        public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+            channels.remove(session.getId());
+        }
+    }
+
+    private static final class SpringSseStream<Message, Close> implements ApiServerStream<Message, Close> {
+        private final SseEmitter emitter;
+        private final ObjectMapper objectMapper;
+        private volatile boolean closed = false;
+
+        SpringSseStream(SseEmitter emitter, ObjectMapper objectMapper) {
+            this.emitter = emitter;
+            this.objectMapper = objectMapper;
+        }
+
+        @Override
+        public void send(Message message) throws Exception {
+            if (closed) {
+                return;
+            }
+            emitter.send(SseEmitter.event().data(message, MediaType.APPLICATION_JSON));
+        }
+
+        @Override
+        public void close(Close close) throws Exception {
+            if (closed) {
+                return;
+            }
+            closed = true;
+            emitter.send(SseEmitter.event().name("close").data(close, MediaType.APPLICATION_JSON));
+            emitter.complete();
+        }
+
+        @Override
+        public void abort(int code, String reason) throws Exception {
+            if (closed) {
+                return;
+            }
+            closed = true;
+            emitter.send(SseEmitter.event().name("close").data(Map.of("code", code, "reason", reason == null ? "" : reason), MediaType.APPLICATION_JSON));
+            emitter.complete();
+        }
+
+        void abortUnchecked(int code, String reason) {
+            try {
+                abort(code, reason);
+            } catch (Exception error) {
+                emitter.completeWithError(error);
+            }
+        }
+    }
+
+    private static final class SpringWebSocketChannel<Recv, Send, Close> implements ApiServerChannel<Recv, Send, Close> {
+        private final WebSocketSession session;
+        private final ObjectMapper objectMapper;
+        private final BlockingQueue<Recv> incoming = new LinkedBlockingQueue<>();
+        private volatile boolean closed = false;
+
+        SpringWebSocketChannel(WebSocketSession session, ObjectMapper objectMapper) {
+            this.session = session;
+            this.objectMapper = objectMapper;
+        }
+
+        void accept(String payload, Class<Recv> recvClass) throws IOException {
+            incoming.offer(objectMapper.readValue(payload, recvClass));
+        }
+
+        @Override
+        public Recv receive() throws Exception {
+            return incoming.take();
+        }
+
+        @Override
+        public void send(Send message) throws Exception {
+            if (closed) {
+                return;
+            }
+            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of("type", "message", "data", message))));
+        }
+
+        @Override
+        public void close(Close close) throws Exception {
+            if (closed) {
+                return;
+            }
+            closed = true;
+            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of("type", "close", "data", close))));
+            session.close(CloseStatus.NORMAL);
+        }
+
+        @Override
+        public void abort(int code, String reason) throws Exception {
+            if (closed) {
+                return;
+            }
+            closed = true;
+            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of("type", "close", "data", Map.of("code", code, "reason", reason == null ? "" : reason)))));
+            session.close(CloseStatus.SERVER_ERROR);
+        }
+
+        void abortUnchecked(int code, String reason) {
+            try {
+                abort(code, reason);
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private static Map<String, String> parseQuery(URI uri) {
+        if (uri == null || uri.getRawQuery() == null || uri.getRawQuery().isBlank()) {
+            return Map.of();
+        }
+        Map<String, String> result = new LinkedHashMap<>();
+        for (String part : uri.getRawQuery().split("&")) {
+            if (part.isBlank()) {
+                continue;
+            }
+            int separator = part.indexOf('=');
+            String key = separator >= 0 ? part.substring(0, separator) : part;
+            String value = separator >= 0 ? part.substring(separator + 1) : "";
+            result.put(
+                URLDecoder.decode(key, StandardCharsets.UTF_8),
+                URLDecoder.decode(value, StandardCharsets.UTF_8)
+            );
+        }
+        return result;
     }
 
     private Object wrapResponse(ApiResponseEnvelope envelopeSpec, Object data) {

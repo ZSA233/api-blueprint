@@ -135,10 +135,10 @@ module = "pb"
 - `typescript-client`：生成只依赖 `ApiTransport` 的 TypeScript client core；route DTO 使用 `types.ts` / `gen_types.ts`，binary schema helper 是 route-local `gen_binary.ts` 实现文件并通过 types surface re-export；`base_url` / `base_url_expr` 由 transport facade 注入。
 - `flutter-client`：生成纯 Dart package，可被 Flutter app 直接依赖但不绑定 Flutter SDK。public entry 位于 `lib/<package>.dart`，实现位于 `lib/src/<root>/runtime`、`routes` 与 `transports/http`。route DTO 使用手写 codegen 的 `fromJson` / `toJson`，并通过 preserved `api_json_codecs.dart` 提供 `ApiJsonCodec<T>` override 注册点。默认 HTTP adapter 使用 `package:http` 处理 RPC query/json/form/binary/open，STREAM 使用 SSE，CHANNEL 使用 `web_socket_channel`。
 - `kotlin-client`：生成 OkHttp + kotlinx.serialization client；通过共享 transport abstraction 生成 RPC、STREAM、CHANNEL route surface，支持 query/json/form/binary/open request kind，以及 `none` / `code_message_data` / `ok_data_error` response envelope。route DTO 使用 `<Group>Types.kt`；binary schema helper 是 `BinaryTypes.kt` 中的 route-local packet / wire helper 类型；`base_url` / `base_url_expr` 由生成的 OkHttp HTTP adapter config 使用，route/runtime client 保持 transport-neutral。内置 OkHttp adapter 覆盖 RPC query/json/form/binary 请求，STREAM 使用 SSE，CHANNEL 使用 OkHttp WebSocket。
-- `kotlin-server`：生成 preview Ktor server scaffold，包含 route service interface、stub、runtime 和 Ktor route registration。route DTO 与 binary schema helper 复用 Kotlin serialization 模型。RPC HTTP adapter 可用；connection route 保留 service surface 和协议关键帧 helper，Ktor adapter 返回明确 501。
+- `kotlin-server`：生成 preview Ktor server scaffold，包含 route service interface、stub、runtime 和 Ktor route registration。route DTO 与 binary schema helper 复用 Kotlin serialization 模型。RPC HTTP adapter 可用；STREAM 生成 SSE bridge，CHANNEL 生成 Ktor WebSocket bridge，但不生成宿主 session engine、鉴权、重试、缓存、room 管理或连接编排。
 - `java-client`：生成 preview Java 17 client；使用 `java.net.http.HttpClient` + Jackson，输出 transport-neutral route surface 与默认 JDK HTTP adapter。RPC query/json/form/binary/binary-schema 可用，route DTO 和 binary schema helper record 都位于 `<Group>Types.java`，STREAM 和 CHANNEL 默认抛明确 unsupported，便于替换自定义 transport。
-- `java-server`：生成 preview Spring MVC server scaffold；输出 route service interface、stub、runtime 与 Spring controller。route DTO 和 binary schema helper record 都位于 `<Group>Types.java`；RPC HTTP controller 可用，非 RPC connection route 先保留 service surface，HTTP adapter 返回明确 501。
-- `python-server`：生成 Python route service contracts/stubs 与 FastAPI HTTP adapter scaffold；使用 `python_package_root` 控制生成包根。
+- `java-server`：生成 preview Spring MVC server scaffold；输出 route service interface、stub、runtime 与 Spring controller。route DTO 和 binary schema helper record 都位于 `<Group>Types.java`；RPC HTTP controller 可用，STREAM 使用 Spring `SseEmitter` bridge，CHANNEL 生成 WebSocket handler/config，但不生成宿主 session engine、鉴权、重试、缓存或 room 管理。
+- `python-server`：生成 Python route service contracts/stubs 与 FastAPI HTTP adapter scaffold；使用 `python_package_root` 控制生成包根。FastAPI adapter 覆盖 query/json/form/binary、response envelope、typed error、SSE 和 WebSocket 协议桥接。
 - `python-client`：生成 async-first Python HTTP client；使用 `python_package_root` 控制生成包根，推荐聚合入口是 `create_client(base_url)`，route DTO 使用 `gen_types.py`，binary schema codec 使用 route-local `gen_binary.py` 并通过 `gen_types.py` re-export，`base_url` / `base_url_expr` 由 HTTP transport adapter 使用。默认 httpx adapter 实现 RPC 请求，STREAM/CHANNEL 连接 transport 是 preview/custom 扩展点。
 - `grpc-proto`：从 ContractGraph 输出 `.proto` 和 service 定义；可通过 `[[targets.proto_files]]` 或快捷表 `[[grpc.proto.proto_files]]` 把 DSL schema module/name 与 route path/id/service 映射到指定 proto file/package/go_package/service。
 - `grpc-go`：消费同配置内的 `grpc-proto` target，或直接消费手写 proto，调用 `protoc` / `protoc-gen-go` / `protoc-gen-go-grpc` 生成 Go protobuf/gRPC stub。
@@ -170,7 +170,7 @@ gRPC stub target 字段：
 
 transport target：
 
-- `http-transport`：声明 HTTP server/client 组合；`server` 可引用 `go-server`、`java-server` 或 `python-server`，`clients` 可引用 Go、TypeScript、Flutter、Kotlin、Java 或 Python client。
+- `http-transport`：声明 HTTP server/client 组合；`server` 可引用 `go-server`、`java-server`、`kotlin-server` 或 `python-server`，`clients` 可引用 Go、TypeScript、Flutter、Kotlin、Java 或 Python client。
 - `wails-transport`：声明 Wails overlay，必须设置 `version`、`server` 和 `clients`；Wails 保持 Go + TypeScript only，不接入 Flutter / Kotlin / Java / Python client。
 - `frontend_mode = "external"` 生成外部前端使用的 Wails TypeScript facade；`none` 只生成 Go overlay。
 - `include` / `exclude` 可裁剪 Wails target overlay / facade。

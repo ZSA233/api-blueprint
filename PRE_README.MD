@@ -76,7 +76,7 @@ README 应链接到以下用户文档：
 - `src/api_blueprint/hub/` 与 `src/api_blueprint/static/`：文档服务 UI 资源。
 - `examples/blueprints/`：示例蓝图真源。
 - `examples/golang/`、`examples/typescript/`、`examples/flutter/`、`examples/kotlin/`、`examples/java/`、`examples/python/`、`examples/grpc/`、`examples/wails-*`：生成快照、preserved conformance harness、验证工程和示例 app shell。
-- `scripts/example_conformance/`：examples 真实协议互通验证 CLI，第一阶段以 Go HTTP server 为服务端真源，驱动 Go / TypeScript / Kotlin / Flutter client。
+- `scripts/example_conformance/`：examples 真实协议互通验证 CLI，按 Go / Java / Kotlin / Python server 与 Go / TypeScript / Kotlin / Flutter / Java / Python client 的能力交集执行真实互通矩阵。
 - `tests/`：单元测试、CLI 测试、codegen 测试、example 集成验证、打包与 release contract 测试。
 
 ## DSL 与契约事实
@@ -119,9 +119,9 @@ README 应链接到以下用户文档：
 - TypeScript client 输出 runtime、routes、transports，并通过 transport facade 注入 HTTP/Wails 能力。
 - Flutter client 输出纯 Dart package：public entry 位于 `lib/<package>.dart`，实现位于 `lib/src/<root>/runtime`、`routes` 与 `transports/http`；`gen_*.dart` 由生成器覆盖，非 `gen_` facade、HTTP client facade 与 `api_json_codecs.dart` 作为 preserved scaffold 保留。默认 HTTP adapter 使用 `package:http`，STREAM 使用 SSE，CHANNEL 使用 `web_socket_channel`，不生成 Flutter UI、状态管理、鉴权、重试、缓存或 session engine。
 - Flutter 采用 Dart package 输出布局；Kotlin / Java / Python 采用各自语言的 package-first 输出布局；这些 target 按 preview 口径描述，文档应要求使用方把生成结果纳入自身类型检查、lint、编译或 smoke。
-- Kotlin client 使用 OkHttp + kotlinx.serialization，默认 HTTP adapter 覆盖 RPC query/json/form/binary，并用 SSE 实现 `STREAM`、OkHttp WebSocket 实现 `CHANNEL`；Kotlin server 使用 Ktor + kotlinx.serialization，生成 service contract/stub、HTTP RPC adapter 和协议关键帧 helper。Kotlin server 不生成 WebSocket/SSE/session engine；非 RPC 连接 route 的 Ktor adapter 返回明确 501。
-- Java client 使用 Java 17 `HttpClient` + Jackson，Java server 使用 Spring MVC + Jackson；binary schema 会生成 typed packet writer / parser，server controller 会把 `.REQ_BINARY` body 解析为 typed packet 后交给 service；不生成 Gradle/Maven 工程，也不生成 JPMS `module-info.java`。
-- Python client 是 async-first，推荐从 `create_client(base_url)` 聚合 facade 进入；Python server 输出 service contract/stub 与 FastAPI HTTP adapter scaffold。
+- Kotlin client 使用 OkHttp + kotlinx.serialization，默认 HTTP adapter 覆盖 RPC query/json/form/binary，并用 SSE 实现 `STREAM`、OkHttp WebSocket 实现 `CHANNEL`；Kotlin server 使用 Ktor + kotlinx.serialization，生成 service contract/stub、HTTP RPC adapter、SSE stream bridge、WebSocket channel bridge 和协议关键帧 helper。Kotlin server 不生成宿主 session engine、重试、鉴权、缓存或 room 管理。
+- Java client 使用 Java 17 `HttpClient` + Jackson，Java server 使用 Spring MVC + Jackson；binary schema 会生成 typed packet writer / parser，server controller 会把 `.REQ_BINARY` body 解析为 typed packet 后交给 service；Spring server adapter 生成 `SseEmitter` stream bridge 与 WebSocket channel bridge，但不生成 Gradle/Maven 工程或 JPMS `module-info.java`。
+- Python client 是 async-first，推荐从 `create_client(base_url)` 聚合 facade 进入；Python server 输出 service contract/stub 与 FastAPI HTTP adapter scaffold，包含 RPC/form/binary、typed error、SSE 和 WebSocket 协议桥接；运行 WebSocket server 需要安装 `websockets` 或等价 uvicorn WebSocket 后端。
 - Wails target 保持 Go + TypeScript only；`frontend_mode = "external"` 只生成 API artifacts，外部 frontend 需要加载 Wails runtime。
 - gRPC proto 可由 `grpc-proto` target 从 ContractGraph 输出；`grpc-go` / `grpc-python` 可消费同配置内的 `grpc-proto`，也可直接编译手写 proto。
 
@@ -130,9 +130,10 @@ README 应链接到以下用户文档：
 - `examples/blueprints/` 是 Blueprint 真源。
 - 语言 examples、`examples/api-blueprint.index.json`、可选 full contract/agent/shards 快照与 `examples/grpc/{protos,go,python}/` 是生成快照；`examples/flutter/` 是纯 Dart package 快照，验证使用 `dart pub get`、`dart analyze` 和 `dart test`。
 - examples DSL 覆盖 query/json/form/binary/raw/XML、typed error、命名冲突、多 blueprint root、stream、channel、SSE/WebSocket 等公开协议场景；暂不支持的端侧能力必须在 conformance manifest 中显式标注，不静默漏测。
-- `scripts/example_validation.py` 负责 snapshot drift、refresh、compile/analyze/import smoke 和旧增强 suite；`python -m scripts.example_conformance` 负责真实互通验证，Makefile 通过 `make example-conformance-*` 暴露同一能力，并用 `EXAMPLE_CONFORMANCE_SERVER`、`EXAMPLE_CONFORMANCE_CLIENTS`、`EXAMPLE_CONFORMANCE_SCENARIOS`、`EXAMPLE_CONFORMANCE_KEEP_WORKSPACE` 选择矩阵。conformance 第一阶段只启用 Go HTTP server，Go / TypeScript / Kotlin / Flutter client 连接同一服务端；TypeScript / Kotlin / Flutter 覆盖 SSE 与 WebSocket 真实互通，端侧暂不支持的能力仍必须在 manifest 中显式标注。
-- conformance 输出默认采用 stage summary：生成、snapshot、编译、server 启动输出一行状态，client 作为分组标题；每个 client 先输出 `client/setup` 表示正在冷启动或准备测试执行环境，再逐个执行 `client/scenario` 并在该项完成时立即输出结果。状态文本在 TTY 下自动着色，支持 `FORCE_COLOR=1` 与 `NO_COLOR=1`。被调用工具的详细 stdout/stderr 成功时隐藏，失败时回放到 stderr。
-- conformance harness 位于各语言 preserved 文件中，例如 `examples/golang/conformance/`、`examples/typescript/conformance.ts`、`examples/kotlin/conformance/`、`examples/flutter/test/conformance_test.dart`，刷新生成物不得覆盖这些文件。
+- `scripts/example_validation.py` 负责 snapshot drift、refresh、compile/analyze/import smoke 和旧增强 suite；`python -m scripts.example_conformance` 负责真实互通验证，Makefile 通过 `make example-conformance-*` 暴露同一能力，并用 `EXAMPLE_CONFORMANCE_SERVERS`、`EXAMPLE_CONFORMANCE_CLIENTS`、`EXAMPLE_CONFORMANCE_SCENARIOS`、`EXAMPLE_CONFORMANCE_KEEP_WORKSPACE` 选择矩阵。默认服务端矩阵仍建议从 `go` 开始，完整矩阵可设置 `EXAMPLE_CONFORMANCE_SERVERS=all EXAMPLE_CONFORMANCE_CLIENTS=all`。
+- conformance 当前服务端覆盖 Go HTTP、Java Spring、Kotlin Ktor 和 Python FastAPI；客户端覆盖 Go、TypeScript、Kotlin、Flutter、Java 和 Python。runner 按 server/client/scenario 的能力交集执行；Java/Python client 对暂不支持的 SSE/WebSocket 默认 transport 走显式 unsupported-contract，不能静默漏测。
+- conformance 输出默认采用 stage summary：生成、snapshot、编译、server 启动输出一行状态，client 作为分组标题；每个 client 先输出 `client/setup` 表示正在冷启动或准备测试执行环境，再逐个执行 `client/scenario` 并在该项完成时立即输出结果。状态文本在 TTY 下自动着色，支持 `FORCE_COLOR=1` 与 `NO_COLOR=1`。被调用工具的详细 stdout/stderr 成功时隐藏，失败时回放到 stderr；client 场景失败时会额外回放当前 server log。
+- conformance harness 位于各语言 preserved 文件中，例如 `examples/golang/conformance/`、`examples/typescript/conformance.ts`、`examples/kotlin/conformance/`、`examples/java/conformance/`、`examples/python/conformance/`、`examples/flutter/test/conformance_test.dart`，刷新生成物不得覆盖这些文件。
 - snapshot drift 表示生成结果变化，不自动等于 bug。
 - `make example-golang-suite` 和 `make example-java-suite` 是手动增强验证，不进入默认 `test`、`example-validation`、`release-preflight` 或 CI。
 - generator-owned artifact 的短期逃生口方案记录在 `docs/plans/generated-artifact-escape-hatches.md`：优先通过 preserved facade、transport hook、codec registry、raw body fallback 和 route wrapper 绕过，不在第一阶段做 template partial override 或 post-generate patch hooks。

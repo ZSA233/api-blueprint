@@ -71,7 +71,6 @@ include = ['tag:api']
 id = 'python.server'
 out_dir = 'python/server'
 module = 'api_blueprint_example_server'
-exclude = ['path:/api/binary/**']
 
 [[python.client]]
 id = 'python.client'

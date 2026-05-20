@@ -198,6 +198,18 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
             context,
             "server/runtime",
         )
+        self._write_generated(
+            plan.runtime.directory / "ApiServerStream.java",
+            "ApiServerStream.java",
+            context,
+            "server/runtime",
+        )
+        self._write_generated(
+            plan.runtime.directory / "ApiServerChannel.java",
+            "ApiServerChannel.java",
+            context,
+            "server/runtime",
+        )
 
     def _write_server_transport(self, plan: JavaBlueprintPlan, context: dict[str, object]) -> None:
         self._write_generated(
@@ -286,6 +298,21 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
 
     def route_params(self, route: JavaRoute, group: JavaApiGroup) -> list[tuple[str, str]]:
         params: list[tuple[str, str]] = []
+        if self.server_mode and route.kind == "stream":
+            if route.open_model:
+                params.append((self.schema_type(route.open_model, group), "openData"))
+            params.append((f"ApiServerStream<{self.server_message_type(route, group)}, {self.close_type(route, group)}>", "stream"))
+            return params
+        if self.server_mode and route.kind == "channel":
+            if route.open_model:
+                params.append((self.schema_type(route.open_model, group), "openData"))
+            params.append(
+                (
+                    f"ApiServerChannel<{self.client_message_type(route, group)}, {self.server_message_type(route, group)}, {self.close_type(route, group)}>",
+                    "channel",
+                )
+            )
+            return params
         if route.query_model:
             params.append((self.schema_type(route.query_model, group), "query"))
         if route.json_model:
@@ -310,11 +337,18 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
         return self.catalog.class_literal_for_schema_name(schema_name, owner_group=group)
 
     def response_type(self, route: JavaRoute, group: JavaApiGroup) -> str:
+        if self.server_mode and not route.is_rpc:
+            return "void"
         if route.response_model:
             return self.schema_type(route.response_model, group)
         if route.response_media_type != "application/json":
             return "String"
         return "Object"
+
+    def close_type(self, route: JavaRoute, group: JavaApiGroup) -> str:
+        if not route.close_model or route.close_model.rsplit(".", 1)[-1] == "DefaultConnectionClose":
+            return "Object"
+        return self.schema_type(route.close_model, group)
 
     def response_class_literal(self, route: JavaRoute, group: JavaApiGroup) -> str:
         if route.response_model:

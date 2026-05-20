@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
+from ....runtime.server import ApiServerChannel, ApiServerStream
+
 
 class DemoService(Protocol):
     async def abc(
@@ -39,12 +41,14 @@ class DemoService(Protocol):
     async def sweep_events(
         self,
         open_data: dict[str, Any] | None = None,
+        stream: ApiServerStream | None = None,
     ) -> Any:
         ...
 
     async def assistant_session(
         self,
         open_data: dict[str, Any] | None = None,
+        channel: ApiServerChannel | None = None,
     ) -> Any:
         ...
 
@@ -102,12 +106,14 @@ class DemoServiceStub:
     async def sweep_events(
         self,
         open_data: dict[str, Any] | None = None,
+        stream: ApiServerStream | None = None,
     ) -> Any:
         raise NotImplementedError("sweep_events")
 
     async def assistant_session(
         self,
         open_data: dict[str, Any] | None = None,
+        channel: ApiServerChannel | None = None,
     ) -> Any:
         raise NotImplementedError("assistant_session")
 

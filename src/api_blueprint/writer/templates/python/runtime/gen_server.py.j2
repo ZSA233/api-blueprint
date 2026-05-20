@@ -1,9 +1,25 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Protocol
 
 
 @dataclass
 class ApiServerContext:
     state: dict[str, Any] = field(default_factory=dict)
+
+
+class ApiServerStream(Protocol):
+    async def send(self, message: Any) -> None:
+        ...
+
+    async def close(self, close: Any) -> None:
+        ...
+
+    async def abort(self, code: int = 1011, reason: str | None = None) -> None:
+        ...
+
+
+class ApiServerChannel(ApiServerStream, Protocol):
+    async def receive(self) -> Any:
+        ...

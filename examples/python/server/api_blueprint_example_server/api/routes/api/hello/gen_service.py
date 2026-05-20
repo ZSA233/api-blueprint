@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
+from ....runtime.server import ApiServerChannel, ApiServerStream
+
 
 class HelloService(Protocol):
     async def abc(

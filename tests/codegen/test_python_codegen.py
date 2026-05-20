@@ -289,13 +289,15 @@ def test_python_generated_files_use_pep8_blank_line_spacing(tmp_path: Path):
     assert "async def health(self) -> Any:" in service_text
     assert "class DemoService(Protocol):\n    async def health(self) -> Any:" in service_text
     assert "\n    async def ping(" in service_text
-    assert "async def demo_health() -> Any:" in adapter_text
-    assert "return await service.health()" in adapter_text
+    assert "async def demo_health(request: Request) -> Any:" in adapter_text
+    assert "result = await service.health(" in adapter_text
+    assert "return _wrap_response(" in adapter_text
     assert (
         '@router.api_route("/api/demo/health", methods=["GET"])\n'
-        "    async def demo_health() -> Any:"
+        "    async def demo_health(request: Request) -> Any:"
     ) in adapter_text
-    assert "StreamingResponse\n\nfrom ...routes.api.demo.service" in adapter_text
+    assert "from starlette.responses import StreamingResponse, JSONResponse" in adapter_text
+    assert "from ...routes.api.demo.service" in adapter_text
     assert "router = APIRouter()\n    demo_service_impl = demo_service or DemoServiceStub()" in adapter_text
     assert (
         "demo_service_impl = demo_service or DemoServiceStub()\n"
@@ -383,6 +385,8 @@ def test_python_server_generates_service_core_and_fastapi_adapter(tmp_path: Path
     assert "from fastapi import APIRouter" in adapter_text
     assert "def create_router(" in adapter_text
     assert "await service.submit(" in adapter_text
+    assert "await request.form()" in adapter_text
+    assert "parse_qs" not in adapter_text
     _compile_generated_files(output_dir)
 
 
@@ -411,7 +415,16 @@ def test_python_server_generates_connection_adapter_scaffolds(tmp_path: Path):
     assert "from starlette.responses import StreamingResponse" in adapter_text
     assert "@router.api_route(\"/api/demo/events\", methods=[\"GET\"])" in adapter_text
     assert "@router.websocket(\"/api/demo/chat\")" in adapter_text
-    assert "return StreamingResponse(result)" in adapter_text
+    assert "stream = _SseStream()" in adapter_text
+    assert "async for chunk in stream:" in adapter_text
+    assert "channel = _WebSocketChannel(websocket)" in adapter_text
+    assert "await service.chat(" in adapter_text
+    assert "media_type=\"text/event-stream\"" in adapter_text
+    service_text = (
+        output_dir / "api_blueprint_generated" / "api" / "routes" / "api" / "demo" / "gen_service.py"
+    ).read_text(encoding="utf-8")
+    assert "stream: ApiServerStream | None = None" in service_text
+    assert "channel: ApiServerChannel | None = None" in service_text
     _compile_generated_files(output_dir)
 
 
