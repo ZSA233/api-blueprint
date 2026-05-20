@@ -92,19 +92,19 @@ public open class Gen{{ group.class_name }} internal constructor(
         headers: Map<String, String> = emptyMap(),
     ): ApiStreamBridge<{{ route.server_message_type }}, {{ route.close_type }}> {
         return transport.openStream(
-            StreamConnectOptions(
+            StreamConnectOptions<{{ route.server_message_type }}, {{ route.close_type }}>(
                 routeId = "{{ route.protocol.route.route_id }}",
                 connectionKind = "stream",
                 path = "{{ route.url }}",
-{%- if route.query_type %}
-                query = query.toQueryMap(),
-{%- endif %}
+                query = {{ route.connection_query_expr }},
 {%- if route.open_type %}
                 open = open,
 {%- endif %}
                 headers = headers,
+                messageSerializer = {{ route.server_message_serializer_expr }},
+                closeSerializer = {{ route.close_serializer_expr }},
             )
-        ) as ApiStreamBridge<{{ route.server_message_type }}, {{ route.close_type }}>
+        )
     }
 {%- elif route.supports_channel %}
 
@@ -120,27 +120,28 @@ public open class Gen{{ group.class_name }} internal constructor(
         protocols: List<String> = emptyList(),
     ): ApiChannelBridge<{{ route.server_message_type }}, {{ route.client_message_type }}, {{ route.close_type }}> {
         return transport.openChannel(
-            ChannelConnectOptions(
+            ChannelConnectOptions<{{ route.server_message_type }}, {{ route.client_message_type }}, {{ route.close_type }}>(
                 routeId = "{{ route.protocol.route.route_id }}",
                 connectionKind = "channel",
                 path = "{{ route.url }}",
-{%- if route.query_type %}
-                query = query.toQueryMap(),
-{%- endif %}
+                query = {{ route.connection_query_expr }},
 {%- if route.open_type %}
                 open = open,
 {%- endif %}
                 headers = headers,
                 protocols = protocols,
+                messageSerializer = {{ route.server_message_serializer_expr }},
+                closeSerializer = {{ route.close_serializer_expr }},
+                sendSerializer = {{ route.client_message_serializer_expr }},
             )
-        ) as ApiChannelBridge<{{ route.server_message_type }}, {{ route.client_message_type }}, {{ route.close_type }}>
+        )
     }
 {%- endif %}
 {%- endfor %}
-{%- for route in group.routes if route.query_type %}
+{%- for proto in group.query_map_protos() %}
 
-    private fun {{ route.query_type }}.toQueryMap(): Map<String, String?> = mapOf(
-{%- for field in route.query_proto.fields %}
+    private fun {{ proto.name }}.toQueryMap(): Map<String, String?> = mapOf(
+{%- for field in proto.fields %}
         "{{ field.serial_name }}" to {{ field.type.query_expr(field.name, optional=field.optional) }}{% if not loop.last %},{% endif %}
 {%- endfor %}
     )

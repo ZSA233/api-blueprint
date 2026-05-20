@@ -92,14 +92,17 @@ public open class GenDemoApi internal constructor(
         headers: Map<String, String> = emptyMap(),
     ): ApiStreamBridge<SweepStreamMessage, ConnectionClose> {
         return transport.openStream(
-            StreamConnectOptions(
+            StreamConnectOptions<SweepStreamMessage, ConnectionClose>(
                 routeId = "api.demo.stream.sweepevents",
                 connectionKind = "stream",
                 path = "/api/demo/sweep-events",
+                query = open.toQueryMap(),
                 open = open,
                 headers = headers,
+                messageSerializer = SweepStreamMessage.serializer(),
+                closeSerializer = ConnectionClose.serializer(),
             )
-        ) as ApiStreamBridge<SweepStreamMessage, ConnectionClose>
+        )
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -109,15 +112,19 @@ public open class GenDemoApi internal constructor(
         protocols: List<String> = emptyList(),
     ): ApiChannelBridge<AssistantServerMessage, AssistantClientMessage, ConnectionClose> {
         return transport.openChannel(
-            ChannelConnectOptions(
+            ChannelConnectOptions<AssistantServerMessage, AssistantClientMessage, ConnectionClose>(
                 routeId = "api.demo.channel.assistantsession",
                 connectionKind = "channel",
                 path = "/api/demo/assistant-session",
+                query = open.toQueryMap(),
                 open = open,
                 headers = headers,
                 protocols = protocols,
+                messageSerializer = AssistantServerMessage.serializer(),
+                closeSerializer = ConnectionClose.serializer(),
+                sendSerializer = AssistantClientMessage.serializer(),
             )
-        ) as ApiChannelBridge<AssistantServerMessage, AssistantClientMessage, ConnectionClose>
+        )
     }
 
     public open suspend fun postDeprecated(
@@ -199,6 +206,15 @@ public open class GenDemoApi internal constructor(
         "arg1" to arg1?.toString(),
         "arg2" to arg2?.toString(),
         "arg3" to arg3?.toString()
+    )
+
+    private fun SweepOpen.toQueryMap(): Map<String, String?> = mapOf(
+        "run_id" to runId.toString(),
+        "replay_from" to replayFrom?.toString()
+    )
+
+    private fun AssistantOpen.toQueryMap(): Map<String, String?> = mapOf(
+        "session_id" to sessionId.toString()
     )
 
     private fun DemoErrorDemoQuery.toQueryMap(): Map<String, String?> = mapOf(

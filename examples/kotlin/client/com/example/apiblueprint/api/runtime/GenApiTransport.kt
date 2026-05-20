@@ -3,6 +3,7 @@ package com.example.apiblueprint.api.runtime
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationStrategy
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.JsonObject
@@ -53,22 +54,25 @@ public data class ApiResponse(
     public val headers: Map<String, String> = emptyMap(),
 )
 
+@Serializable
 public data class SocketCloseInfo(
     public val code: Int? = null,
     public val reason: String? = null,
     public val error: String? = null,
 )
 
-public data class StreamConnectOptions(
+public data class StreamConnectOptions<Recv, Close>(
     public val routeId: String,
     public val connectionKind: String,
     public val path: String,
     public val query: Map<String, String?> = emptyMap(),
     public val open: Any? = null,
     public val headers: Map<String, String> = emptyMap(),
+    public val messageSerializer: KSerializer<Recv>,
+    public val closeSerializer: KSerializer<Close>,
 )
 
-public data class ChannelConnectOptions(
+public data class ChannelConnectOptions<Recv, Send, Close>(
     public val routeId: String,
     public val connectionKind: String,
     public val path: String,
@@ -76,6 +80,9 @@ public data class ChannelConnectOptions(
     public val open: Any? = null,
     public val headers: Map<String, String> = emptyMap(),
     public val protocols: List<String> = emptyList(),
+    public val messageSerializer: KSerializer<Recv>,
+    public val closeSerializer: KSerializer<Close>,
+    public val sendSerializer: KSerializer<Send>,
 )
 
 public interface ApiStreamBridge<Recv, Close> {
@@ -90,8 +97,10 @@ public interface ApiChannelBridge<Recv, Send, Close> : ApiStreamBridge<Recv, Clo
 
 public interface ApiTransport {
     public suspend fun execute(request: ApiRequest<*>): ApiResponse
-    public fun openStream(options: StreamConnectOptions): ApiStreamBridge<*, *>
-    public fun openChannel(options: ChannelConnectOptions): ApiChannelBridge<*, *, *>
+    public fun <Recv, Close> openStream(options: StreamConnectOptions<Recv, Close>): ApiStreamBridge<Recv, Close>
+    public fun <Recv, Send, Close> openChannel(
+        options: ChannelConnectOptions<Recv, Send, Close>,
+    ): ApiChannelBridge<Recv, Send, Close>
 }
 
 public suspend fun <T> ApiTransport.request(request: ApiRequest<T>): T {

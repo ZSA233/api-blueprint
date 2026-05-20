@@ -250,6 +250,13 @@ def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full
     assert "public interface ApiSocketBridge<Send, Recv>" not in runtime_text
     assert "public interface ApiStreamBridge<Recv, Close>" in runtime_text
     assert "public interface ApiChannelBridge<Recv, Send, Close>" in runtime_text
+    assert "public data class StreamConnectOptions<Recv, Close>" in runtime_text
+    assert "public val messageSerializer: KSerializer<Recv>" in runtime_text
+    assert "public val closeSerializer: KSerializer<Close>" in runtime_text
+    assert "public data class ChannelConnectOptions<Recv, Send, Close>" in runtime_text
+    assert "public val sendSerializer: KSerializer<Send>" in runtime_text
+    assert "public fun <Recv, Close> openStream(" in runtime_text
+    assert "public fun <Recv, Send, Close> openChannel(" in runtime_text
     assert (
         'val code = nested["code"]?.jsonPrimitive?.intOrNull ?: '
         "root[envelope.fields.code]?.jsonPrimitive?.intOrNull ?: 0"
@@ -284,7 +291,11 @@ def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full
     assert 'connectionKind = "legacy_ws"' not in route_text
     assert 'connectionKind = "stream"' in route_text
     assert 'connectionKind = "channel"' in route_text
+    assert "query = open.toQueryMap()" in route_text
     assert "open = open" in route_text
+    assert "messageSerializer = ServerMessage.serializer()" in route_text
+    assert "closeSerializer = CloseInfo.serializer()" in route_text
+    assert "sendSerializer = ClientMessage.serializer()" in route_text
     assert "public data class DemoPingQuery" in route_types_text
 
     assert "public class OkHttpApiTransport" in transport_text
@@ -294,8 +305,13 @@ def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full
     assert 'toRequestBody("application/x-www-form-urlencoded; charset=utf-8".toMediaType())' in transport_text
     assert "private fun encodeFormPayload(" in transport_text
     assert "override fun connectSocket(options: SocketConnectOptions): ApiSocketBridge" not in transport_text
-    assert "override fun openStream(options: StreamConnectOptions): ApiStreamBridge" in transport_text
-    assert "override fun openChannel(options: ChannelConnectOptions): ApiChannelBridge" in transport_text
+    assert "override fun <Recv, Close> openStream(options: StreamConnectOptions<Recv, Close>)" in transport_text
+    assert "override fun <Recv, Send, Close> openChannel(" in transport_text
+    assert "options: ChannelConnectOptions<Recv, Send, Close>" in transport_text
+    assert "OkHttpEventStreamBridge" in transport_text
+    assert "WebSocketListener" in transport_text
+    assert "InMemoryStreamBridge" not in transport_text
+    assert "InMemoryChannelBridge" not in transport_text
     assert "public data class HttpApiConfig" in http_config_text
     assert 'public val baseUrl: String = "http://localhost:2333"' in http_config_text
 

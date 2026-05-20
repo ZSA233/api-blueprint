@@ -97,7 +97,7 @@ api-gen generate -c api-blueprint.toml
 | Go server | 可用 | 生成 Go 路由、provider、长连接 message helper、HTTP/Wails adapter 和 runtime |
 | TypeScript client | 预览 | 生成 transport-neutral client、长连接 message helper、HTTP adapter 和 Wails facade |
 | Flutter client | 预览 | 生成纯 Dart package、DTO、typed error、binary codec、HTTP/SSE/WebSocket client |
-| Kotlin client/server | 预览 | 生成 OkHttp client、Ktor server scaffold、模型、长连接 message helper、binary writer 和 HTTP adapter |
+| Kotlin client/server | 预览 | 生成 OkHttp HTTP/SSE/WebSocket client、Ktor server scaffold、模型、长连接 message helper 和 binary writer |
 | Java client/server | 预览 | 生成 Java 17 HttpClient client、Spring MVC server scaffold、record DTO、长连接 message helper、binary packet helper 和 HTTP adapter |
 | Go / Python client | 预览 | 生成服务端之外的脚本或工具侧客户端，并提供长连接 message helper 与 binary writer |
 | Python server | 预览 | 生成 FastAPI server scaffold、service contract 和长连接 message helper |

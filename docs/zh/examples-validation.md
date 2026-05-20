@@ -78,9 +78,9 @@ make example-conformance-refresh
 
 conformance 成功时输出按阶段收敛为一行状态，例如生成、snapshot、编译和 server 启动；client 作为分组标题，每个 client/scenario 会逐项执行并在该项完成时立即输出结果。生成器、`dart pub get`、Gradle、`go test` 等详细输出默认隐藏。某个阶段失败时，runner 会把该阶段捕获到的 stdout/stderr 回放到 stderr，便于直接定位失败工具。状态文本在 TTY 下自动着色；可用 `FORCE_COLOR=1` 强制开启，或用 `NO_COLOR=1` 关闭。
 
-第一阶段服务端矩阵只启用 Go HTTP server。Go / TypeScript / Kotlin / Flutter client 连接同一 Go server；TypeScript 与 Flutter 覆盖 SSE 和 WebSocket 真实互通；Kotlin 只覆盖 RPC、form、binary、typed error、naming 等 HTTP 场景，并对 stream/channel 保留显式 unsupported/contract 检查。
+第一阶段服务端矩阵只启用 Go HTTP server。Go / TypeScript / Kotlin / Flutter client 连接同一 Go server；TypeScript / Kotlin / Flutter 覆盖 SSE 和 WebSocket 真实互通。端侧暂不支持的能力必须写入 manifest，而不是靠跳过用例静默通过。
 
-场景 registry 会把 DSL 覆盖类别映射到自动化用例：query/json/form/binary/raw/XML、typed error、命名冲突、多 blueprint root、response envelope、SSE 和 WebSocket。端侧暂不支持的能力必须写入 manifest，而不是靠跳过用例静默通过。
+场景 registry 会把 DSL 覆盖类别映射到自动化用例：query/json/form/binary/raw/XML、typed error、命名冲突、多 blueprint root、response envelope、SSE 和 WebSocket。
 
 ## Drift 语义
 

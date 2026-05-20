@@ -249,7 +249,7 @@ Kotlin 生成器拥有文件统一命名为 `Gen*.kt`，例如 `routes/api/demo/
 
 Route DTO 输出为 `<Group>Types.kt`。Markdown Binary Schema helper 是 `BinaryTypes.kt` 中的 route-local packet / wire helper 类型，与 route API 位于同一 package。
 
-Kotlin 通过 transport abstraction 生成 `rpc`、`stream`、`channel` route surface，支持 query/json/form/binary/open request kind，并支持 `none` / `code_message_data` / `ok_data_error` response envelope。内置 OkHttp adapter 以 RPC 为主；长连接 bridge 属于 preview/custom transport surface，建议先用 `api-gen check` 和目标平台 smoke 验证后再接入生产调用路径。
+Kotlin 通过 transport abstraction 生成 `rpc`、`stream`、`channel` route surface，支持 query/json/form/binary/open request kind，并支持 `none` / `code_message_data` / `ok_data_error` response envelope。内置 OkHttp adapter 覆盖 RPC query/json/form/binary 请求，`STREAM` bridge 使用 SSE，`CHANNEL` bridge 使用 OkHttp WebSocket；它只实现协议传输，不生成宿主应用的 session engine、重试、缓存或连接编排。
 
 `base_url` / `base_url_expr` 会写入生成的 `transports/http/HttpApiConfig.kt` 默认值，不进入 transport-neutral runtime client。
 

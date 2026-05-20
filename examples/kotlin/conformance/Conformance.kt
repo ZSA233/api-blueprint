@@ -12,12 +12,27 @@ import com.example.apiblueprint.api.routes.api.demo.DemoFormSubmitForm
 import com.example.apiblueprint.api.routes.api.demo.DemoPutDemoJson
 import com.example.apiblueprint.api.routes.api.demo.DemoPutDemoQuery
 import com.example.apiblueprint.api.routes.api.demo.DemoTestPostJson
+import com.example.apiblueprint.api.routes.api.demo.AssistantClientMessageVariants
+import com.example.apiblueprint.api.routes.api.demo.AssistantServerMessage
+import com.example.apiblueprint.api.routes.api.demo.AssistantServerMessageHandlers
+import com.example.apiblueprint.api.routes.api.demo.SweepStreamMessage
+import com.example.apiblueprint.api.routes.api.demo.SweepStreamMessageHandlers
+import com.example.apiblueprint.api.routes.api.demo.dispatchAssistantServerMessage
+import com.example.apiblueprint.api.routes.api.demo.dispatchSweepStreamMessage
 import com.example.apiblueprint.api.runtime.ApiClient
 import com.example.apiblueprint.api.runtime.ApiError
+import com.example.apiblueprint.api.runtime.AssistantCancel
+import com.example.apiblueprint.api.runtime.AssistantDelta
+import com.example.apiblueprint.api.runtime.AssistantDone
+import com.example.apiblueprint.api.runtime.AssistantInput
 import com.example.apiblueprint.api.runtime.AssistantOpen
+import com.example.apiblueprint.api.runtime.ConnectionClose
 import com.example.apiblueprint.api.runtime.DemoErr
 import com.example.apiblueprint.api.runtime.KeywordEnum
+import com.example.apiblueprint.api.runtime.SweepLog
 import com.example.apiblueprint.api.runtime.SweepOpen
+import com.example.apiblueprint.api.runtime.SweepProgress
+import com.example.apiblueprint.api.runtime.SweepState
 import com.example.apiblueprint.api.runtime.resolveApiToast
 import com.example.apiblueprint.api.transports.http.HttpApiConfig
 import com.example.apiblueprint.api.transports.http.createHttpApiClient
@@ -26,11 +41,13 @@ import com.example.apiblueprint.alt.runtime.ApiClient as AltApiClient
 import com.example.apiblueprint.alt.runtime.KeywordEnum as AltKeywordEnum
 import com.example.apiblueprint.alt.transports.http.HttpApiConfig as AltHttpApiConfig
 import com.example.apiblueprint.alt.transports.http.createHttpApiClient as createAltHttpApiClient
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 
 fun main(args: Array<String>) = runBlocking {
     val baseUrl = args.firstOrNull()?.trimEnd('/') ?: error("base URL argument is required")
-    val selected = scenarioSet(args.getOrNull(1) ?: "rpc,binary,form,error,naming")
+    val selected = scenarioSet(args.getOrNull(1) ?: "rpc,binary,form,error,naming,sse,websocket")
     val client = createHttpApiClient(HttpApiConfig(baseUrl = baseUrl))
     val altClient = createAltHttpApiClient(AltHttpApiConfig(baseUrl = baseUrl))
 
@@ -49,7 +66,12 @@ fun main(args: Array<String>) = runBlocking {
     if ("naming" in selected) {
         checkNaming(client, altClient)
     }
-    checkConnectionContract(client)
+    if ("sse" in selected) {
+        checkSse(client)
+    }
+    if ("websocket" in selected) {
+        checkWebSocket(client)
+    }
     println("kotlin conformance passed")
 }
 
@@ -123,16 +145,48 @@ private suspend fun checkNaming(client: ApiClient, altClient: AltApiClient) {
     assertEquals(AltKeywordEnum.CLASS, alt.enum, "altConflict.enum")
 }
 
-private fun checkConnectionContract(client: ApiClient) {
-    val stream = client.demo.subscribeSweepEvents(SweepOpen(runId = "kotlin-contract"))
-    stream.onMessage { error("Kotlin generated HTTP transport should not receive SSE messages") }
-    stream.onClose { error("Kotlin generated HTTP transport should not receive SSE close events") }
-    stream.close(code = 1000, reason = "contract-only")
+private suspend fun checkSse(client: ApiClient) {
+    val stream = client.demo.subscribeSweepEvents(SweepOpen(runId = "kotlin-sse"))
+    val message = CompletableDeferred<SweepStreamMessage>()
+    val close = CompletableDeferred<ConnectionClose>()
+    stream.onMessage { if (!message.isCompleted) message.complete(it) }
+    stream.onClose { if (!close.isCompleted) close.complete(it) }
 
-    val channel = client.demo.openAssistantSession(AssistantOpen(sessionId = "kotlin-contract"))
-    channel.onMessage { error("Kotlin generated HTTP transport should not receive WebSocket messages") }
-    channel.onClose { error("Kotlin generated HTTP transport should not receive WebSocket close events") }
-    channel.close(code = 1000, reason = "contract-only")
+    val received = withTimeout(5_000) { message.await() }
+    val status = dispatchSweepStreamMessage(received, object : SweepStreamMessageHandlers<String> {
+        override fun state(data: SweepState, message: SweepStreamMessage): String = data.status
+        override fun progress(data: SweepProgress, message: SweepStreamMessage): String =
+            "${data.current}/${data.total}"
+        override fun log(data: SweepLog, message: SweepStreamMessage): String = "${data.level}:${data.message}"
+    })
+    assertContains(status, "kotlin-sse", "sse.message")
+
+    val closed = withTimeout(5_000) { close.await() }
+    assertEquals(1000, closed.code, "sse.close.code")
+    assertEquals("example stream complete", closed.reason, "sse.close.reason")
+}
+
+private suspend fun checkWebSocket(client: ApiClient) {
+    val channel = client.demo.openAssistantSession(AssistantOpen(sessionId = "kotlin-ws"))
+    val message = CompletableDeferred<AssistantServerMessage>()
+    val close = CompletableDeferred<ConnectionClose>()
+    channel.onMessage { if (!message.isCompleted) message.complete(it) }
+    channel.onClose { if (!close.isCompleted) close.complete(it) }
+    channel.send(AssistantClientMessageVariants.input(AssistantInput(text = "hello")))
+
+    val received = withTimeout(5_000) { message.await() }
+    val text = dispatchAssistantServerMessage(received, object : AssistantServerMessageHandlers<String> {
+        override fun delta(data: AssistantDelta, message: AssistantServerMessage): String = data.text
+        override fun done(data: AssistantDone, message: AssistantServerMessage): String = data.messageId
+        override fun log(data: SweepLog, message: AssistantServerMessage): String = "${data.level}:${data.message}"
+    })
+    assertContains(text, "kotlin-ws", "websocket.message.session")
+    assertContains(text, "hello", "websocket.message.text")
+
+    channel.send(AssistantClientMessageVariants.cancel(AssistantCancel(reason = "kotlin complete")))
+    val closed = withTimeout(5_000) { close.await() }
+    assertEquals(1000, closed.code, "websocket.close.code")
+    assertEquals("kotlin complete", closed.reason, "websocket.close.reason")
 }
 
 private fun buildPacket(): DemoPacket {
@@ -182,5 +236,11 @@ private suspend fun expectApiError(action: suspend () -> Unit): ApiError {
 private fun assertEquals(expected: Any?, actual: Any?, label: String) {
     if (expected != actual) {
         error("$label=$actual expected $expected")
+    }
+}
+
+private fun assertContains(actual: String, expectedPart: String, label: String) {
+    if (!actual.contains(expectedPart)) {
+        error("$label=$actual expected to contain $expectedPart")
     }
 }

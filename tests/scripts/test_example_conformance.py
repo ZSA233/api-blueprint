@@ -17,8 +17,9 @@ def test_manifest_marks_first_phase_capabilities() -> None:
     assert clients["typescript"].supports_websocket is True
     assert clients["flutter"].supports_sse is True
     assert clients["kotlin"].supports_rpc is True
-    assert clients["kotlin"].supports_sse is False
-    assert clients["kotlin"].connection_policy == "unsupported-contract"
+    assert clients["kotlin"].supports_sse is True
+    assert clients["kotlin"].supports_websocket is True
+    assert clients["kotlin"].connection_policy == "native"
 
 
 def test_scenario_registry_covers_required_dsl_categories() -> None:
@@ -42,6 +43,8 @@ def test_scenario_registry_covers_required_dsl_categories() -> None:
     assert "go" in coverage["binary"]
     assert "typescript" in coverage["websocket"]
     assert "flutter" in coverage["sse"]
+    assert "kotlin" in coverage["sse"]
+    assert "kotlin" in coverage["websocket"]
     assert "kotlin" in coverage["form"]
 
 
@@ -154,7 +157,7 @@ def test_cli_list_reports_servers_clients_and_scenarios(capsys: pytest.CaptureFi
     assert "servers:" in output
     assert "- go" in output
     assert "clients:" in output
-    assert "- kotlin rpc=yes sse=no websocket=no" in output
+    assert "- kotlin rpc=yes sse=yes websocket=yes" in output
     assert "scenarios:" in output
     assert "- binary" in output
 

@@ -47,14 +47,14 @@ def scenario_registry() -> dict[str, Scenario]:
         "sse": Scenario(
             name="sse",
             categories=("sse",),
-            clients=("typescript", "flutter"),
+            clients=("typescript", "kotlin", "flutter"),
             route_ids=("api.demo.stream.sweepevents",),
             description="HTTP server-sent event stream",
         ),
         "websocket": Scenario(
             name="websocket",
             categories=("websocket",),
-            clients=("typescript", "flutter"),
+            clients=("typescript", "kotlin", "flutter"),
             route_ids=("api.demo.channel.assistantsession",),
             description="HTTP WebSocket channel",
         ),
@@ -98,4 +98,3 @@ def runnable_scenarios_for_client(client: str, selected: tuple[Scenario, ...]) -
     if client not in clients:
         raise ValueError(f"unknown conformance client: {client}")
     return tuple(scenario for scenario in selected if client in scenario.clients)
-

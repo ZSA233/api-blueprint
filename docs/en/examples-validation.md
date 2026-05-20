@@ -78,9 +78,9 @@ make example-conformance-refresh
 
 Successful conformance output is collapsed into one line per stage, such as generation, snapshot drift, compilation, and server startup; each client is printed as a group heading, and each client/scenario item runs and reports as soon as that item finishes. Detailed generator, `dart pub get`, Gradle, `go test`, and similar tool output is hidden by default. If a stage fails, the runner replays that stage's captured stdout/stderr to stderr so the failing tool remains visible. Status text is colored automatically on TTYs; set `FORCE_COLOR=1` to force colors or `NO_COLOR=1` to disable them.
 
-The first server matrix phase enables only the Go HTTP server. Go / TypeScript / Kotlin / Flutter clients connect to the same Go server; TypeScript and Flutter cover real SSE and WebSocket interoperability; Kotlin covers HTTP scenarios such as RPC, form, binary, typed errors, and naming, and keeps stream/channel as explicit unsupported/contract checks.
+The first server matrix phase enables only the Go HTTP server. Go / TypeScript / Kotlin / Flutter clients connect to the same Go server; TypeScript / Kotlin / Flutter cover real SSE and WebSocket interoperability. Unsupported client capabilities must be recorded in the manifest instead of being silently skipped.
 
-The scenario registry maps DSL coverage categories to automated cases: query/json/form/binary/raw/XML, typed errors, naming conflicts, multiple blueprint roots, response envelopes, SSE, and WebSocket. Unsupported client capabilities must be recorded in the manifest instead of being silently skipped.
+The scenario registry maps DSL coverage categories to automated cases: query/json/form/binary/raw/XML, typed errors, naming conflicts, multiple blueprint roots, response envelopes, SSE, and WebSocket.
 
 ## Drift Meaning
 

@@ -249,7 +249,7 @@ Kotlin generator-owned files are named `Gen*.kt`, for example `routes/api/demo/G
 
 Route DTOs are emitted as `<Group>Types.kt`. Markdown Binary Schema helpers are route-local packet / wire helper types in `BinaryTypes.kt` in the same package as the route API.
 
-Through the transport abstraction, Kotlin generates `rpc`, `stream`, and `channel` route surfaces, and supports query/json/form/binary/open request kinds plus `none` / `code_message_data` / `ok_data_error` response envelopes. The built-in OkHttp adapter is RPC-first; long-connection bridges are preview/custom transport surfaces, so validate with `api-gen check` and target-platform smoke tests before putting them on a production call path.
+Through the transport abstraction, Kotlin generates `rpc`, `stream`, and `channel` route surfaces, and supports query/json/form/binary/open request kinds plus `none` / `code_message_data` / `ok_data_error` response envelopes. The built-in OkHttp adapter covers RPC query/json/form/binary requests, uses SSE for `STREAM` bridges, and uses OkHttp WebSocket for `CHANNEL` bridges; it implements protocol transport only, not the host application's session engine, retry, cache, or connection orchestration.
 
 `base_url` / `base_url_expr` are written into the generated `transports/http/HttpApiConfig.kt` default, not into the transport-neutral runtime client.
 

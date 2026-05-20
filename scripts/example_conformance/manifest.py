@@ -54,9 +54,8 @@ def client_manifest() -> dict[str, ClientCapability]:
             supports_binary=True,
             supports_form=True,
             supports_typed_error=True,
-            supports_sse=False,
-            supports_websocket=False,
-            connection_policy="unsupported-contract",
+            supports_sse=True,
+            supports_websocket=True,
         ),
         "flutter": ClientCapability(
             name="flutter",
@@ -98,4 +97,3 @@ def require_enabled_server(server: str) -> ServerCapability:
     if not selected.enabled:
         raise ValueError(f"server {server} is planned but not enabled")
     return selected
-

@@ -158,6 +158,28 @@ class KotlinRoute:
         return self.close_proto.name if self.close_proto else "SocketCloseInfo"
 
     @property
+    def server_message_serializer_expr(self) -> str:
+        return f"{self.server_message_type}.serializer()"
+
+    @property
+    def client_message_serializer_expr(self) -> str:
+        return f"{self.client_message_type}.serializer()"
+
+    @property
+    def close_serializer_expr(self) -> str:
+        return f"{self.close_type}.serializer()"
+
+    @property
+    def connection_query_expr(self) -> str:
+        if self.query_type and self.open_type:
+            return "query.toQueryMap() + open.toQueryMap()"
+        if self.open_type:
+            return "open.toQueryMap()"
+        if self.query_type:
+            return "query.toQueryMap()"
+        return "emptyMap()"
+
+    @property
     def subscribe_method_name(self) -> str:
         return to_kotlin_property_name(
             self.protocol.route.stream.connect_method if self.protocol.route.stream else f"subscribe{self.func_name}"
@@ -273,6 +295,14 @@ class KotlinApiGroup:
             for helper in route.message_helpers():
                 helpers.setdefault(helper.name, helper)
         return tuple(helpers.values())
+
+    def query_map_protos(self) -> tuple[KotlinProto, ...]:
+        protos: "OrderedDict[str, KotlinProto]" = OrderedDict()
+        for route in self.routes:
+            for proto in (route.query_proto, route.open_proto):
+                if proto is not None and proto.fields:
+                    protos.setdefault(proto.name, proto)
+        return tuple(protos.values())
 
 
 class KotlinBlueprint(BaseBlueprint["KotlinWriter"]):

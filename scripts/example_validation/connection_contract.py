@@ -126,6 +126,14 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         / "api"
         / "demo"
         / "DemoTypes.kt",
+        "kotlin_client_http": workspace.kotlin_client_dir
+        / "com"
+        / "example"
+        / "apiblueprint"
+        / "api"
+        / "transports"
+        / "http"
+        / "GenOkHttpApiTransport.kt",
         "kotlin_server_demo_types": workspace.kotlin_server_dir
         / "com"
         / "example"
@@ -427,6 +435,8 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
             files["kotlin_client_demo_types"],
             "public fun <R> dispatchAssistantServerMessage(",
         ),
+        "kotlin client sse transport": (files["kotlin_client_http"], "OkHttpEventStreamBridge"),
+        "kotlin client websocket transport": (files["kotlin_client_http"], "WebSocketListener"),
         "kotlin server service": (files["kotlin_server_service"], "public interface GenDemoService"),
         "kotlin server client dispatcher": (
             files["kotlin_server_demo_types"],
