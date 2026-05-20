@@ -19,7 +19,7 @@
 make example-compile-check
 make example-refresh
 make example-validation
-uv run python -m scripts.example_conformance check --server go --clients go,typescript,kotlin,flutter
+make example-conformance
 make example-golang-suite
 make example-java-suite
 make wails-hello-compile-check
@@ -29,7 +29,7 @@ make wails-hello-check
 - `example-compile-check`: for feature development; allows snapshot drift and only verifies regenerated artifacts still compile or import.
 - `example-refresh`: accepts intentional generation changes and refreshes committed snapshots.
 - `example-validation`: strict mode; requires generator output and committed snapshots to converge.
-- `scripts.example_conformance check`: real protocol interoperability validation; it regenerates examples in a temporary workspace, checks snapshot drift and language compilation, then starts a Go HTTP server and runs Go / TypeScript / Kotlin / Flutter clients against it.
+- `example-conformance`: real protocol interoperability validation; it regenerates examples in a temporary workspace, checks snapshot drift and language compilation, then starts a Go HTTP server and runs Go / TypeScript / Kotlin / Flutter clients against it.
 - `example-golang-suite`: manual end-to-end validation aid; it regenerates the Go server/client in a temporary workspace, starts a real Go server process, then verifies the loop with the generated Go client and raw HTTP binary requests. It is not part of default `test`, `example-validation`, `release-preflight`, or CI.
 - `example-java-suite`: manual end-to-end validation aid; it regenerates the Java client/server needed by `http.java` in a temporary workspace, runs `examples/java/suite`, starts a real Spring Boot server, then verifies core RPC, binary, static, and unsupported-route loops with the generated Java 17 JDK HTTP client. It is not part of default `test`, `example-validation`, `release-preflight`, or CI.
 - `wails-hello-compile-check`: validates only the standalone Wails hello example, allows snapshot drift, and is useful for fast development checks.
@@ -57,11 +57,26 @@ uv run python -m scripts.example_conformance check --server go --clients go,type
 uv run python -m scripts.example_conformance refresh --server go --clients go,typescript,kotlin,flutter
 ```
 
+The Makefile wraps the same CLI thinly for quick matrix selection:
+
+```sh
+make example-conformance-list
+make example-conformance-run EXAMPLE_CONFORMANCE_CLIENTS=flutter EXAMPLE_CONFORMANCE_SCENARIOS=sse,websocket
+make example-conformance-check EXAMPLE_CONFORMANCE_CLIENTS=go,typescript EXAMPLE_CONFORMANCE_SCENARIOS=rpc,binary
+make example-conformance-refresh
+```
+
 - `list`: prints enabled servers, client capabilities, and scenarios.
 - `generate`: generates all example artifacts in a temporary workspace without changing the repository.
 - `run`: runs only interoperability checks and can be filtered with `--clients` and `--scenario`.
 - `check`: generates in a temporary workspace, checks snapshot drift, compiles/analyzes, then runs interoperability.
 - `refresh`: refreshes repository examples, then compiles/analyzes and runs interoperability.
+- `EXAMPLE_CONFORMANCE_SERVER`: selects the server matrix item, defaulting to `go`.
+- `EXAMPLE_CONFORMANCE_CLIENTS`: selects client matrix items, defaulting to `go,typescript,kotlin,flutter`.
+- `EXAMPLE_CONFORMANCE_SCENARIOS`: selects scenario matrix items; an empty value means all scenarios.
+- `EXAMPLE_CONFORMANCE_KEEP_WORKSPACE=1`: keeps the temporary workspace for `generate`, `run`, and `check` to debug failures.
+
+Successful conformance output is collapsed into one line per stage, such as generation, snapshot drift, compilation, server startup, and each client, then expands the scenarios covered by that client as subitems. Detailed generator, `dart pub get`, Gradle, `go test`, and similar tool output is hidden by default. If a stage fails, the runner replays that stage's captured stdout/stderr to stderr so the failing tool remains visible. Status text is colored automatically on TTYs; set `FORCE_COLOR=1` to force colors or `NO_COLOR=1` to disable them.
 
 The first server matrix phase enables only the Go HTTP server. Go / TypeScript / Kotlin / Flutter clients connect to the same Go server; TypeScript and Flutter cover real SSE and WebSocket interoperability; Kotlin covers HTTP scenarios such as RPC, form, binary, typed errors, and naming, and keeps stream/channel as explicit unsupported/contract checks.
 

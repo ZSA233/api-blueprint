@@ -18,20 +18,46 @@ def test_release_tag_matches_repository_version_state():
 
 
 def test_makefile_exposes_example_validation_and_release_preflight_uses_it():
-    text = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
+    root_text = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
+    text = _makefile_text()
 
     example_block = _target_block(text, "example-validation")
     compile_block = _target_block(text, "example-compile-check")
     refresh_block = _target_block(text, "example-refresh")
+    conformance_block = _target_block(text, "example-conformance")
+    conformance_list_block = _target_block(text, "example-conformance-list")
+    conformance_generate_block = _target_block(text, "example-conformance-generate")
+    conformance_run_block = _target_block(text, "example-conformance-run")
+    conformance_check_block = _target_block(text, "example-conformance-check")
+    conformance_refresh_block = _target_block(text, "example-conformance-refresh")
     golang_suite_block = _target_block(text, "example-golang-suite")
     java_suite_block = _target_block(text, "example-java-suite")
     benchmark_binary_block = _target_block(text, "benchmark-binary")
     preflight_block = _target_block(text, "release-preflight")
     tag_check_block = _target_block(text, "release-tag-check")
 
+    assert ".DEFAULT_GOAL := help" in root_text
+    assert "include make/core.mk" in root_text
+    assert "include make/examples.mk" in root_text
+    assert "include make/wails.mk" in root_text
+    assert "include make/release.mk" in root_text
+    assert "help:" in text
+    assert "make sync" in _target_block(text, "help")
+    assert 'EXAMPLE_CONFORMANCE_SERVER ?= go' in text
+    assert 'EXAMPLE_CONFORMANCE_CLIENTS ?= go,typescript,kotlin,flutter' in text
+    assert 'EXAMPLE_CONFORMANCE_SCENARIOS ?=' in text
+    assert 'EXAMPLE_CONFORMANCE_KEEP_WORKSPACE ?= 0' in text
     assert "uv run python scripts/example_validation.py" in example_block
     assert "uv run python scripts/example_validation.py --mode compile" in compile_block
     assert "uv run python scripts/example_validation.py --mode refresh" in refresh_block
+    assert "$(MAKE) example-conformance-check" in conformance_block
+    assert "uv run python -m scripts.example_conformance list" in conformance_list_block
+    assert "uv run python -m scripts.example_conformance generate" in conformance_generate_block
+    assert "$(EXAMPLE_CONFORMANCE_KEEP_ARG)" in conformance_generate_block
+    assert "uv run python -m scripts.example_conformance run $(EXAMPLE_CONFORMANCE_MATRIX_ARGS)" in conformance_run_block
+    assert "$(EXAMPLE_CONFORMANCE_KEEP_ARG)" in conformance_run_block
+    assert "uv run python -m scripts.example_conformance check $(EXAMPLE_CONFORMANCE_MATRIX_ARGS)" in conformance_check_block
+    assert "uv run python -m scripts.example_conformance refresh $(EXAMPLE_CONFORMANCE_MATRIX_ARGS)" in conformance_refresh_block
     assert "uv run python scripts/example_validation.py --scope blueprint --mode golang-suite" in golang_suite_block
     assert "uv run python scripts/example_validation.py --scope blueprint --mode java-suite" in java_suite_block
     assert 'uv run python scripts/benchmark_binary.py --target "$(BINARY_BENCH_TARGET)" --count "$(BINARY_BENCH_COUNT)"' in benchmark_binary_block
@@ -114,6 +140,12 @@ def _target_block(text: str, target: str) -> str:
     if not collected:
         raise AssertionError(f"target {target!r} not found in Makefile")
     return "\n".join(collected)
+
+
+def _makefile_text() -> str:
+    chunks = [(REPO_ROOT / "Makefile").read_text(encoding="utf-8")]
+    chunks.extend(path.read_text(encoding="utf-8") for path in sorted((REPO_ROOT / "make").glob("*.mk")))
+    return "\n".join(chunks)
 
 
 def _job_block(text: str, job: str) -> str:

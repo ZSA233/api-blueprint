@@ -33,6 +33,7 @@ uv pip install "git+https://github.com/zsa233/api-blueprint@stable"
 本仓库开发环境使用：
 
 ```sh
+make
 make sync
 ```
 
@@ -122,12 +123,13 @@ api-gen generate -c api-blueprint.toml
 开发期常用命令：
 
 ```sh
+make
 make test
 make example-compile-check
 make example-validation
-uv run python -m scripts.example_conformance check --server go --clients go,typescript,kotlin,flutter
+make example-conformance
 make example-golang-suite
 make example-java-suite
 ```
 
-`scripts.example_conformance` 会启动真实 Go HTTP server，并让 Go / TypeScript / Kotlin / Flutter client 跑协议互通；`example-golang-suite` 和 `example-java-suite` 是保留的手动端到端增强验证。正式发布前的版本、构建、安装和 GitHub Release 流程见 [发布流程](docs/release-process.md)。
+`make example-conformance` 会启动真实 Go HTTP server，并让 Go / TypeScript / Kotlin / Flutter client 跑协议互通；可用 `EXAMPLE_CONFORMANCE_CLIENTS` 和 `EXAMPLE_CONFORMANCE_SCENARIOS` 选择矩阵。`example-golang-suite` 和 `example-java-suite` 是保留的手动端到端增强验证。正式发布前的版本、构建、安装和 GitHub Release 流程见 [发布流程](docs/release-process.md)。

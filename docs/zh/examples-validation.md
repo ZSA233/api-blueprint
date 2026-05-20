@@ -19,7 +19,7 @@
 make example-compile-check
 make example-refresh
 make example-validation
-uv run python -m scripts.example_conformance check --server go --clients go,typescript,kotlin,flutter
+make example-conformance
 make example-golang-suite
 make example-java-suite
 make wails-hello-compile-check
@@ -29,7 +29,7 @@ make wails-hello-check
 - `example-compile-check`：功能开发期使用，允许 snapshot drift，只验证重生成产物仍可编译或导入。
 - `example-refresh`：接受预期生成变化，刷新仓库里的 snapshots。
 - `example-validation`：严格模式，要求本地生成器输出与已提交 snapshots 收敛。
-- `scripts.example_conformance check`：真实协议互通验证；它在临时 workspace 重生成 examples，检查 snapshot drift 和语言编译，再启动 Go HTTP server，让 Go / TypeScript / Kotlin / Flutter client 连接同一服务端。
+- `example-conformance`：真实协议互通验证；它在临时 workspace 重生成 examples，检查 snapshot drift 和语言编译，再启动 Go HTTP server，让 Go / TypeScript / Kotlin / Flutter client 连接同一服务端。
 - `example-golang-suite`：手动端到端增强验证；它在临时 workspace 重生成 Go server/client，启动真实 Go server 进程，再通过 generated Go client 和原生 HTTP binary 请求验证回路。它不接入默认 `test`、`example-validation`、`release-preflight` 或 CI。
 - `example-java-suite`：手动端到端增强验证；它在临时 workspace 重生成 `http.java` 所需 Java client/server，运行 `examples/java/suite`，启动真实 Spring Boot server，再通过 generated Java 17 JDK HTTP client 验证核心 RPC、binary、static 和 unsupported 回路。它不接入默认 `test`、`example-validation`、`release-preflight` 或 CI。
 - `wails-hello-compile-check`：只验证独立 Wails hello 示例，允许 snapshot drift，适合快速开发验证。
@@ -57,11 +57,26 @@ uv run python -m scripts.example_conformance check --server go --clients go,type
 uv run python -m scripts.example_conformance refresh --server go --clients go,typescript,kotlin,flutter
 ```
 
+Makefile 对同一 CLI 做薄封装，便于快速选择矩阵：
+
+```sh
+make example-conformance-list
+make example-conformance-run EXAMPLE_CONFORMANCE_CLIENTS=flutter EXAMPLE_CONFORMANCE_SCENARIOS=sse,websocket
+make example-conformance-check EXAMPLE_CONFORMANCE_CLIENTS=go,typescript EXAMPLE_CONFORMANCE_SCENARIOS=rpc,binary
+make example-conformance-refresh
+```
+
 - `list`：列出启用服务端、客户端 capability 和场景。
 - `generate`：在临时 workspace 生成所有 examples 产物，不修改仓库。
 - `run`：只跑真实互通，可用 `--clients` 与 `--scenario` 过滤。
 - `check`：临时生成、做 snapshot drift、编译/分析，再跑互通。
 - `refresh`：刷新仓库 examples，然后做编译/分析和互通。
+- `EXAMPLE_CONFORMANCE_SERVER`：选择服务端矩阵项，默认 `go`。
+- `EXAMPLE_CONFORMANCE_CLIENTS`：选择客户端矩阵项，默认 `go,typescript,kotlin,flutter`。
+- `EXAMPLE_CONFORMANCE_SCENARIOS`：选择场景矩阵项，空值表示全部场景。
+- `EXAMPLE_CONFORMANCE_KEEP_WORKSPACE=1`：对 `generate`、`run`、`check` 保留临时 workspace，便于排查失败。
+
+conformance 成功时输出按阶段收敛为一行状态，例如生成、snapshot、编译、server 启动和每个 client，并在 client 成功后展开对应 scenario 子项；生成器、`dart pub get`、Gradle、`go test` 等详细输出默认隐藏。某个阶段失败时，runner 会把该阶段捕获到的 stdout/stderr 回放到 stderr，便于直接定位失败工具。状态文本在 TTY 下自动着色；可用 `FORCE_COLOR=1` 强制开启，或用 `NO_COLOR=1` 关闭。
 
 第一阶段服务端矩阵只启用 Go HTTP server。Go / TypeScript / Kotlin / Flutter client 连接同一 Go server；TypeScript 与 Flutter 覆盖 SSE 和 WebSocket 真实互通；Kotlin 只覆盖 RPC、form、binary、typed error、naming 等 HTTP 场景，并对 stream/channel 保留显式 unsupported/contract 检查。
 

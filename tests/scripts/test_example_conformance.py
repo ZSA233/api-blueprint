@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 from scripts import example_validation
-from scripts.example_conformance import cli, manifest, scenarios, tools
+from scripts.example_conformance import cli, manifest, reporter, runner, scenarios, tools
 
 
 def test_manifest_marks_first_phase_capabilities() -> None:
@@ -61,6 +62,85 @@ def test_prepare_blueprint_outputs_preserves_kotlin_conformance_source(tmp_path:
     assert (target_root / "kotlin" / "conformance" / "Conformance.kt").read_text(encoding="utf-8") == (
         "package com.example.apiblueprint.conformance\n"
     )
+
+
+def test_reporter_suppresses_success_output_and_reports_stage(capsys: pytest.CaptureFixture[str]) -> None:
+    reporter.run_stage("generate examples", lambda: print("generated noisy file list"))
+
+    captured = capsys.readouterr()
+    assert "generate examples ... ok" in captured.out
+    assert "generated noisy file list" not in captured.out
+    assert captured.err == ""
+
+
+def test_reporter_supports_forced_color(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    monkeypatch.setenv("FORCE_COLOR", "1")
+
+    reporter.run_stage("server go", lambda: "http://127.0.0.1", success_detail=lambda value: value)
+
+    captured = capsys.readouterr()
+    assert "\x1b[32mok\x1b[0m http://127.0.0.1" in captured.out
+
+
+def test_reporter_replays_captured_output_on_failure(capsys: pytest.CaptureFixture[str]) -> None:
+    def fail() -> None:
+        print("stdout before failure")
+        raise RuntimeError("boom")
+
+    with pytest.raises(RuntimeError, match="boom"):
+        reporter.run_stage("flutter [sse]", fail)
+
+    captured = capsys.readouterr()
+    assert "flutter [sse] ... failed" in captured.out
+    assert "--- flutter [sse] output ---" in captured.err
+    assert "stdout before failure" in captured.err
+
+
+def test_reporter_prints_scenario_subitems(capsys: pytest.CaptureFixture[str]) -> None:
+    reporter.print_scenario_results("flutter", ("sse", "websocket"))
+
+    captured = capsys.readouterr()
+    assert "  - flutter/sse ... ok" in captured.out
+    assert "  - flutter/websocket ... ok" in captured.out
+
+
+def test_runner_reports_server_and_client_matrix_without_client_noise(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    fake_server = SimpleNamespace(
+        base_url="http://127.0.0.1:12345",
+        output_path=Path(".conformance-server.log"),
+        stop=lambda: None,
+    )
+    fake_workspace = SimpleNamespace(
+        blueprint=SimpleNamespace(golang_server_dir=Path(".")),
+    )
+    calls: list[tuple[str, str]] = []
+
+    def fake_run_client(ws: object, client: str, base_url: str, selected_scenarios: tuple[scenarios.Scenario, ...]) -> None:
+        print("client noisy output")
+        calls.append((client, ",".join(scenario.name for scenario in selected_scenarios)))
+
+    monkeypatch.setattr(runner.server, "start_go_server", lambda server_dir: fake_server)
+    monkeypatch.setattr(runner.server, "cleanup_server_log", lambda path: None)
+    monkeypatch.setattr(runner, "_run_client", fake_run_client)
+
+    runner._run_against_workspace(
+        fake_workspace,  # type: ignore[arg-type]
+        server_name="go",
+        clients=("flutter",),
+        selected_scenarios=scenarios.filter_scenarios(("sse", "websocket")),
+    )
+
+    captured = capsys.readouterr()
+    assert "server go ... ok http://127.0.0.1:12345" in captured.out
+    assert "flutter ... ok" in captured.out
+    assert "  - flutter/sse ... ok" in captured.out
+    assert "  - flutter/websocket ... ok" in captured.out
+    assert "client noisy output" not in captured.out
+    assert calls == [("flutter", "sse,websocket")]
 
 
 def test_cli_list_reports_servers_clients_and_scenarios(capsys: pytest.CaptureFixture[str]) -> None:

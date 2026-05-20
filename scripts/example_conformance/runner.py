@@ -8,7 +8,7 @@ import tempfile
 from pathlib import Path
 
 from scripts import example_validation
-from scripts.example_conformance import manifest, scenarios, server, tools, workspace
+from scripts.example_conformance import manifest, reporter, scenarios, server, tools, workspace
 
 
 def run_conformance(
@@ -26,9 +26,14 @@ def run_conformance(
         raise ValueError(f"unknown conformance client: {', '.join(unknown_clients)}")
     selected_scenarios = scenarios.filter_scenarios(scenario_names)
     tools.ensure_tools_for_targets(server, clients)
-    conf_workspace = workspace.prepare_generated_workspace(repo_root)
+    conf_workspace = reporter.run_stage("generate examples", lambda: workspace.prepare_generated_workspace(repo_root))
     try:
-        _run_against_workspace(conf_workspace, clients=clients, selected_scenarios=selected_scenarios)
+        _run_against_workspace(
+            conf_workspace,
+            server_name=server,
+            clients=clients,
+            selected_scenarios=selected_scenarios,
+        )
         if keep_workspace:
             print(f"conformance workspace kept: {conf_workspace.root}")
         elif conf_workspace.temporary:
@@ -52,11 +57,16 @@ def check_conformance(
     manifest.require_enabled_server(server_name)
     selected_scenarios = scenarios.filter_scenarios(scenario_names)
     tools.ensure_tools_for_targets(server_name, clients)
-    conf_workspace = workspace.prepare_generated_workspace(repo_root)
+    conf_workspace = reporter.run_stage("generate examples", lambda: workspace.prepare_generated_workspace(repo_root))
     try:
-        workspace.validate_snapshot(repo_root, conf_workspace)
-        workspace.compile_workspace(conf_workspace)
-        _run_against_workspace(conf_workspace, clients=clients, selected_scenarios=selected_scenarios)
+        reporter.run_stage("check snapshot drift", lambda: workspace.validate_snapshot(repo_root, conf_workspace))
+        reporter.run_stage("compile generated examples", lambda: workspace.compile_workspace(conf_workspace))
+        _run_against_workspace(
+            conf_workspace,
+            server_name=server_name,
+            clients=clients,
+            selected_scenarios=selected_scenarios,
+        )
         if keep_workspace:
             print(f"conformance workspace kept: {conf_workspace.root}")
         elif conf_workspace.temporary:
@@ -70,7 +80,7 @@ def check_conformance(
 
 
 def generate_conformance_workspace(repo_root: Path, *, keep_workspace: bool) -> None:
-    conf_workspace = workspace.prepare_generated_workspace(repo_root)
+    conf_workspace = reporter.run_stage("generate examples", lambda: workspace.prepare_generated_workspace(repo_root))
     if keep_workspace:
         print(conf_workspace.root)
         return
@@ -87,24 +97,52 @@ def refresh_and_check(
     manifest.require_enabled_server(server_name)
     selected_scenarios = scenarios.filter_scenarios(scenario_names)
     tools.ensure_tools_for_targets(server_name, clients)
-    conf_workspace = workspace.refresh_repo_workspace(repo_root)
-    workspace.compile_workspace(conf_workspace)
-    _run_against_workspace(conf_workspace, clients=clients, selected_scenarios=selected_scenarios)
+    conf_workspace = reporter.run_stage("refresh examples", lambda: workspace.refresh_repo_workspace(repo_root))
+    reporter.run_stage("compile generated examples", lambda: workspace.compile_workspace(conf_workspace))
+    _run_against_workspace(
+        conf_workspace,
+        server_name=server_name,
+        clients=clients,
+        selected_scenarios=selected_scenarios,
+    )
 
 
 def _run_against_workspace(
     conf_workspace: workspace.ConformanceWorkspace,
     *,
+    server_name: str,
     clients: tuple[str, ...],
     selected_scenarios: tuple[scenarios.Scenario, ...],
 ) -> None:
-    active_server = server.start_go_server(conf_workspace.blueprint.golang_server_dir)
+    active_server = reporter.run_stage(
+        f"server {server_name}",
+        lambda: server.start_go_server(conf_workspace.blueprint.golang_server_dir),
+        success_detail=lambda active: active.base_url,
+    )
     try:
         for client in clients:
             client_scenarios = scenarios.runnable_scenarios_for_client(client, selected_scenarios)
             if not client_scenarios:
+                reporter.print_skipped(
+                    client,
+                    "no runnable scenarios for client",
+                )
                 continue
-            _run_client(conf_workspace.blueprint, client, active_server.base_url, client_scenarios)
+            reporter.run_stage(
+                client,
+                lambda client=client, client_scenarios=client_scenarios: _run_client(
+                    conf_workspace.blueprint,
+                    client,
+                    active_server.base_url,
+                    client_scenarios,
+                ),
+            )
+            reporter.print_scenario_results(client, tuple(scenario.name for scenario in client_scenarios))
+        reporter.print_summary(
+            server=server_name,
+            clients=clients,
+            scenarios=tuple(scenario.name for scenario in selected_scenarios),
+        )
     finally:
         active_server.stop()
         server.cleanup_server_log(active_server.output_path)

@@ -33,6 +33,7 @@ uv pip install "git+https://github.com/zsa233/api-blueprint@stable"
 When developing this repository, use:
 
 ```sh
+make
 make sync
 ```
 
@@ -122,12 +123,13 @@ For fuller project layout, config fields, DSL, generator output, typed errors, R
 Common development commands:
 
 ```sh
+make
 make test
 make example-compile-check
 make example-validation
-uv run python -m scripts.example_conformance check --server go --clients go,typescript,kotlin,flutter
+make example-conformance
 make example-golang-suite
 make example-java-suite
 ```
 
-`scripts.example_conformance` starts a real Go HTTP server and runs Go / TypeScript / Kotlin / Flutter clients against it; `example-golang-suite` and `example-java-suite` remain manual end-to-end validation aids. See [Release Process](docs/release-process.md) for versioning, build, install, and GitHub Release flow.
+`make example-conformance` starts a real Go HTTP server and runs Go / TypeScript / Kotlin / Flutter clients against it; use `EXAMPLE_CONFORMANCE_CLIENTS` and `EXAMPLE_CONFORMANCE_SCENARIOS` to select the matrix. `example-golang-suite` and `example-java-suite` remain manual end-to-end validation aids. See [Release Process](docs/release-process.md) for versioning, build, install, and GitHub Release flow.
