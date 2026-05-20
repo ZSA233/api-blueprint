@@ -1,0 +1,67 @@
+{% autoescape false %}import 'gen_api_errors.dart';
+
+class ApiErrorCode {
+  const ApiErrorCode._();
+{% for constant in writer.api_error_constants() %}
+  static const {{ constant.name }} = {{ constant.code }};
+{% endfor %}}
+
+final apiErrorsById = <String, ApiErrorPayload>{
+{% for error in writer.api_errors() %}  {{ error.id | tojson }}: ApiErrorPayload(
+    id: {{ error.id | tojson }},
+    group: {{ error.group | tojson }},
+    key: {{ error.key | tojson }},
+    code: {{ error.code }},
+    message: {{ error.message | tojson }},
+    toast: ApiToastPayload(
+      key: {{ error.toast.key | tojson }},
+      level: {{ error.toast.level | tojson }},
+      defaultMessage: {{ error.toast.default | tojson }},
+    ),
+  ),
+{% endfor %}};
+
+final routeApiErrorsByCode = <String, Map<int, ApiErrorPayload>>{
+{% for route_id, errors in writer.route_api_errors_for_bp(bp).items() %}  {{ route_id | tojson }}: {
+{% for error in errors %}    {{ error.code }}: apiErrorsById[{{ error.id | tojson }}]!,
+{% endfor %}  },
+{% endfor %}};
+
+final apiErrorsByCode = <int, ApiErrorPayload>{
+{% for error in writer.api_errors() %}  {{ error.code }}: apiErrorsById[{{ error.id | tojson }}]!,
+{% endfor %}};
+
+ApiErrorPayload lookupApiError(ApiErrorPayload payload) {
+  if (payload.id.isNotEmpty && apiErrorsById.containsKey(payload.id)) {
+    return mergeApiErrorPayload(apiErrorsById[payload.id]!, payload);
+  }
+  final routeMatch = routeApiErrorsByCode[payload.routeId]?[payload.code];
+  if (routeMatch != null) {
+    return mergeApiErrorPayload(routeMatch, payload);
+  }
+  final codeMatch = apiErrorsByCode[payload.code];
+  if (codeMatch != null) {
+    return mergeApiErrorPayload(codeMatch, payload);
+  }
+  return payload;
+}
+
+ApiErrorPayload mergeApiErrorPayload(ApiErrorPayload known, ApiErrorPayload payload) {
+  return ApiErrorPayload(
+    id: payload.id.isNotEmpty ? payload.id : known.id,
+    group: payload.group.isNotEmpty ? payload.group : known.group,
+    key: payload.key.isNotEmpty ? payload.key : known.key,
+    code: payload.code != 0 ? payload.code : known.code,
+    message: payload.message.isNotEmpty ? payload.message : known.message,
+    toast: ApiToastPayload(
+      key: payload.toast.key.isNotEmpty ? payload.toast.key : known.toast.key,
+      level: payload.toast.level.isNotEmpty ? payload.toast.level : known.toast.level,
+      defaultMessage: payload.toast.defaultMessage.isNotEmpty
+          ? payload.toast.defaultMessage
+          : known.toast.defaultMessage,
+      text: payload.toast.text.isNotEmpty ? payload.toast.text : known.toast.text,
+    ),
+    routeId: payload.routeId,
+  );
+}
+{% endautoescape %}

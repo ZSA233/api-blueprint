@@ -1,6 +1,6 @@
 # Configuration
 
-`api-blueprint.toml` is the main config file for the documentation service and the unified generator. The generation flow is `Blueprint -> ContractGraph -> targets`; `[[targets]]` is the canonical entrypoint, and shortcut tables such as `[[contract]]`, `[[go.server]]`, `[[go.client]]`, `[[java.server]]`, `[[java.client]]`, `[[python.server]]`, `[[transport.http]]`, `[[grpc.proto]]`, and `[[grpc.go]]` are normalized into the same target list when config is loaded.
+`api-blueprint.toml` is the main config file for the documentation service and the unified generator. The generation flow is `Blueprint -> ContractGraph -> targets`; `[[targets]]` is the canonical entrypoint, and shortcut tables such as `[[contract]]`, `[[go.server]]`, `[[go.client]]`, `[[typescript.client]]`, `[[flutter.client]]`, `[[kotlin.client]]`, `[[java.server]]`, `[[java.client]]`, `[[python.server]]`, `[[transport.http]]`, `[[grpc.proto]]`, and `[[grpc.go]]` are normalized into the same target list when config is loaded.
 
 ## blueprint
 
@@ -40,6 +40,12 @@ id = "typescript.client"
 out_dir = "typescript"
 base_url = "http://localhost:2333"
 
+[[flutter.client]]
+id = "flutter.client"
+out_dir = "flutter"
+package = "api_blueprint_example"
+base_url = "http://localhost:2333"
+
 [[kotlin.client]]
 id = "kotlin.client"
 out_dir = "kotlin"
@@ -70,7 +76,7 @@ base_url = "http://localhost:2333"
 [[transport.http]]
 id = "http"
 server = "go.server"
-clients = ["go.client", "typescript.client", "kotlin.client", "python.client"]
+clients = ["go.client", "typescript.client", "flutter.client", "kotlin.client", "python.client"]
 
 [[transport.http]]
 id = "http.java"
@@ -119,7 +125,7 @@ Common fields:
 - `kind`: target type.
 - `out_dir`: generated output directory. For Go server it is the generated package root; transport targets usually do not need one.
 
-Shortcut tables infer `kind`, so they must not include an explicit `kind`. `id` is still required. In shortcut tables, Go `module` remains the Go module; Python `module` maps to `python_package_root`; Kotlin / Java `module` maps to `package`, and explicit `package` is still accepted; Java does not generate a JPMS `module-info.java`, and the canonical field is `package`; `[[grpc.python]] module` also maps to `python_package_root`.
+Shortcut tables infer `kind`, so they must not include an explicit `kind`. `id` is still required. In shortcut tables, Go `module` remains the Go module; Python `module` maps to `python_package_root`; Flutter / Kotlin / Java `module` maps to `package`, and explicit `package` is still accepted; Flutter and Java use `package` as the canonical field, Java does not generate a JPMS `module-info.java`; `[[grpc.python]] module` also maps to `python_package_root`.
 
 Core targets:
 
@@ -127,6 +133,7 @@ Core targets:
 - `go-server`: emits Go server core. `out_dir` is the package root; route/provider/transport/error artifacts live under `routes`, `providers`, `transports`, and `runtime/errors`. Markdown Binary Schema parsers live in route-group-local `routes/<root>/<group...>/_gen_binary` packages, with shared binary runtime helpers in `runtime/binary`. Projects that want `/views` in the package path should set `out_dir` explicitly to `.../views`.
 - `go-client`: emits a preview Go client. RPC/query/json/form/binary HTTP calls are usable; `apiclient.NewHTTP(...)` is the recommended root facade, binary schema writers live in the route package as `gen_binary.go`, STREAM and CHANNEL generate transport-neutral surfaces, and the default HTTP adapter returns an explicit unsupported error so projects can swap in a custom transport.
 - `typescript-client`: emits TypeScript client core that depends only on `ApiTransport`; route DTOs use `types.ts` / `gen_types.ts`, binary schema helpers are route-local `gen_binary.ts` implementation files re-exported through the types surface, and `base_url` / `base_url_expr` are injected by transport facades.
+- `flutter-client`: emits a pure Dart package that Flutter apps can depend on without binding the generated SDK to the Flutter SDK. The public entry lives at `lib/<package>.dart`, with implementation under `lib/src/<root>/runtime`, `routes`, and `transports/http`. Route DTOs use manual generated `fromJson` / `toJson`, with a preserved `api_json_codecs.dart` `ApiJsonCodec<T>` override registry. The default HTTP adapter uses `package:http` for RPC query/json/form/binary/open, SSE for STREAM, and `web_socket_channel` for CHANNEL.
 - `kotlin-client`: emits an OkHttp + kotlinx.serialization client. Through the shared transport abstraction it generates RPC, STREAM, and CHANNEL route surfaces, and supports query/json/form/binary/open request kinds plus `none` / `code_message_data` / `ok_data_error` response envelopes. Route DTOs use `<Group>Types.kt`; binary schema helpers are route-local packet / wire helper types in `BinaryTypes.kt`. `base_url` / `base_url_expr` are used by the generated OkHttp HTTP adapter config, while route/runtime clients stay transport-neutral. The built-in OkHttp adapter is RPC-first; long-connection bridges are preview/custom transport surfaces.
 - `kotlin-server`: emits a preview Ktor server scaffold with route service interfaces, stubs, runtime, and Ktor route registration. Route DTOs and binary schema helpers use the same Kotlin serialization model as the client. RPC HTTP adapters are usable; connection routes keep the service surface and protocol keyframe helpers while the Ktor adapter returns explicit 501 responses.
 - `java-client`: emits a preview Java 17 client using `java.net.http.HttpClient` and Jackson, with transport-neutral route surfaces and a default JDK HTTP adapter. RPC query/json/form/binary/binary-schema calls are usable; route DTOs and binary schema helper records live in `<Group>Types.java`; STREAM and CHANNEL default to explicit unsupported errors so projects can swap in custom transports.
@@ -137,13 +144,15 @@ Core targets:
 - `grpc-go`: consumes a `grpc-proto` target in the same config, or handwritten proto files directly, and calls `protoc` / `protoc-gen-go` / `protoc-gen-go-grpc` to generate Go protobuf/gRPC stubs.
 - `grpc-python`: consumes a `grpc-proto` target in the same config, or handwritten proto files directly, and calls `grpcio-tools` to generate Python protobuf/gRPC stubs. `python_package_root` places generated files under a package root and rewrites generated imports.
 
-Kotlin / Java / Python client/server, `api-gen check`, and contract / agent artifact projection use the same planner / capability metadata. If a target capability does not support a route, request kind, or response envelope, generation should fail before writing a partial output tree.
+Flutter / Kotlin / Java / Python client/server, `api-gen check`, and contract / agent artifact projection use the same planner / capability metadata. If a target capability does not support a route, request kind, or response envelope, generation should fail before writing a partial output tree.
 
-ContractGraph collects language-agnostic typed errors from `Blueprint(errors=...)` and route `.ERR(...)`. Manifest `2.0` keeps the global `errors` table for complete definitions and writes compact route-local refs (`id/group/key/code/message/toast`) into `routes[].errors`, so callers can inspect the error surface from the route they are invoking. `id` is the public protocol error identity; `code` is a business code and may be reused across groups or routes. `ResponseEnvelope` decides the wire shape, and manifest writes `name/kind/error_identity/success_code/success_message/fields` under `response.envelope`. The default `CodeMessageDataEnvelope` returns `{ code: 0, message: "ok", data }` on success and `{ code, message, data: null, error: { id, group, key, toast } }` on failure; strict `{ code, message, data }` output uses `LegacyCodeMessageDataEnvelope` without `id`; choose `OkDataErrorEnvelope` explicitly for `{ ok, data/error }`. Main generators expose `ApiError`, `ApiErrors`, and route-aware `lookupApiError` helpers; default Go, TypeScript, Python, Kotlin, and Java client transports restore typed errors from the envelope spec. Business i18n resolves the current language by toast key, and client helpers fall back through `toast.text`, external i18n, `toast.default`, then `message`. Business error codes are not forced to equal HTTP status codes.
+ContractGraph collects language-agnostic typed errors from `Blueprint(errors=...)` and route `.ERR(...)`. Manifest `2.0` keeps the global `errors` table for complete definitions and writes compact route-local refs (`id/group/key/code/message/toast`) into `routes[].errors`, so callers can inspect the error surface from the route they are invoking. `id` is the public protocol error identity; `code` is a business code and may be reused across groups or routes. `ResponseEnvelope` decides the wire shape, and manifest writes `name/kind/error_identity/success_code/success_message/fields` under `response.envelope`. The default `CodeMessageDataEnvelope` returns `{ code: 0, message: "ok", data }` on success and `{ code, message, data: null, error: { id, group, key, toast } }` on failure; strict `{ code, message, data }` output uses `LegacyCodeMessageDataEnvelope` without `id`; choose `OkDataErrorEnvelope` explicitly for `{ ok, data/error }`. Main generators expose `ApiError`, `ApiErrors`, and route-aware `lookupApiError` helpers; default Go, TypeScript, Flutter, Python, Kotlin, and Java client transports restore typed errors from the envelope spec. Business i18n resolves the current language by toast key, and client helpers fall back through `toast.text`, external i18n, `toast.default`, then `message`. Business error codes are not forced to equal HTTP status codes.
 
 The Kotlin client/server output layout is `<package>/<root>/runtime/*`, `<package>/<root>/routes/<root>/<group...>/*`, and `<package>/<root>/transports/http/*`. `Gen*.kt` files are generator-owned; non-`Gen*` façade / extension files are user-owned. The client preserves route façade and HTTP client façade files; the server preserves `<Group>Service.kt` implementations.
 
 The Go client output layout is `runtime/*`, `routes/<root>/<group...>/*`, and `transports/http/*`. `gen_*.go` files are generator-owned, while `client.go` façades are user-owned and preserved during regeneration. `base_url` / `base_url_expr` are written only to the HTTP transport config, not route/runtime clients.
+
+The Flutter client output layout is `lib/<package>.dart`, `lib/src/<root>/<root>.dart`, `lib/src/<root>/runtime/*`, `lib/src/<root>/routes/<root>/<group...>/*`, and `lib/src/<root>/transports/http/*`. `gen_*.dart` files are generator-owned; `api_client.dart`, `api_json_codecs.dart`, `http_api_client.dart`, route façades, type façades, and `binary.dart` are preserved user files. `package` is normalized to a Dart package name, and `base_url` / `base_url_expr` are written only to the HTTP transport config.
 
 The Java client/server output layout is `<package>/<root>/runtime/*`, `<package>/<root>/routes/<root>/<group...>/*`, and `<package>/<root>/transports/http/*`. `out_dir` is the package root and does not include `src/main/java`. The client preserves `ApiClient.java`, `<Group>Api.java`, and `HttpApiClient.java`; the server preserves `<Group>Service.java`. DTOs use Java 17 `record`, fields use Jackson `@JsonProperty`, and enums use `@JsonCreator` / `@JsonValue` to preserve wire values.
 
@@ -161,8 +170,8 @@ gRPC stub target fields:
 
 Transport targets:
 
-- `http-transport`: declares an HTTP server/client combination. `server` can reference a `go-server`, `java-server`, or `python-server`; `clients` can reference Go, TypeScript, Kotlin, Java, or Python clients.
-- `wails-transport`: declares a Wails overlay and must set `version`, `server`, and `clients`. Wails remains Go + TypeScript only and does not attach Kotlin / Java / Python clients.
+- `http-transport`: declares an HTTP server/client combination. `server` can reference a `go-server`, `java-server`, or `python-server`; `clients` can reference Go, TypeScript, Flutter, Kotlin, Java, or Python clients.
+- `wails-transport`: declares a Wails overlay and must set `version`, `server`, and `clients`. Wails remains Go + TypeScript only and does not attach Flutter / Kotlin / Java / Python clients.
 - `frontend_mode = "external"` emits Wails TypeScript facades for external frontends; `none` emits only the Go overlay.
 - `include` / `exclude` can trim the Wails target overlay / facade.
 

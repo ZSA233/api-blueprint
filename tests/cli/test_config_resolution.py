@@ -41,6 +41,7 @@ def test_example_config_loads_vnext_targets() -> None:
         "kotlin.server",
         "java.server",
         "java.client",
+        "flutter.client",
         "python.server",
         "python.client",
         "http",
@@ -62,6 +63,7 @@ def test_example_config_loads_vnext_targets() -> None:
         "kotlin-server",
         "java-server",
         "java-client",
+        "flutter-client",
         "python-server",
         "python-client",
         "http-transport",
@@ -145,6 +147,12 @@ out_dir = "java/client"
 module = "com.example.generated"
 base_url = "http://localhost:2333"
 
+[[flutter.client]]
+id = "flutter.client"
+out_dir = "flutter"
+package = "api_blueprint_example"
+base_url = "http://localhost:2333"
+
 [[python.server]]
 id = "python.server"
 out_dir = "python/server"
@@ -211,6 +219,7 @@ module = "pb"
         "kotlin.server",
         "java.server",
         "java.client",
+        "flutter.client",
         "python.server",
         "python.client",
         "http",
@@ -229,6 +238,7 @@ module = "pb"
         "kotlin-server",
         "java-server",
         "java-client",
+        "flutter-client",
         "python-server",
         "python-client",
         "http-transport",
@@ -248,12 +258,13 @@ module = "pb"
     assert config.targets[7].module is None
     assert config.targets[7].package == "com.example.generated"
     assert config.targets[8].module is None
-    assert config.targets[8].python_package_root == "server_app"
-    assert config.targets[9].python_package_root == "client_app"
-    assert len(config.targets[13].proto_files) == 1
-    assert config.targets[13].proto_files[0].file == "api/demo.proto"
-    assert config.targets[13].proto_files[0].service == "DemoService"
-    assert config.targets[15].python_package_root == "pb"
+    assert config.targets[8].package == "api_blueprint_example"
+    assert config.targets[9].python_package_root == "server_app"
+    assert config.targets[10].python_package_root == "client_app"
+    assert len(config.targets[14].proto_files) == 1
+    assert config.targets[14].proto_files[0].file == "api/demo.proto"
+    assert config.targets[14].proto_files[0].service == "DemoService"
+    assert config.targets[16].python_package_root == "pb"
 
 
 def test_contract_alias_table_normalizes_to_contract_target(tmp_path) -> None:

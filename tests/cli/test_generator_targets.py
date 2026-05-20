@@ -27,6 +27,13 @@ out_dir = "typescript"
 base_url = "http://localhost:2333"
 
 [[targets]]
+id = "flutter.client"
+kind = "flutter-client"
+out_dir = "flutter"
+package = "api_blueprint_example"
+base_url = "http://localhost:2333"
+
+[[targets]]
 id = "wails.v3"
 kind = "wails-transport"
 version = "v3"
@@ -49,14 +56,16 @@ go_package_prefix = "example.com/project/grpc/go"
     assert [target.id for target in config.targets] == [
         "go.server",
         "typescript.client",
+        "flutter.client",
         "wails.v3",
         "grpc.proto",
     ]
 
     resolved = resolve_config(config_path)
     assert resolved.targets[0].out_dir == (tmp_path / "golang").resolve()
-    assert resolved.targets[2].server == "go.server"
-    assert resolved.targets[2].clients == ("typescript.client",)
+    assert resolved.targets[2].package == "api_blueprint_example"
+    assert resolved.targets[3].server == "go.server"
+    assert resolved.targets[3].clients == ("typescript.client",)
 
 
 def test_vnext_targets_reject_missing_dependency(tmp_path):
@@ -207,3 +216,33 @@ clients = ["java.client"]
     planned = generator.generation_plan(resolved.targets, ("http.java",))
 
     assert [target.id for target in planned] == ["java.server", "java.client", "http.java"]
+
+
+def test_generation_plan_includes_flutter_http_transport_dependencies(tmp_path):
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[targets]]
+id = "go.server"
+kind = "go-server"
+out_dir = "golang/server"
+module = "example.com/project/server"
+
+[[flutter.client]]
+id = "flutter.client"
+out_dir = "flutter"
+package = "api_blueprint_example"
+
+[[transport.http]]
+id = "http.flutter"
+server = "go.server"
+clients = ["flutter.client"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    resolved = resolve_config(config_path)
+
+    planned = generator.generation_plan(resolved.targets, ("http.flutter",))
+
+    assert [target.id for target in planned] == ["go.server", "flutter.client", "http.flutter"]

@@ -1,6 +1,6 @@
 # 配置说明
 
-`api-blueprint.toml` 是文档服务和统一生成器的主配置文件。生成链路是 `Blueprint -> ContractGraph -> targets`；`[[targets]]` 是 canonical 入口，`[[contract]]`、`[[go.server]]`、`[[go.client]]`、`[[java.server]]`、`[[java.client]]`、`[[python.server]]`、`[[transport.http]]`、`[[grpc.proto]]`、`[[grpc.go]]` 等快捷表会在加载时 normalize 成同一个 target 列表。
+`api-blueprint.toml` 是文档服务和统一生成器的主配置文件。生成链路是 `Blueprint -> ContractGraph -> targets`；`[[targets]]` 是 canonical 入口，`[[contract]]`、`[[go.server]]`、`[[go.client]]`、`[[typescript.client]]`、`[[flutter.client]]`、`[[kotlin.client]]`、`[[java.server]]`、`[[java.client]]`、`[[python.server]]`、`[[transport.http]]`、`[[grpc.proto]]`、`[[grpc.go]]` 等快捷表会在加载时 normalize 成同一个 target 列表。
 
 ## blueprint
 
@@ -40,6 +40,12 @@ id = "typescript.client"
 out_dir = "typescript"
 base_url = "http://localhost:2333"
 
+[[flutter.client]]
+id = "flutter.client"
+out_dir = "flutter"
+package = "api_blueprint_example"
+base_url = "http://localhost:2333"
+
 [[kotlin.client]]
 id = "kotlin.client"
 out_dir = "kotlin"
@@ -70,7 +76,7 @@ base_url = "http://localhost:2333"
 [[transport.http]]
 id = "http"
 server = "go.server"
-clients = ["go.client", "typescript.client", "kotlin.client", "python.client"]
+clients = ["go.client", "typescript.client", "flutter.client", "kotlin.client", "python.client"]
 
 [[transport.http]]
 id = "http.java"
@@ -119,7 +125,7 @@ module = "pb"
 - `kind`：target 类型。
 - `out_dir`：生成目录；Go server 中它就是生成包根；transport target 通常不需要。
 
-快捷表会推导 `kind`，因此不允许手写 `kind`。`id` 仍必填。快捷表中的 Go `module` 保持 Go module；Python `module` 会映射到 `python_package_root`；Kotlin / Java `module` 会映射到 `package`，也可以继续写显式 `package`；Java 不生成 JPMS `module-info.java`，canonical 字段是 `package`；`[[grpc.python]] module` 同样映射到 `python_package_root`。
+快捷表会推导 `kind`，因此不允许手写 `kind`。`id` 仍必填。快捷表中的 Go `module` 保持 Go module；Python `module` 会映射到 `python_package_root`；Flutter / Kotlin / Java `module` 会映射到 `package`，也可以继续写显式 `package`；Flutter 和 Java 的 canonical 字段都是 `package`，Java 不生成 JPMS `module-info.java`；`[[grpc.python]] module` 同样映射到 `python_package_root`。
 
 核心 target：
 
@@ -127,6 +133,7 @@ module = "pb"
 - `go-server`：生成 Go 服务端 core。`out_dir` 是包根；route/provider/transport/error 产物分别位于 `routes`、`providers`、`transports`、`runtime/errors`。Markdown Binary Schema parser 按 route group 位于 `routes/<root>/<group...>/_gen_binary`，共享二进制 runtime 位于 `runtime/binary`。如果需要包路径包含 `/views`，应显式把 `out_dir` 写成 `.../views`。
 - `go-client`：生成 preview Go client；RPC/query/json/form/binary HTTP 调用可用，推荐根入口是 `apiclient.NewHTTP(...)`，binary schema writer 作为 `gen_binary.go` 位于 route package，STREAM 和 CHANNEL 生成 transport-neutral surface，默认 HTTP adapter 返回明确 unsupported error，便于项目替换自定义 transport。
 - `typescript-client`：生成只依赖 `ApiTransport` 的 TypeScript client core；route DTO 使用 `types.ts` / `gen_types.ts`，binary schema helper 是 route-local `gen_binary.ts` 实现文件并通过 types surface re-export；`base_url` / `base_url_expr` 由 transport facade 注入。
+- `flutter-client`：生成纯 Dart package，可被 Flutter app 直接依赖但不绑定 Flutter SDK。public entry 位于 `lib/<package>.dart`，实现位于 `lib/src/<root>/runtime`、`routes` 与 `transports/http`。route DTO 使用手写 codegen 的 `fromJson` / `toJson`，并通过 preserved `api_json_codecs.dart` 提供 `ApiJsonCodec<T>` override 注册点。默认 HTTP adapter 使用 `package:http` 处理 RPC query/json/form/binary/open，STREAM 使用 SSE，CHANNEL 使用 `web_socket_channel`。
 - `kotlin-client`：生成 OkHttp + kotlinx.serialization client；通过共享 transport abstraction 生成 RPC、STREAM、CHANNEL route surface，支持 query/json/form/binary/open request kind，以及 `none` / `code_message_data` / `ok_data_error` response envelope。route DTO 使用 `<Group>Types.kt`；binary schema helper 是 `BinaryTypes.kt` 中的 route-local packet / wire helper 类型；`base_url` / `base_url_expr` 由生成的 OkHttp HTTP adapter config 使用，route/runtime client 保持 transport-neutral。内置 OkHttp adapter 以 RPC 为主，长连接 bridge 属于 preview/custom transport surface。
 - `kotlin-server`：生成 preview Ktor server scaffold，包含 route service interface、stub、runtime 和 Ktor route registration。route DTO 与 binary schema helper 复用 Kotlin serialization 模型。RPC HTTP adapter 可用；connection route 保留 service surface 和协议关键帧 helper，Ktor adapter 返回明确 501。
 - `java-client`：生成 preview Java 17 client；使用 `java.net.http.HttpClient` + Jackson，输出 transport-neutral route surface 与默认 JDK HTTP adapter。RPC query/json/form/binary/binary-schema 可用，route DTO 和 binary schema helper record 都位于 `<Group>Types.java`，STREAM 和 CHANNEL 默认抛明确 unsupported，便于替换自定义 transport。
@@ -137,13 +144,15 @@ module = "pb"
 - `grpc-go`：消费同配置内的 `grpc-proto` target，或直接消费手写 proto，调用 `protoc` / `protoc-gen-go` / `protoc-gen-go-grpc` 生成 Go protobuf/gRPC stub。
 - `grpc-python`：消费同配置内的 `grpc-proto` target，或直接消费手写 proto，调用 `grpcio-tools` 生成 Python protobuf/gRPC stub；`python_package_root` 会把生成物放入指定包根并重写生成 import。
 
-Kotlin / Java / Python client/server、`api-gen check` 和 contract / agent artifact projection 使用同一份 planner / capability metadata。若 target capability 不支持某个 route、request kind 或 response envelope，应在生成前失败，而不是生成半套产物。
+Flutter / Kotlin / Java / Python client/server、`api-gen check` 和 contract / agent artifact projection 使用同一份 planner / capability metadata。若 target capability 不支持某个 route、request kind 或 response envelope，应在生成前失败，而不是生成半套产物。
 
-ContractGraph 会从 `Blueprint(errors=...)` 和 route `.ERR(...)` 收集语言无关 typed errors。Manifest `2.0` 保留全局 `errors` 完整定义表，并把 compact route-local refs（`id/group/key/code/message/toast`）写入 `routes[].errors`，让调用方能从该 route 直接看到可抛错误。`id` 是公开协议错误身份，`code` 是业务码，可跨 group 或 route 复用。`ResponseEnvelope` 决定 wire shape，manifest 在 `response.envelope` 输出 `name/kind/error_identity/success_code/success_message/fields`。默认 `CodeMessageDataEnvelope` 成功返回 `{ code: 0, message: "ok", data }`，失败返回 `{ code, message, data: null, error: { id, group, key, toast } }`；严格 `{ code, message, data }` 形态用 `LegacyCodeMessageDataEnvelope` 且不暴露 `id`；显式选择 `OkDataErrorEnvelope` 才使用 `{ ok, data/error }`。各主生成器暴露 `ApiError`、`ApiErrors` 和 route-aware `lookupApiError` helper；默认 Go、TypeScript、Python、Kotlin、Java client transport 会按 envelope spec 自动还原 typed error。业务 i18n 系统按 toast key 取请求语言，客户端 helper 按 `toast.text`、外部 i18n、`toast.default`、`message` 兜底。业务错误码不默认等价于 HTTP status。
+ContractGraph 会从 `Blueprint(errors=...)` 和 route `.ERR(...)` 收集语言无关 typed errors。Manifest `2.0` 保留全局 `errors` 完整定义表，并把 compact route-local refs（`id/group/key/code/message/toast`）写入 `routes[].errors`，让调用方能从该 route 直接看到可抛错误。`id` 是公开协议错误身份，`code` 是业务码，可跨 group 或 route 复用。`ResponseEnvelope` 决定 wire shape，manifest 在 `response.envelope` 输出 `name/kind/error_identity/success_code/success_message/fields`。默认 `CodeMessageDataEnvelope` 成功返回 `{ code: 0, message: "ok", data }`，失败返回 `{ code, message, data: null, error: { id, group, key, toast } }`；严格 `{ code, message, data }` 形态用 `LegacyCodeMessageDataEnvelope` 且不暴露 `id`；显式选择 `OkDataErrorEnvelope` 才使用 `{ ok, data/error }`。各主生成器暴露 `ApiError`、`ApiErrors` 和 route-aware `lookupApiError` helper；默认 Go、TypeScript、Flutter、Python、Kotlin、Java client transport 会按 envelope spec 自动还原 typed error。业务 i18n 系统按 toast key 取请求语言，客户端 helper 按 `toast.text`、外部 i18n、`toast.default`、`message` 兜底。业务错误码不默认等价于 HTTP status。
 
 Kotlin client/server 输出目录是 `<package>/<root>/runtime/*`、`<package>/<root>/routes/<root>/<group...>/*`、`<package>/<root>/transports/http/*`。`Gen*.kt` 文件由生成器拥有；非 `Gen*` façade / extension 文件由用户拥有。client 保留 route façade 和 HTTP client façade 文件；server 保留 `<Group>Service.kt` 实现文件。
 
 Go client 输出目录是 `runtime/*`、`routes/<root>/<group...>/*`、`transports/http/*`。`gen_*.go` 由生成器拥有，`client.go` façade 由用户拥有并在重生成时保留。`base_url` / `base_url_expr` 只进入 HTTP transport config，不进入 route/runtime client。
+
+Flutter client 输出目录是 `lib/<package>.dart`、`lib/src/<root>/<root>.dart`、`lib/src/<root>/runtime/*`、`lib/src/<root>/routes/<root>/<group...>/*`、`lib/src/<root>/transports/http/*`。`gen_*.dart` 由生成器拥有；`api_client.dart`、`api_json_codecs.dart`、`http_api_client.dart`、route façade、types façade 和 `binary.dart` 是 preserved 用户文件。`package` 会规范化为 Dart package name，`base_url` / `base_url_expr` 只进入 HTTP transport config。
 
 Java client/server 输出目录是 `<package>/<root>/runtime/*`、`<package>/<root>/routes/<root>/<group...>/*`、`<package>/<root>/transports/http/*`。`out_dir` 是 package root，不包含 `src/main/java`。client 的用户保留文件是 `ApiClient.java`、`<Group>Api.java`、`HttpApiClient.java`；server 的用户保留文件是 `<Group>Service.java`。DTO 使用 Java 17 `record`，字段使用 Jackson `@JsonProperty`，enum 使用 `@JsonCreator` / `@JsonValue` 保留 wire value。
 
@@ -161,8 +170,8 @@ gRPC stub target 字段：
 
 transport target：
 
-- `http-transport`：声明 HTTP server/client 组合；`server` 可引用 `go-server`、`java-server` 或 `python-server`，`clients` 可引用 Go、TypeScript、Kotlin、Java 或 Python client。
-- `wails-transport`：声明 Wails overlay，必须设置 `version`、`server` 和 `clients`；Wails 保持 Go + TypeScript only，不接入 Kotlin / Java / Python client。
+- `http-transport`：声明 HTTP server/client 组合；`server` 可引用 `go-server`、`java-server` 或 `python-server`，`clients` 可引用 Go、TypeScript、Flutter、Kotlin、Java 或 Python client。
+- `wails-transport`：声明 Wails overlay，必须设置 `version`、`server` 和 `clients`；Wails 保持 Go + TypeScript only，不接入 Flutter / Kotlin / Java / Python client。
 - `frontend_mode = "external"` 生成外部前端使用的 Wails TypeScript facade；`none` 只生成 Go overlay。
 - `include` / `exclude` 可裁剪 Wails target overlay / facade。
 

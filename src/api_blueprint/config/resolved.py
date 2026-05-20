@@ -164,6 +164,7 @@ def resolve_api_targets(config_path: Path, raw: Config) -> tuple[ResolvedApiTarg
                     "kotlin-client",
                     "python-client",
                     "java-client",
+                    "flutter-client",
                 }:
                     raise ValueError(f"target[{target.id}] http-transport clients must reference client targets")
 

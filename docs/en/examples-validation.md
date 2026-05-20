@@ -1,12 +1,12 @@
 # Examples Validation
 
-`examples/` carries the public Blueprint, Wails, Kotlin, Java, and gRPC examples. Most example directories are generated snapshots and should not be hand-edited for business logic.
+`examples/` carries the public Blueprint, Flutter, Wails, Kotlin, Java, and gRPC examples. Most example directories are generated snapshots and should not be hand-edited for business logic.
 
 ## Sources And Snapshots
 
 - `examples/blueprints/`: Blueprint source of truth.
 - `examples/api-blueprint.index.json`: lightweight route catalog snapshot. Prefer `api-gen inspect` for daily on-demand project understanding; full contract, agent, and shard snapshots are optional outputs mainly for offline navigation, archiving, and drift validation.
-- `examples/golang/server/`, `examples/golang/client/`, `examples/typescript/`, `examples/kotlin/`, `examples/java/client/`, `examples/java/server/`: Blueprint generated snapshots.
+- `examples/golang/server/`, `examples/golang/client/`, `examples/typescript/`, `examples/flutter/`, `examples/kotlin/`, `examples/java/client/`, `examples/java/server/`: Blueprint generated snapshots.
 - `examples/java/suite/`: handwritten Gradle Java 17 application that runs core generated Java client/server round-trips.
 - `examples/wails-harness/v2/`, `examples/wails-harness/v3/`: handwritten minimal Wails harnesses that consume shared generated artifacts.
 - `examples/wails-hello/`: standalone Wails v3 hello example; `blueprints/` is the source of truth, `golang/` and `typescript/` are generated snapshots, and `app/` is a handwritten Wails app shell.
@@ -62,6 +62,7 @@ Strict examples validation may require:
 - `go`
 - `go-enum`
 - `npm`
+- Dart SDK
 - Java 17
 - Gradle or `API_BLUEPRINT_GRADLE_BIN`
 - Wails v2 CLI `wails` or `API_BLUEPRINT_WAILS_V2_BIN`

@@ -1,0 +1,6 @@
+{% autoescape false %}import 'gen_{{ group.file_stem }}_api.dart';
+
+class {{ group.class_name }} extends Gen{{ group.class_name }} {
+  {{ group.class_name }}(super.transport);
+}
+{% endautoescape %}

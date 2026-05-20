@@ -1,12 +1,12 @@
 # Examples 验证
 
-`examples/` 同时承载 Blueprint、Wails、Kotlin、Java 与 gRPC 的公开示例。多数示例目录是生成快照，不应手写业务逻辑。
+`examples/` 同时承载 Blueprint、Flutter、Wails、Kotlin、Java 与 gRPC 的公开示例。多数示例目录是生成快照，不应手写业务逻辑。
 
 ## 真源与快照
 
 - `examples/blueprints/`：Blueprint 真源。
 - `examples/api-blueprint.index.json`：轻量接口目录快照；日常理解项目时优先用 `api-gen inspect` 按需查询，完整 contract、agent 与 shards 快照是可选输出，主要用于离线导航、归档和 drift 验证。
-- `examples/golang/server/`、`examples/golang/client/`、`examples/typescript/`、`examples/kotlin/`、`examples/java/client/`、`examples/java/server/`：Blueprint 生成快照。
+- `examples/golang/server/`、`examples/golang/client/`、`examples/typescript/`、`examples/flutter/`、`examples/kotlin/`、`examples/java/client/`、`examples/java/server/`：Blueprint 生成快照。
 - `examples/java/suite/`：手写 Gradle Java 17 application，用于运行 generated Java client/server 的核心 round-trip。
 - `examples/wails-harness/v2/`、`examples/wails-harness/v3/`：手写最小 Wails harness，消费共享生成产物。
 - `examples/wails-hello/`：独立 Wails v3 hello 示例；`blueprints/` 是真源，`golang/` 与 `typescript/` 是生成快照，`app/` 是手写 Wails app shell。
@@ -62,6 +62,7 @@ make example-validation
 - `go`
 - `go-enum`
 - `npm`
+- Dart SDK
 - Java 17
 - Gradle 或 `API_BLUEPRINT_GRADLE_BIN`
 - Wails v2 CLI `wails` 或 `API_BLUEPRINT_WAILS_V2_BIN`

@@ -1,0 +1,11 @@
+{% autoescape false %}{% for route_group in plan.route_groups %}import '../routes/{{ route_group.group.path }}/{{ route_group.group.file_stem }}_api.dart';
+{% endfor %}import 'gen_api_transport.dart';
+
+class GenApiClient {
+  final ApiTransport transport;
+
+  GenApiClient(this.transport);
+
+{% for route_group in plan.route_groups %}  late final {{ route_group.group.property_name }} = {{ route_group.group.class_name }}(transport);
+{% endfor %}}
+{% endautoescape %}

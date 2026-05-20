@@ -493,6 +493,24 @@ def _artifact_for_route(
         if has_binary_schema:
             files.append(_join(base, "gen_binary.py"))
         imports = [f"{package_root}.{root}.routes.{python_route_package}.client"]
+    elif kind == "flutter-client":
+        package = _string(target.get("package")) or "api_blueprint_generated"
+        dart_root = _dart_path(root)
+        dart_route_path = _dart_path(route_path)
+        dart_group = _dart_file_stem(group)
+        base = _join(out_dir, "lib", "src", dart_root, "routes", dart_route_path)
+        transport_base = _join(out_dir, "lib", "src", dart_root, "transports", "http")
+        files = [
+            _join(base, f"gen_{dart_group}_api.dart"),
+            _join(base, f"{dart_group}_api.dart"),
+            _join(base, f"gen_{dart_group}_types.dart"),
+            _join(base, f"{dart_group}_types.dart"),
+            _join(transport_base, "gen_http_api_transport.dart"),
+            _join(transport_base, "http_api_client.dart"),
+        ]
+        if has_binary_schema:
+            files.extend([_join(base, "gen_binary.dart"), _join(base, "binary.dart")])
+        imports = [f"package:{package}/{package}.dart"]
     elif kind == "python-server":
         package_root = _string(target.get("python_package_root")) or "api_blueprint_generated"
         package_parts = _python_package_parts(package_root)
@@ -697,6 +715,22 @@ def _route_path(root: str, group: str) -> str:
 
 def _python_package_parts(package_root: str) -> tuple[str, ...]:
     return tuple(part for part in re.split(r"[./]+", package_root) if part)
+
+
+def _dart_path(value: str) -> str:
+    parts = [_dart_file_stem(part) for part in value.strip("/").split("/") if part]
+    return "/".join(parts or ["root"])
+
+
+def _dart_file_stem(value: str) -> str:
+    safe = re.sub(r"[^0-9A-Za-z]+", "_", value.strip()).strip("_").lower()
+    if not safe:
+        safe = "root"
+    if not safe[0].isalpha():
+        safe = f"root_{safe}"
+    if safe in {"class", "enum", "import", "export", "void", "sealed", "base", "interface"}:
+        safe = f"{safe}_"
+    return safe
 
 
 def _route_id(route: Mapping[str, Any]) -> str:

@@ -87,6 +87,25 @@ BLUEPRINT_JAVA_SUITE_PRESERVED = (
     "src/main/java/com/example/apiblueprint/suite/JavaExampleSuite.java",
 )
 BLUEPRINT_PYTHON_PRESERVED = ("client/suite.py",)
+BLUEPRINT_FLUTTER_PRESERVED = (
+    "pubspec.yaml",
+    "analysis_options.yaml",
+    "lib/src/api/runtime/api_client.dart",
+    "lib/src/api/runtime/api_json_codecs.dart",
+    "lib/src/api/transports/http/http_api_client.dart",
+    "lib/src/api/routes/api/api_api.dart",
+    "lib/src/api/routes/api/api_types.dart",
+    "lib/src/api/routes/api/binary/binary.dart",
+    "lib/src/api/routes/api/binary/binary_api.dart",
+    "lib/src/api/routes/api/binary/binary_types.dart",
+    "lib/src/api/routes/api/demo/demo_api.dart",
+    "lib/src/api/routes/api/demo/demo_types.dart",
+    "lib/src/api/routes/api/hello/hello_api.dart",
+    "lib/src/api/routes/api/hello/hello_types.dart",
+    "test/api_contract_test.dart",
+    "test/binary_contract_test.dart",
+    "test/http_transport_test.dart",
+)
 WAILS_HELLO_GOLANG_PRESERVED = (
     "go.mod",
     "go.sum",
@@ -97,6 +116,7 @@ GRPC_GO_PRESERVED = ("go.mod", "go.sum")
 GRPC_PYTHON_PRESERVED = ()
 EXAMPLE_SNAPSHOT_IGNORES: Mapping[str, frozenset[str]] = {
     "blueprint/java/suite": frozenset((".gradle", "bin", "build")),
+    "blueprint/flutter": frozenset((".dart_tool", "pubspec.lock")),
 }
 
 
@@ -136,6 +156,7 @@ class BlueprintExampleWorkspace:
     java_server_dir: Path
     java_suite_dir: Path
     python_dir: Path
+    flutter_dir: Path
     wails_v2_dir: Path
     wails_v3_dir: Path
 
@@ -204,6 +225,10 @@ def collect_missing_validation_requirements(scope: ExampleValidationScope = Exam
                 + "`.",
             ),
             (
+                "dart",
+                "install the Dart SDK and ensure `dart` is available on PATH.",
+            ),
+            (
                 "protoc",
                 "install the Protocol Buffers compiler, for example `brew install protobuf` or `apt-get install protobuf-compiler`.",
             ),
@@ -226,6 +251,10 @@ def collect_missing_validation_requirements(scope: ExampleValidationScope = Exam
                 "install it with `go install github.com/abice/go-enum@"
                 + GO_ENUM_VERSION
                 + "`.",
+            ),
+            (
+                "dart",
+                "install the Dart SDK and ensure `dart` is available on PATH.",
             ),
         ),
         ExampleValidationScope.GRPC: (
@@ -326,6 +355,7 @@ def _blueprint_workspace(root: Path) -> BlueprintExampleWorkspace:
         java_server_dir=root / "java" / "server",
         java_suite_dir=root / "java" / "suite",
         python_dir=root / "python",
+        flutter_dir=root / "flutter",
         wails_v2_dir=root / "wails-harness" / "v2",
         wails_v3_dir=root / "wails-harness" / "v3",
     )
@@ -434,6 +464,10 @@ def _prepare_blueprint_outputs(*, source_root: Path, target_root: Path) -> None:
     _prepare_output_dir(
         target_root / "python",
         _capture_relative_files(source_root / "python", BLUEPRINT_PYTHON_PRESERVED),
+    )
+    _prepare_output_dir(
+        target_root / "flutter",
+        _capture_relative_files(source_root / "flutter", BLUEPRINT_FLUTTER_PRESERVED),
     )
 
 
@@ -573,6 +607,7 @@ def validate_example_snapshots(repo_root: Path, workspace: BlueprintExampleWorks
             (examples_root / "kotlin", workspace.kotlin_dir, "blueprint/kotlin"),
             (examples_root / "java", workspace.java_dir, "blueprint/java"),
             (examples_root / "python", workspace.python_dir, "blueprint/python"),
+            (examples_root / "flutter", workspace.flutter_dir, "blueprint/flutter"),
         )
     )
     _validate_blueprint_connection_examples(workspace)
@@ -764,6 +799,44 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         / "api"
         / "demo"
         / "DemoTypes.java",
+        "flutter_runtime_client": workspace.flutter_dir / "lib" / "src" / "api" / "runtime" / "gen_api_client.dart",
+        "flutter_runtime_errors": workspace.flutter_dir
+        / "lib"
+        / "src"
+        / "api"
+        / "runtime"
+        / "gen_api_error_lookup.dart",
+        "flutter_demo_api": workspace.flutter_dir
+        / "lib"
+        / "src"
+        / "api"
+        / "routes"
+        / "api"
+        / "demo"
+        / "gen_demo_api.dart",
+        "flutter_demo_types": workspace.flutter_dir
+        / "lib"
+        / "src"
+        / "api"
+        / "routes"
+        / "api"
+        / "demo"
+        / "gen_demo_types.dart",
+        "flutter_binary": workspace.flutter_dir
+        / "lib"
+        / "src"
+        / "api"
+        / "routes"
+        / "api"
+        / "binary"
+        / "gen_binary.dart",
+        "flutter_http_transport": workspace.flutter_dir
+        / "lib"
+        / "src"
+        / "api"
+        / "transports"
+        / "http"
+        / "gen_http_api_transport.dart",
     }
     missing_files = [label for label, path in files.items() if not path.is_file()]
     if missing_files:
@@ -991,6 +1064,20 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
             files["java_server_demo_types"],
             "public static <R> R dispatchAssistantClientMessage(",
         ),
+        "flutter runtime client route": (files["flutter_runtime_client"], "final demo = DemoApi(transport);"),
+        "flutter error demo constant": (files["flutter_runtime_errors"], "const rateLimited = 42901;"),
+        "flutter stream client": (files["flutter_demo_api"], "subscribeSweepEvents("),
+        "flutter channel client": (files["flutter_demo_api"], "openAssistantSession("),
+        "flutter channel bridge message types": (
+            files["flutter_demo_api"],
+            "ApiChannelBridge<AssistantServerMessage, AssistantClientMessage, ConnectionClose>",
+        ),
+        "flutter client message variants": (files["flutter_demo_types"], "class AssistantClientMessageVariants"),
+        "flutter server dispatcher": (files["flutter_demo_types"], "R dispatchAssistantServerMessage<R>("),
+        "flutter binary encode": (files["flutter_binary"], "Uint8List encodeDemoPacket(DemoPacket value)"),
+        "flutter binary decode": (files["flutter_binary"], "DemoPacket decodeDemoPacket(Uint8List bytes)"),
+        "flutter http transport": (files["flutter_http_transport"], "class HttpApiTransport implements ApiTransport"),
+        "flutter websocket channel": (files["flutter_http_transport"], "WebSocketChannel.connect"),
     }
     validation_errors = []
     for label, (path, snippet) in checks.items():
@@ -1106,6 +1193,7 @@ def compile_generated_examples(workspace: BlueprintExampleWorkspace) -> None:
     _validate_kotlin_sources(workspace.kotlin_dir)
     _validate_java_sources(workspace.java_dir)
     _validate_python_sources(workspace.python_dir)
+    _validate_flutter_sources(workspace.flutter_dir)
     _compile_wails_harness(workspace.wails_v2_dir, version="v2")
     _compile_wails_harness(workspace.wails_v3_dir, version="v3")
 
@@ -1163,6 +1251,7 @@ def compile_repo_examples(repo_root: Path) -> None:
     _validate_kotlin_sources(workspace.kotlin_dir)
     _validate_java_sources(workspace.java_dir)
     _validate_python_sources(workspace.python_dir)
+    _validate_flutter_sources(workspace.flutter_dir)
 
 
 def compile_repo_grpc_examples(repo_root: Path) -> None:
@@ -1400,6 +1489,31 @@ def _validate_python_sources(python_dir: Path) -> None:
         raise ExampleValidationError("python example missing expected snippets:\n" + "\n".join(missing_snippets))
     for path in python_dir.rglob("*.py"):
         compile(path.read_text(encoding="utf-8"), str(path), "exec")
+
+
+def _validate_flutter_sources(flutter_dir: Path) -> None:
+    expected = (
+        "lib/api_blueprint_example.dart",
+        "lib/src/api/runtime/gen_api_client.dart",
+        "lib/src/api/runtime/gen_api_transport.dart",
+        "lib/src/api/runtime/gen_api_errors.dart",
+        "lib/src/api/runtime/gen_api_error_lookup.dart",
+        "lib/src/api/runtime/gen_api_types.dart",
+        "lib/src/api/runtime/binary/gen_binary_runtime.dart",
+        "lib/src/api/routes/api/demo/gen_demo_api.dart",
+        "lib/src/api/routes/api/demo/gen_demo_types.dart",
+        "lib/src/api/routes/api/binary/gen_binary.dart",
+        "lib/src/api/transports/http/gen_http_api_transport.dart",
+        "test/api_contract_test.dart",
+        "test/binary_contract_test.dart",
+        "test/http_transport_test.dart",
+    )
+    missing = [path for path in expected if not (flutter_dir / path).is_file()]
+    if missing:
+        raise ExampleValidationError("flutter example missing generated files:\n" + "\n".join(missing))
+    subprocess.run(["dart", "pub", "get"], cwd=flutter_dir, check=True)
+    subprocess.run(["dart", "analyze"], cwd=flutter_dir, check=True)
+    subprocess.run(["dart", "test"], cwd=flutter_dir, check=True)
 
 
 def _compile_kotlin_sources(kotlin_dir: Path, *, include_okhttp: bool, include_ktor: bool) -> None:

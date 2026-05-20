@@ -137,7 +137,7 @@ padding/reserved
 | Reserved | 4..31 | const=0 | reserved bits must be zero |
 ```
 
-`bits=0` 表示第 0 位，`bits=2..3` 表示连续位段。`enum=DemoKind` 表示该位段按枚举值解释，Go 生成物会提供 `Mode()` / `WithMode(...)` 这类 helper。`const=0` 表示这些位是保留位，生成的 Go server parser 与 Go / TypeScript / Kotlin / Python client writer 都会校验这些位必须为 0。
+`bits=0` 表示第 0 位，`bits=2..3` 表示连续位段。`enum=DemoKind` 表示该位段按枚举值解释，Go 生成物会提供 `Mode()` / `WithMode(...)` 这类 helper。`const=0` 表示这些位是保留位，生成的 Go server parser 与 Go / TypeScript / Flutter / Kotlin / Python client writer 都会校验这些位必须为 0。
 
 ### 兼容性说明
 
@@ -153,6 +153,8 @@ routes/api/binary/gen_binary.go               # Go client
 routes/api/binary/BinaryTypes.java
 routes/api/binary/BinaryTypes.kt
 routes/api/binary/gen_binary.ts
+lib/src/api/routes/api/binary/gen_binary.dart
+lib/src/api/runtime/binary/gen_binary_runtime.dart
 routes/api/binary/gen_binary.py
 routes/api/binary/gen_types.py
 runtime/binary/gen_runtime.go
@@ -162,7 +164,7 @@ runtime/binary/gen_runtime.go
 
 二进制 parser / writer 的诊断路径使用 schema 原始 packet、section、object 和 field 名，而不是生成语言里的内部符号名。嵌套对象和数组元素会在错误发生后按上下文包装路径，例如 `DemoPacket.body.items[0].id`；成功写入路径不会为了诊断信息提前拼接完整字段路径。
 
-Public packet 字段名遵循目标语言的 SDK 习惯，但诊断路径仍保持 schema 原始名字。Go / Kotlin / Java 暴露 `ItemCount` 或 `itemCount` 这类语言风格字段；TypeScript / Python 保持 `item_count` 这类贴近 JSON / wire 命名的 snake_case 字段。
+Public packet 字段名遵循目标语言的 SDK 习惯，但诊断路径仍保持 schema 原始名字。Go / Kotlin / Java / Flutter 暴露 `ItemCount` 或 `itemCount` 这类语言风格字段；TypeScript / Python 保持 `item_count` 这类贴近 JSON / wire 命名的 snake_case 字段。
 
 Go bitflags 仍生成整数别名，便于保持 wire 兼容和位运算性能；额外 helper 只提供更直观的访问方式：
 
@@ -175,7 +177,7 @@ flags.HasReservedBits()
 flags.Validate()
 ```
 
-Go / TypeScript / Kotlin / Python / Java client 会为同一 schema 生成：
+Go / TypeScript / Flutter / Kotlin / Python / Java client 会为同一 schema 生成：
 
 - typed packet，适合小包或测试。
 - streaming/raw binary body，适合大包热路径。

@@ -88,6 +88,7 @@ def test_kotlin_capability_accepts_connection_routes(kind: str) -> None:
         ("kotlin-server", {"package": "com.example"}),
         ("java-client", {"package": "com.example"}),
         ("python-client", {}),
+        ("flutter-client", {"package": "api_blueprint_example"}),
     ],
 )
 def test_client_capabilities_accept_binary_schema_rpc_routes(kind: str, target_kwargs: dict[str, object]) -> None:
@@ -189,3 +190,12 @@ def test_kotlin_server_is_real_generation_capability() -> None:
     assert manifest["kotlin-server"]["implemented"] is True
     assert manifest["kotlin-server"]["routes"] == ["rpc", "stream", "channel"]
     assert "binary-schema" in manifest["kotlin-server"]["requests"]
+
+
+def test_flutter_client_is_real_generation_capability() -> None:
+    manifest = target_capability_manifest()
+
+    assert manifest["flutter-client"]["implemented"] is True
+    assert manifest["flutter-client"]["routes"] == ["rpc", "stream", "channel"]
+    assert "binary-schema" in manifest["flutter-client"]["requests"]
+    assert manifest["flutter-client"]["transport"] == "injected"

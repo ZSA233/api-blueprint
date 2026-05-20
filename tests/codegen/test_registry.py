@@ -18,6 +18,7 @@ def test_generator_registry_exposes_implemented_and_placeholder_targets():
     assert targets["java"].implemented is False
     assert targets["java-client"].implemented is True
     assert targets["java-server"].implemented is True
+    assert targets["flutter-client"].implemented is True
     assert get_target("golang").writer_factory is not None
     assert get_target("grpc-proto").writer_factory is not None
     assert get_target("kotlin").writer_factory is not None
@@ -27,3 +28,4 @@ def test_generator_registry_exposes_implemented_and_placeholder_targets():
     assert get_target("python-server").writer_factory is not None
     assert get_target("java-client").writer_factory is not None
     assert get_target("java-server").writer_factory is not None
+    assert get_target("flutter-client").writer_factory is not None

@@ -60,6 +60,13 @@ out_dir = 'java/client'
 module = 'com.example.apiblueprint'
 base_url = 'http://localhost:2333'
 
+[[flutter.client]]
+id = 'flutter.client'
+out_dir = 'flutter'
+package = 'api_blueprint_example'
+base_url = 'http://localhost:2333'
+include = ['tag:api']
+
 [[python.server]]
 id = 'python.server'
 out_dir = 'python/server'
@@ -75,7 +82,7 @@ base_url = 'http://localhost:2333'
 [[transport.http]]
 id = 'http'
 server = 'go.server'
-clients = ['go.client', 'typescript.client', 'kotlin.client']
+clients = ['go.client', 'typescript.client', 'kotlin.client', 'flutter.client']
 
 [[transport.http]]
 id = 'http.kotlin'

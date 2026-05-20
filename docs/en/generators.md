@@ -6,9 +6,9 @@ This page covers the main non-Wails, non-gRPC generators. See [Wails](wails.md) 
 
 `api-gen check`, contract / agent artifact projection, and language writers use the same planner / capability metadata. Before generation, target dependencies, route kinds, request kinds, and response envelopes are validated consistently, avoiding cases where check passes and a writer later discovers unsupported input.
 
-Generator status and path conventions are part of the shared planning surface. Go server is available; Go client, Kotlin, Java, and Python targets are preview surfaces. Go server / Go client / Wails Go contract and agent artifact paths use Go-safe route package segments, for example `/api-v1` -> `api_v1` and `/admin/v1` -> `admin_v1`. Kotlin / Java / Python artifact paths follow their language-specific route output layout, for example `routes/api/demo`.
+Generator status and path conventions are part of the shared planning surface. Go server is available; Go client, Flutter, Kotlin, Java, and Python targets are preview surfaces. Go server / Go client / Wails Go contract and agent artifact paths use Go-safe route package segments, for example `/api-v1` -> `api_v1` and `/admin/v1` -> `admin_v1`. Flutter / Kotlin / Java / Python artifact paths follow their language-specific route output layout, for example `routes/api/demo`.
 
-Markdown Binary Schema generated names use the same collision policy across targets: packet entry names remain packet-based, while schema-internal struct / enum / bitflags / state / helper symbols are scoped by packet name. Packet names that normalize to the same generated symbol are rejected during generation. Public binary packet fields follow target-language conventions: Go / Kotlin / Java use exported or camelCase field names, while TypeScript / Python keep snake_case fields close to the JSON / wire names.
+Markdown Binary Schema generated names use the same collision policy across targets: packet entry names remain packet-based, while schema-internal struct / enum / bitflags / state / helper symbols are scoped by packet name. Packet names that normalize to the same generated symbol are rejected during generation. Public binary packet fields follow target-language conventions: Go / Kotlin / Java / Flutter use exported or camelCase field names, while TypeScript / Python keep snake_case fields close to the JSON / wire names.
 
 ## Go
 
@@ -24,7 +24,7 @@ The Go generator emits:
 - Transport-neutral Go core.
 - Optional HTTP/Gin adapter.
 
-`gen_*` files are generator-owned and overwritten during regeneration. `impl_*` and non-`gen_*` files are user-owned extension points and are preserved. Kotlin / Java follow the same ownership model: Kotlin uses `Gen*.kt` for generator-owned files, Java uses `Gen*.java` plus runtime generated files, and non-`Gen*` façade / extension files are user-owned.
+`gen_*` files are generator-owned and overwritten during regeneration. `impl_*` and non-`gen_*` files are user-owned extension points and are preserved. Flutter uses Dart-style `gen_*.dart` for generator-owned files and keeps non-`gen_` façade / extension files user-owned; Kotlin / Java follow the same ownership model with `Gen*.kt` and `Gen*.java` plus runtime generated files.
 
 `go-server` owns only the Go server core. `out_dir` is the generated package root; projects that want `views` in import paths should include `views` in `out_dir`. HTTP / Wails output is attached explicitly by `http-transport` / `wails-transport` targets through `server = "go.server"`. The HTTP entrypoint is generated under `<out_dir>/transports/http/<go-root-segment>`, for example `transports/http/api.NewBlueprint(engine)`.
 
@@ -91,7 +91,7 @@ The default HTTP/Wails runtimes fully implement only `ConnectionScope.SESSION`. 
 
 Named variant-union messages generate stable helpers while keeping the same `{ type, data }` wire shape. Go server and Go client output place message unions, `NewXxxMessageVariant(...)`, and `DecodeVariant()` in `gen_messages.go`; message keyframes live in `gen_message_cases.go`: `XxxMessageProcessor[C]`, `VisitXxxMessage(ctx, message, processor)`, lazy `XxxMessageVariantCase.Decode()`, and typed helpers such as `AsXxxMessageError(...)` / `IsXxxMessageErrorKind(...)`. The visitor handles only one message and does not own the `Recv` loop, middleware, close/abort decisions, write path, or error policy; applications keep those runtime decisions in their route/app layer.
 
-TypeScript, Python, Kotlin, and Java use language-native lightweight helpers instead of copying the Go visitor shape. TypeScript emits `XxxMessageVariants.variant(data)`, `dispatchXxxMessage(message, handlers)`, and typed unknown-message dispatch errors. Python emits dataclass `XxxMessage`, `XxxMessageVariants`, `XxxMessageHandlers`, `dispatch_xxx_message(...)`, and `XxxMessageDispatchError` in route `gen_types.py` for both client and server output. Kotlin emits `@Serializable data class XxxMessage(type, data)`, `object XxxMessageVariants`, `XxxMessageHandlers<R>`, `dispatchXxxMessage(...)`, and `XxxMessageDispatchException`; the runtime exposes `ApiJson` for generated encode/decode. Java emits nested `record XxxMessage(String type, JsonNode data)`, variants, handlers, dispatch, and dispatch exception helpers inside the route `<Group>Types.java`, with `ApiJson.MAPPER` as the shared Jackson holder. These helpers support constructing `CHANNEL` client messages and dispatching server pushes, but they still do not implement a WebSocket/SSE engine.
+TypeScript, Flutter, Python, Kotlin, and Java use language-native lightweight helpers instead of copying the Go visitor shape. TypeScript emits `XxxMessageVariants.variant(data)`, `dispatchXxxMessage(message, handlers)`, and typed unknown-message dispatch errors. Flutter emits Dart 3 `sealed class XxxMessage`, final variant classes, `XxxMessageVariants.variant(data)`, and `dispatchXxxMessage(...)`. Python emits dataclass `XxxMessage`, `XxxMessageVariants`, `XxxMessageHandlers`, `dispatch_xxx_message(...)`, and `XxxMessageDispatchError` in route `gen_types.py` for both client and server output. Kotlin emits `@Serializable data class XxxMessage(type, data)`, `object XxxMessageVariants`, `XxxMessageHandlers<R>`, `dispatchXxxMessage(...)`, and `XxxMessageDispatchException`; the runtime exposes `ApiJson` for generated encode/decode. Java emits nested `record XxxMessage(String type, JsonNode data)`, variants, handlers, dispatch, and dispatch exception helpers inside the route `<Group>Types.java`, with `ApiJson.MAPPER` as the shared Jackson holder. These helpers support constructing `CHANNEL` client messages and dispatching server pushes, but they still do not implement the host application's connection session engine.
 
 Go server also creates three user-owned scaffold files the first time it sees a `CHANNEL` with a named client message: `<leaf>_session.go`, `<leaf>_processor.go`, and `<leaf>_error.go`. These files do not carry a `Code generated` marker, and later generations create them only when missing instead of overwriting user edits. The default shell gives humans and AI agents stable places for the route handler, `Recv` loop, `VisitXxxMessage(...)`, `OnXxx` processor methods, and message error policy; it is still an editable starting point, not a generator-owned session engine, and it does not bind the route to appkit, a hub, middleware, or a close policy.
 
@@ -101,7 +101,7 @@ Non-scaffold generated connection handlers still default to `not implemented`, s
 
 ContractGraph collects `Blueprint(errors=...)` and route `.ERR(...)` declarations into language-agnostic typed errors. Manifest `2.0` keeps a global `errors` definition table and writes compact route-local refs (`id/group/key/code/message/toast`) into `routes[].errors`, so generated clients and `api-gen inspect errors --route ...` can show the error surface from the route being called. `id` is the public protocol error identity; `code` is only a business code and may be reused across groups or routes. `ResponseEnvelope` decides the wire shape: the default `CodeMessageDataEnvelope` uses `{ code, message, data, error? }`, strict `{ code, message, data }` output can opt into `LegacyCodeMessageDataEnvelope`, and `{ ok, data/error }` is available only when selecting `OkDataErrorEnvelope`.
 
-Generated runtime APIs use user-facing names such as `ApiError`, `ApiErrors`, `ApiErrorsByID`, `lookupApiError`, and `isApiError`; catalog dictionaries are internal indexes rather than the primary surface. Default Go, TypeScript, Python, Kotlin, and Java client transports unwrap by the route envelope spec, resolve the payload by `id`, then by `(route_id, code)`, then by global code fallback, and throw or return a typed `ApiError`. Go server grouped errors under packages such as `runtime/errors/common_err` return typed `ApiError` values; `WithToast(...)` returns an immutable override copy for request-language, tenant, or rollout-specific dynamic `toast.text`. Business i18n resolves the current language by toast key, and client helpers resolve display text in the order `toast.text`, external i18n, `toast.default`, then `message`. HTTP status remains transport state and is not derived from business error codes.
+Generated runtime APIs use user-facing names such as `ApiError`, `ApiErrors`, `ApiErrorsByID`, `lookupApiError`, and `isApiError`; catalog dictionaries are internal indexes rather than the primary surface. Default Go, TypeScript, Flutter, Python, Kotlin, and Java client transports unwrap by the route envelope spec, resolve the payload by `id`, then by `(route_id, code)`, then by global code fallback, and throw or return a typed `ApiError`. Go server grouped errors under packages such as `runtime/errors/common_err` return typed `ApiError` values; `WithToast(...)` returns an immutable override copy for request-language, tenant, or rollout-specific dynamic `toast.text`. Business i18n resolves the current language by toast key, and client helpers resolve display text in the order `toast.text`, external i18n, `toast.default`, then `message`. HTTP status remains transport state and is not derived from business error codes.
 
 A Go server handler can return generated typed errors directly, or return an undeclared business code to exercise client unknown fallback:
 
@@ -145,7 +145,7 @@ try {
 }
 ```
 
-The repository’s `/api/demo/error-demo` example and Go / TypeScript / Python / Java suites cover declared errors, route-local errors, dynamic `toast.text`, and fallback for undeclared error codes.
+The repository’s `/api/demo/error-demo` example and Go / TypeScript / Flutter / Python / Java suites cover declared errors, route-local errors, dynamic `toast.text`, and fallback for undeclared error codes.
 
 ## Go Client
 
@@ -189,6 +189,43 @@ The TypeScript client target emits:
 `STREAM` / `CHANNEL` generate `ApiStreamBridge<Recv, Close>` and `ApiChannelBridge<Recv, Send, Close>`. Single-message directions use the model type directly; multi-message directions generate discriminated union types such as `{ type: "progress"; data: TaskProgress }`. The HTTP transport stream bridge uses SSE, the channel bridge uses WebSocket with an internal envelope to distinguish normal messages from close lifecycle payloads, and the Wails transport uses generated runtime events without exposing event names to business clients.
 
 Markdown Binary Schema helpers are route-local `gen_binary.ts` implementation files and are re-exported through `types.ts`. Route clients import packet helpers from the route types surface.
+
+## Flutter Client
+
+```sh
+api-gen generate -c api-blueprint.toml --target flutter.client
+```
+
+The Flutter client target emits a pure Dart package that Flutter Android/iOS apps can depend on directly. The generated package does not generate Flutter UI, app lifecycle, state management, auth, retry, cache, or a session engine.
+
+A typical output layout is:
+
+- `lib/<package>.dart`
+- `lib/src/<root>/<root>.dart`
+- `lib/src/<root>/runtime/gen_api_transport.dart`
+- `lib/src/<root>/runtime/gen_api_client.dart`
+- `lib/src/<root>/runtime/gen_api_errors.dart`
+- `lib/src/<root>/runtime/gen_api_error_lookup.dart`
+- `lib/src/<root>/runtime/gen_api_types.dart`
+- `lib/src/<root>/runtime/binary/gen_binary_runtime.dart`
+- `lib/src/<root>/runtime/api_client.dart`
+- `lib/src/<root>/runtime/api_json_codecs.dart`
+- `lib/src/<root>/routes/<root>/<group...>/gen_<group>_api.dart`
+- `lib/src/<root>/routes/<root>/<group...>/gen_<group>_types.dart`
+- `lib/src/<root>/routes/<root>/<group...>/gen_binary.dart`
+- `lib/src/<root>/routes/<root>/<group...>/<group>_api.dart`
+- `lib/src/<root>/routes/<root>/<group...>/<group>_types.dart`
+- `lib/src/<root>/routes/<root>/<group...>/binary.dart`
+- `lib/src/<root>/transports/http/gen_http_api_config.dart`
+- `lib/src/<root>/transports/http/gen_http_api_transport.dart`
+- `lib/src/<root>/transports/http/gen_http_connection.dart`
+- `lib/src/<root>/transports/http/http_api_client.dart`
+
+`gen_*.dart` files are overwritten by the generator. `api_client.dart`, `api_json_codecs.dart`, `http_api_client.dart`, route façades, type façades, and `binary.dart` are created only when missing and then owned by the user. The `ApiJsonCodec<T>` registry in `api_json_codecs.dart` lets projects plug in `build_runner` or handwritten codecs; without an override, generated manual `fromJson` / `toJson` code is used.
+
+Runtime entrypoints include the aggregate `ApiClient` façade, route clients such as `DemoApi`, DTO `fromJson` / `toJson`, `ApiError`, `lookupApiError`, `ApiTransport`, `ApiStreamBridge`, `ApiChannelBridge`, and binary `Uint8List` codecs. The default HTTP transport uses `package:http` for RPC query/json/form/binary requests, SSE for STREAM bridges, and `web_socket_channel` for CHANNEL bridges. `base_url` / `base_url_expr` are written to HTTP config, not route/runtime clients.
+
+Markdown Binary Schema helpers live in route-local `gen_binary.dart`; the shared binary reader/writer runtime lives in `runtime/binary/gen_binary_runtime.dart`. Dart public fields use lowerCamelCase while diagnostics keep the schema's original field names.
 
 ## Kotlin Client / Server
 
@@ -293,7 +330,7 @@ Python server also uses `python_package_root` as its package root and emits rout
 
 ## Example Snapshots
 
-`examples/golang/server/`, `examples/golang/client/`, `examples/typescript/`, `examples/kotlin/client`, `examples/kotlin/server`, and `examples/java/client` / `examples/java/server` are generated snapshots, not business sources; `examples/java/suite` is a handwritten runtime validation project. Go server / Go client / Wails Go contract / agent artifact indexes use Go-safe route package segments, while Kotlin / Java / Python artifact indexes keep their language-specific route output paths. To accept intentional generation changes, use:
+`examples/golang/server/`, `examples/golang/client/`, `examples/typescript/`, `examples/flutter/`, `examples/kotlin/client`, `examples/kotlin/server`, and `examples/java/client` / `examples/java/server` are generated snapshots, not business sources; `examples/java/suite` is a handwritten runtime validation project. Go server / Go client / Wails Go contract / agent artifact indexes use Go-safe route package segments, while Flutter / Kotlin / Java / Python artifact indexes keep their language-specific route output paths. To accept intentional generation changes, use:
 
 ```sh
 make example-refresh

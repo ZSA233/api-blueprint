@@ -1,0 +1,89 @@
+{% autoescape false %}// ignore_for_file: unused_import
+
+import 'package:{{ writer.package }}/src/{{ bp.root_path }}/runtime/gen_api_transport.dart';
+import 'package:{{ writer.package }}/src/{{ bp.root_path }}/runtime/gen_api_errors.dart';
+import 'package:{{ writer.package }}/src/{{ bp.root_path }}/runtime/gen_api_types.dart';
+import 'gen_{{ group.file_stem }}_types.dart';
+{% if group.binary_schemas() %}import 'gen_binary.dart';
+{% endif %}
+
+class Gen{{ group.class_name }} {
+  final ApiTransport transport;
+
+  Gen{{ group.class_name }}(this.transport);
+{% for route in group.routes %}
+{% if route.is_rpc %}
+
+  Future<{{ route.response_type.text }}> {{ route.method_name }}({
+{% if route.query_type %}    {{ route.query_type }}? query,
+{% endif %}{% if route.json_type %}    {{ route.json_type }}? json,
+{% endif %}{% if route.form_type %}    {{ route.form_type }}? form,
+{% endif %}{% if route.binary_type %}    required {{ route.binary_type }} {{ route.binary_param_name }},
+{% endif %}    Map<String, String> headers = const {},
+  }) {
+    return transport.request(
+      ApiRequest<{{ route.response_type.text }}>(
+        routeId: {{ route.protocol.route.route_id | tojson }},
+        method: {{ route.http_method | tojson }},
+        path: {{ writer.dart_string_literal(route.url) }},
+        query: {{ route.query_to_map_expr }},
+        headers: headers,
+{% if route.json_type %}        json: json?.toJson(),
+{% endif %}{% if route.form_type %}        form: form?.toJson(),
+{% endif %}{% if route.has_binary_schema %}        binary: {{ route.flutter_binary_schema.encode_func }}({{ route.binary_param_name }}),
+        binaryContentType: {{ route.flutter_binary_schema.content_type | tojson }},
+{% elif route.binary_type %}        binary: const <int>[],
+{% endif %}        responseMediaType: {{ route.response_media_type | tojson }},
+        responseEnvelope: {{ route.response_envelope_literal }},
+        decode: {{ route.decoder_expr }},
+      ),
+    );
+  }
+{% elif route.supports_stream %}
+
+  ApiStreamBridge<{{ route.server_message_type }}, {{ route.close_type }}> {{ route.subscribe_method_name }}({
+{% if route.query_type %}    {{ route.query_type }}? query,
+{% endif %}{% if route.open_type %}    {{ route.open_type }}? open,
+{% endif %}    Map<String, String> headers = const {},
+  }) {
+    return transport.openStream(
+      StreamConnectOptions<{{ route.server_message_type }}, {{ route.close_type }}>(
+        routeId: {{ route.protocol.route.route_id | tojson }},
+        connectionKind: "stream",
+        path: {{ writer.dart_string_literal(route.url) }},
+        query: {{ route.open_to_query_expr }},
+        open: {% if route.open_type %}apiBlueprintToJson(open){% else %}null{% endif %},
+        headers: headers,
+        decodeMessage: {{ route.server_message_type }}.fromJsonValue,
+        decodeClose: {{ route.close_type }}.fromJsonValue,
+      ),
+    );
+  }
+{% elif route.supports_channel %}
+
+  ApiChannelBridge<{{ route.server_message_type }}, {{ route.client_message_type }}, {{ route.close_type }}> {{ route.open_channel_method_name }}({
+{% if route.query_type %}    {{ route.query_type }}? query,
+{% endif %}{% if route.open_type %}    {{ route.open_type }}? open,
+{% endif %}    Map<String, String> headers = const {},
+    List<String> protocols = const [],
+  }) {
+    return transport.openChannel(
+      ChannelConnectOptions<{{ route.server_message_type }}, {{ route.client_message_type }}, {{ route.close_type }}>(
+        routeId: {{ route.protocol.route.route_id | tojson }},
+        connectionKind: "channel",
+        path: {{ writer.dart_string_literal(route.url) }},
+        query: {{ route.open_to_query_expr }},
+        open: {% if route.open_type %}apiBlueprintToJson(open){% else %}null{% endif %},
+        headers: headers,
+        protocols: protocols,
+        delivery: {{ route.connection_delivery | tojson }},
+        decodeMessage: {{ route.server_message_type }}.fromJsonValue,
+        encodeMessage: (value) => value.toJson(),
+        decodeClose: {{ route.close_type }}.fromJsonValue,
+      ),
+    );
+  }
+{% endif %}
+{% endfor %}
+}
+{% endautoescape %}

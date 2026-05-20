@@ -137,7 +137,7 @@ Dynamic arrays or dynamic bytes must have a derivable upper bound. The common sh
 | Reserved | 4..31 | const=0 | reserved bits must be zero |
 ```
 
-`bits=0` means bit 0. `bits=2..3` means a continuous range. `enum=DemoKind` interprets the range as an enum value, and Go output generates helpers such as `Mode()` / `WithMode(...)`. `const=0` marks those bits as reserved; generated Go server parsers and Go / TypeScript / Kotlin / Python client writers validate that they stay zero.
+`bits=0` means bit 0. `bits=2..3` means a continuous range. `enum=DemoKind` interprets the range as an enum value, and Go output generates helpers such as `Mode()` / `WithMode(...)`. `const=0` marks those bits as reserved; generated Go server parsers and Go / TypeScript / Flutter / Kotlin / Python client writers validate that they stay zero.
 
 ### Compatibility
 
@@ -153,6 +153,8 @@ routes/api/binary/gen_binary.go               # Go client
 routes/api/binary/BinaryTypes.java
 routes/api/binary/BinaryTypes.kt
 routes/api/binary/gen_binary.ts
+lib/src/api/routes/api/binary/gen_binary.dart
+lib/src/api/runtime/binary/gen_binary_runtime.dart
 routes/api/binary/gen_binary.py
 routes/api/binary/gen_types.py
 runtime/binary/gen_runtime.go
@@ -162,7 +164,7 @@ When multiple `.REQ_BINARY(...)` routes share the same route group, packet entry
 
 Binary parser / writer diagnostics use the schema's original packet, section, object, and field names rather than target-language internal generated symbols. Nested objects and array items wrap paths after an error occurs, for example `DemoPacket.body.items[0].id`; successful write paths do not eagerly concatenate full field paths just for diagnostics.
 
-Public packet field names follow each target language's SDK conventions while diagnostics keep schema names. Go / Kotlin / Java expose language-style fields such as `ItemCount` or `itemCount`; TypeScript and Python keep snake_case fields such as `item_count` to stay close to JSON / wire naming.
+Public packet field names follow each target language's SDK conventions while diagnostics keep schema names. Go / Kotlin / Java / Flutter expose language-style fields such as `ItemCount` or `itemCount`; TypeScript and Python keep snake_case fields such as `item_count` to stay close to JSON / wire naming.
 
 Go bitflags remain integer aliases to keep wire compatibility and bit-operation performance; helpers provide a clearer access surface:
 
@@ -175,7 +177,7 @@ flags.HasReservedBits()
 flags.Validate()
 ```
 
-Go / TypeScript / Kotlin / Python / Java clients generate, from the same schema:
+Go / TypeScript / Flutter / Kotlin / Python / Java clients generate, from the same schema:
 
 - typed packets for small bodies or tests.
 - streaming/raw binary bodies for large hot paths.

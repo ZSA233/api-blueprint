@@ -17,8 +17,8 @@ Blueprint DSL -> ContractGraph -> api-gen check / inspect / generate -> generate
 
 ## When To Use
 
-- Backend, web, Kotlin, and script clients need to share one API contract.
-- You want to generate a Go server first, then TypeScript, Kotlin, Java, Go, or Python clients, or generate Kotlin/Java/Python server scaffolds.
+- Backend, web, Flutter, Kotlin, and script clients need to share one API contract.
+- You want to generate a Go server first, then TypeScript, Flutter, Kotlin, Java, Go, or Python clients, or generate Kotlin/Java/Python server scaffolds.
 - You need documentation, contract checks, generated snapshots, and end-to-end examples to move together.
 - You need Markdown Binary Schema, Wails, or gRPC in the same generation flow.
 
@@ -95,6 +95,7 @@ For fuller project layout, config fields, DSL, generator output, typed errors, R
 | Contract / inspect | Available | Emit a contract index and query route, schema, error, or file ownership details |
 | Go server | Available | Generate Go routes, providers, long-connection message helpers, HTTP/Wails adapters, and runtime |
 | TypeScript client | Preview | Generate transport-neutral clients, long-connection message helpers, HTTP adapters, and Wails facades |
+| Flutter client | Preview | Generate a pure Dart package, DTOs, typed errors, binary codecs, and HTTP/SSE/WebSocket clients |
 | Kotlin client/server | Preview | Generate OkHttp clients, Ktor server scaffolds, models, long-connection message helpers, binary writers, and HTTP adapters |
 | Java client/server | Preview | Generate Java 17 HttpClient clients, Spring MVC server scaffolds, record DTOs, long-connection message helpers, binary packet helpers, and HTTP adapters |
 | Go / Python client | Preview | Generate non-server clients for scripts, tools, or services, with long-connection message helpers and binary writers |

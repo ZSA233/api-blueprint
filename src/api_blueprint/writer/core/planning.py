@@ -95,6 +95,13 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
         envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
     ),
+    "flutter-client": TargetCapability(
+        implemented=True,
+        routes=("rpc", "stream", "channel"),
+        requests=("query", "json", "form", "binary", "binary-schema", "open"),
+        envelopes=("none", "code_message_data", "ok_data_error"),
+        transport="injected",
+    ),
     "python-server": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
