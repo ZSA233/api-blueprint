@@ -153,7 +153,16 @@ function toBlob(value: Blob | ArrayBuffer | Uint8Array, contentType?: string): B
   if (value instanceof Blob) {
     return contentType ? value.slice(0, value.size, contentType) : value;
   }
-  return new Blob([value], contentType ? { type: contentType } : undefined);
+  return new Blob([toBlobPart(value)], contentType ? { type: contentType } : undefined);
+}
+
+function toBlobPart(value: ArrayBuffer | Uint8Array): ArrayBuffer {
+  if (value instanceof ArrayBuffer) {
+    return value;
+  }
+  const copy = new ArrayBuffer(value.byteLength);
+  new Uint8Array(copy).set(value);
+  return copy;
 }
 
 const defaultFetch: typeof fetch = (...args) => fetch(...args);
