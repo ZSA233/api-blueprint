@@ -28,7 +28,7 @@ public open class Gen{{ group.class_name }} internal constructor(
 {%- if route.binary_type %}
         binary: {{ route.binary_type }},
 {%- endif %}
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): {{ route.response_type.text }} {
         return transport.request(
             ApiRequest(
@@ -38,7 +38,7 @@ public open class Gen{{ group.class_name }} internal constructor(
 {%- if route.query_type %}
                 query = query.toQueryMap(),
 {%- endif %}
-                headers = headers,
+                options = options,
 {%- if route.json_type %}
                 json = json,
                 jsonSerializer = {{ route.json_type }}.serializer(),
@@ -68,7 +68,7 @@ public open class Gen{{ group.class_name }} internal constructor(
         query: {{ route.query_type }},
 {%- endif %}
         binary: ApiBinaryBody,
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): {{ route.response_type.text }} {
         return transport.request(
             ApiRequest(
@@ -78,7 +78,7 @@ public open class Gen{{ group.class_name }} internal constructor(
 {%- if route.query_type %}
                 query = query.toQueryMap(),
 {%- endif %}
-                headers = headers,
+                options = options,
                 binary = binary,
                 responseSerializer = {{ route.response_serializer_expr }},
                 responseMediaType = "{{ route.response_media_type }}",

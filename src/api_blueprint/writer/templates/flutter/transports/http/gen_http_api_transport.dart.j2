@@ -22,7 +22,7 @@ class HttpApiTransport implements ApiTransport {
     final url = _buildUrl(request.path, request.query);
     final headers = {
       ...config.defaultHeaders,
-      ...request.headers,
+      ...request.options.headers,
     };
     Object? body;
     if (request.json != null) {
@@ -47,7 +47,8 @@ class HttpApiTransport implements ApiTransport {
         ..bodyBytes = body is List<int> ? body : utf8.encode(body?.toString() ?? '')).then(http.Response.fromStream);
     }
 
-    final response = config.timeout == null ? await send() : await send().timeout(config.timeout!);
+    final timeout = request.options.timeout ?? config.timeout;
+    final response = timeout == null ? await send() : await send().timeout(timeout);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final payload = _decodeBody(response.body);
       throw ApiError(

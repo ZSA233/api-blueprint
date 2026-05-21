@@ -3,12 +3,22 @@ import 'gen_api_error_lookup.dart';
 import 'gen_api_errors.dart';
 import 'dart:typed_data';
 
+class ApiRequestOptions {
+  final Map<String, String> headers;
+  final Duration? timeout;
+
+  const ApiRequestOptions({
+    this.headers = const {},
+    this.timeout,
+  });
+}
+
 class ApiRequest<T> {
   final String routeId;
   final String method;
   final String path;
   final Map<String, String?> query;
-  final Map<String, String> headers;
+  final ApiRequestOptions options;
   final Object? json;
   final Object? form;
   final Object? multipart;
@@ -25,7 +35,7 @@ class ApiRequest<T> {
     required this.path,
     required this.decode,
     this.query = const {},
-    this.headers = const {},
+    this.options = const ApiRequestOptions(),
     this.json,
     this.form,
     this.multipart,

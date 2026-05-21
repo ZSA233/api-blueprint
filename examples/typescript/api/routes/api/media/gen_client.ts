@@ -4,7 +4,7 @@
 
 import type * as Types from "./types";
 import type * as Shared from "../../../runtime/types";
-import { ApiChannelBridge, ApiClientConfig, ApiStreamBridge, BaseClient } from "../../../runtime/client";
+import { ApiChannelBridge, ApiClientConfig, ApiRequestOptions, ApiStreamBridge, BaseClient } from "../../../runtime/client";
 
 export class MediaClient extends BaseClient {
   constructor(config: ApiClientConfig = {}) {
@@ -21,10 +21,9 @@ export class MediaClient extends BaseClient {
     request: {
       multipart?: Shared.MediaPreviewRequest;
       body?: RequestInit["body"];
-      headers?: Record<string, string>;
+
     } = {},
-    init: RequestInit = {},
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<Types.MediaPreviewResponse> {
     return this.request<Types.MediaPreviewResponse>({
       routeId: "api.media.post.preview",
@@ -35,11 +34,11 @@ export class MediaClient extends BaseClient {
       namespace: "media",
       multipart: request.multipart as unknown as Record<string, unknown> | undefined,
       body: request.body,
-      headers: request.headers,
-      init,
+      headers: options?.headers,
+      init: options?.init,
       responseType: "blob",
       responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
     });
   }
 
@@ -51,10 +50,9 @@ export class MediaClient extends BaseClient {
 
   async mediaFrame(
     request: {
-      headers?: Record<string, string>;
+
     } = {},
-    init: RequestInit = {},
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<Types.MediaFrameResponse> {
     return this.request<Types.MediaFrameResponse>({
       routeId: "api.media.get.frame",
@@ -63,11 +61,11 @@ export class MediaClient extends BaseClient {
       service: "MediaService",
       operation: "MediaFrame",
       namespace: "media",
-      headers: request.headers,
-      init,
+      headers: options?.headers,
+      init: options?.init,
       responseType: "blob",
       responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
     });
   }
 
@@ -79,10 +77,9 @@ export class MediaClient extends BaseClient {
 
   async mediaDownload(
     request: {
-      headers?: Record<string, string>;
+
     } = {},
-    init: RequestInit = {},
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<Types.MediaDownloadResponse> {
     return this.request<Types.MediaDownloadResponse>({
       routeId: "api.media.get.download",
@@ -91,11 +88,11 @@ export class MediaClient extends BaseClient {
       service: "MediaService",
       operation: "MediaDownload",
       namespace: "media",
-      headers: request.headers,
-      init,
+      headers: options?.headers,
+      init: options?.init,
       responseType: "blob",
       responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
     });
   }
 
@@ -107,10 +104,9 @@ export class MediaClient extends BaseClient {
 
   async mediaDownloadDynamic(
     request: {
-      headers?: Record<string, string>;
+
     } = {},
-    init: RequestInit = {},
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<Types.MediaDownloadDynamicResponse> {
     return this.request<Types.MediaDownloadDynamicResponse>({
       routeId: "api.media.get.downloaddynamic",
@@ -119,11 +115,11 @@ export class MediaClient extends BaseClient {
       service: "MediaService",
       operation: "MediaDownloadDynamic",
       namespace: "media",
-      headers: request.headers,
-      init,
+      headers: options?.headers,
+      init: options?.init,
       responseType: "blob",
       responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
     });
   }
 
@@ -135,10 +131,9 @@ export class MediaClient extends BaseClient {
 
   async mediaMjpeg(
     request: {
-      headers?: Record<string, string>;
+
     } = {},
-    init: RequestInit = {},
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<Types.MediaMjpegResponse> {
     return this.request<Types.MediaMjpegResponse>({
       routeId: "api.media.get.mjpeg",
@@ -147,11 +142,11 @@ export class MediaClient extends BaseClient {
       service: "MediaService",
       operation: "MediaMjpeg",
       namespace: "media",
-      headers: request.headers,
-      init,
+      headers: options?.headers,
+      init: options?.init,
       responseType: "stream",
       responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
     });
   }
 

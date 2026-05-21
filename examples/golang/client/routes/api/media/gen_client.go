@@ -23,7 +23,7 @@ type MediaClient = GenMediaClient
 
 var NewMediaClient = NewGenMediaClient
 
-func (client *GenMediaClient) MediaPreview(ctx context.Context, multipartBody MediaPreviewForm) (*runtime.RawResponse, error) {
+func (client *GenMediaClient) MediaPreview(ctx context.Context, multipartBody MediaPreviewForm, opts ...runtime.RequestOption) (*runtime.RawResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.media.post.preview",
 		Method:           "POST",
@@ -33,6 +33,7 @@ func (client *GenMediaClient) MediaPreview(ctx context.Context, multipartBody Me
 		BodyKind:         runtime.RequestBodyKind("multipart"),
 		ResponseKind:     runtime.ResponseKind("bytes"),
 	}
+	request.ApplyOptions(opts...)
 	var response runtime.RawResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
@@ -40,7 +41,7 @@ func (client *GenMediaClient) MediaPreview(ctx context.Context, multipartBody Me
 	return &response, nil
 }
 
-func (client *GenMediaClient) MediaFrame(ctx context.Context) (*runtime.RawResponse, error) {
+func (client *GenMediaClient) MediaFrame(ctx context.Context, opts ...runtime.RequestOption) (*runtime.RawResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.media.get.frame",
 		Method:           "GET",
@@ -49,6 +50,7 @@ func (client *GenMediaClient) MediaFrame(ctx context.Context) (*runtime.RawRespo
 		BodyKind:         runtime.RequestBodyKind("none"),
 		ResponseKind:     runtime.ResponseKind("bytes"),
 	}
+	request.ApplyOptions(opts...)
 	var response runtime.RawResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
@@ -56,7 +58,7 @@ func (client *GenMediaClient) MediaFrame(ctx context.Context) (*runtime.RawRespo
 	return &response, nil
 }
 
-func (client *GenMediaClient) MediaDownload(ctx context.Context) (*runtime.RawResponse, error) {
+func (client *GenMediaClient) MediaDownload(ctx context.Context, opts ...runtime.RequestOption) (*runtime.RawResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.media.get.download",
 		Method:           "GET",
@@ -65,6 +67,7 @@ func (client *GenMediaClient) MediaDownload(ctx context.Context) (*runtime.RawRe
 		BodyKind:         runtime.RequestBodyKind("none"),
 		ResponseKind:     runtime.ResponseKind("file"),
 	}
+	request.ApplyOptions(opts...)
 	var response runtime.RawResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
@@ -72,7 +75,7 @@ func (client *GenMediaClient) MediaDownload(ctx context.Context) (*runtime.RawRe
 	return &response, nil
 }
 
-func (client *GenMediaClient) MediaDownloadDynamic(ctx context.Context) (*runtime.RawResponse, error) {
+func (client *GenMediaClient) MediaDownloadDynamic(ctx context.Context, opts ...runtime.RequestOption) (*runtime.RawResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.media.get.downloaddynamic",
 		Method:           "GET",
@@ -81,6 +84,7 @@ func (client *GenMediaClient) MediaDownloadDynamic(ctx context.Context) (*runtim
 		BodyKind:         runtime.RequestBodyKind("none"),
 		ResponseKind:     runtime.ResponseKind("file"),
 	}
+	request.ApplyOptions(opts...)
 	var response runtime.RawResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
@@ -88,7 +92,7 @@ func (client *GenMediaClient) MediaDownloadDynamic(ctx context.Context) (*runtim
 	return &response, nil
 }
 
-func (client *GenMediaClient) MediaMjpeg(ctx context.Context) (*runtime.StreamResponse, error) {
+func (client *GenMediaClient) MediaMjpeg(ctx context.Context, opts ...runtime.RequestOption) (*runtime.StreamResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.media.get.mjpeg",
 		Method:           "GET",
@@ -97,6 +101,7 @@ func (client *GenMediaClient) MediaMjpeg(ctx context.Context) (*runtime.StreamRe
 		BodyKind:         runtime.RequestBodyKind("none"),
 		ResponseKind:     runtime.ResponseKind("byte_stream"),
 	}
+	request.ApplyOptions(opts...)
 	var response runtime.StreamResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err

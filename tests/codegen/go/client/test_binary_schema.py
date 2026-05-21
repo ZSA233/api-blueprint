@@ -130,7 +130,10 @@ content-type: application/vnd.audit-packet
     binary_runtime = (output_dir / "runtime" / "binary" / "gen_runtime.go").read_text(encoding="utf-8")
     transport_text = (output_dir / "transports" / "http" / "gen_transport.go").read_text(encoding="utf-8")
 
-    assert "func (client *GenBinaryClient) Audit(ctx context.Context) (*AuditPacket, error)" in route_text
+    assert (
+        "func (client *GenBinaryClient) Audit(ctx context.Context, opts ...runtime.RequestOption) "
+        "(*AuditPacket, error)"
+    ) in route_text
     assert 'ResponseKind:     runtime.ResponseKind("binary_schema")' in route_text
     assert "var response AuditPacket" in route_text
     assert "func ParseAuditPacket(r io.Reader) (*AuditPacket, error)" in schema_text

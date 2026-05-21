@@ -11,7 +11,7 @@ public open class GenDemoApi internal constructor(
 
     public open suspend fun abc(
         query: DemoAbcQuery,
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): ApiDemoA {
         return transport.request(
             ApiRequest(
@@ -19,7 +19,7 @@ public open class GenDemoApi internal constructor(
                 method = "GET",
                 path = "/api/demo/abc",
                 query = query.toQueryMap(),
-                headers = headers,
+                options = options,
                 responseSerializer = ApiDemoA.serializer(),
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
@@ -30,14 +30,14 @@ public open class GenDemoApi internal constructor(
 
     public open suspend fun testPost(
         json: DemoTestPostJson,
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): DemoTestPostResponse {
         return transport.request(
             ApiRequest(
                 routeId = "api.demo.post.testpost",
                 method = "POST",
                 path = "/api/demo/test_post",
-                headers = headers,
+                options = options,
                 json = json,
                 jsonSerializer = DemoTestPostJson.serializer(),
                 responseSerializer = DemoTestPostResponse.serializer(),
@@ -50,14 +50,14 @@ public open class GenDemoApi internal constructor(
 
     public open suspend fun formSubmit(
         form: DemoFormSubmitForm,
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): DemoFormSubmitResponse {
         return transport.request(
             ApiRequest(
                 routeId = "api.demo.post.formsubmit",
                 method = "POST",
                 path = "/api/demo/form-submit",
-                headers = headers,
+                options = options,
                 form = form,
                 formSerializer = DemoFormSubmitForm.serializer(),
                 responseSerializer = DemoFormSubmitResponse.serializer(),
@@ -71,7 +71,7 @@ public open class GenDemoApi internal constructor(
     public open suspend fun putDemo(
         query: DemoPutDemoQuery,
         json: DemoPutDemoJson,
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): DemoPutDemoResponse {
         return transport.request(
             ApiRequest(
@@ -79,7 +79,7 @@ public open class GenDemoApi internal constructor(
                 method = "PUT",
                 path = "/api/demo/1put",
                 query = query.toQueryMap(),
-                headers = headers,
+                options = options,
                 json = json,
                 jsonSerializer = DemoPutDemoJson.serializer(),
                 responseSerializer = DemoPutDemoResponse.serializer(),
@@ -133,14 +133,14 @@ public open class GenDemoApi internal constructor(
 
     public open suspend fun postDeprecated(
         json: DemoPostDeprecatedJson,
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): DemoPostDeprecatedResponse {
         return transport.request(
             ApiRequest(
                 routeId = "api.demo.post.postdeprecated",
                 method = "POST",
                 path = "/api/demo/post_deprecated",
-                headers = headers,
+                options = options,
                 json = json,
                 jsonSerializer = DemoPostDeprecatedJson.serializer(),
                 responseSerializer = DemoPostDeprecatedResponse.serializer(),
@@ -152,14 +152,14 @@ public open class GenDemoApi internal constructor(
     }
 
     public open suspend fun raw(
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): DemoRawResponse {
         return transport.request(
             ApiRequest(
                 routeId = "api.demo.post.raw",
                 method = "POST",
                 path = "/api/demo/raw",
-                headers = headers,
+                options = options,
                 responseSerializer = DemoRawResponse.serializer(),
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
@@ -169,14 +169,14 @@ public open class GenDemoApi internal constructor(
     }
 
     public open suspend fun mapModel(
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): DemoMapModelResponse {
         return transport.request(
             ApiRequest(
                 routeId = "api.demo.post.mapmodel",
                 method = "POST",
                 path = "/api/demo/map_model",
-                headers = headers,
+                options = options,
                 responseSerializer = MapSerializer(Int.serializer(), ApiDemoMap.serializer()),
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
@@ -187,7 +187,7 @@ public open class GenDemoApi internal constructor(
 
     public open suspend fun errorDemo(
         query: DemoErrorDemoQuery,
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): DemoErrorDemoResponse {
         return transport.request(
             ApiRequest(
@@ -195,7 +195,7 @@ public open class GenDemoApi internal constructor(
                 method = "GET",
                 path = "/api/demo/error-demo",
                 query = query.toQueryMap(),
-                headers = headers,
+                options = options,
                 responseSerializer = DemoErrorDemoResponse.serializer(),
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),

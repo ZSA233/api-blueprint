@@ -16,7 +16,7 @@ class GenConflictApi {
 
   Future<ConflictModel> default_({
     ConflictDefaultQuery? query,
-    Map<String, String> headers = const {},
+    ApiRequestOptions options = const ApiRequestOptions(),
   }) {
     return transport.request(
       ApiRequest<ConflictModel>(
@@ -24,7 +24,7 @@ class GenConflictApi {
         method: "GET",
         path: "/api/conflict/default",
         query: query?.toQueryMap() ?? const <String, String?>{},
-        headers: headers,
+        options: options,
         responseMediaType: "application/json",
         responseKind: "json",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),

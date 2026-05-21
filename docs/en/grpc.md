@@ -82,6 +82,10 @@ Use proto-native modeling instead:
 - File uploads / multipart: use client-streaming `UploadChunk`; put file metadata in the first message and `bytes data` in later chunks; normal form fields should become explicit request message fields.
 - Byte streams / MJPEG: use server-streaming chunk messages, not HTTP multipart boundaries.
 
+## Deadlines And Metadata
+
+`grpc-proto` does not generate a cross-language client options wrapper. Per-call timeout, cancellation, headers, auth tokens, and tracing context should use each generated gRPC client's native APIs: deadlines / contexts, outgoing metadata, interceptors, and call options. For example, Go callers use `context.WithTimeout(...)` plus `metadata.AppendToOutgoingContext(...)`; Python callers use gRPC metadata tuples and timeout arguments on the generated stub method.
+
 ## RPC Mapping
 
 - Normal HTTP routes emit unary RPCs.

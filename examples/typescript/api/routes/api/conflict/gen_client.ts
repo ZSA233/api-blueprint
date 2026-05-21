@@ -4,7 +4,7 @@
 
 import type * as Types from "./types";
 import type * as Shared from "../../../runtime/types";
-import { ApiChannelBridge, ApiClientConfig, ApiStreamBridge, BaseClient } from "../../../runtime/client";
+import { ApiChannelBridge, ApiClientConfig, ApiRequestOptions, ApiStreamBridge, BaseClient } from "../../../runtime/client";
 
 export class ConflictClient extends BaseClient {
   constructor(config: ApiClientConfig = {}) {
@@ -20,10 +20,9 @@ export class ConflictClient extends BaseClient {
   async default(
     request: {
       query?: Types.DefaultQuery;
-      headers?: Record<string, string>;
+
     } = {},
-    init: RequestInit = {},
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<Types.DefaultResponse> {
     return this.request<Types.DefaultResponse>({
       routeId: "api.conflict.get.default",
@@ -33,11 +32,11 @@ export class ConflictClient extends BaseClient {
       operation: "Default",
       namespace: "conflict",
       query: request.query as unknown as Record<string, unknown> | undefined,
-      headers: request.headers,
-      init,
+      headers: options?.headers,
+      init: options?.init,
       responseType: "json",
       responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
     });
   }
 

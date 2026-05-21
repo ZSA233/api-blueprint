@@ -3,6 +3,7 @@ package com.example.apiblueprint.api.routes.api;
 
 import com.example.apiblueprint.api.runtime.GenApiChannelBridge;
 import com.example.apiblueprint.api.runtime.GenApiRequest;
+import com.example.apiblueprint.api.runtime.GenApiRequestOptions;
 import com.example.apiblueprint.api.runtime.GenApiRawResponse;
 import com.example.apiblueprint.api.runtime.GenApiResponseEnvelope;
 import com.example.apiblueprint.api.runtime.GenApiStreamResponse;
@@ -10,7 +11,6 @@ import com.example.apiblueprint.api.runtime.GenApiStreamBridge;
 import com.example.apiblueprint.api.runtime.GenApiTransport;
 
 import com.example.apiblueprint.api.runtime.binary.GenApiBinaryBody;
-import java.util.Map;
 
 public class GenApiApi {
     protected final GenApiTransport transport;
@@ -21,6 +21,15 @@ public class GenApiApi {
 
     public GenApiChannelBridge<com.example.apiblueprint.api.runtime.GenApiTypes.HelloChannelMessage, com.example.apiblueprint.api.runtime.GenApiTypes.HelloChannelMessage, Object> openHelloChannel(
     ) {
+        return openHelloChannel(
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenApiChannelBridge<com.example.apiblueprint.api.runtime.GenApiTypes.HelloChannelMessage, com.example.apiblueprint.api.runtime.GenApiTypes.HelloChannelMessage, Object> openHelloChannel(
+        GenApiRequestOptions options
+    ) {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<Object> request = new GenApiRequest<>(
             "api.api.channel.ws",
             "CHANNEL",
@@ -37,7 +46,8 @@ public class GenApiApi {
             "json",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.openChannel(request);
     }

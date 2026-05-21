@@ -82,6 +82,10 @@ gRPC 需要文件、bytes、stream 或 typed binary packet 这类能力，但这
 - 文件上传 / multipart：使用 client-streaming `UploadChunk`；首包携带文件 metadata，后续包携带 `bytes data`；普通表单字段应进入显式 request message。
 - byte stream / MJPEG：使用 server-streaming chunk message，不生成 HTTP multipart boundary。
 
+## Deadline 与 metadata
+
+`grpc-proto` 不生成跨语言 client options wrapper。单次调用的 timeout、cancel、header、auth token 与 trace context 应使用各语言 gRPC client 的原生 API：deadline / context、outgoing metadata、interceptor 和 call options。例如 Go 调用方使用 `context.WithTimeout(...)` 搭配 `metadata.AppendToOutgoingContext(...)`；Python 调用方使用 generated stub 方法上的 metadata tuple 与 timeout 参数。
+
 ## RPC 映射
 
 - 普通 HTTP route 输出 unary RPC。

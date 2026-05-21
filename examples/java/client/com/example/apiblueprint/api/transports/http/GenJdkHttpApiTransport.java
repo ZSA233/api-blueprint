@@ -26,6 +26,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.StringJoiner;
@@ -111,7 +113,11 @@ public class GenJdkHttpApiTransport implements GenApiTransport {
     private HttpRequest buildRequest(GenApiRequest<?> request) throws IOException {
         String url = url(request.path(), request.query());
         HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url));
-        request.headers().forEach(builder::header);
+        mergedHeaders(request.headers()).forEach(builder::header);
+        Duration timeout = request.timeout() == null ? config.timeout() : request.timeout();
+        if (timeout != null) {
+            builder.timeout(timeout);
+        }
         Object json = request.json();
         Object form = request.form();
         Object multipart = request.multipart();
@@ -133,6 +139,14 @@ public class GenJdkHttpApiTransport implements GenApiTransport {
             builder.method(request.method(), HttpRequest.BodyPublishers.noBody());
         }
         return builder.build();
+    }
+
+    private Map<String, String> mergedHeaders(Map<String, String> headers) {
+        LinkedHashMap<String, String> merged = new LinkedHashMap<>(config.defaultHeaders());
+        if (headers != null) {
+            merged.putAll(headers);
+        }
+        return merged;
     }
 
     private String url(String path, Object query) {

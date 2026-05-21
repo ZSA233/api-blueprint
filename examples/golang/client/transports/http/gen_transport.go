@@ -64,13 +64,17 @@ func (transport *HttpTransport) Do(ctx context.Context, request runtime.Request,
 	if err != nil {
 		return err
 	}
+	applyHeaders(httpRequest.Header, transport.config.DefaultHeaders)
+	applyHeaders(httpRequest.Header, request.Headers)
 	if contentType != "" {
 		httpRequest.Header.Set("Content-Type", contentType)
 	}
 	if contentLength >= 0 {
 		httpRequest.ContentLength = contentLength
 	}
-	httpRequest.Header.Set("Accept", "application/json")
+	if httpRequest.Header.Get("Accept") == "" {
+		httpRequest.Header.Set("Accept", "application/json")
+	}
 
 	httpResponse, err := transport.client.Do(httpRequest)
 	if err != nil {
@@ -131,6 +135,12 @@ func joinURL(base string, path string) (*url.URL, error) {
 		return nil, err
 	}
 	return endpoint, nil
+}
+
+func applyHeaders(target nethttp.Header, headers map[string]string) {
+	for name, value := range headers {
+		target.Set(name, value)
+	}
 }
 
 func encodeBody(request runtime.Request) (io.Reader, string, int64, error) {

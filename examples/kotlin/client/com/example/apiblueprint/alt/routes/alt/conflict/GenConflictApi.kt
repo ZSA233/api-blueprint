@@ -11,7 +11,7 @@ public open class GenConflictApi internal constructor(
 
     public open suspend fun default(
         query: ConflictDefaultQuery,
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): ConflictModel {
         return transport.request(
             ApiRequest(
@@ -19,7 +19,7 @@ public open class GenConflictApi internal constructor(
                 method = "GET",
                 path = "/alt/conflict/default",
                 query = query.toQueryMap(),
-                headers = headers,
+                options = options,
                 responseSerializer = ConflictModel.serializer(),
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "OkDataErrorEnvelope", kind = "ok_data_error", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),

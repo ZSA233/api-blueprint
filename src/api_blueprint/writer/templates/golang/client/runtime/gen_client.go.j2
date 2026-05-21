@@ -34,6 +34,7 @@ type Request struct {
 	RouteID         string
 	Method          string
 	Path            string
+	Headers         map[string]string
 	BodyKind        RequestBodyKind
 	ResponseKind    ResponseKind
 	Query           any
@@ -42,6 +43,39 @@ type Request struct {
 	Multipart       any
 	Binary          any
 	ResponseEnvelope ApiResponseEnvelope
+}
+
+type RequestOption func(*Request)
+
+func WithHeader(name string, value string) RequestOption {
+	return func(request *Request) {
+		if request.Headers == nil {
+			request.Headers = map[string]string{}
+		}
+		request.Headers[name] = value
+	}
+}
+
+func WithHeaders(headers map[string]string) RequestOption {
+	return func(request *Request) {
+		if len(headers) == 0 {
+			return
+		}
+		if request.Headers == nil {
+			request.Headers = make(map[string]string, len(headers))
+		}
+		for name, value := range headers {
+			request.Headers[name] = value
+		}
+	}
+}
+
+func (request *Request) ApplyOptions(opts ...RequestOption) {
+	for _, opt := range opts {
+		if opt != nil {
+			opt(request)
+		}
+	}
 }
 
 type MultipartFile struct {

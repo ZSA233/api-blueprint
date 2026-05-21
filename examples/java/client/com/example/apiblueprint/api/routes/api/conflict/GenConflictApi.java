@@ -3,6 +3,7 @@ package com.example.apiblueprint.api.routes.api.conflict;
 
 import com.example.apiblueprint.api.runtime.GenApiChannelBridge;
 import com.example.apiblueprint.api.runtime.GenApiRequest;
+import com.example.apiblueprint.api.runtime.GenApiRequestOptions;
 import com.example.apiblueprint.api.runtime.GenApiRawResponse;
 import com.example.apiblueprint.api.runtime.GenApiResponseEnvelope;
 import com.example.apiblueprint.api.runtime.GenApiStreamResponse;
@@ -12,7 +13,6 @@ import com.example.apiblueprint.api.runtime.GenApiTransport;
 import com.example.apiblueprint.api.runtime.GenApiTypes;
 
 import com.example.apiblueprint.api.runtime.binary.GenApiBinaryBody;
-import java.util.Map;
 
 public class GenConflictApi {
     protected final GenApiTransport transport;
@@ -24,6 +24,17 @@ public class GenConflictApi {
     public GenApiTypes.BlueprintsApiConflictConflictModel defaultValue(
         GenConflictTypes.DefaultQuery query
     ) throws Exception {
+        return defaultValue(
+            query,
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenApiTypes.BlueprintsApiConflictConflictModel defaultValue(
+        GenConflictTypes.DefaultQuery query,
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<GenApiTypes.BlueprintsApiConflictConflictModel> request = new GenApiRequest<>(
             "api.conflict.get.default",
             "GET",
@@ -40,7 +51,8 @@ public class GenConflictApi {
             "json",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }

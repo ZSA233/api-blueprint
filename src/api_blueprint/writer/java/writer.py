@@ -144,24 +144,24 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
             self._unlink_generated_file(stale_path)
         self._unlink_generated_file(plan.runtime.binary_directory / "ApiBinaryBody.java")
         for output_name, template_path in (
-            ("GenApiException.java", "ApiException.java"),
-            ("GenApiError.java", "ApiError.java"),
-            ("GenApiToastSpec.java", "ApiToastSpec.java"),
-            ("GenApiToastPayload.java", "ApiToastPayload.java"),
-            ("GenApiErrorEntry.java", "ApiErrorEntry.java"),
-            ("GenApiErrorPayload.java", "ApiErrorPayload.java"),
-            ("GenApiFilePart.java", "ApiFilePart.java"),
-            ("GenApiRawResponse.java", "ApiRawResponse.java"),
-            ("GenApiStreamResponse.java", "ApiStreamResponse.java"),
-            ("GenApiResponseEnvelope.java", "ApiResponseEnvelope.java"),
-            ("GenApiErrors.java", "ApiErrors.java"),
-            ("GenApiTypes.java", "ApiTypes.java"),
-            ("GenApiJson.java", "ApiJson.java"),
+            ("GenApiException.java", "GenApiException.java"),
+            ("GenApiError.java", "GenApiError.java"),
+            ("GenApiToastSpec.java", "GenApiToastSpec.java"),
+            ("GenApiToastPayload.java", "GenApiToastPayload.java"),
+            ("GenApiErrorEntry.java", "GenApiErrorEntry.java"),
+            ("GenApiErrorPayload.java", "GenApiErrorPayload.java"),
+            ("GenApiFilePart.java", "GenApiFilePart.java"),
+            ("GenApiRawResponse.java", "GenApiRawResponse.java"),
+            ("GenApiStreamResponse.java", "GenApiStreamResponse.java"),
+            ("GenApiResponseEnvelope.java", "GenApiResponseEnvelope.java"),
+            ("GenApiErrors.java", "GenApiErrors.java"),
+            ("GenApiTypes.java", "GenApiTypes.java"),
+            ("GenApiJson.java", "GenApiJson.java"),
         ):
             self._write_generated(plan.runtime.directory / output_name, template_path, context, "common/runtime")
         self._write_generated(
             plan.runtime.binary_directory / "GenApiBinaryBody.java",
-            "ApiBinaryBody.java",
+            "GenApiBinaryBody.java",
             context,
             "common/runtime/binary",
         )
@@ -185,11 +185,12 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
         ):
             self._unlink_generated_file(plan.runtime.directory / stale_name)
         for output_name, template_path in (
-            ("GenApiRequest.java", "ApiRequest.java"),
-            ("GenApiResponse.java", "ApiResponse.java"),
-            ("GenApiTransport.java", "ApiTransport.java"),
-            ("GenApiStreamBridge.java", "ApiStreamBridge.java"),
-            ("GenApiChannelBridge.java", "ApiChannelBridge.java"),
+            ("GenApiRequest.java", "GenApiRequest.java"),
+            ("GenApiRequestOptions.java", "GenApiRequestOptions.java"),
+            ("GenApiResponse.java", "GenApiResponse.java"),
+            ("GenApiTransport.java", "GenApiTransport.java"),
+            ("GenApiStreamBridge.java", "GenApiStreamBridge.java"),
+            ("GenApiChannelBridge.java", "GenApiChannelBridge.java"),
             ("GenApiClient.java", "GenApiClient.java"),
         ):
             self._write_generated(plan.runtime.directory / output_name, template_path, context, "client/runtime")
@@ -225,25 +226,25 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
             self._unlink_generated_file(plan.runtime.directory / stale_name)
         self._write_generated(
             plan.runtime.directory / "GenApiServerContext.java",
-            "ApiServerContext.java",
+            "GenApiServerContext.java",
             context,
             "server/runtime",
         )
         self._write_generated(
             plan.runtime.directory / "GenApiServerResponse.java",
-            "ApiServerResponse.java",
+            "GenApiServerResponse.java",
             context,
             "server/runtime",
         )
         self._write_generated(
             plan.runtime.directory / "GenApiServerStream.java",
-            "ApiServerStream.java",
+            "GenApiServerStream.java",
             context,
             "server/runtime",
         )
         self._write_generated(
             plan.runtime.directory / "GenApiServerChannel.java",
-            "ApiServerChannel.java",
+            "GenApiServerChannel.java",
             context,
             "server/runtime",
         )
@@ -273,7 +274,7 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
         self._unlink_generated_file(legacy_types_file)
         self._write_generated(
             group_plan.directory / f"{group.types_class}.java",
-            "ApiGroupTypes.java",
+            "GenApiGroupTypes.java",
             {**context, "group": group},
             "client/routes" if self.client_mode else "server/routes",
         )

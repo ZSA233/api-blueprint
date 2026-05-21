@@ -11,13 +11,19 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody
 import java.nio.charset.Charset
+import kotlin.time.Duration
+
+public data class ApiRequestOptions(
+    public val headers: Map<String, String> = emptyMap(),
+    public val timeout: Duration? = null,
+)
 
 public data class ApiRequest<T>(
     public val routeId: String,
     public val method: String,
     public val path: String,
     public val query: Map<String, String?> = emptyMap(),
-    public val headers: Map<String, String> = emptyMap(),
+    public val options: ApiRequestOptions = ApiRequestOptions(),
     public val json: Any? = null,
     public val jsonSerializer: SerializationStrategy<*>? = null,
     public val form: Any? = null,

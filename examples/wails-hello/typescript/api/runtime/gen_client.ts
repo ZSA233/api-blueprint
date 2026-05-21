@@ -9,6 +9,12 @@ export interface ApiClientConfig {
 type RequestBody = RequestInit["body"];
 type RequestBinaryBody = never;
 
+export interface ApiRequestOptions {
+  headers?: Record<string, string>;
+  init?: RequestInit;
+  timeoutMs?: number;
+}
+
 export type ApiFilePart =
   | File
   | Blob

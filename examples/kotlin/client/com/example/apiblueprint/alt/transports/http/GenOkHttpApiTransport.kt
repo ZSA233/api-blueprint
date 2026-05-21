@@ -35,6 +35,8 @@ import okio.BufferedSink
 import java.io.IOException
 import java.net.URLEncoder
 import java.util.ArrayDeque
+import java.util.concurrent.TimeUnit
+import kotlin.time.Duration
 
 public class OkHttpApiTransport(
     private val config: HttpApiConfig = HttpApiConfig(),
@@ -47,7 +49,7 @@ public class OkHttpApiTransport(
     }
 
     public override suspend fun execute(request: ApiRequest<*>): ApiResponse = withContext(Dispatchers.IO) {
-        val mergedHeaders = config.defaultHeaders() + request.headers
+        val mergedHeaders = config.defaultHeaders() + request.options.headers
         val requestBuilder = Request.Builder().url(buildUrl(config.baseUrl, request.path, request.query))
         mergedHeaders.forEach { (key, value) -> requestBuilder.header(key, value) }
 
@@ -59,7 +61,7 @@ public class OkHttpApiTransport(
         }
 
         val okRequest = requestBuilder.method(request.method, effectiveBody).build()
-        httpClient.newCall(okRequest).execute().use { response ->
+        clientWithTimeout(request.options.timeout ?: config.timeout).newCall(okRequest).execute().use { response ->
             ApiResponse(
                 statusCode = response.code,
                 body = response.body?.bytes() ?: ByteArray(0),
@@ -92,6 +94,14 @@ public class OkHttpApiTransport(
 
     private fun mergedHeaders(headers: Map<String, String>): Map<String, String> {
         return runBlocking { config.defaultHeaders() } + headers
+    }
+
+    private fun clientWithTimeout(timeout: Duration?): OkHttpClient {
+        return if (timeout == null) {
+            httpClient
+        } else {
+            httpClient.newBuilder().callTimeout(timeout.inWholeMilliseconds, TimeUnit.MILLISECONDS).build()
+        }
     }
 
     private fun ApiRequest<*>.requestBody(): RequestBody? {

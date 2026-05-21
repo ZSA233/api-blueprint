@@ -16,7 +16,7 @@ class GenMediaApi {
 
   Future<ApiRawResponse> mediaPreview({
     MediaPreviewRequest? multipart,
-    Map<String, String> headers = const {},
+    ApiRequestOptions options = const ApiRequestOptions(),
   }) {
     return transport.request(
       ApiRequest<ApiRawResponse>(
@@ -24,7 +24,7 @@ class GenMediaApi {
         method: "POST",
         path: "/api/media/preview",
         query: const <String, String?>{},
-        headers: headers,
+        options: options,
         multipart: multipart,
         responseMediaType: "image/jpeg",
         responseKind: "bytes",
@@ -38,7 +38,7 @@ class GenMediaApi {
 
 
   Future<ApiRawResponse> mediaFrame({
-    Map<String, String> headers = const {},
+    ApiRequestOptions options = const ApiRequestOptions(),
   }) {
     return transport.request(
       ApiRequest<ApiRawResponse>(
@@ -46,7 +46,7 @@ class GenMediaApi {
         method: "GET",
         path: "/api/media/frame",
         query: const <String, String?>{},
-        headers: headers,
+        options: options,
         responseMediaType: "image/jpeg",
         responseKind: "bytes",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
@@ -59,7 +59,7 @@ class GenMediaApi {
 
 
   Future<ApiRawResponse> mediaDownload({
-    Map<String, String> headers = const {},
+    ApiRequestOptions options = const ApiRequestOptions(),
   }) {
     return transport.request(
       ApiRequest<ApiRawResponse>(
@@ -67,7 +67,7 @@ class GenMediaApi {
         method: "GET",
         path: "/api/media/download",
         query: const <String, String?>{},
-        headers: headers,
+        options: options,
         responseMediaType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         responseKind: "file",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
@@ -80,7 +80,7 @@ class GenMediaApi {
 
 
   Future<ApiRawResponse> mediaDownloadDynamic({
-    Map<String, String> headers = const {},
+    ApiRequestOptions options = const ApiRequestOptions(),
   }) {
     return transport.request(
       ApiRequest<ApiRawResponse>(
@@ -88,7 +88,7 @@ class GenMediaApi {
         method: "GET",
         path: "/api/media/download-dynamic",
         query: const <String, String?>{},
-        headers: headers,
+        options: options,
         responseMediaType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         responseKind: "file",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
@@ -101,7 +101,7 @@ class GenMediaApi {
 
 
   Future<ApiStreamResponse> mediaMjpeg({
-    Map<String, String> headers = const {},
+    ApiRequestOptions options = const ApiRequestOptions(),
   }) {
     return transport.request(
       ApiRequest<ApiStreamResponse>(
@@ -109,7 +109,7 @@ class GenMediaApi {
         method: "GET",
         path: "/api/media/mjpeg",
         query: const <String, String?>{},
-        headers: headers,
+        options: options,
         responseMediaType: "multipart/x-mixed-replace; boundary=frame",
         responseKind: "byte_stream",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),

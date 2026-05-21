@@ -3,6 +3,7 @@ package com.example.apiblueprint.static_.routes.static_;
 
 import com.example.apiblueprint.static_.runtime.GenApiChannelBridge;
 import com.example.apiblueprint.static_.runtime.GenApiRequest;
+import com.example.apiblueprint.static_.runtime.GenApiRequestOptions;
 import com.example.apiblueprint.static_.runtime.GenApiRawResponse;
 import com.example.apiblueprint.static_.runtime.GenApiResponseEnvelope;
 import com.example.apiblueprint.static_.runtime.GenApiStreamResponse;
@@ -12,7 +13,6 @@ import com.example.apiblueprint.static_.runtime.GenApiTransport;
 import com.example.apiblueprint.static_.runtime.GenApiTypes;
 
 import com.example.apiblueprint.static_.runtime.binary.GenApiBinaryBody;
-import java.util.Map;
 
 public class GenStaticApi {
     protected final GenApiTransport transport;
@@ -23,6 +23,15 @@ public class GenStaticApi {
 
     public GenStaticTypes.DocJsonResponse docJson(
     ) throws Exception {
+        return docJson(
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenStaticTypes.DocJsonResponse docJson(
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<GenStaticTypes.DocJsonResponse> request = new GenApiRequest<>(
             "static.static.get.docjson",
             "GET",
@@ -39,13 +48,23 @@ public class GenStaticApi {
             "json",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }
 
     public GenStaticTypes.DochahaResponse dochaha(
     ) throws Exception {
+        return dochaha(
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenStaticTypes.DochahaResponse dochaha(
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<GenStaticTypes.DochahaResponse> request = new GenApiRequest<>(
             "static.static.get.dochaha",
             "GET",
@@ -62,7 +81,8 @@ public class GenStaticApi {
             "json",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }

@@ -3,6 +3,15 @@ from __future__ import annotations
 from .helpers import *
 
 
+def test_typescript_binary_templates_use_generated_names() -> None:
+    template_dir = Path(__file__).resolve().parents[3] / "src" / "api_blueprint" / "writer" / "templates" / "typescript"
+
+    assert (template_dir / "gen_binary_runtime.ts.j2").is_file()
+    assert (template_dir / "gen_binary_schema.ts.j2").is_file()
+    assert not (template_dir / "binary_runtime.ts.j2").exists()
+    assert not (template_dir / "binary_schema.ts.j2").exists()
+
+
 def test_typescript_client_generates_binary_overloads_runtime_and_transport(tmp_path: Path):
     schema = parse_binary_schema(
         """
@@ -60,6 +69,10 @@ endian: little
     assert "binary: Types.DemoPacket;" in route_text
     assert "binary: ApiBinaryBody;" in route_text
     assert "binary: Types.DemoPacket | ApiBinaryBody;" in route_text
+    assert "options?: ApiRequestOptions" in route_text
+    assert "init?: RequestInit" not in route_text
+    assert "timeoutMs?: number,\n  ): Promise" not in route_text
+    assert "headers?: Record<string, string>;" not in route_text
     assert "DemoPacketWire.toBinaryBody(request.binary)" in route_text
     assert 'export * as Wire from "./wire";' not in index_text
     assert 'export * from "./types";' in index_text

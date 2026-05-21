@@ -23,7 +23,7 @@ type ConflictClient = GenConflictClient
 
 var NewConflictClient = NewGenConflictClient
 
-func (client *GenConflictClient) Default(ctx context.Context, query DefaultQuery) (*DefaultResponse, error) {
+func (client *GenConflictClient) Default(ctx context.Context, query DefaultQuery, opts ...runtime.RequestOption) (*DefaultResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.conflict.get.default",
 		Method:           "GET",
@@ -33,6 +33,7 @@ func (client *GenConflictClient) Default(ctx context.Context, query DefaultQuery
 		BodyKind:         runtime.RequestBodyKind("none"),
 		ResponseKind:     runtime.ResponseKind("json"),
 	}
+	request.ApplyOptions(opts...)
 	var response DefaultResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err

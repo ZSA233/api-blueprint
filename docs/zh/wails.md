@@ -210,6 +210,8 @@ make wails-hello-compile-check
 
 ## 长连接 bridge
 
+Wails TypeScript RPC route 方法使用与 TypeScript client surface 相同的 per-call request options 形态。`headers` 会进入 Wails invoke envelope，使 Go overlay 能通过生成请求上下文读取；`timeoutMs` 只限制前端 Promise 等待时间，超时后在前端 reject，不会取消已经在 Go 侧运行的 Wails native call。
+
 Wails TypeScript 不暴露 raw WebSocket，也不要求业务代码手写 runtime event name。`STREAM` / `CHANNEL` 在默认 Wails transport 中会映射成 session-scoped runtime events，事件名只存在于 generated Go runtime 与 generated TypeScript transport 内部。建连使用前端预分配的 `session_id`：生成的 TypeScript bridge 会先按 route/eventBase/sessionId 计算 deterministic event name 并完成订阅，再发送 connect RPC，从而避免 ordered 交付丢掉 `seq=1`。生成的 service 仍暴露轻量 `ConnectionHub` 替换点；自定义 hub 通过 `Open(ConnectionOpenSpec)` 接收请求，并必须返回符合生成器命名规则的 descriptor。默认 hub 只完整支持 `ConnectionScope.SESSION`，`APP` / `TOPIC` 的广播或 topic routing 策略仍应由自定义 hub 实现。
 
 生成的 Wails `STREAM` / `CHANNEL` 默认是“有序异步”交付：Go runtime 会补 session 级 `seq` envelope，生成的 TypeScript bridge 会在交给业务 `onMessage` / `onClose` 前完成重排。这与 HTTP 不同：HTTP `STREAM` / `CHANNEL` 本身就依赖 SSE / WebSocket 的单连接原生顺序，不额外叠加 Wails 这套 seq/reorder overlay。只有 arrival order 不值得缓冲成本的 telemetry 一类场景，才建议 route 显式切到 `delivery=ConnectionDelivery.UNORDERED`；这个 opt-out 主要对 Wails transport 有实际差异。

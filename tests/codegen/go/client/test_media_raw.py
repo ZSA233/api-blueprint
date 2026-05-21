@@ -26,10 +26,16 @@ def test_golang_client_codegen_emits_multipart_and_raw_response_contracts(tmp_pa
     assert "type RawResponse struct" in runtime_text
     assert "type StreamResponse struct" in runtime_text
     assert "Image MultipartFile" in runtime_types
-    assert "func (client *GenMediaClient) Preview(ctx context.Context, multipartBody PreviewForm) (*runtime.RawResponse, error)" in route_client
+    assert (
+        "func (client *GenMediaClient) Preview(ctx context.Context, multipartBody PreviewForm, "
+        "opts ...runtime.RequestOption) (*runtime.RawResponse, error)"
+    ) in route_client
     assert "Multipart:        multipartBody" in route_client
     assert 'BodyKind:         runtime.RequestBodyKind("multipart")' in route_client
     assert 'ResponseKind:     runtime.ResponseKind("bytes")' in route_client
-    assert "func (client *GenMediaClient) Mjpeg(ctx context.Context) (*runtime.StreamResponse, error)" in route_client
+    assert (
+        "func (client *GenMediaClient) Mjpeg(ctx context.Context, opts ...runtime.RequestOption) "
+        "(*runtime.StreamResponse, error)"
+    ) in route_client
     assert "func encodeMultipart" in transport
     assert "func decodeRawResponse" in transport

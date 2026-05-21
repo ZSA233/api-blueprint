@@ -158,6 +158,11 @@ go 1.23.8
     assert "this.runtime.buildConnectionEnvelope(" in ts_overlay_connection
     assert "export function unwrapResponseEnvelope" in ts_overlay_response
     assert "protected buildEnvelope(" in ts_overlay_transport
+    assert "const operation = this.invokeOperation<unknown>(" in ts_overlay_transport
+    assert "const payload = await withWailsFrontendTimeout(operation, options.timeoutMs);" in ts_overlay_transport
+    assert "function withWailsFrontendTimeout<R>(operation: Promise<R>, timeoutMs?: number): Promise<R>" in ts_overlay_transport
+    assert "This limits frontend waiting only; the native Wails invocation may continue." in ts_overlay_transport
+    assert "Wails request timed out after ${timeoutMs} ms" in ts_overlay_transport
     assert "protected buildConnectionEnvelope(" in ts_overlay_transport
     assert "private createRuntimeAdapter(): WailsRuntimeAdapter" in ts_overlay_transport
     assert "buildWailsEnvelope(" not in ts_overlay_transport
@@ -205,6 +210,11 @@ go 1.23.8
     assert "export type DemoClient = SharedDemoClient;" in ts_overlay_client
     assert "export function createClient(config: ApiClientConfig = {}): DemoClient" in ts_overlay_client
     assert "transport: config.transport ?? new WailsV3Transport(config)" in ts_overlay_client
+    assert "ApiRequestOptions" in shared_ts_client
+    assert "options?: ApiRequestOptions" in shared_ts_client
+    assert "headers: options?.headers" in shared_ts_client
+    assert "timeoutMs: options?.timeoutMs" in shared_ts_client
+    assert "timeoutMs?: number,\n  ): Promise" not in shared_ts_client
     assert 'delivery: "ordered"' in shared_ts_client
     assert 'delivery: "unordered"' in shared_ts_client
     assert "connectWsRaw(" not in ts_overlay_client

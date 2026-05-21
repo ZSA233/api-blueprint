@@ -23,7 +23,7 @@ type HelloClient = GenHelloClient
 
 var NewHelloClient = NewGenHelloClient
 
-func (client *GenHelloClient) Abc(ctx context.Context, query AbcQuery) (*AbcResponse, error) {
+func (client *GenHelloClient) Abc(ctx context.Context, query AbcQuery, opts ...runtime.RequestOption) (*AbcResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.hello.get.abc",
 		Method:           "GET",
@@ -33,6 +33,7 @@ func (client *GenHelloClient) Abc(ctx context.Context, query AbcQuery) (*AbcResp
 		BodyKind:         runtime.RequestBodyKind("none"),
 		ResponseKind:     runtime.ResponseKind("json"),
 	}
+	request.ApplyOptions(opts...)
 	var response AbcResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
@@ -40,7 +41,7 @@ func (client *GenHelloClient) Abc(ctx context.Context, query AbcQuery) (*AbcResp
 	return &response, nil
 }
 
-func (client *GenHelloClient) MapEnum(ctx context.Context) (*MapEnumResponse, error) {
+func (client *GenHelloClient) MapEnum(ctx context.Context, opts ...runtime.RequestOption) (*MapEnumResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.hello.get.mapenum",
 		Method:           "GET",
@@ -49,6 +50,7 @@ func (client *GenHelloClient) MapEnum(ctx context.Context) (*MapEnumResponse, er
 		BodyKind:         runtime.RequestBodyKind("none"),
 		ResponseKind:     runtime.ResponseKind("json"),
 	}
+	request.ApplyOptions(opts...)
 	var response MapEnumResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
@@ -56,7 +58,7 @@ func (client *GenHelloClient) MapEnum(ctx context.Context) (*MapEnumResponse, er
 	return &response, nil
 }
 
-func (client *GenHelloClient) ListEnum(ctx context.Context) (*ListEnumResponse, error) {
+func (client *GenHelloClient) ListEnum(ctx context.Context, opts ...runtime.RequestOption) (*ListEnumResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.hello.get.listenum",
 		Method:           "GET",
@@ -65,6 +67,7 @@ func (client *GenHelloClient) ListEnum(ctx context.Context) (*ListEnumResponse, 
 		BodyKind:         runtime.RequestBodyKind("none"),
 		ResponseKind:     runtime.ResponseKind("json"),
 	}
+	request.ApplyOptions(opts...)
 	var response ListEnumResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
@@ -72,7 +75,7 @@ func (client *GenHelloClient) ListEnum(ctx context.Context) (*ListEnumResponse, 
 	return &response, nil
 }
 
-func (client *GenHelloClient) String(ctx context.Context) (*StringResponse, error) {
+func (client *GenHelloClient) String(ctx context.Context, opts ...runtime.RequestOption) (*StringResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.hello.get.string",
 		Method:           "GET",
@@ -81,6 +84,7 @@ func (client *GenHelloClient) String(ctx context.Context) (*StringResponse, erro
 		BodyKind:         runtime.RequestBodyKind("none"),
 		ResponseKind:     runtime.ResponseKind("json"),
 	}
+	request.ApplyOptions(opts...)
 	var response StringResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
@@ -88,7 +92,7 @@ func (client *GenHelloClient) String(ctx context.Context) (*StringResponse, erro
 	return &response, nil
 }
 
-func (client *GenHelloClient) Uint64(ctx context.Context) (*Uint64Response, error) {
+func (client *GenHelloClient) Uint64(ctx context.Context, opts ...runtime.RequestOption) (*Uint64Response, error) {
 	request := runtime.Request{
 		RouteID:          "api.hello.get.uint64",
 		Method:           "GET",
@@ -97,6 +101,7 @@ func (client *GenHelloClient) Uint64(ctx context.Context) (*Uint64Response, erro
 		BodyKind:         runtime.RequestBodyKind("none"),
 		ResponseKind:     runtime.ResponseKind("json"),
 	}
+	request.ApplyOptions(opts...)
 	var response Uint64Response
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
@@ -104,7 +109,7 @@ func (client *GenHelloClient) Uint64(ctx context.Context) (*Uint64Response, erro
 	return &response, nil
 }
 
-func (client *GenHelloClient) StringEmun(ctx context.Context) (*StringEmunResponse, error) {
+func (client *GenHelloClient) StringEmun(ctx context.Context, opts ...runtime.RequestOption) (*StringEmunResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.hello.get.stringemun",
 		Method:           "GET",
@@ -113,6 +118,7 @@ func (client *GenHelloClient) StringEmun(ctx context.Context) (*StringEmunRespon
 		BodyKind:         runtime.RequestBodyKind("none"),
 		ResponseKind:     runtime.ResponseKind("json"),
 	}
+	request.ApplyOptions(opts...)
 	var response StringEmunResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
@@ -120,7 +126,7 @@ func (client *GenHelloClient) StringEmun(ctx context.Context) (*StringEmunRespon
 	return &response, nil
 }
 
-func (client *GenHelloClient) HelloWay(ctx context.Context, query HelloWayQuery) (any, error) {
+func (client *GenHelloClient) HelloWay(ctx context.Context, query HelloWayQuery, opts ...runtime.RequestOption) (any, error) {
 	request := runtime.Request{
 		RouteID:          "api.hello.get.helloway",
 		Method:           "GET",
@@ -130,6 +136,7 @@ func (client *GenHelloClient) HelloWay(ctx context.Context, query HelloWayQuery)
 		BodyKind:         runtime.RequestBodyKind("none"),
 		ResponseKind:     runtime.ResponseKind("json"),
 	}
+	request.ApplyOptions(opts...)
 	var response any
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err

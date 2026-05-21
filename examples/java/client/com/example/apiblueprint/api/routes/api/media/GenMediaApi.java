@@ -3,6 +3,7 @@ package com.example.apiblueprint.api.routes.api.media;
 
 import com.example.apiblueprint.api.runtime.GenApiChannelBridge;
 import com.example.apiblueprint.api.runtime.GenApiRequest;
+import com.example.apiblueprint.api.runtime.GenApiRequestOptions;
 import com.example.apiblueprint.api.runtime.GenApiRawResponse;
 import com.example.apiblueprint.api.runtime.GenApiResponseEnvelope;
 import com.example.apiblueprint.api.runtime.GenApiStreamResponse;
@@ -12,7 +13,6 @@ import com.example.apiblueprint.api.runtime.GenApiTransport;
 import com.example.apiblueprint.api.runtime.GenApiTypes;
 
 import com.example.apiblueprint.api.runtime.binary.GenApiBinaryBody;
-import java.util.Map;
 
 public class GenMediaApi {
     protected final GenApiTransport transport;
@@ -24,6 +24,17 @@ public class GenMediaApi {
     public GenApiRawResponse mediaPreview(
         GenApiTypes.MediaPreviewRequest multipart
     ) throws Exception {
+        return mediaPreview(
+            multipart,
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenApiRawResponse mediaPreview(
+        GenApiTypes.MediaPreviewRequest multipart,
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<GenApiRawResponse> request = new GenApiRequest<>(
             "api.media.post.preview",
             "POST",
@@ -40,13 +51,23 @@ public class GenMediaApi {
             "bytes",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }
 
     public GenApiRawResponse mediaFrame(
     ) throws Exception {
+        return mediaFrame(
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenApiRawResponse mediaFrame(
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<GenApiRawResponse> request = new GenApiRequest<>(
             "api.media.get.frame",
             "GET",
@@ -63,13 +84,23 @@ public class GenMediaApi {
             "bytes",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }
 
     public GenApiRawResponse mediaDownload(
     ) throws Exception {
+        return mediaDownload(
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenApiRawResponse mediaDownload(
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<GenApiRawResponse> request = new GenApiRequest<>(
             "api.media.get.download",
             "GET",
@@ -86,13 +117,23 @@ public class GenMediaApi {
             "file",
             "media-report.xlsx",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }
 
     public GenApiRawResponse mediaDownloadDynamic(
     ) throws Exception {
+        return mediaDownloadDynamic(
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenApiRawResponse mediaDownloadDynamic(
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<GenApiRawResponse> request = new GenApiRequest<>(
             "api.media.get.downloaddynamic",
             "GET",
@@ -109,13 +150,23 @@ public class GenMediaApi {
             "file",
             "media-report.xlsx",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }
 
     public GenApiStreamResponse mediaMjpeg(
     ) throws Exception {
+        return mediaMjpeg(
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenApiStreamResponse mediaMjpeg(
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<GenApiStreamResponse> request = new GenApiRequest<>(
             "api.media.get.mjpeg",
             "GET",
@@ -132,7 +183,8 @@ public class GenMediaApi {
             "byte_stream",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }

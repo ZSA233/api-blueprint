@@ -106,6 +106,8 @@ api-gen generate -c api-blueprint.toml
 
 生成器会覆盖的文件统一使用 `gen_*` / `Gen*`，或位于 `_gen_*` 目录，并带 `Code generated ... DO NOT EDIT` header。非 `gen_` / 非 `Gen` 的 facade、impl、service、client 文件是 preserved 用户扩展点，只在缺失时创建且不带 generated header。
 
+生成的 HTTP / Wails 客户端支持按单次 RPC 调用传入 header 和 timeout；Go 使用 `context.Context` 控制超时，gRPC 使用各语言原生 deadline / metadata。
+
 ## 下一步
 
 | 主题 | 文档 |

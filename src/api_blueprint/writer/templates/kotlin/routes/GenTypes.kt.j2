@@ -111,6 +111,6 @@ public fun <R> {{ helper.dispatch_func }}(
 {% endfor %}
 {% if binary_schemas %}
 
-{% include "routes/binary/BinaryTypes.kt.j2" %}
+{% include "routes/binary/GenBinaryTypes.kt.j2" %}
 {% endif %}
 {% endautoescape %}

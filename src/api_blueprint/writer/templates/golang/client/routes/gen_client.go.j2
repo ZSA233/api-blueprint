@@ -41,7 +41,7 @@ func (client *Gen{{ group.client_class }}) {{ connection_method_name(route) }}(c
 {% else %}
 {% set response_type = route_response_type(route) %}
 
-func (client *Gen{{ group.client_class }}) {{ route.operation }}(ctx context.Context{% for param in params %}, {{ param }}{% endfor %}) ({{ response_type }}, error) {
+func (client *Gen{{ group.client_class }}) {{ route.operation }}(ctx context.Context{% for param in params %}, {{ param }}{% endfor %}, opts ...runtime.RequestOption) ({{ response_type }}, error) {
 	request := runtime.Request{
 		RouteID:          {{ route.route_id | code_literal }},
 		Method:           {{ route.method | code_literal }},
@@ -49,6 +49,7 @@ func (client *Gen{{ group.client_class }}) {{ route.operation }}(ctx context.Con
 		ResponseEnvelope: {{ route.response_envelope_go_literal | safe }},
 {% for field, value in runtime_request_fields(route) %}		{{ field }}: {{ value | safe }},
 {% endfor %}	}
+	request.ApplyOptions(opts...)
 {% if response_type == "any" %}	var response any
 {% elif response_type == "*runtime.RawResponse" %}	var response runtime.RawResponse
 {% elif response_type == "*runtime.StreamResponse" %}	var response runtime.StreamResponse

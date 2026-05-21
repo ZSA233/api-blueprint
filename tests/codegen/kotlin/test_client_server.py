@@ -1,6 +1,28 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from .helpers import *
+
+
+def test_kotlin_generated_template_files_use_gen_names() -> None:
+    template_root = Path("src/api_blueprint/writer/templates/kotlin")
+    allowed_preserved_templates = {
+        Path("routes/ApiGroupFacade.kt.j2"),
+        Path("runtime/ApiClient.kt.j2"),
+        Path("server/routes/ApiService.kt.j2"),
+        Path("transports/http/HttpApiClient.kt.j2"),
+    }
+
+    non_gen_templates = {
+        path.relative_to(template_root)
+        for path in template_root.rglob("*.kt.j2")
+        if not path.name.startswith("Gen") and path.relative_to(template_root) not in allowed_preserved_templates
+    }
+
+    assert non_gen_templates == set()
+    assert (template_root / "runtime/GenApiTransport.kt.j2").is_file()
+    assert (template_root / "transports/http/GenOkHttpApiTransport.kt.j2").is_file()
 
 
 def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full_route_surface(tmp_path):
@@ -119,6 +141,9 @@ def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full
     assert not (tmp_path / "kotlin" / "com" / "example" / "generated" / "internal").exists()
 
     assert "public interface ApiTransport" in runtime_text
+    assert "public data class ApiRequestOptions(" in runtime_text
+    assert "public val options: ApiRequestOptions = ApiRequestOptions()" in runtime_text
+    assert "public val timeout: Duration? = null" in runtime_text
     assert "public interface ApiSocketBridge<Send, Recv>" not in runtime_text
     assert "public interface ApiStreamBridge<Recv, Close>" in runtime_text
     assert "public interface ApiChannelBridge<Recv, Send, Close>" in runtime_text
@@ -157,6 +182,8 @@ def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full
     assert "query: DemoPingQuery," in route_text
     assert "json: SubmitJson," in route_text
     assert "form: FormPayload," in route_text
+    assert "options: ApiRequestOptions = ApiRequestOptions()," in route_text
+    assert "options = options" in route_text
     assert "public open fun connectWs(" not in route_text
     assert "public open fun subscribeEvents(" in route_text
     assert "public open fun openChat(" in route_text
@@ -173,6 +200,9 @@ def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full
     assert "public class OkHttpApiTransport" in transport_text
     assert "private val config: HttpApiConfig = HttpApiConfig()" in transport_text
     assert "override suspend fun execute(request: ApiRequest<*>): ApiResponse" in transport_text
+    assert "config.defaultHeaders() + request.options.headers" in transport_text
+    assert "clientWithTimeout(request.options.timeout ?: config.timeout).newCall" in transport_text
+    assert "callTimeout(timeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)" in transport_text
     assert 'toRequestBody("application/json; charset=utf-8".toMediaType())' in transport_text
     assert 'toRequestBody("application/x-www-form-urlencoded; charset=utf-8".toMediaType())' in transport_text
     assert "private fun encodeFormPayload(" in transport_text
@@ -186,6 +216,7 @@ def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full
     assert "InMemoryChannelBridge" not in transport_text
     assert "public data class HttpApiConfig" in http_config_text
     assert 'public val baseUrl: String = "http://localhost:2333"' in http_config_text
+    assert "public val timeout: Duration? = null" in http_config_text
 
 def test_kotlin_writer_generates_custom_response_envelope_spec(tmp_path):
     class SubmitResponse(Model):

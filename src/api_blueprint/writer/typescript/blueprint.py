@@ -1182,7 +1182,7 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
             binary_runtime_dir.mkdir(parents=True, exist_ok=True)
             with self.writer.write_file(binary_runtime_dir / "gen_runtime.ts", overwrite=True) as handle:
                 if handle:
-                    handle.write(render(self.writer.template_lang, "binary_runtime.ts", {}, ""))
+                    handle.write(render(self.writer.template_lang, "gen_binary_runtime.ts", {}, ""))
             with self.writer.write_file(binary_runtime_dir / "index.ts", overwrite=False) as handle:
                 if handle:
                     handle.write(self.render_passthrough("./gen_runtime"))
@@ -1263,7 +1263,7 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                         handle.write(
                             render(
                                 self.writer.template_lang,
-                                "binary_schema.ts",
+                                "gen_binary_schema.ts",
                                 {
                                     "binary_schemas": binary_schemas,
                                     "runtime_binary_path": self._relative_import_path(group_dir, binary_runtime_dir / "index.ts"),

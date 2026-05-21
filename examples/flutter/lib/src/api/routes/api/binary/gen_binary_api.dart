@@ -18,7 +18,7 @@ class GenBinaryApi {
   Future<BinaryPacketResponse> packet({
     BinaryPacketQuery? query,
     required DemoPacket packet,
-    Map<String, String> headers = const {},
+    ApiRequestOptions options = const ApiRequestOptions(),
   }) {
     return transport.request(
       ApiRequest<BinaryPacketResponse>(
@@ -26,7 +26,7 @@ class GenBinaryApi {
         method: "POST",
         path: "/api/binary/packet",
         query: query?.toQueryMap() ?? const <String, String?>{},
-        headers: headers,
+        options: options,
         binary: encodeDemoPacket(packet),
         binaryContentType: "application/octet-stream",
         responseMediaType: "application/json",
@@ -43,7 +43,7 @@ class GenBinaryApi {
   Future<BinaryAuditPacketResponse> auditPacket({
     BinaryAuditPacketQuery? query,
     required AuditPacket auditPacket,
-    Map<String, String> headers = const {},
+    ApiRequestOptions options = const ApiRequestOptions(),
   }) {
     return transport.request(
       ApiRequest<BinaryAuditPacketResponse>(
@@ -51,7 +51,7 @@ class GenBinaryApi {
         method: "POST",
         path: "/api/binary/audit-packet",
         query: query?.toQueryMap() ?? const <String, String?>{},
-        headers: headers,
+        options: options,
         binary: encodeAuditPacket(auditPacket),
         binaryContentType: "application/octet-stream",
         responseMediaType: "application/json",
@@ -66,7 +66,7 @@ class GenBinaryApi {
 
 
   Future<AuditPacket> auditPacketResponse({
-    Map<String, String> headers = const {},
+    ApiRequestOptions options = const ApiRequestOptions(),
   }) {
     return transport.request(
       ApiRequest<AuditPacket>(
@@ -74,7 +74,7 @@ class GenBinaryApi {
         method: "GET",
         path: "/api/binary/audit-packet-response",
         query: const <String, String?>{},
-        headers: headers,
+        options: options,
         responseMediaType: "application/octet-stream",
         responseKind: "binary_schema",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),

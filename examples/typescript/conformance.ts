@@ -116,7 +116,7 @@ async function checkStatic(baseUrl: string): Promise<void> {
 
 async function checkHeader(baseUrl: string): Promise<void> {
   const { demoClient } = createApiClients({ baseUrl });
-  const rsp = await demoClient.abc({ headers: { "x-token": "conformance-token" } });
+  const rsp = await demoClient.abc({}, { headers: { "x-token": "conformance-token" } });
   if (rsp.bc !== "header-ok") {
     throw new Error(`header=${JSON.stringify(rsp)}`);
   }

@@ -142,8 +142,15 @@ def test_python_http_transport_performs_async_rpc_requests(tmp_path: Path):
     writer.gen()
 
     async def handler(request: httpx.Request) -> httpx.Response:
+        assert request.headers["x-trace-id"] in {"rpc-123", "stream-123"}
+        timeout = request.extensions["timeout"]
+        if request.url.path.endswith("/stream"):
+            assert request.method == "GET"
+            assert timeout["connect"] == 2.5
+            return httpx.Response(200, content=b"chunk")
         assert request.method == "POST"
         assert str(request.url) == "https://api.example.test/api/demo/submit?trace=1"
+        assert timeout["connect"] == 1.5
         assert request.headers["content-type"].startswith("application/json")
         assert request.read() == b'{"value":"abc"}'
         return httpx.Response(200, json={"status": "ok"})
@@ -155,13 +162,60 @@ def test_python_http_transport_performs_async_rpc_requests(tmp_path: Path):
     async_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     transport = transport_module.HttpClientTransport(client=async_client)
 
-    result = asyncio.run(
-        transport.request(
+    async def exercise_transport() -> dict[str, object]:
+        result = await transport.request(
             "POST",
             "/api/demo/submit",
             query={"trace": "1"},
             json={"value": "abc"},
+            headers={"X-Trace-Id": "rpc-123"},
+            timeout=1.5,
         )
-    )
+        stream = await transport.request(
+            "GET",
+            "/api/demo/stream",
+            response_type="stream",
+            headers={"X-Trace-Id": "stream-123"},
+            timeout=2.5,
+        )
+        await stream.aclose()
+        return result
+
+    result = asyncio.run(exercise_transport())
 
     assert result == {"status": "ok"}
+
+
+def test_python_rpc_methods_forward_request_options_to_transport(tmp_path: Path):
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.GET("/ping").RSP(Result)
+
+    output_dir = tmp_path / "python"
+    writer = PythonClientWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+    _compile_generated_files(output_dir)
+
+    client_module = _import_generated_module(
+        output_dir,
+        "api_blueprint_generated.api.routes.api.demo.gen_client",
+    )
+
+    class CaptureTransport:
+        def __init__(self) -> None:
+            self.kwargs: dict[str, object] | None = None
+
+        async def request(self, method: str, path: str, **kwargs: object) -> dict[str, str]:
+            self.kwargs = kwargs
+            return {"status": "ok"}
+
+    transport = CaptureTransport()
+    client = client_module.DemoClient(transport)
+
+    result = asyncio.run(client.ping(headers={"X-Trace-Id": "rpc-123"}, timeout=1.5))
+
+    assert result.status == "ok"
+    assert transport.kwargs is not None
+    assert transport.kwargs["headers"] == {"X-Trace-Id": "rpc-123"}
+    assert transport.kwargs["timeout"] == 1.5

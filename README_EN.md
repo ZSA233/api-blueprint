@@ -106,6 +106,8 @@ For fuller project layout, config fields, DSL, generator output, typed errors, R
 
 Files overwritten by generators are named `gen_*` / `Gen*`, or live under `_gen_*`, and include a `Code generated ... DO NOT EDIT` header. Non-`gen_` / non-`Gen` facade, impl, service, and client files are preserved user extension points, created only when missing and without a generated header.
 
+Generated HTTP / Wails clients support per-RPC headers and timeouts; Go keeps timeout control on `context.Context`, and gRPC uses native deadline / metadata APIs.
+
 ## Next Steps
 
 | Topic | Documentation |

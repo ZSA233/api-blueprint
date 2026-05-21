@@ -165,7 +165,7 @@ class KotlinBaseWriter(BaseWriter[KotlinBlueprint]):
         with self.write_file(plan.runtime.binary_runtime_file, overwrite=True) as handle:
             if handle:
                 handle.write(self.generated_header)
-                handle.write(render("kotlin", "BinaryRuntime.kt", context, "runtime/binary"))
+                handle.write(render("kotlin", "GenBinaryRuntime.kt", context, "runtime/binary"))
 
         if self.client_mode:
             for output_name, template_name in plan.http_transport.generated_files:
@@ -182,7 +182,7 @@ class KotlinBaseWriter(BaseWriter[KotlinBlueprint]):
         with self.write_file(plan.runtime.types_file, overwrite=True) as handle:
             if handle:
                 handle.write(self.generated_header)
-                handle.write(render("kotlin", "Types.kt", {**context, "protos": plan.runtime.shared_protos}, "runtime"))
+                handle.write(render("kotlin", "GenApiTypes.kt", {**context, "protos": plan.runtime.shared_protos}, "runtime"))
 
         for route_group in plan.route_groups:
             route_group.directory.mkdir(parents=True, exist_ok=True)
@@ -196,13 +196,13 @@ class KotlinBaseWriter(BaseWriter[KotlinBlueprint]):
             with self.write_file(route_group.types_file, overwrite=True) as handle:
                 if handle:
                     handle.write(self.generated_header)
-                    handle.write(render("kotlin", "Types.kt", group_models_context, "routes"))
+                    handle.write(render("kotlin", "GenTypes.kt", group_models_context, "routes"))
 
             if self.client_mode:
                 with self.write_file(route_group.client_file, overwrite=True) as handle:
                     if handle:
                         handle.write(self.generated_header)
-                        handle.write(render("kotlin", "ApiGroup.kt", {**context, "group": route_group.group}, "routes"))
+                        handle.write(render("kotlin", "GenApiGroup.kt", {**context, "group": route_group.group}, "routes"))
 
                 with self.write_file(route_group.facade_file, overwrite=False) as handle:
                     if handle:
@@ -212,7 +212,7 @@ class KotlinBaseWriter(BaseWriter[KotlinBlueprint]):
                 server_context = {**context, "group": route_group.group}
                 for output_file, template_name in (
                     (route_group.service_file, "GenApiService.kt"),
-                    (route_group.service_stub_file, "ApiServiceStub.kt"),
+                    (route_group.service_stub_file, "GenApiServiceStub.kt"),
                 ):
                     with self.write_file(output_file, overwrite=True) as handle:
                         if handle:

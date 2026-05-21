@@ -16,7 +16,7 @@ class GenHelloApi {
 
   Future<HelloAbcResponse> abc({
     HelloAbcQuery? query,
-    Map<String, String> headers = const {},
+    ApiRequestOptions options = const ApiRequestOptions(),
   }) {
     return transport.request(
       ApiRequest<HelloAbcResponse>(
@@ -24,7 +24,7 @@ class GenHelloApi {
         method: "GET",
         path: "/api/hello/abc",
         query: query?.toQueryMap() ?? const <String, String?>{},
-        headers: headers,
+        options: options,
         responseMediaType: "application/json",
         responseKind: "json",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
@@ -37,7 +37,7 @@ class GenHelloApi {
 
 
   Future<HelloMapEnumResponse> mapEnum({
-    Map<String, String> headers = const {},
+    ApiRequestOptions options = const ApiRequestOptions(),
   }) {
     return transport.request(
       ApiRequest<HelloMapEnumResponse>(
@@ -45,7 +45,7 @@ class GenHelloApi {
         method: "GET",
         path: "/api/hello/map-enum",
         query: const <String, String?>{},
-        headers: headers,
+        options: options,
         responseMediaType: "application/json",
         responseKind: "json",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
@@ -58,7 +58,7 @@ class GenHelloApi {
 
 
   Future<HelloListEnumResponse> listEnum({
-    Map<String, String> headers = const {},
+    ApiRequestOptions options = const ApiRequestOptions(),
   }) {
     return transport.request(
       ApiRequest<HelloListEnumResponse>(
@@ -66,7 +66,7 @@ class GenHelloApi {
         method: "GET",
         path: "/api/hello/list-enum",
         query: const <String, String?>{},
-        headers: headers,
+        options: options,
         responseMediaType: "application/json",
         responseKind: "json",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
@@ -79,7 +79,7 @@ class GenHelloApi {
 
 
   Future<HelloStringResponse> string({
-    Map<String, String> headers = const {},
+    ApiRequestOptions options = const ApiRequestOptions(),
   }) {
     return transport.request(
       ApiRequest<HelloStringResponse>(
@@ -87,7 +87,7 @@ class GenHelloApi {
         method: "GET",
         path: "/api/hello/string",
         query: const <String, String?>{},
-        headers: headers,
+        options: options,
         responseMediaType: "application/json",
         responseKind: "json",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
@@ -100,7 +100,7 @@ class GenHelloApi {
 
 
   Future<HelloUint64Response> uint64({
-    Map<String, String> headers = const {},
+    ApiRequestOptions options = const ApiRequestOptions(),
   }) {
     return transport.request(
       ApiRequest<HelloUint64Response>(
@@ -108,7 +108,7 @@ class GenHelloApi {
         method: "GET",
         path: "/api/hello/uint64",
         query: const <String, String?>{},
-        headers: headers,
+        options: options,
         responseMediaType: "application/json",
         responseKind: "json",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
@@ -121,7 +121,7 @@ class GenHelloApi {
 
 
   Future<HelloStringEmunResponse> stringEmun({
-    Map<String, String> headers = const {},
+    ApiRequestOptions options = const ApiRequestOptions(),
   }) {
     return transport.request(
       ApiRequest<HelloStringEmunResponse>(
@@ -129,7 +129,7 @@ class GenHelloApi {
         method: "GET",
         path: "/api/hello/string-emun",
         query: const <String, String?>{},
-        headers: headers,
+        options: options,
         responseMediaType: "application/json",
         responseKind: "json",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
@@ -143,7 +143,7 @@ class GenHelloApi {
 
   Future<void> helloWay({
     HelloHelloWayQuery? query,
-    Map<String, String> headers = const {},
+    ApiRequestOptions options = const ApiRequestOptions(),
   }) {
     return transport.request(
       ApiRequest<void>(
@@ -151,7 +151,7 @@ class GenHelloApi {
         method: "GET",
         path: "/api/hello/hello-way",
         query: query?.toQueryMap() ?? const <String, String?>{},
-        headers: headers,
+        options: options,
         responseMediaType: "application/json",
         responseKind: "json",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),

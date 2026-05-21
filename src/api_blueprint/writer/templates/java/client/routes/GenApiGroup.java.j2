@@ -2,6 +2,7 @@
 
 import {{ bp.root_package }}.runtime.GenApiChannelBridge;
 import {{ bp.root_package }}.runtime.GenApiRequest;
+import {{ bp.root_package }}.runtime.GenApiRequestOptions;
 import {{ bp.root_package }}.runtime.GenApiRawResponse;
 import {{ bp.root_package }}.runtime.GenApiResponseEnvelope;
 import {{ bp.root_package }}.runtime.GenApiStreamResponse;
@@ -11,7 +12,6 @@ import {{ bp.root_package }}.runtime.GenApiTransport;
 import {{ bp.root_package }}.runtime.GenApiTypes;
 {% endif %}
 import {{ bp.root_package }}.runtime.binary.GenApiBinaryBody;
-import java.util.Map;
 
 public class {{ group.generated_client_class }} {
     protected final GenApiTransport transport;
@@ -33,7 +33,24 @@ public class {{ group.generated_client_class }} {
 {%- for type_name, name in writer.route_params(route, group) if name != "binaryBody" %}
             {{ name }},
 {%- endfor %}
-            {{ group.types_class }}.{{ route.binary_schema_type }}Wire.toBinaryBody(binary)
+            binary,
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public {{ writer.response_type(route, group) }} {{ route.method_name }}(
+{%- for type_name, name in writer.route_params(route, group) if name != "binaryBody" %}
+        {{ type_name }} {{ name }},
+{%- endfor %}
+        {{ group.types_class }}.{{ route.binary_schema_type }} binary,
+        GenApiRequestOptions options
+    ) throws Exception {
+        return {{ route.method_name }}(
+{%- for type_name, name in writer.route_params(route, group) if name != "binaryBody" %}
+            {{ name }},
+{%- endfor %}
+            {{ group.types_class }}.{{ route.binary_schema_type }}Wire.toBinaryBody(binary),
+            options
         );
     }
 {% endif %}
@@ -43,6 +60,21 @@ public class {{ group.generated_client_class }} {
         {{ type_name }} {{ name }}{% if not loop.last %},{% endif %}
 {%- endfor %}
     ) throws Exception {
+        return {{ route.method_name }}(
+{%- for type_name, name in writer.route_params(route, group) %}
+            {{ name }},
+{%- endfor %}
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public {{ writer.response_type(route, group) }} {{ route.method_name }}(
+{%- for type_name, name in writer.route_params(route, group) %}
+        {{ type_name }} {{ name }},
+{%- endfor %}
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<{{ writer.response_type(route, group) }}> request = new GenApiRequest<>(
             {{ route.route_id | code_literal }},
             {{ route.http_method | code_literal }},
@@ -59,7 +91,8 @@ public class {{ group.generated_client_class }} {
             {{ route.response_kind | code_literal }},
             {% if route.response_filename %}{{ route.response_filename | code_literal }}{% else %}""{% endif %},
             {% if route.is_binary_schema_response %}{{ group.types_class }}.{{ route.response_binary_schema_type }}Wire::parse{% else %}null{% endif %},
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }
@@ -70,6 +103,21 @@ public class {{ group.generated_client_class }} {
         {{ type_name }} {{ name }}{% if not loop.last %},{% endif %}
 {%- endfor %}
     ) {
+        return {{ route.connection_method_name }}(
+{%- for type_name, name in writer.route_params(route, group) %}
+            {{ name }},
+{%- endfor %}
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenApiStreamBridge<{{ writer.server_message_type(route, group) }}, Object> {{ route.connection_method_name }}(
+{%- for type_name, name in writer.route_params(route, group) %}
+        {{ type_name }} {{ name }},
+{%- endfor %}
+        GenApiRequestOptions options
+    ) {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<Object> request = new GenApiRequest<>(
             {{ route.route_id | code_literal }},
             "STREAM",
@@ -86,7 +134,8 @@ public class {{ group.generated_client_class }} {
             "json",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.openStream(request);
     }
@@ -97,6 +146,21 @@ public class {{ group.generated_client_class }} {
         {{ type_name }} {{ name }}{% if not loop.last %},{% endif %}
 {%- endfor %}
     ) {
+        return {{ route.connection_method_name }}(
+{%- for type_name, name in writer.route_params(route, group) %}
+            {{ name }},
+{%- endfor %}
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenApiChannelBridge<{{ writer.server_message_type(route, group) }}, {{ writer.client_message_type(route, group) }}, Object> {{ route.connection_method_name }}(
+{%- for type_name, name in writer.route_params(route, group) %}
+        {{ type_name }} {{ name }},
+{%- endfor %}
+        GenApiRequestOptions options
+    ) {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<Object> request = new GenApiRequest<>(
             {{ route.route_id | code_literal }},
             "CHANNEL",
@@ -113,7 +177,8 @@ public class {{ group.generated_client_class }} {
             "json",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.openChannel(request);
     }

@@ -4,7 +4,7 @@
 
 import type * as Types from "./types";
 import type * as Shared from "../../../runtime/types";
-import { ApiChannelBridge, ApiClientConfig, ApiStreamBridge, BaseClient } from "../../../runtime/client";
+import { ApiChannelBridge, ApiClientConfig, ApiRequestOptions, ApiStreamBridge, BaseClient } from "../../../runtime/client";
 
 export class HelloClient extends BaseClient {
   constructor(config: ApiClientConfig = {}) {
@@ -20,10 +20,9 @@ export class HelloClient extends BaseClient {
   async greet(
     request: {
       query?: Types.GreetQuery;
-      headers?: Record<string, string>;
+
     } = {},
-    init: RequestInit = {},
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<Shared.GreetResponse> {
     return this.request<Shared.GreetResponse>({
       routeId: "api.hello.get.greet",
@@ -33,11 +32,11 @@ export class HelloClient extends BaseClient {
       operation: "Greet",
       namespace: "hello",
       query: request.query as unknown as Record<string, unknown> | undefined,
-      headers: request.headers,
-      init,
+      headers: options?.headers,
+      init: options?.init,
       responseType: "json",
       responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
     });
   }
 

@@ -190,18 +190,18 @@ class FlutterWriter(BaseWriter[FlutterBlueprint]):
             if handle:
                 handle.write(FLUTTER_CLIENT_GENERATED_HEADER)
                 primary_bp = bps[0] if bps else None
-                handle.write(render("flutter", "public_entry.dart", {"writer": self, "primary_bp": primary_bp, "generated": True}))
+                handle.write(render("flutter", "gen_public_entry.dart", {"writer": self, "primary_bp": primary_bp}))
         for bp in bps:
             public_name = bp.root_path.rsplit("/", 1)[-1]
             root_facade = self.lib_dir / f"{public_name}.dart"
             self._unlink_generated_file(root_facade)
             with self.write_file(root_facade, overwrite=False) as handle:
                 if handle:
-                    handle.write(render("flutter", "root_public_entry.dart", {"writer": self, "bp": bp, "generated": False}))
+                    handle.write(render("flutter", "root_public_entry.dart", {"writer": self, "bp": bp}))
             with self.write_file(self.lib_dir / f"gen_{public_name}.dart", overwrite=True) as handle:
                 if handle:
                     handle.write(FLUTTER_CLIENT_GENERATED_HEADER)
-                    handle.write(render("flutter", "root_public_entry.dart", {"writer": self, "bp": bp, "generated": True}))
+                    handle.write(render("flutter", "gen_root_public_entry.dart", {"writer": self, "bp": bp}))
 
     def _gen_blueprint(self, bp: FlutterBlueprint) -> None:
         plan = build_flutter_blueprint_plan(self, bp)
@@ -213,12 +213,12 @@ class FlutterWriter(BaseWriter[FlutterBlueprint]):
         self._unlink_generated_file(plan.root_facade_file)
         with self.write_file(plan.root_facade_file, overwrite=False) as handle:
             if handle:
-                handle.write(render("flutter", "root_public_entry.dart", {"writer": self, "bp": bp, "generated": False}))
+                handle.write(render("flutter", "root_public_entry.dart", {"writer": self, "bp": bp}))
 
         with self.write_file(plan.root_barrel_file, overwrite=True) as handle:
             if handle:
                 handle.write(FLUTTER_CLIENT_GENERATED_HEADER)
-                handle.write(render("flutter", "root_barrel.dart", context))
+                handle.write(render("flutter", "gen_root_barrel.dart", context))
 
         for output_name, template_name in plan.runtime.generated_files:
             with self.write_file(plan.runtime.directory / output_name, overwrite=True) as handle:

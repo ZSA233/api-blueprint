@@ -121,6 +121,7 @@ README 应链接到以下用户文档：
 ## 生成器事实
 
 - 生成物 ownership 必须在 docs 中按长期规则描述：生成器会覆盖的文件必须命名为 `gen_*` / `Gen*`，或位于 `_gen_*` 目录，并保留 `Code generated ... DO NOT EDIT` header；非 `gen_` / 非 `Gen` 的 facade、impl、service、client 扩展点只在缺失时创建，不能带 generated header。
+- HTTP / Wails client 的普通 RPC route 必须暴露 per-call request options：调用方可以按单次请求传入 header 和 timeout；全局 default header / timeout 放在对应 HTTP transport config。Go timeout 继续使用 `context.Context`，并通过 variadic request option 补充 per-call header；gRPC timeout/header 使用各语言 gRPC 原生 deadline、metadata 和 call options，不由 `grpc-proto` 生成额外 client wrapper。
 - Go / Wails Go 生成物的 root/group 目录、Go import path 和 `package` 声明使用 Go-safe route package segment；URL、route path、selection/filter 语义不受影响。
 - Go server 的 `out_dir` 是生成包根；route/provider/transport/error/binary runtime 按生成器布局输出，不隐式追加 `views`。Go HTTP server 支持 urlencoded、multipart、binary_schema 请求和 binary_schema/bytes/file/byte_stream 成功响应，raw 响应通过 generated provider/adapter contract 输出，不再依赖 `HTTP_RAW_RESPONSE()`。
 - Go client 输出 runtime、routes、transports/http、根 facade；推荐从 `apiclient.NewHTTP(...)` 进入。Go HTTP client 支持 multipart file upload，binary_schema 成功响应返回 typed packet，bytes/file raw 响应返回 `RawResponse`，byte stream 返回 `StreamResponse` 并由调用方关闭。

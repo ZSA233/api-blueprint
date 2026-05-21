@@ -2,6 +2,7 @@
 package com.example.apiblueprint.static_.runtime;
 
 import com.example.apiblueprint.static_.runtime.binary.GenApiBinaryBody;
+import java.time.Duration;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -21,8 +22,48 @@ public record GenApiRequest<T>(
     String responseKind,
     String responseFilename,
     Function<byte[], T> binaryResponseDecoder,
-    Map<String, String> headers
+    Map<String, String> headers,
+    Duration timeout
 ) {
+    public GenApiRequest(
+        String routeId,
+        String method,
+        String path,
+        Object query,
+        Object json,
+        Object form,
+        Object multipart,
+        GenApiBinaryBody binary,
+        String bodyKind,
+        GenApiResponseEnvelope responseEnvelope,
+        Class<T> responseClass,
+        String responseMediaType,
+        String responseKind,
+        String responseFilename,
+        Function<byte[], T> binaryResponseDecoder,
+        Map<String, String> headers
+    ) {
+        this(
+            routeId,
+            method,
+            path,
+            query,
+            json,
+            form,
+            multipart,
+            binary,
+            bodyKind,
+            responseEnvelope,
+            responseClass,
+            responseMediaType,
+            responseKind,
+            responseFilename,
+            binaryResponseDecoder,
+            headers,
+            null
+        );
+    }
+
     public GenApiRequest {
         routeId = routeId == null ? "" : routeId;
         method = method == null ? "GET" : method;

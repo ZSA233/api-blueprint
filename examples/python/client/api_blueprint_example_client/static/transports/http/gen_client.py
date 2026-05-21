@@ -43,8 +43,14 @@ class HttpClientTransport(ApiClientTransport):
         open_data: Mapping[str, Any] | None = None,
         response_type: str | None = None,
         response_envelope: ApiResponseEnvelope | None = None,
+        headers: Mapping[str, str] | None = None,
+        timeout: float | None = None,
     ) -> Any:
         request_kwargs: dict[str, Any] = {}
+        if headers is not None:
+            request_kwargs["headers"] = dict(headers)
+        if timeout is not None:
+            request_kwargs["timeout"] = timeout
         if query:
             request_kwargs["params"] = {key: value for key, value in query.items() if value is not None}
         if json is not None:
@@ -53,14 +59,14 @@ class HttpClientTransport(ApiClientTransport):
             data, files = _split_multipart(multipart)
             content, content_type = _encode_multipart(data, files)
             request_kwargs["content"] = content
-            request_kwargs.setdefault("headers", {})["content-type"] = content_type
+            _set_header(request_kwargs, "content-type", content_type)
         elif form is not None:
             request_kwargs["data"] = form
         elif binary is not None:
             request_kwargs["content"] = binary.to_bytes() if is_api_binary_body(binary) else binary
-            request_kwargs.setdefault("headers", {})["content-type"] = (
+            _set_header(request_kwargs, "content-type", (
                 binary.content_type if is_api_binary_body(binary) else "application/octet-stream"
-            )
+            ))
         elif open_data is not None:
             request_kwargs["json"] = open_data
 
@@ -232,6 +238,14 @@ def _raw_response(response: httpx.Response) -> ApiRawResponse[bytes]:
 
 def _content_type(response: httpx.Response) -> str:
     return response.headers.get("content-type", "").split(";", 1)[0].lower()
+
+
+def _set_header(request_kwargs: dict[str, Any], name: str, value: str) -> None:
+    headers = request_kwargs.setdefault("headers", {})
+    for existing in tuple(headers):
+        if existing.lower() == name.lower() and existing != name:
+            del headers[existing]
+    headers[name] = value
 
 
 def _filename_from_disposition(disposition: str) -> str | None:

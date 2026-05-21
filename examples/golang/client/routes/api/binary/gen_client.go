@@ -24,7 +24,7 @@ type BinaryClient = GenBinaryClient
 
 var NewBinaryClient = NewGenBinaryClient
 
-func (client *GenBinaryClient) Packet(ctx context.Context, query PacketQuery, binaryBody runtimebinary.Body) (*PacketResponse, error) {
+func (client *GenBinaryClient) Packet(ctx context.Context, query PacketQuery, binaryBody runtimebinary.Body, opts ...runtime.RequestOption) (*PacketResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.binary.post.packet",
 		Method:           "POST",
@@ -35,6 +35,7 @@ func (client *GenBinaryClient) Packet(ctx context.Context, query PacketQuery, bi
 		BodyKind:         runtime.RequestBodyKind("binary_schema"),
 		ResponseKind:     runtime.ResponseKind("json"),
 	}
+	request.ApplyOptions(opts...)
 	var response PacketResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
@@ -42,7 +43,7 @@ func (client *GenBinaryClient) Packet(ctx context.Context, query PacketQuery, bi
 	return &response, nil
 }
 
-func (client *GenBinaryClient) AuditPacket(ctx context.Context, query AuditPacketQuery, binaryBody runtimebinary.Body) (*AuditPacketResponse, error) {
+func (client *GenBinaryClient) AuditPacket(ctx context.Context, query AuditPacketQuery, binaryBody runtimebinary.Body, opts ...runtime.RequestOption) (*AuditPacketResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.binary.post.auditpacket",
 		Method:           "POST",
@@ -53,6 +54,7 @@ func (client *GenBinaryClient) AuditPacket(ctx context.Context, query AuditPacke
 		BodyKind:         runtime.RequestBodyKind("binary_schema"),
 		ResponseKind:     runtime.ResponseKind("json"),
 	}
+	request.ApplyOptions(opts...)
 	var response AuditPacketResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
@@ -60,7 +62,7 @@ func (client *GenBinaryClient) AuditPacket(ctx context.Context, query AuditPacke
 	return &response, nil
 }
 
-func (client *GenBinaryClient) AuditPacketResponse(ctx context.Context) (*AuditPacket, error) {
+func (client *GenBinaryClient) AuditPacketResponse(ctx context.Context, opts ...runtime.RequestOption) (*AuditPacket, error) {
 	request := runtime.Request{
 		RouteID:          "api.binary.get.auditpacketresponse",
 		Method:           "GET",
@@ -69,6 +71,7 @@ func (client *GenBinaryClient) AuditPacketResponse(ctx context.Context) (*AuditP
 		BodyKind:         runtime.RequestBodyKind("none"),
 		ResponseKind:     runtime.ResponseKind("binary_schema"),
 	}
+	request.ApplyOptions(opts...)
 	var response AuditPacket
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err

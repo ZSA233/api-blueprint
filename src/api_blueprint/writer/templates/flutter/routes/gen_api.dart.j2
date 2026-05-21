@@ -20,7 +20,7 @@ class Gen{{ group.class_name }} {
 {% endif %}{% if route.form_type %}    {{ route.form_type }}? form,
 {% endif %}{% if route.multipart_type %}    {{ route.multipart_type }}? multipart,
 {% endif %}{% if route.binary_type %}    required {{ route.binary_type }} {{ route.binary_param_name }},
-{% endif %}    Map<String, String> headers = const {},
+{% endif %}    ApiRequestOptions options = const ApiRequestOptions(),
   }) {
     return transport.request(
       ApiRequest<{{ route.response_type.text }}>(
@@ -28,7 +28,7 @@ class Gen{{ group.class_name }} {
         method: {{ route.http_method | tojson }},
         path: {{ writer.dart_string_literal(route.url) }},
         query: {{ route.query_to_map_expr }},
-        headers: headers,
+        options: options,
 {% if route.json_type %}        json: json?.toJson(),
 {% endif %}{% if route.form_type %}        form: form?.toJson(),
 {% endif %}{% if route.multipart_type %}        multipart: multipart,

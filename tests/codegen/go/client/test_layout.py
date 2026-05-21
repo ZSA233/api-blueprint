@@ -122,12 +122,18 @@ def test_golang_client_writer_generates_layout_preserves_user_files_and_compiles
     assert "BaseURL" not in runtime_text
     assert "base_url" not in runtime_text
     assert "baseUrl" not in runtime_text
+    assert "Headers          map[string]string" in runtime_text
+    assert "type RequestOption func(*Request)" in runtime_text
+    assert "func WithHeader(name string, value string) RequestOption" in runtime_text
+    assert "func WithHeaders(headers map[string]string) RequestOption" in runtime_text
     assert "ResponseEnvelope ApiResponseEnvelope" in runtime_text
     assert "RouteID          string" in runtime_text
-    assert 'BaseURL string' in config_text
+    assert 'BaseURL        string' in config_text
+    assert "DefaultHeaders map[string]string" in config_text
     assert '"http://localhost:2333"' in config_text
     assert "context.Context" in route_text
-    assert "func (client *GenDemoClient) Ping(ctx context.Context" in route_text
+    assert "func (client *GenDemoClient) Ping(ctx context.Context, query PingQuery, opts ...runtime.RequestOption)" in route_text
+    assert "request.ApplyOptions(opts...)" in route_text
     assert "type Client = GenDemoClient" in route_text
     assert "var NewClient = NewGenDemoClient" in route_text
     assert 'ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope"' in route_text
@@ -212,6 +218,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	demo "example.com/generated/client/routes/api/demo"
@@ -224,6 +231,20 @@ func TestCodeMessageDataEnvelopeRoundTrip(t *testing.T) {
 		var body demo.SubmitJSON
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			t.Fatalf("decode request: %v", err)
+		}
+		if body.Value == "good" {
+			if got := r.Header.Get("X-Default"); got != "base" {
+				t.Fatalf("expected default header, got %q", got)
+			}
+			if got := r.Header.Get("X-Trace-Id"); got != "call" {
+				t.Fatalf("expected per-call header override, got %q", got)
+			}
+			if got := r.Header.Get("X-Batch"); got != "batch" {
+				t.Fatalf("expected WithHeaders value, got %q", got)
+			}
+			if got := r.Header.Get("Content-Type"); !strings.HasPrefix(got, "application/json") {
+				t.Fatalf("expected generated content type to win, got %q", got)
+			}
 		}
 		if body.Value == "bad" {
 			_ = json.NewEncoder(w).Encode(map[string]any{
@@ -245,9 +266,21 @@ func TestCodeMessageDataEnvelopeRoundTrip(t *testing.T) {
 	}))
 	defer server.Close()
 
-	transport := httptransport.NewHttpTransport(httptransport.HttpConfig{BaseURL: server.URL})
+	transport := httptransport.NewHttpTransport(httptransport.HttpConfig{
+		BaseURL: server.URL,
+		DefaultHeaders: map[string]string{
+			"X-Default":    "base",
+			"X-Trace-Id":   "default",
+			"Content-Type": "text/plain",
+		},
+	})
 	client := demo.NewClient(transport)
-	rsp, err := client.Submit(context.Background(), demo.SubmitJSON{Value: "good"})
+	rsp, err := client.Submit(
+		context.Background(),
+		demo.SubmitJSON{Value: "good"},
+		runtime.WithHeader("X-Trace-Id", "call"),
+		runtime.WithHeaders(map[string]string{"X-Batch": "batch"}),
+	)
 	if err != nil {
 		t.Fatalf("submit returned error: %v", err)
 	}

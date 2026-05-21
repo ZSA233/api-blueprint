@@ -23,7 +23,7 @@ type StaticClient = GenStaticClient
 
 var NewStaticClient = NewGenStaticClient
 
-func (client *GenStaticClient) DocJson(ctx context.Context) (*DocJsonResponse, error) {
+func (client *GenStaticClient) DocJson(ctx context.Context, opts ...runtime.RequestOption) (*DocJsonResponse, error) {
 	request := runtime.Request{
 		RouteID:          "static.static.get.docjson",
 		Method:           "GET",
@@ -32,6 +32,7 @@ func (client *GenStaticClient) DocJson(ctx context.Context) (*DocJsonResponse, e
 		BodyKind:         runtime.RequestBodyKind("none"),
 		ResponseKind:     runtime.ResponseKind("json"),
 	}
+	request.ApplyOptions(opts...)
 	var response DocJsonResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
@@ -39,7 +40,7 @@ func (client *GenStaticClient) DocJson(ctx context.Context) (*DocJsonResponse, e
 	return &response, nil
 }
 
-func (client *GenStaticClient) Dochaha(ctx context.Context) (*DochahaResponse, error) {
+func (client *GenStaticClient) Dochaha(ctx context.Context, opts ...runtime.RequestOption) (*DochahaResponse, error) {
 	request := runtime.Request{
 		RouteID:          "static.static.get.dochaha",
 		Method:           "GET",
@@ -48,6 +49,7 @@ func (client *GenStaticClient) Dochaha(ctx context.Context) (*DochahaResponse, e
 		BodyKind:         runtime.RequestBodyKind("none"),
 		ResponseKind:     runtime.ResponseKind("json"),
 	}
+	request.ApplyOptions(opts...)
 	var response DochahaResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err

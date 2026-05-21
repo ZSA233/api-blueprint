@@ -65,6 +65,8 @@ class ApiClientTransport(Protocol):
         open_data: Mapping[str, Any] | None = None,
         response_type: str | None = None,
         response_envelope: ApiResponseEnvelope | None = None,
+        headers: Mapping[str, str] | None = None,
+        timeout: float | None = None,
     ) -> Any:
         ...
 

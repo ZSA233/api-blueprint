@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Mapping
 
 from {{ group.runtime_import_prefix }}runtime.client import ApiChannelBridge, ApiClientTransport, ApiRawResponse, ApiStreamBridge, ApiStreamResponse
 from {{ group.runtime_import_prefix }}runtime.gen_codecs import (
@@ -34,14 +34,13 @@ class {{ group.client_class }}:
 {% for route in group.routes %}
 {% if route.is_rpc %}
 
-{% if route.params %}
     async def {{ route.method_name }}(
         self{% for param in route.params %},
         {{ param.name }}: {{ param.annotation }}{% if param.default is not none %} = {{ param.default }}{% endif %}{% endfor %},
+        *,
+        headers: Mapping[str, str] | None = None,
+        timeout: float | None = None,
     ) -> {{ route.response_annotation }}:
-{% else %}
-    async def {{ route.method_name }}(self) -> {{ route.response_annotation }}:
-{% endif %}
         response_type: str | None = {{ route.response_type_literal | safe }}
         payload = await self._transport.request(
             {{ route.http_method_literal | safe }},
@@ -52,6 +51,8 @@ class {{ group.client_class }}:
 {% endfor %}
             response_type=response_type,
             response_envelope={{ route.response_envelope_literal | safe }},
+            headers=headers,
+            timeout=timeout,
         )
         return {{ route.response_decode_expr("payload") | safe }}
 {% elif route.supports_stream %}

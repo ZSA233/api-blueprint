@@ -3,6 +3,25 @@ from __future__ import annotations
 from .helpers import *
 
 
+def test_java_generated_template_files_use_gen_names() -> None:
+    template_root = Path("src/api_blueprint/writer/templates/java")
+    allowed_preserved_templates = {
+        Path("client/routes/ApiGroup.java.j2"),
+        Path("client/runtime/ApiClient.java.j2"),
+        Path("client/transports/http/HttpApiClient.java.j2"),
+        Path("server/routes/ApiService.java.j2"),
+    }
+
+    non_gen_templates = {
+        path.relative_to(template_root)
+        for path in template_root.rglob("*.java.j2")
+        if not path.name.startswith("Gen") and path.relative_to(template_root) not in allowed_preserved_templates
+    }
+
+    assert non_gen_templates == set()
+    assert (template_root / "client/runtime/GenApiRequestOptions.java.j2").is_file()
+
+
 def test_java_selection_matches_path_tag_group_method_and_name(example_entrypoints) -> None:
     _config, entrypoints = example_entrypoints
     graph = build_contract_graph(entrypoints)
@@ -102,6 +121,8 @@ content-type: application/octet-stream
     types_text = (client_runtime_dir / "GenApiTypes.java").read_text(encoding="utf-8")
     catalog_text = (client_runtime_dir / "GenApiErrors.java").read_text(encoding="utf-8")
     api_error_text = (client_runtime_dir / "GenApiError.java").read_text(encoding="utf-8")
+    request_options_text = (client_runtime_dir / "GenApiRequestOptions.java").read_text(encoding="utf-8")
+    request_text = (client_runtime_dir / "GenApiRequest.java").read_text(encoding="utf-8")
     route_text = (client_route_dir / "GenDemoApi.java").read_text(encoding="utf-8")
     route_types_text = (client_route_dir / "GenDemoTypes.java").read_text(encoding="utf-8")
     transport_text = (client_http_dir / "GenJdkHttpApiTransport.java").read_text(encoding="utf-8")
@@ -124,6 +145,8 @@ content-type: application/octet-stream
         types_text,
         catalog_text,
         api_error_text,
+        request_options_text,
+        request_text,
         route_text,
         route_types_text,
         transport_text,
@@ -154,6 +177,22 @@ content-type: application/octet-stream
     assert "GenDemoTypes.PingQuery query" in route_text
     assert "GenApiTypes.SubmitJson json" in route_text
     assert "GenApiTypes.FormPayload form" in route_text
+    assert "public record GenApiRequestOptions(" in request_options_text
+    assert "public static Builder builder()" in request_options_text
+    assert "public GenApiRequestOptions withHeader(String name, String value)" in request_options_text
+    assert "Duration timeout" in request_text
+    assert "Map<String, String> defaultHeaders" in config_text
+    assert "Duration timeout" in config_text
+    assert 'this("http://localhost:2333", Map.of(), null);' in config_text
+    assert (
+        "public GenApiTypes.Result ping(\n"
+        "        GenDemoTypes.PingQuery query,\n"
+        "        GenApiRequestOptions options\n"
+        "    ) throws Exception"
+    ) in route_text
+    assert "GenApiRequestOptions.none()" in route_text
+    assert "effectiveOptions.headers()" in route_text
+    assert "effectiveOptions.timeout()" in route_text
     assert "GenBinaryTypes.DemoPacket binary" in (client_dir / package_root / "routes/api/binary/GenBinaryApi.java").read_text(
         encoding="utf-8"
     )
@@ -171,12 +210,15 @@ content-type: application/octet-stream
     assert "GenDemoTypes.Event" not in route_text
     assert "public class GenJdkHttpApiTransport implements GenApiTransport" in transport_text
     assert "HttpClient.newHttpClient()" in transport_text
+    assert "mergedHeaders(request.headers()).forEach(builder::header)" in transport_text
+    assert "Duration timeout = request.timeout() == null ? config.timeout() : request.timeout();" in transport_text
+    assert "builder.timeout(timeout)" in transport_text
+    assert "new LinkedHashMap<>(config.defaultHeaders())" in transport_text
     assert "throw new GenApiError(payload" in transport_text
     assert "throw new GenApiException(response.statusCode(), body)" in transport_text
     assert "parseApiErrorPayload(nested, routeId, false)" in transport_text
     assert "parseApiErrorPayload(JsonNode node, String routeId, boolean synthesizeFallbackMessage)" in transport_text
     assert "UnsupportedOperationException" in (client_runtime_dir / "GenApiTransport.java").read_text(encoding="utf-8")
-    assert 'this("http://localhost:2333");' in config_text
     assert '"CommonErr.UNKNOWN"' in catalog_text
     assert "COMMONERR_TOKEN_EXPIRE" in catalog_text
     assert "public final class GenApiErrors" in catalog_text

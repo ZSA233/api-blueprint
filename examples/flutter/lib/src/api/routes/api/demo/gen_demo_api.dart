@@ -16,7 +16,7 @@ class GenDemoApi {
 
   Future<ApiDemoA> abc({
     DemoAbcQuery? query,
-    Map<String, String> headers = const {},
+    ApiRequestOptions options = const ApiRequestOptions(),
   }) {
     return transport.request(
       ApiRequest<ApiDemoA>(
@@ -24,7 +24,7 @@ class GenDemoApi {
         method: "GET",
         path: "/api/demo/abc",
         query: query?.toQueryMap() ?? const <String, String?>{},
-        headers: headers,
+        options: options,
         responseMediaType: "application/json",
         responseKind: "json",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
@@ -38,7 +38,7 @@ class GenDemoApi {
 
   Future<DemoTestPostResponse> testPost({
     DemoTestPostJson? json,
-    Map<String, String> headers = const {},
+    ApiRequestOptions options = const ApiRequestOptions(),
   }) {
     return transport.request(
       ApiRequest<DemoTestPostResponse>(
@@ -46,7 +46,7 @@ class GenDemoApi {
         method: "POST",
         path: "/api/demo/test_post",
         query: const <String, String?>{},
-        headers: headers,
+        options: options,
         json: json?.toJson(),
         responseMediaType: "application/json",
         responseKind: "json",
@@ -61,7 +61,7 @@ class GenDemoApi {
 
   Future<DemoFormSubmitResponse> formSubmit({
     DemoFormSubmitForm? form,
-    Map<String, String> headers = const {},
+    ApiRequestOptions options = const ApiRequestOptions(),
   }) {
     return transport.request(
       ApiRequest<DemoFormSubmitResponse>(
@@ -69,7 +69,7 @@ class GenDemoApi {
         method: "POST",
         path: "/api/demo/form-submit",
         query: const <String, String?>{},
-        headers: headers,
+        options: options,
         form: form?.toJson(),
         responseMediaType: "application/json",
         responseKind: "json",
@@ -85,7 +85,7 @@ class GenDemoApi {
   Future<DemoPutDemoResponse> putDemo({
     DemoPutDemoQuery? query,
     DemoPutDemoJson? json,
-    Map<String, String> headers = const {},
+    ApiRequestOptions options = const ApiRequestOptions(),
   }) {
     return transport.request(
       ApiRequest<DemoPutDemoResponse>(
@@ -93,7 +93,7 @@ class GenDemoApi {
         method: "PUT",
         path: "/api/demo/1put",
         query: query?.toQueryMap() ?? const <String, String?>{},
-        headers: headers,
+        options: options,
         json: json?.toJson(),
         responseMediaType: "application/json",
         responseKind: "json",
@@ -108,7 +108,7 @@ class GenDemoApi {
 
   Future<String> delete({
     DemoDeleteQuery? query,
-    Map<String, String> headers = const {},
+    ApiRequestOptions options = const ApiRequestOptions(),
   }) {
     return transport.request(
       ApiRequest<String>(
@@ -116,7 +116,7 @@ class GenDemoApi {
         method: "DELETE",
         path: "/api/demo/delete\$",
         query: query?.toQueryMap() ?? const <String, String?>{},
-        headers: headers,
+        options: options,
         responseMediaType: "application/xml",
         responseKind: "xml",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
@@ -176,7 +176,7 @@ class GenDemoApi {
 
   Future<DemoPostDeprecatedResponse> postDeprecated({
     DemoPostDeprecatedJson? json,
-    Map<String, String> headers = const {},
+    ApiRequestOptions options = const ApiRequestOptions(),
   }) {
     return transport.request(
       ApiRequest<DemoPostDeprecatedResponse>(
@@ -184,7 +184,7 @@ class GenDemoApi {
         method: "POST",
         path: "/api/demo/post_deprecated",
         query: const <String, String?>{},
-        headers: headers,
+        options: options,
         json: json?.toJson(),
         responseMediaType: "application/json",
         responseKind: "json",
@@ -198,7 +198,7 @@ class GenDemoApi {
 
 
   Future<DemoRawResponse> raw({
-    Map<String, String> headers = const {},
+    ApiRequestOptions options = const ApiRequestOptions(),
   }) {
     return transport.request(
       ApiRequest<DemoRawResponse>(
@@ -206,7 +206,7 @@ class GenDemoApi {
         method: "POST",
         path: "/api/demo/raw",
         query: const <String, String?>{},
-        headers: headers,
+        options: options,
         responseMediaType: "application/json",
         responseKind: "json",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
@@ -219,7 +219,7 @@ class GenDemoApi {
 
 
   Future<DemoMapModelResponse> mapModel({
-    Map<String, String> headers = const {},
+    ApiRequestOptions options = const ApiRequestOptions(),
   }) {
     return transport.request(
       ApiRequest<DemoMapModelResponse>(
@@ -227,7 +227,7 @@ class GenDemoApi {
         method: "POST",
         path: "/api/demo/map_model",
         query: const <String, String?>{},
-        headers: headers,
+        options: options,
         responseMediaType: "application/json",
         responseKind: "json",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
@@ -241,7 +241,7 @@ class GenDemoApi {
 
   Future<DemoErrorDemoResponse> errorDemo({
     DemoErrorDemoQuery? query,
-    Map<String, String> headers = const {},
+    ApiRequestOptions options = const ApiRequestOptions(),
   }) {
     return transport.request(
       ApiRequest<DemoErrorDemoResponse>(
@@ -249,7 +249,7 @@ class GenDemoApi {
         method: "GET",
         path: "/api/demo/error-demo",
         query: query?.toQueryMap() ?? const <String, String?>{},
-        headers: headers,
+        options: options,
         responseMediaType: "application/json",
         responseKind: "json",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),

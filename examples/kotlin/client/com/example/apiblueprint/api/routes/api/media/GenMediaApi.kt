@@ -11,14 +11,14 @@ public open class GenMediaApi internal constructor(
 
     public open suspend fun mediaPreview(
         multipart: MediaPreviewRequest,
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): ApiRawResponse {
         return transport.request(
             ApiRequest(
                 routeId = "api.media.post.preview",
                 method = "POST",
                 path = "/api/media/preview",
-                headers = headers,
+                options = options,
                 multipart = multipart,
                 multipartSerializer = MediaPreviewRequest.serializer(),
                 responseSerializer = Unit.serializer(),
@@ -30,14 +30,14 @@ public open class GenMediaApi internal constructor(
     }
 
     public open suspend fun mediaFrame(
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): ApiRawResponse {
         return transport.request(
             ApiRequest(
                 routeId = "api.media.get.frame",
                 method = "GET",
                 path = "/api/media/frame",
-                headers = headers,
+                options = options,
                 responseSerializer = Unit.serializer(),
                 responseMediaType = "image/jpeg",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
@@ -47,14 +47,14 @@ public open class GenMediaApi internal constructor(
     }
 
     public open suspend fun mediaDownload(
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): ApiRawResponse {
         return transport.request(
             ApiRequest(
                 routeId = "api.media.get.download",
                 method = "GET",
                 path = "/api/media/download",
-                headers = headers,
+                options = options,
                 responseSerializer = Unit.serializer(),
                 responseMediaType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
@@ -64,14 +64,14 @@ public open class GenMediaApi internal constructor(
     }
 
     public open suspend fun mediaDownloadDynamic(
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): ApiRawResponse {
         return transport.request(
             ApiRequest(
                 routeId = "api.media.get.downloaddynamic",
                 method = "GET",
                 path = "/api/media/download-dynamic",
-                headers = headers,
+                options = options,
                 responseSerializer = Unit.serializer(),
                 responseMediaType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
@@ -81,14 +81,14 @@ public open class GenMediaApi internal constructor(
     }
 
     public open suspend fun mediaMjpeg(
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): ApiStreamResponse {
         return transport.request(
             ApiRequest(
                 routeId = "api.media.get.mjpeg",
                 method = "GET",
                 path = "/api/media/mjpeg",
-                headers = headers,
+                options = options,
                 responseSerializer = Unit.serializer(),
                 responseMediaType = "multipart/x-mixed-replace; boundary=frame",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),

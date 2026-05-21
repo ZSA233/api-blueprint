@@ -3,6 +3,7 @@ package com.example.apiblueprint.api.routes.api.binary;
 
 import com.example.apiblueprint.api.runtime.GenApiChannelBridge;
 import com.example.apiblueprint.api.runtime.GenApiRequest;
+import com.example.apiblueprint.api.runtime.GenApiRequestOptions;
 import com.example.apiblueprint.api.runtime.GenApiRawResponse;
 import com.example.apiblueprint.api.runtime.GenApiResponseEnvelope;
 import com.example.apiblueprint.api.runtime.GenApiStreamResponse;
@@ -12,7 +13,6 @@ import com.example.apiblueprint.api.runtime.GenApiTransport;
 import com.example.apiblueprint.api.runtime.GenApiTypes;
 
 import com.example.apiblueprint.api.runtime.binary.GenApiBinaryBody;
-import java.util.Map;
 
 public class GenBinaryApi {
     protected final GenApiTransport transport;
@@ -27,7 +27,20 @@ public class GenBinaryApi {
     ) throws Exception {
         return packet(
             query,
-            GenBinaryTypes.DemoPacketWire.toBinaryBody(binary)
+            binary,
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenBinaryTypes.PacketResponse packet(
+        GenBinaryTypes.PacketQuery query,
+        GenBinaryTypes.DemoPacket binary,
+        GenApiRequestOptions options
+    ) throws Exception {
+        return packet(
+            query,
+            GenBinaryTypes.DemoPacketWire.toBinaryBody(binary),
+            options
         );
     }
 
@@ -35,6 +48,19 @@ public class GenBinaryApi {
         GenBinaryTypes.PacketQuery query,
         GenApiBinaryBody binaryBody
     ) throws Exception {
+        return packet(
+            query,
+            binaryBody,
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenBinaryTypes.PacketResponse packet(
+        GenBinaryTypes.PacketQuery query,
+        GenApiBinaryBody binaryBody,
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<GenBinaryTypes.PacketResponse> request = new GenApiRequest<>(
             "api.binary.post.packet",
             "POST",
@@ -51,7 +77,8 @@ public class GenBinaryApi {
             "json",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }
@@ -62,7 +89,20 @@ public class GenBinaryApi {
     ) throws Exception {
         return auditPacket(
             query,
-            GenBinaryTypes.AuditPacketWire.toBinaryBody(binary)
+            binary,
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenBinaryTypes.AuditPacketResponse auditPacket(
+        GenBinaryTypes.AuditPacketQuery query,
+        GenBinaryTypes.AuditPacket binary,
+        GenApiRequestOptions options
+    ) throws Exception {
+        return auditPacket(
+            query,
+            GenBinaryTypes.AuditPacketWire.toBinaryBody(binary),
+            options
         );
     }
 
@@ -70,6 +110,19 @@ public class GenBinaryApi {
         GenBinaryTypes.AuditPacketQuery query,
         GenApiBinaryBody binaryBody
     ) throws Exception {
+        return auditPacket(
+            query,
+            binaryBody,
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenBinaryTypes.AuditPacketResponse auditPacket(
+        GenBinaryTypes.AuditPacketQuery query,
+        GenApiBinaryBody binaryBody,
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<GenBinaryTypes.AuditPacketResponse> request = new GenApiRequest<>(
             "api.binary.post.auditpacket",
             "POST",
@@ -86,13 +139,23 @@ public class GenBinaryApi {
             "json",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }
 
     public GenBinaryTypes.AuditPacket auditPacketResponse(
     ) throws Exception {
+        return auditPacketResponse(
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenBinaryTypes.AuditPacket auditPacketResponse(
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<GenBinaryTypes.AuditPacket> request = new GenApiRequest<>(
             "api.binary.get.auditpacketresponse",
             "GET",
@@ -109,7 +172,8 @@ public class GenBinaryApi {
             "binary_schema",
             "",
             GenBinaryTypes.AuditPacketWire::parse,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }

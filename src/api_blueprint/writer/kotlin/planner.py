@@ -94,8 +94,8 @@ def build_kotlin_blueprint_plan(writer: "KotlinBaseWriter", bp: "KotlinBlueprint
         http_transport=KotlinHttpTransportPlan(
             directory=http_dir,
             generated_files=(
-                ("GenHttpApiConfig.kt", "HttpApiConfig.kt"),
-                ("GenOkHttpApiTransport.kt", "OkHttpApiTransport.kt"),
+                ("GenHttpApiConfig.kt", "GenHttpApiConfig.kt"),
+                ("GenOkHttpApiTransport.kt", "GenOkHttpApiTransport.kt"),
             )
             if writer.client_mode
             else (),
@@ -108,23 +108,23 @@ def build_kotlin_blueprint_plan(writer: "KotlinBaseWriter", bp: "KotlinBlueprint
 
 def _runtime_generated_files(writer: "KotlinBaseWriter") -> tuple[tuple[str, str], ...]:
     files: list[tuple[str, str]] = [
-        ("GenApiException.kt", "ApiException.kt"),
-        ("GenApiErrors.kt", "ApiErrors.kt"),
-        ("GenApiErrorLookup.kt", "ApiErrorLookup.kt"),
-        ("GenApiJson.kt", "ApiJson.kt"),
+        ("GenApiException.kt", "GenApiException.kt"),
+        ("GenApiErrors.kt", "GenApiErrors.kt"),
+        ("GenApiErrorLookup.kt", "GenApiErrorLookup.kt"),
+        ("GenApiJson.kt", "GenApiJson.kt"),
     ]
     if writer.client_mode:
         files.extend(
             (
-                ("GenApiTransport.kt", "ApiTransport.kt"),
+                ("GenApiTransport.kt", "GenApiTransport.kt"),
                 ("GenApiClient.kt", "GenApiClient.kt"),
             )
         )
     if writer.server_mode:
         files.extend(
             (
-                ("GenApiServerContext.kt", "ApiServerContext.kt"),
-                ("GenApiServerResponse.kt", "ApiServerResponse.kt"),
+                ("GenApiServerContext.kt", "GenApiServerContext.kt"),
+                ("GenApiServerResponse.kt", "GenApiServerResponse.kt"),
             )
         )
     return tuple(files)

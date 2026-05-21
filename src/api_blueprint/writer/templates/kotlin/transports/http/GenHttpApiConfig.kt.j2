@@ -1,7 +1,10 @@
 {% autoescape false %}package {{ bp.root_package }}.transports.http
 
+import kotlin.time.Duration
+
 public data class HttpApiConfig(
     public val baseUrl: String = {{ writer.rendered_base_url }},
     public val defaultHeaders: suspend () -> Map<String, String> = { emptyMap() },
+    public val timeout: Duration? = null,
 )
 {% endautoescape %}

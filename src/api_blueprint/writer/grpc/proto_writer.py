@@ -34,7 +34,7 @@ def render_proto_files(
         exclude=normalize_selection_rules(exclude),
     )
     return {
-        path: _normalize_proto_text(render("grpc", "proto.proto", {"file": file_plan}))
+        path: _normalize_proto_text(render("grpc", "gen_proto.proto", {"file": file_plan}))
         for path, file_plan in plans.items()
     }
 

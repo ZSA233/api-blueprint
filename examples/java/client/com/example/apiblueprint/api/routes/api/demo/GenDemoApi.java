@@ -3,6 +3,7 @@ package com.example.apiblueprint.api.routes.api.demo;
 
 import com.example.apiblueprint.api.runtime.GenApiChannelBridge;
 import com.example.apiblueprint.api.runtime.GenApiRequest;
+import com.example.apiblueprint.api.runtime.GenApiRequestOptions;
 import com.example.apiblueprint.api.runtime.GenApiRawResponse;
 import com.example.apiblueprint.api.runtime.GenApiResponseEnvelope;
 import com.example.apiblueprint.api.runtime.GenApiStreamResponse;
@@ -12,7 +13,6 @@ import com.example.apiblueprint.api.runtime.GenApiTransport;
 import com.example.apiblueprint.api.runtime.GenApiTypes;
 
 import com.example.apiblueprint.api.runtime.binary.GenApiBinaryBody;
-import java.util.Map;
 
 public class GenDemoApi {
     protected final GenApiTransport transport;
@@ -24,6 +24,17 @@ public class GenDemoApi {
     public GenApiTypes.ApiDemoA abc(
         GenDemoTypes.AbcQuery query
     ) throws Exception {
+        return abc(
+            query,
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenApiTypes.ApiDemoA abc(
+        GenDemoTypes.AbcQuery query,
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<GenApiTypes.ApiDemoA> request = new GenApiRequest<>(
             "api.demo.get.abc",
             "GET",
@@ -40,7 +51,8 @@ public class GenDemoApi {
             "json",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }
@@ -48,6 +60,17 @@ public class GenDemoApi {
     public GenDemoTypes.TestPostResponse testPost(
         GenDemoTypes.TestPostJSON json
     ) throws Exception {
+        return testPost(
+            json,
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenDemoTypes.TestPostResponse testPost(
+        GenDemoTypes.TestPostJSON json,
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<GenDemoTypes.TestPostResponse> request = new GenApiRequest<>(
             "api.demo.post.testpost",
             "POST",
@@ -64,7 +87,8 @@ public class GenDemoApi {
             "json",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }
@@ -72,6 +96,17 @@ public class GenDemoApi {
     public GenDemoTypes.FormSubmitResponse formSubmit(
         GenDemoTypes.FormSubmitForm form
     ) throws Exception {
+        return formSubmit(
+            form,
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenDemoTypes.FormSubmitResponse formSubmit(
+        GenDemoTypes.FormSubmitForm form,
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<GenDemoTypes.FormSubmitResponse> request = new GenApiRequest<>(
             "api.demo.post.formsubmit",
             "POST",
@@ -88,7 +123,8 @@ public class GenDemoApi {
             "json",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }
@@ -97,6 +133,19 @@ public class GenDemoApi {
         GenDemoTypes.PutDemoQuery query,
         GenDemoTypes.PutDemoJSON json
     ) throws Exception {
+        return putDemo(
+            query,
+            json,
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenDemoTypes.PutDemoResponse putDemo(
+        GenDemoTypes.PutDemoQuery query,
+        GenDemoTypes.PutDemoJSON json,
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<GenDemoTypes.PutDemoResponse> request = new GenApiRequest<>(
             "api.demo.put.z1put",
             "PUT",
@@ -113,7 +162,8 @@ public class GenDemoApi {
             "json",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }
@@ -121,6 +171,17 @@ public class GenDemoApi {
     public GenDemoTypes.DeleteResponse delete(
         GenDemoTypes.DeleteQuery query
     ) throws Exception {
+        return delete(
+            query,
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenDemoTypes.DeleteResponse delete(
+        GenDemoTypes.DeleteQuery query,
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<GenDemoTypes.DeleteResponse> request = new GenApiRequest<>(
             "api.demo.delete.delete",
             "DELETE",
@@ -137,7 +198,8 @@ public class GenDemoApi {
             "xml",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }
@@ -145,6 +207,17 @@ public class GenDemoApi {
     public GenApiStreamBridge<GenDemoTypes.SweepStreamMessage, Object> subscribeSweepEvents(
         GenApiTypes.SweepOpen openData
     ) {
+        return subscribeSweepEvents(
+            openData,
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenApiStreamBridge<GenDemoTypes.SweepStreamMessage, Object> subscribeSweepEvents(
+        GenApiTypes.SweepOpen openData,
+        GenApiRequestOptions options
+    ) {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<Object> request = new GenApiRequest<>(
             "api.demo.stream.sweepevents",
             "STREAM",
@@ -161,7 +234,8 @@ public class GenDemoApi {
             "json",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.openStream(request);
     }
@@ -169,6 +243,17 @@ public class GenDemoApi {
     public GenApiChannelBridge<GenDemoTypes.AssistantServerMessage, GenDemoTypes.AssistantClientMessage, Object> openAssistantSession(
         GenApiTypes.AssistantOpen openData
     ) {
+        return openAssistantSession(
+            openData,
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenApiChannelBridge<GenDemoTypes.AssistantServerMessage, GenDemoTypes.AssistantClientMessage, Object> openAssistantSession(
+        GenApiTypes.AssistantOpen openData,
+        GenApiRequestOptions options
+    ) {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<Object> request = new GenApiRequest<>(
             "api.demo.channel.assistantsession",
             "CHANNEL",
@@ -185,7 +270,8 @@ public class GenDemoApi {
             "json",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.openChannel(request);
     }
@@ -193,6 +279,17 @@ public class GenDemoApi {
     public GenDemoTypes.PostDeprecatedResponse postDeprecated(
         GenDemoTypes.PostDeprecatedJSON json
     ) throws Exception {
+        return postDeprecated(
+            json,
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenDemoTypes.PostDeprecatedResponse postDeprecated(
+        GenDemoTypes.PostDeprecatedJSON json,
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<GenDemoTypes.PostDeprecatedResponse> request = new GenApiRequest<>(
             "api.demo.post.postdeprecated",
             "POST",
@@ -209,13 +306,23 @@ public class GenDemoApi {
             "json",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }
 
     public GenDemoTypes.RawResponse raw(
     ) throws Exception {
+        return raw(
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenDemoTypes.RawResponse raw(
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<GenDemoTypes.RawResponse> request = new GenApiRequest<>(
             "api.demo.post.raw",
             "POST",
@@ -232,13 +339,23 @@ public class GenDemoApi {
             "json",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }
 
     public GenDemoTypes.MapModelResponse mapModel(
     ) throws Exception {
+        return mapModel(
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenDemoTypes.MapModelResponse mapModel(
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<GenDemoTypes.MapModelResponse> request = new GenApiRequest<>(
             "api.demo.post.mapmodel",
             "POST",
@@ -255,7 +372,8 @@ public class GenDemoApi {
             "json",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }
@@ -263,6 +381,17 @@ public class GenDemoApi {
     public GenDemoTypes.ErrorDemoResponse errorDemo(
         GenDemoTypes.ErrorDemoQuery query
     ) throws Exception {
+        return errorDemo(
+            query,
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenDemoTypes.ErrorDemoResponse errorDemo(
+        GenDemoTypes.ErrorDemoQuery query,
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<GenDemoTypes.ErrorDemoResponse> request = new GenApiRequest<>(
             "api.demo.get.errordemo",
             "GET",
@@ -279,7 +408,8 @@ public class GenDemoApi {
             "json",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }

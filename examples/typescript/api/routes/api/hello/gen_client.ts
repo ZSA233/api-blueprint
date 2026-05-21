@@ -4,7 +4,7 @@
 
 import type * as Types from "./types";
 import type * as Shared from "../../../runtime/types";
-import { ApiChannelBridge, ApiClientConfig, ApiStreamBridge, BaseClient } from "../../../runtime/client";
+import { ApiChannelBridge, ApiClientConfig, ApiRequestOptions, ApiStreamBridge, BaseClient } from "../../../runtime/client";
 
 export class HelloClient extends BaseClient {
   constructor(config: ApiClientConfig = {}) {
@@ -20,10 +20,9 @@ export class HelloClient extends BaseClient {
   async abc(
     request: {
       query?: Types.AbcQuery;
-      headers?: Record<string, string>;
+
     } = {},
-    init: RequestInit = {},
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<Types.AbcResponse> {
     return this.request<Types.AbcResponse>({
       routeId: "api.hello.get.abc",
@@ -33,11 +32,11 @@ export class HelloClient extends BaseClient {
       operation: "Abc",
       namespace: "hello",
       query: request.query as unknown as Record<string, unknown> | undefined,
-      headers: request.headers,
-      init,
+      headers: options?.headers,
+      init: options?.init,
       responseType: "json",
       responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
     });
   }
 
@@ -49,10 +48,9 @@ export class HelloClient extends BaseClient {
 
   async mapEnum(
     request: {
-      headers?: Record<string, string>;
+
     } = {},
-    init: RequestInit = {},
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<Types.MapEnumResponse> {
     return this.request<Types.MapEnumResponse>({
       routeId: "api.hello.get.mapenum",
@@ -61,11 +59,11 @@ export class HelloClient extends BaseClient {
       service: "HelloService",
       operation: "MapEnum",
       namespace: "hello",
-      headers: request.headers,
-      init,
+      headers: options?.headers,
+      init: options?.init,
       responseType: "json",
       responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
     });
   }
 
@@ -77,10 +75,9 @@ export class HelloClient extends BaseClient {
 
   async listEnum(
     request: {
-      headers?: Record<string, string>;
+
     } = {},
-    init: RequestInit = {},
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<Types.ListEnumResponse> {
     return this.request<Types.ListEnumResponse>({
       routeId: "api.hello.get.listenum",
@@ -89,11 +86,11 @@ export class HelloClient extends BaseClient {
       service: "HelloService",
       operation: "ListEnum",
       namespace: "hello",
-      headers: request.headers,
-      init,
+      headers: options?.headers,
+      init: options?.init,
       responseType: "json",
       responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
     });
   }
 
@@ -105,10 +102,9 @@ export class HelloClient extends BaseClient {
 
   async string(
     request: {
-      headers?: Record<string, string>;
+
     } = {},
-    init: RequestInit = {},
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<Types.StringResponse> {
     return this.request<Types.StringResponse>({
       routeId: "api.hello.get.string",
@@ -117,11 +113,11 @@ export class HelloClient extends BaseClient {
       service: "HelloService",
       operation: "String",
       namespace: "hello",
-      headers: request.headers,
-      init,
+      headers: options?.headers,
+      init: options?.init,
       responseType: "json",
       responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
     });
   }
 
@@ -133,10 +129,9 @@ export class HelloClient extends BaseClient {
 
   async uint64(
     request: {
-      headers?: Record<string, string>;
+
     } = {},
-    init: RequestInit = {},
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<Types.Uint64Response> {
     return this.request<Types.Uint64Response>({
       routeId: "api.hello.get.uint64",
@@ -145,11 +140,11 @@ export class HelloClient extends BaseClient {
       service: "HelloService",
       operation: "Uint64",
       namespace: "hello",
-      headers: request.headers,
-      init,
+      headers: options?.headers,
+      init: options?.init,
       responseType: "json",
       responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
     });
   }
 
@@ -161,10 +156,9 @@ export class HelloClient extends BaseClient {
 
   async stringEmun(
     request: {
-      headers?: Record<string, string>;
+
     } = {},
-    init: RequestInit = {},
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<Types.StringEmunResponse> {
     return this.request<Types.StringEmunResponse>({
       routeId: "api.hello.get.stringemun",
@@ -173,11 +167,11 @@ export class HelloClient extends BaseClient {
       service: "HelloService",
       operation: "StringEmun",
       namespace: "hello",
-      headers: request.headers,
-      init,
+      headers: options?.headers,
+      init: options?.init,
       responseType: "json",
       responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
     });
   }
 
@@ -190,10 +184,9 @@ export class HelloClient extends BaseClient {
   async helloWay(
     request: {
       query?: Types.HelloWayQuery;
-      headers?: Record<string, string>;
+
     } = {},
-    init: RequestInit = {},
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<Types.HelloWayResponse> {
     return this.request<Types.HelloWayResponse>({
       routeId: "api.hello.get.helloway",
@@ -203,11 +196,11 @@ export class HelloClient extends BaseClient {
       operation: "HelloWay",
       namespace: "hello",
       query: request.query as unknown as Record<string, unknown> | undefined,
-      headers: request.headers,
-      init,
+      headers: options?.headers,
+      init: options?.init,
       responseType: "json",
       responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
     });
   }
 

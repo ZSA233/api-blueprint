@@ -3,6 +3,7 @@ package com.example.apiblueprint.api.routes.api.hello;
 
 import com.example.apiblueprint.api.runtime.GenApiChannelBridge;
 import com.example.apiblueprint.api.runtime.GenApiRequest;
+import com.example.apiblueprint.api.runtime.GenApiRequestOptions;
 import com.example.apiblueprint.api.runtime.GenApiRawResponse;
 import com.example.apiblueprint.api.runtime.GenApiResponseEnvelope;
 import com.example.apiblueprint.api.runtime.GenApiStreamResponse;
@@ -12,7 +13,6 @@ import com.example.apiblueprint.api.runtime.GenApiTransport;
 import com.example.apiblueprint.api.runtime.GenApiTypes;
 
 import com.example.apiblueprint.api.runtime.binary.GenApiBinaryBody;
-import java.util.Map;
 
 public class GenHelloApi {
     protected final GenApiTransport transport;
@@ -24,6 +24,17 @@ public class GenHelloApi {
     public GenHelloTypes.AbcResponse abc(
         GenHelloTypes.AbcQuery query
     ) throws Exception {
+        return abc(
+            query,
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenHelloTypes.AbcResponse abc(
+        GenHelloTypes.AbcQuery query,
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<GenHelloTypes.AbcResponse> request = new GenApiRequest<>(
             "api.hello.get.abc",
             "GET",
@@ -40,13 +51,23 @@ public class GenHelloApi {
             "json",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }
 
     public GenHelloTypes.MapEnumResponse mapEnum(
     ) throws Exception {
+        return mapEnum(
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenHelloTypes.MapEnumResponse mapEnum(
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<GenHelloTypes.MapEnumResponse> request = new GenApiRequest<>(
             "api.hello.get.mapenum",
             "GET",
@@ -63,13 +84,23 @@ public class GenHelloApi {
             "json",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }
 
     public GenHelloTypes.ListEnumResponse listEnum(
     ) throws Exception {
+        return listEnum(
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenHelloTypes.ListEnumResponse listEnum(
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<GenHelloTypes.ListEnumResponse> request = new GenApiRequest<>(
             "api.hello.get.listenum",
             "GET",
@@ -86,13 +117,23 @@ public class GenHelloApi {
             "json",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }
 
     public GenHelloTypes.StringResponse string(
     ) throws Exception {
+        return string(
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenHelloTypes.StringResponse string(
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<GenHelloTypes.StringResponse> request = new GenApiRequest<>(
             "api.hello.get.string",
             "GET",
@@ -109,13 +150,23 @@ public class GenHelloApi {
             "json",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }
 
     public GenHelloTypes.Uint64Response uint64(
     ) throws Exception {
+        return uint64(
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenHelloTypes.Uint64Response uint64(
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<GenHelloTypes.Uint64Response> request = new GenApiRequest<>(
             "api.hello.get.uint64",
             "GET",
@@ -132,13 +183,23 @@ public class GenHelloApi {
             "json",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }
 
     public GenHelloTypes.StringEmunResponse stringEmun(
     ) throws Exception {
+        return stringEmun(
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenHelloTypes.StringEmunResponse stringEmun(
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<GenHelloTypes.StringEmunResponse> request = new GenApiRequest<>(
             "api.hello.get.stringemun",
             "GET",
@@ -155,7 +216,8 @@ public class GenHelloApi {
             "json",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }
@@ -163,6 +225,17 @@ public class GenHelloApi {
     public Object helloWay(
         GenHelloTypes.HelloWayQuery query
     ) throws Exception {
+        return helloWay(
+            query,
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public Object helloWay(
+        GenHelloTypes.HelloWayQuery query,
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
         GenApiRequest<Object> request = new GenApiRequest<>(
             "api.hello.get.helloway",
             "GET",
@@ -179,7 +252,8 @@ public class GenHelloApi {
             "json",
             "",
             null,
-            Map.of()
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
         );
         return transport.execute(request);
     }

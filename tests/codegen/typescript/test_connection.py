@@ -54,6 +54,10 @@ def test_typescript_http_generation_uses_stream_and_channel_bridges(tmp_path: Pa
     assert "export class HttpSocketBridge" in http_connection
     assert "protected connectRaw(options: ChannelConnectOptions<unknown, unknown, SocketCloseInfo>): WebSocket" in http_transport
     assert "export interface ApiClientConfig {\n  transport?: ApiTransport;\n}" in runtime_client
+    assert "export interface ApiRequestOptions" in runtime_client
+    assert "headers?: Record<string, string>;" in runtime_client
+    assert "init?: RequestInit;" in runtime_client
+    assert "timeoutMs?: number;" in runtime_client
     assert "export interface ApiHttpTransportConfig extends ApiClientConfig" in http_transport
     assert "baseUrl?: string;" in http_transport
     assert "fetcher?: typeof fetch;" in http_transport
@@ -64,6 +68,13 @@ def test_typescript_http_generation_uses_stream_and_channel_bridges(tmp_path: Pa
     assert "http://localhost:2333" not in client_text
     assert "super(config);" in client_text
     assert "super(config," not in client_text
+    assert "ApiRequestOptions" in client_text
+    assert "options?: ApiRequestOptions" in client_text
+    assert "headers: options?.headers" in client_text
+    assert "init: options?.init" in client_text
+    assert "timeoutMs: options?.timeoutMs" in client_text
+    assert "init: RequestInit = {}" not in client_text
+    assert "timeoutMs?: number,\n  ): Promise" not in client_text
     assert "openChat(" in client_text
     assert "openChannel<Shared.ServerMessage, Shared.ClientMessage" in client_text
     assert "connectWsRaw(" not in client_text
