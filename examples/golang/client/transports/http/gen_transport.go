@@ -173,28 +173,40 @@ func encodeBody(request runtime.Request) (io.Reader, string, int64, error) {
 }
 
 func encodeMultipart(input any) (io.Reader, string, int64, error) {
-	var buffer bytes.Buffer
-	writer := multipart.NewWriter(&buffer)
-	if err := writeMultipartFields(writer, input); err != nil {
-		_ = writer.Close()
+	value, err := multipartStructValue(input)
+	if err != nil {
 		return nil, "", -1, err
 	}
-	if err := writer.Close(); err != nil {
-		return nil, "", -1, err
-	}
-	return &buffer, writer.FormDataContentType(), int64(buffer.Len()), nil
+	reader, pipeWriter := io.Pipe()
+	writer := multipart.NewWriter(pipeWriter)
+	contentType := writer.FormDataContentType()
+	go func() {
+		err := writeMultipartFields(writer, value)
+		if closeErr := writer.Close(); err == nil {
+			err = closeErr
+		}
+		_ = pipeWriter.CloseWithError(err)
+	}()
+	return reader, contentType, -1, nil
 }
 
-func writeMultipartFields(writer *multipart.Writer, input any) error {
+func multipartStructValue(input any) (reflect.Value, error) {
 	value := reflect.ValueOf(input)
 	if value.Kind() == reflect.Pointer {
 		if value.IsNil() {
-			return nil
+			return reflect.Value{}, nil
 		}
 		value = value.Elem()
 	}
 	if value.Kind() != reflect.Struct {
-		return fmt.Errorf("api-blueprint http transport expected multipart struct values, got %s", value.Kind())
+		return reflect.Value{}, fmt.Errorf("api-blueprint http transport expected multipart struct values, got %s", value.Kind())
+	}
+	return value, nil
+}
+
+func writeMultipartFields(writer *multipart.Writer, value reflect.Value) error {
+	if !value.IsValid() {
+		return nil
 	}
 	valueType := value.Type()
 	for i := 0; i < value.NumField(); i++ {

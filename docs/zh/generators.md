@@ -195,7 +195,7 @@ Go client target 输出 preview HTTP client：
 - `transports/http/gen_transport.go`
 - `transports/http/client.go`
 
-`gen_*.go` 文件由生成器拥有并覆盖；`client.go` façade 由用户拥有并保留。推荐入口是 `apiclient.NewHTTP(apiclient.HTTPConfig{BaseURL: baseURL})`，然后调用 `api.Demo.ErrorDemo(ctx, demo.ErrorDemoQuery{Mode: "token"}, runtime.WithHeader("X-Trace-Id", traceID))` 这类 route 方法。route/runtime client 只依赖 transport abstraction，`base_url` / `base_url_expr` 只写入 HTTP transport config。默认 HTTP adapter 实现 RPC 的 query/json/urlencoded/multipart/binary_schema 请求，multipart file 使用 `runtime.MultipartFile`，binary_schema 成功响应会解码成 typed packet，bytes/file raw 响应返回 `runtime.RawResponse`，byte stream 以真流式 `runtime.StreamResponse` 返回并由调用方关闭；请求 deadline 与 cancel 使用 `context.Context`，per-call request options 承载 header 和后续请求级开关；STREAM 和 CHANNEL 方法也会生成，默认 HTTP adapter 返回明确 unsupported error，项目可以替换自定义 transport。
+`gen_*.go` 文件由生成器拥有并覆盖；`client.go` façade 由用户拥有并保留。推荐入口是 `apiclient.NewHTTP(apiclient.HTTPConfig{BaseURL: baseURL})`，然后调用 `api.Demo.ErrorDemo(ctx, demo.ErrorDemoQuery{Mode: "token"}, runtime.WithHeader("X-Trace-Id", traceID))` 这类 route 方法。route/runtime client 只依赖 transport abstraction，`base_url` / `base_url_expr` 只写入 HTTP transport config。默认 HTTP adapter 实现 RPC 的 query/json/urlencoded/multipart/binary_schema 请求，multipart file 使用 `runtime.MultipartFile`；`Reader` 输入会以 streaming multipart body 发送，`Bytes` 适合小文件和测试。binary_schema 成功响应会解码成 typed packet，bytes/file raw 响应返回 `runtime.RawResponse`，byte stream 以真流式 `runtime.StreamResponse` 返回并由调用方关闭；请求 deadline 与 cancel 使用 `context.Context`，per-call request options 承载 header 和后续请求级开关；STREAM 和 CHANNEL 方法也会生成，默认 HTTP adapter 返回明确 unsupported error，项目可以替换自定义 transport。
 
 ## TypeScript
 

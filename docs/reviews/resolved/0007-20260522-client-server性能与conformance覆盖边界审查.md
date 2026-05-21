@@ -2,11 +2,11 @@
 
 ## 状态
 
-待修复 / 建议优化。
+已修复并归档。
 
-本次审查未发现跨所有 target 的致命性能设计缺陷，但确认 Go HTTP client multipart 上传存在一个真实性能缺口：`runtime.MultipartFile.Reader` 暴露了流式输入能力，当前 transport 却会先把完整 multipart body 写入内存 `bytes.Buffer`，大文件上传会在请求发出前产生与文件大小同量级的内存峰值。
+本次审查未发现跨所有 target 的致命性能设计缺陷。审查中确认的 Go HTTP client multipart 上传性能缺口已修复：`runtime.MultipartFile.Reader` 现在会通过 streaming multipart body 发送，不再在请求发出前写入完整 `bytes.Buffer`。
 
-因此本记录保留在 `docs/reviews/` 顶层，不移动到 `resolved/`。
+因此本记录移动到 `docs/reviews/resolved/`。
 
 ## 发现日期
 
@@ -26,7 +26,7 @@
 中。
 
 - 阻塞风险：未确认。
-- 中风险：Go HTTP client multipart 上传会全量 buffer，即使用户传入 `io.Reader` 文件输入。
+- 已修复的中风险：审查时 Go HTTP client multipart 上传会全量 buffer，即使用户传入 `io.Reader` 文件输入。
 - 低风险：benchmark / conformance 当前缺少大 multipart、长 `byte_stream`、长连接回压、generated SDK 吞吐的性能回归覆盖。
 - 可接受限制：JSON、form、typed binary schema、raw `bytes` / `file` response 的 buffered 行为属于当前契约或便利 API 边界；生产大流量场景应使用 `byte_stream`、stream/file part 或自定义 transport。
 
@@ -38,9 +38,9 @@
 
 ## 存在性判断
 
-确认存在一个需要修复的性能缺口。
+审查时确认存在一个需要修复的性能缺口；截至 2026-05-22 已完成修复。
 
-Go client runtime 已经公开 `runtime.MultipartFile{Reader io.Reader, Bytes []byte}`，这会让使用者合理预期大文件可以走 reader stream。但 HTTP transport 的 `encodeMultipart` 目前使用 `bytes.Buffer` 和 `multipart.NewWriter(&buffer)`，`writeMultipartFile` 虽然对文件执行 `io.Copy(part, reader)`，最终仍写入内存 buffer。也就是说，stream API 被 transport 实现抵消。
+Go client runtime 已经公开 `runtime.MultipartFile{Reader io.Reader, Bytes []byte}`，这会让使用者合理预期大文件可以走 reader stream。修复前 HTTP transport 的 `encodeMultipart` 使用 `bytes.Buffer` 和 `multipart.NewWriter(&buffer)`，`writeMultipartFile` 虽然对文件执行 `io.Copy(part, reader)`，最终仍写入内存 buffer。也就是说，修复前 stream API 被 transport 实现抵消。
 
 其它端未确认同等级缺口：
 
@@ -70,7 +70,7 @@ result, err := api.Media.Preview(ctx, media.PreviewMultipart{
 })
 ```
 
-当前生成的 Go transport 路径：
+修复前生成的 Go transport 路径：
 
 - `examples/golang/client/runtime/gen_client.go:81` 定义 `MultipartFile.Reader io.Reader`。
 - `examples/golang/client/transports/http/gen_transport.go:175` 的 `encodeMultipart` 创建 `bytes.Buffer`。
@@ -198,31 +198,62 @@ Go multipart 修复建议保持 public API 不变：
 
 ## 是否建议修复
 
-建议修复。
+已修复。
 
 Go multipart issue 是确认的性能语义缺口，且与 public API 的 `Reader` 预期相冲突。修复可以不破坏现有 API，只调整 transport 内部编码方式。
 
-同时建议补充性能覆盖，但不建议把 conformance 变成负载测试。更合理的方式是新增 benchmark/probe 层：
+同时建议补充性能覆盖，但不建议把 conformance 变成负载测试。本次已补 Go client multipart streaming runtime 回归测试；更大范围的负载 probe 仍可作为后续 benchmark 增强：
 
 - generated SDK multipart 大文件 / reader streaming smoke。
 - `byte_stream` 首 chunk 后关闭 / 取消 smoke。
 - SSE / WebSocket 慢消费者和 bounded queue probe。
 - generated SDK request-options / media / binary-response 的轻量吞吐 benchmark。
 
-## 后续处置建议
+## 处置结果
 
-1. 新增 plan 修复 Go client multipart streaming encoder。
-2. 为 Go client transport 增加 codegen/runtime 测试，证明 multipart reader 不再通过 `bytes.Buffer` 全量编码。
-3. 扩展 benchmark 或新增 probe，覆盖大 multipart、`byte_stream` cancel、长连接慢消费者。
-4. 修复完成后运行：
+1. 已新增 plan 修复 Go client multipart streaming encoder。
+2. 已为 Go client transport 增加 codegen/runtime 测试，证明 multipart reader 不再通过 `bytes.Buffer` 全量编码。
+3. 已保留 benchmark/probe 扩展为低风险后续增强，不作为本次归档阻塞项。
+4. 已执行：
 
 ```bash
-uv run pytest tests/codegen/go tests/codegen/shared -q
+uv run pytest tests/codegen/go/client/test_media_raw.py -q
+env -u GOROOT uv run pytest tests/codegen/go tests/codegen/shared -q
 uv run python -m compileall src/api_blueprint -q
 uv run api-gen check -c examples/api-blueprint.toml
 env GOROOT=/Users/zsa/.gvm/gos/go1.25.2 uv run python -m scripts.example_validation --mode refresh --scope blueprint
-env GOROOT=/Users/zsa/.gvm/gos/go1.25.2 uv run python -m scripts.example_conformance run --servers go,java,kotlin,python --clients go,typescript,kotlin,flutter,java,python --scenario request-options,media,media-filename-edge,media-error,binary-response,audit-binary
 env GOROOT=/Users/zsa/.gvm/gos/go1.25.2 uv run python -m scripts.example_benchmark binary --target all --count 1
+env GOROOT=/Users/zsa/.gvm/gos/go1.25.2 uv run python -m scripts.example_conformance run --servers go --clients go --scenario media
 ```
 
-修复闭环后，将本记录移动到 `docs/reviews/resolved/`，并追加 Resolution，记录 Go multipart streaming 修复、覆盖补测和验证命令。
+本记录移动到 `docs/reviews/resolved/`，并追加 Resolution，记录 Go multipart streaming 修复、覆盖补测和验证命令。
+
+## Resolution
+
+修复日期：2026-05-22
+
+修复摘要：
+
+- 新增计划 `docs/plans/resolved/0006-20260522-go-client-multipart-streaming-and-performance-review-closure.md`。
+- Go HTTP client multipart encoder 已从 `bytes.Buffer` 预构建改为 `io.Pipe` + `multipart.Writer` streaming 写出。
+- `encodeMultipart` 同步校验 multipart struct，返回 `contentLength = -1`，并通过 `CloseWithError` 把写入错误传播给 HTTP request body reader。
+- `runtime.MultipartFile.Reader` 不再在 `encodeMultipart` 返回前被消费；新增 Go runtime 测试用阻塞 reader 验证只有读取 request body 时才开始消费文件。
+- 已刷新 blueprint examples，`examples/golang/client/transports/http/gen_transport.go` 与模板一致。
+- 已更新 `PRE_README.MD`、`README.md` / `README_EN.md` 和 `docs/zh|en/generators.md`，说明 Go multipart `Reader` 是流式上传路径。
+
+验证命令：
+
+```bash
+uv run pytest tests/codegen/go/client/test_media_raw.py -q
+env -u GOROOT uv run pytest tests/codegen/go tests/codegen/shared -q
+uv run python -m compileall src/api_blueprint -q
+uv run api-gen check -c examples/api-blueprint.toml
+env GOROOT=/Users/zsa/.gvm/gos/go1.25.2 uv run python -m scripts.example_validation --mode refresh --scope blueprint
+env GOROOT=/Users/zsa/.gvm/gos/go1.25.2 uv run python -m scripts.example_benchmark binary --target all --count 1
+env GOROOT=/Users/zsa/.gvm/gos/go1.25.2 uv run python -m scripts.example_conformance run --servers go --clients go --scenario media
+```
+
+残余边界：
+
+- Conformance 继续定位为协议正确性和互操作验证，不改造成高并发负载测试。
+- 大范围 `byte_stream` 长流、SSE/WebSocket 慢消费者和 generated SDK 吞吐 probe 可作为未来 benchmark 增强；它们不再阻塞本次已确认 Go multipart 性能缺口的修复归档。
