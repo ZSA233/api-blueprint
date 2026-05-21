@@ -124,6 +124,77 @@ def test_client_capabilities_accept_binary_schema_rpc_routes(kind: str, target_k
     assert capability_errors(FakeGraph(), (target,)) == []
 
 
+@pytest.mark.parametrize(
+    ("kind", "target_kwargs"),
+    [
+        ("go-server", {"module": "example.com/server"}),
+        ("go-client", {"module": "example.com/client"}),
+        ("typescript-client", {}),
+        ("python-server", {}),
+        ("python-client", {}),
+    ],
+)
+def test_v1_targets_accept_binary_schema_response_routes(kind: str, target_kwargs: dict[str, object]) -> None:
+    class FakeGraph:
+        def to_manifest(self) -> dict[str, object]:
+            return {
+                "routes": [
+                    {
+                        "id": "api.binary.get.packet",
+                        "service_id": "api.binary",
+                        "kind": "rpc",
+                        "operation": "Packet",
+                        "methods": ["GET"],
+                        "url": "/api/binary/packet",
+                        "request": {"body_kind": "none"},
+                        "response": {"kind": "binary_schema", "binary_schema": {"name": "DemoPacket"}},
+                    }
+                ]
+            }
+
+    target = ResolvedApiTargetConfig(id=kind, kind=kind, out_dir=None, **target_kwargs)
+
+    assert capability_errors(FakeGraph(), (target,)) == []
+
+
+@pytest.mark.parametrize(
+    ("kind", "target_kwargs"),
+    [
+        ("java-server", {"package": "com.example"}),
+        ("java-client", {"package": "com.example"}),
+        ("kotlin-client", {"package": "com.example"}),
+        ("kotlin-server", {"package": "com.example"}),
+        ("flutter-client", {"package": "api_blueprint_example"}),
+    ],
+)
+def test_non_v1_targets_report_binary_schema_response_unsupported(
+    kind: str,
+    target_kwargs: dict[str, object],
+) -> None:
+    class FakeGraph:
+        def to_manifest(self) -> dict[str, object]:
+            return {
+                "routes": [
+                    {
+                        "id": "api.binary.get.packet",
+                        "service_id": "api.binary",
+                        "kind": "rpc",
+                        "operation": "Packet",
+                        "methods": ["GET"],
+                        "url": "/api/binary/packet",
+                        "request": {"body_kind": "none"},
+                        "response": {"kind": "binary_schema", "binary_schema": {"name": "DemoPacket"}},
+                    }
+                ]
+            }
+
+    target = ResolvedApiTargetConfig(id=kind, kind=kind, out_dir=None, **target_kwargs)
+
+    assert capability_errors(FakeGraph(), (target,)) == [
+        f"{kind} does not support binary_schema response route: api.binary.get.packet"
+    ]
+
+
 def test_capability_validation_checks_only_declared_dimensions() -> None:
     bp = Blueprint(root="/api")
     with bp.group("/demo") as views:

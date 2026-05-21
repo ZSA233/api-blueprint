@@ -174,9 +174,11 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
                     "connection_method_name": _connection_method_name,
                     "connection_transport_method": _connection_transport_method,
                     "group": group,
-                    "has_binary_schemas": any(route.has_binary_schema for route in group.routes),
+                    "has_binary_schemas": bool(group.binary_schemas),
+                    "has_request_binary_schemas": any(route.has_binary_schema for route in group.routes),
                     "route_params": _route_params,
                     "route_response_type": _route_response_type,
+                    "route_response_value_type": _route_response_value_type,
                     "runtime_binary_import": self.runtime_binary_import,
                     "runtime_import": self.runtime_import,
                     "runtime_request_fields": _runtime_request_fields,
@@ -416,7 +418,10 @@ def _route_aliases(
         (route.binary_type, None if route.has_binary_schema else route.request.get("binary_model")),
         (route.open_type, route.connection.get("open_model")),
         (route.close_type, route.connection.get("close_model")),
-        (route.response_type, None if route.response_kind in {"bytes", "file", "byte_stream"} else route.response.get("model")),
+        (
+            route.response_type,
+            None if route.response_kind in {"bytes", "file", "byte_stream", "binary_schema"} else route.response.get("model"),
+        ),
     )
     for alias, schema_name in aliases:
         if isinstance(schema_name, str) and schema_name:
@@ -538,10 +543,19 @@ def _route_response_type(route: GoClientRoute) -> str:
         return "*runtime.StreamResponse"
     if route.response_kind in {"bytes", "file"}:
         return "*runtime.RawResponse"
+    if route.response_kind == "binary_schema" and route.response_binary_schema is not None:
+        return f"*{_go_type_name(str(route.response_binary_schema.get('name') or 'Packet'))}"
     response_model = route.response.get("model")
     if isinstance(response_model, str) and response_model:
         return f"*{route.response_type}"
     return "any"
+
+
+def _route_response_value_type(route: GoClientRoute) -> str:
+    response_type = _route_response_type(route)
+    if response_type.startswith("*"):
+        return response_type[1:]
+    return response_type
 
 
 def _route_params(route: GoClientRoute, *, include_open: bool) -> list[str]:

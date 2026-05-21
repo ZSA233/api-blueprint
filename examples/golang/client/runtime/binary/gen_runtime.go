@@ -4,6 +4,7 @@ package binary
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -43,6 +44,154 @@ func (body RawBody) ContentLength() int64 {
 func (body RawBody) WriteBinary(writer io.Writer) error {
 	_, err := writer.Write(body.Data)
 	return err
+}
+
+type Reader struct {
+	input   io.Reader
+	endian  Endian
+	scratch [8]byte
+}
+
+func NewReader(input io.Reader, endian Endian) *Reader {
+	return &Reader{input: input, endian: endian}
+}
+
+func (reader *Reader) ReadFull(dst []byte) error {
+	_, err := io.ReadFull(reader.input, dst)
+	return err
+}
+
+func (reader *Reader) ReadBytes(n int) ([]byte, error) {
+	if n < 0 {
+		return nil, errors.New("negative byte count")
+	}
+	buf := make([]byte, n)
+	if err := reader.ReadFull(buf); err != nil {
+		return nil, err
+	}
+	return buf, nil
+}
+
+func (reader *Reader) Skip(n int) error {
+	if n < 0 {
+		return errors.New("negative byte count")
+	}
+	var buf [8192]byte
+	remaining := n
+	for remaining > 0 {
+		chunk := remaining
+		if chunk > len(buf) {
+			chunk = len(buf)
+		}
+		if err := reader.ReadFull(buf[:chunk]); err != nil {
+			return err
+		}
+		remaining -= chunk
+	}
+	return nil
+}
+
+func (reader *Reader) ReadZero(n int) error {
+	if n < 0 {
+		return errors.New("negative byte count")
+	}
+	var buf [8192]byte
+	remaining := n
+	for remaining > 0 {
+		chunk := remaining
+		if chunk > len(buf) {
+			chunk = len(buf)
+		}
+		if err := reader.ReadFull(buf[:chunk]); err != nil {
+			return err
+		}
+		if !AllZero(buf[:chunk]) {
+			return NewDecodeError("", "const mismatch")
+		}
+		remaining -= chunk
+	}
+	return nil
+}
+
+func (reader *Reader) ReadUint8() (uint8, error) {
+	if err := reader.ReadFull(reader.scratch[:1]); err != nil {
+		return 0, err
+	}
+	return reader.scratch[0], nil
+}
+
+func (reader *Reader) ReadUint16() (uint16, error) {
+	if err := reader.ReadFull(reader.scratch[:2]); err != nil {
+		return 0, err
+	}
+	return binary.ByteOrder(reader.endian).Uint16(reader.scratch[:2]), nil
+}
+
+func (reader *Reader) ReadUint24() (uint32, error) {
+	if err := reader.ReadFull(reader.scratch[:3]); err != nil {
+		return 0, err
+	}
+	return Uint24(reader.endian, reader.scratch[:3]), nil
+}
+
+func (reader *Reader) ReadUint32() (uint32, error) {
+	if err := reader.ReadFull(reader.scratch[:4]); err != nil {
+		return 0, err
+	}
+	return binary.ByteOrder(reader.endian).Uint32(reader.scratch[:4]), nil
+}
+
+func (reader *Reader) ReadUint64() (uint64, error) {
+	if err := reader.ReadFull(reader.scratch[:8]); err != nil {
+		return 0, err
+	}
+	return binary.ByteOrder(reader.endian).Uint64(reader.scratch[:8]), nil
+}
+
+func (reader *Reader) ReadInt8() (int8, error) {
+	value, err := reader.ReadUint8()
+	return int8(value), err
+}
+
+func (reader *Reader) ReadInt16() (int16, error) {
+	value, err := reader.ReadUint16()
+	return int16(value), err
+}
+
+func (reader *Reader) ReadInt24() (int32, error) {
+	value, err := reader.ReadUint24()
+	if err != nil {
+		return 0, err
+	}
+	if value&0x800000 != 0 {
+		return int32(value | 0xFF000000), nil
+	}
+	return int32(value), nil
+}
+
+func (reader *Reader) ReadInt32() (int32, error) {
+	value, err := reader.ReadUint32()
+	return int32(value), err
+}
+
+func (reader *Reader) ReadInt64() (int64, error) {
+	value, err := reader.ReadUint64()
+	return int64(value), err
+}
+
+func (reader *Reader) ReadFloat32() (float32, error) {
+	value, err := reader.ReadUint32()
+	return math.Float32frombits(value), err
+}
+
+func (reader *Reader) ReadFloat64() (float64, error) {
+	value, err := reader.ReadUint64()
+	return math.Float64frombits(value), err
+}
+
+func (reader *Reader) ReadBool() (bool, error) {
+	value, err := reader.ReadUint8()
+	return value != 0, err
 }
 
 type StreamingBody struct {
@@ -228,6 +377,22 @@ func NewEncodeError(path string, message string) error {
 	return EncodeError{Path: path, Message: message}
 }
 
+type DecodeError struct {
+	Path    string
+	Message string
+}
+
+func (err DecodeError) Error() string {
+	if err.Path == "" {
+		return err.Message
+	}
+	return err.Path + ": " + err.Message
+}
+
+func NewDecodeError(path string, message string) error {
+	return DecodeError{Path: path, Message: message}
+}
+
 func JoinPath(path string, field string) string {
 	if path == "" {
 		return field
@@ -260,9 +425,34 @@ func WrapIndex(path string, index int, err error) error {
 	return WrapField(IndexPath(path, index), err)
 }
 
+func WrapDecodeField(path string, err error) error {
+	if err == nil {
+		return nil
+	}
+	decodeErr, ok := err.(DecodeError)
+	if !ok {
+		return NewDecodeError(path, err.Error())
+	}
+	return DecodeError{
+		Path:    JoinPath(path, decodeErr.Path),
+		Message: decodeErr.Message,
+	}
+}
+
+func WrapDecodeIndex(path string, index int, err error) error {
+	return WrapDecodeField(IndexPath(path, index), err)
+}
+
 func Require(path string, ok bool, message string) error {
 	if !ok {
 		return NewEncodeError(path, message)
+	}
+	return nil
+}
+
+func RequireDecode(path string, ok bool, message string) error {
+	if !ok {
+		return NewDecodeError(path, message)
 	}
 	return nil
 }
@@ -286,4 +476,32 @@ func RequireSize(path string, actual uint64, expected uint64) error {
 		return NewEncodeError(path, fmt.Sprintf("size %d does not match expected %d", actual, expected))
 	}
 	return nil
+}
+
+func ReadFailed(err error) error {
+	return fmt.Errorf("read failed: %w", err)
+}
+
+func CountExceedsMax(count uint64, max uint64) error {
+	return fmt.Errorf("count %d exceeds max %d", count, max)
+}
+
+func CountExceedsIntMax(count uint64) error {
+	return fmt.Errorf("count %d exceeds platform int max", count)
+}
+
+func Uint24(order Endian, value []byte) uint32 {
+	if order == LittleEndian {
+		return uint32(value[0]) | uint32(value[1])<<8 | uint32(value[2])<<16
+	}
+	return uint32(value[2]) | uint32(value[1])<<8 | uint32(value[0])<<16
+}
+
+func AllZero(value []byte) bool {
+	for _, item := range value {
+		if item != 0 {
+			return false
+		}
+	}
+	return true
 }

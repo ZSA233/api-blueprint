@@ -72,6 +72,22 @@ func (client *GenMediaClient) MediaDownload(ctx context.Context) (*runtime.RawRe
 	return &response, nil
 }
 
+func (client *GenMediaClient) MediaDownloadDynamic(ctx context.Context) (*runtime.RawResponse, error) {
+	request := runtime.Request{
+		RouteID:          "api.media.get.downloaddynamic",
+		Method:           "GET",
+		Path:             "/api/media/download-dynamic",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("file"),
+	}
+	var response runtime.RawResponse
+	if err := client.transport.Do(ctx, request, &response); err != nil {
+		return nil, err
+	}
+	return &response, nil
+}
+
 func (client *GenMediaClient) MediaMjpeg(ctx context.Context) (*runtime.StreamResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.media.get.mjpeg",

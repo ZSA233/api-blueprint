@@ -59,7 +59,7 @@ export class {{ client_class }} extends BaseClient {
     init: RequestInit = {},
     timeoutMs?: number,
   ): Promise<{{ route.response_type_expr }}> {
-    return this.request<{{ route.response_type_expr }}>({
+    {% if route.response_kind == "binary_schema" and route.response_binary_schema %}const payload = await this.request<ArrayBuffer>({% else %}return this.request<{{ route.response_type_expr }}>({% endif %}{
       routeId: "{{ route.route_id }}",
       method: "{{ route.http_method }}",
       path: "{{ route.url }}",
@@ -78,7 +78,8 @@ export class {{ client_class }} extends BaseClient {
       responseEnvelope: {{ route.response_envelope_literal }},
       timeoutMs,
     });
-  }
+{% if route.response_kind == "binary_schema" and route.response_binary_schema %}    return {{ route.response_binary_schema.name }}Wire.fromBytes(payload);
+{% endif %}  }
 
 {% endif -%}
 {% if route.supports_stream %}

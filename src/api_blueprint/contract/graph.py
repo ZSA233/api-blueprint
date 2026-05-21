@@ -166,18 +166,22 @@ class ContractGraphBuilder:
             "body_kind": router.request_body_kind,
         }
         response = None
-        if router.rsp_model is not None or router.response_kind in {"bytes", "file", "byte_stream"}:
+        if router.rsp_model is not None or router.response_kind in {"bytes", "file", "byte_stream", "binary_schema"}:
             response = {
                 "kind": router.response_kind,
                 "media_type": router.rsp_media_type,
                 "model": self._schema_ref(router.rsp_model),
+                "binary_schema": router.rsp_binary_schema.to_manifest(include_html=True)
+                if router.rsp_binary_schema is not None
+                else None,
                 "envelope": router.response_envelope.envelope_spec(),
                 "content_type": router.rsp_media_type,
                 "headers": _raw_response_headers(router),
                 "download": router.response_kind == "file",
                 "streaming": router.response_kind == "byte_stream",
                 "filename": router.rsp_filename,
-                "success_enveloped": router.response_kind not in {"bytes", "file", "byte_stream"},
+                "default_filename": router.rsp_filename,
+                "success_enveloped": router.response_kind not in {"bytes", "file", "byte_stream", "binary_schema"},
             }
 
         connection = None
@@ -240,6 +244,7 @@ class ContractGraphBuilder:
             binary_schema=router.req_binary_schema,
             open_model=router.open_model,
             response_model=router.rsp_model,
+            response_binary_schema=router.rsp_binary_schema,
             response_kind=router.response_kind,
             response_media_type=router.rsp_media_type,
             response_filename=router.rsp_filename,

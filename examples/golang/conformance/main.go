@@ -39,7 +39,7 @@ func run() error {
 		return fmt.Errorf("base URL argument is required")
 	}
 	baseURL := strings.TrimRight(os.Args[1], "/")
-	selected := scenarioSet("rpc,binary,form,error,naming,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,media,single-channel")
+	selected := scenarioSet("rpc,binary,form,error,naming,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,single-channel")
 	if len(os.Args) >= 3 && os.Args[2] != "" {
 		selected = scenarioSet(os.Args[2])
 	}
@@ -105,6 +105,11 @@ func run() error {
 	}
 	if selected["audit-binary"] {
 		if err := checkAuditBinary(ctx, client.Binary); err != nil {
+			return err
+		}
+	}
+	if selected["binary-response"] {
+		if err := checkBinaryResponse(ctx, client.Binary); err != nil {
 			return err
 		}
 	}
@@ -376,6 +381,18 @@ func checkAuditBinary(ctx context.Context, binaryClient *binaryapi.BinaryClient)
 	return nil
 }
 
+func checkBinaryResponse(ctx context.Context, binaryClient *binaryapi.BinaryClient) error {
+	rsp, err := binaryClient.AuditPacketResponse(ctx)
+	if err != nil {
+		return fmt.Errorf("binary response: %w", err)
+	}
+	expected := buildAuditPacket()
+	if !reflect.DeepEqual(rsp, expected) {
+		return fmt.Errorf("binary response = %#v", rsp)
+	}
+	return nil
+}
+
 func checkMedia(ctx context.Context, mediaClient *media.MediaClient) error {
 	preview, err := mediaClient.MediaPreview(ctx, media.MediaPreviewForm{
 		Title: "go-media",
@@ -406,6 +423,14 @@ func checkMedia(ctx context.Context, mediaClient *media.MediaClient) error {
 	}
 	if download.Filename != "media-report.xlsx" || !bytes.HasPrefix(download.Body, []byte("PK")) {
 		return fmt.Errorf("media download response = %#v", download)
+	}
+
+	dynamic, err := mediaClient.MediaDownloadDynamic(ctx)
+	if err != nil {
+		return fmt.Errorf("media dynamic download: %w", err)
+	}
+	if dynamic.Filename != "media-report-dynamic.xlsx" || !bytes.HasPrefix(dynamic.Body, []byte("PK")) {
+		return fmt.Errorf("media dynamic download response = %#v", dynamic)
 	}
 
 	stream, err := mediaClient.MediaMjpeg(ctx)

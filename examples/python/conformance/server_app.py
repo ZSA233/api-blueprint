@@ -22,6 +22,11 @@ from api_blueprint_example_server.alt.routes.alt.conflict.gen_types import (
 )
 from api_blueprint_example_server.alt.transports.http.server import create_router as create_alt_router
 from api_blueprint_example_server.api.routes.api.binary.gen_types import (
+    AuditPacket,
+    AuditPacketBody,
+    AuditPacketFlags,
+    AuditPacketHeader,
+    AuditPacketItem,
     AuditPacketQuery,
     AuditPacketResponse,
     PacketQuery,
@@ -248,6 +253,9 @@ class BinaryService:
             checksum=packet.checksum,
         )
 
+    async def audit_packet_response(self) -> AuditPacket:
+        return build_audit_packet()
+
 
 class MediaService:
     async def media_preview(self, multipart: MediaPreviewForm) -> bytes:
@@ -266,6 +274,11 @@ class MediaService:
         path = Path(tempfile.gettempdir()) / "api-blueprint-media-report.xlsx"
         path.write_bytes(SAMPLE_XLSX)
         return str(path)
+
+    async def media_download_dynamic(self) -> ApiRawResponse[str]:
+        path = Path(tempfile.gettempdir()) / "api-blueprint-media-report-dynamic.xlsx"
+        path.write_bytes(SAMPLE_XLSX)
+        return ApiRawResponse(body=str(path), filename="media-report-dynamic.xlsx")
 
     async def media_mjpeg(self) -> ApiRawResponse[Any]:
         async def chunks():
@@ -436,6 +449,22 @@ def parse_audit_packet(data: bytes) -> ParsedAuditPacket:
     if offset != len(data):
         raise ValueError(f"audit packet has trailing bytes: {len(data) - offset}")
     return ParsedAuditPacket(item_count=item_count, checksum=checksum)
+
+
+def build_audit_packet() -> AuditPacket:
+    return AuditPacket(
+        header=AuditPacketHeader(
+            flags=AuditPacketFlags.HasItems,
+            item_count=2,
+        ),
+        body=AuditPacketBody(
+            items=[
+                AuditPacketItem(id=11, code=101),
+                AuditPacketItem(id=22, code=202),
+            ],
+            checksum=2,
+        ),
+    )
 
 
 def _read_u24(data: bytes, offset: int) -> int:

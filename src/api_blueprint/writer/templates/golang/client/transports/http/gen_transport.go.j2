@@ -25,6 +25,10 @@ type HttpTransport struct {
 	client *nethttp.Client
 }
 
+type binaryBodyDecoder interface {
+	DecodeBinary(io.Reader) error
+}
+
 func NewHttpTransport(config HttpConfig) *HttpTransport {
 	client := config.Client
 	if client == nil {
@@ -103,6 +107,9 @@ func (transport *HttpTransport) Do(ctx context.Context, request runtime.Request,
 	}
 	if request.ResponseKind == runtime.ResponseBytes || request.ResponseKind == runtime.ResponseFile {
 		return decodeRawResponse(httpResponse, response)
+	}
+	if request.ResponseKind == runtime.ResponseBinarySchema {
+		return decodeBinarySchemaResponse(httpResponse.Body, response)
 	}
 	return decodeResponse(httpResponse.Body, request.ResponseEnvelope, request.RouteID, response)
 }
@@ -255,6 +262,14 @@ func decodeRawResponse(httpResponse *nethttp.Response, response any) error {
 		Filename:           filenameFromDisposition(httpResponse.Header.Get("Content-Disposition")),
 	}
 	return nil
+}
+
+func decodeBinarySchemaResponse(reader io.Reader, response any) error {
+	target, ok := response.(binaryBodyDecoder)
+	if !ok {
+		return fmt.Errorf("api-blueprint http transport expected binary decoder target, got %T", response)
+	}
+	return target.DecodeBinary(reader)
 }
 
 func contentTypeHeader(response *nethttp.Response) string {

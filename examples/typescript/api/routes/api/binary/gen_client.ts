@@ -121,4 +121,33 @@ export class BinaryClient extends BaseClient {
     });
   }
 
+  /**
+   * Binary audit packet response example
+
+   * Tags: api
+   */
+
+  async auditPacketResponse(
+    request: {
+      headers?: Record<string, string>;
+    } = {},
+    init: RequestInit = {},
+    timeoutMs?: number,
+  ): Promise<Types.AuditPacket> {
+    const payload = await this.request<ArrayBuffer>({
+      routeId: "api.binary.get.auditpacketresponse",
+      method: "GET",
+      path: "/api/binary/audit-packet-response",
+      service: "BinaryService",
+      operation: "AuditPacketResponse",
+      namespace: "binary",
+      headers: request.headers,
+      init,
+      responseType: "binary_schema",
+      responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+      timeoutMs,
+    });
+    return AuditPacketWire.fromBytes(payload);
+  }
+
 }

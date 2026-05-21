@@ -199,6 +199,15 @@ async def check_audit_binary(api) -> None:
     assert response.checksum == 2, response
 
 
+async def check_binary_response(api) -> None:
+    response = await api.binary.audit_packet_response()
+    assert response.header.flags == AuditPacketFlags.HasItems, response
+    assert response.header.item_count == 2, response
+    assert response.body.items[0].id == 11, response
+    assert response.body.items[1].code == 202, response
+    assert response.body.checksum == 2, response
+
+
 async def check_media(api) -> None:
     preview = await api.media.media_preview(
         multipart=MediaPreviewForm(
@@ -218,6 +227,11 @@ async def check_media(api) -> None:
     assert download.status == 200, download
     assert download.filename == "media-report.xlsx", download
     assert download.body.startswith(b"PK"), download.body
+
+    dynamic = await api.media.media_download_dynamic()
+    assert dynamic.status == 200, dynamic
+    assert dynamic.filename == "media-report-dynamic.xlsx", dynamic
+    assert dynamic.body.startswith(b"PK"), dynamic.body
 
     stream = await api.media.media_mjpeg()
     try:
@@ -283,7 +297,7 @@ async def main() -> None:
     selected = scenario_set(
         sys.argv[2]
         if len(sys.argv) > 2
-        else "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,media,single-channel"
+        else "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,single-channel"
     )
     async with create_client(sys.argv[1]) as api, create_alt_client(sys.argv[1]) as alt_api:
         if "rpc" in selected:
@@ -310,6 +324,8 @@ async def main() -> None:
             await check_binary(api)
         if "audit-binary" in selected:
             await check_audit_binary(api)
+        if "binary-response" in selected:
+            await check_binary_response(api)
         if "media" in selected:
             await check_media(api)
         if "error" in selected:

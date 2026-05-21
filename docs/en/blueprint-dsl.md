@@ -56,13 +56,14 @@ with bp.group("/items") as views:
 - `JSON(Model)`: JSON request body.
 - `REQ_URLENCODED(Model)`: `application/x-www-form-urlencoded` request bodies; the older `REQ_FORM(Model)` remains as a compatibility alias.
 - `REQ_MULTIPART(Model)`: `multipart/form-data` request bodies mixing ordinary fields and `FileField(...)`.
+- `REQ_BINARY_SCHEMA(path)`: Markdown Binary Schema request bodies; `REQ_BINARY(path)` remains as a short alias.
 - `RSP(...)`: response model.
 
 A route can declare only one body kind. ContractGraph records request bodies as `none`, `json`, `urlencoded`, `multipart`, `binary_schema`, or `raw_bytes`, and both generators and `api-gen check` use that unified semantics for capability checks.
 
-Binary HTTP request bodies use `.REQ_BINARY("./binary/packet.md")` to reference Markdown Binary Schema. In ContractGraph this is a `binary_schema` request body and is separate from raw media responses. See [Markdown Binary Schema](binary-schema.md) for table format, field types, rules, and generated output.
+Binary HTTP request or response bodies use `.REQ_BINARY_SCHEMA("./binary/packet.md")` or `.RSP_BINARY_SCHEMA("./binary/packet.md")` to reference Markdown Binary Schema. In ContractGraph this is `binary_schema` and is separate from raw bytes/file/stream media responses. See [Markdown Binary Schema](binary-schema.md) for table format, field types, rules, and generated output.
 
-## Multipart And Raw Responses
+## Multipart And Non-JSON Responses
 
 ```python
 class PreviewRequest(Model):
@@ -72,17 +73,20 @@ class PreviewRequest(Model):
 
 with bp.group("/media") as views:
     views.POST("/preview").REQ_MULTIPART(PreviewRequest).RSP_BYTES(content_type="image/jpeg")
-    views.GET("/download").RSP_FILE(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", filename="report.xlsx")
+    views.GET("/download").RSP_FILE(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", default_filename="report.xlsx")
     views.GET("/mjpeg").RSP_BYTE_STREAM(content_type="multipart/x-mixed-replace; boundary=frame")
 ```
 
-Raw response DSL includes:
+Non-JSON response DSL includes:
 
+- `RSP_BINARY_SCHEMA(path, content_type=None)`: bounded typed binary packets encoded from a Markdown Binary Schema. `RSP_BINARY(path)` remains as a short alias.
 - `RSP_BYTES(content_type="application/octet-stream")`: buffered bytes such as a JPEG or frame.
-- `RSP_FILE(content_type=..., filename=None)`: file downloads; services may return a path or a generated file response.
+- `RSP_FILE(content_type=..., default_filename=None)`: file downloads; services may return a path or a generated file response.
 - `RSP_BYTE_STREAM(content_type=...)`: continuous byte streams such as MJPEG or custom streaming payloads.
 
-Raw success responses are not wrapped in the JSON response envelope. HTTP `content-type`, `content-disposition`, headers, download, and streaming semantics are recorded in the ContractGraph manifest. Business errors still use the route's typed error / JSON envelope, so generated clients can keep recognizing `ApiError` consistently.
+Binary schema and raw success responses are not wrapped in the JSON response envelope. HTTP `content-type`, `content-disposition`, headers, download, and streaming semantics are recorded in the ContractGraph manifest. Business errors still use the route's typed error / JSON envelope, so generated clients can keep recognizing `ApiError` consistently.
+
+`RSP_FILE(default_filename=...)` is a default download name, not a forced filename. A service-returned raw response filename or explicit `Content-Disposition` header overrides it. Clients parse only the actual response header and do not synthesize a filename from the contract default. The older `filename=...` parameter remains as a compatibility alias; passing both names with different values fails contract construction.
 
 ## Errors And Toast
 

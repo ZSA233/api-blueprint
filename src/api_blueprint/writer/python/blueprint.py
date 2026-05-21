@@ -80,6 +80,7 @@ class PythonRoute:
         self.response_type = _model_name(protocol.response.model.model)
         self.response_envelope = protocol.response.envelope.envelope_spec()
         self.binary_schema = protocol.request.binary_schema
+        self.response_binary_schema = protocol.response.binary_schema
         self.registry = registry
         self.query_type = registry.resolve_schema(protocol.request.query.schema, class_name=self.public_names.query)
         self.json_type = registry.resolve_schema(protocol.request.json.schema, class_name=self.public_names.json)
@@ -139,6 +140,8 @@ class PythonRoute:
 
     @property
     def response_type_literal(self) -> str:
+        if self.is_binary_schema_response:
+            return repr("binary_schema")
         if self.is_raw_response:
             return repr(self.raw_response_transport_type)
         if self.response_type_info is not None:
@@ -155,6 +158,8 @@ class PythonRoute:
 
     @property
     def response_annotation(self) -> str:
+        if self.is_binary_schema_response:
+            return self.response_binary_schema.name
         if self.protocol.response.kind in {"bytes", "file"}:
             return "ApiRawResponse[bytes]"
         if self.protocol.response.kind == "byte_stream":
@@ -165,6 +170,8 @@ class PythonRoute:
 
     @property
     def service_response_annotation(self) -> str:
+        if self.is_binary_schema_response:
+            return self.response_binary_schema.name
         if self.protocol.response.kind == "bytes":
             return "bytes | ApiRawResponse[bytes]"
         if self.protocol.response.kind == "file":
@@ -176,6 +183,10 @@ class PythonRoute:
     @property
     def is_raw_response(self) -> bool:
         return self.protocol.response.kind in {"bytes", "file", "byte_stream"}
+
+    @property
+    def is_binary_schema_response(self) -> bool:
+        return self.protocol.response.kind == "binary_schema" and self.response_binary_schema is not None
 
     @property
     def raw_response_transport_type(self) -> str:
@@ -198,6 +209,8 @@ class PythonRoute:
         return repr(self.protocol.response.filename)
 
     def response_decode_expr(self, value_expr: str) -> str:
+        if self.is_binary_schema_response:
+            return f"{self.response_binary_wire_name}.from_bytes({value_expr})"
         if self.is_raw_response:
             return value_expr
         if self.response_type_info is None:
@@ -207,6 +220,10 @@ class PythonRoute:
     @property
     def has_binary_schema(self) -> bool:
         return self.binary_schema is not None
+
+    @property
+    def has_response_binary_schema(self) -> bool:
+        return self.response_binary_schema is not None
 
     @property
     def binary_type_name(self) -> str | None:
@@ -219,6 +236,12 @@ class PythonRoute:
         if self.binary_schema is None:
             return None
         return f"{self.binary_schema.name}Wire"
+
+    @property
+    def response_binary_wire_name(self) -> str | None:
+        if self.response_binary_schema is None:
+            return None
+        return f"{self.response_binary_schema.name}Wire"
 
     @property
     def http_method_literal(self) -> str:
@@ -343,7 +366,12 @@ class PythonRouteGroup:
         return "." * (len(self.segments) + 2)
 
     def binary_schemas(self) -> list[PythonBinarySchema]:
-        schemas = [route.binary_schema for route in self.routes if route.binary_schema is not None]
+        schemas = []
+        for route in self.routes:
+            if route.binary_schema is not None:
+                schemas.append(route.binary_schema)
+            if route.response_binary_schema is not None:
+                schemas.append(route.response_binary_schema)
         return unique_python_binary_schemas(schemas)
 
     def route_models(self) -> tuple[PythonDtoModel, ...]:
@@ -364,7 +392,11 @@ class PythonRouteGroup:
 
     def server_type_expr(self, expr: str) -> str:
         result = expr
-        for name in sorted(self.type_import_names(), key=len, reverse=True):
+        names = list(self.type_import_names())
+        for schema in self.binary_schemas():
+            names.append(schema.py_type)
+            names.append(f"{schema.py_type}Wire")
+        for name in sorted(dict.fromkeys(names), key=len, reverse=True):
             result = re.sub(
                 rf"(?<![\w.]){re.escape(name)}(?=\.)",
                 f"{self.server_type_module_alias}.{name}",

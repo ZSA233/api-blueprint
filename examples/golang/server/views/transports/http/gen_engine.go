@@ -3,9 +3,11 @@
 package httptransport
 
 import (
+	"bytes"
 	"compress/gzip"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"reflect"
 	"strings"
@@ -24,6 +26,11 @@ type ginContextCarrier interface {
 
 type binaryBodyDecoder interface {
 	DecodeBinary(io.Reader) error
+}
+
+type binaryBodyEncoder interface {
+	ContentType() string
+	WriteBinary(io.Writer) error
 }
 
 func RequireGin(ctx ginContextCarrier) (*gin.Context, error) {
@@ -282,7 +289,17 @@ func writeResponse[Q, B, P any](
 			ginCtx.JSON(code, payload)
 			return
 		}
-		writeRawResponse(ginCtx, rspProvider.Type, response)
+		writeRawResponse(ginCtx, rspProvider.Type, rspProvider.Route.Filename, response)
+	case "binary_schema":
+		if err != nil {
+			code, payload := provider.NewRSP_JSON(rspProvider, response, err)
+			if code == 0 {
+				code = http.StatusInternalServerError
+			}
+			ginCtx.JSON(code, payload)
+			return
+		}
+		writeBinarySchemaResponse(ginCtx, response)
 	default:
 		if err != nil {
 			_ = ginCtx.AbortWithError(http.StatusInternalServerError, err)
@@ -296,7 +313,7 @@ func writeResponse[Q, B, P any](
 	}
 }
 
-func writeRawResponse[P any](ginCtx *gin.Context, kind string, response *P) {
+func writeRawResponse[P any](ginCtx *gin.Context, kind string, defaultFilename string, response *P) {
 	if response == nil {
 		ginCtx.Data(http.StatusOK, "application/octet-stream", nil)
 		return
@@ -313,20 +330,27 @@ func writeRawResponse[P any](ginCtx *gin.Context, kind string, response *P) {
 	for key, value := range raw.Headers {
 		ginCtx.Header(key, value)
 	}
+	effectiveFilename := raw.Filename
+	if effectiveFilename == "" && !hasHeader(raw.Headers, "Content-Disposition") {
+		effectiveFilename = defaultFilename
+	}
 	contentType := raw.ContentType
 	if contentType == "" {
 		contentType = "application/octet-stream"
 	}
 	switch kind {
 	case "file":
-		if raw.Filename != "" {
-			ginCtx.FileAttachment(raw.FilePath, raw.Filename)
+		if effectiveFilename != "" && raw.FilePath != "" {
+			ginCtx.FileAttachment(raw.FilePath, effectiveFilename)
 			return
 		}
 		if raw.FilePath != "" {
 			ginCtx.Header("Content-Type", contentType)
 			ginCtx.File(raw.FilePath)
 			return
+		}
+		if effectiveFilename != "" && !hasHeader(raw.Headers, "Content-Disposition") {
+			ginCtx.Header("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": effectiveFilename}))
 		}
 		ginCtx.Data(status, contentType, raw.Body)
 	case "byte_stream":
@@ -342,6 +366,37 @@ func writeRawResponse[P any](ginCtx *gin.Context, kind string, response *P) {
 	default:
 		ginCtx.Data(status, contentType, raw.Body)
 	}
+}
+
+func writeBinarySchemaResponse[P any](ginCtx *gin.Context, response *P) {
+	if response == nil {
+		ginCtx.Data(http.StatusOK, "application/octet-stream", nil)
+		return
+	}
+	encoder, ok := any(response).(binaryBodyEncoder)
+	if !ok {
+		ginCtx.String(http.StatusInternalServerError, "binary schema response type mismatch")
+		return
+	}
+	var body bytes.Buffer
+	if err := encoder.WriteBinary(&body); err != nil {
+		ginCtx.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+	contentType := encoder.ContentType()
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+	ginCtx.Data(http.StatusOK, contentType, body.Bytes())
+}
+
+func hasHeader(headers map[string]string, key string) bool {
+	for item := range headers {
+		if strings.EqualFold(item, key) {
+			return true
+		}
+	}
+	return false
 }
 
 func makeHandler[Q, B, P any](

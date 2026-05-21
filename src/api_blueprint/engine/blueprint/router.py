@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from dataclasses import replace
 from typing import TYPE_CHECKING, Any, DefaultDict, Literal, Optional, Self, Union
 
 from fastapi import FastAPI
@@ -68,6 +69,7 @@ class Router:
     req_binary_schema: Optional[BinarySchema]
 
     rsp_model: Optional[Model]
+    rsp_binary_schema: Optional[BinarySchema]
     rsp_envelope: Optional[ResponseEnvelope]
     rsp_kind: str
 
@@ -115,6 +117,7 @@ class Router:
         self.req_bin = None
         self.req_binary_schema = None
         self.rsp_model = None
+        self.rsp_binary_schema = None
 
         if "response_wrapper" in kwargs:
             raise TypeError("response_wrapper is removed; use response_envelope")
@@ -240,13 +243,16 @@ class Router:
     def REQ_BIN(self, __model: Optional[Model] = None, **kwargs: dict[str, ModelOrField]) -> Self:
         raise ValueError("REQ_BIN(Model) is removed; use REQ_BINARY(path)")
 
-    def REQ_BINARY(self, schema: str | BinarySchema) -> Self:
-        self._reject_if_body_contract("REQ_BINARY")
+    def REQ_BINARY_SCHEMA(self, schema: str | BinarySchema, *, content_type: str | None = None) -> Self:
+        self._reject_if_body_contract("REQ_BINARY_SCHEMA")
         if self.req_binary_schema is not None:
-            raise ValueError("REQ_BINARY() can only be called once")
-        self.req_binary_schema = schema if isinstance(schema, BinarySchema) else load_binary_schema(resolve_schema_path(schema))
+            raise ValueError("REQ_BINARY_SCHEMA() can only be called once")
+        self.req_binary_schema = self._normalize_binary_schema(schema, content_type=content_type)
         self._attach_binary_openapi()
         return self
+
+    def REQ_BINARY(self, schema: str | BinarySchema, *, content_type: str | None = None) -> Self:
+        return self.REQ_BINARY_SCHEMA(schema, content_type=content_type)
 
     def _RSP_AS_MODEL(self, __model: Optional[Model] = None, **kwargs: dict[str, ModelOrField]) -> Optional[Model]:
         if __model is None:
@@ -260,6 +266,7 @@ class Router:
 
     def RSP_JSON(self, __model: Optional[Model] = None, **kwargs: dict[str, ModelOrField]) -> Self:
         self._reject_if_raw_response_contract("RSP_JSON")
+        self._reject_if_http_raw_response("RSP_JSON")
         self.rsp_model = self._RSP_AS_MODEL(__model, **kwargs)
         self._reject_file_fields(self.rsp_model, "RSP_JSON")
         self.rsp_kind = "json"
@@ -271,6 +278,7 @@ class Router:
 
     def RSP_XML(self, __model: Optional[Model] = None, **kwargs: dict[str, ModelOrField]) -> Self:
         self._reject_if_raw_response_contract("RSP_XML")
+        self._reject_if_http_raw_response("RSP_XML")
         self.rsp_model = self._RSP_AS_MODEL(__model, **kwargs)
         self._reject_file_fields(self.rsp_model, "RSP_XML")
         self.rsp_kind = "xml"
@@ -280,12 +288,36 @@ class Router:
     def RSP_BYTES(self, *, content_type: str = "application/octet-stream") -> Self:
         return self._raw_response("bytes", content_type=content_type)
 
-    def RSP_FILE(self, *, content_type: str = "application/octet-stream", filename: str | None = None) -> Self:
-        self.rsp_filename = filename
+    def RSP_FILE(
+        self,
+        *,
+        content_type: str = "application/octet-stream",
+        default_filename: str | None = None,
+        filename: str | None = None,
+    ) -> Self:
+        if default_filename is not None and filename is not None and default_filename != filename:
+            raise ValueError("RSP_FILE() filename and default_filename must match when both are provided")
+        self.rsp_filename = default_filename if default_filename is not None else filename
         return self._raw_response("file", content_type=content_type)
 
     def RSP_BYTE_STREAM(self, *, content_type: str = "application/octet-stream") -> Self:
         return self._raw_response("byte_stream", content_type=content_type)
+
+    def RSP_BINARY_SCHEMA(self, schema: str | BinarySchema, *, content_type: str | None = None) -> Self:
+        self._reject_if_raw_response_contract("RSP_BINARY_SCHEMA")
+        self._reject_if_http_raw_response("RSP_BINARY_SCHEMA")
+        if self.rsp_model is not None:
+            raise ValueError("RSP_BINARY_SCHEMA() cannot be combined with RSP/RSP_JSON/RSP_XML")
+        self.rsp_binary_schema = self._normalize_binary_schema(schema, content_type=content_type)
+        self.rsp_model = None
+        self.rsp_kind = "binary_schema"
+        self.rsp_media_type = self.rsp_binary_schema.content_type
+        self.rsp_envelope = None
+        self._attach_binary_response_openapi()
+        return self
+
+    def RSP_BINARY(self, schema: str | BinarySchema, *, content_type: str | None = None) -> Self:
+        return self.RSP_BINARY_SCHEMA(schema, content_type=content_type)
 
     def ERR(self, *errors: Union[Error, Model]) -> Self:
         self.errors = unwrap_errors(list(errors))
@@ -296,10 +328,14 @@ class Router:
         return self
 
     def RAW_RESPONSE(self) -> Self:
+        if self.rsp_kind != "json":
+            raise ValueError("RAW_RESPONSE() can only be applied to JSON response contracts")
         self.extra["http_raw_response"] = True
         return self
 
     def HTTP_RAW_RESPONSE(self) -> Self:
+        if self.rsp_kind != "json":
+            raise ValueError("HTTP_RAW_RESPONSE() can only be applied to JSON response contracts")
         self.extra["http_raw_response"] = True
         return self
 
@@ -366,7 +402,7 @@ class Router:
             or self.req_bin is not None
             or self.req_binary_schema is not None
             or self.rsp_model is not None
-            or self.rsp_kind in {"bytes", "file", "byte_stream"}
+            or self.rsp_kind in {"bytes", "file", "byte_stream", "binary_schema"}
         ):
             raise ValueError(
                 f"{self.connection_kind.value.upper()} route[{self.url}] uses OPEN/SERVER_MESSAGE/CLIENT_MESSAGE/CLOSE "
@@ -435,19 +471,40 @@ class Router:
             return create_field_wrapped_model(name, model)
         return model
 
+    def _normalize_binary_schema(
+        self,
+        schema: str | BinarySchema,
+        *,
+        content_type: str | None = None,
+    ) -> BinarySchema:
+        resolved = schema if isinstance(schema, BinarySchema) else load_binary_schema(resolve_schema_path(schema))
+        media_type = (content_type or "").strip()
+        if not media_type:
+            return resolved
+        return replace(resolved, content_type=media_type)
+
     def _reject_if_body_contract(self, method: str) -> None:
         if self.request_body_kind != "none":
-            raise ValueError(f"{method}() cannot be combined with existing {self.request_body_kind} request body")
+            existing = "REQ_BINARY" if self.request_body_kind == "binary_schema" else self.request_body_kind
+            raise ValueError(f"{method}() cannot be combined with {existing} request body")
 
     def _reject_if_raw_response_contract(self, method: str) -> None:
-        if self.rsp_kind in {"bytes", "file", "byte_stream"}:
+        if self.rsp_kind in {"bytes", "file", "byte_stream", "binary_schema"}:
             raise ValueError(f"{method}() cannot be combined with {self.rsp_kind} response")
 
+    def _reject_if_http_raw_response(self, method: str) -> None:
+        if self.extra.get("http_raw_response"):
+            raise ValueError(f"{method}() cannot be combined with HTTP_RAW_RESPONSE()")
+
     def _raw_response(self, kind: str, *, content_type: str) -> Self:
+        self._reject_if_http_raw_response(f"RSP_{kind.upper()}")
         if self.rsp_model is not None:
             raise ValueError(f"RSP_{kind.upper()}() cannot be combined with RSP/RSP_JSON/RSP_XML")
+        if self.rsp_binary_schema is not None:
+            raise ValueError(f"RSP_{kind.upper()}() cannot be combined with RSP_BINARY_SCHEMA")
         media_type = content_type.strip() or "application/octet-stream"
         self.rsp_model = None
+        self.rsp_binary_schema = None
         self.rsp_kind = kind
         self.rsp_media_type = media_type
         self.rsp_envelope = None
@@ -528,6 +585,25 @@ class Router:
                 "schema": {"type": "string"},
             }
             response["headers"] = headers
+        responses["200"] = response
+        extra["responses"] = responses
+        self.extra["openapi_extra"] = extra
+
+    def _attach_binary_response_openapi(self) -> None:
+        schema = self.rsp_binary_schema
+        if schema is None:
+            return
+        extra = dict(self.extra.get("openapi_extra") or {})
+        responses = dict(extra.get("responses") or {})
+        response = dict(responses.get("200") or {})
+        response["description"] = response.get("description") or "Binary schema response"
+        content = dict(response.get("content") or {})
+        content[schema.content_type] = {
+            "schema": {"type": "string", "format": "binary"},
+            "x-binary-schema": schema.to_route_manifest(),
+        }
+        response["content"] = content
+        response["x-api-blueprint-binary-schema"] = schema.to_route_manifest()
         responses["200"] = response
         extra["responses"] = responses
         self.extra["openapi_extra"] = extra

@@ -30,7 +30,17 @@ with apibp.group("/media") as views:
         description="Returns a generated XLSX file response.",
     ).RSP_FILE(
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        filename="media-report.xlsx",
+        default_filename="media-report.xlsx",
+    )
+
+    views.GET(
+        "/download-dynamic",
+        operation_id="mediaDownloadDynamic",
+        summary="Media workbook download with service filename override",
+        description="Returns a generated XLSX file response with a dynamic filename.",
+    ).RSP_FILE(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        default_filename="media-report.xlsx",
     )
 
     views.GET(

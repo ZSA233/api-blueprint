@@ -142,8 +142,17 @@ class GoClientRoute:
         return schema if isinstance(schema, Mapping) else None
 
     @property
+    def response_binary_schema(self) -> Mapping[str, Any] | None:
+        schema = self.response.get("binary_schema")
+        return schema if isinstance(schema, Mapping) else None
+
+    @property
     def has_binary_schema(self) -> bool:
         return self.binary_schema is not None
+
+    @property
+    def has_response_binary_schema(self) -> bool:
+        return self.response_binary_schema is not None
 
 
 @dataclass
@@ -178,9 +187,14 @@ def build_go_client_groups(
             groups[segments] = group
         client_route = GoClientRoute(route)
         group.routes.append(client_route)
-        if client_route.binary_schema is not None:
+        route_binary_schemas = [
+            schema
+            for schema in (client_route.binary_schema, client_route.response_binary_schema)
+            if schema is not None
+        ]
+        if route_binary_schemas:
             group.binary_schemas = unique_go_client_binary_schemas(
-                [schema.raw for schema in group.binary_schemas] + [client_route.binary_schema]
+                [schema.raw for schema in group.binary_schemas] + route_binary_schemas
             )
     return tuple(groups.values())
 

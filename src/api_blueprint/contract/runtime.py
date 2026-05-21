@@ -18,6 +18,7 @@ class ContractRouteRuntime:
     binary_schema: BinarySchema | None
     open_model: ModelRef | None
     response_model: ModelRef | None
+    response_binary_schema: BinarySchema | None
     response_kind: str
     response_media_type: str
     response_filename: str | None

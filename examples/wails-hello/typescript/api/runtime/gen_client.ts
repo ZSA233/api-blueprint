@@ -9,6 +9,26 @@ export interface ApiClientConfig {
 type RequestBody = RequestInit["body"];
 type RequestBinaryBody = never;
 
+export type ApiFilePart =
+  | File
+  | Blob
+  | ArrayBuffer
+  | Uint8Array
+  | {
+      blob: Blob | ArrayBuffer | Uint8Array;
+      filename?: string;
+      contentType?: string;
+    };
+
+export interface ApiRawResponse<T> {
+  body: T;
+  headers: Headers;
+  status: number;
+  contentType: string;
+  contentDisposition: string;
+  filename?: string;
+}
+
 export interface RequestOptions<R> {
   routeId: string;
   method: string;
@@ -19,11 +39,12 @@ export interface RequestOptions<R> {
   query?: Record<string, unknown>;
   json?: unknown;
   form?: Record<string, unknown>;
+  multipart?: Record<string, unknown>;
   body?: RequestBody;
   binary?: RequestBinaryBody;
   headers?: Record<string, string>;
   init?: RequestInit;
-  responseType?: "json" | "text";
+  responseType?: "json" | "text" | "blob" | "arrayBuffer" | "stream" | "binary_schema";
   responseEnvelope?: ApiResponseEnvelope;
   timeoutMs?: number;
 }

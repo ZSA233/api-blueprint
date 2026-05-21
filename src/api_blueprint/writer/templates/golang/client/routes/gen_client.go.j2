@@ -5,7 +5,7 @@ package {{ group.package }}
 import (
 	"context"
 	runtime "{{ runtime_import }}"
-{% if has_binary_schemas %}	runtimebinary "{{ runtime_binary_import }}"
+{% if has_request_binary_schemas %}	runtimebinary "{{ runtime_binary_import }}"
 {% endif %}
 )
 
@@ -52,7 +52,7 @@ func (client *Gen{{ group.client_class }}) {{ route.operation }}(ctx context.Con
 {% if response_type == "any" %}	var response any
 {% elif response_type == "*runtime.RawResponse" %}	var response runtime.RawResponse
 {% elif response_type == "*runtime.StreamResponse" %}	var response runtime.StreamResponse
-{% else %}	var response {{ route.response_type }}
+{% else %}	var response {{ route_response_value_type(route) }}
 {% endif %}	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
 	}

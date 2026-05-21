@@ -70,3 +70,14 @@ class BinaryClient:
             response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
         )
         return AuditPacketResponse.from_value(payload, "audit_packet.response")
+
+    async def audit_packet_response(self) -> AuditPacket:
+        response_type: str | None = 'binary_schema'
+        payload = await self._transport.request(
+            "GET",
+            "/api/binary/audit-packet-response",
+            route_id="api.binary.get.auditpacketresponse",
+            response_type=response_type,
+            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+        )
+        return AuditPacketWire.from_bytes(payload)

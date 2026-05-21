@@ -105,6 +105,21 @@ def create_router(
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.binary.post.auditpacket")
 
+    @router.api_route("/api/binary/audit-packet-response", methods=["GET"])
+    async def binary_audit_packet_response(request: Request) -> Any:
+        service = binary_service_impl
+        try:
+            result = await service.audit_packet_response(
+            )
+            return _binary_schema_response(
+                content_type="application/octet-stream",
+                result=result,
+                encoder=api_binary_types.AuditPacketWire.to_binary_body,
+            )
+
+        except ApiError as error:
+            return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.binary.get.auditpacketresponse")
+
     @router.api_route("/api/conflict/default", methods=["GET"])
     async def conflict_default(request: Request) -> Any:
         service = conflict_service_impl
@@ -389,6 +404,22 @@ def create_router(
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.media.get.download")
 
+    @router.api_route("/api/media/download-dynamic", methods=["GET"])
+    async def media_media_download_dynamic(request: Request) -> Any:
+        service = media_service_impl
+        try:
+            result = await service.media_download_dynamic(
+            )
+            return _raw_response(
+                kind="file",
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                filename='media-report.xlsx',
+                result=result,
+            )
+
+        except ApiError as error:
+            return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.media.get.downloaddynamic")
+
     @router.api_route("/api/media/mjpeg", methods=["GET"])
     async def media_media_mjpeg(request: Request) -> Any:
         service = media_service_impl
@@ -613,6 +644,37 @@ def _raw_response(
         content = body.encode("utf-8")
     else:
         content = bytes(body or b"")
+    return Response(
+        content=content,
+        status_code=status,
+        media_type=effective_content_type,
+        headers=dict(headers or {}),
+    )
+
+
+def _binary_schema_response(
+    *,
+    content_type: str,
+    result: Any,
+    encoder: Any,
+) -> Response:
+    if isinstance(result, Response):
+        return result
+    status = 200
+    headers: Mapping[str, str] | None = None
+    body = result
+    effective_content_type = content_type
+    if isinstance(result, ApiRawResponse):
+        status = result.status
+        headers = result.headers
+        body = result.body
+        effective_content_type = result.content_type or content_type
+    if isinstance(body, (bytes, bytearray, memoryview)):
+        content = bytes(body)
+    else:
+        binary_body = encoder(body)
+        content = binary_body.to_bytes()
+        effective_content_type = binary_body.content_type or effective_content_type
     return Response(
         content=content,
         status_code=status,

@@ -100,6 +100,34 @@ export class MediaClient extends BaseClient {
   }
 
   /**
+   * Media workbook download with service filename override
+   * Returns a generated XLSX file response with a dynamic filename.
+   * Tags: api
+   */
+
+  async mediaDownloadDynamic(
+    request: {
+      headers?: Record<string, string>;
+    } = {},
+    init: RequestInit = {},
+    timeoutMs?: number,
+  ): Promise<Types.MediaDownloadDynamicResponse> {
+    return this.request<Types.MediaDownloadDynamicResponse>({
+      routeId: "api.media.get.downloaddynamic",
+      method: "GET",
+      path: "/api/media/download-dynamic",
+      service: "MediaService",
+      operation: "MediaDownloadDynamic",
+      namespace: "media",
+      headers: request.headers,
+      init,
+      responseType: "blob",
+      responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+      timeoutMs,
+    });
+  }
+
+  /**
    * MJPEG byte stream
    * Returns a multipart byte stream with MJPEG boundary chunks.
    * Tags: api

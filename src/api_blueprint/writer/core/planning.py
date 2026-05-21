@@ -57,7 +57,7 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
         routes=("rpc", "stream", "channel"),
         requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
-        responses=("json", "xml", "bytes", "file", "byte_stream"),
+        responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
     ),
     "go-client": TargetCapability(
         implemented=True,
@@ -65,7 +65,7 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
         requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
-        responses=("json", "xml", "bytes", "file", "byte_stream"),
+        responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
     ),
     "typescript-client": TargetCapability(
         implemented=True,
@@ -73,7 +73,7 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
         requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
-        responses=("json", "xml", "bytes", "file", "byte_stream"),
+        responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
     ),
     "kotlin-client": TargetCapability(
         implemented=True,
@@ -118,7 +118,7 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
         routes=("rpc", "stream", "channel"),
         requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
-        responses=("json", "xml", "bytes", "file", "byte_stream"),
+        responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
     ),
     "python-client": TargetCapability(
         implemented=True,
@@ -126,7 +126,7 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
         requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
-        responses=("json", "xml", "bytes", "file", "byte_stream"),
+        responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
     ),
     "http-transport": TargetCapability(implemented=True, routes=("rpc", "stream", "channel")),
     "wails-transport": TargetCapability(

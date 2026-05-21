@@ -11,6 +11,7 @@ from api_blueprint.contract import (
     route_contract,
 )
 from api_blueprint.engine import Blueprint, Error, Toast
+from api_blueprint.engine.binary_schema import parse_binary_schema
 from api_blueprint.engine.connection import ConnectionDelivery, ConnectionScope
 from api_blueprint.engine.model import FileField, Int, String, Model, field
 from api_blueprint.writer.core import contracts as legacy_contracts
@@ -112,6 +113,58 @@ def test_contract_graph_manifest_captures_media_body_and_raw_response_kinds():
     stream = routes["Mjpeg"]
     assert stream["response"]["kind"] == "byte_stream"
     assert stream["response"]["streaming"] is True
+
+
+def test_contract_graph_manifest_captures_binary_schema_request_and_response() -> None:
+    request_schema = parse_binary_schema(
+        """
+# packet RequestPacket
+
+endian: little
+content-type: application/vnd.request-packet
+
+## header
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| value | u16 | 1 | min=1 | value |
+        """.strip(),
+        source_path="request_packet.md",
+    )
+    response_schema = parse_binary_schema(
+        """
+# packet ResponsePacket
+
+endian: little
+
+## header
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| status | u8 | 1 | const=1 | status |
+        """.strip(),
+        source_path="response_packet.md",
+    )
+
+    bp = Blueprint(root="/api")
+    with bp.group("/binary") as views:
+        views.POST("/packet").REQ_BINARY_SCHEMA(request_schema).RSP_BINARY_SCHEMA(
+            response_schema,
+            content_type="application/vnd.response-packet",
+        )
+
+    manifest = build_contract_graph([bp]).to_manifest()
+    route = manifest["routes"][0]
+
+    assert route["request"]["body_kind"] == "binary_schema"
+    assert route["request"]["binary_schema"]["name"] == "RequestPacket"
+    assert route["request"]["binary_schema"]["content_type"] == "application/vnd.request-packet"
+    assert route["response"]["kind"] == "binary_schema"
+    assert route["response"]["content_type"] == "application/vnd.response-packet"
+    assert route["response"]["binary_schema"]["name"] == "ResponsePacket"
+    assert route["response"]["success_enveloped"] is False
+    assert route["response"]["streaming"] is False
+    assert route["response"]["download"] is False
 
 
 def test_contract_graph_manifest_carries_declared_connection_delivery():

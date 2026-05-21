@@ -37,6 +37,7 @@ class RouteRuntimeSnapshot:
     binary_schema: BinarySchema | None
     open_model: ModelRef | None
     response_model: ModelRef | None
+    response_binary_schema: BinarySchema | None
     response_kind: str
     response_media_type: str
     response_filename: str | None
@@ -72,6 +73,7 @@ class RouteResponseContract:
     media_type: str
     model: RouteModelSlot
     envelope: type[ResponseEnvelope]
+    binary_schema: BinarySchema | None = None
     filename: str | None = None
 
 
@@ -262,7 +264,10 @@ def _route_protocol_from_contract(
             media_type=str(response_manifest.get("media_type") or runtime.response_media_type or "application/json"),
             model=RouteModelSlot(_optional_str(response_manifest.get("model")), runtime.response_model),
             envelope=runtime.response_envelope or NoEnvelope,
-            filename=_optional_str(response_manifest.get("filename")) or getattr(runtime, "response_filename", None),
+            binary_schema=getattr(runtime, "response_binary_schema", None),
+            filename=_optional_str(response_manifest.get("default_filename"))
+            or _optional_str(response_manifest.get("filename"))
+            or getattr(runtime, "response_filename", None),
         ),
         recvs=tuple(runtime.recvs),
         sends=tuple(runtime.sends),
@@ -283,6 +288,7 @@ def _runtime_from_router(router: Router) -> RouteRuntimeSnapshot:
         binary_schema=router.req_binary_schema,
         open_model=router.open_model,
         response_model=router.rsp_model,
+        response_binary_schema=router.rsp_binary_schema,
         response_kind=router.response_kind,
         response_media_type=router.rsp_media_type,
         response_filename=router.rsp_filename,

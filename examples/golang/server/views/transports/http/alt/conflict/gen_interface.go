@@ -29,6 +29,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Methods:   []string{"GET"},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope(""),
+				Filename:  "",
 			},
 			"req=Q|handle|rsp=json@OkDataErrorEnvelope",
 			impl.Default,

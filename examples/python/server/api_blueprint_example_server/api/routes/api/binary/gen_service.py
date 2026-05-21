@@ -11,6 +11,8 @@ from .gen_types import (
     PacketResponse,
     AuditPacketQuery,
     AuditPacketResponse,
+    DemoPacket,
+    AuditPacket,
 )
 
 
@@ -29,6 +31,9 @@ class BinaryService(Protocol):
     ) -> AuditPacketResponse:
         ...
 
+    async def audit_packet_response(self) -> AuditPacket:
+        ...
+
 
 class BinaryServiceStub:
     async def packet(
@@ -44,3 +49,6 @@ class BinaryServiceStub:
         binary: bytes | None,
     ) -> AuditPacketResponse:
         raise NotImplementedError("audit_packet")
+
+    async def audit_packet_response(self) -> AuditPacket:
+        raise NotImplementedError("audit_packet_response")

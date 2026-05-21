@@ -101,6 +101,13 @@ def scenario_registry() -> dict[str, Scenario]:
             route_ids=("api.binary.post.auditpacket",),
             description="second binary schema body calls",
         ),
+        "binary-response": Scenario(
+            name="binary-response",
+            categories=("binary", "raw-response"),
+            clients=("go", "typescript", "python"),
+            route_ids=("api.binary.get.auditpacketresponse",),
+            description="binary schema typed response calls",
+        ),
         "media": Scenario(
             name="media",
             categories=("multipart", "raw-response", "stream"),
@@ -109,6 +116,7 @@ def scenario_registry() -> dict[str, Scenario]:
                 "api.media.post.preview",
                 "api.media.get.frame",
                 "api.media.get.download",
+                "api.media.get.downloaddynamic",
                 "api.media.get.mjpeg",
             ),
             description="multipart upload and raw bytes/file/byte stream responses",
@@ -246,7 +254,7 @@ def server_supports_scenario(server: str, scenario: Scenario) -> bool:
         return capability.supports_rpc
     if scenario.name == "form":
         return capability.supports_form
-    if scenario.name in {"binary", "audit-binary"}:
+    if scenario.name in {"binary", "audit-binary", "binary-response"}:
         return capability.supports_binary
     if scenario.name == "media":
         return capability.supports_media

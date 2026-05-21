@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 	errors "example.com/api-blueprint/wails-hello/golang/runtime/errors"
 	"fmt"
+	"io"
 	"strings"
 )
 
@@ -14,6 +15,17 @@ const (
 )
 
 type RspContext struct{}
+
+type RawResponse struct {
+	Body        []byte
+	FilePath    string
+	Stream      io.Reader
+	Headers     map[string]string
+	StatusCode  int
+	ContentType string
+	Filename    string
+	Size        int64
+}
 
 type RspProvider[Q, B, P any] struct {
 	Type    string

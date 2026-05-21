@@ -4,6 +4,8 @@
 
 import {
   ApiBinaryBody,
+  BinaryDecodeError,
+  BinaryReader,
   BinaryWriter,
   EncodedBinaryBlock,
   StreamingBinaryBody,
@@ -11,6 +13,7 @@ import {
   bytesEqual,
   isApiBinaryBody,
   requireBinary,
+  requireDecode,
   requireRange,
   requireSize,
   wrapBinaryField,
@@ -39,6 +42,10 @@ export interface DemoPacket {
 
 export function DemoPacketToBinaryBody(value: DemoPacket | ApiBinaryBody): ApiBinaryBody {
   return DemoPacketWire.toBinaryBody(value);
+}
+
+export function DemoPacketFromBytes(value: Uint8Array | ArrayBuffer): DemoPacket {
+  return DemoPacketWire.fromBytes(value);
 }
 
 interface DemoPacketBinaryState {
@@ -113,12 +120,25 @@ export const DemoPacketWire = {
     return this.body({ write: (writer) => this.write(value, writer) });
   },
 
+  fromBytes(value: Uint8Array | ArrayBuffer): DemoPacket {
+    return parseDemoPacket(value);
+  },
+
   write(value: DemoPacket, writer: BinaryWriter): void {
     const state = newDemoPacketBinaryState();
     writeDemoPacketHeader(value.header, writer, state, "DemoPacket.header");
     writeDemoPacketBody(value.body, writer, state, "DemoPacket.body");
   },
 };
+
+export function parseDemoPacket(value: Uint8Array | ArrayBuffer | BinaryReader): DemoPacket {
+  const reader = value instanceof BinaryReader ? value : new BinaryReader(value, "little");
+  const state = newDemoPacketBinaryState();
+  return {
+    header: readDemoPacketHeader(reader, state, "DemoPacket.header"),
+    body: readDemoPacketBody(reader, state, "DemoPacket.body"),
+  };
+}
 
 export function writeDemoPacketHeader(
   value: DemoPacketHeader,
@@ -179,6 +199,71 @@ export function writeDemoPacketHeader(
   }
 }
 
+export function readDemoPacketHeader(
+  reader: BinaryReader,
+  state: DemoPacketBinaryState = newDemoPacketBinaryState(),
+  path = "DemoPacketHeader",
+): DemoPacketHeader {
+  try {
+
+    const magic = reader.readBytes("magic", 4);
+    requireDecode("magic", bytesEqual(magic, new Uint8Array([65, 66, 80, 49])), "const mismatch");
+
+    const version = reader.readU16("version");
+    requireDecode("version", version === 1, "const mismatch");
+    state.version = Number(version);
+
+    const kind = reader.readU16("kind");
+    requireDecode("kind", kind === 1, "const mismatch");
+    state.kind = Number(kind);
+
+    const flags = reader.readU32("flags");
+    requireDecode("flags", flags >= 0, "below min");
+    requireDecode("flags", (Number(flags) & 4294967264) === 0, "reserved bits must be zero");
+    state.flags = Number(flags);
+
+    const header_padHidden = reader.readBytes("header_pad", 1);
+
+    const reserved0Hidden = reader.readBytes("reserved0", 2);
+    requireDecode("reserved0", bytesEqual(reserved0Hidden, new Uint8Array(2)), "reserved bytes must be zero");
+
+    const short_code = reader.readU24("short_code");
+    requireDecode("short_code", short_code >= 1, "below min");
+    requireDecode("short_code", short_code <= 16777215, "exceeds max");
+    state.short_code = Number(short_code);
+
+    const signed_delta = reader.readI24("signed_delta");
+    requireDecode("signed_delta", signed_delta >= 0, "below min");
+    requireDecode("signed_delta", signed_delta <= 8388607, "exceeds max");
+    state.signed_delta = Number(signed_delta);
+
+    const item_count = reader.readU16("item_count");
+    requireDecode("item_count", item_count >= 1, "below min");
+    requireDecode("item_count", item_count <= 8, "exceeds max");
+    state.item_count = Number(item_count);
+
+    const payload_len = reader.readU32("payload_len");
+    requireDecode("payload_len", payload_len >= 0, "below min");
+    requireDecode("payload_len", payload_len <= 64, "exceeds max");
+    state.payload_len = Number(payload_len);
+
+    const score_count = reader.readU16("score_count");
+    requireDecode("score_count", score_count === 2, "const mismatch");
+    requireDecode("score_count", score_count <= 4, "exceeds max");
+    state.score_count = Number(score_count);
+
+    return {
+      flags,
+      short_code,
+      signed_delta,
+      item_count,
+      payload_len,
+    };
+  } catch (error) {
+    throw wrapBinaryField(path, error);
+  }
+}
+
 export function writeDemoPacketBody(
   value: DemoPacketBody,
   writer: BinaryWriter,
@@ -215,6 +300,52 @@ export function writeDemoPacketBody(
     writer.writeU32("checksum", value.checksum);
     state.checksum = Number(value.checksum);
 
+  } catch (error) {
+    throw wrapBinaryField(path, error);
+  }
+}
+
+export function readDemoPacketBody(
+  reader: BinaryReader,
+  state: DemoPacketBinaryState = newDemoPacketBinaryState(),
+  path = "DemoPacketBody",
+): DemoPacketBody {
+  try {
+
+    const itemsCount = state.item_count;
+    const items: DemoPacketItem[] = [];
+    for (let index = 0; index < itemsCount; index += 1) {
+    try {
+    const item = readDemoPacketItem(reader, state, "");
+    items.push(item);
+    } catch (error) {
+    throw wrapBinaryIndex("items", index, error);
+    }
+    }
+
+    const payload = reader.readBytes("payload", state.payload_len);
+
+    const scoresCount = state.score_count;
+    const scores: number[] = [];
+    for (let index = 0; index < scoresCount; index += 1) {
+    try {
+    const item = reader.readF64("");
+    scores.push(item);
+    } catch (error) {
+    throw wrapBinaryIndex("scores", index, error);
+    }
+    }
+
+    const checksum = reader.readU32("checksum");
+    requireDecode("checksum", checksum === state.item_count + state.payload_len, "assert mismatch");
+    state.checksum = Number(checksum);
+
+    return {
+      items,
+      payload,
+      scores,
+      checksum,
+    };
   } catch (error) {
     throw wrapBinaryField(path, error);
   }
@@ -340,6 +471,41 @@ export function writeDemoPacketItem(
   }
 }
 
+export function readDemoPacketItem(
+  reader: BinaryReader,
+  state: DemoPacketBinaryState = newDemoPacketBinaryState(),
+  path = "Item",
+): DemoPacketItem {
+  try {
+
+    const id = reader.readU32("id");
+    requireDecode("id", id >= 1, "below min");
+    requireDecode("id", id <= 999, "exceeds max");
+    state.id = Number(id);
+
+    const enabled = reader.readBool("enabled");
+
+    const value = reader.readF64("value");
+
+    const label_len = reader.readU8("label_len");
+    requireDecode("label_len", label_len >= 1, "below min");
+    requireDecode("label_len", label_len <= 16, "exceeds max");
+    state.label_len = Number(label_len);
+
+    const label = reader.readBytes("label", state.label_len);
+
+    return {
+      id,
+      enabled,
+      value,
+      label_len,
+      label,
+    };
+  } catch (error) {
+    throw wrapBinaryField(path, error);
+  }
+}
+
 export function newDemoPacketItem_label_block(bytes: Uint8Array, count: number): EncodedBinaryBlock {
   return new EncodedBinaryBlock("Item.label", count, bytes);
 }
@@ -390,6 +556,10 @@ export interface AuditPacket {
 
 export function AuditPacketToBinaryBody(value: AuditPacket | ApiBinaryBody): ApiBinaryBody {
   return AuditPacketWire.toBinaryBody(value);
+}
+
+export function AuditPacketFromBytes(value: Uint8Array | ArrayBuffer): AuditPacket {
+  return AuditPacketWire.fromBytes(value);
 }
 
 interface AuditPacketBinaryState {
@@ -446,12 +616,25 @@ export const AuditPacketWire = {
     return this.body({ write: (writer) => this.write(value, writer) });
   },
 
+  fromBytes(value: Uint8Array | ArrayBuffer): AuditPacket {
+    return parseAuditPacket(value);
+  },
+
   write(value: AuditPacket, writer: BinaryWriter): void {
     const state = newAuditPacketBinaryState();
     writeAuditPacketHeader(value.header, writer, state, "AuditPacket.header");
     writeAuditPacketBody(value.body, writer, state, "AuditPacket.body");
   },
 };
+
+export function parseAuditPacket(value: Uint8Array | ArrayBuffer | BinaryReader): AuditPacket {
+  const reader = value instanceof BinaryReader ? value : new BinaryReader(value, "little");
+  const state = newAuditPacketBinaryState();
+  return {
+    header: readAuditPacketHeader(reader, state, "AuditPacket.header"),
+    body: readAuditPacketBody(reader, state, "AuditPacket.body"),
+  };
+}
 
 export function writeAuditPacketHeader(
   value: AuditPacketHeader,
@@ -480,6 +663,36 @@ export function writeAuditPacketHeader(
   }
 }
 
+export function readAuditPacketHeader(
+  reader: BinaryReader,
+  state: AuditPacketBinaryState = newAuditPacketBinaryState(),
+  path = "AuditPacketHeader",
+): AuditPacketHeader {
+  try {
+
+    const kind = reader.readU16("kind");
+    requireDecode("kind", kind === 2, "const mismatch");
+    state.kind = Number(kind);
+
+    const flags = reader.readU32("flags");
+    requireDecode("flags", flags >= 0, "below min");
+    requireDecode("flags", (Number(flags) & 4294967288) === 0, "reserved bits must be zero");
+    state.flags = Number(flags);
+
+    const item_count = reader.readU16("item_count");
+    requireDecode("item_count", item_count >= 1, "below min");
+    requireDecode("item_count", item_count <= 4, "exceeds max");
+    state.item_count = Number(item_count);
+
+    return {
+      flags,
+      item_count,
+    };
+  } catch (error) {
+    throw wrapBinaryField(path, error);
+  }
+}
+
 export function writeAuditPacketBody(
   value: AuditPacketBody,
   writer: BinaryWriter,
@@ -502,6 +715,37 @@ export function writeAuditPacketBody(
     writer.writeU32("checksum", value.checksum);
     state.checksum = Number(value.checksum);
 
+  } catch (error) {
+    throw wrapBinaryField(path, error);
+  }
+}
+
+export function readAuditPacketBody(
+  reader: BinaryReader,
+  state: AuditPacketBinaryState = newAuditPacketBinaryState(),
+  path = "AuditPacketBody",
+): AuditPacketBody {
+  try {
+
+    const itemsCount = state.item_count;
+    const items: AuditPacketItem[] = [];
+    for (let index = 0; index < itemsCount; index += 1) {
+    try {
+    const item = readAuditPacketItem(reader, state, "");
+    items.push(item);
+    } catch (error) {
+    throw wrapBinaryIndex("items", index, error);
+    }
+    }
+
+    const checksum = reader.readU32("checksum");
+    requireDecode("checksum", checksum === state.item_count, "assert mismatch");
+    state.checksum = Number(checksum);
+
+    return {
+      items,
+      checksum,
+    };
   } catch (error) {
     throw wrapBinaryField(path, error);
   }
@@ -552,6 +796,31 @@ export function writeAuditPacketItem(
     writer.writeU16("code", value.code);
     state.code = Number(value.code);
 
+  } catch (error) {
+    throw wrapBinaryField(path, error);
+  }
+}
+
+export function readAuditPacketItem(
+  reader: BinaryReader,
+  state: AuditPacketBinaryState = newAuditPacketBinaryState(),
+  path = "Item",
+): AuditPacketItem {
+  try {
+
+    const id = reader.readU32("id");
+    requireDecode("id", id >= 1, "below min");
+    state.id = Number(id);
+
+    const code = reader.readU16("code");
+    requireDecode("code", code >= 1, "below min");
+    requireDecode("code", code <= 999, "exceeds max");
+    state.code = Number(code);
+
+    return {
+      id,
+      code,
+    };
   } catch (error) {
     throw wrapBinaryField(path, error);
   }

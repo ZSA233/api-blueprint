@@ -215,6 +215,7 @@ class GolangRouterGroup:
                     "http_client_message_type": view.shared_type_expr(view.client_message_type),
                     "http_close_message_type": view.shared_type_expr(view.close_message_type),
                     "connection_scope": view.contract.connection_scope.value if view.contract.connection_scope else "",
+                    "default_filename": view.protocol.response.filename or "",
                     "is_stream": view.is_stream,
                     "is_channel": view.is_channel,
                     "is_connection": view.is_connection,
@@ -235,7 +236,12 @@ class GolangRouterGroup:
             yield from self._router_view(router).com_protos()
 
     def binary_schemas(self) -> list[Any]:
-        schemas = [router.req_binary_schema for router in self.group if router.req_binary_schema is not None]
+        schemas = [
+            schema
+            for router in self.group
+            for schema in (router.req_binary_schema, router.rsp_binary_schema)
+            if schema is not None
+        ]
         return unique_go_binary_schemas(schemas)
 
     def implements(self) -> Generator[dict[str, Any], None, None]:
@@ -667,4 +673,6 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
         for _group, router in self.iter_router():
             if router.req_binary_schema is not None:
                 schemas.append(router.req_binary_schema)
+            if router.rsp_binary_schema is not None:
+                schemas.append(router.rsp_binary_schema)
         return unique_go_binary_schemas(schemas)

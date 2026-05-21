@@ -7,7 +7,7 @@
 
 ## 概述
 
-`api-blueprint` 用 Python DSL 定义 API 契约，再从同一份协议真源生成文档服务和多语言代码。它适合把 HTTP API、长连接消息、二进制请求体、媒体上传 / raw 响应和 gRPC proto 放在一个可检查、可生成、可回归的协议工作流里维护。
+`api-blueprint` 用 Python DSL 定义 API 契约，再从同一份协议真源生成文档服务和多语言代码。它适合把 HTTP API、长连接消息、二进制请求 / 响应体、媒体上传 / raw 响应和 gRPC proto 放在一个可检查、可生成、可回归的协议工作流里维护。
 
 核心链路是：
 
@@ -20,7 +20,7 @@ Blueprint DSL -> ContractGraph -> api-gen check / inspect / generate -> generate
 - 后端、Web、Flutter、Kotlin、脚本客户端需要共享同一份 API 契约。
 - 希望先从协议生成 Go server，再生成 TypeScript、Flutter、Kotlin、Java、Go、Python client，或生成 Kotlin/Java/Python server scaffold。
 - 需要文档服务、契约检查、生成快照和端到端示例一起维护。
-- 需要把 Markdown Binary Schema、multipart 上传、raw bytes/file/stream 响应、Wails 或 gRPC 纳入同一套生成流程。
+- 需要把 Markdown Binary Schema、typed binary 响应、multipart 上传、raw bytes/file/stream 响应、Wails 或 gRPC 纳入同一套生成流程。
 
 ## 安装
 
@@ -94,13 +94,13 @@ api-gen generate -c api-blueprint.toml
 | 目标 | 状态 | 用途 |
 |:---|:---:|:---|
 | Contract / inspect | 可用 | 输出契约索引，并按 route、schema、error、文件归属查询协议细节 |
-| Go server | 可用 | 生成 Go 路由、provider、长连接 message helper、HTTP/Wails adapter、multipart/raw media 响应和 runtime |
-| TypeScript client | 预览 | 生成 transport-neutral client、长连接 message helper、HTTP multipart/raw adapter 和 Wails facade |
+| Go server | 可用 | 生成 Go 路由、provider、长连接 message helper、HTTP/Wails adapter、multipart/raw media、binary schema 响应和 runtime |
+| TypeScript client | 预览 | 生成 transport-neutral client、长连接 message helper、HTTP multipart/raw adapter、binary schema 响应解码和 Wails facade |
 | Flutter client | 预览 | 生成纯 Dart package、DTO、typed error、binary codec、HTTP/SSE/WebSocket client |
 | Kotlin client/server | 预览 | 生成 OkHttp HTTP/SSE/WebSocket client、Ktor HTTP/SSE/WebSocket server scaffold、模型、长连接 message helper 和 binary writer |
 | Java client/server | 预览 | 生成 Java 17 HttpClient client、Spring MVC/SSE/WebSocket server scaffold、record DTO、长连接 message helper、binary packet helper 和 HTTP adapter |
-| Go / Python client | 预览 | 生成服务端之外的脚本或工具侧客户端；Python client 使用递归 dataclass DTO、共享 runtime codec，并提供 multipart/raw、长连接 message helper 与 binary writer |
-| Python server | 预览 | 生成 FastAPI HTTP/SSE/WebSocket server scaffold、multipart/raw adapter、typed service contract 和长连接 message helper |
+| Go / Python client | 预览 | 生成服务端之外的脚本或工具侧客户端；Python client 使用递归 dataclass DTO、共享 runtime codec，并提供 multipart/raw、长连接 message helper 与 binary writer/response codec |
+| Python server | 预览 | 生成 FastAPI HTTP/SSE/WebSocket server scaffold、multipart/raw/binary response adapter、typed service contract 和长连接 message helper |
 | Wails v2/v3 | 预览 / 实验性 | 生成 Go + TypeScript overlay，用于桌面 GUI |
 | gRPC proto / stubs | 可用 | 从 ContractGraph 输出 proto，并生成 Go/Python stub |
 

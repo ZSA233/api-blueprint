@@ -286,6 +286,9 @@ export class DefaultTransport implements ApiTransport {
       if (responseType === "arrayBuffer") {
         return buildRawResponse(await response.arrayBuffer(), response) as unknown as R;
       }
+      if (responseType === "binary_schema") {
+        return await response.arrayBuffer() as unknown as R;
+      }
       if (responseType === "stream") {
         return buildRawResponse(response.body, response) as unknown as R;
       }

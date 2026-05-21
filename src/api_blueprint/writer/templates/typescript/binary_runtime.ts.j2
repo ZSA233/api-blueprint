@@ -11,6 +11,13 @@ export class BinaryEncodeError extends Error {
   }
 }
 
+export class BinaryDecodeError extends Error {
+  constructor(readonly fieldPath: string, readonly detail: string) {
+    super(fieldPath ? `${fieldPath}: ${detail}` : detail);
+    this.name = "BinaryDecodeError";
+  }
+}
+
 export function joinBinaryPath(parent: string, child: string): string {
   if (!parent) {
     return child;
@@ -29,6 +36,9 @@ export function indexBinaryPath(path: string, index: number): string {
 }
 
 export function wrapBinaryField(path: string, error: unknown): unknown {
+  if (error instanceof BinaryDecodeError) {
+    return new BinaryDecodeError(joinBinaryPath(path, error.fieldPath), error.detail);
+  }
   if (error instanceof BinaryEncodeError) {
     return new BinaryEncodeError(joinBinaryPath(path, error.fieldPath), error.detail);
   }
@@ -225,9 +235,106 @@ export class BinaryWriter {
   }
 }
 
+export class BinaryReader {
+  private readonly view: DataView;
+  private offset = 0;
+
+  constructor(
+    bytes: Uint8Array | ArrayBuffer,
+    private readonly endian: BinaryEndian = "little",
+  ) {
+    const data = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+    this.view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  }
+
+  readU8(path: string): number {
+    const value = this.view.getUint8(this.take(path, 1));
+    return value;
+  }
+
+  readU16(path: string): number {
+    return this.view.getUint16(this.take(path, 2), this.endian === "little");
+  }
+
+  readU24(path: string): number {
+    const bytes = this.readBytes(path, 3);
+    return this.endian === "little"
+      ? bytes[0] | (bytes[1] << 8) | (bytes[2] << 16)
+      : (bytes[0] << 16) | (bytes[1] << 8) | bytes[2];
+  }
+
+  readU32(path: string): number {
+    return this.view.getUint32(this.take(path, 4), this.endian === "little");
+  }
+
+  readU64(path: string): number {
+    return Number(this.view.getBigUint64(this.take(path, 8), this.endian === "little"));
+  }
+
+  readI8(path: string): number {
+    return this.view.getInt8(this.take(path, 1));
+  }
+
+  readI16(path: string): number {
+    return this.view.getInt16(this.take(path, 2), this.endian === "little");
+  }
+
+  readI24(path: string): number {
+    const unsigned = this.readU24(path);
+    return unsigned & 0x80_0000 ? unsigned | 0xff00_0000 : unsigned;
+  }
+
+  readI32(path: string): number {
+    return this.view.getInt32(this.take(path, 4), this.endian === "little");
+  }
+
+  readI64(path: string): number {
+    return Number(this.view.getBigInt64(this.take(path, 8), this.endian === "little"));
+  }
+
+  readF32(path: string): number {
+    return this.view.getFloat32(this.take(path, 4), this.endian === "little");
+  }
+
+  readF64(path: string): number {
+    return this.view.getFloat64(this.take(path, 8), this.endian === "little");
+  }
+
+  readBool(path: string): boolean {
+    return this.readU8(path) !== 0;
+  }
+
+  readBytes(path: string, count: number): Uint8Array {
+    const offset = this.take(path, count);
+    return new Uint8Array(this.view.buffer, this.view.byteOffset + offset, count).slice();
+  }
+
+  readUtf8String(path: string, count: number): string {
+    return new TextDecoder().decode(this.readBytes(path, count));
+  }
+
+  private take(path: string, count: number): number {
+    if (!Number.isFinite(count) || count < 0) {
+      throw new BinaryDecodeError(path, "negative byte count");
+    }
+    if (this.offset + count > this.view.byteLength) {
+      throw new BinaryDecodeError(path, `expected ${count} bytes, got ${this.view.byteLength - this.offset}`);
+    }
+    const current = this.offset;
+    this.offset += count;
+    return current;
+  }
+}
+
 export function requireBinary(path: string, condition: boolean, message: string): void {
   if (!condition) {
     throw new BinaryEncodeError(path, message);
+  }
+}
+
+export function requireDecode(path: string, condition: boolean, message: string): void {
+  if (!condition) {
+    throw new BinaryDecodeError(path, message);
   }
 }
 

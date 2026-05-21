@@ -83,6 +83,8 @@ class HttpClientTransport(ApiClientTransport):
             response.raise_for_status()
         if response_type in {"bytes", "file"}:
             return _raw_response(response)
+        if response_type == "binary_schema":
+            return response.content
         if not response.content:
             return None
 

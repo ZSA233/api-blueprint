@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from fastapi import FastAPI
 
 from api_blueprint.engine import Blueprint, Model
 from api_blueprint.engine.binary_schema import BinarySchemaError, parse_binary_schema
@@ -182,3 +183,26 @@ def test_req_binary_replaces_removed_req_bin_api() -> None:
     route.REQ_BINARY(parse_binary_schema(VALID_SCHEMA, source_path="demo_packet.md"))
     with pytest.raises(ValueError, match="cannot be combined with REQ_BINARY"):
         route.REQ(json=String(description="json"))
+
+
+def test_rsp_binary_schema_openapi_content_type_and_mutual_exclusion() -> None:
+    schema = parse_binary_schema(VALID_SCHEMA, source_path="demo_packet.md")
+    bp = Blueprint(root="/api", app=FastAPI())
+    route = bp.GET("/packet").RSP_BINARY_SCHEMA(schema, content_type="application/vnd.demo-packet")
+
+    assert route.rsp_kind == "binary_schema"
+    assert route.rsp_media_type == "application/vnd.demo-packet"
+    assert route.rsp_binary_schema is not None
+    assert route.rsp_binary_schema.content_type == "application/vnd.demo-packet"
+
+    with pytest.raises(ValueError, match="cannot be combined with RSP_BINARY_SCHEMA"):
+        route.RSP_BYTES()
+
+    with pytest.raises(ValueError, match="cannot be combined with RSP/RSP_JSON/RSP_XML"):
+        bp.GET("/json").RSP(ok=String(description="ok")).RSP_BINARY_SCHEMA(schema)
+
+    bp.build()
+    response = bp.app.openapi()["paths"]["/api/packet"]["get"]["responses"]["200"]
+    assert "application/vnd.demo-packet" in response["content"]
+    assert response["content"]["application/vnd.demo-packet"]["schema"]["format"] == "binary"
+    assert response["content"]["application/vnd.demo-packet"]["x-binary-schema"]["name"] == "DemoPacket"

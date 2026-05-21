@@ -47,3 +47,19 @@ def test_multipart_and_raw_response_openapi_contract() -> None:
     download = schema["paths"]["/api/media/download"]["get"]
     assert "Content-Disposition" in download["responses"]["200"]["headers"]
     assert "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" in download["responses"]["200"]["content"]
+
+
+def test_rsp_file_default_filename_alias_and_conflict() -> None:
+    bp = Blueprint(root="/api", app=FastAPI())
+    route = bp.GET("/download").RSP_FILE(content_type="application/octet-stream", default_filename="report.bin")
+    assert route.rsp_filename == "report.bin"
+
+    alias = bp.GET("/download-alias").RSP_FILE(content_type="application/octet-stream", filename="legacy.bin")
+    assert alias.rsp_filename == "legacy.bin"
+
+    with pytest.raises(ValueError, match="filename and default_filename"):
+        bp.GET("/download-conflict").RSP_FILE(
+            content_type="application/octet-stream",
+            default_filename="new.bin",
+            filename="legacy.bin",
+        )

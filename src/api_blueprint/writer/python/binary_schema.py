@@ -39,6 +39,21 @@ WRITE_METHODS = {
     "f64": "write_f64",
     "bool": "write_bool",
 }
+READ_METHODS = {
+    "u8": "read_u8",
+    "u16": "read_u16",
+    "u24": "read_u24",
+    "u32": "read_u32",
+    "u64": "read_u64",
+    "i8": "read_i8",
+    "i16": "read_i16",
+    "i24": "read_i24",
+    "i32": "read_i32",
+    "i64": "read_i64",
+    "f32": "read_f32",
+    "f64": "read_f64",
+    "bool": "read_bool",
+}
 INTEGER_TYPES = {"u8", "u16", "u24", "u32", "u64", "i8", "i16", "i24", "i32", "i64"}
 EXPR_TOKEN_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*|\d+|[()+\-*/]")
 
@@ -216,6 +231,10 @@ class PythonBinaryField:
         return WRITE_METHODS[self.wire_type]
 
     @property
+    def read_method(self) -> str:
+        return READ_METHODS[self.wire_type]
+
+    @property
     def sizeof_name(self) -> str | None:
         return self.rule.get("sizeof")
 
@@ -244,6 +263,10 @@ class PythonBinaryObject:
     @property
     def writer_name(self) -> str:
         return self.schema.object_writer_name(self.obj.name)
+
+    @property
+    def reader_name(self) -> str:
+        return self.schema.object_reader_name(self.obj.name)
 
     @property
     def fields(self) -> list[PythonBinaryField]:
@@ -337,11 +360,18 @@ class PythonBinarySchema:
     def writer_name(self) -> str:
         return _packet_writer_name(self.name)
 
+    @property
+    def reader_name(self) -> str:
+        return f"parse_{py_name(self.name)}"
+
     def object_type_name(self, object_name: str) -> str:
         return _scope_py_type_name(self.name, object_name)
 
     def object_writer_name(self, object_name: str) -> str:
         return _object_writer_name(self.name, object_name)
+
+    def object_reader_name(self, object_name: str) -> str:
+        return f"read_{py_name(self.name)}_{py_name(object_name)}"
 
     def value_set_type_name(self, value_set_name: str) -> str:
         return _scope_py_type_name(self.name, value_set_name)

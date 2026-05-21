@@ -188,6 +188,20 @@ async function checkAuditBinary(baseUrl: string): Promise<void> {
   }
 }
 
+async function checkBinaryResponse(baseUrl: string): Promise<void> {
+  const { binaryClient } = createApiClients({ baseUrl });
+  const response = await binaryClient.auditPacketResponse();
+  if (
+    response.header.flags !== AuditPacketFlagsValues.HasItems ||
+    response.header.item_count !== 2 ||
+    response.body.items[0]?.id !== 11 ||
+    response.body.items[1]?.code !== 202 ||
+    response.body.checksum !== 2
+  ) {
+    throw new Error(`binary response=${JSON.stringify(response)}`);
+  }
+}
+
 async function checkMedia(baseUrl: string): Promise<void> {
   const { mediaClient } = createApiClients({ baseUrl });
   const preview = await mediaClient.mediaPreview({
@@ -212,6 +226,12 @@ async function checkMedia(baseUrl: string): Promise<void> {
     throw new Error(`media download filename=${download.filename}`);
   }
   await assertBlobStartsWith(download.body, [0x50, 0x4b], "media download");
+
+  const dynamic = await mediaClient.mediaDownloadDynamic();
+  if (dynamic.filename !== "media-report-dynamic.xlsx") {
+    throw new Error(`media dynamic download filename=${dynamic.filename}`);
+  }
+  await assertBlobStartsWith(dynamic.body, [0x50, 0x4b], "media dynamic download");
 
   const stream = await mediaClient.mediaMjpeg();
   const reader = stream.body?.getReader();
@@ -414,7 +434,7 @@ async function main(): Promise<void> {
   if (!baseUrl) {
     throw new Error("base URL argument is required");
   }
-  const selected = scenarioSet(process.argv[3] || "rpc,binary,form,error,sse,websocket,naming,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,media,single-channel");
+  const selected = scenarioSet(process.argv[3] || "rpc,binary,form,error,sse,websocket,naming,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,single-channel");
   if (selected.has("rpc")) {
     await checkRPC(baseUrl);
   }
@@ -450,6 +470,9 @@ async function main(): Promise<void> {
   }
   if (selected.has("audit-binary")) {
     await checkAuditBinary(baseUrl);
+  }
+  if (selected.has("binary-response")) {
+    await checkBinaryResponse(baseUrl);
   }
   if (selected.has("media")) {
     await checkMedia(baseUrl);

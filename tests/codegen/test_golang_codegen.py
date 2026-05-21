@@ -1252,6 +1252,86 @@ func TestRouteAwareProviderFactory(t *testing.T) {
     assert result.returncode == 0, result.stdout + result.stderr
 
 
+def test_golang_server_generates_binary_schema_response_writer_and_file_default_filename(tmp_path):
+    output_dir = tmp_path / "golang"
+    output_dir.mkdir()
+    (tmp_path / "go.mod").write_text(
+        """
+module example.com/generated
+
+go 1.23.8
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    schema = parse_binary_schema(
+        """
+# packet AuditPacket
+
+endian: little
+content-type: application/vnd.audit-packet
+
+## header
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| kind | u8 | 1 | const=2 | kind |
+| item_count | u16 | 1 | min=1,max=4,sizeof=items | item count |
+
+## body
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| items | AuditItem | item_count | | items |
+
+## struct AuditItem
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| id | u32 | 1 | min=1 | item id |
+        """.strip(),
+        source_path="audit_packet.md",
+    )
+    bp = Blueprint(root="/api", providers=[provider.Req(), provider.Handle(), provider.Rsp()])
+    with bp.group("/binary") as views:
+        views.GET("/audit").RSP_BINARY_SCHEMA(schema)
+        views.GET("/download").RSP_FILE(content_type="application/octet-stream", default_filename="audit.bin")
+
+    writer = GolangWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    binary_text = (output_dir / "routes" / "api" / "binary" / "_gen_binary" / "gen_binary.go").read_text(
+        encoding="utf-8"
+    )
+    route_types = (output_dir / "routes" / "api" / "binary" / "gen_types.go").read_text(encoding="utf-8")
+    http_runtime = (output_dir / "transports" / "http" / "gen_engine.go").read_text(encoding="utf-8")
+    http_route = (output_dir / "transports" / "http" / "api" / "binary" / "gen_interface.go").read_text(
+        encoding="utf-8"
+    )
+
+    assert "func (msg *AuditPacket) WriteBinary(output io.Writer) error" in binary_text
+    assert "func WriteAuditPacket(value *AuditPacket, writer *binaryruntime.Writer) error" in binary_text
+    assert "type RSP_Audit = binary.AuditPacket" in route_types
+    assert '"req|handle|rsp=binary_schema@CodeMessageDataEnvelope"' in http_route
+    assert 'Filename:  "audit.bin"' in http_route
+    assert "writeBinarySchemaResponse" in http_runtime
+    assert "writeRawResponse(ginCtx, rspProvider.Type, rspProvider.Route.Filename, response)" in http_runtime
+
+    if shutil.which("go") is None:
+        return
+
+    result = subprocess.run(
+        ["go", "test", "./routes/api/binary", "./runtime/binary"],
+        cwd=output_dir,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
 def test_golang_writer_allows_business_root_named_providers(tmp_path):
     output_dir = tmp_path / "golang"
     output_dir.mkdir()

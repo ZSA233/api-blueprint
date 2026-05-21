@@ -646,6 +646,75 @@ endian: little
     _compile_generated_files(output_dir)
 
 
+def test_python_codegen_generates_binary_schema_response_encoder_and_decoder(tmp_path: Path):
+    schema = parse_binary_schema(
+        """
+# packet AuditPacket
+
+endian: little
+content-type: application/vnd.audit-packet
+
+## header
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| kind | u8 | 1 | const=2 | kind |
+| item_count | u16 | 1 | min=1,max=4,sizeof=items | item count |
+
+## body
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| items | AuditItem | item_count | | items |
+| checksum | u16 | 1 | assert=item_count | checksum |
+
+## struct AuditItem
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| id | u32 | 1 | min=1 | item id |
+        """.strip(),
+        source_path="audit_packet.md",
+    )
+    bp = Blueprint(root="/api")
+    with bp.group("/binary") as views:
+        views.GET("/audit").RSP_BINARY_SCHEMA(schema)
+
+    client_dir = tmp_path / "client"
+    client_writer = PythonClientWriter(client_dir)
+    client_writer.register(bp)
+    client_writer.gen()
+
+    server_dir = tmp_path / "server"
+    server_writer = PythonServerWriter(server_dir)
+    server_writer.register(bp)
+    server_writer.gen()
+
+    client_route = (
+        client_dir / "api_blueprint_generated" / "api" / "routes" / "api" / "binary" / "gen_client.py"
+    ).read_text(encoding="utf-8")
+    client_transport = (
+        client_dir / "api_blueprint_generated" / "api" / "transports" / "http" / "gen_client.py"
+    ).read_text(encoding="utf-8")
+    server_service = (
+        server_dir / "api_blueprint_generated" / "api" / "routes" / "api" / "binary" / "gen_service.py"
+    ).read_text(encoding="utf-8")
+    server_adapter = (
+        server_dir / "api_blueprint_generated" / "api" / "transports" / "http" / "gen_server.py"
+    ).read_text(encoding="utf-8")
+
+    assert "async def audit(self) -> AuditPacket:" in client_route
+    assert "response_type: str | None = 'binary_schema'" in client_route
+    assert "return AuditPacketWire.from_bytes(payload)" in client_route
+    assert 'if response_type == "binary_schema":' in client_transport
+    assert "return response.content" in client_transport
+    assert "async def audit(self) -> AuditPacket:" in server_service
+    assert "_binary_schema_response(" in server_adapter
+    assert "encoder=api_binary_types.AuditPacketWire.to_binary_body" in server_adapter
+    _compile_generated_files(client_dir)
+    _compile_generated_files(server_dir)
+
+
 def test_python_server_query_decoder_treats_empty_query_as_empty_object(tmp_path: Path):
     bp = Blueprint(root="/api")
     with bp.group("/demo") as views:

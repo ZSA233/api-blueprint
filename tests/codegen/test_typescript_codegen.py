@@ -47,13 +47,16 @@ def test_typescript_codegen_emits_multipart_and_raw_response_contracts(tmp_path:
     transport = (output_dir / "api" / "transports" / "http" / "gen_transport.ts").read_text(encoding="utf-8")
 
     assert "export type ApiFilePart" in runtime_client
-    assert 'responseType?: "json" | "text" | "blob" | "arrayBuffer" | "stream"' in runtime_client
+    assert 'responseType?: "json" | "text" | "blob" | "arrayBuffer" | "stream" | "binary_schema"' in runtime_client
     assert 'import type { ApiFilePart, ApiRawResponse }' in route_types
     assert "image: ApiFilePart;" in runtime_types
     assert "export type PreviewResponse = ApiRawResponse<Blob>;" in route_types
     assert "multipart?: Shared.MediaUpload;" in route_client
     assert "multipart: request.multipart" in route_client
     assert 'responseType: "blob"' in route_client
+    assert "{\n\n    return this.request" not in route_client
+    assert "({\n\n      routeId" not in route_client
+    assert "    });\n\n  }" not in route_client
     assert "function buildMultipartFormData" in transport
     assert "return buildRawResponse(await response.blob(), response)" in transport
 
@@ -501,6 +504,64 @@ endian: little
     assert "private writeScratch" in runtime_text
     assert "this.writeScratch(8);" in runtime_text
     assert "binaryBodyToUint8Array" in transport_text
+
+
+def test_typescript_client_generates_binary_schema_response_decoder(tmp_path: Path):
+    schema = parse_binary_schema(
+        """
+# packet AuditPacket
+
+endian: little
+content-type: application/vnd.audit-packet
+
+## header
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| kind | u8 | 1 | const=2 | kind |
+| item_count | u16 | 1 | min=1,max=4,sizeof=items | item count |
+
+## body
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| items | AuditItem | item_count | | items |
+
+## struct AuditItem
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| id | u32 | 1 | min=1 | item id |
+        """.strip(),
+        source_path="audit_packet.md",
+    )
+    bp = Blueprint(root="/api")
+    with bp.group("/binary") as views:
+        views.GET("/audit").RSP_BINARY_SCHEMA(schema)
+
+    output_dir = tmp_path / "typescript"
+    writer = TypeScriptWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    route_text = (output_dir / "api" / "routes" / "api" / "binary" / "gen_client.ts").read_text(
+        encoding="utf-8"
+    )
+    binary_text = (output_dir / "api" / "routes" / "api" / "binary" / "gen_binary.ts").read_text(
+        encoding="utf-8"
+    )
+    transport_text = (output_dir / "api" / "transports" / "http" / "gen_transport.ts").read_text(encoding="utf-8")
+
+    assert "): Promise<Types.AuditPacket>" in route_text
+    assert "const payload = await this.request<ArrayBuffer>({" in route_text
+    assert 'responseType: "binary_schema"' in route_text
+    assert "return AuditPacketWire.fromBytes(payload)" in route_text
+    assert "{\n\n    const payload" not in route_text
+    assert "({\n\n      routeId" not in route_text
+    assert "    });\n\n    return AuditPacketWire" not in route_text
+    assert "function parseAuditPacket(" in binary_text
+    assert 'if (responseType === "binary_schema")' in transport_text
+    assert "return await response.arrayBuffer() as unknown as R" in transport_text
 
 
 def test_typescript_binary_schema_uses_local_diagnostic_paths_for_nested_writers(tmp_path: Path):

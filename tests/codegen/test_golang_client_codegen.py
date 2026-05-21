@@ -475,6 +475,73 @@ endian: little
     assert "json.Marshal(request.Binary)" not in transport_text
 
 
+def test_golang_client_generates_binary_schema_response_decoder(tmp_path):
+    schema = parse_binary_schema(
+        """
+# packet AuditPacket
+
+endian: little
+content-type: application/vnd.audit-packet
+
+## header
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| kind | u8 | 1 | const=2 | kind |
+| item_count | u16 | 1 | min=1,max=4,sizeof=items | item count |
+
+## body
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| items | AuditItem | item_count | | items |
+
+## struct AuditItem
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| id | u32 | 1 | min=1 | item id |
+        """.strip(),
+        source_path="audit_packet.md",
+    )
+    bp = Blueprint(root="/api", response_envelope=CodeMessageDataEnvelope)
+    with bp.group("/binary") as views:
+        views.GET("/audit").RSP_BINARY_SCHEMA(schema)
+
+    output_dir = tmp_path / "client"
+    writer = GolangClientWriter(output_dir, module="example.com/generated/client")
+    writer.register(bp)
+    writer.gen()
+
+    route_text = (output_dir / "routes" / "api" / "binary" / "gen_client.go").read_text(encoding="utf-8")
+    schema_text = (output_dir / "routes" / "api" / "binary" / "gen_binary.go").read_text(encoding="utf-8")
+    runtime_text = (output_dir / "runtime" / "gen_client.go").read_text(encoding="utf-8")
+    binary_runtime = (output_dir / "runtime" / "binary" / "gen_runtime.go").read_text(encoding="utf-8")
+    transport_text = (output_dir / "transports" / "http" / "gen_transport.go").read_text(encoding="utf-8")
+
+    assert "func (client *GenBinaryClient) Audit(ctx context.Context) (*AuditPacket, error)" in route_text
+    assert 'ResponseKind:     runtime.ResponseKind("binary_schema")' in route_text
+    assert "var response AuditPacket" in route_text
+    assert "func ParseAuditPacket(r io.Reader) (*AuditPacket, error)" in schema_text
+    assert "func (value *AuditPacket) DecodeBinary(r io.Reader) error" in schema_text
+    assert 'ResponseBinarySchema ResponseKind = "binary_schema"' in runtime_text
+    assert "type DecodeError struct" in binary_runtime
+    assert "func decodeBinarySchemaResponse" in transport_text
+
+    if shutil.which("go") is None:
+        return
+
+    (output_dir / "go.mod").write_text("module example.com/generated/client\n\ngo 1.23.8\n", encoding="utf-8")
+    result = subprocess.run(
+        ["go", "test", "./..."],
+        cwd=output_dir,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
 def test_golang_client_binary_writer_uses_payload_context_paths_for_nested_structs(tmp_path):
     class SubmitResponse(Model):
         status = String(description="status")
@@ -522,8 +589,8 @@ endian: little
     assert "func writeDemoPacketItem(value *DemoPacketItem, writer *runtimebinary.Writer, state *demoPacketBinaryState) error" in schema_text
     assert 'return runtimebinary.WrapField("Item", err)' in schema_text
     assert 'writeDemoPacketItem(&value.Items[index], writer, state); err != nil {\n\t\t\treturn runtimebinary.WrapIndex("items", index, err)\n\t\t}' in schema_text
-    assert 'runtimebinary.RequireRange("item_count", uint64(value.ItemCount), 0, 1)' in schema_text
-    assert 'runtimebinary.RequireRange("id", uint64(value.ID), 1, ^uint64(0))' in schema_text
+    assert 'runtimebinary.RequireRange("item_count", uint64(value.ItemCount), 0, uint64(1))' in schema_text
+    assert 'runtimebinary.RequireRange("id", uint64(value.ID), uint64(1), ^uint64(0))' in schema_text
     assert "value.Item_count" not in schema_text
     assert "value.Id" not in schema_text
     assert "runtimebinary.JoinPath(path," not in schema_text

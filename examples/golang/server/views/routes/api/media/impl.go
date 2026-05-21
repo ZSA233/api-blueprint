@@ -37,9 +37,14 @@ func (impl *Router) MediaDownload(ctx *CTX_MediaDownload, req *REQ_MediaDownload
 	return &RSP_MediaDownload{
 		Body:        []byte("PK\x03\x04api-blueprint media report\n"),
 		ContentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-		Headers: map[string]string{
-			"Content-Disposition": `attachment; filename="media-report.xlsx"`,
-		},
+	}, nil
+}
+
+func (impl *Router) MediaDownloadDynamic(ctx *CTX_MediaDownloadDynamic, req *REQ_MediaDownloadDynamic) (rsp *RSP_MediaDownloadDynamic, err error) {
+	return &RSP_MediaDownloadDynamic{
+		Body:        []byte("PK\x03\x04api-blueprint media report dynamic\n"),
+		ContentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		Filename:    "media-report-dynamic.xlsx",
 	}, nil
 }
 

@@ -78,6 +78,10 @@ const RouteApiErrorsByCode = {
     "-1": ApiErrorsByID["CommonErr.UNKNOWN"],
     "55555": ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
   },
+  "api.binary.get.auditpacketresponse": {
+    "-1": ApiErrorsByID["CommonErr.UNKNOWN"],
+    "55555": ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
+  },
   "api.conflict.get.default": {
     "-1": ApiErrorsByID["CommonErr.UNKNOWN"],
     "55555": ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
@@ -137,6 +141,10 @@ const RouteApiErrorsByCode = {
     "55555": ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
   },
   "api.media.get.download": {
+    "-1": ApiErrorsByID["CommonErr.UNKNOWN"],
+    "55555": ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
+  },
+  "api.media.get.downloaddynamic": {
     "-1": ApiErrorsByID["CommonErr.UNKNOWN"],
     "55555": ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
   },

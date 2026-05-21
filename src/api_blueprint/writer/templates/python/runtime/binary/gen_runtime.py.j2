@@ -14,6 +14,14 @@ class BinaryEncodeError(ValueError):
         super().__init__(self.detail)
 
 
+class BinaryDecodeError(ValueError):
+    def __init__(self, path: str, message: str, detail: str | None = None):
+        self.path = path
+        self.message = message
+        self.detail = detail if detail is not None else f"{path}: {message}" if path else message
+        super().__init__(self.detail)
+
+
 class ApiBinaryBody(Protocol):
     content_type: str
     content_length: int | None
@@ -143,6 +151,72 @@ class BinaryWriter:
         self.output.write(bytes(data))
 
 
+class BinaryReader:
+    def __init__(self, data: bytes | bytearray | memoryview | io.BufferedIOBase | io.BytesIO, endian: str = "little"):
+        if hasattr(data, "read"):
+            self.input = data
+        else:
+            self.input = io.BytesIO(bytes(data))
+        self.endian = endian
+        self.prefix = "<" if endian == "little" else ">"
+
+    def read_exact(self, path: str, count: int) -> bytes:
+        if count < 0:
+            raise BinaryDecodeError(path, "negative byte count")
+        data = self.input.read(count)
+        if len(data) != count:
+            raise BinaryDecodeError(path, f"expected {count} bytes, got {len(data)}")
+        return data
+
+    def read_u8(self, path: str) -> int:
+        return self.read_exact(path, 1)[0]
+
+    def read_u16(self, path: str) -> int:
+        return struct.unpack(self.prefix + "H", self.read_exact(path, 2))[0]
+
+    def read_u24(self, path: str) -> int:
+        return int.from_bytes(self.read_exact(path, 3), self.endian, signed=False)
+
+    def read_u32(self, path: str) -> int:
+        return struct.unpack(self.prefix + "I", self.read_exact(path, 4))[0]
+
+    def read_u64(self, path: str) -> int:
+        return struct.unpack(self.prefix + "Q", self.read_exact(path, 8))[0]
+
+    def read_i8(self, path: str) -> int:
+        return struct.unpack("b", self.read_exact(path, 1))[0]
+
+    def read_i16(self, path: str) -> int:
+        return struct.unpack(self.prefix + "h", self.read_exact(path, 2))[0]
+
+    def read_i24(self, path: str) -> int:
+        return int.from_bytes(self.read_exact(path, 3), self.endian, signed=True)
+
+    def read_i32(self, path: str) -> int:
+        return struct.unpack(self.prefix + "i", self.read_exact(path, 4))[0]
+
+    def read_i64(self, path: str) -> int:
+        return struct.unpack(self.prefix + "q", self.read_exact(path, 8))[0]
+
+    def read_f32(self, path: str) -> float:
+        return struct.unpack(self.prefix + "f", self.read_exact(path, 4))[0]
+
+    def read_f64(self, path: str) -> float:
+        return struct.unpack(self.prefix + "d", self.read_exact(path, 8))[0]
+
+    def read_bool(self, path: str) -> bool:
+        return self.read_u8(path) != 0
+
+    def read_bytes(self, path: str, count: int) -> bytes:
+        return self.read_exact(path, count)
+
+    def read_string(self, path: str, count: int) -> str:
+        try:
+            return self.read_exact(path, count).decode("utf-8")
+        except UnicodeDecodeError as err:
+            raise BinaryDecodeError(path, "invalid utf-8 string") from err
+
+
 def is_api_binary_body(value: object) -> bool:
     return hasattr(value, "write_to") and hasattr(value, "to_bytes")
 
@@ -159,19 +233,26 @@ def index_binary_path(path: str, index: int) -> str:
     return f"{path}[{index}]"
 
 
-def wrap_binary_field(path: str, error: BaseException) -> BinaryEncodeError:
+def wrap_binary_field(path: str, error: BaseException) -> BinaryEncodeError | BinaryDecodeError:
+    if isinstance(error, BinaryDecodeError):
+        return BinaryDecodeError(join_binary_path(path, error.path), error.message)
     if isinstance(error, BinaryEncodeError):
         return BinaryEncodeError(join_binary_path(path, error.path), error.message)
     return BinaryEncodeError(path, str(error))
 
 
-def wrap_binary_index(path: str, index: int, error: BaseException) -> BinaryEncodeError:
+def wrap_binary_index(path: str, index: int, error: BaseException) -> BinaryEncodeError | BinaryDecodeError:
     return wrap_binary_field(index_binary_path(path, index), error)
 
 
 def require_binary(path: str, condition: bool, message: str) -> None:
     if not condition:
         raise BinaryEncodeError(path, message)
+
+
+def require_binary_decode(path: str, condition: bool, message: str) -> None:
+    if not condition:
+        raise BinaryDecodeError(path, message)
 
 
 def require_range(path: str, value: int | float, minimum: int | float, maximum: int | float) -> None:

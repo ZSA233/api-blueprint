@@ -65,6 +65,17 @@ class MediaClient:
         )
         return payload
 
+    async def media_download_dynamic(self) -> ApiRawResponse[bytes]:
+        response_type: str | None = 'file'
+        payload = await self._transport.request(
+            "GET",
+            "/api/media/download-dynamic",
+            route_id="api.media.get.downloaddynamic",
+            response_type=response_type,
+            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+        )
+        return payload
+
     async def media_mjpeg(self) -> ApiStreamResponse:
         response_type: str | None = 'stream'
         payload = await self._transport.request(

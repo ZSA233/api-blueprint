@@ -48,6 +48,19 @@ type CTX_MediaDownload = providers.Context[
 	providers.RawResponse,
 ]
 
+type REQ_MediaDownloadDynamic = providers.REQ[
+	any,
+	any,
+]
+
+type RSP_MediaDownloadDynamic = providers.RawResponse
+
+type CTX_MediaDownloadDynamic = providers.Context[
+	any,
+	any,
+	providers.RawResponse,
+]
+
 type REQ_MediaMjpeg = providers.REQ[
 	any,
 	any,

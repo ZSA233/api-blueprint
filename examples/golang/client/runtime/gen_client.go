@@ -21,12 +21,13 @@ const (
 type ResponseKind string
 
 const (
-	ResponseJSON       ResponseKind = "json"
-	ResponseXML        ResponseKind = "xml"
-	ResponseText       ResponseKind = "text"
-	ResponseBytes      ResponseKind = "bytes"
-	ResponseFile       ResponseKind = "file"
-	ResponseByteStream ResponseKind = "byte_stream"
+	ResponseJSON         ResponseKind = "json"
+	ResponseXML          ResponseKind = "xml"
+	ResponseText         ResponseKind = "text"
+	ResponseBytes        ResponseKind = "bytes"
+	ResponseFile         ResponseKind = "file"
+	ResponseByteStream   ResponseKind = "byte_stream"
+	ResponseBinarySchema ResponseKind = "binary_schema"
 )
 
 type Request struct {

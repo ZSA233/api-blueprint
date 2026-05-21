@@ -149,6 +149,156 @@ import (
 {% endif -%}
 {%- endmacro %}
 
+{% macro check_decode_field(field, receiver, number_expr, path) -%}
+{% if field.rule.get("const") -%}
+{% if field.is_bytes -%}
+	if err := runtimebinary.RequireDecode({{ path }}, string({{ receiver }}) == string({{ field.const_expr }}), "const mismatch"); err != nil {
+		return err
+	}
+{% elif field.is_string -%}
+	if err := runtimebinary.RequireDecode({{ path }}, {{ receiver }} == {{ field.const_expr }}, "const mismatch"); err != nil {
+		return err
+	}
+{% elif field.wire_type == "bool" -%}
+	if err := runtimebinary.RequireDecode({{ path }}, {{ receiver }} == {{ field.const_expr }}, "const mismatch"); err != nil {
+		return err
+	}
+{% elif field.is_signed_integer_scalar -%}
+	if err := runtimebinary.RequireDecode({{ path }}, {{ number_expr }} == int64({{ field.const_expr }}), "const mismatch"); err != nil {
+		return err
+	}
+{% else -%}
+	if err := runtimebinary.RequireDecode({{ path }}, {{ number_expr }} == uint64({{ field.const_expr }}), "const mismatch"); err != nil {
+		return err
+	}
+{% endif -%}
+{% endif -%}
+{% if field.rule.get("min") and field.is_integer_scalar -%}
+{% if field.is_signed_integer_scalar -%}
+	if err := runtimebinary.RequireDecode({{ path }}, {{ number_expr }} >= {{ field.min_expr }}, "below min"); err != nil {
+		return err
+	}
+{% else -%}
+	if err := runtimebinary.RequireDecode({{ path }}, {{ number_expr }} >= {{ field.min_expr }}, "below min"); err != nil {
+		return err
+	}
+{% endif -%}
+{% endif -%}
+{% if field.rule.get("max") and field.is_integer_scalar -%}
+	if err := runtimebinary.RequireDecode({{ path }}, {{ number_expr }} <= {{ field.max_expr }}, "exceeds max"); err != nil {
+		return err
+	}
+{% endif -%}
+{% if field.rule.get("assert") and field.is_integer_scalar -%}
+	if err := runtimebinary.RequireDecode({{ path }}, {{ number_expr }} == {{ field.assert_expr }}, "assert mismatch"); err != nil {
+		return err
+	}
+{% endif -%}
+{% if field.bitflags_zero_mask -%}
+	if err := runtimebinary.RequireDecode({{ path }}, uint64({{ number_expr }})&{{ field.bitflags_zero_mask }} == 0, "reserved bits must be zero"); err != nil {
+		return err
+	}
+{% endif -%}
+{%- endmacro %}
+
+{% macro count_block(field) -%}
+	{{ field.go_name }}Count := {{ field.count_expr }}
+{% if field.rule.get("max") -%}
+	if {{ field.go_name }}Count > {{ field.max_expr }} {
+		return runtimebinary.WrapDecodeField({{ field.name | code_literal }}, runtimebinary.CountExceedsMax({{ field.go_name }}Count, {{ field.max_expr }}))
+	}
+{% endif -%}
+	if {{ field.go_name }}Count > uint64(^uint(0)>>1) {
+		return runtimebinary.WrapDecodeField({{ field.name | code_literal }}, runtimebinary.CountExceedsIntMax({{ field.go_name }}Count))
+	}
+{%- endmacro %}
+
+{% macro read_field(field, object) -%}
+{% set path = field.name | code_literal -%}
+{% if field.is_hidden -%}
+{{ count_block(field) }}
+{% if field.is_reserved -%}
+	if err := reader.ReadZero(int({{ field.go_name }}Count)); err != nil {
+		return runtimebinary.WrapDecodeField({{ path }}, runtimebinary.ReadFailed(err))
+	}
+{% else -%}
+	if err := reader.Skip(int({{ field.go_name }}Count)); err != nil {
+		return runtimebinary.WrapDecodeField({{ path }}, runtimebinary.ReadFailed(err))
+	}
+{% endif -%}
+{% elif field.is_bytes -%}
+{{ count_block(field) }}
+	{{ field.go_name }}Value, err := reader.ReadBytes(int({{ field.go_name }}Count))
+	if err != nil {
+		return runtimebinary.WrapDecodeField({{ path }}, runtimebinary.ReadFailed(err))
+	}
+{{ check_decode_field(field, field.go_name ~ "Value", field.go_name ~ "Value", path) }}
+{% if not field.has_default -%}
+	out.{{ field.go_name }} = {{ field.go_name }}Value
+{% endif -%}
+{% elif field.is_string -%}
+{{ count_block(field) }}
+	{{ field.go_name }}Bytes, err := reader.ReadBytes(int({{ field.go_name }}Count))
+	if err != nil {
+		return runtimebinary.WrapDecodeField({{ path }}, runtimebinary.ReadFailed(err))
+	}
+	{{ field.go_name }}Value := string({{ field.go_name }}Bytes)
+{{ check_decode_field(field, field.go_name ~ "Value", field.go_name ~ "Value", path) }}
+{% if not field.has_default -%}
+	out.{{ field.go_name }} = {{ field.go_name }}Value
+{% endif -%}
+{% elif field.is_array -%}
+{{ count_block(field) }}
+{% if not field.has_default -%}
+	out.{{ field.go_name }} = make([]{{ field.single_go_type }}, int({{ field.go_name }}Count))
+{% endif -%}
+	for index := 0; index < int({{ field.go_name }}Count); index++ {
+{% if field.is_scalar -%}
+		{{ field.go_name }}Value, err := reader.{{ field.read_method }}()
+		if err != nil {
+			return runtimebinary.WrapDecodeIndex({{ path }}, index, runtimebinary.ReadFailed(err))
+		}
+{{ check_decode_field(field, field.go_name ~ "Value", field.numeric_expr(field.go_name ~ "Value"), path) | indent(2, true) }}
+{% if not field.has_default -%}
+		out.{{ field.go_name }}[index] = {{ field.reader_expr(field.go_name ~ "Value") }}
+{% endif -%}
+{% else -%}
+		var item {{ field.single_go_type }}
+		if err := read{{ field.single_go_type }}(reader, state, &item); err != nil {
+			return runtimebinary.WrapDecodeIndex({{ path }}, index, err)
+		}
+{% if not field.has_default -%}
+		out.{{ field.go_name }}[index] = item
+{% endif -%}
+{% endif -%}
+	}
+{% elif field.is_scalar -%}
+	{{ field.go_name }}Value, err := reader.{{ field.read_method }}()
+	if err != nil {
+		return runtimebinary.WrapDecodeField({{ path }}, runtimebinary.ReadFailed(err))
+	}
+	{{ field.go_name }}Typed := {{ field.reader_expr(field.go_name ~ "Value") }}
+{{ check_decode_field(field, field.go_name ~ "Typed", field.numeric_expr(field.go_name ~ "Typed"), path) }}
+{% if not field.has_default -%}
+	out.{{ field.go_name }} = {{ field.go_name }}Typed
+{% endif -%}
+{% if field.is_integer_scalar -%}
+	state.{{ field.go_name }} = int64({{ field.go_name }}Typed)
+{% endif -%}
+{% else -%}
+{% if not field.has_default -%}
+	if err := read{{ field.single_go_type }}(reader, state, &out.{{ field.go_name }}); err != nil {
+		return runtimebinary.WrapDecodeField({{ path }}, err)
+	}
+{% else -%}
+	var {{ field.go_name }}Value {{ field.single_go_type }}
+	if err := read{{ field.single_go_type }}(reader, state, &{{ field.go_name }}Value); err != nil {
+		return runtimebinary.WrapDecodeField({{ path }}, err)
+	}
+{% endif -%}
+{% endif -%}
+{%- endmacro %}
+
 {% for schema in binary_schemas %}
 {% for value_set in schema.value_sets %}
 type {{ value_set.go_type }} {{ value_set.base_type }}
@@ -215,6 +365,25 @@ func (value *{{ schema.go_type }}) WriteBinary(output io.Writer) error {
 	return Write{{ schema.go_type }}(value, writer)
 }
 
+func Parse{{ schema.go_type }}(r io.Reader) (*{{ schema.go_type }}, error) {
+	reader := runtimebinary.NewReader(r, {{ schema.endian }})
+	state := &{{ schema.state_type }}{}
+	var out {{ schema.go_type }}
+{% for section in schema.sections %}	if err := read{{ section.go_type }}(reader, state, &out.{{ schema.packet_field_name(section.name) }}); err != nil {
+		return nil, runtimebinary.WrapDecodeField("{{ schema.name }}.{{ schema.packet_field_name(section.name) | lower }}", err)
+	}
+{% endfor %}	return &out, nil
+}
+
+func (value *{{ schema.go_type }}) DecodeBinary(r io.Reader) error {
+	parsed, err := Parse{{ schema.go_type }}(r)
+	if err != nil {
+		return err
+	}
+	*value = *parsed
+	return nil
+}
+
 func New{{ schema.go_type }}Body(contentLength int64, write func(*runtimebinary.Writer) error) runtimebinary.Body {
 	body := runtimebinary.NewStreamingBody(contentLength, write)
 	body.ContentTypeValue = {{ schema.content_type | code_literal }}
@@ -248,6 +417,11 @@ func Write{{ object.go_type }}(value *{{ object.go_type }}, writer *runtimebinar
 
 func write{{ object.go_type }}(value *{{ object.go_type }}, writer *runtimebinary.Writer, state *{{ schema.state_type }}) error {
 {% for field in object.fields %}{{ write_field(field, object) -}}
+{% endfor %}	return nil
+}
+
+func read{{ object.go_type }}(reader *runtimebinary.Reader, state *{{ schema.state_type }}, out *{{ object.go_type }}) error {
+{% for field in object.fields %}{{ read_field(field, object) }}
 {% endfor %}	return nil
 }
 

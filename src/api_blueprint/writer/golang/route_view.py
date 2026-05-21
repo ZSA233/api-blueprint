@@ -176,8 +176,9 @@ class GoRouteProtocolView:
             "bytes": "bytes",
             "file": "file",
             "byte_stream": "byte_stream",
+            "binary_schema": "binary_schema",
         }
-        if self.protocol.response.kind in {"bytes", "file", "byte_stream"}:
+        if self.protocol.response.kind in {"bytes", "file", "byte_stream", "binary_schema"}:
             response_type = self.protocol.response.kind
         else:
             response_type = media_type_mapping[self.protocol.response.media_type]
@@ -270,6 +271,8 @@ class GoRouteProtocolView:
             rsp_body_ref = rsp_json_proto
         elif self.protocol.response.kind in {"bytes", "file", "byte_stream"}:
             rsp_body_ref = GolangType("{provider_package$}RawResponse")
+        elif self.protocol.response.binary_schema is not None:
+            rsp_body_ref = GolangType(f"{{binary_package$}}{self.protocol.response.binary_schema.name}")
 
         yield GolangProto(
             self.rsp_type,

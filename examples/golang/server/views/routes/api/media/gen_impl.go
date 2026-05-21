@@ -20,6 +20,10 @@ func (impl *_GenRouter) MediaDownload(ctx *CTX_MediaDownload, req *REQ_MediaDown
 	return nil, fmt.Errorf("not implemented")
 }
 
+func (impl *_GenRouter) MediaDownloadDynamic(ctx *CTX_MediaDownloadDynamic, req *REQ_MediaDownloadDynamic) (rsp *RSP_MediaDownloadDynamic, err error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
 func (impl *_GenRouter) MediaMjpeg(ctx *CTX_MediaMjpeg, req *REQ_MediaMjpeg) (rsp *RSP_MediaMjpeg, err error) {
 	return nil, fmt.Errorf("not implemented")
 }

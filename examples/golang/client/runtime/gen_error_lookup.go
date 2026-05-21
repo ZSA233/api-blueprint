@@ -99,6 +99,10 @@ var routeApiErrorsByCode = map[string]map[ApiErrorCode]ApiErrorEntry{
 		CommonErrUnknown:     ApiErrorsByID["CommonErr.UNKNOWN"],
 		CommonErrTokenExpire: ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
 	},
+	"api.binary.get.auditpacketresponse": {
+		CommonErrUnknown:     ApiErrorsByID["CommonErr.UNKNOWN"],
+		CommonErrTokenExpire: ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
+	},
 	"api.conflict.get.default": {
 		CommonErrUnknown:     ApiErrorsByID["CommonErr.UNKNOWN"],
 		CommonErrTokenExpire: ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
@@ -158,6 +162,10 @@ var routeApiErrorsByCode = map[string]map[ApiErrorCode]ApiErrorEntry{
 		CommonErrTokenExpire: ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
 	},
 	"api.media.get.download": {
+		CommonErrUnknown:     ApiErrorsByID["CommonErr.UNKNOWN"],
+		CommonErrTokenExpire: ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
+	},
+	"api.media.get.downloaddynamic": {
 		CommonErrUnknown:     ApiErrorsByID["CommonErr.UNKNOWN"],
 		CommonErrTokenExpire: ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
 	},

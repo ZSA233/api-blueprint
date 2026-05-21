@@ -7,6 +7,8 @@ import type { ApiFilePart, ApiRawResponse } from "../../../runtime/client";
 
 // Route Contracts
 
+export type MediaDownloadDynamicResponse = ApiRawResponse<Blob>;
+
 export type MediaDownloadResponse = ApiRawResponse<Blob>;
 
 export type MediaFrameResponse = ApiRawResponse<Blob>;

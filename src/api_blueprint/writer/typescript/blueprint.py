@@ -94,6 +94,7 @@ class TypeScriptRoute:
         self.multipart_proto = self._ensure_model(self.protocol.request.multipart.model, "REQ", "FORM")
         self.json_proto = self._ensure_model(self.protocol.request.json.model, "REQ", "JSON")
         self.binary_schema = self.protocol.request.binary_schema
+        self.response_binary_schema = self.protocol.response.binary_schema
         self.bin_proto = self.binary_schema is None and self.protocol.request.binary.model is not None
 
         self.response_kind = self.protocol.response.kind
@@ -157,6 +158,8 @@ class TypeScriptRoute:
 
     @property
     def response_type_expr(self) -> str:
+        if self.response_kind == "binary_schema" and self.response_binary_schema is not None:
+            return f"Types.{self.response_binary_schema.name}"
         return self._type_expr(self.response_alias) or "void"
 
     @property
@@ -169,6 +172,8 @@ class TypeScriptRoute:
 
     @property
     def transport_response_type(self) -> str:
+        if self.response_kind == "binary_schema":
+            return "binary_schema"
         if self.response_kind in {"bytes", "file"}:
             return "blob"
         if self.response_kind == "byte_stream":
@@ -219,6 +224,8 @@ class TypeScriptRoute:
 
     def _ensure_response_alias(self) -> Optional[TypeScriptProto]:
         alias_base = self._route_model_name("RSP", "")
+        if self.response_kind == "binary_schema" and self.response_binary_schema is not None:
+            return None
         if self.response_kind in {"bytes", "file"}:
             alias_type = TypeScriptResolvedType("ApiRawResponse<Blob>")
         elif self.response_kind == "byte_stream":
@@ -403,7 +410,12 @@ class TypeScriptViewGroup:
         return base
 
     def binary_schemas(self) -> list[TypeScriptBinarySchema]:
-        schemas = [route.binary_schema for route in self.routes if route.binary_schema is not None]
+        schemas = []
+        for route in self.routes:
+            if route.binary_schema is not None:
+                schemas.append(route.binary_schema)
+            if route.response_binary_schema is not None:
+                schemas.append(route.response_binary_schema)
         return unique_typescript_binary_schemas(schemas)
 
     def message_union_helpers(self) -> list["TypeScriptMessageUnionHelper"]:

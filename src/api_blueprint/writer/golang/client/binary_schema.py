@@ -41,6 +41,21 @@ WRITE_METHODS = {
     "f64": "WriteFloat64",
     "bool": "WriteBool",
 }
+READ_METHODS = {
+    "u8": "ReadUint8",
+    "u16": "ReadUint16",
+    "u24": "ReadUint24",
+    "u32": "ReadUint32",
+    "u64": "ReadUint64",
+    "i8": "ReadInt8",
+    "i16": "ReadInt16",
+    "i24": "ReadInt24",
+    "i32": "ReadInt32",
+    "i64": "ReadInt64",
+    "f32": "ReadFloat32",
+    "f64": "ReadFloat64",
+    "bool": "ReadBool",
+}
 INTEGER_TYPES = {"u8", "u16", "u24", "u32", "u64", "i8", "i16", "i24", "i32", "i64"}
 SIGNED_INTEGER_TYPES = {"i8", "i16", "i24", "i32", "i64"}
 EXPR_TOKEN_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*|\d+|[()+\-*/]")
@@ -72,7 +87,9 @@ def compile_go_uint_expr(expr: str) -> str:
         raise ValueError(f"unsupported binary expression: {expr}")
     rendered: list[str] = []
     for token in tokens:
-        if token.isdigit() or token in {"+", "-", "*", "/", "(", ")"}:
+        if token.isdigit():
+            rendered.append(f"uint64({token})")
+        elif token in {"+", "-", "*", "/", "(", ")"}:
             rendered.append(token)
         else:
             rendered.append(f"uint64(state.{go_name(token)})")
@@ -87,7 +104,9 @@ def compile_go_int_expr(expr: str) -> str:
         raise ValueError(f"unsupported binary expression: {expr}")
     rendered: list[str] = []
     for token in tokens:
-        if token.isdigit() or token in {"+", "-", "*", "/", "(", ")"}:
+        if token.isdigit():
+            rendered.append(f"int64({token})")
+        elif token in {"+", "-", "*", "/", "(", ")"}:
             rendered.append(token)
         else:
             rendered.append(f"int64(state.{go_name(token)})")
@@ -348,12 +367,19 @@ class GoClientBinaryField:
     def numeric_expr(self, expr: str) -> str:
         if self.wire_type == "bool":
             return expr
+        if self.is_signed_integer_scalar:
+            return f"int64({expr})"
         return f"uint64({expr})"
 
     def writer_expr(self, expr: str) -> str:
         if self.value_type is None:
             return expr
         return f"{GO_SCALAR_TYPES.get(self.wire_type, 'uint64')}({expr})"
+
+    def reader_expr(self, expr: str) -> str:
+        if self.value_type is None:
+            return expr
+        return f"{self.value_type.go_type}({expr})"
 
     @property
     def const_expr(self) -> str:
@@ -390,6 +416,10 @@ class GoClientBinaryField:
     @property
     def write_method(self) -> str:
         return WRITE_METHODS[self.wire_type]
+
+    @property
+    def read_method(self) -> str:
+        return READ_METHODS[self.wire_type]
 
     @property
     def sizeof_name(self) -> str | None:

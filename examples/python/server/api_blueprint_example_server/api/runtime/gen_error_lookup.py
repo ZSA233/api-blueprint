@@ -68,6 +68,10 @@ ROUTE_API_ERRORS_BY_CODE: dict[str, dict[int, ApiErrorEntry]] = {
         -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
         55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
     },
+    "api.binary.get.auditpacketresponse": {
+        -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
+        55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
+    },
     "api.conflict.get.default": {
         -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
         55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
@@ -127,6 +131,10 @@ ROUTE_API_ERRORS_BY_CODE: dict[str, dict[int, ApiErrorEntry]] = {
         55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
     },
     "api.media.get.download": {
+        -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
+        55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
+    },
+    "api.media.get.downloaddynamic": {
         -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
         55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
     },

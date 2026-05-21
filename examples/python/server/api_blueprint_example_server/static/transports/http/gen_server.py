@@ -168,6 +168,37 @@ def _raw_response(
     )
 
 
+def _binary_schema_response(
+    *,
+    content_type: str,
+    result: Any,
+    encoder: Any,
+) -> Response:
+    if isinstance(result, Response):
+        return result
+    status = 200
+    headers: Mapping[str, str] | None = None
+    body = result
+    effective_content_type = content_type
+    if isinstance(result, ApiRawResponse):
+        status = result.status
+        headers = result.headers
+        body = result.body
+        effective_content_type = result.content_type or content_type
+    if isinstance(body, (bytes, bytearray, memoryview)):
+        content = bytes(body)
+    else:
+        binary_body = encoder(body)
+        content = binary_body.to_bytes()
+        effective_content_type = binary_body.content_type or effective_content_type
+    return Response(
+        content=content,
+        status_code=status,
+        media_type=effective_content_type,
+        headers=dict(headers or {}),
+    )
+
+
 def _wrap_api_error(envelope: dict[str, Any], error: ApiError, route_id: str) -> Any:
     payload = _jsonable(make_api_error_payload(_jsonable(error.payload), route_id))
     kind = envelope.get("kind") or "none"

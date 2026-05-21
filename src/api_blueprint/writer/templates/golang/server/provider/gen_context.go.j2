@@ -46,6 +46,7 @@ type RouteInfo struct {
 	Methods   []string
 	Transport TransportKind
 	Scope     ConnectionScope
+	Filename  string
 }
 
 type ContextInterface interface {

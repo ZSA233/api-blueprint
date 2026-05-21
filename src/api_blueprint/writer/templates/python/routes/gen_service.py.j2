@@ -4,9 +4,10 @@ from pathlib import Path
 from typing import Any, AsyncIterable, Iterable, Protocol
 
 from {{ group.runtime_import_prefix }}runtime.server import ApiRawResponse, ApiServerChannel, ApiServerStream
-{% if group.type_import_names() %}
+{% if group.type_import_names() or group.binary_schemas() %}
 from .gen_types import (
 {% for name in group.type_import_names() %}    {{ name }},
+{% endfor %}{% for schema in group.binary_schemas() %}    {{ schema.py_type }},
 {% endfor %})
 {% endif %}
 

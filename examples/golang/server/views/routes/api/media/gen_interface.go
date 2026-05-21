@@ -6,5 +6,6 @@ type RouterInterface interface {
 	MediaPreview(ctx *CTX_MediaPreview, req *REQ_MediaPreview) (rsp *RSP_MediaPreview, err error)
 	MediaFrame(ctx *CTX_MediaFrame, req *REQ_MediaFrame) (rsp *RSP_MediaFrame, err error)
 	MediaDownload(ctx *CTX_MediaDownload, req *REQ_MediaDownload) (rsp *RSP_MediaDownload, err error)
+	MediaDownloadDynamic(ctx *CTX_MediaDownloadDynamic, req *REQ_MediaDownloadDynamic) (rsp *RSP_MediaDownloadDynamic, err error)
 	MediaMjpeg(ctx *CTX_MediaMjpeg, req *REQ_MediaMjpeg) (rsp *RSP_MediaMjpeg, err error)
 }

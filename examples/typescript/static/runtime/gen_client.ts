@@ -44,7 +44,7 @@ export interface RequestOptions<R> {
   binary?: RequestBinaryBody;
   headers?: Record<string, string>;
   init?: RequestInit;
-  responseType?: "json" | "text" | "blob" | "arrayBuffer" | "stream";
+  responseType?: "json" | "text" | "blob" | "arrayBuffer" | "stream" | "binary_schema";
   responseEnvelope?: ApiResponseEnvelope;
   timeoutMs?: number;
 }

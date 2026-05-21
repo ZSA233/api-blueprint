@@ -4,6 +4,8 @@
 
 import {
   ApiBinaryBody,
+  BinaryDecodeError,
+  BinaryReader,
   BinaryWriter,
   EncodedBinaryBlock,
   StreamingBinaryBody,
@@ -11,6 +13,7 @@ import {
   bytesEqual,
   isApiBinaryBody,
   requireBinary,
+  requireDecode,
   requireRange,
   requireSize,
   wrapBinaryField,
@@ -108,6 +111,80 @@ import {
 {% endif %}
 {%- endmacro %}
 
+{% macro check_decoded_field(field, receiver, number_expr, path) -%}
+{% if field.const_value %}
+{% if field.is_bytes %}
+  requireDecode({{ path | code_literal }}, bytesEqual({{ receiver }}, {{ field.default_expr }}), "const mismatch");
+{% elif field.is_string %}
+  requireDecode({{ path | code_literal }}, {{ receiver }} === {{ field.default_expr }}, "const mismatch");
+{% elif field.wire_type == "bool" %}
+  requireDecode({{ path | code_literal }}, {{ receiver }} === {{ field.default_expr }}, "const mismatch");
+{% else %}
+  requireDecode({{ path | code_literal }}, {{ number_expr }} === {{ field.const_expr }}, "const mismatch");
+{% endif %}
+{% endif %}
+{% if field.min_value and field.supports_numeric_rules %}
+  requireDecode({{ path | code_literal }}, {{ number_expr }} >= {{ field.min_expr }}, "below min");
+{% endif %}
+{% if field.max_value and field.supports_numeric_rules %}
+  requireDecode({{ path | code_literal }}, {{ number_expr }} <= {{ field.max_expr }}, "exceeds max");
+{% endif %}
+{% if field.assert_value and field.supports_numeric_rules %}
+  requireDecode({{ path | code_literal }}, {{ number_expr }} === {{ field.assert_expr }}, "assert mismatch");
+{% endif %}
+{% if field.bitflags_zero_mask %}
+  requireDecode({{ path | code_literal }}, (Number({{ number_expr }}) & {{ field.bitflags_zero_mask }}) === 0, "reserved bits must be zero");
+{% endif %}
+{%- endmacro %}
+
+{% macro read_field(field, object) -%}
+{% set field_path = field.name %}
+{% if field.is_hidden %}
+  const {{ field.ts_name }}Hidden = reader.readBytes({{ field_path | code_literal }}, {{ field.count_expr }});
+{% if field.is_reserved %}
+  requireDecode({{ field_path | code_literal }}, bytesEqual({{ field.ts_name }}Hidden, new Uint8Array({{ field.count_expr }})), "reserved bytes must be zero");
+{% endif %}
+{% elif field.is_bytes %}
+  const {{ field.ts_name }} = reader.readBytes({{ field_path | code_literal }}, {{ field.count_expr }});
+{{ check_decoded_field(field, field.ts_name, field.ts_name, field_path) }}
+{% elif field.is_string %}
+  const {{ field.ts_name }} = reader.readUtf8String({{ field_path | code_literal }}, {{ field.count_expr }});
+{{ check_decoded_field(field, field.ts_name, field.ts_name, field_path) }}
+{% elif field.is_array %}
+  const {{ field.ts_name }}Count = {{ field.count_expr }};
+{% if field.max_value %}
+  requireDecode({{ field_path | code_literal }}, {{ field.ts_name }}Count <= {{ field.max_expr }}, "exceeds max");
+{% endif %}
+  const {{ field.ts_name }}: {{ field.single_ts_type }}[] = [];
+  for (let index = 0; index < {{ field.ts_name }}Count; index += 1) {
+    try {
+{% if field.is_scalar %}
+      const item = reader.{{ field.read_method }}("");
+{{ check_decoded_field(field, "item", "item", field_path) | indent(6, true) }}
+{% else %}
+      const item = {{ field.schema.object_reader_name(field.typ) }}(reader, state, "");
+{% endif %}
+      {{ field.ts_name }}.push(item);
+    } catch (error) {
+      throw wrapBinaryIndex({{ field_path | code_literal }}, index, error);
+    }
+  }
+{% elif field.is_scalar %}
+  const {{ field.ts_name }} = reader.{{ field.read_method }}({{ field_path | code_literal }});
+{{ check_decoded_field(field, field.ts_name, field.ts_name, field_path) }}
+{% if field.is_integer_scalar %}
+  state.{{ field.ts_name }} = Number({{ field.ts_name }});
+{% endif %}
+{% else %}
+  let {{ field.ts_name }}: {{ field.single_ts_type }};
+  try {
+    {{ field.ts_name }} = read{{ field.single_ts_type }}(reader, state, "");
+  } catch (error) {
+    throw wrapBinaryField({{ field_path | code_literal }}, error);
+  }
+{% endif %}
+{%- endmacro %}
+
 {% macro write_block_tail(byte_size_expr) -%}
 {% if byte_size_expr %}
 requireSize(`${path}.bytes`, block.byteSize, {{ byte_size_expr }});
@@ -167,6 +244,10 @@ export function {{ schema.name }}ToBinaryBody(value: {{ schema.name }} | ApiBina
   return {{ schema.name }}Wire.toBinaryBody(value);
 }
 
+export function {{ schema.name }}FromBytes(value: Uint8Array | ArrayBuffer): {{ schema.name }} {
+  return {{ schema.name }}Wire.fromBytes(value);
+}
+
 interface {{ schema.state_type }} {
 {%- for field_name in schema.state_fields_ts %}
   {{ field_name }}: number;
@@ -208,6 +289,10 @@ export const {{ schema.name }}Wire = {
     return this.body({ write: (writer) => this.write(value, writer) });
   },
 
+  fromBytes(value: Uint8Array | ArrayBuffer): {{ schema.name }} {
+    return {{ schema.reader_name }}(value);
+  },
+
   write(value: {{ schema.name }}, writer: BinaryWriter): void {
     const state = {{ schema.state_factory }}();
 {%- for section in schema.sections %}
@@ -215,6 +300,16 @@ export const {{ schema.name }}Wire = {
 {%- endfor %}
   },
 };
+
+export function {{ schema.reader_name }}(value: Uint8Array | ArrayBuffer | BinaryReader): {{ schema.name }} {
+  const reader = value instanceof BinaryReader ? value : new BinaryReader(value, {{ schema.endian }});
+  const state = {{ schema.state_factory }}();
+  return {
+{%- for section in schema.sections %}
+    {{ schema.packet_field_name(section.name) }}: {{ section.reader_name }}(reader, state, "{{ schema.name }}.{{ schema.packet_field_name(section.name) }}"),
+{%- endfor %}
+  };
+}
 
 {% for object in schema.objects %}
 export function {{ object.writer_name }}(
@@ -227,6 +322,23 @@ export function {{ object.writer_name }}(
 {% for field in object.fields %}
 {{ write_field(field, object) | compact_code_block | indent(4, true) }}
 {% endfor %}
+  } catch (error) {
+    throw wrapBinaryField(path, error);
+  }
+}
+
+export function {{ object.reader_name }}(
+  reader: BinaryReader,
+  state: {{ schema.state_type }} = {{ schema.state_factory }}(),
+  path = "{{ object.path_name }}",
+): {{ object.name }} {
+  try {
+{% for field in object.fields %}
+{{ read_field(field, object) | compact_code_block | indent(4, true) }}
+{% endfor %}
+    return {
+{% for field in object.data_fields %}      {{ field.ts_name }},
+{% endfor %}    };
   } catch (error) {
     throw wrapBinaryField(path, error);
   }

@@ -83,6 +83,19 @@ type DemoPacket struct {
 	Body   DemoPacketBody
 }
 
+func (msg *DemoPacket) ContentType() string {
+	return "application/octet-stream"
+}
+
+func (msg *DemoPacket) ContentLength() int64 {
+	return -1
+}
+
+func (msg *DemoPacket) WriteBinary(output io.Writer) error {
+	writer := binaryruntime.NewWriter(output, binaryruntime.LittleEndian)
+	return WriteDemoPacket(msg, writer)
+}
+
 type demoPacketBinaryState struct {
 	Version     uint64
 	Kind        uint64
@@ -119,6 +132,17 @@ func (msg *DemoPacket) DecodeBinary(r io.Reader) error {
 	return nil
 }
 
+func WriteDemoPacket(value *DemoPacket, writer *binaryruntime.Writer) error {
+	state := &demoPacketBinaryState{}
+	if err := writeDemoPacketHeader(&value.Header, writer, state); err != nil {
+		return binaryruntime.WrapField("DemoPacket.header", err)
+	}
+	if err := writeDemoPacketBody(&value.Body, writer, state); err != nil {
+		return binaryruntime.WrapField("DemoPacket.body", err)
+	}
+	return nil
+}
+
 type DemoPacketHeader struct {
 	Magic       [4]byte
 	Version     uint16
@@ -129,6 +153,107 @@ type DemoPacketHeader struct {
 	ItemCount   uint16
 	PayloadLen  uint32
 	ScoreCount  uint16
+}
+
+func WriteDemoPacketHeader(value *DemoPacketHeader, writer *binaryruntime.Writer, state *demoPacketBinaryState) error {
+	if err := writeDemoPacketHeader(value, writer, state); err != nil {
+		return binaryruntime.WrapField("DemoPacketHeader", err)
+	}
+	return nil
+}
+
+func writeDemoPacketHeader(value *DemoPacketHeader, writer *binaryruntime.Writer, state *demoPacketBinaryState) error {
+	MagicCount := uint64(4)
+	if err := binaryruntime.RequireSize("magic", uint64(len(value.Magic)), uint64(MagicCount)); err != nil {
+		return err
+	}
+	if err := binaryruntime.Require("magic", string(value.Magic[:]) == string([]byte("ABP1")), "const mismatch"); err != nil {
+		return err
+	}
+	if err := writer.WriteBytes("magic", value.Magic[:]); err != nil {
+		return err
+	}
+	if err := binaryruntime.Require("version", uint64(value.Version) == uint64(uint64(1)), "const mismatch"); err != nil {
+		return err
+	}
+	if err := writer.WriteUint16("version", value.Version); err != nil {
+		return err
+	}
+	state.Version = uint64(value.Version)
+	if err := binaryruntime.Require("kind", uint64(value.Kind) == uint64(uint64(1)), "const mismatch"); err != nil {
+		return err
+	}
+	if err := writer.WriteUint16("kind", uint16(value.Kind)); err != nil {
+		return err
+	}
+	state.Kind = uint64(value.Kind)
+	if err := binaryruntime.RequireRange("flags", uint64(value.Flags), uint64(0), ^uint64(0)); err != nil {
+		return err
+	}
+	if err := binaryruntime.Require("flags", uint64(uint64(value.Flags))&4294967264 == 0, "reserved bits must be zero"); err != nil {
+		return err
+	}
+	if err := writer.WriteUint32("flags", uint32(value.Flags)); err != nil {
+		return err
+	}
+	state.Flags = uint64(value.Flags)
+	if err := writer.WriteZeroes("header_pad", uint64(1)); err != nil {
+		return err
+	}
+	if err := writer.WriteZeroes("reserved0", uint64(2)); err != nil {
+		return err
+	}
+	if err := binaryruntime.RequireRange("short_code", uint64(value.ShortCode), uint64(1), ^uint64(0)); err != nil {
+		return err
+	}
+	if err := binaryruntime.RequireRange("short_code", uint64(value.ShortCode), 0, uint64(16777215)); err != nil {
+		return err
+	}
+	if err := writer.WriteUint24("short_code", value.ShortCode); err != nil {
+		return err
+	}
+	state.ShortCode = uint64(value.ShortCode)
+	if err := binaryruntime.RequireSignedRange("signed_delta", int64(value.SignedDelta), int64(0), int64(^uint64(0)>>1)); err != nil {
+		return err
+	}
+	if err := binaryruntime.RequireSignedRange("signed_delta", int64(value.SignedDelta), -int64(^uint64(0)>>1)-1, int64(8388607)); err != nil {
+		return err
+	}
+	if err := writer.WriteInt24("signed_delta", value.SignedDelta); err != nil {
+		return err
+	}
+	state.SignedDelta = uint64(value.SignedDelta)
+	if err := binaryruntime.RequireRange("item_count", uint64(value.ItemCount), uint64(1), ^uint64(0)); err != nil {
+		return err
+	}
+	if err := binaryruntime.RequireRange("item_count", uint64(value.ItemCount), 0, uint64(8)); err != nil {
+		return err
+	}
+	if err := writer.WriteUint16("item_count", value.ItemCount); err != nil {
+		return err
+	}
+	state.ItemCount = uint64(value.ItemCount)
+	if err := binaryruntime.RequireRange("payload_len", uint64(value.PayloadLen), uint64(0), ^uint64(0)); err != nil {
+		return err
+	}
+	if err := binaryruntime.RequireRange("payload_len", uint64(value.PayloadLen), 0, uint64(64)); err != nil {
+		return err
+	}
+	if err := writer.WriteUint32("payload_len", value.PayloadLen); err != nil {
+		return err
+	}
+	state.PayloadLen = uint64(value.PayloadLen)
+	if err := binaryruntime.Require("score_count", uint64(value.ScoreCount) == uint64(uint64(2)), "const mismatch"); err != nil {
+		return err
+	}
+	if err := binaryruntime.RequireRange("score_count", uint64(value.ScoreCount), 0, uint64(4)); err != nil {
+		return err
+	}
+	if err := writer.WriteUint16("score_count", value.ScoreCount); err != nil {
+		return err
+	}
+	state.ScoreCount = uint64(value.ScoreCount)
+	return nil
 }
 
 func readDemoPacketHeader(reader *binaryruntime.Reader, state *demoPacketBinaryState, out *DemoPacketHeader) error {
@@ -183,10 +308,10 @@ func readDemoPacketHeader(reader *binaryruntime.Reader, state *demoPacketBinaryS
 	}
 	out.SignedDelta = binaryruntime.Int24(reader.Order, fixed[18:21])
 	state.SignedDelta = uint64(out.SignedDelta)
-	if uint64(out.SignedDelta) < uint64(0) {
+	if int64(out.SignedDelta) < int64(0) {
 		return binaryruntime.WrapField("signed_delta", binaryruntime.ErrBelowMin)
 	}
-	if uint64(out.SignedDelta) > uint64(8388607) {
+	if int64(out.SignedDelta) > int64(8388607) {
 		return binaryruntime.WrapField("signed_delta", binaryruntime.ErrExceedsMax)
 	}
 	out.ItemCount = reader.Order.Uint16(fixed[21:23])
@@ -221,6 +346,49 @@ type DemoPacketBody struct {
 	Payload  []byte
 	Scores   []float64
 	Checksum uint32
+}
+
+func WriteDemoPacketBody(value *DemoPacketBody, writer *binaryruntime.Writer, state *demoPacketBinaryState) error {
+	if err := writeDemoPacketBody(value, writer, state); err != nil {
+		return binaryruntime.WrapField("DemoPacketBody", err)
+	}
+	return nil
+}
+
+func writeDemoPacketBody(value *DemoPacketBody, writer *binaryruntime.Writer, state *demoPacketBinaryState) error {
+	ItemsCount := state.ItemCount
+	if err := binaryruntime.RequireSize("items", uint64(len(value.Items)), uint64(ItemsCount)); err != nil {
+		return err
+	}
+	for index := range value.Items {
+		if err := writeDemoPacketItem(&value.Items[index], writer, state); err != nil {
+			return binaryruntime.WrapIndex("items", index, err)
+		}
+	}
+	PayloadCount := state.PayloadLen
+	if err := binaryruntime.RequireSize("payload", uint64(len(value.Payload)), uint64(PayloadCount)); err != nil {
+		return err
+	}
+	if err := writer.WriteBytes("payload", value.Payload[:]); err != nil {
+		return err
+	}
+	ScoresCount := state.ScoreCount
+	if err := binaryruntime.RequireSize("scores", uint64(len(value.Scores)), uint64(ScoresCount)); err != nil {
+		return err
+	}
+	for index := range value.Scores {
+		if err := writer.WriteFloat64("", value.Scores[index]); err != nil {
+			return binaryruntime.WrapIndex("scores", index, err)
+		}
+	}
+	if err := binaryruntime.Require("checksum", uint64(value.Checksum) == state.ItemCount+state.PayloadLen, "assert mismatch"); err != nil {
+		return err
+	}
+	if err := writer.WriteUint32("checksum", value.Checksum); err != nil {
+		return err
+	}
+	state.Checksum = uint64(value.Checksum)
+	return nil
 }
 
 func readDemoPacketBody(reader *binaryruntime.Reader, state *demoPacketBinaryState, out *DemoPacketBody) error {
@@ -269,6 +437,53 @@ type DemoPacketItem struct {
 	Value    float64
 	LabelLen uint8
 	Label    []byte
+}
+
+func WriteDemoPacketItem(value *DemoPacketItem, writer *binaryruntime.Writer, state *demoPacketBinaryState) error {
+	if err := writeDemoPacketItem(value, writer, state); err != nil {
+		return binaryruntime.WrapField("Item", err)
+	}
+	return nil
+}
+
+func writeDemoPacketItem(value *DemoPacketItem, writer *binaryruntime.Writer, state *demoPacketBinaryState) error {
+	if err := binaryruntime.RequireRange("id", uint64(value.ID), uint64(1), ^uint64(0)); err != nil {
+		return err
+	}
+	if err := binaryruntime.RequireRange("id", uint64(value.ID), 0, uint64(999)); err != nil {
+		return err
+	}
+	if err := writer.WriteUint32("id", value.ID); err != nil {
+		return err
+	}
+	state.ID = uint64(value.ID)
+	if err := writer.WriteBool("enabled", value.Enabled); err != nil {
+		return err
+	}
+	if err := writer.WriteFloat64("value", value.Value); err != nil {
+		return err
+	}
+	if err := binaryruntime.RequireRange("label_len", uint64(value.LabelLen), uint64(1), ^uint64(0)); err != nil {
+		return err
+	}
+	if err := binaryruntime.RequireRange("label_len", uint64(value.LabelLen), 0, uint64(16)); err != nil {
+		return err
+	}
+	if err := binaryruntime.RequireSize("label_len.label", uint64(len(value.Label)), uint64(value.LabelLen)); err != nil {
+		return err
+	}
+	if err := writer.WriteUint8("label_len", value.LabelLen); err != nil {
+		return err
+	}
+	state.LabelLen = uint64(value.LabelLen)
+	LabelCount := state.LabelLen
+	if err := binaryruntime.RequireSize("label", uint64(len(value.Label)), uint64(LabelCount)); err != nil {
+		return err
+	}
+	if err := writer.WriteBytes("label", value.Label[:]); err != nil {
+		return err
+	}
+	return nil
 }
 
 func readDemoPacketItem(reader *binaryruntime.Reader, state *demoPacketBinaryState, out *DemoPacketItem) error {
@@ -361,6 +576,19 @@ type AuditPacket struct {
 	Body   AuditPacketBody
 }
 
+func (msg *AuditPacket) ContentType() string {
+	return "application/octet-stream"
+}
+
+func (msg *AuditPacket) ContentLength() int64 {
+	return -1
+}
+
+func (msg *AuditPacket) WriteBinary(output io.Writer) error {
+	writer := binaryruntime.NewWriter(output, binaryruntime.LittleEndian)
+	return WriteAuditPacket(msg, writer)
+}
+
 type auditPacketBinaryState struct {
 	Kind      uint64
 	Flags     uint64
@@ -392,10 +620,59 @@ func (msg *AuditPacket) DecodeBinary(r io.Reader) error {
 	return nil
 }
 
+func WriteAuditPacket(value *AuditPacket, writer *binaryruntime.Writer) error {
+	state := &auditPacketBinaryState{}
+	if err := writeAuditPacketHeader(&value.Header, writer, state); err != nil {
+		return binaryruntime.WrapField("AuditPacket.header", err)
+	}
+	if err := writeAuditPacketBody(&value.Body, writer, state); err != nil {
+		return binaryruntime.WrapField("AuditPacket.body", err)
+	}
+	return nil
+}
+
 type AuditPacketHeader struct {
 	Kind      AuditPacketKind
 	Flags     AuditPacketFlags
 	ItemCount uint16
+}
+
+func WriteAuditPacketHeader(value *AuditPacketHeader, writer *binaryruntime.Writer, state *auditPacketBinaryState) error {
+	if err := writeAuditPacketHeader(value, writer, state); err != nil {
+		return binaryruntime.WrapField("AuditPacketHeader", err)
+	}
+	return nil
+}
+
+func writeAuditPacketHeader(value *AuditPacketHeader, writer *binaryruntime.Writer, state *auditPacketBinaryState) error {
+	if err := binaryruntime.Require("kind", uint64(value.Kind) == uint64(uint64(2)), "const mismatch"); err != nil {
+		return err
+	}
+	if err := writer.WriteUint16("kind", uint16(value.Kind)); err != nil {
+		return err
+	}
+	state.Kind = uint64(value.Kind)
+	if err := binaryruntime.RequireRange("flags", uint64(value.Flags), uint64(0), ^uint64(0)); err != nil {
+		return err
+	}
+	if err := binaryruntime.Require("flags", uint64(uint64(value.Flags))&4294967288 == 0, "reserved bits must be zero"); err != nil {
+		return err
+	}
+	if err := writer.WriteUint32("flags", uint32(value.Flags)); err != nil {
+		return err
+	}
+	state.Flags = uint64(value.Flags)
+	if err := binaryruntime.RequireRange("item_count", uint64(value.ItemCount), uint64(1), ^uint64(0)); err != nil {
+		return err
+	}
+	if err := binaryruntime.RequireRange("item_count", uint64(value.ItemCount), 0, uint64(4)); err != nil {
+		return err
+	}
+	if err := writer.WriteUint16("item_count", value.ItemCount); err != nil {
+		return err
+	}
+	state.ItemCount = uint64(value.ItemCount)
+	return nil
 }
 
 func readAuditPacketHeader(reader *binaryruntime.Reader, state *auditPacketBinaryState, out *AuditPacketHeader) error {
@@ -436,6 +713,33 @@ type AuditPacketBody struct {
 	Checksum uint32
 }
 
+func WriteAuditPacketBody(value *AuditPacketBody, writer *binaryruntime.Writer, state *auditPacketBinaryState) error {
+	if err := writeAuditPacketBody(value, writer, state); err != nil {
+		return binaryruntime.WrapField("AuditPacketBody", err)
+	}
+	return nil
+}
+
+func writeAuditPacketBody(value *AuditPacketBody, writer *binaryruntime.Writer, state *auditPacketBinaryState) error {
+	ItemsCount := state.ItemCount
+	if err := binaryruntime.RequireSize("items", uint64(len(value.Items)), uint64(ItemsCount)); err != nil {
+		return err
+	}
+	for index := range value.Items {
+		if err := writeAuditPacketItem(&value.Items[index], writer, state); err != nil {
+			return binaryruntime.WrapIndex("items", index, err)
+		}
+	}
+	if err := binaryruntime.Require("checksum", uint64(value.Checksum) == state.ItemCount, "assert mismatch"); err != nil {
+		return err
+	}
+	if err := writer.WriteUint32("checksum", value.Checksum); err != nil {
+		return err
+	}
+	state.Checksum = uint64(value.Checksum)
+	return nil
+}
+
 func readAuditPacketBody(reader *binaryruntime.Reader, state *auditPacketBinaryState, out *AuditPacketBody) error {
 	itemsCount := state.ItemCount
 	if itemsCount > uint64(binaryruntime.MaxInt) {
@@ -462,6 +766,34 @@ func readAuditPacketBody(reader *binaryruntime.Reader, state *auditPacketBinaryS
 type AuditPacketItem struct {
 	ID   uint32
 	Code uint16
+}
+
+func WriteAuditPacketItem(value *AuditPacketItem, writer *binaryruntime.Writer, state *auditPacketBinaryState) error {
+	if err := writeAuditPacketItem(value, writer, state); err != nil {
+		return binaryruntime.WrapField("Item", err)
+	}
+	return nil
+}
+
+func writeAuditPacketItem(value *AuditPacketItem, writer *binaryruntime.Writer, state *auditPacketBinaryState) error {
+	if err := binaryruntime.RequireRange("id", uint64(value.ID), uint64(1), ^uint64(0)); err != nil {
+		return err
+	}
+	if err := writer.WriteUint32("id", value.ID); err != nil {
+		return err
+	}
+	state.ID = uint64(value.ID)
+	if err := binaryruntime.RequireRange("code", uint64(value.Code), uint64(1), ^uint64(0)); err != nil {
+		return err
+	}
+	if err := binaryruntime.RequireRange("code", uint64(value.Code), 0, uint64(999)); err != nil {
+		return err
+	}
+	if err := writer.WriteUint16("code", value.Code); err != nil {
+		return err
+	}
+	state.Code = uint64(value.Code)
+	return nil
 }
 
 func readAuditPacketItem(reader *binaryruntime.Reader, state *auditPacketBinaryState, out *AuditPacketItem) error {

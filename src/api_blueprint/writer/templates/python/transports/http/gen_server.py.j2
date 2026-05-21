@@ -14,7 +14,7 @@ from ...runtime.errors import ApiError, make_api_error_payload
 from ...runtime.server import ApiRawResponse
 {% for group in bp.groups.values() -%}
 from ...routes.{{ group.package_path }}.service import {{ group.service_class }}, {{ group.service_class }}Stub
-{% if group.type_import_names() %}from ...routes.{{ group.package_path }} import gen_types as {{ group.server_type_module_alias }}
+{% if group.type_import_names() or group.binary_schemas() %}from ...routes.{{ group.package_path }} import gen_types as {{ group.server_type_module_alias }}
 {% endif %}
 {% endfor %}
 
@@ -75,6 +75,12 @@ def create_router(
                 content_type={{ route.response_media_type_literal | safe }},
                 filename={{ route.response_filename_literal | safe }},
                 result=result,
+            )
+{% elif route.is_binary_schema_response %}
+            return _binary_schema_response(
+                content_type={{ route.response_media_type_literal | safe }},
+                result=result,
+                encoder={{ group.server_type_expr(route.response_binary_wire_name ~ ".to_binary_body") | safe }},
             )
 {% else %}
             return _wrap_response({{ route.response_envelope_literal | safe }}, result)
@@ -262,6 +268,37 @@ def _raw_response(
         content = body.encode("utf-8")
     else:
         content = bytes(body or b"")
+    return Response(
+        content=content,
+        status_code=status,
+        media_type=effective_content_type,
+        headers=dict(headers or {}),
+    )
+
+
+def _binary_schema_response(
+    *,
+    content_type: str,
+    result: Any,
+    encoder: Any,
+) -> Response:
+    if isinstance(result, Response):
+        return result
+    status = 200
+    headers: Mapping[str, str] | None = None
+    body = result
+    effective_content_type = content_type
+    if isinstance(result, ApiRawResponse):
+        status = result.status
+        headers = result.headers
+        body = result.body
+        effective_content_type = result.content_type or content_type
+    if isinstance(body, (bytes, bytearray, memoryview)):
+        content = bytes(body)
+    else:
+        binary_body = encoder(body)
+        content = binary_body.to_bytes()
+        effective_content_type = binary_body.content_type or effective_content_type
     return Response(
         content=content,
         status_code=status,
