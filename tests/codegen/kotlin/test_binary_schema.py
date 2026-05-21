@@ -66,8 +66,8 @@ content-encoding: identity,gzip
     root_dir = tmp_path / "kotlin" / "com" / "example" / "generated" / "api"
     runtime_binary_text = (root_dir / "runtime" / "binary" / "GenBinaryRuntime.kt").read_text(encoding="utf-8")
     route_text = (root_dir / "routes" / "api" / "binary" / "GenBinaryApi.kt").read_text(encoding="utf-8")
-    binary_text = (root_dir / "routes" / "api" / "binary" / "BinaryTypes.kt").read_text(encoding="utf-8")
-    runtime_models_text = (root_dir / "runtime" / "ApiTypes.kt").read_text(encoding="utf-8")
+    binary_text = (root_dir / "routes" / "api" / "binary" / "GenBinaryTypes.kt").read_text(encoding="utf-8")
+    runtime_models_text = (root_dir / "runtime" / "GenApiTypes.kt").read_text(encoding="utf-8")
     http_text = (root_dir / "transports" / "http" / "GenOkHttpApiTransport.kt").read_text(encoding="utf-8")
 
     assert "public interface ApiBinaryBody" in runtime_binary_text

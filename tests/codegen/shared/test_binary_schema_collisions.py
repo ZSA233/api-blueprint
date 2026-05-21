@@ -198,7 +198,7 @@ def test_kotlin_scopes_binary_schema_internal_symbols(tmp_path: Path) -> None:
     writer.gen()
 
     schema_text = (
-        output_dir / "com/example/generated/api/routes/api/binary/BinaryTypes.kt"
+        output_dir / "com/example/generated/api/routes/api/binary/GenBinaryTypes.kt"
     ).read_text(encoding="utf-8")
     assert "public class DemoPacketBinaryState" in schema_text
     assert "public class AuditPacketBinaryState" in schema_text

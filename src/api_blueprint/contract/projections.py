@@ -459,7 +459,7 @@ def _artifact_for_route(
         package_path = package.replace(".", "/")
         base = _join(out_dir, package_path, root, "routes", route_path)
         files = [
-            _join(base, f"{pascal_group}Types.kt"),
+            _join(base, f"Gen{pascal_group}Types.kt"),
             _join(base, f"Gen{pascal_group}Api.kt"),
             _join(base, f"{pascal_group}Api.kt"),
         ]
@@ -471,7 +471,7 @@ def _artifact_for_route(
         base = _join(out_dir, package_path, root, "routes", route_path)
         transport_base = _join(out_dir, package_path, root, "transports", "http")
         files = [
-            _join(base, f"{pascal_group}Types.java"),
+            _join(base, f"Gen{pascal_group}Types.java"),
             _join(base, f"Gen{pascal_group}Api.java"),
             _join(base, f"{pascal_group}Api.java"),
             _join(transport_base, "GenJdkHttpApiTransport.java"),
@@ -535,8 +535,8 @@ def _artifact_for_route(
         transport_base = _join(out_dir, package_path, root, "transports", "http")
         files = [
             _join(route_base, f"Gen{pascal_group}Service.java"),
-            _join(route_base, f"{pascal_group}Types.java"),
-            _join(route_base, f"{pascal_group}ServiceStub.java"),
+            _join(route_base, f"Gen{pascal_group}Types.java"),
+            _join(route_base, f"Gen{pascal_group}ServiceStub.java"),
             _join(route_base, f"{pascal_group}Service.java"),
             _join(transport_base, route_path, f"Gen{pascal_group}Controller.java"),
         ]

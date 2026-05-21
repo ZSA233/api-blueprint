@@ -1,9 +1,9 @@
 package com.example.apiblueprint.api.routes.api.media;
 
-import com.example.apiblueprint.api.runtime.ApiTransport;
+import com.example.apiblueprint.api.runtime.GenApiTransport;
 
 public class MediaApi extends GenMediaApi {
-    public MediaApi(ApiTransport transport) {
+    public MediaApi(GenApiTransport transport) {
         super(transport);
     }
 }

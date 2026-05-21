@@ -2,12 +2,12 @@ package {{ bp.root_package }}.runtime;
 
 import java.util.Map;
 
-public record ApiResponse(
+public record GenApiResponse(
     int statusCode,
     byte[] body,
     Map<String, String> headers
 ) {
-    public ApiResponse {
+    public GenApiResponse {
         body = body == null ? new byte[0] : body.clone();
         headers = headers == null ? Map.of() : Map.copyOf(headers);
     }

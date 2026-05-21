@@ -104,6 +104,8 @@ For fuller project layout, config fields, DSL, generator output, typed errors, R
 | Wails v2/v3 | Preview / Experimental | Generate Go + TypeScript overlays; file/stream-style capabilities are modeled with Wails RPC descriptors or STREAM/CHANNEL chunks |
 | gRPC proto / stubs | Available | Emit proto from ContractGraph and generate Go/Python stubs; bytes/file/stream-style capabilities are modeled with protobuf bytes or streaming chunks |
 
+Files overwritten by generators are named `gen_*` / `Gen*`, or live under `_gen_*`, and include a `Code generated ... DO NOT EDIT` header. Non-`gen_` / non-`Gen` facade, impl, service, and client files are preserved user extension points, created only when missing and without a generated header.
+
 ## Next Steps
 
 | Topic | Documentation |

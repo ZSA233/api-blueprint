@@ -83,7 +83,7 @@ def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full
     route_text = (route_dir / "GenDemoApi.kt").read_text(encoding="utf-8")
     root_route_text = (root_dir / "routes" / "api" / "GenApiApi.kt").read_text(encoding="utf-8")
     route_facade_text = (route_dir / "DemoApi.kt").read_text(encoding="utf-8")
-    route_types_text = (route_dir / "DemoTypes.kt").read_text(encoding="utf-8")
+    route_types_text = (route_dir / "GenDemoTypes.kt").read_text(encoding="utf-8")
     transport_text = (http_dir / "GenOkHttpApiTransport.kt").read_text(encoding="utf-8")
     factory_text = (http_dir / "HttpApiClient.kt").read_text(encoding="utf-8")
     http_config_text = (http_dir / "GenHttpApiConfig.kt").read_text(encoding="utf-8")
@@ -99,7 +99,7 @@ def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full
         http_config_text,
     ):
         assert generated_text.startswith(KOTLIN_CLIENT_GENERATED_HEADER)
-    assert (runtime_dir / "ApiTypes.kt").is_file()
+    assert (runtime_dir / "GenApiTypes.kt").is_file()
     assert (runtime_dir / "GenApiException.kt").is_file()
     assert (runtime_dir / "GenApiErrors.kt").is_file()
     assert (runtime_dir / "GenApiErrorLookup.kt").is_file()
@@ -213,7 +213,7 @@ def test_kotlin_writer_generates_custom_response_envelope_spec(tmp_path):
     writer.gen()
 
     root_dir = tmp_path / "kotlin" / "com" / "example" / "generated" / "api"
-    runtime_models_text = (root_dir / "runtime" / "ApiTypes.kt").read_text(encoding="utf-8")
+    runtime_models_text = (root_dir / "runtime" / "GenApiTypes.kt").read_text(encoding="utf-8")
     route_text = (root_dir / "routes" / "api" / "demo" / "GenDemoApi.kt").read_text(encoding="utf-8")
     route_facade_text = (root_dir / "routes" / "api" / "demo" / "DemoApi.kt").read_text(encoding="utf-8")
     client_facade_text = (root_dir / "runtime" / "ApiClient.kt").read_text(encoding="utf-8")

@@ -49,23 +49,23 @@ def test_java_client_and_server_generate_named_message_keyframe_helpers(tmp_path
     client_writer.gen()
     client_route_dir = client_dir / package_root / "routes/api/demo"
     client_runtime_dir = client_dir / package_root / "runtime"
-    client_types = (client_route_dir / "DemoTypes.java").read_text(encoding="utf-8")
+    client_types = (client_route_dir / "GenDemoTypes.java").read_text(encoding="utf-8")
     client_route = (client_route_dir / "GenDemoApi.java").read_text(encoding="utf-8")
-    api_json = (client_runtime_dir / "ApiJson.java").read_text(encoding="utf-8")
+    api_json = (client_runtime_dir / "GenApiJson.java").read_text(encoding="utf-8")
 
     assert "public record AssistantClientMessage(String type, JsonNode data)" in client_types
     assert "public record AssistantSingleMessage(String type, JsonNode data)" in client_types
     assert "public static final class AssistantClientMessageVariants" in client_types
     assert "public static final class AssistantSingleMessageVariants" in client_types
-    assert "public static AssistantClientMessage cancel(ApiTypes.AssistantCancel data)" in client_types
+    assert "public static AssistantClientMessage cancel(GenApiTypes.AssistantCancel data)" in client_types
     assert "public interface AssistantServerMessageHandlers<R>" in client_types
-    assert "R delta(ApiTypes.AssistantDelta data, AssistantServerMessage message) throws Exception;" in client_types
+    assert "R delta(GenApiTypes.AssistantDelta data, AssistantServerMessage message) throws Exception;" in client_types
     assert "public static final class AssistantServerMessageDispatchException extends RuntimeException" in client_types
     assert "public static <R> R dispatchAssistantServerMessage(" in client_types
-    assert "ApiStreamBridge<DemoTypes.AssistantServerMessage, Object>" in client_route
-    assert "ApiStreamBridge<DemoTypes.AssistantSingleMessage, Object>" in client_route
-    assert "ApiChannelBridge<DemoTypes.AssistantServerMessage, DemoTypes.AssistantClientMessage, Object>" in client_route
-    assert "public final class ApiJson" in api_json
+    assert "GenApiStreamBridge<GenDemoTypes.AssistantServerMessage, Object>" in client_route
+    assert "GenApiStreamBridge<GenDemoTypes.AssistantSingleMessage, Object>" in client_route
+    assert "GenApiChannelBridge<GenDemoTypes.AssistantServerMessage, GenDemoTypes.AssistantClientMessage, Object>" in client_route
+    assert "public final class GenApiJson" in api_json
     assert "public static final ObjectMapper MAPPER" in api_json
 
     server_dir = tmp_path / "server"
@@ -73,7 +73,7 @@ def test_java_client_and_server_generate_named_message_keyframe_helpers(tmp_path
     server_writer.register(bp)
     server_writer.gen()
     server_route_dir = server_dir / package_root / "routes/api/demo"
-    server_types = (server_route_dir / "DemoTypes.java").read_text(encoding="utf-8")
+    server_types = (server_route_dir / "GenDemoTypes.java").read_text(encoding="utf-8")
     service_text = (server_route_dir / "GenDemoService.java").read_text(encoding="utf-8")
     controller_text = (
         server_dir / package_root / "transports/http/api/demo/GenDemoController.java"
@@ -82,7 +82,7 @@ def test_java_client_and_server_generate_named_message_keyframe_helpers(tmp_path
     assert "public static final class AssistantClientMessageVariants" in server_types
     assert "public static <R> R dispatchAssistantClientMessage(" in server_types
     assert "void assistant(" in service_text
-    assert "ApiServerChannel<DemoTypes.AssistantClientMessage, DemoTypes.AssistantServerMessage, Object> channel" in service_text
+    assert "GenApiServerChannel<GenDemoTypes.AssistantClientMessage, GenDemoTypes.AssistantServerMessage, Object> channel" in service_text
     assert "SseEmitter" in controller_text
     assert "implements WebSocketConfigurer" in controller_text
     assert "SpringWebSocketChannel" in controller_text

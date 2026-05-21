@@ -3,23 +3,23 @@ package com.example.apiblueprint.api.transports.http.api.binary;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.apiblueprint.api.routes.api.binary.BinaryService;
-import com.example.apiblueprint.api.routes.api.binary.BinaryServiceStub;
-import com.example.apiblueprint.api.routes.api.binary.BinaryTypes;
-import com.example.apiblueprint.api.runtime.ApiError;
-import com.example.apiblueprint.api.runtime.ApiErrorEntry;
-import com.example.apiblueprint.api.runtime.ApiErrorPayload;
-import com.example.apiblueprint.api.runtime.ApiErrors;
-import com.example.apiblueprint.api.runtime.ApiFilePart;
-import com.example.apiblueprint.api.runtime.ApiRawResponse;
-import com.example.apiblueprint.api.runtime.ApiResponseEnvelope;
-import com.example.apiblueprint.api.runtime.ApiServerChannel;
-import com.example.apiblueprint.api.runtime.ApiServerStream;
-import com.example.apiblueprint.api.runtime.ApiStreamResponse;
-import com.example.apiblueprint.api.runtime.ApiToastPayload;
+import com.example.apiblueprint.api.routes.api.binary.GenBinaryServiceStub;
+import com.example.apiblueprint.api.routes.api.binary.GenBinaryTypes;
+import com.example.apiblueprint.api.runtime.GenApiError;
+import com.example.apiblueprint.api.runtime.GenApiErrorEntry;
+import com.example.apiblueprint.api.runtime.GenApiErrorPayload;
+import com.example.apiblueprint.api.runtime.GenApiErrors;
+import com.example.apiblueprint.api.runtime.GenApiFilePart;
+import com.example.apiblueprint.api.runtime.GenApiRawResponse;
+import com.example.apiblueprint.api.runtime.GenApiResponseEnvelope;
+import com.example.apiblueprint.api.runtime.GenApiServerChannel;
+import com.example.apiblueprint.api.runtime.GenApiServerStream;
+import com.example.apiblueprint.api.runtime.GenApiStreamResponse;
+import com.example.apiblueprint.api.runtime.GenApiToastPayload;
 
-import com.example.apiblueprint.api.runtime.ApiTypes;
+import com.example.apiblueprint.api.runtime.GenApiTypes;
 
-import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
+import com.example.apiblueprint.api.runtime.binary.GenApiBinaryBody;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.net.URI;
@@ -53,7 +53,7 @@ public class GenBinaryController {
         @Autowired(required = false) BinaryService service,
         ObjectMapper objectMapper
     ) {
-        this.service = service == null ? new BinaryServiceStub() : service;
+        this.service = service == null ? new GenBinaryServiceStub() : service;
         this.objectMapper = objectMapper;
     }
 
@@ -62,11 +62,11 @@ public class GenBinaryController {
         @RequestParam Map<String, String> queryParams,
         @RequestBody(required = false) byte[] binaryBody
     ) throws Exception {
-        BinaryTypes.PacketQuery query;
-        BinaryTypes.DemoPacket binary;
+        GenBinaryTypes.PacketQuery query;
+        GenBinaryTypes.DemoPacket binary;
         try {
-            query = objectMapper.convertValue(queryParams, BinaryTypes.PacketQuery.class);
-            binary = BinaryTypes.DemoPacketWire.parse(binaryBody == null ? new byte[0] : binaryBody);
+            query = objectMapper.convertValue(queryParams, GenBinaryTypes.PacketQuery.class);
+            binary = GenBinaryTypes.DemoPacketWire.parse(binaryBody == null ? new byte[0] : binaryBody);
         } catch (RuntimeException error) {
             return badRequestResponse(error);
         }
@@ -75,9 +75,9 @@ public class GenBinaryController {
                 query,
                 binary
             );
-            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
-        } catch (ApiError error) {
-            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.binary.post.packet");
+            return wrapResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.binary.post.packet");
         }
     }
 
@@ -86,11 +86,11 @@ public class GenBinaryController {
         @RequestParam Map<String, String> queryParams,
         @RequestBody(required = false) byte[] binaryBody
     ) throws Exception {
-        BinaryTypes.AuditPacketQuery query;
-        BinaryTypes.AuditPacket binary;
+        GenBinaryTypes.AuditPacketQuery query;
+        GenBinaryTypes.AuditPacket binary;
         try {
-            query = objectMapper.convertValue(queryParams, BinaryTypes.AuditPacketQuery.class);
-            binary = BinaryTypes.AuditPacketWire.parse(binaryBody == null ? new byte[0] : binaryBody);
+            query = objectMapper.convertValue(queryParams, GenBinaryTypes.AuditPacketQuery.class);
+            binary = GenBinaryTypes.AuditPacketWire.parse(binaryBody == null ? new byte[0] : binaryBody);
         } catch (RuntimeException error) {
             return badRequestResponse(error);
         }
@@ -99,9 +99,9 @@ public class GenBinaryController {
                 query,
                 binary
             );
-            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
-        } catch (ApiError error) {
-            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.binary.post.auditpacket");
+            return wrapResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.binary.post.auditpacket");
         }
     }
 
@@ -112,13 +112,13 @@ public class GenBinaryController {
         try {
             Object result = service.auditPacketResponse(
             );
-            return rawBytesResponse("application/octet-stream", "", BinaryTypes.AuditPacketWire.toBinaryBody((BinaryTypes.AuditPacket) result).toBytes());
-        } catch (ApiError error) {
-            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.binary.get.auditpacketresponse");
+            return rawBytesResponse("application/octet-stream", "", GenBinaryTypes.AuditPacketWire.toBinaryBody((GenBinaryTypes.AuditPacket) result).toBytes());
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.binary.get.auditpacketresponse");
         }
     }
 
-    private static final class SpringSseStream<Message, Close> implements ApiServerStream<Message, Close> {
+    private static final class SpringSseStream<Message, Close> implements GenApiServerStream<Message, Close> {
         private final SseEmitter emitter;
         private final ObjectMapper objectMapper;
         private volatile boolean closed = false;
@@ -185,7 +185,7 @@ public class GenBinaryController {
         return result;
     }
 
-    private Object wrapResponse(ApiResponseEnvelope envelopeSpec, Object data) {
+    private Object wrapResponse(GenApiResponseEnvelope envelopeSpec, Object data) {
         if ("none".equals(envelopeSpec.kind())) {
             return data;
         }
@@ -218,22 +218,22 @@ public class GenBinaryController {
             MultipartFile file = entry.getValue();
             result.put(
                 entry.getKey(),
-                ApiFilePart.of(file.getOriginalFilename(), file.getContentType(), file.getBytes())
+                GenApiFilePart.of(file.getOriginalFilename(), file.getContentType(), file.getBytes())
             );
         }
         return result;
     }
 
     private ResponseEntity<byte[]> rawResponse(String kind, String mediaType, String filename, Object result) throws IOException {
-        if (result instanceof ApiRawResponse raw) {
+        if (result instanceof GenApiRawResponse raw) {
             ResponseEntity.BodyBuilder builder = rawResponseBuilder(kind, raw.contentType(), raw.filename().isBlank() ? filename : raw.filename());
             raw.headers().forEach(builder::header);
             return builder.body(raw.body());
         }
-        if (result instanceof ApiStreamResponse stream) {
+        if (result instanceof GenApiStreamResponse stream) {
             return rawResponseBuilder(kind, stream.contentType(), filename).body(stream.body());
         }
-        if (result instanceof ApiBinaryBody binary) {
+        if (result instanceof GenApiBinaryBody binary) {
             return rawResponseBuilder(kind, binary.contentType(), filename).body(binary.toBytes());
         }
         if (result instanceof byte[] bytes) {
@@ -262,8 +262,8 @@ public class GenBinaryController {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("detail", "invalid request"));
     }
 
-    private Object wrapApiErrorResponse(ApiResponseEnvelope envelopeSpec, ApiError error, String routeId) {
-        ApiErrorPayload payload = normalizeApiErrorPayload(error.payload(), routeId);
+    private Object wrapApiErrorResponse(GenApiResponseEnvelope envelopeSpec, GenApiError error, String routeId) {
+        GenApiErrorPayload payload = normalizeApiErrorPayload(error.payload(), routeId);
         if ("none".equals(envelopeSpec.kind())) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(payload);
         }
@@ -285,25 +285,25 @@ public class GenBinaryController {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(payload);
     }
 
-    private ApiErrorPayload normalizeApiErrorPayload(ApiErrorPayload payload, String routeId) {
+    private GenApiErrorPayload normalizeApiErrorPayload(GenApiErrorPayload payload, String routeId) {
         if (payload == null) {
-            payload = new ApiErrorPayload("", "", "", 0, "", new ApiToastPayload("", "error", "", ""));
+            payload = new GenApiErrorPayload("", "", "", 0, "", new GenApiToastPayload("", "error", "", ""));
         }
-        ApiErrorEntry entry = ApiErrors.lookup(payload, routeId).orElse(null);
+        GenApiErrorEntry entry = GenApiErrors.lookup(payload, routeId).orElse(null);
         int code = payload.code() != 0 ? payload.code() : entry == null ? 0 : entry.code();
         String message = !payload.message().isBlank()
             ? payload.message()
             : entry == null ? "API error " + code : entry.message();
-        ApiToastPayload toast = payload.toast() == null
-            ? new ApiToastPayload("", "error", "", "")
+        GenApiToastPayload toast = payload.toast() == null
+            ? new GenApiToastPayload("", "error", "", "")
             : payload.toast();
-        return new ApiErrorPayload(
+        return new GenApiErrorPayload(
             payload.id().isBlank() && entry != null ? entry.id() : payload.id(),
             payload.group().isBlank() && entry != null ? entry.group() : payload.group(),
             payload.key().isBlank() && entry != null ? entry.key() : payload.key(),
             code,
             message,
-            new ApiToastPayload(
+            new GenApiToastPayload(
                 toast.key().isBlank() && entry != null ? entry.toast().key() : toast.key(),
                 toast.level().isBlank() ? (entry == null ? "error" : entry.toast().level()) : toast.level(),
                 toast.defaultMessage().isBlank()

@@ -3,23 +3,23 @@ package com.example.apiblueprint.api.transports.http.api.media;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.apiblueprint.api.routes.api.media.MediaService;
-import com.example.apiblueprint.api.routes.api.media.MediaServiceStub;
-import com.example.apiblueprint.api.routes.api.media.MediaTypes;
-import com.example.apiblueprint.api.runtime.ApiError;
-import com.example.apiblueprint.api.runtime.ApiErrorEntry;
-import com.example.apiblueprint.api.runtime.ApiErrorPayload;
-import com.example.apiblueprint.api.runtime.ApiErrors;
-import com.example.apiblueprint.api.runtime.ApiFilePart;
-import com.example.apiblueprint.api.runtime.ApiRawResponse;
-import com.example.apiblueprint.api.runtime.ApiResponseEnvelope;
-import com.example.apiblueprint.api.runtime.ApiServerChannel;
-import com.example.apiblueprint.api.runtime.ApiServerStream;
-import com.example.apiblueprint.api.runtime.ApiStreamResponse;
-import com.example.apiblueprint.api.runtime.ApiToastPayload;
+import com.example.apiblueprint.api.routes.api.media.GenMediaServiceStub;
+import com.example.apiblueprint.api.routes.api.media.GenMediaTypes;
+import com.example.apiblueprint.api.runtime.GenApiError;
+import com.example.apiblueprint.api.runtime.GenApiErrorEntry;
+import com.example.apiblueprint.api.runtime.GenApiErrorPayload;
+import com.example.apiblueprint.api.runtime.GenApiErrors;
+import com.example.apiblueprint.api.runtime.GenApiFilePart;
+import com.example.apiblueprint.api.runtime.GenApiRawResponse;
+import com.example.apiblueprint.api.runtime.GenApiResponseEnvelope;
+import com.example.apiblueprint.api.runtime.GenApiServerChannel;
+import com.example.apiblueprint.api.runtime.GenApiServerStream;
+import com.example.apiblueprint.api.runtime.GenApiStreamResponse;
+import com.example.apiblueprint.api.runtime.GenApiToastPayload;
 
-import com.example.apiblueprint.api.runtime.ApiTypes;
+import com.example.apiblueprint.api.runtime.GenApiTypes;
 
-import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
+import com.example.apiblueprint.api.runtime.binary.GenApiBinaryBody;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.net.URI;
@@ -53,7 +53,7 @@ public class GenMediaController {
         @Autowired(required = false) MediaService service,
         ObjectMapper objectMapper
     ) {
-        this.service = service == null ? new MediaServiceStub() : service;
+        this.service = service == null ? new GenMediaServiceStub() : service;
         this.objectMapper = objectMapper;
     }
 
@@ -62,9 +62,9 @@ public class GenMediaController {
         @RequestParam Map<String, String> queryParams,
         MultipartHttpServletRequest multipartRequest
     ) throws Exception {
-        ApiTypes.MediaPreviewRequest multipart;
+        GenApiTypes.MediaPreviewRequest multipart;
         try {
-            multipart = objectMapper.convertValue(multipartBody(multipartRequest), ApiTypes.MediaPreviewRequest.class);
+            multipart = objectMapper.convertValue(multipartBody(multipartRequest), GenApiTypes.MediaPreviewRequest.class);
         } catch (RuntimeException error) {
             return badRequestResponse(error);
         }
@@ -73,8 +73,8 @@ public class GenMediaController {
                 multipart
             );
             return rawResponse("bytes", "image/jpeg", "", result);
-        } catch (ApiError error) {
-            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.media.post.preview");
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.media.post.preview");
         }
     }
 
@@ -86,8 +86,8 @@ public class GenMediaController {
             Object result = service.mediaFrame(
             );
             return rawResponse("bytes", "image/jpeg", "", result);
-        } catch (ApiError error) {
-            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.media.get.frame");
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.media.get.frame");
         }
     }
 
@@ -99,8 +99,8 @@ public class GenMediaController {
             Object result = service.mediaDownload(
             );
             return rawResponse("file", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "media-report.xlsx", result);
-        } catch (ApiError error) {
-            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.media.get.download");
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.media.get.download");
         }
     }
 
@@ -112,8 +112,8 @@ public class GenMediaController {
             Object result = service.mediaDownloadDynamic(
             );
             return rawResponse("file", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "media-report.xlsx", result);
-        } catch (ApiError error) {
-            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.media.get.downloaddynamic");
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.media.get.downloaddynamic");
         }
     }
 
@@ -125,12 +125,12 @@ public class GenMediaController {
             Object result = service.mediaMjpeg(
             );
             return rawResponse("byte_stream", "multipart/x-mixed-replace; boundary=frame", "", result);
-        } catch (ApiError error) {
-            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.media.get.mjpeg");
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.media.get.mjpeg");
         }
     }
 
-    private static final class SpringSseStream<Message, Close> implements ApiServerStream<Message, Close> {
+    private static final class SpringSseStream<Message, Close> implements GenApiServerStream<Message, Close> {
         private final SseEmitter emitter;
         private final ObjectMapper objectMapper;
         private volatile boolean closed = false;
@@ -197,7 +197,7 @@ public class GenMediaController {
         return result;
     }
 
-    private Object wrapResponse(ApiResponseEnvelope envelopeSpec, Object data) {
+    private Object wrapResponse(GenApiResponseEnvelope envelopeSpec, Object data) {
         if ("none".equals(envelopeSpec.kind())) {
             return data;
         }
@@ -230,22 +230,22 @@ public class GenMediaController {
             MultipartFile file = entry.getValue();
             result.put(
                 entry.getKey(),
-                ApiFilePart.of(file.getOriginalFilename(), file.getContentType(), file.getBytes())
+                GenApiFilePart.of(file.getOriginalFilename(), file.getContentType(), file.getBytes())
             );
         }
         return result;
     }
 
     private ResponseEntity<byte[]> rawResponse(String kind, String mediaType, String filename, Object result) throws IOException {
-        if (result instanceof ApiRawResponse raw) {
+        if (result instanceof GenApiRawResponse raw) {
             ResponseEntity.BodyBuilder builder = rawResponseBuilder(kind, raw.contentType(), raw.filename().isBlank() ? filename : raw.filename());
             raw.headers().forEach(builder::header);
             return builder.body(raw.body());
         }
-        if (result instanceof ApiStreamResponse stream) {
+        if (result instanceof GenApiStreamResponse stream) {
             return rawResponseBuilder(kind, stream.contentType(), filename).body(stream.body());
         }
-        if (result instanceof ApiBinaryBody binary) {
+        if (result instanceof GenApiBinaryBody binary) {
             return rawResponseBuilder(kind, binary.contentType(), filename).body(binary.toBytes());
         }
         if (result instanceof byte[] bytes) {
@@ -274,8 +274,8 @@ public class GenMediaController {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("detail", "invalid request"));
     }
 
-    private Object wrapApiErrorResponse(ApiResponseEnvelope envelopeSpec, ApiError error, String routeId) {
-        ApiErrorPayload payload = normalizeApiErrorPayload(error.payload(), routeId);
+    private Object wrapApiErrorResponse(GenApiResponseEnvelope envelopeSpec, GenApiError error, String routeId) {
+        GenApiErrorPayload payload = normalizeApiErrorPayload(error.payload(), routeId);
         if ("none".equals(envelopeSpec.kind())) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(payload);
         }
@@ -297,25 +297,25 @@ public class GenMediaController {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(payload);
     }
 
-    private ApiErrorPayload normalizeApiErrorPayload(ApiErrorPayload payload, String routeId) {
+    private GenApiErrorPayload normalizeApiErrorPayload(GenApiErrorPayload payload, String routeId) {
         if (payload == null) {
-            payload = new ApiErrorPayload("", "", "", 0, "", new ApiToastPayload("", "error", "", ""));
+            payload = new GenApiErrorPayload("", "", "", 0, "", new GenApiToastPayload("", "error", "", ""));
         }
-        ApiErrorEntry entry = ApiErrors.lookup(payload, routeId).orElse(null);
+        GenApiErrorEntry entry = GenApiErrors.lookup(payload, routeId).orElse(null);
         int code = payload.code() != 0 ? payload.code() : entry == null ? 0 : entry.code();
         String message = !payload.message().isBlank()
             ? payload.message()
             : entry == null ? "API error " + code : entry.message();
-        ApiToastPayload toast = payload.toast() == null
-            ? new ApiToastPayload("", "error", "", "")
+        GenApiToastPayload toast = payload.toast() == null
+            ? new GenApiToastPayload("", "error", "", "")
             : payload.toast();
-        return new ApiErrorPayload(
+        return new GenApiErrorPayload(
             payload.id().isBlank() && entry != null ? entry.id() : payload.id(),
             payload.group().isBlank() && entry != null ? entry.group() : payload.group(),
             payload.key().isBlank() && entry != null ? entry.key() : payload.key(),
             code,
             message,
-            new ApiToastPayload(
+            new GenApiToastPayload(
                 toast.key().isBlank() && entry != null ? entry.toast().key() : toast.key(),
                 toast.level().isBlank() ? (entry == null ? "error" : entry.toast().level()) : toast.level(),
                 toast.defaultMessage().isBlank()

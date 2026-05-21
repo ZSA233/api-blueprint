@@ -9,7 +9,7 @@ import com.example.apiblueprint.api.routes.api.media.MediaApi;
 import com.example.apiblueprint.api.routes.api.hello.HelloApi;
 
 public class GenApiClient {
-    protected final ApiTransport transport;
+    protected final GenApiTransport transport;
 
     public final ApiApi api;
 
@@ -23,7 +23,7 @@ public class GenApiClient {
 
     public final HelloApi hello;
 
-    public GenApiClient(ApiTransport transport) {
+    public GenApiClient(GenApiTransport transport) {
         this.transport = transport;
 
         this.api = new ApiApi(transport);

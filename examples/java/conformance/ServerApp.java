@@ -1,30 +1,30 @@
 package com.example.apiblueprint.conformance;
 
 import com.example.apiblueprint.api.routes.api.binary.BinaryService;
-import com.example.apiblueprint.api.routes.api.binary.BinaryServiceStub;
-import com.example.apiblueprint.api.routes.api.binary.BinaryTypes;
+import com.example.apiblueprint.api.routes.api.binary.GenBinaryServiceStub;
+import com.example.apiblueprint.api.routes.api.binary.GenBinaryTypes;
 import com.example.apiblueprint.api.routes.api.ApiService;
-import com.example.apiblueprint.api.routes.api.ApiServiceStub;
+import com.example.apiblueprint.api.routes.api.GenApiServiceStub;
 import com.example.apiblueprint.api.routes.api.conflict.ConflictService;
-import com.example.apiblueprint.api.routes.api.conflict.ConflictServiceStub;
-import com.example.apiblueprint.api.routes.api.conflict.ConflictTypes;
+import com.example.apiblueprint.api.routes.api.conflict.GenConflictServiceStub;
+import com.example.apiblueprint.api.routes.api.conflict.GenConflictTypes;
 import com.example.apiblueprint.api.routes.api.demo.DemoService;
-import com.example.apiblueprint.api.routes.api.demo.DemoServiceStub;
-import com.example.apiblueprint.api.routes.api.demo.DemoTypes;
+import com.example.apiblueprint.api.routes.api.demo.GenDemoServiceStub;
+import com.example.apiblueprint.api.routes.api.demo.GenDemoTypes;
 import com.example.apiblueprint.api.routes.api.hello.HelloService;
-import com.example.apiblueprint.api.routes.api.hello.HelloServiceStub;
-import com.example.apiblueprint.api.routes.api.hello.HelloTypes;
-import com.example.apiblueprint.api.runtime.ApiError;
-import com.example.apiblueprint.api.runtime.ApiErrorPayload;
-import com.example.apiblueprint.api.runtime.ApiErrors;
-import com.example.apiblueprint.api.runtime.ApiRawResponse;
-import com.example.apiblueprint.api.runtime.ApiServerChannel;
-import com.example.apiblueprint.api.runtime.ApiServerStream;
-import com.example.apiblueprint.api.runtime.ApiStreamResponse;
-import com.example.apiblueprint.api.runtime.ApiToastPayload;
-import com.example.apiblueprint.api.runtime.ApiTypes;
+import com.example.apiblueprint.api.routes.api.hello.GenHelloServiceStub;
+import com.example.apiblueprint.api.routes.api.hello.GenHelloTypes;
+import com.example.apiblueprint.api.runtime.GenApiError;
+import com.example.apiblueprint.api.runtime.GenApiErrorPayload;
+import com.example.apiblueprint.api.runtime.GenApiErrors;
+import com.example.apiblueprint.api.runtime.GenApiRawResponse;
+import com.example.apiblueprint.api.runtime.GenApiServerChannel;
+import com.example.apiblueprint.api.runtime.GenApiServerStream;
+import com.example.apiblueprint.api.runtime.GenApiStreamResponse;
+import com.example.apiblueprint.api.runtime.GenApiToastPayload;
+import com.example.apiblueprint.api.runtime.GenApiTypes;
 import com.example.apiblueprint.api.routes.api.media.MediaService;
-import com.example.apiblueprint.api.routes.api.media.MediaServiceStub;
+import com.example.apiblueprint.api.routes.api.media.GenMediaServiceStub;
 import com.example.apiblueprint.api.transports.http.api.GenApiController;
 import com.example.apiblueprint.api.transports.http.api.binary.GenBinaryController;
 import com.example.apiblueprint.api.transports.http.api.conflict.GenConflictController;
@@ -32,8 +32,8 @@ import com.example.apiblueprint.api.transports.http.api.demo.GenDemoController;
 import com.example.apiblueprint.api.transports.http.api.hello.GenHelloController;
 import com.example.apiblueprint.api.transports.http.api.media.GenMediaController;
 import com.example.apiblueprint.static_.routes.static_.StaticService;
-import com.example.apiblueprint.static_.routes.static_.StaticServiceStub;
-import com.example.apiblueprint.static_.routes.static_.StaticTypes;
+import com.example.apiblueprint.static_.routes.static_.GenStaticServiceStub;
+import com.example.apiblueprint.static_.routes.static_.GenStaticTypes;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -206,168 +206,168 @@ public class ServerApp {
         return result;
     }
 
-    private static final class ApiServiceImpl extends ApiServiceStub {
+    private static final class ApiServiceImpl extends GenApiServiceStub {
         @Override
         public void helloChannel(
-            ApiServerChannel<ApiTypes.HelloChannelMessage, ApiTypes.HelloChannelMessage, Object> channel
+            GenApiServerChannel<GenApiTypes.HelloChannelMessage, GenApiTypes.HelloChannelMessage, Object> channel
         ) throws Exception {
             channel.receive();
-            channel.send(new ApiTypes.HelloChannelMessage(ApiTypes.HelloChannelMsgTypeEnum.PONG, Map.of("source", "java")));
-            channel.close(new ApiTypes.DefaultConnectionClose(1000, "single channel complete", null));
+            channel.send(new GenApiTypes.HelloChannelMessage(GenApiTypes.HelloChannelMsgTypeEnum.PONG, Map.of("source", "java")));
+            channel.close(new GenApiTypes.DefaultConnectionClose(1000, "single channel complete", null));
         }
     }
 
-    private static final class DemoServiceImpl extends DemoServiceStub {
+    private static final class DemoServiceImpl extends GenDemoServiceStub {
         @Override
-        public ApiTypes.ApiDemoA abc(DemoTypes.AbcQuery query) {
+        public GenApiTypes.ApiDemoA abc(GenDemoTypes.AbcQuery query) {
             return demoModel("header-ok");
         }
 
         @Override
-        public DemoTypes.TestPostResponse testPost(DemoTypes.TestPostJSON json) {
-            return new DemoTypes.TestPostResponse(
+        public GenDemoTypes.TestPostResponse testPost(GenDemoTypes.TestPostJSON json) {
+            return new GenDemoTypes.TestPostResponse(
                 List.of("test_post", json.req1()),
-                Map.of("req2", new ApiTypes.ApiDemoMap(json.req2().longValue()))
+                Map.of("req2", new GenApiTypes.ApiDemoMap(json.req2().longValue()))
             );
         }
 
         @Override
-        public DemoTypes.DeleteResponse delete(DemoTypes.DeleteQuery query) {
-            return new DemoTypes.DeleteResponse(
+        public GenDemoTypes.DeleteResponse delete(GenDemoTypes.DeleteQuery query) {
+            return new GenDemoTypes.DeleteResponse(
                 List.of(query.arg1()),
-                List.of(new DemoTypes.AnonDeleteAnonList(7L, List.of("xml")))
+                List.of(new GenDemoTypes.AnonDeleteAnonList(7L, List.of("xml")))
             );
         }
 
         @Override
-        public DemoTypes.PostDeprecatedResponse postDeprecated(DemoTypes.PostDeprecatedJSON json) {
-            return new DemoTypes.PostDeprecatedResponse(List.of(json.req1()));
+        public GenDemoTypes.PostDeprecatedResponse postDeprecated(GenDemoTypes.PostDeprecatedJSON json) {
+            return new GenDemoTypes.PostDeprecatedResponse(List.of(json.req1()));
         }
 
         @Override
-        public DemoTypes.RawResponse raw() {
-            return new DemoTypes.RawResponse(List.of("raw"), Map.of(1L, List.of(demoModel("raw"))));
+        public GenDemoTypes.RawResponse raw() {
+            return new GenDemoTypes.RawResponse(List.of("raw"), Map.of(1L, List.of(demoModel("raw"))));
         }
 
         @Override
-        public DemoTypes.MapModelResponse mapModel() {
-            return new DemoTypes.MapModelResponse();
+        public GenDemoTypes.MapModelResponse mapModel() {
+            return new GenDemoTypes.MapModelResponse();
         }
 
         @Override
-        public DemoTypes.FormSubmitResponse formSubmit(DemoTypes.FormSubmitForm form) {
-            return new DemoTypes.FormSubmitResponse(form.title(), form.count(), form.enabled());
+        public GenDemoTypes.FormSubmitResponse formSubmit(GenDemoTypes.FormSubmitForm form) {
+            return new GenDemoTypes.FormSubmitResponse(form.title(), form.count(), form.enabled());
         }
 
         @Override
-        public DemoTypes.PutDemoResponse putDemo(DemoTypes.PutDemoQuery query, DemoTypes.PutDemoJSON json) {
-            return new DemoTypes.PutDemoResponse(
+        public GenDemoTypes.PutDemoResponse putDemo(GenDemoTypes.PutDemoQuery query, GenDemoTypes.PutDemoJSON json) {
+            return new GenDemoTypes.PutDemoResponse(
                 List.of(query.arg1(), json.req1()),
-                new DemoTypes.AnonFunc1putAnonKv(json.req2().longValue(), List.of(query.arg2().doubleValue(), json.req2().doubleValue()))
+                new GenDemoTypes.AnonFunc1putAnonKv(json.req2().longValue(), List.of(query.arg2().doubleValue(), json.req2().doubleValue()))
             );
         }
 
         @Override
-        public DemoTypes.ErrorDemoResponse errorDemo(DemoTypes.ErrorDemoQuery query) {
+        public GenDemoTypes.ErrorDemoResponse errorDemo(GenDemoTypes.ErrorDemoQuery query) {
             String mode = query == null || query.mode() == null ? "ok" : query.mode();
             return switch (mode) {
-                case "rate_limit" -> throwApiError(new ApiErrorPayload(
+                case "rate_limit" -> throwApiError(new GenApiErrorPayload(
                     "DemoErr.RATE_LIMITED",
                     "",
                     "",
-                    ApiErrors.DEMOERR_RATE_LIMITED,
+                    GenApiErrors.DEMOERR_RATE_LIMITED,
                     "",
-                    new ApiToastPayload("demo.rate_limited", "warning", "请求过于频繁，请稍后再试", "请等待 30 秒后重试")
+                    new GenApiToastPayload("demo.rate_limited", "warning", "请求过于频繁，请稍后再试", "请等待 30 秒后重试")
                 ));
-                case "unknown" -> throwApiError(new ApiErrorPayload(
+                case "unknown" -> throwApiError(new GenApiErrorPayload(
                     "",
                     "",
                     "",
                     70001,
                     "example undefined business error",
-                    new ApiToastPayload("", "error", "", "")
+                    new GenApiToastPayload("", "error", "", "")
                 ));
-                default -> new DemoTypes.ErrorDemoResponse("ok");
+                default -> new GenDemoTypes.ErrorDemoResponse("ok");
             };
         }
 
         @Override
         public void sweepEvents(
-            ApiTypes.SweepOpen openData,
-            ApiServerStream<DemoTypes.SweepStreamMessage, ApiTypes.ConnectionClose> stream
+            GenApiTypes.SweepOpen openData,
+            GenApiServerStream<GenDemoTypes.SweepStreamMessage, GenApiTypes.ConnectionClose> stream
         ) throws Exception {
-            stream.send(DemoTypes.SweepStreamMessageVariants.state(
-                new ApiTypes.SweepState("java sweep " + openData.runId())
+            stream.send(GenDemoTypes.SweepStreamMessageVariants.state(
+                new GenApiTypes.SweepState("java sweep " + openData.runId())
             ));
-            stream.close(new ApiTypes.ConnectionClose(1000, "example stream complete", null));
+            stream.close(new GenApiTypes.ConnectionClose(1000, "example stream complete", null));
         }
 
         @Override
         public void assistantSession(
-            ApiTypes.AssistantOpen openData,
-            ApiServerChannel<DemoTypes.AssistantClientMessage, DemoTypes.AssistantServerMessage, ApiTypes.ConnectionClose> channel
+            GenApiTypes.AssistantOpen openData,
+            GenApiServerChannel<GenDemoTypes.AssistantClientMessage, GenDemoTypes.AssistantServerMessage, GenApiTypes.ConnectionClose> channel
         ) throws Exception {
-            DemoTypes.AssistantClientMessage first = channel.receive();
+            GenDemoTypes.AssistantClientMessage first = channel.receive();
             if (first == null) {
-                channel.close(new ApiTypes.ConnectionClose(1000, "empty session", null));
+                channel.close(new GenApiTypes.ConnectionClose(1000, "empty session", null));
                 return;
             }
-            DemoTypes.dispatchAssistantClientMessage(first, new DemoTypes.AssistantClientMessageHandlers<Void>() {
+            GenDemoTypes.dispatchAssistantClientMessage(first, new GenDemoTypes.AssistantClientMessageHandlers<Void>() {
                 @Override
-                public Void input(ApiTypes.AssistantInput data, DemoTypes.AssistantClientMessage message) throws Exception {
-                    channel.send(DemoTypes.AssistantServerMessageVariants.delta(
-                        new ApiTypes.AssistantDelta(openData.sessionId() + ":" + data.text())
+                public Void input(GenApiTypes.AssistantInput data, GenDemoTypes.AssistantClientMessage message) throws Exception {
+                    channel.send(GenDemoTypes.AssistantServerMessageVariants.delta(
+                        new GenApiTypes.AssistantDelta(openData.sessionId() + ":" + data.text())
                     ));
                     return null;
                 }
 
                 @Override
-                public Void cancel(ApiTypes.AssistantCancel data, DemoTypes.AssistantClientMessage message) throws Exception {
-                    channel.close(new ApiTypes.ConnectionClose(1000, data.reason(), null));
+                public Void cancel(GenApiTypes.AssistantCancel data, GenDemoTypes.AssistantClientMessage message) throws Exception {
+                    channel.close(new GenApiTypes.ConnectionClose(1000, data.reason(), null));
                     return null;
                 }
             });
-            DemoTypes.AssistantClientMessage second = channel.receive();
+            GenDemoTypes.AssistantClientMessage second = channel.receive();
             if (second != null) {
-                DemoTypes.dispatchAssistantClientMessage(second, new DemoTypes.AssistantClientMessageHandlers<Void>() {
+                GenDemoTypes.dispatchAssistantClientMessage(second, new GenDemoTypes.AssistantClientMessageHandlers<Void>() {
                     @Override
-                    public Void input(ApiTypes.AssistantInput data, DemoTypes.AssistantClientMessage message) {
+                    public Void input(GenApiTypes.AssistantInput data, GenDemoTypes.AssistantClientMessage message) {
                         return null;
                     }
 
                     @Override
-                    public Void cancel(ApiTypes.AssistantCancel data, DemoTypes.AssistantClientMessage message) throws Exception {
-                        channel.close(new ApiTypes.ConnectionClose(1000, data.reason(), null));
+                    public Void cancel(GenApiTypes.AssistantCancel data, GenDemoTypes.AssistantClientMessage message) throws Exception {
+                        channel.close(new GenApiTypes.ConnectionClose(1000, data.reason(), null));
                         return null;
                     }
                 });
             }
         }
 
-        private static DemoTypes.ErrorDemoResponse throwApiError(ApiErrorPayload payload) {
-            throw new ApiError(payload, "api.demo.get.errordemo", "", null);
+        private static GenDemoTypes.ErrorDemoResponse throwApiError(GenApiErrorPayload payload) {
+            throw new GenApiError(payload, "api.demo.get.errordemo", "", null);
         }
     }
 
-    private static final class BinaryServiceImpl extends BinaryServiceStub {
+    private static final class BinaryServiceImpl extends GenBinaryServiceStub {
         @Override
-        public BinaryTypes.PacketResponse packet(BinaryTypes.PacketQuery query, BinaryTypes.DemoPacket binary) {
-            BinaryTypes.DemoPacketBody body = binary.body();
-            return new BinaryTypes.PacketResponse(
+        public GenBinaryTypes.PacketResponse packet(GenBinaryTypes.PacketQuery query, GenBinaryTypes.DemoPacket binary) {
+            GenBinaryTypes.DemoPacketBody body = binary.body();
+            return new GenBinaryTypes.PacketResponse(
                 query.trace(),
                 1L,
                 binary.header().itemCount().longValue(),
                 new String(body.payload(), StandardCharsets.UTF_8),
                 body.scores().stream().mapToDouble(Double::doubleValue).sum(),
                 new String(body.items().get(0).label(), StandardCharsets.UTF_8),
-                body.items().stream().map(BinaryTypes.DemoPacketItem::id).toList(),
+                body.items().stream().map(GenBinaryTypes.DemoPacketItem::id).toList(),
                 body.checksum()
             );
         }
 
         @Override
-        public BinaryTypes.AuditPacketResponse auditPacket(BinaryTypes.AuditPacketQuery query, BinaryTypes.AuditPacket binary) {
-            return new BinaryTypes.AuditPacketResponse(
+        public GenBinaryTypes.AuditPacketResponse auditPacket(GenBinaryTypes.AuditPacketQuery query, GenBinaryTypes.AuditPacket binary) {
+            return new GenBinaryTypes.AuditPacketResponse(
                 query.trace(),
                 binary.header().itemCount().longValue(),
                 binary.body().checksum()
@@ -375,13 +375,13 @@ public class ServerApp {
         }
 
         @Override
-        public BinaryTypes.AuditPacket auditPacketResponse() {
-            return new BinaryTypes.AuditPacket(
-                new BinaryTypes.AuditPacketHeader(BinaryTypes.AuditPacketFlagsValues.HASITEMS, 2),
-                new BinaryTypes.AuditPacketBody(
+        public GenBinaryTypes.AuditPacket auditPacketResponse() {
+            return new GenBinaryTypes.AuditPacket(
+                new GenBinaryTypes.AuditPacketHeader(GenBinaryTypes.AuditPacketFlagsValues.HASITEMS, 2),
+                new GenBinaryTypes.AuditPacketBody(
                     List.of(
-                        new BinaryTypes.AuditPacketItem(11L, 101),
-                        new BinaryTypes.AuditPacketItem(22L, 202)
+                        new GenBinaryTypes.AuditPacketItem(11L, 101),
+                        new GenBinaryTypes.AuditPacketItem(22L, 202)
                     ),
                     2L
                 )
@@ -389,28 +389,28 @@ public class ServerApp {
         }
     }
 
-    private static final class MediaServiceImpl extends MediaServiceStub {
+    private static final class MediaServiceImpl extends GenMediaServiceStub {
         @Override
-        public ApiRawResponse mediaPreview(ApiTypes.MediaPreviewRequest multipart) {
-            return ApiRawResponse.of(SAMPLE_JPEG, "image/jpeg");
+        public GenApiRawResponse mediaPreview(GenApiTypes.MediaPreviewRequest multipart) {
+            return GenApiRawResponse.of(SAMPLE_JPEG, "image/jpeg");
         }
 
         @Override
-        public ApiRawResponse mediaFrame() {
-            return ApiRawResponse.of(SAMPLE_JPEG, "image/jpeg");
+        public GenApiRawResponse mediaFrame() {
+            return GenApiRawResponse.of(SAMPLE_JPEG, "image/jpeg");
         }
 
         @Override
-        public ApiRawResponse mediaDownload() {
-            return ApiRawResponse.of(
+        public GenApiRawResponse mediaDownload() {
+            return GenApiRawResponse.of(
                 SAMPLE_XLSX,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             );
         }
 
         @Override
-        public ApiRawResponse mediaDownloadDynamic() {
-            return ApiRawResponse.of(
+        public GenApiRawResponse mediaDownloadDynamic() {
+            return GenApiRawResponse.of(
                 SAMPLE_XLSX_DYNAMIC,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 "media-report-dynamic.xlsx"
@@ -418,8 +418,8 @@ public class ServerApp {
         }
 
         @Override
-        public ApiStreamResponse mediaMjpeg() {
-            return ApiStreamResponse.of(
+        public GenApiStreamResponse mediaMjpeg() {
+            return GenApiStreamResponse.of(
                 concat(
                     "--frame\r\nContent-Type: image/jpeg\r\n\r\n".getBytes(StandardCharsets.UTF_8),
                     SAMPLE_JPEG,
@@ -430,60 +430,60 @@ public class ServerApp {
         }
     }
 
-    private static final class HelloServiceImpl extends HelloServiceStub {
+    private static final class HelloServiceImpl extends GenHelloServiceStub {
         @Override
-        public HelloTypes.StringResponse string() {
-            return new HelloTypes.StringResponse();
+        public GenHelloTypes.StringResponse string() {
+            return new GenHelloTypes.StringResponse();
         }
     }
 
-    private static final class StaticServiceImpl extends StaticServiceStub {
+    private static final class StaticServiceImpl extends GenStaticServiceStub {
         @Override
-        public StaticTypes.DocJsonResponse docJson() {
-            return new StaticTypes.DocJsonResponse();
+        public GenStaticTypes.DocJsonResponse docJson() {
+            return new GenStaticTypes.DocJsonResponse();
         }
 
         @Override
-        public StaticTypes.DochahaResponse dochaha() {
-            return new StaticTypes.DochahaResponse("hello world");
+        public GenStaticTypes.DochahaResponse dochaha() {
+            return new GenStaticTypes.DochahaResponse("hello world");
         }
     }
 
-    private static final class ConflictServiceImpl extends ConflictServiceStub {
+    private static final class ConflictServiceImpl extends GenConflictServiceStub {
         @Override
-        public ApiTypes.BlueprintsApiConflictConflictModel defaultValue(ConflictTypes.DefaultQuery query) {
-            return new ApiTypes.BlueprintsApiConflictConflictModel(
+        public GenApiTypes.BlueprintsApiConflictConflictModel defaultValue(GenConflictTypes.DefaultQuery query) {
+            return new GenApiTypes.BlueprintsApiConflictConflictModel(
                 "api-default",
                 query.classValue(),
-                ApiTypes.KeywordEnum.DEFAULT_VALUE
+                GenApiTypes.KeywordEnum.DEFAULT_VALUE
             );
         }
     }
 
     private static final class AltConflictServiceImpl
-        extends com.example.apiblueprint.alt.routes.alt.conflict.ConflictServiceStub {
+        extends com.example.apiblueprint.alt.routes.alt.conflict.GenConflictServiceStub {
         @Override
-        public com.example.apiblueprint.alt.runtime.ApiTypes.BlueprintsAltConflictConflictModel defaultValue(
-            com.example.apiblueprint.alt.routes.alt.conflict.ConflictTypes.DefaultQuery query
+        public com.example.apiblueprint.alt.runtime.GenApiTypes.BlueprintsAltConflictConflictModel defaultValue(
+            com.example.apiblueprint.alt.routes.alt.conflict.GenConflictTypes.DefaultQuery query
         ) {
-            return new com.example.apiblueprint.alt.runtime.ApiTypes.BlueprintsAltConflictConflictModel(
+            return new com.example.apiblueprint.alt.runtime.GenApiTypes.BlueprintsAltConflictConflictModel(
                 "alt-default",
                 query.classValue(),
-                com.example.apiblueprint.alt.runtime.ApiTypes.KeywordEnum.CLASS_VALUE
+                com.example.apiblueprint.alt.runtime.GenApiTypes.KeywordEnum.CLASS_VALUE
             );
         }
     }
 
-    private static ApiTypes.ApiDemoA demoModel(String label) {
-        return new ApiTypes.ApiDemoA(
+    private static GenApiTypes.ApiDemoA demoModel(String label) {
+        return new GenApiTypes.ApiDemoA(
             label,
             1,
             1.5f,
             List.of(1L, 2L, 3L),
-            List.of(new ApiTypes.ApiDemoSubA(Map.of("a", 1), List.of(new ApiTypes.ApiDemoMap(1L)))),
-            ApiTypes.ColorEnum.RED,
-            ApiTypes.StatusEnum.RUNNING,
-            List.of(ApiTypes.StatusEnum.PENDING, ApiTypes.StatusEnum.RUNNING)
+            List.of(new GenApiTypes.ApiDemoSubA(Map.of("a", 1), List.of(new GenApiTypes.ApiDemoMap(1L)))),
+            GenApiTypes.ColorEnum.RED,
+            GenApiTypes.StatusEnum.RUNNING,
+            List.of(GenApiTypes.StatusEnum.PENDING, GenApiTypes.StatusEnum.RUNNING)
         );
     }
 }

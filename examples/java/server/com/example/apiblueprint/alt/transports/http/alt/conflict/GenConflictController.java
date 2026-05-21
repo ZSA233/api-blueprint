@@ -3,23 +3,23 @@ package com.example.apiblueprint.alt.transports.http.alt.conflict;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.apiblueprint.alt.routes.alt.conflict.ConflictService;
-import com.example.apiblueprint.alt.routes.alt.conflict.ConflictServiceStub;
-import com.example.apiblueprint.alt.routes.alt.conflict.ConflictTypes;
-import com.example.apiblueprint.alt.runtime.ApiError;
-import com.example.apiblueprint.alt.runtime.ApiErrorEntry;
-import com.example.apiblueprint.alt.runtime.ApiErrorPayload;
-import com.example.apiblueprint.alt.runtime.ApiErrors;
-import com.example.apiblueprint.alt.runtime.ApiFilePart;
-import com.example.apiblueprint.alt.runtime.ApiRawResponse;
-import com.example.apiblueprint.alt.runtime.ApiResponseEnvelope;
-import com.example.apiblueprint.alt.runtime.ApiServerChannel;
-import com.example.apiblueprint.alt.runtime.ApiServerStream;
-import com.example.apiblueprint.alt.runtime.ApiStreamResponse;
-import com.example.apiblueprint.alt.runtime.ApiToastPayload;
+import com.example.apiblueprint.alt.routes.alt.conflict.GenConflictServiceStub;
+import com.example.apiblueprint.alt.routes.alt.conflict.GenConflictTypes;
+import com.example.apiblueprint.alt.runtime.GenApiError;
+import com.example.apiblueprint.alt.runtime.GenApiErrorEntry;
+import com.example.apiblueprint.alt.runtime.GenApiErrorPayload;
+import com.example.apiblueprint.alt.runtime.GenApiErrors;
+import com.example.apiblueprint.alt.runtime.GenApiFilePart;
+import com.example.apiblueprint.alt.runtime.GenApiRawResponse;
+import com.example.apiblueprint.alt.runtime.GenApiResponseEnvelope;
+import com.example.apiblueprint.alt.runtime.GenApiServerChannel;
+import com.example.apiblueprint.alt.runtime.GenApiServerStream;
+import com.example.apiblueprint.alt.runtime.GenApiStreamResponse;
+import com.example.apiblueprint.alt.runtime.GenApiToastPayload;
 
-import com.example.apiblueprint.alt.runtime.ApiTypes;
+import com.example.apiblueprint.alt.runtime.GenApiTypes;
 
-import com.example.apiblueprint.alt.runtime.binary.ApiBinaryBody;
+import com.example.apiblueprint.alt.runtime.binary.GenApiBinaryBody;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.net.URI;
@@ -53,7 +53,7 @@ public class GenConflictController {
         @Autowired(required = false) ConflictService service,
         ObjectMapper objectMapper
     ) {
-        this.service = service == null ? new ConflictServiceStub() : service;
+        this.service = service == null ? new GenConflictServiceStub() : service;
         this.objectMapper = objectMapper;
     }
 
@@ -61,9 +61,9 @@ public class GenConflictController {
     public Object defaultValue(
         @RequestParam Map<String, String> queryParams
     ) throws Exception {
-        ConflictTypes.DefaultQuery query;
+        GenConflictTypes.DefaultQuery query;
         try {
-            query = objectMapper.convertValue(queryParams, ConflictTypes.DefaultQuery.class);
+            query = objectMapper.convertValue(queryParams, GenConflictTypes.DefaultQuery.class);
         } catch (RuntimeException error) {
             return badRequestResponse(error);
         }
@@ -71,13 +71,13 @@ public class GenConflictController {
             Object result = service.defaultValue(
                 query
             );
-            return wrapResponse(ApiResponseEnvelope.of("OkDataErrorEnvelope", "ok_data_error", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
-        } catch (ApiError error) {
-            return wrapApiErrorResponse(ApiResponseEnvelope.of("OkDataErrorEnvelope", "ok_data_error", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "alt.conflict.get.default");
+            return wrapResponse(GenApiResponseEnvelope.of("OkDataErrorEnvelope", "ok_data_error", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("OkDataErrorEnvelope", "ok_data_error", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "alt.conflict.get.default");
         }
     }
 
-    private static final class SpringSseStream<Message, Close> implements ApiServerStream<Message, Close> {
+    private static final class SpringSseStream<Message, Close> implements GenApiServerStream<Message, Close> {
         private final SseEmitter emitter;
         private final ObjectMapper objectMapper;
         private volatile boolean closed = false;
@@ -144,7 +144,7 @@ public class GenConflictController {
         return result;
     }
 
-    private Object wrapResponse(ApiResponseEnvelope envelopeSpec, Object data) {
+    private Object wrapResponse(GenApiResponseEnvelope envelopeSpec, Object data) {
         if ("none".equals(envelopeSpec.kind())) {
             return data;
         }
@@ -177,22 +177,22 @@ public class GenConflictController {
             MultipartFile file = entry.getValue();
             result.put(
                 entry.getKey(),
-                ApiFilePart.of(file.getOriginalFilename(), file.getContentType(), file.getBytes())
+                GenApiFilePart.of(file.getOriginalFilename(), file.getContentType(), file.getBytes())
             );
         }
         return result;
     }
 
     private ResponseEntity<byte[]> rawResponse(String kind, String mediaType, String filename, Object result) throws IOException {
-        if (result instanceof ApiRawResponse raw) {
+        if (result instanceof GenApiRawResponse raw) {
             ResponseEntity.BodyBuilder builder = rawResponseBuilder(kind, raw.contentType(), raw.filename().isBlank() ? filename : raw.filename());
             raw.headers().forEach(builder::header);
             return builder.body(raw.body());
         }
-        if (result instanceof ApiStreamResponse stream) {
+        if (result instanceof GenApiStreamResponse stream) {
             return rawResponseBuilder(kind, stream.contentType(), filename).body(stream.body());
         }
-        if (result instanceof ApiBinaryBody binary) {
+        if (result instanceof GenApiBinaryBody binary) {
             return rawResponseBuilder(kind, binary.contentType(), filename).body(binary.toBytes());
         }
         if (result instanceof byte[] bytes) {
@@ -221,8 +221,8 @@ public class GenConflictController {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("detail", "invalid request"));
     }
 
-    private Object wrapApiErrorResponse(ApiResponseEnvelope envelopeSpec, ApiError error, String routeId) {
-        ApiErrorPayload payload = normalizeApiErrorPayload(error.payload(), routeId);
+    private Object wrapApiErrorResponse(GenApiResponseEnvelope envelopeSpec, GenApiError error, String routeId) {
+        GenApiErrorPayload payload = normalizeApiErrorPayload(error.payload(), routeId);
         if ("none".equals(envelopeSpec.kind())) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(payload);
         }
@@ -244,25 +244,25 @@ public class GenConflictController {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(payload);
     }
 
-    private ApiErrorPayload normalizeApiErrorPayload(ApiErrorPayload payload, String routeId) {
+    private GenApiErrorPayload normalizeApiErrorPayload(GenApiErrorPayload payload, String routeId) {
         if (payload == null) {
-            payload = new ApiErrorPayload("", "", "", 0, "", new ApiToastPayload("", "error", "", ""));
+            payload = new GenApiErrorPayload("", "", "", 0, "", new GenApiToastPayload("", "error", "", ""));
         }
-        ApiErrorEntry entry = ApiErrors.lookup(payload, routeId).orElse(null);
+        GenApiErrorEntry entry = GenApiErrors.lookup(payload, routeId).orElse(null);
         int code = payload.code() != 0 ? payload.code() : entry == null ? 0 : entry.code();
         String message = !payload.message().isBlank()
             ? payload.message()
             : entry == null ? "API error " + code : entry.message();
-        ApiToastPayload toast = payload.toast() == null
-            ? new ApiToastPayload("", "error", "", "")
+        GenApiToastPayload toast = payload.toast() == null
+            ? new GenApiToastPayload("", "error", "", "")
             : payload.toast();
-        return new ApiErrorPayload(
+        return new GenApiErrorPayload(
             payload.id().isBlank() && entry != null ? entry.id() : payload.id(),
             payload.group().isBlank() && entry != null ? entry.group() : payload.group(),
             payload.key().isBlank() && entry != null ? entry.key() : payload.key(),
             code,
             message,
-            new ApiToastPayload(
+            new GenApiToastPayload(
                 toast.key().isBlank() && entry != null ? entry.toast().key() : toast.key(),
                 toast.level().isBlank() ? (entry == null ? "error" : entry.toast().level()) : toast.level(),
                 toast.defaultMessage().isBlank()

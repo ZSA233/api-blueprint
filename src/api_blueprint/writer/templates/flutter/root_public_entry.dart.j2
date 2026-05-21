@@ -1,2 +1,4 @@
-{% autoescape false %}export 'src/{{ bp.root_path }}/{{ bp.root_path.rsplit('/', 1)[-1] }}.dart';
+{% autoescape false %}{% if generated %}export 'src/{{ bp.root_path }}/gen_{{ bp.root_path.rsplit('/', 1)[-1] }}.dart';
+{% else %}export 'gen_{{ bp.root_path.rsplit('/', 1)[-1] }}.dart';
+{% endif %}
 {% endautoescape %}

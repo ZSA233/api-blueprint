@@ -4,11 +4,11 @@ package com.example.apiblueprint.alt.runtime;
 import com.example.apiblueprint.alt.routes.alt.conflict.ConflictApi;
 
 public class GenApiClient {
-    protected final ApiTransport transport;
+    protected final GenApiTransport transport;
 
     public final ConflictApi conflict;
 
-    public GenApiClient(ApiTransport transport) {
+    public GenApiClient(GenApiTransport transport) {
         this.transport = transport;
 
         this.conflict = new ConflictApi(transport);

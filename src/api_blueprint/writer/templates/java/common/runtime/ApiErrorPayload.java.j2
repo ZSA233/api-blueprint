@@ -1,18 +1,18 @@
 package {{ bp.root_package }}.runtime;
 
-public record ApiErrorPayload(
+public record GenApiErrorPayload(
     String id,
     String group,
     String key,
     int code,
     String message,
-    ApiToastPayload toast
+    GenApiToastPayload toast
 ) {
-    public ApiErrorPayload {
+    public GenApiErrorPayload {
         id = id == null ? "" : id;
         group = group == null ? "" : group;
         key = key == null ? "" : key;
         message = message == null ? "" : message;
-        toast = toast == null ? new ApiToastPayload("", "error", "", "") : toast;
+        toast = toast == null ? new GenApiToastPayload("", "error", "", "") : toast;
     }
 }

@@ -3,21 +3,21 @@ package com.example.apiblueprint.api.transports.http.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.apiblueprint.api.routes.api.ApiService;
-import com.example.apiblueprint.api.routes.api.ApiServiceStub;
-import com.example.apiblueprint.api.routes.api.ApiTypes;
-import com.example.apiblueprint.api.runtime.ApiError;
-import com.example.apiblueprint.api.runtime.ApiErrorEntry;
-import com.example.apiblueprint.api.runtime.ApiErrorPayload;
-import com.example.apiblueprint.api.runtime.ApiErrors;
-import com.example.apiblueprint.api.runtime.ApiFilePart;
-import com.example.apiblueprint.api.runtime.ApiRawResponse;
-import com.example.apiblueprint.api.runtime.ApiResponseEnvelope;
-import com.example.apiblueprint.api.runtime.ApiServerChannel;
-import com.example.apiblueprint.api.runtime.ApiServerStream;
-import com.example.apiblueprint.api.runtime.ApiStreamResponse;
-import com.example.apiblueprint.api.runtime.ApiToastPayload;
+import com.example.apiblueprint.api.routes.api.GenApiServiceStub;
+import com.example.apiblueprint.api.routes.api.GenApiTypes;
+import com.example.apiblueprint.api.runtime.GenApiError;
+import com.example.apiblueprint.api.runtime.GenApiErrorEntry;
+import com.example.apiblueprint.api.runtime.GenApiErrorPayload;
+import com.example.apiblueprint.api.runtime.GenApiErrors;
+import com.example.apiblueprint.api.runtime.GenApiFilePart;
+import com.example.apiblueprint.api.runtime.GenApiRawResponse;
+import com.example.apiblueprint.api.runtime.GenApiResponseEnvelope;
+import com.example.apiblueprint.api.runtime.GenApiServerChannel;
+import com.example.apiblueprint.api.runtime.GenApiServerStream;
+import com.example.apiblueprint.api.runtime.GenApiStreamResponse;
+import com.example.apiblueprint.api.runtime.GenApiToastPayload;
 
-import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
+import com.example.apiblueprint.api.runtime.binary.GenApiBinaryBody;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.net.URI;
@@ -60,7 +60,7 @@ public class GenApiController implements WebSocketConfigurer {
         @Autowired(required = false) ApiService service,
         ObjectMapper objectMapper
     ) {
-        this.service = service == null ? new ApiServiceStub() : service;
+        this.service = service == null ? new GenApiServiceStub() : service;
         this.objectMapper = objectMapper;
     }
 
@@ -72,12 +72,12 @@ public class GenApiController implements WebSocketConfigurer {
     }
 
     private final class HelloChannelWebSocketHandler extends TextWebSocketHandler {
-        private final Map<String, SpringWebSocketChannel<com.example.apiblueprint.api.runtime.ApiTypes.HelloChannelMessage, com.example.apiblueprint.api.runtime.ApiTypes.HelloChannelMessage, Object>> channels = new ConcurrentHashMap<>();
+        private final Map<String, SpringWebSocketChannel<com.example.apiblueprint.api.runtime.GenApiTypes.HelloChannelMessage, com.example.apiblueprint.api.runtime.GenApiTypes.HelloChannelMessage, Object>> channels = new ConcurrentHashMap<>();
 
         @Override
         public void afterConnectionEstablished(WebSocketSession session) throws Exception {
             Map<String, String> queryParams = parseQuery(session.getUri());
-            SpringWebSocketChannel<com.example.apiblueprint.api.runtime.ApiTypes.HelloChannelMessage, com.example.apiblueprint.api.runtime.ApiTypes.HelloChannelMessage, Object> channel = new SpringWebSocketChannel<>(
+            SpringWebSocketChannel<com.example.apiblueprint.api.runtime.GenApiTypes.HelloChannelMessage, com.example.apiblueprint.api.runtime.GenApiTypes.HelloChannelMessage, Object> channel = new SpringWebSocketChannel<>(
                 session,
                 objectMapper
             );
@@ -95,10 +95,10 @@ public class GenApiController implements WebSocketConfigurer {
 
         @Override
         protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-            SpringWebSocketChannel<com.example.apiblueprint.api.runtime.ApiTypes.HelloChannelMessage, com.example.apiblueprint.api.runtime.ApiTypes.HelloChannelMessage, Object> channel = channels.get(session.getId());
+            SpringWebSocketChannel<com.example.apiblueprint.api.runtime.GenApiTypes.HelloChannelMessage, com.example.apiblueprint.api.runtime.GenApiTypes.HelloChannelMessage, Object> channel = channels.get(session.getId());
             if (channel != null) {
                 try {
-                    channel.accept(message.getPayload(), com.example.apiblueprint.api.runtime.ApiTypes.HelloChannelMessage.class);
+                    channel.accept(message.getPayload(), com.example.apiblueprint.api.runtime.GenApiTypes.HelloChannelMessage.class);
                 } catch (IOException error) {
                     channel.abortUnchecked(1003, "invalid WebSocket message");
                     channel.markClosed(error);
@@ -108,14 +108,14 @@ public class GenApiController implements WebSocketConfigurer {
 
         @Override
         public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-            SpringWebSocketChannel<com.example.apiblueprint.api.runtime.ApiTypes.HelloChannelMessage, com.example.apiblueprint.api.runtime.ApiTypes.HelloChannelMessage, Object> channel = channels.remove(session.getId());
+            SpringWebSocketChannel<com.example.apiblueprint.api.runtime.GenApiTypes.HelloChannelMessage, com.example.apiblueprint.api.runtime.GenApiTypes.HelloChannelMessage, Object> channel = channels.remove(session.getId());
             if (channel != null) {
                 channel.markClosed(new IOException("WebSocket closed"));
             }
         }
     }
 
-    private static final class SpringSseStream<Message, Close> implements ApiServerStream<Message, Close> {
+    private static final class SpringSseStream<Message, Close> implements GenApiServerStream<Message, Close> {
         private final SseEmitter emitter;
         private final ObjectMapper objectMapper;
         private volatile boolean closed = false;
@@ -162,7 +162,7 @@ public class GenApiController implements WebSocketConfigurer {
         }
     }
 
-    private static final class SpringWebSocketChannel<Recv, Send, Close> implements ApiServerChannel<Recv, Send, Close> {
+    private static final class SpringWebSocketChannel<Recv, Send, Close> implements GenApiServerChannel<Recv, Send, Close> {
         private static final Object CLOSED = new Object();
         private final WebSocketSession session;
         private final ObjectMapper objectMapper;
@@ -271,7 +271,7 @@ public class GenApiController implements WebSocketConfigurer {
         return result;
     }
 
-    private Object wrapResponse(ApiResponseEnvelope envelopeSpec, Object data) {
+    private Object wrapResponse(GenApiResponseEnvelope envelopeSpec, Object data) {
         if ("none".equals(envelopeSpec.kind())) {
             return data;
         }
@@ -304,22 +304,22 @@ public class GenApiController implements WebSocketConfigurer {
             MultipartFile file = entry.getValue();
             result.put(
                 entry.getKey(),
-                ApiFilePart.of(file.getOriginalFilename(), file.getContentType(), file.getBytes())
+                GenApiFilePart.of(file.getOriginalFilename(), file.getContentType(), file.getBytes())
             );
         }
         return result;
     }
 
     private ResponseEntity<byte[]> rawResponse(String kind, String mediaType, String filename, Object result) throws IOException {
-        if (result instanceof ApiRawResponse raw) {
+        if (result instanceof GenApiRawResponse raw) {
             ResponseEntity.BodyBuilder builder = rawResponseBuilder(kind, raw.contentType(), raw.filename().isBlank() ? filename : raw.filename());
             raw.headers().forEach(builder::header);
             return builder.body(raw.body());
         }
-        if (result instanceof ApiStreamResponse stream) {
+        if (result instanceof GenApiStreamResponse stream) {
             return rawResponseBuilder(kind, stream.contentType(), filename).body(stream.body());
         }
-        if (result instanceof ApiBinaryBody binary) {
+        if (result instanceof GenApiBinaryBody binary) {
             return rawResponseBuilder(kind, binary.contentType(), filename).body(binary.toBytes());
         }
         if (result instanceof byte[] bytes) {
@@ -348,8 +348,8 @@ public class GenApiController implements WebSocketConfigurer {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("detail", "invalid request"));
     }
 
-    private Object wrapApiErrorResponse(ApiResponseEnvelope envelopeSpec, ApiError error, String routeId) {
-        ApiErrorPayload payload = normalizeApiErrorPayload(error.payload(), routeId);
+    private Object wrapApiErrorResponse(GenApiResponseEnvelope envelopeSpec, GenApiError error, String routeId) {
+        GenApiErrorPayload payload = normalizeApiErrorPayload(error.payload(), routeId);
         if ("none".equals(envelopeSpec.kind())) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(payload);
         }
@@ -371,25 +371,25 @@ public class GenApiController implements WebSocketConfigurer {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(payload);
     }
 
-    private ApiErrorPayload normalizeApiErrorPayload(ApiErrorPayload payload, String routeId) {
+    private GenApiErrorPayload normalizeApiErrorPayload(GenApiErrorPayload payload, String routeId) {
         if (payload == null) {
-            payload = new ApiErrorPayload("", "", "", 0, "", new ApiToastPayload("", "error", "", ""));
+            payload = new GenApiErrorPayload("", "", "", 0, "", new GenApiToastPayload("", "error", "", ""));
         }
-        ApiErrorEntry entry = ApiErrors.lookup(payload, routeId).orElse(null);
+        GenApiErrorEntry entry = GenApiErrors.lookup(payload, routeId).orElse(null);
         int code = payload.code() != 0 ? payload.code() : entry == null ? 0 : entry.code();
         String message = !payload.message().isBlank()
             ? payload.message()
             : entry == null ? "API error " + code : entry.message();
-        ApiToastPayload toast = payload.toast() == null
-            ? new ApiToastPayload("", "error", "", "")
+        GenApiToastPayload toast = payload.toast() == null
+            ? new GenApiToastPayload("", "error", "", "")
             : payload.toast();
-        return new ApiErrorPayload(
+        return new GenApiErrorPayload(
             payload.id().isBlank() && entry != null ? entry.id() : payload.id(),
             payload.group().isBlank() && entry != null ? entry.group() : payload.group(),
             payload.key().isBlank() && entry != null ? entry.key() : payload.key(),
             code,
             message,
-            new ApiToastPayload(
+            new GenApiToastPayload(
                 toast.key().isBlank() && entry != null ? entry.toast().key() : toast.key(),
                 toast.level().isBlank() ? (entry == null ? "error" : entry.toast().level()) : toast.level(),
                 toast.defaultMessage().isBlank()

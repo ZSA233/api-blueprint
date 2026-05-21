@@ -120,28 +120,47 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
             self._write_group_binary(group_plan, context)
 
     def _write_common_runtime(self, plan: JavaBlueprintPlan, context: dict[str, object]) -> None:
-        for stale_name in ("ApiCodeError.java", "ApiErrorCatalogEntry.java", "GenApiErrorCatalog.java", "GenModels.java"):
+        for stale_name in (
+            "ApiBinaryBody.java",
+            "ApiCodeError.java",
+            "ApiError.java",
+            "ApiErrorCatalogEntry.java",
+            "ApiErrorEntry.java",
+            "ApiErrorPayload.java",
+            "ApiErrors.java",
+            "ApiException.java",
+            "ApiFilePart.java",
+            "ApiJson.java",
+            "ApiRawResponse.java",
+            "ApiResponseEnvelope.java",
+            "ApiStreamResponse.java",
+            "ApiToastPayload.java",
+            "ApiToastSpec.java",
+            "ApiTypes.java",
+            "GenApiErrorCatalog.java",
+            "GenModels.java",
+        ):
             stale_path = plan.runtime.directory / stale_name
-            if stale_path.exists():
-                stale_path.unlink()
+            self._unlink_generated_file(stale_path)
+        self._unlink_generated_file(plan.runtime.binary_directory / "ApiBinaryBody.java")
         for output_name, template_path in (
-            ("ApiException.java", "ApiException.java"),
-            ("ApiError.java", "ApiError.java"),
-            ("ApiToastSpec.java", "ApiToastSpec.java"),
-            ("ApiToastPayload.java", "ApiToastPayload.java"),
-            ("ApiErrorEntry.java", "ApiErrorEntry.java"),
-            ("ApiErrorPayload.java", "ApiErrorPayload.java"),
-            ("ApiFilePart.java", "ApiFilePart.java"),
-            ("ApiRawResponse.java", "ApiRawResponse.java"),
-            ("ApiStreamResponse.java", "ApiStreamResponse.java"),
-            ("ApiResponseEnvelope.java", "ApiResponseEnvelope.java"),
-            ("ApiErrors.java", "ApiErrors.java"),
-            ("ApiTypes.java", "ApiTypes.java"),
-            ("ApiJson.java", "ApiJson.java"),
+            ("GenApiException.java", "ApiException.java"),
+            ("GenApiError.java", "ApiError.java"),
+            ("GenApiToastSpec.java", "ApiToastSpec.java"),
+            ("GenApiToastPayload.java", "ApiToastPayload.java"),
+            ("GenApiErrorEntry.java", "ApiErrorEntry.java"),
+            ("GenApiErrorPayload.java", "ApiErrorPayload.java"),
+            ("GenApiFilePart.java", "ApiFilePart.java"),
+            ("GenApiRawResponse.java", "ApiRawResponse.java"),
+            ("GenApiStreamResponse.java", "ApiStreamResponse.java"),
+            ("GenApiResponseEnvelope.java", "ApiResponseEnvelope.java"),
+            ("GenApiErrors.java", "ApiErrors.java"),
+            ("GenApiTypes.java", "ApiTypes.java"),
+            ("GenApiJson.java", "ApiJson.java"),
         ):
             self._write_generated(plan.runtime.directory / output_name, template_path, context, "common/runtime")
         self._write_generated(
-            plan.runtime.binary_directory / "ApiBinaryBody.java",
+            plan.runtime.binary_directory / "GenApiBinaryBody.java",
             "ApiBinaryBody.java",
             context,
             "common/runtime/binary",
@@ -157,12 +176,20 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
         stale_socket_bridge = plan.runtime.directory / "ApiSocketBridge.java"
         if stale_socket_bridge.exists():
             stale_socket_bridge.unlink()
+        for stale_name in (
+            "ApiChannelBridge.java",
+            "ApiRequest.java",
+            "ApiResponse.java",
+            "ApiStreamBridge.java",
+            "ApiTransport.java",
+        ):
+            self._unlink_generated_file(plan.runtime.directory / stale_name)
         for output_name, template_path in (
-            ("ApiRequest.java", "ApiRequest.java"),
-            ("ApiResponse.java", "ApiResponse.java"),
-            ("ApiTransport.java", "ApiTransport.java"),
-            ("ApiStreamBridge.java", "ApiStreamBridge.java"),
-            ("ApiChannelBridge.java", "ApiChannelBridge.java"),
+            ("GenApiRequest.java", "ApiRequest.java"),
+            ("GenApiResponse.java", "ApiResponse.java"),
+            ("GenApiTransport.java", "ApiTransport.java"),
+            ("GenApiStreamBridge.java", "ApiStreamBridge.java"),
+            ("GenApiChannelBridge.java", "ApiChannelBridge.java"),
             ("GenApiClient.java", "GenApiClient.java"),
         ):
             self._write_generated(plan.runtime.directory / output_name, template_path, context, "client/runtime")
@@ -189,26 +216,33 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
         )
 
     def _write_server_runtime(self, plan: JavaBlueprintPlan, context: dict[str, object]) -> None:
+        for stale_name in (
+            "ApiServerChannel.java",
+            "ApiServerContext.java",
+            "ApiServerResponse.java",
+            "ApiServerStream.java",
+        ):
+            self._unlink_generated_file(plan.runtime.directory / stale_name)
         self._write_generated(
-            plan.runtime.directory / "ApiServerContext.java",
+            plan.runtime.directory / "GenApiServerContext.java",
             "ApiServerContext.java",
             context,
             "server/runtime",
         )
         self._write_generated(
-            plan.runtime.directory / "ApiServerResponse.java",
+            plan.runtime.directory / "GenApiServerResponse.java",
             "ApiServerResponse.java",
             context,
             "server/runtime",
         )
         self._write_generated(
-            plan.runtime.directory / "ApiServerStream.java",
+            plan.runtime.directory / "GenApiServerStream.java",
             "ApiServerStream.java",
             context,
             "server/runtime",
         )
         self._write_generated(
-            plan.runtime.directory / "ApiServerChannel.java",
+            plan.runtime.directory / "GenApiServerChannel.java",
             "ApiServerChannel.java",
             context,
             "server/runtime",
@@ -235,6 +269,8 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
             self._unlink_generated_file(stale_file)
         stale_models_file = group_plan.directory / f"{group.types_class.removesuffix('Types')}Models.java"
         self._unlink_generated_file(stale_models_file)
+        legacy_types_file = group_plan.directory / f"{group.class_name.removesuffix('Api')}Types.java"
+        self._unlink_generated_file(legacy_types_file)
         self._write_generated(
             group_plan.directory / f"{group.types_class}.java",
             "ApiGroupTypes.java",
@@ -259,6 +295,7 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
 
     def _write_server_group(self, group_plan: JavaRouteGroupPlan, context: dict[str, object]) -> None:
         group = group_plan.group
+        self._unlink_generated_file(group_plan.directory / f"{group.service_class}Stub.java")
         for output_name, template_name, overwrite in (
             (f"{group.generated_service_class}.java", "GenApiService.java", True),
             (f"{group.stub_class}.java", "GenApiServiceStub.java", True),
@@ -304,14 +341,14 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
         if self.server_mode and route.kind == "stream":
             if route.open_model:
                 params.append((self.schema_type(route.open_model, group), "openData"))
-            params.append((f"ApiServerStream<{self.server_message_type(route, group)}, {self.close_type(route, group)}>", "stream"))
+            params.append((f"GenApiServerStream<{self.server_message_type(route, group)}, {self.close_type(route, group)}>", "stream"))
             return params
         if self.server_mode and route.kind == "channel":
             if route.open_model:
                 params.append((self.schema_type(route.open_model, group), "openData"))
             params.append(
                 (
-                    f"ApiServerChannel<{self.client_message_type(route, group)}, {self.server_message_type(route, group)}, {self.close_type(route, group)}>",
+                    f"GenApiServerChannel<{self.client_message_type(route, group)}, {self.server_message_type(route, group)}, {self.close_type(route, group)}>",
                     "channel",
                 )
             )
@@ -328,7 +365,7 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
             if self.server_mode:
                 params.append((f"{group.types_class}.{route.binary_schema_type}", "binary"))
             else:
-                params.append(("ApiBinaryBody", "binaryBody"))
+                params.append(("GenApiBinaryBody", "binaryBody"))
         elif route.binary_model:
             params.append(("byte[]", "binaryBody") if self.server_mode else (self.schema_type(route.binary_model, group), "binaryBody"))
         if route.open_model:
@@ -347,9 +384,9 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
         if route.is_binary_schema_response and route.response_binary_schema_type:
             return f"{group.types_class}.{route.response_binary_schema_type}"
         if route.response_kind in {"bytes", "file"}:
-            return "ApiRawResponse"
+            return "GenApiRawResponse"
         if route.response_kind == "byte_stream":
-            return "ApiStreamResponse"
+            return "GenApiStreamResponse"
         if route.response_model:
             return self.schema_type(route.response_model, group)
         if route.response_media_type != "application/json":
@@ -365,9 +402,9 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
         if route.is_binary_schema_response and route.response_binary_schema_type:
             return f"{group.types_class}.{route.response_binary_schema_type}.class"
         if route.response_kind in {"bytes", "file"}:
-            return "ApiRawResponse.class"
+            return "GenApiRawResponse.class"
         if route.response_kind == "byte_stream":
-            return "ApiStreamResponse.class"
+            return "GenApiStreamResponse.class"
         if route.response_model:
             return self.schema_class_literal(route.response_model, group)
         if route.response_media_type != "application/json":

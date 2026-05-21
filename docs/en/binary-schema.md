@@ -152,8 +152,8 @@ Generators emit route-group-local binary helpers and reuse the shared runtime. G
 ```text
 routes/api/binary/_gen_binary/gen_binary.go   # Go server
 routes/api/binary/gen_binary.go               # Go client
-routes/api/binary/BinaryTypes.java
-routes/api/binary/BinaryTypes.kt
+routes/api/binary/GenBinaryTypes.java
+routes/api/binary/GenBinaryTypes.kt
 routes/api/binary/gen_binary.ts
 lib/src/api/routes/api/binary/gen_binary.dart
 lib/src/api/runtime/binary/gen_binary_runtime.dart

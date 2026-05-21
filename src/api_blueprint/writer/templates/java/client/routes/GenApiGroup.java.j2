@@ -1,22 +1,22 @@
 {% autoescape false %}package {{ bp.root_package }}.routes.{{ group.package_suffix }};
 
-import {{ bp.root_package }}.runtime.ApiChannelBridge;
-import {{ bp.root_package }}.runtime.ApiRequest;
-import {{ bp.root_package }}.runtime.ApiRawResponse;
-import {{ bp.root_package }}.runtime.ApiResponseEnvelope;
-import {{ bp.root_package }}.runtime.ApiStreamResponse;
-import {{ bp.root_package }}.runtime.ApiStreamBridge;
-import {{ bp.root_package }}.runtime.ApiTransport;
-{% if group.runtime_types_ref == "ApiTypes" %}
-import {{ bp.root_package }}.runtime.ApiTypes;
+import {{ bp.root_package }}.runtime.GenApiChannelBridge;
+import {{ bp.root_package }}.runtime.GenApiRequest;
+import {{ bp.root_package }}.runtime.GenApiRawResponse;
+import {{ bp.root_package }}.runtime.GenApiResponseEnvelope;
+import {{ bp.root_package }}.runtime.GenApiStreamResponse;
+import {{ bp.root_package }}.runtime.GenApiStreamBridge;
+import {{ bp.root_package }}.runtime.GenApiTransport;
+{% if group.runtime_types_ref == "GenApiTypes" %}
+import {{ bp.root_package }}.runtime.GenApiTypes;
 {% endif %}
-import {{ bp.root_package }}.runtime.binary.ApiBinaryBody;
+import {{ bp.root_package }}.runtime.binary.GenApiBinaryBody;
 import java.util.Map;
 
 public class {{ group.generated_client_class }} {
-    protected final ApiTransport transport;
+    protected final GenApiTransport transport;
 
-    public {{ group.generated_client_class }}(ApiTransport transport) {
+    public {{ group.generated_client_class }}(GenApiTransport transport) {
         this.transport = transport;
     }
 {% for route in group.routes %}
@@ -43,7 +43,7 @@ public class {{ group.generated_client_class }} {
         {{ type_name }} {{ name }}{% if not loop.last %},{% endif %}
 {%- endfor %}
     ) throws Exception {
-        ApiRequest<{{ writer.response_type(route, group) }}> request = new ApiRequest<>(
+        GenApiRequest<{{ writer.response_type(route, group) }}> request = new GenApiRequest<>(
             {{ route.route_id | code_literal }},
             {{ route.http_method | code_literal }},
             {{ route.url | code_literal }},
@@ -65,12 +65,12 @@ public class {{ group.generated_client_class }} {
     }
 {% elif route.kind == "stream" %}
 
-    public ApiStreamBridge<{{ writer.server_message_type(route, group) }}, Object> {{ route.connection_method_name }}(
+    public GenApiStreamBridge<{{ writer.server_message_type(route, group) }}, Object> {{ route.connection_method_name }}(
 {%- for type_name, name in writer.route_params(route, group) %}
         {{ type_name }} {{ name }}{% if not loop.last %},{% endif %}
 {%- endfor %}
     ) {
-        ApiRequest<Object> request = new ApiRequest<>(
+        GenApiRequest<Object> request = new GenApiRequest<>(
             {{ route.route_id | code_literal }},
             "STREAM",
             {{ route.url | code_literal }},
@@ -80,7 +80,7 @@ public class {{ group.generated_client_class }} {
             null,
             null,
             "none",
-            ApiResponseEnvelope.none(),
+            GenApiResponseEnvelope.none(),
             Object.class,
             "application/json",
             "json",
@@ -92,12 +92,12 @@ public class {{ group.generated_client_class }} {
     }
 {% elif route.kind == "channel" %}
 
-    public ApiChannelBridge<{{ writer.server_message_type(route, group) }}, {{ writer.client_message_type(route, group) }}, Object> {{ route.connection_method_name }}(
+    public GenApiChannelBridge<{{ writer.server_message_type(route, group) }}, {{ writer.client_message_type(route, group) }}, Object> {{ route.connection_method_name }}(
 {%- for type_name, name in writer.route_params(route, group) %}
         {{ type_name }} {{ name }}{% if not loop.last %},{% endif %}
 {%- endfor %}
     ) {
-        ApiRequest<Object> request = new ApiRequest<>(
+        GenApiRequest<Object> request = new GenApiRequest<>(
             {{ route.route_id | code_literal }},
             "CHANNEL",
             {{ route.url | code_literal }},
@@ -107,7 +107,7 @@ public class {{ group.generated_client_class }} {
             null,
             null,
             "none",
-            ApiResponseEnvelope.none(),
+            GenApiResponseEnvelope.none(),
             Object.class,
             "application/json",
             "json",

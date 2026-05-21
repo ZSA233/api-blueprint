@@ -104,6 +104,8 @@ api-gen generate -c api-blueprint.toml
 | Wails v2/v3 | 预览 / 实验性 | 生成 Go + TypeScript overlay；文件/stream 等能力使用 Wails RPC descriptor 或 STREAM/CHANNEL chunk 建模 |
 | gRPC proto / stubs | 可用 | 从 ContractGraph 输出 proto，并生成 Go/Python stub；bytes/file/stream 使用 protobuf bytes 或 streaming chunk 建模 |
 
+生成器会覆盖的文件统一使用 `gen_*` / `Gen*`，或位于 `_gen_*` 目录，并带 `Code generated ... DO NOT EDIT` header。非 `gen_` / 非 `Gen` 的 facade、impl、service、client 文件是 preserved 用户扩展点，只在缺失时创建且不带 generated header。
+
 ## 下一步
 
 | 主题 | 文档 |

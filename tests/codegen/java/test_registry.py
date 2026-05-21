@@ -22,7 +22,7 @@ def test_java_model_catalog_builds_record_fields_and_enum_metadata() -> None:
     assert schema.name == "Payload"
     assert [field.java_name for field in schema.fields] == ["userId", "scores", "kind"]
     assert [field.wire_name for field in schema.fields] == ["user_id", "scores", "kind"]
-    assert [field.java_type for field in schema.fields] == ["String", "List<Long>", "ApiTypes.WireEnum"]
+    assert [field.java_type for field in schema.fields] == ["String", "List<Long>", "GenApiTypes.WireEnum"]
     assert enum_type.name == "WireEnum"
     assert [member.java_name for member in enum_type.values] == ["FIRST", "SECOND"]
     assert [member.literal for member in enum_type.values] == ['"first"', '"second"']

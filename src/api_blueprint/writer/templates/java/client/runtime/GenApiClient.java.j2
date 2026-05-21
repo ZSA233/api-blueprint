@@ -5,12 +5,12 @@ import {{ bp.root_package }}.routes.{{ group.package_suffix }}.{{ group.class_na
 {% endfor %}
 
 public class GenApiClient {
-    protected final ApiTransport transport;
+    protected final GenApiTransport transport;
 {% for group in bp.groups.values() %}
     public final {{ group.class_name }} {{ group.property_name }};
 {% endfor %}
 
-    public GenApiClient(ApiTransport transport) {
+    public GenApiClient(GenApiTransport transport) {
         this.transport = transport;
 {% for group in bp.groups.values() %}
         this.{{ group.property_name }} = new {{ group.class_name }}(transport);

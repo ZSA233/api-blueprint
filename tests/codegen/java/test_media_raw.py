@@ -46,30 +46,30 @@ def test_java_http_codegen_emits_multipart_raw_and_binary_response_contracts(tmp
     server_writer.gen()
 
     package_root = Path("com/example/generated/api")
-    runtime_request = (client_dir / package_root / "runtime/ApiRequest.java").read_text(encoding="utf-8")
-    runtime_types = (client_dir / package_root / "runtime/ApiTypes.java").read_text(encoding="utf-8")
-    runtime_file = (client_dir / package_root / "runtime/ApiFilePart.java").read_text(encoding="utf-8")
-    runtime_raw = (client_dir / package_root / "runtime/ApiRawResponse.java").read_text(encoding="utf-8")
-    route_types = (client_dir / package_root / "routes/api/media/MediaTypes.java").read_text(encoding="utf-8")
+    runtime_request = (client_dir / package_root / "runtime/GenApiRequest.java").read_text(encoding="utf-8")
+    runtime_types = (client_dir / package_root / "runtime/GenApiTypes.java").read_text(encoding="utf-8")
+    runtime_file = (client_dir / package_root / "runtime/GenApiFilePart.java").read_text(encoding="utf-8")
+    runtime_raw = (client_dir / package_root / "runtime/GenApiRawResponse.java").read_text(encoding="utf-8")
+    route_types = (client_dir / package_root / "routes/api/media/GenMediaTypes.java").read_text(encoding="utf-8")
     route_client = (client_dir / package_root / "routes/api/media/GenMediaApi.java").read_text(encoding="utf-8")
     transport = (client_dir / package_root / "transports/http/GenJdkHttpApiTransport.java").read_text(encoding="utf-8")
     controller = (server_dir / package_root / "transports/http/api/media/GenMediaController.java").read_text(
         encoding="utf-8"
     )
 
-    assert "public record ApiFilePart(" in runtime_file
-    assert "public record ApiRawResponse(" in runtime_raw
+    assert "public record GenApiFilePart(" in runtime_file
+    assert "public record GenApiRawResponse(" in runtime_raw
     assert "Object multipart" in runtime_request
     assert "Function<byte[], T> binaryResponseDecoder" in runtime_request
-    assert "ApiFilePart image" in runtime_types
-    assert "public ApiRawResponse preview(" in route_client
-    assert "public ApiStreamResponse mjpeg(" in route_client
+    assert "GenApiFilePart image" in runtime_types
+    assert "public GenApiRawResponse preview(" in route_client
+    assert "public GenApiStreamResponse mjpeg(" in route_client
     assert '\"binary_schema\"' in route_client
-    assert "MediaTypes.DemoPacketWire::parse" in route_client
+    assert "GenMediaTypes.DemoPacketWire::parse" in route_client
     assert "EncodedMultipart multipartBody(Object value)" in transport
-    assert "new ApiRawResponse(" in transport
+    assert "new GenApiRawResponse(" in transport
     assert "request.binaryResponseDecoder().apply(bodyBytes)" in transport
     assert "MultipartHttpServletRequest multipartRequest" in controller
     assert "multipartBody(multipartRequest)" in controller
     assert "rawResponse(\"file\", \"application/octet-stream\", \"report.bin\", result)" in controller
-    assert "DemoPacketWire.toBinaryBody((MediaTypes.DemoPacket) result).toBytes()" in controller
+    assert "DemoPacketWire.toBinaryBody((GenMediaTypes.DemoPacket) result).toBytes()" in controller

@@ -101,7 +101,7 @@ def test_kotlin_contract_graph_adapter_owns_request_and_response_models(tmp_path
         tmp_path / "kotlin" / "com" / "example" / "generated" / "api" / "routes" / "api" / "demo" / "GenDemoApi.kt"
     ).read_text(encoding="utf-8")
     models_text = (
-        tmp_path / "kotlin" / "com" / "example" / "generated" / "api" / "routes" / "api" / "demo" / "DemoTypes.kt"
+        tmp_path / "kotlin" / "com" / "example" / "generated" / "api" / "routes" / "api" / "demo" / "GenDemoTypes.kt"
     ).read_text(encoding="utf-8")
     assert "query: DemoSubmitQuery," in route_text
     assert "json: SubmitJson," in route_text

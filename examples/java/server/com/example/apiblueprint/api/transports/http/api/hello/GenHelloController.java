@@ -3,23 +3,23 @@ package com.example.apiblueprint.api.transports.http.api.hello;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.apiblueprint.api.routes.api.hello.HelloService;
-import com.example.apiblueprint.api.routes.api.hello.HelloServiceStub;
-import com.example.apiblueprint.api.routes.api.hello.HelloTypes;
-import com.example.apiblueprint.api.runtime.ApiError;
-import com.example.apiblueprint.api.runtime.ApiErrorEntry;
-import com.example.apiblueprint.api.runtime.ApiErrorPayload;
-import com.example.apiblueprint.api.runtime.ApiErrors;
-import com.example.apiblueprint.api.runtime.ApiFilePart;
-import com.example.apiblueprint.api.runtime.ApiRawResponse;
-import com.example.apiblueprint.api.runtime.ApiResponseEnvelope;
-import com.example.apiblueprint.api.runtime.ApiServerChannel;
-import com.example.apiblueprint.api.runtime.ApiServerStream;
-import com.example.apiblueprint.api.runtime.ApiStreamResponse;
-import com.example.apiblueprint.api.runtime.ApiToastPayload;
+import com.example.apiblueprint.api.routes.api.hello.GenHelloServiceStub;
+import com.example.apiblueprint.api.routes.api.hello.GenHelloTypes;
+import com.example.apiblueprint.api.runtime.GenApiError;
+import com.example.apiblueprint.api.runtime.GenApiErrorEntry;
+import com.example.apiblueprint.api.runtime.GenApiErrorPayload;
+import com.example.apiblueprint.api.runtime.GenApiErrors;
+import com.example.apiblueprint.api.runtime.GenApiFilePart;
+import com.example.apiblueprint.api.runtime.GenApiRawResponse;
+import com.example.apiblueprint.api.runtime.GenApiResponseEnvelope;
+import com.example.apiblueprint.api.runtime.GenApiServerChannel;
+import com.example.apiblueprint.api.runtime.GenApiServerStream;
+import com.example.apiblueprint.api.runtime.GenApiStreamResponse;
+import com.example.apiblueprint.api.runtime.GenApiToastPayload;
 
-import com.example.apiblueprint.api.runtime.ApiTypes;
+import com.example.apiblueprint.api.runtime.GenApiTypes;
 
-import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
+import com.example.apiblueprint.api.runtime.binary.GenApiBinaryBody;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.net.URI;
@@ -53,7 +53,7 @@ public class GenHelloController {
         @Autowired(required = false) HelloService service,
         ObjectMapper objectMapper
     ) {
-        this.service = service == null ? new HelloServiceStub() : service;
+        this.service = service == null ? new GenHelloServiceStub() : service;
         this.objectMapper = objectMapper;
     }
 
@@ -61,9 +61,9 @@ public class GenHelloController {
     public Object abc(
         @RequestParam Map<String, String> queryParams
     ) throws Exception {
-        HelloTypes.AbcQuery query;
+        GenHelloTypes.AbcQuery query;
         try {
-            query = objectMapper.convertValue(queryParams, HelloTypes.AbcQuery.class);
+            query = objectMapper.convertValue(queryParams, GenHelloTypes.AbcQuery.class);
         } catch (RuntimeException error) {
             return badRequestResponse(error);
         }
@@ -71,9 +71,9 @@ public class GenHelloController {
             Object result = service.abc(
                 query
             );
-            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
-        } catch (ApiError error) {
-            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.hello.get.abc");
+            return wrapResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.hello.get.abc");
         }
     }
 
@@ -84,9 +84,9 @@ public class GenHelloController {
         try {
             Object result = service.mapEnum(
             );
-            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
-        } catch (ApiError error) {
-            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.hello.get.mapenum");
+            return wrapResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.hello.get.mapenum");
         }
     }
 
@@ -97,9 +97,9 @@ public class GenHelloController {
         try {
             Object result = service.listEnum(
             );
-            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
-        } catch (ApiError error) {
-            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.hello.get.listenum");
+            return wrapResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.hello.get.listenum");
         }
     }
 
@@ -110,9 +110,9 @@ public class GenHelloController {
         try {
             Object result = service.string(
             );
-            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
-        } catch (ApiError error) {
-            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.hello.get.string");
+            return wrapResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.hello.get.string");
         }
     }
 
@@ -123,9 +123,9 @@ public class GenHelloController {
         try {
             Object result = service.uint64(
             );
-            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
-        } catch (ApiError error) {
-            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.hello.get.uint64");
+            return wrapResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.hello.get.uint64");
         }
     }
 
@@ -136,9 +136,9 @@ public class GenHelloController {
         try {
             Object result = service.stringEmun(
             );
-            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
-        } catch (ApiError error) {
-            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.hello.get.stringemun");
+            return wrapResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.hello.get.stringemun");
         }
     }
 
@@ -146,9 +146,9 @@ public class GenHelloController {
     public Object helloWay(
         @RequestParam Map<String, String> queryParams
     ) throws Exception {
-        HelloTypes.HelloWayQuery query;
+        GenHelloTypes.HelloWayQuery query;
         try {
-            query = objectMapper.convertValue(queryParams, HelloTypes.HelloWayQuery.class);
+            query = objectMapper.convertValue(queryParams, GenHelloTypes.HelloWayQuery.class);
         } catch (RuntimeException error) {
             return badRequestResponse(error);
         }
@@ -156,13 +156,13 @@ public class GenHelloController {
             Object result = service.helloWay(
                 query
             );
-            return wrapResponse(ApiResponseEnvelope.of("NoEnvelope", "none", "none", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
-        } catch (ApiError error) {
-            return wrapApiErrorResponse(ApiResponseEnvelope.of("NoEnvelope", "none", "none", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.hello.get.helloway");
+            return wrapResponse(GenApiResponseEnvelope.of("NoEnvelope", "none", "none", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("NoEnvelope", "none", "none", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.hello.get.helloway");
         }
     }
 
-    private static final class SpringSseStream<Message, Close> implements ApiServerStream<Message, Close> {
+    private static final class SpringSseStream<Message, Close> implements GenApiServerStream<Message, Close> {
         private final SseEmitter emitter;
         private final ObjectMapper objectMapper;
         private volatile boolean closed = false;
@@ -229,7 +229,7 @@ public class GenHelloController {
         return result;
     }
 
-    private Object wrapResponse(ApiResponseEnvelope envelopeSpec, Object data) {
+    private Object wrapResponse(GenApiResponseEnvelope envelopeSpec, Object data) {
         if ("none".equals(envelopeSpec.kind())) {
             return data;
         }
@@ -262,22 +262,22 @@ public class GenHelloController {
             MultipartFile file = entry.getValue();
             result.put(
                 entry.getKey(),
-                ApiFilePart.of(file.getOriginalFilename(), file.getContentType(), file.getBytes())
+                GenApiFilePart.of(file.getOriginalFilename(), file.getContentType(), file.getBytes())
             );
         }
         return result;
     }
 
     private ResponseEntity<byte[]> rawResponse(String kind, String mediaType, String filename, Object result) throws IOException {
-        if (result instanceof ApiRawResponse raw) {
+        if (result instanceof GenApiRawResponse raw) {
             ResponseEntity.BodyBuilder builder = rawResponseBuilder(kind, raw.contentType(), raw.filename().isBlank() ? filename : raw.filename());
             raw.headers().forEach(builder::header);
             return builder.body(raw.body());
         }
-        if (result instanceof ApiStreamResponse stream) {
+        if (result instanceof GenApiStreamResponse stream) {
             return rawResponseBuilder(kind, stream.contentType(), filename).body(stream.body());
         }
-        if (result instanceof ApiBinaryBody binary) {
+        if (result instanceof GenApiBinaryBody binary) {
             return rawResponseBuilder(kind, binary.contentType(), filename).body(binary.toBytes());
         }
         if (result instanceof byte[] bytes) {
@@ -306,8 +306,8 @@ public class GenHelloController {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("detail", "invalid request"));
     }
 
-    private Object wrapApiErrorResponse(ApiResponseEnvelope envelopeSpec, ApiError error, String routeId) {
-        ApiErrorPayload payload = normalizeApiErrorPayload(error.payload(), routeId);
+    private Object wrapApiErrorResponse(GenApiResponseEnvelope envelopeSpec, GenApiError error, String routeId) {
+        GenApiErrorPayload payload = normalizeApiErrorPayload(error.payload(), routeId);
         if ("none".equals(envelopeSpec.kind())) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(payload);
         }
@@ -329,25 +329,25 @@ public class GenHelloController {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(payload);
     }
 
-    private ApiErrorPayload normalizeApiErrorPayload(ApiErrorPayload payload, String routeId) {
+    private GenApiErrorPayload normalizeApiErrorPayload(GenApiErrorPayload payload, String routeId) {
         if (payload == null) {
-            payload = new ApiErrorPayload("", "", "", 0, "", new ApiToastPayload("", "error", "", ""));
+            payload = new GenApiErrorPayload("", "", "", 0, "", new GenApiToastPayload("", "error", "", ""));
         }
-        ApiErrorEntry entry = ApiErrors.lookup(payload, routeId).orElse(null);
+        GenApiErrorEntry entry = GenApiErrors.lookup(payload, routeId).orElse(null);
         int code = payload.code() != 0 ? payload.code() : entry == null ? 0 : entry.code();
         String message = !payload.message().isBlank()
             ? payload.message()
             : entry == null ? "API error " + code : entry.message();
-        ApiToastPayload toast = payload.toast() == null
-            ? new ApiToastPayload("", "error", "", "")
+        GenApiToastPayload toast = payload.toast() == null
+            ? new GenApiToastPayload("", "error", "", "")
             : payload.toast();
-        return new ApiErrorPayload(
+        return new GenApiErrorPayload(
             payload.id().isBlank() && entry != null ? entry.id() : payload.id(),
             payload.group().isBlank() && entry != null ? entry.group() : payload.group(),
             payload.key().isBlank() && entry != null ? entry.key() : payload.key(),
             code,
             message,
-            new ApiToastPayload(
+            new GenApiToastPayload(
                 toast.key().isBlank() && entry != null ? entry.toast().key() : toast.key(),
                 toast.level().isBlank() ? (entry == null ? "error" : entry.toast().level()) : toast.level(),
                 toast.defaultMessage().isBlank()

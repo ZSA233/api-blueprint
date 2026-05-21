@@ -48,9 +48,9 @@ def test_kotlin_http_codegen_emits_multipart_raw_and_binary_response_contracts(t
 
     package_root = Path("com/example/generated/api")
     runtime = (client_dir / package_root / "runtime/GenApiTransport.kt").read_text(encoding="utf-8")
-    runtime_types = (client_dir / package_root / "runtime/ApiTypes.kt").read_text(encoding="utf-8")
+    runtime_types = (client_dir / package_root / "runtime/GenApiTypes.kt").read_text(encoding="utf-8")
     binary_runtime = (client_dir / package_root / "runtime/binary/GenBinaryRuntime.kt").read_text(encoding="utf-8")
-    route_types = (client_dir / package_root / "routes/api/media/MediaTypes.kt").read_text(encoding="utf-8")
+    route_types = (client_dir / package_root / "routes/api/media/GenMediaTypes.kt").read_text(encoding="utf-8")
     route_client = (client_dir / package_root / "routes/api/media/GenMediaApi.kt").read_text(encoding="utf-8")
     transport = (client_dir / package_root / "transports/http/GenOkHttpApiTransport.kt").read_text(encoding="utf-8")
     ktor = (server_dir / package_root / "transports/ktor/api/media/GenMediaKtorRoutes.kt").read_text(

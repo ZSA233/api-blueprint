@@ -4,19 +4,19 @@ package com.example.apiblueprint.static_.transports.http;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.example.apiblueprint.static_.runtime.ApiError;
-import com.example.apiblueprint.static_.runtime.ApiErrorEntry;
-import com.example.apiblueprint.static_.runtime.ApiErrorPayload;
-import com.example.apiblueprint.static_.runtime.ApiException;
-import com.example.apiblueprint.static_.runtime.ApiFilePart;
-import com.example.apiblueprint.static_.runtime.ApiRequest;
-import com.example.apiblueprint.static_.runtime.ApiRawResponse;
-import com.example.apiblueprint.static_.runtime.ApiResponseEnvelope;
-import com.example.apiblueprint.static_.runtime.ApiErrors;
-import com.example.apiblueprint.static_.runtime.ApiStreamResponse;
-import com.example.apiblueprint.static_.runtime.ApiToastPayload;
-import com.example.apiblueprint.static_.runtime.ApiTransport;
-import com.example.apiblueprint.static_.runtime.binary.ApiBinaryBody;
+import com.example.apiblueprint.static_.runtime.GenApiError;
+import com.example.apiblueprint.static_.runtime.GenApiErrorEntry;
+import com.example.apiblueprint.static_.runtime.GenApiErrorPayload;
+import com.example.apiblueprint.static_.runtime.GenApiException;
+import com.example.apiblueprint.static_.runtime.GenApiFilePart;
+import com.example.apiblueprint.static_.runtime.GenApiRequest;
+import com.example.apiblueprint.static_.runtime.GenApiRawResponse;
+import com.example.apiblueprint.static_.runtime.GenApiResponseEnvelope;
+import com.example.apiblueprint.static_.runtime.GenApiErrors;
+import com.example.apiblueprint.static_.runtime.GenApiStreamResponse;
+import com.example.apiblueprint.static_.runtime.GenApiToastPayload;
+import com.example.apiblueprint.static_.runtime.GenApiTransport;
+import com.example.apiblueprint.static_.runtime.binary.GenApiBinaryBody;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.reflect.RecordComponent;
@@ -30,7 +30,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.StringJoiner;
 
-public class GenJdkHttpApiTransport implements ApiTransport {
+public class GenJdkHttpApiTransport implements GenApiTransport {
     private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {
     };
 
@@ -53,21 +53,21 @@ public class GenJdkHttpApiTransport implements ApiTransport {
     }
 
     @Override
-    public <T> T execute(ApiRequest<T> request) throws Exception {
+    public <T> T execute(GenApiRequest<T> request) throws Exception {
         HttpRequest httpRequest = buildRequest(request);
         HttpResponse<byte[]> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofByteArray());
         byte[] bodyBytes = response.body() == null ? new byte[0] : response.body();
         String body = new String(bodyBytes, StandardCharsets.UTF_8);
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            Optional<ApiError> apiError = decodeApiError(request.routeId(), body, request.responseEnvelope());
+            Optional<GenApiError> apiError = decodeApiError(request.routeId(), body, request.responseEnvelope());
             if (apiError.isPresent()) {
                 throw apiError.get();
             }
-            throw new ApiException(response.statusCode(), body);
+            throw new GenApiException(response.statusCode(), body);
         }
         if ("bytes".equals(request.responseKind()) || "file".equals(request.responseKind())) {
             return request.responseClass().cast(
-                new ApiRawResponse(
+                new GenApiRawResponse(
                     bodyBytes,
                     firstHeader(response, "content-type").orElse(request.responseMediaType()),
                     firstHeader(response, "content-disposition").flatMap(this::filenameFromContentDisposition).orElse(request.responseFilename()),
@@ -80,7 +80,7 @@ public class GenJdkHttpApiTransport implements ApiTransport {
         }
         if ("byte_stream".equals(request.responseKind())) {
             return request.responseClass().cast(
-                new ApiStreamResponse(
+                new GenApiStreamResponse(
                     bodyBytes,
                     firstHeader(response, "content-type").orElse(request.responseMediaType()),
                     response.headers().map()
@@ -108,14 +108,14 @@ public class GenJdkHttpApiTransport implements ApiTransport {
         return objectMapper.readValue(body, request.responseClass());
     }
 
-    private HttpRequest buildRequest(ApiRequest<?> request) throws IOException {
+    private HttpRequest buildRequest(GenApiRequest<?> request) throws IOException {
         String url = url(request.path(), request.query());
         HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url));
         request.headers().forEach(builder::header);
         Object json = request.json();
         Object form = request.form();
         Object multipart = request.multipart();
-        ApiBinaryBody binary = request.binary();
+        GenApiBinaryBody binary = request.binary();
         if (json != null) {
             builder.header("content-type", "application/json");
             builder.method(request.method(), HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(json), StandardCharsets.UTF_8));
@@ -173,7 +173,7 @@ public class GenJdkHttpApiTransport implements ApiTransport {
                 continue;
             }
             out.write(("--" + boundary + "\r\n").getBytes(StandardCharsets.UTF_8));
-            if (entry.getValue() instanceof ApiFilePart file) {
+            if (entry.getValue() instanceof GenApiFilePart file) {
                 String filename = file.filename().isBlank() ? entry.getKey() : file.filename();
                 out.write(("Content-Disposition: form-data; name=\"" + escapeHeader(entry.getKey()) + "\"; filename=\"" + escapeHeader(filename) + "\"\r\n").getBytes(StandardCharsets.UTF_8));
                 out.write(("Content-Type: " + file.contentType() + "\r\n\r\n").getBytes(StandardCharsets.UTF_8));
@@ -246,9 +246,9 @@ public class GenJdkHttpApiTransport implements ApiTransport {
         return normalized.equals("application/json") || normalized.endsWith("+json");
     }
 
-    private <T> T decodeEnvelope(ApiRequest<T> request, String body) throws IOException {
+    private <T> T decodeEnvelope(GenApiRequest<T> request, String body) throws IOException {
         JsonNode root = objectMapper.readTree(body);
-        ApiResponseEnvelope envelope = request.responseEnvelope();
+        GenApiResponseEnvelope envelope = request.responseEnvelope();
         if ("code_message_data".equals(envelope.kind())) {
             int code = root.path(envelope.fields().code()).asInt(0);
             if (code == envelope.successCode()) {
@@ -258,9 +258,9 @@ public class GenJdkHttpApiTransport implements ApiTransport {
                 }
                 return objectMapper.convertValue(data, request.responseClass());
             }
-            ApiErrorPayload payload = parseCodeMessageEnvelopePayload(root, envelope, request.routeId());
-            Optional<ApiErrorEntry> entry = ApiErrors.lookup(payload, request.routeId());
-            throw new ApiError(payload, request.routeId(), body, entry.orElse(null));
+            GenApiErrorPayload payload = parseCodeMessageEnvelopePayload(root, envelope, request.routeId());
+            Optional<GenApiErrorEntry> entry = GenApiErrors.lookup(payload, request.routeId());
+            throw new GenApiError(payload, request.routeId(), body, entry.orElse(null));
         }
         if ("ok_data_error".equals(envelope.kind())) {
             if (root.path(envelope.fields().ok()).asBoolean(false)) {
@@ -270,14 +270,14 @@ public class GenJdkHttpApiTransport implements ApiTransport {
                 }
                 return objectMapper.convertValue(data, request.responseClass());
             }
-            ApiErrorPayload payload = parseApiErrorPayload(root.path(envelope.fields().error()), request.routeId(), true);
-            Optional<ApiErrorEntry> entry = ApiErrors.lookup(payload, request.routeId());
-            throw new ApiError(payload, request.routeId(), body, entry.orElse(null));
+            GenApiErrorPayload payload = parseApiErrorPayload(root.path(envelope.fields().error()), request.routeId(), true);
+            Optional<GenApiErrorEntry> entry = GenApiErrors.lookup(payload, request.routeId());
+            throw new GenApiError(payload, request.routeId(), body, entry.orElse(null));
         }
         throw new IOException("Unsupported response envelope: " + envelope.kind());
     }
 
-    private Optional<ApiError> decodeApiError(String routeId, String body, ApiResponseEnvelope envelope) {
+    private Optional<GenApiError> decodeApiError(String routeId, String body, GenApiResponseEnvelope envelope) {
         if (body == null || body.isBlank()) {
             return Optional.empty();
         }
@@ -288,28 +288,28 @@ public class GenJdkHttpApiTransport implements ApiTransport {
             return Optional.empty();
         }
         if ("code_message_data".equals(envelope.kind())) {
-            ApiErrorPayload payload = parseCodeMessageEnvelopePayload(root, envelope, routeId);
-            Optional<ApiErrorEntry> entry = ApiErrors.lookup(payload, routeId);
-            return Optional.of(new ApiError(payload, routeId, body, entry.orElse(null)));
+            GenApiErrorPayload payload = parseCodeMessageEnvelopePayload(root, envelope, routeId);
+            Optional<GenApiErrorEntry> entry = GenApiErrors.lookup(payload, routeId);
+            return Optional.of(new GenApiError(payload, routeId, body, entry.orElse(null)));
         }
         JsonNode errorNode = root.path(envelope.fields().error());
         JsonNode node = errorNode.isObject() ? errorNode : root.has("error") && root.get("error").isObject() ? root.get("error") : root;
         if (!node.has("id") && !node.has("code")) {
             return Optional.empty();
         }
-        ApiErrorPayload payload = parseApiErrorPayload(node, routeId, true);
-        Optional<ApiErrorEntry> entry = ApiErrors.lookup(payload, routeId);
-        return Optional.of(new ApiError(payload, routeId, body, entry.orElse(null)));
+        GenApiErrorPayload payload = parseApiErrorPayload(node, routeId, true);
+        Optional<GenApiErrorEntry> entry = GenApiErrors.lookup(payload, routeId);
+        return Optional.of(new GenApiError(payload, routeId, body, entry.orElse(null)));
     }
 
-    private ApiErrorPayload parseCodeMessageEnvelopePayload(JsonNode root, ApiResponseEnvelope envelope, String routeId) {
+    private GenApiErrorPayload parseCodeMessageEnvelopePayload(JsonNode root, GenApiResponseEnvelope envelope, String routeId) {
         JsonNode nested = root.path(envelope.fields().error());
-        ApiErrorPayload payload = nested.isObject()
+        GenApiErrorPayload payload = nested.isObject()
             ? parseApiErrorPayload(nested, routeId, false)
-            : new ApiErrorPayload("", "", "", 0, "", new ApiToastPayload("", "error", "", ""));
+            : new GenApiErrorPayload("", "", "", 0, "", new GenApiToastPayload("", "error", "", ""));
         int code = payload.code() == 0 ? root.path(envelope.fields().code()).asInt(0) : payload.code();
         String message = payload.message().isBlank() ? root.path(envelope.fields().message()).asText("") : payload.message();
-        ApiErrorPayload merged = new ApiErrorPayload(
+        GenApiErrorPayload merged = new GenApiErrorPayload(
             payload.id(),
             payload.group(),
             payload.key(),
@@ -317,20 +317,20 @@ public class GenJdkHttpApiTransport implements ApiTransport {
             message,
             payload.toast()
         );
-        Optional<ApiErrorEntry> entry = ApiErrors.lookup(merged, routeId);
+        Optional<GenApiErrorEntry> entry = GenApiErrors.lookup(merged, routeId);
         if (entry.isEmpty()) {
             return merged.message().isBlank()
-                ? new ApiErrorPayload(merged.id(), merged.group(), merged.key(), merged.code(), "API error " + merged.code(), merged.toast())
+                ? new GenApiErrorPayload(merged.id(), merged.group(), merged.key(), merged.code(), "API error " + merged.code(), merged.toast())
                 : merged;
         }
-        ApiErrorEntry meta = entry.get();
-        return new ApiErrorPayload(
+        GenApiErrorEntry meta = entry.get();
+        return new GenApiErrorPayload(
             merged.id().isBlank() ? meta.id() : merged.id(),
             merged.group().isBlank() ? meta.group() : merged.group(),
             merged.key().isBlank() ? meta.key() : merged.key(),
             merged.code() == 0 ? meta.code() : merged.code(),
             merged.message().isBlank() ? meta.message() : merged.message(),
-            new ApiToastPayload(
+            new GenApiToastPayload(
                 merged.toast().key().isBlank() ? meta.toast().key() : merged.toast().key(),
                 merged.toast().level().isBlank() ? meta.toast().level() : merged.toast().level(),
                 merged.toast().defaultMessage().isBlank() ? meta.toast().defaultMessage() : merged.toast().defaultMessage(),
@@ -339,10 +339,10 @@ public class GenJdkHttpApiTransport implements ApiTransport {
         );
     }
 
-    private ApiErrorPayload parseApiErrorPayload(JsonNode node, String routeId, boolean synthesizeFallbackMessage) {
-        ApiToastPayload toast = parseToast(node.path("toast"));
+    private GenApiErrorPayload parseApiErrorPayload(JsonNode node, String routeId, boolean synthesizeFallbackMessage) {
+        GenApiToastPayload toast = parseToast(node.path("toast"));
         int code = node.path("code").asInt(0);
-        ApiErrorPayload payload = new ApiErrorPayload(
+        GenApiErrorPayload payload = new GenApiErrorPayload(
             node.path("id").asText(""),
             node.path("group").asText(""),
             node.path("key").asText(""),
@@ -350,20 +350,20 @@ public class GenJdkHttpApiTransport implements ApiTransport {
             node.path("message").asText(""),
             toast
         );
-        Optional<ApiErrorEntry> entry = ApiErrors.lookup(payload, routeId);
+        Optional<GenApiErrorEntry> entry = GenApiErrors.lookup(payload, routeId);
         if (entry.isEmpty()) {
             return synthesizeFallbackMessage && payload.message().isBlank()
-                ? new ApiErrorPayload(payload.id(), payload.group(), payload.key(), payload.code(), "API error " + payload.code(), payload.toast())
+                ? new GenApiErrorPayload(payload.id(), payload.group(), payload.key(), payload.code(), "API error " + payload.code(), payload.toast())
                 : payload;
         }
-        ApiErrorEntry meta = entry.get();
-        return new ApiErrorPayload(
+        GenApiErrorEntry meta = entry.get();
+        return new GenApiErrorPayload(
             payload.id().isBlank() ? meta.id() : payload.id(),
             payload.group().isBlank() ? meta.group() : payload.group(),
             payload.key().isBlank() ? meta.key() : payload.key(),
             payload.code() == 0 ? meta.code() : payload.code(),
             payload.message().isBlank() ? meta.message() : payload.message(),
-            new ApiToastPayload(
+            new GenApiToastPayload(
                 payload.toast().key().isBlank() ? meta.toast().key() : payload.toast().key(),
                 payload.toast().level().isBlank() ? meta.toast().level() : payload.toast().level(),
                 payload.toast().defaultMessage().isBlank() ? meta.toast().defaultMessage() : payload.toast().defaultMessage(),
@@ -372,11 +372,11 @@ public class GenJdkHttpApiTransport implements ApiTransport {
         );
     }
 
-    private ApiToastPayload parseToast(JsonNode toastNode) {
+    private GenApiToastPayload parseToast(JsonNode toastNode) {
         if (toastNode == null || !toastNode.isObject()) {
-            return new ApiToastPayload("", "error", "", "");
+            return new GenApiToastPayload("", "error", "", "");
         }
-        return new ApiToastPayload(
+        return new GenApiToastPayload(
             toastNode.path("key").asText(""),
             toastNode.path("level").asText(""),
             toastNode.path("default").asText(""),

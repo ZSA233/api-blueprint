@@ -107,7 +107,7 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         / "apiblueprint"
         / "api"
         / "runtime"
-        / "ApiJson.kt",
+        / "GenApiJson.kt",
         "kotlin_client_route": workspace.kotlin_client_dir
         / "com"
         / "example"
@@ -125,7 +125,7 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         / "routes"
         / "api"
         / "demo"
-        / "DemoTypes.kt",
+        / "GenDemoTypes.kt",
         "kotlin_client_http": workspace.kotlin_client_dir
         / "com"
         / "example"
@@ -142,7 +142,7 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         / "routes"
         / "api"
         / "demo"
-        / "DemoTypes.kt",
+        / "GenDemoTypes.kt",
         "kotlin_server_service": workspace.kotlin_server_dir
         / "com"
         / "example"
@@ -170,7 +170,7 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         / "routes"
         / "api"
         / "demo"
-        / "DemoTypes.java",
+        / "GenDemoTypes.java",
         "java_client_route": workspace.java_client_dir
         / "com"
         / "example"
@@ -186,7 +186,7 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         / "apiblueprint"
         / "api"
         / "runtime"
-        / "ApiJson.java",
+        / "GenApiJson.java",
         "java_server_demo_types": workspace.java_server_dir
         / "com"
         / "example"
@@ -195,7 +195,7 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         / "routes"
         / "api"
         / "demo"
-        / "DemoTypes.java",
+        / "GenDemoTypes.java",
         "flutter_runtime_client": workspace.flutter_dir / "lib" / "src" / "api" / "runtime" / "gen_api_client.dart",
         "flutter_runtime_errors": workspace.flutter_dir
         / "lib"
@@ -457,7 +457,7 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         ),
         "java client channel bridge message types": (
             files["java_client_route"],
-            "ApiChannelBridge<DemoTypes.AssistantServerMessage, DemoTypes.AssistantClientMessage, Object>",
+            "GenApiChannelBridge<GenDemoTypes.AssistantServerMessage, GenDemoTypes.AssistantClientMessage, Object>",
         ),
         "java server client dispatcher": (
             files["java_server_demo_types"],

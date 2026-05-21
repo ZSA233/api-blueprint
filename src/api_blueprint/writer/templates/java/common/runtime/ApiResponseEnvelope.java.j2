@@ -1,6 +1,6 @@
 package {{ bp.root_package }}.runtime;
 
-public record ApiResponseEnvelope(
+public record GenApiResponseEnvelope(
     String name,
     String kind,
     String errorIdentity,
@@ -8,7 +8,7 @@ public record ApiResponseEnvelope(
     String successMessage,
     Fields fields
 ) {
-    public ApiResponseEnvelope {
+    public GenApiResponseEnvelope {
         name = name == null ? "NoEnvelope" : name;
         kind = kind == null || kind.isBlank() ? "none" : kind;
         errorIdentity = errorIdentity == null || errorIdentity.isBlank() ? "none" : errorIdentity;
@@ -16,11 +16,11 @@ public record ApiResponseEnvelope(
         fields = fields == null ? Fields.defaults() : fields;
     }
 
-    public static ApiResponseEnvelope none() {
+    public static GenApiResponseEnvelope none() {
         return of("NoEnvelope", "none", "none", 0, "ok", Fields.defaults());
     }
 
-    public static ApiResponseEnvelope of(
+    public static GenApiResponseEnvelope of(
         String name,
         String kind,
         String errorIdentity,
@@ -28,7 +28,7 @@ public record ApiResponseEnvelope(
         String successMessage,
         Fields fields
     ) {
-        return new ApiResponseEnvelope(name, kind, errorIdentity, successCode, successMessage, fields);
+        return new GenApiResponseEnvelope(name, kind, errorIdentity, successCode, successMessage, fields);
     }
 
     public record Fields(String code, String message, String data, String error, String ok) {

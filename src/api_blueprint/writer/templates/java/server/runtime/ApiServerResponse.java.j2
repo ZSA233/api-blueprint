@@ -1,15 +1,15 @@
 package {{ bp.root_package }}.runtime;
 
-public record ApiServerResponse<T>(
+public record GenApiServerResponse<T>(
     boolean ok,
     T data,
-    ApiErrorPayload error
+    GenApiErrorPayload error
 ) {
-    public static <T> ApiServerResponse<T> ok(T data) {
-        return new ApiServerResponse<>(true, data, null);
+    public static <T> GenApiServerResponse<T> ok(T data) {
+        return new GenApiServerResponse<>(true, data, null);
     }
 
-    public static <T> ApiServerResponse<T> error(ApiErrorPayload error) {
-        return new ApiServerResponse<>(false, null, error);
+    public static <T> GenApiServerResponse<T> error(GenApiErrorPayload error) {
+        return new GenApiServerResponse<>(false, null, error);
     }
 }

@@ -50,8 +50,8 @@ def test_kotlin_writer_generates_named_message_keyframe_helpers(tmp_path):
 
     root_dir = tmp_path / "kotlin" / "com" / "example" / "generated" / "api"
     route_text = (root_dir / "routes" / "api" / "demo" / "GenDemoApi.kt").read_text(encoding="utf-8")
-    types_text = (root_dir / "routes" / "api" / "demo" / "DemoTypes.kt").read_text(encoding="utf-8")
-    runtime_text = (root_dir / "runtime" / "ApiJson.kt").read_text(encoding="utf-8")
+    types_text = (root_dir / "routes" / "api" / "demo" / "GenDemoTypes.kt").read_text(encoding="utf-8")
+    runtime_text = (root_dir / "runtime" / "GenApiJson.kt").read_text(encoding="utf-8")
 
     assert "@Serializable\npublic data class AssistantClientMessage(" in types_text
     assert "@Serializable\npublic data class AssistantSingleMessage(" in types_text
@@ -119,11 +119,11 @@ def test_kotlin_server_writer_generates_service_ktor_adapter_and_message_keyfram
     writer.register(bp)
     writer.gen()
 
-    runtime_json_text = (root_dir / "runtime" / "ApiJson.kt").read_text(encoding="utf-8")
+    runtime_json_text = (root_dir / "runtime" / "GenApiJson.kt").read_text(encoding="utf-8")
     service_text = (route_dir / "GenDemoService.kt").read_text(encoding="utf-8")
-    stub_text = (route_dir / "DemoServiceStub.kt").read_text(encoding="utf-8")
+    stub_text = (route_dir / "GenDemoServiceStub.kt").read_text(encoding="utf-8")
     user_service_text = (route_dir / "DemoService.kt").read_text(encoding="utf-8")
-    types_text = (route_dir / "DemoTypes.kt").read_text(encoding="utf-8")
+    types_text = (route_dir / "GenDemoTypes.kt").read_text(encoding="utf-8")
     transport_text = (transport_dir / "GenDemoKtorRoutes.kt").read_text(encoding="utf-8")
 
     for generated_text in (runtime_json_text, service_text, stub_text, types_text, transport_text):
@@ -156,10 +156,10 @@ def test_kotlin_server_writer_generates_service_ktor_adapter_and_message_keyfram
     assert "val result = service.ping(" in transport_text
     assert "respondSuccess(call, result, SubmitResponse.serializer()," in transport_text
     assert "public interface ApiServerStream<Message, Close>" in (
-        root_dir / "runtime" / "ApiServerResponse.kt"
+        root_dir / "runtime" / "GenApiServerResponse.kt"
     ).read_text(encoding="utf-8")
     assert "public interface ApiServerChannel<Recv, Send, Close>" in (
-        root_dir / "runtime" / "ApiServerResponse.kt"
+        root_dir / "runtime" / "GenApiServerResponse.kt"
     ).read_text(encoding="utf-8")
     assert 'webSocket("/api/demo/assistant")' in transport_text
     assert "val openData = decodeParameters(call.request.queryParameters, OpenPayload.serializer())" in transport_text

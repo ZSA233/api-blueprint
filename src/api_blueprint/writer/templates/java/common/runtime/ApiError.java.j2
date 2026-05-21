@@ -1,12 +1,12 @@
 package {{ bp.root_package }}.runtime;
 
-public class ApiError extends RuntimeException {
-    private final ApiErrorPayload payload;
+public class GenApiError extends RuntimeException {
+    private final GenApiErrorPayload payload;
     private final String routeId;
     private final String rawBody;
-    private final ApiErrorEntry entry;
+    private final GenApiErrorEntry entry;
 
-    public ApiError(ApiErrorPayload payload, String routeId, String rawBody, ApiErrorEntry entry) {
+    public GenApiError(GenApiErrorPayload payload, String routeId, String rawBody, GenApiErrorEntry entry) {
         super(payload.message() == null || payload.message().isBlank() ? "API error " + payload.code() : payload.message());
         this.payload = payload;
         this.routeId = routeId;
@@ -14,7 +14,7 @@ public class ApiError extends RuntimeException {
         this.entry = entry;
     }
 
-    public ApiErrorPayload payload() {
+    public GenApiErrorPayload payload() {
         return payload;
     }
 
@@ -38,7 +38,7 @@ public class ApiError extends RuntimeException {
         return payload.message();
     }
 
-    public ApiToastPayload toast() {
+    public GenApiToastPayload toast() {
         return payload.toast();
     }
 
@@ -50,11 +50,11 @@ public class ApiError extends RuntimeException {
         return rawBody;
     }
 
-    public ApiErrorEntry entry() {
+    public GenApiErrorEntry entry() {
         return entry;
     }
 
-    public boolean is(ApiErrorEntry expected) {
+    public boolean is(GenApiErrorEntry expected) {
         if (expected == null) {
             return false;
         }
@@ -64,7 +64,7 @@ public class ApiError extends RuntimeException {
         return expected.code() != 0 && expected.code() == code();
     }
 
-    public static String resolveApiToast(ApiToastPayload toast, java.util.function.Function<String, String> translate, String fallbackMessage) {
+    public static String resolveApiToast(GenApiToastPayload toast, java.util.function.Function<String, String> translate, String fallbackMessage) {
         if (toast == null) {
             return fallbackMessage;
         }

@@ -2,13 +2,13 @@ package {{ bp.root_package }}.runtime;
 
 import java.util.Map;
 
-public record ApiRawResponse(
+public record GenApiRawResponse(
     byte[] body,
     String contentType,
     String filename,
     Map<String, String> headers
 ) {
-    public ApiRawResponse {
+    public GenApiRawResponse {
         body = body == null ? new byte[0] : body.clone();
         contentType = contentType == null || contentType.isBlank() ? "application/octet-stream" : contentType;
         filename = filename == null ? "" : filename;
@@ -20,11 +20,11 @@ public record ApiRawResponse(
         return body.clone();
     }
 
-    public static ApiRawResponse of(byte[] body, String contentType) {
-        return new ApiRawResponse(body, contentType, "", Map.of());
+    public static GenApiRawResponse of(byte[] body, String contentType) {
+        return new GenApiRawResponse(body, contentType, "", Map.of());
     }
 
-    public static ApiRawResponse of(byte[] body, String contentType, String filename) {
-        return new ApiRawResponse(body, contentType, filename, Map.of());
+    public static GenApiRawResponse of(byte[] body, String contentType, String filename) {
+        return new GenApiRawResponse(body, contentType, filename, Map.of());
     }
 }

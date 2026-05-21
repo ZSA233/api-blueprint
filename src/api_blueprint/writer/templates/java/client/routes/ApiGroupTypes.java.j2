@@ -5,15 +5,15 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 {% if group.message_helpers(writer) %}
 import com.fasterxml.jackson.databind.JsonNode;
 {% endif %}
-{% if group.runtime_types_ref == "ApiTypes" %}
-import {{ bp.root_package }}.runtime.ApiTypes;
+{% if group.runtime_types_ref == "GenApiTypes" %}
+import {{ bp.root_package }}.runtime.GenApiTypes;
 {% endif %}
-import {{ bp.root_package }}.runtime.ApiFilePart;
+import {{ bp.root_package }}.runtime.GenApiFilePart;
 {% if group.message_helpers(writer) %}
-import {{ bp.root_package }}.runtime.ApiJson;
+import {{ bp.root_package }}.runtime.GenApiJson;
 {% endif %}
 {% if group.binary_schemas() %}
-import {{ bp.root_package }}.runtime.binary.ApiBinaryBody;
+import {{ bp.root_package }}.runtime.binary.GenApiBinaryBody;
 import {{ bp.root_package }}.runtime.binary.GenBinaryRuntime;
 {% endif %}
 import java.util.ArrayList;
@@ -44,7 +44,7 @@ public final class {{ group.types_class }} {
 {% for variant in helper.variants %}
 
         public static {{ helper.name }} {{ variant.method_name }}({{ variant.data_type }} data) {
-            return new {{ helper.name }}({{ variant.key | code_literal }}, ApiJson.MAPPER.valueToTree(data));
+            return new {{ helper.name }}({{ variant.key | code_literal }}, GenApiJson.MAPPER.valueToTree(data));
         }
 {% endfor %}
     }
@@ -84,7 +84,7 @@ public final class {{ group.types_class }} {
     ) throws Exception {
         return switch (message.type()) {
 {% for variant in helper.variants %}            case {{ variant.key | code_literal }} -> handlers.{{ variant.method_name }}(
-                ApiJson.MAPPER.treeToValue(message.data(), {{ variant.data_class }}),
+                GenApiJson.MAPPER.treeToValue(message.data(), {{ variant.data_class }}),
                 message
             );
 {% endfor %}            default -> throw new {{ helper.exception_class }}("unknown_type", message);
@@ -110,7 +110,7 @@ public final class {{ group.types_class }} {
         @JsonProperty({{ schema.packet_field_name(section.raw_name) | code_literal }}) {{ section.name }} {{ schema.packet_field_name(section.raw_name) }}{% if not loop.last %},{% endif %}
 {%- endfor %}
     ) {
-        public ApiBinaryBody toBinaryBody() {
+        public GenApiBinaryBody toBinaryBody() {
             return {{ schema.name }}Wire.toBinaryBody(this);
         }
     }
@@ -139,14 +139,14 @@ public final class {{ group.types_class }} {
         private {{ schema.name }}Wire() {
         }
 
-        public static ApiBinaryBody toBinaryBody({{ schema.name }} value) {
+        public static GenApiBinaryBody toBinaryBody({{ schema.name }} value) {
             GenBinaryRuntime.BinaryWriter writer = new GenBinaryRuntime.BinaryWriter(ENDIAN);
             write(value, writer);
-            return ApiBinaryBody.of(writer.toByteArray(), CONTENT_TYPE);
+            return GenApiBinaryBody.of(writer.toByteArray(), CONTENT_TYPE);
         }
 
-        public static ApiBinaryBody toBinaryBody(byte[] bytes) {
-            return ApiBinaryBody.of(bytes, CONTENT_TYPE);
+        public static GenApiBinaryBody toBinaryBody(byte[] bytes) {
+            return GenApiBinaryBody.of(bytes, CONTENT_TYPE);
         }
 
         public static {{ schema.name }} parse(byte[] bytes) {

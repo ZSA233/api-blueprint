@@ -1,14 +1,14 @@
 package com.example.apiblueprint.conformance;
 
-import com.example.apiblueprint.api.routes.api.binary.BinaryTypes;
-import com.example.apiblueprint.api.routes.api.conflict.ConflictTypes;
-import com.example.apiblueprint.api.routes.api.demo.DemoTypes;
-import com.example.apiblueprint.api.runtime.ApiError;
-import com.example.apiblueprint.api.runtime.ApiErrors;
-import com.example.apiblueprint.api.runtime.ApiFilePart;
-import com.example.apiblueprint.api.runtime.ApiRawResponse;
-import com.example.apiblueprint.api.runtime.ApiStreamResponse;
-import com.example.apiblueprint.api.runtime.ApiTypes;
+import com.example.apiblueprint.api.routes.api.binary.GenBinaryTypes;
+import com.example.apiblueprint.api.routes.api.conflict.GenConflictTypes;
+import com.example.apiblueprint.api.routes.api.demo.GenDemoTypes;
+import com.example.apiblueprint.api.runtime.GenApiError;
+import com.example.apiblueprint.api.runtime.GenApiErrors;
+import com.example.apiblueprint.api.runtime.GenApiFilePart;
+import com.example.apiblueprint.api.runtime.GenApiRawResponse;
+import com.example.apiblueprint.api.runtime.GenApiStreamResponse;
+import com.example.apiblueprint.api.runtime.GenApiTypes;
 import com.example.apiblueprint.api.transports.http.HttpApiClient;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -88,10 +88,10 @@ public final class Conformance {
             checkNaming(client, altClient);
         }
         if (selected.contains("sse")) {
-            checkUnsupported(() -> client.demo.subscribeSweepEvents(new ApiTypes.SweepOpen("java-sse", null)), "stream");
+            checkUnsupported(() -> client.demo.subscribeSweepEvents(new GenApiTypes.SweepOpen("java-sse", null)), "stream");
         }
         if (selected.contains("websocket")) {
-            checkUnsupported(() -> client.demo.openAssistantSession(new ApiTypes.AssistantOpen("java-ws")), "channel");
+            checkUnsupported(() -> client.demo.openAssistantSession(new GenApiTypes.AssistantOpen("java-ws")), "channel");
         }
         if (selected.contains("single-channel")) {
             checkUnsupported(() -> client.api.openHelloChannel(), "channel");
@@ -104,21 +104,21 @@ public final class Conformance {
     }
 
     private static void checkRpc(HttpApiClient client) throws Exception {
-        DemoTypes.TestPostResponse post = client.demo.testPost(new DemoTypes.TestPostJSON("java", 7));
+        GenDemoTypes.TestPostResponse post = client.demo.testPost(new GenDemoTypes.TestPostJSON("java", 7));
         require(Objects.equals(List.of("test_post", "java"), post.list()), "testPost.list mismatch: " + post);
         require(Objects.equals(7L, post.map().get("req2").haha()), "testPost.map.req2 mismatch: " + post);
 
-        DemoTypes.PutDemoResponse put = client.demo.putDemo(
-            new DemoTypes.PutDemoQuery("query", 3.5f, null),
-            new DemoTypes.PutDemoJSON("body", 9)
+        GenDemoTypes.PutDemoResponse put = client.demo.putDemo(
+            new GenDemoTypes.PutDemoQuery("query", 3.5f, null),
+            new GenDemoTypes.PutDemoJSON("body", 9)
         );
         require(Objects.equals(List.of("query", "body"), put.list()), "putDemo.list mismatch: " + put);
         require(Objects.equals(9L, put.anonKv().kv1()), "putDemo.anonKv.kv1 mismatch: " + put.anonKv());
     }
 
     private static void checkForm(HttpApiClient client) throws Exception {
-        DemoTypes.FormSubmitResponse response = client.demo.formSubmit(
-            new DemoTypes.FormSubmitForm("java-form", 4, true)
+        GenDemoTypes.FormSubmitResponse response = client.demo.formSubmit(
+            new GenDemoTypes.FormSubmitForm("java-form", 4, true)
         );
         require(Objects.equals("java-form", response.summary()), "form.summary mismatch: " + response);
         require(Objects.equals(4, response.count()), "form.count mismatch: " + response);
@@ -126,15 +126,15 @@ public final class Conformance {
     }
 
     private static void checkDeprecated(HttpApiClient client) throws Exception {
-        DemoTypes.PostDeprecatedResponse response = client.demo.postDeprecated(
-            new DemoTypes.PostDeprecatedJSON("java-deprecated", 3)
+        GenDemoTypes.PostDeprecatedResponse response = client.demo.postDeprecated(
+            new GenDemoTypes.PostDeprecatedJSON("java-deprecated", 3)
         );
         require(Objects.equals(List.of("java-deprecated"), response.list()), "deprecated mismatch: " + response);
     }
 
     private static void checkBinary(HttpApiClient client) throws Exception {
-        BinaryTypes.PacketResponse response = client.binary.packet(
-            new BinaryTypes.PacketQuery("java-typed"),
+        GenBinaryTypes.PacketResponse response = client.binary.packet(
+            new GenBinaryTypes.PacketQuery("java-typed"),
             buildPacket()
         );
         require(Objects.equals("java-typed", response.trace()), "binary.trace mismatch: " + response);
@@ -148,8 +148,8 @@ public final class Conformance {
     }
 
     private static void checkAuditBinary(HttpApiClient client) throws Exception {
-        BinaryTypes.AuditPacketResponse response = client.binary.auditPacket(
-            new BinaryTypes.AuditPacketQuery("java-audit"),
+        GenBinaryTypes.AuditPacketResponse response = client.binary.auditPacket(
+            new GenBinaryTypes.AuditPacketQuery("java-audit"),
             buildAuditPacket()
         );
         require(Objects.equals("java-audit", response.trace()), "audit.trace mismatch: " + response);
@@ -158,51 +158,51 @@ public final class Conformance {
     }
 
     private static void checkBinaryResponse(HttpApiClient client) throws Exception {
-        BinaryTypes.AuditPacket response = client.binary.auditPacketResponse();
+        GenBinaryTypes.AuditPacket response = client.binary.auditPacketResponse();
         require(Objects.equals(buildAuditPacket(), response), "binary response mismatch: " + response);
     }
 
     private static void checkMedia(HttpApiClient client) throws Exception {
-        ApiRawResponse preview = client.media.mediaPreview(
-            new ApiTypes.MediaPreviewRequest(
+        GenApiRawResponse preview = client.media.mediaPreview(
+            new GenApiTypes.MediaPreviewRequest(
                 "java-media",
-                ApiFilePart.of("preview.jpg", "image/jpeg", sampleJpeg())
+                GenApiFilePart.of("preview.jpg", "image/jpeg", sampleJpeg())
             )
         );
         require(preview.contentType().startsWith("image/jpeg"), "media preview contentType=" + preview.contentType());
         require(startsWith(preview.body(), (byte) 0xff, (byte) 0xd8), "media preview body mismatch");
 
-        ApiRawResponse frame = client.media.mediaFrame();
+        GenApiRawResponse frame = client.media.mediaFrame();
         require(frame.contentType().startsWith("image/jpeg"), "media frame contentType=" + frame.contentType());
         require(Arrays.equals(sampleJpeg(), frame.body()), "media frame body mismatch");
 
-        ApiRawResponse download = client.media.mediaDownload();
+        GenApiRawResponse download = client.media.mediaDownload();
         require(Objects.equals("media-report.xlsx", download.filename()), "media download filename=" + download.filename());
         require(startsWith(download.body(), (byte) 'P', (byte) 'K'), "media download body mismatch");
 
-        ApiRawResponse dynamic = client.media.mediaDownloadDynamic();
+        GenApiRawResponse dynamic = client.media.mediaDownloadDynamic();
         require(
             Objects.equals("media-report-dynamic.xlsx", dynamic.filename()),
             "media dynamic filename=" + dynamic.filename()
         );
         require(startsWith(dynamic.body(), (byte) 'P', (byte) 'K'), "media dynamic body mismatch");
 
-        ApiStreamResponse stream = client.media.mediaMjpeg();
+        GenApiStreamResponse stream = client.media.mediaMjpeg();
         String chunk = new String(stream.body(), StandardCharsets.ISO_8859_1);
         require(chunk.contains("--frame"), "media mjpeg chunk=" + chunk);
     }
 
     private static void checkTypedErrors(HttpApiClient client) throws Exception {
-        DemoTypes.ErrorDemoResponse ok = client.demo.errorDemo(new DemoTypes.ErrorDemoQuery("ok"));
+        GenDemoTypes.ErrorDemoResponse ok = client.demo.errorDemo(new GenDemoTypes.ErrorDemoQuery("ok"));
         require(Objects.equals("ok", ok.status()), "errorDemo.ok mismatch: " + ok);
 
-        ApiError rateLimited = expectApiError(() -> client.demo.errorDemo(new DemoTypes.ErrorDemoQuery("rate_limit")));
-        require(rateLimited.is(ApiErrors.DemoErr.RATE_LIMITED), "rate limit entry mismatch: " + rateLimited.id());
-        require(rateLimited.code() == ApiErrors.DEMOERR_RATE_LIMITED, "rate limit code mismatch: " + rateLimited.code());
-        String rateToast = ApiError.resolveApiToast(rateLimited.toast(), null, rateLimited.getMessage());
+        GenApiError rateLimited = expectApiError(() -> client.demo.errorDemo(new GenDemoTypes.ErrorDemoQuery("rate_limit")));
+        require(rateLimited.is(GenApiErrors.DemoErr.RATE_LIMITED), "rate limit entry mismatch: " + rateLimited.id());
+        require(rateLimited.code() == GenApiErrors.DEMOERR_RATE_LIMITED, "rate limit code mismatch: " + rateLimited.code());
+        String rateToast = GenApiError.resolveApiToast(rateLimited.toast(), null, rateLimited.getMessage());
         require(Objects.equals("请等待 30 秒后重试", rateToast), "rate limit toast mismatch: " + rateToast);
 
-        ApiError unknown = expectApiError(() -> client.demo.errorDemo(new DemoTypes.ErrorDemoQuery("unknown")));
+        GenApiError unknown = expectApiError(() -> client.demo.errorDemo(new GenDemoTypes.ErrorDemoQuery("unknown")));
         require(Objects.equals("", unknown.id()), "unknown id mismatch: " + unknown.id());
         require(unknown.code() == 70001, "unknown code mismatch: " + unknown.code());
         require(
@@ -220,38 +220,38 @@ public final class Conformance {
         HttpApiClient client,
         com.example.apiblueprint.alt.transports.http.HttpApiClient altClient
     ) throws Exception {
-        ApiTypes.BlueprintsApiConflictConflictModel api =
-            client.conflict.defaultValue(new ConflictTypes.DefaultQuery("java-api"));
+        GenApiTypes.BlueprintsApiConflictConflictModel api =
+            client.conflict.defaultValue(new GenConflictTypes.DefaultQuery("java-api"));
         require(Objects.equals("api-default", api.defaultValue()), "api conflict default mismatch: " + api);
         require(Objects.equals("java-api", api.classValue()), "api conflict class mismatch: " + api);
-        require(api.enumValue() == ApiTypes.KeywordEnum.DEFAULT_VALUE, "api conflict enum mismatch: " + api);
+        require(api.enumValue() == GenApiTypes.KeywordEnum.DEFAULT_VALUE, "api conflict enum mismatch: " + api);
 
-        com.example.apiblueprint.alt.runtime.ApiTypes.BlueprintsAltConflictConflictModel alt =
+        com.example.apiblueprint.alt.runtime.GenApiTypes.BlueprintsAltConflictConflictModel alt =
             altClient.conflict.defaultValue(
-                new com.example.apiblueprint.alt.routes.alt.conflict.ConflictTypes.DefaultQuery("java-alt")
+                new com.example.apiblueprint.alt.routes.alt.conflict.GenConflictTypes.DefaultQuery("java-alt")
             );
         require(Objects.equals("alt-default", alt.defaultValue()), "alt conflict default mismatch: " + alt);
         require(Objects.equals("java-alt", alt.classValue()), "alt conflict class mismatch: " + alt);
         require(
-            alt.enumValue() == com.example.apiblueprint.alt.runtime.ApiTypes.KeywordEnum.CLASS_VALUE,
+            alt.enumValue() == com.example.apiblueprint.alt.runtime.GenApiTypes.KeywordEnum.CLASS_VALUE,
             "alt conflict enum mismatch: " + alt
         );
     }
 
-    private static BinaryTypes.DemoPacket buildPacket() {
+    private static GenBinaryTypes.DemoPacket buildPacket() {
         byte[] payload = "payload-ok".getBytes(StandardCharsets.UTF_8);
-        return new BinaryTypes.DemoPacket(
-            new BinaryTypes.DemoPacketHeader(
-                BinaryTypes.DemoPacketFlagsValues.HASPAYLOAD | BinaryTypes.DemoPacketFlagsValues.HASSCORES,
+        return new GenBinaryTypes.DemoPacket(
+            new GenBinaryTypes.DemoPacketHeader(
+                GenBinaryTypes.DemoPacketFlagsValues.HASPAYLOAD | GenBinaryTypes.DemoPacketFlagsValues.HASSCORES,
                 0x010203,
                 7,
                 2,
                 (long) payload.length
             ),
-            new BinaryTypes.DemoPacketBody(
+            new GenBinaryTypes.DemoPacketBody(
                 List.of(
-                    new BinaryTypes.DemoPacketItem(11L, true, 1.25d, 5, "alpha".getBytes(StandardCharsets.UTF_8)),
-                    new BinaryTypes.DemoPacketItem(22L, false, 2.5d, 4, "beta".getBytes(StandardCharsets.UTF_8))
+                    new GenBinaryTypes.DemoPacketItem(11L, true, 1.25d, 5, "alpha".getBytes(StandardCharsets.UTF_8)),
+                    new GenBinaryTypes.DemoPacketItem(22L, false, 2.5d, 4, "beta".getBytes(StandardCharsets.UTF_8))
                 ),
                 payload,
                 List.of(3.5d, 4.5d),
@@ -260,13 +260,13 @@ public final class Conformance {
         );
     }
 
-    private static BinaryTypes.AuditPacket buildAuditPacket() {
-        return new BinaryTypes.AuditPacket(
-            new BinaryTypes.AuditPacketHeader(BinaryTypes.AuditPacketFlagsValues.HASITEMS, 2),
-            new BinaryTypes.AuditPacketBody(
+    private static GenBinaryTypes.AuditPacket buildAuditPacket() {
+        return new GenBinaryTypes.AuditPacket(
+            new GenBinaryTypes.AuditPacketHeader(GenBinaryTypes.AuditPacketFlagsValues.HASITEMS, 2),
+            new GenBinaryTypes.AuditPacketBody(
                 List.of(
-                    new BinaryTypes.AuditPacketItem(11L, 101),
-                    new BinaryTypes.AuditPacketItem(22L, 202)
+                    new GenBinaryTypes.AuditPacketItem(11L, 101),
+                    new GenBinaryTypes.AuditPacketItem(22L, 202)
                 ),
                 2L
             )
@@ -316,15 +316,15 @@ public final class Conformance {
         require(response.body().contains("header-ok"), "header body=" + response.body());
     }
 
-    private static ApiError expectApiError(ThrowingRunnable action) throws Exception {
+    private static GenApiError expectApiError(ThrowingRunnable action) throws Exception {
         try {
             action.run();
-        } catch (ApiError error) {
-            require(Objects.equals("api.demo.get.errordemo", error.routeId()), "ApiError.routeId mismatch: " + error.routeId());
-            require(error.rawBody() != null && !error.rawBody().isBlank(), "ApiError raw body is empty");
+        } catch (GenApiError error) {
+            require(Objects.equals("api.demo.get.errordemo", error.routeId()), "GenApiError.routeId mismatch: " + error.routeId());
+            require(error.rawBody() != null && !error.rawBody().isBlank(), "GenApiError raw body is empty");
             return error;
         }
-        throw new IllegalStateException("expected ApiError");
+        throw new IllegalStateException("expected GenApiError");
     }
 
     private static void checkUnsupported(ThrowingRunnable action, String snippet) throws Exception {

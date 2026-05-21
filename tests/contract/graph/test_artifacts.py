@@ -112,12 +112,12 @@ def test_agent_manifest_and_shards_are_compact_navigation_layers():
         "pb.api.runs_pb2_grpc",
     ]
     assert stream_summary["artifacts"]["kotlin.client"]["files"] == [
-        "kotlin/com/example/generated/api/routes/api/runs/RunsTypes.kt",
+        "kotlin/com/example/generated/api/routes/api/runs/GenRunsTypes.kt",
         "kotlin/com/example/generated/api/routes/api/runs/GenRunsApi.kt",
         "kotlin/com/example/generated/api/routes/api/runs/RunsApi.kt",
     ]
     assert stream_summary["artifacts"]["java.client"]["files"] == [
-        "java/client/com/example/generated/api/routes/api/runs/RunsTypes.java",
+        "java/client/com/example/generated/api/routes/api/runs/GenRunsTypes.java",
         "java/client/com/example/generated/api/routes/api/runs/GenRunsApi.java",
         "java/client/com/example/generated/api/routes/api/runs/RunsApi.java",
         "java/client/com/example/generated/api/transports/http/GenJdkHttpApiTransport.java",
@@ -128,8 +128,8 @@ def test_agent_manifest_and_shards_are_compact_navigation_layers():
     ]
     assert stream_summary["artifacts"]["java.server"]["files"] == [
         "java/server/com/example/generated/api/routes/api/runs/GenRunsService.java",
-        "java/server/com/example/generated/api/routes/api/runs/RunsTypes.java",
-        "java/server/com/example/generated/api/routes/api/runs/RunsServiceStub.java",
+        "java/server/com/example/generated/api/routes/api/runs/GenRunsTypes.java",
+        "java/server/com/example/generated/api/routes/api/runs/GenRunsServiceStub.java",
         "java/server/com/example/generated/api/routes/api/runs/RunsService.java",
         "java/server/com/example/generated/api/transports/http/api/runs/GenRunsController.java",
     ]
@@ -202,12 +202,12 @@ def test_contract_artifacts_use_shared_selection_and_python_root_group_paths():
     route_summary = agent["routes"][0]
 
     assert route_summary["artifacts"]["kotlin.client"]["files"] == [
-        "kotlin/com/example/generated/api/routes/api/ApiTypes.kt",
+        "kotlin/com/example/generated/api/routes/api/GenApiTypes.kt",
         "kotlin/com/example/generated/api/routes/api/GenApiApi.kt",
         "kotlin/com/example/generated/api/routes/api/ApiApi.kt",
     ]
     assert route_summary["artifacts"]["java.client"]["files"] == [
-        "java/client/com/example/generated/api/routes/api/ApiTypes.java",
+        "java/client/com/example/generated/api/routes/api/GenApiTypes.java",
         "java/client/com/example/generated/api/routes/api/GenApiApi.java",
         "java/client/com/example/generated/api/routes/api/ApiApi.java",
         "java/client/com/example/generated/api/transports/http/GenJdkHttpApiTransport.java",
@@ -218,8 +218,8 @@ def test_contract_artifacts_use_shared_selection_and_python_root_group_paths():
     ]
     assert route_summary["artifacts"]["java.server"]["files"] == [
         "java/server/com/example/generated/api/routes/api/GenApiService.java",
-        "java/server/com/example/generated/api/routes/api/ApiTypes.java",
-        "java/server/com/example/generated/api/routes/api/ApiServiceStub.java",
+        "java/server/com/example/generated/api/routes/api/GenApiTypes.java",
+        "java/server/com/example/generated/api/routes/api/GenApiServiceStub.java",
         "java/server/com/example/generated/api/routes/api/ApiService.java",
         "java/server/com/example/generated/api/transports/http/api/GenApiController.java",
     ]

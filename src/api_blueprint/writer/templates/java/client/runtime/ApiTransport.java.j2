@@ -1,13 +1,13 @@
 package {{ bp.root_package }}.runtime;
 
-public interface ApiTransport {
-    <T> T execute(ApiRequest<T> request) throws Exception;
+public interface GenApiTransport {
+    <T> T execute(GenApiRequest<T> request) throws Exception;
 
-    default <Recv, Close> ApiStreamBridge<Recv, Close> openStream(ApiRequest<?> request) {
+    default <Recv, Close> GenApiStreamBridge<Recv, Close> openStream(GenApiRequest<?> request) {
         throw new UnsupportedOperationException("Java HTTP stream transport is not implemented by the default adapter");
     }
 
-    default <Recv, Send, Close> ApiChannelBridge<Recv, Send, Close> openChannel(ApiRequest<?> request) {
+    default <Recv, Send, Close> GenApiChannelBridge<Recv, Send, Close> openChannel(GenApiRequest<?> request) {
         throw new UnsupportedOperationException("Java HTTP channel transport is not implemented by the default adapter");
     }
 }

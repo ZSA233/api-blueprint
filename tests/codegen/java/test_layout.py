@@ -99,14 +99,14 @@ content-type: application/octet-stream
     server_writer.gen()
 
     runtime_text = (client_runtime_dir / "GenApiClient.java").read_text(encoding="utf-8")
-    types_text = (client_runtime_dir / "ApiTypes.java").read_text(encoding="utf-8")
-    catalog_text = (client_runtime_dir / "ApiErrors.java").read_text(encoding="utf-8")
-    api_error_text = (client_runtime_dir / "ApiError.java").read_text(encoding="utf-8")
+    types_text = (client_runtime_dir / "GenApiTypes.java").read_text(encoding="utf-8")
+    catalog_text = (client_runtime_dir / "GenApiErrors.java").read_text(encoding="utf-8")
+    api_error_text = (client_runtime_dir / "GenApiError.java").read_text(encoding="utf-8")
     route_text = (client_route_dir / "GenDemoApi.java").read_text(encoding="utf-8")
-    route_types_text = (client_route_dir / "DemoTypes.java").read_text(encoding="utf-8")
+    route_types_text = (client_route_dir / "GenDemoTypes.java").read_text(encoding="utf-8")
     transport_text = (client_http_dir / "GenJdkHttpApiTransport.java").read_text(encoding="utf-8")
     config_text = (client_http_dir / "GenHttpApiConfig.java").read_text(encoding="utf-8")
-    binary_text = (client_dir / package_root / "routes/api/binary/BinaryTypes.java").read_text(encoding="utf-8")
+    binary_text = (client_dir / package_root / "routes/api/binary/GenBinaryTypes.java").read_text(encoding="utf-8")
     binary_service_text = (server_dir / package_root / "routes/api/binary/GenBinaryService.java").read_text(
         encoding="utf-8"
     )
@@ -114,7 +114,7 @@ content-type: application/octet-stream
         server_dir / package_root / "transports/http/api/binary/GenBinaryController.java"
     ).read_text(encoding="utf-8")
     service_text = (server_route_dir / "GenDemoService.java").read_text(encoding="utf-8")
-    service_stub_text = (server_route_dir / "DemoServiceStub.java").read_text(encoding="utf-8")
+    service_stub_text = (server_route_dir / "GenDemoServiceStub.java").read_text(encoding="utf-8")
     controller_text = (
         server_dir / package_root / "transports/http/api/demo/GenDemoController.java"
     ).read_text(encoding="utf-8")
@@ -150,63 +150,63 @@ content-type: application/octet-stream
     assert '@JsonProperty("q") String q' in route_types_text
     assert "public class GenApiClient" in runtime_text
     assert "public final DemoApi demo;" in runtime_text
-    assert "public ApiTypes.Result ping(" in route_text
-    assert "DemoTypes.PingQuery query" in route_text
-    assert "ApiTypes.SubmitJson json" in route_text
-    assert "ApiTypes.FormPayload form" in route_text
-    assert "BinaryTypes.DemoPacket binary" in (client_dir / package_root / "routes/api/binary/GenBinaryApi.java").read_text(
+    assert "public GenApiTypes.Result ping(" in route_text
+    assert "GenDemoTypes.PingQuery query" in route_text
+    assert "GenApiTypes.SubmitJson json" in route_text
+    assert "GenApiTypes.FormPayload form" in route_text
+    assert "GenBinaryTypes.DemoPacket binary" in (client_dir / package_root / "routes/api/binary/GenBinaryApi.java").read_text(
         encoding="utf-8"
     )
-    assert "BinaryTypes.DemoPacketWire.toBinaryBody(binary)" in (
+    assert "GenBinaryTypes.DemoPacketWire.toBinaryBody(binary)" in (
         client_dir / package_root / "routes/api/binary/GenBinaryApi.java"
     ).read_text(encoding="utf-8")
-    assert "ApiBinaryBody binaryBody" in (client_dir / package_root / "routes/api/binary/GenBinaryApi.java").read_text(
+    assert "GenApiBinaryBody binaryBody" in (client_dir / package_root / "routes/api/binary/GenBinaryApi.java").read_text(
         encoding="utf-8"
     )
     assert "connectWs(" not in route_text
     assert "subscribeEvents(" in route_text
     assert "openChat(" in route_text
-    assert "ApiStreamBridge<ApiTypes.Event, Object> subscribeEvents(" in route_text
-    assert "ApiChannelBridge<ApiTypes.Event, ApiTypes.Event, Object> openChat(" in route_text
-    assert "DemoTypes.Event" not in route_text
-    assert "public class GenJdkHttpApiTransport implements ApiTransport" in transport_text
+    assert "GenApiStreamBridge<GenApiTypes.Event, Object> subscribeEvents(" in route_text
+    assert "GenApiChannelBridge<GenApiTypes.Event, GenApiTypes.Event, Object> openChat(" in route_text
+    assert "GenDemoTypes.Event" not in route_text
+    assert "public class GenJdkHttpApiTransport implements GenApiTransport" in transport_text
     assert "HttpClient.newHttpClient()" in transport_text
-    assert "throw new ApiError(payload" in transport_text
-    assert "throw new ApiException(response.statusCode(), body)" in transport_text
+    assert "throw new GenApiError(payload" in transport_text
+    assert "throw new GenApiException(response.statusCode(), body)" in transport_text
     assert "parseApiErrorPayload(nested, routeId, false)" in transport_text
     assert "parseApiErrorPayload(JsonNode node, String routeId, boolean synthesizeFallbackMessage)" in transport_text
-    assert "UnsupportedOperationException" in (client_runtime_dir / "ApiTransport.java").read_text(encoding="utf-8")
+    assert "UnsupportedOperationException" in (client_runtime_dir / "GenApiTransport.java").read_text(encoding="utf-8")
     assert 'this("http://localhost:2333");' in config_text
     assert '"CommonErr.UNKNOWN"' in catalog_text
     assert "COMMONERR_TOKEN_EXPIRE" in catalog_text
-    assert "public final class ApiErrors" in catalog_text
+    assert "public final class GenApiErrors" in catalog_text
     assert "ROUTE_API_ERRORS_BY_CODE" in catalog_text
     assert '"登录状态已失效，请重新登录"' in catalog_text
-    assert "public class ApiError extends RuntimeException" in api_error_text
+    assert "public class GenApiError extends RuntimeException" in api_error_text
     assert "\\u767b" not in catalog_text
-    assert "public final class BinaryTypes" in binary_text
-    assert "public record DemoPacket(ApiBinaryBody body)" not in binary_text
+    assert "public final class GenBinaryTypes" in binary_text
+    assert "public record DemoPacket(GenApiBinaryBody body)" not in binary_text
     assert "public record DemoPacket(" in binary_text
     assert "DemoPacketBody body" in binary_text
     assert "public record DemoPacketBody(" in binary_text
     assert "byte[] payload" in binary_text
-    assert "public static ApiBinaryBody toBinaryBody(DemoPacket value)" in binary_text
+    assert "public static GenApiBinaryBody toBinaryBody(DemoPacket value)" in binary_text
     assert "public static DemoPacket parse(byte[] bytes)" in binary_text
-    assert "BinaryTypes.DemoPacket binary" in binary_service_text
-    assert "BinaryTypes.DemoPacket binary;" in binary_controller_text
-    assert "binary = BinaryTypes.DemoPacketWire.parse(binaryBody == null ? new byte[0] : binaryBody);" in binary_controller_text
+    assert "GenBinaryTypes.DemoPacket binary" in binary_service_text
+    assert "GenBinaryTypes.DemoPacket binary;" in binary_controller_text
+    assert "binary = GenBinaryTypes.DemoPacketWire.parse(binaryBody == null ? new byte[0] : binaryBody);" in binary_controller_text
     assert "return badRequestResponse(error);" in binary_controller_text
     assert "public static final String CONTENT_TYPE = \"application/octet-stream\"" in binary_text
 
     assert "public interface GenDemoService" in service_text
-    assert "ApiTypes.Result ping(" in service_text
+    assert "GenApiTypes.Result ping(" in service_text
     assert "Object ws(" not in service_text
     assert "void events(" in service_text
-    assert "ApiServerStream<ApiTypes.Event, Object> stream" in service_text
+    assert "GenApiServerStream<GenApiTypes.Event, Object> stream" in service_text
     assert "void chat(" in service_text
-    assert "ApiServerChannel<ApiTypes.Event, ApiTypes.Event, Object> channel" in service_text
-    assert "public void events(\n        ApiTypes.OpenPayload openData,\n        ApiServerStream<ApiTypes.Event, Object> stream\n    ) throws Exception" in service_stub_text
-    assert "public void chat(\n        ApiTypes.OpenPayload openData,\n        ApiServerChannel<ApiTypes.Event, ApiTypes.Event, Object> channel\n    ) throws Exception" in service_stub_text
+    assert "GenApiServerChannel<GenApiTypes.Event, GenApiTypes.Event, Object> channel" in service_text
+    assert "public void events(\n        GenApiTypes.OpenPayload openData,\n        GenApiServerStream<GenApiTypes.Event, Object> stream\n    ) throws Exception" in service_stub_text
+    assert "public void chat(\n        GenApiTypes.OpenPayload openData,\n        GenApiServerChannel<GenApiTypes.Event, GenApiTypes.Event, Object> channel\n    ) throws Exception" in service_stub_text
     assert "@RestController" in controller_text
     assert "@RequestMapping(path = \"/api/demo/ping\", method = RequestMethod.GET)" in controller_text
     assert "SseEmitter" in controller_text

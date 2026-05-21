@@ -240,7 +240,11 @@ class KotlinBaseWriter(BaseWriter[KotlinBlueprint]):
         for stale_file in (
             plan.runtime.directory / "ApiConfig.kt",
             plan.runtime.directory / "ApiException.kt",
+            plan.runtime.directory / "ApiJson.kt",
+            plan.runtime.directory / "ApiServerContext.kt",
+            plan.runtime.directory / "ApiServerResponse.kt",
             plan.runtime.directory / "ApiTransport.kt",
+            plan.runtime.directory / "ApiTypes.kt",
             plan.runtime.directory / "GenApiErrorCatalog.kt",
             plan.runtime.directory / "GenModels.kt",
             plan.runtime.directory / "Models.kt",
@@ -275,6 +279,10 @@ class KotlinBaseWriter(BaseWriter[KotlinBlueprint]):
             self._unlink_generated_file(stale_file)
         stale_models_file = directory / f"{route_group.group.class_name.removesuffix('Api')}Models.kt"
         self._unlink_generated_file(stale_models_file)
+        legacy_types_file = directory / f"{route_group.group.class_name.removesuffix('Api')}Types.kt"
+        self._unlink_generated_file(legacy_types_file)
+        legacy_service_stub_file = directory / f"{route_group.group.class_name.removesuffix('Api')}ServiceStub.kt"
+        self._unlink_generated_file(legacy_service_stub_file)
 
     def _unlink_generated_file(self, path: Path) -> None:
         if not path.exists():

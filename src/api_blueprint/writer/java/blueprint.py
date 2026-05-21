@@ -75,13 +75,13 @@ class JavaRoute:
         envelope = _mapping(self.response.get("envelope"))
         fields = _mapping(envelope.get("fields"))
         return (
-            "ApiResponseEnvelope.of("
+            "GenApiResponseEnvelope.of("
             f"{_java_string(envelope.get('name') or 'NoEnvelope')}, "
             f"{_java_string(envelope.get('kind') or 'none')}, "
             f"{_java_string(envelope.get('error_identity') or 'none')}, "
             f"{int(envelope.get('success_code') or 0)}, "
             f"{_java_string(envelope.get('success_message') or 'ok')}, "
-            "new ApiResponseEnvelope.Fields("
+            "new GenApiResponseEnvelope.Fields("
             f"{_java_string(fields.get('code') or 'code')}, "
             f"{_java_string(fields.get('message') or 'message')}, "
             f"{_java_string(fields.get('data') or 'data')}, "
@@ -239,7 +239,7 @@ class JavaApiGroup:
 
     @property
     def stub_class(self) -> str:
-        return f"{self.service_class}Stub"
+        return f"Gen{self.service_class}Stub"
 
     def schema_type_name(self, schema_name: str) -> str:
         return self.schema_type_names.get(schema_name, to_java_type_name(schema_name.rsplit(".", 1)[-1], fallback="Model"))
@@ -345,9 +345,9 @@ class JavaBlueprint(BaseBlueprint["JavaBaseWriter"]):
                     package_suffix=package_suffix,
                     class_name=f"{base_name}Api",
                     service_class=f"{base_name}Service",
-                    types_class=f"{base_name}Types",
+                    types_class=f"Gen{base_name}Types",
                     runtime_types_ref=(
-                        f"{self.root_package}.runtime.ApiTypes" if base_name == "Api" else "ApiTypes"
+                        f"{self.root_package}.runtime.GenApiTypes" if base_name == "Api" else "GenApiTypes"
                     ),
                     property_name=to_java_member_name(group, fallback="api"),
                 )

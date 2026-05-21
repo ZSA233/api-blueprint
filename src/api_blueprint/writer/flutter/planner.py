@@ -45,6 +45,7 @@ class FlutterRouteGroupPlan:
 class FlutterBlueprintPlan:
     root_directory: Path
     root_barrel_file: Path
+    root_facade_file: Path
     runtime: FlutterRuntimePlan
     http_transport: FlutterHttpTransportPlan
     route_groups: tuple[FlutterRouteGroupPlan, ...]
@@ -71,7 +72,8 @@ def build_flutter_blueprint_plan(writer: "FlutterWriter", bp: "FlutterBlueprint"
     )
     return FlutterBlueprintPlan(
         root_directory=root_directory,
-        root_barrel_file=root_directory / f"{bp.root_path.rsplit('/', 1)[-1]}.dart",
+        root_barrel_file=root_directory / f"gen_{bp.root_path.rsplit('/', 1)[-1]}.dart",
+        root_facade_file=root_directory / f"{bp.root_path.rsplit('/', 1)[-1]}.dart",
         runtime=FlutterRuntimePlan(
             directory=runtime_dir,
             generated_files=(

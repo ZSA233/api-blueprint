@@ -3,23 +3,23 @@ package com.example.apiblueprint.api.transports.http.api.demo;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.apiblueprint.api.routes.api.demo.DemoService;
-import com.example.apiblueprint.api.routes.api.demo.DemoServiceStub;
-import com.example.apiblueprint.api.routes.api.demo.DemoTypes;
-import com.example.apiblueprint.api.runtime.ApiError;
-import com.example.apiblueprint.api.runtime.ApiErrorEntry;
-import com.example.apiblueprint.api.runtime.ApiErrorPayload;
-import com.example.apiblueprint.api.runtime.ApiErrors;
-import com.example.apiblueprint.api.runtime.ApiFilePart;
-import com.example.apiblueprint.api.runtime.ApiRawResponse;
-import com.example.apiblueprint.api.runtime.ApiResponseEnvelope;
-import com.example.apiblueprint.api.runtime.ApiServerChannel;
-import com.example.apiblueprint.api.runtime.ApiServerStream;
-import com.example.apiblueprint.api.runtime.ApiStreamResponse;
-import com.example.apiblueprint.api.runtime.ApiToastPayload;
+import com.example.apiblueprint.api.routes.api.demo.GenDemoServiceStub;
+import com.example.apiblueprint.api.routes.api.demo.GenDemoTypes;
+import com.example.apiblueprint.api.runtime.GenApiError;
+import com.example.apiblueprint.api.runtime.GenApiErrorEntry;
+import com.example.apiblueprint.api.runtime.GenApiErrorPayload;
+import com.example.apiblueprint.api.runtime.GenApiErrors;
+import com.example.apiblueprint.api.runtime.GenApiFilePart;
+import com.example.apiblueprint.api.runtime.GenApiRawResponse;
+import com.example.apiblueprint.api.runtime.GenApiResponseEnvelope;
+import com.example.apiblueprint.api.runtime.GenApiServerChannel;
+import com.example.apiblueprint.api.runtime.GenApiServerStream;
+import com.example.apiblueprint.api.runtime.GenApiStreamResponse;
+import com.example.apiblueprint.api.runtime.GenApiToastPayload;
 
-import com.example.apiblueprint.api.runtime.ApiTypes;
+import com.example.apiblueprint.api.runtime.GenApiTypes;
 
-import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
+import com.example.apiblueprint.api.runtime.binary.GenApiBinaryBody;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.net.URI;
@@ -62,7 +62,7 @@ public class GenDemoController implements WebSocketConfigurer {
         @Autowired(required = false) DemoService service,
         ObjectMapper objectMapper
     ) {
-        this.service = service == null ? new DemoServiceStub() : service;
+        this.service = service == null ? new GenDemoServiceStub() : service;
         this.objectMapper = objectMapper;
     }
 
@@ -70,9 +70,9 @@ public class GenDemoController implements WebSocketConfigurer {
     public Object abc(
         @RequestParam Map<String, String> queryParams
     ) throws Exception {
-        DemoTypes.AbcQuery query;
+        GenDemoTypes.AbcQuery query;
         try {
-            query = objectMapper.convertValue(queryParams, DemoTypes.AbcQuery.class);
+            query = objectMapper.convertValue(queryParams, GenDemoTypes.AbcQuery.class);
         } catch (RuntimeException error) {
             return badRequestResponse(error);
         }
@@ -80,24 +80,24 @@ public class GenDemoController implements WebSocketConfigurer {
             Object result = service.abc(
                 query
             );
-            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
-        } catch (ApiError error) {
-            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.get.abc");
+            return wrapResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.get.abc");
         }
     }
 
     @RequestMapping(path = "/api/demo/test_post", method = RequestMethod.POST)
     public Object testPost(
         @RequestParam Map<String, String> queryParams,
-        @RequestBody(required = false) DemoTypes.TestPostJSON json
+        @RequestBody(required = false) GenDemoTypes.TestPostJSON json
     ) throws Exception {
         try {
             Object result = service.testPost(
                 json
             );
-            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
-        } catch (ApiError error) {
-            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.post.testpost");
+            return wrapResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.post.testpost");
         }
     }
 
@@ -105,9 +105,9 @@ public class GenDemoController implements WebSocketConfigurer {
     public Object formSubmit(
         @RequestParam Map<String, String> queryParams
     ) throws Exception {
-        DemoTypes.FormSubmitForm form;
+        GenDemoTypes.FormSubmitForm form;
         try {
-            form = objectMapper.convertValue(queryParams, DemoTypes.FormSubmitForm.class);
+            form = objectMapper.convertValue(queryParams, GenDemoTypes.FormSubmitForm.class);
         } catch (RuntimeException error) {
             return badRequestResponse(error);
         }
@@ -115,20 +115,20 @@ public class GenDemoController implements WebSocketConfigurer {
             Object result = service.formSubmit(
                 form
             );
-            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
-        } catch (ApiError error) {
-            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.post.formsubmit");
+            return wrapResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.post.formsubmit");
         }
     }
 
     @RequestMapping(path = "/api/demo/1put", method = RequestMethod.PUT)
     public Object putDemo(
         @RequestParam Map<String, String> queryParams,
-        @RequestBody(required = false) DemoTypes.PutDemoJSON json
+        @RequestBody(required = false) GenDemoTypes.PutDemoJSON json
     ) throws Exception {
-        DemoTypes.PutDemoQuery query;
+        GenDemoTypes.PutDemoQuery query;
         try {
-            query = objectMapper.convertValue(queryParams, DemoTypes.PutDemoQuery.class);
+            query = objectMapper.convertValue(queryParams, GenDemoTypes.PutDemoQuery.class);
         } catch (RuntimeException error) {
             return badRequestResponse(error);
         }
@@ -137,9 +137,9 @@ public class GenDemoController implements WebSocketConfigurer {
                 query,
                 json
             );
-            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
-        } catch (ApiError error) {
-            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.put.z1put");
+            return wrapResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.put.z1put");
         }
     }
 
@@ -147,9 +147,9 @@ public class GenDemoController implements WebSocketConfigurer {
     public Object delete(
         @RequestParam Map<String, String> queryParams
     ) throws Exception {
-        DemoTypes.DeleteQuery query;
+        GenDemoTypes.DeleteQuery query;
         try {
-            query = objectMapper.convertValue(queryParams, DemoTypes.DeleteQuery.class);
+            query = objectMapper.convertValue(queryParams, GenDemoTypes.DeleteQuery.class);
         } catch (RuntimeException error) {
             return badRequestResponse(error);
         }
@@ -157,9 +157,9 @@ public class GenDemoController implements WebSocketConfigurer {
             Object result = service.delete(
                 query
             );
-            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
-        } catch (ApiError error) {
-            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.delete.delete");
+            return wrapResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.delete.delete");
         }
     }
 
@@ -167,9 +167,9 @@ public class GenDemoController implements WebSocketConfigurer {
     public SseEmitter sweepEvents(
         @RequestParam Map<String, String> queryParams
     ) throws Exception {
-        ApiTypes.SweepOpen openData = objectMapper.convertValue(queryParams, ApiTypes.SweepOpen.class);
+        GenApiTypes.SweepOpen openData = objectMapper.convertValue(queryParams, GenApiTypes.SweepOpen.class);
         SseEmitter emitter = new SseEmitter(30_000L);
-        SpringSseStream<DemoTypes.SweepStreamMessage, ApiTypes.ConnectionClose> stream = new SpringSseStream<>(
+        SpringSseStream<GenDemoTypes.SweepStreamMessage, GenApiTypes.ConnectionClose> stream = new SpringSseStream<>(
             emitter,
             objectMapper
         );
@@ -189,15 +189,15 @@ public class GenDemoController implements WebSocketConfigurer {
     @RequestMapping(path = "/api/demo/post_deprecated", method = RequestMethod.POST)
     public Object postDeprecated(
         @RequestParam Map<String, String> queryParams,
-        @RequestBody(required = false) DemoTypes.PostDeprecatedJSON json
+        @RequestBody(required = false) GenDemoTypes.PostDeprecatedJSON json
     ) throws Exception {
         try {
             Object result = service.postDeprecated(
                 json
             );
-            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
-        } catch (ApiError error) {
-            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.post.postdeprecated");
+            return wrapResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.post.postdeprecated");
         }
     }
 
@@ -208,9 +208,9 @@ public class GenDemoController implements WebSocketConfigurer {
         try {
             Object result = service.raw(
             );
-            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
-        } catch (ApiError error) {
-            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.post.raw");
+            return wrapResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.post.raw");
         }
     }
 
@@ -221,9 +221,9 @@ public class GenDemoController implements WebSocketConfigurer {
         try {
             Object result = service.mapModel(
             );
-            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
-        } catch (ApiError error) {
-            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.post.mapmodel");
+            return wrapResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.post.mapmodel");
         }
     }
 
@@ -231,9 +231,9 @@ public class GenDemoController implements WebSocketConfigurer {
     public Object errorDemo(
         @RequestParam Map<String, String> queryParams
     ) throws Exception {
-        DemoTypes.ErrorDemoQuery query;
+        GenDemoTypes.ErrorDemoQuery query;
         try {
-            query = objectMapper.convertValue(queryParams, DemoTypes.ErrorDemoQuery.class);
+            query = objectMapper.convertValue(queryParams, GenDemoTypes.ErrorDemoQuery.class);
         } catch (RuntimeException error) {
             return badRequestResponse(error);
         }
@@ -241,9 +241,9 @@ public class GenDemoController implements WebSocketConfigurer {
             Object result = service.errorDemo(
                 query
             );
-            return wrapResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
-        } catch (ApiError error) {
-            return wrapApiErrorResponse(ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.get.errordemo");
+            return wrapResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.demo.get.errordemo");
         }
     }
 
@@ -255,13 +255,13 @@ public class GenDemoController implements WebSocketConfigurer {
     }
 
     private final class AssistantSessionWebSocketHandler extends TextWebSocketHandler {
-        private final Map<String, SpringWebSocketChannel<DemoTypes.AssistantClientMessage, DemoTypes.AssistantServerMessage, ApiTypes.ConnectionClose>> channels = new ConcurrentHashMap<>();
+        private final Map<String, SpringWebSocketChannel<GenDemoTypes.AssistantClientMessage, GenDemoTypes.AssistantServerMessage, GenApiTypes.ConnectionClose>> channels = new ConcurrentHashMap<>();
 
         @Override
         public void afterConnectionEstablished(WebSocketSession session) throws Exception {
             Map<String, String> queryParams = parseQuery(session.getUri());
-            ApiTypes.AssistantOpen openData = objectMapper.convertValue(queryParams, ApiTypes.AssistantOpen.class);
-            SpringWebSocketChannel<DemoTypes.AssistantClientMessage, DemoTypes.AssistantServerMessage, ApiTypes.ConnectionClose> channel = new SpringWebSocketChannel<>(
+            GenApiTypes.AssistantOpen openData = objectMapper.convertValue(queryParams, GenApiTypes.AssistantOpen.class);
+            SpringWebSocketChannel<GenDemoTypes.AssistantClientMessage, GenDemoTypes.AssistantServerMessage, GenApiTypes.ConnectionClose> channel = new SpringWebSocketChannel<>(
                 session,
                 objectMapper
             );
@@ -280,10 +280,10 @@ public class GenDemoController implements WebSocketConfigurer {
 
         @Override
         protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-            SpringWebSocketChannel<DemoTypes.AssistantClientMessage, DemoTypes.AssistantServerMessage, ApiTypes.ConnectionClose> channel = channels.get(session.getId());
+            SpringWebSocketChannel<GenDemoTypes.AssistantClientMessage, GenDemoTypes.AssistantServerMessage, GenApiTypes.ConnectionClose> channel = channels.get(session.getId());
             if (channel != null) {
                 try {
-                    channel.accept(message.getPayload(), DemoTypes.AssistantClientMessage.class);
+                    channel.accept(message.getPayload(), GenDemoTypes.AssistantClientMessage.class);
                 } catch (IOException error) {
                     channel.abortUnchecked(1003, "invalid WebSocket message");
                     channel.markClosed(error);
@@ -293,14 +293,14 @@ public class GenDemoController implements WebSocketConfigurer {
 
         @Override
         public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-            SpringWebSocketChannel<DemoTypes.AssistantClientMessage, DemoTypes.AssistantServerMessage, ApiTypes.ConnectionClose> channel = channels.remove(session.getId());
+            SpringWebSocketChannel<GenDemoTypes.AssistantClientMessage, GenDemoTypes.AssistantServerMessage, GenApiTypes.ConnectionClose> channel = channels.remove(session.getId());
             if (channel != null) {
                 channel.markClosed(new IOException("WebSocket closed"));
             }
         }
     }
 
-    private static final class SpringSseStream<Message, Close> implements ApiServerStream<Message, Close> {
+    private static final class SpringSseStream<Message, Close> implements GenApiServerStream<Message, Close> {
         private final SseEmitter emitter;
         private final ObjectMapper objectMapper;
         private volatile boolean closed = false;
@@ -347,7 +347,7 @@ public class GenDemoController implements WebSocketConfigurer {
         }
     }
 
-    private static final class SpringWebSocketChannel<Recv, Send, Close> implements ApiServerChannel<Recv, Send, Close> {
+    private static final class SpringWebSocketChannel<Recv, Send, Close> implements GenApiServerChannel<Recv, Send, Close> {
         private static final Object CLOSED = new Object();
         private final WebSocketSession session;
         private final ObjectMapper objectMapper;
@@ -456,7 +456,7 @@ public class GenDemoController implements WebSocketConfigurer {
         return result;
     }
 
-    private Object wrapResponse(ApiResponseEnvelope envelopeSpec, Object data) {
+    private Object wrapResponse(GenApiResponseEnvelope envelopeSpec, Object data) {
         if ("none".equals(envelopeSpec.kind())) {
             return data;
         }
@@ -489,22 +489,22 @@ public class GenDemoController implements WebSocketConfigurer {
             MultipartFile file = entry.getValue();
             result.put(
                 entry.getKey(),
-                ApiFilePart.of(file.getOriginalFilename(), file.getContentType(), file.getBytes())
+                GenApiFilePart.of(file.getOriginalFilename(), file.getContentType(), file.getBytes())
             );
         }
         return result;
     }
 
     private ResponseEntity<byte[]> rawResponse(String kind, String mediaType, String filename, Object result) throws IOException {
-        if (result instanceof ApiRawResponse raw) {
+        if (result instanceof GenApiRawResponse raw) {
             ResponseEntity.BodyBuilder builder = rawResponseBuilder(kind, raw.contentType(), raw.filename().isBlank() ? filename : raw.filename());
             raw.headers().forEach(builder::header);
             return builder.body(raw.body());
         }
-        if (result instanceof ApiStreamResponse stream) {
+        if (result instanceof GenApiStreamResponse stream) {
             return rawResponseBuilder(kind, stream.contentType(), filename).body(stream.body());
         }
-        if (result instanceof ApiBinaryBody binary) {
+        if (result instanceof GenApiBinaryBody binary) {
             return rawResponseBuilder(kind, binary.contentType(), filename).body(binary.toBytes());
         }
         if (result instanceof byte[] bytes) {
@@ -533,8 +533,8 @@ public class GenDemoController implements WebSocketConfigurer {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("detail", "invalid request"));
     }
 
-    private Object wrapApiErrorResponse(ApiResponseEnvelope envelopeSpec, ApiError error, String routeId) {
-        ApiErrorPayload payload = normalizeApiErrorPayload(error.payload(), routeId);
+    private Object wrapApiErrorResponse(GenApiResponseEnvelope envelopeSpec, GenApiError error, String routeId) {
+        GenApiErrorPayload payload = normalizeApiErrorPayload(error.payload(), routeId);
         if ("none".equals(envelopeSpec.kind())) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(payload);
         }
@@ -556,25 +556,25 @@ public class GenDemoController implements WebSocketConfigurer {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(payload);
     }
 
-    private ApiErrorPayload normalizeApiErrorPayload(ApiErrorPayload payload, String routeId) {
+    private GenApiErrorPayload normalizeApiErrorPayload(GenApiErrorPayload payload, String routeId) {
         if (payload == null) {
-            payload = new ApiErrorPayload("", "", "", 0, "", new ApiToastPayload("", "error", "", ""));
+            payload = new GenApiErrorPayload("", "", "", 0, "", new GenApiToastPayload("", "error", "", ""));
         }
-        ApiErrorEntry entry = ApiErrors.lookup(payload, routeId).orElse(null);
+        GenApiErrorEntry entry = GenApiErrors.lookup(payload, routeId).orElse(null);
         int code = payload.code() != 0 ? payload.code() : entry == null ? 0 : entry.code();
         String message = !payload.message().isBlank()
             ? payload.message()
             : entry == null ? "API error " + code : entry.message();
-        ApiToastPayload toast = payload.toast() == null
-            ? new ApiToastPayload("", "error", "", "")
+        GenApiToastPayload toast = payload.toast() == null
+            ? new GenApiToastPayload("", "error", "", "")
             : payload.toast();
-        return new ApiErrorPayload(
+        return new GenApiErrorPayload(
             payload.id().isBlank() && entry != null ? entry.id() : payload.id(),
             payload.group().isBlank() && entry != null ? entry.group() : payload.group(),
             payload.key().isBlank() && entry != null ? entry.key() : payload.key(),
             code,
             message,
-            new ApiToastPayload(
+            new GenApiToastPayload(
                 toast.key().isBlank() && entry != null ? entry.toast().key() : toast.key(),
                 toast.level().isBlank() ? (entry == null ? "error" : entry.toast().level()) : toast.level(),
                 toast.defaultMessage().isBlank()

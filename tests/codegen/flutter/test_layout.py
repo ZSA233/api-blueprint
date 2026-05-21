@@ -50,6 +50,11 @@ def test_flutter_writer_generates_dart_package_runtime_routes_transport_and_pres
     writer.gen()
 
     public_entry = (out_dir / "lib" / "api_blueprint_example.dart").read_text(encoding="utf-8")
+    generated_public_entry = (out_dir / "lib" / "gen_api_blueprint_example.dart").read_text(encoding="utf-8")
+    root_entry = (out_dir / "lib" / "api.dart").read_text(encoding="utf-8")
+    generated_root_entry = (out_dir / "lib" / "gen_api.dart").read_text(encoding="utf-8")
+    root_facade = (out_dir / "lib" / "src" / "api" / "api.dart").read_text(encoding="utf-8")
+    root_barrel = (out_dir / "lib" / "src" / "api" / "gen_api.dart").read_text(encoding="utf-8")
     runtime_transport = (runtime_dir / "gen_api_transport.dart").read_text(encoding="utf-8")
     runtime_client = (runtime_dir / "gen_api_client.dart").read_text(encoding="utf-8")
     runtime_errors = (runtime_dir / "gen_api_errors.dart").read_text(encoding="utf-8")
@@ -62,7 +67,9 @@ def test_flutter_writer_generates_dart_package_runtime_routes_transport_and_pres
     http_connection = (http_dir / "gen_http_connection.dart").read_text(encoding="utf-8")
 
     for generated_text in (
-        public_entry,
+        generated_public_entry,
+        generated_root_entry,
+        root_barrel,
         runtime_transport,
         runtime_client,
         runtime_errors,
@@ -77,7 +84,14 @@ def test_flutter_writer_generates_dart_package_runtime_routes_transport_and_pres
         assert generated_text.startswith(FLUTTER_CLIENT_GENERATED_HEADER)
 
     assert (out_dir / "pubspec.yaml").is_file()
-    assert "export 'src/api/api.dart';" in public_entry
+    assert not public_entry.startswith(FLUTTER_CLIENT_GENERATED_HEADER)
+    assert not root_entry.startswith(FLUTTER_CLIENT_GENERATED_HEADER)
+    assert not root_facade.startswith(FLUTTER_CLIENT_GENERATED_HEADER)
+    assert "export 'gen_api_blueprint_example.dart';" in public_entry
+    assert "export 'gen_api.dart';" in generated_public_entry
+    assert "export 'gen_api.dart';" in root_entry
+    assert "export 'src/api/gen_api.dart';" in generated_root_entry
+    assert "export 'gen_api.dart';" in root_facade
     assert (runtime_dir / "api_client.dart").read_text(encoding="utf-8") == "// USER CLIENT FACADE\n"
     assert (runtime_dir / "api_json_codecs.dart").read_text(encoding="utf-8") == "// USER CODECS\n"
     assert (route_dir / "demo_api.dart").read_text(encoding="utf-8") == "// USER ROUTE FACADE\n"
@@ -147,10 +161,16 @@ def test_flutter_writer_exports_multiple_roots(tmp_path: Path) -> None:
     writer.gen()
 
     public_entry = (out_dir / "lib" / "api_blueprint_example.dart").read_text(encoding="utf-8")
+    generated_public_entry = (out_dir / "lib" / "gen_api_blueprint_example.dart").read_text(encoding="utf-8")
     api_entry = (out_dir / "lib" / "api.dart").read_text(encoding="utf-8")
+    generated_api_entry = (out_dir / "lib" / "gen_api.dart").read_text(encoding="utf-8")
     static_entry = (out_dir / "lib" / "static_.dart").read_text(encoding="utf-8")
+    generated_static_entry = (out_dir / "lib" / "gen_static_.dart").read_text(encoding="utf-8")
 
-    assert "export 'src/api/api.dart';" in public_entry
-    assert "export 'src/static_/static_.dart';" not in public_entry
-    assert "export 'src/api/api.dart';" in api_entry
-    assert "export 'src/static_/static_.dart';" in static_entry
+    assert "export 'gen_api_blueprint_example.dart';" in public_entry
+    assert "export 'gen_static_.dart';" not in public_entry
+    assert "export 'gen_api.dart';" in generated_public_entry
+    assert "export 'gen_api.dart';" in api_entry
+    assert "export 'src/api/gen_api.dart';" in generated_api_entry
+    assert "export 'gen_static_.dart';" in static_entry
+    assert "export 'src/static_/gen_static_.dart';" in generated_static_entry

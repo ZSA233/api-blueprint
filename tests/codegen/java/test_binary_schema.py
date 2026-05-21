@@ -43,7 +43,7 @@ content-type: application/octet-stream
     writer.gen()
 
     binary_text = (
-        output_dir / "com/example/generated/api/routes/api/binary/BinaryTypes.java"
+        output_dir / "com/example/generated/api/routes/api/binary/GenBinaryTypes.java"
     ).read_text(encoding="utf-8")
     runtime_text = (output_dir / "com/example/generated/api/runtime/binary/GenBinaryRuntime.java").read_text(
         encoding="utf-8"
@@ -55,7 +55,7 @@ content-type: application/octet-stream
     assert "public record DemoPacketItem(" in binary_text
     assert '@JsonProperty("item_count") Integer itemCount' in binary_text
     assert '@JsonProperty("label_len") Integer labelLen' in binary_text
-    assert "public static ApiBinaryBody toBinaryBody(DemoPacket value)" in binary_text
+    assert "public static GenApiBinaryBody toBinaryBody(DemoPacket value)" in binary_text
     assert "public static DemoPacket parse(byte[] bytes)" in binary_text
     assert 'throw GenBinaryRuntime.wrapBinaryField("DemoPacket.body", error);' in binary_text
     assert 'throw GenBinaryRuntime.wrapBinaryIndex("items", index, error);' in binary_text

@@ -1,5 +1,5 @@
 package {{ bp.root_package }}.runtime;
 
-public interface ApiServerChannel<Recv, Send, Close> extends ApiServerStream<Send, Close> {
+public interface GenApiServerChannel<Recv, Send, Close> extends GenApiServerStream<Send, Close> {
     Recv receive() throws Exception;
 }

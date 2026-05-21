@@ -34,13 +34,13 @@ def _validate_kotlin_client_sources(kotlin_dir: Path) -> None:
         "com/example/apiblueprint/api/runtime/GenApiClient.kt",
         "com/example/apiblueprint/api/runtime/GenApiException.kt",
         "com/example/apiblueprint/api/runtime/GenApiTransport.kt",
-        "com/example/apiblueprint/api/runtime/ApiJson.kt",
-        "com/example/apiblueprint/api/runtime/ApiTypes.kt",
+        "com/example/apiblueprint/api/runtime/GenApiJson.kt",
+        "com/example/apiblueprint/api/runtime/GenApiTypes.kt",
         "com/example/apiblueprint/api/routes/api/demo/DemoApi.kt",
         "com/example/apiblueprint/api/routes/api/demo/GenDemoApi.kt",
-        "com/example/apiblueprint/api/routes/api/demo/DemoTypes.kt",
+        "com/example/apiblueprint/api/routes/api/demo/GenDemoTypes.kt",
         "com/example/apiblueprint/api/routes/api/hello/GenHelloApi.kt",
-        "com/example/apiblueprint/api/routes/api/hello/HelloTypes.kt",
+        "com/example/apiblueprint/api/routes/api/hello/GenHelloTypes.kt",
         "com/example/apiblueprint/api/routes/api/hello/HelloApi.kt",
         "com/example/apiblueprint/api/transports/http/GenHttpApiConfig.kt",
         "com/example/apiblueprint/api/transports/http/GenOkHttpApiTransport.kt",
@@ -50,11 +50,11 @@ def _validate_kotlin_client_sources(kotlin_dir: Path) -> None:
     if missing:
         raise ExampleValidationError("kotlin client example missing generated files:\n" + "\n".join(missing))
 
-    types = (kotlin_dir / "com/example/apiblueprint/api/runtime/ApiTypes.kt").read_text(encoding="utf-8")
-    demo_types = (kotlin_dir / "com/example/apiblueprint/api/routes/api/demo/DemoTypes.kt").read_text(
+    types = (kotlin_dir / "com/example/apiblueprint/api/runtime/GenApiTypes.kt").read_text(encoding="utf-8")
+    demo_types = (kotlin_dir / "com/example/apiblueprint/api/routes/api/demo/GenDemoTypes.kt").read_text(
         encoding="utf-8"
     )
-    hello_types = (kotlin_dir / "com/example/apiblueprint/api/routes/api/hello/HelloTypes.kt").read_text(
+    hello_types = (kotlin_dir / "com/example/apiblueprint/api/routes/api/hello/GenHelloTypes.kt").read_text(
         encoding="utf-8"
     )
     demo_api = (kotlin_dir / "com/example/apiblueprint/api/routes/api/demo/GenDemoApi.kt").read_text(encoding="utf-8")
@@ -84,17 +84,17 @@ def _validate_kotlin_client_sources(kotlin_dir: Path) -> None:
 
 def _validate_kotlin_server_sources(kotlin_dir: Path) -> None:
     expected = (
-        "com/example/apiblueprint/api/runtime/ApiJson.kt",
-        "com/example/apiblueprint/api/runtime/ApiServerContext.kt",
-        "com/example/apiblueprint/api/runtime/ApiServerResponse.kt",
+        "com/example/apiblueprint/api/runtime/GenApiJson.kt",
+        "com/example/apiblueprint/api/runtime/GenApiServerContext.kt",
+        "com/example/apiblueprint/api/runtime/GenApiServerResponse.kt",
         "com/example/apiblueprint/api/runtime/GenApiException.kt",
         "com/example/apiblueprint/api/runtime/GenApiErrors.kt",
         "com/example/apiblueprint/api/runtime/GenApiErrorLookup.kt",
-        "com/example/apiblueprint/api/runtime/ApiTypes.kt",
+        "com/example/apiblueprint/api/runtime/GenApiTypes.kt",
         "com/example/apiblueprint/api/routes/api/demo/DemoService.kt",
-        "com/example/apiblueprint/api/routes/api/demo/DemoServiceStub.kt",
+        "com/example/apiblueprint/api/routes/api/demo/GenDemoServiceStub.kt",
         "com/example/apiblueprint/api/routes/api/demo/GenDemoService.kt",
-        "com/example/apiblueprint/api/routes/api/demo/DemoTypes.kt",
+        "com/example/apiblueprint/api/routes/api/demo/GenDemoTypes.kt",
         "com/example/apiblueprint/api/transports/ktor/api/demo/GenDemoKtorRoutes.kt",
     )
     missing = [path for path in expected if not (kotlin_dir / path).is_file()]
@@ -104,7 +104,7 @@ def _validate_kotlin_server_sources(kotlin_dir: Path) -> None:
     service = (kotlin_dir / "com/example/apiblueprint/api/routes/api/demo/GenDemoService.kt").read_text(
         encoding="utf-8"
     )
-    types = (kotlin_dir / "com/example/apiblueprint/api/routes/api/demo/DemoTypes.kt").read_text(encoding="utf-8")
+    types = (kotlin_dir / "com/example/apiblueprint/api/routes/api/demo/GenDemoTypes.kt").read_text(encoding="utf-8")
     ktor = (
         kotlin_dir / "com/example/apiblueprint/api/transports/ktor/api/demo/GenDemoKtorRoutes.kt"
     ).read_text(encoding="utf-8")
@@ -131,13 +131,13 @@ def _validate_java_sources(java_dir: Path) -> None:
         "client/com/example/apiblueprint/api/runtime/GenApiClient.java",
         "client/com/example/apiblueprint/api/routes/api/demo/DemoApi.java",
         "client/com/example/apiblueprint/api/routes/api/demo/GenDemoApi.java",
-        "client/com/example/apiblueprint/api/routes/api/demo/DemoTypes.java",
+        "client/com/example/apiblueprint/api/routes/api/demo/GenDemoTypes.java",
         "client/com/example/apiblueprint/api/transports/http/GenJdkHttpApiTransport.java",
         "client/com/example/apiblueprint/api/transports/http/HttpApiClient.java",
         "server/com/example/apiblueprint/api/routes/api/demo/DemoService.java",
         "server/com/example/apiblueprint/api/routes/api/demo/GenDemoService.java",
-        "server/com/example/apiblueprint/api/routes/api/demo/DemoTypes.java",
-        "server/com/example/apiblueprint/api/routes/api/demo/DemoServiceStub.java",
+        "server/com/example/apiblueprint/api/routes/api/demo/GenDemoTypes.java",
+        "server/com/example/apiblueprint/api/routes/api/demo/GenDemoServiceStub.java",
         "server/com/example/apiblueprint/api/transports/http/api/demo/GenDemoController.java",
     )
     missing = [path for path in expected if not (java_dir / path).is_file()]
@@ -147,11 +147,11 @@ def _validate_java_sources(java_dir: Path) -> None:
     snippets = {
         "client route": (
             java_dir / "client/com/example/apiblueprint/api/routes/api/demo/GenDemoApi.java",
-            "public ApiTypes.ApiDemoA abc(",
+            "public GenApiTypes.ApiDemoA abc(",
         ),
         "client transport": (
             java_dir / "client/com/example/apiblueprint/api/transports/http/GenJdkHttpApiTransport.java",
-            "public class GenJdkHttpApiTransport implements ApiTransport",
+            "public class GenJdkHttpApiTransport implements GenApiTransport",
         ),
         "server service": (
             java_dir / "server/com/example/apiblueprint/api/routes/api/demo/GenDemoService.java",
@@ -162,11 +162,11 @@ def _validate_java_sources(java_dir: Path) -> None:
             "@RestController",
         ),
         "api error lookup": (
-            java_dir / "client/com/example/apiblueprint/api/runtime/ApiErrors.java",
+            java_dir / "client/com/example/apiblueprint/api/runtime/GenApiErrors.java",
             "COMMONERR_TOKEN_EXPIRE",
         ),
         "binary schema": (
-            java_dir / "client/com/example/apiblueprint/api/routes/api/binary/BinaryTypes.java",
+            java_dir / "client/com/example/apiblueprint/api/routes/api/binary/GenBinaryTypes.java",
             "DemoPacketWire",
         ),
     }

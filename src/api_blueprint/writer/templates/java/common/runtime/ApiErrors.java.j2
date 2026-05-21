@@ -3,25 +3,25 @@ package {{ bp.root_package }}.runtime;
 import java.util.Map;
 import java.util.Optional;
 
-public final class ApiErrors {
-    private ApiErrors() {
+public final class GenApiErrors {
+    private GenApiErrors() {
     }
 {% for entry in errors %}
 
     public static final int {{ writer.constant_name(entry.group ~ "_" ~ entry.key) }} = {{ entry.code }};
 {% endfor %}
 
-    public static final Map<String, ApiErrorEntry> API_ERRORS_BY_ID = Map.ofEntries(
+    public static final Map<String, GenApiErrorEntry> API_ERRORS_BY_ID = Map.ofEntries(
 {%- for entry in errors %}
         Map.entry(
             {{ entry.id | code_literal }},
-            new ApiErrorEntry(
+            new GenApiErrorEntry(
                 {{ entry.id | code_literal }},
                 {{ entry.group | code_literal }},
                 {{ entry.key | code_literal }},
                 {{ entry.code }},
                 {{ entry.message | code_literal }},
-                new ApiToastSpec(
+                new GenApiToastSpec(
                     {{ entry.toast.key | code_literal }},
                     {{ entry.toast.level | code_literal }},
                     {{ entry.toast.default | code_literal }}
@@ -31,19 +31,19 @@ public final class ApiErrors {
 {%- endfor %}
     );
 
-    public static final Map<String, ApiErrorEntry> ApiErrorsByID = API_ERRORS_BY_ID;
+    public static final Map<String, GenApiErrorEntry> ApiErrorsByID = API_ERRORS_BY_ID;
 
 {% for group in errors | groupby("group") %}    public static final class {{ group.list[0].group_symbol }} {
         private {{ group.list[0].group_symbol }}() {
         }
 {% for entry in group.list %}
-        public static final ApiErrorEntry {{ entry.key_symbol }} = API_ERRORS_BY_ID.get({{ entry.id | code_literal }});
+        public static final GenApiErrorEntry {{ entry.key_symbol }} = API_ERRORS_BY_ID.get({{ entry.id | code_literal }});
 {% endfor %}
     }
 
 {% endfor %}
 
-    private static final Map<String, Map<Integer, ApiErrorEntry>> ROUTE_API_ERRORS_BY_CODE = Map.ofEntries(
+    private static final Map<String, Map<Integer, GenApiErrorEntry>> ROUTE_API_ERRORS_BY_CODE = Map.ofEntries(
 {%- for route_id, route_entries in route_errors.items() %}
         Map.entry(
             {{ route_id | code_literal }},
@@ -56,13 +56,13 @@ public final class ApiErrors {
 {%- endfor %}
     );
 
-    public static Optional<ApiErrorEntry> findById(String id) {
+    public static Optional<GenApiErrorEntry> findById(String id) {
         return Optional.ofNullable(API_ERRORS_BY_ID.get(id));
     }
 
-    public static Optional<ApiErrorEntry> findByCode(int code, String routeId) {
+    public static Optional<GenApiErrorEntry> findByCode(int code, String routeId) {
         if (routeId != null && !routeId.isBlank()) {
-            ApiErrorEntry routeEntry = ROUTE_API_ERRORS_BY_CODE.getOrDefault(routeId, Map.of()).get(code);
+            GenApiErrorEntry routeEntry = ROUTE_API_ERRORS_BY_CODE.getOrDefault(routeId, Map.of()).get(code);
             if (routeEntry != null) {
                 return Optional.of(routeEntry);
             }
@@ -70,12 +70,12 @@ public final class ApiErrors {
         return API_ERRORS_BY_ID.values().stream().filter(item -> item.code() == code).findFirst();
     }
 
-    public static Optional<ApiErrorEntry> lookup(ApiErrorPayload payload, String routeId) {
+    public static Optional<GenApiErrorEntry> lookup(GenApiErrorPayload payload, String routeId) {
         if (payload == null) {
             return Optional.empty();
         }
         if (payload.id() != null && !payload.id().isBlank()) {
-            Optional<ApiErrorEntry> byId = findById(payload.id());
+            Optional<GenApiErrorEntry> byId = findById(payload.id());
             if (byId.isPresent()) {
                 return byId;
             }

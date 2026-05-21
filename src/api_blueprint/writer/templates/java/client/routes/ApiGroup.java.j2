@@ -1,9 +1,9 @@
 package {{ bp.root_package }}.routes.{{ group.package_suffix }};
 
-import {{ bp.root_package }}.runtime.ApiTransport;
+import {{ bp.root_package }}.runtime.GenApiTransport;
 
 public class {{ group.class_name }} extends {{ group.generated_client_class }} {
-    public {{ group.class_name }}(ApiTransport transport) {
+    public {{ group.class_name }}(GenApiTransport transport) {
         super(transport);
     }
 }

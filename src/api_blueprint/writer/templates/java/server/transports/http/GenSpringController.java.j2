@@ -5,21 +5,21 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import {{ bp.root_package }}.routes.{{ group.package_suffix }}.{{ group.service_class }};
 import {{ bp.root_package }}.routes.{{ group.package_suffix }}.{{ group.stub_class }};
 import {{ bp.root_package }}.routes.{{ group.package_suffix }}.{{ group.types_class }};
-import {{ bp.root_package }}.runtime.ApiError;
-import {{ bp.root_package }}.runtime.ApiErrorEntry;
-import {{ bp.root_package }}.runtime.ApiErrorPayload;
-import {{ bp.root_package }}.runtime.ApiErrors;
-import {{ bp.root_package }}.runtime.ApiFilePart;
-import {{ bp.root_package }}.runtime.ApiRawResponse;
-import {{ bp.root_package }}.runtime.ApiResponseEnvelope;
-import {{ bp.root_package }}.runtime.ApiServerChannel;
-import {{ bp.root_package }}.runtime.ApiServerStream;
-import {{ bp.root_package }}.runtime.ApiStreamResponse;
-import {{ bp.root_package }}.runtime.ApiToastPayload;
-{% if group.runtime_types_ref == "ApiTypes" %}
-import {{ bp.root_package }}.runtime.ApiTypes;
+import {{ bp.root_package }}.runtime.GenApiError;
+import {{ bp.root_package }}.runtime.GenApiErrorEntry;
+import {{ bp.root_package }}.runtime.GenApiErrorPayload;
+import {{ bp.root_package }}.runtime.GenApiErrors;
+import {{ bp.root_package }}.runtime.GenApiFilePart;
+import {{ bp.root_package }}.runtime.GenApiRawResponse;
+import {{ bp.root_package }}.runtime.GenApiResponseEnvelope;
+import {{ bp.root_package }}.runtime.GenApiServerChannel;
+import {{ bp.root_package }}.runtime.GenApiServerStream;
+import {{ bp.root_package }}.runtime.GenApiStreamResponse;
+import {{ bp.root_package }}.runtime.GenApiToastPayload;
+{% if group.runtime_types_ref == "GenApiTypes" %}
+import {{ bp.root_package }}.runtime.GenApiTypes;
 {% endif %}
-import {{ bp.root_package }}.runtime.binary.ApiBinaryBody;
+import {{ bp.root_package }}.runtime.binary.GenApiBinaryBody;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.net.URI;
@@ -119,7 +119,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 {%- else %}
             return wrapResponse({{ route.response_envelope_literal | safe }}, result);
 {%- endif %}
-        } catch (ApiError error) {
+        } catch (GenApiError error) {
             return wrapApiErrorResponse({{ route.response_envelope_literal | safe }}, error, {{ route.route_id | code_literal }});
         }
     }
@@ -215,7 +215,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 {% endfor %}
 {% endif %}
 
-    private static final class SpringSseStream<Message, Close> implements ApiServerStream<Message, Close> {
+    private static final class SpringSseStream<Message, Close> implements GenApiServerStream<Message, Close> {
         private final SseEmitter emitter;
         private final ObjectMapper objectMapper;
         private volatile boolean closed = false;
@@ -263,7 +263,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
     }
 
 {% if channel_routes %}
-    private static final class SpringWebSocketChannel<Recv, Send, Close> implements ApiServerChannel<Recv, Send, Close> {
+    private static final class SpringWebSocketChannel<Recv, Send, Close> implements GenApiServerChannel<Recv, Send, Close> {
         private static final Object CLOSED = new Object();
         private final WebSocketSession session;
         private final ObjectMapper objectMapper;
@@ -373,7 +373,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
         return result;
     }
 
-    private Object wrapResponse(ApiResponseEnvelope envelopeSpec, Object data) {
+    private Object wrapResponse(GenApiResponseEnvelope envelopeSpec, Object data) {
         if ("none".equals(envelopeSpec.kind())) {
             return data;
         }
@@ -406,22 +406,22 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
             MultipartFile file = entry.getValue();
             result.put(
                 entry.getKey(),
-                ApiFilePart.of(file.getOriginalFilename(), file.getContentType(), file.getBytes())
+                GenApiFilePart.of(file.getOriginalFilename(), file.getContentType(), file.getBytes())
             );
         }
         return result;
     }
 
     private ResponseEntity<byte[]> rawResponse(String kind, String mediaType, String filename, Object result) throws IOException {
-        if (result instanceof ApiRawResponse raw) {
+        if (result instanceof GenApiRawResponse raw) {
             ResponseEntity.BodyBuilder builder = rawResponseBuilder(kind, raw.contentType(), raw.filename().isBlank() ? filename : raw.filename());
             raw.headers().forEach(builder::header);
             return builder.body(raw.body());
         }
-        if (result instanceof ApiStreamResponse stream) {
+        if (result instanceof GenApiStreamResponse stream) {
             return rawResponseBuilder(kind, stream.contentType(), filename).body(stream.body());
         }
-        if (result instanceof ApiBinaryBody binary) {
+        if (result instanceof GenApiBinaryBody binary) {
             return rawResponseBuilder(kind, binary.contentType(), filename).body(binary.toBytes());
         }
         if (result instanceof byte[] bytes) {
@@ -450,8 +450,8 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("detail", "invalid request"));
     }
 
-    private Object wrapApiErrorResponse(ApiResponseEnvelope envelopeSpec, ApiError error, String routeId) {
-        ApiErrorPayload payload = normalizeApiErrorPayload(error.payload(), routeId);
+    private Object wrapApiErrorResponse(GenApiResponseEnvelope envelopeSpec, GenApiError error, String routeId) {
+        GenApiErrorPayload payload = normalizeApiErrorPayload(error.payload(), routeId);
         if ("none".equals(envelopeSpec.kind())) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(payload);
         }
@@ -473,25 +473,25 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(payload);
     }
 
-    private ApiErrorPayload normalizeApiErrorPayload(ApiErrorPayload payload, String routeId) {
+    private GenApiErrorPayload normalizeApiErrorPayload(GenApiErrorPayload payload, String routeId) {
         if (payload == null) {
-            payload = new ApiErrorPayload("", "", "", 0, "", new ApiToastPayload("", "error", "", ""));
+            payload = new GenApiErrorPayload("", "", "", 0, "", new GenApiToastPayload("", "error", "", ""));
         }
-        ApiErrorEntry entry = ApiErrors.lookup(payload, routeId).orElse(null);
+        GenApiErrorEntry entry = GenApiErrors.lookup(payload, routeId).orElse(null);
         int code = payload.code() != 0 ? payload.code() : entry == null ? 0 : entry.code();
         String message = !payload.message().isBlank()
             ? payload.message()
             : entry == null ? "API error " + code : entry.message();
-        ApiToastPayload toast = payload.toast() == null
-            ? new ApiToastPayload("", "error", "", "")
+        GenApiToastPayload toast = payload.toast() == null
+            ? new GenApiToastPayload("", "error", "", "")
             : payload.toast();
-        return new ApiErrorPayload(
+        return new GenApiErrorPayload(
             payload.id().isBlank() && entry != null ? entry.id() : payload.id(),
             payload.group().isBlank() && entry != null ? entry.group() : payload.group(),
             payload.key().isBlank() && entry != null ? entry.key() : payload.key(),
             code,
             message,
-            new ApiToastPayload(
+            new GenApiToastPayload(
                 toast.key().isBlank() && entry != null ? entry.toast().key() : toast.key(),
                 toast.level().isBlank() ? (entry == null ? "error" : entry.toast().level()) : toast.level(),
                 toast.defaultMessage().isBlank()
