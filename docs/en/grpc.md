@@ -84,7 +84,7 @@ Use proto-native modeling instead:
 
 ## Deadlines And Metadata
 
-`grpc-proto` does not generate a cross-language client options wrapper. Per-call timeout, cancellation, headers, auth tokens, and tracing context should use each generated gRPC client's native APIs: deadlines / contexts, outgoing metadata, interceptors, and call options. For example, Go callers use `context.WithTimeout(...)` plus `metadata.AppendToOutgoingContext(...)`; Python callers use gRPC metadata tuples and timeout arguments on the generated stub method.
+`grpc-proto` does not generate a cross-language client options wrapper or an additional server runtime guard. Per-call timeout, cancellation, headers, auth tokens, and tracing context should use each generated gRPC client's native APIs: deadlines / contexts, outgoing metadata, interceptors, and call options; streaming backpressure, message size, TLS, and auth policy belong to gRPC server/channel configuration. For example, Go callers use `context.WithTimeout(...)` plus `metadata.AppendToOutgoingContext(...)`; Python callers use gRPC metadata tuples and timeout arguments on the generated stub method.
 
 ## RPC Mapping
 

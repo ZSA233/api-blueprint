@@ -20,6 +20,7 @@ from api_blueprint.writer.core.errors import (
 from api_blueprint.writer.core.files import ensure_filepath_open
 from api_blueprint.writer.core.templates import render
 
+from .binary_schema import compact_dart_binary_source
 from .blueprint import FlutterBlueprint
 from .naming import to_dart_identifier, to_dart_package_name
 from .planner import build_flutter_blueprint_plan
@@ -289,14 +290,13 @@ class FlutterWriter(BaseWriter[FlutterBlueprint]):
             with self.write_file(route_group.binary_file, overwrite=True) as handle:
                 if handle:
                     handle.write(FLUTTER_CLIENT_GENERATED_HEADER)
-                    handle.write(
-                        render(
-                            "flutter",
-                            "gen_binary.dart",
-                            {**context, "binary_schemas": route_group.group.binary_schemas()},
-                            "routes",
-                        )
+                    binary_text = render(
+                        "flutter",
+                        "gen_binary.dart",
+                        {**context, "binary_schemas": route_group.group.binary_schemas()},
+                        "routes",
                     )
+                    handle.write(compact_dart_binary_source(binary_text))
             with self.write_file(route_group.binary_facade_file, overwrite=False) as handle:
                 if handle:
                     handle.write(render("flutter", "binary.dart", context, "routes"))

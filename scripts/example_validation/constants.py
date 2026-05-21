@@ -96,6 +96,7 @@ BLUEPRINT_PYTHON_PRESERVED = (
 )
 BLUEPRINT_FLUTTER_PRESERVED = (
     "pubspec.yaml",
+    "pubspec.lock",
     "analysis_options.yaml",
     "lib/src/api/runtime/api_client.dart",
     "lib/src/api/runtime/api_json_codecs.dart",
@@ -124,5 +125,5 @@ GRPC_GO_PRESERVED = ("go.mod", "go.sum")
 GRPC_PYTHON_PRESERVED = ()
 EXAMPLE_SNAPSHOT_IGNORES: Mapping[str, frozenset[str]] = {
     "blueprint/java/suite": frozenset((".gradle", "bin", "build")),
-    "blueprint/flutter": frozenset((".dart_tool", "pubspec.lock")),
+    "blueprint/flutter": frozenset((".dart_tool",)),
 }

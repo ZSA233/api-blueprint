@@ -95,6 +95,9 @@ content-encoding: identity,gzip
     assert "writer.writeByteString(\"label\", label)" in binary_text
     assert "requireSize(\"label_len.label\", binarySize(value.label), value.labelLen.toLong())" in binary_text
     assert "writer.writeF64(\"score\", value.score)" in binary_text
+    assert "try {\n\n" not in binary_text
+    assert "reader.readBytes(\"magic\", 4L)\n\n            requireBinary" not in binary_text
+    assert "requireBinary(\"magic\", value.magic.contentEquals(byteArrayOf(65, 66, 80, 49)), \"const mismatch\")\n\n            writer.writeBytesExact" not in binary_text
     assert "wrapBinaryIndex(\"items\", index, error)" in binary_text
     assert "wrapBinaryField(path, error)" in binary_text
     assert "+ \"[$index]\"" not in binary_text

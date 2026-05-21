@@ -4,6 +4,8 @@
 
 In this repository, the Wails CLI is used to build and package handwritten harnesses such as `examples/wails-harness/{v2,v3}`. It is not an input to the Wails target.
 
+Both Wails v2 and v3 targets are preview surfaces; Wails v3 remains experimental. Generated overlays provide protocol calls, typed errors, provider bridges, and STREAM/CHANNEL keyframes only. Window permissions, filesystem access, native-call cancellation, long-task scheduling, retry, and app lifecycle policy belong to the Wails app shell or Go service implementation.
+
 ## Target Config
 
 ```toml

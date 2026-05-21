@@ -198,6 +198,9 @@ go 1.23.8
     assert "HTTPEventStreamConnection" in stream_text
     assert "func CHANNEL[" in channel_text
     assert "HTTPWebSocketConnection" in channel_text
+    assert "OriginPatterns:     append([]string(nil), config.WebSocketOriginPatterns...)" in channel_text
+    assert "InsecureSkipVerify: config.WebSocketInsecureSkipVerify" in channel_text
+    assert "if config.WebSocketEnableCompression" in channel_text
     assert "func WS[" not in channel_text
     assert "RunWS" not in channel_text
     assert "return newDefaultHTTPEventStreamConnection(ginCtx)" in generated_hook_text

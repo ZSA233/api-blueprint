@@ -27,11 +27,13 @@ import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import okio.BufferedSink
+import java.io.File
 import java.io.IOException
 import java.net.URLEncoder
 import java.util.ArrayDeque
@@ -224,10 +226,15 @@ public class OkHttpApiTransport(
             }
             val file = filePart(item)
             if (file != null) {
+                val mediaType = file.contentType.toMediaType()
                 builder.addFormDataPart(
                     key,
                     file.filename.ifBlank { key },
-                    file.bytes.toRequestBody(file.contentType.toMediaType()),
+                    if (file.path.isNullOrBlank()) {
+                        file.bytes.toRequestBody(mediaType)
+                    } else {
+                        File(file.path).asRequestBody(mediaType)
+                    },
                 )
             } else {
                 builder.addFormDataPart(key, formValue(item))
@@ -238,11 +245,16 @@ public class OkHttpApiTransport(
 
     private fun filePart(value: JsonElement): ApiFilePart? {
         val jsonObject = value as? JsonObject ?: return null
-        val bytes = jsonObject["bytes"] as? JsonArray ?: return null
+        val path = jsonObject["path"]?.jsonPrimitive?.contentOrNull
+        val bytes = jsonObject["bytes"] as? JsonArray
+        if (path.isNullOrBlank() && bytes == null) {
+            return null
+        }
         return ApiFilePart(
             filename = jsonObject["filename"]?.jsonPrimitive?.contentOrNull.orEmpty(),
             contentType = jsonObject["contentType"]?.jsonPrimitive?.contentOrNull ?: "application/octet-stream",
-            bytes = bytes.map { ((it.jsonPrimitive.intOrNull ?: 0) and 0xFF).toByte() }.toByteArray(),
+            bytes = bytes?.map { ((it.jsonPrimitive.intOrNull ?: 0) and 0xFF).toByte() }?.toByteArray() ?: ByteArray(0),
+            path = path,
         )
     }
 

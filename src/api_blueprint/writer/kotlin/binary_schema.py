@@ -578,9 +578,13 @@ def kotlin_binary_state_fields(schemas: Iterable[KotlinBinarySchema]) -> list[Ko
 def compact_kotlin_binary_source(source: str) -> str:
     lines = [line.rstrip() for line in source.splitlines()]
     compacted: list[str] = []
-    for line in lines:
+    for index, line in enumerate(lines):
         stripped = line.strip()
         if not stripped:
+            previous_line = compacted[-1] if compacted else ""
+            next_line = _next_nonblank_line(lines, index + 1)
+            if _should_drop_kotlin_binary_blank(previous_line, next_line):
+                continue
             if compacted and compacted[-1] != "":
                 compacted.append("")
             continue
@@ -588,3 +592,24 @@ def compact_kotlin_binary_source(source: str) -> str:
             compacted.append("")
         compacted.append(line)
     return "\n".join(compacted).strip() + "\n"
+
+
+def _next_nonblank_line(lines: list[str], start: int) -> str:
+    for line in lines[start:]:
+        if line.strip():
+            return line
+    return ""
+
+
+def _kotlin_indent(line: str) -> int:
+    return len(line) - len(line.lstrip(" "))
+
+
+def _should_drop_kotlin_binary_blank(previous_line: str, next_line: str) -> bool:
+    if not previous_line.strip() or not next_line.strip():
+        return False
+    previous = previous_line.strip()
+    next_ = next_line.strip()
+    if previous == "try {" or next_.startswith("} catch"):
+        return True
+    return _kotlin_indent(previous_line) >= 12 and _kotlin_indent(next_line) >= 12

@@ -48,6 +48,8 @@ def test_flutter_http_codegen_emits_multipart_raw_and_binary_response_contracts(
     binary = (root_dir / "routes/api/media/gen_binary.dart").read_text(encoding="utf-8")
 
     assert "class ApiFilePart" in runtime
+    assert "const ApiFilePart.fromStream" in runtime
+    assert "Stream<List<int>> openStream()" in runtime
     assert "class ApiRawResponse" in runtime
     assert "final Stream<List<int>> body;" in runtime
     assert "Future<Uint8List> readAllBytes() async" in runtime
@@ -63,7 +65,8 @@ def test_flutter_http_codegen_emits_multipart_raw_and_binary_response_contracts(
     assert "apiBlueprintStreamResponse(value, defaultContentType: \"multipart/x-mixed-replace\"" in route_client
     assert "decodeDemoPacket(apiBlueprintReadBytes(value))" in route_client
     assert "http.MultipartRequest(request.method, url)" in transport
-    assert "http.MultipartFile.fromBytes(" in transport
+    assert "http.MultipartFile(" in transport
+    assert "file.openStream()" in transport
     assert "Future<http.StreamedResponse> send()" in transport
     assert "if (request.responseKind == 'byte_stream')" in transport
     assert "body: response.stream" in transport

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-import uuid
+import secrets
 from typing import Any, AsyncIterator, Mapping
 from urllib.parse import unquote
 
@@ -55,8 +55,7 @@ class HttpClientTransport(ApiClientTransport):
         if json is not None:
             request_kwargs["json"] = json
         elif multipart is not None:
-            data, files = _split_multipart(multipart)
-            content, content_type = _encode_multipart(data, files)
+            content_type, content = _multipart_content(multipart)
             request_kwargs["content"] = content
             _set_header(request_kwargs, "content-type", content_type)
         elif form is not None:
@@ -327,21 +326,26 @@ def _filename_from_disposition(disposition: str) -> str | None:
     return None
 
 
-def _split_multipart(values: Mapping[str, Any]) -> tuple[list[tuple[str, str]], list[tuple[str, Any]]]:
-    data: list[tuple[str, str]] = []
-    files: list[tuple[str, Any]] = []
+def _multipart_content(values: Mapping[str, Any]) -> tuple[str, AsyncIterator[bytes]]:
+    boundary = secrets.token_hex(16)
+    return f"multipart/form-data; boundary={boundary}", _iter_multipart(boundary, values)
+
+
+async def _iter_multipart(boundary: str, values: Mapping[str, Any]) -> AsyncIterator[bytes]:
     for key, value in values.items():
         if value is None:
             continue
         if isinstance(value, list):
             for item in value:
-                _append_multipart_part(data, files, key, item)
+                async for chunk in _iter_multipart_part(boundary, key, item):
+                    yield chunk
             continue
-        _append_multipart_part(data, files, key, value)
-    return data, files
+        async for chunk in _iter_multipart_part(boundary, key, value):
+            yield chunk
+    yield f"--{boundary}--\r\n".encode("utf-8")
 
 
-def _append_multipart_part(data: list[tuple[str, str]], files: list[tuple[str, Any]], key: str, value: Any) -> None:
+async def _iter_multipart_part(boundary: str, key: str, value: Any) -> AsyncIterator[bytes]:
     if value is None:
         return
     file_obj = getattr(value, "file", None)
@@ -349,80 +353,75 @@ def _append_multipart_part(data: list[tuple[str, str]], files: list[tuple[str, A
     content_type = getattr(value, "content_type", None)
     if file_obj is not None or filename is not None:
         payload = file_obj if file_obj is not None else value
-        if filename and content_type:
-            files.append((key, (filename, payload, content_type)))
-        elif filename:
-            files.append((key, (filename, payload)))
-        else:
-            files.append((key, payload))
+        yield _multipart_file_header(boundary, key, filename or key, content_type)
+        async for chunk in _iter_file_bytes(payload):
+            yield chunk
+        yield b"\r\n"
         return
     if isinstance(value, (bytes, bytearray, memoryview)) or hasattr(value, "read"):
-        files.append((key, value))
+        yield _multipart_file_header(boundary, key, key, None)
+        async for chunk in _iter_file_bytes(value):
+            yield chunk
+        yield b"\r\n"
         return
     if isinstance(value, tuple):
-        files.append((key, value))
+        filename = str(value[0]) if value else key
+        payload = value[1] if len(value) > 1 else b""
+        content_type = str(value[2]) if len(value) > 2 and value[2] is not None else None
+        yield _multipart_file_header(boundary, key, filename, content_type)
+        async for chunk in _iter_file_bytes(payload):
+            yield chunk
+        yield b"\r\n"
         return
     if isinstance(value, (dict, list)):
-        data.append((key, json.dumps(value, ensure_ascii=False)))
+        value = json.dumps(value, ensure_ascii=False)
+    yield _multipart_field_header(boundary, key)
+    yield str(value).encode("utf-8")
+    yield b"\r\n"
+
+
+def _multipart_field_header(boundary: str, name: str) -> bytes:
+    return (
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="{_quote_header_value(name)}"\r\n'
+        "\r\n"
+    ).encode("utf-8")
+
+
+def _multipart_file_header(boundary: str, name: str, filename: str, content_type: str | None) -> bytes:
+    header = (
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="{_quote_header_value(name)}"; filename="{_quote_header_value(filename)}"\r\n'
+    )
+    if content_type:
+        header += f"Content-Type: {content_type}\r\n"
+    return (header + "\r\n").encode("utf-8")
+
+
+def _quote_header_value(value: str) -> str:
+    return str(value).replace("\\", "\\\\").replace('"', '\\"').replace("\r", "").replace("\n", "")
+
+
+async def _iter_file_bytes(value: Any) -> AsyncIterator[bytes]:
+    if isinstance(value, memoryview):
+        yield value.tobytes()
         return
-    data.append((key, str(value)))
-
-
-def _encode_multipart(data: list[tuple[str, str]], files: list[tuple[str, Any]]) -> tuple[bytes, str]:
-    boundary = f"----api-blueprint-{uuid.uuid4().hex}"
-    chunks: list[bytes] = []
-    for key, value in data:
-        chunks.append(f"--{boundary}\r\n".encode("utf-8"))
-        chunks.append(f'Content-Disposition: form-data; name="{_quote_header(key)}"\r\n\r\n'.encode("utf-8"))
-        chunks.append(value.encode("utf-8"))
-        chunks.append(b"\r\n")
-    for key, value in files:
-        filename, payload, content_type = _coerce_multipart_file(key, value)
-        chunks.append(f"--{boundary}\r\n".encode("utf-8"))
-        chunks.append(
-            (
-                f'Content-Disposition: form-data; name="{_quote_header(key)}"; '
-                f'filename="{_quote_header(filename)}"\r\n'
-            ).encode("utf-8")
-        )
-        chunks.append(f"Content-Type: {content_type}\r\n\r\n".encode("utf-8"))
-        chunks.append(payload)
-        chunks.append(b"\r\n")
-    chunks.append(f"--{boundary}--\r\n".encode("utf-8"))
-    return b"".join(chunks), f"multipart/form-data; boundary={boundary}"
-
-
-def _coerce_multipart_file(key: str, value: Any) -> tuple[str, bytes, str]:
-    filename = getattr(value, "filename", None)
-    content_type = getattr(value, "content_type", None)
-    payload = getattr(value, "file", None)
-    if payload is None:
-        payload = value
-    if isinstance(value, tuple):
-        if len(value) == 3:
-            filename, payload, content_type = value
-        elif len(value) == 2:
-            filename, payload = value
-        else:
-            raise TypeError(f"multipart file {key}: expected tuple(filename, payload[, content_type])")
-    if filename is None:
-        filename = key
-    if content_type is None:
-        content_type = "application/octet-stream"
-    if hasattr(payload, "read"):
-        payload = payload.read()
-    if hasattr(payload, "__await__"):
-        raise TypeError(f"multipart file {key}: async file reads are not supported by the default encoder")
-    if isinstance(payload, str):
-        raw = payload.encode("utf-8")
-    elif isinstance(payload, bytes):
-        raw = payload
-    elif isinstance(payload, (bytearray, memoryview)):
-        raw = bytes(payload)
-    else:
-        raw = bytes(payload or b"")
-    return str(filename), raw, str(content_type)
-
-
-def _quote_header(value: str) -> str:
-    return value.replace("\\", "\\\\").replace('"', '\\"')
+    if isinstance(value, (bytes, bytearray)):
+        yield bytes(value)
+        return
+    read = getattr(value, "read", None)
+    if read is None:
+        yield str(value).encode("utf-8")
+        return
+    while True:
+        try:
+            chunk = read(65536)
+        except TypeError:
+            chunk = read()
+        if hasattr(chunk, "__await__"):
+            chunk = await chunk
+        if not chunk:
+            break
+        if isinstance(chunk, str):
+            chunk = chunk.encode("utf-8")
+        yield bytes(chunk)

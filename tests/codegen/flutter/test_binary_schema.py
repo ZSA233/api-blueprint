@@ -52,5 +52,8 @@ content-encoding: identity,gzip
     assert "class DemoPacketItem" in binary_text
     assert "Uint8List encodeDemoPacket(DemoPacket value)" in binary_text
     assert "DemoPacket decodeDemoPacket(Uint8List bytes)" in binary_text
+    assert ") {\n\n    final" not in binary_text
+    assert "reader.readBytes(apiBinaryJoinPath(path, \"magic\"), 4);\n\n      apiBinaryRequireCondition" not in binary_text
+    assert "writer.writeU16(apiBinaryJoinPath(path, \"version\"), _version);\n\n    state" not in binary_text
     assert "class ApiBinaryWriter" in runtime_text
     assert "binary: encodeDemoPacket(packet)" in route_text

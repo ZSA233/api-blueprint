@@ -108,6 +108,8 @@ Files overwritten by generators are named `gen_*` / `Gen*`, or live under `_gen_
 
 Generated HTTP / Wails clients support per-RPC headers and timeouts; Go keeps timeout control on `context.Context`, and gRPC uses native deadline / metadata APIs.
 
+Default server adapters include safety limits for request bodies, multipart payloads, and long-connection queues, but they are still protocol bridges rather than complete production runtimes. Production projects should prefer narrow route/client/router entrypoints and use native clients, custom transports, service implementations, middleware, or app shells for auth, rate limits, cookies, TLS/proxy, retry, and file permission policy.
+
 ## Next Steps
 
 | Topic | Documentation |

@@ -124,3 +124,30 @@ def test_typescript_generated_output_format_invariants(tmp_path: Path) -> None:
     assert "request: {\n      query?: Types.SearchQuery;\n    } = {}" in client_text
     assert _typescript_format_violations(output_dir) == []
     assert _typescript_request_block_holes(client_text) == []
+
+
+def test_typescript_http_narrow_transport_entrypoint_does_not_import_wails_factories(tmp_path: Path) -> None:
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.GET("/ping").RSP(message=String(description="message"))
+
+    output_dir = tmp_path / "typescript"
+    output_dir.mkdir()
+    for writer in (
+        TypeScriptWriter(output_dir, transport_kind="http"),
+        TypeScriptWriter(output_dir, transport_kind="wails-v2", overlay_name="wailsv2"),
+        TypeScriptWriter(output_dir, transport_kind="wails-v3", overlay_name="wailsv3"),
+    ):
+        writer.register(bp)
+        writer.gen()
+
+    http_factory_text = (output_dir / "api" / "transports" / "http" / "api" / "gen_factory.ts").read_text(
+        encoding="utf-8"
+    )
+    http_index_text = (output_dir / "api" / "transports" / "http" / "gen_index.ts").read_text(encoding="utf-8")
+    aggregate_text = (output_dir / "api" / "transports" / "gen_clients.ts").read_text(encoding="utf-8")
+
+    assert "wails" not in http_factory_text.lower()
+    assert "wails" not in http_index_text.lower()
+    assert "createWailsV2Clients" in aggregate_text
+    assert "createWailsV3Clients" in aggregate_text

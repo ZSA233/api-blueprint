@@ -28,9 +28,9 @@ def test_python_server_generates_connection_adapter_scaffolds(tmp_path: Path):
     assert "from starlette.responses import StreamingResponse" in adapter_text
     assert "@router.api_route(\"/api/demo/events\", methods=[\"GET\"])" in adapter_text
     assert "@router.websocket(\"/api/demo/chat\")" in adapter_text
-    assert "stream = _SseStream()" in adapter_text
+    assert "stream = _SseStream(api_config.sse_queue_capacity)" in adapter_text
     assert "async for chunk in stream:" in adapter_text
-    assert "channel = _WebSocketChannel(websocket, api_demo_types.Event.from_value)" in adapter_text
+    assert "channel = _WebSocketChannel(websocket, api_demo_types.Event.from_value, api_config)" in adapter_text
     assert "except _WebSocketClosed:" in adapter_text
     assert "except (UnicodeDecodeError, json.JSONDecodeError) as err:" in adapter_text
     assert 'await self.abort(1003, "invalid WebSocket message")' in adapter_text

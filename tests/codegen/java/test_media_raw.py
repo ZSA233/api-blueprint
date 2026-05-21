@@ -58,7 +58,10 @@ def test_java_http_codegen_emits_multipart_raw_and_binary_response_contracts(tmp
         encoding="utf-8"
     )
 
-    assert "public record GenApiFilePart(" in runtime_file
+    assert "public final class GenApiFilePart implements AutoCloseable" in runtime_file
+    assert "InputStream body" in runtime_file
+    assert "public static GenApiFilePart ofStream" in runtime_file
+    assert "public byte[] readAllBytes() throws IOException" in runtime_file
     assert "public record GenApiRawResponse(" in runtime_raw
     assert "public record GenApiStreamResponse(" in runtime_stream
     assert "InputStream body" in runtime_stream
@@ -73,6 +76,8 @@ def test_java_http_codegen_emits_multipart_raw_and_binary_response_contracts(tmp
     assert '\"binary_schema\"' in route_client
     assert "GenMediaTypes.DemoPacketWire::parse" in route_client
     assert "EncodedMultipart multipartBody(Object value)" in transport
+    assert "HttpRequest.BodyPublishers.ofInputStream" in transport
+    assert "parts.add(file::body)" in transport
     assert "new GenApiRawResponse(" in transport
     assert "HttpResponse.BodyHandlers.ofInputStream()" in transport
     assert "new GenApiStreamResponse(\n                response.body()," in transport
@@ -83,7 +88,11 @@ def test_java_http_codegen_emits_multipart_raw_and_binary_response_contracts(tmp
     assert "percentDecodeUtf8" in transport
     assert "request.binaryResponseDecoder().apply(bodyBytes)" in transport
     assert "MultipartHttpServletRequest multipartRequest" in controller
-    assert "multipartBody(multipartRequest)" in controller
+    assert "multipartBody(multipartRequest, GenApiTypes.MediaUpload.class)" in controller
+    assert "GenApiFilePart.ofStream" in controller
+    assert "file.getBytes()" not in controller
+    assert "serverConfig.multipartSingleFileBytes()" in controller
+    assert "payloadTooLargeResponse(error)" in controller
     assert "rawResponse(\"file\", \"application/octet-stream\", \"report.bin\", result)" in controller
     assert "InputStreamResource" in controller
     assert "builder.body(new InputStreamResource(stream.body()))" in controller

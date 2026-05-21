@@ -26,6 +26,16 @@ Wails 的等价能力应使用 IPC / app runtime 建模：小型 bytes 或 typed
 
 HTTP transport 会先合并 config default headers，再合并 per-call headers，最后在编码 JSON、form、multipart 或 binary body 时补充 `Content-Type` 等协议必要 header。per-call timeout 优先于 transport config timeout，再回落到 native client 默认值。`STREAM` / `CHANNEL` 的生命周期 timeout 不和普通 RPC 混用，仍由 context cancellation、close API、WebSocket/SSE runtime 或应用策略控制。
 
+### 生产边界与窄入口
+
+默认 HTTP/Wails adapter 是协议桥接和开发验证入口，不是完整生产运行时。它们会提供安全默认值、typed error、request options、raw response、SSE/WebSocket/Wails bridge 等协议关键帧，但鉴权、限流、cookie、TLS/proxy、重试、连接编排、文件权限、审计日志和复杂 backpressure 仍应由宿主应用通过 middleware/plugin/filter、原生 client、custom transport、service implementation 或 app shell 承载。
+
+生产项目推荐优先导入窄入口：具体 route client、具体 HTTP/Wails factory、具体 server group router，而不是总 barrel 或 aggregate facade。聚合入口适合示例、发现能力和快速试用；窄入口更利于 tree-shaking、依赖审计和最小攻击面。
+
+server adapter 默认启用有限资源上限，并允许宿主显式放宽：Go `httptransport.ServerConfig` 默认 request body `16 MiB`、multipart memory `8 MiB`、single file `32 MiB`、decompressed binary `16 MiB`，WebSocket 默认使用 origin 校验并禁用 compression；Java Spring `GenSpringServerConfig` 默认 SSE timeout `30s`、WebSocket allowed origins 为空、inbound queue `256`、multipart single file `32 MiB`；Kotlin `ApiServerConfig` 默认 multipart file `32 MiB`、binary body `16 MiB`、WebSocket message `1 MiB`；Python `ApiServerConfig` 默认 body `16 MiB`、multipart file/part `32 MiB`、SSE queue `256`、WebSocket message `1 MiB`。
+
+multipart file part 的 runtime 表达优先支持 stream/file descriptor，bytes helper 仅适合小文件和测试。大文件路径应使用 Java `InputStream`/`Path`、Kotlin `fromPath`、Flutter `fromStream`、Python path-like/file-like 或宿主框架自己的 spool/temp file 策略，不应依赖 `readAllBytes()` 便利方法作为生产默认。
+
 ## Go
 
 ```sh
@@ -83,6 +93,8 @@ provider factory 应在应用启动或包 `init()` 阶段注册。provider seque
 使用较早 `Select(key, value, handler)` provider hook 的项目，应把选择逻辑迁移到 `SelectProvider(spec, handler)`，让 route metadata 保持显式。
 
 HTTP adapter 只在 blueprint root 存在直接 routes 时导入 root router。handler 如果已经通过 Gin 写出响应，adapter 不会追加自动响应；否则没有 `rsp` provider 的 route 由 adapter 写出 handler 返回值，作为兼容行为。
+
+HTTP server adapter 生成 `transports/http/gen_config.go`，提供 `httptransport.DefaultServerConfig()`、`httptransport.SetServerConfig(config)` 与 `httptransport.ActiveServerConfig()`。默认请求体、multipart、解压后 binary 和 WebSocket origin/compression 策略按“生产安全默认”收紧；项目可以在启动期显式调用 `SetServerConfig` 放宽限制或设置 `WebSocketOriginPatterns`。
 
 新 route 需要返回 bounded typed binary packet、bytes、file 或 byte stream 时，应优先使用 `RSP_BINARY_SCHEMA(...)`、`RSP_BYTES(...)`、`RSP_FILE(...)` 或 `RSP_BYTE_STREAM(...)`，让成功响应进入 ContractGraph 并被客户端生成器识别。`HTTP_RAW_RESPONSE()` 仍可作为旧项目的 HTTP adapter 逃生口，但它不是跨语言契约，不会生成 typed raw response client surface。
 
@@ -292,7 +304,7 @@ Kotlin server target 输出面向 Ktor 的 scaffold：
 
 `Gen<Group>Service.kt`、`Gen<Group>ServiceStub.kt`、`Gen<Group>Types.kt`、runtime `Gen*.kt` 文件与 `Gen<Group>KtorRoutes.kt` 由生成器拥有。`<Group>Service.kt` 是保留的用户文件，默认继承 generated stub。
 
-RPC Ktor route 会 decode query/json/urlencoded/multipart/binary_schema 输入，调用 generated service interface，并按 route response envelope 包装 JSON 成功结果或 generated `ApiError`。binary_schema、bytes、file、byte_stream 成功响应不套 JSON envelope，adapter 会输出 raw bytes、`Content-Type` 与文件下载 header；byte_stream 通过 Ktor streaming writer 分片写出。`STREAM` route 生成 SSE bridge，`CHANNEL` route 生成 Ktor WebSocket bridge；open payload 按 query 解析，message/close/client message 使用 generated serializer。它只提供协议桥接和关键帧，不生成宿主应用的 session engine、鉴权、重试、缓存、room 管理或连接编排。
+RPC Ktor route 会 decode query/json/urlencoded/multipart/binary_schema 输入，调用 generated service interface，并按 route response envelope 包装 JSON 成功结果或 generated `ApiError`。binary_schema、bytes、file、byte_stream 成功响应不套 JSON envelope，adapter 会输出 raw bytes、`Content-Type` 与文件下载 header；byte_stream 通过 Ktor streaming writer 分片写出。`STREAM` route 生成 SSE bridge，`CHANNEL` route 生成 Ktor WebSocket bridge；open payload 按 query 解析，message/close/client message 使用 generated serializer。`register*Routes` 接收 `ApiServerConfig`，默认限制 multipart file、binary body 和 WebSocket message 大小。它只提供协议桥接和关键帧，不生成宿主应用的 session engine、鉴权、重试、缓存、room 管理或连接编排。
 
 ### Kotlin 兼容性说明
 
@@ -316,7 +328,7 @@ Route DTO 输出为 `Gen<Group>Types.java`。Markdown Binary Schema typed packet
 
 Java client 生成 transport-neutral route surface、`GenApiTransport`、默认 JDK HTTP adapter 和 `GenApiClient`。用户保留文件包括 `runtime/ApiClient.java`、`routes/<root>/<group...>/<Group>Api.java`、`transports/http/HttpApiClient.java`；其他 `Gen*.java` 文件由生成器覆盖。推荐入口是 `HttpApiClient.create(baseUrl)`，public DTO 使用 `GenDemoTypes.ErrorDemoQuery` / `GenDemoTypes.ErrorDemoResponse` 这类命名。RPC route 方法提供 `GenApiRequestOptions` overload，用于 per-call headers 和 timeout。默认 HTTP adapter 实现 RPC query/json/urlencoded/multipart/binary_schema 请求，binary_schema 成功响应解码为 typed packet，bytes/file raw 响应返回 `GenApiRawResponse`，byte stream 以 `GenApiStreamResponse` / `InputStream` / `AutoCloseable` 真流式返回，并保留 `readAllBytes()` 便利方法；STREAM 和 CHANNEL 默认抛明确 unsupported。
 
-Java server 生成 route service interface、public stub、runtime、route types 与 Spring controller。对于 `.REQ_BINARY_SCHEMA(...)`，generated Spring controller 会先把请求字节解析成 generated typed packet，再调用 service；multipart route 会把 file part 解码为 `GenApiFilePart`；binary_schema、bytes、file、byte_stream 成功响应不套 JSON envelope，controller 会输出 raw bytes、`Content-Type` 与文件下载 header；byte_stream 通过 Spring streaming response 写出，不再强制缓冲为 byte array。`STREAM` route 使用 Spring `SseEmitter` bridge，`CHANNEL` route 生成 WebSocket handler/config，wire shape 兼容 `{type:"message",data}` / `{type:"close",data}`。用户保留文件是 `routes/<root>/<group...>/<Group>Service.java`；`Gen<Group>Types.java`、`Gen<Group>ServiceStub.java`、`Gen<Group>Service.java` 与 `transports/http/<root>/<group...>/Gen<Group>Controller.java` 由生成器覆盖。连接输出只提供协议桥接，不生成宿主 session engine、鉴权、重试、缓存或 room 管理。
+Java server 生成 route service interface、public stub、runtime、route types、`GenSpringServerConfig` 与 Spring controller。对于 `.REQ_BINARY_SCHEMA(...)`，generated Spring controller 会先把请求字节解析成 generated typed packet，再调用 service；multipart route 会把 file part 解码为 `GenApiFilePart`；binary_schema、bytes、file、byte_stream 成功响应不套 JSON envelope，controller 会输出 raw bytes、`Content-Type` 与文件下载 header；byte_stream 通过 Spring streaming response 写出，不再强制缓冲为 byte array。`STREAM` route 使用 Spring `SseEmitter` bridge，`CHANNEL` route 生成 WebSocket handler/config，wire shape 兼容 `{type:"message",data}` / `{type:"close",data}`。`GenSpringServerConfig` 默认使用有界 WebSocket 入站队列、空 allowed origins、可替换 executor 和 multipart 文件上限；项目可提供自定义 bean/构造参数覆盖。用户保留文件是 `routes/<root>/<group...>/<Group>Service.java`；`Gen<Group>Types.java`、`Gen<Group>ServiceStub.java`、`Gen<Group>Service.java` 与 `transports/http/<root>/<group...>/Gen<Group>Controller.java` 由生成器覆盖。连接输出只提供协议桥接，不生成宿主 session engine、鉴权、重试、缓存或 room 管理。
 
 DTO 使用 Java 17 `record`；字段带 Jackson `@JsonProperty`；enum 使用 `@JsonCreator` / `@JsonValue` 保留 wire value。`module` 只作为快捷表 alias normalize 到 `package`，不会生成 JPMS `module-info.java`。
 
@@ -350,7 +362,7 @@ Python server 同样使用 `python_package_root` 作为包根，输出 route ser
 - `<python_package_root>/<root>/routes/<root>/<group...>/*`
 - `<python_package_root>/<root>/transports/http/*`
 
-`routes/<root>/<group...>/gen_service.py` 是生成的 typed service contract，`routes/<root>/<group...>/service.py` 是用户可维护 stub 入口，`transports/http/gen_server.py` 与 `server.py` 提供 FastAPI HTTP adapter scaffold。root-level route 直接生成在 `routes/<root>`。FastAPI adapter 会把 query/json/urlencoded/multipart/open dict 递归 decode 成 route DTO 后再进入 service，multipart route 使用 `UploadFile = File(...)` 与普通字段 `Form(...)` 组装 DTO，并把 service 返回的 DTO/scalar/list/map 递归 encode 回 JSON；response envelope 与 typed error 包装仍由 adapter 处理。binary_schema 成功响应会把 typed packet 返回值编码成 HTTP bytes。raw bytes/file/byte_stream 成功响应分别使用 `Response`、`FileResponse` 或 `StreamingResponse`，不会套 JSON envelope；typed error 仍按 JSON envelope 返回。`STREAM` 生成 `StreamingResponse` SSE bridge，`CHANNEL` 生成 WebSocket bridge，message payload 与 close payload 使用 generated DTO codec；`.REQ_BINARY_SCHEMA` 的 Python server service 边界接收原始 `bytes`，不会在 server scaffold 中生成 binary schema request parser，业务实现可按项目需要解析。坏 JSON 请求会作为 transport input error 返回 HTTP 400，不进入业务 envelope。Python server WebSocket 运行时需要 `websockets` 或等价 uvicorn WebSocket backend。作为 preview target，Python server 生成结果应纳入项目自己的类型检查、lint 和安装 smoke。
+`routes/<root>/<group...>/gen_service.py` 是生成的 typed service contract，`routes/<root>/<group...>/service.py` 是用户可维护 stub 入口，`transports/http/gen_server.py` 与 `server.py` 提供 FastAPI HTTP adapter scaffold。root-level route 直接生成在 `routes/<root>`。FastAPI adapter 会把 query/json/urlencoded/multipart/open dict 递归 decode 成 route DTO 后再进入 service，multipart route 使用 `UploadFile = File(...)` 与普通字段 `Form(...)` 组装 DTO，并把 service 返回的 DTO/scalar/list/map 递归 encode 回 JSON；response envelope 与 typed error 包装仍由 adapter 处理。binary_schema 成功响应会把 typed packet 返回值编码成 HTTP bytes。raw bytes/file/byte_stream 成功响应分别使用 `Response`、`FileResponse` 或 `StreamingResponse`，不会套 JSON envelope；typed error 仍按 JSON envelope 返回。`STREAM` 生成 `StreamingResponse` SSE bridge，`CHANNEL` 生成 WebSocket bridge，message payload 与 close payload 使用 generated DTO codec；`.REQ_BINARY_SCHEMA` 的 Python server service 边界接收原始 `bytes`，不会在 server scaffold 中生成 binary schema request parser，业务实现可按项目需要解析。`ApiServerConfig` 会限制 request body、multipart file/part、SSE queue 和 WebSocket message 大小；`create_<group>_router(..., config=...)` 是窄入口，`create_router(..., config=...)` 继续作为聚合入口。坏 JSON 请求会作为 transport input error 返回 HTTP 400，不进入业务 envelope。Python server WebSocket 运行时需要 `websockets` 或等价 uvicorn WebSocket backend。作为 preview target，Python server 生成结果应纳入项目自己的类型检查、lint 和安装 smoke。
 
 ## examples 快照
 

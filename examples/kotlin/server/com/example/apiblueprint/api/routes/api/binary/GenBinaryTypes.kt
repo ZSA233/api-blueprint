@@ -166,75 +166,40 @@ public object DemoPacketWire {
         path: String = "DemoPacketHeader",
     ): DemoPacketHeader {
         try {
-
             val magic = reader.readBytes("magic", 4L)
-
             requireBinary("magic", magic.contentEquals(byteArrayOf(65, 66, 80, 49)), "const mismatch")
-
             val version = reader.readU16("version")
-
             requireBinary("version", version.toLong() == 1L, "const mismatch")
-
             state.version = version.toLong()
-
             val kind = reader.readU16("kind")
-
             requireBinary("kind", kind.toLong() == 1L, "const mismatch")
-
             state.kind = kind.toLong()
-
             val flags = reader.readU32("flags")
-
             requireRange("flags", flags, 0L, Long.MAX_VALUE)
-
             requireBinary("flags", ((flags) and 4294967264L) == 0L, "reserved bits must be zero")
-
             state.flags = flags
-
             reader.readZeroes("header_pad", 1L)
-
             reader.readZeroes("reserved0", 2L)
-
             val shortCode = reader.readU24("short_code")
-
             requireRange("short_code", shortCode.toLong(), 1L, Long.MAX_VALUE)
-
             requireRange("short_code", shortCode.toLong(), Long.MIN_VALUE, 16777215L)
-
             state.shortCode = shortCode.toLong()
-
             val signedDelta = reader.readI24("signed_delta")
-
             requireRange("signed_delta", signedDelta.toLong(), 0L, Long.MAX_VALUE)
-
             requireRange("signed_delta", signedDelta.toLong(), Long.MIN_VALUE, 8388607L)
-
             state.signedDelta = signedDelta.toLong()
-
             val itemCount = reader.readU16("item_count")
-
             requireRange("item_count", itemCount.toLong(), 1L, Long.MAX_VALUE)
-
             requireRange("item_count", itemCount.toLong(), Long.MIN_VALUE, 8L)
-
             state.itemCount = itemCount.toLong()
-
             val payloadLen = reader.readU32("payload_len")
-
             requireRange("payload_len", payloadLen, 0L, Long.MAX_VALUE)
-
             requireRange("payload_len", payloadLen, Long.MIN_VALUE, 64L)
-
             state.payloadLen = payloadLen
-
             val scoreCount = reader.readU16("score_count")
-
             requireBinary("score_count", scoreCount.toLong() == 2L, "const mismatch")
-
             requireRange("score_count", scoreCount.toLong(), Long.MIN_VALUE, 4L)
-
             state.scoreCount = scoreCount.toLong()
-
             return DemoPacketHeader(
                 flags = flags,
                 shortCode = shortCode,
@@ -258,75 +223,40 @@ public object DemoPacketWire {
         path: String = "DemoPacketHeader",
     ) {
         try {
-
             requireBinary("magic", value.magic.contentEquals(byteArrayOf(65, 66, 80, 49)), "const mismatch")
-
             writer.writeBytesExact("magic", value.magic, 4L)
-
             requireBinary("version", value.version.toLong() == 1L, "const mismatch")
-
             writer.writeU16("version", value.version)
-
             state.version = value.version.toLong()
-
             requireBinary("kind", value.kind.toLong() == 1L, "const mismatch")
-
             writer.writeU16("kind", value.kind)
-
             state.kind = value.kind.toLong()
-
             requireRange("flags", value.flags, 0L, Long.MAX_VALUE)
-
             requireBinary("flags", ((value.flags) and 4294967264L) == 0L, "reserved bits must be zero")
-
             writer.writeU32("flags", value.flags)
-
             state.flags = value.flags
-
             writer.writeZeroes("header_pad", 1L)
-
             writer.writeZeroes("reserved0", 2L)
-
             requireRange("short_code", value.shortCode.toLong(), 1L, Long.MAX_VALUE)
-
             requireRange("short_code", value.shortCode.toLong(), Long.MIN_VALUE, 16777215L)
-
             writer.writeU24("short_code", value.shortCode)
-
             state.shortCode = value.shortCode.toLong()
-
             requireRange("signed_delta", value.signedDelta.toLong(), 0L, Long.MAX_VALUE)
-
             requireRange("signed_delta", value.signedDelta.toLong(), Long.MIN_VALUE, 8388607L)
-
             writer.writeI24("signed_delta", value.signedDelta)
-
             state.signedDelta = value.signedDelta.toLong()
-
             requireRange("item_count", value.itemCount.toLong(), 1L, Long.MAX_VALUE)
-
             requireRange("item_count", value.itemCount.toLong(), Long.MIN_VALUE, 8L)
-
             writer.writeU16("item_count", value.itemCount)
-
             state.itemCount = value.itemCount.toLong()
-
             requireRange("payload_len", value.payloadLen, 0L, Long.MAX_VALUE)
-
             requireRange("payload_len", value.payloadLen, Long.MIN_VALUE, 64L)
-
             writer.writeU32("payload_len", value.payloadLen)
-
             state.payloadLen = value.payloadLen
-
             requireBinary("score_count", value.scoreCount.toLong() == 2L, "const mismatch")
-
             requireRange("score_count", value.scoreCount.toLong(), Long.MIN_VALUE, 4L)
-
             writer.writeU16("score_count", value.scoreCount)
-
             state.scoreCount = value.scoreCount.toLong()
-
         } catch (error: BinaryEncodeException) {
             throw wrapBinaryField(path, error)
         }
@@ -347,75 +277,40 @@ public object DemoPacketWire {
         path: String = "DemoPacketHeader",
     ) {
         try {
-
             requireBinary("magic", magic.contentEquals(byteArrayOf(65, 66, 80, 49)), "const mismatch")
-
             writer.writeBytesExact("magic", magic, 4L)
-
             requireBinary("version", version.toLong() == 1L, "const mismatch")
-
             writer.writeU16("version", version)
-
             state.version = version.toLong()
-
             requireBinary("kind", kind.toLong() == 1L, "const mismatch")
-
             writer.writeU16("kind", kind)
-
             state.kind = kind.toLong()
-
             requireRange("flags", flags, 0L, Long.MAX_VALUE)
-
             requireBinary("flags", ((flags) and 4294967264L) == 0L, "reserved bits must be zero")
-
             writer.writeU32("flags", flags)
-
             state.flags = flags
-
             writer.writeZeroes("header_pad", 1L)
-
             writer.writeZeroes("reserved0", 2L)
-
             requireRange("short_code", shortCode.toLong(), 1L, Long.MAX_VALUE)
-
             requireRange("short_code", shortCode.toLong(), Long.MIN_VALUE, 16777215L)
-
             writer.writeU24("short_code", shortCode)
-
             state.shortCode = shortCode.toLong()
-
             requireRange("signed_delta", signedDelta.toLong(), 0L, Long.MAX_VALUE)
-
             requireRange("signed_delta", signedDelta.toLong(), Long.MIN_VALUE, 8388607L)
-
             writer.writeI24("signed_delta", signedDelta)
-
             state.signedDelta = signedDelta.toLong()
-
             requireRange("item_count", itemCount.toLong(), 1L, Long.MAX_VALUE)
-
             requireRange("item_count", itemCount.toLong(), Long.MIN_VALUE, 8L)
-
             writer.writeU16("item_count", itemCount)
-
             state.itemCount = itemCount.toLong()
-
             requireRange("payload_len", payloadLen, 0L, Long.MAX_VALUE)
-
             requireRange("payload_len", payloadLen, Long.MIN_VALUE, 64L)
-
             writer.writeU32("payload_len", payloadLen)
-
             state.payloadLen = payloadLen
-
             requireBinary("score_count", scoreCount.toLong() == 2L, "const mismatch")
-
             requireRange("score_count", scoreCount.toLong(), Long.MIN_VALUE, 4L)
-
             writer.writeU16("score_count", scoreCount)
-
             state.scoreCount = scoreCount.toLong()
-
         } catch (error: BinaryEncodeException) {
             throw wrapBinaryField(path, error)
         }
@@ -462,37 +357,24 @@ public object DemoPacketWire {
         path: String = "DemoPacketBody",
     ): DemoPacketBody {
         try {
-
             val itemsCount = state.itemCount
-
             val items = mutableListOf<DemoPacketItem>()
             repeat(itemsCount.toInt()) { index ->
-
                 try {
                     items += readDemoPacketItem(reader, state, "")
                 } catch (error: BinaryDecodeException) {
                     throw wrapBinaryIndex("items", index, error)
                 }
-
             }
-
             val payload = reader.readBytes("payload", state.payloadLen)
-
             val scoresCount = state.scoreCount
-
             val scores = mutableListOf<Double>()
             repeat(scoresCount.toInt()) { index ->
-
                 scores += reader.readF64("scores")
-
             }
-
             val checksum = reader.readU32("checksum")
-
             requireBinary("checksum", checksum == state.itemCount + state.payloadLen, "assert mismatch")
-
             state.checksum = checksum
-
             return DemoPacketBody(
                 items = items,
                 payload = payload,
@@ -511,11 +393,8 @@ public object DemoPacketWire {
         path: String = "DemoPacketBody",
     ) {
         try {
-
             val itemsCount = state.itemCount
-
             requireSize("items", binarySize(value.items), itemsCount)
-
             value.items.forEachIndexed { index, item ->
                 try {
                     writeDemoPacketItem(item, writer, state, "")
@@ -523,17 +402,11 @@ public object DemoPacketWire {
                     throw wrapBinaryIndex("items", index, error)
                 }
             }
-
             val payloadCount = state.payloadLen
-
             requireSize("payload", binarySize(value.payload), payloadCount)
-
             writer.writeBytes("payload", value.payload)
-
             val scoresCount = state.scoreCount
-
             requireSize("scores", binarySize(value.scores), scoresCount)
-
             value.scores.forEachIndexed { index, item ->
                 try {
                     writer.writeF64("", item)
@@ -541,13 +414,9 @@ public object DemoPacketWire {
                     throw wrapBinaryIndex("scores", index, error)
                 }
             }
-
             requireBinary("checksum", value.checksum == state.itemCount + state.payloadLen, "assert mismatch")
-
             writer.writeU32("checksum", value.checksum)
-
             state.checksum = value.checksum
-
         } catch (error: BinaryEncodeException) {
             throw wrapBinaryField(path, error)
         }
@@ -672,29 +541,17 @@ public object DemoPacketWire {
         path: String = "Item",
     ): DemoPacketItem {
         try {
-
             val id = reader.readU32("id")
-
             requireRange("id", id, 1L, Long.MAX_VALUE)
-
             requireRange("id", id, Long.MIN_VALUE, 999L)
-
             state.id = id
-
             val enabled = reader.readBool("enabled")
-
             val value = reader.readF64("value")
-
             val labelLen = reader.readU8("label_len")
-
             requireRange("label_len", labelLen.toLong(), 1L, Long.MAX_VALUE)
-
             requireRange("label_len", labelLen.toLong(), Long.MIN_VALUE, 16L)
-
             state.labelLen = labelLen.toLong()
-
             val label = reader.readBytes("label", state.labelLen)
-
             return DemoPacketItem(
                 id = id,
                 enabled = enabled,
@@ -714,35 +571,20 @@ public object DemoPacketWire {
         path: String = "Item",
     ) {
         try {
-
             requireRange("id", value.id, 1L, Long.MAX_VALUE)
-
             requireRange("id", value.id, Long.MIN_VALUE, 999L)
-
             writer.writeU32("id", value.id)
-
             state.id = value.id
-
             writer.writeBool("enabled", value.enabled)
-
             writer.writeF64("value", value.value)
-
             requireRange("label_len", value.labelLen.toLong(), 1L, Long.MAX_VALUE)
-
             requireRange("label_len", value.labelLen.toLong(), Long.MIN_VALUE, 16L)
-
             requireSize("label_len.label", binarySize(value.label), value.labelLen.toLong())
-
             writer.writeU8("label_len", value.labelLen)
-
             state.labelLen = value.labelLen.toLong()
-
             val labelCount = state.labelLen
-
             requireSize("label", binarySize(value.label), labelCount)
-
             writer.writeBytes("label", value.label)
-
         } catch (error: BinaryEncodeException) {
             throw wrapBinaryField(path, error)
         }
@@ -759,35 +601,20 @@ public object DemoPacketWire {
         path: String = "Item",
     ) {
         try {
-
             requireRange("id", id, 1L, Long.MAX_VALUE)
-
             requireRange("id", id, Long.MIN_VALUE, 999L)
-
             writer.writeU32("id", id)
-
             state.id = id
-
             writer.writeBool("enabled", enabled)
-
             writer.writeF64("value", value)
-
             requireRange("label_len", labelLen.toLong(), 1L, Long.MAX_VALUE)
-
             requireRange("label_len", labelLen.toLong(), Long.MIN_VALUE, 16L)
-
             requireSize("label_len.label", binarySize(label), labelLen.toLong())
-
             writer.writeU8("label_len", labelLen)
-
             state.labelLen = labelLen.toLong()
-
             val labelCount = state.labelLen
-
             requireSize("label", binarySize(label), labelCount)
-
             writer.writeBytes("label", label)
-
         } catch (error: BinaryEncodeException) {
             throw wrapBinaryField(path, error)
         }
@@ -804,35 +631,20 @@ public object DemoPacketWire {
         path: String = "Item",
     ) {
         try {
-
             requireRange("id", id, 1L, Long.MAX_VALUE)
-
             requireRange("id", id, Long.MIN_VALUE, 999L)
-
             writer.writeU32("id", id)
-
             state.id = id
-
             writer.writeBool("enabled", enabled)
-
             writer.writeF64("value", value)
-
             requireRange("label_len", labelLen.toLong(), 1L, Long.MAX_VALUE)
-
             requireRange("label_len", labelLen.toLong(), Long.MIN_VALUE, 16L)
-
             requireSize("label_len.label", binarySize(label), labelLen.toLong())
-
             writer.writeU8("label_len", labelLen)
-
             state.labelLen = labelLen.toLong()
-
             val labelCount = state.labelLen
-
             requireSize("label", binarySize(label), labelCount)
-
             writer.writeByteString("label", label)
-
         } catch (error: BinaryEncodeException) {
             throw wrapBinaryField(path, error)
         }
@@ -964,29 +776,17 @@ public object AuditPacketWire {
         path: String = "AuditPacketHeader",
     ): AuditPacketHeader {
         try {
-
             val kind = reader.readU16("kind")
-
             requireBinary("kind", kind.toLong() == 2L, "const mismatch")
-
             state.kind = kind.toLong()
-
             val flags = reader.readU32("flags")
-
             requireRange("flags", flags, 0L, Long.MAX_VALUE)
-
             requireBinary("flags", ((flags) and 4294967288L) == 0L, "reserved bits must be zero")
-
             state.flags = flags
-
             val itemCount = reader.readU16("item_count")
-
             requireRange("item_count", itemCount.toLong(), 1L, Long.MAX_VALUE)
-
             requireRange("item_count", itemCount.toLong(), Long.MIN_VALUE, 4L)
-
             state.itemCount = itemCount.toLong()
-
             return AuditPacketHeader(
                 flags = flags,
                 itemCount = itemCount,
@@ -1004,29 +804,17 @@ public object AuditPacketWire {
         path: String = "AuditPacketHeader",
     ) {
         try {
-
             requireBinary("kind", value.kind.toLong() == 2L, "const mismatch")
-
             writer.writeU16("kind", value.kind)
-
             state.kind = value.kind.toLong()
-
             requireRange("flags", value.flags, 0L, Long.MAX_VALUE)
-
             requireBinary("flags", ((value.flags) and 4294967288L) == 0L, "reserved bits must be zero")
-
             writer.writeU32("flags", value.flags)
-
             state.flags = value.flags
-
             requireRange("item_count", value.itemCount.toLong(), 1L, Long.MAX_VALUE)
-
             requireRange("item_count", value.itemCount.toLong(), Long.MIN_VALUE, 4L)
-
             writer.writeU16("item_count", value.itemCount)
-
             state.itemCount = value.itemCount.toLong()
-
         } catch (error: BinaryEncodeException) {
             throw wrapBinaryField(path, error)
         }
@@ -1041,29 +829,17 @@ public object AuditPacketWire {
         path: String = "AuditPacketHeader",
     ) {
         try {
-
             requireBinary("kind", kind.toLong() == 2L, "const mismatch")
-
             writer.writeU16("kind", kind)
-
             state.kind = kind.toLong()
-
             requireRange("flags", flags, 0L, Long.MAX_VALUE)
-
             requireBinary("flags", ((flags) and 4294967288L) == 0L, "reserved bits must be zero")
-
             writer.writeU32("flags", flags)
-
             state.flags = flags
-
             requireRange("item_count", itemCount.toLong(), 1L, Long.MAX_VALUE)
-
             requireRange("item_count", itemCount.toLong(), Long.MIN_VALUE, 4L)
-
             writer.writeU16("item_count", itemCount)
-
             state.itemCount = itemCount.toLong()
-
         } catch (error: BinaryEncodeException) {
             throw wrapBinaryField(path, error)
         }
@@ -1075,26 +851,18 @@ public object AuditPacketWire {
         path: String = "AuditPacketBody",
     ): AuditPacketBody {
         try {
-
             val itemsCount = state.itemCount
-
             val items = mutableListOf<AuditPacketItem>()
             repeat(itemsCount.toInt()) { index ->
-
                 try {
                     items += readAuditPacketItem(reader, state, "")
                 } catch (error: BinaryDecodeException) {
                     throw wrapBinaryIndex("items", index, error)
                 }
-
             }
-
             val checksum = reader.readU32("checksum")
-
             requireBinary("checksum", checksum == state.itemCount, "assert mismatch")
-
             state.checksum = checksum
-
             return AuditPacketBody(
                 items = items,
                 checksum = checksum
@@ -1111,11 +879,8 @@ public object AuditPacketWire {
         path: String = "AuditPacketBody",
     ) {
         try {
-
             val itemsCount = state.itemCount
-
             requireSize("items", binarySize(value.items), itemsCount)
-
             value.items.forEachIndexed { index, item ->
                 try {
                     writeAuditPacketItem(item, writer, state, "")
@@ -1123,13 +888,9 @@ public object AuditPacketWire {
                     throw wrapBinaryIndex("items", index, error)
                 }
             }
-
             requireBinary("checksum", value.checksum == state.itemCount, "assert mismatch")
-
             writer.writeU32("checksum", value.checksum)
-
             state.checksum = value.checksum
-
         } catch (error: BinaryEncodeException) {
             throw wrapBinaryField(path, error)
         }
@@ -1176,21 +937,13 @@ public object AuditPacketWire {
         path: String = "Item",
     ): AuditPacketItem {
         try {
-
             val id = reader.readU32("id")
-
             requireRange("id", id, 1L, Long.MAX_VALUE)
-
             state.id = id
-
             val code = reader.readU16("code")
-
             requireRange("code", code.toLong(), 1L, Long.MAX_VALUE)
-
             requireRange("code", code.toLong(), Long.MIN_VALUE, 999L)
-
             state.code = code.toLong()
-
             return AuditPacketItem(
                 id = id,
                 code = code
@@ -1207,21 +960,13 @@ public object AuditPacketWire {
         path: String = "Item",
     ) {
         try {
-
             requireRange("id", value.id, 1L, Long.MAX_VALUE)
-
             writer.writeU32("id", value.id)
-
             state.id = value.id
-
             requireRange("code", value.code.toLong(), 1L, Long.MAX_VALUE)
-
             requireRange("code", value.code.toLong(), Long.MIN_VALUE, 999L)
-
             writer.writeU16("code", value.code)
-
             state.code = value.code.toLong()
-
         } catch (error: BinaryEncodeException) {
             throw wrapBinaryField(path, error)
         }
@@ -1235,21 +980,13 @@ public object AuditPacketWire {
         path: String = "Item",
     ) {
         try {
-
             requireRange("id", id, 1L, Long.MAX_VALUE)
-
             writer.writeU32("id", id)
-
             state.id = id
-
             requireRange("code", code.toLong(), 1L, Long.MAX_VALUE)
-
             requireRange("code", code.toLong(), Long.MIN_VALUE, 999L)
-
             writer.writeU16("code", code)
-
             state.code = code.toLong()
-
         } catch (error: BinaryEncodeException) {
             throw wrapBinaryField(path, error)
         }

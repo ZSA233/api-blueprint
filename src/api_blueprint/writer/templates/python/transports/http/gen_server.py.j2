@@ -11,7 +11,7 @@ from fastapi import APIRouter, WebSocket, Request, HTTPException, WebSocketDisco
 from starlette.responses import StreamingResponse, JSONResponse, FileResponse, Response
 
 from ...runtime.errors import ApiError, make_api_error_payload
-from ...runtime.server import ApiRawResponse
+from ...runtime.server import ApiRawResponse, ApiServerConfig
 {% for group in bp.groups.values() -%}
 from ...routes.{{ group.package_path }}.service import {{ group.service_class }}, {{ group.service_class }}Stub
 {% if group.type_import_names() or group.binary_schemas() %}from ...routes.{{ group.package_path }} import gen_types as {{ group.server_type_module_alias }}
@@ -23,28 +23,42 @@ def create_router(
 {% for group in bp.groups.values() %}
     {{ group.alias }}_service: {{ group.service_class }} | None = None,
 {% endfor %}
+    config: ApiServerConfig | None = None,
 ) -> APIRouter:
     router = APIRouter()
+    api_config = config or ApiServerConfig()
 {% for group in bp.groups.values() %}
-    {{ group.alias }}_service_impl = {{ group.alias }}_service or {{ group.service_class }}Stub()
+    router.include_router(create_{{ group.alias }}_router({{ group.alias }}_service, config=api_config))
 {% endfor %}
-{% for group in bp.groups.values() %}{% for route in group.routes %}
+    return router
+
+
+{% for group in bp.groups.values() %}
+def create_{{ group.alias }}_router(
+    service: {{ group.service_class }} | None = None,
+    *,
+    config: ApiServerConfig | None = None,
+) -> APIRouter:
+    router = APIRouter()
+    api_config = config or ApiServerConfig()
+    service_impl = service or {{ group.service_class }}Stub()
+{% for route in group.routes %}
 {% if route.is_rpc %}
 
     @router.api_route({{ route.url_literal | safe }}, methods={{ route.method_list_literal | safe }})
     async def {{ group.alias }}_{{ route.method_name }}(request: Request) -> Any:
-        service = {{ group.alias }}_service_impl
+        service = service_impl
 {% for param in route.params %}
 {% if param.name == "query" %}
         query_raw = _query_params(request)
 {% elif param.name == "json" %}
-        json_body_raw = await _json_body(request)
+        json_body_raw = await _json_body(request, api_config)
 {% elif param.name == "form" %}
-        form_raw = await _form_body(request)
+        form_raw = await _form_body(request, api_config)
 {% elif param.name == "multipart" %}
-        multipart_raw = await _multipart_body(request)
+        multipart_raw = await _multipart_body(request, api_config)
 {% elif param.name == "binary" %}
-        binary = await request.body()
+        binary = await _body(request, api_config.body_max_bytes)
 {% endif %}
 {% endfor %}
 {% if route.has_decoded_params %}
@@ -87,11 +101,13 @@ def create_router(
 {% endif %}
         except ApiError as error:
             return _wrap_api_error({{ route.response_envelope_literal | safe }}, error, {{ route.route_id_literal | safe }})
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 {% elif route.supports_stream %}
 
     @router.api_route({{ route.url_literal | safe }}, methods=["GET"])
     async def {{ group.alias }}_{{ route.subscribe_method_name }}(request: Request) -> Any:
-        service = {{ group.alias }}_service_impl
+        service = service_impl
 {% for param in route.params if param.name == "open_data" %}
         open_data_raw = _query_params(request)
 {% endfor %}
@@ -101,7 +117,7 @@ def create_router(
         except (TypeError, ValueError) as error:
             return _bad_request_response(error)
 {% endfor %}
-        stream = _SseStream()
+        stream = _SseStream(api_config.sse_queue_capacity)
 
         async def body():
             task = asyncio.create_task(
@@ -126,7 +142,7 @@ def create_router(
     @router.websocket({{ route.url_literal | safe }})
     async def {{ group.alias }}_{{ route.websocket_endpoint_name }}(websocket: WebSocket) -> None:
         await websocket.accept()
-        service = {{ group.alias }}_service_impl
+        service = service_impl
 {% for param in route.params if param.name == "open_data" %}
         open_data_raw = dict(websocket.query_params)
 {% endfor %}
@@ -137,7 +153,7 @@ def create_router(
             await websocket.close(code=1008)
             return
 {% endfor %}
-        channel = _WebSocketChannel(websocket, {{ group.server_type_expr(route.client_message_type.decoder) if route.client_message_type else '_identity_decoder' }})
+        channel = _WebSocketChannel(websocket, {{ group.server_type_expr(route.client_message_type.decoder) if route.client_message_type else '_identity_decoder' }}, api_config)
         try:
             await service.{{ route.method_name }}(
 {% for param in route.params if param.name == "open_data" %}
@@ -151,9 +167,12 @@ def create_router(
             if not channel.closed:
                 await websocket.close()
 {% endif %}
-{% endfor %}{% endfor %}
+{% endfor %}
 
     return router
+
+
+{% endfor %}
 
 
 def _query_params(request: Request) -> dict[str, Any]:
@@ -161,8 +180,22 @@ def _query_params(request: Request) -> dict[str, Any]:
     return values
 
 
-async def _json_body(request: Request) -> Any:
+async def _body(request: Request, max_bytes: int) -> bytes:
+    content_length = request.headers.get("content-length")
+    if content_length is not None:
+        try:
+            if int(content_length) > max_bytes:
+                raise PayloadTooLargeError("request body exceeds configured limit")
+        except ValueError:
+            pass
     body = await request.body()
+    if len(body) > max_bytes:
+        raise PayloadTooLargeError("request body exceeds configured limit")
+    return body
+
+
+async def _json_body(request: Request, config: ApiServerConfig) -> Any:
+    body = await _body(request, config.body_max_bytes)
     if not body:
         return None
     try:
@@ -172,15 +205,34 @@ async def _json_body(request: Request) -> Any:
     return value
 
 
-async def _form_body(request: Request) -> dict[str, Any]:
-    values = await request.form()
+async def _form_body(request: Request, config: ApiServerConfig) -> dict[str, Any]:
+    _ensure_content_length(request, config.body_max_bytes)
+    values = await request.form(max_part_size=config.multipart_part_max_bytes)
     result = {key: value for key, value in values.multi_items()}
     return result
 
 
-async def _multipart_body(request: Request) -> dict[str, Any]:
-    values = await request.form()
-    return {key: value for key, value in values.multi_items()}
+async def _multipart_body(request: Request, config: ApiServerConfig) -> dict[str, Any]:
+    _ensure_content_length(request, config.body_max_bytes)
+    values = await request.form(max_part_size=config.multipart_part_max_bytes)
+    result: dict[str, Any] = {}
+    for key, value in values.multi_items():
+        size = getattr(value, "size", None)
+        if isinstance(size, int) and size > config.multipart_file_max_bytes:
+            raise PayloadTooLargeError("multipart file exceeds configured limit")
+        result[key] = value
+    return result
+
+
+def _ensure_content_length(request: Request, max_bytes: int) -> None:
+    content_length = request.headers.get("content-length")
+    if content_length is None:
+        return
+    try:
+        if int(content_length) > max_bytes:
+            raise PayloadTooLargeError("request body exceeds configured limit")
+    except ValueError:
+        return
 
 
 def _jsonable(value: Any) -> Any:
@@ -207,6 +259,10 @@ def _json_key(value: Any) -> str:
 
 def _bad_request_response(error: Exception) -> JSONResponse:
     return JSONResponse({"detail": str(error) or "invalid request"}, status_code=400)
+
+
+def _payload_too_large_response(error: Exception) -> JSONResponse:
+    return JSONResponse({"detail": "payload too large"}, status_code=413)
 
 
 def _wrap_response(envelope: dict[str, Any], data: Any) -> Any:
@@ -331,8 +387,8 @@ def _wrap_api_error(envelope: dict[str, Any], error: ApiError, route_id: str) ->
 
 
 class _SseStream:
-    def __init__(self) -> None:
-        self._queue: asyncio.Queue[str | None] = asyncio.Queue()
+    def __init__(self, queue_capacity: int) -> None:
+        self._queue: asyncio.Queue[str | None] = asyncio.Queue(maxsize=max(1, queue_capacity))
         self.closed = False
 
     def __aiter__(self):
@@ -370,9 +426,10 @@ def _identity_decoder(value: Any, path: str) -> Any:
 
 
 class _WebSocketChannel:
-    def __init__(self, websocket: WebSocket, message_decoder=_identity_decoder) -> None:
+    def __init__(self, websocket: WebSocket, message_decoder=_identity_decoder, config: ApiServerConfig | None = None) -> None:
         self.websocket = websocket
         self.message_decoder = message_decoder
+        self.config = config or ApiServerConfig()
         self.closed = False
 
     async def receive(self) -> Any:
@@ -381,6 +438,9 @@ class _WebSocketChannel:
         except WebSocketDisconnect as err:
             self.closed = True
             raise _WebSocketClosed() from err
+        if len(payload.encode("utf-8")) > self.config.websocket_message_max_bytes:
+            await self.abort(1009, "WebSocket message exceeds configured limit")
+            raise _WebSocketClosed()
         try:
             value = json.loads(payload)
             return self.message_decoder(value, "message")
@@ -418,3 +478,8 @@ class _WebSocketChannel:
 
 class _WebSocketClosed(Exception):
     pass
+
+
+class PayloadTooLargeError(HTTPException):
+    def __init__(self, detail: str = "payload too large") -> None:
+        super().__init__(status_code=413, detail=detail)

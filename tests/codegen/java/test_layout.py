@@ -254,13 +254,20 @@ content-type: application/octet-stream
     assert "SseEmitter" in controller_text
     assert "implements WebSocketConfigurer" in controller_text
     assert "registry.addHandler(new ChatWebSocketHandler(), \"/api/demo/chat\")" in controller_text
+    assert "setAllowedOrigins(\"*\")" not in controller_text
+    assert "serverConfig.websocketAllowedOrigins()" in controller_text
     assert "SpringSseStream" in controller_text
     assert "SpringWebSocketChannel" in controller_text
+    assert "SseEmitter emitter = new SseEmitter(serverConfig.sseTimeout().toMillis())" in controller_text
     assert "private static final Object CLOSED = new Object();" in controller_text
-    assert "private final BlockingQueue<Object> incoming = new LinkedBlockingQueue<>();" in controller_text
+    assert "private final BlockingQueue<Object> incoming;" in controller_text
+    assert "new LinkedBlockingQueue<>(Math.max(1, inboundQueueCapacity))" in controller_text
     assert "void markClosed(Exception error)" in controller_text
     assert "channel.markClosed" in controller_text
     assert "channel.abortUnchecked(1003, \"invalid WebSocket message\")" in controller_text
+    assert "abortUnchecked(1013, \"WebSocket inbound queue is full\")" in controller_text
+    assert "CompletableFuture.runAsync(() -> {" in controller_text
+    assert "}, connectionExecutor);" in controller_text
     assert "incoming.take()" in controller_text
     assert "return badRequestResponse(error);" in controller_text
     assert "private ResponseEntity<Map<String, Object>> badRequestResponse(Exception error)" in controller_text

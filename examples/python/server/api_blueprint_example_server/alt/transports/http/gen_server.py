@@ -12,20 +12,33 @@ from fastapi import APIRouter, WebSocket, Request, HTTPException, WebSocketDisco
 from starlette.responses import StreamingResponse, JSONResponse, FileResponse, Response
 
 from ...runtime.errors import ApiError, make_api_error_payload
-from ...runtime.server import ApiRawResponse
+from ...runtime.server import ApiRawResponse, ApiServerConfig
 from ...routes.alt.conflict.service import ConflictService, ConflictServiceStub
 from ...routes.alt.conflict import gen_types as alt_conflict_types
 
 
 def create_router(
     conflict_service: ConflictService | None = None,
+    config: ApiServerConfig | None = None,
 ) -> APIRouter:
     router = APIRouter()
-    conflict_service_impl = conflict_service or ConflictServiceStub()
+    api_config = config or ApiServerConfig()
+    router.include_router(create_conflict_router(conflict_service, config=api_config))
+    return router
+
+
+def create_conflict_router(
+    service: ConflictService | None = None,
+    *,
+    config: ApiServerConfig | None = None,
+) -> APIRouter:
+    router = APIRouter()
+    api_config = config or ApiServerConfig()
+    service_impl = service or ConflictServiceStub()
 
     @router.api_route("/alt/conflict/default", methods=["GET"])
     async def conflict_default(request: Request) -> Any:
-        service = conflict_service_impl
+        service = service_impl
         query_raw = _query_params(request)
         try:
             query = alt_conflict_types.DefaultQuery.from_value(query_raw, "query")
@@ -41,6 +54,8 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "OkDataErrorEnvelope", "kind": "ok_data_error", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"ok": "ok", "data": "data", "error": "error"}}, error, "alt.conflict.get.default")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 
     return router
 
@@ -50,8 +65,22 @@ def _query_params(request: Request) -> dict[str, Any]:
     return values
 
 
-async def _json_body(request: Request) -> Any:
+async def _body(request: Request, max_bytes: int) -> bytes:
+    content_length = request.headers.get("content-length")
+    if content_length is not None:
+        try:
+            if int(content_length) > max_bytes:
+                raise PayloadTooLargeError("request body exceeds configured limit")
+        except ValueError:
+            pass
     body = await request.body()
+    if len(body) > max_bytes:
+        raise PayloadTooLargeError("request body exceeds configured limit")
+    return body
+
+
+async def _json_body(request: Request, config: ApiServerConfig) -> Any:
+    body = await _body(request, config.body_max_bytes)
     if not body:
         return None
     try:
@@ -61,15 +90,34 @@ async def _json_body(request: Request) -> Any:
     return value
 
 
-async def _form_body(request: Request) -> dict[str, Any]:
-    values = await request.form()
+async def _form_body(request: Request, config: ApiServerConfig) -> dict[str, Any]:
+    _ensure_content_length(request, config.body_max_bytes)
+    values = await request.form(max_part_size=config.multipart_part_max_bytes)
     result = {key: value for key, value in values.multi_items()}
     return result
 
 
-async def _multipart_body(request: Request) -> dict[str, Any]:
-    values = await request.form()
-    return {key: value for key, value in values.multi_items()}
+async def _multipart_body(request: Request, config: ApiServerConfig) -> dict[str, Any]:
+    _ensure_content_length(request, config.body_max_bytes)
+    values = await request.form(max_part_size=config.multipart_part_max_bytes)
+    result: dict[str, Any] = {}
+    for key, value in values.multi_items():
+        size = getattr(value, "size", None)
+        if isinstance(size, int) and size > config.multipart_file_max_bytes:
+            raise PayloadTooLargeError("multipart file exceeds configured limit")
+        result[key] = value
+    return result
+
+
+def _ensure_content_length(request: Request, max_bytes: int) -> None:
+    content_length = request.headers.get("content-length")
+    if content_length is None:
+        return
+    try:
+        if int(content_length) > max_bytes:
+            raise PayloadTooLargeError("request body exceeds configured limit")
+    except ValueError:
+        return
 
 
 def _jsonable(value: Any) -> Any:
@@ -96,6 +144,10 @@ def _json_key(value: Any) -> str:
 
 def _bad_request_response(error: Exception) -> JSONResponse:
     return JSONResponse({"detail": str(error) or "invalid request"}, status_code=400)
+
+
+def _payload_too_large_response(error: Exception) -> JSONResponse:
+    return JSONResponse({"detail": "payload too large"}, status_code=413)
 
 
 def _wrap_response(envelope: dict[str, Any], data: Any) -> Any:
@@ -220,8 +272,8 @@ def _wrap_api_error(envelope: dict[str, Any], error: ApiError, route_id: str) ->
 
 
 class _SseStream:
-    def __init__(self) -> None:
-        self._queue: asyncio.Queue[str | None] = asyncio.Queue()
+    def __init__(self, queue_capacity: int) -> None:
+        self._queue: asyncio.Queue[str | None] = asyncio.Queue(maxsize=max(1, queue_capacity))
         self.closed = False
 
     def __aiter__(self):
@@ -259,9 +311,10 @@ def _identity_decoder(value: Any, path: str) -> Any:
 
 
 class _WebSocketChannel:
-    def __init__(self, websocket: WebSocket, message_decoder=_identity_decoder) -> None:
+    def __init__(self, websocket: WebSocket, message_decoder=_identity_decoder, config: ApiServerConfig | None = None) -> None:
         self.websocket = websocket
         self.message_decoder = message_decoder
+        self.config = config or ApiServerConfig()
         self.closed = False
 
     async def receive(self) -> Any:
@@ -270,6 +323,9 @@ class _WebSocketChannel:
         except WebSocketDisconnect as err:
             self.closed = True
             raise _WebSocketClosed() from err
+        if len(payload.encode("utf-8")) > self.config.websocket_message_max_bytes:
+            await self.abort(1009, "WebSocket message exceeds configured limit")
+            raise _WebSocketClosed()
         try:
             value = json.loads(payload)
             return self.message_decoder(value, "message")
@@ -307,3 +363,8 @@ class _WebSocketChannel:
 
 class _WebSocketClosed(Exception):
     pass
+
+
+class PayloadTooLargeError(HTTPException):
+    def __init__(self, detail: str = "payload too large") -> None:
+        super().__init__(status_code=413, detail=detail)

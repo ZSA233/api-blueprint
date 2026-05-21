@@ -539,6 +539,9 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
     def gen_http_adapter(self) -> None:
         ctx = {"writer": self.writer, "bp": self}
         plan = build_go_server_blueprint_plan(self.writer, self)
+        with self.writer.write_file(self.writer.http_transport_dir / "gen_config.go", overwrite=True) as handle:
+            if handle:
+                handle.write(render(LANG, "gen_config.go", ctx, "server/views/transports/http"))
         with self.writer.write_file(self.writer.http_transport_dir / "gen_engine.go", overwrite=True) as handle:
             if handle:
                 handle.write(render(LANG, "gen_engine.go", ctx, "server/views/transports/http"))

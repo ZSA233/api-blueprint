@@ -4,7 +4,7 @@ go 1.25
 
 require (
 	example.com/api-blueprint/wails-hello/golang v0.0.0
-	github.com/wailsapp/wails/v3 v3.0.0-alpha.74
+	github.com/wailsapp/wails/v3 v3.0.0-alpha.83
 )
 
 require (

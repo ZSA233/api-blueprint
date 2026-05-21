@@ -43,12 +43,13 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import io.ktor.utils.io.core.readBytes
-import io.ktor.utils.io.readRemaining
+import io.ktor.utils.io.readAvailable
+import java.nio.file.Files
 import java.io.Writer
 
 public fun Route.registerDemoRoutes(
     service: GenDemoService = DemoServiceStub(),
+    config: ApiServerConfig = ApiServerConfig(),
 ) {
 
     get("/api/demo/abc") {
@@ -207,6 +208,7 @@ public fun Route.registerDemoRoutes(
             clientMessageSerializer = AssistantClientMessage.serializer(),
             serverMessageSerializer = AssistantServerMessage.serializer(),
             closeSerializer = ConnectionClose.serializer(),
+            config = config,
         )
         service.assistantSession(
             openData = openData,
@@ -323,6 +325,7 @@ private class KtorWebSocketChannel<Recv, Send, Close>(
     private val clientMessageSerializer: KSerializer<Recv>,
     private val serverMessageSerializer: KSerializer<Send>,
     private val closeSerializer: KSerializer<Close>,
+    private val config: ApiServerConfig,
 ) : ApiServerChannel<Recv, Send, Close> {
     private var closed = false
 
@@ -331,8 +334,13 @@ private class KtorWebSocketChannel<Recv, Send, Close>(
             while (true) {
                 val frame = session.incoming.receive()
                 if (frame is Frame.Text) {
+                    val payload = frame.readText()
+                    if (payload.toByteArray(Charsets.UTF_8).size.toLong() > config.websocketMessageMaxBytes) {
+                        abort(code = 1009, reason = "WebSocket message exceeds configured limit")
+                        return null
+                    }
                     return try {
-                        ApiJson.decodeFromString(clientMessageSerializer, frame.readText())
+                        ApiJson.decodeFromString(clientMessageSerializer, payload)
                     } catch (_: SerializationException) {
                         abort(code = 1003, reason = "invalid WebSocket message")
                         null
@@ -397,7 +405,7 @@ private fun <T> decodeParameters(parameters: Parameters, serializer: KSerializer
     return ApiJson.decodeFromJsonElement(serializer, element)
 }
 
-private suspend fun <T> decodeMultipart(call: ApplicationCall, serializer: KSerializer<T>): T {
+private suspend fun <T> decodeMultipart(call: ApplicationCall, serializer: KSerializer<T>, config: ApiServerConfig): T {
     val fields = linkedMapOf<String, JsonElement>()
     call.receiveMultipart().forEachPart { part ->
         when (part) {
@@ -407,11 +415,11 @@ private suspend fun <T> decodeMultipart(call: ApplicationCall, serializer: KSeri
             is PartData.FileItem -> {
                 val name = part.name
                 if (name != null) {
-                    val bytes = part.provider().readRemaining().readBytes()
+                    val path = receiveFilePart(part, config)
                     fields[name] = buildJsonObject {
                         put("filename", JsonPrimitive(part.originalFileName.orEmpty()))
                         put("contentType", JsonPrimitive(part.contentType?.toString() ?: "application/octet-stream"))
-                        put("bytes", JsonArray(bytes.map { JsonPrimitive(it.toInt()) }))
+                        put("path", JsonPrimitive(path))
                     }
                 }
             }
@@ -420,6 +428,47 @@ private suspend fun <T> decodeMultipart(call: ApplicationCall, serializer: KSeri
         part.dispose()
     }
     return ApiJson.decodeFromJsonElement(serializer, JsonObject(fields))
+}
+
+private suspend fun receiveLimitedBytes(call: ApplicationCall, maxBytes: Long): ByteArray {
+    val contentLength = call.request.headers[HttpHeaders.ContentLength]?.toLongOrNull()
+    if (maxBytes > 0 && contentLength != null && contentLength > maxBytes) {
+        throw ApiPayloadTooLargeException()
+    }
+    val bytes = call.receive<ByteArray>()
+    if (maxBytes > 0 && bytes.size.toLong() > maxBytes) {
+        throw ApiPayloadTooLargeException()
+    }
+    return bytes
+}
+
+private suspend fun receiveFilePart(part: PartData.FileItem, config: ApiServerConfig): String {
+    val temp = Files.createTempFile("api-blueprint-upload-", ".bin")
+    var total = 0L
+    try {
+        Files.newOutputStream(temp).use { output ->
+            val channel = part.provider()
+            val buffer = ByteArray(8192)
+            while (true) {
+                val read = channel.readAvailable(buffer, 0, buffer.size)
+                if (read < 0) {
+                    break
+                }
+                if (read == 0) {
+                    continue
+                }
+                total += read.toLong()
+                if (config.multipartSingleFileMaxBytes > 0 && total > config.multipartSingleFileMaxBytes) {
+                    throw ApiPayloadTooLargeException()
+                }
+                output.write(buffer, 0, read)
+            }
+        }
+        return temp.toString()
+    } catch (error: Throwable) {
+        Files.deleteIfExists(temp)
+        throw error
+    }
 }
 
 private suspend fun respondRawBytes(call: ApplicationCall, bytes: ByteArray, mediaType: String) {
@@ -577,6 +626,16 @@ private suspend fun respondBadRequest(call: ApplicationCall) {
         status = HttpStatusCode.BadRequest,
     )
 }
+
+private suspend fun respondPayloadTooLarge(call: ApplicationCall) {
+    call.respondText(
+        "{\"detail\":\"payload too large\"}",
+        contentType = ContentType.Application.Json,
+        status = HttpStatusCode.PayloadTooLarge,
+    )
+}
+
+private class ApiPayloadTooLargeException : IllegalArgumentException("payload too large")
 
 private fun encodeErrorBody(payload: ApiErrorPayload, envelope: ApiResponseEnvelope): String {
     val payloadElement = ApiJson.encodeToJsonElement(ApiErrorPayload.serializer(), payload)

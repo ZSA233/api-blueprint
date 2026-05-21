@@ -37,7 +37,7 @@ endian: little
     assert "binary: bytes | None" in service_text
     assert "binary: bytes | None = None" not in service_text
     assert "binary: dict[str, Any] | None = None" not in service_text
-    assert "binary = await request.body()" in adapter_text
+    assert "binary = await _body(request, api_config.body_max_bytes)" in adapter_text
     _compile_generated_files(output_dir)
 
 def test_python_codegen_generates_binary_schema_response_encoder_and_decoder(tmp_path: Path):

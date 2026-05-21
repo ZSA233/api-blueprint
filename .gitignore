@@ -22,6 +22,5 @@ __pycache__/
 .claude
 .plans
 examples/flutter/.dart_tool/
-examples/flutter/pubspec.lock
 *.pyi
 !examples/grpc/python/**/*.pyi

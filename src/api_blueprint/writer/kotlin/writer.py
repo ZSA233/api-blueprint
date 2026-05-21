@@ -20,6 +20,7 @@ from api_blueprint.writer.core.errors import (
 from api_blueprint.writer.core.files import ensure_filepath_open
 from api_blueprint.writer.core.templates import render
 
+from .binary_schema import compact_kotlin_binary_source
 from .blueprint import KotlinBlueprint
 from .naming import to_package_path
 from .planner import build_kotlin_blueprint_plan
@@ -196,7 +197,10 @@ class KotlinBaseWriter(BaseWriter[KotlinBlueprint]):
             with self.write_file(route_group.types_file, overwrite=True) as handle:
                 if handle:
                     handle.write(self.generated_header)
-                    handle.write(render("kotlin", "GenTypes.kt", group_models_context, "routes"))
+                    route_types_text = render("kotlin", "GenTypes.kt", group_models_context, "routes")
+                    if group_models_context["binary_schemas"]:
+                        route_types_text = compact_kotlin_binary_source(route_types_text)
+                    handle.write(route_types_text)
 
             if self.client_mode:
                 with self.write_file(route_group.client_file, overwrite=True) as handle:

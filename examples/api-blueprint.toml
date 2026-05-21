@@ -44,7 +44,7 @@ exclude = [
 id = 'kotlin.server'
 out_dir = 'kotlin/server'
 module = 'com.example.apiblueprint'
-include = ['tag:api']
+# include = ['tag:api']
 exclude = [
     'path:/static/**',
 ]

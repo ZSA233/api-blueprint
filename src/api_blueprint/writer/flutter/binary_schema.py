@@ -375,3 +375,43 @@ def unique_flutter_binary_schemas(schemas: list[BinarySchema | None]) -> list[Fl
         seen.add(name)
         result.append(FlutterBinarySchema(schema))
     return result
+
+
+def compact_dart_binary_source(source: str) -> str:
+    lines = [line.rstrip() for line in source.splitlines()]
+    compacted: list[str] = []
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped:
+            previous_line = compacted[-1] if compacted else ""
+            next_line = _next_nonblank_line(lines, index + 1)
+            if _should_drop_dart_binary_blank(previous_line, next_line):
+                continue
+            if compacted and compacted[-1] != "":
+                compacted.append("")
+            continue
+        compacted.append(line)
+    return "\n".join(compacted).strip() + "\n"
+
+
+def _next_nonblank_line(lines: list[str], start: int) -> str:
+    for line in lines[start:]:
+        if line.strip():
+            return line
+    return ""
+
+
+def _dart_indent(line: str) -> int:
+    return len(line) - len(line.lstrip(" "))
+
+
+def _should_drop_dart_binary_blank(previous_line: str, next_line: str) -> bool:
+    if not previous_line.strip() or not next_line.strip():
+        return False
+    previous = previous_line.strip()
+    next_ = next_line.strip()
+    if previous.endswith("{") and _dart_indent(next_line) >= 4:
+        return True
+    if next_ == "}" and _dart_indent(previous_line) >= 4:
+        return True
+    return _dart_indent(previous_line) >= 4 and _dart_indent(next_line) >= 4

@@ -146,6 +146,19 @@ module = "pb"
 
 Flutter / Kotlin / Java / Python client/server、`api-gen check` 和 contract / agent artifact projection 使用同一份 planner / capability metadata。若 target capability 不支持某个 route、request kind 或 response envelope，应在生成前失败，而不是生成半套产物。Wails/gRPC 对 HTTP multipart、Content-Disposition、HTTP status/header、MIME download 和 HTTP byte stream 语义保持明确 unsupported，并在错误中提示 Wails RPC descriptor/STREAM chunks 或 protobuf bytes/streaming chunks 等 native equivalent。
 
+## 运行时生产配置
+
+`api-blueprint.toml` 定义协议和生成目标，不直接承载宿主应用的生产运行时策略。timeout、header、cookie、proxy、TLS、连接池、重试、鉴权、限流、日志、trace、文件权限和复杂 backpressure 应通过生成的 request options、transport config、原生 HTTP/gRPC client、service implementation、middleware/plugin/filter 或 Wails app shell 配置。
+
+HTTP server adapter 会生成安全默认上限，避免默认公开时无限读取请求体或长连接队列：
+
+- Go：`httptransport.ServerConfig` / `DefaultServerConfig()` / `SetServerConfig(...)`，默认 request body `16 MiB`、multipart memory `8 MiB`、single file `32 MiB`、decompressed binary `16 MiB`，WebSocket 默认同源校验并禁用 compression。
+- Java：`GenSpringServerConfig`，默认 SSE timeout `30s`、WebSocket allowed origins 为空、inbound queue `256`、multipart single file `32 MiB`，可通过 Spring bean 或 controller 构造注入覆盖。
+- Kotlin：`ApiServerConfig`，`register*Routes(..., config = ApiServerConfig())` 默认限制 multipart file `32 MiB`、binary body `16 MiB`、WebSocket message `1 MiB`。
+- Python：`ApiServerConfig`，`create_router(..., config=None)` 与 `create_<group>_router(..., config=None)` 默认限制 body `16 MiB`、multipart file/part `32 MiB`、SSE queue `256`、WebSocket message `1 MiB`。
+
+这些配置是生成 adapter 的底线，不替代反向代理、框架级 request size、应用鉴权或部署层资源限制。生产项目推荐导入具体 route client、具体 transport factory 或具体 group router，保留 aggregate facade 作为开发和示例入口。
+
 ContractGraph 会从 `Blueprint(errors=...)` 和 route `.ERR(...)` 收集语言无关 typed errors。Manifest `2.0` 保留全局 `errors` 完整定义表，并把 compact route-local refs（`id/group/key/code/message/toast`）写入 `routes[].errors`，让调用方能从该 route 直接看到可抛错误。`id` 是公开协议错误身份，`code` 是业务码，可跨 group 或 route 复用。`ResponseEnvelope` 决定 wire shape，manifest 在 `response.envelope` 输出 `name/kind/error_identity/success_code/success_message/fields`。默认 `CodeMessageDataEnvelope` 成功返回 `{ code: 0, message: "ok", data }`，失败返回 `{ code, message, data: null, error: { id, group, key, toast } }`；严格 `{ code, message, data }` 形态用 `LegacyCodeMessageDataEnvelope` 且不暴露 `id`；显式选择 `OkDataErrorEnvelope` 才使用 `{ ok, data/error }`。各主生成器暴露语言惯用 typed error helper；Java 生成器拥有的错误类型使用 `GenApiError`、`GenApiErrors`、`GenApiErrorPayload` 等 `Gen*` 名称。默认 Go、TypeScript、Flutter、Python、Kotlin、Java client transport 会按 envelope spec 自动还原 typed error。业务 i18n 系统按 toast key 取请求语言，客户端 helper 按 `toast.text`、外部 i18n、`toast.default`、`message` 兜底。业务错误码不默认等价于 HTTP status。
 
 Kotlin client/server 输出目录是 `<package>/<root>/runtime/*`、`<package>/<root>/routes/<root>/<group...>/*`、`<package>/<root>/transports/http/*`。`Gen*.kt` 文件由生成器拥有；非 `Gen*` façade / extension 文件由用户拥有。client 保留 route façade 和 HTTP client façade 文件；server 保留 `<Group>Service.kt` 实现文件。

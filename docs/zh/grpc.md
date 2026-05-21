@@ -84,7 +84,7 @@ gRPC 需要文件、bytes、stream 或 typed binary packet 这类能力，但这
 
 ## Deadline 与 metadata
 
-`grpc-proto` 不生成跨语言 client options wrapper。单次调用的 timeout、cancel、header、auth token 与 trace context 应使用各语言 gRPC client 的原生 API：deadline / context、outgoing metadata、interceptor 和 call options。例如 Go 调用方使用 `context.WithTimeout(...)` 搭配 `metadata.AppendToOutgoingContext(...)`；Python 调用方使用 generated stub 方法上的 metadata tuple 与 timeout 参数。
+`grpc-proto` 不生成跨语言 client options wrapper，也不生成额外 server runtime guard。单次调用的 timeout、cancel、header、auth token 与 trace context 应使用各语言 gRPC client 的原生 API：deadline / context、outgoing metadata、interceptor 和 call options；streaming backpressure、message size、TLS 和 auth 策略由 gRPC server/channel 配置承担。例如 Go 调用方使用 `context.WithTimeout(...)` 搭配 `metadata.AppendToOutgoingContext(...)`；Python 调用方使用 generated stub 方法上的 metadata tuple 与 timeout 参数。
 
 ## RPC 映射
 

@@ -256,6 +256,12 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
             context,
             "server/transports/http",
         )
+        self._write_generated(
+            plan.http_transport.directory / "GenSpringServerConfig.java",
+            "GenSpringServerConfig.java",
+            context,
+            "server/transports/http",
+        )
         for group in context["bp"].groups.values():  # type: ignore[union-attr]
             self._write_generated(
                 plan.http_transport.directory / group.package_path / f"{group.controller_class}.java",

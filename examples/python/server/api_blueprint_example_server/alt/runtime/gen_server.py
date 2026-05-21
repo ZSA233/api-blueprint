@@ -14,6 +14,15 @@ RawT = TypeVar("RawT")
 ApiUploadFile = bytes | bytearray | memoryview | BinaryIO | tuple[str, bytes] | tuple[str, bytes, str] | Any
 
 
+@dataclass(frozen=True)
+class ApiServerConfig:
+    body_max_bytes: int = 16 * 1024 * 1024
+    multipart_file_max_bytes: int = 32 * 1024 * 1024
+    multipart_part_max_bytes: int = 32 * 1024 * 1024
+    sse_queue_capacity: int = 256
+    websocket_message_max_bytes: int = 1 * 1024 * 1024
+
+
 @dataclass
 class ApiServerContext:
     state: dict[str, Any] = field(default_factory=dict)

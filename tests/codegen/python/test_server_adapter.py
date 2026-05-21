@@ -50,6 +50,7 @@ def test_python_server_generates_service_core_and_fastapi_adapter(tmp_path: Path
     adapter_text = (package_root / "transports" / "http" / "gen_server.py").read_text(encoding="utf-8")
 
     assert "class ApiServerContext:" in runtime_text
+    assert "class ApiServerConfig:" in runtime_text
     assert "class DemoService(Protocol):" in service_text
     assert "async def submit(" in service_text
     assert "from .gen_types import (\n    SubmitJSON,\n    SubmitResponse,\n)" in service_text
@@ -59,8 +60,12 @@ def test_python_server_generates_service_core_and_fastapi_adapter(tmp_path: Path
     assert "class DemoServiceStub:" in service_text
     assert "from fastapi import APIRouter, WebSocket, Request, HTTPException, WebSocketDisconnect" in adapter_text
     assert "def create_router(" in adapter_text
+    assert "def create_demo_router(" in adapter_text
+    assert "config: ApiServerConfig | None = None" in adapter_text
     assert "await service.submit(" in adapter_text
-    assert "await request.form()" in adapter_text
+    assert "await request.form(max_part_size=config.multipart_part_max_bytes)" in adapter_text
+    assert "PayloadTooLargeError" in adapter_text
+    assert "asyncio.Queue(maxsize=max(1, queue_capacity))" in adapter_text
     assert "except (UnicodeDecodeError, json.JSONDecodeError) as err:" in adapter_text
     assert 'raise HTTPException(status_code=400, detail="invalid JSON body") from err' in adapter_text
     assert "parse_qs" not in adapter_text

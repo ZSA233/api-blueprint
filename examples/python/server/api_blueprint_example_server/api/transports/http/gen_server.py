@@ -12,7 +12,7 @@ from fastapi import APIRouter, WebSocket, Request, HTTPException, WebSocketDisco
 from starlette.responses import StreamingResponse, JSONResponse, FileResponse, Response
 
 from ...runtime.errors import ApiError, make_api_error_payload
-from ...runtime.server import ApiRawResponse
+from ...runtime.server import ApiRawResponse, ApiServerConfig
 from ...routes.api.service import ApiService, ApiServiceStub
 from ...routes.api import gen_types as api_types
 
@@ -39,20 +39,33 @@ def create_router(
     demo_service: DemoService | None = None,
     media_service: MediaService | None = None,
     hello_service: HelloService | None = None,
+    config: ApiServerConfig | None = None,
 ) -> APIRouter:
     router = APIRouter()
-    api_service_impl = api_service or ApiServiceStub()
-    binary_service_impl = binary_service or BinaryServiceStub()
-    conflict_service_impl = conflict_service or ConflictServiceStub()
-    demo_service_impl = demo_service or DemoServiceStub()
-    media_service_impl = media_service or MediaServiceStub()
-    hello_service_impl = hello_service or HelloServiceStub()
+    api_config = config or ApiServerConfig()
+    router.include_router(create_api_router(api_service, config=api_config))
+    router.include_router(create_binary_router(binary_service, config=api_config))
+    router.include_router(create_conflict_router(conflict_service, config=api_config))
+    router.include_router(create_demo_router(demo_service, config=api_config))
+    router.include_router(create_media_router(media_service, config=api_config))
+    router.include_router(create_hello_router(hello_service, config=api_config))
+    return router
+
+
+def create_api_router(
+    service: ApiService | None = None,
+    *,
+    config: ApiServerConfig | None = None,
+) -> APIRouter:
+    router = APIRouter()
+    api_config = config or ApiServerConfig()
+    service_impl = service or ApiServiceStub()
 
     @router.websocket("/api/ws")
     async def api_open_hello_channel_socket(websocket: WebSocket) -> None:
         await websocket.accept()
-        service = api_service_impl
-        channel = _WebSocketChannel(websocket, api_types.HelloChannelMessage.from_value)
+        service = service_impl
+        channel = _WebSocketChannel(websocket, api_types.HelloChannelMessage.from_value, api_config)
         try:
             await service.hello_channel(
                 channel=channel,
@@ -63,11 +76,23 @@ def create_router(
             if not channel.closed:
                 await websocket.close()
 
+    return router
+
+
+def create_binary_router(
+    service: BinaryService | None = None,
+    *,
+    config: ApiServerConfig | None = None,
+) -> APIRouter:
+    router = APIRouter()
+    api_config = config or ApiServerConfig()
+    service_impl = service or BinaryServiceStub()
+
     @router.api_route("/api/binary/packet", methods=["POST"])
     async def binary_packet(request: Request) -> Any:
-        service = binary_service_impl
+        service = service_impl
         query_raw = _query_params(request)
-        binary = await request.body()
+        binary = await _body(request, api_config.body_max_bytes)
         try:
             query = api_binary_types.PacketQuery.from_value(query_raw, "query")
 
@@ -83,12 +108,14 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.binary.post.packet")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 
     @router.api_route("/api/binary/audit-packet", methods=["POST"])
     async def binary_audit_packet(request: Request) -> Any:
-        service = binary_service_impl
+        service = service_impl
         query_raw = _query_params(request)
-        binary = await request.body()
+        binary = await _body(request, api_config.body_max_bytes)
         try:
             query = api_binary_types.AuditPacketQuery.from_value(query_raw, "query")
 
@@ -104,10 +131,12 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.binary.post.auditpacket")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 
     @router.api_route("/api/binary/audit-packet-response", methods=["GET"])
     async def binary_audit_packet_response(request: Request) -> Any:
-        service = binary_service_impl
+        service = service_impl
         try:
             result = await service.audit_packet_response(
             )
@@ -119,10 +148,24 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.binary.get.auditpacketresponse")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
+
+    return router
+
+
+def create_conflict_router(
+    service: ConflictService | None = None,
+    *,
+    config: ApiServerConfig | None = None,
+) -> APIRouter:
+    router = APIRouter()
+    api_config = config or ApiServerConfig()
+    service_impl = service or ConflictServiceStub()
 
     @router.api_route("/api/conflict/default", methods=["GET"])
     async def conflict_default(request: Request) -> Any:
-        service = conflict_service_impl
+        service = service_impl
         query_raw = _query_params(request)
         try:
             query = api_conflict_types.DefaultQuery.from_value(query_raw, "query")
@@ -138,10 +181,24 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.conflict.get.default")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
+
+    return router
+
+
+def create_demo_router(
+    service: DemoService | None = None,
+    *,
+    config: ApiServerConfig | None = None,
+) -> APIRouter:
+    router = APIRouter()
+    api_config = config or ApiServerConfig()
+    service_impl = service or DemoServiceStub()
 
     @router.api_route("/api/demo/abc", methods=["GET"])
     async def demo_abc(request: Request) -> Any:
-        service = demo_service_impl
+        service = service_impl
         query_raw = _query_params(request)
         try:
             query = api_demo_types.AbcQuery.from_value(query_raw, "query")
@@ -157,11 +214,13 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.demo.get.abc")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 
     @router.api_route("/api/demo/test_post", methods=["POST"])
     async def demo_test_post(request: Request) -> Any:
-        service = demo_service_impl
-        json_body_raw = await _json_body(request)
+        service = service_impl
+        json_body_raw = await _json_body(request, api_config)
         try:
             json_body = api_demo_types.TestPostJSON.from_value(json_body_raw, "json")
 
@@ -176,11 +235,13 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.demo.post.testpost")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 
     @router.api_route("/api/demo/form-submit", methods=["POST"])
     async def demo_form_submit(request: Request) -> Any:
-        service = demo_service_impl
-        form_raw = await _form_body(request)
+        service = service_impl
+        form_raw = await _form_body(request, api_config)
         try:
             form = api_demo_types.FormSubmitForm.from_value(form_raw, "form")
 
@@ -195,10 +256,12 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.demo.post.formsubmit")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 
     @router.api_route("/api/demo/request-options", methods=["GET"])
     async def demo_request_options(request: Request) -> Any:
-        service = demo_service_impl
+        service = service_impl
         query_raw = _query_params(request)
         try:
             query = api_demo_types.RequestOptionsQuery.from_value(query_raw, "query")
@@ -214,12 +277,14 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.demo.get.requestoptions")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 
     @router.api_route("/api/demo/1put", methods=["PUT"])
     async def demo_put_demo(request: Request) -> Any:
-        service = demo_service_impl
+        service = service_impl
         query_raw = _query_params(request)
-        json_body_raw = await _json_body(request)
+        json_body_raw = await _json_body(request, api_config)
         try:
             query = api_demo_types.PutDemoQuery.from_value(query_raw, "query")
             json_body = api_demo_types.PutDemoJSON.from_value(json_body_raw, "json")
@@ -236,10 +301,12 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.demo.put.z1put")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 
     @router.api_route("/api/demo/delete$", methods=["DELETE"])
     async def demo_delete(request: Request) -> Any:
-        service = demo_service_impl
+        service = service_impl
         query_raw = _query_params(request)
         try:
             query = api_demo_types.DeleteQuery.from_value(query_raw, "query")
@@ -255,17 +322,19 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.demo.delete.delete")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 
     @router.api_route("/api/demo/sweep-events", methods=["GET"])
     async def demo_subscribe_sweep_events(request: Request) -> Any:
-        service = demo_service_impl
+        service = service_impl
         open_data_raw = _query_params(request)
         try:
             open_data = api_demo_types.SweepEventsOpen.from_value(open_data_raw, "open_data")
         except (TypeError, ValueError) as error:
             return _bad_request_response(error)
 
-        stream = _SseStream()
+        stream = _SseStream(api_config.sse_queue_capacity)
 
         async def body():
             task = asyncio.create_task(
@@ -287,7 +356,7 @@ def create_router(
     @router.websocket("/api/demo/assistant-session")
     async def demo_open_assistant_session_socket(websocket: WebSocket) -> None:
         await websocket.accept()
-        service = demo_service_impl
+        service = service_impl
         open_data_raw = dict(websocket.query_params)
         try:
             open_data = api_demo_types.AssistantSessionOpen.from_value(open_data_raw, "open_data")
@@ -295,7 +364,7 @@ def create_router(
             await websocket.close(code=1008)
             return
 
-        channel = _WebSocketChannel(websocket, api_demo_types.AssistantClientMessage.from_value)
+        channel = _WebSocketChannel(websocket, api_demo_types.AssistantClientMessage.from_value, api_config)
         try:
             await service.assistant_session(
                 open_data=open_data,
@@ -309,8 +378,8 @@ def create_router(
 
     @router.api_route("/api/demo/post_deprecated", methods=["POST"])
     async def demo_post_deprecated(request: Request) -> Any:
-        service = demo_service_impl
-        json_body_raw = await _json_body(request)
+        service = service_impl
+        json_body_raw = await _json_body(request, api_config)
         try:
             json_body = api_demo_types.PostDeprecatedJSON.from_value(json_body_raw, "json")
 
@@ -325,10 +394,12 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.demo.post.postdeprecated")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 
     @router.api_route("/api/demo/raw", methods=["POST"])
     async def demo_raw(request: Request) -> Any:
-        service = demo_service_impl
+        service = service_impl
         try:
             result = await service.raw(
             )
@@ -336,10 +407,12 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.demo.post.raw")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 
     @router.api_route("/api/demo/map_model", methods=["POST"])
     async def demo_map_model(request: Request) -> Any:
-        service = demo_service_impl
+        service = service_impl
         try:
             result = await service.map_model(
             )
@@ -347,10 +420,12 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.demo.post.mapmodel")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 
     @router.api_route("/api/demo/error-demo", methods=["GET"])
     async def demo_error_demo(request: Request) -> Any:
-        service = demo_service_impl
+        service = service_impl
         query_raw = _query_params(request)
         try:
             query = api_demo_types.ErrorDemoQuery.from_value(query_raw, "query")
@@ -366,11 +441,25 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.demo.get.errordemo")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
+
+    return router
+
+
+def create_media_router(
+    service: MediaService | None = None,
+    *,
+    config: ApiServerConfig | None = None,
+) -> APIRouter:
+    router = APIRouter()
+    api_config = config or ApiServerConfig()
+    service_impl = service or MediaServiceStub()
 
     @router.api_route("/api/media/preview", methods=["POST"])
     async def media_media_preview(request: Request) -> Any:
-        service = media_service_impl
-        multipart_raw = await _multipart_body(request)
+        service = service_impl
+        multipart_raw = await _multipart_body(request, api_config)
         try:
             multipart = api_media_types.MediaPreviewForm.from_value(multipart_raw, "multipart")
 
@@ -390,10 +479,12 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.media.post.preview")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 
     @router.api_route("/api/media/frame", methods=["GET"])
     async def media_media_frame(request: Request) -> Any:
-        service = media_service_impl
+        service = service_impl
         try:
             result = await service.media_frame(
             )
@@ -406,10 +497,12 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.media.get.frame")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 
     @router.api_route("/api/media/download", methods=["GET"])
     async def media_media_download(request: Request) -> Any:
-        service = media_service_impl
+        service = service_impl
         try:
             result = await service.media_download(
             )
@@ -422,10 +515,12 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.media.get.download")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 
     @router.api_route("/api/media/download-dynamic", methods=["GET"])
     async def media_media_download_dynamic(request: Request) -> Any:
-        service = media_service_impl
+        service = service_impl
         try:
             result = await service.media_download_dynamic(
             )
@@ -438,10 +533,12 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.media.get.downloaddynamic")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 
     @router.api_route("/api/media/download-filename-edge", methods=["GET"])
     async def media_media_download_filename_edge(request: Request) -> Any:
-        service = media_service_impl
+        service = service_impl
         try:
             result = await service.media_download_filename_edge(
             )
@@ -454,10 +551,12 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.media.get.downloadfilenameedge")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 
     @router.api_route("/api/media/error-frame", methods=["GET"])
     async def media_media_error_frame(request: Request) -> Any:
-        service = media_service_impl
+        service = service_impl
         query_raw = _query_params(request)
         try:
             query = api_media_types.MediaErrorFrameQuery.from_value(query_raw, "query")
@@ -478,10 +577,12 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.media.get.errorframe")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 
     @router.api_route("/api/media/mjpeg", methods=["GET"])
     async def media_media_mjpeg(request: Request) -> Any:
-        service = media_service_impl
+        service = service_impl
         try:
             result = await service.media_mjpeg(
             )
@@ -494,10 +595,24 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.media.get.mjpeg")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
+
+    return router
+
+
+def create_hello_router(
+    service: HelloService | None = None,
+    *,
+    config: ApiServerConfig | None = None,
+) -> APIRouter:
+    router = APIRouter()
+    api_config = config or ApiServerConfig()
+    service_impl = service or HelloServiceStub()
 
     @router.api_route("/api/hello/abc", methods=["GET"])
     async def hello_abc(request: Request) -> Any:
-        service = hello_service_impl
+        service = service_impl
         query_raw = _query_params(request)
         try:
             query = api_hello_types.AbcQuery.from_value(query_raw, "query")
@@ -513,10 +628,12 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.hello.get.abc")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 
     @router.api_route("/api/hello/map-enum", methods=["GET"])
     async def hello_map_enum(request: Request) -> Any:
-        service = hello_service_impl
+        service = service_impl
         try:
             result = await service.map_enum(
             )
@@ -524,10 +641,12 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.hello.get.mapenum")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 
     @router.api_route("/api/hello/list-enum", methods=["GET"])
     async def hello_list_enum(request: Request) -> Any:
-        service = hello_service_impl
+        service = service_impl
         try:
             result = await service.list_enum(
             )
@@ -535,10 +654,12 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.hello.get.listenum")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 
     @router.api_route("/api/hello/string", methods=["GET"])
     async def hello_string(request: Request) -> Any:
-        service = hello_service_impl
+        service = service_impl
         try:
             result = await service.string(
             )
@@ -546,10 +667,12 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.hello.get.string")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 
     @router.api_route("/api/hello/uint64", methods=["GET"])
     async def hello_uint64(request: Request) -> Any:
-        service = hello_service_impl
+        service = service_impl
         try:
             result = await service.uint64(
             )
@@ -557,10 +680,12 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.hello.get.uint64")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 
     @router.api_route("/api/hello/string-emun", methods=["GET"])
     async def hello_string_emun(request: Request) -> Any:
-        service = hello_service_impl
+        service = service_impl
         try:
             result = await service.string_emun(
             )
@@ -568,10 +693,12 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.hello.get.stringemun")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 
     @router.api_route("/api/hello/hello-way", methods=["GET"])
     async def hello_hello_way(request: Request) -> Any:
-        service = hello_service_impl
+        service = service_impl
         query_raw = _query_params(request)
         try:
             query = api_hello_types.HelloWayQuery.from_value(query_raw, "query")
@@ -587,6 +714,8 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.hello.get.helloway")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 
     return router
 
@@ -596,8 +725,22 @@ def _query_params(request: Request) -> dict[str, Any]:
     return values
 
 
-async def _json_body(request: Request) -> Any:
+async def _body(request: Request, max_bytes: int) -> bytes:
+    content_length = request.headers.get("content-length")
+    if content_length is not None:
+        try:
+            if int(content_length) > max_bytes:
+                raise PayloadTooLargeError("request body exceeds configured limit")
+        except ValueError:
+            pass
     body = await request.body()
+    if len(body) > max_bytes:
+        raise PayloadTooLargeError("request body exceeds configured limit")
+    return body
+
+
+async def _json_body(request: Request, config: ApiServerConfig) -> Any:
+    body = await _body(request, config.body_max_bytes)
     if not body:
         return None
     try:
@@ -607,15 +750,34 @@ async def _json_body(request: Request) -> Any:
     return value
 
 
-async def _form_body(request: Request) -> dict[str, Any]:
-    values = await request.form()
+async def _form_body(request: Request, config: ApiServerConfig) -> dict[str, Any]:
+    _ensure_content_length(request, config.body_max_bytes)
+    values = await request.form(max_part_size=config.multipart_part_max_bytes)
     result = {key: value for key, value in values.multi_items()}
     return result
 
 
-async def _multipart_body(request: Request) -> dict[str, Any]:
-    values = await request.form()
-    return {key: value for key, value in values.multi_items()}
+async def _multipart_body(request: Request, config: ApiServerConfig) -> dict[str, Any]:
+    _ensure_content_length(request, config.body_max_bytes)
+    values = await request.form(max_part_size=config.multipart_part_max_bytes)
+    result: dict[str, Any] = {}
+    for key, value in values.multi_items():
+        size = getattr(value, "size", None)
+        if isinstance(size, int) and size > config.multipart_file_max_bytes:
+            raise PayloadTooLargeError("multipart file exceeds configured limit")
+        result[key] = value
+    return result
+
+
+def _ensure_content_length(request: Request, max_bytes: int) -> None:
+    content_length = request.headers.get("content-length")
+    if content_length is None:
+        return
+    try:
+        if int(content_length) > max_bytes:
+            raise PayloadTooLargeError("request body exceeds configured limit")
+    except ValueError:
+        return
 
 
 def _jsonable(value: Any) -> Any:
@@ -642,6 +804,10 @@ def _json_key(value: Any) -> str:
 
 def _bad_request_response(error: Exception) -> JSONResponse:
     return JSONResponse({"detail": str(error) or "invalid request"}, status_code=400)
+
+
+def _payload_too_large_response(error: Exception) -> JSONResponse:
+    return JSONResponse({"detail": "payload too large"}, status_code=413)
 
 
 def _wrap_response(envelope: dict[str, Any], data: Any) -> Any:
@@ -766,8 +932,8 @@ def _wrap_api_error(envelope: dict[str, Any], error: ApiError, route_id: str) ->
 
 
 class _SseStream:
-    def __init__(self) -> None:
-        self._queue: asyncio.Queue[str | None] = asyncio.Queue()
+    def __init__(self, queue_capacity: int) -> None:
+        self._queue: asyncio.Queue[str | None] = asyncio.Queue(maxsize=max(1, queue_capacity))
         self.closed = False
 
     def __aiter__(self):
@@ -805,9 +971,10 @@ def _identity_decoder(value: Any, path: str) -> Any:
 
 
 class _WebSocketChannel:
-    def __init__(self, websocket: WebSocket, message_decoder=_identity_decoder) -> None:
+    def __init__(self, websocket: WebSocket, message_decoder=_identity_decoder, config: ApiServerConfig | None = None) -> None:
         self.websocket = websocket
         self.message_decoder = message_decoder
+        self.config = config or ApiServerConfig()
         self.closed = False
 
     async def receive(self) -> Any:
@@ -816,6 +983,9 @@ class _WebSocketChannel:
         except WebSocketDisconnect as err:
             self.closed = True
             raise _WebSocketClosed() from err
+        if len(payload.encode("utf-8")) > self.config.websocket_message_max_bytes:
+            await self.abort(1009, "WebSocket message exceeds configured limit")
+            raise _WebSocketClosed()
         try:
             value = json.loads(payload)
             return self.message_decoder(value, "message")
@@ -853,3 +1023,8 @@ class _WebSocketChannel:
 
 class _WebSocketClosed(Exception):
     pass
+
+
+class PayloadTooLargeError(HTTPException):
+    def __init__(self, detail: str = "payload too large") -> None:
+        super().__init__(status_code=413, detail=detail)

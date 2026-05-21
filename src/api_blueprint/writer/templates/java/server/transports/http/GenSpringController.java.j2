@@ -1,10 +1,12 @@
 {% autoescape false %}{% set channel_routes = group.routes | selectattr("kind", "equalto", "channel") | list -%}
 package {{ bp.root_package }}.transports.http.{{ group.package_suffix }};
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import {{ bp.root_package }}.routes.{{ group.package_suffix }}.{{ group.service_class }};
 import {{ bp.root_package }}.routes.{{ group.package_suffix }}.{{ group.stub_class }};
 import {{ bp.root_package }}.routes.{{ group.package_suffix }}.{{ group.types_class }};
+import {{ bp.root_package }}.transports.http.GenSpringServerConfig;
 import {{ bp.root_package }}.runtime.GenApiError;
 import {{ bp.root_package }}.runtime.GenApiErrorEntry;
 import {{ bp.root_package }}.runtime.GenApiErrorPayload;
@@ -21,6 +23,8 @@ import {{ bp.root_package }}.runtime.GenApiTypes;
 {% endif %}
 import {{ bp.root_package }}.runtime.binary.GenApiBinaryBody;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.RecordComponent;
 import java.nio.charset.StandardCharsets;
 import java.net.URI;
 import java.net.URLDecoder;
@@ -28,6 +32,8 @@ import java.net.URLEncoder;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -60,13 +66,19 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 {% endif %}public class {{ group.controller_class }}{% if channel_routes %} implements WebSocketConfigurer{% endif %} {
     private final {{ group.service_class }} service;
     private final ObjectMapper objectMapper;
+    private final GenSpringServerConfig serverConfig;
+    private final Executor connectionExecutor;
 
     public {{ group.controller_class }}(
         @Autowired(required = false) {{ group.service_class }} service,
-        ObjectMapper objectMapper
+        ObjectMapper objectMapper,
+        @Autowired(required = false) GenSpringServerConfig serverConfig,
+        @Autowired(required = false) Executor connectionExecutor
     ) {
         this.service = service == null ? new {{ group.stub_class }}() : service;
         this.objectMapper = objectMapper;
+        this.serverConfig = serverConfig == null ? GenSpringServerConfig.defaults() : serverConfig;
+        this.connectionExecutor = connectionExecutor == null ? ForkJoinPool.commonPool() : connectionExecutor;
     }
 {% for route in group.routes %}
 {% if route.is_rpc %}
@@ -99,11 +111,13 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
             form = objectMapper.convertValue(queryParams, {{ writer.schema_class_literal(route.form_model, group) }});
 {%- endif %}
 {%- if route.multipart_model %}
-            multipart = objectMapper.convertValue(multipartBody(multipartRequest), {{ writer.schema_class_literal(route.multipart_model, group) }});
+            multipart = multipartBody(multipartRequest, {{ writer.schema_class_literal(route.multipart_model, group) }});
 {%- endif %}
 {%- if route.binary_schema %}
             binary = {{ group.types_class }}.{{ route.binary_schema_type }}Wire.parse(binaryBody == null ? new byte[0] : binaryBody);
 {%- endif %}
+        } catch (PayloadTooLargeException error) {
+            return payloadTooLargeResponse(error);
         } catch (RuntimeException error) {
             return badRequestResponse(error);
         }
@@ -135,7 +149,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 {%- if route.open_model %}
         {{ writer.schema_type(route.open_model, group) }} openData = objectMapper.convertValue(queryParams, {{ writer.schema_class_literal(route.open_model, group) }});
 {%- endif %}
-        SseEmitter emitter = new SseEmitter(30_000L);
+        SseEmitter emitter = new SseEmitter(serverConfig.sseTimeout().toMillis());
         SpringSseStream<{{ writer.server_message_type(route, group) }}, {{ writer.close_type(route, group) }}> stream = new SpringSseStream<>(
             emitter,
             objectMapper
@@ -150,7 +164,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
             } catch (Exception error) {
                 stream.abortUnchecked(1011, error.getMessage() == null ? error.toString() : error.getMessage());
             }
-        });
+        }, connectionExecutor);
         return emitter;
     }
 {% endif %}
@@ -161,7 +175,10 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
 {% for route in channel_routes %}
-        registry.addHandler(new {{ route.operation_type_name }}WebSocketHandler(), {{ route.url | code_literal }}).setAllowedOrigins("*");
+        var {{ route.method_name }}Registration = registry.addHandler(new {{ route.operation_type_name }}WebSocketHandler(), {{ route.url | code_literal }});
+        if (!serverConfig.websocketAllowedOrigins().isEmpty()) {
+            {{ route.method_name }}Registration.setAllowedOrigins(serverConfig.websocketAllowedOrigins().toArray(String[]::new));
+        }
 {% endfor %}
     }
 {% for route in channel_routes %}
@@ -177,7 +194,8 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 {%- endif %}
             SpringWebSocketChannel<{{ writer.client_message_type(route, group) }}, {{ writer.server_message_type(route, group) }}, {{ writer.close_type(route, group) }}> channel = new SpringWebSocketChannel<>(
                 session,
-                objectMapper
+                objectMapper,
+                serverConfig.websocketInboundQueueCapacity()
             );
             channels.put(session.getId(), channel);
             CompletableFuture.runAsync(() -> {
@@ -190,7 +208,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
                 } catch (Exception error) {
                     channel.abortUnchecked(1011, error.getMessage() == null ? error.toString() : error.getMessage());
                 }
-            });
+            }, connectionExecutor);
         }
 
         @Override
@@ -269,21 +287,25 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
         private static final Object CLOSED = new Object();
         private final WebSocketSession session;
         private final ObjectMapper objectMapper;
-        private final BlockingQueue<Object> incoming = new LinkedBlockingQueue<>();
+        private final BlockingQueue<Object> incoming;
         private volatile boolean closed = false;
         private volatile boolean receiveClosed = false;
         private volatile Exception closeError = null;
 
-        SpringWebSocketChannel(WebSocketSession session, ObjectMapper objectMapper) {
+        SpringWebSocketChannel(WebSocketSession session, ObjectMapper objectMapper, int inboundQueueCapacity) {
             this.session = session;
             this.objectMapper = objectMapper;
+            this.incoming = new LinkedBlockingQueue<>(Math.max(1, inboundQueueCapacity));
         }
 
         void accept(String payload, Class<Recv> recvClass) throws IOException {
             if (receiveClosed) {
                 return;
             }
-            incoming.offer(objectMapper.readValue(payload, recvClass));
+            if (!incoming.offer(objectMapper.readValue(payload, recvClass))) {
+                abortUnchecked(1013, "WebSocket inbound queue is full");
+                throw new IOException("WebSocket inbound queue is full");
+            }
         }
 
         void markClosed(Exception error) {
@@ -394,7 +416,35 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
         return envelope;
     }
 
-    private Map<String, Object> multipartBody(MultipartHttpServletRequest request) throws IOException {
+    private <T> T multipartBody(MultipartHttpServletRequest request, Class<T> targetClass) throws IOException {
+        Map<String, Object> values = multipartValues(request);
+        if (!targetClass.isRecord()) {
+            return objectMapper.convertValue(values, targetClass);
+        }
+        RecordComponent[] components = targetClass.getRecordComponents();
+        Class<?>[] parameterTypes = new Class<?>[components.length];
+        Object[] args = new Object[components.length];
+        for (int index = 0; index < components.length; index++) {
+            RecordComponent component = components[index];
+            parameterTypes[index] = component.getType();
+            String key = recordComponentWireName(component);
+            Object raw = values.containsKey(key) ? values.get(key) : values.get(component.getName());
+            if (raw instanceof GenApiFilePart && component.getType().equals(GenApiFilePart.class)) {
+                args[index] = raw;
+            } else {
+                args[index] = objectMapper.convertValue(raw, component.getType());
+            }
+        }
+        try {
+            Constructor<T> constructor = targetClass.getDeclaredConstructor(parameterTypes);
+            constructor.setAccessible(true);
+            return constructor.newInstance(args);
+        } catch (ReflectiveOperationException error) {
+            throw new IllegalArgumentException("invalid multipart request", error);
+        }
+    }
+
+    private Map<String, Object> multipartValues(MultipartHttpServletRequest request) throws IOException {
         Map<String, Object> result = new LinkedHashMap<>();
         if (request == null) {
             return result;
@@ -406,12 +456,17 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
         });
         for (Map.Entry<String, MultipartFile> entry : request.getFileMap().entrySet()) {
             MultipartFile file = entry.getValue();
-            result.put(
-                entry.getKey(),
-                GenApiFilePart.of(file.getOriginalFilename(), file.getContentType(), file.getBytes())
-            );
+            if (file.getSize() > serverConfig.multipartSingleFileBytes()) {
+                throw new PayloadTooLargeException("multipart file " + entry.getKey() + " exceeds configured limit");
+            }
+            result.put(entry.getKey(), GenApiFilePart.ofStream(file.getOriginalFilename(), file.getContentType(), file.getSize(), file.getInputStream()));
         }
         return result;
+    }
+
+    private String recordComponentWireName(RecordComponent component) {
+        JsonProperty property = component.getAnnotation(JsonProperty.class);
+        return property == null || property.value().isBlank() ? component.getName() : property.value();
     }
 
     private ResponseEntity<?> rawResponse(String kind, String mediaType, String filename, Object result) throws IOException {
@@ -474,6 +529,16 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
     private ResponseEntity<Map<String, Object>> badRequestResponse(Exception error) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("detail", "invalid request"));
+    }
+
+    private ResponseEntity<Map<String, Object>> payloadTooLargeResponse(Exception error) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(Map.of("detail", "payload too large"));
+    }
+
+    private static final class PayloadTooLargeException extends RuntimeException {
+        PayloadTooLargeException(String message) {
+            super(message);
+        }
     }
 
     private Object wrapApiErrorResponse(GenApiResponseEnvelope envelopeSpec, GenApiError error, String routeId) {

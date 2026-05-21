@@ -52,13 +52,32 @@ class ApiRequest<T> {
 class ApiFilePart {
   final String filename;
   final String contentType;
-  final Uint8List bytes;
+  final Uint8List? _bytes;
+  final Stream<List<int>>? stream;
+  final int? length;
 
   const ApiFilePart({
     this.filename = '',
     this.contentType = 'application/octet-stream',
-    required this.bytes,
-  });
+    required Uint8List bytes,
+  })  : _bytes = bytes,
+        stream = null,
+        length = bytes.length;
+
+  const ApiFilePart.fromStream({
+    this.filename = '',
+    this.contentType = 'application/octet-stream',
+    required Stream<List<int>> body,
+    required this.length,
+  })  : _bytes = null,
+        stream = body;
+
+  factory ApiFilePart.fromBytes({
+    String filename = '',
+    String contentType = 'application/octet-stream',
+    required Uint8List bytes,
+  }) =>
+      ApiFilePart(filename: filename, contentType: contentType, bytes: bytes);
 
   factory ApiFilePart.fromJson(Object? value) {
     final json = apiBlueprintReadObject(value);
@@ -69,11 +88,30 @@ class ApiFilePart {
     );
   }
 
-  Map<String, Object?> toJson() => {
-        'filename': filename,
-        'contentType': contentType,
-        'bytes': bytes.toList(),
-      };
+  Uint8List get bytes => _bytes ?? Uint8List(0);
+
+  Stream<List<int>> openStream() => stream ?? Stream<List<int>>.value(bytes);
+
+  Future<Uint8List> readAllBytes() async {
+    final cachedBytes = _bytes;
+    if (cachedBytes != null) return cachedBytes;
+    final builder = BytesBuilder(copy: false);
+    await for (final chunk in openStream()) {
+      builder.add(chunk);
+    }
+    return builder.takeBytes();
+  }
+
+  Map<String, Object?> toJson() {
+    final cachedBytes = _bytes;
+    return {
+      'filename': filename,
+      'contentType': contentType,
+      if (cachedBytes != null) 'bytes': cachedBytes.toList(),
+      if (stream != null) 'stream': stream,
+      if (length != null) 'length': length,
+    };
+  }
 }
 
 class ApiBinaryPayload {

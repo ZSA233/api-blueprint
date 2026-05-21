@@ -20,6 +20,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.SequenceInputStream;
 import java.lang.reflect.RecordComponent;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -28,11 +29,15 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.StringJoiner;
+import java.util.function.Supplier;
 
 public class GenJdkHttpApiTransport implements GenApiTransport {
     private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {
@@ -182,7 +187,7 @@ public class GenJdkHttpApiTransport implements GenApiTransport {
         } else if (multipart != null) {
             EncodedMultipart encoded = multipartBody(multipart);
             builder.header("content-type", encoded.contentType());
-            builder.method(request.method(), HttpRequest.BodyPublishers.ofByteArray(encoded.body()));
+            builder.method(request.method(), encoded.publisher());
         } else if (binary != null) {
             builder.header("content-type", binary.contentType());
             builder.method(request.method(), HttpRequest.BodyPublishers.ofByteArray(binary.toBytes()));
@@ -232,26 +237,34 @@ public class GenJdkHttpApiTransport implements GenApiTransport {
 
     private EncodedMultipart multipartBody(Object value) throws IOException {
         String boundary = "api-blueprint-" + java.util.UUID.randomUUID();
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        List<Supplier<InputStream>> parts = new ArrayList<>();
         for (Map.Entry<String, Object> entry : objectFields(value).entrySet()) {
             if (entry.getValue() == null) {
                 continue;
             }
-            out.write(("--" + boundary + "\r\n").getBytes(StandardCharsets.UTF_8));
+            parts.add(bytesPart("--" + boundary + "\r\n"));
             if (entry.getValue() instanceof GenApiFilePart file) {
                 String filename = file.filename().isBlank() ? entry.getKey() : file.filename();
-                out.write(("Content-Disposition: form-data; name=\"" + escapeHeader(entry.getKey()) + "\"; filename=\"" + escapeHeader(filename) + "\"\r\n").getBytes(StandardCharsets.UTF_8));
-                out.write(("Content-Type: " + file.contentType() + "\r\n\r\n").getBytes(StandardCharsets.UTF_8));
-                out.write(file.bytes());
-                out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+                parts.add(bytesPart("Content-Disposition: form-data; name=\"" + escapeHeader(entry.getKey()) + "\"; filename=\"" + escapeHeader(filename) + "\"\r\n"));
+                parts.add(bytesPart("Content-Type: " + file.contentType() + "\r\n\r\n"));
+                parts.add(file::body);
+                parts.add(bytesPart("\r\n"));
                 continue;
             }
-            out.write(("Content-Disposition: form-data; name=\"" + escapeHeader(entry.getKey()) + "\"\r\n\r\n").getBytes(StandardCharsets.UTF_8));
-            out.write(String.valueOf(entry.getValue()).getBytes(StandardCharsets.UTF_8));
-            out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+            parts.add(bytesPart("Content-Disposition: form-data; name=\"" + escapeHeader(entry.getKey()) + "\"\r\n\r\n"));
+            parts.add(bytesPart(String.valueOf(entry.getValue())));
+            parts.add(bytesPart("\r\n"));
         }
-        out.write(("--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
-        return new EncodedMultipart(out.toByteArray(), "multipart/form-data; boundary=" + boundary);
+        parts.add(bytesPart("--" + boundary + "--\r\n"));
+        return new EncodedMultipart(
+            HttpRequest.BodyPublishers.ofInputStream(() -> new SequenceInputStream(Collections.enumeration(parts.stream().map(Supplier::get).toList()))),
+            "multipart/form-data; boundary=" + boundary
+        );
+    }
+
+    private Supplier<InputStream> bytesPart(String value) {
+        byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
+        return () -> new ByteArrayInputStream(bytes);
     }
 
     private Map<String, Object> objectFields(Object value) {
@@ -372,7 +385,7 @@ public class GenJdkHttpApiTransport implements GenApiTransport {
         return new String(out.toByteArray(), StandardCharsets.UTF_8);
     }
 
-    private record EncodedMultipart(byte[] body, String contentType) {
+    private record EncodedMultipart(HttpRequest.BodyPublisher publisher, String contentType) {
     }
 
     private String encode(String value) {

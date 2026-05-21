@@ -56,6 +56,7 @@ func bindRequest[Q, B, P any](
 	ginCtx *gin.Context,
 	reqProvider *provider.ReqProvider[Q, B, P],
 ) (*provider.REQ[Q, B], error) {
+	applyRequestBodyLimit(ginCtx)
 	var reqQ *Q
 	var reqB *B
 	if reqProvider == nil {
@@ -97,7 +98,8 @@ func bindRequest[Q, B, P any](
 }
 
 func bindMultipart(ginCtx *gin.Context, target any) error {
-	if err := ginCtx.Request.ParseMultipartForm(32 << 20); err != nil {
+	config := ActiveServerConfig()
+	if err := ginCtx.Request.ParseMultipartForm(config.MultipartMemoryBytes); err != nil {
 		return err
 	}
 	value := reflect.ValueOf(target)
@@ -117,7 +119,7 @@ func bindMultipart(ginCtx *gin.Context, target any) error {
 			continue
 		}
 		if field.Type() == reflect.TypeOf(provider.MultipartFile{}) {
-			file, err := multipartFile(ginCtx, key)
+			file, err := multipartFile(ginCtx, key, config.MultipartSingleFileBytes)
 			if err != nil {
 				return err
 			}
@@ -135,10 +137,14 @@ func bindMultipart(ginCtx *gin.Context, target any) error {
 	return nil
 }
 
-func multipartFile(ginCtx *gin.Context, key string) (provider.MultipartFile, error) {
+func multipartFile(ginCtx *gin.Context, key string, maxBytes int64) (provider.MultipartFile, error) {
 	file, header, err := ginCtx.Request.FormFile(key)
 	if err != nil {
 		return provider.MultipartFile{}, err
+	}
+	if maxBytes > 0 && header.Size > maxBytes {
+		_ = file.Close()
+		return provider.MultipartFile{}, fmt.Errorf("[httptransport] multipart file %s exceeds %d bytes", key, maxBytes)
 	}
 	return provider.MultipartFile{
 		Filename:    header.Filename,
@@ -210,7 +216,8 @@ func bindBinaryBody(ginCtx *gin.Context, target any) error {
 		encoding = "identity"
 	}
 
-	var reader io.Reader = ginCtx.Request.Body
+	config := ActiveServerConfig()
+	var reader io.Reader = limitReader(ginCtx.Request.Body, config.DecompressedBinaryBytes, "binary request body")
 	switch encoding {
 	case "identity":
 	case "gzip":
@@ -219,12 +226,48 @@ func bindBinaryBody(ginCtx *gin.Context, target any) error {
 			return fmt.Errorf("[httptransport] decode gzip request body: %w", err)
 		}
 		defer gzipReader.Close()
-		reader = gzipReader
+		reader = limitReader(gzipReader, config.DecompressedBinaryBytes, "decompressed binary request body")
 	default:
 		return fmt.Errorf("[httptransport] unsupported binary Content-Encoding %q", encoding)
 	}
 
 	return decoder.DecodeBinary(reader)
+}
+
+func applyRequestBodyLimit(ginCtx *gin.Context) {
+	if ginCtx == nil || ginCtx.Request == nil || ginCtx.Request.Body == nil {
+		return
+	}
+	limit := ActiveServerConfig().MaxRequestBodyBytes
+	if limit <= 0 {
+		return
+	}
+	ginCtx.Request.Body = http.MaxBytesReader(ginCtx.Writer, ginCtx.Request.Body, limit)
+}
+
+type maxBytesReader struct {
+	reader    io.Reader
+	remaining int64
+	label     string
+}
+
+func limitReader(reader io.Reader, maxBytes int64, label string) io.Reader {
+	if maxBytes <= 0 {
+		return reader
+	}
+	return &maxBytesReader{reader: reader, remaining: maxBytes, label: label}
+}
+
+func (reader *maxBytesReader) Read(p []byte) (int, error) {
+	if reader.remaining <= 0 {
+		return 0, fmt.Errorf("[httptransport] %s exceeds configured limit", reader.label)
+	}
+	if int64(len(p)) > reader.remaining {
+		p = p[:reader.remaining]
+	}
+	n, err := reader.reader.Read(p)
+	reader.remaining -= int64(n)
+	return n, err
 }
 
 func newContext[Q, B, P any](ginCtx *gin.Context, executor *provider.RouteExecutor[Q, B, P]) *provider.Context[Q, B, P] {

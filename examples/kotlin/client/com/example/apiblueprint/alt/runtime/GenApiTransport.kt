@@ -13,6 +13,7 @@ import com.example.apiblueprint.alt.runtime.binary.ApiBinaryBody
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.Closeable
+import java.io.File
 import java.io.InputStream
 import java.nio.charset.Charset
 import kotlin.time.Duration
@@ -89,7 +90,27 @@ public data class ApiFilePart(
     public val filename: String = "",
     public val contentType: String = "application/octet-stream",
     public val bytes: ByteArray = ByteArray(0),
-)
+    public val path: String? = null,
+) {
+    public fun openStream(): InputStream =
+        if (path.isNullOrBlank()) ByteArrayInputStream(bytes) else File(path).inputStream()
+
+    public fun readAllBytes(): ByteArray = openStream().use { it.readBytes() }
+
+    public companion object {
+        public fun fromBytes(
+            filename: String = "",
+            contentType: String = "application/octet-stream",
+            bytes: ByteArray = ByteArray(0),
+        ): ApiFilePart = ApiFilePart(filename = filename, contentType = contentType, bytes = bytes)
+
+        public fun fromPath(
+            path: String,
+            filename: String = "",
+            contentType: String = "application/octet-stream",
+        ): ApiFilePart = ApiFilePart(filename = filename, contentType = contentType, path = path)
+    }
+}
 
 public data class ApiRawResponse(
     public val body: ByteArray,

@@ -197,11 +197,11 @@ def test_python_generated_files_use_pep8_blank_line_spacing(tmp_path: Path):
     ) in adapter_text
     assert "from starlette.responses import StreamingResponse, JSONResponse" in adapter_text
     assert "from ...routes.api.demo.service" in adapter_text
-    assert "router = APIRouter()\n    demo_service_impl = demo_service or DemoServiceStub()" in adapter_text
-    assert (
-        "demo_service_impl = demo_service or DemoServiceStub()\n"
-        "    meta_service_impl = meta_service or MetaServiceStub()"
-    ) in adapter_text
+    assert "def create_demo_router(" in adapter_text
+    assert "api_config = config or ApiServerConfig()\n    service_impl = service or DemoServiceStub()" in adapter_text
+    assert "api_config = config or ApiServerConfig()" in adapter_text
+    assert "router.include_router(create_demo_router(demo_service, config=api_config))" in adapter_text
+    assert "router.include_router(create_meta_router(meta_service, config=api_config))" in adapter_text
     route_module = _import_generated_module(output_dir, "api_blueprint_generated.api.routes.api.demo.client")
     assert hasattr(route_module, "DemoClient")
     _compile_generated_files(output_dir)

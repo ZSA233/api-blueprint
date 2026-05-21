@@ -4,6 +4,8 @@
 
 Wails CLI 在本仓库中的角色是构建和打包 `examples/wails-harness/{v2,v3}` 这类手写 harness，而不是 Wails target 的代码输入。
 
+Wails v2/v3 target 都是 preview；Wails v3 仍按 experimental 口径使用。生成 overlay 只提供协议调用、typed error、provider bridge 和 STREAM/CHANNEL 关键帧，窗口权限、文件系统访问、native call 取消、长任务调度、重试和 app 生命周期策略属于 Wails app shell 或 Go service implementation。
+
 ## Target 配置
 
 ```toml

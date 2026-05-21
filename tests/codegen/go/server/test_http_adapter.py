@@ -22,6 +22,7 @@ def test_golang_server_codegen_emits_multipart_and_raw_response_contracts(tmp_pa
     rsp_provider = (output_dir / "providers" / "gen_rsp.go").read_text(encoding="utf-8")
     shared_types = (output_dir / "routes" / "api" / "_gen_types" / "types.go").read_text(encoding="utf-8")
     route_types = (output_dir / "routes" / "api" / "media" / "gen_types.go").read_text(encoding="utf-8")
+    http_config = (output_dir / "transports" / "http" / "gen_config.go").read_text(encoding="utf-8")
     http_runtime = (output_dir / "transports" / "http" / "gen_engine.go").read_text(encoding="utf-8")
     http_route = (output_dir / "transports" / "http" / "api" / "media" / "gen_interface.go").read_text(encoding="utf-8")
 
@@ -31,7 +32,17 @@ def test_golang_server_codegen_emits_multipart_and_raw_response_contracts(tmp_pa
     assert 'providers "example.com/generated/golang/providers"' in shared_types
     assert "Image providers.MultipartFile" in shared_types
     assert "type RSP_Preview = providers.RawResponse" in route_types
+    assert "type ServerConfig struct" in http_config
+    assert "MaxRequestBodyBytes:" in http_config and "16 * mib" in http_config
+    assert "MultipartMemoryBytes:" in http_config and "8 * mib" in http_config
+    assert "MultipartSingleFileBytes:" in http_config and "32 * mib" in http_config
+    assert "DecompressedBinaryBytes:" in http_config and "16 * mib" in http_config
+    assert "WebSocketInsecureSkipVerify" in http_config
     assert "bindMultipart" in http_runtime
+    assert "http.MaxBytesReader(ginCtx.Writer, ginCtx.Request.Body, limit)" in http_runtime
+    assert "ginCtx.Request.ParseMultipartForm(config.MultipartMemoryBytes)" in http_runtime
+    assert "header.Size > maxBytes" in http_runtime
+    assert "limitReader(gzipReader, config.DecompressedBinaryBytes" in http_runtime
     assert "writeRawResponse" in http_runtime
     assert '"req=M|handle|rsp=bytes@CodeMessageDataEnvelope"' in http_route
 

@@ -234,9 +234,10 @@ void _appendMultipart(http.MultipartRequest request, Object? multipart) {
   for (final entry in object.entries) {
     final file = _filePart(entry.value);
     if (file != null) {
-      request.files.add(http.MultipartFile.fromBytes(
+      request.files.add(http.MultipartFile(
         entry.key,
-        file.bytes,
+        file.openStream(),
+        file.length ?? file.bytes.length,
         filename: file.filename.isEmpty ? entry.key : file.filename,
       ));
       continue;
@@ -249,7 +250,20 @@ void _appendMultipart(http.MultipartRequest request, Object? multipart) {
 }
 
 ApiFilePart? _filePart(Object? value) {
+  if (value is ApiFilePart) {
+    return value;
+  }
   final object = apiBlueprintReadObject(value);
+  final stream = object['stream'];
+  final length = apiBlueprintReadInt(object['length']);
+  if (stream is Stream<List<int>> && length != null) {
+    return ApiFilePart.fromStream(
+      filename: apiBlueprintReadString(object['filename']) ?? '',
+      contentType: apiBlueprintReadString(object['contentType']) ?? 'application/octet-stream',
+      body: stream,
+      length: length,
+    );
+  }
   if (!object.containsKey('bytes')) {
     return null;
   }
