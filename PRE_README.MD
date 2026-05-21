@@ -150,7 +150,7 @@ README 应链接到以下用户文档：
 - `python -m scripts.example_benchmark` 提供可选 benchmark runner：`binary` 迁移旧 binary codec benchmark，`protocol` 复用 conformance workspace 和 server runner，对 Go / Java / Kotlin / Python server 的 `rpc-json`、`form`、`binary`、`typed-error` 做趋势压测，`sdk-smoke` 复用 conformance runner 验证 generated client SDK 的 request-options、binary-response、media 最小热路径。Makefile 暴露 `benchmark-list`、`benchmark-binary`、`example-benchmark-protocol` 与 `example-benchmark`；benchmark 只用于趋势与回归排查，不作为默认 CI 硬阈值。
 - snapshot drift 表示生成结果变化，不自动等于 bug。
 - `make example-golang-suite` 和 `make example-java-suite` 是手动增强验证，不进入默认 `test`、`example-validation`、`release-preflight` 或 CI。
-- generator-owned artifact 的短期逃生口方案记录在 `docs/plans/generated-artifact-escape-hatches.md`：优先通过 preserved facade、transport hook、codec registry、raw body fallback 和 route wrapper 绕过，不在第一阶段做 template partial override 或 post-generate patch hooks。
+- generator-owned artifact 的长期逃生通道不再以旧 plan 作为用户入口；当前事实应维护在 `docs/zh|en/generators.md`、`configuration.md`、`wails.md` 与 `grpc.md` 中。用户应优先通过 preserved facade、custom transport、原生 client、codec registry、service implementation、middleware/plugin/filter、Wails app shell 或 gRPC native metadata/deadline/interceptor 绕过项目策略差异，不应编辑 `gen_*` / `Gen*` 文件。
 - `main.py` 与 `debug.py` 是本地辅助脚本，不属于公共发布面。
 
 ## 文档维护规则

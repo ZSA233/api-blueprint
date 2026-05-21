@@ -104,13 +104,7 @@ api-gen generate -c api-blueprint.toml
 | Wails v2/v3 | 预览 / 实验性 | 生成 Go + TypeScript overlay；文件/stream 等能力使用 Wails RPC descriptor 或 STREAM/CHANNEL chunk 建模 |
 | gRPC proto / stubs | 可用 | 从 ContractGraph 输出 proto，并生成 Go/Python stub；bytes/file/stream 使用 protobuf bytes 或 streaming chunk 建模 |
 
-生成器会覆盖的文件统一使用 `gen_*` / `Gen*`，或位于 `_gen_*` 目录，并带 `Code generated ... DO NOT EDIT` header。非 `gen_` / 非 `Gen` 的 facade、impl、service、client 文件是 preserved 用户扩展点，只在缺失时创建且不带 generated header。
-
-生成的 HTTP / Wails 客户端支持按单次 RPC 调用传入 header 和 timeout；Go 使用 `context.Context` 控制超时，gRPC 使用各语言原生 deadline / metadata。
-
-大文件与长响应应使用各端的 stream/file descriptor 路径；Go multipart `Reader` 会以流式 body 发送，`bytes`/`file` raw 响应仍是 bounded buffered 响应，`byte_stream` 才是真流式响应。
-
-默认 server adapter 带请求体、multipart、长连接队列等安全上限，但仍是协议桥接层，不是完整生产运行时。生产项目应优先使用具体 route/client/router 的窄入口，并通过原生 client、custom transport、service implementation、middleware 或 app shell 承载鉴权、限流、cookie、TLS/proxy、重试和文件权限策略。
+生成物 ownership、单次请求选项、stream/file 路径、server adapter 安全默认和生产逃生通道详见 [生成器与目录布局](docs/zh/generators.md)。默认 adapter 是协议桥接层，不是完整生产运行时；生产项目应优先使用具体 route/client/router 的窄入口，并通过原生 client、custom transport、service implementation、middleware 或 app shell 承载鉴权、限流、cookie、TLS/proxy、重试和文件权限策略。
 
 ## 下一步
 

@@ -104,13 +104,7 @@ For fuller project layout, config fields, DSL, generator output, typed errors, R
 | Wails v2/v3 | Preview / Experimental | Generate Go + TypeScript overlays; file/stream-style capabilities are modeled with Wails RPC descriptors or STREAM/CHANNEL chunks |
 | gRPC proto / stubs | Available | Emit proto from ContractGraph and generate Go/Python stubs; bytes/file/stream-style capabilities are modeled with protobuf bytes or streaming chunks |
 
-Files overwritten by generators are named `gen_*` / `Gen*`, or live under `_gen_*`, and include a `Code generated ... DO NOT EDIT` header. Non-`gen_` / non-`Gen` facade, impl, service, and client files are preserved user extension points, created only when missing and without a generated header.
-
-Generated HTTP / Wails clients support per-RPC headers and timeouts; Go keeps timeout control on `context.Context`, and gRPC uses native deadline / metadata APIs.
-
-Large files and long responses should use each target's stream/file descriptor paths; Go multipart `Reader` values are sent as streaming bodies, `bytes`/`file` raw responses remain bounded buffered responses, and `byte_stream` is the true streaming response kind.
-
-Default server adapters include safety limits for request bodies, multipart payloads, and long-connection queues, but they are still protocol bridges rather than complete production runtimes. Production projects should prefer narrow route/client/router entrypoints and use native clients, custom transports, service implementations, middleware, or app shells for auth, rate limits, cookies, TLS/proxy, retry, and file permission policy.
+See [Generators and output layout](docs/en/generators.md) for generated ownership, per-request options, stream/file paths, server-adapter safety defaults, and production escape hatches. Default adapters are protocol bridges rather than complete production runtimes; production projects should prefer narrow route/client/router entrypoints and use native clients, custom transports, service implementations, middleware, or app shells for auth, rate limits, cookies, TLS/proxy, retry, and file permission policy.
 
 ## Next Steps
 

@@ -1,5 +1,22 @@
 # Generated Artifact Escape Hatches
 
+## Status
+
+Superseded / archived.
+
+This early design note is no longer an active implementation plan. Its core intent has been absorbed into the later generated ownership, request-options, production escape-hatch, resource-guard, and performance-closure plans:
+
+- `docs/plans/resolved/0002-20260520-generated-template-ownership-and-client-request-options.md`
+- `docs/plans/resolved/0004-20260522-production-escape-hatches-and-narrow-entrypoints.md`
+- `docs/plans/resolved/0005-20260522-server-resource-guards-file-streaming-and-dependency-hygiene.md`
+- `docs/plans/resolved/0006-20260522-go-client-multipart-streaming-and-performance-review-closure.md`
+
+The historical guidance below is kept for context, but it should not be treated as the current source of implementation truth. Current user-facing rules live in `PRE_README.MD`, `README.md`, `README_EN.md`, and `docs/zh|en/generators.md`.
+
+Archived on 2026-05-22.
+
+## Original Note
+
 This note records the recommended low-intrusion escape hatch model for generated API artifacts. It is a design note only; this change set does not modify generator behavior.
 
 ## Recommendation
