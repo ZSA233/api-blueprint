@@ -18,6 +18,7 @@ import com.example.apiblueprint.api.routes.api.demo.DemoFormSubmitForm
 import com.example.apiblueprint.api.routes.api.demo.DemoPutDemoJson
 import com.example.apiblueprint.api.routes.api.demo.DemoPutDemoQuery
 import com.example.apiblueprint.api.routes.api.demo.DemoPostDeprecatedJson
+import com.example.apiblueprint.api.routes.api.demo.DemoRequestOptionsQuery
 import com.example.apiblueprint.api.routes.api.demo.DemoTestPostJson
 import com.example.apiblueprint.api.routes.api.hello.HelloAbcQuery
 import com.example.apiblueprint.api.routes.api.demo.AssistantClientMessageVariants
@@ -27,9 +28,11 @@ import com.example.apiblueprint.api.routes.api.demo.SweepStreamMessage
 import com.example.apiblueprint.api.routes.api.demo.SweepStreamMessageHandlers
 import com.example.apiblueprint.api.routes.api.demo.dispatchAssistantServerMessage
 import com.example.apiblueprint.api.routes.api.demo.dispatchSweepStreamMessage
+import com.example.apiblueprint.api.routes.api.media.MediaMediaErrorFrameQuery
 import com.example.apiblueprint.api.runtime.ApiClient
 import com.example.apiblueprint.api.runtime.ApiError
 import com.example.apiblueprint.api.runtime.ApiFilePart
+import com.example.apiblueprint.api.runtime.ApiRequestOptions
 import com.example.apiblueprint.api.runtime.AssistantCancel
 import com.example.apiblueprint.api.runtime.AssistantDelta
 import com.example.apiblueprint.api.runtime.AssistantDone
@@ -59,10 +62,12 @@ import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 fun main(args: Array<String>) = runBlocking {
     val baseUrl = args.firstOrNull()?.trimEnd('/') ?: error("base URL argument is required")
-    val selected = scenarioSet(args.getOrNull(1) ?: "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,single-channel")
+    val selected = scenarioSet(args.getOrNull(1) ?: "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel")
     val httpClient = OkHttpClient()
     val altHttpClient = OkHttpClient()
     try {
@@ -111,6 +116,15 @@ fun main(args: Array<String>) = runBlocking {
         }
         if ("media" in selected) {
             checkMedia(client)
+        }
+        if ("request-options" in selected) {
+            checkRequestOptions(baseUrl)
+        }
+        if ("media-filename-edge" in selected) {
+            checkMediaFilenameEdge(client)
+        }
+        if ("media-error" in selected) {
+            checkMediaError(client)
         }
         if ("error" in selected) {
             checkTypedErrors(client)
@@ -234,7 +248,64 @@ private suspend fun checkMedia(client: ApiClient) {
     assertStartsWith(dynamic.body, 'P'.code, 'K'.code, "media.dynamic.body")
 
     val stream = client.media.mediaMjpeg()
-    assertContains(stream.body.decodeToString(), "--frame", "media.mjpeg")
+    val chunk = stream.use { it.readAllBytes() }.decodeToString()
+    assertContains(chunk, "--frame", "media.mjpeg")
+}
+
+private suspend fun checkRequestOptions(baseUrl: String) {
+    val httpClient = OkHttpClient()
+    try {
+        val client = createHttpApiClient(
+            HttpApiConfig(
+                baseUrl = baseUrl,
+                defaultHeaders = { mapOf("x-options-default" to "default", "x-options-token" to "default") },
+                timeout = 20.milliseconds,
+            ),
+            httpClient,
+        )
+        val ok = client.demo.requestOptions(
+            DemoRequestOptionsQuery(delayMs = 30),
+            options = ApiRequestOptions(
+                headers = mapOf("x-options-token" to "per-call"),
+                timeout = 1.seconds,
+            ),
+        )
+        assertEquals("ok", ok.status, "requestOptions.status")
+        assertEquals(30, ok.delayMs, "requestOptions.delayMs")
+
+        var timedOut = false
+        try {
+            client.demo.requestOptions(
+                DemoRequestOptionsQuery(delayMs = 120),
+                options = ApiRequestOptions(
+                    headers = mapOf("x-options-token" to "per-call"),
+                    timeout = 10.milliseconds,
+                ),
+            )
+        } catch (_: Exception) {
+            timedOut = true
+        }
+        assertEquals(true, timedOut, "requestOptions.shortTimeout")
+    } finally {
+        shutdownOkHttp(httpClient)
+    }
+}
+
+private suspend fun checkMediaFilenameEdge(client: ApiClient) {
+    val response = client.media.mediaDownloadFilenameEdge()
+    assertEquals("媒体报告.xlsx", response.filename, "media.filenameEdge.filename")
+    assertStartsWith(response.body, 'P'.code, 'K'.code, "media.filenameEdge.body")
+}
+
+private suspend fun checkMediaError(client: ApiClient) {
+    val ok = client.media.mediaErrorFrame(MediaMediaErrorFrameQuery(mode = "ok"))
+    assertEquals("image/jpeg", ok.contentType, "media.error.contentType")
+    assertStartsWith(ok.body, 0xff, 0xd8, "media.error.body")
+
+    val rateLimited = expectApiError("api.media.get.errorframe") {
+        client.media.mediaErrorFrame(MediaMediaErrorFrameQuery(mode = "rate_limit"))
+    }
+    assertEquals(DemoErr.RATE_LIMITED, rateLimited.code, "media.error.code")
 }
 
 private suspend fun checkTypedErrors(client: ApiClient) {
@@ -432,11 +503,11 @@ private fun checkRawSingleChannel(client: OkHttpClient, baseUrl: String) {
     }
 }
 
-private suspend fun expectApiError(action: suspend () -> Unit): ApiError {
+private suspend fun expectApiError(routeId: String = "api.demo.get.errordemo", action: suspend () -> Unit): ApiError {
     try {
         action()
     } catch (error: ApiError) {
-        assertEquals("api.demo.get.errordemo", error.routeId, "ApiError.routeId")
+        assertEquals(routeId, error.routeId, "ApiError.routeId")
         return error
     }
     error("expected ApiError")

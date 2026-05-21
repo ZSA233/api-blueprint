@@ -3,4 +3,3 @@
 
 export * from "./types";
 export { BinaryClient } from "./client";
-

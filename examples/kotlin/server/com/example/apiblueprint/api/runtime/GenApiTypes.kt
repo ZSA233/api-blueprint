@@ -152,6 +152,13 @@ public data class MediaPreviewRequest(
     public val image: ApiFilePart
 )
 
+@Serializable
+public data class RequestOptionsResponse(
+    public val status: String,
+    @SerialName("delay_ms")
+    public val delayMs: Int
+)
+
 @Serializable(with = StatusEnumSerializer::class)
 public enum class StatusEnum(public val wireValue: Int) {
     PENDING(1),

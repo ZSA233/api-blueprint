@@ -26,6 +26,17 @@ public open class MediaServiceStub : GenMediaService {
         throw NotImplementedError("api.media.get.downloaddynamic is not implemented")
     }
 
+    public override suspend fun mediaDownloadFilenameEdge(
+    ): ApiRawResponse {
+        throw NotImplementedError("api.media.get.downloadfilenameedge is not implemented")
+    }
+
+    public override suspend fun mediaErrorFrame(
+        query: MediaMediaErrorFrameQuery
+    ): ApiRawResponse {
+        throw NotImplementedError("api.media.get.errorframe is not implemented")
+    }
+
     public override suspend fun mediaMjpeg(
     ): ApiStreamResponse {
         throw NotImplementedError("api.media.get.mjpeg is not implemented")

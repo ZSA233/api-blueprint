@@ -20,7 +20,6 @@ export class HelloClient extends BaseClient {
   async abc(
     request: {
       query?: Types.AbcQuery;
-
     } = {},
     options?: ApiRequestOptions,
   ): Promise<Types.AbcResponse> {
@@ -47,9 +46,7 @@ export class HelloClient extends BaseClient {
    */
 
   async mapEnum(
-    request: {
-
-    } = {},
+    request: {} = {},
     options?: ApiRequestOptions,
   ): Promise<Types.MapEnumResponse> {
     return this.request<Types.MapEnumResponse>({
@@ -74,9 +71,7 @@ export class HelloClient extends BaseClient {
    */
 
   async listEnum(
-    request: {
-
-    } = {},
+    request: {} = {},
     options?: ApiRequestOptions,
   ): Promise<Types.ListEnumResponse> {
     return this.request<Types.ListEnumResponse>({
@@ -101,9 +96,7 @@ export class HelloClient extends BaseClient {
    */
 
   async string(
-    request: {
-
-    } = {},
+    request: {} = {},
     options?: ApiRequestOptions,
   ): Promise<Types.StringResponse> {
     return this.request<Types.StringResponse>({
@@ -128,9 +121,7 @@ export class HelloClient extends BaseClient {
    */
 
   async uint64(
-    request: {
-
-    } = {},
+    request: {} = {},
     options?: ApiRequestOptions,
   ): Promise<Types.Uint64Response> {
     return this.request<Types.Uint64Response>({
@@ -155,9 +146,7 @@ export class HelloClient extends BaseClient {
    */
 
   async stringEmun(
-    request: {
-
-    } = {},
+    request: {} = {},
     options?: ApiRequestOptions,
   ): Promise<Types.StringEmunResponse> {
     return this.request<Types.StringEmunResponse>({
@@ -184,7 +173,6 @@ export class HelloClient extends BaseClient {
   async helloWay(
     request: {
       query?: Types.HelloWayQuery;
-
     } = {},
     options?: ApiRequestOptions,
   ): Promise<Types.HelloWayResponse> {

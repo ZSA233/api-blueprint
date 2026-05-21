@@ -20,7 +20,6 @@ export class ConflictClient extends BaseClient {
   async default(
     request: {
       query?: Types.DefaultQuery;
-
     } = {},
     options?: ApiRequestOptions,
   ): Promise<Types.DefaultResponse> {

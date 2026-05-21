@@ -6,7 +6,6 @@ import 'package:api_blueprint_example/src/api/runtime/gen_api_types.dart';
 import 'package:api_blueprint_example/src/api/runtime/gen_api_transport.dart';
 import 'package:api_blueprint_example/src/api/runtime/api_json_codecs.dart';
 
-
 class BinaryAuditPacketQuery {
   final String? trace;
 
@@ -44,8 +43,6 @@ class BinaryAuditPacketQuery {
     };
   }
 }
-
-
 
 class BinaryAuditPacketResponse {
   final String? trace;
@@ -95,8 +92,6 @@ class BinaryAuditPacketResponse {
   }
 }
 
-
-
 class BinaryPacketQuery {
   final String? trace;
 
@@ -134,8 +129,6 @@ class BinaryPacketQuery {
     };
   }
 }
-
-
 
 class BinaryPacketResponse {
   final String? trace;
@@ -209,6 +202,3 @@ class BinaryPacketResponse {
     };
   }
 }
-
-
-

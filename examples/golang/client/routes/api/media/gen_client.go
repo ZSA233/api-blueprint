@@ -92,6 +92,41 @@ func (client *GenMediaClient) MediaDownloadDynamic(ctx context.Context, opts ...
 	return &response, nil
 }
 
+func (client *GenMediaClient) MediaDownloadFilenameEdge(ctx context.Context, opts ...runtime.RequestOption) (*runtime.RawResponse, error) {
+	request := runtime.Request{
+		RouteID:          "api.media.get.downloadfilenameedge",
+		Method:           "GET",
+		Path:             "/api/media/download-filename-edge",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("file"),
+	}
+	request.ApplyOptions(opts...)
+	var response runtime.RawResponse
+	if err := client.transport.Do(ctx, request, &response); err != nil {
+		return nil, err
+	}
+	return &response, nil
+}
+
+func (client *GenMediaClient) MediaErrorFrame(ctx context.Context, query MediaErrorFrameQuery, opts ...runtime.RequestOption) (*runtime.RawResponse, error) {
+	request := runtime.Request{
+		RouteID:          "api.media.get.errorframe",
+		Method:           "GET",
+		Path:             "/api/media/error-frame",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		Query:            query,
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("bytes"),
+	}
+	request.ApplyOptions(opts...)
+	var response runtime.RawResponse
+	if err := client.transport.Do(ctx, request, &response); err != nil {
+		return nil, err
+	}
+	return &response, nil
+}
+
 func (client *GenMediaClient) MediaMjpeg(ctx context.Context, opts ...runtime.RequestOption) (*runtime.StreamResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.media.get.mjpeg",

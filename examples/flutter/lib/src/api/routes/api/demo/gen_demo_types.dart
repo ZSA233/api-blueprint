@@ -6,7 +6,6 @@ import 'package:api_blueprint_example/src/api/runtime/gen_api_types.dart';
 import 'package:api_blueprint_example/src/api/runtime/gen_api_transport.dart';
 import 'package:api_blueprint_example/src/api/runtime/api_json_codecs.dart';
 
-
 class AnonDeleteAnonList {
   final int? kv1;
   final List<String>? kv2;
@@ -50,8 +49,6 @@ class AnonDeleteAnonList {
   }
 }
 
-
-
 class AnonFunc1putAnonKv {
   final int? kv1;
   final List<double>? kv2;
@@ -94,8 +91,6 @@ class AnonFunc1putAnonKv {
     };
   }
 }
-
-
 
 class DemoAbcQuery {
   final bool? arg1;
@@ -145,8 +140,6 @@ class DemoAbcQuery {
   }
 }
 
-
-
 class DemoDeleteQuery {
   final String? arg1;
   final double? arg2;
@@ -189,8 +182,6 @@ class DemoDeleteQuery {
     };
   }
 }
-
-
 
 class DemoDeleteResponse {
   final List<String>? list;
@@ -235,8 +226,6 @@ class DemoDeleteResponse {
   }
 }
 
-
-
 class DemoErrorDemoQuery {
   final String? mode;
 
@@ -275,8 +264,6 @@ class DemoErrorDemoQuery {
   }
 }
 
-
-
 class DemoErrorDemoResponse {
   final String? status;
 
@@ -314,8 +301,6 @@ class DemoErrorDemoResponse {
     };
   }
 }
-
-
 
 class DemoFormSubmitForm {
   final String? title;
@@ -365,8 +350,6 @@ class DemoFormSubmitForm {
   }
 }
 
-
-
 class DemoFormSubmitResponse {
   final String? summary;
   final int? count;
@@ -415,15 +398,11 @@ class DemoFormSubmitResponse {
   }
 }
 
-
-
 typedef DemoMapModelResponse = Map<String, ApiDemoMap>;
 
 DemoMapModelResponse DemoMapModelResponseFromJsonValue(Object? value) {
   return apiBlueprintRequire<Map<String, ApiDemoMap>>(((value) => apiBlueprintReadStringMap<ApiDemoMap>(value, ApiDemoMap.fromJsonValue))(value), "DemoMapModelResponse");
 }
-
-
 
 class DemoPostDeprecatedJson {
   final String? req1;
@@ -468,8 +447,6 @@ class DemoPostDeprecatedJson {
   }
 }
 
-
-
 class DemoPostDeprecatedResponse {
   final List<String>? list;
 
@@ -507,8 +484,6 @@ class DemoPostDeprecatedResponse {
     };
   }
 }
-
-
 
 class DemoPutDemoJson {
   final String? req1;
@@ -552,8 +527,6 @@ class DemoPutDemoJson {
     };
   }
 }
-
-
 
 class DemoPutDemoQuery {
   final String? arg1;
@@ -603,8 +576,6 @@ class DemoPutDemoQuery {
   }
 }
 
-
-
 class DemoPutDemoResponse {
   final List<String>? list;
   final AnonFunc1putAnonKv? anonKv;
@@ -647,8 +618,6 @@ class DemoPutDemoResponse {
     };
   }
 }
-
-
 
 class DemoRawResponse {
   final List<String>? list;
@@ -693,7 +662,43 @@ class DemoRawResponse {
   }
 }
 
+class DemoRequestOptionsQuery {
+  final int? delayMs;
 
+  const DemoRequestOptionsQuery({
+    this.delayMs,
+  });
+
+  factory DemoRequestOptionsQuery.fromJson(Map<String, Object?> json) {
+    return DemoRequestOptionsQuery(
+      delayMs: apiBlueprintReadInt(json["delay_ms"]),
+    );
+  }
+
+  factory DemoRequestOptionsQuery.fromJsonValue(Object? value) {
+    final codec = apiJsonCodecs.find<DemoRequestOptionsQuery>();
+    if (codec != null) {
+      return codec.fromJson(value);
+    }
+    return DemoRequestOptionsQuery.fromJson(apiBlueprintReadObject(value));
+  }
+
+  Map<String, Object?> toJson() {
+    final codec = apiJsonCodecs.find<DemoRequestOptionsQuery>();
+    if (codec != null) {
+      return apiBlueprintReadObject(codec.toJson(this));
+    }
+    return {
+      "delay_ms": apiBlueprintToJson(delayMs),
+    };
+  }
+
+  Map<String, String?> toQueryMap() {
+    return {
+      "delay_ms": apiBlueprintToQueryValue(delayMs),
+    };
+  }
+}
 
 class DemoTestPostJson {
   final String? req1;
@@ -738,8 +743,6 @@ class DemoTestPostJson {
   }
 }
 
-
-
 class DemoTestPostResponse {
   final List<String>? list;
   final Map<String, ApiDemoMap>? map;
@@ -782,8 +785,6 @@ class DemoTestPostResponse {
     };
   }
 }
-
-
 
 sealed class SweepStreamMessage {
   final String type;
@@ -1003,4 +1004,3 @@ R dispatchAssistantClientMessage<R>(
     AssistantClientMessageCancel item => cancel(item.data, item),
   };
 }
-

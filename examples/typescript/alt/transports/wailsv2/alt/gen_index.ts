@@ -3,4 +3,3 @@
 export * as Conflict from "./conflict";
 
 export * from "./factory";
-

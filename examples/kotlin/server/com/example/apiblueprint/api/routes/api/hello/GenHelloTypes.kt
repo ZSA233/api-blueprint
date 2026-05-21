@@ -37,4 +37,3 @@ public typealias HelloStringEmunResponse = MapEnum
 public typealias HelloStringResponse = String
 
 public typealias HelloUint64Response = Long
-

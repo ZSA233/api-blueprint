@@ -118,6 +118,21 @@ func run() error {
 			return err
 		}
 	}
+	if selected["request-options"] {
+		if err := checkRequestOptions(baseURL); err != nil {
+			return err
+		}
+	}
+	if selected["media-filename-edge"] {
+		if err := checkMediaFilenameEdge(ctx, client.Media); err != nil {
+			return err
+		}
+	}
+	if selected["media-error"] {
+		if err := checkMediaError(ctx, client.Media); err != nil {
+			return err
+		}
+	}
 	if selected["error"] {
 		if err := checkTypedErrors(ctx, client.Demo); err != nil {
 			return err
@@ -448,6 +463,73 @@ func checkMedia(ctx context.Context, mediaClient *media.MediaClient) error {
 	return nil
 }
 
+func checkRequestOptions(baseURL string) error {
+	timeoutClient := apiclient.NewHTTP(apiclient.HTTPConfig{
+		BaseURL: baseURL,
+		DefaultHeaders: map[string]string{
+			"x-options-default": "default",
+			"x-options-token":   "default",
+		},
+	})
+	okCtx, okCancel := context.WithTimeout(context.Background(), time.Second)
+	defer okCancel()
+	ok, err := timeoutClient.Demo.RequestOptions(
+		okCtx,
+		demo.RequestOptionsQuery{DelayMs: 30},
+		runtime.WithHeader("x-options-token", "per-call"),
+	)
+	if err != nil {
+		return fmt.Errorf("request options ok: %w", err)
+	}
+	if ok.Status != "ok" || ok.DelayMs != 30 {
+		return fmt.Errorf("request options response = %#v", ok)
+	}
+
+	shortCtx, shortCancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer shortCancel()
+	_, err = timeoutClient.Demo.RequestOptions(
+		shortCtx,
+		demo.RequestOptionsQuery{DelayMs: 120},
+		runtime.WithHeader("x-options-token", "per-call"),
+	)
+	if err == nil {
+		return fmt.Errorf("request options short timeout did not fail")
+	}
+	return nil
+}
+
+func checkMediaFilenameEdge(ctx context.Context, mediaClient *media.MediaClient) error {
+	response, err := mediaClient.MediaDownloadFilenameEdge(ctx)
+	if err != nil {
+		return fmt.Errorf("media filename edge: %w", err)
+	}
+	if response.Filename != "媒体报告.xlsx" || !bytes.HasPrefix(response.Body, []byte("PK")) {
+		return fmt.Errorf("media filename edge response = %#v", response)
+	}
+	return nil
+}
+
+func checkMediaError(ctx context.Context, mediaClient *media.MediaClient) error {
+	ok, err := mediaClient.MediaErrorFrame(ctx, media.MediaErrorFrameQuery{Mode: "ok"})
+	if err != nil {
+		return fmt.Errorf("media error ok: %w", err)
+	}
+	if ok.ContentType != "image/jpeg" || !bytes.HasPrefix(ok.Body, []byte{0xff, 0xd8}) {
+		return fmt.Errorf("media error ok response = %#v", ok)
+	}
+	rateLimited, err := expectApiErrorForRoute("api.media.get.errorframe", func() error {
+		_, err := mediaClient.MediaErrorFrame(ctx, media.MediaErrorFrameQuery{Mode: "rate_limit"})
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	if !runtime.IsApiError(rateLimited, runtime.ApiErrors.DemoErr.RateLimited) {
+		return fmt.Errorf("media error ApiError id=%q code=%d", rateLimited.ID(), rateLimited.Code())
+	}
+	return nil
+}
+
 func checkTypedErrors(ctx context.Context, demoClient *demo.DemoClient) error {
 	okRsp, err := demoClient.ErrorDemo(ctx, demo.ErrorDemoQuery{Mode: "ok"})
 	if err != nil {
@@ -529,6 +611,10 @@ func checkAltConflictRaw(baseURL string) error {
 }
 
 func expectApiError(action func() error) (*runtime.ApiError, error) {
+	return expectApiErrorForRoute("api.demo.get.errordemo", action)
+}
+
+func expectApiErrorForRoute(routeID string, action func() error) (*runtime.ApiError, error) {
 	err := action()
 	if err == nil {
 		return nil, fmt.Errorf("expected ApiError")
@@ -537,7 +623,7 @@ func expectApiError(action func() error) (*runtime.ApiError, error) {
 	if !errors.As(err, &apiErr) {
 		return nil, fmt.Errorf("expected ApiError, got %T: %w", err, err)
 	}
-	if apiErr.RouteID() != "api.demo.get.errordemo" {
+	if apiErr.RouteID() != routeID {
 		return nil, fmt.Errorf("ApiError route id = %q", apiErr.RouteID())
 	}
 	return apiErr, nil

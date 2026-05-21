@@ -1,6 +1,7 @@
 from api_blueprint.includes import *
 
 from blueprints.app import apibp
+from blueprints.errors import DemoErr
 
 
 class MediaPreviewRequest(Model):
@@ -42,6 +43,27 @@ with apibp.group("/media") as views:
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         default_filename="media-report.xlsx",
     )
+
+    views.GET(
+        "/download-filename-edge",
+        operation_id="mediaDownloadFilenameEdge",
+        summary="Media download with RFC 5987 filename",
+        description="Returns a file response whose dynamic filename requires filename* parsing.",
+    ).RSP_FILE(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        default_filename="fallback-report.xlsx",
+    )
+
+    views.GET(
+        "/error-frame",
+        operation_id="mediaErrorFrame",
+        summary="Raw media typed error",
+        description="Returns raw JPEG bytes on success and typed JSON envelope errors on failure.",
+    ).ARGS(
+        mode=String(description="ok/rate_limit", default="ok"),
+    ).ERR(
+        DemoErr,
+    ).RSP_BYTES(content_type="image/jpeg")
 
     views.GET(
         "/mjpeg",

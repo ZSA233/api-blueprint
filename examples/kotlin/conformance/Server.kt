@@ -16,6 +16,7 @@ import com.example.apiblueprint.api.routes.api.conflict.ConflictServiceStub
 import com.example.apiblueprint.api.routes.api.ApiServiceStub
 import com.example.apiblueprint.api.routes.api.demo.*
 import com.example.apiblueprint.api.routes.api.hello.*
+import com.example.apiblueprint.api.routes.api.media.MediaMediaErrorFrameQuery
 import com.example.apiblueprint.api.routes.api.media.MediaServiceStub
 import com.example.apiblueprint.api.runtime.*
 import com.example.apiblueprint.api.transports.ktor.api.binary.registerBinaryRoutes
@@ -27,14 +28,17 @@ import com.example.apiblueprint.api.transports.ktor.api.media.registerMediaRoute
 import com.example.apiblueprint.alt.routes.alt.conflict.ConflictServiceStub as AltConflictServiceStub
 import com.example.apiblueprint.alt.transports.ktor.alt.conflict.registerConflictRoutes as registerAltConflictRoutes
 import io.ktor.server.application.install
+import io.ktor.server.application.call
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.server.routing.routing
 import io.ktor.server.response.respondText
+import io.ktor.server.request.path
 import io.ktor.server.routing.get
 import io.ktor.server.websocket.WebSockets
 import kotlinx.serialization.json.JsonNull
 import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
 
 fun main() {
     val addr = System.getenv("API_BLUEPRINT_EXAMPLE_ADDR") ?: "127.0.0.1:0"
@@ -43,6 +47,29 @@ fun main() {
     embeddedServer(Netty, host = host, port = port) {
         install(WebSockets)
         routing {
+            get("/api/demo/request-options") {
+                if (
+                    call.request.headers["x-options-default"] != "default" ||
+                    call.request.headers["x-options-token"] != "per-call"
+                ) {
+                    call.respondText(
+                        """{"detail":"request options headers missing"}""",
+                        contentType = io.ktor.http.ContentType.Application.Json,
+                        status = io.ktor.http.HttpStatusCode(418, "I'm a teapot"),
+                    )
+                    return@get
+                }
+                val delayMs = call.request.queryParameters["delay_ms"]?.toIntOrNull()
+                    ?: call.request.queryParameters["delayMs"]?.toIntOrNull()
+                    ?: 0
+                if (delayMs > 0) {
+                    delay(delayMs.toLong())
+                }
+                call.respondText(
+                    """{"code":0,"message":"ok","data":{"status":"ok","delayMs":$delayMs,"delay_ms":$delayMs}}""",
+                    contentType = io.ktor.http.ContentType.Application.Json,
+                )
+            }
             registerDemoRoutes(DemoServiceImpl())
             registerBinaryRoutes(BinaryServiceImpl())
             registerMediaRoutes(MediaServiceImpl())
@@ -81,6 +108,14 @@ private class DemoServiceImpl : DemoServiceStub() {
 
     override suspend fun formSubmit(form: DemoFormSubmitForm): DemoFormSubmitResponse =
         DemoFormSubmitResponse(summary = form.title, count = form.count ?: 0, enabled = form.enabled ?: false)
+
+    override suspend fun requestOptions(query: DemoRequestOptionsQuery): RequestOptionsResponse {
+        val delayMs = query.delayMs ?: 0
+        if (delayMs > 0) {
+            delay(delayMs.toLong())
+        }
+        return RequestOptionsResponse(status = "ok", delayMs = delayMs)
+    }
 
     override suspend fun putDemo(query: DemoPutDemoQuery, json: DemoPutDemoJson): DemoPutDemoResponse =
         DemoPutDemoResponse(
@@ -202,6 +237,31 @@ private class MediaServiceImpl : MediaServiceStub() {
             contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             filename = "media-report-dynamic.xlsx",
         )
+
+    override suspend fun mediaDownloadFilenameEdge(): ApiRawResponse =
+        ApiRawResponse(
+            body = "PK\u0003\u0004api-blueprint media report filename edge\n".encodeToByteArray(),
+            contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            filename = "媒体报告.xlsx",
+        )
+
+    override suspend fun mediaErrorFrame(query: MediaMediaErrorFrameQuery): ApiRawResponse {
+        if (query.mode == "rate_limit") {
+            throw ApiError(
+                ApiErrorPayload(
+                    id = "DemoErr.RATE_LIMITED",
+                    code = DemoErr.RATE_LIMITED,
+                    toast = ApiToastPayload(
+                        key = "demo.rate_limited",
+                        level = "warning",
+                        default = "请求过于频繁，请稍后再试",
+                        text = "请等待 30 秒后重试",
+                    ),
+                )
+            )
+        }
+        return ApiRawResponse(body = sampleJpeg(), contentType = "image/jpeg")
+    }
 
     override suspend fun mediaMjpeg(): ApiStreamResponse =
         ApiStreamResponse(

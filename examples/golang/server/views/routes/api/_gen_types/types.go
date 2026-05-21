@@ -43,6 +43,11 @@ type ApiDemoA struct {
 	EnumList   []int          `json:"enum_list" xml:"enum_list" form:"enum_list" binding:"required"`
 }
 
+type RequestOptionsResponse struct {
+	Status  string `json:"status" xml:"status" form:"status" binding:"required"`
+	DelayMs int    `json:"delay_ms" xml:"delay_ms" form:"delay_ms" binding:"required"`
+}
+
 type ANON_Func1put_anon_kv struct {
 	Kv1 uint      `json:"kv1" xml:"kv1" form:"kv1" binding:"required"`
 	Kv2 []float64 `json:"kv2" xml:"kv2" form:"kv2" binding:"required"`

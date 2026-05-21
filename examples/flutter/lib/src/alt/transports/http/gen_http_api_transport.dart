@@ -37,19 +37,56 @@ class HttpApiTransport implements ApiTransport {
       body = request.binary;
     }
 
-    Future<http.Response> send() {
+    Future<http.StreamedResponse> send() {
       if (request.multipart != null) {
         final multipartRequest = http.MultipartRequest(request.method, url)..headers.addAll(headers);
         _appendMultipart(multipartRequest, request.multipart);
-        return _client.send(multipartRequest).then(http.Response.fromStream);
+        return _client.send(multipartRequest);
       }
       return _client.send(http.Request(request.method, url)
         ..headers.addAll(headers)
-        ..bodyBytes = body is List<int> ? body : utf8.encode(body?.toString() ?? '')).then(http.Response.fromStream);
+        ..bodyBytes = body is List<int> ? body : utf8.encode(body?.toString() ?? ''));
     }
 
     final timeout = request.options.timeout ?? config.timeout;
-    final response = timeout == null ? await send() : await send().timeout(timeout);
+    if (request.responseKind == 'byte_stream') {
+      final response = timeout == null ? await send() : await send().timeout(timeout);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        final errorBody = response.stream.transform(utf8.decoder).join();
+        final body = timeout == null ? await errorBody : await errorBody.timeout(timeout);
+        final payload = _decodeBody(body);
+        throw ApiError(
+          extractApiErrorPayload(payload, request.routeId, request.responseEnvelope),
+          routeId: request.routeId,
+          raw: payload,
+        );
+      }
+      if (_isJsonContent(response.headers)) {
+        final errorBody = response.stream.transform(utf8.decoder).join();
+        final body = timeout == null ? await errorBody : await errorBody.timeout(timeout);
+        final payload = _decodeBody(body);
+        _throwRawApiErrorIfPresent(payload, request);
+        return decodeApiResponse(
+          ApiStreamResponse(
+            body: Stream<List<int>>.value(utf8.encode(body)),
+            contentType: _contentType(response.headers, request.responseMediaType),
+            headers: response.headers,
+          ),
+          request,
+        );
+      }
+      return decodeApiResponse(
+        ApiStreamResponse(
+          body: response.stream,
+          contentType: _contentType(response.headers, request.responseMediaType),
+          headers: response.headers,
+        ),
+        request,
+      );
+    }
+
+    final buffered = send().then(http.Response.fromStream);
+    final response = timeout == null ? await buffered : await buffered.timeout(timeout);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final payload = _decodeBody(response.body);
       throw ApiError(
@@ -58,10 +95,11 @@ class HttpApiTransport implements ApiTransport {
         raw: payload,
       );
     }
-    final binaryPayload = request.responseKind == 'bytes' ||
-        request.responseKind == 'file' ||
-        request.responseKind == 'byte_stream' ||
-        request.responseKind == 'binary_schema';
+    final binaryPayload =
+        request.responseKind == 'bytes' || request.responseKind == 'file' || request.responseKind == 'binary_schema';
+    if ((request.responseKind == 'bytes' || request.responseKind == 'file') && _isJsonContent(response.headers)) {
+      _throwRawApiErrorIfPresent(_decodeBody(response.body), request);
+    }
     final payload = binaryPayload
         ? ApiBinaryPayload(Uint8List.fromList(response.bodyBytes), response.headers)
         : _decodeBody(response.body);
@@ -119,6 +157,53 @@ class HttpApiTransport implements ApiTransport {
       return url.replace(scheme: 'wss');
     }
     return url;
+  }
+}
+
+String _contentType(Map<String, String> headers, String defaultValue) {
+  for (final entry in headers.entries) {
+    if (entry.key.toLowerCase() == 'content-type') {
+      return entry.value;
+    }
+  }
+  return defaultValue;
+}
+
+bool _isJsonContent(Map<String, String> headers) {
+  final contentType = _contentType(headers, '').split(';').first.trim().toLowerCase();
+  return contentType == 'application/json' || contentType.endsWith('+json');
+}
+
+void _throwRawApiErrorIfPresent<T>(Object? payload, ApiRequest<T> request) {
+  final envelope = request.responseEnvelope;
+  if (envelope.kind == 'none') {
+    return;
+  }
+  final root = apiBlueprintReadObject(payload);
+  if (root.isEmpty) {
+    return;
+  }
+  if (envelope.kind == 'code_message_data') {
+    final code = apiBlueprintReadInt(root[envelope.fields.code]);
+    if (code == null || code == envelope.successCode) {
+      return;
+    }
+    throw ApiError(
+      extractApiErrorPayload(payload, request.routeId, envelope),
+      routeId: request.routeId,
+      raw: payload,
+    );
+  }
+  if (envelope.kind == 'ok_data_error') {
+    final ok = apiBlueprintReadBool(root[envelope.fields.ok]);
+    if (ok != false) {
+      return;
+    }
+    throw ApiError(
+      extractApiErrorPayload(payload, request.routeId, envelope),
+      routeId: request.routeId,
+      raw: payload,
+    );
   }
 }
 

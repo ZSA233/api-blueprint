@@ -441,6 +441,84 @@ class FormSubmitResponse:
 
 
 @dataclass(kw_only=True)
+class RequestOptionsQuery:
+    delay_ms: int | None = None
+
+    @classmethod
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
+        if not isinstance(value, Mapping):
+            raise TypeError("RequestOptionsQuery: expected object")
+        return cls._from_mapping(value, "RequestOptionsQuery")
+
+    @classmethod
+    def from_value(cls, value: object, path: str = "RequestOptionsQuery") -> Self:
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, Mapping):
+            raise TypeError(f"{path}: expected object")
+        return cls._from_mapping(value, path)
+
+    @classmethod
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
+        return cls(
+            delay_ms=_decode_optional(_decode_int, value.get("delay_ms", _MISSING), _field_path(path, "delay_ms")),
+        )
+
+    def to_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        if self.delay_ms is not None:
+            result["delay_ms"] = _api_to_json(self.delay_ms)
+
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        if self.delay_ms is not None:
+            result["delay_ms"] = _api_to_transport(self.delay_ms)
+
+        return result
+
+
+@dataclass(kw_only=True)
+class RequestOptionsResponse:
+    status: str
+    delay_ms: int
+
+    @classmethod
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
+        if not isinstance(value, Mapping):
+            raise TypeError("RequestOptionsResponse: expected object")
+        return cls._from_mapping(value, "RequestOptionsResponse")
+
+    @classmethod
+    def from_value(cls, value: object, path: str = "RequestOptionsResponse") -> Self:
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, Mapping):
+            raise TypeError(f"{path}: expected object")
+        return cls._from_mapping(value, path)
+
+    @classmethod
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
+        return cls(
+            status=_decode_required(_decode_str, value.get("status", _MISSING), _field_path(path, "status")),
+            delay_ms=_decode_required(_decode_int, value.get("delay_ms", _MISSING), _field_path(path, "delay_ms")),
+        )
+
+    def to_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["status"] = _api_to_json(self.status)
+        result["delay_ms"] = _api_to_json(self.delay_ms)
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["status"] = _api_to_transport(self.status)
+        result["delay_ms"] = _api_to_transport(self.delay_ms)
+        return result
+
+
+@dataclass(kw_only=True)
 class PutDemoQuery:
     arg1: str | None = None
     arg2: float | None = None

@@ -825,4 +825,3 @@ export function readAuditPacketItem(
     throw wrapBinaryField(path, error);
   }
 }
-

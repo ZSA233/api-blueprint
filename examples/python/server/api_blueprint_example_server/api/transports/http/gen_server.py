@@ -196,6 +196,25 @@ def create_router(
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.demo.post.formsubmit")
 
+    @router.api_route("/api/demo/request-options", methods=["GET"])
+    async def demo_request_options(request: Request) -> Any:
+        service = demo_service_impl
+        query_raw = _query_params(request)
+        try:
+            query = api_demo_types.RequestOptionsQuery.from_value(query_raw, "query")
+
+        except (TypeError, ValueError) as error:
+            return _bad_request_response(error)
+
+        try:
+            result = await service.request_options(
+                query=query,
+            )
+            return _wrap_response({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, result)
+
+        except ApiError as error:
+            return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.demo.get.requestoptions")
+
     @router.api_route("/api/demo/1put", methods=["PUT"])
     async def demo_put_demo(request: Request) -> Any:
         service = demo_service_impl
@@ -419,6 +438,46 @@ def create_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.media.get.downloaddynamic")
+
+    @router.api_route("/api/media/download-filename-edge", methods=["GET"])
+    async def media_media_download_filename_edge(request: Request) -> Any:
+        service = media_service_impl
+        try:
+            result = await service.media_download_filename_edge(
+            )
+            return _raw_response(
+                kind="file",
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                filename='fallback-report.xlsx',
+                result=result,
+            )
+
+        except ApiError as error:
+            return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.media.get.downloadfilenameedge")
+
+    @router.api_route("/api/media/error-frame", methods=["GET"])
+    async def media_media_error_frame(request: Request) -> Any:
+        service = media_service_impl
+        query_raw = _query_params(request)
+        try:
+            query = api_media_types.MediaErrorFrameQuery.from_value(query_raw, "query")
+
+        except (TypeError, ValueError) as error:
+            return _bad_request_response(error)
+
+        try:
+            result = await service.media_error_frame(
+                query=query,
+            )
+            return _raw_response(
+                kind="bytes",
+                content_type="image/jpeg",
+                filename=None,
+                result=result,
+            )
+
+        except ApiError as error:
+            return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.media.get.errorframe")
 
     @router.api_route("/api/media/mjpeg", methods=["GET"])
     async def media_media_mjpeg(request: Request) -> Any:

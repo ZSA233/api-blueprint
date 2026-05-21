@@ -6,13 +6,10 @@ import 'package:api_blueprint_example/src/alt/runtime/gen_api_errors.dart';
 import 'package:api_blueprint_example/src/alt/runtime/gen_api_types.dart';
 import 'gen_conflict_types.dart';
 
-
 class GenConflictApi {
   final ApiTransport transport;
 
   GenConflictApi(this.transport);
-
-
 
   Future<ConflictModel> default_({
     ConflictDefaultQuery? query,
@@ -32,6 +29,5 @@ class GenConflictApi {
       ),
     );
   }
-
 
 }

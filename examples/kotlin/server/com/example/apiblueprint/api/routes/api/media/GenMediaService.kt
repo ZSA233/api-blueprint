@@ -18,6 +18,13 @@ public interface GenMediaService {
     public suspend fun mediaDownloadDynamic(
     ): ApiRawResponse
 
+    public suspend fun mediaDownloadFilenameEdge(
+    ): ApiRawResponse
+
+    public suspend fun mediaErrorFrame(
+        query: MediaMediaErrorFrameQuery
+    ): ApiRawResponse
+
     public suspend fun mediaMjpeg(
     ): ApiStreamResponse
 

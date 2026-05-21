@@ -34,6 +34,7 @@ def test_kotlin_http_codegen_emits_multipart_raw_and_binary_response_contracts(t
     bp = Blueprint(root="/api")
     with bp.group("/media") as views:
         views.POST("/preview").REQ_MULTIPART(MediaUpload).RSP_BYTES(content_type="image/jpeg")
+        views.GET("/download").RSP_FILE(content_type="application/octet-stream", filename="sample-é.txt")
         views.GET("/mjpeg").RSP_BYTE_STREAM(content_type="multipart/x-mixed-replace")
         views.GET("/packet").RSP_BINARY_SCHEMA(_demo_packet_schema())
 
@@ -53,12 +54,28 @@ def test_kotlin_http_codegen_emits_multipart_raw_and_binary_response_contracts(t
     route_types = (client_dir / package_root / "routes/api/media/GenMediaTypes.kt").read_text(encoding="utf-8")
     route_client = (client_dir / package_root / "routes/api/media/GenMediaApi.kt").read_text(encoding="utf-8")
     transport = (client_dir / package_root / "transports/http/GenOkHttpApiTransport.kt").read_text(encoding="utf-8")
+    server_runtime = (server_dir / package_root / "runtime/GenApiServerResponse.kt").read_text(encoding="utf-8")
     ktor = (server_dir / package_root / "transports/ktor/api/media/GenMediaKtorRoutes.kt").read_text(
         encoding="utf-8"
     )
 
     assert "public data class ApiFilePart(" in runtime
     assert "public data class ApiRawResponse(" in runtime
+    assert "public class ApiStreamResponse(" in runtime
+    assert "body: InputStream" in runtime
+    assert "public constructor(" in runtime
+    assert "body: ByteArray," in runtime
+    assert "public fun readChunk(maxBytes: Int = API_STREAM_CHUNK_SIZE): ByteArray?" in runtime
+    assert "public fun readAllBytes(): ByteArray" in runtime
+    assert "public val responseKind: String = \"json\"" in runtime
+    assert "public val stream: ApiStreamResponse? = null" in runtime
+    assert "stream ?: ApiStreamResponse(" in runtime
+    assert "public class ApiStreamResponse(" in server_runtime
+    assert "body: InputStream" in server_runtime
+    assert "public fun readAllBytes(): ByteArray" in server_runtime
+    assert 'name.equals("filename*", ignoreCase = true)' in runtime
+    assert "decodeContentDispositionFilenameStar" in runtime
+    assert "percentDecode(value.substring(secondQuote + 1), charset)" in runtime
     assert "public val multipart: Any? = null" in runtime
     assert "public val responseDecoder: ((ApiResponse) -> T)? = null" in runtime
     assert "public class BinaryReader" in binary_runtime
@@ -66,11 +83,29 @@ def test_kotlin_http_codegen_emits_multipart_raw_and_binary_response_contracts(t
     assert "public val image: ApiFilePart" in runtime_types
     assert "multipartSerializer = MediaUpload.serializer()" in route_client
     assert 'responseDecoder = { response -> response.toRawResponse("image/jpeg", "") }' in route_client
+    assert 'responseDecoder = { response -> response.toRawResponse("application/octet-stream", "sample-é.txt") }' in route_client
+    assert 'responseKind = "byte_stream"' in route_client
+    assert 'responseDecoder = { response -> response.toStreamResponse("multipart/x-mixed-replace") }' in route_client
     assert "responseDecoder = { response -> DemoPacketWire.parse(response.body) }" in route_client
     assert "MultipartBody.Builder().setType(MultipartBody.FORM)" in transport
     assert "file.bytes.toRequestBody(file.contentType.toMediaType())" in transport
+    assert 'if (request.responseKind == "byte_stream")' in transport
+    assert "body = body.byteStream()" in transport
+    assert "isJsonContentType(contentType)" in transport
+    assert "decodeEnvelopeApiErrorPayload(responseText, request.routeId, request.responseEnvelope)" in runtime
+    assert "body = response.body?.bytes() ?: ByteArray(0)" in transport
+    assert "response.body?.string().orEmpty().toByteArray(Charsets.UTF_8)" in transport
+    stream_response_helper = transport.split("private fun streamResponse", 1)[1].split("@Suppress", 1)[0]
+    assert "body.byteStream()" in stream_response_helper
     assert "decodeMultipart(call, MediaUpload.serializer())" in ktor
     assert "JsonArray(bytes.map { JsonPrimitive(it.toInt()) })" in ktor
     assert "JsonPrimitive(it.toInt() and 0xFF)" not in ktor
     assert "respondRaw(call, result, \"bytes\", \"image/jpeg\", \"\")" in ktor
+    assert 'respondRaw(call, result, "file", "application/octet-stream", "sample-é.txt")' in ktor
+    assert "respondRaw(call, result, \"byte_stream\", \"multipart/x-mixed-replace\", \"\")" in ktor
+    assert "respondOutputStream(contentType = contentType(response.contentType))" in ktor
+    assert "val read = stream.body.read(buffer)" in ktor
+    assert "contentDispositionAttachment(effectiveFilename)" in ktor
+    assert "filename*=UTF-8''${percentEncodeUtf8(filename)}" in ktor
+    assert '"%%%02X".format(code)' in ktor
     assert "DemoPacketWire.toBinaryBody(result).toByteArray()" in ktor

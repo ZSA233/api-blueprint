@@ -10,7 +10,7 @@ import 'package:test/test.dart';
 void main() {
   final baseUrl = Platform.environment['API_BLUEPRINT_BASE_URL'];
   final selected = _scenarioSet(Platform.environment['API_BLUEPRINT_SCENARIOS'] ??
-      'rpc,binary,form,error,sse,websocket,naming,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,single-channel');
+      'rpc,binary,form,error,sse,websocket,naming,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel');
 
   if (baseUrl == null || baseUrl.isEmpty) {
     test('conformance requires API_BLUEPRINT_BASE_URL', () {
@@ -180,7 +180,67 @@ void main() {
       _expectBytesStartWith(dynamic.body, [0x50, 0x4b], 'media dynamic download');
 
       final stream = await client.media.mediaMjpeg();
-      expect(latin1.decode(stream.body), contains('--frame'));
+      expect(latin1.decode(await stream.readAllBytes()), contains('--frame'));
+    });
+  }
+
+  if (selected.contains('request-options')) {
+    test('request options merge headers and apply per-call timeout', () async {
+      final optionsClient = api.createHttpApiClient(
+        config: api.HttpApiConfig(
+          baseUrl: baseUrl,
+          defaultHeaders: const {
+            'x-options-default': 'default',
+            'x-options-token': 'default',
+          },
+          timeout: const Duration(milliseconds: 20),
+        ),
+      );
+      final ok = await optionsClient.demo.requestOptions(
+        query: const api.DemoRequestOptionsQuery(delayMs: 30),
+        options: const api.ApiRequestOptions(
+          headers: {'x-options-token': 'per-call'},
+          timeout: Duration(seconds: 1),
+        ),
+      );
+      expect(ok.status, 'ok');
+      expect(ok.delayMs, 30);
+
+      var timedOut = false;
+      try {
+        await optionsClient.demo.requestOptions(
+          query: const api.DemoRequestOptionsQuery(delayMs: 120),
+          options: const api.ApiRequestOptions(
+            headers: {'x-options-token': 'per-call'},
+            timeout: Duration(milliseconds: 10),
+          ),
+        );
+      } catch (_) {
+        timedOut = true;
+      }
+      expect(timedOut, isTrue);
+    });
+  }
+
+  if (selected.contains('media-filename-edge')) {
+    test('media filename edge parses filename star', () async {
+      final response = await client.media.mediaDownloadFilenameEdge();
+      expect(response.filename, '媒体报告.xlsx');
+      _expectBytesStartWith(response.body, [0x50, 0x4b], 'media filename edge');
+    });
+  }
+
+  if (selected.contains('media-error')) {
+    test('raw media route preserves typed error envelope', () async {
+      final ok = await client.media.mediaErrorFrame(query: const api.MediaMediaErrorFrameQuery(mode: 'ok'));
+      expect(ok.contentType, startsWith('image/jpeg'));
+      _expectBytesStartWith(ok.body, [0xff, 0xd8], 'media error success');
+
+      final rateLimited = await _expectApiError(
+        () => client.media.mediaErrorFrame(query: const api.MediaMediaErrorFrameQuery(mode: 'rate_limit')),
+        routeId: 'api.media.get.errorframe',
+      );
+      expect(rateLimited.payload.code, api.ApiErrorCode.rateLimited);
     });
   }
 
@@ -386,11 +446,14 @@ Future<String> _rawHttp(
   }
 }
 
-Future<api.ApiError> _expectApiError(Future<Object?> Function() action) async {
+Future<api.ApiError> _expectApiError(
+  Future<Object?> Function() action, {
+  String routeId = 'api.demo.get.errordemo',
+}) async {
   try {
     await action();
   } on api.ApiError catch (error) {
-    expect(error.routeId, 'api.demo.get.errordemo');
+    expect(error.routeId, routeId);
     return error;
   }
   fail('expected ApiError');

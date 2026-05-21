@@ -18,4 +18,3 @@ export enum KeywordEnum {
   DEFAULT = "default",
   CLASS = "class",
 }
-

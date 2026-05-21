@@ -6,7 +6,6 @@ import 'package:api_blueprint_example/src/alt/runtime/gen_api_types.dart';
 import 'package:api_blueprint_example/src/alt/runtime/gen_api_transport.dart';
 import 'package:api_blueprint_example/src/alt/runtime/api_json_codecs.dart';
 
-
 class ConflictDefaultQuery {
   final String? class_;
 
@@ -44,6 +43,3 @@ class ConflictDefaultQuery {
     };
   }
 }
-
-
-

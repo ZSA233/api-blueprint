@@ -6,13 +6,10 @@ import 'package:api_blueprint_example/src/api/runtime/gen_api_errors.dart';
 import 'package:api_blueprint_example/src/api/runtime/gen_api_types.dart';
 import 'gen_media_types.dart';
 
-
 class GenMediaApi {
   final ApiTransport transport;
 
   GenMediaApi(this.transport);
-
-
 
   Future<ApiRawResponse> mediaPreview({
     MediaPreviewRequest? multipart,
@@ -34,9 +31,6 @@ class GenMediaApi {
     );
   }
 
-
-
-
   Future<ApiRawResponse> mediaFrame({
     ApiRequestOptions options = const ApiRequestOptions(),
   }) {
@@ -54,9 +48,6 @@ class GenMediaApi {
       ),
     );
   }
-
-
-
 
   Future<ApiRawResponse> mediaDownload({
     ApiRequestOptions options = const ApiRequestOptions(),
@@ -76,9 +67,6 @@ class GenMediaApi {
     );
   }
 
-
-
-
   Future<ApiRawResponse> mediaDownloadDynamic({
     ApiRequestOptions options = const ApiRequestOptions(),
   }) {
@@ -97,8 +85,42 @@ class GenMediaApi {
     );
   }
 
+  Future<ApiRawResponse> mediaDownloadFilenameEdge({
+    ApiRequestOptions options = const ApiRequestOptions(),
+  }) {
+    return transport.request(
+      ApiRequest<ApiRawResponse>(
+        routeId: "api.media.get.downloadfilenameedge",
+        method: "GET",
+        path: "/api/media/download-filename-edge",
+        query: const <String, String?>{},
+        options: options,
+        responseMediaType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        responseKind: "file",
+        responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+        decode: (value) => apiBlueprintRawResponse(value, defaultContentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", defaultFilename: "fallback-report.xlsx"),
+      ),
+    );
+  }
 
-
+  Future<ApiRawResponse> mediaErrorFrame({
+    MediaMediaErrorFrameQuery? query,
+    ApiRequestOptions options = const ApiRequestOptions(),
+  }) {
+    return transport.request(
+      ApiRequest<ApiRawResponse>(
+        routeId: "api.media.get.errorframe",
+        method: "GET",
+        path: "/api/media/error-frame",
+        query: query?.toQueryMap() ?? const <String, String?>{},
+        options: options,
+        responseMediaType: "image/jpeg",
+        responseKind: "bytes",
+        responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+        decode: (value) => apiBlueprintRawResponse(value, defaultContentType: "image/jpeg", defaultFilename: ""),
+      ),
+    );
+  }
 
   Future<ApiStreamResponse> mediaMjpeg({
     ApiRequestOptions options = const ApiRequestOptions(),
@@ -117,6 +139,5 @@ class GenMediaApi {
       ),
     );
   }
-
 
 }

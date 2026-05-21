@@ -10,8 +10,14 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import com.example.apiblueprint.alt.runtime.binary.ApiBinaryBody
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.Closeable
+import java.io.InputStream
 import java.nio.charset.Charset
 import kotlin.time.Duration
+
+private const val API_STREAM_CHUNK_SIZE: Int = 8192
 
 public data class ApiRequestOptions(
     public val headers: Map<String, String> = emptyMap(),
@@ -32,6 +38,7 @@ public data class ApiRequest<T>(
     public val multipartSerializer: SerializationStrategy<*>? = null,
     public val binary: ApiBinaryBody? = null,
     public val responseSerializer: KSerializer<*>,
+    public val responseKind: String = "json",
     public val responseMediaType: String = "application/json",
     public val responseEnvelope: ApiResponseEnvelope = ApiResponseEnvelope.none(),
     public val responseDecoder: ((ApiResponse) -> T)? = null,
@@ -62,22 +69,19 @@ public data class ApiResponse(
     public val statusCode: Int,
     public val body: ByteArray,
     public val headers: Map<String, String> = emptyMap(),
+    public val stream: ApiStreamResponse? = null,
 ) {
     public fun bodyText(charset: Charset = Charsets.UTF_8): String = body.toString(charset)
 
     public fun contentType(defaultValue: String = "application/octet-stream"): String =
         headers.entries.firstOrNull { it.key.equals("content-type", ignoreCase = true) }?.value ?: defaultValue
 
-    public fun filename(defaultValue: String = ""): String =
-        headers.entries.firstOrNull { it.key.equals("content-disposition", ignoreCase = true) }
+    public fun filename(defaultValue: String = ""): String {
+        val disposition = headers.entries.firstOrNull { it.key.equals("content-disposition", ignoreCase = true) }
             ?.value
-            ?.split(";")
-            ?.firstOrNull { it.trim().startsWith("filename=", ignoreCase = true) }
-            ?.substringAfter("=")
-            ?.trim()
-            ?.trim('"')
-            ?.ifBlank { defaultValue }
-            ?: defaultValue
+            ?: return defaultValue
+        return contentDispositionFilename(disposition)?.ifBlank { defaultValue } ?: defaultValue
+    }
 }
 
 @Serializable
@@ -94,11 +98,54 @@ public data class ApiRawResponse(
     public val headers: Map<String, String> = emptyMap(),
 )
 
-public data class ApiStreamResponse(
-    public val body: ByteArray,
-    public val contentType: String = "application/octet-stream",
-    public val headers: Map<String, String> = emptyMap(),
-)
+public class ApiStreamResponse(
+    body: InputStream,
+    contentType: String = "application/octet-stream",
+    headers: Map<String, String> = emptyMap(),
+    private val closeAction: () -> Unit = {},
+) : Closeable {
+    public constructor(
+        body: ByteArray,
+        contentType: String = "application/octet-stream",
+        headers: Map<String, String> = emptyMap(),
+    ) : this(ByteArrayInputStream(body), contentType, headers)
+
+    public val body: InputStream = body
+    public val contentType: String = contentType.ifBlank { "application/octet-stream" }
+    public val headers: Map<String, String> = headers.toMap()
+    private var closed: Boolean = false
+
+    public fun readChunk(maxBytes: Int = API_STREAM_CHUNK_SIZE): ByteArray? {
+        require(maxBytes > 0) { "maxBytes must be greater than zero" }
+        val buffer = ByteArray(maxBytes)
+        val read = body.read(buffer)
+        if (read < 0) {
+            return null
+        }
+        return if (read == buffer.size) buffer else buffer.copyOf(read)
+    }
+
+    public fun readAllBytes(): ByteArray {
+        val output = ByteArrayOutputStream()
+        while (true) {
+            val chunk = readChunk() ?: break
+            output.write(chunk, 0, chunk.size)
+        }
+        return output.toByteArray()
+    }
+
+    public override fun close() {
+        if (closed) {
+            return
+        }
+        closed = true
+        try {
+            body.close()
+        } finally {
+            closeAction()
+        }
+    }
+}
 
 public fun ApiResponse.toRawResponse(defaultContentType: String, defaultFilename: String = ""): ApiRawResponse =
     ApiRawResponse(
@@ -109,11 +156,69 @@ public fun ApiResponse.toRawResponse(defaultContentType: String, defaultFilename
     )
 
 public fun ApiResponse.toStreamResponse(defaultContentType: String): ApiStreamResponse =
-    ApiStreamResponse(
+    stream ?: ApiStreamResponse(
         body = body,
         contentType = contentType(defaultContentType),
         headers = headers,
     )
+
+private fun contentDispositionFilename(disposition: String): String? {
+    val parts = disposition.split(";")
+    for (part in parts) {
+        val trimmed = part.trim()
+        val name = trimmed.substringBefore("=", "").trim()
+        if (!name.equals("filename*", ignoreCase = true)) {
+            continue
+        }
+        val value = trimmed.substringAfter("=", "").trim().trim('"')
+        val decoded = decodeContentDispositionFilenameStar(value)
+        if (decoded.isNotBlank()) {
+            return decoded
+        }
+    }
+    for (part in parts) {
+        val trimmed = part.trim()
+        val name = trimmed.substringBefore("=", "").trim()
+        if (!name.equals("filename", ignoreCase = true)) {
+            continue
+        }
+        val value = trimmed.substringAfter("=", "").trim().trim('"')
+        if (value.isNotBlank()) {
+            return value
+        }
+    }
+    return null
+}
+
+private fun decodeContentDispositionFilenameStar(value: String): String {
+    val firstQuote = value.indexOf('\'')
+    val secondQuote = if (firstQuote >= 0) value.indexOf('\'', firstQuote + 1) else -1
+    if (firstQuote < 0 || secondQuote < 0) {
+        return percentDecode(value, Charsets.UTF_8)
+    }
+    val charsetName = value.substring(0, firstQuote).ifBlank { "UTF-8" }
+    val charset = runCatching { Charset.forName(charsetName) }.getOrNull() ?: Charsets.UTF_8
+    return percentDecode(value.substring(secondQuote + 1), charset)
+}
+
+private fun percentDecode(value: String, charset: Charset): String {
+    val bytes = ByteArrayOutputStream()
+    var index = 0
+    while (index < value.length) {
+        if (value[index] == '%' && index + 2 < value.length) {
+            val decoded = value.substring(index + 1, index + 3).toIntOrNull(16)
+            if (decoded != null) {
+                bytes.write(decoded)
+                index += 3
+                continue
+            }
+        }
+        val encoded = value[index].toString().toByteArray(charset)
+        bytes.write(encoded, 0, encoded.size)
+        index += 1
+    }
+    return bytes.toByteArray().toString(charset)
+}
 
 @Serializable
 public data class SocketCloseInfo(
@@ -173,6 +278,11 @@ public suspend fun <T> ApiTransport.request(request: ApiRequest<T>): T {
         }
         throw ApiException(response.statusCode, responseText)
     }
+    if (request.responseKind in setOf("bytes", "file", "byte_stream") && response.isJsonContent()) {
+        decodeEnvelopeApiErrorPayload(responseText, request.routeId, request.responseEnvelope)?.let {
+            throw ApiError(it, routeId = request.routeId, rawBody = responseText)
+        }
+    }
     request.responseDecoder?.let { decoder ->
         return decoder(response)
     }
@@ -187,6 +297,11 @@ public suspend fun <T> ApiTransport.request(request: ApiRequest<T>): T {
     }
     @Suppress("UNCHECKED_CAST")
     return ApiJson.decodeFromString(request.responseSerializer as KSerializer<T>, body)
+}
+
+private fun ApiResponse.isJsonContent(): Boolean {
+    val value = contentType("").substringBefore(";").trim().lowercase()
+    return value == "application/json" || value.endsWith("+json")
 }
 
 private fun unwrapResponseEnvelope(body: String, envelope: ApiResponseEnvelope, routeId: String): String {
@@ -218,6 +333,26 @@ private fun unwrapResponseEnvelope(body: String, envelope: ApiResponseEnvelope, 
         )
     }
     throw ApiException(200, "Unsupported response envelope: ${envelope.kind}")
+}
+
+private fun decodeEnvelopeApiErrorPayload(body: String, routeId: String, envelope: ApiResponseEnvelope): ApiErrorPayload? {
+    val root = runCatching { ApiJson.parseToJsonElement(body).jsonObject }.getOrNull() ?: return null
+    if (envelope.kind == "code_message_data") {
+        val code = root[envelope.fields.code]?.jsonPrimitive?.intOrNull ?: return null
+        if (code == envelope.successCode) {
+            return null
+        }
+        return codeMessageEnvelopePayload(root, envelope, routeId)
+    }
+    if (envelope.kind == "ok_data_error") {
+        val ok = root[envelope.fields.ok]?.jsonPrimitive?.contentOrNull ?: return null
+        if (ok == "true") {
+            return null
+        }
+        val errorNode = runCatching { root[envelope.fields.error]?.jsonObject }.getOrNull()
+        return apiErrorPayloadFromNode(errorNode ?: JsonObject(emptyMap()), routeId)
+    }
+    return null
 }
 
 private fun decodeApiErrorPayload(body: String, routeId: String, envelope: ApiResponseEnvelope): ApiErrorPayload? {

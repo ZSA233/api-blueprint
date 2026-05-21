@@ -9,4 +9,3 @@ export interface GreetQuery {
   /** Name to greet */
   name?: string;
 }
-

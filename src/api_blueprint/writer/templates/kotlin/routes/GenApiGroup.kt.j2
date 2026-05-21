@@ -55,6 +55,7 @@ public open class Gen{{ group.class_name }} internal constructor(
                 binary = {% if route.has_binary_schema %}{{ route.binary_wire_type }}.toBinaryBody(binary){% else %}binary{% endif %},
 {%- endif %}
                 responseSerializer = {{ route.response_serializer_expr }},
+                responseKind = "{{ route.response_kind }}",
                 responseMediaType = "{{ route.response_media_type }}",
                 responseEnvelope = {{ route.response_envelope_literal | safe }},
                 responseDecoder = {{ route.response_decoder_expr | safe }},
@@ -81,6 +82,7 @@ public open class Gen{{ group.class_name }} internal constructor(
                 options = options,
                 binary = binary,
                 responseSerializer = {{ route.response_serializer_expr }},
+                responseKind = "{{ route.response_kind }}",
                 responseMediaType = "{{ route.response_media_type }}",
                 responseEnvelope = {{ route.response_envelope_literal | safe }},
                 responseDecoder = {{ route.response_decoder_expr | safe }},

@@ -110,7 +110,7 @@ func (transport *HttpTransport) Do(ctx context.Context, request runtime.Request,
 		return nil
 	}
 	if request.ResponseKind == runtime.ResponseBytes || request.ResponseKind == runtime.ResponseFile {
-		return decodeRawResponse(httpResponse, response)
+		return decodeRawResponse(httpResponse, request, response)
 	}
 	if request.ResponseKind == runtime.ResponseBinarySchema {
 		return decodeBinarySchemaResponse(httpResponse.Body, response)
@@ -254,7 +254,7 @@ func escapeQuotes(value string) string {
 	return strings.NewReplacer("\\", "\\\\", `"`, "\\\"").Replace(value)
 }
 
-func decodeRawResponse(httpResponse *nethttp.Response, response any) error {
+func decodeRawResponse(httpResponse *nethttp.Response, request runtime.Request, response any) error {
 	target, ok := response.(*runtime.RawResponse)
 	if !ok {
 		return fmt.Errorf("api-blueprint http transport expected *runtime.RawResponse target, got %T", response)
@@ -262,6 +262,11 @@ func decodeRawResponse(httpResponse *nethttp.Response, response any) error {
 	data, err := io.ReadAll(httpResponse.Body)
 	if err != nil {
 		return err
+	}
+	if isJSONResponse(httpResponse) {
+		if apiErr := decodeEnvelopeAPIError(data, request.RouteID, request.ResponseEnvelope); apiErr != nil {
+			return apiErr
+		}
 	}
 	*target = runtime.RawResponse{
 		Body:               data,
@@ -284,6 +289,11 @@ func decodeBinarySchemaResponse(reader io.Reader, response any) error {
 
 func contentTypeHeader(response *nethttp.Response) string {
 	return strings.TrimSpace(strings.Split(response.Header.Get("Content-Type"), ";")[0])
+}
+
+func isJSONResponse(response *nethttp.Response) bool {
+	contentType := strings.ToLower(contentTypeHeader(response))
+	return contentType == "application/json" || strings.HasSuffix(contentType, "+json")
 }
 
 func filenameFromDisposition(disposition string) string {
@@ -338,20 +348,8 @@ func decodeEnvelopeData(object map[string]json.RawMessage, field string, respons
 }
 
 func decodeHTTPApiError(data []byte, routeID string, envelope runtime.ApiResponseEnvelope) error {
-	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err == nil && object != nil {
-		switch envelope.Kind {
-		case "code_message_data":
-			payload := payloadFromCodeMessageEnvelope(object, envelope)
-			if payload.Code != 0 || payload.ID != "" || payload.Message != "" {
-				return newApiErrorFromPayload(payload, routeID, string(data))
-			}
-		case "ok_data_error":
-			payload := payloadFromNestedError(object, fieldName(envelope.Fields.Error, "error"))
-			if payload.Code != 0 || payload.ID != "" || payload.Message != "" {
-				return newApiErrorFromPayload(payload, routeID, string(data))
-			}
-		}
+	if apiErr := decodeEnvelopeAPIError(data, routeID, envelope); apiErr != nil {
+		return apiErr
 	}
 	var genericEnvelope struct {
 		Error runtime.ApiErrorPayload `json:"error,omitempty"`
@@ -362,6 +360,33 @@ func decodeHTTPApiError(data []byte, routeID string, envelope runtime.ApiRespons
 	var payload runtime.ApiErrorPayload
 	if err := json.Unmarshal(data, &payload); err == nil && (payload.Code != 0 || payload.ID != "") {
 		return newApiErrorFromPayload(payload, routeID, string(data))
+	}
+	return nil
+}
+
+func decodeEnvelopeAPIError(data []byte, routeID string, envelope runtime.ApiResponseEnvelope) error {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err == nil && object != nil {
+		switch envelope.Kind {
+		case "code_message_data":
+			code, hasCode := decodeEnvelopeCode(object, fieldName(envelope.Fields.Code, "code"))
+			if !hasCode || code == envelope.SuccessCode {
+				return nil
+			}
+			payload := payloadFromCodeMessageEnvelope(object, envelope)
+			if payload.Code != 0 || payload.ID != "" || payload.Message != "" {
+				return newApiErrorFromPayload(payload, routeID, string(data))
+			}
+		case "ok_data_error":
+			ok, hasOk := decodeEnvelopeBool(object, fieldName(envelope.Fields.Ok, "ok"))
+			if !hasOk || ok {
+				return nil
+			}
+			payload := payloadFromNestedError(object, fieldName(envelope.Fields.Error, "error"))
+			if payload.Code != 0 || payload.ID != "" || payload.Message != "" {
+				return newApiErrorFromPayload(payload, routeID, string(data))
+			}
+		}
 	}
 	return nil
 }

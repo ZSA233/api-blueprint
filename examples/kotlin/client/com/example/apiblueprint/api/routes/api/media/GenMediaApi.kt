@@ -22,6 +22,7 @@ public open class GenMediaApi internal constructor(
                 multipart = multipart,
                 multipartSerializer = MediaPreviewRequest.serializer(),
                 responseSerializer = Unit.serializer(),
+                responseKind = "bytes",
                 responseMediaType = "image/jpeg",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
                 responseDecoder = { response -> response.toRawResponse("image/jpeg", "") },
@@ -39,6 +40,7 @@ public open class GenMediaApi internal constructor(
                 path = "/api/media/frame",
                 options = options,
                 responseSerializer = Unit.serializer(),
+                responseKind = "bytes",
                 responseMediaType = "image/jpeg",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
                 responseDecoder = { response -> response.toRawResponse("image/jpeg", "") },
@@ -56,6 +58,7 @@ public open class GenMediaApi internal constructor(
                 path = "/api/media/download",
                 options = options,
                 responseSerializer = Unit.serializer(),
+                responseKind = "file",
                 responseMediaType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
                 responseDecoder = { response -> response.toRawResponse("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "media-report.xlsx") },
@@ -73,9 +76,48 @@ public open class GenMediaApi internal constructor(
                 path = "/api/media/download-dynamic",
                 options = options,
                 responseSerializer = Unit.serializer(),
+                responseKind = "file",
                 responseMediaType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
                 responseDecoder = { response -> response.toRawResponse("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "media-report.xlsx") },
+            )
+        )
+    }
+
+    public open suspend fun mediaDownloadFilenameEdge(
+        options: ApiRequestOptions = ApiRequestOptions(),
+    ): ApiRawResponse {
+        return transport.request(
+            ApiRequest(
+                routeId = "api.media.get.downloadfilenameedge",
+                method = "GET",
+                path = "/api/media/download-filename-edge",
+                options = options,
+                responseSerializer = Unit.serializer(),
+                responseKind = "file",
+                responseMediaType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = { response -> response.toRawResponse("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "fallback-report.xlsx") },
+            )
+        )
+    }
+
+    public open suspend fun mediaErrorFrame(
+        query: MediaMediaErrorFrameQuery,
+        options: ApiRequestOptions = ApiRequestOptions(),
+    ): ApiRawResponse {
+        return transport.request(
+            ApiRequest(
+                routeId = "api.media.get.errorframe",
+                method = "GET",
+                path = "/api/media/error-frame",
+                query = query.toQueryMap(),
+                options = options,
+                responseSerializer = Unit.serializer(),
+                responseKind = "bytes",
+                responseMediaType = "image/jpeg",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = { response -> response.toRawResponse("image/jpeg", "") },
             )
         )
     }
@@ -90,10 +132,15 @@ public open class GenMediaApi internal constructor(
                 path = "/api/media/mjpeg",
                 options = options,
                 responseSerializer = Unit.serializer(),
+                responseKind = "byte_stream",
                 responseMediaType = "multipart/x-mixed-replace; boundary=frame",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
                 responseDecoder = { response -> response.toStreamResponse("multipart/x-mixed-replace; boundary=frame") },
             )
         )
     }
+
+    private fun MediaMediaErrorFrameQuery.toQueryMap(): Map<String, String?> = mapOf(
+        "mode" to mode?.toString()
+    )
 }

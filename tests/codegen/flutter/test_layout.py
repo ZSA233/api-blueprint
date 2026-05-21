@@ -3,6 +3,29 @@ from __future__ import annotations
 from .helpers import *
 
 
+def _flutter_format_violations(output_dir: Path) -> list[str]:
+    violations: list[str] = []
+    for path in sorted(output_dir.rglob("*.dart")):
+        relative_path = path.relative_to(output_dir).as_posix()
+        text = path.read_text(encoding="utf-8")
+        for line_number, line in enumerate(text.splitlines(), 1):
+            if line.rstrip(" \t") != line:
+                violations.append(f"{relative_path}:{line_number}: trailing whitespace")
+        if text.endswith("\n\n"):
+            violations.append(f"{relative_path}: trailing blank line at EOF")
+        blank_run = 0
+        max_blank_run = 0
+        for line in text.splitlines():
+            if line.strip():
+                blank_run = 0
+            else:
+                blank_run += 1
+                max_blank_run = max(max_blank_run, blank_run)
+        if max_blank_run >= 3:
+            violations.append(f"{relative_path}: {max_blank_run} consecutive blank lines")
+    return violations
+
+
 def test_flutter_writer_generates_dart_package_runtime_routes_transport_and_preserved_files(tmp_path: Path) -> None:
     class CommonErr(Model):
         TOKEN_EXPIRE = Error(
@@ -82,6 +105,8 @@ def test_flutter_writer_generates_dart_package_runtime_routes_transport_and_pres
         http_connection,
     ):
         assert generated_text.startswith(FLUTTER_CLIENT_GENERATED_HEADER)
+
+    assert _flutter_format_violations(out_dir) == []
 
     assert (out_dir / "pubspec.yaml").is_file()
     assert not public_entry.startswith(FLUTTER_CLIENT_GENERATED_HEADER)

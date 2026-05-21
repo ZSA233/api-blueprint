@@ -39,3 +39,4 @@ def test_golang_client_codegen_emits_multipart_and_raw_response_contracts(tmp_pa
     ) in route_client
     assert "func encodeMultipart" in transport
     assert "func decodeRawResponse" in transport
+    assert "decodeEnvelopeAPIError(data, request.RouteID, request.ResponseEnvelope)" in transport

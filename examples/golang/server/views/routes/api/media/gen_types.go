@@ -61,6 +61,36 @@ type CTX_MediaDownloadDynamic = providers.Context[
 	providers.RawResponse,
 ]
 
+type REQ_MediaDownloadFilenameEdge = providers.REQ[
+	any,
+	any,
+]
+
+type RSP_MediaDownloadFilenameEdge = providers.RawResponse
+
+type CTX_MediaDownloadFilenameEdge = providers.Context[
+	any,
+	any,
+	providers.RawResponse,
+]
+
+type REQ_MediaErrorFrame_QUERY struct {
+	Mode string `json:"mode" xml:"mode" form:"mode"`
+}
+
+type REQ_MediaErrorFrame = providers.REQ[
+	REQ_MediaErrorFrame_QUERY,
+	any,
+]
+
+type RSP_MediaErrorFrame = providers.RawResponse
+
+type CTX_MediaErrorFrame = providers.Context[
+	REQ_MediaErrorFrame_QUERY,
+	any,
+	providers.RawResponse,
+]
+
 type REQ_MediaMjpeg = providers.REQ[
 	any,
 	any,

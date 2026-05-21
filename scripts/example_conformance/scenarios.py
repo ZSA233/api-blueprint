@@ -121,6 +121,27 @@ def scenario_registry() -> dict[str, Scenario]:
             ),
             description="multipart upload and raw bytes/file/byte stream responses",
         ),
+        "request-options": Scenario(
+            name="request-options",
+            categories=("request-options", "header", "timeout"),
+            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            route_ids=("api.demo.get.requestoptions",),
+            description="generated client per-call headers and timeout options",
+        ),
+        "media-filename-edge": Scenario(
+            name="media-filename-edge",
+            categories=("raw-response", "filename"),
+            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            route_ids=("api.media.get.downloadfilenameedge",),
+            description="raw file response filename* parsing",
+        ),
+        "media-error": Scenario(
+            name="media-error",
+            categories=("raw-response", "typed-error"),
+            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            route_ids=("api.media.get.errorframe",),
+            description="raw media success with typed JSON envelope errors",
+        ),
         "error": Scenario(
             name="error",
             categories=("typed-error", "envelope"),
@@ -256,8 +277,10 @@ def server_supports_scenario(server: str, scenario: Scenario) -> bool:
         return capability.supports_form
     if scenario.name in {"binary", "audit-binary", "binary-response"}:
         return capability.supports_binary
-    if scenario.name == "media":
+    if scenario.name in {"media", "media-filename-edge", "media-error"}:
         return capability.supports_media
+    if scenario.name == "request-options":
+        return capability.supports_rpc
     if scenario.name == "error":
         return capability.supports_typed_error
     if scenario.name == "sse":

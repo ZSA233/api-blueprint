@@ -157,6 +157,13 @@ export interface MediaPreviewRequest {
   image: ApiFilePart;
 }
 
+export interface RequestOptionsResponse {
+  /** request options status */
+  status: string;
+  /** applied delay in milliseconds */
+  delay_ms: number;
+}
+
 export enum StatusEnum {
   PENDING = 1,
   RUNNING = 2,
@@ -198,4 +205,3 @@ export interface Uint64 {
 
   [key: string]: never;
 }
-

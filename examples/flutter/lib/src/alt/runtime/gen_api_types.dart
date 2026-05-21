@@ -5,7 +5,6 @@ import 'api_json_codecs.dart';
 import 'gen_api_errors.dart';
 import 'gen_api_transport.dart';
 
-
 class ConflictModel {
   final String? default_;
   final String? class_;
@@ -54,8 +53,6 @@ class ConflictModel {
   }
 }
 
-
-
 enum KeywordEnum {
   default_("default"),
   class_("class"),
@@ -73,5 +70,3 @@ KeywordEnum? KeywordEnumFromJson(Object? value) {
   }
   return null;
 }
-
-

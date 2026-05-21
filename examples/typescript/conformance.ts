@@ -246,6 +246,60 @@ async function checkMedia(baseUrl: string): Promise<void> {
   }
 }
 
+async function checkRequestOptions(baseUrl: string): Promise<void> {
+  const { demoClient } = createApiClients({
+    baseUrl,
+    defaultHeaders: {
+      "x-options-default": "default",
+      "x-options-token": "default",
+    },
+    timeoutMs: 20,
+  });
+  const ok = await demoClient.requestOptions(
+    { query: { delay_ms: 30 } },
+    { headers: { "x-options-token": "per-call" }, timeoutMs: 1000 },
+  );
+  if (ok.status !== "ok" || ok.delay_ms !== 30) {
+    throw new Error(`request options=${JSON.stringify(ok)}`);
+  }
+
+  let timedOut = false;
+  try {
+    await demoClient.requestOptions(
+      { query: { delay_ms: 120 } },
+      { headers: { "x-options-token": "per-call" }, timeoutMs: 10 },
+    );
+  } catch {
+    timedOut = true;
+  }
+  if (!timedOut) {
+    throw new Error("request options short timeout did not fail");
+  }
+}
+
+async function checkMediaFilenameEdge(baseUrl: string): Promise<void> {
+  const { mediaClient } = createApiClients({ baseUrl });
+  const response = await mediaClient.mediaDownloadFilenameEdge();
+  if (response.filename !== "媒体报告.xlsx") {
+    throw new Error(`media filename edge=${response.filename}`);
+  }
+  await assertBlobStartsWith(response.body, [0x50, 0x4b], "media filename edge");
+}
+
+async function checkMediaError(baseUrl: string): Promise<void> {
+  const { mediaClient } = createApiClients({ baseUrl });
+  const ok = await mediaClient.mediaErrorFrame({ query: { mode: "ok" } });
+  await assertBlobStartsWith(ok.body, [0xff, 0xd8], "media error success");
+
+  const rateLimited = await expectApiError(
+    () => mediaClient.mediaErrorFrame({ query: { mode: "rate_limit" } }),
+    "api.media.get.errorframe",
+  );
+  if (!rateLimited.is(ApiErrors.DemoErr.RateLimited)) {
+    throw new Error(`media error id=${rateLimited.id} code=${rateLimited.code}`);
+  }
+}
+
 async function callBinary(baseUrl: string, trace: string, binary: DemoPacket | ApiBinaryBody): Promise<void> {
   const { binaryClient } = createApiClients({ baseUrl });
   const response = isApiBinaryBody(binary)
@@ -361,14 +415,14 @@ async function checkNaming(baseUrl: string): Promise<void> {
   }
 }
 
-async function expectApiError(action: () => Promise<unknown>): Promise<ApiError> {
+async function expectApiError(action: () => Promise<unknown>, routeId = "api.demo.get.errordemo"): Promise<ApiError> {
   try {
     await action();
   } catch (error) {
     if (!isApiError(error)) {
       throw new Error(`expected ApiError, got ${String(error)}`);
     }
-    if (error.routeId !== "api.demo.get.errordemo") {
+    if (error.routeId !== routeId) {
       throw new Error(`ApiError routeId=${error.routeId}`);
     }
     return error;
@@ -434,7 +488,7 @@ async function main(): Promise<void> {
   if (!baseUrl) {
     throw new Error("base URL argument is required");
   }
-  const selected = scenarioSet(process.argv[3] || "rpc,binary,form,error,sse,websocket,naming,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,single-channel");
+  const selected = scenarioSet(process.argv[3] || "rpc,binary,form,error,sse,websocket,naming,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel");
   if (selected.has("rpc")) {
     await checkRPC(baseUrl);
   }
@@ -476,6 +530,15 @@ async function main(): Promise<void> {
   }
   if (selected.has("media")) {
     await checkMedia(baseUrl);
+  }
+  if (selected.has("request-options")) {
+    await checkRequestOptions(baseUrl);
+  }
+  if (selected.has("media-filename-edge")) {
+    await checkMediaFilenameEdge(baseUrl);
+  }
+  if (selected.has("media-error")) {
+    await checkMediaError(baseUrl);
   }
   if (selected.has("error")) {
     await checkTypedErrors(baseUrl);

@@ -43,15 +43,14 @@ export class {{ client_class }} extends BaseClient {
 
 {% endif %}
   async {{ route.method_name }}(
-    request: {
+    request: {% if route.query_type_expr or route.has_body %}{
 {% if route.query_type_expr %}      query?: {{ route.query_type_expr }};
 {% endif %}{% if route.json_type_expr %}      json?: {{ route.json_type_expr }};
 {% endif %}{% if route.form_type_expr %}      form?: {{ route.form_type_expr }};
 {% endif %}{% if route.multipart_type_expr %}      multipart?: {{ route.multipart_type_expr }};
 {% endif %}{% if route.has_binary_schema %}      binary: {{ route.binary_type_expr }} | ApiBinaryBody;
 {% elif route.has_body %}      body?: RequestInit["body"];
-{% endif %}
-    }{% if not route.has_binary_schema %} = {}{% endif %},
+{% endif %}    }{% else %}{}{% endif %}{% if not route.has_binary_schema %} = {}{% endif %},
     options?: ApiRequestOptions,
   ): Promise<{{ route.response_type_expr }}> {
     {% if route.response_kind == "binary_schema" and route.response_binary_schema %}const payload = await this.request<ArrayBuffer>({% else %}return this.request<{{ route.response_type_expr }}>({% endif %}{

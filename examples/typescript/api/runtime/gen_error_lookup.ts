@@ -98,6 +98,10 @@ const RouteApiErrorsByCode = {
     "-1": ApiErrorsByID["CommonErr.UNKNOWN"],
     "55555": ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
   },
+  "api.demo.get.requestoptions": {
+    "-1": ApiErrorsByID["CommonErr.UNKNOWN"],
+    "55555": ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
+  },
   "api.demo.put.z1put": {
     "-1": ApiErrorsByID["CommonErr.UNKNOWN"],
     "55555": ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
@@ -147,6 +151,16 @@ const RouteApiErrorsByCode = {
   "api.media.get.downloaddynamic": {
     "-1": ApiErrorsByID["CommonErr.UNKNOWN"],
     "55555": ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
+  },
+  "api.media.get.downloadfilenameedge": {
+    "-1": ApiErrorsByID["CommonErr.UNKNOWN"],
+    "55555": ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
+  },
+  "api.media.get.errorframe": {
+    "-1": ApiErrorsByID["CommonErr.UNKNOWN"],
+    "55555": ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
+    "70002": ApiErrorsByID["DemoErr.UNKNOWN"],
+    "42901": ApiErrorsByID["DemoErr.RATE_LIMITED"],
   },
   "api.media.get.mjpeg": {
     "-1": ApiErrorsByID["CommonErr.UNKNOWN"],
@@ -218,4 +232,3 @@ export const DemoErr = {
   UNKNOWN: 70002,
   RATE_LIMITED: 42901,
 } as const;
-

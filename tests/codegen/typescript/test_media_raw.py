@@ -33,4 +33,6 @@ def test_typescript_codegen_emits_multipart_and_raw_response_contracts(tmp_path:
     assert "({\n\n      routeId" not in route_client
     assert "    });\n\n  }" not in route_client
     assert "function buildMultipartFormData" in transport
+    assert "async function throwRawApiErrorIfPresent" in transport
+    assert "await throwRawApiErrorIfPresent(response, routeId, responseEnvelope)" in transport
     assert "return buildRawResponse(await response.blob(), response)" in transport

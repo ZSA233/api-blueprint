@@ -22,6 +22,11 @@ func main() {
 			ctx.AbortWithStatusJSON(418, gin.H{"detail": "missing conformance header"})
 			return
 		}
+		if ctx.Request.URL.Path == "/api/demo/request-options" &&
+			(ctx.GetHeader("x-options-default") != "default" || ctx.GetHeader("x-options-token") != "per-call") {
+			ctx.AbortWithStatusJSON(418, gin.H{"detail": "request options headers missing"})
+			return
+		}
 		ctx.Next()
 	})
 	altBP := alt.NewBlueprint(engine)

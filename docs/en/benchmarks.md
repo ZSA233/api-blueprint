@@ -8,6 +8,7 @@ Benchmarks are opt-in trend tools for investigating generated-artifact performan
 uv run python -m scripts.example_benchmark list
 uv run python -m scripts.example_benchmark binary --target go --count 10000
 uv run python -m scripts.example_benchmark protocol --servers go --scenario rpc-json,binary --requests 1000 --concurrency 16 --warmup 100
+uv run python -m scripts.example_benchmark sdk-smoke --servers go --clients python --scenario request-options,binary-response,media
 ```
 
 The Makefile provides thin wrappers:
@@ -53,6 +54,21 @@ uv run python -m scripts.example_benchmark protocol \
 - `--keep-workspace` keeps the temporary workspace for failure investigation.
 
 Output fields include `requests`, `concurrency`, `warmup`, `elapsed`, `req/s`, `p50`, `p95`, `p99`, and `errors`. These values depend on local CPU, JVM cold start, network stack, Python event loop, and dependency caches, so they should not be treated as cross-machine hard thresholds.
+
+## SDK Smoke
+
+The `sdk-smoke` subcommand reuses the example conformance runner, but it is a generated client SDK smoke path rather than a throughput benchmark. It is useful after changes to request options, binary responses, multipart/raw responses, or HTTP adapters because it proves generated clients can still call a real server.
+
+```sh
+uv run python -m scripts.example_benchmark sdk-smoke \
+  --servers go \
+  --clients python \
+  --scenario request-options,binary-response,media
+```
+
+- `--servers`, `--clients`, and `--scenario` use the same filter semantics as conformance.
+- The default scenarios are `request-options,binary-response,media`.
+- `--keep-workspace` keeps the temporary workspace for failure investigation.
 
 ## Environment Variables
 

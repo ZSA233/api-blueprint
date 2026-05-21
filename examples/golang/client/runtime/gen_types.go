@@ -127,6 +127,15 @@ type RSPFormSubmit struct {
 	Enabled bool   `json:"enabled" form:"enabled"`
 }
 
+type REQRequestOptionsQUERY struct {
+	DelayMs int `json:"delay_ms,omitempty" form:"delay_ms,omitempty"`
+}
+
+type RequestOptionsResponse struct {
+	Status  string `json:"status" form:"status"`
+	DelayMs int    `json:"delay_ms" form:"delay_ms"`
+}
+
 type REQFunc1putQUERY struct {
 	Arg1 string  `json:"arg1,omitempty" form:"arg1,omitempty"`
 	Arg2 float64 `json:"arg2,omitempty" form:"arg2,omitempty"`
@@ -235,6 +244,10 @@ type RSPErrorDemo struct {
 type MediaPreviewRequest struct {
 	Title string        `json:"title,omitempty" form:"title,omitempty"`
 	Image MultipartFile `json:"image" form:"image"`
+}
+
+type REQErrorFrameQUERY struct {
+	Mode string `json:"mode,omitempty" form:"mode,omitempty"`
 }
 
 type REQAbcQUERY50077bffe423 struct {

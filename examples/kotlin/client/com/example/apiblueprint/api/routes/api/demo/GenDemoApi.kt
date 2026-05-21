@@ -21,6 +21,7 @@ public open class GenDemoApi internal constructor(
                 query = query.toQueryMap(),
                 options = options,
                 responseSerializer = ApiDemoA.serializer(),
+                responseKind = "json",
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
                 responseDecoder = null,
@@ -41,6 +42,7 @@ public open class GenDemoApi internal constructor(
                 json = json,
                 jsonSerializer = DemoTestPostJson.serializer(),
                 responseSerializer = DemoTestPostResponse.serializer(),
+                responseKind = "json",
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
                 responseDecoder = null,
@@ -61,6 +63,27 @@ public open class GenDemoApi internal constructor(
                 form = form,
                 formSerializer = DemoFormSubmitForm.serializer(),
                 responseSerializer = DemoFormSubmitResponse.serializer(),
+                responseKind = "json",
+                responseMediaType = "application/json",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
+            )
+        )
+    }
+
+    public open suspend fun requestOptions(
+        query: DemoRequestOptionsQuery,
+        options: ApiRequestOptions = ApiRequestOptions(),
+    ): RequestOptionsResponse {
+        return transport.request(
+            ApiRequest(
+                routeId = "api.demo.get.requestoptions",
+                method = "GET",
+                path = "/api/demo/request-options",
+                query = query.toQueryMap(),
+                options = options,
+                responseSerializer = RequestOptionsResponse.serializer(),
+                responseKind = "json",
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
                 responseDecoder = null,
@@ -83,6 +106,7 @@ public open class GenDemoApi internal constructor(
                 json = json,
                 jsonSerializer = DemoPutDemoJson.serializer(),
                 responseSerializer = DemoPutDemoResponse.serializer(),
+                responseKind = "json",
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
                 responseDecoder = null,
@@ -144,6 +168,7 @@ public open class GenDemoApi internal constructor(
                 json = json,
                 jsonSerializer = DemoPostDeprecatedJson.serializer(),
                 responseSerializer = DemoPostDeprecatedResponse.serializer(),
+                responseKind = "json",
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
                 responseDecoder = null,
@@ -161,6 +186,7 @@ public open class GenDemoApi internal constructor(
                 path = "/api/demo/raw",
                 options = options,
                 responseSerializer = DemoRawResponse.serializer(),
+                responseKind = "json",
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
                 responseDecoder = null,
@@ -178,6 +204,7 @@ public open class GenDemoApi internal constructor(
                 path = "/api/demo/map_model",
                 options = options,
                 responseSerializer = MapSerializer(Int.serializer(), ApiDemoMap.serializer()),
+                responseKind = "json",
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
                 responseDecoder = null,
@@ -197,6 +224,7 @@ public open class GenDemoApi internal constructor(
                 query = query.toQueryMap(),
                 options = options,
                 responseSerializer = DemoErrorDemoResponse.serializer(),
+                responseKind = "json",
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
                 responseDecoder = null,
@@ -208,6 +236,10 @@ public open class GenDemoApi internal constructor(
         "arg1" to arg1?.toString(),
         "arg3" to arg3?.toString(),
         "arg2" to arg2?.toString()
+    )
+
+    private fun DemoRequestOptionsQuery.toQueryMap(): Map<String, String?> = mapOf(
+        "delay_ms" to delayMs?.toString()
     )
 
     private fun DemoPutDemoQuery.toQueryMap(): Map<String, String?> = mapOf(

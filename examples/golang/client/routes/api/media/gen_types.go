@@ -5,3 +5,7 @@ package media
 import runtime "example.com/project/golang/client/runtime"
 
 type MediaPreviewForm = runtime.MediaPreviewRequest
+
+type MediaErrorFrameQuery struct {
+	Mode string `json:"mode,omitempty" form:"mode,omitempty"`
+}

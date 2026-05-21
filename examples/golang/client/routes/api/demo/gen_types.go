@@ -31,6 +31,11 @@ type FormSubmitResponse struct {
 	Enabled bool   `json:"enabled" form:"enabled"`
 }
 
+type RequestOptionsQuery struct {
+	DelayMs int `json:"delay_ms,omitempty" form:"delay_ms,omitempty"`
+}
+type RequestOptionsResponse = runtime.RequestOptionsResponse
+
 type PutDemoQuery struct {
 	Arg1 string  `json:"arg1,omitempty" form:"arg1,omitempty"`
 	Arg2 float64 `json:"arg2,omitempty" form:"arg2,omitempty"`

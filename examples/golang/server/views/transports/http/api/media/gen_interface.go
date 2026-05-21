@@ -108,6 +108,52 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 	)
 
 	httptransport.GET(
+		"/api/media/download-filename-edge",
+		sharedprovider.NewRouteExecutor(
+			sharedprovider.RouteInfo{
+				Root:      "api",
+				Group:     "media",
+				Namespace: "media",
+				Service:   "MediaService",
+				Operation: "MediaDownloadFilenameEdge",
+				RouteID:   "api.media.get.downloadfilenameedge",
+				Path:      "/api/media/download-filename-edge",
+				Methods:   []string{"GET"},
+				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope(""),
+				Filename:  "fallback-report.xlsx",
+			},
+			"req|auth|handle|rsp=file@CodeMessageDataEnvelope",
+			impl.MediaDownloadFilenameEdge,
+		),
+		eng,
+		false,
+	)
+
+	httptransport.GET(
+		"/api/media/error-frame",
+		sharedprovider.NewRouteExecutor(
+			sharedprovider.RouteInfo{
+				Root:      "api",
+				Group:     "media",
+				Namespace: "media",
+				Service:   "MediaService",
+				Operation: "MediaErrorFrame",
+				RouteID:   "api.media.get.errorframe",
+				Path:      "/api/media/error-frame",
+				Methods:   []string{"GET"},
+				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope(""),
+				Filename:  "",
+			},
+			"req=Q|auth|handle|rsp=bytes@CodeMessageDataEnvelope",
+			impl.MediaErrorFrame,
+		),
+		eng,
+		false,
+	)
+
+	httptransport.GET(
 		"/api/media/mjpeg",
 		sharedprovider.NewRouteExecutor(
 			sharedprovider.RouteInfo{

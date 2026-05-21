@@ -1,6 +1,7 @@
 package media
 
 import (
+	"example.com/project/golang/server/views/runtime/errors/demo_err"
 	"io"
 	"strings"
 )
@@ -45,6 +46,24 @@ func (impl *Router) MediaDownloadDynamic(ctx *CTX_MediaDownloadDynamic, req *REQ
 		Body:        []byte("PK\x03\x04api-blueprint media report dynamic\n"),
 		ContentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 		Filename:    "media-report-dynamic.xlsx",
+	}, nil
+}
+
+func (impl *Router) MediaDownloadFilenameEdge(ctx *CTX_MediaDownloadFilenameEdge, req *REQ_MediaDownloadFilenameEdge) (rsp *RSP_MediaDownloadFilenameEdge, err error) {
+	return &RSP_MediaDownloadFilenameEdge{
+		Body:        []byte("PK\x03\x04api-blueprint media report filename edge\n"),
+		ContentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		Filename:    "媒体报告.xlsx",
+	}, nil
+}
+
+func (impl *Router) MediaErrorFrame(ctx *CTX_MediaErrorFrame, req *REQ_MediaErrorFrame) (rsp *RSP_MediaErrorFrame, err error) {
+	if req.Q.Mode == "rate_limit" {
+		return nil, demo_err.RATE_LIMITED
+	}
+	return &RSP_MediaErrorFrame{
+		Body:        sampleJPEG,
+		ContentType: "image/jpeg",
 	}, nil
 }
 

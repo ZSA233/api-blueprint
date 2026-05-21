@@ -20,7 +20,6 @@ export class DemoClient extends BaseClient {
   async abc(
     request: {
       query?: Types.AbcQuery;
-
     } = {},
     options?: ApiRequestOptions,
   ): Promise<Types.AbcResponse> {
@@ -50,7 +49,6 @@ export class DemoClient extends BaseClient {
     request: {
       json?: Types.TestPostJSON;
       body?: RequestInit["body"];
-
     } = {},
     options?: ApiRequestOptions,
   ): Promise<Types.TestPostResponse> {
@@ -81,7 +79,6 @@ export class DemoClient extends BaseClient {
     request: {
       form?: Types.FormSubmitForm;
       body?: RequestInit["body"];
-
     } = {},
     options?: ApiRequestOptions,
   ): Promise<Types.FormSubmitResponse> {
@@ -103,6 +100,34 @@ export class DemoClient extends BaseClient {
   }
 
   /**
+   * Request options conformance endpoint
+   * Used by generated clients to verify per-call headers and timeout behavior.
+   * Tags: api
+   */
+
+  async requestOptions(
+    request: {
+      query?: Types.RequestOptionsQuery;
+    } = {},
+    options?: ApiRequestOptions,
+  ): Promise<Shared.RequestOptionsResponse> {
+    return this.request<Shared.RequestOptionsResponse>({
+      routeId: "api.demo.get.requestoptions",
+      method: "GET",
+      path: "/api/demo/request-options",
+      service: "DemoService",
+      operation: "RequestOptions",
+      namespace: "demo",
+      query: request.query as unknown as Record<string, unknown> | undefined,
+      headers: options?.headers,
+      init: options?.init,
+      responseType: "json",
+      responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+      timeoutMs: options?.timeoutMs,
+    });
+  }
+
+  /**
    * 这是put的summary
    * 这是put的description
    * Tags: api
@@ -113,7 +138,6 @@ export class DemoClient extends BaseClient {
       query?: Types.PutDemoQuery;
       json?: Types.PutDemoJSON;
       body?: RequestInit["body"];
-
     } = {},
     options?: ApiRequestOptions,
   ): Promise<Types.PutDemoResponse> {
@@ -144,7 +168,6 @@ export class DemoClient extends BaseClient {
   async delete(
     request: {
       query?: Types.DeleteQuery;
-
     } = {},
     options?: ApiRequestOptions,
   ): Promise<Types.DeleteResponse> {
@@ -231,7 +254,6 @@ export class DemoClient extends BaseClient {
     request: {
       json?: Types.PostDeprecatedJSON;
       body?: RequestInit["body"];
-
     } = {},
     options?: ApiRequestOptions,
   ): Promise<Types.PostDeprecatedResponse> {
@@ -259,9 +281,7 @@ export class DemoClient extends BaseClient {
    */
 
   async raw(
-    request: {
-
-    } = {},
+    request: {} = {},
     options?: ApiRequestOptions,
   ): Promise<Types.RawResponse> {
     return this.request<Types.RawResponse>({
@@ -286,9 +306,7 @@ export class DemoClient extends BaseClient {
    */
 
   async mapModel(
-    request: {
-
-    } = {},
+    request: {} = {},
     options?: ApiRequestOptions,
   ): Promise<Types.MapModelResponse> {
     return this.request<Types.MapModelResponse>({
@@ -315,7 +333,6 @@ export class DemoClient extends BaseClient {
   async errorDemo(
     request: {
       query?: Types.ErrorDemoQuery;
-
     } = {},
     options?: ApiRequestOptions,
   ): Promise<Types.ErrorDemoResponse> {

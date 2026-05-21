@@ -9,4 +9,3 @@ export interface GreetResponse {
   /** Greeting message */
   message: string;
 }
-

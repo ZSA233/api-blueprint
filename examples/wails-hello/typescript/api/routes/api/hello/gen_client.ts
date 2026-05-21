@@ -20,7 +20,6 @@ export class HelloClient extends BaseClient {
   async greet(
     request: {
       query?: Types.GreetQuery;
-
     } = {},
     options?: ApiRequestOptions,
   ): Promise<Shared.GreetResponse> {

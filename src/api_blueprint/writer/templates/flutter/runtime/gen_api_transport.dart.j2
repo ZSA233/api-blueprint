@@ -1,6 +1,8 @@
-{% autoescape false %}import 'gen_api_error_lookup.dart';
-import 'gen_api_errors.dart';
+{% autoescape false %}import 'dart:async';
 import 'dart:typed_data';
+
+import 'gen_api_error_lookup.dart';
+import 'gen_api_errors.dart';
 
 class ApiRequestOptions {
   final Map<String, String> headers;
@@ -80,31 +82,70 @@ class ApiBinaryPayload {
   const ApiBinaryPayload(this.bytes, this.headers);
 
   String contentType(String defaultValue) {
-    for (final entry in headers.entries) {
-      if (entry.key.toLowerCase() == 'content-type') {
-        return entry.value;
-      }
-    }
-    return defaultValue;
+    return _apiBlueprintHeaderValue(headers, 'content-type') ?? defaultValue;
   }
 
   String filename(String defaultValue) {
-    String? disposition;
-    for (final entry in headers.entries) {
-      if (entry.key.toLowerCase() == 'content-disposition') {
-        disposition = entry.value;
-        break;
-      }
-    }
+    final disposition = _apiBlueprintHeaderValue(headers, 'content-disposition');
     if (disposition == null) return defaultValue;
+    String? fallbackFilename;
     for (final part in disposition.split(';')) {
       final trimmed = part.trim();
-      if (trimmed.toLowerCase().startsWith('filename=')) {
-        return trimmed.substring('filename='.length).replaceAll('"', '').trim();
+      final lower = trimmed.toLowerCase();
+      if (lower.startsWith('filename*=')) {
+        final filename = _apiBlueprintDecodeExtendedFilename(trimmed.substring('filename*='.length));
+        if (filename != null && filename.isNotEmpty) {
+          return filename;
+        }
+      } else if (lower.startsWith('filename=')) {
+        final filename = _apiBlueprintUnquote(trimmed.substring('filename='.length)).trim();
+        if (filename.isNotEmpty) {
+          fallbackFilename = filename;
+        }
       }
     }
-    return defaultValue;
+    return fallbackFilename ?? defaultValue;
   }
+}
+
+String? _apiBlueprintHeaderValue(Map<String, String> headers, String name) {
+  final normalized = name.toLowerCase();
+  for (final entry in headers.entries) {
+    if (entry.key.toLowerCase() == normalized) {
+      return entry.value;
+    }
+  }
+  return null;
+}
+
+String? _apiBlueprintDecodeExtendedFilename(String value) {
+  final token = _apiBlueprintUnquote(value);
+  final firstQuote = token.indexOf("'");
+  final secondQuote = firstQuote < 0 ? -1 : token.indexOf("'", firstQuote + 1);
+  if (firstQuote <= 0 || secondQuote < 0) {
+    return _apiBlueprintDecodeUriComponent(token);
+  }
+  final charset = token.substring(0, firstQuote).toLowerCase();
+  if (charset != 'utf-8') {
+    return null;
+  }
+  return _apiBlueprintDecodeUriComponent(token.substring(secondQuote + 1));
+}
+
+String? _apiBlueprintDecodeUriComponent(String value) {
+  try {
+    return Uri.decodeComponent(value);
+  } on FormatException {
+    return null;
+  }
+}
+
+String _apiBlueprintUnquote(String value) {
+  final trimmed = value.trim();
+  if (trimmed.length >= 2 && trimmed.startsWith('"') && trimmed.endsWith('"')) {
+    return trimmed.substring(1, trimmed.length - 1);
+  }
+  return trimmed;
 }
 
 class ApiRawResponse {
@@ -122,7 +163,7 @@ class ApiRawResponse {
 }
 
 class ApiStreamResponse {
-  final Uint8List body;
+  final Stream<List<int>> body;
   final String contentType;
   final Map<String, String> headers;
 
@@ -131,6 +172,14 @@ class ApiStreamResponse {
     this.contentType = 'application/octet-stream',
     this.headers = const {},
   });
+
+  Future<Uint8List> readAllBytes() async {
+    final builder = BytesBuilder(copy: false);
+    await for (final chunk in body) {
+      builder.add(chunk);
+    }
+    return builder.takeBytes();
+  }
 }
 
 class ApiResponseEnvelope {
@@ -285,10 +334,20 @@ ApiStreamResponse apiBlueprintStreamResponse(
   Object? value, {
   String defaultContentType = 'application/octet-stream',
 }) {
-  if (value is ApiBinaryPayload) {
-    return ApiStreamResponse(body: value.bytes, contentType: value.contentType(defaultContentType), headers: value.headers);
+  if (value is ApiStreamResponse) {
+    return value;
   }
-  return ApiStreamResponse(body: apiBlueprintReadBytes(value), contentType: defaultContentType);
+  if (value is Stream<List<int>>) {
+    return ApiStreamResponse(body: value, contentType: defaultContentType);
+  }
+  if (value is ApiBinaryPayload) {
+    return ApiStreamResponse(
+      body: Stream<List<int>>.value(value.bytes),
+      contentType: value.contentType(defaultContentType),
+      headers: value.headers,
+    );
+  }
+  return ApiStreamResponse(body: Stream<List<int>>.value(apiBlueprintReadBytes(value)), contentType: defaultContentType);
 }
 
 Object? unwrapResponseEnvelope(Object? payload, ApiResponseEnvelope envelope, String routeId) {

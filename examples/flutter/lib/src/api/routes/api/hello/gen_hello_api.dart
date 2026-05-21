@@ -6,13 +6,10 @@ import 'package:api_blueprint_example/src/api/runtime/gen_api_errors.dart';
 import 'package:api_blueprint_example/src/api/runtime/gen_api_types.dart';
 import 'gen_hello_types.dart';
 
-
 class GenHelloApi {
   final ApiTransport transport;
 
   GenHelloApi(this.transport);
-
-
 
   Future<HelloAbcResponse> abc({
     HelloAbcQuery? query,
@@ -33,9 +30,6 @@ class GenHelloApi {
     );
   }
 
-
-
-
   Future<HelloMapEnumResponse> mapEnum({
     ApiRequestOptions options = const ApiRequestOptions(),
   }) {
@@ -53,9 +47,6 @@ class GenHelloApi {
       ),
     );
   }
-
-
-
 
   Future<HelloListEnumResponse> listEnum({
     ApiRequestOptions options = const ApiRequestOptions(),
@@ -75,9 +66,6 @@ class GenHelloApi {
     );
   }
 
-
-
-
   Future<HelloStringResponse> string({
     ApiRequestOptions options = const ApiRequestOptions(),
   }) {
@@ -95,9 +83,6 @@ class GenHelloApi {
       ),
     );
   }
-
-
-
 
   Future<HelloUint64Response> uint64({
     ApiRequestOptions options = const ApiRequestOptions(),
@@ -117,9 +102,6 @@ class GenHelloApi {
     );
   }
 
-
-
-
   Future<HelloStringEmunResponse> stringEmun({
     ApiRequestOptions options = const ApiRequestOptions(),
   }) {
@@ -137,9 +119,6 @@ class GenHelloApi {
       ),
     );
   }
-
-
-
 
   Future<void> helloWay({
     HelloHelloWayQuery? query,
@@ -159,6 +138,5 @@ class GenHelloApi {
       ),
     );
   }
-
 
 }

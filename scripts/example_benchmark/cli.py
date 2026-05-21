@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from scripts.example_benchmark import binary, protocol
+from scripts.example_conformance import runner
 from scripts.example_conformance import manifest, scenarios
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -38,6 +39,20 @@ def build_parser() -> argparse.ArgumentParser:
     protocol_parser.add_argument("--concurrency", type=int, default=10, help="maximum concurrent requests")
     protocol_parser.add_argument("--warmup", type=int, default=5, help="warmup request count before measurement")
     protocol_parser.add_argument("--keep-workspace", action="store_true", help="Keep temporary workspace after the run.")
+
+    sdk_parser = subparsers.add_parser("sdk-smoke", help="Run generated client SDK smoke benchmark paths.")
+    sdk_parser.add_argument("--servers", default="go", help="Comma-separated servers: go,java,kotlin,python, or all.")
+    sdk_parser.add_argument(
+        "--clients",
+        default="python",
+        help="Comma-separated generated clients: go,typescript,kotlin,flutter,java,python, or all.",
+    )
+    sdk_parser.add_argument(
+        "--scenario",
+        default="request-options,binary-response,media",
+        help="Comma-separated conformance scenarios for generated client SDK smoke paths.",
+    )
+    sdk_parser.add_argument("--keep-workspace", action="store_true", help="Keep temporary workspace after the run.")
     return parser
 
 
@@ -88,6 +103,18 @@ def main(argv: list[str] | None = None) -> int:
             )
             protocol.print_protocol_results(results)
             return 0
+        if args.command == "sdk-smoke":
+            server_names = manifest.parse_csv_filter(args.servers, set(manifest.server_manifest()), label="conformance server")
+            client_names = manifest.parse_csv_filter(args.clients, set(manifest.client_manifest()), label="conformance client")
+            scenario_names = scenarios.scenario_names_from_cli(args.scenario)
+            runner.run_conformance(
+                repo_root,
+                servers=server_names,
+                clients=client_names,
+                scenario_names=scenario_names,
+                keep_workspace=args.keep_workspace,
+            )
+            return 0
     except (RuntimeError, ValueError, FileNotFoundError, ModuleNotFoundError, subprocess.CalledProcessError) as exc:
         print(str(exc), file=sys.stderr)
         return 1
@@ -107,6 +134,10 @@ def _print_list() -> None:
     for scenario_name in protocol.BENCHMARK_SCENARIOS:
         conformance_name = protocol.SCENARIO_ALIASES.get(scenario_name, scenario_name)
         scenario = scenarios.scenario_registry()[conformance_name]
+        print(f"- {scenario_name} routes={','.join(scenario.route_ids)}")
+    print("sdk smoke scenarios:")
+    for scenario_name in ("request-options", "binary-response", "media"):
+        scenario = scenarios.scenario_registry()[scenario_name]
         print(f"- {scenario_name} routes={','.join(scenario.route_ids)}")
 
 

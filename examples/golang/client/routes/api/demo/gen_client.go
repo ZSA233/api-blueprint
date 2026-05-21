@@ -77,6 +77,24 @@ func (client *GenDemoClient) FormSubmit(ctx context.Context, formBody FormSubmit
 	return &response, nil
 }
 
+func (client *GenDemoClient) RequestOptions(ctx context.Context, query RequestOptionsQuery, opts ...runtime.RequestOption) (*RequestOptionsResponse, error) {
+	request := runtime.Request{
+		RouteID:          "api.demo.get.requestoptions",
+		Method:           "GET",
+		Path:             "/api/demo/request-options",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		Query:            query,
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("json"),
+	}
+	request.ApplyOptions(opts...)
+	var response RequestOptionsResponse
+	if err := client.transport.Do(ctx, request, &response); err != nil {
+		return nil, err
+	}
+	return &response, nil
+}
+
 func (client *GenDemoClient) PutDemo(ctx context.Context, query PutDemoQuery, jsonBody PutDemoJSON, opts ...runtime.RequestOption) (*PutDemoResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.demo.put.z1put",

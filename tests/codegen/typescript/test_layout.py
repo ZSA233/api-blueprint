@@ -3,6 +3,36 @@ from __future__ import annotations
 from .helpers import *
 
 
+def _typescript_format_violations(output_dir: Path) -> list[str]:
+    violations: list[str] = []
+    for path in sorted(output_dir.rglob("*.ts")):
+        relative_path = path.relative_to(output_dir).as_posix()
+        text = path.read_text(encoding="utf-8")
+        for line_number, line in enumerate(text.splitlines(), 1):
+            if line.rstrip(" \t") != line:
+                violations.append(f"{relative_path}:{line_number}: trailing whitespace")
+        blank_run = _max_consecutive_blank_lines(text)
+        if blank_run >= 3:
+            violations.append(f"{relative_path}: {blank_run} consecutive blank lines")
+    return violations
+
+
+def _typescript_request_block_holes(text: str) -> list[str]:
+    holes: list[str] = []
+    request_block_start: int | None = None
+    for line_number, line in enumerate(text.splitlines(), 1):
+        if request_block_start is None:
+            if line == "    request: {":
+                request_block_start = line_number
+            continue
+        if line.startswith("    }"):
+            request_block_start = None
+            continue
+        if not line.strip():
+            holes.append(f"request block at line {request_block_start} has empty line {line_number}")
+    return holes
+
+
 def test_typescript_generation_allows_real_shared_group_without_alias_rewrite(tmp_path: Path):
     bp = Blueprint(root="/api")
     with bp.group("/shared") as views:
@@ -74,3 +104,23 @@ def test_typescript_writer_removes_safe_legacy_shared_dir(tmp_path: Path):
     writer.gen()
 
     assert not legacy_shared.exists()
+
+
+def test_typescript_generated_output_format_invariants(tmp_path: Path) -> None:
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.GET("/ping").RSP(message=String(description="message"))
+        views.GET("/search").ARGS(q=String(description="q")).RSP(message=String(description="message"))
+        views.POST("/submit").REQ(Payload).RSP(message=String(description="message"))
+
+    output_dir = tmp_path / "typescript"
+    output_dir.mkdir()
+    writer = TypeScriptWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    client_text = (output_dir / "api" / "routes" / "api" / "demo" / "gen_client.ts").read_text(encoding="utf-8")
+    assert "request: {} = {}" in client_text
+    assert "request: {\n      query?: Types.SearchQuery;\n    } = {}" in client_text
+    assert _typescript_format_violations(output_dir) == []
+    assert _typescript_request_block_holes(client_text) == []

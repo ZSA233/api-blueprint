@@ -9,11 +9,19 @@ import type { ApiFilePart, ApiRawResponse } from "../../../runtime/client";
 
 export type MediaDownloadDynamicResponse = ApiRawResponse<Blob>;
 
+export type MediaDownloadFilenameEdgeResponse = ApiRawResponse<Blob>;
+
 export type MediaDownloadResponse = ApiRawResponse<Blob>;
+
+export interface MediaErrorFrameQuery {
+  /** ok/rate_limit */
+  mode?: string;
+}
+
+export type MediaErrorFrameResponse = ApiRawResponse<Blob>;
 
 export type MediaFrameResponse = ApiRawResponse<Blob>;
 
 export type MediaMjpegResponse = ApiRawResponse<ReadableStream<Uint8Array> | null>;
 
 export type MediaPreviewResponse = ApiRawResponse<Blob>;
-

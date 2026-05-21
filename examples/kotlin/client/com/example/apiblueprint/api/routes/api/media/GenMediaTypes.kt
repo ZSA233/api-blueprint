@@ -13,3 +13,7 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 
+@Serializable
+public data class MediaMediaErrorFrameQuery(
+    public val mode: String? = null
+)

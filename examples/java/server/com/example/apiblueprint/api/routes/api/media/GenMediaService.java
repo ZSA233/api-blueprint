@@ -24,6 +24,13 @@ public interface GenMediaService {
     GenApiRawResponse mediaDownloadDynamic(
     ) throws Exception;
 
+    GenApiRawResponse mediaDownloadFilenameEdge(
+    ) throws Exception;
+
+    GenApiRawResponse mediaErrorFrame(
+        GenMediaTypes.MediaErrorFrameQuery query
+    ) throws Exception;
+
     GenApiStreamResponse mediaMjpeg(
     ) throws Exception;
 

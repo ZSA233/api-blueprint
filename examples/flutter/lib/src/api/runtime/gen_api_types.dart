@@ -5,7 +5,6 @@ import 'api_json_codecs.dart';
 import 'gen_api_errors.dart';
 import 'gen_api_transport.dart';
 
-
 class ApiDemoA {
   final String? bc;
   final int? a;
@@ -79,8 +78,6 @@ class ApiDemoA {
   }
 }
 
-
-
 class ApiDemoMap {
   final int? haha;
 
@@ -118,8 +115,6 @@ class ApiDemoMap {
     };
   }
 }
-
-
 
 class ApiDemoSubA {
   final Map<String, int>? hello;
@@ -164,8 +159,6 @@ class ApiDemoSubA {
   }
 }
 
-
-
 class ApiHelloMap {
   final int? haha;
 
@@ -203,8 +196,6 @@ class ApiHelloMap {
     };
   }
 }
-
-
 
 class AssistantCancel {
   final String? reason;
@@ -244,8 +235,6 @@ class AssistantCancel {
   }
 }
 
-
-
 class AssistantDelta {
   final String? text;
 
@@ -283,8 +272,6 @@ class AssistantDelta {
     };
   }
 }
-
-
 
 class AssistantDone {
   final String? messageId;
@@ -324,8 +311,6 @@ class AssistantDone {
   }
 }
 
-
-
 class AssistantInput {
   final String? text;
 
@@ -363,8 +348,6 @@ class AssistantInput {
     };
   }
 }
-
-
 
 class AssistantOpen {
   final String? sessionId;
@@ -404,8 +387,6 @@ class AssistantOpen {
   }
 }
 
-
-
 enum ColorEnum {
   red("red"),
   green("green"),
@@ -424,8 +405,6 @@ ColorEnum? ColorEnumFromJson(Object? value) {
   }
   return null;
 }
-
-
 
 class ConflictModel {
   final String? default_;
@@ -475,8 +454,6 @@ class ConflictModel {
   }
 }
 
-
-
 class ConnectionClose {
   final int? code;
   final String? reason;
@@ -524,8 +501,6 @@ class ConnectionClose {
     };
   }
 }
-
-
 
 class DefaultConnectionClose {
   final int? code;
@@ -575,8 +550,6 @@ class DefaultConnectionClose {
   }
 }
 
-
-
 class HelloChannelMessage {
   final HelloChannelMsgTypeEnum? type_;
   final Object? data;
@@ -620,8 +593,6 @@ class HelloChannelMessage {
   }
 }
 
-
-
 enum HelloChannelMsgTypeEnum {
   ping("ping"),
   pong("pong"),
@@ -644,8 +615,6 @@ HelloChannelMsgTypeEnum? HelloChannelMsgTypeEnumFromJson(Object? value) {
   return null;
 }
 
-
-
 enum HelloWayEnum {
   asd("ASD"),
   ;
@@ -662,8 +631,6 @@ HelloWayEnum? HelloWayEnumFromJson(Object? value) {
   }
   return null;
 }
-
-
 
 enum KeywordEnum {
   default_("default"),
@@ -683,8 +650,6 @@ KeywordEnum? KeywordEnumFromJson(Object? value) {
   return null;
 }
 
-
-
 enum MapEnum {
   a("a"),
   b("b"),
@@ -702,8 +667,6 @@ MapEnum? MapEnumFromJson(Object? value) {
   }
   return null;
 }
-
-
 
 class MediaPreviewRequest {
   final String? title;
@@ -748,7 +711,48 @@ class MediaPreviewRequest {
   }
 }
 
+class RequestOptionsResponse {
+  final String? status;
+  final int? delayMs;
 
+  const RequestOptionsResponse({
+    this.status,
+    this.delayMs,
+  });
+
+  factory RequestOptionsResponse.fromJson(Map<String, Object?> json) {
+    return RequestOptionsResponse(
+      status: apiBlueprintReadString(json["status"]),
+      delayMs: apiBlueprintReadInt(json["delay_ms"]),
+    );
+  }
+
+  factory RequestOptionsResponse.fromJsonValue(Object? value) {
+    final codec = apiJsonCodecs.find<RequestOptionsResponse>();
+    if (codec != null) {
+      return codec.fromJson(value);
+    }
+    return RequestOptionsResponse.fromJson(apiBlueprintReadObject(value));
+  }
+
+  Map<String, Object?> toJson() {
+    final codec = apiJsonCodecs.find<RequestOptionsResponse>();
+    if (codec != null) {
+      return apiBlueprintReadObject(codec.toJson(this));
+    }
+    return {
+      "status": apiBlueprintToJson(status),
+      "delay_ms": apiBlueprintToJson(delayMs),
+    };
+  }
+
+  Map<String, String?> toQueryMap() {
+    return {
+      "status": apiBlueprintToQueryValue(status),
+      "delay_ms": apiBlueprintToQueryValue(delayMs),
+    };
+  }
+}
 
 enum StatusEnum {
   pending(1),
@@ -768,8 +772,6 @@ StatusEnum? StatusEnumFromJson(Object? value) {
   }
   return null;
 }
-
-
 
 class SweepLog {
   final String? level;
@@ -814,8 +816,6 @@ class SweepLog {
   }
 }
 
-
-
 class SweepOpen {
   final String? runId;
   final String? replayFrom;
@@ -858,8 +858,6 @@ class SweepOpen {
     };
   }
 }
-
-
 
 class SweepProgress {
   final int? current;
@@ -904,8 +902,6 @@ class SweepProgress {
   }
 }
 
-
-
 class SweepState {
   final String? status;
 
@@ -943,5 +939,3 @@ class SweepState {
     };
   }
 }
-
-

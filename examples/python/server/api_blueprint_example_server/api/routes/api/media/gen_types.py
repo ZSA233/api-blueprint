@@ -69,3 +69,42 @@ class MediaPreviewForm:
 
         result["image"] = _api_to_transport(self.image)
         return result
+
+
+@dataclass(kw_only=True)
+class MediaErrorFrameQuery:
+    mode: str | None = None
+
+    @classmethod
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
+        if not isinstance(value, Mapping):
+            raise TypeError("MediaErrorFrameQuery: expected object")
+        return cls._from_mapping(value, "MediaErrorFrameQuery")
+
+    @classmethod
+    def from_value(cls, value: object, path: str = "MediaErrorFrameQuery") -> Self:
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, Mapping):
+            raise TypeError(f"{path}: expected object")
+        return cls._from_mapping(value, path)
+
+    @classmethod
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
+        return cls(
+            mode=_decode_optional(_decode_str, value.get("mode", _MISSING), _field_path(path, "mode")),
+        )
+
+    def to_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        if self.mode is not None:
+            result["mode"] = _api_to_json(self.mode)
+
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        if self.mode is not None:
+            result["mode"] = _api_to_transport(self.mode)
+
+        return result

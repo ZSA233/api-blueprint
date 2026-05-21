@@ -14,4 +14,3 @@ export interface DochahaResponse {
   /** a */
   a?: string;
 }
-

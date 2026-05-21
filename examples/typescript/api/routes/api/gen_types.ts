@@ -6,4 +6,3 @@ export {};
 // Route Contracts
 
 export type HelloChannelResponse = void;
-

@@ -13,5 +13,3 @@ export 'transports/http/gen_http_api_transport.dart';
 
 export 'routes/alt/conflict/conflict_api.dart';
 export 'routes/alt/conflict/conflict_types.dart';
-
-

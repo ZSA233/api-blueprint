@@ -14,25 +14,18 @@ export 'transports/http/gen_http_api_transport.dart';
 export 'routes/api/api_api.dart';
 export 'routes/api/api_types.dart';
 
-
 export 'routes/api/binary/binary_api.dart';
 export 'routes/api/binary/binary_types.dart';
 export 'routes/api/binary/binary.dart';
 
-
 export 'routes/api/conflict/conflict_api.dart';
 export 'routes/api/conflict/conflict_types.dart';
-
 
 export 'routes/api/demo/demo_api.dart';
 export 'routes/api/demo/demo_types.dart';
 
-
 export 'routes/api/media/media_api.dart';
 export 'routes/api/media/media_types.dart';
 
-
 export 'routes/api/hello/hello_api.dart';
 export 'routes/api/hello/hello_types.dart';
-
-

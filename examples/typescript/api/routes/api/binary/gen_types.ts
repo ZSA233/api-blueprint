@@ -42,4 +42,3 @@ export interface PacketResponse {
   /** checksum */
   checksum: number;
 }
-

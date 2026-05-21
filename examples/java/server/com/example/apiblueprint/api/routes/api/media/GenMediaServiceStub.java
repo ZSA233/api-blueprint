@@ -37,6 +37,19 @@ public class GenMediaServiceStub implements MediaService {
     }
 
     @Override
+    public GenApiRawResponse mediaDownloadFilenameEdge(
+    ) throws Exception {
+        throw new UnsupportedOperationException("mediaDownloadFilenameEdge");
+    }
+
+    @Override
+    public GenApiRawResponse mediaErrorFrame(
+        GenMediaTypes.MediaErrorFrameQuery query
+    ) throws Exception {
+        throw new UnsupportedOperationException("mediaErrorFrame");
+    }
+
+    @Override
     public GenApiStreamResponse mediaMjpeg(
     ) throws Exception {
         throw new UnsupportedOperationException("mediaMjpeg");

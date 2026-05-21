@@ -7,8 +7,8 @@
   "counts": {
     "connections": 3,
     "errors": 4,
-    "routes": 31,
-    "schemas": 53,
+    "routes": 34,
+    "schemas": 56,
     "services": 8,
     "targets": 20
   },
@@ -133,6 +133,16 @@
       "url": "/api/demo/form-submit"
     },
     {
+      "id": "api.demo.get.requestoptions",
+      "kind": "rpc",
+      "methods": [
+        "GET"
+      ],
+      "operation": "RequestOptions",
+      "service_id": "api.demo",
+      "url": "/api/demo/request-options"
+    },
+    {
       "id": "api.demo.put.z1put",
       "kind": "rpc",
       "methods": [
@@ -247,6 +257,26 @@
       "operation": "MediaDownloadDynamic",
       "service_id": "api.media",
       "url": "/api/media/download-dynamic"
+    },
+    {
+      "id": "api.media.get.downloadfilenameedge",
+      "kind": "rpc",
+      "methods": [
+        "GET"
+      ],
+      "operation": "MediaDownloadFilenameEdge",
+      "service_id": "api.media",
+      "url": "/api/media/download-filename-edge"
+    },
+    {
+      "id": "api.media.get.errorframe",
+      "kind": "rpc",
+      "methods": [
+        "GET"
+      ],
+      "operation": "MediaErrorFrame",
+      "service_id": "api.media",
+      "url": "/api/media/error-frame"
     },
     {
       "id": "api.media.get.mjpeg",
@@ -390,7 +420,7 @@
       "name": "DemoService",
       "path": "/api/demo",
       "root": "api",
-      "route_count": 11
+      "route_count": 12
     },
     {
       "group": "media",
@@ -398,7 +428,7 @@
       "name": "MediaService",
       "path": "/api/media",
       "root": "api",
-      "route_count": 5
+      "route_count": 7
     },
     {
       "group": "hello",
@@ -431,140 +461,140 @@
       "kind": "contract",
       "out_dir": ".",
       "role": "contract",
-      "route_count": 31
+      "route_count": 34
     },
     {
       "id": "go.server",
       "kind": "go-server",
       "out_dir": "golang/server/views",
       "role": "server",
-      "route_count": 31
+      "route_count": 34
     },
     {
       "id": "go.client",
       "kind": "go-client",
       "out_dir": "golang/client",
       "role": "client",
-      "route_count": 31
+      "route_count": 34
     },
     {
       "id": "typescript.client",
       "kind": "typescript-client",
       "out_dir": "typescript",
       "role": "client",
-      "route_count": 31
+      "route_count": 34
     },
     {
       "id": "kotlin.client",
       "kind": "kotlin-client",
       "out_dir": "kotlin/client",
       "role": "client",
-      "route_count": 27
+      "route_count": 30
     },
     {
       "id": "kotlin.server",
       "kind": "kotlin-server",
       "out_dir": "kotlin/server",
       "role": "server",
-      "route_count": 29
+      "route_count": 32
     },
     {
       "id": "java.server",
       "kind": "java-server",
       "out_dir": "java/server",
       "role": "server",
-      "route_count": 31
+      "route_count": 34
     },
     {
       "id": "java.client",
       "kind": "java-client",
       "out_dir": "java/client",
       "role": "client",
-      "route_count": 31
+      "route_count": 34
     },
     {
       "id": "flutter.client",
       "kind": "flutter-client",
       "out_dir": "flutter",
       "role": "client",
-      "route_count": 29
+      "route_count": 32
     },
     {
       "id": "python.server",
       "kind": "python-server",
       "out_dir": "python/server",
       "role": "server",
-      "route_count": 31
+      "route_count": 34
     },
     {
       "id": "python.client",
       "kind": "python-client",
       "out_dir": "python/client",
       "role": "client",
-      "route_count": 31
+      "route_count": 34
     },
     {
       "id": "http",
       "kind": "http-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 31
+      "route_count": 34
     },
     {
       "id": "http.kotlin",
       "kind": "http-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 31
+      "route_count": 34
     },
     {
       "id": "http.python",
       "kind": "http-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 31
+      "route_count": 34
     },
     {
       "id": "http.java",
       "kind": "http-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 31
+      "route_count": 34
     },
     {
       "id": "wails.v3",
       "kind": "wails-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 23
+      "route_count": 24
     },
     {
       "id": "wails.v2",
       "kind": "wails-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 23
+      "route_count": 24
     },
     {
       "id": "grpc.proto",
       "kind": "grpc-proto",
       "out_dir": "grpc/protos",
       "role": "grpc",
-      "route_count": 23
+      "route_count": 24
     },
     {
       "id": "grpc.go",
       "kind": "grpc-go",
       "out_dir": "grpc/go",
       "role": "grpc",
-      "route_count": 23
+      "route_count": 24
     },
     {
       "id": "grpc.python",
       "kind": "grpc-python",
       "out_dir": "grpc/python",
       "role": "grpc",
-      "route_count": 23
+      "route_count": 24
     }
   ],
   "version": "2.0"

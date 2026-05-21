@@ -15,6 +15,8 @@ from .gen_types import (
     TestPostResponse,
     FormSubmitForm,
     FormSubmitResponse,
+    RequestOptionsQuery,
+    RequestOptionsResponse,
     PutDemoQuery,
     PutDemoJSON,
     PutDemoResponse,
@@ -64,6 +66,12 @@ class DemoService(Protocol):
         self,
         form: FormSubmitForm,
     ) -> FormSubmitResponse:
+        ...
+
+    async def request_options(
+        self,
+        query: RequestOptionsQuery,
+    ) -> RequestOptionsResponse:
         ...
 
     async def put_demo(
@@ -130,6 +138,12 @@ class DemoServiceStub:
         form: FormSubmitForm,
     ) -> FormSubmitResponse:
         raise NotImplementedError("form_submit")
+
+    async def request_options(
+        self,
+        query: RequestOptionsQuery,
+    ) -> RequestOptionsResponse:
+        raise NotImplementedError("request_options")
 
     async def put_demo(
         self,

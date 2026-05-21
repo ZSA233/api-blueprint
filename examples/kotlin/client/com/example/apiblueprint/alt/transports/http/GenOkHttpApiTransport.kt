@@ -61,7 +61,11 @@ public class OkHttpApiTransport(
         }
 
         val okRequest = requestBuilder.method(request.method, effectiveBody).build()
-        clientWithTimeout(request.options.timeout ?: config.timeout).newCall(okRequest).execute().use { response ->
+        val response = clientWithTimeout(request.options.timeout ?: config.timeout).newCall(okRequest).execute()
+        if (request.responseKind == "byte_stream") {
+            return@withContext streamResponse(request, response)
+        }
+        response.use {
             ApiResponse(
                 statusCode = response.code,
                 body = response.body?.bytes() ?: ByteArray(0),
@@ -127,6 +131,62 @@ public class OkHttpApiTransport(
             }
         }
         return null
+    }
+
+    private fun streamResponse(request: ApiRequest<*>, response: Response): ApiResponse {
+        val headers = response.headers.toMap()
+        if (!response.isSuccessful) {
+            response.use {
+                return ApiResponse(
+                    statusCode = response.code,
+                    body = response.body?.string().orEmpty().toByteArray(Charsets.UTF_8),
+                    headers = headers,
+                )
+            }
+        }
+        val body = response.body
+        if (body == null) {
+            response.close()
+            return ApiResponse(
+                statusCode = response.code,
+                body = ByteArray(0),
+                headers = headers,
+                stream = ApiStreamResponse(
+                    body = ByteArray(0),
+                    contentType = request.responseMediaType,
+                    headers = headers,
+                ),
+            )
+        }
+        val contentType = body.contentType()?.toString() ?: headerValue(headers, "content-type") ?: request.responseMediaType
+        if (isJsonContentType(contentType)) {
+            response.use {
+                return ApiResponse(
+                    statusCode = response.code,
+                    body = body.bytes(),
+                    headers = headers,
+                )
+            }
+        }
+        return ApiResponse(
+            statusCode = response.code,
+            body = ByteArray(0),
+            headers = headers,
+            stream = ApiStreamResponse(
+                body = body.byteStream(),
+                contentType = contentType,
+                headers = headers,
+                closeAction = { response.close() },
+            ),
+        )
+    }
+
+    private fun headerValue(headers: Map<String, String>, name: String): String? =
+        headers.entries.firstOrNull { it.key.equals(name, ignoreCase = true) }?.value
+
+    private fun isJsonContentType(contentType: String): Boolean {
+        val normalized = contentType.substringBefore(";").trim().lowercase()
+        return normalized == "application/json" || normalized.endsWith("+json")
     }
 
     @Suppress("UNCHECKED_CAST")

@@ -121,6 +121,11 @@ export interface RawResponse {
   list2: Record<number, Array<ApiDemoA>>;
 }
 
+export interface RequestOptionsQuery {
+  /** optional server delay in milliseconds */
+  delay_ms?: number;
+}
+
 export type SweepEventsResponse = void;
 
 export type SweepStreamMessage =
@@ -295,4 +300,3 @@ export function dispatchAssistantClientMessage<R>(
       throw new AssistantClientMessageDispatchError("unknown_type", message);
   }
 }
-

@@ -33,6 +33,8 @@ def test_python_codegen_emits_multipart_and_raw_response_contracts(tmp_path: Pat
     assert "response_type: str | None = 'bytes'" in client_route
     assert "ApiRawResponse[bytes]" in client_route
     assert "_split_multipart" in client_transport
+    assert "payload = self._extract_raw_error_payload(response, response_envelope)" in client_transport
+    assert "def _extract_raw_error_payload(" in client_transport
     assert "return _raw_response(response)" in client_transport
     assert "bytes | ApiRawResponse[bytes]" in server_service
     assert "str | Path | ApiRawResponse[bytes]" in server_service

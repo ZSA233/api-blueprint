@@ -180,8 +180,8 @@ fun main(args: Array<String>) {
 JAVA_BENCHMARK_SOURCE = r"""
 package tmpbench;
 
-import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
-import com.example.apiblueprint.api.routes.api.binary.BinaryTypes;
+import com.example.apiblueprint.api.runtime.binary.GenApiBinaryBody;
+import com.example.apiblueprint.api.routes.api.binary.GenBinaryTypes;
 import java.util.List;
 
 public final class JavaBinaryBenchmark {
@@ -190,10 +190,10 @@ public final class JavaBinaryBenchmark {
 
     public static void main(String[] args) {
         int count = Integer.parseInt(args[0]);
-        BinaryTypes.DemoPacket packet = new BinaryTypes.DemoPacket(
-            new BinaryTypes.DemoPacketHeader(0L, 1, 0, 1, 4L),
-            new BinaryTypes.DemoPacketBody(
-                List.of(new BinaryTypes.DemoPacketItem(1L, true, 1.25d, 3, new byte[] {97, 98, 99})),
+        GenBinaryTypes.DemoPacket packet = new GenBinaryTypes.DemoPacket(
+            new GenBinaryTypes.DemoPacketHeader(0L, 1, 0, 1, 4L),
+            new GenBinaryTypes.DemoPacketBody(
+                List.of(new GenBinaryTypes.DemoPacketItem(1L, true, 1.25d, 3, new byte[] {97, 98, 99})),
                 new byte[] {1, 2, 3, 4},
                 List.of(1.0d, 2.0d),
                 5L
@@ -202,9 +202,9 @@ public final class JavaBinaryBenchmark {
         long started = System.nanoTime();
         long total = 0L;
         for (int index = 0; index < count; index++) {
-            ApiBinaryBody body = BinaryTypes.DemoPacketWire.toBinaryBody(packet);
+            GenApiBinaryBody body = GenBinaryTypes.DemoPacketWire.toBinaryBody(packet);
             byte[] bytes = body.toBytes();
-            BinaryTypes.DemoPacket parsed = BinaryTypes.DemoPacketWire.parse(bytes);
+            GenBinaryTypes.DemoPacket parsed = GenBinaryTypes.DemoPacketWire.parse(bytes);
             total += bytes.length + parsed.body().items().size();
         }
         long elapsed = System.nanoTime() - started;
@@ -232,12 +232,24 @@ public @interface JsonIgnoreProperties {
 """
 
 
-JAVA_API_TYPES_STUB = r"""
+JAVA_GEN_API_TYPES_STUB = r"""
 package com.example.apiblueprint.api.runtime;
 
-public final class ApiTypes {
-    private ApiTypes() {
+public final class GenApiTypes {
+    private GenApiTypes() {
     }
+}
+"""
+
+
+JAVA_GEN_API_FILE_PART_STUB = r"""
+package com.example.apiblueprint.api.runtime;
+
+public record GenApiFilePart(
+    String filename,
+    String contentType,
+    byte[] bytes
+) {
 }
 """
 
@@ -435,15 +447,24 @@ def run_java(ctx: BenchmarkContext) -> BenchmarkResult:
         source_root = bench_dir / "src"
         classes_dir = bench_dir / "classes"
         classes_dir.mkdir()
-        runtime_source = ctx.repo_root / "examples" / "java" / "client" / "com" / "example" / "apiblueprint" / "api" / "runtime" / "binary"
-        binary_types_source = ctx.repo_root / "examples" / "java" / "client" / "com" / "example" / "apiblueprint" / "api" / "routes" / "api" / "binary" / "BinaryTypes.java"
-        _copytree(runtime_source, source_root / "com" / "example" / "apiblueprint" / "api" / "runtime" / "binary")
-        runtime_dir = source_root / "com" / "example" / "apiblueprint" / "api" / "runtime"
+        java_api_root = ctx.repo_root / "examples" / "java" / "client" / "com" / "example" / "apiblueprint" / "api"
+        temp_api_root = source_root / "com" / "example" / "apiblueprint" / "api"
+        runtime_source = java_api_root / "runtime" / "binary"
+        binary_types_source = java_api_root / "routes" / "api" / "binary" / "GenBinaryTypes.java"
+        _copytree(runtime_source, temp_api_root / "runtime" / "binary")
+        runtime_dir = temp_api_root / "runtime"
         runtime_dir.mkdir(parents=True, exist_ok=True)
-        (runtime_dir / "ApiTypes.java").write_text(textwrap.dedent(JAVA_API_TYPES_STUB).strip() + "\n", encoding="utf-8")
-        route_binary_dir = source_root / "com" / "example" / "apiblueprint" / "api" / "routes" / "api" / "binary"
+        (runtime_dir / "GenApiTypes.java").write_text(
+            textwrap.dedent(JAVA_GEN_API_TYPES_STUB).strip() + "\n",
+            encoding="utf-8",
+        )
+        (runtime_dir / "GenApiFilePart.java").write_text(
+            textwrap.dedent(JAVA_GEN_API_FILE_PART_STUB).strip() + "\n",
+            encoding="utf-8",
+        )
+        route_binary_dir = temp_api_root / "routes" / "api" / "binary"
         route_binary_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(binary_types_source, route_binary_dir / "BinaryTypes.java")
+        shutil.copy2(binary_types_source, route_binary_dir / "GenBinaryTypes.java")
         annotation_dir = source_root / "com" / "fasterxml" / "jackson" / "annotation"
         annotation_dir.mkdir(parents=True, exist_ok=True)
         (annotation_dir / "JsonProperty.java").write_text(textwrap.dedent(JACKSON_JSON_PROPERTY_STUB).strip() + "\n", encoding="utf-8")

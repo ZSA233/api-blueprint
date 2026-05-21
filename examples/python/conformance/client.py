@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "client"))
 from api_blueprint_example_client.alt.client import create_client as create_alt_client
 from api_blueprint_example_client.alt.routes.alt.conflict.gen_types import DefaultQuery as AltDefaultQuery
 from api_blueprint_example_client.api.client import create_client
+from api_blueprint_example_client.api.gen_client import ApiClient
 from api_blueprint_example_client.api.routes.api.binary.gen_types import (
     AuditPacket,
     AuditPacketBody,
@@ -34,19 +35,21 @@ from api_blueprint_example_client.api.routes.api.demo.gen_types import (
     PostDeprecatedJSON,
     PutDemoJSON,
     PutDemoQuery,
+    RequestOptionsQuery,
     SweepEventsOpen,
     TestPostJSON,
 )
 from api_blueprint_example_client.api.routes.api.gen_types import HelloChannelMsgTypeEnum
 from api_blueprint_example_client.api.routes.api.hello.gen_types import AbcQuery as HelloAbcQuery
 from api_blueprint_example_client.api.routes.api.hello.gen_types import MapEnum
-from api_blueprint_example_client.api.routes.api.media.gen_types import MediaPreviewForm
+from api_blueprint_example_client.api.routes.api.media.gen_types import MediaErrorFrameQuery, MediaPreviewForm
 from api_blueprint_example_client.api.runtime.errors import (
     ApiError,
     ApiErrors,
     is_api_error,
     resolve_api_toast,
 )
+from api_blueprint_example_client.api.transports.http.client import HttpClientTransport
 from api_blueprint_example_client.static.client import create_client as create_static_client
 
 
@@ -244,6 +247,54 @@ async def check_media(api) -> None:
         await stream.aclose()
 
 
+async def check_request_options(base_url: str) -> None:
+    async_client = httpx.AsyncClient(
+        headers={"x-options-default": "default", "x-options-token": "default"},
+        timeout=0.02,
+    )
+    api = ApiClient(HttpClientTransport(base_url, client=async_client))
+    try:
+        ok = await api.demo.request_options(
+            query=RequestOptionsQuery(delay_ms=30),
+            headers={"x-options-token": "per-call"},
+            timeout=1.0,
+        )
+        assert ok.status == "ok", ok
+        assert ok.delay_ms == 30, ok
+
+        timed_out = False
+        try:
+            await api.demo.request_options(
+                query=RequestOptionsQuery(delay_ms=120),
+                headers={"x-options-token": "per-call"},
+                timeout=0.01,
+            )
+        except (httpx.TimeoutException, httpx.RequestError):
+            timed_out = True
+        assert timed_out, "short per-call timeout did not fail"
+    finally:
+        await api.aclose()
+
+
+async def check_media_filename_edge(api) -> None:
+    response = await api.media.media_download_filename_edge()
+    assert response.status == 200, response
+    assert response.filename == "媒体报告.xlsx", response
+    assert response.body.startswith(b"PK"), response.body
+
+
+async def check_media_error(api) -> None:
+    ok = await api.media.media_error_frame(query=MediaErrorFrameQuery(mode="ok"))
+    assert ok.content_type == "image/jpeg", ok
+    assert ok.body.startswith(b"\xff\xd8"), ok.body
+
+    rate_limited = await expect_api_error(
+        lambda: api.media.media_error_frame(query=MediaErrorFrameQuery(mode="rate_limit")),
+        route_id="api.media.get.errorframe",
+    )
+    assert is_api_error(rate_limited, ApiErrors.DemoErr.RATE_LIMITED), rate_limited
+
+
 async def check_typed_errors(api) -> None:
     ok = await api.demo.error_demo(query=ErrorDemoQuery(mode="ok"))
     assert ok.status == "ok", ok
@@ -270,13 +321,13 @@ async def check_naming(api, alt_api) -> None:
     assert alt_response.enum.value == "class", alt_response
 
 
-async def expect_api_error(action) -> ApiError:
+async def expect_api_error(action, route_id: str = "api.demo.get.errordemo") -> ApiError:
     try:
         await action()
     except Exception as error:
         if not is_api_error(error):
             raise AssertionError(f"expected ApiError, got {type(error).__name__}: {error}") from error
-        assert error.route_id == "api.demo.get.errordemo", error.route_id
+        assert error.route_id == route_id, error.route_id
         assert error.raw, "ApiError raw payload is empty"
         return error
     raise AssertionError("expected ApiError but request succeeded")
@@ -297,7 +348,7 @@ async def main() -> None:
     selected = scenario_set(
         sys.argv[2]
         if len(sys.argv) > 2
-        else "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,single-channel"
+        else "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel"
     )
     async with create_client(sys.argv[1]) as api, create_alt_client(sys.argv[1]) as alt_api:
         if "rpc" in selected:
@@ -328,6 +379,12 @@ async def main() -> None:
             await check_binary_response(api)
         if "media" in selected:
             await check_media(api)
+        if "request-options" in selected:
+            await check_request_options(sys.argv[1])
+        if "media-filename-edge" in selected:
+            await check_media_filename_edge(api)
+        if "media-error" in selected:
+            await check_media_error(api)
         if "error" in selected:
             await check_typed_errors(api)
         if "naming" in selected:

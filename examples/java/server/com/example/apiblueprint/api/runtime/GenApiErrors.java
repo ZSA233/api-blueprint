@@ -159,6 +159,13 @@ public final class GenApiErrors {
             )
         ),
         Map.entry(
+            "api.demo.get.requestoptions",
+            Map.ofEntries(
+                Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
+                Map.entry(55555, API_ERRORS_BY_ID.get("CommonErr.TOKEN_EXPIRE"))
+            )
+        ),
+        Map.entry(
             "api.demo.put.z1put",
             Map.ofEntries(
                 Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
@@ -242,6 +249,22 @@ public final class GenApiErrors {
             Map.ofEntries(
                 Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
                 Map.entry(55555, API_ERRORS_BY_ID.get("CommonErr.TOKEN_EXPIRE"))
+            )
+        ),
+        Map.entry(
+            "api.media.get.downloadfilenameedge",
+            Map.ofEntries(
+                Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
+                Map.entry(55555, API_ERRORS_BY_ID.get("CommonErr.TOKEN_EXPIRE"))
+            )
+        ),
+        Map.entry(
+            "api.media.get.errorframe",
+            Map.ofEntries(
+                Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
+                Map.entry(55555, API_ERRORS_BY_ID.get("CommonErr.TOKEN_EXPIRE")),
+                Map.entry(70002, API_ERRORS_BY_ID.get("DemoErr.UNKNOWN")),
+                Map.entry(42901, API_ERRORS_BY_ID.get("DemoErr.RATE_LIMITED"))
             )
         ),
         Map.entry(

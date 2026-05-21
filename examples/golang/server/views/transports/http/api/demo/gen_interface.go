@@ -84,6 +84,29 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		false,
 	)
 
+	httptransport.GET(
+		"/api/demo/request-options",
+		sharedprovider.NewRouteExecutor(
+			sharedprovider.RouteInfo{
+				Root:      "api",
+				Group:     "demo",
+				Namespace: "demo",
+				Service:   "DemoService",
+				Operation: "RequestOptions",
+				RouteID:   "api.demo.get.requestoptions",
+				Path:      "/api/demo/request-options",
+				Methods:   []string{"GET"},
+				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope(""),
+				Filename:  "",
+			},
+			"req=Q|auth|handle|rsp=json@CodeMessageDataEnvelope",
+			impl.RequestOptions,
+		),
+		eng,
+		false,
+	)
+
 	httptransport.PUT(
 		"/api/demo/1put",
 		sharedprovider.NewRouteExecutor(

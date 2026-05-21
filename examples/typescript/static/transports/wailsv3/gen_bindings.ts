@@ -18,6 +18,7 @@ export const WAILS_V3_BINDINGS: Record<string, string> = {
   "demo.DemoService.PostDeprecated": "example.com/project/golang/server/views/transports/wailsv3/api/demo.DemoService.PostDeprecated",
   "demo.DemoService.PutDemo": "example.com/project/golang/server/views/transports/wailsv3/api/demo.DemoService.PutDemo",
   "demo.DemoService.Raw": "example.com/project/golang/server/views/transports/wailsv3/api/demo.DemoService.Raw",
+  "demo.DemoService.RequestOptions": "example.com/project/golang/server/views/transports/wailsv3/api/demo.DemoService.RequestOptions",
   "demo.DemoService.SendAssistantSession": "example.com/project/golang/server/views/transports/wailsv3/api/demo.DemoService.SendAssistantSession",
   "demo.DemoService.SubscribeSweepEvents": "example.com/project/golang/server/views/transports/wailsv3/api/demo.DemoService.SubscribeSweepEvents",
   "demo.DemoService.TestPost": "example.com/project/golang/server/views/transports/wailsv3/api/demo.DemoService.TestPost",

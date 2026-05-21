@@ -24,6 +24,14 @@ func (impl *_GenRouter) MediaDownloadDynamic(ctx *CTX_MediaDownloadDynamic, req 
 	return nil, fmt.Errorf("not implemented")
 }
 
+func (impl *_GenRouter) MediaDownloadFilenameEdge(ctx *CTX_MediaDownloadFilenameEdge, req *REQ_MediaDownloadFilenameEdge) (rsp *RSP_MediaDownloadFilenameEdge, err error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (impl *_GenRouter) MediaErrorFrame(ctx *CTX_MediaErrorFrame, req *REQ_MediaErrorFrame) (rsp *RSP_MediaErrorFrame, err error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
 func (impl *_GenRouter) MediaMjpeg(ctx *CTX_MediaMjpeg, req *REQ_MediaMjpeg) (rsp *RSP_MediaMjpeg, err error) {
 	return nil, fmt.Errorf("not implemented")
 }

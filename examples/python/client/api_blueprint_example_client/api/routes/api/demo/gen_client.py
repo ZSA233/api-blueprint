@@ -28,6 +28,8 @@ from .gen_types import (
     TestPostResponse,
     FormSubmitForm,
     FormSubmitResponse,
+    RequestOptionsQuery,
+    RequestOptionsResponse,
     PutDemoQuery,
     PutDemoJSON,
     PutDemoResponse,
@@ -123,6 +125,26 @@ class DemoClient:
             timeout=timeout,
         )
         return FormSubmitResponse.from_value(payload, "form_submit.response")
+
+    async def request_options(
+        self,
+        query: RequestOptionsQuery,
+        *,
+        headers: Mapping[str, str] | None = None,
+        timeout: float | None = None,
+    ) -> RequestOptionsResponse:
+        response_type: str | None = 'RequestOptionsResponse'
+        payload = await self._transport.request(
+            "GET",
+            "/api/demo/request-options",
+            route_id="api.demo.get.requestoptions",
+            query=_api_to_json(query),
+            response_type=response_type,
+            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+            headers=headers,
+            timeout=timeout,
+        )
+        return RequestOptionsResponse.from_value(payload, "request_options.response")
 
     async def put_demo(
         self,

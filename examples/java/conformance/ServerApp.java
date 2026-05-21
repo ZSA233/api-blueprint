@@ -25,6 +25,7 @@ import com.example.apiblueprint.api.runtime.GenApiToastPayload;
 import com.example.apiblueprint.api.runtime.GenApiTypes;
 import com.example.apiblueprint.api.routes.api.media.MediaService;
 import com.example.apiblueprint.api.routes.api.media.GenMediaServiceStub;
+import com.example.apiblueprint.api.routes.api.media.GenMediaTypes;
 import com.example.apiblueprint.api.transports.http.api.GenApiController;
 import com.example.apiblueprint.api.transports.http.api.binary.GenBinaryController;
 import com.example.apiblueprint.api.transports.http.api.conflict.GenConflictController;
@@ -136,9 +137,17 @@ public class ServerApp {
                 httpResponse.getWriter().write("{\"detail\":\"missing conformance token\"}");
                 return;
             }
+            if ("/api/demo/request-options".equals(httpRequest.getRequestURI())
+                && (!"default".equals(httpRequest.getHeader("x-options-default"))
+                    || !"per-call".equals(httpRequest.getHeader("x-options-token")))) {
+                httpResponse.setStatus(418);
+                httpResponse.setContentType("application/json");
+                httpResponse.getWriter().write("{\"detail\":\"request options headers missing\"}");
+                return;
+            }
             chain.doFilter(request, response);
         });
-        registration.addUrlPatterns("/api/demo/abc");
+        registration.addUrlPatterns("/api/demo/abc", "/api/demo/request-options");
         return registration;
     }
 
@@ -257,6 +266,15 @@ public class ServerApp {
         @Override
         public GenDemoTypes.FormSubmitResponse formSubmit(GenDemoTypes.FormSubmitForm form) {
             return new GenDemoTypes.FormSubmitResponse(form.title(), form.count(), form.enabled());
+        }
+
+        @Override
+        public GenApiTypes.RequestOptionsResponse requestOptions(GenDemoTypes.RequestOptionsQuery query) throws Exception {
+            int delayMs = query == null || query.delayMs() == null ? 0 : query.delayMs();
+            if (delayMs > 0) {
+                Thread.sleep(delayMs);
+            }
+            return new GenApiTypes.RequestOptionsResponse("ok", delayMs);
         }
 
         @Override
@@ -415,6 +433,35 @@ public class ServerApp {
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 "media-report-dynamic.xlsx"
             );
+        }
+
+        @Override
+        public GenApiRawResponse mediaDownloadFilenameEdge() {
+            return GenApiRawResponse.of(
+                "PK\u0003\u0004api-blueprint media report filename edge\n".getBytes(StandardCharsets.UTF_8),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "媒体报告.xlsx"
+            );
+        }
+
+        @Override
+        public GenApiRawResponse mediaErrorFrame(GenMediaTypes.MediaErrorFrameQuery query) {
+            if (query != null && Objects.equals("rate_limit", query.mode())) {
+                throw new GenApiError(
+                    new GenApiErrorPayload(
+                        "DemoErr.RATE_LIMITED",
+                        "",
+                        "",
+                        GenApiErrors.DEMOERR_RATE_LIMITED,
+                        "",
+                        new GenApiToastPayload("demo.rate_limited", "warning", "请求过于频繁，请稍后再试", "请等待 30 秒后重试")
+                    ),
+                    "api.media.get.errorframe",
+                    "",
+                    null
+                );
+            }
+            return GenApiRawResponse.of(SAMPLE_JPEG, "image/jpeg");
         }
 
         @Override

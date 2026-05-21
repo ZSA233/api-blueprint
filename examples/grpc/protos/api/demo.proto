@@ -8,6 +8,7 @@ service DemoService {
   rpc Abc (AbcRequest) returns (AbcResponse);
   rpc TestPost (TestPostRequest) returns (TestPostResponse);
   rpc FormSubmit (FormSubmitRequest) returns (FormSubmitResponse);
+  rpc RequestOptions (RequestOptionsRequest) returns (RequestOptionsResponse);
   rpc PutDemo (PutDemoRequest) returns (PutDemoResponse);
   rpc Delete (DeleteRequest) returns (DeleteResponse);
   rpc SweepEvents (SweepEventsRequest) returns (stream SweepStreamMessage);
@@ -64,6 +65,15 @@ message FormSubmitResponse {
   string summary = 1;
   int64 count = 2;
   bool enabled = 3;
+}
+
+message RequestOptionsRequest {
+  int64 delay_ms = 1;
+}
+
+message RequestOptionsResponse {
+  string status = 1;
+  int64 delay_ms = 2;
 }
 
 message PutDemoRequest {

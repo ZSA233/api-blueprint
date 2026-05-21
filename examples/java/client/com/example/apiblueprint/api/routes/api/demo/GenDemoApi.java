@@ -129,6 +129,42 @@ public class GenDemoApi {
         return transport.execute(request);
     }
 
+    public GenApiTypes.RequestOptionsResponse requestOptions(
+        GenDemoTypes.RequestOptionsQuery query
+    ) throws Exception {
+        return requestOptions(
+            query,
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenApiTypes.RequestOptionsResponse requestOptions(
+        GenDemoTypes.RequestOptionsQuery query,
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
+        GenApiRequest<GenApiTypes.RequestOptionsResponse> request = new GenApiRequest<>(
+            "api.demo.get.requestoptions",
+            "GET",
+            "/api/demo/request-options",
+            query,
+            null,
+            null,
+            null,
+            null,
+            "none",
+            GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+            GenApiTypes.RequestOptionsResponse.class,
+            "application/json",
+            "json",
+            "",
+            null,
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
+        );
+        return transport.execute(request);
+    }
+
     public GenDemoTypes.PutDemoResponse putDemo(
         GenDemoTypes.PutDemoQuery query,
         GenDemoTypes.PutDemoJSON json

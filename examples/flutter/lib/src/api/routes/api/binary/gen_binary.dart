@@ -5,20 +5,11 @@ import 'dart:typed_data';
 
 import 'package:api_blueprint_example/src/api/runtime/binary/gen_binary_runtime.dart';
 
-
-
-
-
-
-
-
-
 class DemoPacketKindValues {
   const DemoPacketKindValues._();
   static const int metric = 1;
   static const int debug = 2;
 }
-
 
 class DemoPacketFlagsValues {
   const DemoPacketFlagsValues._();
@@ -28,7 +19,6 @@ class DemoPacketFlagsValues {
   static const int mode = 24;
   static const int reserved = 4294967264;
 }
-
 
 class DemoPacket {
   final Uint8List? magic;
@@ -62,7 +52,6 @@ class DemoPacket {
   });
 }
 
-
 class DemoPacketHeader {
   final Uint8List? magic;
   final int? version;
@@ -87,7 +76,6 @@ class DemoPacketHeader {
   });
 }
 
-
 class DemoPacketBody {
   final List<DemoPacketItem>? items;
   final Uint8List? payload;
@@ -101,7 +89,6 @@ class DemoPacketBody {
     this.checksum,
   });
 }
-
 
 class DemoPacketItem {
   final int? id;
@@ -174,194 +161,101 @@ DemoPacket decodeDemoPacket(Uint8List bytes) {
   );
 }
 
-
 void _writeDemoPacketHeader(
   DemoPacket value,
   ApiBinaryWriter writer,
   Map<String, int> state,
   String path,
 ) {
-  
-
 
     final _magic = value.magic ?? Uint8List.fromList([65, 66, 80, 49]);
     final _magicCount = 4;
 
     apiBinaryRequireSize(apiBinaryJoinPath(path, "magic"), apiBinarySize(_magic), _magicCount);
-    
 
       apiBinaryRequireCondition(apiBinaryJoinPath(path, "magic"), apiBinaryBytesEqual(_magic, Uint8List.fromList([65, 66, 80, 49])), 'const mismatch');
 
-
-
-
-
-
     writer.writeBytes(apiBinaryJoinPath(path, "magic"), _magic);
 
-  
-
-
     final _version = value.version ?? 1;
-    
 
       apiBinaryRequireCondition(apiBinaryJoinPath(path, "version"), _version == 1, 'const mismatch');
-
-
-
-
-
-
 
     writer.writeU16(apiBinaryJoinPath(path, "version"), _version);
 
     state["version"] = _version;
 
-
-  
-
-
     final _kind = value.kind ?? 1;
-    
 
       apiBinaryRequireCondition(apiBinaryJoinPath(path, "kind"), _kind == 1, 'const mismatch');
-
-
-
-
-
-
 
     writer.writeU16(apiBinaryJoinPath(path, "kind"), _kind);
 
     state["kind"] = _kind;
 
-
-  
-
-
     final _flags = apiBinaryRequire<int>(value.flags, apiBinaryJoinPath(path, "flags"));
-    
 
       apiBinaryRequireRange(apiBinaryJoinPath(path, "flags"), _flags, 0, 9223372036854775807);
 
-
-
-
       apiBinaryRequireCondition(apiBinaryJoinPath(path, "flags"), (_flags & 4294967264) == 0, 'reserved bits must be zero');
-
 
     writer.writeU32(apiBinaryJoinPath(path, "flags"), _flags);
 
     state["flags"] = _flags;
 
-
-  
-
-
     writer.writeZeroes(apiBinaryJoinPath(path, "header_pad"), 1);
-
-  
-
 
     writer.writeZeroes(apiBinaryJoinPath(path, "reserved0"), 2);
 
-  
-
-
     final _shortCode = apiBinaryRequire<int>(value.shortCode, apiBinaryJoinPath(path, "short_code"));
-    
 
       apiBinaryRequireRange(apiBinaryJoinPath(path, "short_code"), _shortCode, 1, 9223372036854775807);
 
-
       apiBinaryRequireRange(apiBinaryJoinPath(path, "short_code"), _shortCode, -9223372036854775808, 16777215);
-
-
-
 
     writer.writeU24(apiBinaryJoinPath(path, "short_code"), _shortCode);
 
     state["shortCode"] = _shortCode;
 
-
-  
-
-
     final _signedDelta = apiBinaryRequire<int>(value.signedDelta, apiBinaryJoinPath(path, "signed_delta"));
-    
 
       apiBinaryRequireRange(apiBinaryJoinPath(path, "signed_delta"), _signedDelta, 0, 9223372036854775807);
 
-
       apiBinaryRequireRange(apiBinaryJoinPath(path, "signed_delta"), _signedDelta, -9223372036854775808, 8388607);
-
-
-
 
     writer.writeI24(apiBinaryJoinPath(path, "signed_delta"), _signedDelta);
 
     state["signedDelta"] = _signedDelta;
 
-
-  
-
-
     final _itemCount = apiBinaryRequire<int>(value.itemCount, apiBinaryJoinPath(path, "item_count"));
-    
 
       apiBinaryRequireRange(apiBinaryJoinPath(path, "item_count"), _itemCount, 1, 9223372036854775807);
 
-
       apiBinaryRequireRange(apiBinaryJoinPath(path, "item_count"), _itemCount, -9223372036854775808, 8);
-
-
-
 
     writer.writeU16(apiBinaryJoinPath(path, "item_count"), _itemCount);
 
     state["itemCount"] = _itemCount;
 
-
-  
-
-
     final _payloadLen = apiBinaryRequire<int>(value.payloadLen, apiBinaryJoinPath(path, "payload_len"));
-    
 
       apiBinaryRequireRange(apiBinaryJoinPath(path, "payload_len"), _payloadLen, 0, 9223372036854775807);
 
-
       apiBinaryRequireRange(apiBinaryJoinPath(path, "payload_len"), _payloadLen, -9223372036854775808, 64);
-
-
-
 
     writer.writeU32(apiBinaryJoinPath(path, "payload_len"), _payloadLen);
 
     state["payloadLen"] = _payloadLen;
 
-
-  
-
-
     final _scoreCount = value.scoreCount ?? 2;
-    
 
       apiBinaryRequireCondition(apiBinaryJoinPath(path, "score_count"), _scoreCount == 2, 'const mismatch');
 
-
-
-
       apiBinaryRequireRange(apiBinaryJoinPath(path, "score_count"), _scoreCount, -9223372036854775808, 4);
-
-
-
 
     writer.writeU16(apiBinaryJoinPath(path, "score_count"), _scoreCount);
 
     state["scoreCount"] = _scoreCount;
-
 
 }
 
@@ -370,156 +264,74 @@ DemoPacketHeader _readDemoPacketHeader(
   Map<String, int> state,
   String path,
 ) {
-  
 
     final magic = reader.readBytes(apiBinaryJoinPath(path, "magic"), 4);
-    
 
       apiBinaryRequireCondition(apiBinaryJoinPath(path, "magic"), apiBinaryBytesEqual(magic, Uint8List.fromList([65, 66, 80, 49])), 'const mismatch');
 
-
-
-
-
-
-
-  
-
     final version = reader.readU16(apiBinaryJoinPath(path, "version"));
-    
 
       apiBinaryRequireCondition(apiBinaryJoinPath(path, "version"), version == 1, 'const mismatch');
 
-
-
-
-
-
-
     state["version"] = version;
 
-
-  
-
     final kind = reader.readU16(apiBinaryJoinPath(path, "kind"));
-    
 
       apiBinaryRequireCondition(apiBinaryJoinPath(path, "kind"), kind == 1, 'const mismatch');
 
-
-
-
-
-
-
     state["kind"] = kind;
 
-
-  
-
     final flags = reader.readU32(apiBinaryJoinPath(path, "flags"));
-    
 
       apiBinaryRequireRange(apiBinaryJoinPath(path, "flags"), flags, 0, 9223372036854775807);
 
-
-
-
       apiBinaryRequireCondition(apiBinaryJoinPath(path, "flags"), (flags & 4294967264) == 0, 'reserved bits must be zero');
-
 
     state["flags"] = flags;
 
-
-  
-
     reader.readZeroes(apiBinaryJoinPath(path, "header_pad"), 1);
-
-  
 
     reader.readZeroes(apiBinaryJoinPath(path, "reserved0"), 2);
 
-  
-
     final shortCode = reader.readU24(apiBinaryJoinPath(path, "short_code"));
-    
 
       apiBinaryRequireRange(apiBinaryJoinPath(path, "short_code"), shortCode, 1, 9223372036854775807);
 
-
       apiBinaryRequireRange(apiBinaryJoinPath(path, "short_code"), shortCode, -9223372036854775808, 16777215);
-
-
-
 
     state["shortCode"] = shortCode;
 
-
-  
-
     final signedDelta = reader.readI24(apiBinaryJoinPath(path, "signed_delta"));
-    
 
       apiBinaryRequireRange(apiBinaryJoinPath(path, "signed_delta"), signedDelta, 0, 9223372036854775807);
 
-
       apiBinaryRequireRange(apiBinaryJoinPath(path, "signed_delta"), signedDelta, -9223372036854775808, 8388607);
-
-
-
 
     state["signedDelta"] = signedDelta;
 
-
-  
-
     final itemCount = reader.readU16(apiBinaryJoinPath(path, "item_count"));
-    
 
       apiBinaryRequireRange(apiBinaryJoinPath(path, "item_count"), itemCount, 1, 9223372036854775807);
 
-
       apiBinaryRequireRange(apiBinaryJoinPath(path, "item_count"), itemCount, -9223372036854775808, 8);
-
-
-
 
     state["itemCount"] = itemCount;
 
-
-  
-
     final payloadLen = reader.readU32(apiBinaryJoinPath(path, "payload_len"));
-    
 
       apiBinaryRequireRange(apiBinaryJoinPath(path, "payload_len"), payloadLen, 0, 9223372036854775807);
 
-
       apiBinaryRequireRange(apiBinaryJoinPath(path, "payload_len"), payloadLen, -9223372036854775808, 64);
-
-
-
 
     state["payloadLen"] = payloadLen;
 
-
-  
-
     final scoreCount = reader.readU16(apiBinaryJoinPath(path, "score_count"));
-    
 
       apiBinaryRequireCondition(apiBinaryJoinPath(path, "score_count"), scoreCount == 2, 'const mismatch');
 
-
-
-
       apiBinaryRequireRange(apiBinaryJoinPath(path, "score_count"), scoreCount, -9223372036854775808, 4);
 
-
-
-
     state["scoreCount"] = scoreCount;
-
 
   return DemoPacketHeader(
     magic: magic,
@@ -534,15 +346,12 @@ DemoPacketHeader _readDemoPacketHeader(
   );
 }
 
-
 void _writeDemoPacketBody(
   DemoPacket value,
   ApiBinaryWriter writer,
   Map<String, int> state,
   String path,
 ) {
-  
-
 
     final _items = apiBinaryRequire<List<DemoPacketItem>>(value.items, apiBinaryJoinPath(path, "items"));
     final _itemsCount = (state["itemCount"] ?? 0);
@@ -555,22 +364,12 @@ void _writeDemoPacketBody(
 
     }
 
-  
-
-
     final _payload = apiBinaryRequire<Uint8List>(value.payload, apiBinaryJoinPath(path, "payload"));
     final _payloadCount = (state["payloadLen"] ?? 0);
 
     apiBinaryRequireSize(apiBinaryJoinPath(path, "payload"), apiBinarySize(_payload), _payloadCount);
-    
-
-
-
 
     writer.writeBytes(apiBinaryJoinPath(path, "payload"), _payload);
-
-  
-
 
     final _scores = apiBinaryRequire<List<double>>(value.scores, apiBinaryJoinPath(path, "scores"));
     final _scoresCount = (state["scoreCount"] ?? 0);
@@ -583,22 +382,13 @@ void _writeDemoPacketBody(
 
     }
 
-  
-
-
     final _checksum = apiBinaryRequire<int>(value.checksum, apiBinaryJoinPath(path, "checksum"));
-    
-
-
 
       apiBinaryRequireCondition(apiBinaryJoinPath(path, "checksum"), _checksum == (state["itemCount"] ?? 0) + (state["payloadLen"] ?? 0), 'assert mismatch');
-
-
 
     writer.writeU32(apiBinaryJoinPath(path, "checksum"), _checksum);
 
     state["checksum"] = _checksum;
-
 
 }
 
@@ -607,7 +397,6 @@ DemoPacketBody _readDemoPacketBody(
   Map<String, int> state,
   String path,
 ) {
-  
 
     final itemsCount = (state["itemCount"] ?? 0);
 
@@ -618,16 +407,7 @@ DemoPacketBody _readDemoPacketBody(
 
     }
 
-  
-
     final payload = reader.readBytes(apiBinaryJoinPath(path, "payload"), (state["payloadLen"] ?? 0));
-    
-
-
-
-
-
-  
 
     final scoresCount = (state["scoreCount"] ?? 0);
 
@@ -638,19 +418,11 @@ DemoPacketBody _readDemoPacketBody(
 
     }
 
-  
-
     final checksum = reader.readU32(apiBinaryJoinPath(path, "checksum"));
-    
-
-
 
       apiBinaryRequireCondition(apiBinaryJoinPath(path, "checksum"), checksum == (state["itemCount"] ?? 0) + (state["payloadLen"] ?? 0), 'assert mismatch');
 
-
-
     state["checksum"] = checksum;
-
 
   return DemoPacketBody(
     items: items,
@@ -660,71 +432,36 @@ DemoPacketBody _readDemoPacketBody(
   );
 }
 
-
 void _writeDemoPacketItem(
   DemoPacketItem value,
   ApiBinaryWriter writer,
   Map<String, int> state,
   String path,
 ) {
-  
-
 
     final _id = apiBinaryRequire<int>(value.id, apiBinaryJoinPath(path, "id"));
-    
 
       apiBinaryRequireRange(apiBinaryJoinPath(path, "id"), _id, 1, 9223372036854775807);
 
-
       apiBinaryRequireRange(apiBinaryJoinPath(path, "id"), _id, -9223372036854775808, 999);
-
-
-
 
     writer.writeU32(apiBinaryJoinPath(path, "id"), _id);
 
     state["id"] = _id;
 
-
-  
-
-
     final _enabled = apiBinaryRequire<bool>(value.enabled, apiBinaryJoinPath(path, "enabled"));
-    
-
-
-
-
 
     writer.writeBool(apiBinaryJoinPath(path, "enabled"), _enabled);
 
-
-  
-
-
     final _value = apiBinaryRequire<double>(value.value, apiBinaryJoinPath(path, "value"));
-    
-
-
-
-
 
     writer.writeF64(apiBinaryJoinPath(path, "value"), _value);
 
-
-  
-
-
     final _labelLen = apiBinaryRequire<int>(value.labelLen, apiBinaryJoinPath(path, "label_len"));
-    
 
       apiBinaryRequireRange(apiBinaryJoinPath(path, "label_len"), _labelLen, 1, 9223372036854775807);
 
-
       apiBinaryRequireRange(apiBinaryJoinPath(path, "label_len"), _labelLen, -9223372036854775808, 16);
-
-
-
 
     apiBinaryRequireSize(apiBinaryJoinPath(apiBinaryJoinPath(path, "label_len"), "label"), apiBinarySize(value.label), _labelLen);
 
@@ -732,18 +469,10 @@ void _writeDemoPacketItem(
 
     state["labelLen"] = _labelLen;
 
-
-  
-
-
     final _label = apiBinaryRequire<Uint8List>(value.label, apiBinaryJoinPath(path, "label"));
     final _labelCount = (state["labelLen"] ?? 0);
 
     apiBinaryRequireSize(apiBinaryJoinPath(path, "label"), apiBinarySize(_label), _labelCount);
-    
-
-
-
 
     writer.writeBytes(apiBinaryJoinPath(path, "label"), _label);
 
@@ -754,66 +483,28 @@ DemoPacketItem _readDemoPacketItem(
   Map<String, int> state,
   String path,
 ) {
-  
 
     final id = reader.readU32(apiBinaryJoinPath(path, "id"));
-    
 
       apiBinaryRequireRange(apiBinaryJoinPath(path, "id"), id, 1, 9223372036854775807);
 
-
       apiBinaryRequireRange(apiBinaryJoinPath(path, "id"), id, -9223372036854775808, 999);
-
-
-
 
     state["id"] = id;
 
-
-  
-
     final enabled = reader.readBool(apiBinaryJoinPath(path, "enabled"));
-    
-
-
-
-
-
-
-  
 
     final value = reader.readF64(apiBinaryJoinPath(path, "value"));
-    
-
-
-
-
-
-
-  
 
     final labelLen = reader.readU8(apiBinaryJoinPath(path, "label_len"));
-    
 
       apiBinaryRequireRange(apiBinaryJoinPath(path, "label_len"), labelLen, 1, 9223372036854775807);
 
-
       apiBinaryRequireRange(apiBinaryJoinPath(path, "label_len"), labelLen, -9223372036854775808, 16);
-
-
-
 
     state["labelLen"] = labelLen;
 
-
-  
-
     final label = reader.readBytes(apiBinaryJoinPath(path, "label"), (state["labelLen"] ?? 0));
-    
-
-
-
-
 
   return DemoPacketItem(
     id: id,
@@ -824,15 +515,11 @@ DemoPacketItem _readDemoPacketItem(
   );
 }
 
-
-
-
 class AuditPacketKindValues {
   const AuditPacketKindValues._();
   static const int metric = 1;
   static const int audit = 2;
 }
-
 
 class AuditPacketFlagsValues {
   const AuditPacketFlagsValues._();
@@ -840,7 +527,6 @@ class AuditPacketFlagsValues {
   static const int mode = 6;
   static const int reserved = 4294967288;
 }
-
 
 class AuditPacket {
   final int? kind;
@@ -858,7 +544,6 @@ class AuditPacket {
   });
 }
 
-
 class AuditPacketHeader {
   final int? kind;
   final int? flags;
@@ -871,7 +556,6 @@ class AuditPacketHeader {
   });
 }
 
-
 class AuditPacketBody {
   final List<AuditPacketItem>? items;
   final int? checksum;
@@ -881,7 +565,6 @@ class AuditPacketBody {
     this.checksum,
   });
 }
-
 
 class AuditPacketItem {
   final int? id;
@@ -930,69 +613,40 @@ AuditPacket decodeAuditPacket(Uint8List bytes) {
   );
 }
 
-
 void _writeAuditPacketHeader(
   AuditPacket value,
   ApiBinaryWriter writer,
   Map<String, int> state,
   String path,
 ) {
-  
-
 
     final _kind = value.kind ?? 2;
-    
 
       apiBinaryRequireCondition(apiBinaryJoinPath(path, "kind"), _kind == 2, 'const mismatch');
-
-
-
-
-
-
 
     writer.writeU16(apiBinaryJoinPath(path, "kind"), _kind);
 
     state["kind"] = _kind;
 
-
-  
-
-
     final _flags = apiBinaryRequire<int>(value.flags, apiBinaryJoinPath(path, "flags"));
-    
 
       apiBinaryRequireRange(apiBinaryJoinPath(path, "flags"), _flags, 0, 9223372036854775807);
 
-
-
-
       apiBinaryRequireCondition(apiBinaryJoinPath(path, "flags"), (_flags & 4294967288) == 0, 'reserved bits must be zero');
-
 
     writer.writeU32(apiBinaryJoinPath(path, "flags"), _flags);
 
     state["flags"] = _flags;
 
-
-  
-
-
     final _itemCount = apiBinaryRequire<int>(value.itemCount, apiBinaryJoinPath(path, "item_count"));
-    
 
       apiBinaryRequireRange(apiBinaryJoinPath(path, "item_count"), _itemCount, 1, 9223372036854775807);
 
-
       apiBinaryRequireRange(apiBinaryJoinPath(path, "item_count"), _itemCount, -9223372036854775808, 4);
-
-
-
 
     writer.writeU16(apiBinaryJoinPath(path, "item_count"), _itemCount);
 
     state["itemCount"] = _itemCount;
-
 
 }
 
@@ -1001,53 +655,28 @@ AuditPacketHeader _readAuditPacketHeader(
   Map<String, int> state,
   String path,
 ) {
-  
 
     final kind = reader.readU16(apiBinaryJoinPath(path, "kind"));
-    
 
       apiBinaryRequireCondition(apiBinaryJoinPath(path, "kind"), kind == 2, 'const mismatch');
 
-
-
-
-
-
-
     state["kind"] = kind;
 
-
-  
-
     final flags = reader.readU32(apiBinaryJoinPath(path, "flags"));
-    
 
       apiBinaryRequireRange(apiBinaryJoinPath(path, "flags"), flags, 0, 9223372036854775807);
 
-
-
-
       apiBinaryRequireCondition(apiBinaryJoinPath(path, "flags"), (flags & 4294967288) == 0, 'reserved bits must be zero');
-
 
     state["flags"] = flags;
 
-
-  
-
     final itemCount = reader.readU16(apiBinaryJoinPath(path, "item_count"));
-    
 
       apiBinaryRequireRange(apiBinaryJoinPath(path, "item_count"), itemCount, 1, 9223372036854775807);
 
-
       apiBinaryRequireRange(apiBinaryJoinPath(path, "item_count"), itemCount, -9223372036854775808, 4);
 
-
-
-
     state["itemCount"] = itemCount;
-
 
   return AuditPacketHeader(
     kind: kind,
@@ -1056,15 +685,12 @@ AuditPacketHeader _readAuditPacketHeader(
   );
 }
 
-
 void _writeAuditPacketBody(
   AuditPacket value,
   ApiBinaryWriter writer,
   Map<String, int> state,
   String path,
 ) {
-  
-
 
     final _items = apiBinaryRequire<List<AuditPacketItem>>(value.items, apiBinaryJoinPath(path, "items"));
     final _itemsCount = (state["itemCount"] ?? 0);
@@ -1077,22 +703,13 @@ void _writeAuditPacketBody(
 
     }
 
-  
-
-
     final _checksum = apiBinaryRequire<int>(value.checksum, apiBinaryJoinPath(path, "checksum"));
-    
-
-
 
       apiBinaryRequireCondition(apiBinaryJoinPath(path, "checksum"), _checksum == (state["itemCount"] ?? 0), 'assert mismatch');
-
-
 
     writer.writeU32(apiBinaryJoinPath(path, "checksum"), _checksum);
 
     state["checksum"] = _checksum;
-
 
 }
 
@@ -1101,7 +718,6 @@ AuditPacketBody _readAuditPacketBody(
   Map<String, int> state,
   String path,
 ) {
-  
 
     final itemsCount = (state["itemCount"] ?? 0);
 
@@ -1112,19 +728,11 @@ AuditPacketBody _readAuditPacketBody(
 
     }
 
-  
-
     final checksum = reader.readU32(apiBinaryJoinPath(path, "checksum"));
-    
-
-
 
       apiBinaryRequireCondition(apiBinaryJoinPath(path, "checksum"), checksum == (state["itemCount"] ?? 0), 'assert mismatch');
 
-
-
     state["checksum"] = checksum;
-
 
   return AuditPacketBody(
     items: items,
@@ -1132,48 +740,30 @@ AuditPacketBody _readAuditPacketBody(
   );
 }
 
-
 void _writeAuditPacketItem(
   AuditPacketItem value,
   ApiBinaryWriter writer,
   Map<String, int> state,
   String path,
 ) {
-  
-
 
     final _id = apiBinaryRequire<int>(value.id, apiBinaryJoinPath(path, "id"));
-    
 
       apiBinaryRequireRange(apiBinaryJoinPath(path, "id"), _id, 1, 9223372036854775807);
-
-
-
-
 
     writer.writeU32(apiBinaryJoinPath(path, "id"), _id);
 
     state["id"] = _id;
 
-
-  
-
-
     final _code = apiBinaryRequire<int>(value.code, apiBinaryJoinPath(path, "code"));
-    
 
       apiBinaryRequireRange(apiBinaryJoinPath(path, "code"), _code, 1, 9223372036854775807);
 
-
       apiBinaryRequireRange(apiBinaryJoinPath(path, "code"), _code, -9223372036854775808, 999);
-
-
-
 
     writer.writeU16(apiBinaryJoinPath(path, "code"), _code);
 
     state["code"] = _code;
-
 
 }
 
@@ -1182,41 +772,23 @@ AuditPacketItem _readAuditPacketItem(
   Map<String, int> state,
   String path,
 ) {
-  
 
     final id = reader.readU32(apiBinaryJoinPath(path, "id"));
-    
 
       apiBinaryRequireRange(apiBinaryJoinPath(path, "id"), id, 1, 9223372036854775807);
 
-
-
-
-
     state["id"] = id;
 
-
-  
-
     final code = reader.readU16(apiBinaryJoinPath(path, "code"));
-    
 
       apiBinaryRequireRange(apiBinaryJoinPath(path, "code"), code, 1, 9223372036854775807);
 
-
       apiBinaryRequireRange(apiBinaryJoinPath(path, "code"), code, -9223372036854775808, 999);
 
-
-
-
     state["code"] = code;
-
 
   return AuditPacketItem(
     id: id,
     code: code,
   );
 }
-
-
-

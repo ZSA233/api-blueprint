@@ -7,13 +7,10 @@ import 'package:api_blueprint_example/src/api/runtime/gen_api_types.dart';
 import 'gen_binary_types.dart';
 import 'gen_binary.dart';
 
-
 class GenBinaryApi {
   final ApiTransport transport;
 
   GenBinaryApi(this.transport);
-
-
 
   Future<BinaryPacketResponse> packet({
     BinaryPacketQuery? query,
@@ -37,9 +34,6 @@ class GenBinaryApi {
     );
   }
 
-
-
-
   Future<BinaryAuditPacketResponse> auditPacket({
     BinaryAuditPacketQuery? query,
     required AuditPacket auditPacket,
@@ -62,9 +56,6 @@ class GenBinaryApi {
     );
   }
 
-
-
-
   Future<AuditPacket> auditPacketResponse({
     ApiRequestOptions options = const ApiRequestOptions(),
   }) {
@@ -82,6 +73,5 @@ class GenBinaryApi {
       ),
     );
   }
-
 
 }

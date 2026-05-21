@@ -93,6 +93,12 @@ public data class DemoRawResponse(
 )
 
 @Serializable
+public data class DemoRequestOptionsQuery(
+    @SerialName("delay_ms")
+    public val delayMs: Int? = null
+)
+
+@Serializable
 public data class DemoTestPostJson(
     public val req1: String,
     public val req2: Int? = null
@@ -245,4 +251,3 @@ public fun <R> dispatchAssistantClientMessage(
         )
         else -> throw AssistantClientMessageDispatchException("unknown_type", message.type, message)
     }
-

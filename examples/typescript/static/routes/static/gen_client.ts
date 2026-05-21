@@ -18,9 +18,7 @@ export class StaticClient extends BaseClient {
    */
 
   async docJson(
-    request: {
-
-    } = {},
+    request: {} = {},
     options?: ApiRequestOptions,
   ): Promise<Types.DocJsonResponse> {
     return this.request<Types.DocJsonResponse>({
@@ -45,9 +43,7 @@ export class StaticClient extends BaseClient {
    */
 
   async dochaha(
-    request: {
-
-    } = {},
+    request: {} = {},
     options?: ApiRequestOptions,
   ): Promise<Types.DochahaResponse> {
     return this.request<Types.DochahaResponse>({

@@ -21,7 +21,6 @@ export class MediaClient extends BaseClient {
     request: {
       multipart?: Shared.MediaPreviewRequest;
       body?: RequestInit["body"];
-
     } = {},
     options?: ApiRequestOptions,
   ): Promise<Types.MediaPreviewResponse> {
@@ -49,9 +48,7 @@ export class MediaClient extends BaseClient {
    */
 
   async mediaFrame(
-    request: {
-
-    } = {},
+    request: {} = {},
     options?: ApiRequestOptions,
   ): Promise<Types.MediaFrameResponse> {
     return this.request<Types.MediaFrameResponse>({
@@ -76,9 +73,7 @@ export class MediaClient extends BaseClient {
    */
 
   async mediaDownload(
-    request: {
-
-    } = {},
+    request: {} = {},
     options?: ApiRequestOptions,
   ): Promise<Types.MediaDownloadResponse> {
     return this.request<Types.MediaDownloadResponse>({
@@ -103,9 +98,7 @@ export class MediaClient extends BaseClient {
    */
 
   async mediaDownloadDynamic(
-    request: {
-
-    } = {},
+    request: {} = {},
     options?: ApiRequestOptions,
   ): Promise<Types.MediaDownloadDynamicResponse> {
     return this.request<Types.MediaDownloadDynamicResponse>({
@@ -124,15 +117,66 @@ export class MediaClient extends BaseClient {
   }
 
   /**
+   * Media download with RFC 5987 filename
+   * Returns a file response whose dynamic filename requires filename* parsing.
+   * Tags: api
+   */
+
+  async mediaDownloadFilenameEdge(
+    request: {} = {},
+    options?: ApiRequestOptions,
+  ): Promise<Types.MediaDownloadFilenameEdgeResponse> {
+    return this.request<Types.MediaDownloadFilenameEdgeResponse>({
+      routeId: "api.media.get.downloadfilenameedge",
+      method: "GET",
+      path: "/api/media/download-filename-edge",
+      service: "MediaService",
+      operation: "MediaDownloadFilenameEdge",
+      namespace: "media",
+      headers: options?.headers,
+      init: options?.init,
+      responseType: "blob",
+      responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+      timeoutMs: options?.timeoutMs,
+    });
+  }
+
+  /**
+   * Raw media typed error
+   * Returns raw JPEG bytes on success and typed JSON envelope errors on failure.
+   * Tags: api
+   */
+
+  async mediaErrorFrame(
+    request: {
+      query?: Types.MediaErrorFrameQuery;
+    } = {},
+    options?: ApiRequestOptions,
+  ): Promise<Types.MediaErrorFrameResponse> {
+    return this.request<Types.MediaErrorFrameResponse>({
+      routeId: "api.media.get.errorframe",
+      method: "GET",
+      path: "/api/media/error-frame",
+      service: "MediaService",
+      operation: "MediaErrorFrame",
+      namespace: "media",
+      query: request.query as unknown as Record<string, unknown> | undefined,
+      headers: options?.headers,
+      init: options?.init,
+      responseType: "blob",
+      responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+      timeoutMs: options?.timeoutMs,
+    });
+  }
+
+  /**
    * MJPEG byte stream
    * Returns a multipart byte stream with MJPEG boundary chunks.
    * Tags: api
    */
 
   async mediaMjpeg(
-    request: {
-
-    } = {},
+    request: {} = {},
     options?: ApiRequestOptions,
   ): Promise<Types.MediaMjpegResponse> {
     return this.request<Types.MediaMjpegResponse>({

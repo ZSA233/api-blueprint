@@ -50,6 +50,7 @@ def test_java_http_codegen_emits_multipart_raw_and_binary_response_contracts(tmp
     runtime_types = (client_dir / package_root / "runtime/GenApiTypes.java").read_text(encoding="utf-8")
     runtime_file = (client_dir / package_root / "runtime/GenApiFilePart.java").read_text(encoding="utf-8")
     runtime_raw = (client_dir / package_root / "runtime/GenApiRawResponse.java").read_text(encoding="utf-8")
+    runtime_stream = (client_dir / package_root / "runtime/GenApiStreamResponse.java").read_text(encoding="utf-8")
     route_types = (client_dir / package_root / "routes/api/media/GenMediaTypes.java").read_text(encoding="utf-8")
     route_client = (client_dir / package_root / "routes/api/media/GenMediaApi.java").read_text(encoding="utf-8")
     transport = (client_dir / package_root / "transports/http/GenJdkHttpApiTransport.java").read_text(encoding="utf-8")
@@ -59,6 +60,11 @@ def test_java_http_codegen_emits_multipart_raw_and_binary_response_contracts(tmp
 
     assert "public record GenApiFilePart(" in runtime_file
     assert "public record GenApiRawResponse(" in runtime_raw
+    assert "public record GenApiStreamResponse(" in runtime_stream
+    assert "InputStream body" in runtime_stream
+    assert ") implements AutoCloseable" in runtime_stream
+    assert "public byte[] readAllBytes() throws IOException" in runtime_stream
+    assert "new ByteArrayInputStream(bytes)" in runtime_stream
     assert "Object multipart" in runtime_request
     assert "Function<byte[], T> binaryResponseDecoder" in runtime_request
     assert "GenApiFilePart image" in runtime_types
@@ -68,8 +74,18 @@ def test_java_http_codegen_emits_multipart_raw_and_binary_response_contracts(tmp
     assert "GenMediaTypes.DemoPacketWire::parse" in route_client
     assert "EncodedMultipart multipartBody(Object value)" in transport
     assert "new GenApiRawResponse(" in transport
+    assert "HttpResponse.BodyHandlers.ofInputStream()" in transport
+    assert "new GenApiStreamResponse(\n                response.body()," in transport
+    assert "decodeRawApiError(request.routeId(), body, request.responseEnvelope())" in transport
+    assert "private Optional<GenApiError> decodeRawApiError" in transport
+    assert 'parameters.get("filename*")' in transport
+    assert "decodeRfc5987Value" in transport
+    assert "percentDecodeUtf8" in transport
     assert "request.binaryResponseDecoder().apply(bodyBytes)" in transport
     assert "MultipartHttpServletRequest multipartRequest" in controller
     assert "multipartBody(multipartRequest)" in controller
     assert "rawResponse(\"file\", \"application/octet-stream\", \"report.bin\", result)" in controller
+    assert "InputStreamResource" in controller
+    assert "builder.body(new InputStreamResource(stream.body()))" in controller
+    assert "\"; filename*=UTF-8''\" + encodeHeaderValue(filename)" in controller
     assert "DemoPacketWire.toBinaryBody((GenMediaTypes.DemoPacket) result).toBytes()" in controller

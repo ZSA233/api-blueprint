@@ -123,6 +123,20 @@ class FormSubmitResponse(_message.Message):
     enabled: bool
     def __init__(self, summary: _Optional[str] = ..., count: _Optional[int] = ..., enabled: bool = ...) -> None: ...
 
+class RequestOptionsRequest(_message.Message):
+    __slots__ = ("delay_ms",)
+    DELAY_MS_FIELD_NUMBER: _ClassVar[int]
+    delay_ms: int
+    def __init__(self, delay_ms: _Optional[int] = ...) -> None: ...
+
+class RequestOptionsResponse(_message.Message):
+    __slots__ = ("status", "delay_ms")
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    DELAY_MS_FIELD_NUMBER: _ClassVar[int]
+    status: str
+    delay_ms: int
+    def __init__(self, status: _Optional[str] = ..., delay_ms: _Optional[int] = ...) -> None: ...
+
 class PutDemoRequest(_message.Message):
     __slots__ = ("query", "json")
     QUERY_FIELD_NUMBER: _ClassVar[int]

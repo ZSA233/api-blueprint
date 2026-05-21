@@ -6,13 +6,10 @@ import 'package:api_blueprint_example/src/api/runtime/gen_api_errors.dart';
 import 'package:api_blueprint_example/src/api/runtime/gen_api_types.dart';
 import 'gen_api_types.dart';
 
-
 class GenApiApi {
   final ApiTransport transport;
 
   GenApiApi(this.transport);
-
-
 
   ApiChannelBridge<HelloChannelMessage, HelloChannelMessage, DefaultConnectionClose> openHelloChannel({
     Map<String, String> headers = const {},
@@ -34,6 +31,5 @@ class GenApiApi {
       ),
     );
   }
-
 
 }

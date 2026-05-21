@@ -6,13 +6,10 @@ import 'package:api_blueprint_example/src/api/runtime/gen_api_errors.dart';
 import 'package:api_blueprint_example/src/api/runtime/gen_api_types.dart';
 import 'gen_demo_types.dart';
 
-
 class GenDemoApi {
   final ApiTransport transport;
 
   GenDemoApi(this.transport);
-
-
 
   Future<ApiDemoA> abc({
     DemoAbcQuery? query,
@@ -32,9 +29,6 @@ class GenDemoApi {
       ),
     );
   }
-
-
-
 
   Future<DemoTestPostResponse> testPost({
     DemoTestPostJson? json,
@@ -56,9 +50,6 @@ class GenDemoApi {
     );
   }
 
-
-
-
   Future<DemoFormSubmitResponse> formSubmit({
     DemoFormSubmitForm? form,
     ApiRequestOptions options = const ApiRequestOptions(),
@@ -79,8 +70,24 @@ class GenDemoApi {
     );
   }
 
-
-
+  Future<RequestOptionsResponse> requestOptions({
+    DemoRequestOptionsQuery? query,
+    ApiRequestOptions options = const ApiRequestOptions(),
+  }) {
+    return transport.request(
+      ApiRequest<RequestOptionsResponse>(
+        routeId: "api.demo.get.requestoptions",
+        method: "GET",
+        path: "/api/demo/request-options",
+        query: query?.toQueryMap() ?? const <String, String?>{},
+        options: options,
+        responseMediaType: "application/json",
+        responseKind: "json",
+        responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+        decode: RequestOptionsResponse.fromJsonValue,
+      ),
+    );
+  }
 
   Future<DemoPutDemoResponse> putDemo({
     DemoPutDemoQuery? query,
@@ -103,9 +110,6 @@ class GenDemoApi {
     );
   }
 
-
-
-
   Future<String> delete({
     DemoDeleteQuery? query,
     ApiRequestOptions options = const ApiRequestOptions(),
@@ -125,9 +129,6 @@ class GenDemoApi {
     );
   }
 
-
-
-
   ApiStreamBridge<SweepStreamMessage, ConnectionClose> subscribeSweepEvents({
     SweepOpen? open,
     Map<String, String> headers = const {},
@@ -145,9 +146,6 @@ class GenDemoApi {
       ),
     );
   }
-
-
-
 
   ApiChannelBridge<AssistantServerMessage, AssistantClientMessage, ConnectionClose> openAssistantSession({
     AssistantOpen? open,
@@ -171,9 +169,6 @@ class GenDemoApi {
     );
   }
 
-
-
-
   Future<DemoPostDeprecatedResponse> postDeprecated({
     DemoPostDeprecatedJson? json,
     ApiRequestOptions options = const ApiRequestOptions(),
@@ -194,9 +189,6 @@ class GenDemoApi {
     );
   }
 
-
-
-
   Future<DemoRawResponse> raw({
     ApiRequestOptions options = const ApiRequestOptions(),
   }) {
@@ -214,9 +206,6 @@ class GenDemoApi {
       ),
     );
   }
-
-
-
 
   Future<DemoMapModelResponse> mapModel({
     ApiRequestOptions options = const ApiRequestOptions(),
@@ -236,9 +225,6 @@ class GenDemoApi {
     );
   }
 
-
-
-
   Future<DemoErrorDemoResponse> errorDemo({
     DemoErrorDemoQuery? query,
     ApiRequestOptions options = const ApiRequestOptions(),
@@ -257,6 +243,5 @@ class GenDemoApi {
       ),
     );
   }
-
 
 }

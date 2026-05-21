@@ -3,20 +3,25 @@ package com.example.apiblueprint.conformance;
 import com.example.apiblueprint.api.routes.api.binary.GenBinaryTypes;
 import com.example.apiblueprint.api.routes.api.conflict.GenConflictTypes;
 import com.example.apiblueprint.api.routes.api.demo.GenDemoTypes;
+import com.example.apiblueprint.api.routes.api.media.GenMediaTypes;
 import com.example.apiblueprint.api.runtime.GenApiError;
 import com.example.apiblueprint.api.runtime.GenApiErrors;
 import com.example.apiblueprint.api.runtime.GenApiFilePart;
 import com.example.apiblueprint.api.runtime.GenApiRawResponse;
+import com.example.apiblueprint.api.runtime.GenApiRequestOptions;
 import com.example.apiblueprint.api.runtime.GenApiStreamResponse;
 import com.example.apiblueprint.api.runtime.GenApiTypes;
+import com.example.apiblueprint.api.transports.http.GenHttpApiConfig;
 import com.example.apiblueprint.api.transports.http.HttpApiClient;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -29,7 +34,7 @@ public final class Conformance {
             throw new IllegalArgumentException("base URL argument is required");
         }
         String baseUrl = args[0];
-        Set<String> selected = scenarioSet(args.length > 1 ? args[1] : "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,single-channel");
+        Set<String> selected = scenarioSet(args.length > 1 ? args[1] : "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel");
         HttpApiClient client = HttpApiClient.create(baseUrl);
         com.example.apiblueprint.alt.transports.http.HttpApiClient altClient =
             com.example.apiblueprint.alt.transports.http.HttpApiClient.create(baseUrl);
@@ -80,6 +85,15 @@ public final class Conformance {
         }
         if (selected.contains("media")) {
             checkMedia(client);
+        }
+        if (selected.contains("request-options")) {
+            checkRequestOptions(baseUrl);
+        }
+        if (selected.contains("media-filename-edge")) {
+            checkMediaFilenameEdge(client);
+        }
+        if (selected.contains("media-error")) {
+            checkMediaError(client);
         }
         if (selected.contains("error")) {
             checkTypedErrors(client);
@@ -187,9 +201,61 @@ public final class Conformance {
         );
         require(startsWith(dynamic.body(), (byte) 'P', (byte) 'K'), "media dynamic body mismatch");
 
-        GenApiStreamResponse stream = client.media.mediaMjpeg();
-        String chunk = new String(stream.body(), StandardCharsets.ISO_8859_1);
-        require(chunk.contains("--frame"), "media mjpeg chunk=" + chunk);
+        try (GenApiStreamResponse stream = client.media.mediaMjpeg()) {
+            String chunk = new String(stream.readAllBytes(), StandardCharsets.ISO_8859_1);
+            require(chunk.contains("--frame"), "media mjpeg chunk=" + chunk);
+        }
+    }
+
+    private static void checkRequestOptions(String baseUrl) throws Exception {
+        HttpApiClient timeoutClient = new HttpApiClient(
+            new GenHttpApiConfig(
+                baseUrl,
+                Map.of("x-options-default", "default", "x-options-token", "default"),
+                Duration.ofMillis(20)
+            )
+        );
+        GenApiTypes.RequestOptionsResponse ok = timeoutClient.demo.requestOptions(
+            new GenDemoTypes.RequestOptionsQuery(30),
+            GenApiRequestOptions.builder()
+                .header("x-options-token", "per-call")
+                .timeout(Duration.ofSeconds(1))
+                .build()
+        );
+        require(Objects.equals("ok", ok.status()), "requestOptions.status mismatch: " + ok);
+        require(Objects.equals(30, ok.delayMs()), "requestOptions.delayMs mismatch: " + ok);
+
+        boolean timedOut = false;
+        try {
+            timeoutClient.demo.requestOptions(
+                new GenDemoTypes.RequestOptionsQuery(120),
+                GenApiRequestOptions.builder()
+                    .header("x-options-token", "per-call")
+                    .timeout(Duration.ofMillis(10))
+                    .build()
+            );
+        } catch (Exception error) {
+            timedOut = true;
+        }
+        require(timedOut, "request options short timeout did not fail");
+    }
+
+    private static void checkMediaFilenameEdge(HttpApiClient client) throws Exception {
+        GenApiRawResponse response = client.media.mediaDownloadFilenameEdge();
+        require(Objects.equals("媒体报告.xlsx", response.filename()), "media filename edge=" + response.filename());
+        require(startsWith(response.body(), (byte) 'P', (byte) 'K'), "media filename edge body mismatch");
+    }
+
+    private static void checkMediaError(HttpApiClient client) throws Exception {
+        GenApiRawResponse ok = client.media.mediaErrorFrame(new GenMediaTypes.MediaErrorFrameQuery("ok"));
+        require(ok.contentType().startsWith("image/jpeg"), "media error contentType=" + ok.contentType());
+        require(startsWith(ok.body(), (byte) 0xff, (byte) 0xd8), "media error body mismatch");
+
+        GenApiError rateLimited = expectApiError(
+            () -> client.media.mediaErrorFrame(new GenMediaTypes.MediaErrorFrameQuery("rate_limit")),
+            "api.media.get.errorframe"
+        );
+        require(rateLimited.is(GenApiErrors.DemoErr.RATE_LIMITED), "media error entry mismatch: " + rateLimited.id());
     }
 
     private static void checkTypedErrors(HttpApiClient client) throws Exception {
@@ -317,10 +383,14 @@ public final class Conformance {
     }
 
     private static GenApiError expectApiError(ThrowingRunnable action) throws Exception {
+        return expectApiError(action, "api.demo.get.errordemo");
+    }
+
+    private static GenApiError expectApiError(ThrowingRunnable action, String routeId) throws Exception {
         try {
             action.run();
         } catch (GenApiError error) {
-            require(Objects.equals("api.demo.get.errordemo", error.routeId()), "GenApiError.routeId mismatch: " + error.routeId());
+            require(Objects.equals(routeId, error.routeId()), "GenApiError.routeId mismatch: " + error.routeId());
             require(error.rawBody() != null && !error.rawBody().isBlank(), "GenApiError raw body is empty");
             return error;
         }

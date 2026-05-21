@@ -43,7 +43,6 @@ export class BinaryClient extends BaseClient {
     request: {
       query?: Types.PacketQuery;
       binary: Types.DemoPacket | ApiBinaryBody;
-
     },
     options?: ApiRequestOptions,
   ): Promise<Types.PacketResponse> {
@@ -90,7 +89,6 @@ export class BinaryClient extends BaseClient {
     request: {
       query?: Types.AuditPacketQuery;
       binary: Types.AuditPacket | ApiBinaryBody;
-
     },
     options?: ApiRequestOptions,
   ): Promise<Types.AuditPacketResponse> {
@@ -118,9 +116,7 @@ export class BinaryClient extends BaseClient {
    */
 
   async auditPacketResponse(
-    request: {
-
-    } = {},
+    request: {} = {},
     options?: ApiRequestOptions,
   ): Promise<Types.AuditPacket> {
     const payload = await this.request<ArrayBuffer>({

@@ -2,6 +2,12 @@
 package com.example.apiblueprint.api.runtime
 
 import kotlinx.serialization.Serializable
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.Closeable
+import java.io.InputStream
+
+private const val API_STREAM_CHUNK_SIZE: Int = 8192
 
 public data class ApiServerResponse(
     public val statusCode: Int,
@@ -24,11 +30,54 @@ public data class ApiRawResponse(
     public val headers: Map<String, String> = emptyMap(),
 )
 
-public data class ApiStreamResponse(
-    public val body: ByteArray,
-    public val contentType: String = "application/octet-stream",
-    public val headers: Map<String, String> = emptyMap(),
-)
+public class ApiStreamResponse(
+    body: InputStream,
+    contentType: String = "application/octet-stream",
+    headers: Map<String, String> = emptyMap(),
+    private val closeAction: () -> Unit = {},
+) : Closeable {
+    public constructor(
+        body: ByteArray,
+        contentType: String = "application/octet-stream",
+        headers: Map<String, String> = emptyMap(),
+    ) : this(ByteArrayInputStream(body), contentType, headers)
+
+    public val body: InputStream = body
+    public val contentType: String = contentType.ifBlank { "application/octet-stream" }
+    public val headers: Map<String, String> = headers.toMap()
+    private var closed: Boolean = false
+
+    public fun readChunk(maxBytes: Int = API_STREAM_CHUNK_SIZE): ByteArray? {
+        require(maxBytes > 0) { "maxBytes must be greater than zero" }
+        val buffer = ByteArray(maxBytes)
+        val read = body.read(buffer)
+        if (read < 0) {
+            return null
+        }
+        return if (read == buffer.size) buffer else buffer.copyOf(read)
+    }
+
+    public fun readAllBytes(): ByteArray {
+        val output = ByteArrayOutputStream()
+        while (true) {
+            val chunk = readChunk() ?: break
+            output.write(chunk, 0, chunk.size)
+        }
+        return output.toByteArray()
+    }
+
+    public override fun close() {
+        if (closed) {
+            return
+        }
+        closed = true
+        try {
+            body.close()
+        } finally {
+            closeAction()
+        }
+    }
+}
 
 public data class ApiResponseEnvelope(
     public val name: String = "NoEnvelope",

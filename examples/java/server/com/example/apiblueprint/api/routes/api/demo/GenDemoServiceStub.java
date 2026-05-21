@@ -33,6 +33,13 @@ public class GenDemoServiceStub implements DemoService {
     }
 
     @Override
+    public GenApiTypes.RequestOptionsResponse requestOptions(
+        GenDemoTypes.RequestOptionsQuery query
+    ) throws Exception {
+        throw new UnsupportedOperationException("requestOptions");
+    }
+
+    @Override
     public GenDemoTypes.PutDemoResponse putDemo(
         GenDemoTypes.PutDemoQuery query,
         GenDemoTypes.PutDemoJSON json

@@ -22,6 +22,7 @@ const (
 	DemoService_Abc_FullMethodName              = "/example.api.demo.DemoService/Abc"
 	DemoService_TestPost_FullMethodName         = "/example.api.demo.DemoService/TestPost"
 	DemoService_FormSubmit_FullMethodName       = "/example.api.demo.DemoService/FormSubmit"
+	DemoService_RequestOptions_FullMethodName   = "/example.api.demo.DemoService/RequestOptions"
 	DemoService_PutDemo_FullMethodName          = "/example.api.demo.DemoService/PutDemo"
 	DemoService_Delete_FullMethodName           = "/example.api.demo.DemoService/Delete"
 	DemoService_SweepEvents_FullMethodName      = "/example.api.demo.DemoService/SweepEvents"
@@ -39,6 +40,7 @@ type DemoServiceClient interface {
 	Abc(ctx context.Context, in *AbcRequest, opts ...grpc.CallOption) (*AbcResponse, error)
 	TestPost(ctx context.Context, in *TestPostRequest, opts ...grpc.CallOption) (*TestPostResponse, error)
 	FormSubmit(ctx context.Context, in *FormSubmitRequest, opts ...grpc.CallOption) (*FormSubmitResponse, error)
+	RequestOptions(ctx context.Context, in *RequestOptionsRequest, opts ...grpc.CallOption) (*RequestOptionsResponse, error)
 	PutDemo(ctx context.Context, in *PutDemoRequest, opts ...grpc.CallOption) (*PutDemoResponse, error)
 	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	SweepEvents(ctx context.Context, in *SweepEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[SweepStreamMessage], error)
@@ -81,6 +83,16 @@ func (c *demoServiceClient) FormSubmit(ctx context.Context, in *FormSubmitReques
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(FormSubmitResponse)
 	err := c.cc.Invoke(ctx, DemoService_FormSubmit_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *demoServiceClient) RequestOptions(ctx context.Context, in *RequestOptionsRequest, opts ...grpc.CallOption) (*RequestOptionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RequestOptionsResponse)
+	err := c.cc.Invoke(ctx, DemoService_RequestOptions_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -186,6 +198,7 @@ type DemoServiceServer interface {
 	Abc(context.Context, *AbcRequest) (*AbcResponse, error)
 	TestPost(context.Context, *TestPostRequest) (*TestPostResponse, error)
 	FormSubmit(context.Context, *FormSubmitRequest) (*FormSubmitResponse, error)
+	RequestOptions(context.Context, *RequestOptionsRequest) (*RequestOptionsResponse, error)
 	PutDemo(context.Context, *PutDemoRequest) (*PutDemoResponse, error)
 	Delete(context.Context, *DeleteRequest) (*DeleteResponse, error)
 	SweepEvents(*SweepEventsRequest, grpc.ServerStreamingServer[SweepStreamMessage]) error
@@ -212,6 +225,9 @@ func (UnimplementedDemoServiceServer) TestPost(context.Context, *TestPostRequest
 }
 func (UnimplementedDemoServiceServer) FormSubmit(context.Context, *FormSubmitRequest) (*FormSubmitResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method FormSubmit not implemented")
+}
+func (UnimplementedDemoServiceServer) RequestOptions(context.Context, *RequestOptionsRequest) (*RequestOptionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RequestOptions not implemented")
 }
 func (UnimplementedDemoServiceServer) PutDemo(context.Context, *PutDemoRequest) (*PutDemoResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method PutDemo not implemented")
@@ -308,6 +324,24 @@ func _DemoService_FormSubmit_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DemoServiceServer).FormSubmit(ctx, req.(*FormSubmitRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DemoService_RequestOptions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestOptionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DemoServiceServer).RequestOptions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DemoService_RequestOptions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DemoServiceServer).RequestOptions(ctx, req.(*RequestOptionsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -456,6 +490,10 @@ var DemoService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "FormSubmit",
 			Handler:    _DemoService_FormSubmit_Handler,
+		},
+		{
+			MethodName: "RequestOptions",
+			Handler:    _DemoService_RequestOptions_Handler,
 		},
 		{
 			MethodName: "PutDemo",

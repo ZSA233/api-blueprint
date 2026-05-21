@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.net.URI;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,6 +32,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -114,6 +116,39 @@ public class GenMediaController {
             return rawResponse("file", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "media-report.xlsx", result);
         } catch (GenApiError error) {
             return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.media.get.downloaddynamic");
+        }
+    }
+
+    @RequestMapping(path = "/api/media/download-filename-edge", method = RequestMethod.GET)
+    public Object mediaDownloadFilenameEdge(
+        @RequestParam Map<String, String> queryParams
+    ) throws Exception {
+        try {
+            Object result = service.mediaDownloadFilenameEdge(
+            );
+            return rawResponse("file", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "fallback-report.xlsx", result);
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.media.get.downloadfilenameedge");
+        }
+    }
+
+    @RequestMapping(path = "/api/media/error-frame", method = RequestMethod.GET)
+    public Object mediaErrorFrame(
+        @RequestParam Map<String, String> queryParams
+    ) throws Exception {
+        GenMediaTypes.MediaErrorFrameQuery query;
+        try {
+            query = objectMapper.convertValue(queryParams, GenMediaTypes.MediaErrorFrameQuery.class);
+        } catch (RuntimeException error) {
+            return badRequestResponse(error);
+        }
+        try {
+            Object result = service.mediaErrorFrame(
+                query
+            );
+            return rawResponse("bytes", "image/jpeg", "", result);
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.media.get.errorframe");
         }
     }
 
@@ -236,14 +271,16 @@ public class GenMediaController {
         return result;
     }
 
-    private ResponseEntity<byte[]> rawResponse(String kind, String mediaType, String filename, Object result) throws IOException {
+    private ResponseEntity<?> rawResponse(String kind, String mediaType, String filename, Object result) throws IOException {
         if (result instanceof GenApiRawResponse raw) {
             ResponseEntity.BodyBuilder builder = rawResponseBuilder(kind, raw.contentType(), raw.filename().isBlank() ? filename : raw.filename());
             raw.headers().forEach(builder::header);
             return builder.body(raw.body());
         }
         if (result instanceof GenApiStreamResponse stream) {
-            return rawResponseBuilder(kind, stream.contentType(), filename).body(stream.body());
+            ResponseEntity.BodyBuilder builder = rawResponseBuilder(kind, stream.contentType(), filename);
+            stream.headers().forEach(builder::header);
+            return builder.body(new InputStreamResource(stream.body()));
         }
         if (result instanceof GenApiBinaryBody binary) {
             return rawResponseBuilder(kind, binary.contentType(), filename).body(binary.toBytes());
@@ -265,9 +302,31 @@ public class GenMediaController {
     private ResponseEntity.BodyBuilder rawResponseBuilder(String kind, String mediaType, String filename) {
         ResponseEntity.BodyBuilder builder = ResponseEntity.ok().contentType(MediaType.parseMediaType(mediaType));
         if ("file".equals(kind) && filename != null && !filename.isBlank()) {
-            builder.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename.replace("\"", "\\\"") + "\"");
+            builder.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + escapeHeader(asciiFilename(filename)) + "\"; filename*=UTF-8''" + encodeHeaderValue(filename));
         }
         return builder;
+    }
+
+    private String asciiFilename(String filename) {
+        StringBuilder result = new StringBuilder();
+        for (int index = 0; index < filename.length(); index++) {
+            char current = filename.charAt(index);
+            if (current >= 0x20 && current < 0x7f) {
+                result.append(current);
+            } else {
+                result.append('_');
+            }
+        }
+        String value = result.toString();
+        return value.isBlank() ? "download" : value;
+    }
+
+    private String escapeHeader(String value) {
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private String encodeHeaderValue(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
     }
 
     private ResponseEntity<Map<String, Object>> badRequestResponse(Exception error) {

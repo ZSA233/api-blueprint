@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import struct
 import tempfile
+import asyncio
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -64,6 +65,8 @@ from api_blueprint_example_server.api.routes.api.demo.gen_types import (
     PutDemoQuery,
     PutDemoResponse,
     RawResponse,
+    RequestOptionsQuery,
+    RequestOptionsResponse,
     StatusEnum,
     SweepEventsClose,
     SweepEventsOpen,
@@ -82,6 +85,7 @@ from api_blueprint_example_server.api.routes.api.hello.gen_types import (
 )
 from api_blueprint_example_server.api.routes.api.hello.gen_types import ApiHelloMap, HelloWayQuery, MapEnum
 from api_blueprint_example_server.api.routes.api.media.gen_types import MediaPreviewForm
+from api_blueprint_example_server.api.routes.api.media.gen_types import MediaErrorFrameQuery
 from api_blueprint_example_server.api.runtime.errors import ApiError, ApiErrorPayload, ApiToastPayload
 from api_blueprint_example_server.api.runtime.server import ApiRawResponse
 from api_blueprint_example_server.api.transports.http.server import create_router as create_api_router
@@ -100,6 +104,12 @@ MJPEG_CHUNK = b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + SAMPLE_JPEG + b"\
 async def require_demo_header(request: Request, call_next):
     if request.url.path == "/api/demo/abc" and request.headers.get("x-token") != "conformance-token":
         return JSONResponse({"detail": "missing conformance token"}, status_code=418)
+    if request.url.path == "/api/demo/request-options":
+        if (
+            request.headers.get("x-options-default") != "default"
+            or request.headers.get("x-options-token") != "per-call"
+        ):
+            return JSONResponse({"detail": "request options headers missing"}, status_code=418)
     return await call_next(request)
 
 
@@ -131,6 +141,12 @@ class DemoService:
             count=0 if form.count is None else form.count,
             enabled=False if form.enabled is None else form.enabled,
         )
+
+    async def request_options(self, query: RequestOptionsQuery) -> RequestOptionsResponse:
+        delay_ms = 0 if query.delay_ms is None else query.delay_ms
+        if delay_ms > 0:
+            await asyncio.sleep(delay_ms / 1000)
+        return RequestOptionsResponse(status="ok", delay_ms=delay_ms)
 
     async def put_demo(
         self,
@@ -279,6 +295,30 @@ class MediaService:
         path = Path(tempfile.gettempdir()) / "api-blueprint-media-report-dynamic.xlsx"
         path.write_bytes(SAMPLE_XLSX)
         return ApiRawResponse(body=str(path), filename="media-report-dynamic.xlsx")
+
+    async def media_download_filename_edge(self) -> ApiRawResponse[str]:
+        path = Path(tempfile.gettempdir()) / "api-blueprint-media-report-filename-edge.xlsx"
+        path.write_bytes(SAMPLE_XLSX)
+        return ApiRawResponse(body=str(path), filename="媒体报告.xlsx")
+
+    async def media_error_frame(self, query: MediaErrorFrameQuery) -> bytes:
+        if query.mode == "rate_limit":
+            raise ApiError(
+                ApiErrorPayload(
+                    id="DemoErr.RATE_LIMITED",
+                    group="",
+                    key="",
+                    code=42901,
+                    message="",
+                    toast=ApiToastPayload(
+                        key="demo.rate_limited",
+                        level="warning",
+                        default="请求过于频繁，请稍后再试",
+                        text="请等待 30 秒后重试",
+                    ),
+                )
+            )
+        return SAMPLE_JPEG
 
     async def media_mjpeg(self) -> ApiRawResponse[Any]:
         async def chunks():

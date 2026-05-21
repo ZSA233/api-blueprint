@@ -83,4 +83,3 @@ export function unwrapWailsV3Event(event?: unknown): unknown {
   }
   return event;
 }
-

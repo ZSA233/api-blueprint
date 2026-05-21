@@ -216,6 +216,13 @@ public final class GenApiTypes {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
+    public record RequestOptionsResponse(
+        @JsonProperty("status") String status,
+        @JsonProperty("delay_ms") Integer delayMs
+    ) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record SweepOpen(
         @JsonProperty("run_id") String runId,
         @JsonProperty("replay_from") String replayFrom

@@ -6,7 +6,6 @@ import 'package:api_blueprint_example/src/api/runtime/gen_api_types.dart';
 import 'package:api_blueprint_example/src/api/runtime/gen_api_transport.dart';
 import 'package:api_blueprint_example/src/api/runtime/api_json_codecs.dart';
 
-
 class HelloAbcQuery {
   final bool? arg1;
   final String? arg3;
@@ -60,15 +59,11 @@ class HelloAbcQuery {
   }
 }
 
-
-
 typedef HelloAbcResponse = Map<String, ApiHelloMap>;
 
 HelloAbcResponse HelloAbcResponseFromJsonValue(Object? value) {
   return apiBlueprintRequire<Map<String, ApiHelloMap>>(((value) => apiBlueprintReadStringMap<ApiHelloMap>(value, ApiHelloMap.fromJsonValue))(value), "HelloAbcResponse");
 }
-
-
 
 class HelloHelloWayQuery {
   final HelloWayEnum? arg1;
@@ -108,15 +103,11 @@ class HelloHelloWayQuery {
   }
 }
 
-
-
 typedef HelloListEnumResponse = List<MapEnum>;
 
 HelloListEnumResponse HelloListEnumResponseFromJsonValue(Object? value) {
   return apiBlueprintRequire<List<MapEnum>>(((value) => apiBlueprintReadList<MapEnum>(value, MapEnumFromJson))(value), "HelloListEnumResponse");
 }
-
-
 
 typedef HelloMapEnumResponse = Map<String, ApiHelloMap>;
 
@@ -124,15 +115,11 @@ HelloMapEnumResponse HelloMapEnumResponseFromJsonValue(Object? value) {
   return apiBlueprintRequire<Map<String, ApiHelloMap>>(((value) => apiBlueprintReadStringMap<ApiHelloMap>(value, ApiHelloMap.fromJsonValue))(value), "HelloMapEnumResponse");
 }
 
-
-
 typedef HelloStringEmunResponse = MapEnum;
 
 HelloStringEmunResponse HelloStringEmunResponseFromJsonValue(Object? value) {
   return apiBlueprintRequire<MapEnum>(MapEnumFromJson(value), "HelloStringEmunResponse");
 }
-
-
 
 typedef HelloStringResponse = String;
 
@@ -140,13 +127,8 @@ HelloStringResponse HelloStringResponseFromJsonValue(Object? value) {
   return apiBlueprintRequire<String>(apiBlueprintReadString(value), "HelloStringResponse");
 }
 
-
-
 typedef HelloUint64Response = int;
 
 HelloUint64Response HelloUint64ResponseFromJsonValue(Object? value) {
   return apiBlueprintRequire<int>(apiBlueprintReadInt(value), "HelloUint64Response");
 }
-
-
-

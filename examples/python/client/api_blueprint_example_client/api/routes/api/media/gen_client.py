@@ -21,6 +21,7 @@ from ....runtime.gen_codecs import (
 
 from .gen_types import (
     MediaPreviewForm,
+    MediaErrorFrameQuery,
 )
 
 
@@ -95,6 +96,44 @@ class MediaClient:
             "GET",
             "/api/media/download-dynamic",
             route_id="api.media.get.downloaddynamic",
+            response_type=response_type,
+            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+            headers=headers,
+            timeout=timeout,
+        )
+        return payload
+
+    async def media_download_filename_edge(
+        self,
+        *,
+        headers: Mapping[str, str] | None = None,
+        timeout: float | None = None,
+    ) -> ApiRawResponse[bytes]:
+        response_type: str | None = 'file'
+        payload = await self._transport.request(
+            "GET",
+            "/api/media/download-filename-edge",
+            route_id="api.media.get.downloadfilenameedge",
+            response_type=response_type,
+            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+            headers=headers,
+            timeout=timeout,
+        )
+        return payload
+
+    async def media_error_frame(
+        self,
+        query: MediaErrorFrameQuery,
+        *,
+        headers: Mapping[str, str] | None = None,
+        timeout: float | None = None,
+    ) -> ApiRawResponse[bytes]:
+        response_type: str | None = 'bytes'
+        payload = await self._transport.request(
+            "GET",
+            "/api/media/error-frame",
+            route_id="api.media.get.errorframe",
+            query=_api_to_json(query),
             response_type=response_type,
             response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
             headers=headers,

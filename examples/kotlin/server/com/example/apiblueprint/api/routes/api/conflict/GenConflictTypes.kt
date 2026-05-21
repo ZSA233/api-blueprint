@@ -18,4 +18,3 @@ public data class ConflictDefaultQuery(
     @SerialName("class_")
     public val `class`: String? = null
 )
-

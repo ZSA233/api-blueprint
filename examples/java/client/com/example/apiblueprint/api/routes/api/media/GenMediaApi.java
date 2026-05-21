@@ -156,6 +156,75 @@ public class GenMediaApi {
         return transport.execute(request);
     }
 
+    public GenApiRawResponse mediaDownloadFilenameEdge(
+    ) throws Exception {
+        return mediaDownloadFilenameEdge(
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenApiRawResponse mediaDownloadFilenameEdge(
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
+        GenApiRequest<GenApiRawResponse> request = new GenApiRequest<>(
+            "api.media.get.downloadfilenameedge",
+            "GET",
+            "/api/media/download-filename-edge",
+            null,
+            null,
+            null,
+            null,
+            null,
+            "none",
+            GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+            GenApiRawResponse.class,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "file",
+            "fallback-report.xlsx",
+            null,
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
+        );
+        return transport.execute(request);
+    }
+
+    public GenApiRawResponse mediaErrorFrame(
+        GenMediaTypes.MediaErrorFrameQuery query
+    ) throws Exception {
+        return mediaErrorFrame(
+            query,
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenApiRawResponse mediaErrorFrame(
+        GenMediaTypes.MediaErrorFrameQuery query,
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
+        GenApiRequest<GenApiRawResponse> request = new GenApiRequest<>(
+            "api.media.get.errorframe",
+            "GET",
+            "/api/media/error-frame",
+            query,
+            null,
+            null,
+            null,
+            null,
+            "none",
+            GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+            GenApiRawResponse.class,
+            "image/jpeg",
+            "bytes",
+            "",
+            null,
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
+        );
+        return transport.execute(request);
+    }
+
     public GenApiStreamResponse mediaMjpeg(
     ) throws Exception {
         return mediaMjpeg(

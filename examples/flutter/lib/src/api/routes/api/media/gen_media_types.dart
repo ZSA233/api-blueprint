@@ -6,4 +6,40 @@ import 'package:api_blueprint_example/src/api/runtime/gen_api_types.dart';
 import 'package:api_blueprint_example/src/api/runtime/gen_api_transport.dart';
 import 'package:api_blueprint_example/src/api/runtime/api_json_codecs.dart';
 
+class MediaMediaErrorFrameQuery {
+  final String? mode;
 
+  const MediaMediaErrorFrameQuery({
+    this.mode,
+  });
+
+  factory MediaMediaErrorFrameQuery.fromJson(Map<String, Object?> json) {
+    return MediaMediaErrorFrameQuery(
+      mode: apiBlueprintReadString(json["mode"]),
+    );
+  }
+
+  factory MediaMediaErrorFrameQuery.fromJsonValue(Object? value) {
+    final codec = apiJsonCodecs.find<MediaMediaErrorFrameQuery>();
+    if (codec != null) {
+      return codec.fromJson(value);
+    }
+    return MediaMediaErrorFrameQuery.fromJson(apiBlueprintReadObject(value));
+  }
+
+  Map<String, Object?> toJson() {
+    final codec = apiJsonCodecs.find<MediaMediaErrorFrameQuery>();
+    if (codec != null) {
+      return apiBlueprintReadObject(codec.toJson(this));
+    }
+    return {
+      "mode": apiBlueprintToJson(mode),
+    };
+  }
+
+  Map<String, String?> toQueryMap() {
+    return {
+      "mode": apiBlueprintToQueryValue(mode),
+    };
+  }
+}

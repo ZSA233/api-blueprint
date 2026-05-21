@@ -5,6 +5,7 @@ import (
 	apperrors "example.com/project/golang/server/views/runtime/errors"
 	"example.com/project/golang/server/views/runtime/errors/common_err"
 	"example.com/project/golang/server/views/runtime/errors/demo_err"
+	"time"
 )
 
 type Router struct {
@@ -35,6 +36,17 @@ func (impl *Router) FormSubmit(ctx *CTX_FormSubmit, req *REQ_FormSubmit) (rsp *R
 		Summary: body.Title,
 		Count:   body.Count,
 		Enabled: body.Enabled,
+	}, nil
+}
+
+func (impl *Router) RequestOptions(ctx *CTX_RequestOptions, req *REQ_RequestOptions) (rsp *RSP_RequestOptions, err error) {
+	delayMs := req.Q.DelayMs
+	if delayMs > 0 {
+		time.Sleep(time.Duration(delayMs) * time.Millisecond)
+	}
+	return &RSP_RequestOptions{
+		Status:  "ok",
+		DelayMs: delayMs,
 	}, nil
 }
 

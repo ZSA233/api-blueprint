@@ -5,6 +5,7 @@
 import type {
   ApiChannelBridge,
   ApiClientConfig,
+  ApiResponseEnvelope,
   ApiStreamBridge,
   ApiTransport,
   ChannelConnectOptions,
@@ -153,4 +154,3 @@ function withWailsFrontendTimeout<R>(operation: Promise<R>, timeoutMs?: number):
     );
   });
 }
-

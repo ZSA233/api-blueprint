@@ -8,6 +8,7 @@ from ....runtime.server import ApiRawResponse, ApiServerChannel, ApiServerStream
 
 from .gen_types import (
     MediaPreviewForm,
+    MediaErrorFrameQuery,
 )
 
 
@@ -25,6 +26,15 @@ class MediaService(Protocol):
         ...
 
     async def media_download_dynamic(self) -> str | Path | ApiRawResponse[bytes]:
+        ...
+
+    async def media_download_filename_edge(self) -> str | Path | ApiRawResponse[bytes]:
+        ...
+
+    async def media_error_frame(
+        self,
+        query: MediaErrorFrameQuery,
+    ) -> bytes | ApiRawResponse[bytes]:
         ...
 
     async def media_mjpeg(self) -> AsyncIterable[bytes] | Iterable[bytes] | ApiRawResponse[AsyncIterable[bytes] | Iterable[bytes]]:
@@ -46,6 +56,15 @@ class MediaServiceStub:
 
     async def media_download_dynamic(self) -> str | Path | ApiRawResponse[bytes]:
         raise NotImplementedError("media_download_dynamic")
+
+    async def media_download_filename_edge(self) -> str | Path | ApiRawResponse[bytes]:
+        raise NotImplementedError("media_download_filename_edge")
+
+    async def media_error_frame(
+        self,
+        query: MediaErrorFrameQuery,
+    ) -> bytes | ApiRawResponse[bytes]:
+        raise NotImplementedError("media_error_frame")
 
     async def media_mjpeg(self) -> AsyncIterable[bytes] | Iterable[bytes] | ApiRawResponse[AsyncIterable[bytes] | Iterable[bytes]]:
         raise NotImplementedError("media_mjpeg")

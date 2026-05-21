@@ -80,6 +80,13 @@ class HttpClientTransport(ApiClientTransport):
                 if payload is not None:
                     raise ApiError(make_api_error_payload(payload, route_id), route_id=route_id, raw=payload)
                 response.raise_for_status()
+            if _is_json_response(response):
+                await response.aread()
+                payload = self._extract_raw_error_payload(response, response_envelope)
+                if payload is not None:
+                    await response.aclose()
+                    raise ApiError(make_api_error_payload(payload, route_id), route_id=route_id, raw=payload)
+                return _BufferedStreamResponse(response)
             return _HttpxStreamResponse(response)
 
         response = await self._client.request(method, self._url(path), **request_kwargs)
@@ -89,6 +96,9 @@ class HttpClientTransport(ApiClientTransport):
                 raise ApiError(make_api_error_payload(payload, route_id), route_id=route_id, raw=payload)
             response.raise_for_status()
         if response_type in {"bytes", "file"}:
+            payload = self._extract_raw_error_payload(response, response_envelope)
+            if payload is not None:
+                raise ApiError(make_api_error_payload(payload, route_id), route_id=route_id, raw=payload)
             return _raw_response(response)
         if response_type == "binary_schema":
             return response.content
@@ -185,6 +195,36 @@ class HttpClientTransport(ApiClientTransport):
             return payload
         return None
 
+    def _extract_raw_error_payload(
+        self,
+        response: httpx.Response,
+        response_envelope: ApiResponseEnvelope | None,
+    ) -> dict[str, object] | None:
+        if response_envelope is None or response_envelope.get("kind") == "none" or not _is_json_response(response):
+            return None
+        try:
+            payload = response.json()
+        except ValueError:
+            return None
+        if not isinstance(payload, dict):
+            return None
+        fields = response_envelope.get("fields", {})
+        kind = response_envelope.get("kind")
+        if kind == "code_message_data":
+            code_field = fields.get("code") or "code"
+            code = payload.get(code_field)
+            if not isinstance(code, int) or code == response_envelope.get("success_code", 0):
+                return None
+            return self._payload_from_code_message_envelope(payload, response_envelope)
+        if kind == "ok_data_error":
+            ok_field = fields.get("ok") or "ok"
+            if payload.get(ok_field) is not False:
+                return None
+            error_field = fields.get("error") or "error"
+            error = payload.get(error_field)
+            return error if isinstance(error, dict) else {}
+        return None
+
     def _payload_from_code_message_envelope(
         self,
         payload: dict[str, Any],
@@ -224,6 +264,27 @@ class _HttpxStreamResponse(ApiStreamResponse):
         await self._response.aclose()
 
 
+class _BufferedStreamResponse(ApiStreamResponse):
+    _response: httpx.Response
+
+    def __init__(self, response: httpx.Response) -> None:
+        object.__setattr__(self, "body", _single_chunk(response.content))
+        object.__setattr__(self, "headers", dict(response.headers))
+        object.__setattr__(self, "status", response.status_code)
+        object.__setattr__(self, "content_type", _content_type(response))
+        object.__setattr__(self, "content_disposition", response.headers.get("content-disposition", ""))
+        object.__setattr__(self, "filename", _filename_from_disposition(response.headers.get("content-disposition", "")))
+        object.__setattr__(self, "_response", response)
+
+    async def aclose(self) -> None:
+        await self._response.aclose()
+
+
+async def _single_chunk(body: bytes) -> AsyncIterator[bytes]:
+    if body:
+        yield body
+
+
 def _raw_response(response: httpx.Response) -> ApiRawResponse[bytes]:
     disposition = response.headers.get("content-disposition", "")
     return ApiRawResponse(
@@ -238,6 +299,11 @@ def _raw_response(response: httpx.Response) -> ApiRawResponse[bytes]:
 
 def _content_type(response: httpx.Response) -> str:
     return response.headers.get("content-type", "").split(";", 1)[0].lower()
+
+
+def _is_json_response(response: httpx.Response) -> bool:
+    content_type = _content_type(response)
+    return content_type == "application/json" or content_type.endswith("+json")
 
 
 def _set_header(request_kwargs: dict[str, Any], name: str, value: str) -> None:

@@ -17,6 +17,7 @@ import io.ktor.server.request.receiveMultipart
 import io.ktor.server.request.receiveParameters
 import io.ktor.server.request.receiveText
 import io.ktor.server.response.respondBytes
+import io.ktor.server.response.respondOutputStream
 import io.ktor.server.response.respondText
 import io.ktor.server.response.respondTextWriter
 import io.ktor.server.routing.Route
@@ -107,6 +108,26 @@ public fun Route.registerDemoRoutes(
             respondSuccess(call, result, DemoFormSubmitResponse.serializer(), ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "application/json")
         } catch (error: ApiError) {
             respondApiError(call, error, ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "api.demo.post.formsubmit")
+        }
+    }
+
+    get("/api/demo/request-options") {
+        val query = try {
+            decodeParameters(call.request.queryParameters, DemoRequestOptionsQuery.serializer())
+        } catch (_: SerializationException) {
+            respondBadRequest(call)
+            return@get
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@get
+        }
+        try {
+            val result = service.requestOptions(
+                query = query
+            )
+            respondSuccess(call, result, RequestOptionsResponse.serializer(), ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "application/json")
+        } catch (error: ApiError) {
+            respondApiError(call, error, ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "api.demo.get.requestoptions")
         }
     }
 
@@ -406,9 +427,16 @@ private suspend fun respondRawBytes(call: ApplicationCall, bytes: ByteArray, med
 }
 
 private suspend fun respondRaw(call: ApplicationCall, result: Any?, kind: String, mediaType: String, filename: String) {
+    if (result is ApiStreamResponse) {
+        respondStream(call, result, kind, filename)
+        return
+    }
+    if (kind == "byte_stream") {
+        respondStream(call, streamRawResponse(result, mediaType), kind, filename)
+        return
+    }
     val response = when (result) {
         is ApiRawResponse -> result
-        is ApiStreamResponse -> ApiRawResponse(result.body, result.contentType, filename, result.headers)
         is ApiBinaryBody -> ApiRawResponse(result.toByteArray(), result.contentType, filename)
         is ByteArray -> ApiRawResponse(result, mediaType, filename)
         is String -> ApiRawResponse(result.toByteArray(Charsets.UTF_8), mediaType, filename)
@@ -418,10 +446,73 @@ private suspend fun respondRaw(call: ApplicationCall, result: Any?, kind: String
     response.headers.forEach { (key, value) -> call.response.headers.append(key, value) }
     val effectiveFilename = response.filename.ifBlank { filename }
     if (kind == "file" && effectiveFilename.isNotBlank()) {
-        call.response.headers.append(HttpHeaders.ContentDisposition, "attachment; filename=\"${effectiveFilename.replace("\"", "\\\"")}\"")
+        call.response.headers.append(HttpHeaders.ContentDisposition, contentDispositionAttachment(effectiveFilename))
     }
     call.respondBytes(response.body, contentType = contentType(response.contentType))
 }
+
+private fun streamRawResponse(result: Any?, mediaType: String): ApiStreamResponse =
+    when (result) {
+        is ApiRawResponse -> ApiStreamResponse(result.body, result.contentType, result.headers)
+        is ApiBinaryBody -> ApiStreamResponse(result.toByteArray(), result.contentType)
+        is ByteArray -> ApiStreamResponse(result, mediaType)
+        is String -> ApiStreamResponse(result.toByteArray(Charsets.UTF_8), mediaType)
+        null -> ApiStreamResponse(ByteArray(0), mediaType)
+        else -> ApiStreamResponse(result.toString().toByteArray(Charsets.UTF_8), mediaType)
+    }
+
+private suspend fun respondStream(
+    call: ApplicationCall,
+    response: ApiStreamResponse,
+    kind: String,
+    filename: String,
+) {
+    response.headers.forEach { (key, value) -> call.response.headers.append(key, value) }
+    if (kind == "file" && filename.isNotBlank()) {
+        call.response.headers.append(HttpHeaders.ContentDisposition, contentDispositionAttachment(filename))
+    }
+    call.respondOutputStream(contentType = contentType(response.contentType)) {
+        response.use { stream ->
+            val buffer = ByteArray(8192)
+            while (true) {
+                val read = stream.body.read(buffer)
+                if (read < 0) {
+                    break
+                }
+                write(buffer, 0, read)
+                flush()
+            }
+        }
+    }
+}
+
+private fun contentDispositionAttachment(filename: String): String =
+    "attachment; filename=\"${asciiFilenameFallback(filename)}\"; filename*=UTF-8''${percentEncodeUtf8(filename)}"
+
+private fun asciiFilenameFallback(filename: String): String =
+    filename
+        .map { char ->
+            if (char.code in 0x20..0x7E && char != '"' && char != '\\' && char != ';') char else '_'
+        }
+        .joinToString("")
+        .ifBlank { "download" }
+
+private fun percentEncodeUtf8(value: String): String =
+    value.toByteArray(Charsets.UTF_8).joinToString("") { byte ->
+        val code = byte.toInt() and 0xFF
+        if (
+            code in 'a'.code..'z'.code ||
+            code in 'A'.code..'Z'.code ||
+            code in '0'.code..'9'.code ||
+            code == '-'.code ||
+            code == '.'.code ||
+            code == '_'.code
+        ) {
+            code.toChar().toString()
+        } else {
+            "%%%02X".format(code)
+        }
+    }
 
 private suspend fun <T> respondSuccess(
     call: ApplicationCall,

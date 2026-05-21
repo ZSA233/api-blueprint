@@ -16,4 +16,10 @@ public final class GenMediaTypes {
     private GenMediaTypes() {
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record MediaErrorFrameQuery(
+        @JsonProperty("mode") String mode
+    ) {
+    }
+
 }

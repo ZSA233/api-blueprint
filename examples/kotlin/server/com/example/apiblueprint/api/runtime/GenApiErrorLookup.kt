@@ -87,6 +87,10 @@ private val routeApiErrorsByCode: Map<String, Map<ApiErrorCode, ApiErrorEntry>> 
         -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
         55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
     ),
+    "api.demo.get.requestoptions" to mapOf(
+        -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
+        55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
+    ),
     "api.demo.put.z1put" to mapOf(
         -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
         55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
@@ -136,6 +140,16 @@ private val routeApiErrorsByCode: Map<String, Map<ApiErrorCode, ApiErrorEntry>> 
     "api.media.get.downloaddynamic" to mapOf(
         -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
         55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
+    ),
+    "api.media.get.downloadfilenameedge" to mapOf(
+        -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
+        55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
+    ),
+    "api.media.get.errorframe" to mapOf(
+        -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
+        55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
+        70002 to ApiErrorsByID.getValue("DemoErr.UNKNOWN"),
+        42901 to ApiErrorsByID.getValue("DemoErr.RATE_LIMITED"),
     ),
     "api.media.get.mjpeg" to mapOf(
         -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
@@ -225,4 +239,3 @@ object DemoErr {
     const val UNKNOWN: Int = 70002
     const val RATE_LIMITED: Int = 42901
 }
-

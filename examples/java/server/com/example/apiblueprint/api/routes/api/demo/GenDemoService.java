@@ -23,6 +23,10 @@ public interface GenDemoService {
         GenDemoTypes.FormSubmitForm form
     ) throws Exception;
 
+    GenApiTypes.RequestOptionsResponse requestOptions(
+        GenDemoTypes.RequestOptionsQuery query
+    ) throws Exception;
+
     GenDemoTypes.PutDemoResponse putDemo(
         GenDemoTypes.PutDemoQuery query,
         GenDemoTypes.PutDemoJSON json

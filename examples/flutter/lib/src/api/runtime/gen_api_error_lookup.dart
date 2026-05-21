@@ -97,6 +97,10 @@ final routeApiErrorsByCode = <String, Map<int, ApiErrorPayload>>{
     -1: apiErrorsById["CommonErr.UNKNOWN"]!,
     55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,
   },
+  "api.demo.get.requestoptions": {
+    -1: apiErrorsById["CommonErr.UNKNOWN"]!,
+    55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,
+  },
   "api.demo.put.z1put": {
     -1: apiErrorsById["CommonErr.UNKNOWN"]!,
     55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,
@@ -146,6 +150,16 @@ final routeApiErrorsByCode = <String, Map<int, ApiErrorPayload>>{
   "api.media.get.downloaddynamic": {
     -1: apiErrorsById["CommonErr.UNKNOWN"]!,
     55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,
+  },
+  "api.media.get.downloadfilenameedge": {
+    -1: apiErrorsById["CommonErr.UNKNOWN"]!,
+    55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,
+  },
+  "api.media.get.errorframe": {
+    -1: apiErrorsById["CommonErr.UNKNOWN"]!,
+    55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,
+    70002: apiErrorsById["DemoErr.UNKNOWN"]!,
+    42901: apiErrorsById["DemoErr.RATE_LIMITED"]!,
   },
   "api.media.get.mjpeg": {
     -1: apiErrorsById["CommonErr.UNKNOWN"]!,

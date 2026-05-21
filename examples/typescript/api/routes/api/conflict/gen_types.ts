@@ -15,4 +15,3 @@ export interface DefaultQuery {
 }
 
 export type DefaultResponse = ConflictModel;
-
