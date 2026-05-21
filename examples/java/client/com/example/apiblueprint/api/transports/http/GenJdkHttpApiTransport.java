@@ -8,13 +8,18 @@ import com.example.apiblueprint.api.runtime.ApiError;
 import com.example.apiblueprint.api.runtime.ApiErrorEntry;
 import com.example.apiblueprint.api.runtime.ApiErrorPayload;
 import com.example.apiblueprint.api.runtime.ApiException;
+import com.example.apiblueprint.api.runtime.ApiFilePart;
 import com.example.apiblueprint.api.runtime.ApiRequest;
+import com.example.apiblueprint.api.runtime.ApiRawResponse;
 import com.example.apiblueprint.api.runtime.ApiResponseEnvelope;
 import com.example.apiblueprint.api.runtime.ApiErrors;
+import com.example.apiblueprint.api.runtime.ApiStreamResponse;
 import com.example.apiblueprint.api.runtime.ApiToastPayload;
 import com.example.apiblueprint.api.runtime.ApiTransport;
 import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.lang.reflect.RecordComponent;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -50,14 +55,46 @@ public class GenJdkHttpApiTransport implements ApiTransport {
     @Override
     public <T> T execute(ApiRequest<T> request) throws Exception {
         HttpRequest httpRequest = buildRequest(request);
-        HttpResponse<String> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-        String body = response.body() == null ? "" : response.body();
+        HttpResponse<byte[]> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofByteArray());
+        byte[] bodyBytes = response.body() == null ? new byte[0] : response.body();
+        String body = new String(bodyBytes, StandardCharsets.UTF_8);
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             Optional<ApiError> apiError = decodeApiError(request.routeId(), body, request.responseEnvelope());
             if (apiError.isPresent()) {
                 throw apiError.get();
             }
             throw new ApiException(response.statusCode(), body);
+        }
+        if ("bytes".equals(request.responseKind()) || "file".equals(request.responseKind())) {
+            return request.responseClass().cast(
+                new ApiRawResponse(
+                    bodyBytes,
+                    firstHeader(response, "content-type").orElse(request.responseMediaType()),
+                    firstHeader(response, "content-disposition").flatMap(this::filenameFromContentDisposition).orElse(request.responseFilename()),
+                    response.headers().map()
+                        .entrySet()
+                        .stream()
+                        .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, entry -> String.join(",", entry.getValue())))
+                )
+            );
+        }
+        if ("byte_stream".equals(request.responseKind())) {
+            return request.responseClass().cast(
+                new ApiStreamResponse(
+                    bodyBytes,
+                    firstHeader(response, "content-type").orElse(request.responseMediaType()),
+                    response.headers().map()
+                        .entrySet()
+                        .stream()
+                        .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, entry -> String.join(",", entry.getValue())))
+                )
+            );
+        }
+        if ("binary_schema".equals(request.responseKind())) {
+            if (request.binaryResponseDecoder() == null) {
+                throw new IOException("Missing binary response decoder for " + request.routeId());
+            }
+            return request.binaryResponseDecoder().apply(bodyBytes);
         }
         if (body.isBlank()) {
             return null;
@@ -77,6 +114,7 @@ public class GenJdkHttpApiTransport implements ApiTransport {
         request.headers().forEach(builder::header);
         Object json = request.json();
         Object form = request.form();
+        Object multipart = request.multipart();
         ApiBinaryBody binary = request.binary();
         if (json != null) {
             builder.header("content-type", "application/json");
@@ -84,6 +122,10 @@ public class GenJdkHttpApiTransport implements ApiTransport {
         } else if (form != null) {
             builder.header("content-type", "application/x-www-form-urlencoded");
             builder.method(request.method(), HttpRequest.BodyPublishers.ofString(formBody(form), StandardCharsets.UTF_8));
+        } else if (multipart != null) {
+            EncodedMultipart encoded = multipartBody(multipart);
+            builder.header("content-type", encoded.contentType());
+            builder.method(request.method(), HttpRequest.BodyPublishers.ofByteArray(encoded.body()));
         } else if (binary != null) {
             builder.header("content-type", binary.contentType());
             builder.method(request.method(), HttpRequest.BodyPublishers.ofByteArray(binary.toBytes()));
@@ -121,6 +163,78 @@ public class GenJdkHttpApiTransport implements ApiTransport {
 
     private String formBody(Object value) {
         return queryString(value);
+    }
+
+    private EncodedMultipart multipartBody(Object value) throws IOException {
+        String boundary = "api-blueprint-" + java.util.UUID.randomUUID();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        for (Map.Entry<String, Object> entry : objectFields(value).entrySet()) {
+            if (entry.getValue() == null) {
+                continue;
+            }
+            out.write(("--" + boundary + "\r\n").getBytes(StandardCharsets.UTF_8));
+            if (entry.getValue() instanceof ApiFilePart file) {
+                String filename = file.filename().isBlank() ? entry.getKey() : file.filename();
+                out.write(("Content-Disposition: form-data; name=\"" + escapeHeader(entry.getKey()) + "\"; filename=\"" + escapeHeader(filename) + "\"\r\n").getBytes(StandardCharsets.UTF_8));
+                out.write(("Content-Type: " + file.contentType() + "\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+                out.write(file.bytes());
+                out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+                continue;
+            }
+            out.write(("Content-Disposition: form-data; name=\"" + escapeHeader(entry.getKey()) + "\"\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+            out.write(String.valueOf(entry.getValue()).getBytes(StandardCharsets.UTF_8));
+            out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+        }
+        out.write(("--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
+        return new EncodedMultipart(out.toByteArray(), "multipart/form-data; boundary=" + boundary);
+    }
+
+    private Map<String, Object> objectFields(Object value) {
+        if (value instanceof Map<?, ?> raw) {
+            java.util.LinkedHashMap<String, Object> result = new java.util.LinkedHashMap<>();
+            for (Map.Entry<?, ?> entry : raw.entrySet()) {
+                result.put(String.valueOf(entry.getKey()), entry.getValue());
+            }
+            return result;
+        }
+        Class<?> type = value.getClass();
+        if (type.isRecord()) {
+            java.util.LinkedHashMap<String, Object> result = new java.util.LinkedHashMap<>();
+            for (RecordComponent component : type.getRecordComponents()) {
+                try {
+                    result.put(component.getName(), component.getAccessor().invoke(value));
+                } catch (ReflectiveOperationException error) {
+                    throw new IllegalArgumentException("Cannot read multipart field " + component.getName(), error);
+                }
+            }
+            return result;
+        }
+        return objectMapper.convertValue(value, MAP_TYPE);
+    }
+
+    private String escapeHeader(String value) {
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private Optional<String> firstHeader(HttpResponse<?> response, String name) {
+        return response.headers().firstValue(name);
+    }
+
+    private Optional<String> filenameFromContentDisposition(String disposition) {
+        for (String part : disposition.split(";")) {
+            String trimmed = part.trim();
+            if (trimmed.toLowerCase().startsWith("filename=")) {
+                String value = trimmed.substring("filename=".length()).trim();
+                if (value.startsWith("\"") && value.endsWith("\"") && value.length() >= 2) {
+                    value = value.substring(1, value.length() - 1);
+                }
+                return value.isBlank() ? Optional.empty() : Optional.of(value);
+            }
+        }
+        return Optional.empty();
+    }
+
+    private record EncodedMultipart(byte[] body, String contentType) {
     }
 
     private String encode(String value) {

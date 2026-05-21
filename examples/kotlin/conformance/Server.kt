@@ -4,20 +4,26 @@ import com.example.apiblueprint.api.routes.api.binary.BinaryPacketResponse
 import com.example.apiblueprint.api.routes.api.binary.BinaryPacketQuery
 import com.example.apiblueprint.api.routes.api.binary.BinaryAuditPacketResponse
 import com.example.apiblueprint.api.routes.api.binary.BinaryAuditPacketQuery
+import com.example.apiblueprint.api.routes.api.binary.AuditPacket
+import com.example.apiblueprint.api.routes.api.binary.AuditPacketBody
+import com.example.apiblueprint.api.routes.api.binary.AuditPacketFlagsValues
+import com.example.apiblueprint.api.routes.api.binary.AuditPacketHeader
+import com.example.apiblueprint.api.routes.api.binary.AuditPacketItem
+import com.example.apiblueprint.api.routes.api.binary.DemoPacket
 import com.example.apiblueprint.api.routes.api.binary.BinaryServiceStub
 import com.example.apiblueprint.api.routes.api.conflict.ConflictDefaultQuery
 import com.example.apiblueprint.api.routes.api.conflict.ConflictServiceStub
 import com.example.apiblueprint.api.routes.api.ApiServiceStub
 import com.example.apiblueprint.api.routes.api.demo.*
 import com.example.apiblueprint.api.routes.api.hello.*
+import com.example.apiblueprint.api.routes.api.media.MediaServiceStub
 import com.example.apiblueprint.api.runtime.*
-import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody
-import com.example.apiblueprint.api.runtime.binary.toByteArray
 import com.example.apiblueprint.api.transports.ktor.api.binary.registerBinaryRoutes
 import com.example.apiblueprint.api.transports.ktor.api.registerApiRoutes
 import com.example.apiblueprint.api.transports.ktor.api.conflict.registerConflictRoutes as registerApiConflictRoutes
 import com.example.apiblueprint.api.transports.ktor.api.demo.registerDemoRoutes
 import com.example.apiblueprint.api.transports.ktor.api.hello.registerHelloRoutes
+import com.example.apiblueprint.api.transports.ktor.api.media.registerMediaRoutes
 import com.example.apiblueprint.alt.routes.alt.conflict.ConflictServiceStub as AltConflictServiceStub
 import com.example.apiblueprint.alt.transports.ktor.alt.conflict.registerConflictRoutes as registerAltConflictRoutes
 import io.ktor.server.application.install
@@ -28,8 +34,6 @@ import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.websocket.WebSockets
 import kotlinx.serialization.json.JsonNull
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import kotlin.math.roundToInt
 
 fun main() {
@@ -41,6 +45,7 @@ fun main() {
         routing {
             registerDemoRoutes(DemoServiceImpl())
             registerBinaryRoutes(BinaryServiceImpl())
+            registerMediaRoutes(MediaServiceImpl())
             registerApiRoutes(ApiServiceImpl())
             registerHelloRoutes(HelloServiceImpl())
             registerApiConflictRoutes(ConflictServiceImpl())
@@ -154,28 +159,57 @@ private class DemoServiceImpl : DemoServiceStub() {
 }
 
 private class BinaryServiceImpl : BinaryServiceStub() {
-    override suspend fun packet(query: BinaryPacketQuery, binaryBody: ApiBinaryBody): BinaryPacketResponse {
-        val packet = parsePacket(binaryBody.toByteArray())
+    override suspend fun packet(query: BinaryPacketQuery, binary: DemoPacket): BinaryPacketResponse {
         return BinaryPacketResponse(
             trace = query.trace.orEmpty(),
-            version = packet.version,
-            itemCount = packet.itemIds.size,
-            payload = packet.payload,
-            scoreSum = packet.scoreSum,
-            firstLabel = packet.firstLabel,
-            itemIds = packet.itemIds,
-            checksum = packet.checksum,
+            version = binary.header.version,
+            itemCount = binary.body.items.size,
+            payload = binary.body.payload.decodeToString(),
+            scoreSum = binary.body.scores.sum().roundToInt().toDouble(),
+            firstLabel = binary.body.items.firstOrNull()?.label?.decodeToString().orEmpty(),
+            itemIds = binary.body.items.map { it.id.toInt() },
+            checksum = binary.body.checksum.toInt(),
         )
     }
 
-    override suspend fun auditPacket(query: BinaryAuditPacketQuery, binaryBody: ApiBinaryBody): BinaryAuditPacketResponse {
-        val packet = parseAuditPacket(binaryBody.toByteArray())
+    override suspend fun auditPacket(query: BinaryAuditPacketQuery, binary: AuditPacket): BinaryAuditPacketResponse {
         return BinaryAuditPacketResponse(
             trace = query.trace.orEmpty(),
-            itemCount = packet.itemCount,
-            checksum = packet.checksum,
+            itemCount = binary.header.itemCount,
+            checksum = binary.body.checksum.toInt(),
         )
     }
+
+    override suspend fun auditPacketResponse(): AuditPacket = buildAuditPacket()
+}
+
+private class MediaServiceImpl : MediaServiceStub() {
+    override suspend fun mediaPreview(multipart: MediaPreviewRequest): ApiRawResponse =
+        ApiRawResponse(body = sampleJpeg(), contentType = "image/jpeg")
+
+    override suspend fun mediaFrame(): ApiRawResponse =
+        ApiRawResponse(body = sampleJpeg(), contentType = "image/jpeg")
+
+    override suspend fun mediaDownload(): ApiRawResponse =
+        ApiRawResponse(
+            body = "PK\u0003\u0004api-blueprint media report\n".encodeToByteArray(),
+            contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+
+    override suspend fun mediaDownloadDynamic(): ApiRawResponse =
+        ApiRawResponse(
+            body = "PK\u0003\u0004api-blueprint media report dynamic\n".encodeToByteArray(),
+            contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            filename = "media-report-dynamic.xlsx",
+        )
+
+    override suspend fun mediaMjpeg(): ApiStreamResponse =
+        ApiStreamResponse(
+            body = "--frame\r\nContent-Type: image/jpeg\r\n\r\n".encodeToByteArray() +
+                sampleJpeg() +
+                "\r\n".encodeToByteArray(),
+            contentType = "multipart/x-mixed-replace; boundary=frame",
+        )
 }
 
 private class HelloServiceImpl : HelloServiceStub() {
@@ -210,20 +244,6 @@ private class AltConflictServiceImpl : AltConflictServiceStub() {
         )
 }
 
-private data class ParsedPacket(
-    val version: Int,
-    val payload: String,
-    val scoreSum: Double,
-    val firstLabel: String,
-    val itemIds: List<Int>,
-    val checksum: Int,
-)
-
-private data class ParsedAuditPacket(
-    val itemCount: Int,
-    val checksum: Int,
-)
-
 private fun demoModel(label: String): ApiDemoA =
     ApiDemoA(
         bc = label,
@@ -236,88 +256,21 @@ private fun demoModel(label: String): ApiDemoA =
         enumList = listOf(StatusEnum.PENDING, StatusEnum.RUNNING),
     )
 
-private fun parsePacket(bytes: ByteArray): ParsedPacket {
-    val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
-    val magic = readUtf8(buffer, 4)
-    check(magic == "ABP1") { "binary magic mismatch: $magic" }
-    val version = readU16(buffer)
-    val kind = readU16(buffer)
-    check(kind == 1) { "binary kind mismatch: $kind" }
-    val flags = Integer.toUnsignedLong(buffer.int)
-    check((flags and 1L) != 0L) { "binary flags missing payload bit: $flags" }
-    buffer.get()
-    buffer.get()
-    buffer.get()
-    val shortCode = readU24(buffer)
-    check(shortCode == 0x010203) { "binary shortCode mismatch: $shortCode" }
-    readI24(buffer)
-    val itemCount = readU16(buffer)
-    val payloadLen = Integer.toUnsignedLong(buffer.int).toInt()
-    val scoreCount = readU16(buffer)
-    val itemIds = mutableListOf<Int>()
-    var firstLabel = ""
-    repeat(itemCount) { index ->
-        itemIds += buffer.int
-        buffer.get()
-        buffer.double
-        val labelLen = buffer.get().toInt() and 0xFF
-        val label = readUtf8(buffer, labelLen)
-        if (index == 0) {
-            firstLabel = label
-        }
-    }
-    val payload = readUtf8(buffer, payloadLen)
-    var scoreSum = 0.0
-    repeat(scoreCount) {
-        scoreSum += buffer.double
-    }
-    val checksum = Integer.toUnsignedLong(buffer.int).toInt()
-    check(!buffer.hasRemaining()) { "binary packet has trailing bytes: ${buffer.remaining()}" }
-    return ParsedPacket(
-        version = version,
-        payload = payload,
-        scoreSum = scoreSum.roundToInt().toDouble(),
-        firstLabel = firstLabel,
-        itemIds = itemIds,
-        checksum = checksum,
+private fun buildAuditPacket(): AuditPacket =
+    AuditPacket(
+        header = AuditPacketHeader(flags = AuditPacketFlagsValues.HasItems, itemCount = 2),
+        body = AuditPacketBody(
+            items = listOf(
+                AuditPacketItem(id = 11, code = 101),
+                AuditPacketItem(id = 22, code = 202),
+            ),
+            checksum = 2,
+        ),
     )
-}
 
-private fun parseAuditPacket(bytes: ByteArray): ParsedAuditPacket {
-    val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
-    val kind = readU16(buffer)
-    check(kind == 2) { "audit kind mismatch: $kind" }
-    val flags = Integer.toUnsignedLong(buffer.int)
-    check((flags and 1L) != 0L) { "audit flags missing items bit: $flags" }
-    val itemCount = readU16(buffer)
-    repeat(itemCount) {
-        buffer.int
-        buffer.short
-    }
-    val checksum = Integer.toUnsignedLong(buffer.int).toInt()
-    check(!buffer.hasRemaining()) { "audit packet has trailing bytes: ${buffer.remaining()}" }
-    return ParsedAuditPacket(itemCount = itemCount, checksum = checksum)
-}
-
-private fun readUtf8(buffer: ByteBuffer, size: Int): String {
-    val bytes = ByteArray(size)
-    buffer.get(bytes)
-    return bytes.decodeToString()
-}
-
-private fun readU16(buffer: ByteBuffer): Int = java.lang.Short.toUnsignedInt(buffer.short)
-
-private fun readU24(buffer: ByteBuffer): Int {
-    val b0 = buffer.get().toInt() and 0xFF
-    val b1 = buffer.get().toInt() and 0xFF
-    val b2 = buffer.get().toInt() and 0xFF
-    return b0 or (b1 shl 8) or (b2 shl 16)
-}
-
-private fun readI24(buffer: ByteBuffer): Int {
-    var value = readU24(buffer)
-    if ((value and 0x800000) != 0) {
-        value = value or -0x1000000
-    }
-    return value
-}
+private fun sampleJpeg(): ByteArray =
+    intArrayOf(
+        0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10,
+        'J'.code, 'F'.code, 'I'.code, 'F'.code, 0x00, 0x01, 0x01, 0x01, 0x00, 0x01,
+        0x00, 0x01, 0x00, 0x00, 0xff, 0xd9,
+    ).map { it.toByte() }.toByteArray()

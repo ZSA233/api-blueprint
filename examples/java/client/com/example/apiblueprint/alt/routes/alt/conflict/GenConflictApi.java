@@ -3,7 +3,9 @@ package com.example.apiblueprint.alt.routes.alt.conflict;
 
 import com.example.apiblueprint.alt.runtime.ApiChannelBridge;
 import com.example.apiblueprint.alt.runtime.ApiRequest;
+import com.example.apiblueprint.alt.runtime.ApiRawResponse;
 import com.example.apiblueprint.alt.runtime.ApiResponseEnvelope;
+import com.example.apiblueprint.alt.runtime.ApiStreamResponse;
 import com.example.apiblueprint.alt.runtime.ApiStreamBridge;
 import com.example.apiblueprint.alt.runtime.ApiTransport;
 
@@ -30,9 +32,14 @@ public class GenConflictApi {
             null,
             null,
             null,
+            null,
+            "none",
             ApiResponseEnvelope.of("OkDataErrorEnvelope", "ok_data_error", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
             ApiTypes.BlueprintsAltConflictConflictModel.class,
             "application/json",
+            "json",
+            "",
+            null,
             Map.of()
         );
         return transport.execute(request);

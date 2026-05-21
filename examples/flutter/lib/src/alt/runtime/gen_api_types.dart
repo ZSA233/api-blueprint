@@ -3,6 +3,7 @@
 
 import 'api_json_codecs.dart';
 import 'gen_api_errors.dart';
+import 'gen_api_transport.dart';
 
 
 class ConflictModel {

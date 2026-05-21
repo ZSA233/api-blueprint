@@ -2,7 +2,9 @@
 
 ## 状态
 
-v1 已实现，其他端待扩展。
+已修复，已归档。
+
+HTTP target 已补齐 binary schema response 与 file filename semantics；Wails/gRPC 不继承 HTTP raw response contract，而是通过各自 transport-native 方式建模同类能力。
 
 ## 发现日期
 
@@ -10,7 +12,7 @@ v1 已实现，其他端待扩展。
 
 ## 背景
 
-`docs/reviews/0002-20260521-media-raw-transport-extension.md` 已把 raw media 请求/响应纳入 ContractGraph，但仍有两个协议语义需要在继续铺开其他语言端前收束：
+`docs/reviews/resolved/0002-20260521-media-raw-transport-extension.md` 已把 raw media 请求/响应纳入 ContractGraph，但仍有两个协议语义需要在继续铺开其他语言端前收束：
 
 - `REQ_BINARY` 已能让客户端编码、服务端解码 Markdown Binary Schema 请求体，但还缺少对称的结构化二进制响应契约。
 - `RSP_FILE(filename=...)` 容易被理解为强制文件名；实际更合理的语义是默认下载名，可被 service 返回值覆盖。
@@ -93,3 +95,37 @@ uv run python -m scripts.example_validation --mode refresh --scope blueprint
 - 相关单测 `135 passed`。
 - Go/Python server × Go/TypeScript/Python client 的 binary-response、media、audit-binary 互通通过。
 - blueprint example refresh 已通过，刷新后的生成快照已纳入本次变更。
+
+## 修复记录 / Resolution
+
+修复日期：2026-05-21。
+
+修复摘要：
+
+- Java client/server、Kotlin client/server、Flutter client 已补齐 `binary_schema` success response。客户端把 HTTP bytes 解码为 typed packet；Java/Kotlin server adapter 把 typed packet 返回值编码为 HTTP bytes。
+- Python binary schema response 生成修复 endian 字面量双重转义问题，避免 little-endian response 在 Python client 侧误解码。
+- `RSP_FILE(default_filename=...)` 保持默认下载名语义；service 返回值中的 `filename` 或实际 `Content-Disposition` 可覆盖默认名，客户端只解析实际响应头。
+- Wails/gRPC 的文件、bytes、stream、typed binary packet 需求确认存在，但不复用 HTTP raw contract：Wails 使用 RPC descriptor / chunk / temp file；gRPC 使用 protobuf `bytes` / streaming chunk message。
+- capability check 与文档已明确 Wails/gRPC 的 native equivalent，不再形成隐性能力缺口。
+
+验证命令：
+
+```sh
+env GOROOT=/Users/zsa/.gvm/gos/go1.25.2 uv run pytest tests/engine/test_media_contract.py tests/engine/test_binary_schema.py tests/contract/graph tests/codegen/shared tests/codegen/java tests/codegen/kotlin tests/codegen/flutter -q
+uv run pytest tests/codegen/python/test_binary_schema.py -q
+uv run python -m compileall src/api_blueprint -q
+uv run api-gen check -c examples/api-blueprint.toml
+env GOROOT=/Users/zsa/.gvm/gos/go1.25.2 uv run python -m scripts.example_validation --mode refresh --scope blueprint
+env GOROOT=/Users/zsa/.gvm/gos/go1.25.2 uv run python -m scripts.example_conformance run --servers go,java,kotlin,python --clients go,typescript,kotlin,flutter,java,python --scenario binary-response,media,audit-binary
+```
+
+验证结果：
+
+- 相关 Java/Kotlin/Flutter/shared/engine/contract 单测 `102 passed`。
+- Python binary schema codegen 单测 `5 passed`。
+- `compileall` 通过。
+- `api-gen check` 输出 `ok`。
+- blueprint example refresh 通过，包含 Go/Kotlin/Java/Flutter/Wails harness 编译验证。
+- Go / Java / Kotlin / Python server × Go / TypeScript / Kotlin / Flutter / Java / Python client 的 `binary-response`、`media`、`audit-binary` 互通通过。
+
+相关 commit / PR：本地未提交。

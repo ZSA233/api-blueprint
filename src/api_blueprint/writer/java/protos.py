@@ -180,6 +180,7 @@ class JavaModelCatalog:
             "boolean": "Boolean",
             "bool": "Boolean",
             "binary": "byte[]",
+            "file": "ApiFilePart",
             "object": "Object",
             "any": "Object",
             "null": "Object",

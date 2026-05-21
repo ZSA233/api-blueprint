@@ -9,18 +9,21 @@ import com.example.apiblueprint.alt.runtime.ApiError;
 import com.example.apiblueprint.alt.runtime.ApiErrorEntry;
 import com.example.apiblueprint.alt.runtime.ApiErrorPayload;
 import com.example.apiblueprint.alt.runtime.ApiErrors;
+import com.example.apiblueprint.alt.runtime.ApiFilePart;
+import com.example.apiblueprint.alt.runtime.ApiRawResponse;
 import com.example.apiblueprint.alt.runtime.ApiResponseEnvelope;
 import com.example.apiblueprint.alt.runtime.ApiServerChannel;
 import com.example.apiblueprint.alt.runtime.ApiServerStream;
+import com.example.apiblueprint.alt.runtime.ApiStreamResponse;
 import com.example.apiblueprint.alt.runtime.ApiToastPayload;
 
 import com.example.apiblueprint.alt.runtime.ApiTypes;
 
 import com.example.apiblueprint.alt.runtime.binary.ApiBinaryBody;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.net.URI;
 import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,6 +31,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -36,6 +40,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
@@ -155,6 +161,60 @@ public class GenConflictController {
             return envelope;
         }
         return envelope;
+    }
+
+    private Map<String, Object> multipartBody(MultipartHttpServletRequest request) throws IOException {
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (request == null) {
+            return result;
+        }
+        request.getParameterMap().forEach((key, values) -> {
+            if (values != null && values.length > 0) {
+                result.put(key, values[0]);
+            }
+        });
+        for (Map.Entry<String, MultipartFile> entry : request.getFileMap().entrySet()) {
+            MultipartFile file = entry.getValue();
+            result.put(
+                entry.getKey(),
+                ApiFilePart.of(file.getOriginalFilename(), file.getContentType(), file.getBytes())
+            );
+        }
+        return result;
+    }
+
+    private ResponseEntity<byte[]> rawResponse(String kind, String mediaType, String filename, Object result) throws IOException {
+        if (result instanceof ApiRawResponse raw) {
+            ResponseEntity.BodyBuilder builder = rawResponseBuilder(kind, raw.contentType(), raw.filename().isBlank() ? filename : raw.filename());
+            raw.headers().forEach(builder::header);
+            return builder.body(raw.body());
+        }
+        if (result instanceof ApiStreamResponse stream) {
+            return rawResponseBuilder(kind, stream.contentType(), filename).body(stream.body());
+        }
+        if (result instanceof ApiBinaryBody binary) {
+            return rawResponseBuilder(kind, binary.contentType(), filename).body(binary.toBytes());
+        }
+        if (result instanceof byte[] bytes) {
+            return rawResponseBuilder(kind, mediaType, filename).body(bytes);
+        }
+        if (result instanceof String text) {
+            return rawResponseBuilder(kind, mediaType, filename).body(text.getBytes(StandardCharsets.UTF_8));
+        }
+        byte[] bytes = result == null ? new byte[0] : objectMapper.writeValueAsBytes(result);
+        return rawResponseBuilder(kind, mediaType, filename).body(bytes);
+    }
+
+    private ResponseEntity<byte[]> rawBytesResponse(String mediaType, String filename, byte[] body) {
+        return rawResponseBuilder("bytes", mediaType, filename).body(body == null ? new byte[0] : body);
+    }
+
+    private ResponseEntity.BodyBuilder rawResponseBuilder(String kind, String mediaType, String filename) {
+        ResponseEntity.BodyBuilder builder = ResponseEntity.ok().contentType(MediaType.parseMediaType(mediaType));
+        if ("file".equals(kind) && filename != null && !filename.isBlank()) {
+            builder.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename.replace("\"", "\\\"") + "\"");
+        }
+        return builder;
     }
 
     private ResponseEntity<Map<String, Object>> badRequestResponse(Exception error) {

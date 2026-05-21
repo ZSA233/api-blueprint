@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import com.example.apiblueprint.api.runtime.ApiTypes;
 
+import com.example.apiblueprint.api.runtime.ApiFilePart;
+
 import com.example.apiblueprint.api.runtime.ApiJson;
 
 import java.util.ArrayList;

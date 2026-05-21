@@ -78,40 +78,40 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
     "kotlin-client": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "urlencoded", "binary", "binary-schema", "open"),
+        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
-        responses=("json", "xml"),
+        responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
     ),
     "kotlin-server": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "urlencoded", "binary", "binary-schema", "open"),
+        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
-        responses=("json", "xml"),
+        responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
     ),
     "java-server": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "urlencoded", "binary", "binary-schema", "open"),
+        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
-        responses=("json", "xml"),
+        responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
     ),
     "java-client": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "urlencoded", "binary", "binary-schema", "open"),
+        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
-        responses=("json", "xml"),
+        responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
     ),
     "flutter-client": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "urlencoded", "binary", "binary-schema", "open"),
+        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
-        responses=("json", "xml"),
+        responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
     ),
     "python-server": TargetCapability(
         implemented=True,
@@ -132,11 +132,15 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
     "wails-transport": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
+        requests=("query", "json", "form", "urlencoded", "open"),
+        responses=("json", "xml"),
         frontend_modes=("external", "none"),
     ),
     "grpc-proto": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
+        requests=("query", "json", "form", "urlencoded", "binary", "open"),
+        responses=("json", "xml"),
         outputs=("proto",),
     ),
     "grpc-go": TargetCapability(implemented=True, inputs=("proto",), outputs=("go", "grpc-go")),
@@ -227,13 +231,19 @@ def _route_capability_errors(
             ("open", "open_model"),
         ):
             if request.get(manifest_key) is not None and request_kind not in capability.requests:
-                errors.append(f"{target.kind} does not support {request_kind} request route: {route_id}")
+                errors.append(
+                    f"{target.kind} does not support {request_kind} request route: {route_id}"
+                    f"{_native_modeling_hint(target.kind, request_kind)}"
+                )
 
     response = route.get("response") or {}
     if capability.responses and isinstance(response, Mapping):
         response_kind = str(response.get("kind") or "json")
         if response_kind not in capability.responses:
-            errors.append(f"{target.kind} does not support {response_kind} response route: {route_id}")
+            errors.append(
+                f"{target.kind} does not support {response_kind} response route: {route_id}"
+                f"{_native_modeling_hint(target.kind, response_kind)}"
+            )
     if capability.envelopes and isinstance(response, Mapping):
         response_envelope = response.get("envelope")
         envelope = _envelope_kind(response_envelope)
@@ -282,3 +292,25 @@ def _duplicate_route_error_codes(route: RouteManifest) -> tuple[int, ...]:
 def _route_str(route: RouteManifest, key: str) -> str:
     value = route.get(key)
     return "" if value is None else str(value)
+
+
+def _native_modeling_hint(target_kind: str, contract_kind: str) -> str:
+    if target_kind == "grpc-proto" and contract_kind in {
+        "multipart",
+        "binary-schema",
+        "binary_schema",
+        "bytes",
+        "file",
+        "byte_stream",
+    }:
+        return "; model this as protobuf bytes fields or explicit client/server-streaming chunk messages"
+    if target_kind == "wails-transport" and contract_kind in {
+        "multipart",
+        "binary-schema",
+        "binary_schema",
+        "bytes",
+        "file",
+        "byte_stream",
+    }:
+        return "; model this as Wails RPC file descriptors, serializable bytes, or STREAM/CHANNEL chunks"
+    return ""

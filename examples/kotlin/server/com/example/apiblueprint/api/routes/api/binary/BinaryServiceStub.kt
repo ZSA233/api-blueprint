@@ -9,16 +9,21 @@ public open class BinaryServiceStub : GenBinaryService {
 
     public override suspend fun packet(
         query: BinaryPacketQuery,
-        binaryBody: ApiBinaryBody
+        binary: DemoPacket
     ): BinaryPacketResponse {
         throw NotImplementedError("api.binary.post.packet is not implemented")
     }
 
     public override suspend fun auditPacket(
         query: BinaryAuditPacketQuery,
-        binaryBody: ApiBinaryBody
+        binary: AuditPacket
     ): BinaryAuditPacketResponse {
         throw NotImplementedError("api.binary.post.auditpacket is not implemented")
+    }
+
+    public override suspend fun auditPacketResponse(
+    ): AuditPacket {
+        throw NotImplementedError("api.binary.get.auditpacketresponse is not implemented")
     }
 
 }

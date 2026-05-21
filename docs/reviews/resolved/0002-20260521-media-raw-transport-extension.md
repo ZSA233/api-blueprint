@@ -2,9 +2,9 @@
 
 ## 状态
 
-部分修复，继续跟踪。
+已修复，已归档。
 
-v1 已实现核心 DSL、ContractGraph、capability check、Python client/server、TypeScript client、Go client/server、examples media 场景与跨端 conformance。Java、Kotlin、Flutter、Wails、gRPC 仍按 unsupported contract 处理，后续按同一 ContractGraph 语义补齐。
+HTTP target 已按同一 ContractGraph 语义补齐；Wails/gRPC 不继承 HTTP raw media contract，而是通过各自 transport-native 方式建模同类能力。
 
 ## 发现日期
 
@@ -82,3 +82,36 @@ v1 已实现核心 DSL、ContractGraph、capability check、Python client/server
 - 已执行并通过：`uv run api-gen check -c examples/api-blueprint.toml`。
 - 已执行并通过：`uv run python -m scripts.example_validation --mode refresh --scope blueprint`。
 - 已执行并通过：`uv run python -m scripts.example_conformance run --servers go,python --clients go,typescript,python --scenario media`。
+
+## 修复记录 / Resolution
+
+修复日期：2026-05-21。
+
+修复摘要：
+
+- Java client/server、Kotlin client/server、Flutter client 已补齐 HTTP `multipart` request、`bytes` / `file` / `byte_stream` raw success response 和 `binary_schema` success response。
+- Java Spring、Kotlin Ktor、Python FastAPI、Go HTTP server 的 raw success response 不套 JSON envelope；typed error 仍按 JSON error envelope 返回。
+- capability matrix 与 `api-gen check` 已按 request/response kind 做统一检查。Wails/gRPC 对 HTTP raw media route 继续显式 unsupported，但错误和文档指向 native equivalent。
+- Wails 的同类能力通过普通 RPC 可序列化 payload、app-local file descriptor、`STREAM` / `CHANNEL` chunk 或 app-managed temp file/cache 建模，不模拟 HTTP response。
+- gRPC 的同类能力通过 protobuf `bytes` 字段、encoded packet payload、client/server streaming chunk message 和 metadata 建模，不继承 `multipart`、`Content-Disposition`、HTTP status/header 或 MIME download。
+- examples media/binary-response/audit-binary 场景已扩展到 Java/Kotlin/Flutter，并纳入真实跨端 conformance。
+
+验证命令：
+
+```sh
+env GOROOT=/Users/zsa/.gvm/gos/go1.25.2 uv run pytest tests/engine/test_media_contract.py tests/engine/test_binary_schema.py tests/contract/graph tests/codegen/shared tests/codegen/java tests/codegen/kotlin tests/codegen/flutter -q
+uv run python -m compileall src/api_blueprint -q
+uv run api-gen check -c examples/api-blueprint.toml
+env GOROOT=/Users/zsa/.gvm/gos/go1.25.2 uv run python -m scripts.example_validation --mode refresh --scope blueprint
+env GOROOT=/Users/zsa/.gvm/gos/go1.25.2 uv run python -m scripts.example_conformance run --servers go,java,kotlin,python --clients go,typescript,kotlin,flutter,java,python --scenario binary-response,media,audit-binary
+```
+
+验证结果：
+
+- 相关单测 `102 passed`。
+- `compileall` 通过。
+- `api-gen check` 输出 `ok`。
+- blueprint example refresh 通过，包含 Go/Kotlin/Java/Flutter/Wails harness 编译验证。
+- Go / Java / Kotlin / Python server × Go / TypeScript / Kotlin / Flutter / Java / Python client 的 `binary-response`、`media`、`audit-binary` 互通通过。
+
+相关 commit / PR：本地未提交。

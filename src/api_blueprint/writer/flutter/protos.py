@@ -14,6 +14,7 @@ from api_blueprint.engine.model import (
     Enum as ModelEnum,
     Field,
     FieldWrappedModel,
+    FileField,
     Float,
     Float32,
     Float64,
@@ -110,6 +111,8 @@ class DartTypeResolver:
 
         if isinstance(field, String):
             return DartResolvedType("String", decoder="apiBlueprintReadString")
+        if isinstance(field, FileField):
+            return DartResolvedType("ApiFilePart", decoder="ApiFilePart.fromJson")
         if isinstance(field, Bool):
             return DartResolvedType("bool", decoder="apiBlueprintReadBool")
         if isinstance(field, (Int, Int64, Int32, Int16, Int8, Uint, Uint64, Uint32, Uint16, Uint8, Byte)):

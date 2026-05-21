@@ -283,7 +283,7 @@ public final class ApiTypes {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record MediaPreviewRequest(
         @JsonProperty("title") String title,
-        @JsonProperty("image") Object image
+        @JsonProperty("image") ApiFilePart image
     ) {
     }
 

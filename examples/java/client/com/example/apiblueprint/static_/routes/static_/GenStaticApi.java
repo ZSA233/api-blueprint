@@ -3,7 +3,9 @@ package com.example.apiblueprint.static_.routes.static_;
 
 import com.example.apiblueprint.static_.runtime.ApiChannelBridge;
 import com.example.apiblueprint.static_.runtime.ApiRequest;
+import com.example.apiblueprint.static_.runtime.ApiRawResponse;
 import com.example.apiblueprint.static_.runtime.ApiResponseEnvelope;
+import com.example.apiblueprint.static_.runtime.ApiStreamResponse;
 import com.example.apiblueprint.static_.runtime.ApiStreamBridge;
 import com.example.apiblueprint.static_.runtime.ApiTransport;
 
@@ -29,9 +31,14 @@ public class GenStaticApi {
             null,
             null,
             null,
+            null,
+            "none",
             ApiResponseEnvelope.of("NoEnvelope", "none", "none", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
             StaticTypes.DocJsonResponse.class,
             "application/json",
+            "json",
+            "",
+            null,
             Map.of()
         );
         return transport.execute(request);
@@ -47,9 +54,14 @@ public class GenStaticApi {
             null,
             null,
             null,
+            null,
+            "none",
             ApiResponseEnvelope.of("NoEnvelope", "none", "none", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
             StaticTypes.DochahaResponse.class,
             "application/json",
+            "json",
+            "",
+            null,
             Map.of()
         );
         return transport.execute(request);

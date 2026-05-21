@@ -28,6 +28,17 @@ frontend_mode = "external"
 - `frontend_mode`：默认 `external`；`none` 跳过 Wails TypeScript overlay。
 - `include` / `exclude`：裁剪 Wails target overlay / facade。没有任何 selected route 的 root 不会生成 `transports/<overlay_name>`；共享 Go / TypeScript 主契约层仍完整生成。
 
+## HTTP raw media 边界
+
+Wails 需要文件、bytes、stream 或 typed binary packet 这类能力，但这些能力不通过 HTTP 语义表达。`multipart`、`Content-Disposition`、HTTP status/header、MIME download 和 HTTP byte stream 都属于 HTTP transport contract；`wails-transport` 遇到 HTTP raw media route 或 HTTP binary schema body/response 时会在 `api-gen check` 阶段报明确 unsupported，不会生成伪 HTTP response。
+
+Wails 推荐使用协议原生 IPC 模式：
+
+- 小型 bytes 或 typed binary packet：通过普通 RPC 返回可序列化 payload，例如 base64 string、number array，或项目封装的 `Uint8Array` adapter。
+- 文件下载：返回 app-local file descriptor，例如 `path`、`filename`、`contentType`、`size`，由 Wails app shell 负责 save/open dialog 和文件系统权限。
+- byte stream：复用 `STREAM` / `CHANNEL`，按消息分片传递 chunk 和 close payload。
+- 大文件：优先走 app-managed temp file/cache，避免把大对象长期塞进 Wails RPC payload。
+
 ## Go 输出布局
 
 Wails Go overlay 生成在 `server` 指向的 Go target 输出树的 transport target 目录中：

@@ -96,13 +96,13 @@ For fuller project layout, config fields, DSL, generator output, typed errors, R
 | Contract / inspect | Available | Emit a contract index and query route, schema, error, or file ownership details |
 | Go server | Available | Generate Go routes, providers, long-connection message helpers, HTTP/Wails adapters, multipart/raw media, binary schema responses, and runtime |
 | TypeScript client | Preview | Generate transport-neutral clients, long-connection message helpers, HTTP multipart/raw adapters, binary schema response decoding, and Wails facades |
-| Flutter client | Preview | Generate a pure Dart package, DTOs, typed errors, binary codecs, and HTTP/SSE/WebSocket clients |
-| Kotlin client/server | Preview | Generate OkHttp HTTP/SSE/WebSocket clients, Ktor HTTP/SSE/WebSocket server scaffolds, models, long-connection message helpers, and binary writers |
-| Java client/server | Preview | Generate Java 17 HttpClient clients, Spring MVC/SSE/WebSocket server scaffolds, record DTOs, long-connection message helpers, binary packet helpers, and HTTP adapters |
+| Flutter client | Preview | Generate a pure Dart package, DTOs, typed errors, binary codecs, HTTP multipart/raw/binary response clients, and SSE/WebSocket clients |
+| Kotlin client/server | Preview | Generate OkHttp HTTP/SSE/WebSocket clients, Ktor HTTP/SSE/WebSocket server scaffolds, multipart/raw/binary response adapters, models, and long-connection message helpers |
+| Java client/server | Preview | Generate Java 17 HttpClient clients, Spring MVC/SSE/WebSocket server scaffolds, record DTOs, HTTP multipart/raw/binary response adapters, and long-connection message helpers |
 | Go / Python client | Preview | Generate non-server clients for scripts, tools, or services; the Python client uses recursive dataclass DTOs, shared runtime codecs, multipart/raw support, long-connection message helpers, and binary writers/response codecs |
 | Python server | Preview | Generate FastAPI HTTP/SSE/WebSocket server scaffolds, multipart/raw/binary response adapters, typed service contracts, and long-connection message helpers |
-| Wails v2/v3 | Preview / Experimental | Generate Go + TypeScript overlays for desktop GUIs |
-| gRPC proto / stubs | Available | Emit proto from ContractGraph and generate Go/Python stubs |
+| Wails v2/v3 | Preview / Experimental | Generate Go + TypeScript overlays; file/stream-style capabilities are modeled with Wails RPC descriptors or STREAM/CHANNEL chunks |
+| gRPC proto / stubs | Available | Emit proto from ContractGraph and generate Go/Python stubs; bytes/file/stream-style capabilities are modeled with protobuf bytes or streaming chunks |
 
 ## Next Steps
 

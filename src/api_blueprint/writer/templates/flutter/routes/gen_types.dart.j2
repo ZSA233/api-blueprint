@@ -2,6 +2,7 @@
 
 import 'package:{{ writer.package }}/src/{{ bp.root_path }}/runtime/gen_api_errors.dart';
 import 'package:{{ writer.package }}/src/{{ bp.root_path }}/runtime/gen_api_types.dart';
+import 'package:{{ writer.package }}/src/{{ bp.root_path }}/runtime/gen_api_transport.dart';
 import 'package:{{ writer.package }}/src/{{ bp.root_path }}/runtime/api_json_codecs.dart';
 {% for proto in protos %}
 {% if proto.kind == 'data' %}

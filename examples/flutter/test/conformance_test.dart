@@ -10,7 +10,7 @@ import 'package:test/test.dart';
 void main() {
   final baseUrl = Platform.environment['API_BLUEPRINT_BASE_URL'];
   final selected = _scenarioSet(Platform.environment['API_BLUEPRINT_SCENARIOS'] ??
-      'rpc,binary,form,error,sse,websocket,naming,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,single-channel');
+      'rpc,binary,form,error,sse,websocket,naming,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,single-channel');
 
   if (baseUrl == null || baseUrl.isEmpty) {
     test('conformance requires API_BLUEPRINT_BASE_URL', () {
@@ -139,6 +139,48 @@ void main() {
       expect(rsp.trace, 'flutter-audit');
       expect(rsp.itemCount, 2);
       expect(rsp.checksum, 2);
+    });
+  }
+
+  if (selected.contains('binary-response')) {
+    test('binary schema response routes interoperate with Go server', () async {
+      final rsp = await client.binary.auditPacketResponse();
+      expect(rsp.flags, api.AuditPacketFlagsValues.hasItems);
+      expect(rsp.itemCount, 2);
+      expect((rsp.items ?? const <api.AuditPacketItem>[]).map((item) => item.id), [11, 22]);
+      expect(rsp.checksum, 2);
+    });
+  }
+
+  if (selected.contains('media')) {
+    test('raw media routes interoperate with Go server', () async {
+      final preview = await client.media.mediaPreview(
+        multipart: api.MediaPreviewRequest(
+          title: 'flutter-media',
+          image: api.ApiFilePart(
+            filename: 'preview.jpg',
+            contentType: 'image/jpeg',
+            bytes: _sampleJpeg(),
+          ),
+        ),
+      );
+      expect(preview.contentType, startsWith('image/jpeg'));
+      _expectBytesStartWith(preview.body, [0xff, 0xd8], 'media preview');
+
+      final frame = await client.media.mediaFrame();
+      expect(frame.contentType, startsWith('image/jpeg'));
+      expect(frame.body, _sampleJpeg());
+
+      final download = await client.media.mediaDownload();
+      expect(download.filename, 'media-report.xlsx');
+      _expectBytesStartWith(download.body, [0x50, 0x4b], 'media download');
+
+      final dynamic = await client.media.mediaDownloadDynamic();
+      expect(dynamic.filename, 'media-report-dynamic.xlsx');
+      _expectBytesStartWith(dynamic.body, [0x50, 0x4b], 'media dynamic download');
+
+      final stream = await client.media.mediaMjpeg();
+      expect(latin1.decode(stream.body), contains('--frame'));
     });
   }
 
@@ -281,6 +323,31 @@ api.AuditPacket _buildAuditPacket() {
   );
 }
 
+Uint8List _sampleJpeg() => Uint8List.fromList(const [
+      0xff,
+      0xd8,
+      0xff,
+      0xe0,
+      0x00,
+      0x10,
+      0x4a,
+      0x46,
+      0x49,
+      0x46,
+      0x00,
+      0x01,
+      0x01,
+      0x01,
+      0x00,
+      0x01,
+      0x00,
+      0x01,
+      0x00,
+      0x00,
+      0xff,
+      0xd9,
+    ]);
+
 void _expectBinaryResponse(api.BinaryPacketResponse rsp, String trace) {
   expect(rsp.trace, trace);
   expect(rsp.version, 1);
@@ -290,6 +357,13 @@ void _expectBinaryResponse(api.BinaryPacketResponse rsp, String trace) {
   expect(rsp.firstLabel, 'alpha');
   expect(rsp.itemIds, [11, 22]);
   expect(rsp.checksum, 12);
+}
+
+void _expectBytesStartWith(Uint8List actual, List<int> prefix, String label) {
+  expect(actual.length, greaterThanOrEqualTo(prefix.length), reason: label);
+  for (var index = 0; index < prefix.length; index++) {
+    expect(actual[index], prefix[index], reason: '$label[$index]');
+  }
 }
 
 Future<String> _rawHttp(

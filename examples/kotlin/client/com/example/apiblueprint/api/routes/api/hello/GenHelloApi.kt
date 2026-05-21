@@ -23,6 +23,7 @@ public open class GenHelloApi internal constructor(
                 responseSerializer = MapSerializer(String.serializer(), ApiHelloMap.serializer()),
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }
@@ -39,6 +40,7 @@ public open class GenHelloApi internal constructor(
                 responseSerializer = MapSerializer(String.serializer(), ApiHelloMap.serializer()),
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }
@@ -55,6 +57,7 @@ public open class GenHelloApi internal constructor(
                 responseSerializer = ListSerializer(MapEnum.serializer()),
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }
@@ -71,6 +74,7 @@ public open class GenHelloApi internal constructor(
                 responseSerializer = String.serializer(),
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }
@@ -87,6 +91,7 @@ public open class GenHelloApi internal constructor(
                 responseSerializer = Long.serializer(),
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }
@@ -103,6 +108,7 @@ public open class GenHelloApi internal constructor(
                 responseSerializer = MapEnum.serializer(),
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }
@@ -121,6 +127,7 @@ public open class GenHelloApi internal constructor(
                 responseSerializer = Unit.serializer(),
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }

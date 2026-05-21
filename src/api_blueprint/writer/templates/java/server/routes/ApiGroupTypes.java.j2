@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 {% if group.runtime_types_ref == "ApiTypes" %}
 import {{ bp.root_package }}.runtime.ApiTypes;
 {% endif %}
+import {{ bp.root_package }}.runtime.ApiFilePart;
 {% if group.message_helpers(writer) %}
 import {{ bp.root_package }}.runtime.ApiJson;
 {% endif %}

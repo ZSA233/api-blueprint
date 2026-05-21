@@ -67,6 +67,7 @@ def client_manifest() -> dict[str, ClientCapability]:
             supports_typed_error=True,
             supports_sse=True,
             supports_websocket=True,
+            supports_media=True,
         ),
         "flutter": ClientCapability(
             name="flutter",
@@ -77,6 +78,7 @@ def client_manifest() -> dict[str, ClientCapability]:
             supports_typed_error=True,
             supports_sse=True,
             supports_websocket=True,
+            supports_media=True,
         ),
         "java": ClientCapability(
             name="java",
@@ -88,6 +90,7 @@ def client_manifest() -> dict[str, ClientCapability]:
             supports_sse=True,
             supports_websocket=True,
             connection_policy="unsupported-contract",
+            supports_media=True,
         ),
         "python": ClientCapability(
             name="python",
@@ -132,6 +135,7 @@ def server_manifest() -> dict[str, ServerCapability]:
             supports_sse=True,
             supports_websocket=True,
             supports_naming=True,
+            supports_media=True,
         ),
         "kotlin": ServerCapability(
             "kotlin",
@@ -145,6 +149,7 @@ def server_manifest() -> dict[str, ServerCapability]:
             supports_sse=True,
             supports_websocket=True,
             supports_naming=True,
+            supports_media=True,
         ),
         "python": ServerCapability(
             "python",

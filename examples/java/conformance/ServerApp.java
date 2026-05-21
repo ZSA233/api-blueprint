@@ -17,15 +17,20 @@ import com.example.apiblueprint.api.routes.api.hello.HelloTypes;
 import com.example.apiblueprint.api.runtime.ApiError;
 import com.example.apiblueprint.api.runtime.ApiErrorPayload;
 import com.example.apiblueprint.api.runtime.ApiErrors;
+import com.example.apiblueprint.api.runtime.ApiRawResponse;
 import com.example.apiblueprint.api.runtime.ApiServerChannel;
 import com.example.apiblueprint.api.runtime.ApiServerStream;
+import com.example.apiblueprint.api.runtime.ApiStreamResponse;
 import com.example.apiblueprint.api.runtime.ApiToastPayload;
 import com.example.apiblueprint.api.runtime.ApiTypes;
+import com.example.apiblueprint.api.routes.api.media.MediaService;
+import com.example.apiblueprint.api.routes.api.media.MediaServiceStub;
 import com.example.apiblueprint.api.transports.http.api.GenApiController;
 import com.example.apiblueprint.api.transports.http.api.binary.GenBinaryController;
 import com.example.apiblueprint.api.transports.http.api.conflict.GenConflictController;
 import com.example.apiblueprint.api.transports.http.api.demo.GenDemoController;
 import com.example.apiblueprint.api.transports.http.api.hello.GenHelloController;
+import com.example.apiblueprint.api.transports.http.api.media.GenMediaController;
 import com.example.apiblueprint.static_.routes.static_.StaticService;
 import com.example.apiblueprint.static_.routes.static_.StaticServiceStub;
 import com.example.apiblueprint.static_.routes.static_.StaticTypes;
@@ -54,6 +59,7 @@ import org.springframework.context.annotation.Import;
     GenConflictController.class,
     GenDemoController.class,
     GenHelloController.class,
+    GenMediaController.class,
     com.example.apiblueprint.static_.transports.http.static_.GenStaticController.class,
     com.example.apiblueprint.alt.transports.http.alt.conflict.GenConflictController.class
 })
@@ -90,6 +96,11 @@ public class ServerApp {
     @Bean
     public BinaryService binaryService() {
         return new BinaryServiceImpl();
+    }
+
+    @Bean
+    public MediaService mediaService() {
+        return new MediaServiceImpl();
     }
 
     @Bean
@@ -170,6 +181,29 @@ public class ServerApp {
 
     private static String envelope(String data) {
         return "{\"code\":0,\"message\":\"ok\",\"data\":" + data + "}";
+    }
+
+    private static final byte[] SAMPLE_JPEG = new byte[] {
+        (byte) 0xff, (byte) 0xd8, (byte) 0xff, (byte) 0xe0, 0x00, 0x10,
+        'J', 'F', 'I', 'F', 0x00, 0x01, 0x01, 0x01, 0x00, 0x01,
+        0x00, 0x01, 0x00, 0x00, (byte) 0xff, (byte) 0xd9
+    };
+    private static final byte[] SAMPLE_XLSX = "PK\u0003\u0004api-blueprint media report\n".getBytes(StandardCharsets.UTF_8);
+    private static final byte[] SAMPLE_XLSX_DYNAMIC =
+        "PK\u0003\u0004api-blueprint media report dynamic\n".getBytes(StandardCharsets.UTF_8);
+
+    private static byte[] concat(byte[]... parts) {
+        int length = 0;
+        for (byte[] part : parts) {
+            length += part.length;
+        }
+        byte[] result = new byte[length];
+        int offset = 0;
+        for (byte[] part : parts) {
+            System.arraycopy(part, 0, result, offset, part.length);
+            offset += part.length;
+        }
+        return result;
     }
 
     private static final class ApiServiceImpl extends ApiServiceStub {
@@ -337,6 +371,61 @@ public class ServerApp {
                 query.trace(),
                 binary.header().itemCount().longValue(),
                 binary.body().checksum()
+            );
+        }
+
+        @Override
+        public BinaryTypes.AuditPacket auditPacketResponse() {
+            return new BinaryTypes.AuditPacket(
+                new BinaryTypes.AuditPacketHeader(BinaryTypes.AuditPacketFlagsValues.HASITEMS, 2),
+                new BinaryTypes.AuditPacketBody(
+                    List.of(
+                        new BinaryTypes.AuditPacketItem(11L, 101),
+                        new BinaryTypes.AuditPacketItem(22L, 202)
+                    ),
+                    2L
+                )
+            );
+        }
+    }
+
+    private static final class MediaServiceImpl extends MediaServiceStub {
+        @Override
+        public ApiRawResponse mediaPreview(ApiTypes.MediaPreviewRequest multipart) {
+            return ApiRawResponse.of(SAMPLE_JPEG, "image/jpeg");
+        }
+
+        @Override
+        public ApiRawResponse mediaFrame() {
+            return ApiRawResponse.of(SAMPLE_JPEG, "image/jpeg");
+        }
+
+        @Override
+        public ApiRawResponse mediaDownload() {
+            return ApiRawResponse.of(
+                SAMPLE_XLSX,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            );
+        }
+
+        @Override
+        public ApiRawResponse mediaDownloadDynamic() {
+            return ApiRawResponse.of(
+                SAMPLE_XLSX_DYNAMIC,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "media-report-dynamic.xlsx"
+            );
+        }
+
+        @Override
+        public ApiStreamResponse mediaMjpeg() {
+            return ApiStreamResponse.of(
+                concat(
+                    "--frame\r\nContent-Type: image/jpeg\r\n\r\n".getBytes(StandardCharsets.UTF_8),
+                    SAMPLE_JPEG,
+                    "\r\n".getBytes(StandardCharsets.UTF_8)
+                ),
+                "multipart/x-mixed-replace; boundary=frame"
             );
         }
     }

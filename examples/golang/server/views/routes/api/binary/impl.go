@@ -59,6 +59,7 @@ func (impl *Router) AuditPacket(ctx *CTX_AuditPacket, req *REQ_AuditPacket) (rsp
 func (impl *Router) AuditPacketResponse(ctx *CTX_AuditPacketResponse, req *REQ_AuditPacketResponse) (rsp *RSP_AuditPacketResponse, err error) {
 	return &RSP_AuditPacketResponse{
 		Header: binaryschema.AuditPacketHeader{
+			Kind:      binaryschema.AuditPacketKindAudit,
 			Flags:     binaryschema.AuditPacketFlagsHasItems,
 			ItemCount: 2,
 		},

@@ -146,6 +146,12 @@ public enum class MapEnum(public val wireValue: String) {
     B("b")
 }
 
+@Serializable
+public data class MediaPreviewRequest(
+    public val title: String? = null,
+    public val image: ApiFilePart
+)
+
 @Serializable(with = StatusEnumSerializer::class)
 public enum class StatusEnum(public val wireValue: Int) {
     PENDING(1),

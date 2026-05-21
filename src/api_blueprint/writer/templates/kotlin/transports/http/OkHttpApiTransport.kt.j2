@@ -8,16 +8,21 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
@@ -56,7 +61,7 @@ public class OkHttpApiTransport(
         httpClient.newCall(okRequest).execute().use { response ->
             ApiResponse(
                 statusCode = response.code,
-                body = response.body?.string().orEmpty(),
+                body = response.body?.bytes() ?: ByteArray(0),
                 headers = response.headers.toMap(),
             )
         }
@@ -96,6 +101,9 @@ public class OkHttpApiTransport(
             return encodeFormPayload(form, formSerializer)
                 .toRequestBody("application/x-www-form-urlencoded; charset=utf-8".toMediaType())
         }
+        if (multipart != null) {
+            return encodeMultipartPayload(multipart, multipartSerializer)
+        }
         if (binary != null) {
             return object : RequestBody() {
                 override fun contentType() = binary.contentType.toMediaType()
@@ -128,6 +136,43 @@ public class OkHttpApiTransport(
         return fields.entries
             .filter { (_, item) -> item !is JsonNull }
             .joinToString("&") { (key, item) -> encode(key) + "=" + encode(formValue(item)) }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun encodeMultipartPayload(value: Any?, serializer: SerializationStrategy<*>?): RequestBody {
+        val builder = MultipartBody.Builder().setType(MultipartBody.FORM)
+        val element = if (serializer == null) {
+            JsonObject(emptyMap())
+        } else {
+            json.encodeToJsonElement(serializer as SerializationStrategy<Any?>, value)
+        }
+        val fields = element as? JsonObject ?: JsonObject(emptyMap())
+        for ((key, item) in fields.entries) {
+            if (item is JsonNull) {
+                continue
+            }
+            val file = filePart(item)
+            if (file != null) {
+                builder.addFormDataPart(
+                    key,
+                    file.filename.ifBlank { key },
+                    file.bytes.toRequestBody(file.contentType.toMediaType()),
+                )
+            } else {
+                builder.addFormDataPart(key, formValue(item))
+            }
+        }
+        return builder.build()
+    }
+
+    private fun filePart(value: JsonElement): ApiFilePart? {
+        val jsonObject = value as? JsonObject ?: return null
+        val bytes = jsonObject["bytes"] as? JsonArray ?: return null
+        return ApiFilePart(
+            filename = jsonObject["filename"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            contentType = jsonObject["contentType"]?.jsonPrimitive?.contentOrNull ?: "application/octet-stream",
+            bytes = bytes.map { ((it.jsonPrimitive.intOrNull ?: 0) and 0xFF).toByte() }.toByteArray(),
+        )
     }
 
     private fun formValue(value: JsonElement): String {

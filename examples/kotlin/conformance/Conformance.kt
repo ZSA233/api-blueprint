@@ -29,6 +29,7 @@ import com.example.apiblueprint.api.routes.api.demo.dispatchAssistantServerMessa
 import com.example.apiblueprint.api.routes.api.demo.dispatchSweepStreamMessage
 import com.example.apiblueprint.api.runtime.ApiClient
 import com.example.apiblueprint.api.runtime.ApiError
+import com.example.apiblueprint.api.runtime.ApiFilePart
 import com.example.apiblueprint.api.runtime.AssistantCancel
 import com.example.apiblueprint.api.runtime.AssistantDelta
 import com.example.apiblueprint.api.runtime.AssistantDone
@@ -39,6 +40,7 @@ import com.example.apiblueprint.api.runtime.DemoErr
 import com.example.apiblueprint.api.runtime.HelloChannelMsgTypeEnum
 import com.example.apiblueprint.api.runtime.KeywordEnum
 import com.example.apiblueprint.api.runtime.MapEnum
+import com.example.apiblueprint.api.runtime.MediaPreviewRequest
 import com.example.apiblueprint.api.runtime.SweepLog
 import com.example.apiblueprint.api.runtime.SweepOpen
 import com.example.apiblueprint.api.runtime.SweepProgress
@@ -60,7 +62,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 
 fun main(args: Array<String>) = runBlocking {
     val baseUrl = args.firstOrNull()?.trimEnd('/') ?: error("base URL argument is required")
-    val selected = scenarioSet(args.getOrNull(1) ?: "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,single-channel")
+    val selected = scenarioSet(args.getOrNull(1) ?: "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,single-channel")
     val httpClient = OkHttpClient()
     val altHttpClient = OkHttpClient()
     try {
@@ -103,6 +105,12 @@ fun main(args: Array<String>) = runBlocking {
         }
         if ("audit-binary" in selected) {
             checkAuditBinary(client)
+        }
+        if ("binary-response" in selected) {
+            checkBinaryResponse(client)
+        }
+        if ("media" in selected) {
+            checkMedia(client)
         }
         if ("error" in selected) {
             checkTypedErrors(client)
@@ -196,6 +204,37 @@ private suspend fun checkAuditBinary(client: ApiClient) {
     assertEquals("kotlin-audit", response.trace, "audit.trace")
     assertEquals(2, response.itemCount, "audit.itemCount")
     assertEquals(2, response.checksum, "audit.checksum")
+}
+
+private suspend fun checkBinaryResponse(client: ApiClient) {
+    val response = client.binary.auditPacketResponse()
+    assertEquals(buildAuditPacket(), response, "binaryResponse.packet")
+}
+
+private suspend fun checkMedia(client: ApiClient) {
+    val preview = client.media.mediaPreview(
+        MediaPreviewRequest(
+            title = "kotlin-media",
+            image = ApiFilePart(filename = "preview.jpg", contentType = "image/jpeg", bytes = sampleJpeg()),
+        )
+    )
+    assertEquals("image/jpeg", preview.contentType, "media.preview.contentType")
+    assertStartsWith(preview.body, 0xff, 0xd8, "media.preview.body")
+
+    val frame = client.media.mediaFrame()
+    assertEquals("image/jpeg", frame.contentType, "media.frame.contentType")
+    assertEquals(true, frame.body.contentEquals(sampleJpeg()), "media.frame.body")
+
+    val download = client.media.mediaDownload()
+    assertEquals("media-report.xlsx", download.filename, "media.download.filename")
+    assertStartsWith(download.body, 'P'.code, 'K'.code, "media.download.body")
+
+    val dynamic = client.media.mediaDownloadDynamic()
+    assertEquals("media-report-dynamic.xlsx", dynamic.filename, "media.dynamic.filename")
+    assertStartsWith(dynamic.body, 'P'.code, 'K'.code, "media.dynamic.body")
+
+    val stream = client.media.mediaMjpeg()
+    assertContains(stream.body.decodeToString(), "--frame", "media.mjpeg")
 }
 
 private suspend fun checkTypedErrors(client: ApiClient) {
@@ -323,6 +362,13 @@ private fun buildAuditPacket(): AuditPacket =
         ),
     )
 
+private fun sampleJpeg(): ByteArray =
+    intArrayOf(
+        0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10,
+        'J'.code, 'F'.code, 'I'.code, 'F'.code, 0x00, 0x01, 0x01, 0x01, 0x00, 0x01,
+        0x00, 0x01, 0x00, 0x00, 0xff, 0xd9,
+    ).map { it.toByte() }.toByteArray()
+
 private fun checkRawHttp(client: OkHttpClient, url: String, method: String, snippet: String, label: String) {
     val body = if (method == "POST" || method == "PUT" || method == "PATCH") ByteArray(0).toRequestBody(null) else null
     val request = Request.Builder().url(url).method(method, body).build()
@@ -405,5 +451,11 @@ private fun assertEquals(expected: Any?, actual: Any?, label: String) {
 private fun assertContains(actual: String, expectedPart: String, label: String) {
     if (!actual.contains(expectedPart)) {
         error("$label=$actual expected to contain $expectedPart")
+    }
+}
+
+private fun assertStartsWith(actual: ByteArray, first: Int, second: Int, label: String) {
+    if (actual.size < 2 || actual[0] != first.toByte() || actual[1] != second.toByte()) {
+        error("$label=${actual.joinToString(prefix = "[", postfix = "]")}")
     }
 }

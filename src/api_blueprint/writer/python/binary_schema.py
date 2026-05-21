@@ -317,7 +317,7 @@ class PythonBinarySchema:
 
     @property
     def endian(self) -> str:
-        return repr(self.schema.endian)
+        return self.schema.endian
 
     @property
     def content_type(self) -> str:

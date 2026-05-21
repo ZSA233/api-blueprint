@@ -63,12 +63,15 @@ class FlutterRoute:
         self.query_proto = self._ensure_model(self.protocol.request.query.model, "Query")
         self.open_proto = self._ensure_model(self.protocol.request.open.model, "Open")
         self.form_proto = self._ensure_model(self.protocol.request.form.model, "Form")
+        self.multipart_proto = self._ensure_model(self.protocol.request.multipart.model, "Form")
         self.json_proto = self._ensure_model(self.protocol.request.json.model, "Json")
         self.binary_schema = self.protocol.request.binary_schema
         self.binary_proto = None if self.binary_schema is not None else self._ensure_model(
             self.protocol.request.binary.model, "Binary"
         )
+        self.response_kind = self.protocol.response.kind
         self.response_media_type = self.protocol.response.media_type
+        self.response_binary_schema = self.protocol.response.binary_schema
         self.response_payload_proto = self._ensure_model(self.protocol.response.model.model, "Response")
         self.response_type = self._payload_response_type()
         self.server_message_proto = self._ensure_message_contract(self.protocol.server_message, "ServerMessage")
@@ -101,6 +104,10 @@ class FlutterRoute:
         return self.form_proto.name if self.form_proto else None
 
     @property
+    def multipart_type(self) -> str | None:
+        return self.multipart_proto.name if self.multipart_proto else None
+
+    @property
     def binary_type(self) -> str | None:
         if self.binary_schema is not None:
             return self.flutter_binary_schema.name
@@ -115,6 +122,20 @@ class FlutterRoute:
     @property
     def has_binary_schema(self) -> bool:
         return self.binary_schema is not None
+
+    @property
+    def has_response_binary_schema(self) -> bool:
+        return self.response_binary_schema is not None
+
+    @property
+    def response_binary_schema_name(self) -> str | None:
+        return self.response_binary_schema.name if self.response_binary_schema is not None else None
+
+    @property
+    def response_binary_schema_obj(self) -> FlutterBinarySchema | None:
+        if self.response_binary_schema is None:
+            return None
+        return FlutterBinarySchema(self.response_binary_schema)
 
     @property
     def binary_param_name(self) -> str:
@@ -173,6 +194,13 @@ class FlutterRoute:
 
     @property
     def decoder_expr(self) -> str:
+        if self.response_kind in {"bytes", "file"}:
+            filename = json.dumps(self.protocol.response.filename or "")
+            return f"(value) => apiBlueprintRawResponse(value, defaultContentType: {json.dumps(self.response_media_type)}, defaultFilename: {filename})"
+        if self.response_kind == "byte_stream":
+            return f"(value) => apiBlueprintStreamResponse(value, defaultContentType: {json.dumps(self.response_media_type)})"
+        if self.response_kind == "binary_schema" and self.response_binary_schema_obj is not None:
+            return f"(value) => {self.response_binary_schema_obj.decode_func}(apiBlueprintReadBytes(value))"
         if self.response_media_type != "application/json":
             return "(value) => apiBlueprintReadString(value) ?? ''"
         if self.response_payload_proto is None:
@@ -220,6 +248,12 @@ class FlutterRoute:
         )
 
     def _payload_response_type(self) -> DartResolvedType:
+        if self.response_kind in {"bytes", "file"}:
+            return DartResolvedType("ApiRawResponse", decoder="apiBlueprintRawResponse")
+        if self.response_kind == "byte_stream":
+            return DartResolvedType("ApiStreamResponse", decoder="apiBlueprintStreamResponse")
+        if self.response_kind == "binary_schema" and self.response_binary_schema is not None:
+            return DartResolvedType(self.response_binary_schema.name, decoder="apiBlueprintReadAny")
         if self.response_media_type != "application/json":
             return DartResolvedType("String", decoder="apiBlueprintReadString")
         if self.response_payload_proto is None:
@@ -281,7 +315,14 @@ class FlutterApiGroup:
     routes: list[FlutterRoute] = field(default_factory=list)
 
     def binary_schemas(self) -> list[FlutterBinarySchema]:
-        return unique_flutter_binary_schemas([route.binary_schema for route in self.routes])
+        return unique_flutter_binary_schemas(
+            [
+                schema
+                for route in self.routes
+                for schema in (route.binary_schema, route.response_binary_schema)
+                if schema is not None
+            ]
+        )
 
     def message_helpers(self) -> tuple[DartMessageHelper, ...]:
         helpers: "OrderedDict[str, DartMessageHelper]" = OrderedDict()

@@ -6,6 +6,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import com.example.apiblueprint.static_.runtime.ApiTypes;
 
+import com.example.apiblueprint.static_.runtime.ApiFilePart;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;

@@ -3,14 +3,20 @@ package com.example.apiblueprint.alt.transports.ktor.alt.conflict
 
 import com.example.apiblueprint.alt.routes.alt.conflict.*
 import com.example.apiblueprint.alt.runtime.*
-
+import com.example.apiblueprint.alt.runtime.binary.ApiBinaryBody
+import com.example.apiblueprint.alt.runtime.binary.toByteArray
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Parameters
+import io.ktor.http.content.PartData
+import io.ktor.http.content.forEachPart
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.receive
+import io.ktor.server.request.receiveMultipart
 import io.ktor.server.request.receiveParameters
 import io.ktor.server.request.receiveText
+import io.ktor.server.response.respondBytes
 import io.ktor.server.response.respondText
 import io.ktor.server.response.respondTextWriter
 import io.ktor.server.routing.Route
@@ -30,11 +36,14 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.*
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import io.ktor.utils.io.core.readBytes
+import io.ktor.utils.io.readRemaining
 import java.io.Writer
 
 public fun Route.registerConflictRoutes(
@@ -182,6 +191,53 @@ private fun <T> decodeParameters(parameters: Parameters, serializer: KSerializer
         }
     }
     return ApiJson.decodeFromJsonElement(serializer, element)
+}
+
+private suspend fun <T> decodeMultipart(call: ApplicationCall, serializer: KSerializer<T>): T {
+    val fields = linkedMapOf<String, JsonElement>()
+    call.receiveMultipart().forEachPart { part ->
+        when (part) {
+            is PartData.FormItem -> {
+                part.name?.let { fields[it] = JsonPrimitive(part.value) }
+            }
+            is PartData.FileItem -> {
+                val name = part.name
+                if (name != null) {
+                    val bytes = part.provider().readRemaining().readBytes()
+                    fields[name] = buildJsonObject {
+                        put("filename", JsonPrimitive(part.originalFileName.orEmpty()))
+                        put("contentType", JsonPrimitive(part.contentType?.toString() ?: "application/octet-stream"))
+                        put("bytes", JsonArray(bytes.map { JsonPrimitive(it.toInt()) }))
+                    }
+                }
+            }
+            else -> Unit
+        }
+        part.dispose()
+    }
+    return ApiJson.decodeFromJsonElement(serializer, JsonObject(fields))
+}
+
+private suspend fun respondRawBytes(call: ApplicationCall, bytes: ByteArray, mediaType: String) {
+    call.respondBytes(bytes, contentType = contentType(mediaType))
+}
+
+private suspend fun respondRaw(call: ApplicationCall, result: Any?, kind: String, mediaType: String, filename: String) {
+    val response = when (result) {
+        is ApiRawResponse -> result
+        is ApiStreamResponse -> ApiRawResponse(result.body, result.contentType, filename, result.headers)
+        is ApiBinaryBody -> ApiRawResponse(result.toByteArray(), result.contentType, filename)
+        is ByteArray -> ApiRawResponse(result, mediaType, filename)
+        is String -> ApiRawResponse(result.toByteArray(Charsets.UTF_8), mediaType, filename)
+        null -> ApiRawResponse(ByteArray(0), mediaType, filename)
+        else -> ApiRawResponse(result.toString().toByteArray(Charsets.UTF_8), mediaType, filename)
+    }
+    response.headers.forEach { (key, value) -> call.response.headers.append(key, value) }
+    val effectiveFilename = response.filename.ifBlank { filename }
+    if (kind == "file" && effectiveFilename.isNotBlank()) {
+        call.response.headers.append(HttpHeaders.ContentDisposition, "attachment; filename=\"${effectiveFilename.replace("\"", "\\\"")}\"")
+    }
+    call.respondBytes(response.body, contentType = contentType(response.contentType))
 }
 
 private suspend fun <T> respondSuccess(

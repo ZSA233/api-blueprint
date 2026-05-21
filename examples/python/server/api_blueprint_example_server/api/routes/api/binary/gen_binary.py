@@ -49,7 +49,7 @@ class DemoPacketWire:
             write=write,
             content_length=content_length,
             content_type="application/octet-stream",
-            endian='little',
+            endian="little",
         )
 
     @staticmethod
@@ -64,7 +64,7 @@ class DemoPacketWire:
 
 
 def parse_demopacket(data: bytes | bytearray | memoryview | BinaryReader) -> DemoPacket:
-    reader = data if isinstance(data, BinaryReader) else BinaryReader(data, endian="'little'")
+    reader = data if isinstance(data, BinaryReader) else BinaryReader(data, endian="little")
     state = {
         "version": 0,
         "kind": 0,
@@ -402,7 +402,7 @@ class AuditPacketWire:
             write=write,
             content_length=content_length,
             content_type="application/octet-stream",
-            endian='little',
+            endian="little",
         )
 
     @staticmethod
@@ -417,7 +417,7 @@ class AuditPacketWire:
 
 
 def parse_auditpacket(data: bytes | bytearray | memoryview | BinaryReader) -> AuditPacket:
-    reader = data if isinstance(data, BinaryReader) else BinaryReader(data, endian="'little'")
+    reader = data if isinstance(data, BinaryReader) else BinaryReader(data, endian="little")
     state = {
         "kind": 0,
         "flags": 0,

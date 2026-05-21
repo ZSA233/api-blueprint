@@ -9,12 +9,15 @@ public interface GenBinaryService {
 
     public suspend fun packet(
         query: BinaryPacketQuery,
-        binaryBody: ApiBinaryBody
+        binary: DemoPacket
     ): BinaryPacketResponse
 
     public suspend fun auditPacket(
         query: BinaryAuditPacketQuery,
-        binaryBody: ApiBinaryBody
+        binary: AuditPacket
     ): BinaryAuditPacketResponse
+
+    public suspend fun auditPacketResponse(
+    ): AuditPacket
 
 }

@@ -332,8 +332,10 @@ class KotlinBaseWriter(BaseWriter[KotlinBlueprint]):
             params.append((route.json_type, "json"))
         if route.form_type:
             params.append((route.form_type, "form"))
+        if route.multipart_type:
+            params.append((route.multipart_type, "multipart"))
         if route.has_binary_schema:
-            params.append(("ApiBinaryBody", "binaryBody"))
+            params.append((route.binary_type or "ApiBinaryBody", "binary"))
         elif route.binary_type:
             params.append(("ByteArray", "binaryBody"))
         if route.open_type:

@@ -70,6 +70,18 @@ files = ["**/*.proto"]
 module = "pb"
 ```
 
+## HTTP Raw Media Boundary
+
+gRPC still needs file, bytes, stream, and typed binary packet capabilities, but those capabilities do not inherit the HTTP raw contract. `multipart`, `Content-Disposition`, HTTP status/header, MIME download, and HTTP byte stream are HTTP transport semantics; `grpc-proto` reports an explicit unsupported error during `api-gen check` when it sees HTTP raw media routes or HTTP binary schema body/response routes, and it does not project them into proto automatically.
+
+Use proto-native modeling instead:
+
+- Small bytes or typed binary packets: carry them in protobuf `bytes` fields.
+- Preserving the exact Markdown Binary Schema wire format: place the encoded packet in a `bytes payload` field instead of expanding it into proto fields.
+- File downloads: use server-streaming `FileChunk`; carry `filename`, `content_type`, `size`, and `sha256` in metadata or the first message, then carry `bytes data` in later chunks.
+- File uploads / multipart: use client-streaming `UploadChunk`; put file metadata in the first message and `bytes data` in later chunks; normal form fields should become explicit request message fields.
+- Byte streams / MJPEG: use server-streaming chunk messages, not HTTP multipart boundaries.
+
 ## RPC Mapping
 
 - Normal HTTP routes emit unary RPCs.

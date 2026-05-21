@@ -77,6 +77,10 @@ final routeApiErrorsByCode = <String, Map<int, ApiErrorPayload>>{
     -1: apiErrorsById["CommonErr.UNKNOWN"]!,
     55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,
   },
+  "api.binary.get.auditpacketresponse": {
+    -1: apiErrorsById["CommonErr.UNKNOWN"]!,
+    55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,
+  },
   "api.conflict.get.default": {
     -1: apiErrorsById["CommonErr.UNKNOWN"]!,
     55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,
@@ -126,6 +130,26 @@ final routeApiErrorsByCode = <String, Map<int, ApiErrorPayload>>{
     55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,
     70002: apiErrorsById["DemoErr.UNKNOWN"]!,
     42901: apiErrorsById["DemoErr.RATE_LIMITED"]!,
+  },
+  "api.media.post.preview": {
+    -1: apiErrorsById["CommonErr.UNKNOWN"]!,
+    55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,
+  },
+  "api.media.get.frame": {
+    -1: apiErrorsById["CommonErr.UNKNOWN"]!,
+    55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,
+  },
+  "api.media.get.download": {
+    -1: apiErrorsById["CommonErr.UNKNOWN"]!,
+    55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,
+  },
+  "api.media.get.downloaddynamic": {
+    -1: apiErrorsById["CommonErr.UNKNOWN"]!,
+    55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,
+  },
+  "api.media.get.mjpeg": {
+    -1: apiErrorsById["CommonErr.UNKNOWN"]!,
+    55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,
   },
   "api.hello.get.abc": {
     -1: apiErrorsById["CommonErr.UNKNOWN"]!,

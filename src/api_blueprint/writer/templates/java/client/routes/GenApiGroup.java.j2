@@ -2,7 +2,9 @@
 
 import {{ bp.root_package }}.runtime.ApiChannelBridge;
 import {{ bp.root_package }}.runtime.ApiRequest;
+import {{ bp.root_package }}.runtime.ApiRawResponse;
 import {{ bp.root_package }}.runtime.ApiResponseEnvelope;
+import {{ bp.root_package }}.runtime.ApiStreamResponse;
 import {{ bp.root_package }}.runtime.ApiStreamBridge;
 import {{ bp.root_package }}.runtime.ApiTransport;
 {% if group.runtime_types_ref == "ApiTypes" %}
@@ -48,10 +50,15 @@ public class {{ group.generated_client_class }} {
             {% if route.query_model %}query{% else %}null{% endif %},
             {% if route.json_model %}json{% else %}null{% endif %},
             {% if route.form_model %}form{% else %}null{% endif %},
+            {% if route.multipart_model %}multipart{% else %}null{% endif %},
             {% if route.binary_schema or route.binary_model %}binaryBody{% else %}null{% endif %},
+            {{ route.request_body_kind | code_literal }},
             {{ route.response_envelope_literal | safe }},
             {{ writer.response_class_literal(route, group) }},
             {{ route.response_media_type | code_literal }},
+            {{ route.response_kind | code_literal }},
+            {% if route.response_filename %}{{ route.response_filename | code_literal }}{% else %}""{% endif %},
+            {% if route.is_binary_schema_response %}{{ group.types_class }}.{{ route.response_binary_schema_type }}Wire::parse{% else %}null{% endif %},
             Map.of()
         );
         return transport.execute(request);
@@ -71,9 +78,14 @@ public class {{ group.generated_client_class }} {
             {% if route.open_model %}openData{% else %}null{% endif %},
             null,
             null,
+            null,
+            "none",
             ApiResponseEnvelope.none(),
             Object.class,
             "application/json",
+            "json",
+            "",
+            null,
             Map.of()
         );
         return transport.openStream(request);
@@ -93,9 +105,14 @@ public class {{ group.generated_client_class }} {
             {% if route.open_model %}openData{% else %}null{% endif %},
             null,
             null,
+            null,
+            "none",
             ApiResponseEnvelope.none(),
             Object.class,
             "application/json",
+            "json",
+            "",
+            null,
             Map.of()
         );
         return transport.openChannel(request);

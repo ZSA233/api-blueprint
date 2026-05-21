@@ -185,7 +185,7 @@ Go / TypeScript / Flutter / Kotlin / Python / Java clients generate, from the sa
 - streaming/raw binary bodies for large hot paths.
 - writer helpers and block helpers for plugging in cached or pre-encoded field fragments.
 
-For binary schema responses, Go / Python server adapters encode typed packet return values as HTTP bytes, and Go / TypeScript / Python clients decode successful HTTP bytes into typed packets. Targets that do not implement binary schema responses yet fail `api-gen check` with an explicit unsupported contract error.
+For binary schema responses, Go / Python / Kotlin / Java server adapters encode typed packet return values as HTTP bytes, and Go / TypeScript / Flutter / Kotlin / Java / Python clients decode successful HTTP bytes into typed packets. Wails/gRPC do not inherit HTTP raw response semantics; those routes fail `api-gen check` with an explicit unsupported contract error that points to transport-native bytes / chunk modeling.
 
 Java server controllers parse `.REQ_BINARY_SCHEMA(...)` request bytes into the generated typed packet before calling the generated service interface. This is still protocol-contract code; HTTP content-encoding orchestration remains owned by the transport/runtime layer.
 

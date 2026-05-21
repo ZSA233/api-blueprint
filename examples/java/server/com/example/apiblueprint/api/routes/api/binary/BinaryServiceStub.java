@@ -3,8 +3,10 @@ package com.example.apiblueprint.api.routes.api.binary;
 
 import com.example.apiblueprint.api.runtime.ApiTypes;
 
+import com.example.apiblueprint.api.runtime.ApiRawResponse;
 import com.example.apiblueprint.api.runtime.ApiServerChannel;
 import com.example.apiblueprint.api.runtime.ApiServerStream;
+import com.example.apiblueprint.api.runtime.ApiStreamResponse;
 import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
 
 public class BinaryServiceStub implements BinaryService {
@@ -23,6 +25,12 @@ public class BinaryServiceStub implements BinaryService {
         BinaryTypes.AuditPacket binary
     ) throws Exception {
         throw new UnsupportedOperationException("auditPacket");
+    }
+
+    @Override
+    public BinaryTypes.AuditPacket auditPacketResponse(
+    ) throws Exception {
+        throw new UnsupportedOperationException("auditPacketResponse");
     }
 
 }

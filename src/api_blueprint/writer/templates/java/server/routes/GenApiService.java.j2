@@ -3,8 +3,10 @@
 {% if group.runtime_types_ref == "ApiTypes" %}
 import {{ bp.root_package }}.runtime.ApiTypes;
 {% endif %}
+import {{ bp.root_package }}.runtime.ApiRawResponse;
 import {{ bp.root_package }}.runtime.ApiServerChannel;
 import {{ bp.root_package }}.runtime.ApiServerStream;
+import {{ bp.root_package }}.runtime.ApiStreamResponse;
 import {{ bp.root_package }}.runtime.binary.ApiBinaryBody;
 
 public interface {{ group.generated_service_class }} {

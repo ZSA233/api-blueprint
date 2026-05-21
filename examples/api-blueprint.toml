@@ -38,8 +38,6 @@ exclude = [
     'path:/api/ws',
     'path:/api/demo/ws',
     'path:/api/demo/delete$',
-    'path:/api/binary/audit-packet-response',
-    'path:/api/media/**',
 ]
 
 [[kotlin.server]]
@@ -49,22 +47,18 @@ module = 'com.example.apiblueprint'
 include = ['tag:api']
 exclude = [
     'path:/static/**',
-    'path:/api/binary/audit-packet-response',
-    'path:/api/media/**',
 ]
 
 [[java.server]]
 id = 'java.server'
 out_dir = 'java/server'
 module = 'com.example.apiblueprint'
-exclude = ['path:/api/binary/audit-packet-response', 'path:/api/media/**']
 
 [[java.client]]
 id = 'java.client'
 out_dir = 'java/client'
 module = 'com.example.apiblueprint'
 base_url = 'http://localhost:2333'
-exclude = ['path:/api/binary/audit-packet-response', 'path:/api/media/**']
 
 [[flutter.client]]
 id = 'flutter.client'
@@ -72,7 +66,6 @@ out_dir = 'flutter'
 package = 'api_blueprint_example'
 base_url = 'http://localhost:2333'
 include = ['tag:api']
-exclude = ['path:/api/binary/audit-packet-response', 'path:/api/media/**']
 
 [[python.server]]
 id = 'python.server'

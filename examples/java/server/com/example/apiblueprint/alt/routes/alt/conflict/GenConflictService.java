@@ -3,8 +3,10 @@ package com.example.apiblueprint.alt.routes.alt.conflict;
 
 import com.example.apiblueprint.alt.runtime.ApiTypes;
 
+import com.example.apiblueprint.alt.runtime.ApiRawResponse;
 import com.example.apiblueprint.alt.runtime.ApiServerChannel;
 import com.example.apiblueprint.alt.runtime.ApiServerStream;
+import com.example.apiblueprint.alt.runtime.ApiStreamResponse;
 import com.example.apiblueprint.alt.runtime.binary.ApiBinaryBody;
 
 public interface GenConflictService {

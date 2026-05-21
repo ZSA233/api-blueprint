@@ -131,6 +131,9 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
             ("ApiToastPayload.java", "ApiToastPayload.java"),
             ("ApiErrorEntry.java", "ApiErrorEntry.java"),
             ("ApiErrorPayload.java", "ApiErrorPayload.java"),
+            ("ApiFilePart.java", "ApiFilePart.java"),
+            ("ApiRawResponse.java", "ApiRawResponse.java"),
+            ("ApiStreamResponse.java", "ApiStreamResponse.java"),
             ("ApiResponseEnvelope.java", "ApiResponseEnvelope.java"),
             ("ApiErrors.java", "ApiErrors.java"),
             ("ApiTypes.java", "ApiTypes.java"),
@@ -319,6 +322,8 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
             params.append((self.schema_type(route.json_model, group), "json"))
         if route.form_model:
             params.append((self.schema_type(route.form_model, group), "form"))
+        if route.multipart_model:
+            params.append((self.schema_type(route.multipart_model, group), "multipart"))
         if route.binary_schema is not None:
             if self.server_mode:
                 params.append((f"{group.types_class}.{route.binary_schema_type}", "binary"))
@@ -339,6 +344,12 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
     def response_type(self, route: JavaRoute, group: JavaApiGroup) -> str:
         if self.server_mode and not route.is_rpc:
             return "void"
+        if route.is_binary_schema_response and route.response_binary_schema_type:
+            return f"{group.types_class}.{route.response_binary_schema_type}"
+        if route.response_kind in {"bytes", "file"}:
+            return "ApiRawResponse"
+        if route.response_kind == "byte_stream":
+            return "ApiStreamResponse"
         if route.response_model:
             return self.schema_type(route.response_model, group)
         if route.response_media_type != "application/json":
@@ -351,6 +362,12 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
         return self.schema_type(route.close_model, group)
 
     def response_class_literal(self, route: JavaRoute, group: JavaApiGroup) -> str:
+        if route.is_binary_schema_response and route.response_binary_schema_type:
+            return f"{group.types_class}.{route.response_binary_schema_type}.class"
+        if route.response_kind in {"bytes", "file"}:
+            return "ApiRawResponse.class"
+        if route.response_kind == "byte_stream":
+            return "ApiStreamResponse.class"
         if route.response_model:
             return self.schema_class_literal(route.response_model, group)
         if route.response_media_type != "application/json":

@@ -10,6 +10,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody
+import java.nio.charset.Charset
 
 public data class ApiRequest<T>(
     public val routeId: String,
@@ -21,10 +22,13 @@ public data class ApiRequest<T>(
     public val jsonSerializer: SerializationStrategy<*>? = null,
     public val form: Any? = null,
     public val formSerializer: SerializationStrategy<*>? = null,
+    public val multipart: Any? = null,
+    public val multipartSerializer: SerializationStrategy<*>? = null,
     public val binary: ApiBinaryBody? = null,
-    public val responseSerializer: KSerializer<T>,
+    public val responseSerializer: KSerializer<*>,
     public val responseMediaType: String = "application/json",
     public val responseEnvelope: ApiResponseEnvelope = ApiResponseEnvelope.none(),
+    public val responseDecoder: ((ApiResponse) -> T)? = null,
 )
 
 public data class ApiResponseEnvelope(
@@ -50,9 +54,60 @@ public data class ApiResponseEnvelopeFields(
 
 public data class ApiResponse(
     public val statusCode: Int,
-    public val body: String,
+    public val body: ByteArray,
+    public val headers: Map<String, String> = emptyMap(),
+) {
+    public fun bodyText(charset: Charset = Charsets.UTF_8): String = body.toString(charset)
+
+    public fun contentType(defaultValue: String = "application/octet-stream"): String =
+        headers.entries.firstOrNull { it.key.equals("content-type", ignoreCase = true) }?.value ?: defaultValue
+
+    public fun filename(defaultValue: String = ""): String =
+        headers.entries.firstOrNull { it.key.equals("content-disposition", ignoreCase = true) }
+            ?.value
+            ?.split(";")
+            ?.firstOrNull { it.trim().startsWith("filename=", ignoreCase = true) }
+            ?.substringAfter("=")
+            ?.trim()
+            ?.trim('"')
+            ?.ifBlank { defaultValue }
+            ?: defaultValue
+}
+
+@Serializable
+public data class ApiFilePart(
+    public val filename: String = "",
+    public val contentType: String = "application/octet-stream",
+    public val bytes: ByteArray = ByteArray(0),
+)
+
+public data class ApiRawResponse(
+    public val body: ByteArray,
+    public val contentType: String = "application/octet-stream",
+    public val filename: String = "",
     public val headers: Map<String, String> = emptyMap(),
 )
+
+public data class ApiStreamResponse(
+    public val body: ByteArray,
+    public val contentType: String = "application/octet-stream",
+    public val headers: Map<String, String> = emptyMap(),
+)
+
+public fun ApiResponse.toRawResponse(defaultContentType: String, defaultFilename: String = ""): ApiRawResponse =
+    ApiRawResponse(
+        body = body,
+        contentType = contentType(defaultContentType),
+        filename = filename(defaultFilename),
+        headers = headers,
+    )
+
+public fun ApiResponse.toStreamResponse(defaultContentType: String): ApiStreamResponse =
+    ApiStreamResponse(
+        body = body,
+        contentType = contentType(defaultContentType),
+        headers = headers,
+    )
 
 @Serializable
 public data class SocketCloseInfo(
@@ -105,13 +160,17 @@ public interface ApiTransport {
 
 public suspend fun <T> ApiTransport.request(request: ApiRequest<T>): T {
     val response = execute(request)
+    val responseText = response.bodyText()
     if (response.statusCode < 200 || response.statusCode >= 300) {
-        decodeApiErrorPayload(response.body, request.routeId, request.responseEnvelope)?.let {
-            throw ApiError(it, routeId = request.routeId, rawBody = response.body)
+        decodeApiErrorPayload(responseText, request.routeId, request.responseEnvelope)?.let {
+            throw ApiError(it, routeId = request.routeId, rawBody = responseText)
         }
-        throw ApiException(response.statusCode, response.body)
+        throw ApiException(response.statusCode, responseText)
     }
-    val body = unwrapResponseEnvelope(response.body, request.responseEnvelope, request.routeId)
+    request.responseDecoder?.let { decoder ->
+        return decoder(response)
+    }
+    val body = unwrapResponseEnvelope(responseText, request.responseEnvelope, request.routeId)
     if (request.responseSerializer.descriptor.serialName == "kotlin.Unit") {
         @Suppress("UNCHECKED_CAST")
         return Unit as T
@@ -120,7 +179,8 @@ public suspend fun <T> ApiTransport.request(request: ApiRequest<T>): T {
         @Suppress("UNCHECKED_CAST")
         return body as T
     }
-    return ApiJson.decodeFromString(request.responseSerializer, body)
+    @Suppress("UNCHECKED_CAST")
+    return ApiJson.decodeFromString(request.responseSerializer as KSerializer<T>, body)
 }
 
 private fun unwrapResponseEnvelope(body: String, envelope: ApiResponseEnvelope, routeId: String): String {

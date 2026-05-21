@@ -459,35 +459,35 @@
       "kind": "kotlin-client",
       "out_dir": "kotlin/client",
       "role": "client",
-      "route_count": 21
+      "route_count": 27
     },
     {
       "id": "kotlin.server",
       "kind": "kotlin-server",
       "out_dir": "kotlin/server",
       "role": "server",
-      "route_count": 23
+      "route_count": 29
     },
     {
       "id": "java.server",
       "kind": "java-server",
       "out_dir": "java/server",
       "role": "server",
-      "route_count": 25
+      "route_count": 31
     },
     {
       "id": "java.client",
       "kind": "java-client",
       "out_dir": "java/client",
       "role": "client",
-      "route_count": 25
+      "route_count": 31
     },
     {
       "id": "flutter.client",
       "kind": "flutter-client",
       "out_dir": "flutter",
       "role": "client",
-      "route_count": 23
+      "route_count": 29
     },
     {
       "id": "python.server",

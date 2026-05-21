@@ -5,6 +5,9 @@ import com.example.apiblueprint.api.routes.api.conflict.ConflictTypes;
 import com.example.apiblueprint.api.routes.api.demo.DemoTypes;
 import com.example.apiblueprint.api.runtime.ApiError;
 import com.example.apiblueprint.api.runtime.ApiErrors;
+import com.example.apiblueprint.api.runtime.ApiFilePart;
+import com.example.apiblueprint.api.runtime.ApiRawResponse;
+import com.example.apiblueprint.api.runtime.ApiStreamResponse;
 import com.example.apiblueprint.api.runtime.ApiTypes;
 import com.example.apiblueprint.api.transports.http.HttpApiClient;
 import java.net.URI;
@@ -26,7 +29,7 @@ public final class Conformance {
             throw new IllegalArgumentException("base URL argument is required");
         }
         String baseUrl = args[0];
-        Set<String> selected = scenarioSet(args.length > 1 ? args[1] : "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,single-channel");
+        Set<String> selected = scenarioSet(args.length > 1 ? args[1] : "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,single-channel");
         HttpApiClient client = HttpApiClient.create(baseUrl);
         com.example.apiblueprint.alt.transports.http.HttpApiClient altClient =
             com.example.apiblueprint.alt.transports.http.HttpApiClient.create(baseUrl);
@@ -71,6 +74,12 @@ public final class Conformance {
         }
         if (selected.contains("audit-binary")) {
             checkAuditBinary(client);
+        }
+        if (selected.contains("binary-response")) {
+            checkBinaryResponse(client);
+        }
+        if (selected.contains("media")) {
+            checkMedia(client);
         }
         if (selected.contains("error")) {
             checkTypedErrors(client);
@@ -146,6 +155,41 @@ public final class Conformance {
         require(Objects.equals("java-audit", response.trace()), "audit.trace mismatch: " + response);
         require(Objects.equals(2L, response.itemCount()), "audit.itemCount mismatch: " + response);
         require(Objects.equals(2L, response.checksum()), "audit.checksum mismatch: " + response);
+    }
+
+    private static void checkBinaryResponse(HttpApiClient client) throws Exception {
+        BinaryTypes.AuditPacket response = client.binary.auditPacketResponse();
+        require(Objects.equals(buildAuditPacket(), response), "binary response mismatch: " + response);
+    }
+
+    private static void checkMedia(HttpApiClient client) throws Exception {
+        ApiRawResponse preview = client.media.mediaPreview(
+            new ApiTypes.MediaPreviewRequest(
+                "java-media",
+                ApiFilePart.of("preview.jpg", "image/jpeg", sampleJpeg())
+            )
+        );
+        require(preview.contentType().startsWith("image/jpeg"), "media preview contentType=" + preview.contentType());
+        require(startsWith(preview.body(), (byte) 0xff, (byte) 0xd8), "media preview body mismatch");
+
+        ApiRawResponse frame = client.media.mediaFrame();
+        require(frame.contentType().startsWith("image/jpeg"), "media frame contentType=" + frame.contentType());
+        require(Arrays.equals(sampleJpeg(), frame.body()), "media frame body mismatch");
+
+        ApiRawResponse download = client.media.mediaDownload();
+        require(Objects.equals("media-report.xlsx", download.filename()), "media download filename=" + download.filename());
+        require(startsWith(download.body(), (byte) 'P', (byte) 'K'), "media download body mismatch");
+
+        ApiRawResponse dynamic = client.media.mediaDownloadDynamic();
+        require(
+            Objects.equals("media-report-dynamic.xlsx", dynamic.filename()),
+            "media dynamic filename=" + dynamic.filename()
+        );
+        require(startsWith(dynamic.body(), (byte) 'P', (byte) 'K'), "media dynamic body mismatch");
+
+        ApiStreamResponse stream = client.media.mediaMjpeg();
+        String chunk = new String(stream.body(), StandardCharsets.ISO_8859_1);
+        require(chunk.contains("--frame"), "media mjpeg chunk=" + chunk);
     }
 
     private static void checkTypedErrors(HttpApiClient client) throws Exception {
@@ -227,6 +271,26 @@ public final class Conformance {
                 2L
             )
         );
+    }
+
+    private static byte[] sampleJpeg() {
+        return new byte[] {
+            (byte) 0xff, (byte) 0xd8, (byte) 0xff, (byte) 0xe0, 0x00, 0x10,
+            'J', 'F', 'I', 'F', 0x00, 0x01, 0x01, 0x01, 0x00, 0x01,
+            0x00, 0x01, 0x00, 0x00, (byte) 0xff, (byte) 0xd9
+        };
+    }
+
+    private static boolean startsWith(byte[] body, byte... prefix) {
+        if (body.length < prefix.length) {
+            return false;
+        }
+        for (int i = 0; i < prefix.length; i++) {
+            if (body[i] != prefix[i]) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static void checkRawHttp(String url, String method, String snippet, String label) throws Exception {

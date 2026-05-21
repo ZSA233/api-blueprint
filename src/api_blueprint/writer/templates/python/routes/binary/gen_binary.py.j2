@@ -189,7 +189,7 @@ class {{ schema.py_type }}Wire:
             write=write,
             content_length=content_length,
             content_type={{ schema.content_type | code_literal }},
-            endian={{ schema.endian }},
+            endian={{ schema.endian | code_literal }},
         )
 
     @staticmethod

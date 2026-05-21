@@ -55,6 +55,7 @@ class JavaRoute:
         self.response = _mapping(route.get("response"))
         self.connection = _mapping(route.get("connection"))
         self.binary_schema = _mapping(self.request.get("binary_schema")) or None
+        self.response_binary_schema = _mapping(self.response.get("binary_schema")) or None
         self.public_names = RoutePublicNames.from_operation(self.operation, fallback="Call")
 
     @property
@@ -112,6 +113,14 @@ class JavaRoute:
         return _model_name(self.request.get("form_model"))
 
     @property
+    def multipart_model(self) -> str | None:
+        return _model_name(self.request.get("multipart_model"))
+
+    @property
+    def request_body_kind(self) -> str:
+        return str(self.request.get("body_kind") or "none")
+
+    @property
     def binary_model(self) -> str | None:
         if self.binary_schema is not None:
             return None
@@ -122,6 +131,29 @@ class JavaRoute:
         if self.binary_schema is None:
             return None
         return JavaBinarySchema(self.binary_schema).name
+
+    @property
+    def response_kind(self) -> str:
+        return str(self.response.get("kind") or "json")
+
+    @property
+    def is_raw_response(self) -> bool:
+        return self.response_kind in {"bytes", "file", "byte_stream"}
+
+    @property
+    def is_binary_schema_response(self) -> bool:
+        return self.response_kind == "binary_schema" and self.response_binary_schema is not None
+
+    @property
+    def response_binary_schema_type(self) -> str | None:
+        if self.response_binary_schema is None:
+            return None
+        return JavaBinarySchema(self.response_binary_schema).name
+
+    @property
+    def response_filename(self) -> str | None:
+        value = self.response.get("default_filename") or self.response.get("filename")
+        return str(value) if isinstance(value, str) and value else None
 
     @property
     def open_model(self) -> str | None:
@@ -154,6 +186,7 @@ class JavaRoute:
                 self.query_model,
                 self.json_model,
                 self.form_model,
+                self.multipart_model,
                 self.binary_model,
                 self.open_model,
                 self.close_model,
@@ -216,6 +249,7 @@ class JavaApiGroup:
             (route.query_model, route.public_names.query),
             (route.json_model, route.public_names.json),
             (route.form_model, route.public_names.form),
+            (route.multipart_model, route.public_names.form),
             (route.binary_model, route.public_names.binary),
             (route.open_model, route.public_names.open),
             (route.close_model, route.public_names.close),
@@ -233,7 +267,12 @@ class JavaApiGroup:
 
     def binary_schemas(self) -> tuple[JavaBinarySchema, ...]:
         return unique_java_binary_schemas(
-            [route.binary_schema for route in self.routes if route.binary_schema is not None]
+            [
+                schema
+                for route in self.routes
+                for schema in (route.binary_schema, route.response_binary_schema)
+                if schema is not None
+            ]
         )
 
     def message_helpers(self, writer: "JavaBaseWriter") -> tuple[JavaMessageHelper, ...]:

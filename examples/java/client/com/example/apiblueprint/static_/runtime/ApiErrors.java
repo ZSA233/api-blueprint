@@ -124,6 +124,13 @@ public final class ApiErrors {
             )
         ),
         Map.entry(
+            "api.binary.get.auditpacketresponse",
+            Map.ofEntries(
+                Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
+                Map.entry(55555, API_ERRORS_BY_ID.get("CommonErr.TOKEN_EXPIRE"))
+            )
+        ),
+        Map.entry(
             "api.conflict.get.default",
             Map.ofEntries(
                 Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
@@ -207,6 +214,41 @@ public final class ApiErrors {
                 Map.entry(55555, API_ERRORS_BY_ID.get("CommonErr.TOKEN_EXPIRE")),
                 Map.entry(70002, API_ERRORS_BY_ID.get("DemoErr.UNKNOWN")),
                 Map.entry(42901, API_ERRORS_BY_ID.get("DemoErr.RATE_LIMITED"))
+            )
+        ),
+        Map.entry(
+            "api.media.post.preview",
+            Map.ofEntries(
+                Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
+                Map.entry(55555, API_ERRORS_BY_ID.get("CommonErr.TOKEN_EXPIRE"))
+            )
+        ),
+        Map.entry(
+            "api.media.get.frame",
+            Map.ofEntries(
+                Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
+                Map.entry(55555, API_ERRORS_BY_ID.get("CommonErr.TOKEN_EXPIRE"))
+            )
+        ),
+        Map.entry(
+            "api.media.get.download",
+            Map.ofEntries(
+                Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
+                Map.entry(55555, API_ERRORS_BY_ID.get("CommonErr.TOKEN_EXPIRE"))
+            )
+        ),
+        Map.entry(
+            "api.media.get.downloaddynamic",
+            Map.ofEntries(
+                Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
+                Map.entry(55555, API_ERRORS_BY_ID.get("CommonErr.TOKEN_EXPIRE"))
+            )
+        ),
+        Map.entry(
+            "api.media.get.mjpeg",
+            Map.ofEntries(
+                Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
+                Map.entry(55555, API_ERRORS_BY_ID.get("CommonErr.TOKEN_EXPIRE"))
             )
         ),
         Map.entry(

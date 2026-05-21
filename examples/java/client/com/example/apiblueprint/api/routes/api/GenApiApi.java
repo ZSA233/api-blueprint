@@ -3,7 +3,9 @@ package com.example.apiblueprint.api.routes.api;
 
 import com.example.apiblueprint.api.runtime.ApiChannelBridge;
 import com.example.apiblueprint.api.runtime.ApiRequest;
+import com.example.apiblueprint.api.runtime.ApiRawResponse;
 import com.example.apiblueprint.api.runtime.ApiResponseEnvelope;
+import com.example.apiblueprint.api.runtime.ApiStreamResponse;
 import com.example.apiblueprint.api.runtime.ApiStreamBridge;
 import com.example.apiblueprint.api.runtime.ApiTransport;
 
@@ -27,9 +29,14 @@ public class GenApiApi {
             null,
             null,
             null,
+            null,
+            "none",
             ApiResponseEnvelope.none(),
             Object.class,
             "application/json",
+            "json",
+            "",
+            null,
             Map.of()
         );
         return transport.openChannel(request);

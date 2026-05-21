@@ -3,8 +3,10 @@ package com.example.apiblueprint.static_.routes.static_;
 
 import com.example.apiblueprint.static_.runtime.ApiTypes;
 
+import com.example.apiblueprint.static_.runtime.ApiRawResponse;
 import com.example.apiblueprint.static_.runtime.ApiServerChannel;
 import com.example.apiblueprint.static_.runtime.ApiServerStream;
+import com.example.apiblueprint.static_.runtime.ApiStreamResponse;
 import com.example.apiblueprint.static_.runtime.binary.ApiBinaryBody;
 
 public class StaticServiceStub implements StaticService {

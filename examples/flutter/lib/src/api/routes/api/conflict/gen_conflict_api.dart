@@ -26,6 +26,7 @@ class GenConflictApi {
         query: query?.toQueryMap() ?? const <String, String?>{},
         headers: headers,
         responseMediaType: "application/json",
+        responseKind: "json",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
         decode: ConflictModel.fromJsonValue,
       ),

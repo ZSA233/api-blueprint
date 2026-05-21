@@ -96,10 +96,15 @@ content-type: application/vnd.audit-packet
     server_adapter = (
         server_dir / "api_blueprint_generated" / "api" / "transports" / "http" / "gen_server.py"
     ).read_text(encoding="utf-8")
+    binary_types = (
+        client_dir / "api_blueprint_generated" / "api" / "routes" / "api" / "binary" / "gen_binary.py"
+    ).read_text(encoding="utf-8")
 
     assert "async def audit(self) -> AuditPacket:" in client_route
     assert "response_type: str | None = 'binary_schema'" in client_route
     assert "return AuditPacketWire.from_bytes(payload)" in client_route
+    assert 'endian="little"' in binary_types
+    assert 'endian="\'little\'"' not in binary_types
     assert 'if response_type == "binary_schema":' in client_transport
     assert "return response.content" in client_transport
     assert "async def audit(self) -> AuditPacket:" in server_service

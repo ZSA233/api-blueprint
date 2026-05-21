@@ -70,6 +70,18 @@ files = ["**/*.proto"]
 module = "pb"
 ```
 
+## HTTP raw media 边界
+
+gRPC 需要文件、bytes、stream 或 typed binary packet 这类能力，但这些能力不继承 HTTP raw contract。`multipart`、`Content-Disposition`、HTTP status/header、MIME download 和 HTTP byte stream 都属于 HTTP transport 语义；`grpc-proto` 遇到 HTTP raw media route 或 HTTP binary schema body/response 时会在 `api-gen check` 阶段报明确 unsupported，不会把它们自动投影为 proto。
+
+推荐使用 proto-native 建模：
+
+- 小型 bytes 或 typed binary packet：使用 protobuf `bytes` 字段承载。
+- 保留 Markdown Binary Schema 精确 wire format：把 encoded packet 放入 `bytes payload`，不要自动展开成 proto fields。
+- 文件下载：使用 server-streaming `FileChunk`；首包或 metadata 携带 `filename`、`content_type`、`size`、`sha256`，后续包携带 `bytes data`。
+- 文件上传 / multipart：使用 client-streaming `UploadChunk`；首包携带文件 metadata，后续包携带 `bytes data`；普通表单字段应进入显式 request message。
+- byte stream / MJPEG：使用 server-streaming chunk message，不生成 HTTP multipart boundary。
+
 ## RPC 映射
 
 - 普通 HTTP route 输出 unary RPC。

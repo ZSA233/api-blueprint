@@ -104,14 +104,14 @@ def scenario_registry() -> dict[str, Scenario]:
         "binary-response": Scenario(
             name="binary-response",
             categories=("binary", "raw-response"),
-            clients=("go", "typescript", "python"),
+            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
             route_ids=("api.binary.get.auditpacketresponse",),
             description="binary schema typed response calls",
         ),
         "media": Scenario(
             name="media",
             categories=("multipart", "raw-response", "stream"),
-            clients=("go", "typescript", "python"),
+            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
             route_ids=(
                 "api.media.post.preview",
                 "api.media.get.frame",

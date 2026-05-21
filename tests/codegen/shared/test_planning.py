@@ -132,6 +132,11 @@ def test_client_capabilities_accept_binary_schema_rpc_routes(kind: str, target_k
         ("typescript-client", {}),
         ("python-server", {}),
         ("python-client", {}),
+        ("java-server", {"package": "com.example"}),
+        ("java-client", {"package": "com.example"}),
+        ("kotlin-client", {"package": "com.example"}),
+        ("kotlin-server", {"package": "com.example"}),
+        ("flutter-client", {"package": "api_blueprint_example"}),
     ],
 )
 def test_v1_targets_accept_binary_schema_response_routes(kind: str, target_kwargs: dict[str, object]) -> None:
@@ -158,18 +163,20 @@ def test_v1_targets_accept_binary_schema_response_routes(kind: str, target_kwarg
 
 
 @pytest.mark.parametrize(
-    ("kind", "target_kwargs"),
+    ("kind", "target_kwargs", "hint"),
     [
-        ("java-server", {"package": "com.example"}),
-        ("java-client", {"package": "com.example"}),
-        ("kotlin-client", {"package": "com.example"}),
-        ("kotlin-server", {"package": "com.example"}),
-        ("flutter-client", {"package": "api_blueprint_example"}),
+        (
+            "wails-transport",
+            {"server": "go.server", "clients": ("typescript.client",), "version": "v3"},
+            "model this as Wails RPC file descriptors",
+        ),
+        ("grpc-proto", {"package": "example.api"}, "model this as protobuf bytes fields"),
     ],
 )
-def test_non_v1_targets_report_binary_schema_response_unsupported(
+def test_transport_targets_report_binary_schema_response_unsupported(
     kind: str,
     target_kwargs: dict[str, object],
+    hint: str,
 ) -> None:
     class FakeGraph:
         def to_manifest(self) -> dict[str, object]:
@@ -190,9 +197,8 @@ def test_non_v1_targets_report_binary_schema_response_unsupported(
 
     target = ResolvedApiTargetConfig(id=kind, kind=kind, out_dir=None, **target_kwargs)
 
-    assert capability_errors(FakeGraph(), (target,)) == [
-        f"{kind} does not support binary_schema response route: api.binary.get.packet"
-    ]
+    errors = capability_errors(FakeGraph(), (target,))
+    assert errors == [f"{kind} does not support binary_schema response route: api.binary.get.packet; {hint} or explicit client/server-streaming chunk messages" if kind == "grpc-proto" else f"{kind} does not support binary_schema response route: api.binary.get.packet; {hint}, serializable bytes, or STREAM/CHANNEL chunks"]
 
 
 def test_capability_validation_checks_only_declared_dimensions() -> None:
@@ -289,13 +295,20 @@ def test_media_capability_is_limited_to_v1_targets() -> None:
         ResolvedApiTargetConfig(id="go.server", kind="go-server", out_dir=None, module="example.com/server"),
     ]
     unsupported = [
-        ResolvedApiTargetConfig(id="java.client", kind="java-client", out_dir=None, package="com.example"),
-        ResolvedApiTargetConfig(id="kotlin.client", kind="kotlin-client", out_dir=None, package="com.example"),
-        ResolvedApiTargetConfig(id="flutter.client", kind="flutter-client", out_dir=None, package="example"),
+        ResolvedApiTargetConfig(
+            id="wails.v3",
+            kind="wails-transport",
+            out_dir=None,
+            server="go.server",
+            clients=("typescript.client",),
+            version="v3",
+        ),
+        ResolvedApiTargetConfig(id="grpc.proto", kind="grpc-proto", out_dir=None, package="example.api"),
     ]
 
     assert capability_errors(graph, supported) == []
     errors = capability_errors(graph, unsupported)
-    assert "java-client does not support multipart request route: api.media.post.preview" in errors
-    assert "kotlin-client does not support bytes response route: api.media.post.preview" in errors
-    assert "flutter-client does not support multipart request route: api.media.post.preview" in errors
+    assert any("wails-transport does not support multipart request route: api.media.post.preview" in error for error in errors)
+    assert any("model this as Wails RPC file descriptors" in error for error in errors)
+    assert any("grpc-proto does not support multipart request route: api.media.post.preview" in error for error in errors)
+    assert any("model this as protobuf bytes fields" in error for error in errors)

@@ -55,6 +55,21 @@ WRITE_METHODS = {
     "f64": "writeF64",
     "bool": "writeBool",
 }
+READ_METHODS = {
+    "u8": "readU8",
+    "u16": "readU16",
+    "u24": "readU24",
+    "u32": "readU32",
+    "u64": "readU64",
+    "i8": "readI8",
+    "i16": "readI16",
+    "i24": "readI24",
+    "i32": "readI32",
+    "i64": "readI64",
+    "f32": "readF32",
+    "f64": "readF64",
+    "bool": "readBool",
+}
 INTEGER_TYPES = {"u8", "u16", "u24", "u32", "u64", "i8", "i16", "i24", "i32", "i64"}
 UNSIGNED_TYPES = {"u8", "u16", "u24", "u32", "u64"}
 EXPR_TOKEN_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*|\d+|[()+\-*/]")
@@ -226,6 +241,10 @@ class KotlinBinaryField:
     @property
     def write_method(self) -> str:
         return WRITE_METHODS[self.wire_type]
+
+    @property
+    def read_method(self) -> str:
+        return READ_METHODS[self.wire_type]
 
     @property
     def supports_binary_block(self) -> bool:
@@ -412,6 +431,10 @@ class KotlinBinaryObject:
     @property
     def writer_name(self) -> str:
         return "write" + kotlin_type_name(self.name)
+
+    @property
+    def reader_name(self) -> str:
+        return "read" + kotlin_type_name(self.name)
 
     def block_factory_name(self, field: KotlinBinaryField) -> str:
         return "new" + kotlin_type_name(f"{self.name}_{field.name}_block")

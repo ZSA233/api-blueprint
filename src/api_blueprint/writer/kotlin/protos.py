@@ -15,6 +15,7 @@ from api_blueprint.engine.model import (
     Enum as ModelEnum,
     Field,
     FieldWrappedModel,
+    FileField,
     Float,
     Float32,
     Float64,
@@ -130,6 +131,8 @@ class KotlinTypeResolver:
 
         if isinstance(field, String):
             return KotlinResolvedType("String", serializer="String.serializer()")
+        if isinstance(field, FileField):
+            return KotlinResolvedType("ApiFilePart", serializer="ApiFilePart.serializer()")
         if isinstance(field, Bool):
             return KotlinResolvedType("Boolean", serializer="Boolean.serializer()")
         if isinstance(field, (Int64, Uint64)):

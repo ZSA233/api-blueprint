@@ -3,7 +3,9 @@ package com.example.apiblueprint.api.routes.api.demo;
 
 import com.example.apiblueprint.api.runtime.ApiChannelBridge;
 import com.example.apiblueprint.api.runtime.ApiRequest;
+import com.example.apiblueprint.api.runtime.ApiRawResponse;
 import com.example.apiblueprint.api.runtime.ApiResponseEnvelope;
+import com.example.apiblueprint.api.runtime.ApiStreamResponse;
 import com.example.apiblueprint.api.runtime.ApiStreamBridge;
 import com.example.apiblueprint.api.runtime.ApiTransport;
 
@@ -30,9 +32,14 @@ public class GenDemoApi {
             null,
             null,
             null,
+            null,
+            "none",
             ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
             ApiTypes.ApiDemoA.class,
             "application/json",
+            "json",
+            "",
+            null,
             Map.of()
         );
         return transport.execute(request);
@@ -49,9 +56,14 @@ public class GenDemoApi {
             json,
             null,
             null,
+            null,
+            "json",
             ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
             DemoTypes.TestPostResponse.class,
             "application/json",
+            "json",
+            "",
+            null,
             Map.of()
         );
         return transport.execute(request);
@@ -68,9 +80,14 @@ public class GenDemoApi {
             null,
             form,
             null,
+            null,
+            "urlencoded",
             ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
             DemoTypes.FormSubmitResponse.class,
             "application/json",
+            "json",
+            "",
+            null,
             Map.of()
         );
         return transport.execute(request);
@@ -88,9 +105,14 @@ public class GenDemoApi {
             json,
             null,
             null,
+            null,
+            "json",
             ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
             DemoTypes.PutDemoResponse.class,
             "application/json",
+            "json",
+            "",
+            null,
             Map.of()
         );
         return transport.execute(request);
@@ -107,9 +129,14 @@ public class GenDemoApi {
             null,
             null,
             null,
+            null,
+            "none",
             ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
             DemoTypes.DeleteResponse.class,
             "application/xml",
+            "xml",
+            "",
+            null,
             Map.of()
         );
         return transport.execute(request);
@@ -126,9 +153,14 @@ public class GenDemoApi {
             openData,
             null,
             null,
+            null,
+            "none",
             ApiResponseEnvelope.none(),
             Object.class,
             "application/json",
+            "json",
+            "",
+            null,
             Map.of()
         );
         return transport.openStream(request);
@@ -145,9 +177,14 @@ public class GenDemoApi {
             openData,
             null,
             null,
+            null,
+            "none",
             ApiResponseEnvelope.none(),
             Object.class,
             "application/json",
+            "json",
+            "",
+            null,
             Map.of()
         );
         return transport.openChannel(request);
@@ -164,9 +201,14 @@ public class GenDemoApi {
             json,
             null,
             null,
+            null,
+            "json",
             ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
             DemoTypes.PostDeprecatedResponse.class,
             "application/json",
+            "json",
+            "",
+            null,
             Map.of()
         );
         return transport.execute(request);
@@ -182,9 +224,14 @@ public class GenDemoApi {
             null,
             null,
             null,
+            null,
+            "none",
             ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
             DemoTypes.RawResponse.class,
             "application/json",
+            "json",
+            "",
+            null,
             Map.of()
         );
         return transport.execute(request);
@@ -200,9 +247,14 @@ public class GenDemoApi {
             null,
             null,
             null,
+            null,
+            "none",
             ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
             DemoTypes.MapModelResponse.class,
             "application/json",
+            "json",
+            "",
+            null,
             Map.of()
         );
         return transport.execute(request);
@@ -219,9 +271,14 @@ public class GenDemoApi {
             null,
             null,
             null,
+            null,
+            "none",
             ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
             DemoTypes.ErrorDemoResponse.class,
             "application/json",
+            "json",
+            "",
+            null,
             Map.of()
         );
         return transport.execute(request);

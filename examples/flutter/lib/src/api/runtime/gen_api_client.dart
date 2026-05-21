@@ -3,6 +3,7 @@ import '../routes/api/api_api.dart';
 import '../routes/api/binary/binary_api.dart';
 import '../routes/api/conflict/conflict_api.dart';
 import '../routes/api/demo/demo_api.dart';
+import '../routes/api/media/media_api.dart';
 import '../routes/api/hello/hello_api.dart';
 import 'gen_api_transport.dart';
 
@@ -15,5 +16,6 @@ class GenApiClient {
   late final binary = BinaryApi(transport);
   late final conflict = ConflictApi(transport);
   late final demo = DemoApi(transport);
+  late final media = MediaApi(transport);
   late final hello = HelloApi(transport);
 }

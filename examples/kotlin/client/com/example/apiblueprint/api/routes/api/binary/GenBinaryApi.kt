@@ -27,6 +27,7 @@ public open class GenBinaryApi internal constructor(
                 responseSerializer = BinaryPacketResponse.serializer(),
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }
@@ -47,6 +48,7 @@ public open class GenBinaryApi internal constructor(
                 responseSerializer = BinaryPacketResponse.serializer(),
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }
@@ -67,6 +69,7 @@ public open class GenBinaryApi internal constructor(
                 responseSerializer = BinaryAuditPacketResponse.serializer(),
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }
@@ -87,6 +90,24 @@ public open class GenBinaryApi internal constructor(
                 responseSerializer = BinaryAuditPacketResponse.serializer(),
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
+            )
+        )
+    }
+
+    public open suspend fun auditPacketResponse(
+        headers: Map<String, String> = emptyMap(),
+    ): AuditPacket {
+        return transport.request(
+            ApiRequest(
+                routeId = "api.binary.get.auditpacketresponse",
+                method = "GET",
+                path = "/api/binary/audit-packet-response",
+                headers = headers,
+                responseSerializer = Unit.serializer(),
+                responseMediaType = "application/octet-stream",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = { response -> AuditPacketWire.parse(response.body) },
             )
         )
     }

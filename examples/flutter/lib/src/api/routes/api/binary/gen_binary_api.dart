@@ -30,6 +30,7 @@ class GenBinaryApi {
         binary: encodeDemoPacket(packet),
         binaryContentType: "application/octet-stream",
         responseMediaType: "application/json",
+        responseKind: "json",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
         decode: BinaryPacketResponse.fromJsonValue,
       ),
@@ -54,8 +55,30 @@ class GenBinaryApi {
         binary: encodeAuditPacket(auditPacket),
         binaryContentType: "application/octet-stream",
         responseMediaType: "application/json",
+        responseKind: "json",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
         decode: BinaryAuditPacketResponse.fromJsonValue,
+      ),
+    );
+  }
+
+
+
+
+  Future<AuditPacket> auditPacketResponse({
+    Map<String, String> headers = const {},
+  }) {
+    return transport.request(
+      ApiRequest<AuditPacket>(
+        routeId: "api.binary.get.auditpacketresponse",
+        method: "GET",
+        path: "/api/binary/audit-packet-response",
+        query: const <String, String?>{},
+        headers: headers,
+        responseMediaType: "application/octet-stream",
+        responseKind: "binary_schema",
+        responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+        decode: (value) => decodeAuditPacket(apiBlueprintReadBytes(value)),
       ),
     );
   }

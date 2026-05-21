@@ -144,6 +144,49 @@
 {% endif %}
 {%- endmacro %}
 
+{% macro read_field(field, object) -%}
+{% set path = field.name %}
+{% if field.is_hidden %}
+    reader.readZeroes({{ path | code_literal }}, {{ field.count_expr }})
+{% elif field.is_bytes %}
+    val {{ field.kotlin_name }} = reader.readBytes({{ path | code_literal }}, {{ field.count_expr }})
+{{ check_expr(field, field.kotlin_name, field.param_long_expr, path) }}
+{% elif field.is_string %}
+    val {{ field.kotlin_name }} = reader.readUtf8String({{ path | code_literal }}, {{ field.count_expr }})
+{{ check_expr(field, field.kotlin_name, field.param_long_expr, path) }}
+{% elif field.is_array %}
+    val {{ field.count_var }} = {{ field.count_expr }}
+{% if field.max_value %}
+    requireRange({{ path | code_literal }}, {{ field.count_var }}, 0L, {{ field.max_expr }})
+{% endif %}
+    val {{ field.kotlin_name }} = mutableListOf<{{ field.single_kotlin_type }}>()
+    repeat({{ field.count_var }}.toInt()) { index ->
+{% if field.is_scalar %}
+        {{ field.kotlin_name }} += reader.{{ field.read_method }}({{ path | code_literal }})
+{% else %}
+        try {
+            {{ field.kotlin_name }} += read{{ field.single_kotlin_type }}(reader, state, "")
+        } catch (error: BinaryDecodeException) {
+            throw wrapBinaryIndex({{ path | code_literal }}, index, error)
+        }
+{% endif %}
+    }
+{% elif field.is_scalar %}
+    val {{ field.kotlin_name }} = reader.{{ field.read_method }}({{ path | code_literal }})
+{{ check_expr(field, field.kotlin_name, field.param_long_expr, path) }}
+{% if field.can_store_var %}
+    state.{{ field.kotlin_name }} = {{ field.param_long_expr }}
+{% endif %}
+{% else %}
+    val {{ field.kotlin_name }} = try {
+        read{{ field.single_kotlin_type }}(reader, state, "")
+    } catch (error: BinaryDecodeException) {
+        throw wrapBinaryField({{ path | code_literal }}, error)
+    }
+{{ check_expr(field, field.kotlin_name, field.param_long_expr, path) }}
+{% endif %}
+{%- endmacro %}
+
 {% macro block_helpers(field, object, schema) -%}
 {% set path = object.block_path(field) %}
 {% set count_var = field.count_var %}
@@ -239,6 +282,20 @@ public object {{ schema.name }}Wire {
         write(value, writer)
     }
 
+    public fun parse(bytes: ByteArray): {{ schema.name }} {
+        val reader = BinaryReader(bytes, ENDIAN)
+        val state = {{ schema.state_type }}()
+{%- for section in schema.sections %}
+        val {{ schema.packet_field_name(section.name) }} = read{{ section.name }}(reader, state, "{{ schema.name }}.{{ schema.packet_field_name(section.name) }}")
+{%- endfor %}
+        reader.requireEOF("{{ schema.name }}")
+        return {{ schema.name }}(
+{%- for section in schema.sections %}
+            {{ schema.packet_field_name(section.name) }} = {{ schema.packet_field_name(section.name) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+        )
+    }
+
     public fun write(value: {{ schema.name }}, writer: BinaryWriter) {
         val state = {{ schema.state_type }}()
 {%- for section in schema.sections %}
@@ -247,6 +304,25 @@ public object {{ schema.name }}Wire {
     }
 
 {% for object in schema.objects %}
+    public fun {{ object.reader_name }}(
+        reader: BinaryReader,
+        state: {{ schema.state_type }} = {{ schema.state_type }}(),
+        path: String = "{{ object.path_name }}",
+    ): {{ object.name }} {
+        try {
+{%- for field in object.fields %}
+{{ read_field(field, object) | indent(8, false) }}
+{%- endfor %}
+            return {{ object.name }}(
+{%- for field in object.data_fields %}
+                {{ field.kotlin_name }} = {{ field.kotlin_name }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+            )
+        } catch (error: BinaryDecodeException) {
+            throw wrapBinaryField(path, error)
+        }
+    }
+
     public fun {{ object.writer_name }}(
         value: {{ object.name }},
         writer: BinaryWriter,

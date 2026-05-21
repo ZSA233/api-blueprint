@@ -3,7 +3,9 @@ package com.example.apiblueprint.api.routes.api.binary;
 
 import com.example.apiblueprint.api.runtime.ApiChannelBridge;
 import com.example.apiblueprint.api.runtime.ApiRequest;
+import com.example.apiblueprint.api.runtime.ApiRawResponse;
 import com.example.apiblueprint.api.runtime.ApiResponseEnvelope;
+import com.example.apiblueprint.api.runtime.ApiStreamResponse;
 import com.example.apiblueprint.api.runtime.ApiStreamBridge;
 import com.example.apiblueprint.api.runtime.ApiTransport;
 
@@ -40,10 +42,15 @@ public class GenBinaryApi {
             query,
             null,
             null,
+            null,
             binaryBody,
+            "binary_schema",
             ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
             BinaryTypes.PacketResponse.class,
             "application/json",
+            "json",
+            "",
+            null,
             Map.of()
         );
         return transport.execute(request);
@@ -70,10 +77,38 @@ public class GenBinaryApi {
             query,
             null,
             null,
+            null,
             binaryBody,
+            "binary_schema",
             ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
             BinaryTypes.AuditPacketResponse.class,
             "application/json",
+            "json",
+            "",
+            null,
+            Map.of()
+        );
+        return transport.execute(request);
+    }
+
+    public BinaryTypes.AuditPacket auditPacketResponse(
+    ) throws Exception {
+        ApiRequest<BinaryTypes.AuditPacket> request = new ApiRequest<>(
+            "api.binary.get.auditpacketresponse",
+            "GET",
+            "/api/binary/audit-packet-response",
+            null,
+            null,
+            null,
+            null,
+            null,
+            "none",
+            ApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new ApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+            BinaryTypes.AuditPacket.class,
+            "application/octet-stream",
+            "binary_schema",
+            "",
+            BinaryTypes.AuditPacketWire::parse,
             Map.of()
         );
         return transport.execute(request);

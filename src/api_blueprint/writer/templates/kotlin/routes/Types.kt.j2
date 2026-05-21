@@ -17,8 +17,10 @@ import kotlinx.serialization.json.JsonNull
 {% endif %}
 {% if binary_schemas %}
 import {{ bp.root_package }}.runtime.binary.ApiBinaryBody
+import {{ bp.root_package }}.runtime.binary.BinaryDecodeException
 import {{ bp.root_package }}.runtime.binary.BinaryEncodeException
 import {{ bp.root_package }}.runtime.binary.BinaryEndian
+import {{ bp.root_package }}.runtime.binary.BinaryReader
 import {{ bp.root_package }}.runtime.binary.BinaryWriter
 import {{ bp.root_package }}.runtime.binary.EncodedBinaryBlock
 import {{ bp.root_package }}.runtime.binary.StreamingBinaryBody

@@ -3,6 +3,7 @@ package com.example.apiblueprint.api.runtime;
 
 import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
 import java.util.Map;
+import java.util.function.Function;
 
 public record ApiRequest<T>(
     String routeId,
@@ -11,18 +12,26 @@ public record ApiRequest<T>(
     Object query,
     Object json,
     Object form,
+    Object multipart,
     ApiBinaryBody binary,
+    String bodyKind,
     ApiResponseEnvelope responseEnvelope,
     Class<T> responseClass,
     String responseMediaType,
+    String responseKind,
+    String responseFilename,
+    Function<byte[], T> binaryResponseDecoder,
     Map<String, String> headers
 ) {
     public ApiRequest {
         routeId = routeId == null ? "" : routeId;
         method = method == null ? "GET" : method;
         path = path == null ? "" : path;
+        bodyKind = bodyKind == null || bodyKind.isBlank() ? "none" : bodyKind;
         responseEnvelope = responseEnvelope == null ? ApiResponseEnvelope.none() : responseEnvelope;
         responseMediaType = responseMediaType == null ? "application/json" : responseMediaType;
+        responseKind = responseKind == null || responseKind.isBlank() ? "json" : responseKind;
+        responseFilename = responseFilename == null ? "" : responseFilename;
         headers = headers == null ? Map.of() : Map.copyOf(headers);
     }
 }

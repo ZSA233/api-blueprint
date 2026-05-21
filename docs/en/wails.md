@@ -28,6 +28,17 @@ frontend_mode = "external"
 - `frontend_mode`: defaults to `external`; `none` skips the Wails TypeScript overlay.
 - `include` / `exclude`: trim the Wails target overlay / facade. Roots with no selected routes do not get `transports/<overlay_name>` output; the shared Go / TypeScript contract layers are still generated in full.
 
+## HTTP Raw Media Boundary
+
+Wails still needs file, bytes, stream, and typed binary packet capabilities, but those capabilities are not expressed with HTTP semantics. `multipart`, `Content-Disposition`, HTTP status/header, MIME download, and HTTP byte stream are HTTP transport contracts; `wails-transport` reports an explicit unsupported error during `api-gen check` when it sees HTTP raw media routes or HTTP binary schema body/response routes, and it does not generate pseudo HTTP responses.
+
+Use Wails-native IPC patterns instead:
+
+- Small bytes or typed binary packets: return serializable payloads from normal RPC, such as base64 strings, number arrays, or a project-owned `Uint8Array` adapter.
+- File downloads: return an app-local file descriptor such as `path`, `filename`, `contentType`, and `size`, then let the Wails app shell handle save/open dialogs and filesystem permissions.
+- Byte streams: reuse `STREAM` / `CHANNEL` and send chunk messages plus close payloads.
+- Large files: prefer app-managed temp files or caches instead of keeping large objects in Wails RPC payloads.
+
 ## Go Output Layout
 
 Wails Go overlays are generated under the transport target directory inside the Go target output tree referenced by `server`:

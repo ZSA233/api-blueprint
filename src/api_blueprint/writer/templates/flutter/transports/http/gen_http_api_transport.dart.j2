@@ -1,5 +1,6 @@
 {% autoescape false %}import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -36,20 +37,32 @@ class HttpApiTransport implements ApiTransport {
     }
 
     Future<http.Response> send() {
+      if (request.multipart != null) {
+        final multipartRequest = http.MultipartRequest(request.method, url)..headers.addAll(headers);
+        _appendMultipart(multipartRequest, request.multipart);
+        return _client.send(multipartRequest).then(http.Response.fromStream);
+      }
       return _client.send(http.Request(request.method, url)
         ..headers.addAll(headers)
         ..bodyBytes = body is List<int> ? body : utf8.encode(body?.toString() ?? '')).then(http.Response.fromStream);
     }
 
     final response = config.timeout == null ? await send() : await send().timeout(config.timeout!);
-    final payload = _decodeBody(response.body);
     if (response.statusCode < 200 || response.statusCode >= 300) {
+      final payload = _decodeBody(response.body);
       throw ApiError(
         extractApiErrorPayload(payload, request.routeId, request.responseEnvelope),
         routeId: request.routeId,
         raw: payload,
       );
     }
+    final binaryPayload = request.responseKind == 'bytes' ||
+        request.responseKind == 'file' ||
+        request.responseKind == 'byte_stream' ||
+        request.responseKind == 'binary_schema';
+    final payload = binaryPayload
+        ? ApiBinaryPayload(Uint8List.fromList(response.bodyBytes), response.headers)
+        : _decodeBody(response.body);
     return decodeApiResponse(payload, request);
   }
 
@@ -128,5 +141,32 @@ String _encodeFormBody(Object? form) {
     }
   }
   return Uri(queryParameters: values).query;
+}
+
+void _appendMultipart(http.MultipartRequest request, Object? multipart) {
+  final object = apiBlueprintReadObject(apiBlueprintToJson(multipart));
+  for (final entry in object.entries) {
+    final file = _filePart(entry.value);
+    if (file != null) {
+      request.files.add(http.MultipartFile.fromBytes(
+        entry.key,
+        file.bytes,
+        filename: file.filename.isEmpty ? entry.key : file.filename,
+      ));
+      continue;
+    }
+    final value = apiBlueprintToQueryValue(entry.value);
+    if (value != null) {
+      request.fields[entry.key] = value;
+    }
+  }
+}
+
+ApiFilePart? _filePart(Object? value) {
+  final object = apiBlueprintReadObject(value);
+  if (!object.containsKey('bytes')) {
+    return null;
+  }
+  return ApiFilePart.fromJson(object);
 }
 {% endautoescape %}

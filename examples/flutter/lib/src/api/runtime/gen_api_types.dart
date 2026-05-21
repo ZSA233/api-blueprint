@@ -3,6 +3,7 @@
 
 import 'api_json_codecs.dart';
 import 'gen_api_errors.dart';
+import 'gen_api_transport.dart';
 
 
 class ApiDemoA {
@@ -700,6 +701,51 @@ MapEnum? MapEnumFromJson(Object? value) {
     }
   }
   return null;
+}
+
+
+
+class MediaPreviewRequest {
+  final String? title;
+  final ApiFilePart? image;
+
+  const MediaPreviewRequest({
+    this.title,
+    this.image,
+  });
+
+  factory MediaPreviewRequest.fromJson(Map<String, Object?> json) {
+    return MediaPreviewRequest(
+      title: apiBlueprintReadString(json["title"]),
+      image: ApiFilePart.fromJson(json["image"]),
+    );
+  }
+
+  factory MediaPreviewRequest.fromJsonValue(Object? value) {
+    final codec = apiJsonCodecs.find<MediaPreviewRequest>();
+    if (codec != null) {
+      return codec.fromJson(value);
+    }
+    return MediaPreviewRequest.fromJson(apiBlueprintReadObject(value));
+  }
+
+  Map<String, Object?> toJson() {
+    final codec = apiJsonCodecs.find<MediaPreviewRequest>();
+    if (codec != null) {
+      return apiBlueprintReadObject(codec.toJson(this));
+    }
+    return {
+      "title": apiBlueprintToJson(title),
+      "image": apiBlueprintToJson(image),
+    };
+  }
+
+  Map<String, String?> toQueryMap() {
+    return {
+      "title": apiBlueprintToQueryValue(title),
+      "image": apiBlueprintToQueryValue(image),
+    };
+  }
 }
 
 

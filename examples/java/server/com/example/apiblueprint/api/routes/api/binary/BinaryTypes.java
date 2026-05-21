@@ -6,6 +6,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import com.example.apiblueprint.api.runtime.ApiTypes;
 
+import com.example.apiblueprint.api.runtime.ApiFilePart;
+
 import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
 import com.example.apiblueprint.api.runtime.binary.GenBinaryRuntime;
 

@@ -3,6 +3,7 @@
 
 import 'package:api_blueprint_example/src/api/runtime/gen_api_errors.dart';
 import 'package:api_blueprint_example/src/api/runtime/gen_api_types.dart';
+import 'package:api_blueprint_example/src/api/runtime/gen_api_transport.dart';
 import 'package:api_blueprint_example/src/api/runtime/api_json_codecs.dart';
 
 

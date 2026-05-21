@@ -4,11 +4,16 @@ import java.util.Map;
 
 public record ApiResponse(
     int statusCode,
-    String body,
+    byte[] body,
     Map<String, String> headers
 ) {
     public ApiResponse {
-        body = body == null ? "" : body;
+        body = body == null ? new byte[0] : body.clone();
         headers = headers == null ? Map.of() : Map.copyOf(headers);
+    }
+
+    @Override
+    public byte[] body() {
+        return body.clone();
     }
 }

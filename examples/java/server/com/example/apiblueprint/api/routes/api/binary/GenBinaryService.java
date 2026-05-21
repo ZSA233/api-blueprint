@@ -3,8 +3,10 @@ package com.example.apiblueprint.api.routes.api.binary;
 
 import com.example.apiblueprint.api.runtime.ApiTypes;
 
+import com.example.apiblueprint.api.runtime.ApiRawResponse;
 import com.example.apiblueprint.api.runtime.ApiServerChannel;
 import com.example.apiblueprint.api.runtime.ApiServerStream;
+import com.example.apiblueprint.api.runtime.ApiStreamResponse;
 import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
 
 public interface GenBinaryService {
@@ -17,6 +19,9 @@ public interface GenBinaryService {
     BinaryTypes.AuditPacketResponse auditPacket(
         BinaryTypes.AuditPacketQuery query,
         BinaryTypes.AuditPacket binary
+    ) throws Exception;
+
+    BinaryTypes.AuditPacket auditPacketResponse(
     ) throws Exception;
 
 }

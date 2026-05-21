@@ -5,6 +5,7 @@ import com.example.apiblueprint.api.routes.api.ApiApi;
 import com.example.apiblueprint.api.routes.api.binary.BinaryApi;
 import com.example.apiblueprint.api.routes.api.conflict.ConflictApi;
 import com.example.apiblueprint.api.routes.api.demo.DemoApi;
+import com.example.apiblueprint.api.routes.api.media.MediaApi;
 import com.example.apiblueprint.api.routes.api.hello.HelloApi;
 
 public class GenApiClient {
@@ -18,6 +19,8 @@ public class GenApiClient {
 
     public final DemoApi demo;
 
+    public final MediaApi media;
+
     public final HelloApi hello;
 
     public GenApiClient(ApiTransport transport) {
@@ -30,6 +33,8 @@ public class GenApiClient {
         this.conflict = new ConflictApi(transport);
 
         this.demo = new DemoApi(transport);
+
+        this.media = new MediaApi(transport);
 
         this.hello = new HelloApi(transport);
 

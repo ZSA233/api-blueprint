@@ -22,6 +22,9 @@ public open class Gen{{ group.class_name }} internal constructor(
 {%- if route.form_type %}
         form: {{ route.form_type }},
 {%- endif %}
+{%- if route.multipart_type %}
+        multipart: {{ route.multipart_type }},
+{%- endif %}
 {%- if route.binary_type %}
         binary: {{ route.binary_type }},
 {%- endif %}
@@ -44,12 +47,17 @@ public open class Gen{{ group.class_name }} internal constructor(
                 form = form,
                 formSerializer = {{ route.form_type }}.serializer(),
 {%- endif %}
+{%- if route.multipart_type %}
+                multipart = multipart,
+                multipartSerializer = {{ route.multipart_type }}.serializer(),
+{%- endif %}
 {%- if route.binary_type %}
                 binary = {% if route.has_binary_schema %}{{ route.binary_wire_type }}.toBinaryBody(binary){% else %}binary{% endif %},
 {%- endif %}
                 responseSerializer = {{ route.response_serializer_expr }},
                 responseMediaType = "{{ route.response_media_type }}",
                 responseEnvelope = {{ route.response_envelope_literal | safe }},
+                responseDecoder = {{ route.response_decoder_expr | safe }},
             )
         )
     }
@@ -75,6 +83,7 @@ public open class Gen{{ group.class_name }} internal constructor(
                 responseSerializer = {{ route.response_serializer_expr }},
                 responseMediaType = "{{ route.response_media_type }}",
                 responseEnvelope = {{ route.response_envelope_literal | safe }},
+                responseDecoder = {{ route.response_decoder_expr | safe }},
             )
         )
     }
