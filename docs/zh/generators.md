@@ -10,6 +10,8 @@
 
 Markdown Binary Schema 的生成名在各 target 使用同一套碰撞策略：packet 入口名保持基于 packet 的稳定命名，schema 内部的 struct / enum / bitflags / state / helper 符号按 packet name 作用域输出。归一化后生成符号相同的 packet name 会在生成阶段被拒绝。Public binary packet 字段遵循目标语言习惯：Go / Kotlin / Java / Flutter 使用导出或 camelCase 字段名，TypeScript / Python 保持贴近 JSON / wire 名的 snake_case 字段。
 
+HTTP body / response kind 也属于共享规划语义。请求体统一记录为 `none`、`json`、`urlencoded`、`multipart`、`binary_schema` 或 `raw_bytes`，响应统一记录为 `json`、`xml`、`text`、`bytes`、`file` 或 `byte_stream`。v1 生成器支持 Go server/client、TypeScript client、Python server/client 的 multipart 和 raw media 响应；其他目标在遇到这些 route 时由 `api-gen check` 明确报 unsupported。
+
 ## Go
 
 ```sh
@@ -22,7 +24,7 @@ Go 生成器输出：
 - 请求 / 响应 / 上下文结构。
 - provider runtime 与 response envelope codec。
 - transport-neutral Go core。
-- 可选 HTTP/Gin adapter。
+- 可选 HTTP/Gin adapter，包含 multipart bind 与 raw bytes/file/stream response writer。
 
 `gen_*` 文件由生成器拥有，重生成会覆盖。`impl_*` 与非 `gen_*` 文件是用户拥有扩展点，重生成时保留。Flutter 使用 Dart 风格的 `gen_*.dart` 作为 generator-owned 文件，非 `gen_` façade / extension 文件由用户拥有；Kotlin / Java 使用相同 ownership 模型，Kotlin 生成器拥有文件命名为 `Gen*.kt`，Java 生成器拥有文件命名为 `Gen*.java` 以及 runtime generated 文件，非 `Gen*` façade / extension 文件由用户拥有。
 
@@ -68,7 +70,7 @@ provider factory 应在应用启动或包 `init()` 阶段注册。provider seque
 
 HTTP adapter 只在 blueprint root 存在直接 routes 时导入 root router。handler 如果已经通过 Gin 写出响应，adapter 不会追加自动响应；否则没有 `rsp` provider 的 route 由 adapter 写出 handler 返回值，作为兼容行为。
 
-需要由 handler 完全接管 HTTP 成功响应时，使用 `HTTP_RAW_RESPONSE()`。该语义只影响 HTTP adapter：成功时不自动写响应，错误时如果 Gin writer 尚未写出则返回 500；它不是 shared provider，也不会改变 Wails overlay。
+新 route 需要返回 bytes、file 或 byte stream 时，应优先使用 `RSP_BYTES(...)`、`RSP_FILE(...)` 或 `RSP_BYTE_STREAM(...)`，让 raw 成功响应进入 ContractGraph 并被客户端生成器识别。`HTTP_RAW_RESPONSE()` 仍可作为旧项目的 HTTP adapter 逃生口，但它不是跨语言契约，不会生成 typed raw response client surface。
 
 ### 长连接契约
 
@@ -167,7 +169,7 @@ Go client target 输出 preview HTTP client：
 - `transports/http/gen_transport.go`
 - `transports/http/client.go`
 
-`gen_*.go` 文件由生成器拥有并覆盖；`client.go` façade 由用户拥有并保留。推荐入口是 `apiclient.NewHTTP(apiclient.HTTPConfig{BaseURL: baseURL})`，然后调用 `api.Demo.ErrorDemo(ctx, demo.ErrorDemoQuery{Mode: "token"})` 这类 route 方法。route/runtime client 只依赖 transport abstraction，`base_url` / `base_url_expr` 只写入 HTTP transport config。默认 HTTP adapter 实现 RPC 的 query/json/form/binary 请求；STREAM 和 CHANNEL 方法也会生成，默认 HTTP adapter 返回明确 unsupported error，项目可以替换自定义 transport。
+`gen_*.go` 文件由生成器拥有并覆盖；`client.go` façade 由用户拥有并保留。推荐入口是 `apiclient.NewHTTP(apiclient.HTTPConfig{BaseURL: baseURL})`，然后调用 `api.Demo.ErrorDemo(ctx, demo.ErrorDemoQuery{Mode: "token"})` 这类 route 方法。route/runtime client 只依赖 transport abstraction，`base_url` / `base_url_expr` 只写入 HTTP transport config。默认 HTTP adapter 实现 RPC 的 query/json/urlencoded/multipart/binary_schema 请求，multipart file 使用 `runtime.MultipartFile`，bytes/file raw 响应返回 `runtime.RawResponse`，byte stream 返回 `runtime.StreamResponse` 并由调用方关闭；STREAM 和 CHANNEL 方法也会生成，默认 HTTP adapter 返回明确 unsupported error，项目可以替换自定义 transport。
 
 ## TypeScript
 
@@ -185,6 +187,8 @@ TypeScript client target 输出：
 - user-owned passthrough 文件，例如 `client.ts`、`transport.ts`、`factory.ts`。
 
 `base_url` / `base_url_expr` 由生成的 HTTP transport facade 拥有，不进入 route/runtime client。`base_url_expr` 会原样写入生成代码，适合 Vite、Next.js 等运行时配置；它与 `base_url` 互斥。
+
+HTTP transport 支持 JSON、urlencoded、multipart 和 binary_schema 请求。multipart DTO 中的文件字段使用 `ApiFilePart = File | Blob | { blob: Blob; filename?: string; contentType?: string }`；raw bytes/file 响应返回 `ApiRawResponse<Blob>` 或 `ApiRawResponse<ArrayBuffer>`，其中包含 `body`、`headers`、`status`、`contentType`、`contentDisposition` 与可推导的 `filename`。byte stream route 使用 `responseType: "stream"`，具体可读流类型取决于运行环境的 Fetch API 能力。
 
 `STREAM` / `CHANNEL` 会生成 `ApiStreamBridge<Recv, Close>` 与 `ApiChannelBridge<Recv, Send, Close>`。单消息方向直接使用模型类型；多消息方向生成判别联合类型，例如 `{ type: "progress"; data: TaskProgress }`。HTTP transport 的 stream bridge 使用 SSE，channel bridge 使用内部 envelope 的 WebSocket 来区分普通消息与 close lifecycle payload；Wails transport 使用 generated runtime events，但事件名不暴露给业务 client。
 
@@ -310,7 +314,7 @@ Python client 使用 `python_package_root` 作为包根，输出 async-first HTT
 - `<python_package_root>/<root>/routes/<root>/<group...>/*`
 - `<python_package_root>/<root>/transports/http/*`
 
-根目录的 `gen_client.py` / `client.py` 提供聚合 facade，推荐入口是 `async with create_client(base_url) as api`。route 方法的 public facade 使用 typed dataclass DTO，不再把 `Mapping[str, Any]` 作为普通请求入口；需要原始 dict/body 逃生时应直接使用 transport。`routes/<root>/<group...>/gen_client.py` 是生成 route client，`routes/<root>/<group...>/gen_types.py` 是 route DTO 与 binary public export surface，`routes/<root>/<group...>/client.py` 是保留的 passthrough 入口，`runtime/gen_codecs.py` 收束共享 decode/encode helper，`transports/http/gen_client.py` 提供默认 httpx adapter。root-level route 直接生成在 `routes/<root>`。该 adapter 实现 RPC 请求；STREAM/CHANNEL bridge interface 会生成，但连接 transport 需要项目自定义或后续扩展。`base_url` / `base_url_expr` 由 HTTP transport adapter 使用。
+根目录的 `gen_client.py` / `client.py` 提供聚合 facade，推荐入口是 `async with create_client(base_url) as api`。route 方法的 public facade 使用 typed dataclass DTO，不再把 `Mapping[str, Any]` 作为普通请求入口；需要原始 dict/body 逃生时应直接使用 transport。`routes/<root>/<group...>/gen_client.py` 是生成 route client，`routes/<root>/<group...>/gen_types.py` 是 route DTO 与 binary public export surface，`routes/<root>/<group...>/client.py` 是保留的 passthrough 入口，`runtime/gen_codecs.py` 收束共享 decode/encode helper，`transports/http/gen_client.py` 提供默认 httpx adapter。root-level route 直接生成在 `routes/<root>`。该 adapter 实现 RPC 的 JSON、urlencoded、multipart 和 binary_schema 请求；multipart 文件可传 bytes、path-like、file-like 或带 filename/content_type 的 tuple/dict，bytes/file raw 响应返回 `ApiRawResponse[bytes]`，byte stream 响应返回 async context manager。STREAM/CHANNEL bridge interface 会生成，但连接 transport 需要项目自定义或后续扩展。`base_url` / `base_url_expr` 由 HTTP transport adapter 使用。
 
 Python DTO 使用 `@dataclass(kw_only=True)`、Python `Enum` / `StrEnum` / `IntEnum` 和生成 codec。显式嵌套 model、数组、map、enum key/value 都会递归生成和解码，例如 response 中的 `dict[str, NestedItem]` 会还原为 `NestedItem` 实例而不是裸 dict。每个 DTO 输出 `from_mapping()`、`from_value()` 和 `to_mapping()`；缺少 required 字段、字段类型错误或 enum 值非法会抛出带字段路径的 `ValueError` / `TypeError`。字段名使用 Python-safe 属性名，JSON/query/form wire name 由 codec 保留。
 
@@ -328,11 +332,11 @@ Python server 同样使用 `python_package_root` 作为包根，输出 route ser
 - `<python_package_root>/<root>/routes/<root>/<group...>/*`
 - `<python_package_root>/<root>/transports/http/*`
 
-`routes/<root>/<group...>/gen_service.py` 是生成的 typed service contract，`routes/<root>/<group...>/service.py` 是用户可维护 stub 入口，`transports/http/gen_server.py` 与 `server.py` 提供 FastAPI HTTP adapter scaffold。root-level route 直接生成在 `routes/<root>`。FastAPI adapter 会把 query/json/form/open dict 递归 decode 成 route DTO 后再进入 service，并把 service 返回的 DTO/scalar/list/map 递归 encode 回 JSON；response envelope 与 typed error 包装仍由 adapter 处理。`STREAM` 生成 `StreamingResponse` SSE bridge，`CHANNEL` 生成 WebSocket bridge，message payload 与 close payload 使用 generated DTO codec；`.REQ_BINARY` 的 Python server service 边界接收原始 `bytes`，不会在 server scaffold 中生成 binary schema parser，业务实现可按项目需要解析。坏 JSON 请求会作为 transport input error 返回 HTTP 400，不进入业务 envelope。Python server WebSocket 运行时需要 `websockets` 或等价 uvicorn WebSocket backend。作为 preview target，Python server 生成结果应纳入项目自己的类型检查、lint 和安装 smoke。
+`routes/<root>/<group...>/gen_service.py` 是生成的 typed service contract，`routes/<root>/<group...>/service.py` 是用户可维护 stub 入口，`transports/http/gen_server.py` 与 `server.py` 提供 FastAPI HTTP adapter scaffold。root-level route 直接生成在 `routes/<root>`。FastAPI adapter 会把 query/json/urlencoded/multipart/open dict 递归 decode 成 route DTO 后再进入 service，multipart route 使用 `UploadFile = File(...)` 与普通字段 `Form(...)` 组装 DTO，并把 service 返回的 DTO/scalar/list/map 递归 encode 回 JSON；response envelope 与 typed error 包装仍由 adapter 处理。raw bytes/file/byte_stream 成功响应分别使用 `Response`、`FileResponse` 或 `StreamingResponse`，不会套 JSON envelope；typed error 仍按 JSON envelope 返回。`STREAM` 生成 `StreamingResponse` SSE bridge，`CHANNEL` 生成 WebSocket bridge，message payload 与 close payload 使用 generated DTO codec；`.REQ_BINARY` 的 Python server service 边界接收原始 `bytes`，不会在 server scaffold 中生成 binary schema parser，业务实现可按项目需要解析。坏 JSON 请求会作为 transport input error 返回 HTTP 400，不进入业务 envelope。Python server WebSocket 运行时需要 `websockets` 或等价 uvicorn WebSocket backend。作为 preview target，Python server 生成结果应纳入项目自己的类型检查、lint 和安装 smoke。
 
 ## examples 快照
 
-`examples/golang/server/`、`examples/golang/client/`、`examples/typescript/`、`examples/flutter/`、`examples/kotlin/client`、`examples/kotlin/server`、`examples/java/client` / `examples/java/server` 与 `examples/python/` 是生成快照，不是业务真源；`examples/java/suite` 是手写运行时验证项目。`examples/golang/conformance/`、`examples/typescript/conformance.ts`、`examples/kotlin/conformance/`、`examples/java/conformance/`、`examples/python/conformance/` 与 `examples/flutter/test/conformance_test.dart` 是 preserved conformance 文件，职责是调用对应语言的生成物并连接真实 Go / Java / Kotlin / Python server，验证 RPC、form、binary、typed error、命名冲突、raw/XML/static/header/scalar/enum/map/deprecated/audit-binary、单模型 channel 以及已支持的 SSE/WebSocket 互通；刷新生成物时不得覆盖这些文件。Go server / Go client / Wails Go contract / agent artifact 索引使用 Go-safe route package segment，Flutter / Kotlin / Java / Python artifact 索引继续使用各自的 route 输出路径。需要接受预期生成变化时，使用：
+`examples/golang/server/`、`examples/golang/client/`、`examples/typescript/`、`examples/flutter/`、`examples/kotlin/client`、`examples/kotlin/server`、`examples/java/client` / `examples/java/server` 与 `examples/python/` 是生成快照，不是业务真源；`examples/java/suite` 是手写运行时验证项目。`examples/golang/conformance/`、`examples/typescript/conformance.ts`、`examples/kotlin/conformance/`、`examples/java/conformance/`、`examples/python/conformance/` 与 `examples/flutter/test/conformance_test.dart` 是 preserved conformance 文件，职责是调用对应语言的生成物并连接真实 Go / Java / Kotlin / Python server，验证 RPC、urlencoded、multipart media、binary_schema、typed error、命名冲突、bytes/file/byte_stream raw response、XML/static/header/scalar/enum/map/deprecated/audit-binary、单模型 channel 以及已支持的 SSE/WebSocket 互通；刷新生成物时不得覆盖这些文件。Go server / Go client / Wails Go contract / agent artifact 索引使用 Go-safe route package segment，Flutter / Kotlin / Java / Python artifact 索引继续使用各自的 route 输出路径。需要接受预期生成变化时，使用：
 
 ```sh
 make example-refresh

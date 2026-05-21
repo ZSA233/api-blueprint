@@ -4,12 +4,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum, IntEnum, StrEnum
 from typing import Any, Callable, Generic, Mapping, Self, TypeVar
+from ....runtime.client import ApiUploadFile
 from ....runtime.gen_codecs import (
     _MISSING,
     _api_to_json,
+    _api_to_transport,
     _decode_any,
     _decode_bool,
     _decode_bytes,
+    _decode_file,
     _decode_float,
     _decode_int,
     _decode_list,
@@ -102,6 +105,19 @@ class AbcQuery:
 
         return result
 
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        if self.arg1 is not None:
+            result["arg1"] = _api_to_transport(self.arg1)
+
+        if self.arg3 is not None:
+            result["arg3"] = _api_to_transport(self.arg3)
+
+        if self.arg2 is not None:
+            result["arg2"] = _api_to_transport(self.arg2)
+
+        return result
+
 
 @dataclass(kw_only=True)
 class AbcResponse:
@@ -157,6 +173,22 @@ class AbcResponse:
         result["enum_list"] = _api_to_json(self.enum_list)
         return result
 
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["bc"] = _api_to_transport(self.bc)
+        result["a"] = _api_to_transport(self.a)
+        result["efg"] = _api_to_transport(self.efg)
+        result["hijk"] = _api_to_transport(self.hijk)
+        if self.lmnop is not None:
+            result["lmnop"] = _api_to_transport(self.lmnop)
+
+        if self.enum_color is not None:
+            result["enum_color"] = _api_to_transport(self.enum_color)
+
+        result["enum_status"] = _api_to_transport(self.enum_status)
+        result["enum_list"] = _api_to_transport(self.enum_list)
+        return result
+
 
 @dataclass(kw_only=True)
 class ApiDemoSubA:
@@ -190,6 +222,12 @@ class ApiDemoSubA:
         result["amap"] = _api_to_json(self.amap)
         return result
 
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["hello"] = _api_to_transport(self.hello)
+        result["amap"] = _api_to_transport(self.amap)
+        return result
+
 
 @dataclass(kw_only=True)
 class ApiDemoMap:
@@ -218,6 +256,11 @@ class ApiDemoMap:
     def to_mapping(self) -> dict[str, Any]:
         result: dict[str, Any] = {}
         result["haha"] = _api_to_json(self.haha)
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["haha"] = _api_to_transport(self.haha)
         return result
 
 
@@ -255,6 +298,14 @@ class TestPostJSON:
 
         return result
 
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["req1"] = _api_to_transport(self.req1)
+        if self.req2 is not None:
+            result["req2"] = _api_to_transport(self.req2)
+
+        return result
+
 
 @dataclass(kw_only=True)
 class TestPostResponse:
@@ -286,6 +337,12 @@ class TestPostResponse:
         result: dict[str, Any] = {}
         result["list"] = _api_to_json(self.list)
         result["map"] = _api_to_json(self.map)
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["list"] = _api_to_transport(self.list)
+        result["map"] = _api_to_transport(self.map)
         return result
 
 
@@ -328,6 +385,17 @@ class FormSubmitForm:
 
         return result
 
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["title"] = _api_to_transport(self.title)
+        if self.count is not None:
+            result["count"] = _api_to_transport(self.count)
+
+        if self.enabled is not None:
+            result["enabled"] = _api_to_transport(self.enabled)
+
+        return result
+
 
 @dataclass(kw_only=True)
 class FormSubmitResponse:
@@ -362,6 +430,13 @@ class FormSubmitResponse:
         result["summary"] = _api_to_json(self.summary)
         result["count"] = _api_to_json(self.count)
         result["enabled"] = _api_to_json(self.enabled)
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["summary"] = _api_to_transport(self.summary)
+        result["count"] = _api_to_transport(self.count)
+        result["enabled"] = _api_to_transport(self.enabled)
         return result
 
 
@@ -406,6 +481,19 @@ class PutDemoQuery:
 
         return result
 
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        if self.arg1 is not None:
+            result["arg1"] = _api_to_transport(self.arg1)
+
+        if self.arg2 is not None:
+            result["arg2"] = _api_to_transport(self.arg2)
+
+        if self.arg3 is not None:
+            result["arg3"] = _api_to_transport(self.arg3)
+
+        return result
+
 
 @dataclass(kw_only=True)
 class PutDemoJSON:
@@ -438,6 +526,14 @@ class PutDemoJSON:
         result["req1"] = _api_to_json(self.req1)
         if self.req2 is not None:
             result["req2"] = _api_to_json(self.req2)
+
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["req1"] = _api_to_transport(self.req1)
+        if self.req2 is not None:
+            result["req2"] = _api_to_transport(self.req2)
 
         return result
 
@@ -474,6 +570,12 @@ class PutDemoResponse:
         result["anon_kv"] = _api_to_json(self.anon_kv)
         return result
 
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["list"] = _api_to_transport(self.list)
+        result["anon_kv"] = _api_to_transport(self.anon_kv)
+        return result
+
 
 @dataclass(kw_only=True)
 class ANONFunc1putAnonKv:
@@ -505,6 +607,12 @@ class ANONFunc1putAnonKv:
         result: dict[str, Any] = {}
         result["kv1"] = _api_to_json(self.kv1)
         result["kv2"] = _api_to_json(self.kv2)
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["kv1"] = _api_to_transport(self.kv1)
+        result["kv2"] = _api_to_transport(self.kv2)
         return result
 
 
@@ -544,6 +652,16 @@ class DeleteQuery:
 
         return result
 
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        if self.arg1 is not None:
+            result["arg1"] = _api_to_transport(self.arg1)
+
+        if self.arg2 is not None:
+            result["arg2"] = _api_to_transport(self.arg2)
+
+        return result
+
 
 @dataclass(kw_only=True)
 class DeleteResponse:
@@ -577,6 +695,12 @@ class DeleteResponse:
         result["anon_list"] = _api_to_json(self.anon_list)
         return result
 
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["list"] = _api_to_transport(self.list)
+        result["anon_list"] = _api_to_transport(self.anon_list)
+        return result
+
 
 @dataclass(kw_only=True)
 class ANONDeleteAnonList:
@@ -608,6 +732,12 @@ class ANONDeleteAnonList:
         result: dict[str, Any] = {}
         result["kv1"] = _api_to_json(self.kv1)
         result["kv2"] = _api_to_json(self.kv2)
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["kv1"] = _api_to_transport(self.kv1)
+        result["kv2"] = _api_to_transport(self.kv2)
         return result
 
 
@@ -645,6 +775,14 @@ class SweepEventsOpen:
 
         return result
 
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["run_id"] = _api_to_transport(self.run_id)
+        if self.replay_from is not None:
+            result["replay_from"] = _api_to_transport(self.replay_from)
+
+        return result
+
 
 @dataclass(kw_only=True)
 class SweepState:
@@ -673,6 +811,11 @@ class SweepState:
     def to_mapping(self) -> dict[str, Any]:
         result: dict[str, Any] = {}
         result["status"] = _api_to_json(self.status)
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["status"] = _api_to_transport(self.status)
         return result
 
 
@@ -708,6 +851,12 @@ class SweepProgress:
         result["total"] = _api_to_json(self.total)
         return result
 
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["current"] = _api_to_transport(self.current)
+        result["total"] = _api_to_transport(self.total)
+        return result
+
 
 @dataclass(kw_only=True)
 class SweepLog:
@@ -739,6 +888,12 @@ class SweepLog:
         result: dict[str, Any] = {}
         result["level"] = _api_to_json(self.level)
         result["message"] = _api_to_json(self.message)
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["level"] = _api_to_transport(self.level)
+        result["message"] = _api_to_transport(self.message)
         return result
 
 
@@ -781,6 +936,17 @@ class SweepEventsClose:
 
         return result
 
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["code"] = _api_to_transport(self.code)
+        if self.reason is not None:
+            result["reason"] = _api_to_transport(self.reason)
+
+        if self.error is not None:
+            result["error"] = _api_to_transport(self.error)
+
+        return result
+
 
 @dataclass(kw_only=True)
 class AssistantSessionOpen:
@@ -809,6 +975,11 @@ class AssistantSessionOpen:
     def to_mapping(self) -> dict[str, Any]:
         result: dict[str, Any] = {}
         result["session_id"] = _api_to_json(self.session_id)
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["session_id"] = _api_to_transport(self.session_id)
         return result
 
 
@@ -841,6 +1012,11 @@ class AssistantDelta:
         result["text"] = _api_to_json(self.text)
         return result
 
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["text"] = _api_to_transport(self.text)
+        return result
+
 
 @dataclass(kw_only=True)
 class AssistantDone:
@@ -869,6 +1045,11 @@ class AssistantDone:
     def to_mapping(self) -> dict[str, Any]:
         result: dict[str, Any] = {}
         result["message_id"] = _api_to_json(self.message_id)
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["message_id"] = _api_to_transport(self.message_id)
         return result
 
 
@@ -901,6 +1082,11 @@ class AssistantInput:
         result["text"] = _api_to_json(self.text)
         return result
 
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["text"] = _api_to_transport(self.text)
+        return result
+
 
 @dataclass(kw_only=True)
 class AssistantCancel:
@@ -930,6 +1116,13 @@ class AssistantCancel:
         result: dict[str, Any] = {}
         if self.reason is not None:
             result["reason"] = _api_to_json(self.reason)
+
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        if self.reason is not None:
+            result["reason"] = _api_to_transport(self.reason)
 
         return result
 
@@ -973,6 +1166,17 @@ class AssistantSessionClose:
 
         return result
 
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["code"] = _api_to_transport(self.code)
+        if self.reason is not None:
+            result["reason"] = _api_to_transport(self.reason)
+
+        if self.error is not None:
+            result["error"] = _api_to_transport(self.error)
+
+        return result
+
 
 @dataclass(kw_only=True)
 class PostDeprecatedJSON:
@@ -1008,6 +1212,14 @@ class PostDeprecatedJSON:
 
         return result
 
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["req1"] = _api_to_transport(self.req1)
+        if self.req2 is not None:
+            result["req2"] = _api_to_transport(self.req2)
+
+        return result
+
 
 @dataclass(kw_only=True)
 class PostDeprecatedResponse:
@@ -1036,6 +1248,11 @@ class PostDeprecatedResponse:
     def to_mapping(self) -> dict[str, Any]:
         result: dict[str, Any] = {}
         result["list"] = _api_to_json(self.list)
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["list"] = _api_to_transport(self.list)
         return result
 
 
@@ -1069,6 +1286,12 @@ class RawResponse:
         result: dict[str, Any] = {}
         result["list"] = _api_to_json(self.list)
         result["list2"] = _api_to_json(self.list2)
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["list"] = _api_to_transport(self.list)
+        result["list2"] = _api_to_transport(self.list2)
         return result
 
 
@@ -1126,6 +1349,22 @@ class ApiDemoA:
         result["enum_list"] = _api_to_json(self.enum_list)
         return result
 
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["bc"] = _api_to_transport(self.bc)
+        result["a"] = _api_to_transport(self.a)
+        result["efg"] = _api_to_transport(self.efg)
+        result["hijk"] = _api_to_transport(self.hijk)
+        if self.lmnop is not None:
+            result["lmnop"] = _api_to_transport(self.lmnop)
+
+        if self.enum_color is not None:
+            result["enum_color"] = _api_to_transport(self.enum_color)
+
+        result["enum_status"] = _api_to_transport(self.enum_status)
+        result["enum_list"] = _api_to_transport(self.enum_list)
+        return result
+
 
 @dataclass(kw_only=True)
 class ErrorDemoQuery:
@@ -1158,6 +1397,13 @@ class ErrorDemoQuery:
 
         return result
 
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        if self.mode is not None:
+            result["mode"] = _api_to_transport(self.mode)
+
+        return result
+
 
 @dataclass(kw_only=True)
 class ErrorDemoResponse:
@@ -1186,6 +1432,11 @@ class ErrorDemoResponse:
     def to_mapping(self) -> dict[str, Any]:
         result: dict[str, Any] = {}
         result["status"] = _api_to_json(self.status)
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["status"] = _api_to_transport(self.status)
         return result
 
 

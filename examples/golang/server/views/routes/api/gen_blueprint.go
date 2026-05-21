@@ -7,6 +7,7 @@ import (
 	"example.com/project/golang/server/views/routes/api/conflict"
 	"example.com/project/golang/server/views/routes/api/demo"
 	"example.com/project/golang/server/views/routes/api/hello"
+	"example.com/project/golang/server/views/routes/api/media"
 )
 
 type Blueprint struct {
@@ -14,6 +15,7 @@ type Blueprint struct {
 	BinaryRouter   *binary.Router
 	ConflictRouter *conflict.Router
 	DemoRouter     *demo.Router
+	MediaRouter    *media.Router
 	HelloRouter    *hello.Router
 }
 
@@ -23,6 +25,7 @@ func NewBlueprint() *Blueprint {
 		BinaryRouter:   binary.NewRouter(),
 		ConflictRouter: conflict.NewRouter(),
 		DemoRouter:     demo.NewRouter(),
+		MediaRouter:    media.NewRouter(),
 		HelloRouter:    hello.NewRouter(),
 	}
 }

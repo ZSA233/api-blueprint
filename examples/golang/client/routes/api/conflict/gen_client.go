@@ -30,6 +30,8 @@ func (client *GenConflictClient) Default(ctx context.Context, query DefaultQuery
 		Path:             "/api/conflict/default",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 		Query:            query,
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
 	var response DefaultResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {

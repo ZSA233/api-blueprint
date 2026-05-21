@@ -232,6 +232,11 @@ type RSPErrorDemo struct {
 	Status string `json:"status" form:"status"`
 }
 
+type MediaPreviewRequest struct {
+	Title string        `json:"title,omitempty" form:"title,omitempty"`
+	Image MultipartFile `json:"image" form:"image"`
+}
+
 type REQAbcQUERY50077bffe423 struct {
 	Arg1 bool    `json:"arg1,omitempty" form:"arg1,omitempty"`
 	Arg3 string  `json:"arg3,omitempty" form:"arg3,omitempty"`

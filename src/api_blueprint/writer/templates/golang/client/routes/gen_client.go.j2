@@ -47,9 +47,11 @@ func (client *Gen{{ group.client_class }}) {{ route.operation }}(ctx context.Con
 		Method:           {{ route.method | code_literal }},
 		Path:             {{ route.url | code_literal }},
 		ResponseEnvelope: {{ route.response_envelope_go_literal | safe }},
-{% for field, value in runtime_request_fields(route) %}		{{ field }}: {{ value }},
+{% for field, value in runtime_request_fields(route) %}		{{ field }}: {{ value | safe }},
 {% endfor %}	}
 {% if response_type == "any" %}	var response any
+{% elif response_type == "*runtime.RawResponse" %}	var response runtime.RawResponse
+{% elif response_type == "*runtime.StreamResponse" %}	var response runtime.StreamResponse
 {% else %}	var response {{ route.response_type }}
 {% endif %}	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err

@@ -281,6 +281,13 @@ public final class ApiTypes {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
+    public record MediaPreviewRequest(
+        @JsonProperty("title") String title,
+        @JsonProperty("image") Object image
+    ) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record ApiHelloMap(
         @JsonProperty("haha") Long haha
     ) {

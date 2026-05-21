@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import os
 import struct
+import tempfile
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import uvicorn
@@ -74,13 +76,19 @@ from api_blueprint_example_server.api.routes.api.hello.gen_types import (
     AbcQuery as HelloAbcQuery,
 )
 from api_blueprint_example_server.api.routes.api.hello.gen_types import ApiHelloMap, HelloWayQuery, MapEnum
+from api_blueprint_example_server.api.routes.api.media.gen_types import MediaPreviewForm
 from api_blueprint_example_server.api.runtime.errors import ApiError, ApiErrorPayload, ApiToastPayload
+from api_blueprint_example_server.api.runtime.server import ApiRawResponse
 from api_blueprint_example_server.api.transports.http.server import create_router as create_api_router
 from api_blueprint_example_server.static.routes.static.gen_types import DocJsonResponse, DochahaResponse
 from api_blueprint_example_server.static.transports.http.server import create_router as create_static_router
 
 
 app = FastAPI()
+
+SAMPLE_JPEG = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00\x01\x00\x01\x00\x00\xff\xd9"
+SAMPLE_XLSX = b"PK\x03\x04api-blueprint media report\n"
+MJPEG_CHUNK = b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + SAMPLE_JPEG + b"\r\n"
 
 
 @app.middleware("http")
@@ -241,6 +249,31 @@ class BinaryService:
         )
 
 
+class MediaService:
+    async def media_preview(self, multipart: MediaPreviewForm) -> bytes:
+        upload = multipart.image
+        read = getattr(upload, "read", None)
+        if callable(read):
+            maybe_data = read()
+            if hasattr(maybe_data, "__await__"):
+                await maybe_data
+        return SAMPLE_JPEG
+
+    async def media_frame(self) -> bytes:
+        return SAMPLE_JPEG
+
+    async def media_download(self) -> str:
+        path = Path(tempfile.gettempdir()) / "api-blueprint-media-report.xlsx"
+        path.write_bytes(SAMPLE_XLSX)
+        return str(path)
+
+    async def media_mjpeg(self) -> ApiRawResponse[Any]:
+        async def chunks():
+            yield MJPEG_CHUNK
+
+        return ApiRawResponse(body=chunks())
+
+
 class HelloService:
     async def abc(self, query: HelloAbcQuery) -> dict[str, ApiHelloMap]:
         key = "ping" if query.type is None else query.type.value
@@ -297,6 +330,7 @@ app.include_router(
         binary_service=BinaryService(),
         conflict_service=ConflictService(),
         demo_service=DemoService(),
+        media_service=MediaService(),
         hello_service=HelloService(),
     )
 )

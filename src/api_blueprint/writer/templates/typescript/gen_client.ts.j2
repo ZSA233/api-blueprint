@@ -51,6 +51,7 @@ export class {{ client_class }} extends BaseClient {
 {% if route.query_type_expr %}      query?: {{ route.query_type_expr }};
 {% endif %}{% if route.json_type_expr %}      json?: {{ route.json_type_expr }};
 {% endif %}{% if route.form_type_expr %}      form?: {{ route.form_type_expr }};
+{% endif %}{% if route.multipart_type_expr %}      multipart?: {{ route.multipart_type_expr }};
 {% endif %}{% if route.has_binary_schema %}      binary: {{ route.binary_type_expr }} | ApiBinaryBody;
 {% elif route.has_body %}      body?: RequestInit["body"];
 {% endif %}      headers?: Record<string, string>;
@@ -68,11 +69,12 @@ export class {{ client_class }} extends BaseClient {
 {% if route.query_type_expr %}      query: request.query as unknown as Record<string, unknown> | undefined,
 {% endif %}{% if route.json_type_expr %}      json: request.json,
 {% endif %}{% if route.form_type_expr %}      form: request.form as unknown as Record<string, unknown> | undefined,
+{% endif %}{% if route.multipart_type_expr %}      multipart: request.multipart as unknown as Record<string, unknown> | undefined,
 {% endif %}{% if route.has_binary_schema %}      binary: {{ route.binary_wire_expr }}.toBinaryBody(request.binary),
 {% elif route.has_body %}      body: request.body,
 {% endif %}      headers: request.headers,
       init,
-      responseType: "{{ 'json' if route.response_media_type == 'application/json' else 'text' }}",
+      responseType: "{{ route.transport_response_type }}",
       responseEnvelope: {{ route.response_envelope_literal }},
       timeoutMs,
     });

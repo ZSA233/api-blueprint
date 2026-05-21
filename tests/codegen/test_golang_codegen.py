@@ -9,7 +9,7 @@ import pytest
 from api_blueprint.contract import build_contract_graph
 from api_blueprint.engine import Blueprint, Error, Model, Toast, provider
 from api_blueprint.engine.binary_schema import parse_binary_schema
-from api_blueprint.engine.model import String
+from api_blueprint.engine.model import FileField, String
 from api_blueprint.engine.envelope import CodeMessageDataEnvelope
 from api_blueprint.writer.golang import GolangResponseEnvelope
 from api_blueprint.writer.golang import GolangWriter
@@ -17,10 +17,48 @@ from api_blueprint.writer.golang import GolangWriter
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
+class MediaUpload(Model):
+    title = String(description="title")
+    image = FileField(content_types=["image/jpeg"], description="image")
+
+
 def test_golang_response_envelope_preserves_generic_type_parameters():
     envelope = GolangResponseEnvelope("RSP_JSON", CodeMessageDataEnvelope)
     assert envelope.proto_def_name == "RSP_JSON_CodeMessageDataEnvelope[T any]"
     assert envelope.generic_types(True) == "[T any]"
+
+
+def test_golang_server_codegen_emits_multipart_and_raw_response_contracts(tmp_path):
+    output_dir = tmp_path / "golang"
+    output_dir.mkdir()
+    (tmp_path / "go.mod").write_text("module example.com/generated\n\ngo 1.23.8\n", encoding="utf-8")
+
+    bp = Blueprint(root="/api", providers=[provider.Req(), provider.Handle(), provider.Rsp()])
+    with bp.group("/media") as views:
+        views.POST("/preview").REQ_MULTIPART(MediaUpload).RSP_BYTES(content_type="image/jpeg")
+        views.GET("/download").RSP_FILE(content_type="application/vnd.ms-excel", filename="report.xls")
+        views.GET("/mjpeg").RSP_BYTE_STREAM(content_type="multipart/x-mixed-replace")
+
+    writer = GolangWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    req_provider = (output_dir / "providers" / "gen_req.go").read_text(encoding="utf-8")
+    rsp_provider = (output_dir / "providers" / "gen_rsp.go").read_text(encoding="utf-8")
+    shared_types = (output_dir / "routes" / "api" / "_gen_types" / "types.go").read_text(encoding="utf-8")
+    route_types = (output_dir / "routes" / "api" / "media" / "gen_types.go").read_text(encoding="utf-8")
+    http_runtime = (output_dir / "transports" / "http" / "gen_engine.go").read_text(encoding="utf-8")
+    http_route = (output_dir / "transports" / "http" / "api" / "media" / "gen_interface.go").read_text(encoding="utf-8")
+
+    assert "type MultipartFile struct" in req_provider
+    assert "BindMultipart bool" in req_provider
+    assert "type RawResponse struct" in rsp_provider
+    assert 'providers "example.com/generated/golang/providers"' in shared_types
+    assert "Image providers.MultipartFile" in shared_types
+    assert "type RSP_Preview = providers.RawResponse" in route_types
+    assert "bindMultipart" in http_runtime
+    assert "writeRawResponse" in http_runtime
+    assert '"req=M|handle|rsp=bytes@CodeMessageDataEnvelope"' in http_route
 
 
 def test_golang_writer_uses_go_safe_route_package_segments(tmp_path):

@@ -101,6 +101,18 @@ def scenario_registry() -> dict[str, Scenario]:
             route_ids=("api.binary.post.auditpacket",),
             description="second binary schema body calls",
         ),
+        "media": Scenario(
+            name="media",
+            categories=("multipart", "raw-response", "stream"),
+            clients=("go", "typescript", "python"),
+            route_ids=(
+                "api.media.post.preview",
+                "api.media.get.frame",
+                "api.media.get.download",
+                "api.media.get.mjpeg",
+            ),
+            description="multipart upload and raw bytes/file/byte stream responses",
+        ),
         "error": Scenario(
             name="error",
             categories=("typed-error", "envelope"),
@@ -236,6 +248,8 @@ def server_supports_scenario(server: str, scenario: Scenario) -> bool:
         return capability.supports_form
     if scenario.name in {"binary", "audit-binary"}:
         return capability.supports_binary
+    if scenario.name == "media":
+        return capability.supports_media
     if scenario.name == "error":
         return capability.supports_typed_error
     if scenario.name == "sse":

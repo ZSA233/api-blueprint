@@ -4,12 +4,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum, IntEnum, StrEnum
 from typing import Any, Callable, Generic, Mapping, Self, TypeVar
+from ...runtime.server import ApiUploadFile
 from ...runtime.gen_codecs import (
     _MISSING,
     _api_to_json,
+    _api_to_transport,
     _decode_any,
     _decode_bool,
     _decode_bytes,
+    _decode_file,
     _decode_float,
     _decode_int,
     _decode_list,
@@ -52,6 +55,10 @@ class DocJsonResponse:
         result: dict[str, Any] = {}
         return result
 
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        return result
+
 
 @dataclass(kw_only=True)
 class DochahaResponse:
@@ -81,5 +88,12 @@ class DochahaResponse:
         result: dict[str, Any] = {}
         if self.a is not None:
             result["a"] = _api_to_json(self.a)
+
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        if self.a is not None:
+            result["a"] = _api_to_transport(self.a)
 
         return result

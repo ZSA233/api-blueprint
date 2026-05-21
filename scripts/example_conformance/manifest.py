@@ -14,6 +14,7 @@ class ClientCapability:
     supports_sse: bool
     supports_websocket: bool
     connection_policy: str = "native"
+    supports_media: bool = False
 
 
 @dataclass(frozen=True)
@@ -29,6 +30,7 @@ class ServerCapability:
     supports_sse: bool
     supports_websocket: bool
     supports_naming: bool
+    supports_media: bool = False
 
 
 def client_manifest() -> dict[str, ClientCapability]:
@@ -43,6 +45,7 @@ def client_manifest() -> dict[str, ClientCapability]:
             supports_sse=False,
             supports_websocket=False,
             connection_policy="raw-probe",
+            supports_media=True,
         ),
         "typescript": ClientCapability(
             name="typescript",
@@ -53,6 +56,7 @@ def client_manifest() -> dict[str, ClientCapability]:
             supports_typed_error=True,
             supports_sse=True,
             supports_websocket=True,
+            supports_media=True,
         ),
         "kotlin": ClientCapability(
             name="kotlin",
@@ -95,6 +99,7 @@ def client_manifest() -> dict[str, ClientCapability]:
             supports_sse=True,
             supports_websocket=True,
             connection_policy="unsupported-contract",
+            supports_media=True,
         ),
     }
 
@@ -113,6 +118,7 @@ def server_manifest() -> dict[str, ServerCapability]:
             supports_sse=True,
             supports_websocket=True,
             supports_naming=True,
+            supports_media=True,
         ),
         "java": ServerCapability(
             "java",
@@ -152,6 +158,7 @@ def server_manifest() -> dict[str, ServerCapability]:
             supports_sse=True,
             supports_websocket=True,
             supports_naming=True,
+            supports_media=True,
         ),
     }
 

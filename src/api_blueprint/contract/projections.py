@@ -626,7 +626,7 @@ def _request_models(route: Mapping[str, Any]) -> list[str]:
     if not isinstance(request, Mapping):
         return []
     models = []
-    for key in ("query_model", "json_model", "form_model", "binary_model"):
+    for key in ("query_model", "json_model", "form_model", "urlencoded_model", "multipart_model", "binary_model"):
         value = request.get(key)
         if value is not None:
             models.append(str(value))

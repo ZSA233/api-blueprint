@@ -84,6 +84,18 @@ class GoClientRoute:
         return response if isinstance(response, Mapping) else {}
 
     @property
+    def body_kind(self) -> str:
+        return str(self.request.get("body_kind") or "none")
+
+    @property
+    def response_kind(self) -> str:
+        return str(self.response.get("kind") or "json")
+
+    @property
+    def multipart_type(self) -> str:
+        return self.public_names.form
+
+    @property
     def connection(self) -> Mapping[str, Any]:
         connection = self.route.get("connection")
         return connection if isinstance(connection, Mapping) else {}

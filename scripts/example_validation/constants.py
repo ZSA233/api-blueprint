@@ -35,6 +35,7 @@ BLUEPRINT_GOLANG_SERVER_PRESERVED = (
     "views/routes/api/demo/impl.go",
     "views/routes/api/impl.go",
     "views/routes/api/hello/impl.go",
+    "views/routes/api/media/impl.go",
     "views/routes/alt/conflict/impl.go",
     "views/routes/static/impl.go",
 )

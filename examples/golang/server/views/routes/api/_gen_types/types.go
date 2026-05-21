@@ -2,6 +2,10 @@
 
 package types
 
+import (
+	providers "example.com/project/golang/server/views/providers"
+)
+
 type HelloChannelMessage struct {
 	Type string `json:"type" xml:"type" form:"type" binding:"required"`
 	Data any    `json:"data" xml:"data" form:"data" binding:"required"`
@@ -92,6 +96,11 @@ type AssistantInput struct {
 
 type AssistantCancel struct {
 	Reason string `json:"reason,omitempty" xml:"reason,omitempty" form:"reason,omitempty" binding:"omitempty"`
+}
+
+type MediaPreviewRequest struct {
+	Title string                  `json:"title,omitempty" xml:"title,omitempty" form:"title,omitempty" binding:"omitempty"`
+	Image providers.MultipartFile `json:"image" xml:"image" form:"image" binding:"required"`
 }
 
 type ApiHelloMap struct {

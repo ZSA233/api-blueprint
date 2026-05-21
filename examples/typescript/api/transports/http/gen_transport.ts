@@ -82,6 +82,78 @@ function buildFormData(data: Record<string, unknown>): FormData {
   return form;
 }
 
+function buildUrlEncoded(data: Record<string, unknown>): URLSearchParams {
+  const params = new URLSearchParams();
+  const append = (key: string, value: unknown) => {
+    if (value === undefined || value === null) {
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((item) => append(key, item));
+      return;
+    }
+    if (typeof value === "object") {
+      params.append(key, JSON.stringify(value));
+      return;
+    }
+    params.append(key, String(value));
+  };
+  Object.entries(data ?? {}).forEach(([key, value]) => append(key, value));
+  return params;
+}
+
+function buildMultipartFormData(data: Record<string, unknown>): FormData {
+  const form = new FormData();
+  const append = (key: string, value: unknown) => {
+    if (value === undefined || value === null) {
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((item) => append(key, item));
+      return;
+    }
+    if (isFilePartObject(value)) {
+      const blob = toBlob(value.blob, value.contentType);
+      if (value.filename) {
+        form.append(key, blob, value.filename);
+      } else {
+        form.append(key, blob);
+      }
+      return;
+    }
+    if (value instanceof Blob) {
+      form.append(key, value);
+      return;
+    }
+    if (typeof File !== "undefined" && value instanceof File) {
+      form.append(key, value);
+      return;
+    }
+    if (value instanceof ArrayBuffer || value instanceof Uint8Array) {
+      form.append(key, toBlob(value));
+      return;
+    }
+    if (typeof value === "object") {
+      form.append(key, JSON.stringify(value));
+      return;
+    }
+    form.append(key, String(value));
+  };
+  Object.entries(data ?? {}).forEach(([key, value]) => append(key, value));
+  return form;
+}
+
+function isFilePartObject(value: unknown): value is { blob: Blob | ArrayBuffer | Uint8Array; filename?: string; contentType?: string } {
+  return value !== null && typeof value === "object" && "blob" in value;
+}
+
+function toBlob(value: Blob | ArrayBuffer | Uint8Array, contentType?: string): Blob {
+  if (value instanceof Blob) {
+    return contentType ? value.slice(0, value.size, contentType) : value;
+  }
+  return new Blob([value], contentType ? { type: contentType } : undefined);
+}
+
 const defaultFetch: typeof fetch = (...args) => fetch(...args);
 
 export class DefaultTransport implements ApiTransport {
@@ -129,6 +201,7 @@ export class DefaultTransport implements ApiTransport {
     query,
     json,
     form,
+    multipart,
     binary,
 
     body: rawBody,
@@ -150,8 +223,11 @@ export class DefaultTransport implements ApiTransport {
     if (json !== undefined) {
       body = JSON.stringify(json);
       headers["Content-Type"] = headers["Content-Type"] ?? "application/json";
+    } else if (multipart !== undefined) {
+      body = buildMultipartFormData(multipart);
     } else if (form !== undefined) {
-      body = buildFormData(form);
+      body = buildUrlEncoded(form);
+      headers["Content-Type"] = headers["Content-Type"] ?? "application/x-www-form-urlencoded";
     } else if (binary !== undefined) {
       body = binaryBodyToUint8Array(binary) as RequestBody;
       headers["Content-Type"] = headers["Content-Type"] ?? binary.contentType;
@@ -210,6 +286,15 @@ export class DefaultTransport implements ApiTransport {
       if (responseType === "text") {
         return (await response.text()) as unknown as R;
       }
+      if (responseType === "blob") {
+        return buildRawResponse(await response.blob(), response) as unknown as R;
+      }
+      if (responseType === "arrayBuffer") {
+        return buildRawResponse(await response.arrayBuffer(), response) as unknown as R;
+      }
+      if (responseType === "stream") {
+        return buildRawResponse(response.body, response) as unknown as R;
+      }
       if (response.status === 204) {
         return undefined as R;
       }
@@ -246,5 +331,34 @@ export class DefaultTransport implements ApiTransport {
   protected connectRaw(options: ChannelConnectOptions<unknown, unknown, SocketCloseInfo>): WebSocket {
     return new WebSocket(this.buildWsUrl(options.path, options.query ?? options.open), options.protocols);
   }
+}
+
+function buildRawResponse<T>(body: T, response: Response) {
+  const disposition = response.headers.get("content-disposition") ?? "";
+  return {
+    body,
+    headers: response.headers,
+    status: response.status,
+    contentType: (response.headers.get("content-type") ?? "").split(";", 1)[0].toLowerCase(),
+    contentDisposition: disposition,
+    filename: filenameFromContentDisposition(disposition),
+  };
+}
+
+function filenameFromContentDisposition(disposition: string): string | undefined {
+  const parts = disposition.split(";").map((part) => part.trim());
+  for (const part of parts) {
+    if (part.toLowerCase().startsWith("filename*=")) {
+      const value = part.split("=", 2)[1]?.replace(/^"|"$/g, "") ?? "";
+      const encoded = value.includes("''") ? value.split("''", 2)[1] : value;
+      return decodeURIComponent(encoded);
+    }
+  }
+  for (const part of parts) {
+    if (part.toLowerCase().startsWith("filename=")) {
+      return part.split("=", 2)[1]?.replace(/^"|"$/g, "") || undefined;
+    }
+  }
+  return undefined;
 }
 

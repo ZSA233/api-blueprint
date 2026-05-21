@@ -9,6 +9,7 @@ import (
 	api_conflict "example.com/project/golang/client/routes/api/conflict"
 	demo "example.com/project/golang/client/routes/api/demo"
 	hello "example.com/project/golang/client/routes/api/hello"
+	media "example.com/project/golang/client/routes/api/media"
 	static "example.com/project/golang/client/routes/static"
 	runtime "example.com/project/golang/client/runtime"
 	httptransport "example.com/project/golang/client/transports/http"
@@ -21,6 +22,7 @@ type Client struct {
 	Binary      *binary.Client
 	APIConflict *api_conflict.Client
 	Demo        *demo.Client
+	Media       *media.Client
 	Hello       *hello.Client
 	Static      *static.Client
 	AltConflict *alt_conflict.Client
@@ -37,6 +39,7 @@ func NewClient(transport runtime.Transport) *Client {
 		Binary:      binary.NewClient(transport),
 		APIConflict: api_conflict.NewClient(transport),
 		Demo:        demo.NewClient(transport),
+		Media:       media.NewClient(transport),
 		Hello:       hello.NewClient(transport),
 		Static:      static.NewClient(transport),
 		AltConflict: alt_conflict.NewClient(transport),

@@ -156,18 +156,28 @@ class ContractGraphBuilder:
         request = {
             "query_model": self._schema_ref(router.req_query),
             "json_model": self._schema_ref(router.req_json),
-            "form_model": self._schema_ref(router.req_form),
+            "form_model": self._schema_ref(router.req_urlencoded),
+            "urlencoded_model": self._schema_ref(router.req_urlencoded),
+            "multipart_model": self._schema_ref(router.req_multipart),
             "binary_model": self._schema_ref(router.req_bin),
             "binary_schema": router.req_binary_schema.to_manifest(include_html=True)
             if router.req_binary_schema is not None
             else None,
+            "body_kind": router.request_body_kind,
         }
         response = None
-        if router.rsp_model is not None:
+        if router.rsp_model is not None or router.response_kind in {"bytes", "file", "byte_stream"}:
             response = {
+                "kind": router.response_kind,
                 "media_type": router.rsp_media_type,
                 "model": self._schema_ref(router.rsp_model),
                 "envelope": router.response_envelope.envelope_spec(),
+                "content_type": router.rsp_media_type,
+                "headers": _raw_response_headers(router),
+                "download": router.response_kind == "file",
+                "streaming": router.response_kind == "byte_stream",
+                "filename": router.rsp_filename,
+                "success_enveloped": router.response_kind not in {"bytes", "file", "byte_stream"},
             }
 
         connection = None
@@ -223,12 +233,16 @@ class ContractGraphBuilder:
         return ContractRouteRuntime(
             query_model=router.req_query,
             json_model=router.req_json,
-            form_model=router.req_form,
+            form_model=router.req_urlencoded,
+            multipart_model=router.req_multipart,
+            body_kind=router.request_body_kind,
             binary_model=router.req_bin,
             binary_schema=router.req_binary_schema,
             open_model=router.open_model,
             response_model=router.rsp_model,
+            response_kind=router.response_kind,
             response_media_type=router.rsp_media_type,
+            response_filename=router.rsp_filename,
             response_envelope=router.response_envelope,
             recvs=tuple(router.recvs),
             sends=tuple(router.sends),
@@ -417,11 +431,17 @@ class ContractGraphBuilder:
 
         field_type = getattr(field_value, "__type__", None)
         if isinstance(field_type, str) and field_type:
-            return {
+            manifest = {
                 "type": field_type,
                 **_contract_field_metadata(getattr(field_value, "__extra__", {}) or {}),
                 **_proto_field_metadata(getattr(field_value, "__extra__", {}) or {}),
             }
+            if field_type == "file":
+                extra = getattr(field_value, "__extra__", {}) or {}
+                manifest["content_types"] = list(extra.get("content_types") or [])
+                if extra.get("max_size") is not None:
+                    manifest["max_size"] = int(extra["max_size"])
+            return manifest
 
         if isinstance(field_value, type):
             return {"type": field_value.__name__.lower()}
@@ -528,6 +548,17 @@ def _contract_root_slug(contract: RouteContract) -> str:
     return contract.route_id.split(".", 1)[0] or "root"
 
 
+def _raw_response_headers(router: Router) -> JsonObject:
+    if router.response_kind != "file":
+        return {}
+    return {
+        "Content-Disposition": {
+            "description": "File download disposition",
+            "required": False,
+        }
+    }
+
+
 def _model_name(model: object) -> str:
     value = getattr(model, "__name__", None)
     if isinstance(value, str) and value:
@@ -604,7 +635,12 @@ def _field_signature(field_value: object) -> object:
         return {"type": "object", "identity": _model_identity(unwrap_model_type(field_value))}
     field_type = getattr(field_value, "__type__", None)
     if isinstance(field_type, str) and field_type:
-        return {"type": field_type}
+        signature: dict[str, object] = {"type": field_type}
+        if field_type == "file":
+            extra = getattr(field_value, "__extra__", {}) or {}
+            signature["content_types"] = list(extra.get("content_types") or [])
+            signature["max_size"] = extra.get("max_size")
+        return signature
     if isinstance(field_value, type):
         return {"type": field_value.__name__.lower()}
     return {"type": type(field_value).__name__}
@@ -700,6 +736,8 @@ def _replace_schema_ref_value(value: object, old: str, new: str) -> None:
                 "query_model",
                 "json_model",
                 "form_model",
+                "urlencoded_model",
+                "multipart_model",
                 "binary_model",
                 "open_model",
                 "close_model",

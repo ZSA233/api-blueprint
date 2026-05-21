@@ -6,7 +6,7 @@ import pytest
 
 from api_blueprint.contract import build_contract_graph
 from api_blueprint.engine.binary_schema import parse_binary_schema
-from api_blueprint.engine.model import Model, String
+from api_blueprint.engine.model import FileField, Model, String
 from api_blueprint.engine import Blueprint, ConnectionDelivery, Error, Toast
 from api_blueprint.engine.envelope import CodeMessageDataEnvelope
 from api_blueprint.writer.core.contracts import route_contract
@@ -18,9 +18,44 @@ class Payload(Model):
     value = String(description="value")
 
 
+class MediaUpload(Model):
+    title = String(description="title")
+    image = FileField(content_types=["image/jpeg"], description="image")
+
+
 def test_typescript_name_helpers_preserve_expected_output():
     assert to_ts_name("REQ_Ws_QUERY") == "ReqWsQuery"
     assert to_ts_identifier("delete$") == '"delete$"'
+
+
+def test_typescript_codegen_emits_multipart_and_raw_response_contracts(tmp_path: Path):
+    bp = Blueprint(root="/api")
+    with bp.group("/media") as views:
+        views.POST("/preview").REQ_MULTIPART(MediaUpload).RSP_BYTES(content_type="image/jpeg")
+        views.GET("/download").RSP_FILE(content_type="application/vnd.ms-excel", filename="report.xls")
+        views.GET("/mjpeg").RSP_BYTE_STREAM(content_type="multipart/x-mixed-replace")
+
+    output_dir = tmp_path / "typescript"
+    writer = TypeScriptWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    runtime_client = (output_dir / "api" / "runtime" / "gen_client.ts").read_text(encoding="utf-8")
+    runtime_types = (output_dir / "api" / "runtime" / "gen_types.ts").read_text(encoding="utf-8")
+    route_types = (output_dir / "api" / "routes" / "api" / "media" / "gen_types.ts").read_text(encoding="utf-8")
+    route_client = (output_dir / "api" / "routes" / "api" / "media" / "gen_client.ts").read_text(encoding="utf-8")
+    transport = (output_dir / "api" / "transports" / "http" / "gen_transport.ts").read_text(encoding="utf-8")
+
+    assert "export type ApiFilePart" in runtime_client
+    assert 'responseType?: "json" | "text" | "blob" | "arrayBuffer" | "stream"' in runtime_client
+    assert 'import type { ApiFilePart, ApiRawResponse }' in route_types
+    assert "image: ApiFilePart;" in runtime_types
+    assert "export type PreviewResponse = ApiRawResponse<Blob>;" in route_types
+    assert "multipart?: Shared.MediaUpload;" in route_client
+    assert "multipart: request.multipart" in route_client
+    assert 'responseType: "blob"' in route_client
+    assert "function buildMultipartFormData" in transport
+    assert "return buildRawResponse(await response.blob(), response)" in transport
 
 
 def test_typescript_registry_builds_wrapper_alias_with_generics():

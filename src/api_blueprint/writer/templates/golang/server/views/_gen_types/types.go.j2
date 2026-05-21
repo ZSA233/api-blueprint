@@ -15,6 +15,7 @@ package {{ bp.com_proto_package }}
 {% set gen_proto_block %}
 {% for proto in protos_list %}
 {% if proto.struct_type == 'struct' %}
+{% set ns.imports = ns.imports + proto.import_specs(fmts) %}
 type {{ proto.def_name }} struct {
 	{% for field in proto.fields_for(fmts) %}{{ field.name }} {{ field.type | safe }} `{{ field.tags | safe }}`
 	{% endfor %}

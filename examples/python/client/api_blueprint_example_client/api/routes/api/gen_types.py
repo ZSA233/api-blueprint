@@ -4,12 +4,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum, IntEnum, StrEnum
 from typing import Any, Callable, Generic, Mapping, Self, TypeVar
+from ...runtime.client import ApiUploadFile
 from ...runtime.gen_codecs import (
     _MISSING,
     _api_to_json,
+    _api_to_transport,
     _decode_any,
     _decode_bool,
     _decode_bytes,
+    _decode_file,
     _decode_float,
     _decode_int,
     _decode_list,
@@ -78,6 +81,12 @@ class HelloChannelMessage:
         result["data"] = _api_to_json(self.data)
         return result
 
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["type"] = _api_to_transport(self.type)
+        result["data"] = _api_to_transport(self.data)
+        return result
+
 
 @dataclass(kw_only=True)
 class HelloChannelClose:
@@ -117,5 +126,18 @@ class HelloChannelClose:
 
         if self.error is not None:
             result["error"] = _api_to_json(self.error)
+
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        if self.code is not None:
+            result["code"] = _api_to_transport(self.code)
+
+        if self.reason is not None:
+            result["reason"] = _api_to_transport(self.reason)
+
+        if self.error is not None:
+            result["error"] = _api_to_transport(self.error)
 
         return result

@@ -18,10 +18,13 @@ import (
 	apiconflict "example.com/project/golang/client/routes/api/conflict"
 	demo "example.com/project/golang/client/routes/api/demo"
 	hello "example.com/project/golang/client/routes/api/hello"
+	media "example.com/project/golang/client/routes/api/media"
 	runtime "example.com/project/golang/client/runtime"
 	runtimebinary "example.com/project/golang/client/runtime/binary"
 	httptransport "example.com/project/golang/client/transports/http"
 )
+
+var sampleJPEG = []byte{0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 'J', 'F', 'I', 'F', 0x00, 0x01, 0x01, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0xff, 0xd9}
 
 func main() {
 	if err := run(); err != nil {
@@ -36,7 +39,7 @@ func run() error {
 		return fmt.Errorf("base URL argument is required")
 	}
 	baseURL := strings.TrimRight(os.Args[1], "/")
-	selected := scenarioSet("rpc,binary,form,error,naming,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,single-channel")
+	selected := scenarioSet("rpc,binary,form,error,naming,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,media,single-channel")
 	if len(os.Args) >= 3 && os.Args[2] != "" {
 		selected = scenarioSet(os.Args[2])
 	}
@@ -102,6 +105,11 @@ func run() error {
 	}
 	if selected["audit-binary"] {
 		if err := checkAuditBinary(ctx, client.Binary); err != nil {
+			return err
+		}
+	}
+	if selected["media"] {
+		if err := checkMedia(ctx, client.Media); err != nil {
 			return err
 		}
 	}
@@ -364,6 +372,53 @@ func checkAuditBinary(ctx context.Context, binaryClient *binaryapi.BinaryClient)
 	}
 	if rsp.Trace != "go-audit" || rsp.ItemCount != 2 || rsp.Checksum != 2 {
 		return fmt.Errorf("audit binary response = %#v", rsp)
+	}
+	return nil
+}
+
+func checkMedia(ctx context.Context, mediaClient *media.MediaClient) error {
+	preview, err := mediaClient.MediaPreview(ctx, media.MediaPreviewForm{
+		Title: "go-media",
+		Image: runtime.MultipartFile{
+			Filename:    "preview.jpg",
+			ContentType: "image/jpeg",
+			Bytes:       sampleJPEG,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("media preview: %w", err)
+	}
+	if preview.StatusCode != http.StatusOK || preview.ContentType != "image/jpeg" || !bytes.HasPrefix(preview.Body, []byte{0xff, 0xd8}) {
+		return fmt.Errorf("media preview response = %#v", preview)
+	}
+
+	frame, err := mediaClient.MediaFrame(ctx)
+	if err != nil {
+		return fmt.Errorf("media frame: %w", err)
+	}
+	if frame.ContentType != "image/jpeg" || !bytes.Equal(frame.Body, sampleJPEG) {
+		return fmt.Errorf("media frame response = %#v", frame)
+	}
+
+	download, err := mediaClient.MediaDownload(ctx)
+	if err != nil {
+		return fmt.Errorf("media download: %w", err)
+	}
+	if download.Filename != "media-report.xlsx" || !bytes.HasPrefix(download.Body, []byte("PK")) {
+		return fmt.Errorf("media download response = %#v", download)
+	}
+
+	stream, err := mediaClient.MediaMjpeg(ctx)
+	if err != nil {
+		return fmt.Errorf("media mjpeg: %w", err)
+	}
+	defer stream.Body.Close()
+	chunk, err := io.ReadAll(stream.Body)
+	if err != nil {
+		return fmt.Errorf("media mjpeg read: %w", err)
+	}
+	if !bytes.Contains(chunk, []byte("--frame")) {
+		return fmt.Errorf("media mjpeg chunk = %q", string(chunk))
 	}
 	return nil
 }

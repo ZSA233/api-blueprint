@@ -38,6 +38,7 @@ exclude = [
     'path:/api/ws',
     'path:/api/demo/ws',
     'path:/api/demo/delete$',
+    'path:/api/media/**',
 ]
 
 [[kotlin.server]]
@@ -47,18 +48,21 @@ module = 'com.example.apiblueprint'
 include = ['tag:api']
 exclude = [
     'path:/static/**',
+    'path:/api/media/**',
 ]
 
 [[java.server]]
 id = 'java.server'
 out_dir = 'java/server'
 module = 'com.example.apiblueprint'
+exclude = ['path:/api/media/**']
 
 [[java.client]]
 id = 'java.client'
 out_dir = 'java/client'
 module = 'com.example.apiblueprint'
 base_url = 'http://localhost:2333'
+exclude = ['path:/api/media/**']
 
 [[flutter.client]]
 id = 'flutter.client'
@@ -66,6 +70,7 @@ out_dir = 'flutter'
 package = 'api_blueprint_example'
 base_url = 'http://localhost:2333'
 include = ['tag:api']
+exclude = ['path:/api/media/**']
 
 [[python.server]]
 id = 'python.server'
@@ -104,7 +109,7 @@ version = 'v3'
 server = 'go.server'
 clients = ['typescript.client']
 frontend_mode = 'external'
-exclude = ['path:/api/binary/**']
+exclude = ['path:/api/binary/**', 'path:/api/media/**']
 
 [[transport.wails]]
 id = 'wails.v2'
@@ -112,7 +117,7 @@ version = 'v2'
 server = 'go.server'
 clients = ['typescript.client']
 frontend_mode = 'external'
-exclude = ['path:/api/binary/**']
+exclude = ['path:/api/binary/**', 'path:/api/media/**']
 
 
 
@@ -121,7 +126,7 @@ id = 'grpc.proto'
 out_dir = 'grpc/protos'
 package = 'example.api'
 go_package_prefix = 'example.com/project/grpc/go'
-exclude = ['path:/api/binary/**']
+exclude = ['path:/api/binary/**', 'path:/api/media/**']
 
 [[grpc.proto.proto_files]]
 file = 'api/api.proto'
@@ -156,7 +161,7 @@ id = 'grpc.go'
 proto = 'grpc.proto'
 out_dir = 'grpc/go'
 module = 'example.com/project/grpc/go'
-exclude = ['path:/api/binary/**']
+exclude = ['path:/api/binary/**', 'path:/api/media/**']
 files = [
     'api/*.proto',
     'static/*.proto',
@@ -166,7 +171,7 @@ files = [
 id = 'grpc.python'
 proto = 'grpc.proto'
 out_dir = 'grpc/python'
-exclude = ['path:/api/binary/**']
+exclude = ['path:/api/binary/**', 'path:/api/media/**']
 files = [
     'api/*.proto',
     'static/*.proto',

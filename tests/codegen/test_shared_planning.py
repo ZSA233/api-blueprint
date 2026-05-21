@@ -5,7 +5,7 @@ import pytest
 from api_blueprint.contract import build_contract_graph
 from api_blueprint.config.resolved import ResolvedApiTargetConfig
 from api_blueprint.engine import Blueprint
-from api_blueprint.engine.model import Model, String
+from api_blueprint.engine.model import FileField, Model, String
 from api_blueprint.writer.core.planning import (
     capability_errors,
     route_matches_rule,
@@ -17,6 +17,10 @@ from api_blueprint.writer.core.sdk_names import RoutePublicNames, go_exported_fi
 
 class Event(Model):
     value = String(description="value")
+
+
+class MediaUpload(Model):
+    file = FileField(content_types=["image/jpeg"], description="file")
 
 
 def test_route_public_names_use_operation_id_and_route_local_suffixes() -> None:
@@ -198,3 +202,29 @@ def test_flutter_client_is_real_generation_capability() -> None:
     assert manifest["flutter-client"]["routes"] == ["rpc", "stream", "channel"]
     assert "binary-schema" in manifest["flutter-client"]["requests"]
     assert manifest["flutter-client"]["transport"] == "injected"
+
+
+def test_media_capability_is_limited_to_v1_targets() -> None:
+    bp = Blueprint(root="/api")
+    with bp.group("/media") as views:
+        views.POST("/preview").REQ_MULTIPART(MediaUpload).RSP_BYTES(content_type="image/jpeg")
+
+    graph = build_contract_graph([bp])
+    supported = [
+        ResolvedApiTargetConfig(id="python.client", kind="python-client", out_dir=None),
+        ResolvedApiTargetConfig(id="python.server", kind="python-server", out_dir=None),
+        ResolvedApiTargetConfig(id="typescript.client", kind="typescript-client", out_dir=None),
+        ResolvedApiTargetConfig(id="go.client", kind="go-client", out_dir=None, module="example.com/client"),
+        ResolvedApiTargetConfig(id="go.server", kind="go-server", out_dir=None, module="example.com/server"),
+    ]
+    unsupported = [
+        ResolvedApiTargetConfig(id="java.client", kind="java-client", out_dir=None, package="com.example"),
+        ResolvedApiTargetConfig(id="kotlin.client", kind="kotlin-client", out_dir=None, package="com.example"),
+        ResolvedApiTargetConfig(id="flutter.client", kind="flutter-client", out_dir=None, package="example"),
+    ]
+
+    assert capability_errors(graph, supported) == []
+    errors = capability_errors(graph, unsupported)
+    assert "java-client does not support multipart request route: api.media.post.preview" in errors
+    assert "kotlin-client does not support bytes response route: api.media.post.preview" in errors
+    assert "flutter-client does not support multipart request route: api.media.post.preview" in errors

@@ -5,4 +5,5 @@ export * as Binary from "./api/binary";
 export * as Conflict from "./api/conflict";
 export * as Demo from "./api/demo";
 export * as Hello from "./api/hello";
+export * as Media from "./api/media";
 

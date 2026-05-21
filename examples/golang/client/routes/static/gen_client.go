@@ -29,6 +29,8 @@ func (client *GenStaticClient) DocJson(ctx context.Context) (*DocJsonResponse, e
 		Method:           "GET",
 		Path:             "/static/doc.json",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "NoEnvelope", Kind: "none", ErrorIdentity: "none", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
 	var response DocJsonResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -43,6 +45,8 @@ func (client *GenStaticClient) Dochaha(ctx context.Context) (*DochahaResponse, e
 		Method:           "GET",
 		Path:             "/static/dochaha",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "NoEnvelope", Kind: "none", ErrorIdentity: "none", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
 	var response DochahaResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {

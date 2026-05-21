@@ -60,6 +60,7 @@ README 应链接到以下用户文档：
 3. 从 Blueprint 构建唯一协议真源 `ContractGraph`。
 4. 通过 `api-gen check`、`api-gen inspect`、`api-gen manifest`、`api-gen diff` 和 `api-gen generate` 检查、查询、归档和生成代码。
 5. 基于同一份 `ContractGraph` 输出 Go server/client、TypeScript client、Flutter client、Kotlin client/server、Java client/server、Python client/server、Wails v2/v3 overlay、gRPC proto/service 定义，以及 protoc-backed Go/Python gRPC stub。
+6. 在支持的 HTTP target 中统一表达 JSON、urlencoded、multipart、binary schema 请求体，以及 buffered bytes、file、byte stream 等 raw 成功响应。
 
 仓库事实：
 
@@ -87,7 +88,11 @@ README 应链接到以下用户文档：
 - `STREAM` 表示服务端持续推送，`CHANNEL` 表示双向消息通道；长连接语义通过 `OPEN`、`SERVER_MESSAGE`、`CLIENT_MESSAGE`、typed `CLOSE`、`ConnectionScope` 与 `ConnectionDelivery` 描述。
 - 多消息类型必须通过单个判别联合消息契约声明，避免多个裸 event 名。
 - 具名 variant 消息联合在 Go、TypeScript、Flutter、Python、Kotlin、Java 中生成构造、解码或分发关键帧 helper，并保持 `{ type, data }` wire shape；Go server 额外为带具名 client message 的 `CHANNEL` 首次生成用户拥有的 `<leaf>_session.go` / `<leaf>_processor.go` / `<leaf>_error.go` scaffold，后续不覆盖；长连接 `Send`、`Close`、`Abort` 为 context-first API。详细使用方式放在 generators 专题文档，不写入 README 首页。
-- Markdown Binary Schema 是 HTTP 二进制请求体的一等契约，route 使用 `.REQ_BINARY(path)` 绑定 Markdown schema。
+- HTTP RPC 请求体在 ContractGraph 中统一记录为 body kind：`none`、`json`、`urlencoded`、`multipart`、`binary_schema` 或 `raw_bytes`。DSL 推荐使用 `JSON(Model)` / `REQ_URLENCODED(Model)` / `REQ_MULTIPART(Model)` / `REQ_BINARY(path)` 表达对应请求体；旧 `.REQ_FORM(Model)` 保留为 urlencoded 兼容入口，不再作为推荐写法。
+- `FileField(content_types=..., max_size=..., description=..., omitempty=False)` 是 multipart 专用字段，只允许出现在 `REQ_MULTIPART` 绑定的 model 中。`FileField` 不允许进入 JSON、urlencoded、普通响应模型或长连接消息模型。
+- 响应在 ContractGraph 中统一记录 response kind：`json`、`xml`、`text`、`bytes`、`file` 或 `byte_stream`。DSL 使用 `RSP_BYTES(content_type=...)`、`RSP_FILE(content_type=..., filename=...)`、`RSP_BYTE_STREAM(content_type=...)` 表达 raw 成功响应。
+- Raw 成功响应不走 JSON response envelope；typed error 仍按既有 JSON 错误 envelope 返回，客户端继续通过 generated typed error helper 识别业务错误。
+- Markdown Binary Schema 是 HTTP 二进制请求体的一等契约，route 使用 `.REQ_BINARY(path)` 绑定 Markdown schema；在 body kind 中它归类为 `binary_schema`，不和 raw response 概念混用。
 - Binary schema metadata 可以写成裸 `key: value` 行，也可以包在 fenced code block 中改善 Markdown 渲染，两种写法解析等价。
 - 同一个 route group 内允许多个 binary schema；packet 入口名保持稳定，schema 内部生成符号按 packet name 作用域输出，归一化后重名的 packet name 在生成阶段报错。
 - Binary schema parser / writer 诊断路径使用 schema 原始 packet、section、object 和 field 名，并在错误发生后按嵌套上下文包装路径，避免成功路径为了诊断信息提前拼接完整 path。
@@ -98,7 +103,7 @@ README 应链接到以下用户文档：
 ## Contract 与 CLI 事实
 
 - 公开 target kind：`contract`、`go-server`、`go-client`、`typescript-client`、`flutter-client`、`kotlin-server`、`kotlin-client`、`java-server`、`java-client`、`python-server`、`python-client`、`http-transport`、`wails-transport`、`grpc-proto`、`grpc-go`、`grpc-python`。
-- `api-gen check` 与 writer 共享 planner / capability metadata，生成前校验 target dependency、route kind、request kind 与 response envelope。
+- `api-gen check` 与 writer 共享 planner / capability metadata，生成前校验 target dependency、route kind、request kind、response kind 与 response envelope。multipart/raw media v1 支持 Go server/client、TypeScript client、Python server/client；Java/Kotlin/Flutter/Wails/gRPC 等尚未实现的目标必须给出明确 unsupported contract 错误，不能静默降级。
 - `api-gen inspect routes/route/files/schema/binary-schema/errors` 是人类和 AI agent 查询 ContractGraph 的主入口；应优先按需查询，而不是先读生成物、完整 manifest 或 shards。
 - 默认 contract target 生成轻量 `api-blueprint.index.json`；完整 JSON manifest、agent manifest、Markdown agent guide、contract shards 和 diff 通过显式命令或 formats/profile 生成。
 - `manifest.version` 是 manifest schema 兼容版本；`manifest.generator.version` 来自包版本真源。
@@ -116,14 +121,14 @@ README 应链接到以下用户文档：
 
 - 生成物 ownership 必须在 docs 中按长期规则描述：生成器拥有 `gen_*` / `Gen*` 文件，用户拥有保留的 facade、impl、service、client 扩展点。
 - Go / Wails Go 生成物的 root/group 目录、Go import path 和 `package` 声明使用 Go-safe route package segment；URL、route path、selection/filter 语义不受影响。
-- Go server 的 `out_dir` 是生成包根；route/provider/transport/error/binary runtime 按生成器布局输出，不隐式追加 `views`。
-- Go client 输出 runtime、routes、transports/http、根 facade；推荐从 `apiclient.NewHTTP(...)` 进入。
-- TypeScript client 输出 runtime、routes、transports，并通过 transport facade 注入 HTTP/Wails 能力。
+- Go server 的 `out_dir` 是生成包根；route/provider/transport/error/binary runtime 按生成器布局输出，不隐式追加 `views`。Go HTTP server 支持 urlencoded、multipart、binary_schema 请求和 bytes/file/byte_stream raw 成功响应，raw 响应通过 generated provider/adapter contract 输出，不再依赖 `HTTP_RAW_RESPONSE()`。
+- Go client 输出 runtime、routes、transports/http、根 facade；推荐从 `apiclient.NewHTTP(...)` 进入。Go HTTP client 支持 multipart file upload，bytes/file raw 响应返回 `RawResponse`，byte stream 返回 `StreamResponse` 并由调用方关闭。
+- TypeScript client 输出 runtime、routes、transports，并通过 transport facade 注入 HTTP/Wails 能力。TypeScript HTTP client 支持 `ApiFilePart` multipart 输入、`ApiRawResponse<T>` raw 响应，以及 `json/text/blob/arrayBuffer/stream` response type 分支。
 - Flutter client 输出纯 Dart package：public entry 位于 `lib/<package>.dart`，实现位于 `lib/src/<root>/runtime`、`routes` 与 `transports/http`；`gen_*.dart` 由生成器覆盖，非 `gen_` facade、HTTP client facade 与 `api_json_codecs.dart` 作为 preserved scaffold 保留。默认 HTTP adapter 使用 `package:http`，STREAM 使用 SSE，CHANNEL 使用 `web_socket_channel`，不生成 Flutter UI、状态管理、鉴权、重试、缓存或 session engine。
 - Flutter 采用 Dart package 输出布局；Kotlin / Java / Python 采用各自语言的 package-first 输出布局；这些 target 按 preview 口径描述，文档应要求使用方把生成结果纳入自身类型检查、lint、编译或 smoke。
 - Kotlin client 使用 OkHttp + kotlinx.serialization，默认 HTTP adapter 覆盖 RPC query/json/form/binary，并用 SSE 实现 `STREAM`、OkHttp WebSocket 实现 `CHANNEL`；Kotlin server 使用 Ktor + kotlinx.serialization，生成 service contract/stub、HTTP RPC adapter、SSE stream bridge、WebSocket channel bridge 和协议关键帧 helper。Kotlin server 不生成宿主 session engine、重试、鉴权、缓存或 room 管理。
 - Java client 使用 Java 17 `HttpClient` + Jackson，Java server 使用 Spring MVC + Jackson；binary schema 会生成 typed packet writer / parser，server controller 会把 `.REQ_BINARY` body 解析为 typed packet 后交给 service；Spring server adapter 生成 `SseEmitter` stream bridge 与 WebSocket channel bridge，但不生成 Gradle/Maven 工程或 JPMS `module-info.java`。
-- Python client 是 async-first，推荐从 `create_client(base_url)` 聚合 facade 进入；route DTO 使用递归强类型 `dataclass(kw_only=True)`、enum 和生成的 `from_mapping()` / `from_value()` / `to_mapping()` codec，通用 decode/encode helper 收束在 runtime `gen_codecs.py`，普通 route facade 使用 typed DTO 入参和 typed DTO/scalar/list/map 返回，raw mapping 逃生口保留在 transport 层。Python server 输出 typed service contract/stub 与 FastAPI HTTP adapter scaffold，包含 RPC/form/binary、typed error、SSE 和 WebSocket 协议桥接；Python server 的 `.REQ_BINARY` service 边界接收原始 `bytes`，坏 JSON 属于 transport input error 并返回 HTTP 400；运行 WebSocket server 需要安装 `websockets` 或等价 uvicorn WebSocket 后端。
+- Python client 是 async-first，推荐从 `create_client(base_url)` 聚合 facade 进入；route DTO 使用递归强类型 `dataclass(kw_only=True)`、enum 和生成的 `from_mapping()` / `from_value()` / `to_mapping()` codec，通用 decode/encode helper 收束在 runtime `gen_codecs.py`，普通 route facade 使用 typed DTO 入参和 typed DTO/scalar/list/map 返回，raw mapping 逃生口保留在 transport 层。Python HTTP client 支持 multipart file upload，bytes/file raw 响应返回 `ApiRawResponse[bytes]`，byte stream 返回 async stream response context。Python server 输出 typed service contract/stub 与 FastAPI HTTP adapter scaffold，包含 RPC/urlencoded/multipart/binary_schema、typed error、SSE 和 WebSocket 协议桥接；Python server multipart route 使用 FastAPI `UploadFile` / `Form` 组装 typed DTO，raw 响应使用 `Response`、`FileResponse` 或 `StreamingResponse`；`.REQ_BINARY` service 边界接收原始 `bytes`，坏 JSON 属于 transport input error 并返回 HTTP 400；运行 WebSocket server 需要安装 `websockets` 或等价 uvicorn WebSocket 后端。
 - Wails target 保持 Go + TypeScript only；`frontend_mode = "external"` 只生成 API artifacts，外部 frontend 需要加载 Wails runtime。
 - gRPC proto 可由 `grpc-proto` target 从 ContractGraph 输出；`grpc-go` / `grpc-python` 可消费同配置内的 `grpc-proto`，也可直接编译手写 proto。
 
@@ -131,7 +136,7 @@ README 应链接到以下用户文档：
 
 - `examples/blueprints/` 是 Blueprint 真源。
 - 语言 examples、`examples/api-blueprint.index.json`、可选 full contract/agent/shards 快照与 `examples/grpc/{protos,go,python}/` 是生成快照；`examples/flutter/` 是纯 Dart package 快照，验证使用 `dart pub get`、`dart analyze` 和 `dart test`。
-- examples DSL 覆盖 query/json/form/binary/raw/XML、static/no-envelope、header、scalar、enum、map、deprecated、typed error、命名冲突、多 blueprint root、stream、channel、SSE/WebSocket 等公开协议场景；暂不支持的端侧能力必须在 conformance manifest 中显式标注，不静默漏测。
+- examples DSL 覆盖 query/json/urlencoded/multipart、binary_schema、bytes/file/byte_stream raw response、XML、static/no-envelope、header、scalar、enum、map、deprecated、typed error、命名冲突、多 blueprint root、stream、channel、SSE/WebSocket 等公开协议场景；暂不支持的端侧能力必须在 conformance manifest 中显式标注，不静默漏测。
 - `scripts/example_validation.py` 负责 snapshot drift、refresh、compile/analyze/import smoke 和旧增强 suite；`python -m scripts.example_conformance` 负责真实互通验证，Makefile 通过 `make example-conformance-*` 暴露同一能力，并用 `EXAMPLE_CONFORMANCE_SERVERS`、`EXAMPLE_CONFORMANCE_CLIENTS`、`EXAMPLE_CONFORMANCE_SCENARIOS`、`EXAMPLE_CONFORMANCE_KEEP_WORKSPACE` 选择矩阵。默认服务端矩阵仍建议从 `go` 开始，完整矩阵可设置 `EXAMPLE_CONFORMANCE_SERVERS=all EXAMPLE_CONFORMANCE_CLIENTS=all`。
 - conformance 当前服务端覆盖 Go HTTP、Java Spring、Kotlin Ktor 和 Python FastAPI；客户端覆盖 Go、TypeScript、Kotlin、Flutter、Java 和 Python。runner 按 server/client/scenario 的能力交集执行；Java/Python client 对暂不支持的 SSE/WebSocket 默认 transport 走显式 unsupported-contract，不能静默漏测。
 - conformance 输出默认采用 stage summary：生成、snapshot、编译、server 启动输出一行状态，client 作为分组标题；每个 client 先输出 `client/setup` 表示正在冷启动或准备测试执行环境，再逐个执行 `client/scenario` 并在该项完成时立即输出结果。状态文本在 TTY 下自动着色，支持 `FORCE_COLOR=1` 与 `NO_COLOR=1`。被调用工具的详细 stdout/stderr 成功时隐藏，失败时回放到 stderr；client 场景失败时会额外回放当前 server log。

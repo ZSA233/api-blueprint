@@ -88,6 +88,12 @@ def _decode_bytes(value: object, path: str) -> bytes:
     raise TypeError(f"{path}: expected bytes")
 
 
+def _decode_file(value: object, path: str) -> object:
+    if value is None:
+        raise TypeError(f"{path}: expected file")
+    return value
+
+
 def _decode_list(value: object, path: str, item_decoder) -> list[Any]:
     if not isinstance(value, list):
         raise TypeError(f"{path}: expected list")
@@ -122,4 +128,24 @@ def _api_to_json(value: object) -> object:
         return [_api_to_json(item) for item in value]
     if isinstance(value, bytes):
         return value.decode("utf-8")
+    return value
+
+
+def _api_to_transport(value: object) -> object:
+    if value is None:
+        return None
+    if isinstance(value, Enum):
+        return value.value
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return value
+    if hasattr(value, "to_transport_mapping"):
+        return value.to_transport_mapping()
+    if hasattr(value, "to_mapping"):
+        return value.to_mapping()
+    if isinstance(value, Mapping):
+        return {_api_key_to_json(key): _api_to_transport(item) for key, item in value.items() if item is not None}
+    if isinstance(value, list):
+        return [_api_to_transport(item) for item in value]
+    if isinstance(value, tuple):
+        return value
     return value

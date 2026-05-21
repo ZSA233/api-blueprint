@@ -25,6 +25,7 @@ class TargetCapability:
     outputs: tuple[str, ...] = ()
     inputs: tuple[str, ...] = ()
     frontend_modes: tuple[str, ...] = ()
+    responses: tuple[str, ...] = ()
 
     def to_manifest(self) -> dict[str, object]:
         manifest: dict[str, object] = {"implemented": self.implemented, "routes": list(self.routes)}
@@ -44,6 +45,8 @@ class TargetCapability:
             manifest["inputs"] = list(self.inputs)
         if self.frontend_modes:
             manifest["frontend_modes"] = list(self.frontend_modes)
+        if self.responses:
+            manifest["responses"] = list(self.responses)
         return manifest
 
 
@@ -52,68 +55,78 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
     "go-server": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "binary", "binary-schema", "open"),
+        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
+        responses=("json", "xml", "bytes", "file", "byte_stream"),
     ),
     "go-client": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "binary", "binary-schema", "open"),
+        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
+        responses=("json", "xml", "bytes", "file", "byte_stream"),
     ),
     "typescript-client": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "binary", "binary-schema", "open"),
+        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
+        responses=("json", "xml", "bytes", "file", "byte_stream"),
     ),
     "kotlin-client": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "binary", "binary-schema", "open"),
+        requests=("query", "json", "form", "urlencoded", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
+        responses=("json", "xml"),
     ),
     "kotlin-server": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "binary", "binary-schema", "open"),
+        requests=("query", "json", "form", "urlencoded", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
+        responses=("json", "xml"),
     ),
     "java-server": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "binary", "binary-schema", "open"),
+        requests=("query", "json", "form", "urlencoded", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
+        responses=("json", "xml"),
     ),
     "java-client": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "binary", "binary-schema", "open"),
+        requests=("query", "json", "form", "urlencoded", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
+        responses=("json", "xml"),
     ),
     "flutter-client": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "binary", "binary-schema", "open"),
+        requests=("query", "json", "form", "urlencoded", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
+        responses=("json", "xml"),
     ),
     "python-server": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "binary", "binary-schema", "open"),
+        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
+        responses=("json", "xml", "bytes", "file", "byte_stream"),
     ),
     "python-client": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "binary", "binary-schema", "open"),
+        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
+        responses=("json", "xml", "bytes", "file", "byte_stream"),
     ),
     "http-transport": TargetCapability(implemented=True, routes=("rpc", "stream", "channel")),
     "wails-transport": TargetCapability(
@@ -207,6 +220,8 @@ def _route_capability_errors(
             ("query", "query_model"),
             ("json", "json_model"),
             ("form", "form_model"),
+            ("urlencoded", "urlencoded_model"),
+            ("multipart", "multipart_model"),
             ("binary", "binary_model"),
             ("binary-schema", "binary_schema"),
             ("open", "open_model"),
@@ -215,6 +230,10 @@ def _route_capability_errors(
                 errors.append(f"{target.kind} does not support {request_kind} request route: {route_id}")
 
     response = route.get("response") or {}
+    if capability.responses and isinstance(response, Mapping):
+        response_kind = str(response.get("kind") or "json")
+        if response_kind not in capability.responses:
+            errors.append(f"{target.kind} does not support {response_kind} response route: {route_id}")
     if capability.envelopes and isinstance(response, Mapping):
         response_envelope = response.get("envelope")
         envelope = _envelope_kind(response_envelope)

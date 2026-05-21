@@ -5,12 +5,14 @@ import asyncio
 import json
 from dataclasses import asdict, is_dataclass
 from enum import Enum
-from typing import Any
+from pathlib import Path
+from typing import Any, AsyncIterable, Iterable, Mapping
 
 from fastapi import APIRouter, WebSocket, Request, HTTPException, WebSocketDisconnect
-from starlette.responses import StreamingResponse, JSONResponse
+from starlette.responses import StreamingResponse, JSONResponse, FileResponse, Response
 
 from ...runtime.errors import ApiError, make_api_error_payload
+from ...runtime.server import ApiRawResponse
 from ...routes.static.service import StaticService, StaticServiceStub
 from ...routes.static import gen_types as static_types
 
@@ -28,6 +30,7 @@ def create_router(
             result = await service.doc_json(
             )
             return _wrap_response({"name": "NoEnvelope", "kind": "none", "error_identity": "none", "success_code": 0, "success_message": "ok", "fields": {}}, result)
+
         except ApiError as error:
             return _wrap_api_error({"name": "NoEnvelope", "kind": "none", "error_identity": "none", "success_code": 0, "success_message": "ok", "fields": {}}, error, "static.static.get.docjson")
 
@@ -38,6 +41,7 @@ def create_router(
             result = await service.dochaha(
             )
             return _wrap_response({"name": "NoEnvelope", "kind": "none", "error_identity": "none", "success_code": 0, "success_message": "ok", "fields": {}}, result)
+
         except ApiError as error:
             return _wrap_api_error({"name": "NoEnvelope", "kind": "none", "error_identity": "none", "success_code": 0, "success_message": "ok", "fields": {}}, error, "static.static.get.dochaha")
 
@@ -64,6 +68,11 @@ async def _form_body(request: Request) -> dict[str, Any]:
     values = await request.form()
     result = {key: value for key, value in values.multi_items()}
     return result
+
+
+async def _multipart_body(request: Request) -> dict[str, Any]:
+    values = await request.form()
+    return {key: value for key, value in values.multi_items()}
 
 
 def _jsonable(value: Any) -> Any:
@@ -110,6 +119,53 @@ def _wrap_response(envelope: dict[str, Any], data: Any) -> Any:
             fields.get("data", "data"): payload,
         }
     return payload
+
+
+def _raw_response(
+    *,
+    kind: str,
+    content_type: str,
+    filename: str | None,
+    result: Any,
+) -> Response:
+    status = 200
+    headers: Mapping[str, str] | None = None
+    body = result
+    effective_content_type = content_type
+    effective_filename = filename
+    if isinstance(result, ApiRawResponse):
+        status = result.status
+        headers = result.headers
+        body = result.body
+        effective_content_type = result.content_type or content_type
+        effective_filename = result.filename or filename
+    if isinstance(body, Response):
+        return body
+    if kind == "file":
+        return FileResponse(
+            path=body if isinstance(body, (str, Path)) else Path(str(body)),
+            status_code=status,
+            media_type=effective_content_type,
+            filename=effective_filename,
+            headers=dict(headers or {}),
+        )
+    if kind == "byte_stream":
+        return StreamingResponse(
+            body,
+            status_code=status,
+            media_type=effective_content_type,
+            headers=dict(headers or {}),
+        )
+    if isinstance(body, str):
+        content = body.encode("utf-8")
+    else:
+        content = bytes(body or b"")
+    return Response(
+        content=content,
+        status_code=status,
+        media_type=effective_content_type,
+        headers=dict(headers or {}),
+    )
 
 
 def _wrap_api_error(envelope: dict[str, Any], error: ApiError, route_id: str) -> Any:

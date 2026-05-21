@@ -71,6 +71,7 @@ class GolangTypeResolver:
         "boolean": "bool",
         "bool": "bool",
         "byte": "byte",
+        "file": "{provider_package$}MultipartFile",
         "error": "error",
         "null": "nil",
     }

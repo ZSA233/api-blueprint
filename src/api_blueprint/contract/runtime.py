@@ -12,11 +12,15 @@ class ContractRouteRuntime:
     query_model: ModelRef | None
     json_model: ModelRef | None
     form_model: ModelRef | None
+    multipart_model: ModelRef | None
+    body_kind: str
     binary_model: ModelRef | None
     binary_schema: BinarySchema | None
     open_model: ModelRef | None
     response_model: ModelRef | None
+    response_kind: str
     response_media_type: str
+    response_filename: str | None
     response_envelope: type[ResponseEnvelope]
     recvs: tuple[ModelRef, ...]
     sends: tuple[ModelRef, ...]

@@ -30,6 +30,8 @@ func (client *GenDemoClient) Abc(ctx context.Context, query AbcQuery) (*AbcRespo
 		Path:             "/api/demo/abc",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 		Query:            query,
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
 	var response AbcResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -45,6 +47,8 @@ func (client *GenDemoClient) TestPost(ctx context.Context, jsonBody TestPostJSON
 		Path:             "/api/demo/test_post",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 		JSON:             jsonBody,
+		BodyKind:         runtime.RequestBodyKind("json"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
 	var response TestPostResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -60,6 +64,8 @@ func (client *GenDemoClient) FormSubmit(ctx context.Context, formBody FormSubmit
 		Path:             "/api/demo/form-submit",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 		Form:             formBody,
+		BodyKind:         runtime.RequestBodyKind("urlencoded"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
 	var response FormSubmitResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -76,6 +82,8 @@ func (client *GenDemoClient) PutDemo(ctx context.Context, query PutDemoQuery, js
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 		Query:            query,
 		JSON:             jsonBody,
+		BodyKind:         runtime.RequestBodyKind("json"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
 	var response PutDemoResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -91,6 +99,8 @@ func (client *GenDemoClient) Delete(ctx context.Context, query DeleteQuery) (*De
 		Path:             "/api/demo/delete$",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 		Query:            query,
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("xml"),
 	}
 	var response DeleteResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -126,6 +136,8 @@ func (client *GenDemoClient) PostDeprecated(ctx context.Context, jsonBody PostDe
 		Path:             "/api/demo/post_deprecated",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 		JSON:             jsonBody,
+		BodyKind:         runtime.RequestBodyKind("json"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
 	var response PostDeprecatedResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -140,6 +152,8 @@ func (client *GenDemoClient) Raw(ctx context.Context) (*RawResponse, error) {
 		Method:           "POST",
 		Path:             "/api/demo/raw",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
 	var response RawResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -154,6 +168,8 @@ func (client *GenDemoClient) MapModel(ctx context.Context) (*MapModelResponse, e
 		Method:           "POST",
 		Path:             "/api/demo/map_model",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
 	var response MapModelResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -169,6 +185,8 @@ func (client *GenDemoClient) ErrorDemo(ctx context.Context, query ErrorDemoQuery
 		Path:             "/api/demo/error-demo",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 		Query:            query,
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
 	var response ErrorDemoResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {

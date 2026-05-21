@@ -21,6 +21,7 @@ from .fields import (
     Enum,
     Error,
     FieldWrappedModel,
+    FileField,
     Float,
     Float32,
     Float64,
@@ -184,6 +185,8 @@ def resolve_field(
             py_type, _ = resolve_field(obj, name=name, router=router)
     elif ismatch(field, Error):
         py_type = Any
+    elif ismatch(field, FileField):
+        py_type = fastapi.UploadFile
     elif ismatch(field, Null):
         py_type = Any
     elif ismatch(field, Header):
@@ -213,6 +216,8 @@ def _normalize_field_factory_kwargs(extra: dict[str, Any], *, description: str) 
     optional = bool(copy_extra.pop("optional", False))
     omitempty = bool(copy_extra.pop("omitempty", False))
     regex = copy_extra.pop("regex", None)
+    content_types = copy_extra.pop("content_types", None)
+    max_size = copy_extra.pop("max_size", None)
 
     if regex is not None:
         copy_extra["pattern"] = regex
@@ -221,6 +226,10 @@ def _normalize_field_factory_kwargs(extra: dict[str, Any], *, description: str) 
     merged_schema_extra = dict(json_schema_extra or {})
     if omitempty:
         merged_schema_extra["omitempty"] = True
+    if content_types:
+        merged_schema_extra["content_types"] = list(content_types)
+    if max_size is not None:
+        merged_schema_extra["max_size"] = int(max_size)
     if merged_schema_extra:
         copy_extra["json_schema_extra"] = merged_schema_extra
 

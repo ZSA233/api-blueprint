@@ -5,12 +5,14 @@ import asyncio
 import json
 from dataclasses import asdict, is_dataclass
 from enum import Enum
-from typing import Any
+from pathlib import Path
+from typing import Any, AsyncIterable, Iterable, Mapping
 
 from fastapi import APIRouter, WebSocket, Request, HTTPException, WebSocketDisconnect
-from starlette.responses import StreamingResponse, JSONResponse
+from starlette.responses import StreamingResponse, JSONResponse, FileResponse, Response
 
 from ...runtime.errors import ApiError, make_api_error_payload
+from ...runtime.server import ApiRawResponse
 from ...routes.api.service import ApiService, ApiServiceStub
 from ...routes.api import gen_types as api_types
 
@@ -23,6 +25,9 @@ from ...routes.api.conflict import gen_types as api_conflict_types
 from ...routes.api.demo.service import DemoService, DemoServiceStub
 from ...routes.api.demo import gen_types as api_demo_types
 
+from ...routes.api.media.service import MediaService, MediaServiceStub
+from ...routes.api.media import gen_types as api_media_types
+
 from ...routes.api.hello.service import HelloService, HelloServiceStub
 from ...routes.api.hello import gen_types as api_hello_types
 
@@ -32,6 +37,7 @@ def create_router(
     binary_service: BinaryService | None = None,
     conflict_service: ConflictService | None = None,
     demo_service: DemoService | None = None,
+    media_service: MediaService | None = None,
     hello_service: HelloService | None = None,
 ) -> APIRouter:
     router = APIRouter()
@@ -39,6 +45,7 @@ def create_router(
     binary_service_impl = binary_service or BinaryServiceStub()
     conflict_service_impl = conflict_service or ConflictServiceStub()
     demo_service_impl = demo_service or DemoServiceStub()
+    media_service_impl = media_service or MediaServiceStub()
     hello_service_impl = hello_service or HelloServiceStub()
 
     @router.websocket("/api/ws")
@@ -73,6 +80,7 @@ def create_router(
                 binary=binary,
             )
             return _wrap_response({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, result)
+
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.binary.post.packet")
 
@@ -93,6 +101,7 @@ def create_router(
                 binary=binary,
             )
             return _wrap_response({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, result)
+
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.binary.post.auditpacket")
 
@@ -111,6 +120,7 @@ def create_router(
                 query=query,
             )
             return _wrap_response({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, result)
+
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.conflict.get.default")
 
@@ -129,6 +139,7 @@ def create_router(
                 query=query,
             )
             return _wrap_response({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, result)
+
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.demo.get.abc")
 
@@ -147,6 +158,7 @@ def create_router(
                 json=json_body,
             )
             return _wrap_response({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, result)
+
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.demo.post.testpost")
 
@@ -165,6 +177,7 @@ def create_router(
                 form=form,
             )
             return _wrap_response({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, result)
+
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.demo.post.formsubmit")
 
@@ -186,6 +199,7 @@ def create_router(
                 json=json_body,
             )
             return _wrap_response({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, result)
+
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.demo.put.z1put")
 
@@ -204,6 +218,7 @@ def create_router(
                 query=query,
             )
             return _wrap_response({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, result)
+
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.demo.delete.delete")
 
@@ -273,6 +288,7 @@ def create_router(
                 json=json_body,
             )
             return _wrap_response({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, result)
+
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.demo.post.postdeprecated")
 
@@ -283,6 +299,7 @@ def create_router(
             result = await service.raw(
             )
             return _wrap_response({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, result)
+
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.demo.post.raw")
 
@@ -293,6 +310,7 @@ def create_router(
             result = await service.map_model(
             )
             return _wrap_response({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, result)
+
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.demo.post.mapmodel")
 
@@ -311,8 +329,81 @@ def create_router(
                 query=query,
             )
             return _wrap_response({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, result)
+
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.demo.get.errordemo")
+
+    @router.api_route("/api/media/preview", methods=["POST"])
+    async def media_media_preview(request: Request) -> Any:
+        service = media_service_impl
+        multipart_raw = await _multipart_body(request)
+        try:
+            multipart = api_media_types.MediaPreviewForm.from_value(multipart_raw, "multipart")
+
+        except (TypeError, ValueError) as error:
+            return _bad_request_response(error)
+
+        try:
+            result = await service.media_preview(
+                multipart=multipart,
+            )
+            return _raw_response(
+                kind="bytes",
+                content_type="image/jpeg",
+                filename=None,
+                result=result,
+            )
+
+        except ApiError as error:
+            return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.media.post.preview")
+
+    @router.api_route("/api/media/frame", methods=["GET"])
+    async def media_media_frame(request: Request) -> Any:
+        service = media_service_impl
+        try:
+            result = await service.media_frame(
+            )
+            return _raw_response(
+                kind="bytes",
+                content_type="image/jpeg",
+                filename=None,
+                result=result,
+            )
+
+        except ApiError as error:
+            return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.media.get.frame")
+
+    @router.api_route("/api/media/download", methods=["GET"])
+    async def media_media_download(request: Request) -> Any:
+        service = media_service_impl
+        try:
+            result = await service.media_download(
+            )
+            return _raw_response(
+                kind="file",
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                filename='media-report.xlsx',
+                result=result,
+            )
+
+        except ApiError as error:
+            return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.media.get.download")
+
+    @router.api_route("/api/media/mjpeg", methods=["GET"])
+    async def media_media_mjpeg(request: Request) -> Any:
+        service = media_service_impl
+        try:
+            result = await service.media_mjpeg(
+            )
+            return _raw_response(
+                kind="byte_stream",
+                content_type="multipart/x-mixed-replace; boundary=frame",
+                filename=None,
+                result=result,
+            )
+
+        except ApiError as error:
+            return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.media.get.mjpeg")
 
     @router.api_route("/api/hello/abc", methods=["GET"])
     async def hello_abc(request: Request) -> Any:
@@ -329,6 +420,7 @@ def create_router(
                 query=query,
             )
             return _wrap_response({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, result)
+
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.hello.get.abc")
 
@@ -339,6 +431,7 @@ def create_router(
             result = await service.map_enum(
             )
             return _wrap_response({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, result)
+
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.hello.get.mapenum")
 
@@ -349,6 +442,7 @@ def create_router(
             result = await service.list_enum(
             )
             return _wrap_response({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, result)
+
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.hello.get.listenum")
 
@@ -359,6 +453,7 @@ def create_router(
             result = await service.string(
             )
             return _wrap_response({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, result)
+
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.hello.get.string")
 
@@ -369,6 +464,7 @@ def create_router(
             result = await service.uint64(
             )
             return _wrap_response({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, result)
+
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.hello.get.uint64")
 
@@ -379,6 +475,7 @@ def create_router(
             result = await service.string_emun(
             )
             return _wrap_response({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, result)
+
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.hello.get.stringemun")
 
@@ -397,6 +494,7 @@ def create_router(
                 query=query,
             )
             return _wrap_response({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, result)
+
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.hello.get.helloway")
 
@@ -423,6 +521,11 @@ async def _form_body(request: Request) -> dict[str, Any]:
     values = await request.form()
     result = {key: value for key, value in values.multi_items()}
     return result
+
+
+async def _multipart_body(request: Request) -> dict[str, Any]:
+    values = await request.form()
+    return {key: value for key, value in values.multi_items()}
 
 
 def _jsonable(value: Any) -> Any:
@@ -469,6 +572,53 @@ def _wrap_response(envelope: dict[str, Any], data: Any) -> Any:
             fields.get("data", "data"): payload,
         }
     return payload
+
+
+def _raw_response(
+    *,
+    kind: str,
+    content_type: str,
+    filename: str | None,
+    result: Any,
+) -> Response:
+    status = 200
+    headers: Mapping[str, str] | None = None
+    body = result
+    effective_content_type = content_type
+    effective_filename = filename
+    if isinstance(result, ApiRawResponse):
+        status = result.status
+        headers = result.headers
+        body = result.body
+        effective_content_type = result.content_type or content_type
+        effective_filename = result.filename or filename
+    if isinstance(body, Response):
+        return body
+    if kind == "file":
+        return FileResponse(
+            path=body if isinstance(body, (str, Path)) else Path(str(body)),
+            status_code=status,
+            media_type=effective_content_type,
+            filename=effective_filename,
+            headers=dict(headers or {}),
+        )
+    if kind == "byte_stream":
+        return StreamingResponse(
+            body,
+            status_code=status,
+            media_type=effective_content_type,
+            headers=dict(headers or {}),
+        )
+    if isinstance(body, str):
+        content = body.encode("utf-8")
+    else:
+        content = bytes(body or b"")
+    return Response(
+        content=content,
+        status_code=status,
+        media_type=effective_content_type,
+        headers=dict(headers or {}),
+    )
 
 
 def _wrap_api_error(envelope: dict[str, Any], error: ApiError, route_id: str) -> Any:

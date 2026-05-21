@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Protocol
+from pathlib import Path
+from typing import Any, AsyncIterable, Iterable, Protocol
 
-from {{ group.runtime_import_prefix }}runtime.server import ApiServerChannel, ApiServerStream
+from {{ group.runtime_import_prefix }}runtime.server import ApiRawResponse, ApiServerChannel, ApiServerStream
 {% if group.type_import_names() %}
 from .gen_types import (
 {% for name in group.type_import_names() %}    {{ name }},
@@ -18,9 +19,9 @@ class {{ group.service_class }}(Protocol):
         {{ param.name }}: {{ param.service_annotation }}{% if param.default is not none %} = {{ param.default }}{% endif %}{% endfor %}{% if route.supports_stream %},
         stream: ApiServerStream[{{ route.server_message_type.annotation if route.server_message_type else 'Any' }}, {{ route.close_type.annotation if route.close_type else 'Any' }}] | None = None{% endif %}{% if route.supports_channel %},
         channel: ApiServerChannel[{{ route.client_message_type.annotation if route.client_message_type else 'Any' }}, {{ route.server_message_type.annotation if route.server_message_type else 'Any' }}, {{ route.close_type.annotation if route.close_type else 'Any' }}] | None = None{% endif %},
-    ) -> {{ route.response_annotation if route.is_rpc else 'Any' }}:
+    ) -> {{ route.service_response_annotation if route.is_rpc else 'Any' }}:
 {% else %}
-    async def {{ route.method_name }}(self) -> {{ route.response_annotation if route.is_rpc else 'Any' }}:
+    async def {{ route.method_name }}(self) -> {{ route.service_response_annotation if route.is_rpc else 'Any' }}:
 {% endif %}
         ...
 {% endfor %}{% else %}
@@ -36,9 +37,9 @@ class {{ group.service_class }}Stub:
         {{ param.name }}: {{ param.service_annotation }}{% if param.default is not none %} = {{ param.default }}{% endif %}{% endfor %}{% if route.supports_stream %},
         stream: ApiServerStream[{{ route.server_message_type.annotation if route.server_message_type else 'Any' }}, {{ route.close_type.annotation if route.close_type else 'Any' }}] | None = None{% endif %}{% if route.supports_channel %},
         channel: ApiServerChannel[{{ route.client_message_type.annotation if route.client_message_type else 'Any' }}, {{ route.server_message_type.annotation if route.server_message_type else 'Any' }}, {{ route.close_type.annotation if route.close_type else 'Any' }}] | None = None{% endif %},
-    ) -> {{ route.response_annotation if route.is_rpc else 'Any' }}:
+    ) -> {{ route.service_response_annotation if route.is_rpc else 'Any' }}:
 {% else %}
-    async def {{ route.method_name }}(self) -> {{ route.response_annotation if route.is_rpc else 'Any' }}:
+    async def {{ route.method_name }}(self) -> {{ route.service_response_annotation if route.is_rpc else 'Any' }}:
 {% endif %}
         raise NotImplementedError({{ route.method_name_literal | safe }})
 {% endfor %}{% else %}

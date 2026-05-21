@@ -12,7 +12,7 @@ from api_blueprint.contract import (
 )
 from api_blueprint.engine import Blueprint, Error, Toast
 from api_blueprint.engine.connection import ConnectionDelivery, ConnectionScope
-from api_blueprint.engine.model import Int, String, Model, field
+from api_blueprint.engine.model import FileField, Int, String, Model, field
 from api_blueprint.writer.core import contracts as legacy_contracts
 from api_blueprint.writer.core.contract_adapters import RouteContractIndex
 
@@ -38,6 +38,11 @@ class GenericContractPayload(Model):
     name = field(1, String(description="name"), optional=True)
     success = field(2, String(description="success"), choice="result")
     error = field(3, String(description="error"), choice="result")
+
+
+class MediaUpload(Model):
+    title = String(description="title")
+    file = FileField(content_types=["image/jpeg"], max_size=1024, description="file")
 
 
 def test_contract_graph_manifest_captures_rpc_and_connection_routes():
@@ -76,6 +81,37 @@ def test_contract_graph_manifest_captures_rpc_and_connection_routes():
     schema = manifest["schemas"]["CloseInfo"]
     assert schema["fields"]["reason"]["optional"] is True
     assert len(manifest["hashes"]["routes"]["api.runs.stream.events"]) == 64
+
+
+def test_contract_graph_manifest_captures_media_body_and_raw_response_kinds():
+    bp = Blueprint(root="/api")
+    with bp.group("/media") as views:
+        views.POST("/preview").REQ_MULTIPART(MediaUpload).RSP_BYTES(content_type="image/jpeg")
+        views.GET("/download").RSP_FILE(content_type="application/vnd.ms-excel", filename="report.xls")
+        views.GET("/mjpeg").RSP_BYTE_STREAM(content_type="multipart/x-mixed-replace; boundary=frame")
+
+    manifest = build_contract_graph([bp]).to_manifest()
+    routes = {route["operation"]: route for route in manifest["routes"]}
+
+    preview = routes["Preview"]
+    assert preview["request"]["body_kind"] == "multipart"
+    assert preview["request"]["multipart_model"] == "MediaUpload"
+    assert preview["response"]["kind"] == "bytes"
+    assert preview["response"]["content_type"] == "image/jpeg"
+    assert preview["response"]["success_enveloped"] is False
+    assert manifest["schemas"]["MediaUpload"]["fields"]["file"]["type"] == "file"
+    assert manifest["schemas"]["MediaUpload"]["fields"]["file"]["content_types"] == ["image/jpeg"]
+    assert manifest["schemas"]["MediaUpload"]["fields"]["file"]["max_size"] == 1024
+
+    download = routes["Download"]
+    assert download["response"]["kind"] == "file"
+    assert download["response"]["download"] is True
+    assert download["response"]["filename"] == "report.xls"
+    assert "Content-Disposition" in download["response"]["headers"]
+
+    stream = routes["Mjpeg"]
+    assert stream["response"]["kind"] == "byte_stream"
+    assert stream["response"]["streaming"] is True
 
 
 def test_contract_graph_manifest_carries_declared_connection_delivery():

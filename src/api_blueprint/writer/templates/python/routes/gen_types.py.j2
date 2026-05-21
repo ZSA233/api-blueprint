@@ -3,12 +3,19 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum, IntEnum, StrEnum
 from typing import Any, Callable, Generic, Mapping, Self, TypeVar
+{% if writer.runtime_template == "gen_server.py" -%}
+from {{ group.runtime_import_prefix }}runtime.server import ApiUploadFile
+{% else -%}
+from {{ group.runtime_import_prefix }}runtime.client import ApiUploadFile
+{% endif -%}
 from {{ group.runtime_import_prefix }}runtime.gen_codecs import (
     _MISSING,
     _api_to_json,
+    _api_to_transport,
     _decode_any,
     _decode_bool,
     _decode_bytes,
+    _decode_file,
     _decode_float,
     _decode_int,
     _decode_list,
@@ -78,6 +85,14 @@ class {{ model.class_name }}:
 {% for field in model.fields %}{% if field.optional %}        if self.{{ field.name }} is not None:
             result[{{ field.wire_literal | safe }}] = _api_to_json(self.{{ field.name }})
 {% else %}        result[{{ field.wire_literal | safe }}] = _api_to_json(self.{{ field.name }})
+{% endif %}
+{% endfor %}        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+{% for field in model.fields %}{% if field.optional %}        if self.{{ field.name }} is not None:
+            result[{{ field.wire_literal | safe }}] = _api_to_transport(self.{{ field.name }})
+{% else %}        result[{{ field.wire_literal | safe }}] = _api_to_transport(self.{{ field.name }})
 {% endif %}
 {% endfor %}        return result
 

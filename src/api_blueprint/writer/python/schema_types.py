@@ -250,4 +250,5 @@ _PRIMITIVE_TYPES: dict[str, PythonResolvedType] = {
     "boolean": PythonResolvedType("bool", "_decode_bool"),
     "bool": PythonResolvedType("bool", "_decode_bool"),
     "binary": PythonResolvedType("bytes", "_decode_bytes"),
+    "file": PythonResolvedType("ApiUploadFile", "_decode_file"),
 }

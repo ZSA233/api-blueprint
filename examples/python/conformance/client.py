@@ -40,6 +40,7 @@ from api_blueprint_example_client.api.routes.api.demo.gen_types import (
 from api_blueprint_example_client.api.routes.api.gen_types import HelloChannelMsgTypeEnum
 from api_blueprint_example_client.api.routes.api.hello.gen_types import AbcQuery as HelloAbcQuery
 from api_blueprint_example_client.api.routes.api.hello.gen_types import MapEnum
+from api_blueprint_example_client.api.routes.api.media.gen_types import MediaPreviewForm
 from api_blueprint_example_client.api.runtime.errors import (
     ApiError,
     ApiErrors,
@@ -47,6 +48,10 @@ from api_blueprint_example_client.api.runtime.errors import (
     resolve_api_toast,
 )
 from api_blueprint_example_client.static.client import create_client as create_static_client
+
+
+SAMPLE_JPEG = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00\x01\x00\x01\x00\x00\xff\xd9"
+MJPEG_BOUNDARY = b"--frame"
 
 
 def scenario_set(raw: str) -> set[str]:
@@ -194,6 +199,37 @@ async def check_audit_binary(api) -> None:
     assert response.checksum == 2, response
 
 
+async def check_media(api) -> None:
+    preview = await api.media.media_preview(
+        multipart=MediaPreviewForm(
+            title="python-media",
+            image=("preview.jpg", SAMPLE_JPEG, "image/jpeg"),
+        )
+    )
+    assert preview.status == 200, preview
+    assert preview.content_type == "image/jpeg", preview
+    assert preview.body.startswith(b"\xff\xd8"), preview.body
+
+    frame = await api.media.media_frame()
+    assert frame.content_type == "image/jpeg", frame
+    assert frame.body == SAMPLE_JPEG, frame.body
+
+    download = await api.media.media_download()
+    assert download.status == 200, download
+    assert download.filename == "media-report.xlsx", download
+    assert download.body.startswith(b"PK"), download.body
+
+    stream = await api.media.media_mjpeg()
+    try:
+        first = b""
+        async for chunk in stream:
+            first += chunk
+            break
+        assert MJPEG_BOUNDARY in first, first
+    finally:
+        await stream.aclose()
+
+
 async def check_typed_errors(api) -> None:
     ok = await api.demo.error_demo(query=ErrorDemoQuery(mode="ok"))
     assert ok.status == "ok", ok
@@ -247,7 +283,7 @@ async def main() -> None:
     selected = scenario_set(
         sys.argv[2]
         if len(sys.argv) > 2
-        else "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,single-channel"
+        else "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,media,single-channel"
     )
     async with create_client(sys.argv[1]) as api, create_alt_client(sys.argv[1]) as alt_api:
         if "rpc" in selected:
@@ -274,6 +310,8 @@ async def main() -> None:
             await check_binary(api)
         if "audit-binary" in selected:
             await check_audit_binary(api)
+        if "media" in selected:
+            await check_media(api)
         if "error" in selected:
             await check_typed_errors(api)
         if "naming" in selected:

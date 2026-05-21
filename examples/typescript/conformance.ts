@@ -24,6 +24,11 @@ declare const process: {
   exit(code?: number): never;
 };
 
+const SAMPLE_JPEG = new Uint8Array([
+  0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
+  0x01, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0xff, 0xd9,
+]);
+
 function scenarioSet(raw: string): Set<string> {
   return new Set(raw.split(",").map((item) => item.trim()).filter(Boolean));
 }
@@ -180,6 +185,44 @@ async function checkAuditBinary(baseUrl: string): Promise<void> {
   });
   if (response.trace !== "ts-audit" || response.item_count !== 2 || response.checksum !== 2) {
     throw new Error(`audit binary=${JSON.stringify(response)}`);
+  }
+}
+
+async function checkMedia(baseUrl: string): Promise<void> {
+  const { mediaClient } = createApiClients({ baseUrl });
+  const preview = await mediaClient.mediaPreview({
+    multipart: {
+      title: "ts-media",
+      image: { blob: SAMPLE_JPEG, filename: "preview.jpg", contentType: "image/jpeg" },
+    },
+  });
+  if (preview.status !== 200 || preview.contentType !== "image/jpeg") {
+    throw new Error(`media preview status=${preview.status} contentType=${preview.contentType}`);
+  }
+  await assertBlobStartsWith(preview.body, [0xff, 0xd8], "media preview");
+
+  const frame = await mediaClient.mediaFrame();
+  if (frame.contentType !== "image/jpeg") {
+    throw new Error(`media frame contentType=${frame.contentType}`);
+  }
+  await assertBlobStartsWith(frame.body, [0xff, 0xd8], "media frame");
+
+  const download = await mediaClient.mediaDownload();
+  if (download.filename !== "media-report.xlsx") {
+    throw new Error(`media download filename=${download.filename}`);
+  }
+  await assertBlobStartsWith(download.body, [0x50, 0x4b], "media download");
+
+  const stream = await mediaClient.mediaMjpeg();
+  const reader = stream.body?.getReader();
+  if (!reader) {
+    throw new Error("media stream body is empty");
+  }
+  const first = await reader.read();
+  await reader.cancel();
+  const chunk = new TextDecoder().decode(first.value ?? new Uint8Array());
+  if (!chunk.includes("--frame")) {
+    throw new Error(`media stream chunk=${chunk}`);
   }
 }
 
@@ -359,12 +402,19 @@ function assertArrayEquals(actual: readonly unknown[], expected: readonly unknow
   }
 }
 
+async function assertBlobStartsWith(blob: Blob, expected: readonly number[], label: string): Promise<void> {
+  const actual = Array.from(new Uint8Array(await blob.arrayBuffer()).slice(0, expected.length));
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    throw new Error(`${label} prefix=${JSON.stringify(actual)} expected ${JSON.stringify(expected)}`);
+  }
+}
+
 async function main(): Promise<void> {
   const baseUrl = process.argv[2];
   if (!baseUrl) {
     throw new Error("base URL argument is required");
   }
-  const selected = scenarioSet(process.argv[3] || "rpc,binary,form,error,sse,websocket,naming,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,single-channel");
+  const selected = scenarioSet(process.argv[3] || "rpc,binary,form,error,sse,websocket,naming,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,media,single-channel");
   if (selected.has("rpc")) {
     await checkRPC(baseUrl);
   }
@@ -400,6 +450,9 @@ async function main(): Promise<void> {
   }
   if (selected.has("audit-binary")) {
     await checkAuditBinary(baseUrl);
+  }
+  if (selected.has("media")) {
+    await checkMedia(baseUrl);
   }
   if (selected.has("error")) {
     await checkTypedErrors(baseUrl);

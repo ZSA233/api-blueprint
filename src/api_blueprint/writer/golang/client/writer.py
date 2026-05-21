@@ -412,10 +412,11 @@ def _route_aliases(
         (route.query_type, route.request.get("query_model")),
         (route.json_type, route.request.get("json_model")),
         (route.form_type, route.request.get("form_model")),
+        (route.multipart_type, route.request.get("multipart_model")),
         (route.binary_type, None if route.has_binary_schema else route.request.get("binary_model")),
         (route.open_type, route.connection.get("open_model")),
         (route.close_type, route.connection.get("close_model")),
-        (route.response_type, route.response.get("model")),
+        (route.response_type, None if route.response_kind in {"bytes", "file", "byte_stream"} else route.response.get("model")),
     )
     for alias, schema_name in aliases:
         if isinstance(schema_name, str) and schema_name:
@@ -533,6 +534,10 @@ def _connection_transport_method(route: GoClientRoute) -> str:
 
 
 def _route_response_type(route: GoClientRoute) -> str:
+    if route.response_kind == "byte_stream":
+        return "*runtime.StreamResponse"
+    if route.response_kind in {"bytes", "file"}:
+        return "*runtime.RawResponse"
     response_model = route.response.get("model")
     if isinstance(response_model, str) and response_model:
         return f"*{route.response_type}"
@@ -547,6 +552,8 @@ def _route_params(route: GoClientRoute, *, include_open: bool) -> list[str]:
         params.append(f"jsonBody {route.json_type}")
     if isinstance(route.request.get("form_model"), str):
         params.append(f"formBody {route.form_type}")
+    if isinstance(route.request.get("multipart_model"), str):
+        params.append(f"multipartBody {route.multipart_type}")
     if route.has_binary_schema:
         params.append("binaryBody runtimebinary.Body")
     elif isinstance(route.request.get("binary_model"), str):
@@ -564,8 +571,12 @@ def _runtime_request_fields(route: GoClientRoute) -> list[tuple[str, str]]:
         fields.append(("JSON", "jsonBody"))
     if isinstance(route.request.get("form_model"), str):
         fields.append(("Form", "formBody"))
+    if isinstance(route.request.get("multipart_model"), str):
+        fields.append(("Multipart", "multipartBody"))
     if route.has_binary_schema or isinstance(route.request.get("binary_model"), str):
         fields.append(("Binary", "binaryBody"))
+    fields.append(("BodyKind", f"runtime.RequestBodyKind({_code_literal(route.body_kind)})"))
+    fields.append(("ResponseKind", f"runtime.ResponseKind({_code_literal(route.response_kind)})"))
     return fields
 
 
@@ -608,6 +619,7 @@ def _go_type_for_schema_value(value: Mapping[str, Any], type_names: _TypeNames) 
         "boolean": "bool",
         "bool": "bool",
         "binary": "[]byte",
+        "file": "MultipartFile",
         "any": "any",
         "null": "any",
     }.get(value_type, "any")
@@ -630,6 +642,8 @@ def _go_type_for_route_schema_value(value: Mapping[str, Any], type_names: _TypeN
         return f"map[{key_type}]{value_go_type}"
     if value_type == "enum":
         return f"runtime.{_go_type_name(str(value.get('enum') or 'EnumValue'))}"
+    if value_type == "file":
+        return "runtime.MultipartFile"
     return _go_type_for_schema_value(value, type_names)
 
 

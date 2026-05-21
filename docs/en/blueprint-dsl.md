@@ -34,6 +34,8 @@ Common types come from `api_blueprint.includes`, including `String`, `Bool`, `In
 Use `field(number, Type(...))` when a field needs stable identity, and `field(number, Type(...), choice="group")` to model mutually exclusive choices. These are generic contract semantics, not tied to a specific target.
 Semantic value types include `DateTime`, `JSONValue`, and `AnyValue`; individual targets map them to their own time, JSON, or arbitrary payload representation.
 
+`FileField(content_types=..., max_size=..., description=..., omitempty=False)` describes a multipart upload field. It is not a normal JSON field and is valid only inside a model bound with `REQ_MULTIPART(Model)`; using it in JSON, urlencoded, response, or long-connection message models fails contract construction.
+
 ## Requests And Responses
 
 ```python
@@ -52,9 +54,35 @@ with bp.group("/items") as views:
 
 - `ARGS(...)`: query parameters.
 - `JSON(Model)`: JSON request body.
+- `REQ_URLENCODED(Model)`: `application/x-www-form-urlencoded` request bodies; the older `REQ_FORM(Model)` remains as a compatibility alias.
+- `REQ_MULTIPART(Model)`: `multipart/form-data` request bodies mixing ordinary fields and `FileField(...)`.
 - `RSP(...)`: response model.
 
-Binary HTTP request bodies use `.REQ_BINARY("./binary/packet.md")` to reference Markdown Binary Schema. See [Markdown Binary Schema](binary-schema.md) for table format, field types, rules, and generated output.
+A route can declare only one body kind. ContractGraph records request bodies as `none`, `json`, `urlencoded`, `multipart`, `binary_schema`, or `raw_bytes`, and both generators and `api-gen check` use that unified semantics for capability checks.
+
+Binary HTTP request bodies use `.REQ_BINARY("./binary/packet.md")` to reference Markdown Binary Schema. In ContractGraph this is a `binary_schema` request body and is separate from raw media responses. See [Markdown Binary Schema](binary-schema.md) for table format, field types, rules, and generated output.
+
+## Multipart And Raw Responses
+
+```python
+class PreviewRequest(Model):
+    image = FileField(content_types=["image/png", "image/jpeg"], description="source image")
+    max_width = Uint64(description="max width", optional=True)
+
+
+with bp.group("/media") as views:
+    views.POST("/preview").REQ_MULTIPART(PreviewRequest).RSP_BYTES(content_type="image/jpeg")
+    views.GET("/download").RSP_FILE(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", filename="report.xlsx")
+    views.GET("/mjpeg").RSP_BYTE_STREAM(content_type="multipart/x-mixed-replace; boundary=frame")
+```
+
+Raw response DSL includes:
+
+- `RSP_BYTES(content_type="application/octet-stream")`: buffered bytes such as a JPEG or frame.
+- `RSP_FILE(content_type=..., filename=None)`: file downloads; services may return a path or a generated file response.
+- `RSP_BYTE_STREAM(content_type=...)`: continuous byte streams such as MJPEG or custom streaming payloads.
+
+Raw success responses are not wrapped in the JSON response envelope. HTTP `content-type`, `content-disposition`, headers, download, and streaming semantics are recorded in the ContractGraph manifest. Business errors still use the route's typed error / JSON envelope, so generated clients can keep recognizing `ApiError` consistently.
 
 ## Errors And Toast
 

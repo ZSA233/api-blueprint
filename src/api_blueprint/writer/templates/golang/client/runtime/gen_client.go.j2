@@ -2,17 +2,70 @@
 
 package runtime
 
-import "context"
+import (
+	"context"
+	"io"
+)
+
+type RequestBodyKind string
+
+const (
+	RequestBodyNone         RequestBodyKind = "none"
+	RequestBodyJSON         RequestBodyKind = "json"
+	RequestBodyURLEncoded   RequestBodyKind = "urlencoded"
+	RequestBodyMultipart    RequestBodyKind = "multipart"
+	RequestBodyBinarySchema RequestBodyKind = "binary_schema"
+	RequestBodyRawBytes     RequestBodyKind = "raw_bytes"
+)
+
+type ResponseKind string
+
+const (
+	ResponseJSON       ResponseKind = "json"
+	ResponseXML        ResponseKind = "xml"
+	ResponseText       ResponseKind = "text"
+	ResponseBytes      ResponseKind = "bytes"
+	ResponseFile       ResponseKind = "file"
+	ResponseByteStream ResponseKind = "byte_stream"
+)
 
 type Request struct {
 	RouteID         string
 	Method          string
 	Path            string
+	BodyKind        RequestBodyKind
+	ResponseKind    ResponseKind
 	Query           any
 	JSON            any
 	Form            any
+	Multipart       any
 	Binary          any
 	ResponseEnvelope ApiResponseEnvelope
+}
+
+type MultipartFile struct {
+	Filename    string
+	ContentType string
+	Reader      io.Reader
+	Bytes       []byte
+}
+
+type RawResponse struct {
+	Body               []byte
+	Headers            map[string][]string
+	StatusCode         int
+	ContentType        string
+	ContentDisposition string
+	Filename           string
+}
+
+type StreamResponse struct {
+	Body               io.ReadCloser
+	Headers            map[string][]string
+	StatusCode         int
+	ContentType        string
+	ContentDisposition string
+	Filename           string
 }
 
 type ApiResponseEnvelope struct {

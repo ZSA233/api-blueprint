@@ -118,6 +118,22 @@ ROUTE_API_ERRORS_BY_CODE: dict[str, dict[int, ApiErrorEntry]] = {
         70002: API_ERRORS_BY_ID["DemoErr.UNKNOWN"],
         42901: API_ERRORS_BY_ID["DemoErr.RATE_LIMITED"],
     },
+    "api.media.post.preview": {
+        -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
+        55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
+    },
+    "api.media.get.frame": {
+        -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
+        55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
+    },
+    "api.media.get.download": {
+        -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
+        55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
+    },
+    "api.media.get.mjpeg": {
+        -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
+        55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
+    },
     "api.hello.get.abc": {
         -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
         55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],

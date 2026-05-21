@@ -149,6 +149,22 @@ var routeApiErrorsByCode = map[string]map[ApiErrorCode]ApiErrorEntry{
 		DemoErrUnknown:       ApiErrorsByID["DemoErr.UNKNOWN"],
 		DemoErrRateLimited:   ApiErrorsByID["DemoErr.RATE_LIMITED"],
 	},
+	"api.media.post.preview": {
+		CommonErrUnknown:     ApiErrorsByID["CommonErr.UNKNOWN"],
+		CommonErrTokenExpire: ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
+	},
+	"api.media.get.frame": {
+		CommonErrUnknown:     ApiErrorsByID["CommonErr.UNKNOWN"],
+		CommonErrTokenExpire: ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
+	},
+	"api.media.get.download": {
+		CommonErrUnknown:     ApiErrorsByID["CommonErr.UNKNOWN"],
+		CommonErrTokenExpire: ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
+	},
+	"api.media.get.mjpeg": {
+		CommonErrUnknown:     ApiErrorsByID["CommonErr.UNKNOWN"],
+		CommonErrTokenExpire: ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
+	},
 	"api.hello.get.abc": {
 		CommonErrUnknown:     ApiErrorsByID["CommonErr.UNKNOWN"],
 		CommonErrTokenExpire: ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],

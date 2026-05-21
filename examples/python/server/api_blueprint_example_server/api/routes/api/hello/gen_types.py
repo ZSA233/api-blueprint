@@ -4,12 +4,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum, IntEnum, StrEnum
 from typing import Any, Callable, Generic, Mapping, Self, TypeVar
+from ....runtime.server import ApiUploadFile
 from ....runtime.gen_codecs import (
     _MISSING,
     _api_to_json,
+    _api_to_transport,
     _decode_any,
     _decode_bool,
     _decode_bytes,
+    _decode_file,
     _decode_float,
     _decode_int,
     _decode_list,
@@ -123,6 +126,20 @@ class AbcQuery:
         result["type"] = _api_to_json(self.type)
         return result
 
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        if self.arg1 is not None:
+            result["arg1"] = _api_to_transport(self.arg1)
+
+        if self.arg3 is not None:
+            result["arg3"] = _api_to_transport(self.arg3)
+
+        if self.arg2 is not None:
+            result["arg2"] = _api_to_transport(self.arg2)
+
+        result["type"] = _api_to_transport(self.type)
+        return result
+
 
 @dataclass(kw_only=True)
 class ApiHelloMap:
@@ -151,6 +168,11 @@ class ApiHelloMap:
     def to_mapping(self) -> dict[str, Any]:
         result: dict[str, Any] = {}
         result["haha"] = _api_to_json(self.haha)
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["haha"] = _api_to_transport(self.haha)
         return result
 
 
@@ -182,5 +204,12 @@ class HelloWayQuery:
         result: dict[str, Any] = {}
         if self.arg1 is not None:
             result["arg1"] = _api_to_json(self.arg1)
+
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        if self.arg1 is not None:
+            result["arg1"] = _api_to_transport(self.arg1)
 
         return result

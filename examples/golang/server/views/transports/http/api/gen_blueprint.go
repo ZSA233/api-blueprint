@@ -9,10 +9,12 @@ import (
 	sharedConflict "example.com/project/golang/server/views/routes/api/conflict"
 	sharedDemo "example.com/project/golang/server/views/routes/api/demo"
 	sharedHello "example.com/project/golang/server/views/routes/api/hello"
+	sharedMedia "example.com/project/golang/server/views/routes/api/media"
 	binary "example.com/project/golang/server/views/transports/http/api/binary"
 	conflict "example.com/project/golang/server/views/transports/http/api/conflict"
 	demo "example.com/project/golang/server/views/transports/http/api/demo"
 	hello "example.com/project/golang/server/views/transports/http/api/hello"
+	media "example.com/project/golang/server/views/transports/http/api/media"
 
 	"github.com/gin-gonic/gin"
 )
@@ -22,6 +24,7 @@ type Blueprint struct {
 	BinaryRouter   *sharedBinary.Router
 	ConflictRouter *sharedConflict.Router
 	DemoRouter     *sharedDemo.Router
+	MediaRouter    *sharedMedia.Router
 	HelloRouter    *sharedHello.Router
 }
 
@@ -31,6 +34,7 @@ func NewBlueprint(eng *gin.Engine) *Blueprint {
 		BinaryRouter:   binary.NewRouter(eng),
 		ConflictRouter: conflict.NewRouter(eng),
 		DemoRouter:     demo.NewRouter(eng),
+		MediaRouter:    media.NewRouter(eng),
 		HelloRouter:    hello.NewRouter(eng),
 	}
 }

@@ -7,7 +7,7 @@ Language: [中文](README.md) | English
 
 ## Overview
 
-`api-blueprint` defines API contracts with a Python DSL, then generates documentation services and multi-language code from the same protocol source of truth. It is built for maintaining HTTP APIs, long-connection messages, binary request bodies, and gRPC proto in one checkable, generatable, regression-friendly workflow.
+`api-blueprint` defines API contracts with a Python DSL, then generates documentation services and multi-language code from the same protocol source of truth. It is built for maintaining HTTP APIs, long-connection messages, binary request bodies, media uploads / raw responses, and gRPC proto in one checkable, generatable, regression-friendly workflow.
 
 The core flow is:
 
@@ -20,7 +20,7 @@ Blueprint DSL -> ContractGraph -> api-gen check / inspect / generate -> generate
 - Backend, web, Flutter, Kotlin, and script clients need to share one API contract.
 - You want to generate a Go server first, then TypeScript, Flutter, Kotlin, Java, Go, or Python clients, or generate Kotlin/Java/Python server scaffolds.
 - You need documentation, contract checks, generated snapshots, and end-to-end examples to move together.
-- You need Markdown Binary Schema, Wails, or gRPC in the same generation flow.
+- You need Markdown Binary Schema, multipart uploads, raw bytes/file/stream responses, Wails, or gRPC in the same generation flow.
 
 ## Installation
 
@@ -94,13 +94,13 @@ For fuller project layout, config fields, DSL, generator output, typed errors, R
 | Target | Status | Purpose |
 |:---|:---:|:---|
 | Contract / inspect | Available | Emit a contract index and query route, schema, error, or file ownership details |
-| Go server | Available | Generate Go routes, providers, long-connection message helpers, HTTP/Wails adapters, and runtime |
-| TypeScript client | Preview | Generate transport-neutral clients, long-connection message helpers, HTTP adapters, and Wails facades |
+| Go server | Available | Generate Go routes, providers, long-connection message helpers, HTTP/Wails adapters, multipart/raw media responses, and runtime |
+| TypeScript client | Preview | Generate transport-neutral clients, long-connection message helpers, HTTP multipart/raw adapters, and Wails facades |
 | Flutter client | Preview | Generate a pure Dart package, DTOs, typed errors, binary codecs, and HTTP/SSE/WebSocket clients |
 | Kotlin client/server | Preview | Generate OkHttp HTTP/SSE/WebSocket clients, Ktor HTTP/SSE/WebSocket server scaffolds, models, long-connection message helpers, and binary writers |
 | Java client/server | Preview | Generate Java 17 HttpClient clients, Spring MVC/SSE/WebSocket server scaffolds, record DTOs, long-connection message helpers, binary packet helpers, and HTTP adapters |
-| Go / Python client | Preview | Generate non-server clients for scripts, tools, or services; the Python client uses recursive dataclass DTOs, shared runtime codecs, long-connection message helpers, and binary writers |
-| Python server | Preview | Generate FastAPI HTTP/SSE/WebSocket server scaffolds, typed service contracts, and long-connection message helpers |
+| Go / Python client | Preview | Generate non-server clients for scripts, tools, or services; the Python client uses recursive dataclass DTOs, shared runtime codecs, multipart/raw support, long-connection message helpers, and binary writers |
+| Python server | Preview | Generate FastAPI HTTP/SSE/WebSocket server scaffolds, multipart/raw adapters, typed service contracts, and long-connection message helpers |
 | Wails v2/v3 | Preview / Experimental | Generate Go + TypeScript overlays for desktop GUIs |
 | gRPC proto / stubs | Available | Emit proto from ContractGraph and generate Go/Python stubs |
 

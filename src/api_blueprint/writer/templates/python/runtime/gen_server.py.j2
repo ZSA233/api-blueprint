@@ -1,17 +1,33 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Generic, Protocol, TypeVar
+from typing import Any, AsyncIterable, BinaryIO, Generic, Iterable, Mapping, Protocol, TypeVar
 
 
 RecvT = TypeVar("RecvT")
 SendT = TypeVar("SendT")
 CloseT = TypeVar("CloseT")
+RawT = TypeVar("RawT")
+
+
+ApiUploadFile = bytes | bytearray | memoryview | BinaryIO | tuple[str, bytes] | tuple[str, bytes, str] | Any
 
 
 @dataclass
 class ApiServerContext:
     state: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ApiRawResponse(Generic[RawT]):
+    body: RawT
+    headers: Mapping[str, str] | None = None
+    status: int = 200
+    content_type: str | None = None
+    filename: str | None = None
+
+
+ApiByteStream = AsyncIterable[bytes] | Iterable[bytes]
 
 
 class ApiServerStream(Protocol, Generic[SendT, CloseT]):

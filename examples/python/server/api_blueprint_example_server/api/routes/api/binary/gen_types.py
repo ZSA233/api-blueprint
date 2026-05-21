@@ -4,12 +4,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum, IntEnum, StrEnum
 from typing import Any, Callable, Generic, Mapping, Self, TypeVar
+from ....runtime.server import ApiUploadFile
 from ....runtime.gen_codecs import (
     _MISSING,
     _api_to_json,
+    _api_to_transport,
     _decode_any,
     _decode_bool,
     _decode_bytes,
+    _decode_file,
     _decode_float,
     _decode_int,
     _decode_list,
@@ -55,6 +58,13 @@ class PacketQuery:
         result: dict[str, Any] = {}
         if self.trace is not None:
             result["trace"] = _api_to_json(self.trace)
+
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        if self.trace is not None:
+            result["trace"] = _api_to_transport(self.trace)
 
         return result
 
@@ -109,6 +119,18 @@ class PacketResponse:
         result["checksum"] = _api_to_json(self.checksum)
         return result
 
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["trace"] = _api_to_transport(self.trace)
+        result["version"] = _api_to_transport(self.version)
+        result["item_count"] = _api_to_transport(self.item_count)
+        result["payload"] = _api_to_transport(self.payload)
+        result["score_sum"] = _api_to_transport(self.score_sum)
+        result["first_label"] = _api_to_transport(self.first_label)
+        result["item_ids"] = _api_to_transport(self.item_ids)
+        result["checksum"] = _api_to_transport(self.checksum)
+        return result
+
 
 @dataclass(kw_only=True)
 class AuditPacketQuery:
@@ -138,6 +160,13 @@ class AuditPacketQuery:
         result: dict[str, Any] = {}
         if self.trace is not None:
             result["trace"] = _api_to_json(self.trace)
+
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        if self.trace is not None:
+            result["trace"] = _api_to_transport(self.trace)
 
         return result
 
@@ -175,4 +204,11 @@ class AuditPacketResponse:
         result["trace"] = _api_to_json(self.trace)
         result["item_count"] = _api_to_json(self.item_count)
         result["checksum"] = _api_to_json(self.checksum)
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["trace"] = _api_to_transport(self.trace)
+        result["item_count"] = _api_to_transport(self.item_count)
+        result["checksum"] = _api_to_transport(self.checksum)
         return result

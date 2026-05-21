@@ -3,9 +3,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from ....runtime.client import ApiChannelBridge, ApiClientTransport, ApiStreamBridge
+from ....runtime.client import ApiChannelBridge, ApiClientTransport, ApiRawResponse, ApiStreamBridge, ApiStreamResponse
 from ....runtime.gen_codecs import (
     _api_to_json,
+    _api_to_transport,
     _decode_any,
     _decode_bool,
     _decode_bytes,

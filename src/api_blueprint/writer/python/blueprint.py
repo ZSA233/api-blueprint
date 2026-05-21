@@ -29,12 +29,15 @@ class PythonRequestParam:
     server_annotation: str | None = None
     default: str | None = None
     type: PythonResolvedType | None = None
+    transport_encode: bool = False
 
     @property
     def service_annotation(self) -> str:
         return self.server_annotation or self.annotation
 
     def encode_expr(self, value_expr: str) -> str:
+        if self.transport_encode:
+            return f"_api_to_transport({value_expr})"
         if self.type is None:
             return value_expr
         return f"_api_to_json({value_expr})"
@@ -81,6 +84,7 @@ class PythonRoute:
         self.query_type = registry.resolve_schema(protocol.request.query.schema, class_name=self.public_names.query)
         self.json_type = registry.resolve_schema(protocol.request.json.schema, class_name=self.public_names.json)
         self.form_type = registry.resolve_schema(protocol.request.form.schema, class_name=self.public_names.form)
+        self.multipart_type = registry.resolve_schema(protocol.request.multipart.schema, class_name=self.public_names.form)
         self.open_type = registry.resolve_schema(protocol.request.open.schema, class_name=self.public_names.open)
         self.response_type_info = registry.resolve_schema(
             protocol.response.model.schema,
@@ -135,6 +139,8 @@ class PythonRoute:
 
     @property
     def response_type_literal(self) -> str:
+        if self.is_raw_response:
+            return repr(self.raw_response_transport_type)
         if self.response_type_info is not None:
             return repr(self.response_type_info.annotation)
         if self.response_type is None:
@@ -149,11 +155,51 @@ class PythonRoute:
 
     @property
     def response_annotation(self) -> str:
+        if self.protocol.response.kind in {"bytes", "file"}:
+            return "ApiRawResponse[bytes]"
+        if self.protocol.response.kind == "byte_stream":
+            return "ApiStreamResponse"
         if self.response_type_info is None:
             return "Any"
         return self.response_type_info.annotation
 
+    @property
+    def service_response_annotation(self) -> str:
+        if self.protocol.response.kind == "bytes":
+            return "bytes | ApiRawResponse[bytes]"
+        if self.protocol.response.kind == "file":
+            return "str | Path | ApiRawResponse[bytes]"
+        if self.protocol.response.kind == "byte_stream":
+            return "AsyncIterable[bytes] | Iterable[bytes] | ApiRawResponse[AsyncIterable[bytes] | Iterable[bytes]]"
+        return self.response_annotation
+
+    @property
+    def is_raw_response(self) -> bool:
+        return self.protocol.response.kind in {"bytes", "file", "byte_stream"}
+
+    @property
+    def raw_response_transport_type(self) -> str:
+        if self.protocol.response.kind == "byte_stream":
+            return "stream"
+        return self.protocol.response.kind
+
+    @property
+    def response_kind_literal(self) -> str:
+        return json.dumps(self.protocol.response.kind)
+
+    @property
+    def response_media_type_literal(self) -> str:
+        return json.dumps(self.protocol.response.media_type)
+
+    @property
+    def response_filename_literal(self) -> str:
+        if self.protocol.response.filename is None:
+            return "None"
+        return repr(self.protocol.response.filename)
+
     def response_decode_expr(self, value_expr: str) -> str:
+        if self.is_raw_response:
+            return value_expr
         if self.response_type_info is None:
             return value_expr
         return self.response_type_info.decode_expr(value_expr, json.dumps(f"{self.method_name}.response"))
@@ -208,6 +254,8 @@ class PythonRoute:
             params.append(_request_param("json", "json", self.json_type))
         if self.protocol.request.form.model is not None:
             params.append(_request_param("form", "form", self.form_type))
+        if self.protocol.request.multipart.model is not None:
+            params.append(_request_param("multipart", "multipart", self.multipart_type, transport_encode=True))
         if self.binary_schema is not None:
             params.append(
                 PythonRequestParam(
@@ -398,14 +446,21 @@ def _message_payload_type(schema_name: str) -> str:
     return to_py_class_name(schema_name.rsplit(".", 1)[-1], default="MessageData")
 
 
-def _request_param(name: str, call_name: str, resolved: PythonResolvedType | None) -> PythonRequestParam:
+def _request_param(
+    name: str,
+    call_name: str,
+    resolved: PythonResolvedType | None,
+    *,
+    transport_encode: bool = False,
+) -> PythonRequestParam:
     if resolved is None:
-        return PythonRequestParam(name, call_name, "Any", type=None)
+        return PythonRequestParam(name, call_name, "Any", type=None, transport_encode=transport_encode)
     return PythonRequestParam(
         name,
         call_name,
         resolved.annotation,
         type=resolved,
+        transport_encode=transport_encode,
     )
 
 

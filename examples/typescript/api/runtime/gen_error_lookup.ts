@@ -128,6 +128,22 @@ const RouteApiErrorsByCode = {
     "70002": ApiErrorsByID["DemoErr.UNKNOWN"],
     "42901": ApiErrorsByID["DemoErr.RATE_LIMITED"],
   },
+  "api.media.post.preview": {
+    "-1": ApiErrorsByID["CommonErr.UNKNOWN"],
+    "55555": ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
+  },
+  "api.media.get.frame": {
+    "-1": ApiErrorsByID["CommonErr.UNKNOWN"],
+    "55555": ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
+  },
+  "api.media.get.download": {
+    "-1": ApiErrorsByID["CommonErr.UNKNOWN"],
+    "55555": ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
+  },
+  "api.media.get.mjpeg": {
+    "-1": ApiErrorsByID["CommonErr.UNKNOWN"],
+    "55555": ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
+  },
   "api.hello.get.abc": {
     "-1": ApiErrorsByID["CommonErr.UNKNOWN"],
     "55555": ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],

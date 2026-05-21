@@ -30,6 +30,8 @@ func (client *GenHelloClient) Abc(ctx context.Context, query AbcQuery) (*AbcResp
 		Path:             "/api/hello/abc",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 		Query:            query,
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
 	var response AbcResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -44,6 +46,8 @@ func (client *GenHelloClient) MapEnum(ctx context.Context) (*MapEnumResponse, er
 		Method:           "GET",
 		Path:             "/api/hello/map-enum",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
 	var response MapEnumResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -58,6 +62,8 @@ func (client *GenHelloClient) ListEnum(ctx context.Context) (*ListEnumResponse, 
 		Method:           "GET",
 		Path:             "/api/hello/list-enum",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
 	var response ListEnumResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -72,6 +78,8 @@ func (client *GenHelloClient) String(ctx context.Context) (*StringResponse, erro
 		Method:           "GET",
 		Path:             "/api/hello/string",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
 	var response StringResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -86,6 +94,8 @@ func (client *GenHelloClient) Uint64(ctx context.Context) (*Uint64Response, erro
 		Method:           "GET",
 		Path:             "/api/hello/uint64",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
 	var response Uint64Response
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -100,6 +110,8 @@ func (client *GenHelloClient) StringEmun(ctx context.Context) (*StringEmunRespon
 		Method:           "GET",
 		Path:             "/api/hello/string-emun",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
 	var response StringEmunResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -115,6 +127,8 @@ func (client *GenHelloClient) HelloWay(ctx context.Context, query HelloWayQuery)
 		Path:             "/api/hello/hello-way",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "NoEnvelope", Kind: "none", ErrorIdentity: "none", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 		Query:            query,
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
 	var response any
 	if err := client.transport.Do(ctx, request, &response); err != nil {

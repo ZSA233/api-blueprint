@@ -8,7 +8,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime"
+	"mime/multipart"
 	nethttp "net/http"
+	"net/textproto"
 	"net/url"
 	"reflect"
 	"strings"
@@ -69,17 +72,37 @@ func (transport *HttpTransport) Do(ctx context.Context, request runtime.Request,
 	if err != nil {
 		return err
 	}
-	defer httpResponse.Body.Close()
 
 	if httpResponse.StatusCode >= 400 {
+		defer httpResponse.Body.Close()
 		data, _ := io.ReadAll(httpResponse.Body)
 		if apiErr := decodeHTTPApiError(data, request.RouteID, request.ResponseEnvelope); apiErr != nil {
 			return apiErr
 		}
 		return runtime.HTTPError{StatusCode: httpResponse.StatusCode, Body: string(data)}
 	}
+	if request.ResponseKind == runtime.ResponseByteStream {
+		target, ok := response.(*runtime.StreamResponse)
+		if !ok {
+			httpResponse.Body.Close()
+			return fmt.Errorf("api-blueprint http transport expected *runtime.StreamResponse target, got %T", response)
+		}
+		*target = runtime.StreamResponse{
+			Body:               httpResponse.Body,
+			Headers:            map[string][]string(httpResponse.Header),
+			StatusCode:         httpResponse.StatusCode,
+			ContentType:        contentTypeHeader(httpResponse),
+			ContentDisposition: httpResponse.Header.Get("Content-Disposition"),
+			Filename:           filenameFromDisposition(httpResponse.Header.Get("Content-Disposition")),
+		}
+		return nil
+	}
+	defer httpResponse.Body.Close()
 	if response == nil || httpResponse.StatusCode == nethttp.StatusNoContent {
 		return nil
+	}
+	if request.ResponseKind == runtime.ResponseBytes || request.ResponseKind == runtime.ResponseFile {
+		return decodeRawResponse(httpResponse, response)
 	}
 	return decodeResponse(httpResponse.Body, request.ResponseEnvelope, request.RouteID, response)
 }
@@ -115,6 +138,8 @@ func encodeBody(request runtime.Request) (io.Reader, string, int64, error) {
 			_ = writer.CloseWithError(body.WriteBinary(writer))
 		}()
 		return reader, body.ContentType(), body.ContentLength(), nil
+	case request.Multipart != nil:
+		return encodeMultipart(request.Multipart)
 	case request.Form != nil:
 		values, err := encodeValues(request.Form)
 		if err != nil {
@@ -128,6 +153,120 @@ func encodeBody(request runtime.Request) (io.Reader, string, int64, error) {
 	default:
 		return nil, "", -1, nil
 	}
+}
+
+func encodeMultipart(input any) (io.Reader, string, int64, error) {
+	var buffer bytes.Buffer
+	writer := multipart.NewWriter(&buffer)
+	if err := writeMultipartFields(writer, input); err != nil {
+		_ = writer.Close()
+		return nil, "", -1, err
+	}
+	if err := writer.Close(); err != nil {
+		return nil, "", -1, err
+	}
+	return &buffer, writer.FormDataContentType(), int64(buffer.Len()), nil
+}
+
+func writeMultipartFields(writer *multipart.Writer, input any) error {
+	value := reflect.ValueOf(input)
+	if value.Kind() == reflect.Pointer {
+		if value.IsNil() {
+			return nil
+		}
+		value = value.Elem()
+	}
+	if value.Kind() != reflect.Struct {
+		return fmt.Errorf("api-blueprint http transport expected multipart struct values, got %s", value.Kind())
+	}
+	valueType := value.Type()
+	for i := 0; i < value.NumField(); i++ {
+		field := value.Field(i)
+		fieldType := valueType.Field(i)
+		key := formFieldName(fieldType)
+		if key == "" || key == "-" || field.IsZero() {
+			continue
+		}
+		if err := writeMultipartField(writer, key, field); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func writeMultipartField(writer *multipart.Writer, key string, field reflect.Value) error {
+	if field.Kind() == reflect.Pointer {
+		if field.IsNil() {
+			return nil
+		}
+		field = field.Elem()
+	}
+	if file, ok := field.Interface().(runtime.MultipartFile); ok {
+		return writeMultipartFile(writer, key, file)
+	}
+	return writer.WriteField(key, fmt.Sprint(field.Interface()))
+}
+
+func writeMultipartFile(writer *multipart.Writer, key string, file runtime.MultipartFile) error {
+	filename := file.Filename
+	if filename == "" {
+		filename = key
+	}
+	var part io.Writer
+	var err error
+	if file.ContentType != "" {
+		header := make(textproto.MIMEHeader)
+		header.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`, escapeQuotes(key), escapeQuotes(filename)))
+		header.Set("Content-Type", file.ContentType)
+		part, err = writer.CreatePart(header)
+	} else {
+		part, err = writer.CreateFormFile(key, filename)
+	}
+	if err != nil {
+		return err
+	}
+	reader := file.Reader
+	if reader == nil {
+		reader = bytes.NewReader(file.Bytes)
+	}
+	_, err = io.Copy(part, reader)
+	return err
+}
+
+func escapeQuotes(value string) string {
+	return strings.NewReplacer("\\", "\\\\", `"`, "\\\"").Replace(value)
+}
+
+func decodeRawResponse(httpResponse *nethttp.Response, response any) error {
+	target, ok := response.(*runtime.RawResponse)
+	if !ok {
+		return fmt.Errorf("api-blueprint http transport expected *runtime.RawResponse target, got %T", response)
+	}
+	data, err := io.ReadAll(httpResponse.Body)
+	if err != nil {
+		return err
+	}
+	*target = runtime.RawResponse{
+		Body:               data,
+		Headers:            map[string][]string(httpResponse.Header),
+		StatusCode:         httpResponse.StatusCode,
+		ContentType:        contentTypeHeader(httpResponse),
+		ContentDisposition: httpResponse.Header.Get("Content-Disposition"),
+		Filename:           filenameFromDisposition(httpResponse.Header.Get("Content-Disposition")),
+	}
+	return nil
+}
+
+func contentTypeHeader(response *nethttp.Response) string {
+	return strings.TrimSpace(strings.Split(response.Header.Get("Content-Type"), ";")[0])
+}
+
+func filenameFromDisposition(disposition string) string {
+	_, params, err := mime.ParseMediaType(disposition)
+	if err != nil {
+		return ""
+	}
+	return params["filename"]
 }
 
 func decodeResponse(reader io.Reader, envelope runtime.ApiResponseEnvelope, routeID string, response any) error {
@@ -309,11 +448,7 @@ func encodeValues(input any) (url.Values, error) {
 	for i := 0; i < value.NumField(); i++ {
 		field := value.Field(i)
 		fieldType := valueType.Field(i)
-		key := fieldType.Tag.Get("form")
-		if key == "" {
-			key = fieldType.Tag.Get("json")
-		}
-		key = strings.Split(key, ",")[0]
+		key := formFieldName(fieldType)
 		if key == "" || key == "-" {
 			key = fieldType.Name
 		}
@@ -323,4 +458,12 @@ func encodeValues(input any) (url.Values, error) {
 		values.Set(key, fmt.Sprint(field.Interface()))
 	}
 	return values, nil
+}
+
+func formFieldName(fieldType reflect.StructField) string {
+	key := fieldType.Tag.Get("form")
+	if key == "" {
+		key = fieldType.Tag.Get("json")
+	}
+	return strings.Split(key, ",")[0]
 }

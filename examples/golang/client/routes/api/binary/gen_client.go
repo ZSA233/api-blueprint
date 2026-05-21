@@ -32,6 +32,8 @@ func (client *GenBinaryClient) Packet(ctx context.Context, query PacketQuery, bi
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 		Query:            query,
 		Binary:           binaryBody,
+		BodyKind:         runtime.RequestBodyKind("binary_schema"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
 	var response PacketResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
@@ -48,6 +50,8 @@ func (client *GenBinaryClient) AuditPacket(ctx context.Context, query AuditPacke
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 		Query:            query,
 		Binary:           binaryBody,
+		BodyKind:         runtime.RequestBodyKind("binary_schema"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
 	var response AuditPacketResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {

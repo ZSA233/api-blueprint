@@ -222,6 +222,7 @@ class GolangRouterGroup:
                     "bind_query": view.bind_query,
                     "bind_json": view.bind_json,
                     "bind_form": view.bind_form,
+                    "bind_multipart": view.bind_multipart,
                     "bind_binary": view.bind_binary,
                 }
 

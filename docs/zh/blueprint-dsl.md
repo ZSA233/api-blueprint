@@ -34,6 +34,8 @@ class Item(Model):
 需要稳定字段身份时使用 `field(number, Type(...))`；需要表达互斥选择时使用 `field(number, Type(...), choice="group")`。这些都是通用契约语义，不绑定具体生成 target。
 通用语义类型包括 `DateTime`、`JSONValue`、`AnyValue`，具体 target 可映射到自身的时间、JSON 或任意载荷表达。
 
+`FileField(content_types=..., max_size=..., description=..., omitempty=False)` 用于 multipart 上传字段。它不是普通 JSON 字段，只能出现在 `REQ_MULTIPART(Model)` 绑定的请求 model 中；放入 JSON、urlencoded、响应模型或长连接消息模型都会在构建契约时失败。
+
 ## 请求与响应
 
 ```python
@@ -52,9 +54,35 @@ with bp.group("/items") as views:
 
 - `ARGS(...)`：query 参数。
 - `JSON(Model)`：JSON 请求体。
+- `REQ_URLENCODED(Model)`：`application/x-www-form-urlencoded` 请求体；旧 `REQ_FORM(Model)` 作为兼容别名保留。
+- `REQ_MULTIPART(Model)`：`multipart/form-data` 请求体，可混合普通字段和 `FileField(...)`。
 - `RSP(...)`：响应模型。
 
-二进制 HTTP 请求体使用 `.REQ_BINARY("./binary/packet.md")` 引用 Markdown Binary Schema。Schema 表格格式、字段类型、规则和生成输出见 [Markdown Binary Schema](binary-schema.md)。
+同一个 route 只能声明一种 body kind。ContractGraph 会把请求体记录为 `none`、`json`、`urlencoded`、`multipart`、`binary_schema` 或 `raw_bytes`，生成器和 `api-gen check` 都按这个统一语义判断 target 能力。
+
+二进制 HTTP 请求体使用 `.REQ_BINARY("./binary/packet.md")` 引用 Markdown Binary Schema，它在 ContractGraph 中归类为 `binary_schema`，不和 raw media response 概念混用。Schema 表格格式、字段类型、规则和生成输出见 [Markdown Binary Schema](binary-schema.md)。
+
+## Multipart 与 Raw 响应
+
+```python
+class PreviewRequest(Model):
+    image = FileField(content_types=["image/png", "image/jpeg"], description="source image")
+    max_width = Uint64(description="max width", optional=True)
+
+
+with bp.group("/media") as views:
+    views.POST("/preview").REQ_MULTIPART(PreviewRequest).RSP_BYTES(content_type="image/jpeg")
+    views.GET("/download").RSP_FILE(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", filename="report.xlsx")
+    views.GET("/mjpeg").RSP_BYTE_STREAM(content_type="multipart/x-mixed-replace; boundary=frame")
+```
+
+Raw response DSL 包括：
+
+- `RSP_BYTES(content_type="application/octet-stream")`：返回已缓冲的 bytes，例如 JPEG 或 frame。
+- `RSP_FILE(content_type=..., filename=None)`：返回文件下载；service 可返回 path 或 generated file response。
+- `RSP_BYTE_STREAM(content_type=...)`：返回持续字节流，例如 MJPEG 或自定义 streaming payload。
+
+Raw 成功响应不会被 JSON response envelope 包装；HTTP `content-type`、`content-disposition`、headers、download 和 streaming 语义会进入 ContractGraph manifest。业务错误仍按 route 的 typed error / JSON envelope 返回，生成客户端可以继续统一识别 `ApiError`。
 
 ## Error 与 Toast
 
