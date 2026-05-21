@@ -100,7 +100,7 @@ def test_scenario_registry_exposes_expanded_examples() -> None:
     assert registry["single-channel"].route_ids == ("api.api.channel.ws",)
 
 def test_user_visible_example_routes_have_conformance_status() -> None:
-    contract = json.loads((REPO_ROOT / "examples/api-blueprint.index.json").read_text())
+    contract = json.loads((REPO_ROOT / "examples/api-blueprint.index.json").read_text(encoding="utf-8"))
     route_ids = {route["id"] for route in contract["routes"]}
     covered_route_ids = {route_id for scenario in scenarios.scenario_registry().values() for route_id in scenario.route_ids}
     unsupported_route_ids = set(scenarios.unsupported_route_ids())
