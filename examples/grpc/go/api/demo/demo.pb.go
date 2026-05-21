@@ -485,6 +485,126 @@ func (x *TestPostResponse) GetMap() map[string]*ApiDemoMap {
 	return nil
 }
 
+type FormSubmitRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Title         string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
+	Count         int64                  `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`
+	Enabled       bool                   `protobuf:"varint,3,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FormSubmitRequest) Reset() {
+	*x = FormSubmitRequest{}
+	mi := &file_api_demo_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FormSubmitRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FormSubmitRequest) ProtoMessage() {}
+
+func (x *FormSubmitRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_demo_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FormSubmitRequest.ProtoReflect.Descriptor instead.
+func (*FormSubmitRequest) Descriptor() ([]byte, []int) {
+	return file_api_demo_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *FormSubmitRequest) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *FormSubmitRequest) GetCount() int64 {
+	if x != nil {
+		return x.Count
+	}
+	return 0
+}
+
+func (x *FormSubmitRequest) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+type FormSubmitResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Summary       string                 `protobuf:"bytes,1,opt,name=summary,proto3" json:"summary,omitempty"`
+	Count         int64                  `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`
+	Enabled       bool                   `protobuf:"varint,3,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FormSubmitResponse) Reset() {
+	*x = FormSubmitResponse{}
+	mi := &file_api_demo_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FormSubmitResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FormSubmitResponse) ProtoMessage() {}
+
+func (x *FormSubmitResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_demo_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FormSubmitResponse.ProtoReflect.Descriptor instead.
+func (*FormSubmitResponse) Descriptor() ([]byte, []int) {
+	return file_api_demo_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *FormSubmitResponse) GetSummary() string {
+	if x != nil {
+		return x.Summary
+	}
+	return ""
+}
+
+func (x *FormSubmitResponse) GetCount() int64 {
+	if x != nil {
+		return x.Count
+	}
+	return 0
+}
+
+func (x *FormSubmitResponse) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
 type PutDemoRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Query         *REQFunc1PutQUERY      `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
@@ -495,7 +615,7 @@ type PutDemoRequest struct {
 
 func (x *PutDemoRequest) Reset() {
 	*x = PutDemoRequest{}
-	mi := &file_api_demo_proto_msgTypes[6]
+	mi := &file_api_demo_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -507,7 +627,7 @@ func (x *PutDemoRequest) String() string {
 func (*PutDemoRequest) ProtoMessage() {}
 
 func (x *PutDemoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[6]
+	mi := &file_api_demo_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -520,7 +640,7 @@ func (x *PutDemoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PutDemoRequest.ProtoReflect.Descriptor instead.
 func (*PutDemoRequest) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{6}
+	return file_api_demo_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *PutDemoRequest) GetQuery() *REQFunc1PutQUERY {
@@ -548,7 +668,7 @@ type REQFunc1PutQUERY struct {
 
 func (x *REQFunc1PutQUERY) Reset() {
 	*x = REQFunc1PutQUERY{}
-	mi := &file_api_demo_proto_msgTypes[7]
+	mi := &file_api_demo_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -560,7 +680,7 @@ func (x *REQFunc1PutQUERY) String() string {
 func (*REQFunc1PutQUERY) ProtoMessage() {}
 
 func (x *REQFunc1PutQUERY) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[7]
+	mi := &file_api_demo_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -573,7 +693,7 @@ func (x *REQFunc1PutQUERY) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use REQFunc1PutQUERY.ProtoReflect.Descriptor instead.
 func (*REQFunc1PutQUERY) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{7}
+	return file_api_demo_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *REQFunc1PutQUERY) GetArg1() string {
@@ -607,7 +727,7 @@ type REQFunc1PutJSON struct {
 
 func (x *REQFunc1PutJSON) Reset() {
 	*x = REQFunc1PutJSON{}
-	mi := &file_api_demo_proto_msgTypes[8]
+	mi := &file_api_demo_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -619,7 +739,7 @@ func (x *REQFunc1PutJSON) String() string {
 func (*REQFunc1PutJSON) ProtoMessage() {}
 
 func (x *REQFunc1PutJSON) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[8]
+	mi := &file_api_demo_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -632,7 +752,7 @@ func (x *REQFunc1PutJSON) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use REQFunc1PutJSON.ProtoReflect.Descriptor instead.
 func (*REQFunc1PutJSON) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{8}
+	return file_api_demo_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *REQFunc1PutJSON) GetReq1() string {
@@ -659,7 +779,7 @@ type PutDemoResponse struct {
 
 func (x *PutDemoResponse) Reset() {
 	*x = PutDemoResponse{}
-	mi := &file_api_demo_proto_msgTypes[9]
+	mi := &file_api_demo_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -671,7 +791,7 @@ func (x *PutDemoResponse) String() string {
 func (*PutDemoResponse) ProtoMessage() {}
 
 func (x *PutDemoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[9]
+	mi := &file_api_demo_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -684,7 +804,7 @@ func (x *PutDemoResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PutDemoResponse.ProtoReflect.Descriptor instead.
 func (*PutDemoResponse) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{9}
+	return file_api_demo_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *PutDemoResponse) GetList() []string {
@@ -711,7 +831,7 @@ type ANONFunc1PutAnonKv struct {
 
 func (x *ANONFunc1PutAnonKv) Reset() {
 	*x = ANONFunc1PutAnonKv{}
-	mi := &file_api_demo_proto_msgTypes[10]
+	mi := &file_api_demo_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -723,7 +843,7 @@ func (x *ANONFunc1PutAnonKv) String() string {
 func (*ANONFunc1PutAnonKv) ProtoMessage() {}
 
 func (x *ANONFunc1PutAnonKv) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[10]
+	mi := &file_api_demo_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -736,7 +856,7 @@ func (x *ANONFunc1PutAnonKv) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ANONFunc1PutAnonKv.ProtoReflect.Descriptor instead.
 func (*ANONFunc1PutAnonKv) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{10}
+	return file_api_demo_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ANONFunc1PutAnonKv) GetKv1() uint64 {
@@ -763,7 +883,7 @@ type DeleteRequest struct {
 
 func (x *DeleteRequest) Reset() {
 	*x = DeleteRequest{}
-	mi := &file_api_demo_proto_msgTypes[11]
+	mi := &file_api_demo_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -775,7 +895,7 @@ func (x *DeleteRequest) String() string {
 func (*DeleteRequest) ProtoMessage() {}
 
 func (x *DeleteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[11]
+	mi := &file_api_demo_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -788,7 +908,7 @@ func (x *DeleteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteRequest.ProtoReflect.Descriptor instead.
 func (*DeleteRequest) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{11}
+	return file_api_demo_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *DeleteRequest) GetArg1() string {
@@ -815,7 +935,7 @@ type DeleteResponse struct {
 
 func (x *DeleteResponse) Reset() {
 	*x = DeleteResponse{}
-	mi := &file_api_demo_proto_msgTypes[12]
+	mi := &file_api_demo_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -827,7 +947,7 @@ func (x *DeleteResponse) String() string {
 func (*DeleteResponse) ProtoMessage() {}
 
 func (x *DeleteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[12]
+	mi := &file_api_demo_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -840,7 +960,7 @@ func (x *DeleteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteResponse.ProtoReflect.Descriptor instead.
 func (*DeleteResponse) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{12}
+	return file_api_demo_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *DeleteResponse) GetList() []string {
@@ -867,7 +987,7 @@ type ANONDeleteAnonList struct {
 
 func (x *ANONDeleteAnonList) Reset() {
 	*x = ANONDeleteAnonList{}
-	mi := &file_api_demo_proto_msgTypes[13]
+	mi := &file_api_demo_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -879,7 +999,7 @@ func (x *ANONDeleteAnonList) String() string {
 func (*ANONDeleteAnonList) ProtoMessage() {}
 
 func (x *ANONDeleteAnonList) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[13]
+	mi := &file_api_demo_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -892,7 +1012,7 @@ func (x *ANONDeleteAnonList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ANONDeleteAnonList.ProtoReflect.Descriptor instead.
 func (*ANONDeleteAnonList) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{13}
+	return file_api_demo_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ANONDeleteAnonList) GetKv1() int64 {
@@ -919,7 +1039,7 @@ type SweepEventsRequest struct {
 
 func (x *SweepEventsRequest) Reset() {
 	*x = SweepEventsRequest{}
-	mi := &file_api_demo_proto_msgTypes[14]
+	mi := &file_api_demo_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -931,7 +1051,7 @@ func (x *SweepEventsRequest) String() string {
 func (*SweepEventsRequest) ProtoMessage() {}
 
 func (x *SweepEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[14]
+	mi := &file_api_demo_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -944,7 +1064,7 @@ func (x *SweepEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SweepEventsRequest.ProtoReflect.Descriptor instead.
 func (*SweepEventsRequest) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{14}
+	return file_api_demo_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *SweepEventsRequest) GetRunId() string {
@@ -975,7 +1095,7 @@ type SweepStreamMessage struct {
 
 func (x *SweepStreamMessage) Reset() {
 	*x = SweepStreamMessage{}
-	mi := &file_api_demo_proto_msgTypes[15]
+	mi := &file_api_demo_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -987,7 +1107,7 @@ func (x *SweepStreamMessage) String() string {
 func (*SweepStreamMessage) ProtoMessage() {}
 
 func (x *SweepStreamMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[15]
+	mi := &file_api_demo_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1000,7 +1120,7 @@ func (x *SweepStreamMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SweepStreamMessage.ProtoReflect.Descriptor instead.
 func (*SweepStreamMessage) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{15}
+	return file_api_demo_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *SweepStreamMessage) GetMessage() isSweepStreamMessage_Message {
@@ -1068,7 +1188,7 @@ type SweepState struct {
 
 func (x *SweepState) Reset() {
 	*x = SweepState{}
-	mi := &file_api_demo_proto_msgTypes[16]
+	mi := &file_api_demo_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1080,7 +1200,7 @@ func (x *SweepState) String() string {
 func (*SweepState) ProtoMessage() {}
 
 func (x *SweepState) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[16]
+	mi := &file_api_demo_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1093,7 +1213,7 @@ func (x *SweepState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SweepState.ProtoReflect.Descriptor instead.
 func (*SweepState) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{16}
+	return file_api_demo_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *SweepState) GetStatus() string {
@@ -1113,7 +1233,7 @@ type SweepProgress struct {
 
 func (x *SweepProgress) Reset() {
 	*x = SweepProgress{}
-	mi := &file_api_demo_proto_msgTypes[17]
+	mi := &file_api_demo_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1125,7 +1245,7 @@ func (x *SweepProgress) String() string {
 func (*SweepProgress) ProtoMessage() {}
 
 func (x *SweepProgress) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[17]
+	mi := &file_api_demo_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1138,7 +1258,7 @@ func (x *SweepProgress) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SweepProgress.ProtoReflect.Descriptor instead.
 func (*SweepProgress) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{17}
+	return file_api_demo_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *SweepProgress) GetCurrent() uint64 {
@@ -1165,7 +1285,7 @@ type SweepLog struct {
 
 func (x *SweepLog) Reset() {
 	*x = SweepLog{}
-	mi := &file_api_demo_proto_msgTypes[18]
+	mi := &file_api_demo_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1177,7 +1297,7 @@ func (x *SweepLog) String() string {
 func (*SweepLog) ProtoMessage() {}
 
 func (x *SweepLog) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[18]
+	mi := &file_api_demo_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1190,7 +1310,7 @@ func (x *SweepLog) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SweepLog.ProtoReflect.Descriptor instead.
 func (*SweepLog) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{18}
+	return file_api_demo_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *SweepLog) GetLevel() string {
@@ -1220,7 +1340,7 @@ type AssistantClientMessage struct {
 
 func (x *AssistantClientMessage) Reset() {
 	*x = AssistantClientMessage{}
-	mi := &file_api_demo_proto_msgTypes[19]
+	mi := &file_api_demo_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1232,7 +1352,7 @@ func (x *AssistantClientMessage) String() string {
 func (*AssistantClientMessage) ProtoMessage() {}
 
 func (x *AssistantClientMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[19]
+	mi := &file_api_demo_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1245,7 +1365,7 @@ func (x *AssistantClientMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AssistantClientMessage.ProtoReflect.Descriptor instead.
 func (*AssistantClientMessage) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{19}
+	return file_api_demo_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *AssistantClientMessage) GetMessage() isAssistantClientMessage_Message {
@@ -1298,7 +1418,7 @@ type AssistantInput struct {
 
 func (x *AssistantInput) Reset() {
 	*x = AssistantInput{}
-	mi := &file_api_demo_proto_msgTypes[20]
+	mi := &file_api_demo_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1310,7 +1430,7 @@ func (x *AssistantInput) String() string {
 func (*AssistantInput) ProtoMessage() {}
 
 func (x *AssistantInput) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[20]
+	mi := &file_api_demo_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1323,7 +1443,7 @@ func (x *AssistantInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AssistantInput.ProtoReflect.Descriptor instead.
 func (*AssistantInput) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{20}
+	return file_api_demo_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *AssistantInput) GetText() string {
@@ -1342,7 +1462,7 @@ type AssistantCancel struct {
 
 func (x *AssistantCancel) Reset() {
 	*x = AssistantCancel{}
-	mi := &file_api_demo_proto_msgTypes[21]
+	mi := &file_api_demo_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1354,7 +1474,7 @@ func (x *AssistantCancel) String() string {
 func (*AssistantCancel) ProtoMessage() {}
 
 func (x *AssistantCancel) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[21]
+	mi := &file_api_demo_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1367,7 +1487,7 @@ func (x *AssistantCancel) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AssistantCancel.ProtoReflect.Descriptor instead.
 func (*AssistantCancel) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{21}
+	return file_api_demo_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *AssistantCancel) GetReason() string {
@@ -1391,7 +1511,7 @@ type AssistantServerMessage struct {
 
 func (x *AssistantServerMessage) Reset() {
 	*x = AssistantServerMessage{}
-	mi := &file_api_demo_proto_msgTypes[22]
+	mi := &file_api_demo_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1403,7 +1523,7 @@ func (x *AssistantServerMessage) String() string {
 func (*AssistantServerMessage) ProtoMessage() {}
 
 func (x *AssistantServerMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[22]
+	mi := &file_api_demo_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1416,7 +1536,7 @@ func (x *AssistantServerMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AssistantServerMessage.ProtoReflect.Descriptor instead.
 func (*AssistantServerMessage) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{22}
+	return file_api_demo_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *AssistantServerMessage) GetMessage() isAssistantServerMessage_Message {
@@ -1484,7 +1604,7 @@ type AssistantDelta struct {
 
 func (x *AssistantDelta) Reset() {
 	*x = AssistantDelta{}
-	mi := &file_api_demo_proto_msgTypes[23]
+	mi := &file_api_demo_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1496,7 +1616,7 @@ func (x *AssistantDelta) String() string {
 func (*AssistantDelta) ProtoMessage() {}
 
 func (x *AssistantDelta) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[23]
+	mi := &file_api_demo_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1509,7 +1629,7 @@ func (x *AssistantDelta) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AssistantDelta.ProtoReflect.Descriptor instead.
 func (*AssistantDelta) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{23}
+	return file_api_demo_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *AssistantDelta) GetText() string {
@@ -1528,7 +1648,7 @@ type AssistantDone struct {
 
 func (x *AssistantDone) Reset() {
 	*x = AssistantDone{}
-	mi := &file_api_demo_proto_msgTypes[24]
+	mi := &file_api_demo_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1540,7 +1660,7 @@ func (x *AssistantDone) String() string {
 func (*AssistantDone) ProtoMessage() {}
 
 func (x *AssistantDone) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[24]
+	mi := &file_api_demo_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1553,7 +1673,7 @@ func (x *AssistantDone) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AssistantDone.ProtoReflect.Descriptor instead.
 func (*AssistantDone) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{24}
+	return file_api_demo_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *AssistantDone) GetMessageId() string {
@@ -1573,7 +1693,7 @@ type PostDeprecatedRequest struct {
 
 func (x *PostDeprecatedRequest) Reset() {
 	*x = PostDeprecatedRequest{}
-	mi := &file_api_demo_proto_msgTypes[25]
+	mi := &file_api_demo_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1585,7 +1705,7 @@ func (x *PostDeprecatedRequest) String() string {
 func (*PostDeprecatedRequest) ProtoMessage() {}
 
 func (x *PostDeprecatedRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[25]
+	mi := &file_api_demo_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1598,7 +1718,7 @@ func (x *PostDeprecatedRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PostDeprecatedRequest.ProtoReflect.Descriptor instead.
 func (*PostDeprecatedRequest) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{25}
+	return file_api_demo_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *PostDeprecatedRequest) GetReq1() string {
@@ -1624,7 +1744,7 @@ type PostDeprecatedResponse struct {
 
 func (x *PostDeprecatedResponse) Reset() {
 	*x = PostDeprecatedResponse{}
-	mi := &file_api_demo_proto_msgTypes[26]
+	mi := &file_api_demo_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1636,7 +1756,7 @@ func (x *PostDeprecatedResponse) String() string {
 func (*PostDeprecatedResponse) ProtoMessage() {}
 
 func (x *PostDeprecatedResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[26]
+	mi := &file_api_demo_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1649,7 +1769,7 @@ func (x *PostDeprecatedResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PostDeprecatedResponse.ProtoReflect.Descriptor instead.
 func (*PostDeprecatedResponse) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{26}
+	return file_api_demo_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *PostDeprecatedResponse) GetList() []string {
@@ -1667,7 +1787,7 @@ type RawRequest struct {
 
 func (x *RawRequest) Reset() {
 	*x = RawRequest{}
-	mi := &file_api_demo_proto_msgTypes[27]
+	mi := &file_api_demo_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1679,7 +1799,7 @@ func (x *RawRequest) String() string {
 func (*RawRequest) ProtoMessage() {}
 
 func (x *RawRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[27]
+	mi := &file_api_demo_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1692,7 +1812,7 @@ func (x *RawRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RawRequest.ProtoReflect.Descriptor instead.
 func (*RawRequest) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{27}
+	return file_api_demo_proto_rawDescGZIP(), []int{29}
 }
 
 type RawResponse struct {
@@ -1705,7 +1825,7 @@ type RawResponse struct {
 
 func (x *RawResponse) Reset() {
 	*x = RawResponse{}
-	mi := &file_api_demo_proto_msgTypes[28]
+	mi := &file_api_demo_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1717,7 +1837,7 @@ func (x *RawResponse) String() string {
 func (*RawResponse) ProtoMessage() {}
 
 func (x *RawResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[28]
+	mi := &file_api_demo_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1730,7 +1850,7 @@ func (x *RawResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RawResponse.ProtoReflect.Descriptor instead.
 func (*RawResponse) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{28}
+	return file_api_demo_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *RawResponse) GetList() []string {
@@ -1756,7 +1876,7 @@ type RawResponseList2Value struct {
 
 func (x *RawResponseList2Value) Reset() {
 	*x = RawResponseList2Value{}
-	mi := &file_api_demo_proto_msgTypes[29]
+	mi := &file_api_demo_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1768,7 +1888,7 @@ func (x *RawResponseList2Value) String() string {
 func (*RawResponseList2Value) ProtoMessage() {}
 
 func (x *RawResponseList2Value) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[29]
+	mi := &file_api_demo_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1781,7 +1901,7 @@ func (x *RawResponseList2Value) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RawResponseList2Value.ProtoReflect.Descriptor instead.
 func (*RawResponseList2Value) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{29}
+	return file_api_demo_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *RawResponseList2Value) GetValue() []*ApiDemoA {
@@ -1807,7 +1927,7 @@ type ApiDemoA struct {
 
 func (x *ApiDemoA) Reset() {
 	*x = ApiDemoA{}
-	mi := &file_api_demo_proto_msgTypes[30]
+	mi := &file_api_demo_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1819,7 +1939,7 @@ func (x *ApiDemoA) String() string {
 func (*ApiDemoA) ProtoMessage() {}
 
 func (x *ApiDemoA) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[30]
+	mi := &file_api_demo_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1832,7 +1952,7 @@ func (x *ApiDemoA) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApiDemoA.ProtoReflect.Descriptor instead.
 func (*ApiDemoA) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{30}
+	return file_api_demo_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *ApiDemoA) GetBc() string {
@@ -1899,7 +2019,7 @@ type MapModelRequest struct {
 
 func (x *MapModelRequest) Reset() {
 	*x = MapModelRequest{}
-	mi := &file_api_demo_proto_msgTypes[31]
+	mi := &file_api_demo_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1911,7 +2031,7 @@ func (x *MapModelRequest) String() string {
 func (*MapModelRequest) ProtoMessage() {}
 
 func (x *MapModelRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[31]
+	mi := &file_api_demo_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1924,7 +2044,7 @@ func (x *MapModelRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MapModelRequest.ProtoReflect.Descriptor instead.
 func (*MapModelRequest) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{31}
+	return file_api_demo_proto_rawDescGZIP(), []int{33}
 }
 
 type MapModelResponse struct {
@@ -1936,7 +2056,7 @@ type MapModelResponse struct {
 
 func (x *MapModelResponse) Reset() {
 	*x = MapModelResponse{}
-	mi := &file_api_demo_proto_msgTypes[32]
+	mi := &file_api_demo_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1948,7 +2068,7 @@ func (x *MapModelResponse) String() string {
 func (*MapModelResponse) ProtoMessage() {}
 
 func (x *MapModelResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[32]
+	mi := &file_api_demo_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1961,7 +2081,7 @@ func (x *MapModelResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MapModelResponse.ProtoReflect.Descriptor instead.
 func (*MapModelResponse) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{32}
+	return file_api_demo_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *MapModelResponse) GetValue() map[string]*ApiDemoMap {
@@ -1980,7 +2100,7 @@ type ErrorDemoRequest struct {
 
 func (x *ErrorDemoRequest) Reset() {
 	*x = ErrorDemoRequest{}
-	mi := &file_api_demo_proto_msgTypes[33]
+	mi := &file_api_demo_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1992,7 +2112,7 @@ func (x *ErrorDemoRequest) String() string {
 func (*ErrorDemoRequest) ProtoMessage() {}
 
 func (x *ErrorDemoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[33]
+	mi := &file_api_demo_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2005,7 +2125,7 @@ func (x *ErrorDemoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ErrorDemoRequest.ProtoReflect.Descriptor instead.
 func (*ErrorDemoRequest) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{33}
+	return file_api_demo_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *ErrorDemoRequest) GetMode() string {
@@ -2024,7 +2144,7 @@ type ErrorDemoResponse struct {
 
 func (x *ErrorDemoResponse) Reset() {
 	*x = ErrorDemoResponse{}
-	mi := &file_api_demo_proto_msgTypes[34]
+	mi := &file_api_demo_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2036,7 +2156,7 @@ func (x *ErrorDemoResponse) String() string {
 func (*ErrorDemoResponse) ProtoMessage() {}
 
 func (x *ErrorDemoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_demo_proto_msgTypes[34]
+	mi := &file_api_demo_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2049,7 +2169,7 @@ func (x *ErrorDemoResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ErrorDemoResponse.ProtoReflect.Descriptor instead.
 func (*ErrorDemoResponse) Descriptor() ([]byte, []int) {
-	return file_api_demo_proto_rawDescGZIP(), []int{34}
+	return file_api_demo_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *ErrorDemoResponse) GetStatus() string {
@@ -2098,7 +2218,15 @@ const file_api_demo_proto_rawDesc = "" +
 	"\x03map\x18\x02 \x03(\v2+.example.api.demo.TestPostResponse.MapEntryR\x03map\x1aT\n" +
 	"\bMapEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x122\n" +
-	"\x05value\x18\x02 \x01(\v2\x1c.example.api.demo.ApiDemoMapR\x05value:\x028\x01\"\x81\x01\n" +
+	"\x05value\x18\x02 \x01(\v2\x1c.example.api.demo.ApiDemoMapR\x05value:\x028\x01\"Y\n" +
+	"\x11FormSubmitRequest\x12\x14\n" +
+	"\x05title\x18\x01 \x01(\tR\x05title\x12\x14\n" +
+	"\x05count\x18\x02 \x01(\x03R\x05count\x12\x18\n" +
+	"\aenabled\x18\x03 \x01(\bR\aenabled\"^\n" +
+	"\x12FormSubmitResponse\x12\x18\n" +
+	"\asummary\x18\x01 \x01(\tR\asummary\x12\x14\n" +
+	"\x05count\x18\x02 \x01(\x03R\x05count\x12\x18\n" +
+	"\aenabled\x18\x03 \x01(\bR\aenabled\"\x81\x01\n" +
 	"\x0ePutDemoRequest\x128\n" +
 	"\x05query\x18\x01 \x01(\v2\".example.api.demo.REQFunc1putQUERYR\x05query\x125\n" +
 	"\x04json\x18\x02 \x01(\v2!.example.api.demo.REQFunc1putJSONR\x04json\"N\n" +
@@ -2208,10 +2336,12 @@ const file_api_demo_proto_rawDesc = "" +
 	"\x16STATUSENUM_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12STATUSENUM_PENDING\x10\x01\x12\x16\n" +
 	"\x12STATUSENUM_RUNNING\x10\x02\x12\x17\n" +
-	"\x13STATUSENUM_FINISHED\x10\x032\xdc\x06\n" +
+	"\x13STATUSENUM_FINISHED\x10\x032\xb5\a\n" +
 	"\vDemoService\x12B\n" +
 	"\x03Abc\x12\x1c.example.api.demo.AbcRequest\x1a\x1d.example.api.demo.AbcResponse\x12Q\n" +
-	"\bTestPost\x12!.example.api.demo.TestPostRequest\x1a\".example.api.demo.TestPostResponse\x12N\n" +
+	"\bTestPost\x12!.example.api.demo.TestPostRequest\x1a\".example.api.demo.TestPostResponse\x12W\n" +
+	"\n" +
+	"FormSubmit\x12#.example.api.demo.FormSubmitRequest\x1a$.example.api.demo.FormSubmitResponse\x12N\n" +
 	"\aPutDemo\x12 .example.api.demo.PutDemoRequest\x1a!.example.api.demo.PutDemoResponse\x12K\n" +
 	"\x06Delete\x12\x1f.example.api.demo.DeleteRequest\x1a .example.api.demo.DeleteResponse\x12[\n" +
 	"\vSweepEvents\x12$.example.api.demo.SweepEventsRequest\x1a$.example.api.demo.SweepStreamMessage0\x01\x12j\n" +
@@ -2234,7 +2364,7 @@ func file_api_demo_proto_rawDescGZIP() []byte {
 }
 
 var file_api_demo_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_api_demo_proto_msgTypes = make([]protoimpl.MessageInfo, 39)
+var file_api_demo_proto_msgTypes = make([]protoimpl.MessageInfo, 41)
 var file_api_demo_proto_goTypes = []any{
 	(ColorEnum)(0),                 // 0: example.api.demo.ColorEnum
 	(StatusEnum)(0),                // 1: example.api.demo.StatusEnum
@@ -2244,92 +2374,96 @@ var file_api_demo_proto_goTypes = []any{
 	(*ApiDemoMap)(nil),             // 5: example.api.demo.ApiDemoMap
 	(*TestPostRequest)(nil),        // 6: example.api.demo.TestPostRequest
 	(*TestPostResponse)(nil),       // 7: example.api.demo.TestPostResponse
-	(*PutDemoRequest)(nil),         // 8: example.api.demo.PutDemoRequest
-	(*REQFunc1PutQUERY)(nil),       // 9: example.api.demo.REQFunc1putQUERY
-	(*REQFunc1PutJSON)(nil),        // 10: example.api.demo.REQFunc1putJSON
-	(*PutDemoResponse)(nil),        // 11: example.api.demo.PutDemoResponse
-	(*ANONFunc1PutAnonKv)(nil),     // 12: example.api.demo.ANONFunc1putAnonKv
-	(*DeleteRequest)(nil),          // 13: example.api.demo.DeleteRequest
-	(*DeleteResponse)(nil),         // 14: example.api.demo.DeleteResponse
-	(*ANONDeleteAnonList)(nil),     // 15: example.api.demo.ANONDeleteAnonList
-	(*SweepEventsRequest)(nil),     // 16: example.api.demo.SweepEventsRequest
-	(*SweepStreamMessage)(nil),     // 17: example.api.demo.SweepStreamMessage
-	(*SweepState)(nil),             // 18: example.api.demo.SweepState
-	(*SweepProgress)(nil),          // 19: example.api.demo.SweepProgress
-	(*SweepLog)(nil),               // 20: example.api.demo.SweepLog
-	(*AssistantClientMessage)(nil), // 21: example.api.demo.AssistantClientMessage
-	(*AssistantInput)(nil),         // 22: example.api.demo.AssistantInput
-	(*AssistantCancel)(nil),        // 23: example.api.demo.AssistantCancel
-	(*AssistantServerMessage)(nil), // 24: example.api.demo.AssistantServerMessage
-	(*AssistantDelta)(nil),         // 25: example.api.demo.AssistantDelta
-	(*AssistantDone)(nil),          // 26: example.api.demo.AssistantDone
-	(*PostDeprecatedRequest)(nil),  // 27: example.api.demo.PostDeprecatedRequest
-	(*PostDeprecatedResponse)(nil), // 28: example.api.demo.PostDeprecatedResponse
-	(*RawRequest)(nil),             // 29: example.api.demo.RawRequest
-	(*RawResponse)(nil),            // 30: example.api.demo.RawResponse
-	(*RawResponseList2Value)(nil),  // 31: example.api.demo.RawResponseList2Value
-	(*ApiDemoA)(nil),               // 32: example.api.demo.ApiDemoA
-	(*MapModelRequest)(nil),        // 33: example.api.demo.MapModelRequest
-	(*MapModelResponse)(nil),       // 34: example.api.demo.MapModelResponse
-	(*ErrorDemoRequest)(nil),       // 35: example.api.demo.ErrorDemoRequest
-	(*ErrorDemoResponse)(nil),      // 36: example.api.demo.ErrorDemoResponse
-	nil,                            // 37: example.api.demo.ApiDemoSubA.HelloEntry
-	nil,                            // 38: example.api.demo.TestPostResponse.MapEntry
-	nil,                            // 39: example.api.demo.RawResponse.List2Entry
-	nil,                            // 40: example.api.demo.MapModelResponse.ValueEntry
+	(*FormSubmitRequest)(nil),      // 8: example.api.demo.FormSubmitRequest
+	(*FormSubmitResponse)(nil),     // 9: example.api.demo.FormSubmitResponse
+	(*PutDemoRequest)(nil),         // 10: example.api.demo.PutDemoRequest
+	(*REQFunc1PutQUERY)(nil),       // 11: example.api.demo.REQFunc1putQUERY
+	(*REQFunc1PutJSON)(nil),        // 12: example.api.demo.REQFunc1putJSON
+	(*PutDemoResponse)(nil),        // 13: example.api.demo.PutDemoResponse
+	(*ANONFunc1PutAnonKv)(nil),     // 14: example.api.demo.ANONFunc1putAnonKv
+	(*DeleteRequest)(nil),          // 15: example.api.demo.DeleteRequest
+	(*DeleteResponse)(nil),         // 16: example.api.demo.DeleteResponse
+	(*ANONDeleteAnonList)(nil),     // 17: example.api.demo.ANONDeleteAnonList
+	(*SweepEventsRequest)(nil),     // 18: example.api.demo.SweepEventsRequest
+	(*SweepStreamMessage)(nil),     // 19: example.api.demo.SweepStreamMessage
+	(*SweepState)(nil),             // 20: example.api.demo.SweepState
+	(*SweepProgress)(nil),          // 21: example.api.demo.SweepProgress
+	(*SweepLog)(nil),               // 22: example.api.demo.SweepLog
+	(*AssistantClientMessage)(nil), // 23: example.api.demo.AssistantClientMessage
+	(*AssistantInput)(nil),         // 24: example.api.demo.AssistantInput
+	(*AssistantCancel)(nil),        // 25: example.api.demo.AssistantCancel
+	(*AssistantServerMessage)(nil), // 26: example.api.demo.AssistantServerMessage
+	(*AssistantDelta)(nil),         // 27: example.api.demo.AssistantDelta
+	(*AssistantDone)(nil),          // 28: example.api.demo.AssistantDone
+	(*PostDeprecatedRequest)(nil),  // 29: example.api.demo.PostDeprecatedRequest
+	(*PostDeprecatedResponse)(nil), // 30: example.api.demo.PostDeprecatedResponse
+	(*RawRequest)(nil),             // 31: example.api.demo.RawRequest
+	(*RawResponse)(nil),            // 32: example.api.demo.RawResponse
+	(*RawResponseList2Value)(nil),  // 33: example.api.demo.RawResponseList2Value
+	(*ApiDemoA)(nil),               // 34: example.api.demo.ApiDemoA
+	(*MapModelRequest)(nil),        // 35: example.api.demo.MapModelRequest
+	(*MapModelResponse)(nil),       // 36: example.api.demo.MapModelResponse
+	(*ErrorDemoRequest)(nil),       // 37: example.api.demo.ErrorDemoRequest
+	(*ErrorDemoResponse)(nil),      // 38: example.api.demo.ErrorDemoResponse
+	nil,                            // 39: example.api.demo.ApiDemoSubA.HelloEntry
+	nil,                            // 40: example.api.demo.TestPostResponse.MapEntry
+	nil,                            // 41: example.api.demo.RawResponse.List2Entry
+	nil,                            // 42: example.api.demo.MapModelResponse.ValueEntry
 }
 var file_api_demo_proto_depIdxs = []int32{
 	4,  // 0: example.api.demo.AbcResponse.lmnop:type_name -> example.api.demo.ApiDemoSubA
 	0,  // 1: example.api.demo.AbcResponse.enum_color:type_name -> example.api.demo.ColorEnum
 	1,  // 2: example.api.demo.AbcResponse.enum_status:type_name -> example.api.demo.StatusEnum
 	1,  // 3: example.api.demo.AbcResponse.enum_list:type_name -> example.api.demo.StatusEnum
-	37, // 4: example.api.demo.ApiDemoSubA.hello:type_name -> example.api.demo.ApiDemoSubA.HelloEntry
+	39, // 4: example.api.demo.ApiDemoSubA.hello:type_name -> example.api.demo.ApiDemoSubA.HelloEntry
 	5,  // 5: example.api.demo.ApiDemoSubA.amap:type_name -> example.api.demo.ApiDemoMap
-	38, // 6: example.api.demo.TestPostResponse.map:type_name -> example.api.demo.TestPostResponse.MapEntry
-	9,  // 7: example.api.demo.PutDemoRequest.query:type_name -> example.api.demo.REQFunc1putQUERY
-	10, // 8: example.api.demo.PutDemoRequest.json:type_name -> example.api.demo.REQFunc1putJSON
-	12, // 9: example.api.demo.PutDemoResponse.anon_kv:type_name -> example.api.demo.ANONFunc1putAnonKv
-	15, // 10: example.api.demo.DeleteResponse.anon_list:type_name -> example.api.demo.ANONDeleteAnonList
-	18, // 11: example.api.demo.SweepStreamMessage.state:type_name -> example.api.demo.SweepState
-	19, // 12: example.api.demo.SweepStreamMessage.progress:type_name -> example.api.demo.SweepProgress
-	20, // 13: example.api.demo.SweepStreamMessage.log:type_name -> example.api.demo.SweepLog
-	22, // 14: example.api.demo.AssistantClientMessage.input:type_name -> example.api.demo.AssistantInput
-	23, // 15: example.api.demo.AssistantClientMessage.cancel:type_name -> example.api.demo.AssistantCancel
-	25, // 16: example.api.demo.AssistantServerMessage.delta:type_name -> example.api.demo.AssistantDelta
-	26, // 17: example.api.demo.AssistantServerMessage.done:type_name -> example.api.demo.AssistantDone
-	20, // 18: example.api.demo.AssistantServerMessage.log:type_name -> example.api.demo.SweepLog
-	39, // 19: example.api.demo.RawResponse.list2:type_name -> example.api.demo.RawResponse.List2Entry
-	32, // 20: example.api.demo.RawResponseList2Value.value:type_name -> example.api.demo.ApiDemoA
+	40, // 6: example.api.demo.TestPostResponse.map:type_name -> example.api.demo.TestPostResponse.MapEntry
+	11, // 7: example.api.demo.PutDemoRequest.query:type_name -> example.api.demo.REQFunc1putQUERY
+	12, // 8: example.api.demo.PutDemoRequest.json:type_name -> example.api.demo.REQFunc1putJSON
+	14, // 9: example.api.demo.PutDemoResponse.anon_kv:type_name -> example.api.demo.ANONFunc1putAnonKv
+	17, // 10: example.api.demo.DeleteResponse.anon_list:type_name -> example.api.demo.ANONDeleteAnonList
+	20, // 11: example.api.demo.SweepStreamMessage.state:type_name -> example.api.demo.SweepState
+	21, // 12: example.api.demo.SweepStreamMessage.progress:type_name -> example.api.demo.SweepProgress
+	22, // 13: example.api.demo.SweepStreamMessage.log:type_name -> example.api.demo.SweepLog
+	24, // 14: example.api.demo.AssistantClientMessage.input:type_name -> example.api.demo.AssistantInput
+	25, // 15: example.api.demo.AssistantClientMessage.cancel:type_name -> example.api.demo.AssistantCancel
+	27, // 16: example.api.demo.AssistantServerMessage.delta:type_name -> example.api.demo.AssistantDelta
+	28, // 17: example.api.demo.AssistantServerMessage.done:type_name -> example.api.demo.AssistantDone
+	22, // 18: example.api.demo.AssistantServerMessage.log:type_name -> example.api.demo.SweepLog
+	41, // 19: example.api.demo.RawResponse.list2:type_name -> example.api.demo.RawResponse.List2Entry
+	34, // 20: example.api.demo.RawResponseList2Value.value:type_name -> example.api.demo.ApiDemoA
 	4,  // 21: example.api.demo.ApiDemoA.lmnop:type_name -> example.api.demo.ApiDemoSubA
 	0,  // 22: example.api.demo.ApiDemoA.enum_color:type_name -> example.api.demo.ColorEnum
 	1,  // 23: example.api.demo.ApiDemoA.enum_status:type_name -> example.api.demo.StatusEnum
 	1,  // 24: example.api.demo.ApiDemoA.enum_list:type_name -> example.api.demo.StatusEnum
-	40, // 25: example.api.demo.MapModelResponse.value:type_name -> example.api.demo.MapModelResponse.ValueEntry
+	42, // 25: example.api.demo.MapModelResponse.value:type_name -> example.api.demo.MapModelResponse.ValueEntry
 	5,  // 26: example.api.demo.TestPostResponse.MapEntry.value:type_name -> example.api.demo.ApiDemoMap
-	31, // 27: example.api.demo.RawResponse.List2Entry.value:type_name -> example.api.demo.RawResponseList2Value
+	33, // 27: example.api.demo.RawResponse.List2Entry.value:type_name -> example.api.demo.RawResponseList2Value
 	5,  // 28: example.api.demo.MapModelResponse.ValueEntry.value:type_name -> example.api.demo.ApiDemoMap
 	2,  // 29: example.api.demo.DemoService.Abc:input_type -> example.api.demo.AbcRequest
 	6,  // 30: example.api.demo.DemoService.TestPost:input_type -> example.api.demo.TestPostRequest
-	8,  // 31: example.api.demo.DemoService.PutDemo:input_type -> example.api.demo.PutDemoRequest
-	13, // 32: example.api.demo.DemoService.Delete:input_type -> example.api.demo.DeleteRequest
-	16, // 33: example.api.demo.DemoService.SweepEvents:input_type -> example.api.demo.SweepEventsRequest
-	21, // 34: example.api.demo.DemoService.AssistantSession:input_type -> example.api.demo.AssistantClientMessage
-	27, // 35: example.api.demo.DemoService.PostDeprecated:input_type -> example.api.demo.PostDeprecatedRequest
-	29, // 36: example.api.demo.DemoService.Raw:input_type -> example.api.demo.RawRequest
-	33, // 37: example.api.demo.DemoService.MapModel:input_type -> example.api.demo.MapModelRequest
-	35, // 38: example.api.demo.DemoService.ErrorDemo:input_type -> example.api.demo.ErrorDemoRequest
-	3,  // 39: example.api.demo.DemoService.Abc:output_type -> example.api.demo.AbcResponse
-	7,  // 40: example.api.demo.DemoService.TestPost:output_type -> example.api.demo.TestPostResponse
-	11, // 41: example.api.demo.DemoService.PutDemo:output_type -> example.api.demo.PutDemoResponse
-	14, // 42: example.api.demo.DemoService.Delete:output_type -> example.api.demo.DeleteResponse
-	17, // 43: example.api.demo.DemoService.SweepEvents:output_type -> example.api.demo.SweepStreamMessage
-	24, // 44: example.api.demo.DemoService.AssistantSession:output_type -> example.api.demo.AssistantServerMessage
-	28, // 45: example.api.demo.DemoService.PostDeprecated:output_type -> example.api.demo.PostDeprecatedResponse
-	30, // 46: example.api.demo.DemoService.Raw:output_type -> example.api.demo.RawResponse
-	34, // 47: example.api.demo.DemoService.MapModel:output_type -> example.api.demo.MapModelResponse
-	36, // 48: example.api.demo.DemoService.ErrorDemo:output_type -> example.api.demo.ErrorDemoResponse
-	39, // [39:49] is the sub-list for method output_type
-	29, // [29:39] is the sub-list for method input_type
+	8,  // 31: example.api.demo.DemoService.FormSubmit:input_type -> example.api.demo.FormSubmitRequest
+	10, // 32: example.api.demo.DemoService.PutDemo:input_type -> example.api.demo.PutDemoRequest
+	15, // 33: example.api.demo.DemoService.Delete:input_type -> example.api.demo.DeleteRequest
+	18, // 34: example.api.demo.DemoService.SweepEvents:input_type -> example.api.demo.SweepEventsRequest
+	23, // 35: example.api.demo.DemoService.AssistantSession:input_type -> example.api.demo.AssistantClientMessage
+	29, // 36: example.api.demo.DemoService.PostDeprecated:input_type -> example.api.demo.PostDeprecatedRequest
+	31, // 37: example.api.demo.DemoService.Raw:input_type -> example.api.demo.RawRequest
+	35, // 38: example.api.demo.DemoService.MapModel:input_type -> example.api.demo.MapModelRequest
+	37, // 39: example.api.demo.DemoService.ErrorDemo:input_type -> example.api.demo.ErrorDemoRequest
+	3,  // 40: example.api.demo.DemoService.Abc:output_type -> example.api.demo.AbcResponse
+	7,  // 41: example.api.demo.DemoService.TestPost:output_type -> example.api.demo.TestPostResponse
+	9,  // 42: example.api.demo.DemoService.FormSubmit:output_type -> example.api.demo.FormSubmitResponse
+	13, // 43: example.api.demo.DemoService.PutDemo:output_type -> example.api.demo.PutDemoResponse
+	16, // 44: example.api.demo.DemoService.Delete:output_type -> example.api.demo.DeleteResponse
+	19, // 45: example.api.demo.DemoService.SweepEvents:output_type -> example.api.demo.SweepStreamMessage
+	26, // 46: example.api.demo.DemoService.AssistantSession:output_type -> example.api.demo.AssistantServerMessage
+	30, // 47: example.api.demo.DemoService.PostDeprecated:output_type -> example.api.demo.PostDeprecatedResponse
+	32, // 48: example.api.demo.DemoService.Raw:output_type -> example.api.demo.RawResponse
+	36, // 49: example.api.demo.DemoService.MapModel:output_type -> example.api.demo.MapModelResponse
+	38, // 50: example.api.demo.DemoService.ErrorDemo:output_type -> example.api.demo.ErrorDemoResponse
+	40, // [40:51] is the sub-list for method output_type
+	29, // [29:40] is the sub-list for method input_type
 	29, // [29:29] is the sub-list for extension type_name
 	29, // [29:29] is the sub-list for extension extendee
 	0,  // [0:29] is the sub-list for field type_name
@@ -2340,16 +2474,16 @@ func file_api_demo_proto_init() {
 	if File_api_demo_proto != nil {
 		return
 	}
-	file_api_demo_proto_msgTypes[15].OneofWrappers = []any{
+	file_api_demo_proto_msgTypes[17].OneofWrappers = []any{
 		(*SweepStreamMessage_State)(nil),
 		(*SweepStreamMessage_Progress)(nil),
 		(*SweepStreamMessage_Log)(nil),
 	}
-	file_api_demo_proto_msgTypes[19].OneofWrappers = []any{
+	file_api_demo_proto_msgTypes[21].OneofWrappers = []any{
 		(*AssistantClientMessage_Input)(nil),
 		(*AssistantClientMessage_Cancel)(nil),
 	}
-	file_api_demo_proto_msgTypes[22].OneofWrappers = []any{
+	file_api_demo_proto_msgTypes[24].OneofWrappers = []any{
 		(*AssistantServerMessage_Delta)(nil),
 		(*AssistantServerMessage_Done)(nil),
 		(*AssistantServerMessage_Log)(nil),
@@ -2360,7 +2494,7 @@ func file_api_demo_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_demo_proto_rawDesc), len(file_api_demo_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   39,
+			NumMessages:   41,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -44,6 +44,11 @@ class DemoServiceStub(object):
                 request_serializer=api_dot_demo__pb2.TestPostRequest.SerializeToString,
                 response_deserializer=api_dot_demo__pb2.TestPostResponse.FromString,
                 _registered_method=True)
+        self.FormSubmit = channel.unary_unary(
+                '/example.api.demo.DemoService/FormSubmit',
+                request_serializer=api_dot_demo__pb2.FormSubmitRequest.SerializeToString,
+                response_deserializer=api_dot_demo__pb2.FormSubmitResponse.FromString,
+                _registered_method=True)
         self.PutDemo = channel.unary_unary(
                 '/example.api.demo.DemoService/PutDemo',
                 request_serializer=api_dot_demo__pb2.PutDemoRequest.SerializeToString,
@@ -96,6 +101,12 @@ class DemoServiceServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def TestPost(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def FormSubmit(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -161,6 +172,11 @@ def add_DemoServiceServicer_to_server(servicer, server):
                     servicer.TestPost,
                     request_deserializer=api_dot_demo__pb2.TestPostRequest.FromString,
                     response_serializer=api_dot_demo__pb2.TestPostResponse.SerializeToString,
+            ),
+            'FormSubmit': grpc.unary_unary_rpc_method_handler(
+                    servicer.FormSubmit,
+                    request_deserializer=api_dot_demo__pb2.FormSubmitRequest.FromString,
+                    response_serializer=api_dot_demo__pb2.FormSubmitResponse.SerializeToString,
             ),
             'PutDemo': grpc.unary_unary_rpc_method_handler(
                     servicer.PutDemo,
@@ -257,6 +273,33 @@ class DemoService(object):
             '/example.api.demo.DemoService/TestPost',
             api_dot_demo__pb2.TestPostRequest.SerializeToString,
             api_dot_demo__pb2.TestPostResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def FormSubmit(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/example.api.demo.DemoService/FormSubmit',
+            api_dot_demo__pb2.FormSubmitRequest.SerializeToString,
+            api_dot_demo__pb2.FormSubmitResponse.FromString,
             options,
             channel_credentials,
             insecure,

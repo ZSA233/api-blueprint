@@ -81,7 +81,7 @@ v1 已实现，其他端待扩展。
 ```sh
 uv run python -m compileall src/api_blueprint -q
 uv run api-gen check -c examples/api-blueprint.toml
-uv run pytest tests/engine/test_binary_schema.py tests/engine/test_media_contract.py tests/contract/test_graph.py tests/codegen/test_python_codegen.py tests/codegen/test_typescript_codegen.py tests/codegen/test_golang_codegen.py tests/codegen/test_golang_client_codegen.py tests/codegen/test_shared_planning.py -q
+uv run pytest tests/engine/test_binary_schema.py tests/engine/test_media_contract.py tests/contract/graph tests/codegen/python tests/codegen/typescript tests/codegen/go/server tests/codegen/go/client tests/codegen/shared -q
 uv run python -m scripts.example_conformance.cli run --servers go,python --clients go,typescript,python --scenario binary-response,media,audit-binary
 uv run python -m scripts.example_validation --mode refresh --scope blueprint
 ```

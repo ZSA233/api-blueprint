@@ -5,16 +5,12 @@
 import type { ApiClientConfig, ApiTransport } from "../runtime/client";
 import type { ApiClient } from "../routes/api/client";
 import { ApiClient as ApiClientImpl } from "../routes/api/client";
-import type { BinaryClient } from "../routes/api/binary/client";
-import { BinaryClient as BinaryClientImpl } from "../routes/api/binary/client";
 import type { ConflictClient } from "../routes/api/conflict/client";
 import { ConflictClient as ConflictClientImpl } from "../routes/api/conflict/client";
 import type { DemoClient } from "../routes/api/demo/client";
 import { DemoClient as DemoClientImpl } from "../routes/api/demo/client";
 import type { HelloClient } from "../routes/api/hello/client";
 import { HelloClient as HelloClientImpl } from "../routes/api/hello/client";
-import type { MediaClient } from "../routes/api/media/client";
-import { MediaClient as MediaClientImpl } from "../routes/api/media/client";
 import type { GeneratedClients as HttpGeneratedClients } from "./http/api/factory";
 import { createClients as createHttpClients } from "./http/api/factory";
 import type { GeneratedClients as WailsV2GeneratedClients } from "./wailsv2/api/factory";
@@ -35,11 +31,9 @@ export interface GeneratedClientsByTransport {
 
 export interface CommonGeneratedClients {
   apiClient: ApiClient;
-  binaryClient: BinaryClient;
   conflictClient: ConflictClient;
   demoClient: DemoClient;
   helloClient: HelloClient;
-  mediaClient: MediaClient;
 }
 
 export interface ApiTransportClientConfig extends ApiClientConfig {
@@ -49,10 +43,8 @@ export interface ApiTransportClientConfig extends ApiClientConfig {
 export function createClientsForTransport(config: ApiTransportClientConfig): CommonGeneratedClients {
   return {
     apiClient: new ApiClientImpl(config),
-    binaryClient: new BinaryClientImpl(config),
     conflictClient: new ConflictClientImpl(config),
     demoClient: new DemoClientImpl(config),
     helloClient: new HelloClientImpl(config),
-    mediaClient: new MediaClientImpl(config),
   };
 }

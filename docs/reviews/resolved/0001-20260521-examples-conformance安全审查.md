@@ -181,7 +181,7 @@ curl -i -X POST 'http://127.0.0.1:<port>/api/demo/test_post' -H 'Content-Type: a
   - 新增 route coverage test，要求 examples index 中用户可见 route 绑定到 conformance 场景或显式 unsupported。
   - 新增 `scripts/example_benchmark/`，把旧 binary benchmark 包化，并增加 opt-in protocol benchmark 作为性能趋势观察工具。
 - 验证命令：
-  - `uv run pytest tests/contract/test_graph.py tests/codegen/test_python_codegen.py tests/scripts/test_example_conformance.py tests/scripts/test_example_benchmark.py tests/scripts/test_benchmark_binary.py tests/release/test_release_assets.py -q`
+  - `uv run pytest tests/contract/graph tests/codegen/python tests/scripts/example_conformance tests/scripts/test_example_benchmark.py tests/scripts/test_benchmark_binary.py tests/release/test_release_assets.py -q`
   - `uv run python scripts/example_validation.py --scope blueprint --mode refresh`
   - `uv run python scripts/example_validation.py --scope blueprint --mode check`
   - `uv run python -m scripts.example_conformance run --servers go,java,kotlin,python --scenario bad-json,bad-query,malformed-websocket,ws-early-close,bad-binary`

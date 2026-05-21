@@ -7,6 +7,16 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class HelloChannelMsgTypeEnum(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    HELLOCHANNELMSGTYPEENUM_UNSPECIFIED: _ClassVar[HelloChannelMsgTypeEnum]
+    HELLOCHANNELMSGTYPEENUM_PING: _ClassVar[HelloChannelMsgTypeEnum]
+    HELLOCHANNELMSGTYPEENUM_PONG: _ClassVar[HelloChannelMsgTypeEnum]
+    HELLOCHANNELMSGTYPEENUM_JOIN: _ClassVar[HelloChannelMsgTypeEnum]
+    HELLOCHANNELMSGTYPEENUM_LEAVE: _ClassVar[HelloChannelMsgTypeEnum]
+    HELLOCHANNELMSGTYPEENUM_FORGEROUND: _ClassVar[HelloChannelMsgTypeEnum]
+    HELLOCHANNELMSGTYPEENUM_UPGRADE: _ClassVar[HelloChannelMsgTypeEnum]
+
 class MapEnum(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     MAPENUM_UNSPECIFIED: _ClassVar[MapEnum]
@@ -17,6 +27,13 @@ class HelloWayEnum(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     HELLOWAYENUM_UNSPECIFIED: _ClassVar[HelloWayEnum]
     HELLOWAYENUM_ASD: _ClassVar[HelloWayEnum]
+HELLOCHANNELMSGTYPEENUM_UNSPECIFIED: HelloChannelMsgTypeEnum
+HELLOCHANNELMSGTYPEENUM_PING: HelloChannelMsgTypeEnum
+HELLOCHANNELMSGTYPEENUM_PONG: HelloChannelMsgTypeEnum
+HELLOCHANNELMSGTYPEENUM_JOIN: HelloChannelMsgTypeEnum
+HELLOCHANNELMSGTYPEENUM_LEAVE: HelloChannelMsgTypeEnum
+HELLOCHANNELMSGTYPEENUM_FORGEROUND: HelloChannelMsgTypeEnum
+HELLOCHANNELMSGTYPEENUM_UPGRADE: HelloChannelMsgTypeEnum
 MAPENUM_UNSPECIFIED: MapEnum
 MAPENUM_A: MapEnum
 MAPENUM_B: MapEnum
@@ -24,14 +41,16 @@ HELLOWAYENUM_UNSPECIFIED: HelloWayEnum
 HELLOWAYENUM_ASD: HelloWayEnum
 
 class AbcRequest(_message.Message):
-    __slots__ = ("arg1", "arg3", "arg2")
+    __slots__ = ("arg1", "arg3", "arg2", "type")
     ARG1_FIELD_NUMBER: _ClassVar[int]
     ARG3_FIELD_NUMBER: _ClassVar[int]
     ARG2_FIELD_NUMBER: _ClassVar[int]
+    TYPE_FIELD_NUMBER: _ClassVar[int]
     arg1: bool
     arg3: str
     arg2: float
-    def __init__(self, arg1: bool = ..., arg3: _Optional[str] = ..., arg2: _Optional[float] = ...) -> None: ...
+    type: HelloChannelMsgTypeEnum
+    def __init__(self, arg1: bool = ..., arg3: _Optional[str] = ..., arg2: _Optional[float] = ..., type: _Optional[_Union[HelloChannelMsgTypeEnum, str]] = ...) -> None: ...
 
 class AbcResponse(_message.Message):
     __slots__ = ("value",)

@@ -3,6 +3,7 @@ from __future__ import annotations
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 from .constants import WAILS_V2_BIN_ENV, WAILS_V3_BIN_ENV

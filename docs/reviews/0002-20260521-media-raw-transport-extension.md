@@ -77,7 +77,7 @@ v1 已实现核心 DSL、ContractGraph、capability check、Python client/server
 
 ## 本轮验证记录
 
-- 已执行并通过：`uv run pytest tests/engine/test_media_contract.py tests/engine/test_blueprint_build.py tests/contract/test_graph.py tests/codegen/test_shared_planning.py tests/codegen/test_python_codegen.py tests/codegen/test_typescript_codegen.py tests/codegen/test_golang_client_codegen.py tests/codegen/test_golang_codegen.py -q`。
+- 已执行并通过：`uv run pytest tests/engine/test_media_contract.py tests/engine/test_blueprint_build.py tests/contract/graph tests/codegen/shared tests/codegen/python tests/codegen/typescript tests/codegen/go/client tests/codegen/go/server -q`。
 - 已执行并通过：`uv run python -m compileall src/api_blueprint -q`。
 - 已执行并通过：`uv run api-gen check -c examples/api-blueprint.toml`。
 - 已执行并通过：`uv run python -m scripts.example_validation --mode refresh --scope blueprint`。

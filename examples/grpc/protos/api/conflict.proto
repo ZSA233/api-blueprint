@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package example.api.conflict;
+
+option go_package = "example.com/project/grpc/go/api/conflict;conflict";
+
+service ConflictService {
+  rpc Default (DefaultRequest) returns (DefaultResponse);
+}
+
+message DefaultRequest {
+  string class = 1;
+}
+
+message DefaultResponse {
+  string default = 1;
+  string class = 2;
+  KeywordEnum enum = 3;
+}
+
+enum KeywordEnum {
+  KEYWORDENUM_UNSPECIFIED = 0;
+  KEYWORDENUM_DEFAULT = 1;
+  KEYWORDENUM_CLASS = 2;
+}
