@@ -21,6 +21,16 @@ type HelloChannelMsgTypeEnum string
 /*
 ENUM(
 
+	DEFAULT = "default"
+	CLASS = "class"
+
+)
+*/
+type KeywordEnum string
+
+/*
+ENUM(
+
 	RED = "red"
 	GREEN = "green"
 	BLUE = "blue"

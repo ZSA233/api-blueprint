@@ -1,12 +1,13 @@
 # Examples Validation
 
-`examples/` carries the public Blueprint, Wails, Kotlin, Java, and gRPC examples. Most example directories are generated snapshots and should not be hand-edited for business logic.
+`examples/` carries the public Blueprint, Flutter, Wails, Kotlin, Java, and gRPC examples. Most example directories are generated snapshots and should not be hand-edited for business logic.
 
 ## Sources And Snapshots
 
 - `examples/blueprints/`: Blueprint source of truth.
 - `examples/api-blueprint.index.json`: lightweight route catalog snapshot. Prefer `api-gen inspect` for daily on-demand project understanding; full contract, agent, and shard snapshots are optional outputs mainly for offline navigation, archiving, and drift validation.
-- `examples/golang/server/`, `examples/golang/client/`, `examples/typescript/`, `examples/kotlin/`, `examples/java/client/`, `examples/java/server/`: Blueprint generated snapshots.
+- `examples/golang/server/`, `examples/golang/client/`, `examples/typescript/`, `examples/flutter/`, `examples/kotlin/`, `examples/java/client/`, `examples/java/server/`, `examples/python/`: Blueprint generated snapshots.
+- `examples/golang/conformance/`, `examples/typescript/conformance.ts`, `examples/kotlin/conformance/`, `examples/java/conformance/`, `examples/python/conformance/`, `examples/flutter/test/conformance_test.dart`: handwritten preserved conformance harnesses that call generated artifacts against a real server; snapshot refresh must preserve them.
 - `examples/java/suite/`: handwritten Gradle Java 17 application that runs core generated Java client/server round-trips.
 - `examples/wails-harness/v2/`, `examples/wails-harness/v3/`: handwritten minimal Wails harnesses that consume shared generated artifacts.
 - `examples/wails-hello/`: standalone Wails v3 hello example; `blueprints/` is the source of truth, `golang/` and `typescript/` are generated snapshots, and `app/` is a handwritten Wails app shell.
@@ -18,6 +19,7 @@
 make example-compile-check
 make example-refresh
 make example-validation
+make example-conformance
 make example-golang-suite
 make example-java-suite
 make wails-hello-compile-check
@@ -27,6 +29,7 @@ make wails-hello-check
 - `example-compile-check`: for feature development; allows snapshot drift and only verifies regenerated artifacts still compile or import.
 - `example-refresh`: accepts intentional generation changes and refreshes committed snapshots.
 - `example-validation`: strict mode; requires generator output and committed snapshots to converge.
+- `example-conformance`: real protocol interoperability validation; it regenerates examples in a temporary workspace, checks snapshot drift and language compilation, then starts real servers and runs clients by the server/client/scenario capability intersection.
 - `example-golang-suite`: manual end-to-end validation aid; it regenerates the Go server/client in a temporary workspace, starts a real Go server process, then verifies the loop with the generated Go client and raw HTTP binary requests. It is not part of default `test`, `example-validation`, `release-preflight`, or CI.
 - `example-java-suite`: manual end-to-end validation aid; it regenerates the Java client/server needed by `http.java` in a temporary workspace, runs `examples/java/suite`, starts a real Spring Boot server, then verifies core RPC, binary, static, and unsupported-route loops with the generated Java 17 JDK HTTP client. It is not part of default `test`, `example-validation`, `release-preflight`, or CI.
 - `wails-hello-compile-check`: validates only the standalone Wails hello example, allows snapshot drift, and is useful for fast development checks.
@@ -41,6 +44,45 @@ uv run python scripts/example_validation.py --scope wails-hello --mode refresh
 uv run python scripts/example_validation.py --scope blueprint --mode golang-suite
 uv run python scripts/example_validation.py --scope blueprint --mode java-suite
 ```
+
+## Conformance Interoperability
+
+`scripts/example_conformance/` is a real interoperability manager independent of the older validation scopes:
+
+```sh
+uv run python -m scripts.example_conformance list
+uv run python -m scripts.example_conformance generate --keep-workspace
+uv run python -m scripts.example_conformance run --servers go,kotlin --clients typescript,flutter --scenario request-options,media-filename-edge,media-error
+uv run python -m scripts.example_conformance check --servers go,java,kotlin,python --clients go,typescript,kotlin,flutter,java,python
+uv run python -m scripts.example_conformance refresh --servers go --clients go,typescript,kotlin,flutter
+```
+
+The Makefile wraps the same CLI thinly for quick matrix selection:
+
+```sh
+make example-conformance-list
+make example-conformance-run EXAMPLE_CONFORMANCE_SERVERS=go,kotlin EXAMPLE_CONFORMANCE_CLIENTS=flutter EXAMPLE_CONFORMANCE_SCENARIOS=request-options,media-filename-edge,media-error
+make example-conformance-check EXAMPLE_CONFORMANCE_SERVERS=all EXAMPLE_CONFORMANCE_CLIENTS=all EXAMPLE_CONFORMANCE_SCENARIOS=rpc,binary
+make example-conformance-refresh
+```
+
+- `list`: prints enabled servers, client capabilities, and scenarios.
+- `generate`: generates all example artifacts in a temporary workspace without changing the repository.
+- `run`: runs only interoperability checks and can be filtered with `--servers`, `--clients`, and `--scenario`; `--server` remains available as a single-server compatibility shortcut.
+- `check`: generates in a temporary workspace, checks snapshot drift, compiles/analyzes, then runs interoperability.
+- `refresh`: refreshes repository examples, then compiles/analyzes and runs interoperability.
+- `EXAMPLE_CONFORMANCE_SERVERS`: selects server matrix items, defaulting to `go`; set it to `all` for Go / Java / Kotlin / Python servers.
+- `EXAMPLE_CONFORMANCE_CLIENTS`: selects client matrix items, defaulting to `go,typescript,kotlin,flutter`; set it to `all` for Go / TypeScript / Kotlin / Flutter / Java / Python clients.
+- `EXAMPLE_CONFORMANCE_SCENARIOS`: selects scenario matrix items; an empty value means all scenarios.
+- `EXAMPLE_CONFORMANCE_KEEP_WORKSPACE=1`: keeps the temporary workspace for `generate`, `run`, and `check` to debug failures.
+
+Successful conformance output is collapsed into one line per stage, such as generation, snapshot drift, compilation, and server startup; the runtime hierarchy is `server -> client -> setup/scenario`. Each client first prints `client/setup` while it cold-starts or prepares the test execution unit, such as Go build, TypeScript compile, `dart pub get`, or Gradle `installDist`; then each `client/scenario` item runs and reports as soon as that item finishes. Detailed generator, `dart pub get`, Gradle, `go test`, and similar tool output is hidden by default. If a stage fails, the runner replays that stage's captured stdout/stderr to stderr; if a client scenario fails, it also replays the active server log so server-side or interoperability failures stay visible. Status text is colored automatically on TTYs; set `FORCE_COLOR=1` to force colors or `NO_COLOR=1` to disable them.
+
+The active server matrix covers Go HTTP, Java Spring, Kotlin Ktor, and Python FastAPI; the client matrix covers Go, TypeScript, Kotlin, Flutter, Java, and Python. The runner executes the intersection of server capabilities, client capabilities, and scenario registry entries. Unsupported combinations must be recorded in the manifest and reported as skipped or explicit unsupported contracts instead of silently disappearing. TypeScript / Kotlin / Flutter cover real SSE and WebSocket interoperability; Java / Python clients currently cover long-connection scenarios through their default transport's unsupported contract.
+
+The scenario registry maps DSL coverage categories to automated cases: query/json/form/binary/raw/XML, static/no-envelope, request options headers/timeouts, media filename edge cases, raw media typed errors, scalar values, enums, maps, deprecated routes, typed errors, naming conflicts, multiple blueprint roots, response envelopes, binary responses, audit-binary, SSE, WebSocket, single-model channels, and the second binary schema. Server-only safety probes cover bad JSON, bad query, malformed WebSocket frames, WebSocket early close, and bad binary input so servers do not 5xx crash, exit, or leave connections hanging.
+
+`docs/reviews/resolved/0001-20260521-examples-conformance安全审查.md` records the closure of this safety review: high-risk server stability items, Python strict DTOs, and ordinary examples conformance coverage gaps have been completed. Future generated-artifact risks should get the next review record instead of reopening the resolved 0001 item.
 
 ## Drift Meaning
 
@@ -62,6 +104,7 @@ Strict examples validation may require:
 - `go`
 - `go-enum`
 - `npm`
+- Dart SDK
 - Java 17
 - Gradle or `API_BLUEPRINT_GRADLE_BIN`
 - Wails v2 CLI `wails` or `API_BLUEPRINT_WAILS_V2_BIN`
@@ -70,6 +113,7 @@ Strict examples validation may require:
 - `protoc-gen-go`
 - `protoc-gen-go-grpc`
 - `grpcio-tools`
+- The Python server WebSocket runtime needs the `websockets` module; this repository manages it through `pyproject.toml`.
 
 ## Release Requirement
 

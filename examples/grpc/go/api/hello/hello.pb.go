@@ -21,6 +21,67 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type HelloChannelMsgTypeEnum int32
+
+const (
+	HelloChannelMsgTypeEnum_HELLOCHANNELMSGTYPEENUM_UNSPECIFIED HelloChannelMsgTypeEnum = 0
+	HelloChannelMsgTypeEnum_HELLOCHANNELMSGTYPEENUM_PING        HelloChannelMsgTypeEnum = 1
+	HelloChannelMsgTypeEnum_HELLOCHANNELMSGTYPEENUM_PONG        HelloChannelMsgTypeEnum = 2
+	HelloChannelMsgTypeEnum_HELLOCHANNELMSGTYPEENUM_JOIN        HelloChannelMsgTypeEnum = 3
+	HelloChannelMsgTypeEnum_HELLOCHANNELMSGTYPEENUM_LEAVE       HelloChannelMsgTypeEnum = 4
+	HelloChannelMsgTypeEnum_HELLOCHANNELMSGTYPEENUM_FORGEROUND  HelloChannelMsgTypeEnum = 5
+	HelloChannelMsgTypeEnum_HELLOCHANNELMSGTYPEENUM_UPGRADE     HelloChannelMsgTypeEnum = 6
+)
+
+// Enum value maps for HelloChannelMsgTypeEnum.
+var (
+	HelloChannelMsgTypeEnum_name = map[int32]string{
+		0: "HELLOCHANNELMSGTYPEENUM_UNSPECIFIED",
+		1: "HELLOCHANNELMSGTYPEENUM_PING",
+		2: "HELLOCHANNELMSGTYPEENUM_PONG",
+		3: "HELLOCHANNELMSGTYPEENUM_JOIN",
+		4: "HELLOCHANNELMSGTYPEENUM_LEAVE",
+		5: "HELLOCHANNELMSGTYPEENUM_FORGEROUND",
+		6: "HELLOCHANNELMSGTYPEENUM_UPGRADE",
+	}
+	HelloChannelMsgTypeEnum_value = map[string]int32{
+		"HELLOCHANNELMSGTYPEENUM_UNSPECIFIED": 0,
+		"HELLOCHANNELMSGTYPEENUM_PING":        1,
+		"HELLOCHANNELMSGTYPEENUM_PONG":        2,
+		"HELLOCHANNELMSGTYPEENUM_JOIN":        3,
+		"HELLOCHANNELMSGTYPEENUM_LEAVE":       4,
+		"HELLOCHANNELMSGTYPEENUM_FORGEROUND":  5,
+		"HELLOCHANNELMSGTYPEENUM_UPGRADE":     6,
+	}
+)
+
+func (x HelloChannelMsgTypeEnum) Enum() *HelloChannelMsgTypeEnum {
+	p := new(HelloChannelMsgTypeEnum)
+	*p = x
+	return p
+}
+
+func (x HelloChannelMsgTypeEnum) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (HelloChannelMsgTypeEnum) Descriptor() protoreflect.EnumDescriptor {
+	return file_api_hello_proto_enumTypes[0].Descriptor()
+}
+
+func (HelloChannelMsgTypeEnum) Type() protoreflect.EnumType {
+	return &file_api_hello_proto_enumTypes[0]
+}
+
+func (x HelloChannelMsgTypeEnum) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use HelloChannelMsgTypeEnum.Descriptor instead.
+func (HelloChannelMsgTypeEnum) EnumDescriptor() ([]byte, []int) {
+	return file_api_hello_proto_rawDescGZIP(), []int{0}
+}
+
 type MapEnum int32
 
 const (
@@ -54,11 +115,11 @@ func (x MapEnum) String() string {
 }
 
 func (MapEnum) Descriptor() protoreflect.EnumDescriptor {
-	return file_api_hello_proto_enumTypes[0].Descriptor()
+	return file_api_hello_proto_enumTypes[1].Descriptor()
 }
 
 func (MapEnum) Type() protoreflect.EnumType {
-	return &file_api_hello_proto_enumTypes[0]
+	return &file_api_hello_proto_enumTypes[1]
 }
 
 func (x MapEnum) Number() protoreflect.EnumNumber {
@@ -67,7 +128,7 @@ func (x MapEnum) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use MapEnum.Descriptor instead.
 func (MapEnum) EnumDescriptor() ([]byte, []int) {
-	return file_api_hello_proto_rawDescGZIP(), []int{0}
+	return file_api_hello_proto_rawDescGZIP(), []int{1}
 }
 
 type HelloWayEnum int32
@@ -100,11 +161,11 @@ func (x HelloWayEnum) String() string {
 }
 
 func (HelloWayEnum) Descriptor() protoreflect.EnumDescriptor {
-	return file_api_hello_proto_enumTypes[1].Descriptor()
+	return file_api_hello_proto_enumTypes[2].Descriptor()
 }
 
 func (HelloWayEnum) Type() protoreflect.EnumType {
-	return &file_api_hello_proto_enumTypes[1]
+	return &file_api_hello_proto_enumTypes[2]
 }
 
 func (x HelloWayEnum) Number() protoreflect.EnumNumber {
@@ -113,14 +174,15 @@ func (x HelloWayEnum) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use HelloWayEnum.Descriptor instead.
 func (HelloWayEnum) EnumDescriptor() ([]byte, []int) {
-	return file_api_hello_proto_rawDescGZIP(), []int{1}
+	return file_api_hello_proto_rawDescGZIP(), []int{2}
 }
 
 type AbcRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Arg1          bool                   `protobuf:"varint,1,opt,name=arg1,proto3" json:"arg1,omitempty"`
-	Arg3          string                 `protobuf:"bytes,2,opt,name=arg3,proto3" json:"arg3,omitempty"`
-	Arg2          float32                `protobuf:"fixed32,3,opt,name=arg2,proto3" json:"arg2,omitempty"`
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	Arg1          bool                    `protobuf:"varint,1,opt,name=arg1,proto3" json:"arg1,omitempty"`
+	Arg3          string                  `protobuf:"bytes,2,opt,name=arg3,proto3" json:"arg3,omitempty"`
+	Arg2          float32                 `protobuf:"fixed32,3,opt,name=arg2,proto3" json:"arg2,omitempty"`
+	Type          HelloChannelMsgTypeEnum `protobuf:"varint,4,opt,name=type,proto3,enum=example.api.hello.HelloChannelMsgTypeEnum" json:"type,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -174,6 +236,13 @@ func (x *AbcRequest) GetArg2() float32 {
 		return x.Arg2
 	}
 	return 0
+}
+
+func (x *AbcRequest) GetType() HelloChannelMsgTypeEnum {
+	if x != nil {
+		return x.Type
+	}
+	return HelloChannelMsgTypeEnum_HELLOCHANNELMSGTYPEENUM_UNSPECIFIED
 }
 
 type AbcResponse struct {
@@ -748,12 +817,13 @@ var File_api_hello_proto protoreflect.FileDescriptor
 
 const file_api_hello_proto_rawDesc = "" +
 	"\n" +
-	"\x0fapi/hello.proto\x12\x11example.api.hello\"H\n" +
+	"\x0fapi/hello.proto\x12\x11example.api.hello\"\x88\x01\n" +
 	"\n" +
 	"AbcRequest\x12\x12\n" +
 	"\x04arg1\x18\x01 \x01(\bR\x04arg1\x12\x12\n" +
 	"\x04arg3\x18\x02 \x01(\tR\x04arg3\x12\x12\n" +
-	"\x04arg2\x18\x03 \x01(\x02R\x04arg2\"\xa8\x01\n" +
+	"\x04arg2\x18\x03 \x01(\x02R\x04arg2\x12>\n" +
+	"\x04type\x18\x04 \x01(\x0e2*.example.api.hello.HelloChannelMsgTypeEnumR\x04type\"\xa8\x01\n" +
 	"\vAbcResponse\x12?\n" +
 	"\x05value\x18\x01 \x03(\v2).example.api.hello.AbcResponse.ValueEntryR\x05value\x1aX\n" +
 	"\n" +
@@ -783,7 +853,15 @@ const file_api_hello_proto_rawDesc = "" +
 	"\x05value\x18\x01 \x01(\x0e2\x1a.example.api.hello.MapEnumR\x05value\"F\n" +
 	"\x0fHelloWayRequest\x123\n" +
 	"\x04arg1\x18\x01 \x01(\x0e2\x1f.example.api.hello.HelloWayEnumR\x04arg1\"\x12\n" +
-	"\x10HelloWayResponse*@\n" +
+	"\x10HelloWayResponse*\x98\x02\n" +
+	"\x17HelloChannelMsgTypeEnum\x12'\n" +
+	"#HELLOCHANNELMSGTYPEENUM_UNSPECIFIED\x10\x00\x12 \n" +
+	"\x1cHELLOCHANNELMSGTYPEENUM_PING\x10\x01\x12 \n" +
+	"\x1cHELLOCHANNELMSGTYPEENUM_PONG\x10\x02\x12 \n" +
+	"\x1cHELLOCHANNELMSGTYPEENUM_JOIN\x10\x03\x12!\n" +
+	"\x1dHELLOCHANNELMSGTYPEENUM_LEAVE\x10\x04\x12&\n" +
+	"\"HELLOCHANNELMSGTYPEENUM_FORGEROUND\x10\x05\x12#\n" +
+	"\x1fHELLOCHANNELMSGTYPEENUM_UPGRADE\x10\x06*@\n" +
 	"\aMapEnum\x12\x17\n" +
 	"\x13MAPENUM_UNSPECIFIED\x10\x00\x12\r\n" +
 	"\tMAPENUM_A\x10\x01\x12\r\n" +
@@ -813,56 +891,58 @@ func file_api_hello_proto_rawDescGZIP() []byte {
 	return file_api_hello_proto_rawDescData
 }
 
-var file_api_hello_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_api_hello_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
 var file_api_hello_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_api_hello_proto_goTypes = []any{
-	(MapEnum)(0),               // 0: example.api.hello.MapEnum
-	(HelloWayEnum)(0),          // 1: example.api.hello.HelloWayEnum
-	(*AbcRequest)(nil),         // 2: example.api.hello.AbcRequest
-	(*AbcResponse)(nil),        // 3: example.api.hello.AbcResponse
-	(*ApiHelloMap)(nil),        // 4: example.api.hello.ApiHelloMap
-	(*MapEnumRequest)(nil),     // 5: example.api.hello.MapEnumRequest
-	(*MapEnumResponse)(nil),    // 6: example.api.hello.MapEnumResponse
-	(*ListEnumRequest)(nil),    // 7: example.api.hello.ListEnumRequest
-	(*ListEnumResponse)(nil),   // 8: example.api.hello.ListEnumResponse
-	(*StringRequest)(nil),      // 9: example.api.hello.StringRequest
-	(*StringResponse)(nil),     // 10: example.api.hello.StringResponse
-	(*Uint64Request)(nil),      // 11: example.api.hello.Uint64Request
-	(*Uint64Response)(nil),     // 12: example.api.hello.Uint64Response
-	(*StringEmunRequest)(nil),  // 13: example.api.hello.StringEmunRequest
-	(*StringEmunResponse)(nil), // 14: example.api.hello.StringEmunResponse
-	(*HelloWayRequest)(nil),    // 15: example.api.hello.HelloWayRequest
-	(*HelloWayResponse)(nil),   // 16: example.api.hello.HelloWayResponse
-	nil,                        // 17: example.api.hello.AbcResponse.ValueEntry
-	nil,                        // 18: example.api.hello.MapEnumResponse.ValueEntry
+	(HelloChannelMsgTypeEnum)(0), // 0: example.api.hello.HelloChannelMsgTypeEnum
+	(MapEnum)(0),                 // 1: example.api.hello.MapEnum
+	(HelloWayEnum)(0),            // 2: example.api.hello.HelloWayEnum
+	(*AbcRequest)(nil),           // 3: example.api.hello.AbcRequest
+	(*AbcResponse)(nil),          // 4: example.api.hello.AbcResponse
+	(*ApiHelloMap)(nil),          // 5: example.api.hello.ApiHelloMap
+	(*MapEnumRequest)(nil),       // 6: example.api.hello.MapEnumRequest
+	(*MapEnumResponse)(nil),      // 7: example.api.hello.MapEnumResponse
+	(*ListEnumRequest)(nil),      // 8: example.api.hello.ListEnumRequest
+	(*ListEnumResponse)(nil),     // 9: example.api.hello.ListEnumResponse
+	(*StringRequest)(nil),        // 10: example.api.hello.StringRequest
+	(*StringResponse)(nil),       // 11: example.api.hello.StringResponse
+	(*Uint64Request)(nil),        // 12: example.api.hello.Uint64Request
+	(*Uint64Response)(nil),       // 13: example.api.hello.Uint64Response
+	(*StringEmunRequest)(nil),    // 14: example.api.hello.StringEmunRequest
+	(*StringEmunResponse)(nil),   // 15: example.api.hello.StringEmunResponse
+	(*HelloWayRequest)(nil),      // 16: example.api.hello.HelloWayRequest
+	(*HelloWayResponse)(nil),     // 17: example.api.hello.HelloWayResponse
+	nil,                          // 18: example.api.hello.AbcResponse.ValueEntry
+	nil,                          // 19: example.api.hello.MapEnumResponse.ValueEntry
 }
 var file_api_hello_proto_depIdxs = []int32{
-	17, // 0: example.api.hello.AbcResponse.value:type_name -> example.api.hello.AbcResponse.ValueEntry
-	18, // 1: example.api.hello.MapEnumResponse.value:type_name -> example.api.hello.MapEnumResponse.ValueEntry
-	0,  // 2: example.api.hello.ListEnumResponse.value:type_name -> example.api.hello.MapEnum
-	0,  // 3: example.api.hello.StringEmunResponse.value:type_name -> example.api.hello.MapEnum
-	1,  // 4: example.api.hello.HelloWayRequest.arg1:type_name -> example.api.hello.HelloWayEnum
-	4,  // 5: example.api.hello.AbcResponse.ValueEntry.value:type_name -> example.api.hello.ApiHelloMap
-	4,  // 6: example.api.hello.MapEnumResponse.ValueEntry.value:type_name -> example.api.hello.ApiHelloMap
-	2,  // 7: example.api.hello.HelloService.Abc:input_type -> example.api.hello.AbcRequest
-	5,  // 8: example.api.hello.HelloService.MapEnum:input_type -> example.api.hello.MapEnumRequest
-	7,  // 9: example.api.hello.HelloService.ListEnum:input_type -> example.api.hello.ListEnumRequest
-	9,  // 10: example.api.hello.HelloService.String:input_type -> example.api.hello.StringRequest
-	11, // 11: example.api.hello.HelloService.Uint64:input_type -> example.api.hello.Uint64Request
-	13, // 12: example.api.hello.HelloService.StringEmun:input_type -> example.api.hello.StringEmunRequest
-	15, // 13: example.api.hello.HelloService.HelloWay:input_type -> example.api.hello.HelloWayRequest
-	3,  // 14: example.api.hello.HelloService.Abc:output_type -> example.api.hello.AbcResponse
-	6,  // 15: example.api.hello.HelloService.MapEnum:output_type -> example.api.hello.MapEnumResponse
-	8,  // 16: example.api.hello.HelloService.ListEnum:output_type -> example.api.hello.ListEnumResponse
-	10, // 17: example.api.hello.HelloService.String:output_type -> example.api.hello.StringResponse
-	12, // 18: example.api.hello.HelloService.Uint64:output_type -> example.api.hello.Uint64Response
-	14, // 19: example.api.hello.HelloService.StringEmun:output_type -> example.api.hello.StringEmunResponse
-	16, // 20: example.api.hello.HelloService.HelloWay:output_type -> example.api.hello.HelloWayResponse
-	14, // [14:21] is the sub-list for method output_type
-	7,  // [7:14] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	0,  // 0: example.api.hello.AbcRequest.type:type_name -> example.api.hello.HelloChannelMsgTypeEnum
+	18, // 1: example.api.hello.AbcResponse.value:type_name -> example.api.hello.AbcResponse.ValueEntry
+	19, // 2: example.api.hello.MapEnumResponse.value:type_name -> example.api.hello.MapEnumResponse.ValueEntry
+	1,  // 3: example.api.hello.ListEnumResponse.value:type_name -> example.api.hello.MapEnum
+	1,  // 4: example.api.hello.StringEmunResponse.value:type_name -> example.api.hello.MapEnum
+	2,  // 5: example.api.hello.HelloWayRequest.arg1:type_name -> example.api.hello.HelloWayEnum
+	5,  // 6: example.api.hello.AbcResponse.ValueEntry.value:type_name -> example.api.hello.ApiHelloMap
+	5,  // 7: example.api.hello.MapEnumResponse.ValueEntry.value:type_name -> example.api.hello.ApiHelloMap
+	3,  // 8: example.api.hello.HelloService.Abc:input_type -> example.api.hello.AbcRequest
+	6,  // 9: example.api.hello.HelloService.MapEnum:input_type -> example.api.hello.MapEnumRequest
+	8,  // 10: example.api.hello.HelloService.ListEnum:input_type -> example.api.hello.ListEnumRequest
+	10, // 11: example.api.hello.HelloService.String:input_type -> example.api.hello.StringRequest
+	12, // 12: example.api.hello.HelloService.Uint64:input_type -> example.api.hello.Uint64Request
+	14, // 13: example.api.hello.HelloService.StringEmun:input_type -> example.api.hello.StringEmunRequest
+	16, // 14: example.api.hello.HelloService.HelloWay:input_type -> example.api.hello.HelloWayRequest
+	4,  // 15: example.api.hello.HelloService.Abc:output_type -> example.api.hello.AbcResponse
+	7,  // 16: example.api.hello.HelloService.MapEnum:output_type -> example.api.hello.MapEnumResponse
+	9,  // 17: example.api.hello.HelloService.ListEnum:output_type -> example.api.hello.ListEnumResponse
+	11, // 18: example.api.hello.HelloService.String:output_type -> example.api.hello.StringResponse
+	13, // 19: example.api.hello.HelloService.Uint64:output_type -> example.api.hello.Uint64Response
+	15, // 20: example.api.hello.HelloService.StringEmun:output_type -> example.api.hello.StringEmunResponse
+	17, // 21: example.api.hello.HelloService.HelloWay:output_type -> example.api.hello.HelloWayResponse
+	15, // [15:22] is the sub-list for method output_type
+	8,  // [8:15] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_api_hello_proto_init() }
@@ -875,7 +955,7 @@ func file_api_hello_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_hello_proto_rawDesc), len(file_api_hello_proto_rawDesc)),
-			NumEnums:      2,
+			NumEnums:      3,
 			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,

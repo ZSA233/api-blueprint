@@ -1,0 +1,15 @@
+package {{ bp.root_package }}.runtime;
+
+public record GenApiServerResponse<T>(
+    boolean ok,
+    T data,
+    GenApiErrorPayload error
+) {
+    public static <T> GenApiServerResponse<T> ok(T data) {
+        return new GenApiServerResponse<>(true, data, null);
+    }
+
+    public static <T> GenApiServerResponse<T> error(GenApiErrorPayload error) {
+        return new GenApiServerResponse<>(false, null, error);
+    }
+}

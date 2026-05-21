@@ -1,5 +1,4 @@
 app/build/bin/
 app/frontend/dist/assets/
 app/frontend/node_modules/
-app/frontend/package-lock.json
 blueprints/__pycache__/

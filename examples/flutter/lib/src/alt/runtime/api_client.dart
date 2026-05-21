@@ -1,0 +1,5 @@
+import 'gen_api_client.dart';
+
+class ApiClient extends GenApiClient {
+  ApiClient(super.transport);
+}

@@ -1,0 +1,9 @@
+package {{ bp.root_package }}.runtime;
+
+public interface GenApiStreamBridge<Recv, Close> {
+    void close(Integer code, String reason);
+
+    void onMessage(java.util.function.Consumer<Recv> listener);
+
+    void onClose(java.util.function.Consumer<Close> listener);
+}

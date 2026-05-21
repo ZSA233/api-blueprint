@@ -14,7 +14,7 @@ public open class GenBinaryApi internal constructor(
     public open suspend fun packet(
         query: BinaryPacketQuery,
         binary: DemoPacket,
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): BinaryPacketResponse {
         return transport.request(
             ApiRequest(
@@ -22,11 +22,13 @@ public open class GenBinaryApi internal constructor(
                 method = "POST",
                 path = "/api/binary/packet",
                 query = query.toQueryMap(),
-                headers = headers,
+                options = options,
                 binary = DemoPacketWire.toBinaryBody(binary),
                 responseSerializer = BinaryPacketResponse.serializer(),
+                responseKind = "json",
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }
@@ -34,7 +36,7 @@ public open class GenBinaryApi internal constructor(
     public open suspend fun packet(
         query: BinaryPacketQuery,
         binary: ApiBinaryBody,
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): BinaryPacketResponse {
         return transport.request(
             ApiRequest(
@@ -42,11 +44,13 @@ public open class GenBinaryApi internal constructor(
                 method = "POST",
                 path = "/api/binary/packet",
                 query = query.toQueryMap(),
-                headers = headers,
+                options = options,
                 binary = binary,
                 responseSerializer = BinaryPacketResponse.serializer(),
+                responseKind = "json",
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }
@@ -54,7 +58,7 @@ public open class GenBinaryApi internal constructor(
     public open suspend fun auditPacket(
         query: BinaryAuditPacketQuery,
         binary: AuditPacket,
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): BinaryAuditPacketResponse {
         return transport.request(
             ApiRequest(
@@ -62,11 +66,13 @@ public open class GenBinaryApi internal constructor(
                 method = "POST",
                 path = "/api/binary/audit-packet",
                 query = query.toQueryMap(),
-                headers = headers,
+                options = options,
                 binary = AuditPacketWire.toBinaryBody(binary),
                 responseSerializer = BinaryAuditPacketResponse.serializer(),
+                responseKind = "json",
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }
@@ -74,7 +80,7 @@ public open class GenBinaryApi internal constructor(
     public open suspend fun auditPacket(
         query: BinaryAuditPacketQuery,
         binary: ApiBinaryBody,
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): BinaryAuditPacketResponse {
         return transport.request(
             ApiRequest(
@@ -82,11 +88,31 @@ public open class GenBinaryApi internal constructor(
                 method = "POST",
                 path = "/api/binary/audit-packet",
                 query = query.toQueryMap(),
-                headers = headers,
+                options = options,
                 binary = binary,
                 responseSerializer = BinaryAuditPacketResponse.serializer(),
+                responseKind = "json",
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
+            )
+        )
+    }
+
+    public open suspend fun auditPacketResponse(
+        options: ApiRequestOptions = ApiRequestOptions(),
+    ): AuditPacket {
+        return transport.request(
+            ApiRequest(
+                routeId = "api.binary.get.auditpacketresponse",
+                method = "GET",
+                path = "/api/binary/audit-packet-response",
+                options = options,
+                responseSerializer = Unit.serializer(),
+                responseKind = "binary_schema",
+                responseMediaType = "application/octet-stream",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = { response -> AuditPacketWire.parse(response.body) },
             )
         )
     }

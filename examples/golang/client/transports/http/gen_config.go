@@ -5,8 +5,9 @@ package http
 import nethttp "net/http"
 
 type HttpConfig struct {
-	BaseURL string
-	Client  *nethttp.Client
+	BaseURL        string
+	Client         *nethttp.Client
+	DefaultHeaders map[string]string
 }
 
 func DefaultHttpConfig() HttpConfig {

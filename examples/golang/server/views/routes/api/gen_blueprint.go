@@ -4,22 +4,28 @@ package api
 
 import (
 	"example.com/project/golang/server/views/routes/api/binary"
+	"example.com/project/golang/server/views/routes/api/conflict"
 	"example.com/project/golang/server/views/routes/api/demo"
 	"example.com/project/golang/server/views/routes/api/hello"
+	"example.com/project/golang/server/views/routes/api/media"
 )
 
 type Blueprint struct {
-	Router       *Router
-	BinaryRouter *binary.Router
-	DemoRouter   *demo.Router
-	HelloRouter  *hello.Router
+	Router         *Router
+	BinaryRouter   *binary.Router
+	ConflictRouter *conflict.Router
+	DemoRouter     *demo.Router
+	MediaRouter    *media.Router
+	HelloRouter    *hello.Router
 }
 
 func NewBlueprint() *Blueprint {
 	return &Blueprint{
-		Router:       NewRouter(),
-		BinaryRouter: binary.NewRouter(),
-		DemoRouter:   demo.NewRouter(),
-		HelloRouter:  hello.NewRouter(),
+		Router:         NewRouter(),
+		BinaryRouter:   binary.NewRouter(),
+		ConflictRouter: conflict.NewRouter(),
+		DemoRouter:     demo.NewRouter(),
+		MediaRouter:    media.NewRouter(),
+		HelloRouter:    hello.NewRouter(),
 	}
 }

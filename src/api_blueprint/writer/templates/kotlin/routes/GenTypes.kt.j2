@@ -1,0 +1,116 @@
+{% autoescape false %}package {{ bp.root_package }}.routes.{{ group.package_suffix }}
+
+import {{ bp.root_package }}.runtime.*
+import kotlinx.serialization.builtins.*
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+{% if group.message_helpers() %}
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+{% endif %}
+{% if binary_schemas %}
+import {{ bp.root_package }}.runtime.binary.ApiBinaryBody
+import {{ bp.root_package }}.runtime.binary.BinaryDecodeException
+import {{ bp.root_package }}.runtime.binary.BinaryEncodeException
+import {{ bp.root_package }}.runtime.binary.BinaryEndian
+import {{ bp.root_package }}.runtime.binary.BinaryReader
+import {{ bp.root_package }}.runtime.binary.BinaryWriter
+import {{ bp.root_package }}.runtime.binary.EncodedBinaryBlock
+import {{ bp.root_package }}.runtime.binary.StreamingBinaryBody
+import {{ bp.root_package }}.runtime.binary.binarySize
+import {{ bp.root_package }}.runtime.binary.requireBinary
+import {{ bp.root_package }}.runtime.binary.requireRange
+import {{ bp.root_package }}.runtime.binary.requireSize
+import {{ bp.root_package }}.runtime.binary.wrapBinaryField
+import {{ bp.root_package }}.runtime.binary.wrapBinaryIndex
+import okio.ByteString
+{% endif %}
+{% for proto in protos %}
+{%- if proto.kind == 'data' %}
+{{ '\n' if not loop.first }}@Serializable
+public data class {{ proto.name }}(
+{%- for field in proto.fields %}
+{%- if field.serial_name != field.name %}
+    @SerialName("{{ field.serial_name }}")
+{%- endif %}
+    public val {{ field.name }}: {{ field.type.text }}{% if field.optional %} = null{% endif %}{% if not loop.last %},{% endif %}
+{%- endfor %}
+)
+{%- elif proto.kind == 'alias' %}
+{{ '\n' if not loop.first }}public typealias {{ proto.name }} = {{ proto.alias_type.text if proto.alias_type else 'kotlinx.serialization.json.JsonElement' }}
+{%- elif proto.kind == 'enum' %}
+{{ '\n' if not loop.first }}@Serializable{% if proto.enum_wire_type == 'int' %}(with = {{ proto.name }}Serializer::class){% endif %}
+public enum class {{ proto.name }}(public val wireValue: {{ 'Int' if proto.enum_wire_type == 'int' else 'String' }}) {
+{%- for key, value in proto.enum_members %}
+{%- if proto.enum_wire_type != 'int' %}
+    @SerialName({{ proto.enum_wire_literal(value) }})
+{%- endif %}
+    {{ key }}({{ proto.enum_wire_literal(value) }}){% if not loop.last %},{% endif %}
+{%- endfor %}
+}
+{%- if proto.enum_wire_type == 'int' %}
+
+public object {{ proto.name }}Serializer : KSerializer<{{ proto.name }}> {
+    public override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("{{ proto.name }}", PrimitiveKind.INT)
+
+    public override fun serialize(encoder: Encoder, value: {{ proto.name }}): Unit {
+        encoder.encodeInt(value.wireValue)
+    }
+
+    public override fun deserialize(decoder: Decoder): {{ proto.name }} {
+        val wireValue = decoder.decodeInt()
+        return {{ proto.name }}.values().firstOrNull { it.wireValue == wireValue }
+            ?: throw SerializationException("Unknown {{ proto.name }} wire value: $wireValue")
+    }
+}
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+{% for helper in group.message_helpers() %}
+
+@Serializable
+public data class {{ helper.name }}(
+    public val type: String,
+    public val data: JsonElement? = null,
+)
+
+public object {{ helper.variants_object }} {
+{% for variant in helper.variants %}    public fun {{ variant.method_name }}(data: {{ variant.data_type }}): {{ helper.name }} =
+        {{ helper.name }}({{ variant.key | tojson }}, ApiJson.encodeToJsonElement({{ variant.data_type }}.serializer(), data))
+
+{% endfor %}}
+
+public interface {{ helper.handlers_interface }}<R> {
+{% for variant in helper.variants %}    public fun {{ variant.method_name }}(data: {{ variant.data_type }}, message: {{ helper.name }}): R
+{% endfor %}}
+
+public class {{ helper.dispatch_exception }}(
+    public val kind: String,
+    public val type: String,
+    public val rawMessage: {{ helper.name }},
+) : RuntimeException("unsupported {{ helper.name }} type $type")
+
+public fun <R> {{ helper.dispatch_func }}(
+    message: {{ helper.name }},
+    handlers: {{ helper.handlers_interface }}<R>,
+): R =
+    when (message.type) {
+{% for variant in helper.variants %}        {{ variant.key | tojson }} -> handlers.{{ variant.method_name }}(
+            ApiJson.decodeFromJsonElement({{ variant.data_type }}.serializer(), message.data ?: JsonNull),
+            message,
+        )
+{% endfor %}        else -> throw {{ helper.dispatch_exception }}("unknown_type", message.type, message)
+    }
+{% endfor %}
+{% if binary_schemas %}
+
+{% include "routes/binary/GenBinaryTypes.kt.j2" %}
+{% endif %}
+{% endautoescape %}

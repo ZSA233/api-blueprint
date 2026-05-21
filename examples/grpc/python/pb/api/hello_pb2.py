@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0f\x61pi/hello.proto\x12\x11\x65xample.api.hello\"6\n\nAbcRequest\x12\x0c\n\x04\x61rg1\x18\x01 \x01(\x08\x12\x0c\n\x04\x61rg3\x18\x02 \x01(\t\x12\x0c\n\x04\x61rg2\x18\x03 \x01(\x02\"\x95\x01\n\x0b\x41\x62\x63Response\x12\x38\n\x05value\x18\x01 \x03(\x0b\x32).example.api.hello.AbcResponse.ValueEntry\x1aL\n\nValueEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12-\n\x05value\x18\x02 \x01(\x0b\x32\x1e.example.api.hello.ApiHelloMap:\x02\x38\x01\"\x1b\n\x0b\x41piHelloMap\x12\x0c\n\x04haha\x18\x01 \x01(\x03\"\x10\n\x0eMapEnumRequest\"\x9d\x01\n\x0fMapEnumResponse\x12<\n\x05value\x18\x01 \x03(\x0b\x32-.example.api.hello.MapEnumResponse.ValueEntry\x1aL\n\nValueEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12-\n\x05value\x18\x02 \x01(\x0b\x32\x1e.example.api.hello.ApiHelloMap:\x02\x38\x01\"\x11\n\x0fListEnumRequest\"=\n\x10ListEnumResponse\x12)\n\x05value\x18\x01 \x03(\x0e\x32\x1a.example.api.hello.MapEnum\"\x0f\n\rStringRequest\"\x1f\n\x0eStringResponse\x12\r\n\x05value\x18\x01 \x01(\t\"\x0f\n\rUint64Request\"\x1f\n\x0eUint64Response\x12\r\n\x05value\x18\x01 \x01(\x04\"\x13\n\x11StringEmunRequest\"?\n\x12StringEmunResponse\x12)\n\x05value\x18\x01 \x01(\x0e\x32\x1a.example.api.hello.MapEnum\"@\n\x0fHelloWayRequest\x12-\n\x04\x61rg1\x18\x01 \x01(\x0e\x32\x1f.example.api.hello.HelloWayEnum\"\x12\n\x10HelloWayResponse*@\n\x07MapEnum\x12\x17\n\x13MAPENUM_UNSPECIFIED\x10\x00\x12\r\n\tMAPENUM_A\x10\x01\x12\r\n\tMAPENUM_B\x10\x02*B\n\x0cHelloWayEnum\x12\x1c\n\x18HELLOWAYENUM_UNSPECIFIED\x10\x00\x12\x14\n\x10HELLOWAYENUM_ASD\x10\x01\x32\xc9\x04\n\x0cHelloService\x12\x44\n\x03\x41\x62\x63\x12\x1d.example.api.hello.AbcRequest\x1a\x1e.example.api.hello.AbcResponse\x12P\n\x07MapEnum\x12!.example.api.hello.MapEnumRequest\x1a\".example.api.hello.MapEnumResponse\x12S\n\x08ListEnum\x12\".example.api.hello.ListEnumRequest\x1a#.example.api.hello.ListEnumResponse\x12M\n\x06String\x12 .example.api.hello.StringRequest\x1a!.example.api.hello.StringResponse\x12M\n\x06Uint64\x12 .example.api.hello.Uint64Request\x1a!.example.api.hello.Uint64Response\x12Y\n\nStringEmun\x12$.example.api.hello.StringEmunRequest\x1a%.example.api.hello.StringEmunResponse\x12S\n\x08HelloWay\x12\".example.api.hello.HelloWayRequest\x1a#.example.api.hello.HelloWayResponseB-Z+example.com/project/grpc/go/api/hello;hellob\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0f\x61pi/hello.proto\x12\x11\x65xample.api.hello\"p\n\nAbcRequest\x12\x0c\n\x04\x61rg1\x18\x01 \x01(\x08\x12\x0c\n\x04\x61rg3\x18\x02 \x01(\t\x12\x0c\n\x04\x61rg2\x18\x03 \x01(\x02\x12\x38\n\x04type\x18\x04 \x01(\x0e\x32*.example.api.hello.HelloChannelMsgTypeEnum\"\x95\x01\n\x0b\x41\x62\x63Response\x12\x38\n\x05value\x18\x01 \x03(\x0b\x32).example.api.hello.AbcResponse.ValueEntry\x1aL\n\nValueEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12-\n\x05value\x18\x02 \x01(\x0b\x32\x1e.example.api.hello.ApiHelloMap:\x02\x38\x01\"\x1b\n\x0b\x41piHelloMap\x12\x0c\n\x04haha\x18\x01 \x01(\x03\"\x10\n\x0eMapEnumRequest\"\x9d\x01\n\x0fMapEnumResponse\x12<\n\x05value\x18\x01 \x03(\x0b\x32-.example.api.hello.MapEnumResponse.ValueEntry\x1aL\n\nValueEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12-\n\x05value\x18\x02 \x01(\x0b\x32\x1e.example.api.hello.ApiHelloMap:\x02\x38\x01\"\x11\n\x0fListEnumRequest\"=\n\x10ListEnumResponse\x12)\n\x05value\x18\x01 \x03(\x0e\x32\x1a.example.api.hello.MapEnum\"\x0f\n\rStringRequest\"\x1f\n\x0eStringResponse\x12\r\n\x05value\x18\x01 \x01(\t\"\x0f\n\rUint64Request\"\x1f\n\x0eUint64Response\x12\r\n\x05value\x18\x01 \x01(\x04\"\x13\n\x11StringEmunRequest\"?\n\x12StringEmunResponse\x12)\n\x05value\x18\x01 \x01(\x0e\x32\x1a.example.api.hello.MapEnum\"@\n\x0fHelloWayRequest\x12-\n\x04\x61rg1\x18\x01 \x01(\x0e\x32\x1f.example.api.hello.HelloWayEnum\"\x12\n\x10HelloWayResponse*\x98\x02\n\x17HelloChannelMsgTypeEnum\x12\'\n#HELLOCHANNELMSGTYPEENUM_UNSPECIFIED\x10\x00\x12 \n\x1cHELLOCHANNELMSGTYPEENUM_PING\x10\x01\x12 \n\x1cHELLOCHANNELMSGTYPEENUM_PONG\x10\x02\x12 \n\x1cHELLOCHANNELMSGTYPEENUM_JOIN\x10\x03\x12!\n\x1dHELLOCHANNELMSGTYPEENUM_LEAVE\x10\x04\x12&\n\"HELLOCHANNELMSGTYPEENUM_FORGEROUND\x10\x05\x12#\n\x1fHELLOCHANNELMSGTYPEENUM_UPGRADE\x10\x06*@\n\x07MapEnum\x12\x17\n\x13MAPENUM_UNSPECIFIED\x10\x00\x12\r\n\tMAPENUM_A\x10\x01\x12\r\n\tMAPENUM_B\x10\x02*B\n\x0cHelloWayEnum\x12\x1c\n\x18HELLOWAYENUM_UNSPECIFIED\x10\x00\x12\x14\n\x10HELLOWAYENUM_ASD\x10\x01\x32\xc9\x04\n\x0cHelloService\x12\x44\n\x03\x41\x62\x63\x12\x1d.example.api.hello.AbcRequest\x1a\x1e.example.api.hello.AbcResponse\x12P\n\x07MapEnum\x12!.example.api.hello.MapEnumRequest\x1a\".example.api.hello.MapEnumResponse\x12S\n\x08ListEnum\x12\".example.api.hello.ListEnumRequest\x1a#.example.api.hello.ListEnumResponse\x12M\n\x06String\x12 .example.api.hello.StringRequest\x1a!.example.api.hello.StringResponse\x12M\n\x06Uint64\x12 .example.api.hello.Uint64Request\x1a!.example.api.hello.Uint64Response\x12Y\n\nStringEmun\x12$.example.api.hello.StringEmunRequest\x1a%.example.api.hello.StringEmunResponse\x12S\n\x08HelloWay\x12\".example.api.hello.HelloWayRequest\x1a#.example.api.hello.HelloWayResponseB-Z+example.com/project/grpc/go/api/hello;hellob\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -36,44 +36,46 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_ABCRESPONSE_VALUEENTRY']._serialized_options = b'8\001'
   _globals['_MAPENUMRESPONSE_VALUEENTRY']._loaded_options = None
   _globals['_MAPENUMRESPONSE_VALUEENTRY']._serialized_options = b'8\001'
-  _globals['_MAPENUM']._serialized_start=807
-  _globals['_MAPENUM']._serialized_end=871
-  _globals['_HELLOWAYENUM']._serialized_start=873
-  _globals['_HELLOWAYENUM']._serialized_end=939
+  _globals['_HELLOCHANNELMSGTYPEENUM']._serialized_start=866
+  _globals['_HELLOCHANNELMSGTYPEENUM']._serialized_end=1146
+  _globals['_MAPENUM']._serialized_start=1148
+  _globals['_MAPENUM']._serialized_end=1212
+  _globals['_HELLOWAYENUM']._serialized_start=1214
+  _globals['_HELLOWAYENUM']._serialized_end=1280
   _globals['_ABCREQUEST']._serialized_start=38
-  _globals['_ABCREQUEST']._serialized_end=92
-  _globals['_ABCRESPONSE']._serialized_start=95
-  _globals['_ABCRESPONSE']._serialized_end=244
-  _globals['_ABCRESPONSE_VALUEENTRY']._serialized_start=168
-  _globals['_ABCRESPONSE_VALUEENTRY']._serialized_end=244
-  _globals['_APIHELLOMAP']._serialized_start=246
-  _globals['_APIHELLOMAP']._serialized_end=273
-  _globals['_MAPENUMREQUEST']._serialized_start=275
-  _globals['_MAPENUMREQUEST']._serialized_end=291
-  _globals['_MAPENUMRESPONSE']._serialized_start=294
-  _globals['_MAPENUMRESPONSE']._serialized_end=451
-  _globals['_MAPENUMRESPONSE_VALUEENTRY']._serialized_start=168
-  _globals['_MAPENUMRESPONSE_VALUEENTRY']._serialized_end=244
-  _globals['_LISTENUMREQUEST']._serialized_start=453
-  _globals['_LISTENUMREQUEST']._serialized_end=470
-  _globals['_LISTENUMRESPONSE']._serialized_start=472
-  _globals['_LISTENUMRESPONSE']._serialized_end=533
-  _globals['_STRINGREQUEST']._serialized_start=535
-  _globals['_STRINGREQUEST']._serialized_end=550
-  _globals['_STRINGRESPONSE']._serialized_start=552
-  _globals['_STRINGRESPONSE']._serialized_end=583
-  _globals['_UINT64REQUEST']._serialized_start=585
-  _globals['_UINT64REQUEST']._serialized_end=600
-  _globals['_UINT64RESPONSE']._serialized_start=602
-  _globals['_UINT64RESPONSE']._serialized_end=633
-  _globals['_STRINGEMUNREQUEST']._serialized_start=635
-  _globals['_STRINGEMUNREQUEST']._serialized_end=654
-  _globals['_STRINGEMUNRESPONSE']._serialized_start=656
-  _globals['_STRINGEMUNRESPONSE']._serialized_end=719
-  _globals['_HELLOWAYREQUEST']._serialized_start=721
-  _globals['_HELLOWAYREQUEST']._serialized_end=785
-  _globals['_HELLOWAYRESPONSE']._serialized_start=787
-  _globals['_HELLOWAYRESPONSE']._serialized_end=805
-  _globals['_HELLOSERVICE']._serialized_start=942
-  _globals['_HELLOSERVICE']._serialized_end=1527
+  _globals['_ABCREQUEST']._serialized_end=150
+  _globals['_ABCRESPONSE']._serialized_start=153
+  _globals['_ABCRESPONSE']._serialized_end=302
+  _globals['_ABCRESPONSE_VALUEENTRY']._serialized_start=226
+  _globals['_ABCRESPONSE_VALUEENTRY']._serialized_end=302
+  _globals['_APIHELLOMAP']._serialized_start=304
+  _globals['_APIHELLOMAP']._serialized_end=331
+  _globals['_MAPENUMREQUEST']._serialized_start=333
+  _globals['_MAPENUMREQUEST']._serialized_end=349
+  _globals['_MAPENUMRESPONSE']._serialized_start=352
+  _globals['_MAPENUMRESPONSE']._serialized_end=509
+  _globals['_MAPENUMRESPONSE_VALUEENTRY']._serialized_start=226
+  _globals['_MAPENUMRESPONSE_VALUEENTRY']._serialized_end=302
+  _globals['_LISTENUMREQUEST']._serialized_start=511
+  _globals['_LISTENUMREQUEST']._serialized_end=528
+  _globals['_LISTENUMRESPONSE']._serialized_start=530
+  _globals['_LISTENUMRESPONSE']._serialized_end=591
+  _globals['_STRINGREQUEST']._serialized_start=593
+  _globals['_STRINGREQUEST']._serialized_end=608
+  _globals['_STRINGRESPONSE']._serialized_start=610
+  _globals['_STRINGRESPONSE']._serialized_end=641
+  _globals['_UINT64REQUEST']._serialized_start=643
+  _globals['_UINT64REQUEST']._serialized_end=658
+  _globals['_UINT64RESPONSE']._serialized_start=660
+  _globals['_UINT64RESPONSE']._serialized_end=691
+  _globals['_STRINGEMUNREQUEST']._serialized_start=693
+  _globals['_STRINGEMUNREQUEST']._serialized_end=712
+  _globals['_STRINGEMUNRESPONSE']._serialized_start=714
+  _globals['_STRINGEMUNRESPONSE']._serialized_end=777
+  _globals['_HELLOWAYREQUEST']._serialized_start=779
+  _globals['_HELLOWAYREQUEST']._serialized_end=843
+  _globals['_HELLOWAYRESPONSE']._serialized_start=845
+  _globals['_HELLOWAYRESPONSE']._serialized_end=863
+  _globals['_HELLOSERVICE']._serialized_start=1283
+  _globals['_HELLOSERVICE']._serialized_end=1868
 # @@protoc_insertion_point(module_scope)

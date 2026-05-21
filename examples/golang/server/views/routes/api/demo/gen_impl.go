@@ -16,6 +16,14 @@ func (impl *_GenRouter) TestPost(ctx *CTX_TestPost, req *REQ_TestPost) (rsp *RSP
 	return nil, fmt.Errorf("not implemented")
 }
 
+func (impl *_GenRouter) FormSubmit(ctx *CTX_FormSubmit, req *REQ_FormSubmit) (rsp *RSP_FormSubmit, err error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (impl *_GenRouter) RequestOptions(ctx *CTX_RequestOptions, req *REQ_RequestOptions) (rsp *RSP_RequestOptions, err error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
 func (impl *_GenRouter) PutDemo(ctx *CTX_PutDemo, req *REQ_PutDemo) (rsp *RSP_PutDemo, err error) {
 	return nil, fmt.Errorf("not implemented")
 }

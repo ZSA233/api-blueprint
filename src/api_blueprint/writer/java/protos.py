@@ -129,7 +129,7 @@ class JavaModelCatalog:
         if self.is_auto_schema(schema_name) and owner_group is not None:
             types_class = str(getattr(owner_group, "types_class", "RouteTypes"))
             return f"{types_class}.{self._schema_class_name_for_owner(schema_name, owner_group=owner_group)}"
-        runtime_types_ref = str(getattr(owner_group, "runtime_types_ref", "ApiTypes"))
+        runtime_types_ref = str(getattr(owner_group, "runtime_types_ref", "GenApiTypes"))
         return f"{runtime_types_ref}.{self.schema_class_name(schema_name)}"
 
     def class_literal_for_schema_name(self, schema_name: str, *, owner_group: object | None = None) -> str:
@@ -141,7 +141,7 @@ class JavaModelCatalog:
         if isinstance(ref, str) and ref:
             return self.type_for_schema_name(ref, owner_group=owner_group)
         if value_type == "enum":
-            runtime_types_ref = str(getattr(owner_group, "runtime_types_ref", "ApiTypes"))
+            runtime_types_ref = str(getattr(owner_group, "runtime_types_ref", "GenApiTypes"))
             return f"{runtime_types_ref}.{self.enum_class_name(str(value.get('enum') or 'EnumValue'))}"
         if value_type == "array":
             items = value.get("items")
@@ -180,6 +180,7 @@ class JavaModelCatalog:
             "boolean": "Boolean",
             "bool": "Boolean",
             "binary": "byte[]",
+            "file": "GenApiFilePart",
             "object": "Object",
             "any": "Object",
             "null": "Object",

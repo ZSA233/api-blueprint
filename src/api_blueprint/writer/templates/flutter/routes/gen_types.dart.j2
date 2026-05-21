@@ -1,0 +1,126 @@
+{% autoescape false %}// ignore_for_file: non_constant_identifier_names, unused_import
+
+import 'package:{{ writer.package }}/src/{{ bp.root_path }}/runtime/gen_api_errors.dart';
+import 'package:{{ writer.package }}/src/{{ bp.root_path }}/runtime/gen_api_types.dart';
+import 'package:{{ writer.package }}/src/{{ bp.root_path }}/runtime/gen_api_transport.dart';
+import 'package:{{ writer.package }}/src/{{ bp.root_path }}/runtime/api_json_codecs.dart';
+{% for proto in protos %}
+{% if proto.kind == 'data' %}
+class {{ proto.name }} {
+{% for field in proto.fields %}  final {{ field.type.nullable_text() }} {{ field.name }};
+{% endfor %}
+  const {{ proto.name }}({
+{% for field in proto.fields %}    this.{{ field.name }},
+{% endfor %}  });
+
+  factory {{ proto.name }}.fromJson(Map<String, Object?> json) {
+    return {{ proto.name }}(
+{% for field in proto.fields %}      {{ field.name }}: {{ field.type.decode_expr("json[" ~ (field.wire_name | tojson) ~ "]") }},
+{% endfor %}    );
+  }
+
+  factory {{ proto.name }}.fromJsonValue(Object? value) {
+    final codec = apiJsonCodecs.find<{{ proto.name }}>();
+    if (codec != null) {
+      return codec.fromJson(value);
+    }
+    return {{ proto.name }}.fromJson(apiBlueprintReadObject(value));
+  }
+
+  Map<String, Object?> toJson() {
+    final codec = apiJsonCodecs.find<{{ proto.name }}>();
+    if (codec != null) {
+      return apiBlueprintReadObject(codec.toJson(this));
+    }
+    return {
+{% for field in proto.fields %}      {{ field.wire_name | tojson }}: apiBlueprintToJson({{ field.name }}),
+{% endfor %}    };
+  }
+
+  Map<String, String?> toQueryMap() {
+    return {
+{% for field in proto.fields %}      {{ field.wire_name | tojson }}: apiBlueprintToQueryValue({{ field.name }}),
+{% endfor %}    };
+  }
+}
+{% elif proto.kind == 'alias' %}
+typedef {{ proto.name }} = {{ proto.alias_type.text if proto.alias_type else 'Object?' }};
+
+{{ proto.name }} {{ proto.name }}FromJsonValue(Object? value) {
+{% if proto.alias_type %}  return {{ proto.alias_type.decode_required_expr("value", proto.name) }};
+{% else %}  return apiBlueprintReadAny(value);
+{% endif %}}
+{% elif proto.kind == 'enum' %}
+enum {{ proto.name }} {
+{% for key, value in proto.enum_members %}  {{ key }}({{ proto.enum_wire_literal(value) }}),
+{% endfor %}  ;
+
+  final Object wireValue;
+  const {{ proto.name }}(this.wireValue);
+}
+
+{{ proto.name }}? {{ proto.name }}FromJson(Object? value) {
+  for (final item in {{ proto.name }}.values) {
+    if (item.wireValue == value || item.wireValue.toString() == value?.toString()) {
+      return item;
+    }
+  }
+  return null;
+}
+{% endif %}
+{% endfor %}
+{% for helper in group.message_helpers() %}
+sealed class {{ helper.name }} {
+  final String type;
+
+  const {{ helper.name }}(this.type);
+
+  Object? get data;
+
+  Map<String, Object?> toJson() => {
+    'type': type,
+    'data': apiBlueprintToJson(data),
+  };
+
+  static {{ helper.name }} fromJsonValue(Object? value) {
+    final json = apiBlueprintReadObject(value);
+    final type = apiBlueprintReadString(json['type']) ?? '';
+    switch (type) {
+{% for variant in helper.variants %}      case {{ variant.key | tojson }}:
+        return {{ variant.class_name }}({{ variant.data_type }}.fromJsonValue(json['data']));
+{% endfor %}      default:
+        throw FormatException('Unknown {{ helper.name }} type: $type');
+    }
+  }
+}
+
+{% for variant in helper.variants %}final class {{ variant.class_name }} extends {{ helper.name }} {
+  @override
+  final {{ variant.data_type }} data;
+
+  const {{ variant.class_name }}(this.data) : super({{ variant.key | tojson }});
+}
+
+{% endfor %}class {{ helper.variants_class }} {
+  const {{ helper.variants_class }}._();
+
+{% for variant in helper.variants %}  static {{ helper.name }} {{ variant.method_name }}({{ variant.data_type }} data) => {{ variant.class_name }}(data);
+{% endfor %}}
+
+class {{ helper.exception_class }} implements Exception {
+  final String type;
+  final {{ helper.name }} message;
+
+  const {{ helper.exception_class }}(this.type, this.message);
+}
+
+R {{ helper.dispatch_func }}<R>(
+  {{ helper.name }} message, {
+{% for variant in helper.variants %}  required R Function({{ variant.data_type }} data, {{ variant.class_name }} message) {{ variant.method_name }},
+{% endfor %}}) {
+  return switch (message) {
+{% for variant in helper.variants %}    {{ variant.class_name }} item => {{ variant.method_name }}(item.data, item),
+{% endfor %}  };
+}
+{% endfor %}
+{% endautoescape %}

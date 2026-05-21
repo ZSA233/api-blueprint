@@ -4,7 +4,7 @@
 
 import type * as Types from "./types";
 import type * as Shared from "{{ shared_models_path }}";
-import { ApiChannelBridge, ApiClientConfig, ApiStreamBridge, BaseClient } from "{{ shared_client_path }}";
+import { ApiChannelBridge, ApiClientConfig, ApiRequestOptions, ApiStreamBridge, BaseClient } from "{{ shared_client_path }}";
 {% if has_binary_schemas %}
 import type { ApiBinaryBody } from "{{ binary_runtime_path }}";
 import {
@@ -29,36 +29,31 @@ export class {{ client_class }} extends BaseClient {
     request: {
 {% if route.query_type_expr %}      query?: {{ route.query_type_expr }};
 {% endif %}      binary: {{ route.binary_type_expr }};
-      headers?: Record<string, string>;
     },
-    init?: RequestInit,
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<{{ route.response_type_expr }}>;
 
   async {{ route.method_name }}(
     request: {
 {% if route.query_type_expr %}      query?: {{ route.query_type_expr }};
 {% endif %}      binary: ApiBinaryBody;
-      headers?: Record<string, string>;
     },
-    init?: RequestInit,
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<{{ route.response_type_expr }}>;
 
 {% endif %}
   async {{ route.method_name }}(
-    request: {
+    request: {% if route.query_type_expr or route.has_body %}{
 {% if route.query_type_expr %}      query?: {{ route.query_type_expr }};
 {% endif %}{% if route.json_type_expr %}      json?: {{ route.json_type_expr }};
 {% endif %}{% if route.form_type_expr %}      form?: {{ route.form_type_expr }};
+{% endif %}{% if route.multipart_type_expr %}      multipart?: {{ route.multipart_type_expr }};
 {% endif %}{% if route.has_binary_schema %}      binary: {{ route.binary_type_expr }} | ApiBinaryBody;
 {% elif route.has_body %}      body?: RequestInit["body"];
-{% endif %}      headers?: Record<string, string>;
-    }{% if not route.has_binary_schema %} = {}{% endif %},
-    init: RequestInit = {},
-    timeoutMs?: number,
+{% endif %}    }{% else %}{}{% endif %}{% if not route.has_binary_schema %} = {}{% endif %},
+    options?: ApiRequestOptions,
   ): Promise<{{ route.response_type_expr }}> {
-    return this.request<{{ route.response_type_expr }}>({
+    {% if route.response_kind == "binary_schema" and route.response_binary_schema %}const payload = await this.request<ArrayBuffer>({% else %}return this.request<{{ route.response_type_expr }}>({% endif %}{
       routeId: "{{ route.route_id }}",
       method: "{{ route.http_method }}",
       path: "{{ route.url }}",
@@ -68,15 +63,17 @@ export class {{ client_class }} extends BaseClient {
 {% if route.query_type_expr %}      query: request.query as unknown as Record<string, unknown> | undefined,
 {% endif %}{% if route.json_type_expr %}      json: request.json,
 {% endif %}{% if route.form_type_expr %}      form: request.form as unknown as Record<string, unknown> | undefined,
+{% endif %}{% if route.multipart_type_expr %}      multipart: request.multipart as unknown as Record<string, unknown> | undefined,
 {% endif %}{% if route.has_binary_schema %}      binary: {{ route.binary_wire_expr }}.toBinaryBody(request.binary),
 {% elif route.has_body %}      body: request.body,
-{% endif %}      headers: request.headers,
-      init,
-      responseType: "{{ 'json' if route.response_media_type == 'application/json' else 'text' }}",
+{% endif %}      headers: options?.headers,
+      init: options?.init,
+      responseType: "{{ route.transport_response_type }}",
       responseEnvelope: {{ route.response_envelope_literal }},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
     });
-  }
+{% if route.response_kind == "binary_schema" and route.response_binary_schema %}    return {{ route.response_binary_schema.name }}Wire.fromBytes(payload);
+{% endif %}  }
 
 {% endif -%}
 {% if route.supports_stream %}

@@ -4,7 +4,7 @@
 
 import type * as Types from "./types";
 import type * as Shared from "../../runtime/types";
-import { ApiChannelBridge, ApiClientConfig, ApiStreamBridge, BaseClient } from "../../runtime/client";
+import { ApiChannelBridge, ApiClientConfig, ApiRequestOptions, ApiStreamBridge, BaseClient } from "../../runtime/client";
 
 export class StaticClient extends BaseClient {
   constructor(config: ApiClientConfig = {}) {
@@ -18,11 +18,8 @@ export class StaticClient extends BaseClient {
    */
 
   async docJson(
-    request: {
-      headers?: Record<string, string>;
-    } = {},
-    init: RequestInit = {},
-    timeoutMs?: number,
+    request: {} = {},
+    options?: ApiRequestOptions,
   ): Promise<Types.DocJsonResponse> {
     return this.request<Types.DocJsonResponse>({
       routeId: "static.static.get.docjson",
@@ -31,11 +28,11 @@ export class StaticClient extends BaseClient {
       service: "StaticService",
       operation: "DocJson",
       namespace: "static",
-      headers: request.headers,
-      init,
+      headers: options?.headers,
+      init: options?.init,
       responseType: "json",
       responseEnvelope: {"name": "NoEnvelope", "kind": "none", "error_identity": "none", "success_code": 0, "success_message": "ok", "fields": {}},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
     });
   }
 
@@ -46,11 +43,8 @@ export class StaticClient extends BaseClient {
    */
 
   async dochaha(
-    request: {
-      headers?: Record<string, string>;
-    } = {},
-    init: RequestInit = {},
-    timeoutMs?: number,
+    request: {} = {},
+    options?: ApiRequestOptions,
   ): Promise<Types.DochahaResponse> {
     return this.request<Types.DochahaResponse>({
       routeId: "static.static.get.dochaha",
@@ -59,11 +53,11 @@ export class StaticClient extends BaseClient {
       service: "StaticService",
       operation: "Dochaha",
       namespace: "static",
-      headers: request.headers,
-      init,
+      headers: options?.headers,
+      init: options?.init,
       responseType: "json",
       responseEnvelope: {"name": "NoEnvelope", "kind": "none", "error_identity": "none", "success_code": 0, "success_message": "ok", "fields": {}},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
     });
   }
 

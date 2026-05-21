@@ -7,7 +7,7 @@
 
 ## 概述
 
-`api-blueprint` 用 Python DSL 定义 API 契约，再从同一份协议真源生成文档服务和多语言代码。它适合把 HTTP API、长连接消息、二进制请求体和 gRPC proto 放在一个可检查、可生成、可回归的协议工作流里维护。
+`api-blueprint` 用 Python DSL 定义 API 契约，再从同一份协议真源生成文档服务和多语言代码。它适合把 HTTP API、长连接消息、二进制请求 / 响应体、媒体上传 / raw 响应和 gRPC proto 放在一个可检查、可生成、可回归的协议工作流里维护。
 
 核心链路是：
 
@@ -17,10 +17,10 @@ Blueprint DSL -> ContractGraph -> api-gen check / inspect / generate -> generate
 
 ## 适合什么场景
 
-- 后端、Web、Kotlin、脚本客户端需要共享同一份 API 契约。
-- 希望先从协议生成 Go server，再生成 TypeScript、Kotlin、Java、Go、Python client，或生成 Kotlin/Java/Python server scaffold。
+- 后端、Web、Flutter、Kotlin、脚本客户端需要共享同一份 API 契约。
+- 希望先从协议生成 Go server，再生成 TypeScript、Flutter、Kotlin、Java、Go、Python client，或生成 Kotlin/Java/Python server scaffold。
 - 需要文档服务、契约检查、生成快照和端到端示例一起维护。
-- 需要把 Markdown Binary Schema、Wails 或 gRPC 纳入同一套生成流程。
+- 需要把 Markdown Binary Schema、typed binary 响应、multipart 上传、raw bytes/file/stream 响应、Wails 或 gRPC 纳入同一套生成流程。
 
 ## 安装
 
@@ -33,6 +33,7 @@ uv pip install "git+https://github.com/zsa233/api-blueprint@stable"
 本仓库开发环境使用：
 
 ```sh
+make
 make sync
 ```
 
@@ -93,14 +94,17 @@ api-gen generate -c api-blueprint.toml
 | 目标 | 状态 | 用途 |
 |:---|:---:|:---|
 | Contract / inspect | 可用 | 输出契约索引，并按 route、schema、error、文件归属查询协议细节 |
-| Go server | 可用 | 生成 Go 路由、provider、长连接 message helper、HTTP/Wails adapter 和 runtime |
-| TypeScript client | 预览 | 生成 transport-neutral client、长连接 message helper、HTTP adapter 和 Wails facade |
-| Kotlin client/server | 预览 | 生成 OkHttp client、Ktor server scaffold、模型、长连接 message helper、binary writer 和 HTTP adapter |
-| Java client/server | 预览 | 生成 Java 17 HttpClient client、Spring MVC server scaffold、record DTO、长连接 message helper、binary packet helper 和 HTTP adapter |
-| Go / Python client | 预览 | 生成服务端之外的脚本或工具侧客户端，并提供长连接 message helper 与 binary writer |
-| Python server | 预览 | 生成 FastAPI server scaffold、service contract 和长连接 message helper |
-| Wails v2/v3 | 预览 / 实验性 | 生成 Go + TypeScript overlay，用于桌面 GUI |
-| gRPC proto / stubs | 可用 | 从 ContractGraph 输出 proto，并生成 Go/Python stub |
+| Go server | 可用 | 生成 Go 路由、provider、长连接 message helper、HTTP/Wails adapter、multipart/raw media、binary schema 响应和 runtime |
+| TypeScript client | 预览 | 生成 transport-neutral client、长连接 message helper、HTTP multipart/raw adapter、binary schema 响应解码和 Wails facade |
+| Flutter client | 预览 | 生成纯 Dart package、DTO、typed error、binary codec、HTTP multipart/raw/binary response client 和 SSE/WebSocket client |
+| Kotlin client/server | 预览 | 生成 OkHttp HTTP/SSE/WebSocket client、Ktor HTTP/SSE/WebSocket server scaffold、multipart/raw/binary response adapter、模型和长连接 message helper |
+| Java client/server | 预览 | 生成 Java 17 HttpClient client、Spring MVC/SSE/WebSocket server scaffold、record DTO、HTTP multipart/raw/binary response adapter 和长连接 message helper |
+| Go / Python client | 预览 | 生成服务端之外的脚本或工具侧客户端；Python client 使用递归 dataclass DTO、共享 runtime codec，并提供 multipart/raw、长连接 message helper 与 binary writer/response codec |
+| Python server | 预览 | 生成 FastAPI HTTP/SSE/WebSocket server scaffold、multipart/raw/binary response adapter、typed service contract 和长连接 message helper |
+| Wails v2/v3 | 预览 / 实验性 | 生成 Go + TypeScript overlay；文件/stream 等能力使用 Wails RPC descriptor 或 STREAM/CHANNEL chunk 建模 |
+| gRPC proto / stubs | 可用 | 从 ContractGraph 输出 proto，并生成 Go/Python stub；bytes/file/stream 使用 protobuf bytes 或 streaming chunk 建模 |
+
+生成物 ownership、单次请求选项、stream/file 路径、server adapter 安全默认和生产逃生通道详见 [生成器与目录布局](docs/zh/generators.md)。默认 adapter 是协议桥接层，不是完整生产运行时；生产项目应优先使用具体 route/client/router 的窄入口，并通过原生 client、custom transport、service implementation、middleware 或 app shell 承载鉴权、限流、cookie、TLS/proxy、重试和文件权限策略。
 
 ## 下一步
 
@@ -114,6 +118,7 @@ api-gen generate -c api-blueprint.toml
 | Wails | [docs/zh/wails.md](docs/zh/wails.md) |
 | gRPC | [docs/zh/grpc.md](docs/zh/grpc.md) |
 | Examples 验证 | [docs/zh/examples-validation.md](docs/zh/examples-validation.md) |
+| Benchmark | [docs/zh/benchmarks.md](docs/zh/benchmarks.md) |
 | 发布流程 | [docs/release-process.md](docs/release-process.md) |
 
 ## 开发和发布
@@ -121,11 +126,14 @@ api-gen generate -c api-blueprint.toml
 开发期常用命令：
 
 ```sh
+make
 make test
 make example-compile-check
 make example-validation
+make example-conformance
+make benchmark-list
 make example-golang-suite
 make example-java-suite
 ```
 
-`example-golang-suite` 和 `example-java-suite` 是手动端到端增强验证，不进入默认测试、发布预检或 CI。正式发布前的版本、构建、安装和 GitHub Release 流程见 [发布流程](docs/release-process.md)。
+`make example-conformance` 默认从真实 Go HTTP server 开始跑协议互通；可用 `EXAMPLE_CONFORMANCE_SERVERS`、`EXAMPLE_CONFORMANCE_CLIENTS` 和 `EXAMPLE_CONFORMANCE_SCENARIOS` 选择矩阵，完整矩阵可设为 `EXAMPLE_CONFORMANCE_SERVERS=all EXAMPLE_CONFORMANCE_CLIENTS=all`。benchmark 是可选趋势工具，不作为默认 CI 阈值；除 binary / protocol 外，也提供 generated client SDK smoke 入口，见 [Benchmark](docs/zh/benchmarks.md)。`example-golang-suite` 和 `example-java-suite` 是保留的手动端到端增强验证。正式发布前的版本、构建、安装和 GitHub Release 流程见 [发布流程](docs/release-process.md)。

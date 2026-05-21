@@ -127,6 +127,10 @@ def validate_config(repo_root: Path) -> None:
         RELEASE_DOC_PATH,
         Path("release-version.toml"),
         Path("Makefile"),
+        Path("make/core.mk"),
+        Path("make/examples.mk"),
+        Path("make/wails.mk"),
+        Path("make/release.mk"),
         Path(".github/workflows/ci.yml"),
         Path(".github/workflows/release-rc.yml"),
         Path(".github/workflows/release.yml"),
@@ -134,6 +138,19 @@ def validate_config(repo_root: Path) -> None:
         Path("scripts/release_version.py"),
         Path("scripts/release_assets.py"),
         Path("scripts/example_validation.py"),
+        Path("scripts/example_validation/__init__.py"),
+        Path("scripts/example_validation/__main__.py"),
+        Path("scripts/example_validation/cli.py"),
+        Path("scripts/example_validation/compile.py"),
+        Path("scripts/example_validation/constants.py"),
+        Path("scripts/example_validation/connection_contract.py"),
+        Path("scripts/example_validation/generate.py"),
+        Path("scripts/example_validation/language_checks.py"),
+        Path("scripts/example_validation/models.py"),
+        Path("scripts/example_validation/runner.py"),
+        Path("scripts/example_validation/snapshot.py"),
+        Path("scripts/example_validation/tools.py"),
+        Path("scripts/example_validation/workspace.py"),
     ]
     missing = [str(path) for path in required_paths if not (repo_root / path).exists()]
     if missing:
@@ -207,8 +224,8 @@ def validate_dist_artifacts(dist_dir: Path) -> DistArtifacts:
 
     wheel_path = artifacts.wheels[0]
     _assert_wheel_contains(wheel_path, "api_blueprint/writer/templates/")
-    _assert_wheel_contains_file(wheel_path, "api_blueprint/writer/templates/kotlin/runtime/ApiTransport.kt.j2")
-    _assert_wheel_contains_file(wheel_path, "api_blueprint/writer/templates/kotlin/transports/http/OkHttpApiTransport.kt.j2")
+    _assert_wheel_contains_file(wheel_path, "api_blueprint/writer/templates/kotlin/runtime/GenApiTransport.kt.j2")
+    _assert_wheel_contains_file(wheel_path, "api_blueprint/writer/templates/kotlin/transports/http/GenOkHttpApiTransport.kt.j2")
     _assert_wheel_contains_file(wheel_path, "api_blueprint/writer/templates/python/runtime/gen_client.py.j2")
     _assert_wheel_contains_file(wheel_path, "api_blueprint/writer/templates/python/transports/http/gen_server.py.j2")
     _assert_wheel_contains(wheel_path, "api_blueprint/hub/templates/")

@@ -1,0 +1,176 @@
+{% autoescape false %}import 'dart:async';
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+import 'package:web_socket_channel/web_socket_channel.dart';
+
+import '../../runtime/gen_api_errors.dart';
+import '../../runtime/gen_api_transport.dart';
+
+class HttpEventStreamBridge<Recv, Close> implements ApiStreamBridge<Recv, Close> {
+  @override
+  final String routeId;
+  final Future<http.StreamedResponse> Function() start;
+  final Recv Function(Object? value) decodeMessage;
+  final Close Function(Object? value) decodeClose;
+  final _messages = <SocketMessageHandler<Recv>>{};
+  final _closes = <SocketCloseHandler<Close>>{};
+  var _didClose = false;
+  late final StreamSubscription<String> _subscription;
+
+  @override
+  late final Future<void> ready = _connect();
+
+  HttpEventStreamBridge({
+    required this.routeId,
+    required this.start,
+    required this.decodeMessage,
+    required this.decodeClose,
+  });
+
+  @override
+  SocketUnsubscribe onMessage(SocketMessageHandler<Recv> listener) {
+    _messages.add(listener);
+    return () => _messages.remove(listener);
+  }
+
+  @override
+  SocketUnsubscribe onClose(SocketCloseHandler<Close> listener) {
+    _closes.add(listener);
+    return () => _closes.remove(listener);
+  }
+
+  @override
+  Future<void> close([int? code, String? reason]) async {
+    await _subscription.cancel();
+    _emitClose({'code': code, 'reason': reason});
+  }
+
+  Future<void> _connect() async {
+    final response = await start();
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final body = await response.stream.transform(utf8.decoder).join();
+      throw ApiException(response.statusCode, body);
+    }
+    _subscription = response.stream.transform(utf8.decoder).listen(_acceptChunk, onDone: () => _emitClose(null));
+  }
+
+  String _buffer = '';
+
+  void _acceptChunk(String chunk) {
+    _buffer += chunk;
+    var boundary = RegExp(r'\r?\n\r?\n').firstMatch(_buffer);
+    while (boundary != null) {
+      final block = _buffer.substring(0, boundary.start);
+      _buffer = _buffer.substring(boundary.end);
+      _dispatchBlock(block);
+      boundary = RegExp(r'\r?\n\r?\n').firstMatch(_buffer);
+    }
+  }
+
+  void _dispatchBlock(String block) {
+    var eventName = 'message';
+    final data = <String>[];
+    for (final line in block.split(RegExp(r'\r?\n'))) {
+      if (line.startsWith('event:')) {
+        eventName = line.substring('event:'.length).trim();
+      } else if (line.startsWith('data:')) {
+        data.add(line.substring('data:'.length).trimLeft());
+      }
+    }
+    final payload = data.isEmpty ? null : jsonDecode(data.join('\n'));
+    if (eventName == 'close') {
+      _emitClose(payload);
+      return;
+    }
+    final message = decodeMessage(payload);
+    for (final listener in List.of(_messages)) {
+      listener(message);
+    }
+  }
+
+  void _emitClose(Object? payload) {
+    if (_didClose) {
+      return;
+    }
+    _didClose = true;
+    final close = decodeClose(payload);
+    for (final listener in List.of(_closes)) {
+      listener(close);
+    }
+  }
+}
+
+class HttpSocketBridge<Recv, Send, Close> implements ApiChannelBridge<Recv, Send, Close> {
+  @override
+  final String routeId;
+  final WebSocketChannel socket;
+  final Recv Function(Object? value) decodeMessage;
+  final Object? Function(Send value) encodeMessage;
+  final Close Function(Object? value) decodeClose;
+  final _messages = <SocketMessageHandler<Recv>>{};
+  final _closes = <SocketCloseHandler<Close>>{};
+  var _didClose = false;
+
+  @override
+  late final Future<void> ready = socket.ready;
+
+  late final StreamSubscription<dynamic> _subscription = socket.stream.listen((event) {
+    final payload = event is String ? jsonDecode(event) : event;
+    final object = apiBlueprintReadObject(payload);
+    if (object['type'] == 'close') {
+      _emitClose(object['data']);
+      return;
+    }
+    final message = decodeMessage(object['type'] == 'message' ? object['data'] : payload);
+    for (final listener in List.of(_messages)) {
+      listener(message);
+    }
+  }, onDone: () => _emitClose(null), onError: (Object error) => _emitClose({'error': error.toString()}));
+
+  HttpSocketBridge({
+    required this.routeId,
+    required this.socket,
+    required this.decodeMessage,
+    required this.encodeMessage,
+    required this.decodeClose,
+  }) {
+    _subscription;
+  }
+
+  @override
+  SocketUnsubscribe onMessage(SocketMessageHandler<Recv> listener) {
+    _messages.add(listener);
+    return () => _messages.remove(listener);
+  }
+
+  @override
+  SocketUnsubscribe onClose(SocketCloseHandler<Close> listener) {
+    _closes.add(listener);
+    return () => _closes.remove(listener);
+  }
+
+  @override
+  Future<void> send(Send message) async {
+    await ready;
+    socket.sink.add(jsonEncode(encodeMessage(message)));
+  }
+
+  @override
+  Future<void> close([int? code, String? reason]) async {
+    await _subscription.cancel();
+    await socket.sink.close(code, reason);
+  }
+
+  void _emitClose(Object? payload) {
+    if (_didClose) {
+      return;
+    }
+    _didClose = true;
+    final close = decodeClose(payload);
+    for (final listener in List.of(_closes)) {
+      listener(close);
+    }
+  }
+}
+{% endautoescape %}

@@ -1,0 +1,190 @@
+{% autoescape false %}// ignore_for_file: no_leading_underscores_for_local_identifiers, unused_import
+
+import 'dart:typed_data';
+
+import 'package:{{ writer.package }}/src/{{ bp.root_path }}/runtime/binary/gen_binary_runtime.dart';
+
+{% macro check_field(field, receiver, path_expr) -%}
+{% if field.const_value %}
+{% if field.is_bytes %}
+  apiBinaryRequireCondition({{ path_expr }}, apiBinaryBytesEqual({{ receiver }}, {{ field.const_expr }}), 'const mismatch');
+{% elif field.is_string %}
+  apiBinaryRequireCondition({{ path_expr }}, {{ receiver }} == {{ field.const_expr }}, 'const mismatch');
+{% elif field.wire_type == "bool" %}
+  apiBinaryRequireCondition({{ path_expr }}, {{ receiver }} == {{ field.const_expr }}, 'const mismatch');
+{% else %}
+  apiBinaryRequireCondition({{ path_expr }}, {{ receiver }} == {{ field.const_expr }}, 'const mismatch');
+{% endif %}
+{% endif %}
+{% if field.rule.get("min") and field.supports_numeric_rules %}
+  apiBinaryRequireRange({{ path_expr }}, {{ receiver }}, {{ field.min_expr }}, 9223372036854775807);
+{% endif %}
+{% if field.rule.get("max") and field.supports_numeric_rules %}
+  apiBinaryRequireRange({{ path_expr }}, {{ receiver }}, -9223372036854775808, {{ field.max_expr }});
+{% endif %}
+{% if field.rule.get("assert") and field.supports_numeric_rules %}
+  apiBinaryRequireCondition({{ path_expr }}, {{ receiver }} == {{ field.assert_expr }}, 'assert mismatch');
+{% endif %}
+{% if field.bitflags_zero_mask %}
+  apiBinaryRequireCondition({{ path_expr }}, ({{ receiver }} & {{ field.bitflags_zero_mask }}) == 0, 'reserved bits must be zero');
+{% endif %}
+{%- endmacro %}
+
+{% macro write_field(field, object) -%}
+{% set field_path = "apiBinaryJoinPath(path, " ~ (field.name | code_literal) ~ ")" %}
+{% set field_var = "_" ~ field.dart_name %}
+{% if field.is_hidden %}
+  writer.writeZeroes({{ field_path }}, {{ field.count_expr }});
+{% elif field.is_bytes %}
+  final {{ field_var }} = {{ field.required_value_expr }};
+  final {{ field_var }}Count = {{ field.count_expr }};
+{% if field.rule.get("max") %}
+  apiBinaryRequireRange({{ field_path }}, {{ field_var }}Count, 0, {{ field.max_expr }});
+{% endif %}
+  apiBinaryRequireSize({{ field_path }}, apiBinarySize({{ field_var }}), {{ field_var }}Count);
+{{ check_field(field, field_var, field_path) | indent(2, true) }}
+  writer.writeBytes({{ field_path }}, {{ field_var }});
+{% elif field.is_string %}
+  final {{ field_var }} = {{ field.required_value_expr }};
+  final {{ field_var }}Count = {{ field.count_expr }};
+{% if field.rule.get("max") %}
+  apiBinaryRequireRange({{ field_path }}, {{ field_var }}Count, 0, {{ field.max_expr }});
+{% endif %}
+  apiBinaryRequireSize({{ field_path }}, apiBinarySize({{ field_var }}), {{ field_var }}Count);
+{{ check_field(field, field_var, field_path) | indent(2, true) }}
+  writer.writeString({{ field_path }}, {{ field_var }});
+{% elif field.is_array %}
+  final {{ field_var }} = {{ field.required_value_expr }};
+  final {{ field_var }}Count = {{ field.count_expr }};
+{% if field.rule.get("max") %}
+  apiBinaryRequireRange({{ field_path }}, {{ field_var }}Count, 0, {{ field.max_expr }});
+{% endif %}
+  apiBinaryRequireSize({{ field_path }}, apiBinarySize({{ field_var }}), {{ field_var }}Count);
+  for (var index = 0; index < {{ field_var }}.length; index += 1) {
+    final item = {{ field_var }}[index];
+{% if field.is_scalar %}
+    writer.{{ field.write_method }}(apiBinaryIndexPath({{ field_path }}, index), item);
+{% else %}
+    _write{{ field.single_dart_type }}(item, writer, state, apiBinaryIndexPath({{ field_path }}, index));
+{% endif %}
+  }
+{% elif field.is_scalar %}
+  final {{ field_var }} = {{ field.required_value_expr }};
+{{ check_field(field, field_var, field_path) | indent(2, true) }}
+{% if field.sizeof_name and object.has_public_field(field.sizeof_name) %}
+  apiBinaryRequireSize(apiBinaryJoinPath({{ field_path }}, {{ field.sizeof_name | code_literal }}), apiBinarySize(value.{{ field.sizeof_dart_name }}), {{ field_var }});
+{% endif %}
+  writer.{{ field.write_method }}({{ field_path }}, {{ field_var }});
+{% if field.is_integer_scalar %}
+  state[{{ field.dart_name | code_literal }}] = {{ field_var }};
+{% endif %}
+{% else %}
+  final {{ field_var }} = {{ field.required_value_expr }};
+  _write{{ field.single_dart_type }}({{ field_var }}, writer, state, {{ field_path }});
+{% endif %}
+{%- endmacro %}
+
+{% macro read_field(field, object) -%}
+{% set field_path = "apiBinaryJoinPath(path, " ~ (field.name | code_literal) ~ ")" %}
+{% if field.is_hidden %}
+  reader.readZeroes({{ field_path }}, {{ field.count_expr }});
+{% elif field.is_bytes %}
+  final {{ field.dart_name }} = reader.readBytes({{ field_path }}, {{ field.count_expr }});
+{{ check_field(field, field.dart_name, field_path) | indent(2, true) }}
+{% elif field.is_string %}
+  final {{ field.dart_name }} = reader.readString({{ field_path }}, {{ field.count_expr }});
+{{ check_field(field, field.dart_name, field_path) | indent(2, true) }}
+{% elif field.is_array %}
+  final {{ field.dart_name }}Count = {{ field.count_expr }};
+{% if field.rule.get("max") %}
+  apiBinaryRequireRange({{ field_path }}, {{ field.dart_name }}Count, 0, {{ field.max_expr }});
+{% endif %}
+  final {{ field.dart_name }} = <{{ field.single_dart_type }}>[];
+  for (var index = 0; index < {{ field.dart_name }}Count; index += 1) {
+{% if field.is_scalar %}
+    {{ field.dart_name }}.add(reader.{{ field.read_method }}(apiBinaryIndexPath({{ field_path }}, index)));
+{% else %}
+    {{ field.dart_name }}.add(_read{{ field.single_dart_type }}(reader, state, apiBinaryIndexPath({{ field_path }}, index)));
+{% endif %}
+  }
+{% elif field.is_scalar %}
+  final {{ field.dart_name }} = reader.{{ field.read_method }}({{ field_path }});
+{{ check_field(field, field.dart_name, field_path) | indent(2, true) }}
+{% if field.is_integer_scalar %}
+  state[{{ field.dart_name | code_literal }}] = {{ field.dart_name }};
+{% endif %}
+{% else %}
+  final {{ field.dart_name }} = _read{{ field.single_dart_type }}(reader, state, {{ field_path }});
+{% endif %}
+{%- endmacro %}
+
+{% for schema in binary_schemas %}
+{% for value_set in schema.value_sets %}
+class {{ value_set.values_class }} {
+  const {{ value_set.values_class }}._();
+{% for value in value_set.values %}  static const int {{ value_set.value_name(value.name) }} = {{ value.value }};
+{% endfor %}}
+
+{% endfor %}
+class {{ schema.name }} {
+{% for field in schema.packet_fields %}  final {{ field.dart_type }}? {{ field.dart_name }};
+{% endfor %}
+  const {{ schema.name }}({
+{% for field in schema.packet_fields %}    this.{{ field.dart_name }},
+{% endfor %}  });
+}
+
+{% for obj in schema.all_objects %}
+class {{ obj.dart_name }} {
+{% for field in obj.data_fields %}  final {{ field.dart_type }}? {{ field.dart_name }};
+{% endfor %}
+  const {{ obj.dart_name }}({
+{% for field in obj.data_fields %}    this.{{ field.dart_name }},
+{% endfor %}  });
+}
+
+{% endfor %}Uint8List {{ schema.encode_func }}({{ schema.name }} value) {
+  final writer = ApiBinaryWriter(endian: {{ schema.endian_expr }});
+  final state = <String, int>{
+{% for field_name in schema.state_fields %}    {{ field_name | code_literal }}: 0,
+{% endfor %}  };
+{% for section in schema.sections %}  {{ section.writer_name }}(value, writer, state, {{ (schema.name ~ "." ~ section.var_name) | code_literal }});
+{% endfor %}  return writer.takeBytes();
+}
+
+{{ schema.name }} {{ schema.decode_func }}(Uint8List bytes) {
+  final reader = ApiBinaryReader(bytes, endian: {{ schema.endian_expr }});
+  final state = <String, int>{
+{% for field_name in schema.state_fields %}    {{ field_name | code_literal }}: 0,
+{% endfor %}  };
+{% for section in schema.sections %}  final {{ section.var_name }} = {{ section.reader_name }}(reader, state, {{ (schema.name ~ "." ~ section.var_name) | code_literal }});
+{% endfor %}  reader.requireDone();
+  return {{ schema.name }}(
+{% for section in schema.sections %}{% for field in section.data_fields %}    {{ field.dart_name }}: {{ section.var_name }}.{{ field.dart_name }},
+{% endfor %}{% endfor %}  );
+}
+
+{% for obj in schema.all_objects %}
+void {{ obj.writer_name }}(
+  {{ schema.name if obj.obj.kind == 'section' else obj.dart_name }} value,
+  ApiBinaryWriter writer,
+  Map<String, int> state,
+  String path,
+) {
+{% for field in obj.fields %}{{ write_field(field, obj) | indent(2, true) }}
+{% endfor %}}
+
+{{ obj.dart_name }} {{ obj.reader_name }}(
+  ApiBinaryReader reader,
+  Map<String, int> state,
+  String path,
+) {
+{% for field in obj.fields %}{{ read_field(field, obj) | indent(2, true) }}
+{% endfor %}  return {{ obj.dart_name }}(
+{% for field in obj.data_fields %}    {{ field.dart_name }}: {{ field.dart_name }},
+{% endfor %}  );
+}
+
+{% endfor %}
+{% endfor %}
+{% endautoescape %}

@@ -523,6 +523,9 @@ class GolangProto(Proto):
 
     def import_specs(self, formatters: dict[str, str]) -> list[str]:
         specs: list[str] = []
+        if self.struct_type == "struct":
+            for field in self.fields():
+                specs += field.import_specs(formatters)
         if self.generic:
             specs += self.generic.import_specs(formatters)
         if self.alias:

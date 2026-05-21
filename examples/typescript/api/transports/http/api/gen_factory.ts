@@ -8,16 +8,22 @@ import type { ApiClient } from "../../../routes/api/client";
 import { ApiClient as ApiClientImpl } from "../../../routes/api/client";
 import type { BinaryClient } from "../../../routes/api/binary/client";
 import { BinaryClient as BinaryClientImpl } from "../../../routes/api/binary/client";
+import type { ConflictClient } from "../../../routes/api/conflict/client";
+import { ConflictClient as ConflictClientImpl } from "../../../routes/api/conflict/client";
 import type { DemoClient } from "../../../routes/api/demo/client";
 import { DemoClient as DemoClientImpl } from "../../../routes/api/demo/client";
 import type { HelloClient } from "../../../routes/api/hello/client";
 import { HelloClient as HelloClientImpl } from "../../../routes/api/hello/client";
+import type { MediaClient } from "../../../routes/api/media/client";
+import { MediaClient as MediaClientImpl } from "../../../routes/api/media/client";
 
 export interface GeneratedClients {
   apiClient: ApiClient;
   binaryClient: BinaryClient;
+  conflictClient: ConflictClient;
   demoClient: DemoClient;
   helloClient: HelloClient;
+  mediaClient: MediaClient;
 }
 
 export function createClients(config: ApiHttpTransportConfig = {}): GeneratedClients {
@@ -26,7 +32,9 @@ export function createClients(config: ApiHttpTransportConfig = {}): GeneratedCli
   return {
     apiClient: new ApiClientImpl(sharedConfig),
     binaryClient: new BinaryClientImpl(sharedConfig),
+    conflictClient: new ConflictClientImpl(sharedConfig),
     demoClient: new DemoClientImpl(sharedConfig),
     helloClient: new HelloClientImpl(sharedConfig),
+    mediaClient: new MediaClientImpl(sharedConfig),
   };
 }

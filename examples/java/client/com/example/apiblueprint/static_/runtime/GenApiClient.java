@@ -4,11 +4,11 @@ package com.example.apiblueprint.static_.runtime;
 import com.example.apiblueprint.static_.routes.static_.StaticApi;
 
 public class GenApiClient {
-    protected final ApiTransport transport;
+    protected final GenApiTransport transport;
 
     public final StaticApi staticValue;
 
-    public GenApiClient(ApiTransport transport) {
+    public GenApiClient(GenApiTransport transport) {
         this.transport = transport;
 
         this.staticValue = new StaticApi(transport);

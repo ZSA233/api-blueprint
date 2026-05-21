@@ -55,6 +55,21 @@ WRITE_METHODS = {
     "f64": "writeF64",
     "bool": "writeBool",
 }
+READ_METHODS = {
+    "u8": "readU8",
+    "u16": "readU16",
+    "u24": "readU24",
+    "u32": "readU32",
+    "u64": "readU64",
+    "i8": "readI8",
+    "i16": "readI16",
+    "i24": "readI24",
+    "i32": "readI32",
+    "i64": "readI64",
+    "f32": "readF32",
+    "f64": "readF64",
+    "bool": "readBool",
+}
 INTEGER_TYPES = {"u8", "u16", "u24", "u32", "u64", "i8", "i16", "i24", "i32", "i64"}
 EXPR_TOKEN_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*|\d+|[()+\-*/]")
 
@@ -199,6 +214,10 @@ class TypeScriptBinaryField:
         return WRITE_METHODS[self.wire_type]
 
     @property
+    def read_method(self) -> str:
+        return READ_METHODS[self.wire_type]
+
+    @property
     def supports_binary_block(self) -> bool:
         return self.is_array and not self.fixed_bytes and not self.is_hidden
 
@@ -316,6 +335,10 @@ class TypeScriptBinaryObject:
     def writer_name(self) -> str:
         return "write" + ts_name(self.name)
 
+    @property
+    def reader_name(self) -> str:
+        return "read" + ts_name(self.name)
+
     def block_factory_name(self, field: TypeScriptBinaryField) -> str:
         return "new" + ts_name(f"{self.name}_{field.name}_block")
 
@@ -401,6 +424,10 @@ class TypeScriptBinarySchema:
         return f"new{self.name}BinaryState"
 
     @property
+    def reader_name(self) -> str:
+        return f"parse{self.name}"
+
+    @property
     def state_fields(self) -> list[str]:
         seen: set[str] = set()
         fields: list[str] = []
@@ -422,6 +449,9 @@ class TypeScriptBinarySchema:
 
     def object_type_name(self, object_name: str) -> str:
         return _scope_ts_name(self.name, object_name)
+
+    def object_reader_name(self, object_name: str) -> str:
+        return "read" + self.object_type_name(object_name)
 
     def value_set_type_name(self, value_set_name: str) -> str:
         return _scope_ts_name(self.name, value_set_name)

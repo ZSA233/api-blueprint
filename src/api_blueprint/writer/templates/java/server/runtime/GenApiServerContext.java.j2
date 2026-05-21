@@ -1,0 +1,12 @@
+package {{ bp.root_package }}.runtime;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public final class GenApiServerContext {
+    private final Map<String, Object> state = new HashMap<>();
+
+    public Map<String, Object> state() {
+        return state;
+    }
+}

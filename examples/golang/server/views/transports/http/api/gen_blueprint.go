@@ -6,27 +6,35 @@ import (
 	sharedroot "example.com/project/golang/server/views/routes/api"
 
 	sharedBinary "example.com/project/golang/server/views/routes/api/binary"
+	sharedConflict "example.com/project/golang/server/views/routes/api/conflict"
 	sharedDemo "example.com/project/golang/server/views/routes/api/demo"
 	sharedHello "example.com/project/golang/server/views/routes/api/hello"
+	sharedMedia "example.com/project/golang/server/views/routes/api/media"
 	binary "example.com/project/golang/server/views/transports/http/api/binary"
+	conflict "example.com/project/golang/server/views/transports/http/api/conflict"
 	demo "example.com/project/golang/server/views/transports/http/api/demo"
 	hello "example.com/project/golang/server/views/transports/http/api/hello"
+	media "example.com/project/golang/server/views/transports/http/api/media"
 
 	"github.com/gin-gonic/gin"
 )
 
 type Blueprint struct {
-	Router       *sharedroot.Router
-	BinaryRouter *sharedBinary.Router
-	DemoRouter   *sharedDemo.Router
-	HelloRouter  *sharedHello.Router
+	Router         *sharedroot.Router
+	BinaryRouter   *sharedBinary.Router
+	ConflictRouter *sharedConflict.Router
+	DemoRouter     *sharedDemo.Router
+	MediaRouter    *sharedMedia.Router
+	HelloRouter    *sharedHello.Router
 }
 
 func NewBlueprint(eng *gin.Engine) *Blueprint {
 	return &Blueprint{
-		Router:       NewRouter(eng),
-		BinaryRouter: binary.NewRouter(eng),
-		DemoRouter:   demo.NewRouter(eng),
-		HelloRouter:  hello.NewRouter(eng),
+		Router:         NewRouter(eng),
+		BinaryRouter:   binary.NewRouter(eng),
+		ConflictRouter: conflict.NewRouter(eng),
+		DemoRouter:     demo.NewRouter(eng),
+		MediaRouter:    media.NewRouter(eng),
+		HelloRouter:    hello.NewRouter(eng),
 	}
 }

@@ -1,0 +1,71 @@
+{% autoescape false %}// ignore_for_file: non_constant_identifier_names, unused_import
+
+import 'api_json_codecs.dart';
+import 'gen_api_errors.dart';
+import 'gen_api_transport.dart';
+{% for proto in protos %}
+{% if proto.kind == 'data' %}
+class {{ proto.name }} {
+{% for field in proto.fields %}  final {{ field.type.nullable_text() }} {{ field.name }};
+{% endfor %}
+  const {{ proto.name }}({
+{% for field in proto.fields %}    this.{{ field.name }},
+{% endfor %}  });
+
+  factory {{ proto.name }}.fromJson(Map<String, Object?> json) {
+    return {{ proto.name }}(
+{% for field in proto.fields %}      {{ field.name }}: {{ field.type.decode_expr("json[" ~ (field.wire_name | tojson) ~ "]") }},
+{% endfor %}    );
+  }
+
+  factory {{ proto.name }}.fromJsonValue(Object? value) {
+    final codec = apiJsonCodecs.find<{{ proto.name }}>();
+    if (codec != null) {
+      return codec.fromJson(value);
+    }
+    return {{ proto.name }}.fromJson(apiBlueprintReadObject(value));
+  }
+
+  Map<String, Object?> toJson() {
+    final codec = apiJsonCodecs.find<{{ proto.name }}>();
+    if (codec != null) {
+      return apiBlueprintReadObject(codec.toJson(this));
+    }
+    return {
+{% for field in proto.fields %}      {{ field.wire_name | tojson }}: apiBlueprintToJson({{ field.name }}),
+{% endfor %}    };
+  }
+
+  Map<String, String?> toQueryMap() {
+    return {
+{% for field in proto.fields %}      {{ field.wire_name | tojson }}: apiBlueprintToQueryValue({{ field.name }}),
+{% endfor %}    };
+  }
+}
+{% elif proto.kind == 'alias' %}
+typedef {{ proto.name }} = {{ proto.alias_type.text if proto.alias_type else 'Object?' }};
+
+{{ proto.name }} {{ proto.name }}FromJsonValue(Object? value) {
+{% if proto.alias_type %}  return {{ proto.alias_type.decode_required_expr("value", proto.name) }};
+{% else %}  return apiBlueprintReadAny(value);
+{% endif %}}
+{% elif proto.kind == 'enum' %}
+enum {{ proto.name }} {
+{% for key, value in proto.enum_members %}  {{ key }}({{ proto.enum_wire_literal(value) }}),
+{% endfor %}  ;
+
+  final Object wireValue;
+  const {{ proto.name }}(this.wireValue);
+}
+
+{{ proto.name }}? {{ proto.name }}FromJson(Object? value) {
+  for (final item in {{ proto.name }}.values) {
+    if (item.wireValue == value || item.wireValue.toString() == value?.toString()) {
+      return item;
+    }
+  }
+  return null;
+}
+{% endif %}
+{% endfor %}
+{% endautoescape %}

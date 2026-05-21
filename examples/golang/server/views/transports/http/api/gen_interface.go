@@ -29,6 +29,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Methods:   []string{"CHANNEL"},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope("session"),
+				Filename:  "",
 			},
 			"req|auth",
 			nil,

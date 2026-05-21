@@ -23,13 +23,16 @@ type StaticClient = GenStaticClient
 
 var NewStaticClient = NewGenStaticClient
 
-func (client *GenStaticClient) DocJson(ctx context.Context) (*DocJsonResponse, error) {
+func (client *GenStaticClient) DocJson(ctx context.Context, opts ...runtime.RequestOption) (*DocJsonResponse, error) {
 	request := runtime.Request{
 		RouteID:          "static.static.get.docjson",
 		Method:           "GET",
 		Path:             "/static/doc.json",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "NoEnvelope", Kind: "none", ErrorIdentity: "none", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
+	request.ApplyOptions(opts...)
 	var response DocJsonResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
@@ -37,13 +40,16 @@ func (client *GenStaticClient) DocJson(ctx context.Context) (*DocJsonResponse, e
 	return &response, nil
 }
 
-func (client *GenStaticClient) Dochaha(ctx context.Context) (*DochahaResponse, error) {
+func (client *GenStaticClient) Dochaha(ctx context.Context, opts ...runtime.RequestOption) (*DochahaResponse, error) {
 	request := runtime.Request{
 		RouteID:          "static.static.get.dochaha",
 		Method:           "GET",
 		Path:             "/static/dochaha",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "NoEnvelope", Kind: "none", ErrorIdentity: "none", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
+	request.ApplyOptions(opts...)
 	var response DochahaResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err

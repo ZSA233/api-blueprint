@@ -67,4 +67,3 @@ export async function ensureWailsRuntime(): Promise<void> {
   }
   await wailsRuntimeLoadPromise;
 }
-

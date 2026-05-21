@@ -20,6 +20,22 @@ type TestPostResponse struct {
 	Map  map[string]*runtime.ApiDemoMap `json:"map" form:"map"`
 }
 
+type FormSubmitForm struct {
+	Title   string `json:"title" form:"title"`
+	Count   int    `json:"count,omitempty" form:"count,omitempty"`
+	Enabled bool   `json:"enabled,omitempty" form:"enabled,omitempty"`
+}
+type FormSubmitResponse struct {
+	Summary string `json:"summary" form:"summary"`
+	Count   int    `json:"count" form:"count"`
+	Enabled bool   `json:"enabled" form:"enabled"`
+}
+
+type RequestOptionsQuery struct {
+	DelayMs int `json:"delay_ms,omitempty" form:"delay_ms,omitempty"`
+}
+type RequestOptionsResponse = runtime.RequestOptionsResponse
+
 type PutDemoQuery struct {
 	Arg1 string  `json:"arg1,omitempty" form:"arg1,omitempty"`
 	Arg2 float64 `json:"arg2,omitempty" form:"arg2,omitempty"`

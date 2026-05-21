@@ -82,6 +82,8 @@ class GoRouteProtocolView:
     def body_alias_name(self) -> str | None:
         if self.protocol.request.json.model is not None:
             return f"{self.req_type}_JSON"
+        if self.protocol.request.multipart.model is not None:
+            return f"{self.req_type}_FORM"
         if self.protocol.request.form.model is not None:
             return f"{self.req_type}_FORM"
         if self.protocol.request.binary_schema is not None:
@@ -92,6 +94,8 @@ class GoRouteProtocolView:
     def body_proto_ref(self) -> GolangProto | GolangType | None:
         if self.protocol.request.json.model is not None:
             return GolangProto.from_model_ref(ensure_model(self.protocol.request.json.model), f"{self.req_type}_JSON")
+        if self.protocol.request.multipart.model is not None:
+            return GolangProto.from_model_ref(ensure_model(self.protocol.request.multipart.model), f"{self.req_type}_FORM")
         if self.protocol.request.form.model is not None:
             return GolangProto.from_model_ref(ensure_model(self.protocol.request.form.model), f"{self.req_type}_FORM")
         if self.protocol.request.binary_schema is not None:
@@ -125,6 +129,10 @@ class GoRouteProtocolView:
         return self.protocol.request.form.model is not None
 
     @property
+    def bind_multipart(self) -> bool:
+        return self.protocol.request.multipart.model is not None
+
+    @property
     def bind_binary(self) -> bool:
         return self.protocol.request.binary_schema is not None
 
@@ -153,6 +161,7 @@ class GoRouteProtocolView:
         options = [
             ("Q", self.query_model),
             ("F", self.protocol.request.form.model),
+            ("M", self.protocol.request.multipart.model),
             ("J", self.protocol.request.json.model),
             ("B", self.protocol.request.binary_schema),
         ]
@@ -164,9 +173,17 @@ class GoRouteProtocolView:
             "application/json": "json",
             "application/xml": "xml",
             "text/html": "html",
+            "bytes": "bytes",
+            "file": "file",
+            "byte_stream": "byte_stream",
+            "binary_schema": "binary_schema",
         }
+        if self.protocol.response.kind in {"bytes", "file", "byte_stream", "binary_schema"}:
+            response_type = self.protocol.response.kind
+        else:
+            response_type = media_type_mapping[self.protocol.response.media_type]
         return "@".join([
-            media_type_mapping[self.protocol.response.media_type],
+            response_type,
             self.protocol.response.envelope.__name__,
         ])
 
@@ -210,6 +227,13 @@ class GoRouteProtocolView:
             )
             yield req_form_proto
             req_body_proto = req_form_proto
+        if self.protocol.request.multipart.model is not None:
+            req_form_proto = GolangProto.from_model_ref(
+                ensure_model(self.protocol.request.multipart.model),
+                f"{self.req_type}_FORM",
+            )
+            yield req_form_proto
+            req_body_proto = req_form_proto
         if self.protocol.request.json.model is not None:
             req_json_proto = GolangProto.from_model_ref(
                 ensure_model(self.protocol.request.json.model),
@@ -226,7 +250,7 @@ class GoRouteProtocolView:
                 self.req_type,
                 {
                     "Q": self.query_model,
-                    "B": self.protocol.request.json.model or self.protocol.request.form.model or Null(),
+                    "B": self.protocol.request.json.model or self.protocol.request.multipart.model or self.protocol.request.form.model or Null(),
                 },
             ),
             "generic",
@@ -237,19 +261,25 @@ class GoRouteProtocolView:
         )
 
         rsp_json_proto = None
+        rsp_body_ref: GolangProto | GolangType | None = None
         if self.protocol.response.model.model is not None:
             rsp_json_proto = GolangProto.from_model_ref(
                 ensure_model(self.protocol.response.model.model),
                 f"{self.rsp_type}_BODY",
             )
             yield rsp_json_proto
+            rsp_body_ref = rsp_json_proto
+        elif self.protocol.response.kind in {"bytes", "file", "byte_stream"}:
+            rsp_body_ref = GolangType("{provider_package$}RawResponse")
+        elif self.protocol.response.binary_schema is not None:
+            rsp_body_ref = GolangType(f"{{binary_package$}}{self.protocol.response.binary_schema.name}")
 
         yield GolangProto(
             self.rsp_type,
             self.protocol.response.model.model,
             "alias",
             alias=GolangProtoAlias(
-                name=GolangType(rsp_json_proto.name if rsp_json_proto else "any"),
+                name=GolangType(rsp_body_ref.name if isinstance(rsp_body_ref, GolangProto) else str(rsp_body_ref or "any")),
                 proto=rsp_json_proto,
             ),
         )
@@ -260,7 +290,7 @@ class GoRouteProtocolView:
                 self.req_type,
                 {
                     "Q": self.query_model or Null(),
-                    "B": self.protocol.request.json.model or self.protocol.request.form.model or Null(),
+                    "B": self.protocol.request.json.model or self.protocol.request.multipart.model or self.protocol.request.form.model or Null(),
                     "P": self.protocol.response.model.model or Null(),
                 },
             ),
@@ -270,7 +300,7 @@ class GoRouteProtocolView:
                 types=[
                     req_query_proto or GolangType("any"),
                     req_body_proto or GolangType("any"),
-                    rsp_json_proto or GolangType("any"),
+                    rsp_body_ref or GolangType("any"),
                 ],
             ),
         )
@@ -282,6 +312,8 @@ class GoRouteProtocolView:
             yield from GolangProto.from_model(self.query_model).com_protos()
         if self.protocol.request.form.model is not None:
             yield from GolangProto.from_model(self.protocol.request.form.model).com_protos()
+        if self.protocol.request.multipart.model is not None:
+            yield from GolangProto.from_model(self.protocol.request.multipart.model).com_protos()
         if self.protocol.request.json.model is not None:
             yield from GolangProto.from_model(self.protocol.request.json.model).com_protos()
         if self.protocol.response.model.model is not None:

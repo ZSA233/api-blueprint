@@ -42,4 +42,3 @@ export function lookupApiError(payload: Partial<ApiErrorPayload> | undefined, ro
   }
   return typeof payload.code === "number" ? lookupApiErrorByCode(payload.code, routeId) : undefined;
 }
-

@@ -25,6 +25,7 @@ class TargetCapability:
     outputs: tuple[str, ...] = ()
     inputs: tuple[str, ...] = ()
     frontend_modes: tuple[str, ...] = ()
+    responses: tuple[str, ...] = ()
 
     def to_manifest(self) -> dict[str, object]:
         manifest: dict[str, object] = {"implemented": self.implemented, "routes": list(self.routes)}
@@ -44,6 +45,8 @@ class TargetCapability:
             manifest["inputs"] = list(self.inputs)
         if self.frontend_modes:
             manifest["frontend_modes"] = list(self.frontend_modes)
+        if self.responses:
+            manifest["responses"] = list(self.responses)
         return manifest
 
 
@@ -52,71 +55,92 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
     "go-server": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "binary", "binary-schema", "open"),
+        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
+        responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
     ),
     "go-client": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "binary", "binary-schema", "open"),
+        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
+        responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
     ),
     "typescript-client": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "binary", "binary-schema", "open"),
+        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
+        responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
     ),
     "kotlin-client": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "binary", "binary-schema", "open"),
+        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
+        responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
     ),
     "kotlin-server": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "binary", "binary-schema", "open"),
+        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
+        responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
     ),
     "java-server": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "binary", "binary-schema", "open"),
+        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
+        responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
     ),
     "java-client": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "binary", "binary-schema", "open"),
+        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
+        responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
+    ),
+    "flutter-client": TargetCapability(
+        implemented=True,
+        routes=("rpc", "stream", "channel"),
+        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
+        envelopes=("none", "code_message_data", "ok_data_error"),
+        transport="injected",
+        responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
     ),
     "python-server": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "binary", "open"),
+        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
+        responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
     ),
     "python-client": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "binary", "binary-schema", "open"),
+        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
+        responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
     ),
     "http-transport": TargetCapability(implemented=True, routes=("rpc", "stream", "channel")),
     "wails-transport": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
+        requests=("query", "json", "form", "urlencoded", "open"),
+        responses=("json", "xml"),
         frontend_modes=("external", "none"),
     ),
     "grpc-proto": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
+        requests=("query", "json", "form", "urlencoded", "binary", "open"),
+        responses=("json", "xml"),
         outputs=("proto",),
     ),
     "grpc-go": TargetCapability(implemented=True, inputs=("proto",), outputs=("go", "grpc-go")),
@@ -200,14 +224,26 @@ def _route_capability_errors(
             ("query", "query_model"),
             ("json", "json_model"),
             ("form", "form_model"),
+            ("urlencoded", "urlencoded_model"),
+            ("multipart", "multipart_model"),
             ("binary", "binary_model"),
             ("binary-schema", "binary_schema"),
             ("open", "open_model"),
         ):
             if request.get(manifest_key) is not None and request_kind not in capability.requests:
-                errors.append(f"{target.kind} does not support {request_kind} request route: {route_id}")
+                errors.append(
+                    f"{target.kind} does not support {request_kind} request route: {route_id}"
+                    f"{_native_modeling_hint(target.kind, request_kind)}"
+                )
 
     response = route.get("response") or {}
+    if capability.responses and isinstance(response, Mapping):
+        response_kind = str(response.get("kind") or "json")
+        if response_kind not in capability.responses:
+            errors.append(
+                f"{target.kind} does not support {response_kind} response route: {route_id}"
+                f"{_native_modeling_hint(target.kind, response_kind)}"
+            )
     if capability.envelopes and isinstance(response, Mapping):
         response_envelope = response.get("envelope")
         envelope = _envelope_kind(response_envelope)
@@ -256,3 +292,25 @@ def _duplicate_route_error_codes(route: RouteManifest) -> tuple[int, ...]:
 def _route_str(route: RouteManifest, key: str) -> str:
     value = route.get(key)
     return "" if value is None else str(value)
+
+
+def _native_modeling_hint(target_kind: str, contract_kind: str) -> str:
+    if target_kind == "grpc-proto" and contract_kind in {
+        "multipart",
+        "binary-schema",
+        "binary_schema",
+        "bytes",
+        "file",
+        "byte_stream",
+    }:
+        return "; model this as protobuf bytes fields or explicit client/server-streaming chunk messages"
+    if target_kind == "wails-transport" and contract_kind in {
+        "multipart",
+        "binary-schema",
+        "binary_schema",
+        "bytes",
+        "file",
+        "byte_stream",
+    }:
+        return "; model this as Wails RPC file descriptors, serializable bytes, or STREAM/CHANNEL chunks"
+    return ""

@@ -95,6 +95,28 @@ func (value *DemoPacket) WriteBinary(output io.Writer) error {
 	return WriteDemoPacket(value, writer)
 }
 
+func ParseDemoPacket(r io.Reader) (*DemoPacket, error) {
+	reader := runtimebinary.NewReader(r, runtimebinary.LittleEndian)
+	state := &demoPacketBinaryState{}
+	var out DemoPacket
+	if err := readDemoPacketHeader(reader, state, &out.Header); err != nil {
+		return nil, runtimebinary.WrapDecodeField("DemoPacket.header", err)
+	}
+	if err := readDemoPacketBody(reader, state, &out.Body); err != nil {
+		return nil, runtimebinary.WrapDecodeField("DemoPacket.body", err)
+	}
+	return &out, nil
+}
+
+func (value *DemoPacket) DecodeBinary(r io.Reader) error {
+	parsed, err := ParseDemoPacket(r)
+	if err != nil {
+		return err
+	}
+	*value = *parsed
+	return nil
+}
+
 func NewDemoPacketBody(contentLength int64, write func(*runtimebinary.Writer) error) runtimebinary.Body {
 	body := runtimebinary.NewStreamingBody(contentLength, write)
 	body.ContentTypeValue = "application/octet-stream"
@@ -146,7 +168,7 @@ func writeDemoPacketHeader(value *DemoPacketHeader, writer *runtimebinary.Writer
 	if err := runtimebinary.Require("magic", string([]byte("ABP1")) == string([]byte("ABP1")), "const mismatch"); err != nil {
 		return err
 	}
-	if err := runtimebinary.RequireSize("magic", uint64(len([]byte("ABP1"))), uint64(4)); err != nil {
+	if err := runtimebinary.RequireSize("magic", uint64(len([]byte("ABP1"))), uint64(uint64(4))); err != nil {
 		return err
 	}
 	if err := writer.WriteBytes("magic", []byte("ABP1")); err != nil {
@@ -166,7 +188,7 @@ func writeDemoPacketHeader(value *DemoPacketHeader, writer *runtimebinary.Writer
 		return err
 	}
 	state.Kind = int64(DemoPacketKind(1))
-	if err := runtimebinary.RequireRange("flags", uint64(value.Flags), 0, ^uint64(0)); err != nil {
+	if err := runtimebinary.RequireRange("flags", uint64(value.Flags), uint64(0), ^uint64(0)); err != nil {
 		return err
 	}
 	if err := runtimebinary.Require("flags", uint64(uint64(value.Flags))&4294967264 == 0, "reserved bits must be zero"); err != nil {
@@ -176,46 +198,46 @@ func writeDemoPacketHeader(value *DemoPacketHeader, writer *runtimebinary.Writer
 		return err
 	}
 	state.Flags = int64(value.Flags)
-	if err := writer.WriteZeroes("header_pad", 1); err != nil {
+	if err := writer.WriteZeroes("header_pad", uint64(1)); err != nil {
 		return err
 	}
-	if err := writer.WriteZeroes("reserved0", 2); err != nil {
+	if err := writer.WriteZeroes("reserved0", uint64(2)); err != nil {
 		return err
 	}
-	if err := runtimebinary.RequireRange("short_code", uint64(value.ShortCode), 1, ^uint64(0)); err != nil {
+	if err := runtimebinary.RequireRange("short_code", uint64(value.ShortCode), uint64(1), ^uint64(0)); err != nil {
 		return err
 	}
-	if err := runtimebinary.RequireRange("short_code", uint64(value.ShortCode), 0, 16777215); err != nil {
+	if err := runtimebinary.RequireRange("short_code", uint64(value.ShortCode), 0, uint64(16777215)); err != nil {
 		return err
 	}
 	if err := writer.WriteUint24("short_code", value.ShortCode); err != nil {
 		return err
 	}
 	state.ShortCode = int64(value.ShortCode)
-	if err := runtimebinary.RequireSignedRange("signed_delta", int64(value.SignedDelta), 0, int64(^uint64(0)>>1)); err != nil {
+	if err := runtimebinary.RequireSignedRange("signed_delta", int64(value.SignedDelta), int64(0), int64(^uint64(0)>>1)); err != nil {
 		return err
 	}
-	if err := runtimebinary.RequireSignedRange("signed_delta", int64(value.SignedDelta), -int64(^uint64(0)>>1)-1, 8388607); err != nil {
+	if err := runtimebinary.RequireSignedRange("signed_delta", int64(value.SignedDelta), -int64(^uint64(0)>>1)-1, int64(8388607)); err != nil {
 		return err
 	}
 	if err := writer.WriteInt24("signed_delta", value.SignedDelta); err != nil {
 		return err
 	}
 	state.SignedDelta = int64(value.SignedDelta)
-	if err := runtimebinary.RequireRange("item_count", uint64(value.ItemCount), 1, ^uint64(0)); err != nil {
+	if err := runtimebinary.RequireRange("item_count", uint64(value.ItemCount), uint64(1), ^uint64(0)); err != nil {
 		return err
 	}
-	if err := runtimebinary.RequireRange("item_count", uint64(value.ItemCount), 0, 8); err != nil {
+	if err := runtimebinary.RequireRange("item_count", uint64(value.ItemCount), 0, uint64(8)); err != nil {
 		return err
 	}
 	if err := writer.WriteUint16("item_count", value.ItemCount); err != nil {
 		return err
 	}
 	state.ItemCount = int64(value.ItemCount)
-	if err := runtimebinary.RequireRange("payload_len", uint64(value.PayloadLen), 0, ^uint64(0)); err != nil {
+	if err := runtimebinary.RequireRange("payload_len", uint64(value.PayloadLen), uint64(0), ^uint64(0)); err != nil {
 		return err
 	}
-	if err := runtimebinary.RequireRange("payload_len", uint64(value.PayloadLen), 0, 64); err != nil {
+	if err := runtimebinary.RequireRange("payload_len", uint64(value.PayloadLen), 0, uint64(64)); err != nil {
 		return err
 	}
 	if err := writer.WriteUint32("payload_len", value.PayloadLen); err != nil {
@@ -225,13 +247,156 @@ func writeDemoPacketHeader(value *DemoPacketHeader, writer *runtimebinary.Writer
 	if err := runtimebinary.Require("score_count", uint64(2) == uint64(2), "const mismatch"); err != nil {
 		return err
 	}
-	if err := runtimebinary.RequireRange("score_count", uint64(2), 0, 4); err != nil {
+	if err := runtimebinary.RequireRange("score_count", uint64(2), 0, uint64(4)); err != nil {
 		return err
 	}
 	if err := writer.WriteUint16("score_count", 2); err != nil {
 		return err
 	}
 	state.ScoreCount = int64(2)
+	return nil
+}
+
+func readDemoPacketHeader(reader *runtimebinary.Reader, state *demoPacketBinaryState, out *DemoPacketHeader) error {
+	MagicCount := uint64(4)
+	if MagicCount > uint64(^uint(0)>>1) {
+		return runtimebinary.WrapDecodeField("magic", runtimebinary.CountExceedsIntMax(MagicCount))
+	}
+	MagicValue, err := reader.ReadBytes(int(MagicCount))
+	if err != nil {
+		return runtimebinary.WrapDecodeField("magic", runtimebinary.ReadFailed(err))
+	}
+	if err := runtimebinary.RequireDecode("magic", string(MagicValue) == string([]byte("ABP1")), "const mismatch"); err != nil {
+		return err
+	}
+
+	VersionValue, err := reader.ReadUint16()
+	if err != nil {
+		return runtimebinary.WrapDecodeField("version", runtimebinary.ReadFailed(err))
+	}
+	VersionTyped := VersionValue
+	if err := runtimebinary.RequireDecode("version", uint64(VersionTyped) == uint64(1), "const mismatch"); err != nil {
+		return err
+	}
+
+	state.Version = int64(VersionTyped)
+
+	KindValue, err := reader.ReadUint16()
+	if err != nil {
+		return runtimebinary.WrapDecodeField("kind", runtimebinary.ReadFailed(err))
+	}
+	KindTyped := DemoPacketKind(KindValue)
+	if err := runtimebinary.RequireDecode("kind", uint64(KindTyped) == uint64(DemoPacketKind(1)), "const mismatch"); err != nil {
+		return err
+	}
+
+	state.Kind = int64(KindTyped)
+
+	FlagsValue, err := reader.ReadUint32()
+	if err != nil {
+		return runtimebinary.WrapDecodeField("flags", runtimebinary.ReadFailed(err))
+	}
+	FlagsTyped := DemoPacketFlags(FlagsValue)
+	if err := runtimebinary.RequireDecode("flags", uint64(FlagsTyped) >= uint64(0), "below min"); err != nil {
+		return err
+	}
+	if err := runtimebinary.RequireDecode("flags", uint64(uint64(FlagsTyped))&4294967264 == 0, "reserved bits must be zero"); err != nil {
+		return err
+	}
+
+	out.Flags = FlagsTyped
+	state.Flags = int64(FlagsTyped)
+
+	HeaderPadCount := uint64(1)
+	if HeaderPadCount > uint64(^uint(0)>>1) {
+		return runtimebinary.WrapDecodeField("header_pad", runtimebinary.CountExceedsIntMax(HeaderPadCount))
+	}
+	if err := reader.Skip(int(HeaderPadCount)); err != nil {
+		return runtimebinary.WrapDecodeField("header_pad", runtimebinary.ReadFailed(err))
+	}
+
+	Reserved0Count := uint64(2)
+	if Reserved0Count > uint64(^uint(0)>>1) {
+		return runtimebinary.WrapDecodeField("reserved0", runtimebinary.CountExceedsIntMax(Reserved0Count))
+	}
+	if err := reader.ReadZero(int(Reserved0Count)); err != nil {
+		return runtimebinary.WrapDecodeField("reserved0", runtimebinary.ReadFailed(err))
+	}
+
+	ShortCodeValue, err := reader.ReadUint24()
+	if err != nil {
+		return runtimebinary.WrapDecodeField("short_code", runtimebinary.ReadFailed(err))
+	}
+	ShortCodeTyped := ShortCodeValue
+	if err := runtimebinary.RequireDecode("short_code", uint64(ShortCodeTyped) >= uint64(1), "below min"); err != nil {
+		return err
+	}
+	if err := runtimebinary.RequireDecode("short_code", uint64(ShortCodeTyped) <= uint64(16777215), "exceeds max"); err != nil {
+		return err
+	}
+
+	out.ShortCode = ShortCodeTyped
+	state.ShortCode = int64(ShortCodeTyped)
+
+	SignedDeltaValue, err := reader.ReadInt24()
+	if err != nil {
+		return runtimebinary.WrapDecodeField("signed_delta", runtimebinary.ReadFailed(err))
+	}
+	SignedDeltaTyped := SignedDeltaValue
+	if err := runtimebinary.RequireDecode("signed_delta", int64(SignedDeltaTyped) >= int64(0), "below min"); err != nil {
+		return err
+	}
+	if err := runtimebinary.RequireDecode("signed_delta", int64(SignedDeltaTyped) <= int64(8388607), "exceeds max"); err != nil {
+		return err
+	}
+
+	out.SignedDelta = SignedDeltaTyped
+	state.SignedDelta = int64(SignedDeltaTyped)
+
+	ItemCountValue, err := reader.ReadUint16()
+	if err != nil {
+		return runtimebinary.WrapDecodeField("item_count", runtimebinary.ReadFailed(err))
+	}
+	ItemCountTyped := ItemCountValue
+	if err := runtimebinary.RequireDecode("item_count", uint64(ItemCountTyped) >= uint64(1), "below min"); err != nil {
+		return err
+	}
+	if err := runtimebinary.RequireDecode("item_count", uint64(ItemCountTyped) <= uint64(8), "exceeds max"); err != nil {
+		return err
+	}
+
+	out.ItemCount = ItemCountTyped
+	state.ItemCount = int64(ItemCountTyped)
+
+	PayloadLenValue, err := reader.ReadUint32()
+	if err != nil {
+		return runtimebinary.WrapDecodeField("payload_len", runtimebinary.ReadFailed(err))
+	}
+	PayloadLenTyped := PayloadLenValue
+	if err := runtimebinary.RequireDecode("payload_len", uint64(PayloadLenTyped) >= uint64(0), "below min"); err != nil {
+		return err
+	}
+	if err := runtimebinary.RequireDecode("payload_len", uint64(PayloadLenTyped) <= uint64(64), "exceeds max"); err != nil {
+		return err
+	}
+
+	out.PayloadLen = PayloadLenTyped
+	state.PayloadLen = int64(PayloadLenTyped)
+
+	ScoreCountValue, err := reader.ReadUint16()
+	if err != nil {
+		return runtimebinary.WrapDecodeField("score_count", runtimebinary.ReadFailed(err))
+	}
+	ScoreCountTyped := ScoreCountValue
+	if err := runtimebinary.RequireDecode("score_count", uint64(ScoreCountTyped) == uint64(2), "const mismatch"); err != nil {
+		return err
+	}
+	if err := runtimebinary.RequireDecode("score_count", uint64(ScoreCountTyped) <= uint64(4), "exceeds max"); err != nil {
+		return err
+	}
+
+	state.ScoreCount = int64(ScoreCountTyped)
+
 	return nil
 }
 
@@ -285,6 +450,60 @@ func writeDemoPacketBody(value *DemoPacketBody, writer *runtimebinary.Writer, st
 	return nil
 }
 
+func readDemoPacketBody(reader *runtimebinary.Reader, state *demoPacketBinaryState, out *DemoPacketBody) error {
+	ItemsCount := uint64(state.ItemCount)
+	if ItemsCount > uint64(^uint(0)>>1) {
+		return runtimebinary.WrapDecodeField("items", runtimebinary.CountExceedsIntMax(ItemsCount))
+	}
+	out.Items = make([]DemoPacketItem, int(ItemsCount))
+	for index := 0; index < int(ItemsCount); index++ {
+		var item DemoPacketItem
+		if err := readDemoPacketItem(reader, state, &item); err != nil {
+			return runtimebinary.WrapDecodeIndex("items", index, err)
+		}
+		out.Items[index] = item
+	}
+
+	PayloadCount := uint64(state.PayloadLen)
+	if PayloadCount > uint64(^uint(0)>>1) {
+		return runtimebinary.WrapDecodeField("payload", runtimebinary.CountExceedsIntMax(PayloadCount))
+	}
+	PayloadValue, err := reader.ReadBytes(int(PayloadCount))
+	if err != nil {
+		return runtimebinary.WrapDecodeField("payload", runtimebinary.ReadFailed(err))
+	}
+
+	out.Payload = PayloadValue
+
+	ScoresCount := uint64(state.ScoreCount)
+	if ScoresCount > uint64(^uint(0)>>1) {
+		return runtimebinary.WrapDecodeField("scores", runtimebinary.CountExceedsIntMax(ScoresCount))
+	}
+	out.Scores = make([]float64, int(ScoresCount))
+	for index := 0; index < int(ScoresCount); index++ {
+		ScoresValue, err := reader.ReadFloat64()
+		if err != nil {
+			return runtimebinary.WrapDecodeIndex("scores", index, runtimebinary.ReadFailed(err))
+		}
+
+		out.Scores[index] = ScoresValue
+	}
+
+	ChecksumValue, err := reader.ReadUint32()
+	if err != nil {
+		return runtimebinary.WrapDecodeField("checksum", runtimebinary.ReadFailed(err))
+	}
+	ChecksumTyped := ChecksumValue
+	if err := runtimebinary.RequireDecode("checksum", uint64(ChecksumTyped) == uint64(state.ItemCount)+uint64(state.PayloadLen), "assert mismatch"); err != nil {
+		return err
+	}
+
+	out.Checksum = ChecksumTyped
+	state.Checksum = int64(ChecksumTyped)
+
+	return nil
+}
+
 type DemoPacketItem struct {
 	ID       uint32
 	Enabled  bool
@@ -301,10 +520,10 @@ func WriteDemoPacketItem(value *DemoPacketItem, writer *runtimebinary.Writer, st
 }
 
 func writeDemoPacketItem(value *DemoPacketItem, writer *runtimebinary.Writer, state *demoPacketBinaryState) error {
-	if err := runtimebinary.RequireRange("id", uint64(value.ID), 1, ^uint64(0)); err != nil {
+	if err := runtimebinary.RequireRange("id", uint64(value.ID), uint64(1), ^uint64(0)); err != nil {
 		return err
 	}
-	if err := runtimebinary.RequireRange("id", uint64(value.ID), 0, 999); err != nil {
+	if err := runtimebinary.RequireRange("id", uint64(value.ID), 0, uint64(999)); err != nil {
 		return err
 	}
 	if err := writer.WriteUint32("id", value.ID); err != nil {
@@ -317,10 +536,10 @@ func writeDemoPacketItem(value *DemoPacketItem, writer *runtimebinary.Writer, st
 	if err := writer.WriteFloat64("value", value.Value); err != nil {
 		return err
 	}
-	if err := runtimebinary.RequireRange("label_len", uint64(value.LabelLen), 1, ^uint64(0)); err != nil {
+	if err := runtimebinary.RequireRange("label_len", uint64(value.LabelLen), uint64(1), ^uint64(0)); err != nil {
 		return err
 	}
-	if err := runtimebinary.RequireRange("label_len", uint64(value.LabelLen), 0, 16); err != nil {
+	if err := runtimebinary.RequireRange("label_len", uint64(value.LabelLen), 0, uint64(16)); err != nil {
 		return err
 	}
 	if err := runtimebinary.RequireSize("label_len.label", uint64(len(value.Label)), uint64(value.LabelLen)); err != nil {
@@ -337,6 +556,67 @@ func writeDemoPacketItem(value *DemoPacketItem, writer *runtimebinary.Writer, st
 	if err := writer.WriteBytes("label", value.Label); err != nil {
 		return err
 	}
+	return nil
+}
+
+func readDemoPacketItem(reader *runtimebinary.Reader, state *demoPacketBinaryState, out *DemoPacketItem) error {
+	IDValue, err := reader.ReadUint32()
+	if err != nil {
+		return runtimebinary.WrapDecodeField("id", runtimebinary.ReadFailed(err))
+	}
+	IDTyped := IDValue
+	if err := runtimebinary.RequireDecode("id", uint64(IDTyped) >= uint64(1), "below min"); err != nil {
+		return err
+	}
+	if err := runtimebinary.RequireDecode("id", uint64(IDTyped) <= uint64(999), "exceeds max"); err != nil {
+		return err
+	}
+
+	out.ID = IDTyped
+	state.ID = int64(IDTyped)
+
+	EnabledValue, err := reader.ReadBool()
+	if err != nil {
+		return runtimebinary.WrapDecodeField("enabled", runtimebinary.ReadFailed(err))
+	}
+	EnabledTyped := EnabledValue
+
+	out.Enabled = EnabledTyped
+
+	ValueValue, err := reader.ReadFloat64()
+	if err != nil {
+		return runtimebinary.WrapDecodeField("value", runtimebinary.ReadFailed(err))
+	}
+	ValueTyped := ValueValue
+
+	out.Value = ValueTyped
+
+	LabelLenValue, err := reader.ReadUint8()
+	if err != nil {
+		return runtimebinary.WrapDecodeField("label_len", runtimebinary.ReadFailed(err))
+	}
+	LabelLenTyped := LabelLenValue
+	if err := runtimebinary.RequireDecode("label_len", uint64(LabelLenTyped) >= uint64(1), "below min"); err != nil {
+		return err
+	}
+	if err := runtimebinary.RequireDecode("label_len", uint64(LabelLenTyped) <= uint64(16), "exceeds max"); err != nil {
+		return err
+	}
+
+	out.LabelLen = LabelLenTyped
+	state.LabelLen = int64(LabelLenTyped)
+
+	LabelCount := uint64(state.LabelLen)
+	if LabelCount > uint64(^uint(0)>>1) {
+		return runtimebinary.WrapDecodeField("label", runtimebinary.CountExceedsIntMax(LabelCount))
+	}
+	LabelValue, err := reader.ReadBytes(int(LabelCount))
+	if err != nil {
+		return runtimebinary.WrapDecodeField("label", runtimebinary.ReadFailed(err))
+	}
+
+	out.Label = LabelValue
+
 	return nil
 }
 
@@ -403,6 +683,28 @@ func (value *AuditPacket) WriteBinary(output io.Writer) error {
 	return WriteAuditPacket(value, writer)
 }
 
+func ParseAuditPacket(r io.Reader) (*AuditPacket, error) {
+	reader := runtimebinary.NewReader(r, runtimebinary.LittleEndian)
+	state := &auditPacketBinaryState{}
+	var out AuditPacket
+	if err := readAuditPacketHeader(reader, state, &out.Header); err != nil {
+		return nil, runtimebinary.WrapDecodeField("AuditPacket.header", err)
+	}
+	if err := readAuditPacketBody(reader, state, &out.Body); err != nil {
+		return nil, runtimebinary.WrapDecodeField("AuditPacket.body", err)
+	}
+	return &out, nil
+}
+
+func (value *AuditPacket) DecodeBinary(r io.Reader) error {
+	parsed, err := ParseAuditPacket(r)
+	if err != nil {
+		return err
+	}
+	*value = *parsed
+	return nil
+}
+
 func NewAuditPacketBody(contentLength int64, write func(*runtimebinary.Writer) error) runtimebinary.Body {
 	body := runtimebinary.NewStreamingBody(contentLength, write)
 	body.ContentTypeValue = "application/octet-stream"
@@ -450,7 +752,7 @@ func writeAuditPacketHeader(value *AuditPacketHeader, writer *runtimebinary.Writ
 		return err
 	}
 	state.Kind = int64(AuditPacketKind(2))
-	if err := runtimebinary.RequireRange("flags", uint64(value.Flags), 0, ^uint64(0)); err != nil {
+	if err := runtimebinary.RequireRange("flags", uint64(value.Flags), uint64(0), ^uint64(0)); err != nil {
 		return err
 	}
 	if err := runtimebinary.Require("flags", uint64(uint64(value.Flags))&4294967288 == 0, "reserved bits must be zero"); err != nil {
@@ -460,16 +762,61 @@ func writeAuditPacketHeader(value *AuditPacketHeader, writer *runtimebinary.Writ
 		return err
 	}
 	state.Flags = int64(value.Flags)
-	if err := runtimebinary.RequireRange("item_count", uint64(value.ItemCount), 1, ^uint64(0)); err != nil {
+	if err := runtimebinary.RequireRange("item_count", uint64(value.ItemCount), uint64(1), ^uint64(0)); err != nil {
 		return err
 	}
-	if err := runtimebinary.RequireRange("item_count", uint64(value.ItemCount), 0, 4); err != nil {
+	if err := runtimebinary.RequireRange("item_count", uint64(value.ItemCount), 0, uint64(4)); err != nil {
 		return err
 	}
 	if err := writer.WriteUint16("item_count", value.ItemCount); err != nil {
 		return err
 	}
 	state.ItemCount = int64(value.ItemCount)
+	return nil
+}
+
+func readAuditPacketHeader(reader *runtimebinary.Reader, state *auditPacketBinaryState, out *AuditPacketHeader) error {
+	KindValue, err := reader.ReadUint16()
+	if err != nil {
+		return runtimebinary.WrapDecodeField("kind", runtimebinary.ReadFailed(err))
+	}
+	KindTyped := AuditPacketKind(KindValue)
+	if err := runtimebinary.RequireDecode("kind", uint64(KindTyped) == uint64(AuditPacketKind(2)), "const mismatch"); err != nil {
+		return err
+	}
+
+	state.Kind = int64(KindTyped)
+
+	FlagsValue, err := reader.ReadUint32()
+	if err != nil {
+		return runtimebinary.WrapDecodeField("flags", runtimebinary.ReadFailed(err))
+	}
+	FlagsTyped := AuditPacketFlags(FlagsValue)
+	if err := runtimebinary.RequireDecode("flags", uint64(FlagsTyped) >= uint64(0), "below min"); err != nil {
+		return err
+	}
+	if err := runtimebinary.RequireDecode("flags", uint64(uint64(FlagsTyped))&4294967288 == 0, "reserved bits must be zero"); err != nil {
+		return err
+	}
+
+	out.Flags = FlagsTyped
+	state.Flags = int64(FlagsTyped)
+
+	ItemCountValue, err := reader.ReadUint16()
+	if err != nil {
+		return runtimebinary.WrapDecodeField("item_count", runtimebinary.ReadFailed(err))
+	}
+	ItemCountTyped := ItemCountValue
+	if err := runtimebinary.RequireDecode("item_count", uint64(ItemCountTyped) >= uint64(1), "below min"); err != nil {
+		return err
+	}
+	if err := runtimebinary.RequireDecode("item_count", uint64(ItemCountTyped) <= uint64(4), "exceeds max"); err != nil {
+		return err
+	}
+
+	out.ItemCount = ItemCountTyped
+	state.ItemCount = int64(ItemCountTyped)
+
 	return nil
 }
 
@@ -505,6 +852,35 @@ func writeAuditPacketBody(value *AuditPacketBody, writer *runtimebinary.Writer, 
 	return nil
 }
 
+func readAuditPacketBody(reader *runtimebinary.Reader, state *auditPacketBinaryState, out *AuditPacketBody) error {
+	ItemsCount := uint64(state.ItemCount)
+	if ItemsCount > uint64(^uint(0)>>1) {
+		return runtimebinary.WrapDecodeField("items", runtimebinary.CountExceedsIntMax(ItemsCount))
+	}
+	out.Items = make([]AuditPacketItem, int(ItemsCount))
+	for index := 0; index < int(ItemsCount); index++ {
+		var item AuditPacketItem
+		if err := readAuditPacketItem(reader, state, &item); err != nil {
+			return runtimebinary.WrapDecodeIndex("items", index, err)
+		}
+		out.Items[index] = item
+	}
+
+	ChecksumValue, err := reader.ReadUint32()
+	if err != nil {
+		return runtimebinary.WrapDecodeField("checksum", runtimebinary.ReadFailed(err))
+	}
+	ChecksumTyped := ChecksumValue
+	if err := runtimebinary.RequireDecode("checksum", uint64(ChecksumTyped) == uint64(state.ItemCount), "assert mismatch"); err != nil {
+		return err
+	}
+
+	out.Checksum = ChecksumTyped
+	state.Checksum = int64(ChecksumTyped)
+
+	return nil
+}
+
 type AuditPacketItem struct {
 	ID   uint32
 	Code uint16
@@ -518,22 +894,53 @@ func WriteAuditPacketItem(value *AuditPacketItem, writer *runtimebinary.Writer, 
 }
 
 func writeAuditPacketItem(value *AuditPacketItem, writer *runtimebinary.Writer, state *auditPacketBinaryState) error {
-	if err := runtimebinary.RequireRange("id", uint64(value.ID), 1, ^uint64(0)); err != nil {
+	if err := runtimebinary.RequireRange("id", uint64(value.ID), uint64(1), ^uint64(0)); err != nil {
 		return err
 	}
 	if err := writer.WriteUint32("id", value.ID); err != nil {
 		return err
 	}
 	state.ID = int64(value.ID)
-	if err := runtimebinary.RequireRange("code", uint64(value.Code), 1, ^uint64(0)); err != nil {
+	if err := runtimebinary.RequireRange("code", uint64(value.Code), uint64(1), ^uint64(0)); err != nil {
 		return err
 	}
-	if err := runtimebinary.RequireRange("code", uint64(value.Code), 0, 999); err != nil {
+	if err := runtimebinary.RequireRange("code", uint64(value.Code), 0, uint64(999)); err != nil {
 		return err
 	}
 	if err := writer.WriteUint16("code", value.Code); err != nil {
 		return err
 	}
 	state.Code = int64(value.Code)
+	return nil
+}
+
+func readAuditPacketItem(reader *runtimebinary.Reader, state *auditPacketBinaryState, out *AuditPacketItem) error {
+	IDValue, err := reader.ReadUint32()
+	if err != nil {
+		return runtimebinary.WrapDecodeField("id", runtimebinary.ReadFailed(err))
+	}
+	IDTyped := IDValue
+	if err := runtimebinary.RequireDecode("id", uint64(IDTyped) >= uint64(1), "below min"); err != nil {
+		return err
+	}
+
+	out.ID = IDTyped
+	state.ID = int64(IDTyped)
+
+	CodeValue, err := reader.ReadUint16()
+	if err != nil {
+		return runtimebinary.WrapDecodeField("code", runtimebinary.ReadFailed(err))
+	}
+	CodeTyped := CodeValue
+	if err := runtimebinary.RequireDecode("code", uint64(CodeTyped) >= uint64(1), "below min"); err != nil {
+		return err
+	}
+	if err := runtimebinary.RequireDecode("code", uint64(CodeTyped) <= uint64(999), "exceeds max"); err != nil {
+		return err
+	}
+
+	out.Code = CodeTyped
+	state.Code = int64(CodeTyped)
+
 	return nil
 }

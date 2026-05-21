@@ -1,6 +1,6 @@
 # Markdown Binary Schema
 
-Markdown Binary Schema 用 `.md` 文件描述 HTTP 二进制请求体。它的目标是让协议源文件既能被 Markdown 渲染成文档，也能被 `api-gen check` 校验并生成服务端 parser 与客户端 writer。
+Markdown Binary Schema 用 `.md` 文件描述 HTTP 二进制请求体和 bounded 二进制成功响应。它的目标是让协议源文件既能被 Markdown 渲染成文档，也能被 `api-gen check` 校验，并生成 packet parser、writer、服务端响应 encoder 与客户端响应 decoder。
 
 Schema 格式面向固定宽度二进制协议：显式字节序、显式长度字段、可验证的动态数组、结构体数组、保留字节和 bitflags。它不是通用 Markdown 文档解析器；参与 schema 的内容必须使用约定的 heading 和 table。
 
@@ -19,10 +19,12 @@ class UploadResult(Model):
 with bp.group("/binary") as views:
     views.POST("/packet").ARGS(
         trace=String(description="trace id", optional=True),
-    ).REQ_BINARY("./binary/demo_packet.md").RSP(UploadResult)
+    ).REQ_BINARY_SCHEMA("./binary/demo_packet.md").RSP(UploadResult)
+
+    views.GET("/latest-packet").RSP_BINARY_SCHEMA("./binary/demo_packet.md")
 ```
 
-`.REQ_BINARY(path)` 可以和 `.ARGS(...)` query 参数共存，但不能和 JSON / form 请求体共存。
+`.REQ_BINARY_SCHEMA(path)` 可以和 `.ARGS(...)` query 参数共存，但不能和 JSON / form 请求体共存。`.RSP_BINARY_SCHEMA(path)` 是不套成功 envelope 的响应：generated server adapter 会把 service 返回的 typed packet 编码成 HTTP bytes，generated client 会把成功响应 bytes 解码回 typed packet。业务错误仍按 route 的 JSON typed-error envelope 返回。
 
 ## 文件结构
 
@@ -137,11 +139,11 @@ padding/reserved
 | Reserved | 4..31 | const=0 | reserved bits must be zero |
 ```
 
-`bits=0` 表示第 0 位，`bits=2..3` 表示连续位段。`enum=DemoKind` 表示该位段按枚举值解释，Go 生成物会提供 `Mode()` / `WithMode(...)` 这类 helper。`const=0` 表示这些位是保留位，生成的 Go server parser 与 Go / TypeScript / Kotlin / Python client writer 都会校验这些位必须为 0。
+`bits=0` 表示第 0 位，`bits=2..3` 表示连续位段。`enum=DemoKind` 表示该位段按枚举值解释，Go 生成物会提供 `Mode()` / `WithMode(...)` 这类 helper。`const=0` 表示这些位是保留位，生成的 Go server parser 与 Go / TypeScript / Flutter / Kotlin / Python client writer 都会校验这些位必须为 0。
 
 ### 兼容性说明
 
-较早的 `.REQ_BIN(Model)` 路由 API 和 `name/value/comment` bitflags 表仍作为兼容路径保留。新 schema 应使用 `.REQ_BINARY(path)` 以及 `bits` / `rule` bitflags 表，因为它们更适合表达协议布局和保留位范围。
+较早的 `.REQ_BIN(Model)` 路由 API、`.REQ_BINARY(path)` 短别名、`.RSP_BINARY(path)` 短别名和 `name/value/comment` bitflags 表仍作为兼容路径保留。新 route schema 应使用 `.REQ_BINARY_SCHEMA(path)` / `.RSP_BINARY_SCHEMA(path)` 以及 `bits` / `rule` bitflags 表，因为它们更适合表达协议布局和保留位范围。
 
 ## 生成结果
 
@@ -150,19 +152,21 @@ padding/reserved
 ```text
 routes/api/binary/_gen_binary/gen_binary.go   # Go server
 routes/api/binary/gen_binary.go               # Go client
-routes/api/binary/BinaryTypes.java
-routes/api/binary/BinaryTypes.kt
+routes/api/binary/GenBinaryTypes.java
+routes/api/binary/GenBinaryTypes.kt
 routes/api/binary/gen_binary.ts
+lib/src/api/routes/api/binary/gen_binary.dart
+lib/src/api/runtime/binary/gen_binary_runtime.dart
 routes/api/binary/gen_binary.py
 routes/api/binary/gen_types.py
 runtime/binary/gen_runtime.go
 ```
 
-当多个 `.REQ_BINARY(...)` route 位于同一个 route group 时，packet 入口名仍保持基于 packet 的稳定命名，例如 `DemoPacket`、`DemoPacketWire`、`ParseDemoPacket`、`DemoPacketToBinaryBody`。Schema 内部生成符号会按 packet 作用域输出：`struct Item`、`enum Kind`、`bitflags Flags`、state holder、writer/parser helper 会生成类似 `DemoPacketItem`、`DemoPacketKind`、`DemoPacketFlags` 的名字。`DemoPacket` 与 `Demo_Packet` 这类归一化后生成名相同的 packet name 会在写文件前被明确拒绝。
+当多个 `.REQ_BINARY_SCHEMA(...)` 或 `.RSP_BINARY_SCHEMA(...)` route 位于同一个 route group 时，packet 入口名仍保持基于 packet 的稳定命名，例如 `DemoPacket`、`DemoPacketWire`、`ParseDemoPacket`、`DemoPacketToBinaryBody`。Schema 内部生成符号会按 packet 作用域输出：`struct Item`、`enum Kind`、`bitflags Flags`、state holder、writer/parser helper 会生成类似 `DemoPacketItem`、`DemoPacketKind`、`DemoPacketFlags` 的名字。`DemoPacket` 与 `Demo_Packet` 这类归一化后生成名相同的 packet name 会在写文件前被明确拒绝。
 
 二进制 parser / writer 的诊断路径使用 schema 原始 packet、section、object 和 field 名，而不是生成语言里的内部符号名。嵌套对象和数组元素会在错误发生后按上下文包装路径，例如 `DemoPacket.body.items[0].id`；成功写入路径不会为了诊断信息提前拼接完整字段路径。
 
-Public packet 字段名遵循目标语言的 SDK 习惯，但诊断路径仍保持 schema 原始名字。Go / Kotlin / Java 暴露 `ItemCount` 或 `itemCount` 这类语言风格字段；TypeScript / Python 保持 `item_count` 这类贴近 JSON / wire 命名的 snake_case 字段。
+Public packet 字段名遵循目标语言的 SDK 习惯，但诊断路径仍保持 schema 原始名字。Go / Kotlin / Java / Flutter 暴露 `ItemCount` 或 `itemCount` 这类语言风格字段；TypeScript / Python 保持 `item_count` 这类贴近 JSON / wire 命名的 snake_case 字段。
 
 Go bitflags 仍生成整数别名，便于保持 wire 兼容和位运算性能；额外 helper 只提供更直观的访问方式：
 
@@ -175,15 +179,17 @@ flags.HasReservedBits()
 flags.Validate()
 ```
 
-Go / TypeScript / Kotlin / Python / Java client 会为同一 schema 生成：
+Go / TypeScript / Flutter / Kotlin / Python / Java client 会为同一 schema 生成：
 
 - typed packet，适合小包或测试。
 - streaming/raw binary body，适合大包热路径。
 - writer helper 和 block helper，适合把已经缓存或预编码的字段片段直接接入。
 
-Java server controller 会把 `.REQ_BINARY(...)` 请求字节解析成 generated typed packet 后再调用 generated service interface。这仍然是协议契约代码；HTTP content-encoding 编排仍属于 transport/runtime 层职责。
+对于 binary schema 响应，Go / Python / Kotlin / Java server adapter 会把 typed packet 返回值编码成 HTTP bytes，Go / TypeScript / Flutter / Kotlin / Java / Python client 会把成功响应 bytes 解码成 typed packet。Wails/gRPC 不继承 HTTP raw response 语义，相关 route 会在 `api-gen check` 阶段明确报 unsupported contract error，并提示使用 transport-native bytes / chunk 建模。
 
-HTTP adapter 会把 binary body 作为 `application/octet-stream` 发送；服务端 adapter 会按 schema 声明接受 `identity` 或 `gzip`。
+Java server controller 会把 `.REQ_BINARY_SCHEMA(...)` 请求字节解析成 generated typed packet 后再调用 generated service interface。这仍然是协议契约代码；HTTP content-encoding 编排仍属于 transport/runtime 层职责。
+
+HTTP adapter 会使用 route binary schema 的 content type，缺省回退到 `application/octet-stream`；服务端 adapter 会按 schema 声明接受 `identity` 或 `gzip`。
 
 ## 检查与调试
 

@@ -51,6 +51,50 @@ type CTX_TestPost = providers.Context[
 	RSP_TestPost_BODY,
 ]
 
+type REQ_FormSubmit_FORM struct {
+	Title   string `json:"title" xml:"title" form:"title" binding:"required"`
+	Count   int    `json:"count" xml:"count" form:"count"`
+	Enabled bool   `json:"enabled" xml:"enabled" form:"enabled"`
+}
+
+type REQ_FormSubmit = providers.REQ[
+	any,
+	REQ_FormSubmit_FORM,
+]
+
+type RSP_FormSubmit_BODY struct {
+	Summary string `json:"summary" xml:"summary" form:"summary" binding:"required"`
+	Count   int    `json:"count" xml:"count" form:"count" binding:"required"`
+	Enabled bool   `json:"enabled" xml:"enabled" form:"enabled" binding:"required"`
+}
+
+type RSP_FormSubmit = RSP_FormSubmit_BODY
+
+type CTX_FormSubmit = providers.Context[
+	any,
+	REQ_FormSubmit_FORM,
+	RSP_FormSubmit_BODY,
+]
+
+type REQ_RequestOptions_QUERY struct {
+	DelayMs int `json:"delay_ms" xml:"delay_ms" form:"delay_ms"`
+}
+
+type REQ_RequestOptions = providers.REQ[
+	REQ_RequestOptions_QUERY,
+	any,
+]
+
+type RSP_RequestOptions_BODY = types.RequestOptionsResponse
+
+type RSP_RequestOptions = RSP_RequestOptions_BODY
+
+type CTX_RequestOptions = providers.Context[
+	REQ_RequestOptions_QUERY,
+	any,
+	RSP_RequestOptions_BODY,
+]
+
 type REQ_PutDemo_QUERY struct {
 	Arg1 string  `json:"arg1" xml:"arg1" form:"arg1"`
 	Arg2 float64 `json:"arg2" xml:"arg2" form:"arg2"`

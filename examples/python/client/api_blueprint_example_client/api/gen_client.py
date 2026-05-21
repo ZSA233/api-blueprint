@@ -4,8 +4,10 @@ from __future__ import annotations
 from .transports.http.client import HttpClientTransport
 from .routes.api.gen_client import ApiClient as _Route1Client
 from .routes.api.binary.gen_client import BinaryClient as _Route2Client
-from .routes.api.demo.gen_client import DemoClient as _Route3Client
-from .routes.api.hello.gen_client import HelloClient as _Route4Client
+from .routes.api.conflict.gen_client import ConflictClient as _Route3Client
+from .routes.api.demo.gen_client import DemoClient as _Route4Client
+from .routes.api.media.gen_client import MediaClient as _Route5Client
+from .routes.api.hello.gen_client import HelloClient as _Route6Client
 
 
 class ApiClient:
@@ -13,8 +15,10 @@ class ApiClient:
         self._transport = transport
         self.api = _Route1Client(transport)
         self.binary = _Route2Client(transport)
-        self.demo = _Route3Client(transport)
-        self.hello = _Route4Client(transport)
+        self.conflict = _Route3Client(transport)
+        self.demo = _Route4Client(transport)
+        self.media = _Route5Client(transport)
+        self.hello = _Route6Client(transport)
 
     async def aclose(self) -> None:
         close = getattr(self._transport, "aclose", None)

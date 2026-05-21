@@ -42,6 +42,7 @@ EXPLAIN_TARGET_KIND_FIELDS: dict[str, tuple[str, ...]] = {
     "kotlin-client": ("package", "base_url", "base_url_expr", "include", "exclude"),
     "java-server": ("package", "include", "exclude"),
     "java-client": ("package", "base_url", "base_url_expr", "include", "exclude"),
+    "flutter-client": ("package", "base_url", "base_url_expr", "include", "exclude"),
     "python-server": ("python_package_root", "include", "exclude"),
     "python-client": ("python_package_root", "base_url", "base_url_expr", "include", "exclude"),
     "http-transport": ("server", "clients"),
@@ -128,7 +129,7 @@ def check(config_path: str | Path | None) -> None:
 
 
 def generate(config_path: str | Path | None, target_ids: Sequence[str] = ()) -> None:
-    from api_blueprint.writer import golang, java, kotlin, python as python_writer, typescript
+    from api_blueprint.writer import flutter, golang, java, kotlin, python as python_writer, typescript
     from api_blueprint.writer.grpc.proto_writer import render_proto_files, write_proto_files
     from api_blueprint.writer.grpc import toolchain as grpc_toolchain
 
@@ -237,6 +238,20 @@ def generate(config_path: str | Path | None, target_ids: Sequence[str] = ()) -> 
             writer = java.JavaServerWriter(
                 output,
                 package=target.package or "",
+                include=target.include,
+                exclude=target.exclude,
+                contract_graph=graph,
+            )
+            writer.register(*project.entrypoints)
+            writer.gen()
+        elif target.kind == "flutter-client":
+            output = require_out_dir(target)
+            output.mkdir(parents=True, exist_ok=True)
+            writer = flutter.FlutterWriter(
+                output,
+                package=target.package or "",
+                base_url=target.base_url or "",
+                base_url_expr=target.base_url_expr,
                 include=target.include,
                 exclude=target.exclude,
                 contract_graph=graph,

@@ -31,3 +31,15 @@ staticbp = Blueprint(
     ],
     response_envelope=NoEnvelope,
 )
+
+
+altbp = Blueprint(
+    root='/alt',
+    tags=['api'],
+    providers=[
+        provider.Req(),
+        provider.Handle(),
+        provider.Rsp(),
+    ],
+    response_envelope=OkDataErrorEnvelope,
+)

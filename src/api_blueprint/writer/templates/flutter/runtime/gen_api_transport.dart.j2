@@ -1,0 +1,438 @@
+{% autoescape false %}import 'dart:async';
+import 'dart:typed_data';
+
+import 'gen_api_error_lookup.dart';
+import 'gen_api_errors.dart';
+
+class ApiRequestOptions {
+  final Map<String, String> headers;
+  final Duration? timeout;
+
+  const ApiRequestOptions({
+    this.headers = const {},
+    this.timeout,
+  });
+}
+
+class ApiRequest<T> {
+  final String routeId;
+  final String method;
+  final String path;
+  final Map<String, String?> query;
+  final ApiRequestOptions options;
+  final Object? json;
+  final Object? form;
+  final Object? multipart;
+  final List<int>? binary;
+  final String? binaryContentType;
+  final String responseMediaType;
+  final String responseKind;
+  final ApiResponseEnvelope responseEnvelope;
+  final T Function(Object? value) decode;
+
+  const ApiRequest({
+    required this.routeId,
+    required this.method,
+    required this.path,
+    required this.decode,
+    this.query = const {},
+    this.options = const ApiRequestOptions(),
+    this.json,
+    this.form,
+    this.multipart,
+    this.binary,
+    this.binaryContentType,
+    this.responseMediaType = 'application/json',
+    this.responseKind = 'json',
+    this.responseEnvelope = const ApiResponseEnvelope(),
+  });
+}
+
+class ApiFilePart {
+  final String filename;
+  final String contentType;
+  final Uint8List? _bytes;
+  final Stream<List<int>>? stream;
+  final int? length;
+
+  const ApiFilePart({
+    this.filename = '',
+    this.contentType = 'application/octet-stream',
+    required Uint8List bytes,
+  })  : _bytes = bytes,
+        stream = null,
+        length = bytes.length;
+
+  const ApiFilePart.fromStream({
+    this.filename = '',
+    this.contentType = 'application/octet-stream',
+    required Stream<List<int>> body,
+    required this.length,
+  })  : _bytes = null,
+        stream = body;
+
+  factory ApiFilePart.fromBytes({
+    String filename = '',
+    String contentType = 'application/octet-stream',
+    required Uint8List bytes,
+  }) =>
+      ApiFilePart(filename: filename, contentType: contentType, bytes: bytes);
+
+  factory ApiFilePart.fromJson(Object? value) {
+    final json = apiBlueprintReadObject(value);
+    return ApiFilePart(
+      filename: apiBlueprintReadString(json['filename']) ?? '',
+      contentType: apiBlueprintReadString(json['contentType']) ?? 'application/octet-stream',
+      bytes: apiBlueprintReadBytes(json['bytes']),
+    );
+  }
+
+  Uint8List get bytes => _bytes ?? Uint8List(0);
+
+  Stream<List<int>> openStream() => stream ?? Stream<List<int>>.value(bytes);
+
+  Future<Uint8List> readAllBytes() async {
+    final cachedBytes = _bytes;
+    if (cachedBytes != null) return cachedBytes;
+    final builder = BytesBuilder(copy: false);
+    await for (final chunk in openStream()) {
+      builder.add(chunk);
+    }
+    return builder.takeBytes();
+  }
+
+  Map<String, Object?> toJson() {
+    final cachedBytes = _bytes;
+    return {
+      'filename': filename,
+      'contentType': contentType,
+      if (cachedBytes != null) 'bytes': cachedBytes.toList(),
+      if (stream != null) 'stream': stream,
+      if (length != null) 'length': length,
+    };
+  }
+}
+
+class ApiBinaryPayload {
+  final Uint8List bytes;
+  final Map<String, String> headers;
+
+  const ApiBinaryPayload(this.bytes, this.headers);
+
+  String contentType(String defaultValue) {
+    return _apiBlueprintHeaderValue(headers, 'content-type') ?? defaultValue;
+  }
+
+  String filename(String defaultValue) {
+    final disposition = _apiBlueprintHeaderValue(headers, 'content-disposition');
+    if (disposition == null) return defaultValue;
+    String? fallbackFilename;
+    for (final part in disposition.split(';')) {
+      final trimmed = part.trim();
+      final lower = trimmed.toLowerCase();
+      if (lower.startsWith('filename*=')) {
+        final filename = _apiBlueprintDecodeExtendedFilename(trimmed.substring('filename*='.length));
+        if (filename != null && filename.isNotEmpty) {
+          return filename;
+        }
+      } else if (lower.startsWith('filename=')) {
+        final filename = _apiBlueprintUnquote(trimmed.substring('filename='.length)).trim();
+        if (filename.isNotEmpty) {
+          fallbackFilename = filename;
+        }
+      }
+    }
+    return fallbackFilename ?? defaultValue;
+  }
+}
+
+String? _apiBlueprintHeaderValue(Map<String, String> headers, String name) {
+  final normalized = name.toLowerCase();
+  for (final entry in headers.entries) {
+    if (entry.key.toLowerCase() == normalized) {
+      return entry.value;
+    }
+  }
+  return null;
+}
+
+String? _apiBlueprintDecodeExtendedFilename(String value) {
+  final token = _apiBlueprintUnquote(value);
+  final firstQuote = token.indexOf("'");
+  final secondQuote = firstQuote < 0 ? -1 : token.indexOf("'", firstQuote + 1);
+  if (firstQuote <= 0 || secondQuote < 0) {
+    return _apiBlueprintDecodeUriComponent(token);
+  }
+  final charset = token.substring(0, firstQuote).toLowerCase();
+  if (charset != 'utf-8') {
+    return null;
+  }
+  return _apiBlueprintDecodeUriComponent(token.substring(secondQuote + 1));
+}
+
+String? _apiBlueprintDecodeUriComponent(String value) {
+  try {
+    return Uri.decodeComponent(value);
+  } on FormatException {
+    return null;
+  }
+}
+
+String _apiBlueprintUnquote(String value) {
+  final trimmed = value.trim();
+  if (trimmed.length >= 2 && trimmed.startsWith('"') && trimmed.endsWith('"')) {
+    return trimmed.substring(1, trimmed.length - 1);
+  }
+  return trimmed;
+}
+
+class ApiRawResponse {
+  final Uint8List body;
+  final String contentType;
+  final String filename;
+  final Map<String, String> headers;
+
+  const ApiRawResponse({
+    required this.body,
+    this.contentType = 'application/octet-stream',
+    this.filename = '',
+    this.headers = const {},
+  });
+}
+
+class ApiStreamResponse {
+  final Stream<List<int>> body;
+  final String contentType;
+  final Map<String, String> headers;
+
+  const ApiStreamResponse({
+    required this.body,
+    this.contentType = 'application/octet-stream',
+    this.headers = const {},
+  });
+
+  Future<Uint8List> readAllBytes() async {
+    final builder = BytesBuilder(copy: false);
+    await for (final chunk in body) {
+      builder.add(chunk);
+    }
+    return builder.takeBytes();
+  }
+}
+
+class ApiResponseEnvelope {
+  final String name;
+  final String kind;
+  final String errorIdentity;
+  final int successCode;
+  final String successMessage;
+  final ApiResponseEnvelopeFields fields;
+
+  const ApiResponseEnvelope({
+    this.name = 'NoEnvelope',
+    this.kind = 'none',
+    this.errorIdentity = 'none',
+    this.successCode = 0,
+    this.successMessage = 'ok',
+    this.fields = const ApiResponseEnvelopeFields(),
+  });
+}
+
+class ApiResponseEnvelopeFields {
+  final String code;
+  final String message;
+  final String data;
+  final String error;
+  final String ok;
+
+  const ApiResponseEnvelopeFields({
+    this.code = 'code',
+    this.message = 'message',
+    this.data = 'data',
+    this.error = 'error',
+    this.ok = 'ok',
+  });
+}
+
+class SocketCloseInfo {
+  final int? code;
+  final String? reason;
+  final Object? error;
+
+  const SocketCloseInfo({this.code, this.reason, this.error});
+}
+
+class StreamConnectOptions<Recv, Close> {
+  final String routeId;
+  final String connectionKind;
+  final String path;
+  final Map<String, String?> query;
+  final Object? open;
+  final Map<String, String> headers;
+  final Recv Function(Object? value) decodeMessage;
+  final Close Function(Object? value) decodeClose;
+
+  const StreamConnectOptions({
+    required this.routeId,
+    required this.connectionKind,
+    required this.path,
+    required this.decodeMessage,
+    required this.decodeClose,
+    this.query = const {},
+    this.open,
+    this.headers = const {},
+  });
+}
+
+class ChannelConnectOptions<Recv, Send, Close> extends StreamConnectOptions<Recv, Close> {
+  final Object? Function(Send value) encodeMessage;
+  final List<String> protocols;
+  final String delivery;
+
+  const ChannelConnectOptions({
+    required super.routeId,
+    required super.connectionKind,
+    required super.path,
+    required super.decodeMessage,
+    required super.decodeClose,
+    required this.encodeMessage,
+    this.protocols = const [],
+    this.delivery = 'ordered',
+    super.query = const {},
+    super.open,
+    super.headers = const {},
+  });
+}
+
+typedef SocketUnsubscribe = void Function();
+typedef SocketMessageHandler<T> = void Function(T message);
+typedef SocketCloseHandler<T> = void Function(T close);
+
+abstract interface class ApiStreamBridge<Recv, Close> {
+  String get routeId;
+  Future<void> get ready;
+  SocketUnsubscribe onMessage(SocketMessageHandler<Recv> listener);
+  SocketUnsubscribe onClose(SocketCloseHandler<Close> listener);
+  Future<void> close([int? code, String? reason]);
+}
+
+abstract interface class ApiChannelBridge<Recv, Send, Close> implements ApiStreamBridge<Recv, Close> {
+  Future<void> send(Send message);
+}
+
+abstract interface class ApiTransport {
+  Future<T> request<T>(ApiRequest<T> request);
+  ApiStreamBridge<Recv, Close> openStream<Recv, Close>(StreamConnectOptions<Recv, Close> options);
+  ApiChannelBridge<Recv, Send, Close> openChannel<Recv, Send, Close>(
+    ChannelConnectOptions<Recv, Send, Close> options,
+  );
+}
+
+T decodeApiResponse<T>(Object? payload, ApiRequest<T> request) {
+  if (request.responseMediaType != 'application/json') {
+    return request.decode(payload);
+  }
+  final unwrapped = unwrapResponseEnvelope(payload, request.responseEnvelope, request.routeId);
+  return request.decode(unwrapped);
+}
+
+Uint8List apiBlueprintReadBytes(Object? value) {
+  if (value is ApiBinaryPayload) {
+    return value.bytes;
+  }
+  if (value is Uint8List) {
+    return value;
+  }
+  if (value is List<int>) {
+    return Uint8List.fromList(value);
+  }
+  if (value is List) {
+    return Uint8List.fromList(value.map((item) => apiBlueprintReadInt(item) ?? 0).toList());
+  }
+  return Uint8List(0);
+}
+
+ApiRawResponse apiBlueprintRawResponse(
+  Object? value, {
+  String defaultContentType = 'application/octet-stream',
+  String defaultFilename = '',
+}) {
+  if (value is ApiBinaryPayload) {
+    return ApiRawResponse(
+      body: value.bytes,
+      contentType: value.contentType(defaultContentType),
+      filename: value.filename(defaultFilename),
+      headers: value.headers,
+    );
+  }
+  return ApiRawResponse(body: apiBlueprintReadBytes(value), contentType: defaultContentType, filename: defaultFilename);
+}
+
+ApiStreamResponse apiBlueprintStreamResponse(
+  Object? value, {
+  String defaultContentType = 'application/octet-stream',
+}) {
+  if (value is ApiStreamResponse) {
+    return value;
+  }
+  if (value is Stream<List<int>>) {
+    return ApiStreamResponse(body: value, contentType: defaultContentType);
+  }
+  if (value is ApiBinaryPayload) {
+    return ApiStreamResponse(
+      body: Stream<List<int>>.value(value.bytes),
+      contentType: value.contentType(defaultContentType),
+      headers: value.headers,
+    );
+  }
+  return ApiStreamResponse(body: Stream<List<int>>.value(apiBlueprintReadBytes(value)), contentType: defaultContentType);
+}
+
+Object? unwrapResponseEnvelope(Object? payload, ApiResponseEnvelope envelope, String routeId) {
+  if (envelope.kind == 'none') {
+    return payload;
+  }
+  final root = apiBlueprintReadObject(payload);
+  if (envelope.kind == 'code_message_data') {
+    final code = apiBlueprintReadInt(root[envelope.fields.code]) ?? 0;
+    if (code == envelope.successCode) {
+      return root[envelope.fields.data];
+    }
+    throw ApiError(lookupApiError(_codeMessagePayload(root, envelope, routeId)), routeId: routeId, raw: payload);
+  }
+  if (envelope.kind == 'ok_data_error') {
+    final ok = apiBlueprintReadBool(root[envelope.fields.ok]) ?? false;
+    if (ok) {
+      return root[envelope.fields.data];
+    }
+    throw ApiError(
+      lookupApiError(ApiErrorPayload.fromJson(root[envelope.fields.error], routeId: routeId)),
+      routeId: routeId,
+      raw: payload,
+    );
+  }
+  return payload;
+}
+
+ApiErrorPayload extractApiErrorPayload(Object? payload, String routeId, ApiResponseEnvelope envelope) {
+  final root = apiBlueprintReadObject(payload);
+  if (envelope.kind == 'code_message_data') {
+    return _codeMessagePayload(root, envelope, routeId);
+  }
+  final nested = root[envelope.fields.error] ?? root['error'] ?? payload;
+  return ApiErrorPayload.fromJson(nested, routeId: routeId);
+}
+
+ApiErrorPayload _codeMessagePayload(Map<String, Object?> root, ApiResponseEnvelope envelope, String routeId) {
+  final nested = ApiErrorPayload.fromJson(root[envelope.fields.error], routeId: routeId);
+  return ApiErrorPayload(
+    id: nested.id,
+    group: nested.group,
+    key: nested.key,
+    code: nested.code == 0 ? apiBlueprintReadInt(root[envelope.fields.code]) ?? 0 : nested.code,
+    message: nested.message.isEmpty ? apiBlueprintReadString(root[envelope.fields.message]) ?? '' : nested.message,
+    toast: nested.toast,
+    routeId: routeId,
+  );
+}
+{% endautoescape %}

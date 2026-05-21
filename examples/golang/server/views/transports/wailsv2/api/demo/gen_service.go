@@ -14,6 +14,8 @@ type DemoService struct {
 	sessions                 wailstransport.ConnectionHub
 	abcExecutor              *sharedprovider.RouteExecutor[REQ_Abc_QUERY, any, RSP_Abc]
 	testPostExecutor         *sharedprovider.RouteExecutor[any, REQ_TestPost_JSON, RSP_TestPost]
+	formSubmitExecutor       *sharedprovider.RouteExecutor[any, REQ_FormSubmit_FORM, RSP_FormSubmit]
+	requestOptionsExecutor   *sharedprovider.RouteExecutor[REQ_RequestOptions_QUERY, any, RSP_RequestOptions]
 	putDemoExecutor          *sharedprovider.RouteExecutor[REQ_PutDemo_QUERY, REQ_PutDemo_JSON, RSP_PutDemo]
 	deleteExecutor           *sharedprovider.RouteExecutor[REQ_Delete_QUERY, any, RSP_Delete]
 	sweepEventsExecutor      *sharedprovider.RouteExecutor[OPEN_SweepEvents, any, RSP_SweepEvents]
@@ -59,6 +61,38 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 			},
 			"req=J|auth|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.TestPost,
+		),
+		formSubmitExecutor: sharedprovider.NewRouteExecutor(
+			sharedprovider.RouteInfo{
+				Root:      "api",
+				Group:     "demo",
+				Namespace: "demo",
+				Service:   "DemoService",
+				Operation: "FormSubmit",
+				RouteID:   "api.demo.post.formsubmit",
+				Path:      "/api/demo/form-submit",
+				Methods:   []string{"POST"},
+				Transport: sharedprovider.TransportWails,
+				Scope:     sharedprovider.ConnectionScope(""),
+			},
+			"req=F|auth|handle|rsp=json@CodeMessageDataEnvelope",
+			impl.FormSubmit,
+		),
+		requestOptionsExecutor: sharedprovider.NewRouteExecutor(
+			sharedprovider.RouteInfo{
+				Root:      "api",
+				Group:     "demo",
+				Namespace: "demo",
+				Service:   "DemoService",
+				Operation: "RequestOptions",
+				RouteID:   "api.demo.get.requestoptions",
+				Path:      "/api/demo/request-options",
+				Methods:   []string{"GET"},
+				Transport: sharedprovider.TransportWails,
+				Scope:     sharedprovider.ConnectionScope(""),
+			},
+			"req=Q|auth|handle|rsp=json@CodeMessageDataEnvelope",
+			impl.RequestOptions,
 		),
 		putDemoExecutor: sharedprovider.NewRouteExecutor(
 			sharedprovider.RouteInfo{
@@ -252,6 +286,60 @@ func (svc *DemoService) TestPost(
 	)
 	ctx.Req = &sharedprovider.ReqContext[any, REQ_TestPost_JSON, RSP_TestPost]{Request: req}
 	execErr := svc.testPostExecutor.Run(ctx)
+	response, invokeErr := ctx.HandleResult()
+	if invokeErr == nil {
+		invokeErr = execErr
+	}
+
+	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
+}
+
+func (svc *DemoService) FormSubmit(
+	envelope *INVOKE_FormSubmit,
+) (rsp *sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_FormSubmit], err error) {
+	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
+		BindQuery: false,
+		BindJSON:  false,
+		BindForm:  true,
+	})
+	if reqErr != nil {
+		err = reqErr
+		return
+	}
+	ctx := sharedprovider.NewWailsContext[any, REQ_FormSubmit_FORM, RSP_FormSubmit](
+		"DemoService",
+		"FormSubmit",
+		wailstransport.EnvelopeHeaders(envelope),
+	)
+	ctx.Req = &sharedprovider.ReqContext[any, REQ_FormSubmit_FORM, RSP_FormSubmit]{Request: req}
+	execErr := svc.formSubmitExecutor.Run(ctx)
+	response, invokeErr := ctx.HandleResult()
+	if invokeErr == nil {
+		invokeErr = execErr
+	}
+
+	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
+}
+
+func (svc *DemoService) RequestOptions(
+	envelope *INVOKE_RequestOptions,
+) (rsp *sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_RequestOptions], err error) {
+	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
+		BindQuery: true,
+		BindJSON:  false,
+		BindForm:  false,
+	})
+	if reqErr != nil {
+		err = reqErr
+		return
+	}
+	ctx := sharedprovider.NewWailsContext[REQ_RequestOptions_QUERY, any, RSP_RequestOptions](
+		"DemoService",
+		"RequestOptions",
+		wailstransport.EnvelopeHeaders(envelope),
+	)
+	ctx.Req = &sharedprovider.ReqContext[REQ_RequestOptions_QUERY, any, RSP_RequestOptions]{Request: req}
+	execErr := svc.requestOptionsExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
 		invokeErr = execErr

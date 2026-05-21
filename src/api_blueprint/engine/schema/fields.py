@@ -227,6 +227,35 @@ class Byte(Field):
         super().__init__(**kwargs)
 
 
+class FileField(Field):
+    __type__ = "file"
+
+    @overload
+    def __init__(
+        self,
+        *,
+        content_types: list[str] | tuple[str, ...] | None = ...,
+        max_size: int | None = ...,
+        description: str | None = ...,
+        alias: str | None = ...,
+        omitempty: bool = False,
+        **kwargs: Any,
+    ) -> None: ...
+
+    def __init__(
+        self,
+        *,
+        content_types: list[str] | tuple[str, ...] | None = None,
+        max_size: int | None = None,
+        **kwargs: Any,
+    ) -> None:
+        if content_types is not None:
+            kwargs["content_types"] = list(content_types)
+        if max_size is not None:
+            kwargs["max_size"] = int(max_size)
+        super().__init__(**kwargs)
+
+
 class Enum(Field, Generic[T]):
     __type__ = "enum"
 

@@ -1,17 +1,17 @@
 package com.example.apiblueprint.suite;
 
 import com.example.apiblueprint.api.routes.api.binary.BinaryService;
-import com.example.apiblueprint.api.routes.api.binary.BinaryTypes;
-import com.example.apiblueprint.api.routes.api.binary.BinaryServiceStub;
+import com.example.apiblueprint.api.routes.api.binary.GenBinaryTypes;
+import com.example.apiblueprint.api.routes.api.binary.GenBinaryServiceStub;
 import com.example.apiblueprint.api.routes.api.demo.DemoService;
-import com.example.apiblueprint.api.routes.api.demo.DemoTypes;
-import com.example.apiblueprint.api.routes.api.demo.DemoServiceStub;
-import com.example.apiblueprint.api.runtime.ApiError;
-import com.example.apiblueprint.api.runtime.ApiErrorPayload;
-import com.example.apiblueprint.api.runtime.ApiErrors;
-import com.example.apiblueprint.api.runtime.ApiToastPayload;
-import com.example.apiblueprint.api.runtime.ApiTypes;
-import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody;
+import com.example.apiblueprint.api.routes.api.demo.GenDemoTypes;
+import com.example.apiblueprint.api.routes.api.demo.GenDemoServiceStub;
+import com.example.apiblueprint.api.runtime.GenApiError;
+import com.example.apiblueprint.api.runtime.GenApiErrorPayload;
+import com.example.apiblueprint.api.runtime.GenApiErrors;
+import com.example.apiblueprint.api.runtime.GenApiToastPayload;
+import com.example.apiblueprint.api.runtime.GenApiTypes;
+import com.example.apiblueprint.api.runtime.binary.GenApiBinaryBody;
 import com.example.apiblueprint.api.transports.http.api.GenApiController;
 import com.example.apiblueprint.api.transports.http.api.binary.GenBinaryController;
 import com.example.apiblueprint.api.transports.http.api.demo.GenDemoController;
@@ -92,7 +92,7 @@ public class JavaExampleSuite {
         var apiClient = com.example.apiblueprint.api.transports.http.HttpApiClient.create(baseUrl);
 
         var post = apiClient.demo.testPost(
-            new DemoTypes.TestPostJSON("suite", 7)
+            new GenDemoTypes.TestPostJSON("suite", 7)
         );
         require(Objects.equals(List.of("test_post", "suite"), post.list()), "demo.testPost list mismatch: " + post);
         require(
@@ -103,8 +103,8 @@ public class JavaExampleSuite {
         );
 
         var put = apiClient.demo.putDemo(
-            new DemoTypes.PutDemoQuery("query", 3.5f, null),
-            new DemoTypes.PutDemoJSON("body", 9)
+            new GenDemoTypes.PutDemoQuery("query", 3.5f, null),
+            new GenDemoTypes.PutDemoJSON("body", 9)
         );
         require(Objects.equals(List.of("query", "body"), put.list()), "demo.putDemo list mismatch: " + put);
         require(put.anonKv() != null, "demo.putDemo anonKv missing");
@@ -112,8 +112,8 @@ public class JavaExampleSuite {
         require(Objects.equals(List.of(3.5d, 9.0d), put.anonKv().kv2()), "demo.putDemo kv2 mismatch: " + put.anonKv());
 
         var binary = apiClient.binary.packet(
-            new BinaryTypes.PacketQuery("java-binary"),
-            ApiBinaryBody.of(buildDemoPacketFixture("ABP1", 2, "payload-ok"))
+            new GenBinaryTypes.PacketQuery("java-binary"),
+            GenApiBinaryBody.of(buildDemoPacketFixture("ABP1", 2, "payload-ok"))
         );
         require(Objects.equals("java-binary", binary.trace()), "binary trace mismatch: " + binary);
         require(Objects.equals(1L, binary.version()), "binary version mismatch: " + binary);
@@ -124,31 +124,31 @@ public class JavaExampleSuite {
         require(Objects.equals(List.of(11L, 22L), binary.itemIds()), "binary itemIds mismatch: " + binary);
         require(Objects.equals(12L, binary.checksum()), "binary checksum mismatch: " + binary);
 
-        var ok = apiClient.demo.errorDemo(new DemoTypes.ErrorDemoQuery("ok"));
+        var ok = apiClient.demo.errorDemo(new GenDemoTypes.ErrorDemoQuery("ok"));
         require(Objects.equals("ok", ok.status()), "error-demo ok mismatch: " + ok);
 
-        ApiError token = expectApiError(() ->
-            apiClient.demo.errorDemo(new DemoTypes.ErrorDemoQuery("token"))
+        GenApiError token = expectApiError(() ->
+            apiClient.demo.errorDemo(new GenDemoTypes.ErrorDemoQuery("token"))
         );
-        require(token.is(ApiErrors.CommonErr.TOKEN_EXPIRE), "token error entry mismatch: " + token.id());
-        require(token.code() == ApiErrors.COMMONERR_TOKEN_EXPIRE, "token error code mismatch: " + token.code());
-        String tokenToast = ApiError.resolveApiToast(
+        require(token.is(GenApiErrors.CommonErr.TOKEN_EXPIRE), "token error entry mismatch: " + token.id());
+        require(token.code() == GenApiErrors.COMMONERR_TOKEN_EXPIRE, "token error code mismatch: " + token.code());
+        String tokenToast = GenApiError.resolveApiToast(
             token.toast(),
             key -> Objects.equals("auth.token_expire", key) ? "translated token expired" : null,
             token.getMessage()
         );
         require(Objects.equals("translated token expired", tokenToast), "token toast mismatch: " + tokenToast);
 
-        ApiError rateLimited = expectApiError(() ->
-            apiClient.demo.errorDemo(new DemoTypes.ErrorDemoQuery("rate_limit"))
+        GenApiError rateLimited = expectApiError(() ->
+            apiClient.demo.errorDemo(new GenDemoTypes.ErrorDemoQuery("rate_limit"))
         );
-        require(rateLimited.is(ApiErrors.DemoErr.RATE_LIMITED), "rate limit error entry mismatch: " + rateLimited.id());
-        require(rateLimited.code() == ApiErrors.DEMOERR_RATE_LIMITED, "rate limit error code mismatch: " + rateLimited.code());
-        String rateToast = ApiError.resolveApiToast(rateLimited.toast(), null, rateLimited.getMessage());
+        require(rateLimited.is(GenApiErrors.DemoErr.RATE_LIMITED), "rate limit error entry mismatch: " + rateLimited.id());
+        require(rateLimited.code() == GenApiErrors.DEMOERR_RATE_LIMITED, "rate limit error code mismatch: " + rateLimited.code());
+        String rateToast = GenApiError.resolveApiToast(rateLimited.toast(), null, rateLimited.getMessage());
         require(Objects.equals("请等待 30 秒后重试", rateToast), "rate limit toast mismatch: " + rateToast);
 
-        ApiError unknown = expectApiError(() ->
-            apiClient.demo.errorDemo(new DemoTypes.ErrorDemoQuery("unknown"))
+        GenApiError unknown = expectApiError(() ->
+            apiClient.demo.errorDemo(new GenDemoTypes.ErrorDemoQuery("unknown"))
         );
         require(Objects.equals("", unknown.id()), "unknown error id mismatch: " + unknown.id());
         require(unknown.code() == 70001, "unknown error code mismatch: " + unknown.code());
@@ -167,8 +167,8 @@ public class JavaExampleSuite {
     private static void checkUnsupportedConnections(String baseUrl) throws Exception {
         var apiClient = com.example.apiblueprint.api.transports.http.HttpApiClient.create(baseUrl);
         expectUnsupported(apiClient.api::openHelloChannel, "channel");
-        expectUnsupported(() -> apiClient.demo.subscribeSweepEvents(new ApiTypes.SweepOpen("suite", null)), "stream");
-        expectUnsupported(() -> apiClient.demo.openAssistantSession(new ApiTypes.AssistantOpen("suite")), "channel");
+        expectUnsupported(() -> apiClient.demo.subscribeSweepEvents(new GenApiTypes.SweepOpen("suite", null)), "stream");
+        expectUnsupported(() -> apiClient.demo.openAssistantSession(new GenApiTypes.AssistantOpen("suite")), "channel");
 
         HttpClient httpClient = HttpClient.newHttpClient();
         requireStatus(httpClient, baseUrl + "/api/ws", 501, "channel route is not implemented");
@@ -192,15 +192,15 @@ public class JavaExampleSuite {
         throw new IllegalStateException("expected UnsupportedOperationException containing " + snippet);
     }
 
-    private static ApiError expectApiError(ThrowingRunnable action) throws Exception {
+    private static GenApiError expectApiError(ThrowingRunnable action) throws Exception {
         try {
             action.run();
-        } catch (ApiError error) {
-            require(Objects.equals("api.demo.get.errordemo", error.routeId()), "ApiError routeId mismatch: " + error.routeId());
-            require(error.rawBody() != null && !error.rawBody().isBlank(), "ApiError raw body is empty");
+        } catch (GenApiError error) {
+            require(Objects.equals("api.demo.get.errordemo", error.routeId()), "GenApiError routeId mismatch: " + error.routeId());
+            require(error.rawBody() != null && !error.rawBody().isBlank(), "GenApiError raw body is empty");
             return error;
         }
-        throw new IllegalStateException("expected ApiError");
+        throw new IllegalStateException("expected GenApiError");
     }
 
     private static void require(boolean condition, String message) {
@@ -213,23 +213,23 @@ public class JavaExampleSuite {
         void run() throws Exception;
     }
 
-    private static final class DemoServiceImpl extends DemoServiceStub {
+    private static final class DemoServiceImpl extends GenDemoServiceStub {
         @Override
-        public DemoTypes.TestPostResponse testPost(DemoTypes.TestPostJSON json) {
-            return new DemoTypes.TestPostResponse(
+        public GenDemoTypes.TestPostResponse testPost(GenDemoTypes.TestPostJSON json) {
+            return new GenDemoTypes.TestPostResponse(
                 List.of("test_post", json.req1()),
-                Map.of("req2", new com.example.apiblueprint.api.runtime.ApiTypes.ApiDemoMap(json.req2().longValue()))
+                Map.of("req2", new com.example.apiblueprint.api.runtime.GenApiTypes.ApiDemoMap(json.req2().longValue()))
             );
         }
 
         @Override
-        public DemoTypes.PutDemoResponse putDemo(
-            DemoTypes.PutDemoQuery query,
-            DemoTypes.PutDemoJSON json
+        public GenDemoTypes.PutDemoResponse putDemo(
+            GenDemoTypes.PutDemoQuery query,
+            GenDemoTypes.PutDemoJSON json
         ) {
-            return new DemoTypes.PutDemoResponse(
+            return new GenDemoTypes.PutDemoResponse(
                 List.of(query.arg1(), json.req1()),
-                new DemoTypes.AnonFunc1putAnonKv(
+                new GenDemoTypes.AnonFunc1putAnonKv(
                     json.req2().longValue(),
                     List.of(query.arg2().doubleValue(), json.req2().doubleValue())
                 )
@@ -237,50 +237,50 @@ public class JavaExampleSuite {
         }
 
         @Override
-        public DemoTypes.ErrorDemoResponse errorDemo(DemoTypes.ErrorDemoQuery query) {
+        public GenDemoTypes.ErrorDemoResponse errorDemo(GenDemoTypes.ErrorDemoQuery query) {
             String mode = query == null || query.mode() == null ? "ok" : query.mode();
             return switch (mode) {
-                case "token" -> throwApiError(new ApiErrorPayload(
+                case "token" -> throwApiError(new GenApiErrorPayload(
                     "CommonErr.TOKEN_EXPIRE",
                     "",
                     "",
                     0,
                     "",
-                    new ApiToastPayload("", "", "", "")
+                    new GenApiToastPayload("", "", "", "")
                 ));
-                case "rate_limit" -> throwApiError(new ApiErrorPayload(
+                case "rate_limit" -> throwApiError(new GenApiErrorPayload(
                     "DemoErr.RATE_LIMITED",
                     "",
                     "",
-                    ApiErrors.DEMOERR_RATE_LIMITED,
+                    GenApiErrors.DEMOERR_RATE_LIMITED,
                     "",
-                    new ApiToastPayload("demo.rate_limited", "warning", "请求过于频繁，请稍后再试", "请等待 30 秒后重试")
+                    new GenApiToastPayload("demo.rate_limited", "warning", "请求过于频繁，请稍后再试", "请等待 30 秒后重试")
                 ));
-                case "unknown" -> throwApiError(new ApiErrorPayload(
+                case "unknown" -> throwApiError(new GenApiErrorPayload(
                     "",
                     "",
                     "",
                     70001,
                     "example undefined business error",
-                    new ApiToastPayload("", "error", "", "")
+                    new GenApiToastPayload("", "error", "", "")
                 ));
-                default -> new DemoTypes.ErrorDemoResponse("ok");
+                default -> new GenDemoTypes.ErrorDemoResponse("ok");
             };
         }
 
-        private static DemoTypes.ErrorDemoResponse throwApiError(ApiErrorPayload payload) {
-            throw new ApiError(payload, "api.demo.get.errordemo", "", null);
+        private static GenDemoTypes.ErrorDemoResponse throwApiError(GenApiErrorPayload payload) {
+            throw new GenApiError(payload, "api.demo.get.errordemo", "", null);
         }
     }
 
-    private static final class BinaryServiceImpl extends BinaryServiceStub {
+    private static final class BinaryServiceImpl extends GenBinaryServiceStub {
         @Override
-        public BinaryTypes.PacketResponse packet(
-            BinaryTypes.PacketQuery query,
-            ApiBinaryBody binaryBody
+        public GenBinaryTypes.PacketResponse packet(
+            GenBinaryTypes.PacketQuery query,
+            GenApiBinaryBody binaryBody
         ) {
             ParsedDemoPacket packet = parseDemoPacket(binaryBody.toBytes());
-            return new BinaryTypes.PacketResponse(
+            return new GenBinaryTypes.PacketResponse(
                 query.trace(),
                 packet.version(),
                 packet.itemCount(),
@@ -294,10 +294,10 @@ public class JavaExampleSuite {
     }
 
     private static final class StaticServiceImpl
-        extends com.example.apiblueprint.static_.routes.static_.StaticServiceStub {
+        extends com.example.apiblueprint.static_.routes.static_.GenStaticServiceStub {
         @Override
-        public com.example.apiblueprint.static_.routes.static_.StaticTypes.DochahaResponse dochaha() {
-            return new com.example.apiblueprint.static_.routes.static_.StaticTypes.DochahaResponse("suite-static");
+        public com.example.apiblueprint.static_.routes.static_.GenStaticTypes.DochahaResponse dochaha() {
+            return new com.example.apiblueprint.static_.routes.static_.GenStaticTypes.DochahaResponse("suite-static");
         }
     }
 

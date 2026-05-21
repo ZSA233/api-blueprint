@@ -13,8 +13,8 @@ public final class GenBinaryRuntime {
         BIG
     }
 
-    public static ApiBinaryBody emptyBody(String contentType) {
-        return ApiBinaryBody.of(new byte[0], contentType);
+    public static GenApiBinaryBody emptyBody(String contentType) {
+        return GenApiBinaryBody.of(new byte[0], contentType);
     }
 
     public static String joinBinaryPath(String path, String field) {

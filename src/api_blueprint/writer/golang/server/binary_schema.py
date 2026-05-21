@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 import re
 from typing import Iterable
 
@@ -38,6 +39,21 @@ READ_METHODS = {
     "f32": "ReadFloat32",
     "f64": "ReadFloat64",
     "bool": "ReadBool",
+}
+WRITE_METHODS = {
+    "u8": "WriteUint8",
+    "u16": "WriteUint16",
+    "u24": "WriteUint24",
+    "u32": "WriteUint32",
+    "u64": "WriteUint64",
+    "i8": "WriteInt8",
+    "i16": "WriteInt16",
+    "i24": "WriteInt24",
+    "i32": "WriteInt32",
+    "i64": "WriteInt64",
+    "f32": "WriteFloat32",
+    "f64": "WriteFloat64",
+    "bool": "WriteBool",
 }
 BULK_READ_METHODS = {
     "u8": "ReadUint8Array",
@@ -118,6 +134,23 @@ def compile_go_binary_uint_expr(expr: str) -> str:
     return " ".join(rendered)
 
 
+def compile_go_binary_int_expr(expr: str) -> str:
+    tokens = EXPR_TOKEN_RE.findall(expr)
+    compact = "".join(tokens)
+    expected = re.sub(r"\s+", "", expr)
+    if compact != expected or not tokens:
+        raise ValueError(f"unsupported binary expression: {expr}")
+    rendered: list[str] = []
+    for token in tokens:
+        if token.isdigit():
+            rendered.append(f"int64({token})")
+        elif token in {"+", "-", "*", "/", "(", ")"}:
+            rendered.append(token)
+        else:
+            rendered.append(f"int64(state.{binary_go_field_name(token)})")
+    return " ".join(rendered)
+
+
 def go_byte_array_literal(value: str, count: str) -> str | None:
     if not count.isdigit():
         return None
@@ -125,6 +158,10 @@ def go_byte_array_literal(value: str, count: str) -> str | None:
     if len(raw) != int(count):
         return None
     return f"[{count}]byte{{" + ", ".join(str(item) for item in raw) + "}"
+
+
+def go_string(value: str) -> str:
+    return json.dumps(value, ensure_ascii=False)
 
 
 @dataclass(frozen=True)
@@ -239,6 +276,10 @@ class GoBinaryField:
         return self.wire_type in {"u8", "u16", "u24", "u32", "u64", "i8", "i16", "i24", "i32", "i64"}
 
     @property
+    def is_signed_integer_scalar(self) -> bool:
+        return self.wire_type in {"i8", "i16", "i24", "i32", "i64"}
+
+    @property
     def is_bytes(self) -> bool:
         return self.typ == "bytes"
 
@@ -291,6 +332,10 @@ class GoBinaryField:
     @property
     def read_method(self) -> str:
         return READ_METHODS[self.wire_type]
+
+    @property
+    def write_method(self) -> str:
+        return WRITE_METHODS[self.wire_type]
 
     @property
     def local_name(self) -> str:
@@ -370,24 +415,32 @@ class GoBinaryField:
     def min_expr(self) -> str:
         if self.min_value is None:
             raise ValueError(f"{self.name} has no min rule")
+        if self.is_signed_integer_scalar:
+            return compile_go_binary_int_expr(self.min_value)
         return compile_go_binary_uint_expr(self.min_value)
 
     @property
     def max_expr(self) -> str:
         if self.max_value is None:
             raise ValueError(f"{self.name} has no max rule")
+        if self.is_signed_integer_scalar:
+            return compile_go_binary_int_expr(self.max_value)
         return compile_go_binary_uint_expr(self.max_value)
 
     @property
     def assert_expr(self) -> str:
         if self.assert_value is None:
             raise ValueError(f"{self.name} has no assert rule")
+        if self.is_signed_integer_scalar:
+            return compile_go_binary_int_expr(self.assert_value)
         return compile_go_binary_uint_expr(self.assert_value)
 
     @property
     def const_expr(self) -> str:
         if self.const_value is None:
             raise ValueError(f"{self.name} has no const rule")
+        if self.is_signed_integer_scalar:
+            return compile_go_binary_int_expr(self.const_value)
         return compile_go_binary_uint_expr(self.const_value)
 
     @property
@@ -409,6 +462,52 @@ class GoBinaryField:
         if self.value_type is not None:
             return f"{self.go_type}({self.value_var})"
         return self.value_var
+
+    @property
+    def value_expr(self) -> str:
+        return f"value.{self.go_name}"
+
+    @property
+    def numeric_value_expr(self) -> str:
+        if self.wire_type == "bool":
+            return self.value_expr
+        if self.is_signed_integer_scalar:
+            return f"int64({self.value_expr})"
+        return f"uint64({self.value_expr})"
+
+    @property
+    def numeric_output_expr(self) -> str:
+        if self.is_signed_integer_scalar:
+            return f"int64(out.{self.go_name})"
+        return f"uint64(out.{self.go_name})"
+
+    def writer_expr(self, expr: str) -> str:
+        if self.value_type is None:
+            return expr
+        return f"{GO_SCALAR_TYPES.get(self.wire_type, 'uint64')}({expr})"
+
+    @property
+    def write_const_expr(self) -> str:
+        if self.const_value is None:
+            raise ValueError(f"{self.name} has no const rule")
+        if self.is_bytes:
+            return f"[]byte({go_string(self.const_value)})"
+        if self.is_string:
+            return go_string(self.const_value)
+        if self.wire_type == "bool":
+            return "true" if self.const_value.lower() in {"1", "true"} else "false"
+        if self.value_type is not None:
+            return f"{self.go_type}({self.const_value})"
+        return self.const_expr
+
+    @property
+    def sizeof_name(self) -> str | None:
+        value = self.rule.get("sizeof")
+        return str(value) if value else None
+
+    @property
+    def sizeof_go_name(self) -> str | None:
+        return binary_go_field_name(self.sizeof_name) if self.sizeof_name else None
 
 
 @dataclass(frozen=True)
@@ -458,6 +557,15 @@ class GoBinaryObject:
     @property
     def has_fixed_prefix(self) -> bool:
         return bool(self.fixed_prefix_fields)
+
+    @property
+    def data_fields(self) -> list[GoBinaryField]:
+        return [field for field in self.fields if not field.is_hidden]
+
+    def has_public_field(self, name: str | None) -> bool:
+        if not name:
+            return False
+        return any(field.name == name and not field.is_hidden for field in self.fields)
 
 
 @dataclass(frozen=True)
@@ -583,6 +691,14 @@ class GoBinarySchema:
     @property
     def byte_order(self) -> str:
         return "stdbinary.BigEndian" if self.schema.endian == "big" else "stdbinary.LittleEndian"
+
+    @property
+    def runtime_byte_order(self) -> str:
+        return "binaryruntime.BigEndian" if self.schema.endian == "big" else "binaryruntime.LittleEndian"
+
+    @property
+    def content_type(self) -> str:
+        return self.schema.content_type or "application/octet-stream"
 
     @property
     def sections(self) -> list[GoBinaryObject]:

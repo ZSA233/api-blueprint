@@ -5,6 +5,7 @@ import (
 	apperrors "example.com/project/golang/server/views/runtime/errors"
 	"example.com/project/golang/server/views/runtime/errors/common_err"
 	"example.com/project/golang/server/views/runtime/errors/demo_err"
+	"time"
 )
 
 type Router struct {
@@ -16,7 +17,7 @@ func NewRouter() *Router {
 }
 
 func (impl *Router) Abc(ctx *CTX_Abc, req *REQ_Abc) (rsp *RSP_Abc, err error) {
-	return demoA("abc", 7), nil
+	return demoA("header-ok", 7), nil
 }
 
 func (impl *Router) TestPost(ctx *CTX_TestPost, req *REQ_TestPost) (rsp *RSP_TestPost, err error) {
@@ -26,6 +27,26 @@ func (impl *Router) TestPost(ctx *CTX_TestPost, req *REQ_TestPost) (rsp *RSP_Tes
 		Map: map[string]*types.ApiDemoMap{
 			"req2": {Haha: int64(body.Req2)},
 		},
+	}, nil
+}
+
+func (impl *Router) FormSubmit(ctx *CTX_FormSubmit, req *REQ_FormSubmit) (rsp *RSP_FormSubmit, err error) {
+	body := req.B
+	return &RSP_FormSubmit{
+		Summary: body.Title,
+		Count:   body.Count,
+		Enabled: body.Enabled,
+	}, nil
+}
+
+func (impl *Router) RequestOptions(ctx *CTX_RequestOptions, req *REQ_RequestOptions) (rsp *RSP_RequestOptions, err error) {
+	delayMs := req.Q.DelayMs
+	if delayMs > 0 {
+		time.Sleep(time.Duration(delayMs) * time.Millisecond)
+	}
+	return &RSP_RequestOptions{
+		Status:  "ok",
+		DelayMs: delayMs,
 	}, nil
 }
 

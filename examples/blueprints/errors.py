@@ -16,6 +16,7 @@ class CommonErr(Model):
 
 
 class DemoErr(Model):
+    UNKNOWN = Error(70002, 'demo unknown error')
     RATE_LIMITED = Error(
         42901,
         '请求过于频繁',

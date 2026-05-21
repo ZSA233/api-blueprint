@@ -459,7 +459,7 @@ def _artifact_for_route(
         package_path = package.replace(".", "/")
         base = _join(out_dir, package_path, root, "routes", route_path)
         files = [
-            _join(base, f"{pascal_group}Types.kt"),
+            _join(base, f"Gen{pascal_group}Types.kt"),
             _join(base, f"Gen{pascal_group}Api.kt"),
             _join(base, f"{pascal_group}Api.kt"),
         ]
@@ -471,7 +471,7 @@ def _artifact_for_route(
         base = _join(out_dir, package_path, root, "routes", route_path)
         transport_base = _join(out_dir, package_path, root, "transports", "http")
         files = [
-            _join(base, f"{pascal_group}Types.java"),
+            _join(base, f"Gen{pascal_group}Types.java"),
             _join(base, f"Gen{pascal_group}Api.java"),
             _join(base, f"{pascal_group}Api.java"),
             _join(transport_base, "GenJdkHttpApiTransport.java"),
@@ -493,6 +493,24 @@ def _artifact_for_route(
         if has_binary_schema:
             files.append(_join(base, "gen_binary.py"))
         imports = [f"{package_root}.{root}.routes.{python_route_package}.client"]
+    elif kind == "flutter-client":
+        package = _string(target.get("package")) or "api_blueprint_generated"
+        dart_root = _dart_path(root)
+        dart_route_path = _dart_path(route_path)
+        dart_group = _dart_file_stem(group)
+        base = _join(out_dir, "lib", "src", dart_root, "routes", dart_route_path)
+        transport_base = _join(out_dir, "lib", "src", dart_root, "transports", "http")
+        files = [
+            _join(base, f"gen_{dart_group}_api.dart"),
+            _join(base, f"{dart_group}_api.dart"),
+            _join(base, f"gen_{dart_group}_types.dart"),
+            _join(base, f"{dart_group}_types.dart"),
+            _join(transport_base, "gen_http_api_transport.dart"),
+            _join(transport_base, "http_api_client.dart"),
+        ]
+        if has_binary_schema:
+            files.extend([_join(base, "gen_binary.dart"), _join(base, "binary.dart")])
+        imports = [f"package:{package}/{package}.dart"]
     elif kind == "python-server":
         package_root = _string(target.get("python_package_root")) or "api_blueprint_generated"
         package_parts = _python_package_parts(package_root)
@@ -517,8 +535,8 @@ def _artifact_for_route(
         transport_base = _join(out_dir, package_path, root, "transports", "http")
         files = [
             _join(route_base, f"Gen{pascal_group}Service.java"),
-            _join(route_base, f"{pascal_group}Types.java"),
-            _join(route_base, f"{pascal_group}ServiceStub.java"),
+            _join(route_base, f"Gen{pascal_group}Types.java"),
+            _join(route_base, f"Gen{pascal_group}ServiceStub.java"),
             _join(route_base, f"{pascal_group}Service.java"),
             _join(transport_base, route_path, f"Gen{pascal_group}Controller.java"),
         ]
@@ -608,7 +626,7 @@ def _request_models(route: Mapping[str, Any]) -> list[str]:
     if not isinstance(request, Mapping):
         return []
     models = []
-    for key in ("query_model", "json_model", "form_model", "binary_model"):
+    for key in ("query_model", "json_model", "form_model", "urlencoded_model", "multipart_model", "binary_model"):
         value = request.get(key)
         if value is not None:
             models.append(str(value))
@@ -697,6 +715,22 @@ def _route_path(root: str, group: str) -> str:
 
 def _python_package_parts(package_root: str) -> tuple[str, ...]:
     return tuple(part for part in re.split(r"[./]+", package_root) if part)
+
+
+def _dart_path(value: str) -> str:
+    parts = [_dart_file_stem(part) for part in value.strip("/").split("/") if part]
+    return "/".join(parts or ["root"])
+
+
+def _dart_file_stem(value: str) -> str:
+    safe = re.sub(r"[^0-9A-Za-z]+", "_", value.strip()).strip("_").lower()
+    if not safe:
+        safe = "root"
+    if not safe[0].isalpha():
+        safe = f"root_{safe}"
+    if safe in {"class", "enum", "import", "export", "void", "sealed", "base", "interface"}:
+        safe = f"{safe}_"
+    return safe
 
 
 def _route_id(route: Mapping[str, Any]) -> str:

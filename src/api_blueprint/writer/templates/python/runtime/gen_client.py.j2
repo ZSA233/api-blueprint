@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, AsyncIterator, Generic, Mapping, Protocol, TypedDict, TypeVar
+from dataclasses import dataclass
+from typing import Any, AsyncIterator, BinaryIO, Generic, Mapping, Protocol, TypedDict, TypeVar
 
 from .binary import ApiBinaryBody
 
@@ -8,6 +9,28 @@ from .binary import ApiBinaryBody
 RecvT = TypeVar("RecvT")
 SendT = TypeVar("SendT")
 CloseT = TypeVar("CloseT")
+RawT = TypeVar("RawT")
+
+
+ApiUploadFile = bytes | bytearray | memoryview | BinaryIO | tuple[str, bytes] | tuple[str, bytes, str] | Any
+
+
+@dataclass(frozen=True)
+class ApiRawResponse(Generic[RawT]):
+    body: RawT
+    headers: Mapping[str, str]
+    status: int
+    content_type: str = ""
+    content_disposition: str = ""
+    filename: str | None = None
+
+
+class ApiStreamResponse(ApiRawResponse[AsyncIterator[bytes]]):
+    async def aclose(self) -> None:
+        ...
+
+    def __aiter__(self) -> AsyncIterator[bytes]:
+        return self.body
 
 
 class ApiResponseEnvelopeFields(TypedDict, total=False):
@@ -37,10 +60,13 @@ class ApiClientTransport(Protocol):
         query: Mapping[str, Any] | None = None,
         json: Any = None,
         form: Mapping[str, Any] | None = None,
+        multipart: Mapping[str, Any] | None = None,
         binary: bytes | ApiBinaryBody | None = None,
         open_data: Mapping[str, Any] | None = None,
         response_type: str | None = None,
         response_envelope: ApiResponseEnvelope | None = None,
+        headers: Mapping[str, str] | None = None,
+        timeout: float | None = None,
     ) -> Any:
         ...
 

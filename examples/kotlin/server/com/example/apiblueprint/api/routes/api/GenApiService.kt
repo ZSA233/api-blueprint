@@ -6,6 +6,7 @@ import com.example.apiblueprint.api.runtime.*
 public interface GenApiService {
 
     public suspend fun helloChannel(
-    ): Any
+        channel: ApiServerChannel<HelloChannelMessage, HelloChannelMessage, DefaultConnectionClose>
+    ): Unit
 
 }

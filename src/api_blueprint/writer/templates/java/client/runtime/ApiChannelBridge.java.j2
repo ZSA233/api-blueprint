@@ -1,5 +1,0 @@
-package {{ bp.root_package }}.runtime;
-
-public interface ApiChannelBridge<Recv, Send, Close> extends ApiStreamBridge<Recv, Close> {
-    void send(Send message);
-}

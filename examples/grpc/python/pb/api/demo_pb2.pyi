@@ -103,6 +103,40 @@ class TestPostResponse(_message.Message):
     map: _containers.MessageMap[str, ApiDemoMap]
     def __init__(self, list: _Optional[_Iterable[str]] = ..., map: _Optional[_Mapping[str, ApiDemoMap]] = ...) -> None: ...
 
+class FormSubmitRequest(_message.Message):
+    __slots__ = ("title", "count", "enabled")
+    TITLE_FIELD_NUMBER: _ClassVar[int]
+    COUNT_FIELD_NUMBER: _ClassVar[int]
+    ENABLED_FIELD_NUMBER: _ClassVar[int]
+    title: str
+    count: int
+    enabled: bool
+    def __init__(self, title: _Optional[str] = ..., count: _Optional[int] = ..., enabled: bool = ...) -> None: ...
+
+class FormSubmitResponse(_message.Message):
+    __slots__ = ("summary", "count", "enabled")
+    SUMMARY_FIELD_NUMBER: _ClassVar[int]
+    COUNT_FIELD_NUMBER: _ClassVar[int]
+    ENABLED_FIELD_NUMBER: _ClassVar[int]
+    summary: str
+    count: int
+    enabled: bool
+    def __init__(self, summary: _Optional[str] = ..., count: _Optional[int] = ..., enabled: bool = ...) -> None: ...
+
+class RequestOptionsRequest(_message.Message):
+    __slots__ = ("delay_ms",)
+    DELAY_MS_FIELD_NUMBER: _ClassVar[int]
+    delay_ms: int
+    def __init__(self, delay_ms: _Optional[int] = ...) -> None: ...
+
+class RequestOptionsResponse(_message.Message):
+    __slots__ = ("status", "delay_ms")
+    STATUS_FIELD_NUMBER: _ClassVar[int]
+    DELAY_MS_FIELD_NUMBER: _ClassVar[int]
+    status: str
+    delay_ms: int
+    def __init__(self, status: _Optional[str] = ..., delay_ms: _Optional[int] = ...) -> None: ...
+
 class PutDemoRequest(_message.Message):
     __slots__ = ("query", "json")
     QUERY_FIELD_NUMBER: _ClassVar[int]

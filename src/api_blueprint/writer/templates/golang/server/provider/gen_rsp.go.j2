@@ -5,6 +5,7 @@ package {{ writer.provider_package }}
 import (
 	"encoding/xml"
 	"fmt"
+	"io"
 	"strings"
 	errors "{{ writer.errors_imports }}"
 )
@@ -14,6 +15,17 @@ const (
 )
 
 type RspContext struct{}
+
+type RawResponse struct {
+	Body        []byte
+	FilePath    string
+	Stream      io.Reader
+	Headers     map[string]string
+	StatusCode  int
+	ContentType string
+	Filename    string
+	Size        int64
+}
 
 type RspProvider[Q, B, P any] struct {
 	Type    string

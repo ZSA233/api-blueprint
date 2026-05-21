@@ -11,7 +11,7 @@ public open class GenDemoApi internal constructor(
 
     public open suspend fun abc(
         query: DemoAbcQuery,
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): ApiDemoA {
         return transport.request(
             ApiRequest(
@@ -19,29 +19,74 @@ public open class GenDemoApi internal constructor(
                 method = "GET",
                 path = "/api/demo/abc",
                 query = query.toQueryMap(),
-                headers = headers,
+                options = options,
                 responseSerializer = ApiDemoA.serializer(),
+                responseKind = "json",
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }
 
     public open suspend fun testPost(
         json: DemoTestPostJson,
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): DemoTestPostResponse {
         return transport.request(
             ApiRequest(
                 routeId = "api.demo.post.testpost",
                 method = "POST",
                 path = "/api/demo/test_post",
-                headers = headers,
+                options = options,
                 json = json,
                 jsonSerializer = DemoTestPostJson.serializer(),
                 responseSerializer = DemoTestPostResponse.serializer(),
+                responseKind = "json",
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
+            )
+        )
+    }
+
+    public open suspend fun formSubmit(
+        form: DemoFormSubmitForm,
+        options: ApiRequestOptions = ApiRequestOptions(),
+    ): DemoFormSubmitResponse {
+        return transport.request(
+            ApiRequest(
+                routeId = "api.demo.post.formsubmit",
+                method = "POST",
+                path = "/api/demo/form-submit",
+                options = options,
+                form = form,
+                formSerializer = DemoFormSubmitForm.serializer(),
+                responseSerializer = DemoFormSubmitResponse.serializer(),
+                responseKind = "json",
+                responseMediaType = "application/json",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
+            )
+        )
+    }
+
+    public open suspend fun requestOptions(
+        query: DemoRequestOptionsQuery,
+        options: ApiRequestOptions = ApiRequestOptions(),
+    ): RequestOptionsResponse {
+        return transport.request(
+            ApiRequest(
+                routeId = "api.demo.get.requestoptions",
+                method = "GET",
+                path = "/api/demo/request-options",
+                query = query.toQueryMap(),
+                options = options,
+                responseSerializer = RequestOptionsResponse.serializer(),
+                responseKind = "json",
+                responseMediaType = "application/json",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }
@@ -49,7 +94,7 @@ public open class GenDemoApi internal constructor(
     public open suspend fun putDemo(
         query: DemoPutDemoQuery,
         json: DemoPutDemoJson,
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): DemoPutDemoResponse {
         return transport.request(
             ApiRequest(
@@ -57,12 +102,14 @@ public open class GenDemoApi internal constructor(
                 method = "PUT",
                 path = "/api/demo/1put",
                 query = query.toQueryMap(),
-                headers = headers,
+                options = options,
                 json = json,
                 jsonSerializer = DemoPutDemoJson.serializer(),
                 responseSerializer = DemoPutDemoResponse.serializer(),
+                responseKind = "json",
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }
@@ -73,14 +120,17 @@ public open class GenDemoApi internal constructor(
         headers: Map<String, String> = emptyMap(),
     ): ApiStreamBridge<SweepStreamMessage, ConnectionClose> {
         return transport.openStream(
-            StreamConnectOptions(
+            StreamConnectOptions<SweepStreamMessage, ConnectionClose>(
                 routeId = "api.demo.stream.sweepevents",
                 connectionKind = "stream",
                 path = "/api/demo/sweep-events",
+                query = open.toQueryMap(),
                 open = open,
                 headers = headers,
+                messageSerializer = SweepStreamMessage.serializer(),
+                closeSerializer = ConnectionClose.serializer(),
             )
-        ) as ApiStreamBridge<SweepStreamMessage, ConnectionClose>
+        )
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -90,71 +140,81 @@ public open class GenDemoApi internal constructor(
         protocols: List<String> = emptyList(),
     ): ApiChannelBridge<AssistantServerMessage, AssistantClientMessage, ConnectionClose> {
         return transport.openChannel(
-            ChannelConnectOptions(
+            ChannelConnectOptions<AssistantServerMessage, AssistantClientMessage, ConnectionClose>(
                 routeId = "api.demo.channel.assistantsession",
                 connectionKind = "channel",
                 path = "/api/demo/assistant-session",
+                query = open.toQueryMap(),
                 open = open,
                 headers = headers,
                 protocols = protocols,
+                messageSerializer = AssistantServerMessage.serializer(),
+                closeSerializer = ConnectionClose.serializer(),
+                sendSerializer = AssistantClientMessage.serializer(),
             )
-        ) as ApiChannelBridge<AssistantServerMessage, AssistantClientMessage, ConnectionClose>
+        )
     }
 
     public open suspend fun postDeprecated(
         json: DemoPostDeprecatedJson,
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): DemoPostDeprecatedResponse {
         return transport.request(
             ApiRequest(
                 routeId = "api.demo.post.postdeprecated",
                 method = "POST",
                 path = "/api/demo/post_deprecated",
-                headers = headers,
+                options = options,
                 json = json,
                 jsonSerializer = DemoPostDeprecatedJson.serializer(),
                 responseSerializer = DemoPostDeprecatedResponse.serializer(),
+                responseKind = "json",
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }
 
     public open suspend fun raw(
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): DemoRawResponse {
         return transport.request(
             ApiRequest(
                 routeId = "api.demo.post.raw",
                 method = "POST",
                 path = "/api/demo/raw",
-                headers = headers,
+                options = options,
                 responseSerializer = DemoRawResponse.serializer(),
+                responseKind = "json",
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }
 
     public open suspend fun mapModel(
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): DemoMapModelResponse {
         return transport.request(
             ApiRequest(
                 routeId = "api.demo.post.mapmodel",
                 method = "POST",
                 path = "/api/demo/map_model",
-                headers = headers,
+                options = options,
                 responseSerializer = MapSerializer(Int.serializer(), ApiDemoMap.serializer()),
+                responseKind = "json",
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }
 
     public open suspend fun errorDemo(
         query: DemoErrorDemoQuery,
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): DemoErrorDemoResponse {
         return transport.request(
             ApiRequest(
@@ -162,10 +222,12 @@ public open class GenDemoApi internal constructor(
                 method = "GET",
                 path = "/api/demo/error-demo",
                 query = query.toQueryMap(),
-                headers = headers,
+                options = options,
                 responseSerializer = DemoErrorDemoResponse.serializer(),
+                responseKind = "json",
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }
@@ -176,10 +238,23 @@ public open class GenDemoApi internal constructor(
         "arg2" to arg2?.toString()
     )
 
+    private fun DemoRequestOptionsQuery.toQueryMap(): Map<String, String?> = mapOf(
+        "delay_ms" to delayMs?.toString()
+    )
+
     private fun DemoPutDemoQuery.toQueryMap(): Map<String, String?> = mapOf(
         "arg1" to arg1?.toString(),
         "arg2" to arg2?.toString(),
         "arg3" to arg3?.toString()
+    )
+
+    private fun SweepOpen.toQueryMap(): Map<String, String?> = mapOf(
+        "run_id" to runId.toString(),
+        "replay_from" to replayFrom?.toString()
+    )
+
+    private fun AssistantOpen.toQueryMap(): Map<String, String?> = mapOf(
+        "session_id" to sessionId.toString()
     )
 
     private fun DemoErrorDemoQuery.toQueryMap(): Map<String, String?> = mapOf(

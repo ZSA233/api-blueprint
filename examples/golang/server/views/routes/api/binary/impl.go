@@ -1,5 +1,7 @@
 package binary
 
+import binaryschema "example.com/project/golang/server/views/routes/api/binary/_gen_binary"
+
 type Router struct {
 	_GenRouter
 }
@@ -38,5 +40,35 @@ func (impl *Router) Packet(ctx *CTX_Packet, req *REQ_Packet) (rsp *RSP_Packet, e
 		FirstLabel: firstLabel,
 		ItemIds:    itemIDs,
 		Checksum:   uint(packet.Body.Checksum),
+	}, nil
+}
+
+func (impl *Router) AuditPacket(ctx *CTX_AuditPacket, req *REQ_AuditPacket) (rsp *RSP_AuditPacket, err error) {
+	packet := req.B
+	trace := ""
+	if req.Q != nil {
+		trace = req.Q.Trace
+	}
+	return &RSP_AuditPacket{
+		Trace:     trace,
+		ItemCount: uint(packet.Header.ItemCount),
+		Checksum:  uint(packet.Body.Checksum),
+	}, nil
+}
+
+func (impl *Router) AuditPacketResponse(ctx *CTX_AuditPacketResponse, req *REQ_AuditPacketResponse) (rsp *RSP_AuditPacketResponse, err error) {
+	return &RSP_AuditPacketResponse{
+		Header: binaryschema.AuditPacketHeader{
+			Kind:      binaryschema.AuditPacketKindAudit,
+			Flags:     binaryschema.AuditPacketFlagsHasItems,
+			ItemCount: 2,
+		},
+		Body: binaryschema.AuditPacketBody{
+			Items: []binaryschema.AuditPacketItem{
+				{ID: 11, Code: 101},
+				{ID: 22, Code: 202},
+			},
+			Checksum: 2,
+		},
 	}, nil
 }

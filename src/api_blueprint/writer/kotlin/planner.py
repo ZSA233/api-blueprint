@@ -68,11 +68,11 @@ def build_kotlin_blueprint_plan(writer: "KotlinBaseWriter", bp: "KotlinBlueprint
         KotlinRouteGroupPlan(
             group=group,
             directory=routes_dir / group.package_path,
-            types_file=routes_dir / group.package_path / f"{group.class_name.removesuffix('Api')}Types.kt",
+            types_file=routes_dir / group.package_path / f"Gen{group.class_name.removesuffix('Api')}Types.kt",
             client_file=routes_dir / group.package_path / f"Gen{group.class_name}.kt",
             facade_file=routes_dir / group.package_path / f"{group.class_name}.kt",
             service_file=routes_dir / group.package_path / f"Gen{group.class_name.removesuffix('Api')}Service.kt",
-            service_stub_file=routes_dir / group.package_path / f"{group.class_name.removesuffix('Api')}ServiceStub.kt",
+            service_stub_file=routes_dir / group.package_path / f"Gen{group.class_name.removesuffix('Api')}ServiceStub.kt",
             service_user_file=routes_dir / group.package_path / f"{group.class_name.removesuffix('Api')}Service.kt",
             ktor_routes_file=ktor_dir / group.package_path / f"Gen{group.class_name.removesuffix('Api')}KtorRoutes.kt",
             stale_binary_file=routes_dir / group.package_path / "GenBinary.kt",
@@ -87,15 +87,15 @@ def build_kotlin_blueprint_plan(writer: "KotlinBaseWriter", bp: "KotlinBlueprint
             directory=runtime_dir,
             generated_files=_runtime_generated_files(writer),
             user_files=(("ApiClient.kt", "ApiClient.kt"),) if writer.client_mode else (),
-            types_file=runtime_dir / "ApiTypes.kt",
+            types_file=runtime_dir / "GenApiTypes.kt",
             shared_protos=tuple(bp.registry.filter(module="shared")),
             binary_runtime_file=runtime_dir / "binary" / "GenBinaryRuntime.kt",
         ),
         http_transport=KotlinHttpTransportPlan(
             directory=http_dir,
             generated_files=(
-                ("GenHttpApiConfig.kt", "HttpApiConfig.kt"),
-                ("GenOkHttpApiTransport.kt", "OkHttpApiTransport.kt"),
+                ("GenHttpApiConfig.kt", "GenHttpApiConfig.kt"),
+                ("GenOkHttpApiTransport.kt", "GenOkHttpApiTransport.kt"),
             )
             if writer.client_mode
             else (),
@@ -108,23 +108,23 @@ def build_kotlin_blueprint_plan(writer: "KotlinBaseWriter", bp: "KotlinBlueprint
 
 def _runtime_generated_files(writer: "KotlinBaseWriter") -> tuple[tuple[str, str], ...]:
     files: list[tuple[str, str]] = [
-        ("GenApiException.kt", "ApiException.kt"),
-        ("GenApiErrors.kt", "ApiErrors.kt"),
-        ("GenApiErrorLookup.kt", "ApiErrorLookup.kt"),
-        ("ApiJson.kt", "ApiJson.kt"),
+        ("GenApiException.kt", "GenApiException.kt"),
+        ("GenApiErrors.kt", "GenApiErrors.kt"),
+        ("GenApiErrorLookup.kt", "GenApiErrorLookup.kt"),
+        ("GenApiJson.kt", "GenApiJson.kt"),
     ]
     if writer.client_mode:
         files.extend(
             (
-                ("GenApiTransport.kt", "ApiTransport.kt"),
+                ("GenApiTransport.kt", "GenApiTransport.kt"),
                 ("GenApiClient.kt", "GenApiClient.kt"),
             )
         )
     if writer.server_mode:
         files.extend(
             (
-                ("ApiServerContext.kt", "ApiServerContext.kt"),
-                ("ApiServerResponse.kt", "ApiServerResponse.kt"),
+                ("GenApiServerContext.kt", "GenApiServerContext.kt"),
+                ("GenApiServerResponse.kt", "GenApiServerResponse.kt"),
             )
         )
     return tuple(files)

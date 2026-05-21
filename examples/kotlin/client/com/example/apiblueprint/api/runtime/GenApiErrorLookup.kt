@@ -26,6 +26,18 @@ val ApiErrorsByID: Map<String, ApiErrorEntry> = mapOf(
             default = "登录状态已失效，请重新登录",
         ),
     ),
+    "DemoErr.UNKNOWN" to ApiErrorEntry(
+        id = "DemoErr.UNKNOWN",
+        group = "DemoErr",
+        key = "UNKNOWN",
+        code = 70002,
+        message = "demo unknown error",
+        toast = ApiToastSpec(
+            key = "DemoErr.UNKNOWN",
+            level = "error",
+            default = "demo unknown error",
+        ),
+    ),
     "DemoErr.RATE_LIMITED" to ApiErrorEntry(
         id = "DemoErr.RATE_LIMITED",
         group = "DemoErr",
@@ -51,11 +63,27 @@ private val routeApiErrorsByCode: Map<String, Map<ApiErrorCode, ApiErrorEntry>> 
         -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
         55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
     ),
+    "api.binary.get.auditpacketresponse" to mapOf(
+        -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
+        55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
+    ),
+    "api.conflict.get.default" to mapOf(
+        -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
+        55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
+    ),
     "api.demo.get.abc" to mapOf(
         -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
         55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
     ),
     "api.demo.post.testpost" to mapOf(
+        -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
+        55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
+    ),
+    "api.demo.post.formsubmit" to mapOf(
+        -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
+        55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
+    ),
+    "api.demo.get.requestoptions" to mapOf(
         -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
         55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
     ),
@@ -86,7 +114,38 @@ private val routeApiErrorsByCode: Map<String, Map<ApiErrorCode, ApiErrorEntry>> 
     "api.demo.get.errordemo" to mapOf(
         -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
         55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
+        70002 to ApiErrorsByID.getValue("DemoErr.UNKNOWN"),
         42901 to ApiErrorsByID.getValue("DemoErr.RATE_LIMITED"),
+    ),
+    "api.media.post.preview" to mapOf(
+        -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
+        55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
+    ),
+    "api.media.get.frame" to mapOf(
+        -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
+        55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
+    ),
+    "api.media.get.download" to mapOf(
+        -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
+        55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
+    ),
+    "api.media.get.downloaddynamic" to mapOf(
+        -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
+        55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
+    ),
+    "api.media.get.downloadfilenameedge" to mapOf(
+        -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
+        55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
+    ),
+    "api.media.get.errorframe" to mapOf(
+        -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
+        55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
+        70002 to ApiErrorsByID.getValue("DemoErr.UNKNOWN"),
+        42901 to ApiErrorsByID.getValue("DemoErr.RATE_LIMITED"),
+    ),
+    "api.media.get.mjpeg" to mapOf(
+        -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
+        55555 to ApiErrorsByID.getValue("CommonErr.TOKEN_EXPIRE"),
     ),
     "api.hello.get.abc" to mapOf(
         -1 to ApiErrorsByID.getValue("CommonErr.UNKNOWN"),
@@ -169,6 +228,6 @@ object CommonErr {
 }
 
 object DemoErr {
+    const val UNKNOWN: Int = 70002
     const val RATE_LIMITED: Int = 42901
 }
-

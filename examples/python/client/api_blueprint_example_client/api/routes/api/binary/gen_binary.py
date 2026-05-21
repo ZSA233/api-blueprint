@@ -5,12 +5,15 @@ from dataclasses import dataclass
 
 from ....runtime.binary import (
     ApiBinaryBody,
+    BinaryDecodeError,
     BinaryEncodeError,
+    BinaryReader,
     BinaryWriter,
     EncodedBinaryBlock,
     StreamingBinaryBody,
     is_api_binary_body,
     require_binary,
+    require_binary_decode,
     require_range,
     require_size,
     wrap_binary_field,
@@ -46,7 +49,7 @@ class DemoPacketWire:
             write=write,
             content_length=content_length,
             content_type="application/octet-stream",
-            endian='little',
+            endian="little",
         )
 
     @staticmethod
@@ -54,6 +57,31 @@ class DemoPacketWire:
         if is_api_binary_body(value):
             return value
         return DemoPacketWire.body(lambda writer: write_demopacket(value, writer))
+
+    @staticmethod
+    def from_bytes(data: bytes | bytearray | memoryview) -> DemoPacket:
+        return parse_demopacket(data)
+
+
+def parse_demopacket(data: bytes | bytearray | memoryview | BinaryReader) -> DemoPacket:
+    reader = data if isinstance(data, BinaryReader) else BinaryReader(data, endian="little")
+    state = {
+        "version": 0,
+        "kind": 0,
+        "flags": 0,
+        "short_code": 0,
+        "signed_delta": 0,
+        "item_count": 0,
+        "payload_len": 0,
+        "score_count": 0,
+        "checksum": 0,
+        "id": 0,
+        "label_len": 0,
+    }
+    return DemoPacket(
+        header=read_demopacket_demopacketheader(reader, state, path="DemoPacket.header"),
+        body=read_demopacket_demopacketbody(reader, state, path="DemoPacket.body"),
+    )
 
 
 def write_demopacket(value: DemoPacket, writer: BinaryWriter) -> None:
@@ -138,6 +166,61 @@ def write_demopacket_demopacketheader(
         raise wrap_binary_field(path, err) from err
 
 
+def read_demopacket_demopacketheader(
+    reader: BinaryReader,
+    state: dict[str, int],
+    path: str = "DemoPacketHeader",
+) -> DemoPacketHeader:
+    try:
+        magic = reader.read_bytes("magic", 4)
+        require_binary_decode("magic", magic == b'ABP1', "const mismatch")
+        version = reader.read_u16("version")
+        require_binary_decode("version", int(version) == int(1), "const mismatch")
+        state["version"] = int(version)
+        kind = reader.read_u16("kind")
+        require_binary_decode("kind", int(kind) == int(1), "const mismatch")
+        state["kind"] = int(kind)
+        flags = reader.read_u32("flags")
+        require_binary_decode("flags", int(flags) >= int(0), "below min")
+        require_binary_decode("flags", (int(flags) & 4294967264) == 0, "reserved bits must be zero")
+        state["flags"] = int(flags)
+        header_pad_hidden = reader.read_bytes("header_pad", 1)
+        reserved0_hidden = reader.read_bytes("reserved0", 2)
+        require_binary_decode("reserved0", reserved0_hidden == bytes(2), "reserved bytes must be zero")
+        short_code = reader.read_u24("short_code")
+        require_binary_decode("short_code", int(short_code) >= int(1), "below min")
+        require_binary_decode("short_code", int(short_code) <= int(16777215), "exceeds max")
+        state["short_code"] = int(short_code)
+        signed_delta = reader.read_i24("signed_delta")
+        require_binary_decode("signed_delta", int(signed_delta) >= int(0), "below min")
+        require_binary_decode("signed_delta", int(signed_delta) <= int(8388607), "exceeds max")
+        state["signed_delta"] = int(signed_delta)
+        item_count = reader.read_u16("item_count")
+        require_binary_decode("item_count", int(item_count) >= int(1), "below min")
+        require_binary_decode("item_count", int(item_count) <= int(8), "exceeds max")
+        state["item_count"] = int(item_count)
+        payload_len = reader.read_u32("payload_len")
+        require_binary_decode("payload_len", int(payload_len) >= int(0), "below min")
+        require_binary_decode("payload_len", int(payload_len) <= int(64), "exceeds max")
+        state["payload_len"] = int(payload_len)
+        score_count = reader.read_u16("score_count")
+        require_binary_decode("score_count", int(score_count) == int(2), "const mismatch")
+        require_binary_decode("score_count", int(score_count) <= int(4), "exceeds max")
+        state["score_count"] = int(score_count)
+
+    except BinaryDecodeError as err:
+        if not path:
+            raise
+        raise wrap_binary_field(path, err) from err
+    return DemoPacketHeader(
+        flags=flags,
+        short_code=short_code,
+        signed_delta=signed_delta,
+        item_count=item_count,
+        payload_len=payload_len,
+    )
+
+
 @dataclass
 class DemoPacketBody:
     items: list[DemoPacketItem]
@@ -182,6 +265,49 @@ def write_demopacket_demopacketbody(
         raise wrap_binary_field(path, err) from err
 
 
+def read_demopacket_demopacketbody(
+    reader: BinaryReader,
+    state: dict[str, int],
+    path: str = "DemoPacketBody",
+) -> DemoPacketBody:
+    try:
+        items_count = state.get("item_count", 0)
+        items: list[DemoPacketItem] = []
+        for index in range(items_count):
+            try:
+                item = read_demopacket_item(reader, state, path="")
+
+            except BinaryDecodeError as err:
+                raise wrap_binary_index("items", index, err) from err
+            items.append(item)
+
+        payload = reader.read_bytes("payload", state.get("payload_len", 0))
+        scores_count = state.get("score_count", 0)
+        scores: list[float] = []
+        for index in range(scores_count):
+            try:
+                item = reader.read_f64("")
+
+            except BinaryDecodeError as err:
+                raise wrap_binary_index("scores", index, err) from err
+            scores.append(item)
+
+        checksum = reader.read_u32("checksum")
+        require_binary_decode("checksum", int(checksum) == state.get("item_count", 0) + state.get("payload_len", 0), "assert mismatch")
+        state["checksum"] = int(checksum)
+
+    except BinaryDecodeError as err:
+        if not path:
+            raise
+        raise wrap_binary_field(path, err) from err
+    return DemoPacketBody(
+        items=items,
+        payload=payload,
+        scores=scores,
+        checksum=checksum,
+    )
+
+
 @dataclass
 class DemoPacketItem:
     id: int
@@ -219,6 +345,37 @@ def write_demopacket_item(
         raise wrap_binary_field(path, err) from err
 
 
+def read_demopacket_item(
+    reader: BinaryReader,
+    state: dict[str, int],
+    path: str = "Item",
+) -> DemoPacketItem:
+    try:
+        id = reader.read_u32("id")
+        require_binary_decode("id", int(id) >= int(1), "below min")
+        require_binary_decode("id", int(id) <= int(999), "exceeds max")
+        state["id"] = int(id)
+        enabled = reader.read_bool("enabled")
+        value = reader.read_f64("value")
+        label_len = reader.read_u8("label_len")
+        require_binary_decode("label_len", int(label_len) >= int(1), "below min")
+        require_binary_decode("label_len", int(label_len) <= int(16), "exceeds max")
+        state["label_len"] = int(label_len)
+        label = reader.read_bytes("label", state.get("label_len", 0))
+
+    except BinaryDecodeError as err:
+        if not path:
+            raise
+        raise wrap_binary_field(path, err) from err
+    return DemoPacketItem(
+        id=id,
+        enabled=enabled,
+        value=value,
+        label_len=label_len,
+        label=label,
+    )
+
+
 class AuditPacketKind:
     Metric = 1
     Audit = 2
@@ -245,7 +402,7 @@ class AuditPacketWire:
             write=write,
             content_length=content_length,
             content_type="application/octet-stream",
-            endian='little',
+            endian="little",
         )
 
     @staticmethod
@@ -253,6 +410,26 @@ class AuditPacketWire:
         if is_api_binary_body(value):
             return value
         return AuditPacketWire.body(lambda writer: write_auditpacket(value, writer))
+
+    @staticmethod
+    def from_bytes(data: bytes | bytearray | memoryview) -> AuditPacket:
+        return parse_auditpacket(data)
+
+
+def parse_auditpacket(data: bytes | bytearray | memoryview | BinaryReader) -> AuditPacket:
+    reader = data if isinstance(data, BinaryReader) else BinaryReader(data, endian="little")
+    state = {
+        "kind": 0,
+        "flags": 0,
+        "item_count": 0,
+        "checksum": 0,
+        "id": 0,
+        "code": 0,
+    }
+    return AuditPacket(
+        header=read_auditpacket_auditpacketheader(reader, state, path="AuditPacket.header"),
+        body=read_auditpacket_auditpacketbody(reader, state, path="AuditPacket.body"),
+    )
 
 
 def write_auditpacket(value: AuditPacket, writer: BinaryWriter) -> None:
@@ -305,6 +482,34 @@ def write_auditpacket_auditpacketheader(
         raise wrap_binary_field(path, err) from err
 
 
+def read_auditpacket_auditpacketheader(
+    reader: BinaryReader,
+    state: dict[str, int],
+    path: str = "AuditPacketHeader",
+) -> AuditPacketHeader:
+    try:
+        kind = reader.read_u16("kind")
+        require_binary_decode("kind", int(kind) == int(2), "const mismatch")
+        state["kind"] = int(kind)
+        flags = reader.read_u32("flags")
+        require_binary_decode("flags", int(flags) >= int(0), "below min")
+        require_binary_decode("flags", (int(flags) & 4294967288) == 0, "reserved bits must be zero")
+        state["flags"] = int(flags)
+        item_count = reader.read_u16("item_count")
+        require_binary_decode("item_count", int(item_count) >= int(1), "below min")
+        require_binary_decode("item_count", int(item_count) <= int(4), "exceeds max")
+        state["item_count"] = int(item_count)
+
+    except BinaryDecodeError as err:
+        if not path:
+            raise
+        raise wrap_binary_field(path, err) from err
+    return AuditPacketHeader(
+        flags=flags,
+        item_count=item_count,
+    )
+
+
 @dataclass
 class AuditPacketBody:
     items: list[AuditPacketItem]
@@ -336,6 +541,36 @@ def write_auditpacket_auditpacketbody(
         raise wrap_binary_field(path, err) from err
 
 
+def read_auditpacket_auditpacketbody(
+    reader: BinaryReader,
+    state: dict[str, int],
+    path: str = "AuditPacketBody",
+) -> AuditPacketBody:
+    try:
+        items_count = state.get("item_count", 0)
+        items: list[AuditPacketItem] = []
+        for index in range(items_count):
+            try:
+                item = read_auditpacket_item(reader, state, path="")
+
+            except BinaryDecodeError as err:
+                raise wrap_binary_index("items", index, err) from err
+            items.append(item)
+
+        checksum = reader.read_u32("checksum")
+        require_binary_decode("checksum", int(checksum) == state.get("item_count", 0), "assert mismatch")
+        state["checksum"] = int(checksum)
+
+    except BinaryDecodeError as err:
+        if not path:
+            raise
+        raise wrap_binary_field(path, err) from err
+    return AuditPacketBody(
+        items=items,
+        checksum=checksum,
+    )
+
+
 @dataclass
 class AuditPacketItem:
     id: int
@@ -361,3 +596,27 @@ def write_auditpacket_item(
         if not path:
             raise
         raise wrap_binary_field(path, err) from err
+
+
+def read_auditpacket_item(
+    reader: BinaryReader,
+    state: dict[str, int],
+    path: str = "Item",
+) -> AuditPacketItem:
+    try:
+        id = reader.read_u32("id")
+        require_binary_decode("id", int(id) >= int(1), "below min")
+        state["id"] = int(id)
+        code = reader.read_u16("code")
+        require_binary_decode("code", int(code) >= int(1), "below min")
+        require_binary_decode("code", int(code) <= int(999), "exceeds max")
+        state["code"] = int(code)
+
+    except BinaryDecodeError as err:
+        if not path:
+            raise
+        raise wrap_binary_field(path, err) from err
+    return AuditPacketItem(
+        id=id,
+        code=code,
+    )

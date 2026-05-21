@@ -42,6 +42,13 @@ const (
 	HelloWayEnumASD HelloWayEnum = "ASD"
 )
 
+type KeywordEnum string
+
+const (
+	KeywordEnumDEFAULT KeywordEnum = "default"
+	KeywordEnumCLASS   KeywordEnum = "class"
+)
+
 type DefaultConnectionClose struct {
 	Code   int    `json:"code,omitempty" form:"code,omitempty"`
 	Reason string `json:"reason,omitempty" form:"reason,omitempty"`
@@ -78,12 +85,6 @@ type RSPAuditPacket struct {
 	Checksum  uint   `json:"checksum" form:"checksum"`
 }
 
-type REQAbcQUERY struct {
-	Arg1 bool    `json:"arg1,omitempty" form:"arg1,omitempty"`
-	Arg3 string  `json:"arg3,omitempty" form:"arg3,omitempty"`
-	Arg2 float64 `json:"arg2,omitempty" form:"arg2,omitempty"`
-}
-
 type ApiDemoA struct {
 	Bc         string         `json:"bc" form:"bc"`
 	A          int            `json:"a" form:"a"`
@@ -112,6 +113,27 @@ type REQTestPostJSON struct {
 type RSPTestPost struct {
 	List []string               `json:"list" form:"list"`
 	Map  map[string]*ApiDemoMap `json:"map" form:"map"`
+}
+
+type REQFormSubmitFORM struct {
+	Title   string `json:"title" form:"title"`
+	Count   int    `json:"count,omitempty" form:"count,omitempty"`
+	Enabled bool   `json:"enabled,omitempty" form:"enabled,omitempty"`
+}
+
+type RSPFormSubmit struct {
+	Summary string `json:"summary" form:"summary"`
+	Count   int    `json:"count" form:"count"`
+	Enabled bool   `json:"enabled" form:"enabled"`
+}
+
+type REQRequestOptionsQUERY struct {
+	DelayMs int `json:"delay_ms,omitempty" form:"delay_ms,omitempty"`
+}
+
+type RequestOptionsResponse struct {
+	Status  string `json:"status" form:"status"`
+	DelayMs int    `json:"delay_ms" form:"delay_ms"`
 }
 
 type REQFunc1putQUERY struct {
@@ -219,6 +241,28 @@ type RSPErrorDemo struct {
 	Status string `json:"status" form:"status"`
 }
 
+type MediaPreviewRequest struct {
+	Title string        `json:"title,omitempty" form:"title,omitempty"`
+	Image MultipartFile `json:"image" form:"image"`
+}
+
+type REQErrorFrameQUERY struct {
+	Mode string `json:"mode,omitempty" form:"mode,omitempty"`
+}
+
+type REQAbcQUERY50077bffe423 struct {
+	Arg1 bool    `json:"arg1,omitempty" form:"arg1,omitempty"`
+	Arg3 string  `json:"arg3,omitempty" form:"arg3,omitempty"`
+	Arg2 float64 `json:"arg2,omitempty" form:"arg2,omitempty"`
+}
+
+type REQAbcQUERY11707fb825bf struct {
+	Arg1 bool                    `json:"arg1,omitempty" form:"arg1,omitempty"`
+	Arg3 string                  `json:"arg3,omitempty" form:"arg3,omitempty"`
+	Arg2 float64                 `json:"arg2,omitempty" form:"arg2,omitempty"`
+	Type HelloChannelMsgTypeEnum `json:"type" form:"type"`
+}
+
 type ApiHelloMap struct {
 	Haha int64 `json:"haha" form:"haha"`
 }
@@ -243,4 +287,24 @@ type RSPDocJson struct{}
 
 type RSPDochaha struct {
 	A string `json:"a,omitempty" form:"a,omitempty"`
+}
+
+type REQDefaultQUERYB3dee69d2d1e struct {
+	Class string `json:"class_,omitempty" form:"class_,omitempty"`
+}
+
+type REQDefaultQUERYE7ed94a60410 struct {
+	Class string `json:"class_,omitempty" form:"class_,omitempty"`
+}
+
+type BlueprintsAPIConflictConflictModel struct {
+	Default string      `json:"default" form:"default"`
+	Class   string      `json:"class_" form:"class_"`
+	Enum    KeywordEnum `json:"enum" form:"enum"`
+}
+
+type BlueprintsAltConflictConflictModel struct {
+	Default string      `json:"default" form:"default"`
+	Class   string      `json:"class_" form:"class_"`
+	Enum    KeywordEnum `json:"enum" form:"enum"`
 }

@@ -21,5 +21,6 @@ __pycache__/
 .codex
 .claude
 .plans
+examples/flutter/.dart_tool/
 *.pyi
 !examples/grpc/python/**/*.pyi

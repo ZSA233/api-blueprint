@@ -5,6 +5,7 @@
 import type {
   ApiChannelBridge,
   ApiClientConfig,
+  ApiResponseEnvelope,
   ApiStreamBridge,
   ApiTransport,
   ChannelConnectOptions,
@@ -82,6 +83,87 @@ function buildFormData(data: Record<string, unknown>): FormData {
   return form;
 }
 
+function buildUrlEncoded(data: Record<string, unknown>): URLSearchParams {
+  const params = new URLSearchParams();
+  const append = (key: string, value: unknown) => {
+    if (value === undefined || value === null) {
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((item) => append(key, item));
+      return;
+    }
+    if (typeof value === "object") {
+      params.append(key, JSON.stringify(value));
+      return;
+    }
+    params.append(key, String(value));
+  };
+  Object.entries(data ?? {}).forEach(([key, value]) => append(key, value));
+  return params;
+}
+
+function buildMultipartFormData(data: Record<string, unknown>): FormData {
+  const form = new FormData();
+  const append = (key: string, value: unknown) => {
+    if (value === undefined || value === null) {
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((item) => append(key, item));
+      return;
+    }
+    if (isFilePartObject(value)) {
+      const blob = toBlob(value.blob, value.contentType);
+      if (value.filename) {
+        form.append(key, blob, value.filename);
+      } else {
+        form.append(key, blob);
+      }
+      return;
+    }
+    if (value instanceof Blob) {
+      form.append(key, value);
+      return;
+    }
+    if (typeof File !== "undefined" && value instanceof File) {
+      form.append(key, value);
+      return;
+    }
+    if (value instanceof ArrayBuffer || value instanceof Uint8Array) {
+      form.append(key, toBlob(value));
+      return;
+    }
+    if (typeof value === "object") {
+      form.append(key, JSON.stringify(value));
+      return;
+    }
+    form.append(key, String(value));
+  };
+  Object.entries(data ?? {}).forEach(([key, value]) => append(key, value));
+  return form;
+}
+
+function isFilePartObject(value: unknown): value is { blob: Blob | ArrayBuffer | Uint8Array; filename?: string; contentType?: string } {
+  return value !== null && typeof value === "object" && "blob" in value;
+}
+
+function toBlob(value: Blob | ArrayBuffer | Uint8Array, contentType?: string): Blob {
+  if (value instanceof Blob) {
+    return contentType ? value.slice(0, value.size, contentType) : value;
+  }
+  return new Blob([toBlobPart(value)], contentType ? { type: contentType } : undefined);
+}
+
+function toBlobPart(value: ArrayBuffer | Uint8Array): ArrayBuffer {
+  if (value instanceof ArrayBuffer) {
+    return value;
+  }
+  const copy = new ArrayBuffer(value.byteLength);
+  new Uint8Array(copy).set(value);
+  return copy;
+}
+
 const defaultFetch: typeof fetch = (...args) => fetch(...args);
 
 export class DefaultTransport implements ApiTransport {
@@ -129,6 +211,7 @@ export class DefaultTransport implements ApiTransport {
     query,
     json,
     form,
+    multipart,
     binary,
 
     body: rawBody,
@@ -150,8 +233,11 @@ export class DefaultTransport implements ApiTransport {
     if (json !== undefined) {
       body = JSON.stringify(json);
       headers["Content-Type"] = headers["Content-Type"] ?? "application/json";
+    } else if (multipart !== undefined) {
+      body = buildMultipartFormData(multipart);
     } else if (form !== undefined) {
-      body = buildFormData(form);
+      body = buildUrlEncoded(form);
+      headers["Content-Type"] = headers["Content-Type"] ?? "application/x-www-form-urlencoded";
     } else if (binary !== undefined) {
       body = binaryBodyToUint8Array(binary) as RequestBody;
       headers["Content-Type"] = headers["Content-Type"] ?? binary.contentType;
@@ -210,6 +296,21 @@ export class DefaultTransport implements ApiTransport {
       if (responseType === "text") {
         return (await response.text()) as unknown as R;
       }
+      if (responseType === "blob") {
+        await throwRawApiErrorIfPresent(response, routeId, responseEnvelope);
+        return buildRawResponse(await response.blob(), response) as unknown as R;
+      }
+      if (responseType === "arrayBuffer") {
+        await throwRawApiErrorIfPresent(response, routeId, responseEnvelope);
+        return buildRawResponse(await response.arrayBuffer(), response) as unknown as R;
+      }
+      if (responseType === "binary_schema") {
+        return await response.arrayBuffer() as unknown as R;
+      }
+      if (responseType === "stream") {
+        await throwRawApiErrorIfPresent(response, routeId, responseEnvelope);
+        return buildRawResponse(response.body, response) as unknown as R;
+      }
       if (response.status === 204) {
         return undefined as R;
       }
@@ -248,3 +349,67 @@ export class DefaultTransport implements ApiTransport {
   }
 }
 
+function buildRawResponse<T>(body: T, response: Response) {
+  const disposition = response.headers.get("content-disposition") ?? "";
+  return {
+    body,
+    headers: response.headers,
+    status: response.status,
+    contentType: (response.headers.get("content-type") ?? "").split(";", 1)[0].toLowerCase(),
+    contentDisposition: disposition,
+    filename: filenameFromContentDisposition(disposition),
+  };
+}
+
+async function throwRawApiErrorIfPresent(response: Response, routeId: string, envelope?: ApiResponseEnvelope): Promise<void> {
+  if (!envelope || envelope.kind === "none" || !isJsonResponse(response)) {
+    return;
+  }
+  const parsed = tryParseJson(await response.clone().text());
+  if (!isRecord(parsed)) {
+    return;
+  }
+  if (envelope.kind === "code_message_data") {
+    const codeField = envelope.fields?.code ?? "code";
+    const code = parsed[codeField];
+    if (typeof code !== "number" || code === envelope.success_code) {
+      return;
+    }
+    const errorPayload = extractApiErrorPayload(parsed, envelope) ?? parsed;
+    throw new ApiError(normalizeApiErrorPayload(errorPayload, routeId), { routeId, raw: parsed });
+  }
+  if (envelope.kind === "ok_data_error") {
+    const okField = envelope.fields?.ok ?? "ok";
+    if (parsed[okField] !== false) {
+      return;
+    }
+    const errorPayload = extractApiErrorPayload(parsed, envelope) ?? parsed;
+    throw new ApiError(normalizeApiErrorPayload(errorPayload, routeId), { routeId, raw: parsed });
+  }
+}
+
+function isJsonResponse(response: Response): boolean {
+  const contentType = (response.headers.get("content-type") ?? "").split(";", 1)[0].toLowerCase();
+  return contentType === "application/json" || contentType.endsWith("+json");
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object";
+}
+
+function filenameFromContentDisposition(disposition: string): string | undefined {
+  const parts = disposition.split(";").map((part) => part.trim());
+  for (const part of parts) {
+    if (part.toLowerCase().startsWith("filename*=")) {
+      const value = part.split("=", 2)[1]?.replace(/^"|"$/g, "") ?? "";
+      const encoded = value.includes("''") ? value.split("''", 2)[1] : value;
+      return decodeURIComponent(encoded);
+    }
+  }
+  for (const part of parts) {
+    if (part.toLowerCase().startsWith("filename=")) {
+      return part.split("=", 2)[1]?.replace(/^"|"$/g, "") || undefined;
+    }
+  }
+  return undefined;
+}

@@ -7,7 +7,7 @@ Language: [中文](README.md) | English
 
 ## Overview
 
-`api-blueprint` defines API contracts with a Python DSL, then generates documentation services and multi-language code from the same protocol source of truth. It is built for maintaining HTTP APIs, long-connection messages, binary request bodies, and gRPC proto in one checkable, generatable, regression-friendly workflow.
+`api-blueprint` defines API contracts with a Python DSL, then generates documentation services and multi-language code from the same protocol source of truth. It is built for maintaining HTTP APIs, long-connection messages, binary request / response bodies, media uploads / raw responses, and gRPC proto in one checkable, generatable, regression-friendly workflow.
 
 The core flow is:
 
@@ -17,10 +17,10 @@ Blueprint DSL -> ContractGraph -> api-gen check / inspect / generate -> generate
 
 ## When To Use
 
-- Backend, web, Kotlin, and script clients need to share one API contract.
-- You want to generate a Go server first, then TypeScript, Kotlin, Java, Go, or Python clients, or generate Kotlin/Java/Python server scaffolds.
+- Backend, web, Flutter, Kotlin, and script clients need to share one API contract.
+- You want to generate a Go server first, then TypeScript, Flutter, Kotlin, Java, Go, or Python clients, or generate Kotlin/Java/Python server scaffolds.
 - You need documentation, contract checks, generated snapshots, and end-to-end examples to move together.
-- You need Markdown Binary Schema, Wails, or gRPC in the same generation flow.
+- You need Markdown Binary Schema, typed binary responses, multipart uploads, raw bytes/file/stream responses, Wails, or gRPC in the same generation flow.
 
 ## Installation
 
@@ -33,6 +33,7 @@ uv pip install "git+https://github.com/zsa233/api-blueprint@stable"
 When developing this repository, use:
 
 ```sh
+make
 make sync
 ```
 
@@ -93,14 +94,17 @@ For fuller project layout, config fields, DSL, generator output, typed errors, R
 | Target | Status | Purpose |
 |:---|:---:|:---|
 | Contract / inspect | Available | Emit a contract index and query route, schema, error, or file ownership details |
-| Go server | Available | Generate Go routes, providers, long-connection message helpers, HTTP/Wails adapters, and runtime |
-| TypeScript client | Preview | Generate transport-neutral clients, long-connection message helpers, HTTP adapters, and Wails facades |
-| Kotlin client/server | Preview | Generate OkHttp clients, Ktor server scaffolds, models, long-connection message helpers, binary writers, and HTTP adapters |
-| Java client/server | Preview | Generate Java 17 HttpClient clients, Spring MVC server scaffolds, record DTOs, long-connection message helpers, binary packet helpers, and HTTP adapters |
-| Go / Python client | Preview | Generate non-server clients for scripts, tools, or services, with long-connection message helpers and binary writers |
-| Python server | Preview | Generate FastAPI server scaffolds, service contracts, and long-connection message helpers |
-| Wails v2/v3 | Preview / Experimental | Generate Go + TypeScript overlays for desktop GUIs |
-| gRPC proto / stubs | Available | Emit proto from ContractGraph and generate Go/Python stubs |
+| Go server | Available | Generate Go routes, providers, long-connection message helpers, HTTP/Wails adapters, multipart/raw media, binary schema responses, and runtime |
+| TypeScript client | Preview | Generate transport-neutral clients, long-connection message helpers, HTTP multipart/raw adapters, binary schema response decoding, and Wails facades |
+| Flutter client | Preview | Generate a pure Dart package, DTOs, typed errors, binary codecs, HTTP multipart/raw/binary response clients, and SSE/WebSocket clients |
+| Kotlin client/server | Preview | Generate OkHttp HTTP/SSE/WebSocket clients, Ktor HTTP/SSE/WebSocket server scaffolds, multipart/raw/binary response adapters, models, and long-connection message helpers |
+| Java client/server | Preview | Generate Java 17 HttpClient clients, Spring MVC/SSE/WebSocket server scaffolds, record DTOs, HTTP multipart/raw/binary response adapters, and long-connection message helpers |
+| Go / Python client | Preview | Generate non-server clients for scripts, tools, or services; the Python client uses recursive dataclass DTOs, shared runtime codecs, multipart/raw support, long-connection message helpers, and binary writers/response codecs |
+| Python server | Preview | Generate FastAPI HTTP/SSE/WebSocket server scaffolds, multipart/raw/binary response adapters, typed service contracts, and long-connection message helpers |
+| Wails v2/v3 | Preview / Experimental | Generate Go + TypeScript overlays; file/stream-style capabilities are modeled with Wails RPC descriptors or STREAM/CHANNEL chunks |
+| gRPC proto / stubs | Available | Emit proto from ContractGraph and generate Go/Python stubs; bytes/file/stream-style capabilities are modeled with protobuf bytes or streaming chunks |
+
+See [Generators and output layout](docs/en/generators.md) for generated ownership, per-request options, stream/file paths, server-adapter safety defaults, and production escape hatches. Default adapters are protocol bridges rather than complete production runtimes; production projects should prefer narrow route/client/router entrypoints and use native clients, custom transports, service implementations, middleware, or app shells for auth, rate limits, cookies, TLS/proxy, retry, and file permission policy.
 
 ## Next Steps
 
@@ -114,6 +118,7 @@ For fuller project layout, config fields, DSL, generator output, typed errors, R
 | Wails | [docs/en/wails.md](docs/en/wails.md) |
 | gRPC | [docs/en/grpc.md](docs/en/grpc.md) |
 | Examples validation | [docs/en/examples-validation.md](docs/en/examples-validation.md) |
+| Benchmarks | [docs/en/benchmarks.md](docs/en/benchmarks.md) |
 | Release process | [docs/release-process.md](docs/release-process.md) |
 
 ## Development And Release
@@ -121,11 +126,14 @@ For fuller project layout, config fields, DSL, generator output, typed errors, R
 Common development commands:
 
 ```sh
+make
 make test
 make example-compile-check
 make example-validation
+make example-conformance
+make benchmark-list
 make example-golang-suite
 make example-java-suite
 ```
 
-`example-golang-suite` and `example-java-suite` are manual end-to-end validation aids; they are not part of default tests, release preflight, or CI. See [Release Process](docs/release-process.md) for versioning, build, install, and GitHub Release flow.
+`make example-conformance` starts with a real Go HTTP server by default; use `EXAMPLE_CONFORMANCE_SERVERS`, `EXAMPLE_CONFORMANCE_CLIENTS`, and `EXAMPLE_CONFORMANCE_SCENARIOS` to select the matrix, or set `EXAMPLE_CONFORMANCE_SERVERS=all EXAMPLE_CONFORMANCE_CLIENTS=all` for the full matrix. Benchmarks are opt-in trend tools, not default CI gates; generated client SDK smoke is available alongside binary / protocol benchmarks in [Benchmarks](docs/en/benchmarks.md). `example-golang-suite` and `example-java-suite` remain manual end-to-end validation aids. See [Release Process](docs/release-process.md) for versioning, build, install, and GitHub Release flow.

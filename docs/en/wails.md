@@ -4,6 +4,8 @@
 
 In this repository, the Wails CLI is used to build and package handwritten harnesses such as `examples/wails-harness/{v2,v3}`. It is not an input to the Wails target.
 
+Both Wails v2 and v3 targets are preview surfaces; Wails v3 remains experimental. Generated overlays provide protocol calls, typed errors, provider bridges, and STREAM/CHANNEL keyframes only. Window permissions, filesystem access, native-call cancellation, long-task scheduling, retry, and app lifecycle policy belong to the Wails app shell or Go service implementation.
+
 ## Target Config
 
 ```toml
@@ -27,6 +29,17 @@ frontend_mode = "external"
 - `overlay_name`: defaults to `wailsv3` / `wailsv2` and must be unique.
 - `frontend_mode`: defaults to `external`; `none` skips the Wails TypeScript overlay.
 - `include` / `exclude`: trim the Wails target overlay / facade. Roots with no selected routes do not get `transports/<overlay_name>` output; the shared Go / TypeScript contract layers are still generated in full.
+
+## HTTP Raw Media Boundary
+
+Wails still needs file, bytes, stream, and typed binary packet capabilities, but those capabilities are not expressed with HTTP semantics. `multipart`, `Content-Disposition`, HTTP status/header, MIME download, and HTTP byte stream are HTTP transport contracts; `wails-transport` reports an explicit unsupported error during `api-gen check` when it sees HTTP raw media routes or HTTP binary schema body/response routes, and it does not generate pseudo HTTP responses.
+
+Use Wails-native IPC patterns instead:
+
+- Small bytes or typed binary packets: return serializable payloads from normal RPC, such as base64 strings, number arrays, or a project-owned `Uint8Array` adapter.
+- File downloads: return an app-local file descriptor such as `path`, `filename`, `contentType`, and `size`, then let the Wails app shell handle save/open dialogs and filesystem permissions.
+- Byte streams: reuse `STREAM` / `CHANNEL` and send chunk messages plus close payloads.
+- Large files: prefer app-managed temp files or caches instead of keeping large objects in Wails RPC payloads.
 
 ## Go Output Layout
 
@@ -198,6 +211,8 @@ make wails-hello-compile-check
 `wails-hello-check` is strict and checks snapshot drift; `wails-hello-compile-check` only validates regenerated TypeScript, Go, and Wails v3 build output, which is useful during development.
 
 ## Long-Connection Bridge
+
+Wails TypeScript RPC route methods use the same per-call request options shape as the generated TypeScript client surface. `headers` are carried in the Wails invoke envelope so the Go overlay can expose them through generated request context. `timeoutMs` only limits how long the frontend promise waits; it rejects locally when exceeded and does not cancel a native Wails call already running in Go.
 
 Wails TypeScript does not expose raw WebSocket and does not require business code to hand-write runtime event names. In the default Wails transport, `STREAM` / `CHANNEL` map to session-scoped runtime events, and event names exist only inside the generated Go runtime and generated TypeScript transport. Connection setup uses a client-allocated `session_id`: the generated TypeScript bridge computes deterministic per-session event names, subscribes first, and then sends the connect RPC so ordered delivery cannot miss `seq=1`. The generated service still exposes a lightweight `ConnectionHub` replacement point; custom hubs receive `Open(ConnectionOpenSpec)` and must return a descriptor that preserves the generated event naming contract. The default hub fully supports only `ConnectionScope.SESSION`, and `APP` / `TOPIC` broadcast or topic routing policy still belongs in a custom hub.
 

@@ -4,7 +4,7 @@
 
 import type * as Types from "./types";
 import type * as Shared from "../../../runtime/types";
-import { ApiChannelBridge, ApiClientConfig, ApiStreamBridge, BaseClient } from "../../../runtime/client";
+import { ApiChannelBridge, ApiClientConfig, ApiRequestOptions, ApiStreamBridge, BaseClient } from "../../../runtime/client";
 
 export class DemoClient extends BaseClient {
   constructor(config: ApiClientConfig = {}) {
@@ -20,10 +20,8 @@ export class DemoClient extends BaseClient {
   async abc(
     request: {
       query?: Types.AbcQuery;
-      headers?: Record<string, string>;
     } = {},
-    init: RequestInit = {},
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<Types.AbcResponse> {
     return this.request<Types.AbcResponse>({
       routeId: "api.demo.get.abc",
@@ -33,11 +31,11 @@ export class DemoClient extends BaseClient {
       operation: "Abc",
       namespace: "demo",
       query: request.query as unknown as Record<string, unknown> | undefined,
-      headers: request.headers,
-      init,
+      headers: options?.headers,
+      init: options?.init,
       responseType: "json",
       responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
     });
   }
 
@@ -51,10 +49,8 @@ export class DemoClient extends BaseClient {
     request: {
       json?: Types.TestPostJSON;
       body?: RequestInit["body"];
-      headers?: Record<string, string>;
     } = {},
-    init: RequestInit = {},
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<Types.TestPostResponse> {
     return this.request<Types.TestPostResponse>({
       routeId: "api.demo.post.testpost",
@@ -65,11 +61,69 @@ export class DemoClient extends BaseClient {
       namespace: "demo",
       json: request.json,
       body: request.body,
-      headers: request.headers,
-      init,
+      headers: options?.headers,
+      init: options?.init,
       responseType: "json",
       responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
+    });
+  }
+
+  /**
+   * Form body example
+   * Covers application/x-www-form-urlencoded request generation
+   * Tags: api
+   */
+
+  async formSubmit(
+    request: {
+      form?: Types.FormSubmitForm;
+      body?: RequestInit["body"];
+    } = {},
+    options?: ApiRequestOptions,
+  ): Promise<Types.FormSubmitResponse> {
+    return this.request<Types.FormSubmitResponse>({
+      routeId: "api.demo.post.formsubmit",
+      method: "POST",
+      path: "/api/demo/form-submit",
+      service: "DemoService",
+      operation: "FormSubmit",
+      namespace: "demo",
+      form: request.form as unknown as Record<string, unknown> | undefined,
+      body: request.body,
+      headers: options?.headers,
+      init: options?.init,
+      responseType: "json",
+      responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+      timeoutMs: options?.timeoutMs,
+    });
+  }
+
+  /**
+   * Request options conformance endpoint
+   * Used by generated clients to verify per-call headers and timeout behavior.
+   * Tags: api
+   */
+
+  async requestOptions(
+    request: {
+      query?: Types.RequestOptionsQuery;
+    } = {},
+    options?: ApiRequestOptions,
+  ): Promise<Shared.RequestOptionsResponse> {
+    return this.request<Shared.RequestOptionsResponse>({
+      routeId: "api.demo.get.requestoptions",
+      method: "GET",
+      path: "/api/demo/request-options",
+      service: "DemoService",
+      operation: "RequestOptions",
+      namespace: "demo",
+      query: request.query as unknown as Record<string, unknown> | undefined,
+      headers: options?.headers,
+      init: options?.init,
+      responseType: "json",
+      responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+      timeoutMs: options?.timeoutMs,
     });
   }
 
@@ -84,10 +138,8 @@ export class DemoClient extends BaseClient {
       query?: Types.PutDemoQuery;
       json?: Types.PutDemoJSON;
       body?: RequestInit["body"];
-      headers?: Record<string, string>;
     } = {},
-    init: RequestInit = {},
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<Types.PutDemoResponse> {
     return this.request<Types.PutDemoResponse>({
       routeId: "api.demo.put.z1put",
@@ -99,11 +151,11 @@ export class DemoClient extends BaseClient {
       query: request.query as unknown as Record<string, unknown> | undefined,
       json: request.json,
       body: request.body,
-      headers: request.headers,
-      init,
+      headers: options?.headers,
+      init: options?.init,
       responseType: "json",
       responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
     });
   }
 
@@ -116,10 +168,8 @@ export class DemoClient extends BaseClient {
   async delete(
     request: {
       query?: Types.DeleteQuery;
-      headers?: Record<string, string>;
     } = {},
-    init: RequestInit = {},
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<Types.DeleteResponse> {
     return this.request<Types.DeleteResponse>({
       routeId: "api.demo.delete.delete",
@@ -129,11 +179,11 @@ export class DemoClient extends BaseClient {
       operation: "Delete",
       namespace: "demo",
       query: request.query as unknown as Record<string, unknown> | undefined,
-      headers: request.headers,
-      init,
+      headers: options?.headers,
+      init: options?.init,
       responseType: "text",
       responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
     });
   }
 
@@ -204,10 +254,8 @@ export class DemoClient extends BaseClient {
     request: {
       json?: Types.PostDeprecatedJSON;
       body?: RequestInit["body"];
-      headers?: Record<string, string>;
     } = {},
-    init: RequestInit = {},
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<Types.PostDeprecatedResponse> {
     return this.request<Types.PostDeprecatedResponse>({
       routeId: "api.demo.post.postdeprecated",
@@ -218,11 +266,11 @@ export class DemoClient extends BaseClient {
       namespace: "demo",
       json: request.json,
       body: request.body,
-      headers: request.headers,
-      init,
+      headers: options?.headers,
+      init: options?.init,
       responseType: "json",
       responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
     });
   }
 
@@ -233,11 +281,8 @@ export class DemoClient extends BaseClient {
    */
 
   async raw(
-    request: {
-      headers?: Record<string, string>;
-    } = {},
-    init: RequestInit = {},
-    timeoutMs?: number,
+    request: {} = {},
+    options?: ApiRequestOptions,
   ): Promise<Types.RawResponse> {
     return this.request<Types.RawResponse>({
       routeId: "api.demo.post.raw",
@@ -246,11 +291,11 @@ export class DemoClient extends BaseClient {
       service: "DemoService",
       operation: "Raw",
       namespace: "demo",
-      headers: request.headers,
-      init,
+      headers: options?.headers,
+      init: options?.init,
       responseType: "json",
       responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
     });
   }
 
@@ -261,11 +306,8 @@ export class DemoClient extends BaseClient {
    */
 
   async mapModel(
-    request: {
-      headers?: Record<string, string>;
-    } = {},
-    init: RequestInit = {},
-    timeoutMs?: number,
+    request: {} = {},
+    options?: ApiRequestOptions,
   ): Promise<Types.MapModelResponse> {
     return this.request<Types.MapModelResponse>({
       routeId: "api.demo.post.mapmodel",
@@ -274,11 +316,11 @@ export class DemoClient extends BaseClient {
       service: "DemoService",
       operation: "MapModel",
       namespace: "demo",
-      headers: request.headers,
-      init,
+      headers: options?.headers,
+      init: options?.init,
       responseType: "json",
       responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
     });
   }
 
@@ -291,10 +333,8 @@ export class DemoClient extends BaseClient {
   async errorDemo(
     request: {
       query?: Types.ErrorDemoQuery;
-      headers?: Record<string, string>;
     } = {},
-    init: RequestInit = {},
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<Types.ErrorDemoResponse> {
     return this.request<Types.ErrorDemoResponse>({
       routeId: "api.demo.get.errordemo",
@@ -304,11 +344,11 @@ export class DemoClient extends BaseClient {
       operation: "ErrorDemo",
       namespace: "demo",
       query: request.query as unknown as Record<string, unknown> | undefined,
-      headers: request.headers,
-      init,
+      headers: options?.headers,
+      init: options?.init,
       responseType: "json",
       responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
     });
   }
 

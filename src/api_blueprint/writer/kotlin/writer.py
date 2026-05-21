@@ -20,6 +20,7 @@ from api_blueprint.writer.core.errors import (
 from api_blueprint.writer.core.files import ensure_filepath_open
 from api_blueprint.writer.core.templates import render
 
+from .binary_schema import compact_kotlin_binary_source
 from .blueprint import KotlinBlueprint
 from .naming import to_package_path
 from .planner import build_kotlin_blueprint_plan
@@ -165,7 +166,7 @@ class KotlinBaseWriter(BaseWriter[KotlinBlueprint]):
         with self.write_file(plan.runtime.binary_runtime_file, overwrite=True) as handle:
             if handle:
                 handle.write(self.generated_header)
-                handle.write(render("kotlin", "BinaryRuntime.kt", context, "runtime/binary"))
+                handle.write(render("kotlin", "GenBinaryRuntime.kt", context, "runtime/binary"))
 
         if self.client_mode:
             for output_name, template_name in plan.http_transport.generated_files:
@@ -182,7 +183,7 @@ class KotlinBaseWriter(BaseWriter[KotlinBlueprint]):
         with self.write_file(plan.runtime.types_file, overwrite=True) as handle:
             if handle:
                 handle.write(self.generated_header)
-                handle.write(render("kotlin", "Types.kt", {**context, "protos": plan.runtime.shared_protos}, "runtime"))
+                handle.write(render("kotlin", "GenApiTypes.kt", {**context, "protos": plan.runtime.shared_protos}, "runtime"))
 
         for route_group in plan.route_groups:
             route_group.directory.mkdir(parents=True, exist_ok=True)
@@ -196,13 +197,16 @@ class KotlinBaseWriter(BaseWriter[KotlinBlueprint]):
             with self.write_file(route_group.types_file, overwrite=True) as handle:
                 if handle:
                     handle.write(self.generated_header)
-                    handle.write(render("kotlin", "Types.kt", group_models_context, "routes"))
+                    route_types_text = render("kotlin", "GenTypes.kt", group_models_context, "routes")
+                    if group_models_context["binary_schemas"]:
+                        route_types_text = compact_kotlin_binary_source(route_types_text)
+                    handle.write(route_types_text)
 
             if self.client_mode:
                 with self.write_file(route_group.client_file, overwrite=True) as handle:
                     if handle:
                         handle.write(self.generated_header)
-                        handle.write(render("kotlin", "ApiGroup.kt", {**context, "group": route_group.group}, "routes"))
+                        handle.write(render("kotlin", "GenApiGroup.kt", {**context, "group": route_group.group}, "routes"))
 
                 with self.write_file(route_group.facade_file, overwrite=False) as handle:
                     if handle:
@@ -212,7 +216,7 @@ class KotlinBaseWriter(BaseWriter[KotlinBlueprint]):
                 server_context = {**context, "group": route_group.group}
                 for output_file, template_name in (
                     (route_group.service_file, "GenApiService.kt"),
-                    (route_group.service_stub_file, "ApiServiceStub.kt"),
+                    (route_group.service_stub_file, "GenApiServiceStub.kt"),
                 ):
                     with self.write_file(output_file, overwrite=True) as handle:
                         if handle:
@@ -240,7 +244,11 @@ class KotlinBaseWriter(BaseWriter[KotlinBlueprint]):
         for stale_file in (
             plan.runtime.directory / "ApiConfig.kt",
             plan.runtime.directory / "ApiException.kt",
+            plan.runtime.directory / "ApiJson.kt",
+            plan.runtime.directory / "ApiServerContext.kt",
+            plan.runtime.directory / "ApiServerResponse.kt",
             plan.runtime.directory / "ApiTransport.kt",
+            plan.runtime.directory / "ApiTypes.kt",
             plan.runtime.directory / "GenApiErrorCatalog.kt",
             plan.runtime.directory / "GenModels.kt",
             plan.runtime.directory / "Models.kt",
@@ -275,6 +283,10 @@ class KotlinBaseWriter(BaseWriter[KotlinBlueprint]):
             self._unlink_generated_file(stale_file)
         stale_models_file = directory / f"{route_group.group.class_name.removesuffix('Api')}Models.kt"
         self._unlink_generated_file(stale_models_file)
+        legacy_types_file = directory / f"{route_group.group.class_name.removesuffix('Api')}Types.kt"
+        self._unlink_generated_file(legacy_types_file)
+        legacy_service_stub_file = directory / f"{route_group.group.class_name.removesuffix('Api')}ServiceStub.kt"
+        self._unlink_generated_file(legacy_service_stub_file)
 
     def _unlink_generated_file(self, path: Path) -> None:
         if not path.exists():
@@ -311,14 +323,31 @@ class KotlinBaseWriter(BaseWriter[KotlinBlueprint]):
 
     def server_route_params(self, route: "KotlinRoute") -> list[tuple[str, str]]:
         params: list[tuple[str, str]] = []
+        if route.supports_stream:
+            if route.open_type:
+                params.append((route.open_type, "openData"))
+            params.append((f"ApiServerStream<{route.server_message_type}, {route.close_type}>", "stream"))
+            return params
+        if route.supports_channel:
+            if route.open_type:
+                params.append((route.open_type, "openData"))
+            params.append(
+                (
+                    f"ApiServerChannel<{route.client_message_type}, {route.server_message_type}, {route.close_type}>",
+                    "channel",
+                )
+            )
+            return params
         if route.query_type:
             params.append((route.query_type, "query"))
         if route.json_type:
             params.append((route.json_type, "json"))
         if route.form_type:
             params.append((route.form_type, "form"))
+        if route.multipart_type:
+            params.append((route.multipart_type, "multipart"))
         if route.has_binary_schema:
-            params.append(("ApiBinaryBody", "binaryBody"))
+            params.append((route.binary_type or "ApiBinaryBody", "binary"))
         elif route.binary_type:
             params.append(("ByteArray", "binaryBody"))
         if route.open_type:
@@ -326,7 +355,7 @@ class KotlinBaseWriter(BaseWriter[KotlinBlueprint]):
         return params
 
     def server_response_type(self, route: "KotlinRoute") -> str:
-        return route.response_type.text if route.is_rpc else "Any"
+        return route.response_type.text if route.is_rpc else "Unit"
 
     def route_kind(self, route: "KotlinRoute") -> str:
         if route.supports_channel:

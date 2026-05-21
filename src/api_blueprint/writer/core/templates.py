@@ -78,9 +78,16 @@ def iter_render(
 
 
 def normalize_generated_source(lang: str, text: str) -> str:
-    if lang not in {"java", "kotlin", "typescript"}:
+    if lang not in {"flutter", "java", "kotlin", "typescript"}:
         return text
-    return _collapse_blank_line_runs(text, max_blank_lines=1)
+    return _strip_trailing_blank_lines(_collapse_blank_line_runs(text, max_blank_lines=1))
+
+
+def _strip_trailing_blank_lines(text: str) -> str:
+    stripped = text.rstrip()
+    if not stripped:
+        return ""
+    return stripped + "\n"
 
 
 def _collapse_blank_line_runs(text: str, *, max_blank_lines: int) -> str:

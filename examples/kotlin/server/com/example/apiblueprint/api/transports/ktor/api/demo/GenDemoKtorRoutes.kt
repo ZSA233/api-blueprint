@@ -3,36 +3,65 @@ package com.example.apiblueprint.api.transports.ktor.api.demo
 
 import com.example.apiblueprint.api.routes.api.demo.*
 import com.example.apiblueprint.api.runtime.*
-
+import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody
+import com.example.apiblueprint.api.runtime.binary.toByteArray
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Parameters
+import io.ktor.http.content.PartData
+import io.ktor.http.content.forEachPart
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.receive
+import io.ktor.server.request.receiveMultipart
 import io.ktor.server.request.receiveParameters
 import io.ktor.server.request.receiveText
+import io.ktor.server.response.respondBytes
+import io.ktor.server.response.respondOutputStream
 import io.ktor.server.response.respondText
+import io.ktor.server.response.respondTextWriter
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.patch
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
+import io.ktor.server.websocket.DefaultWebSocketServerSession
+import io.ktor.server.websocket.webSocket
+import io.ktor.websocket.CloseReason
+import io.ktor.websocket.Frame
+import io.ktor.websocket.close
+import io.ktor.websocket.readText
+import kotlinx.coroutines.channels.ClosedReceiveChannelException
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.*
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import io.ktor.utils.io.readAvailable
+import java.nio.file.Files
+import java.io.Writer
 
 public fun Route.registerDemoRoutes(
     service: GenDemoService = DemoServiceStub(),
+    config: ApiServerConfig = ApiServerConfig(),
 ) {
 
     get("/api/demo/abc") {
-        val query = decodeParameters(call.request.queryParameters, DemoAbcQuery.serializer())
+        val query = try {
+            decodeParameters(call.request.queryParameters, DemoAbcQuery.serializer())
+        } catch (_: SerializationException) {
+            respondBadRequest(call)
+            return@get
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@get
+        }
         try {
             val result = service.abc(
                 query = query
@@ -44,7 +73,15 @@ public fun Route.registerDemoRoutes(
     }
 
     post("/api/demo/test_post") {
-        val json = ApiJson.decodeFromString(DemoTestPostJson.serializer(), call.receiveText().ifBlank { "{}" })
+        val json = try {
+            ApiJson.decodeFromString(DemoTestPostJson.serializer(), call.receiveText().ifBlank { "{}" })
+        } catch (_: SerializationException) {
+            respondBadRequest(call)
+            return@post
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@post
+        }
         try {
             val result = service.testPost(
                 json = json
@@ -55,9 +92,65 @@ public fun Route.registerDemoRoutes(
         }
     }
 
+    post("/api/demo/form-submit") {
+        val form = try {
+            decodeParameters(call.receiveParameters(), DemoFormSubmitForm.serializer())
+        } catch (_: SerializationException) {
+            respondBadRequest(call)
+            return@post
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@post
+        }
+        try {
+            val result = service.formSubmit(
+                form = form
+            )
+            respondSuccess(call, result, DemoFormSubmitResponse.serializer(), ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "application/json")
+        } catch (error: ApiError) {
+            respondApiError(call, error, ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "api.demo.post.formsubmit")
+        }
+    }
+
+    get("/api/demo/request-options") {
+        val query = try {
+            decodeParameters(call.request.queryParameters, DemoRequestOptionsQuery.serializer())
+        } catch (_: SerializationException) {
+            respondBadRequest(call)
+            return@get
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@get
+        }
+        try {
+            val result = service.requestOptions(
+                query = query
+            )
+            respondSuccess(call, result, RequestOptionsResponse.serializer(), ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "application/json")
+        } catch (error: ApiError) {
+            respondApiError(call, error, ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "api.demo.get.requestoptions")
+        }
+    }
+
     put("/api/demo/1put") {
-        val query = decodeParameters(call.request.queryParameters, DemoPutDemoQuery.serializer())
-        val json = ApiJson.decodeFromString(DemoPutDemoJson.serializer(), call.receiveText().ifBlank { "{}" })
+        val query = try {
+            decodeParameters(call.request.queryParameters, DemoPutDemoQuery.serializer())
+        } catch (_: SerializationException) {
+            respondBadRequest(call)
+            return@put
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@put
+        }
+        val json = try {
+            ApiJson.decodeFromString(DemoPutDemoJson.serializer(), call.receiveText().ifBlank { "{}" })
+        } catch (_: SerializationException) {
+            respondBadRequest(call)
+            return@put
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@put
+        }
         try {
             val result = service.putDemo(
                 query = query,
@@ -70,7 +163,15 @@ public fun Route.registerDemoRoutes(
     }
 
     delete("/api/demo/delete$") {
-        val query = decodeParameters(call.request.queryParameters, DemoDeleteQuery.serializer())
+        val query = try {
+            decodeParameters(call.request.queryParameters, DemoDeleteQuery.serializer())
+        } catch (_: SerializationException) {
+            respondBadRequest(call)
+            return@delete
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@delete
+        }
         try {
             val result = service.delete(
                 query = query
@@ -82,21 +183,49 @@ public fun Route.registerDemoRoutes(
     }
 
     get("/api/demo/sweep-events") {
-        call.respondText(
-            "stream route is not implemented by the generated Ktor adapter",
-            status = HttpStatusCode.NotImplemented,
-        )
+        val openData = decodeParameters(call.request.queryParameters, SweepOpen.serializer())
+        call.respondTextWriter(contentType = ContentType.Text.EventStream) {
+            val stream = KtorEventStream(
+                writer = this,
+                messageSerializer = SweepStreamMessage.serializer(),
+                closeSerializer = ConnectionClose.serializer(),
+            )
+            try {
+                service.sweepEvents(
+                    openData = openData,
+                    stream = stream
+                )
+            } catch (error: Throwable) {
+                stream.abort(reason = error.message ?: error.toString())
+            }
+        }
     }
 
-    get("/api/demo/assistant-session") {
-        call.respondText(
-            "channel route is not implemented by the generated Ktor adapter",
-            status = HttpStatusCode.NotImplemented,
+    webSocket("/api/demo/assistant-session") {
+        val openData = decodeParameters(call.request.queryParameters, AssistantOpen.serializer())
+        val channel = KtorWebSocketChannel(
+            session = this,
+            clientMessageSerializer = AssistantClientMessage.serializer(),
+            serverMessageSerializer = AssistantServerMessage.serializer(),
+            closeSerializer = ConnectionClose.serializer(),
+            config = config,
+        )
+        service.assistantSession(
+            openData = openData,
+            channel = channel
         )
     }
 
     post("/api/demo/post_deprecated") {
-        val json = ApiJson.decodeFromString(DemoPostDeprecatedJson.serializer(), call.receiveText().ifBlank { "{}" })
+        val json = try {
+            ApiJson.decodeFromString(DemoPostDeprecatedJson.serializer(), call.receiveText().ifBlank { "{}" })
+        } catch (_: SerializationException) {
+            respondBadRequest(call)
+            return@post
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@post
+        }
         try {
             val result = service.postDeprecated(
                 json = json
@@ -128,7 +257,15 @@ public fun Route.registerDemoRoutes(
     }
 
     get("/api/demo/error-demo") {
-        val query = decodeParameters(call.request.queryParameters, DemoErrorDemoQuery.serializer())
+        val query = try {
+            decodeParameters(call.request.queryParameters, DemoErrorDemoQuery.serializer())
+        } catch (_: SerializationException) {
+            respondBadRequest(call)
+            return@get
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@get
+        }
         try {
             val result = service.errorDemo(
                 query = query
@@ -141,6 +278,122 @@ public fun Route.registerDemoRoutes(
 
 }
 
+private class KtorEventStream<Message, Close>(
+    private val writer: Writer,
+    private val messageSerializer: KSerializer<Message>,
+    private val closeSerializer: KSerializer<Close>,
+) : ApiServerStream<Message, Close> {
+    private var closed = false
+
+    override suspend fun send(message: Message) {
+        if (closed) {
+            return
+        }
+        writer.write("data: ")
+        writer.write(ApiJson.encodeToString(messageSerializer, message))
+        writer.write("\n\n")
+        writer.flush()
+    }
+
+    override suspend fun close(close: Close) {
+        if (closed) {
+            return
+        }
+        closed = true
+        writer.write("event: close\n")
+        writer.write("data: ")
+        writer.write(ApiJson.encodeToString(closeSerializer, close))
+        writer.write("\n\n")
+        writer.flush()
+    }
+
+    override suspend fun abort(code: Int, reason: String?) {
+        if (closed) {
+            return
+        }
+        closed = true
+        writer.write("event: close\n")
+        writer.write("data: ")
+        writer.write(closePayload(code = code, reason = reason).toString())
+        writer.write("\n\n")
+        writer.flush()
+    }
+}
+
+private class KtorWebSocketChannel<Recv, Send, Close>(
+    private val session: DefaultWebSocketServerSession,
+    private val clientMessageSerializer: KSerializer<Recv>,
+    private val serverMessageSerializer: KSerializer<Send>,
+    private val closeSerializer: KSerializer<Close>,
+    private val config: ApiServerConfig,
+) : ApiServerChannel<Recv, Send, Close> {
+    private var closed = false
+
+    override suspend fun receive(): Recv? {
+        return try {
+            while (true) {
+                val frame = session.incoming.receive()
+                if (frame is Frame.Text) {
+                    val payload = frame.readText()
+                    if (payload.toByteArray(Charsets.UTF_8).size.toLong() > config.websocketMessageMaxBytes) {
+                        abort(code = 1009, reason = "WebSocket message exceeds configured limit")
+                        return null
+                    }
+                    return try {
+                        ApiJson.decodeFromString(clientMessageSerializer, payload)
+                    } catch (_: SerializationException) {
+                        abort(code = 1003, reason = "invalid WebSocket message")
+                        null
+                    } catch (_: IllegalArgumentException) {
+                        abort(code = 1003, reason = "invalid WebSocket message")
+                        null
+                    }
+                }
+            }
+            null
+        } catch (_: ClosedReceiveChannelException) {
+            null
+        }
+    }
+
+    override suspend fun send(message: Send) {
+        if (closed) {
+            return
+        }
+        val body = buildJsonObject {
+            put("type", JsonPrimitive("message"))
+            put("data", ApiJson.encodeToJsonElement(serverMessageSerializer, message))
+        }.toString()
+        session.send(Frame.Text(body))
+    }
+
+    override suspend fun close(close: Close) {
+        if (closed) {
+            return
+        }
+        closed = true
+        val body = buildJsonObject {
+            put("type", JsonPrimitive("close"))
+            put("data", ApiJson.encodeToJsonElement(closeSerializer, close))
+        }.toString()
+        session.send(Frame.Text(body))
+        session.close(CloseReason(CloseReason.Codes.NORMAL, ""))
+    }
+
+    override suspend fun abort(code: Int, reason: String?) {
+        if (closed) {
+            return
+        }
+        closed = true
+        val body = buildJsonObject {
+            put("type", JsonPrimitive("close"))
+            put("data", closePayload(code = code, reason = reason))
+        }.toString()
+        session.send(Frame.Text(body))
+        session.close(CloseReason(CloseReason.Codes.INTERNAL_ERROR, reason.orEmpty()))
+    }
+}
+
 private fun <T> decodeParameters(parameters: Parameters, serializer: KSerializer<T>): T {
     val element = buildJsonObject {
         parameters.entries().forEach { entry ->
@@ -151,6 +404,164 @@ private fun <T> decodeParameters(parameters: Parameters, serializer: KSerializer
     }
     return ApiJson.decodeFromJsonElement(serializer, element)
 }
+
+private suspend fun <T> decodeMultipart(call: ApplicationCall, serializer: KSerializer<T>, config: ApiServerConfig): T {
+    val fields = linkedMapOf<String, JsonElement>()
+    call.receiveMultipart().forEachPart { part ->
+        when (part) {
+            is PartData.FormItem -> {
+                part.name?.let { fields[it] = JsonPrimitive(part.value) }
+            }
+            is PartData.FileItem -> {
+                val name = part.name
+                if (name != null) {
+                    val path = receiveFilePart(part, config)
+                    fields[name] = buildJsonObject {
+                        put("filename", JsonPrimitive(part.originalFileName.orEmpty()))
+                        put("contentType", JsonPrimitive(part.contentType?.toString() ?: "application/octet-stream"))
+                        put("path", JsonPrimitive(path))
+                    }
+                }
+            }
+            else -> Unit
+        }
+        part.dispose()
+    }
+    return ApiJson.decodeFromJsonElement(serializer, JsonObject(fields))
+}
+
+private suspend fun receiveLimitedBytes(call: ApplicationCall, maxBytes: Long): ByteArray {
+    val contentLength = call.request.headers[HttpHeaders.ContentLength]?.toLongOrNull()
+    if (maxBytes > 0 && contentLength != null && contentLength > maxBytes) {
+        throw ApiPayloadTooLargeException()
+    }
+    val bytes = call.receive<ByteArray>()
+    if (maxBytes > 0 && bytes.size.toLong() > maxBytes) {
+        throw ApiPayloadTooLargeException()
+    }
+    return bytes
+}
+
+private suspend fun receiveFilePart(part: PartData.FileItem, config: ApiServerConfig): String {
+    val temp = Files.createTempFile("api-blueprint-upload-", ".bin")
+    var total = 0L
+    try {
+        Files.newOutputStream(temp).use { output ->
+            val channel = part.provider()
+            val buffer = ByteArray(8192)
+            while (true) {
+                val read = channel.readAvailable(buffer, 0, buffer.size)
+                if (read < 0) {
+                    break
+                }
+                if (read == 0) {
+                    continue
+                }
+                total += read.toLong()
+                if (config.multipartSingleFileMaxBytes > 0 && total > config.multipartSingleFileMaxBytes) {
+                    throw ApiPayloadTooLargeException()
+                }
+                output.write(buffer, 0, read)
+            }
+        }
+        return temp.toString()
+    } catch (error: Throwable) {
+        Files.deleteIfExists(temp)
+        throw error
+    }
+}
+
+private suspend fun respondRawBytes(call: ApplicationCall, bytes: ByteArray, mediaType: String) {
+    call.respondBytes(bytes, contentType = contentType(mediaType))
+}
+
+private suspend fun respondRaw(call: ApplicationCall, result: Any?, kind: String, mediaType: String, filename: String) {
+    if (result is ApiStreamResponse) {
+        respondStream(call, result, kind, filename)
+        return
+    }
+    if (kind == "byte_stream") {
+        respondStream(call, streamRawResponse(result, mediaType), kind, filename)
+        return
+    }
+    val response = when (result) {
+        is ApiRawResponse -> result
+        is ApiBinaryBody -> ApiRawResponse(result.toByteArray(), result.contentType, filename)
+        is ByteArray -> ApiRawResponse(result, mediaType, filename)
+        is String -> ApiRawResponse(result.toByteArray(Charsets.UTF_8), mediaType, filename)
+        null -> ApiRawResponse(ByteArray(0), mediaType, filename)
+        else -> ApiRawResponse(result.toString().toByteArray(Charsets.UTF_8), mediaType, filename)
+    }
+    response.headers.forEach { (key, value) -> call.response.headers.append(key, value) }
+    val effectiveFilename = response.filename.ifBlank { filename }
+    if (kind == "file" && effectiveFilename.isNotBlank()) {
+        call.response.headers.append(HttpHeaders.ContentDisposition, contentDispositionAttachment(effectiveFilename))
+    }
+    call.respondBytes(response.body, contentType = contentType(response.contentType))
+}
+
+private fun streamRawResponse(result: Any?, mediaType: String): ApiStreamResponse =
+    when (result) {
+        is ApiRawResponse -> ApiStreamResponse(result.body, result.contentType, result.headers)
+        is ApiBinaryBody -> ApiStreamResponse(result.toByteArray(), result.contentType)
+        is ByteArray -> ApiStreamResponse(result, mediaType)
+        is String -> ApiStreamResponse(result.toByteArray(Charsets.UTF_8), mediaType)
+        null -> ApiStreamResponse(ByteArray(0), mediaType)
+        else -> ApiStreamResponse(result.toString().toByteArray(Charsets.UTF_8), mediaType)
+    }
+
+private suspend fun respondStream(
+    call: ApplicationCall,
+    response: ApiStreamResponse,
+    kind: String,
+    filename: String,
+) {
+    response.headers.forEach { (key, value) -> call.response.headers.append(key, value) }
+    if (kind == "file" && filename.isNotBlank()) {
+        call.response.headers.append(HttpHeaders.ContentDisposition, contentDispositionAttachment(filename))
+    }
+    call.respondOutputStream(contentType = contentType(response.contentType)) {
+        response.use { stream ->
+            val buffer = ByteArray(8192)
+            while (true) {
+                val read = stream.body.read(buffer)
+                if (read < 0) {
+                    break
+                }
+                write(buffer, 0, read)
+                flush()
+            }
+        }
+    }
+}
+
+private fun contentDispositionAttachment(filename: String): String =
+    "attachment; filename=\"${asciiFilenameFallback(filename)}\"; filename*=UTF-8''${percentEncodeUtf8(filename)}"
+
+private fun asciiFilenameFallback(filename: String): String =
+    filename
+        .map { char ->
+            if (char.code in 0x20..0x7E && char != '"' && char != '\\' && char != ';') char else '_'
+        }
+        .joinToString("")
+        .ifBlank { "download" }
+
+private fun percentEncodeUtf8(value: String): String =
+    value.toByteArray(Charsets.UTF_8).joinToString("") { byte ->
+        val code = byte.toInt() and 0xFF
+        if (
+            code in 'a'.code..'z'.code ||
+            code in 'A'.code..'Z'.code ||
+            code in '0'.code..'9'.code ||
+            code == '-'.code ||
+            code == '.'.code ||
+            code == '_'.code
+        ) {
+            code.toChar().toString()
+        } else {
+            "%%%02X".format(code)
+        }
+    }
 
 private suspend fun <T> respondSuccess(
     call: ApplicationCall,
@@ -208,6 +619,24 @@ private suspend fun respondApiError(
     call.respondText(body, contentType = ContentType.Application.Json, status = status)
 }
 
+private suspend fun respondBadRequest(call: ApplicationCall) {
+    call.respondText(
+        "{\"detail\":\"invalid request\"}",
+        contentType = ContentType.Application.Json,
+        status = HttpStatusCode.BadRequest,
+    )
+}
+
+private suspend fun respondPayloadTooLarge(call: ApplicationCall) {
+    call.respondText(
+        "{\"detail\":\"payload too large\"}",
+        contentType = ContentType.Application.Json,
+        status = HttpStatusCode.PayloadTooLarge,
+    )
+}
+
+private class ApiPayloadTooLargeException : IllegalArgumentException("payload too large")
+
 private fun encodeErrorBody(payload: ApiErrorPayload, envelope: ApiResponseEnvelope): String {
     val payloadElement = ApiJson.encodeToJsonElement(ApiErrorPayload.serializer(), payload)
     if (envelope.kind == "code_message_data") {
@@ -248,6 +677,16 @@ private fun normalizeApiErrorPayload(payload: ApiErrorPayload, routeId: String):
         ),
     )
 }
+
+private fun closePayload(code: Int? = null, reason: String? = null): JsonElement =
+    buildJsonObject {
+        if (code != null) {
+            put("code", JsonPrimitive(code))
+        }
+        if (reason != null) {
+            put("reason", JsonPrimitive(reason))
+        }
+    }
 
 private fun contentType(mediaType: String): ContentType =
     if (mediaType == "application/json") ContentType.Application.Json else ContentType.parse(mediaType)

@@ -4,12 +4,15 @@ from dataclasses import dataclass
 
 from {{ runtime_import_prefix }}runtime.binary import (
     ApiBinaryBody,
+    BinaryDecodeError,
     BinaryEncodeError,
+    BinaryReader,
     BinaryWriter,
     EncodedBinaryBlock,
     StreamingBinaryBody,
     is_api_binary_body,
     require_binary,
+    require_binary_decode,
     require_range,
     require_size,
     wrap_binary_field,
@@ -98,6 +101,72 @@ from {{ runtime_import_prefix }}runtime.binary import (
 {% endif %}
 {%- endmacro %}
 
+{% macro check_decoded_field(field, receiver, number_expr, path) -%}
+{% if field.rule.get("const") %}
+{% if field.is_bytes or field.is_string or field.wire_type == "bool" %}
+    require_binary_decode({{ path | code_literal }}, {{ receiver }} == {{ field.const_expr }}, "const mismatch")
+{% else %}
+    require_binary_decode({{ path | code_literal }}, int({{ receiver }}) == int({{ field.const_expr }}), "const mismatch")
+{% endif %}
+{% endif %}
+{% if field.rule.get("min") and field.is_integer_scalar %}
+    require_binary_decode({{ path | code_literal }}, int({{ receiver }}) >= int({{ field.min_expr }}), "below min")
+{% endif %}
+{% if field.rule.get("max") and field.is_integer_scalar %}
+    require_binary_decode({{ path | code_literal }}, int({{ receiver }}) <= int({{ field.max_expr }}), "exceeds max")
+{% endif %}
+{% if field.rule.get("assert") and field.is_integer_scalar %}
+    require_binary_decode({{ path | code_literal }}, int({{ receiver }}) == {{ field.assert_expr }}, "assert mismatch")
+{% endif %}
+{% if field.bitflags_zero_mask %}
+    require_binary_decode({{ path | code_literal }}, (int({{ receiver }}) & {{ field.bitflags_zero_mask }}) == 0, "reserved bits must be zero")
+{% endif %}
+{%- endmacro %}
+
+{% macro read_field(field, object) -%}
+{% set path = field.name %}
+{% if field.is_hidden %}
+    {{ field.py_name }}_hidden = reader.read_bytes({{ path | code_literal }}, {{ field.count_expr }})
+{% if field.typ == "reserved" %}
+    require_binary_decode({{ path | code_literal }}, {{ field.py_name }}_hidden == bytes({{ field.count_expr }}), "reserved bytes must be zero")
+{% endif %}
+{% elif field.is_bytes %}
+    {{ field.py_name }} = reader.read_bytes({{ path | code_literal }}, {{ field.count_expr }})
+{{ check_decoded_field(field, field.py_name, field.py_name, path) }}
+{% elif field.is_string %}
+    {{ field.py_name }} = reader.read_string({{ path | code_literal }}, {{ field.count_expr }})
+{{ check_decoded_field(field, field.py_name, field.py_name, path) }}
+{% elif field.is_array %}
+    {{ field.py_name }}_count = {{ field.count_expr }}
+{% if field.rule.get("max") %}
+    require_binary_decode({{ path | code_literal }}, {{ field.py_name }}_count <= {{ field.max_expr }}, "exceeds max")
+{% endif %}
+    {{ field.py_name }}: list[{{ field.single_py_type }}] = []
+    for index in range({{ field.py_name }}_count):
+        try:
+{% if field.is_scalar %}
+            item = reader.{{ field.read_method }}("")
+{{ check_decoded_field(field, "item", "item", path) | indent(12, true) }}
+{% else %}
+            item = {{ field.schema.object_reader_name(field.typ) }}(reader, state, path="")
+{% endif %}
+        except BinaryDecodeError as err:
+            raise wrap_binary_index({{ path | code_literal }}, index, err) from err
+        {{ field.py_name }}.append(item)
+{% elif field.is_scalar %}
+    {{ field.py_name }} = reader.{{ field.read_method }}({{ path | code_literal }})
+{{ check_decoded_field(field, field.py_name, field.py_name, path) }}
+{% if field.is_integer_scalar %}
+    state[{{ field.py_name | code_literal }}] = int({{ field.py_name }})
+{% endif %}
+{% else %}
+    try:
+        {{ field.py_name }} = {{ field.schema.object_reader_name(field.typ) }}(reader, state, path="")
+    except BinaryDecodeError as err:
+        raise wrap_binary_field({{ path | code_literal }}, err) from err
+{% endif %}
+{%- endmacro %}
+
 {% for schema in binary_schemas %}
 {% for value_set in schema.value_sets %}
 class {{ value_set.py_type }}:
@@ -120,7 +189,7 @@ class {{ schema.py_type }}Wire:
             write=write,
             content_length=content_length,
             content_type={{ schema.content_type | code_literal }},
-            endian={{ schema.endian }},
+            endian={{ schema.endian | code_literal }},
         )
 
     @staticmethod
@@ -128,6 +197,20 @@ class {{ schema.py_type }}Wire:
         if is_api_binary_body(value):
             return value
         return {{ schema.py_type }}Wire.body(lambda writer: {{ schema.writer_name }}(value, writer))
+
+    @staticmethod
+    def from_bytes(data: bytes | bytearray | memoryview) -> {{ schema.py_type }}:
+        return {{ schema.reader_name }}(data)
+
+
+def {{ schema.reader_name }}(data: bytes | bytearray | memoryview | BinaryReader) -> {{ schema.py_type }}:
+    reader = data if isinstance(data, BinaryReader) else BinaryReader(data, endian={{ schema.endian | code_literal }})
+    state = {
+{% for field_name in schema.state_fields %}        {{ field_name | code_literal }}: 0,
+{% endfor %}    }
+    return {{ schema.py_type }}(
+{% for section in schema.sections %}        {{ schema.packet_field_name(section.name) }}={{ section.reader_name }}(reader, state, path={{ (schema.name ~ "." ~ schema.packet_field_name(section.name)) | code_literal }}),
+{% endfor %}    )
 
 
 def {{ schema.writer_name }}(value: {{ schema.py_type }}, writer: BinaryWriter) -> None:
@@ -163,6 +246,22 @@ def {{ object.writer_name }}(
         if not path:
             raise
         raise wrap_binary_field(path, err) from err
+
+
+def {{ object.reader_name }}(
+    reader: BinaryReader,
+    state: dict[str, int],
+    path: str = {{ object.path_name | code_literal }},
+) -> {{ object.py_type }}:
+    try:
+{% for field in object.fields %}{{ read_field(field, object) | indent(4, true) }}
+{% endfor %}    except BinaryDecodeError as err:
+        if not path:
+            raise
+        raise wrap_binary_field(path, err) from err
+    return {{ object.py_type }}(
+{% for field in object.data_fields %}        {{ field.py_name }}={{ field.py_name }},
+{% endfor %}    )
 
 {% endfor %}
 {% endfor %}

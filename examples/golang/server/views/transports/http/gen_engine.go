@@ -3,10 +3,13 @@
 package httptransport
 
 import (
+	"bytes"
 	"compress/gzip"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
+	"reflect"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -23,6 +26,11 @@ type ginContextCarrier interface {
 
 type binaryBodyDecoder interface {
 	DecodeBinary(io.Reader) error
+}
+
+type binaryBodyEncoder interface {
+	ContentType() string
+	WriteBinary(io.Writer) error
 }
 
 func RequireGin(ctx ginContextCarrier) (*gin.Context, error) {
@@ -48,6 +56,7 @@ func bindRequest[Q, B, P any](
 	ginCtx *gin.Context,
 	reqProvider *provider.ReqProvider[Q, B, P],
 ) (*provider.REQ[Q, B], error) {
+	applyRequestBodyLimit(ginCtx)
 	var reqQ *Q
 	var reqB *B
 	if reqProvider == nil {
@@ -70,6 +79,11 @@ func bindRequest[Q, B, P any](
 		if err := ginCtx.ShouldBind(reqB); err != nil {
 			return nil, err
 		}
+	} else if reqProvider.BindMultipart {
+		reqB = new(B)
+		if err := bindMultipart(ginCtx, reqB); err != nil {
+			return nil, err
+		}
 	} else if reqProvider.BindBinary {
 		reqB = new(B)
 		if err := bindBinaryBody(ginCtx, reqB); err != nil {
@@ -81,6 +95,111 @@ func bindRequest[Q, B, P any](
 		Q: reqQ,
 		B: reqB,
 	}, nil
+}
+
+func bindMultipart(ginCtx *gin.Context, target any) error {
+	config := ActiveServerConfig()
+	if err := ginCtx.Request.ParseMultipartForm(config.MultipartMemoryBytes); err != nil {
+		return err
+	}
+	value := reflect.ValueOf(target)
+	if value.Kind() != reflect.Pointer || value.IsNil() {
+		return fmt.Errorf("[httptransport] multipart target must be non-nil pointer, got %T", target)
+	}
+	value = value.Elem()
+	if value.Kind() != reflect.Struct {
+		return fmt.Errorf("[httptransport] multipart target must point to struct, got %s", value.Kind())
+	}
+	valueType := value.Type()
+	for i := 0; i < value.NumField(); i++ {
+		field := value.Field(i)
+		fieldType := valueType.Field(i)
+		key := formFieldName(fieldType)
+		if key == "" || key == "-" || !field.CanSet() {
+			continue
+		}
+		if field.Type() == reflect.TypeOf(provider.MultipartFile{}) {
+			file, err := multipartFile(ginCtx, key, config.MultipartSingleFileBytes)
+			if err != nil {
+				return err
+			}
+			field.Set(reflect.ValueOf(file))
+			continue
+		}
+		raw := ginCtx.PostForm(key)
+		if raw == "" {
+			continue
+		}
+		if err := setStringLikeField(field, raw); err != nil {
+			return fmt.Errorf("[httptransport] bind multipart field %s: %w", key, err)
+		}
+	}
+	return nil
+}
+
+func multipartFile(ginCtx *gin.Context, key string, maxBytes int64) (provider.MultipartFile, error) {
+	file, header, err := ginCtx.Request.FormFile(key)
+	if err != nil {
+		return provider.MultipartFile{}, err
+	}
+	if maxBytes > 0 && header.Size > maxBytes {
+		_ = file.Close()
+		return provider.MultipartFile{}, fmt.Errorf("[httptransport] multipart file %s exceeds %d bytes", key, maxBytes)
+	}
+	return provider.MultipartFile{
+		Filename:    header.Filename,
+		ContentType: header.Header.Get("Content-Type"),
+		Size:        header.Size,
+		Header:      header.Header,
+		File:        file,
+	}, nil
+}
+
+func setStringLikeField(field reflect.Value, raw string) error {
+	if field.Kind() == reflect.Pointer {
+		if field.IsNil() {
+			field.Set(reflect.New(field.Type().Elem()))
+		}
+		field = field.Elem()
+	}
+	switch field.Kind() {
+	case reflect.String:
+		field.SetString(raw)
+	case reflect.Bool:
+		field.SetBool(raw == "true" || raw == "1" || raw == "on")
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		var value int64
+		_, err := fmt.Sscan(raw, &value)
+		if err != nil {
+			return err
+		}
+		field.SetInt(value)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		var value uint64
+		_, err := fmt.Sscan(raw, &value)
+		if err != nil {
+			return err
+		}
+		field.SetUint(value)
+	case reflect.Float32, reflect.Float64:
+		var value float64
+		_, err := fmt.Sscan(raw, &value)
+		if err != nil {
+			return err
+		}
+		field.SetFloat(value)
+	default:
+		return fmt.Errorf("unsupported field kind %s", field.Kind())
+	}
+	return nil
+}
+
+func formFieldName(fieldType reflect.StructField) string {
+	key := fieldType.Tag.Get("form")
+	if key == "" {
+		key = fieldType.Tag.Get("json")
+	}
+	return strings.Split(key, ",")[0]
 }
 
 func bindBinaryBody(ginCtx *gin.Context, target any) error {
@@ -97,7 +216,8 @@ func bindBinaryBody(ginCtx *gin.Context, target any) error {
 		encoding = "identity"
 	}
 
-	var reader io.Reader = ginCtx.Request.Body
+	config := ActiveServerConfig()
+	var reader io.Reader = limitReader(ginCtx.Request.Body, config.DecompressedBinaryBytes, "binary request body")
 	switch encoding {
 	case "identity":
 	case "gzip":
@@ -106,12 +226,48 @@ func bindBinaryBody(ginCtx *gin.Context, target any) error {
 			return fmt.Errorf("[httptransport] decode gzip request body: %w", err)
 		}
 		defer gzipReader.Close()
-		reader = gzipReader
+		reader = limitReader(gzipReader, config.DecompressedBinaryBytes, "decompressed binary request body")
 	default:
 		return fmt.Errorf("[httptransport] unsupported binary Content-Encoding %q", encoding)
 	}
 
 	return decoder.DecodeBinary(reader)
+}
+
+func applyRequestBodyLimit(ginCtx *gin.Context) {
+	if ginCtx == nil || ginCtx.Request == nil || ginCtx.Request.Body == nil {
+		return
+	}
+	limit := ActiveServerConfig().MaxRequestBodyBytes
+	if limit <= 0 {
+		return
+	}
+	ginCtx.Request.Body = http.MaxBytesReader(ginCtx.Writer, ginCtx.Request.Body, limit)
+}
+
+type maxBytesReader struct {
+	reader    io.Reader
+	remaining int64
+	label     string
+}
+
+func limitReader(reader io.Reader, maxBytes int64, label string) io.Reader {
+	if maxBytes <= 0 {
+		return reader
+	}
+	return &maxBytesReader{reader: reader, remaining: maxBytes, label: label}
+}
+
+func (reader *maxBytesReader) Read(p []byte) (int, error) {
+	if reader.remaining <= 0 {
+		return 0, fmt.Errorf("[httptransport] %s exceeds configured limit", reader.label)
+	}
+	if int64(len(p)) > reader.remaining {
+		p = p[:reader.remaining]
+	}
+	n, err := reader.reader.Read(p)
+	reader.remaining -= int64(n)
+	return n, err
 }
 
 func newContext[Q, B, P any](ginCtx *gin.Context, executor *provider.RouteExecutor[Q, B, P]) *provider.Context[Q, B, P] {
@@ -167,6 +323,26 @@ func writeResponse[Q, B, P any](
 			code = http.StatusOK
 		}
 		ginCtx.XML(code, payload)
+	case "bytes", "file", "byte_stream":
+		if err != nil {
+			code, payload := provider.NewRSP_JSON(rspProvider, response, err)
+			if code == 0 {
+				code = http.StatusInternalServerError
+			}
+			ginCtx.JSON(code, payload)
+			return
+		}
+		writeRawResponse(ginCtx, rspProvider.Type, rspProvider.Route.Filename, response)
+	case "binary_schema":
+		if err != nil {
+			code, payload := provider.NewRSP_JSON(rspProvider, response, err)
+			if code == 0 {
+				code = http.StatusInternalServerError
+			}
+			ginCtx.JSON(code, payload)
+			return
+		}
+		writeBinarySchemaResponse(ginCtx, response)
 	default:
 		if err != nil {
 			_ = ginCtx.AbortWithError(http.StatusInternalServerError, err)
@@ -178,6 +354,92 @@ func writeResponse[Q, B, P any](
 		}
 		ginCtx.String(http.StatusOK, fmt.Sprint(*response))
 	}
+}
+
+func writeRawResponse[P any](ginCtx *gin.Context, kind string, defaultFilename string, response *P) {
+	if response == nil {
+		ginCtx.Data(http.StatusOK, "application/octet-stream", nil)
+		return
+	}
+	raw, ok := any(*response).(provider.RawResponse)
+	if !ok {
+		ginCtx.String(http.StatusInternalServerError, "raw response type mismatch")
+		return
+	}
+	status := raw.StatusCode
+	if status == 0 {
+		status = http.StatusOK
+	}
+	for key, value := range raw.Headers {
+		ginCtx.Header(key, value)
+	}
+	effectiveFilename := raw.Filename
+	if effectiveFilename == "" && !hasHeader(raw.Headers, "Content-Disposition") {
+		effectiveFilename = defaultFilename
+	}
+	contentType := raw.ContentType
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+	switch kind {
+	case "file":
+		if effectiveFilename != "" && raw.FilePath != "" {
+			ginCtx.FileAttachment(raw.FilePath, effectiveFilename)
+			return
+		}
+		if raw.FilePath != "" {
+			ginCtx.Header("Content-Type", contentType)
+			ginCtx.File(raw.FilePath)
+			return
+		}
+		if effectiveFilename != "" && !hasHeader(raw.Headers, "Content-Disposition") {
+			ginCtx.Header("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": effectiveFilename}))
+		}
+		ginCtx.Data(status, contentType, raw.Body)
+	case "byte_stream":
+		size := raw.Size
+		if size == 0 {
+			size = -1
+		}
+		if raw.Stream == nil {
+			ginCtx.Data(status, contentType, raw.Body)
+			return
+		}
+		ginCtx.DataFromReader(status, size, contentType, raw.Stream, nil)
+	default:
+		ginCtx.Data(status, contentType, raw.Body)
+	}
+}
+
+func writeBinarySchemaResponse[P any](ginCtx *gin.Context, response *P) {
+	if response == nil {
+		ginCtx.Data(http.StatusOK, "application/octet-stream", nil)
+		return
+	}
+	encoder, ok := any(response).(binaryBodyEncoder)
+	if !ok {
+		ginCtx.String(http.StatusInternalServerError, "binary schema response type mismatch")
+		return
+	}
+	var body bytes.Buffer
+	if err := encoder.WriteBinary(&body); err != nil {
+		ginCtx.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+	contentType := encoder.ContentType()
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+	ginCtx.Data(http.StatusOK, contentType, body.Bytes())
+}
+
+func hasHeader(headers map[string]string, key string) bool {
+	for item := range headers {
+		if strings.EqualFold(item, key) {
+			return true
+		}
+	}
+	return false
 }
 
 func makeHandler[Q, B, P any](

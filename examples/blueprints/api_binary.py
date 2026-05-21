@@ -23,3 +23,8 @@ with apibp.group("/binary") as views:
         item_count=Uint(description="item count"),
         checksum=Uint(description="checksum"),
     )
+    views.GET(
+        "/audit-packet-response",
+        operation_id="auditPacketResponse",
+        summary="Binary audit packet response example",
+    ).RSP_BINARY_SCHEMA("./binary/audit_packet.md")

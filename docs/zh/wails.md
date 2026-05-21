@@ -4,6 +4,8 @@
 
 Wails CLI 在本仓库中的角色是构建和打包 `examples/wails-harness/{v2,v3}` 这类手写 harness，而不是 Wails target 的代码输入。
 
+Wails v2/v3 target 都是 preview；Wails v3 仍按 experimental 口径使用。生成 overlay 只提供协议调用、typed error、provider bridge 和 STREAM/CHANNEL 关键帧，窗口权限、文件系统访问、native call 取消、长任务调度、重试和 app 生命周期策略属于 Wails app shell 或 Go service implementation。
+
 ## Target 配置
 
 ```toml
@@ -27,6 +29,17 @@ frontend_mode = "external"
 - `overlay_name`：默认 `wailsv3` / `wailsv2`，必须唯一。
 - `frontend_mode`：默认 `external`；`none` 跳过 Wails TypeScript overlay。
 - `include` / `exclude`：裁剪 Wails target overlay / facade。没有任何 selected route 的 root 不会生成 `transports/<overlay_name>`；共享 Go / TypeScript 主契约层仍完整生成。
+
+## HTTP raw media 边界
+
+Wails 需要文件、bytes、stream 或 typed binary packet 这类能力，但这些能力不通过 HTTP 语义表达。`multipart`、`Content-Disposition`、HTTP status/header、MIME download 和 HTTP byte stream 都属于 HTTP transport contract；`wails-transport` 遇到 HTTP raw media route 或 HTTP binary schema body/response 时会在 `api-gen check` 阶段报明确 unsupported，不会生成伪 HTTP response。
+
+Wails 推荐使用协议原生 IPC 模式：
+
+- 小型 bytes 或 typed binary packet：通过普通 RPC 返回可序列化 payload，例如 base64 string、number array，或项目封装的 `Uint8Array` adapter。
+- 文件下载：返回 app-local file descriptor，例如 `path`、`filename`、`contentType`、`size`，由 Wails app shell 负责 save/open dialog 和文件系统权限。
+- byte stream：复用 `STREAM` / `CHANNEL`，按消息分片传递 chunk 和 close payload。
+- 大文件：优先走 app-managed temp file/cache，避免把大对象长期塞进 Wails RPC payload。
 
 ## Go 输出布局
 
@@ -198,6 +211,8 @@ make wails-hello-compile-check
 `wails-hello-check` 是严格模式，会检查 snapshot drift；`wails-hello-compile-check` 只验证重生成后的 TypeScript、Go 和 Wails v3 build，适合开发中快速确认。
 
 ## 长连接 bridge
+
+Wails TypeScript RPC route 方法使用与 TypeScript client surface 相同的 per-call request options 形态。`headers` 会进入 Wails invoke envelope，使 Go overlay 能通过生成请求上下文读取；`timeoutMs` 只限制前端 Promise 等待时间，超时后在前端 reject，不会取消已经在 Go 侧运行的 Wails native call。
 
 Wails TypeScript 不暴露 raw WebSocket，也不要求业务代码手写 runtime event name。`STREAM` / `CHANNEL` 在默认 Wails transport 中会映射成 session-scoped runtime events，事件名只存在于 generated Go runtime 与 generated TypeScript transport 内部。建连使用前端预分配的 `session_id`：生成的 TypeScript bridge 会先按 route/eventBase/sessionId 计算 deterministic event name 并完成订阅，再发送 connect RPC，从而避免 ordered 交付丢掉 `seq=1`。生成的 service 仍暴露轻量 `ConnectionHub` 替换点；自定义 hub 通过 `Open(ConnectionOpenSpec)` 接收请求，并必须返回符合生成器命名规则的 descriptor。默认 hub 只完整支持 `ConnectionScope.SESSION`，`APP` / `TOPIC` 的广播或 topic routing 策略仍应由自定义 hub 实现。
 

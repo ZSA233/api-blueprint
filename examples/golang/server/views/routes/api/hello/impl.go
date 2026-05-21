@@ -13,9 +13,13 @@ func NewRouter() *Router {
 }
 
 func (impl *Router) Abc(ctx *CTX_Abc, req *REQ_Abc) (rsp *RSP_Abc, err error) {
+	key := req.Q.Type
+	if key == "" {
+		key = "ping"
+	}
 	return &RSP_Abc{
 		"hello": {Haha: 1001},
-		"type":  {Haha: int64(len(req.Q.Type))},
+		key:     {Haha: 1},
 	}, nil
 }
 

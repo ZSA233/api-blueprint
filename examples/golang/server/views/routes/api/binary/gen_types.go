@@ -57,3 +57,16 @@ type CTX_AuditPacket = providers.Context[
 	binary.AuditPacket,
 	RSP_AuditPacket_BODY,
 ]
+
+type REQ_AuditPacketResponse = providers.REQ[
+	any,
+	any,
+]
+
+type RSP_AuditPacketResponse = binary.AuditPacket
+
+type CTX_AuditPacketResponse = providers.Context[
+	any,
+	any,
+	binary.AuditPacket,
+]

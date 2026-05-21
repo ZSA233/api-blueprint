@@ -1,0 +1,5 @@
+package {{ bp.root_package }}.runtime;
+
+public interface GenApiChannelBridge<Recv, Send, Close> extends GenApiStreamBridge<Recv, Close> {
+    void send(Send message);
+}

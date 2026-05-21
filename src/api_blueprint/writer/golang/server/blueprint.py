@@ -215,6 +215,7 @@ class GolangRouterGroup:
                     "http_client_message_type": view.shared_type_expr(view.client_message_type),
                     "http_close_message_type": view.shared_type_expr(view.close_message_type),
                     "connection_scope": view.contract.connection_scope.value if view.contract.connection_scope else "",
+                    "default_filename": view.protocol.response.filename or "",
                     "is_stream": view.is_stream,
                     "is_channel": view.is_channel,
                     "is_connection": view.is_connection,
@@ -222,6 +223,7 @@ class GolangRouterGroup:
                     "bind_query": view.bind_query,
                     "bind_json": view.bind_json,
                     "bind_form": view.bind_form,
+                    "bind_multipart": view.bind_multipart,
                     "bind_binary": view.bind_binary,
                 }
 
@@ -234,7 +236,12 @@ class GolangRouterGroup:
             yield from self._router_view(router).com_protos()
 
     def binary_schemas(self) -> list[Any]:
-        schemas = [router.req_binary_schema for router in self.group if router.req_binary_schema is not None]
+        schemas = [
+            schema
+            for router in self.group
+            for schema in (router.req_binary_schema, router.rsp_binary_schema)
+            if schema is not None
+        ]
         return unique_go_binary_schemas(schemas)
 
     def implements(self) -> Generator[dict[str, Any], None, None]:
@@ -532,6 +539,9 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
     def gen_http_adapter(self) -> None:
         ctx = {"writer": self.writer, "bp": self}
         plan = build_go_server_blueprint_plan(self.writer, self)
+        with self.writer.write_file(self.writer.http_transport_dir / "gen_config.go", overwrite=True) as handle:
+            if handle:
+                handle.write(render(LANG, "gen_config.go", ctx, "server/views/transports/http"))
         with self.writer.write_file(self.writer.http_transport_dir / "gen_engine.go", overwrite=True) as handle:
             if handle:
                 handle.write(render(LANG, "gen_engine.go", ctx, "server/views/transports/http"))
@@ -666,4 +676,6 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
         for _group, router in self.iter_router():
             if router.req_binary_schema is not None:
                 schemas.append(router.req_binary_schema)
+            if router.rsp_binary_schema is not None:
+                schemas.append(router.rsp_binary_schema)
         return unique_go_binary_schemas(schemas)

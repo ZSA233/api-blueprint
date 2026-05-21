@@ -20,6 +20,7 @@ TargetKind = Literal[
     "kotlin-server",
     "java-server",
     "java-client",
+    "flutter-client",
     "python-server",
     "python-client",
     "http-transport",
@@ -79,6 +80,8 @@ class TargetConfig(BaseModel):
             raise ValueError(f"target[{self.id}] {self.kind} requires package")
         if self.kind in {"java-client", "java-server"} and not self.package:
             raise ValueError(f"target[{self.id}] {self.kind} requires package")
+        if self.kind == "flutter-client" and not self.package:
+            raise ValueError(f"target[{self.id}] flutter-client requires package")
         if self.kind == "grpc-proto" and not self.package:
             raise ValueError(f"target[{self.id}] grpc-proto requires package")
         if self.kind != "grpc-proto" and self.proto_files:

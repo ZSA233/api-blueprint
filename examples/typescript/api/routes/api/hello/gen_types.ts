@@ -41,4 +41,3 @@ export type StringEmunResponse = MapEnum;
 export type StringResponse = string;
 
 export type Uint64Response = number;
-

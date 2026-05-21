@@ -1,12 +1,21 @@
 from __future__ import annotations
 
-from typing import Any
+import asyncio
+import json
+from dataclasses import asdict, is_dataclass
+from enum import Enum
+from pathlib import Path
+from typing import Any, AsyncIterable, Iterable, Mapping
 
-from fastapi import APIRouter, WebSocket
-from starlette.responses import StreamingResponse
+from fastapi import APIRouter, WebSocket, Request, HTTPException, WebSocketDisconnect
+from starlette.responses import StreamingResponse, JSONResponse, FileResponse, Response
 
+from ...runtime.errors import ApiError, make_api_error_payload
+from ...runtime.server import ApiRawResponse, ApiServerConfig
 {% for group in bp.groups.values() -%}
 from ...routes.{{ group.package_path }}.service import {{ group.service_class }}, {{ group.service_class }}Stub
+{% if group.type_import_names() or group.binary_schemas() %}from ...routes.{{ group.package_path }} import gen_types as {{ group.server_type_module_alias }}
+{% endif %}
 {% endfor %}
 
 
@@ -14,68 +23,463 @@ def create_router(
 {% for group in bp.groups.values() %}
     {{ group.alias }}_service: {{ group.service_class }} | None = None,
 {% endfor %}
+    config: ApiServerConfig | None = None,
 ) -> APIRouter:
     router = APIRouter()
+    api_config = config or ApiServerConfig()
 {% for group in bp.groups.values() %}
-    {{ group.alias }}_service_impl = {{ group.alias }}_service or {{ group.service_class }}Stub()
+    router.include_router(create_{{ group.alias }}_router({{ group.alias }}_service, config=api_config))
 {% endfor %}
-{% for group in bp.groups.values() %}{% for route in group.routes %}
+    return router
+
+
+{% for group in bp.groups.values() %}
+def create_{{ group.alias }}_router(
+    service: {{ group.service_class }} | None = None,
+    *,
+    config: ApiServerConfig | None = None,
+) -> APIRouter:
+    router = APIRouter()
+    api_config = config or ApiServerConfig()
+    service_impl = service or {{ group.service_class }}Stub()
+{% for route in group.routes %}
 {% if route.is_rpc %}
 
     @router.api_route({{ route.url_literal | safe }}, methods={{ route.method_list_literal | safe }})
-{% if route.params %}
-    async def {{ group.alias }}_{{ route.method_name }}(
+    async def {{ group.alias }}_{{ route.method_name }}(request: Request) -> Any:
+        service = service_impl
 {% for param in route.params %}
-        {{ param.name }}: dict[str, Any] | None = None,
-{% endfor %}
-    ) -> Any:
-{% else %}
-    async def {{ group.alias }}_{{ route.method_name }}() -> Any:
+{% if param.name == "query" %}
+        query_raw = _query_params(request)
+{% elif param.name == "json" %}
+        json_body_raw = await _json_body(request, api_config)
+{% elif param.name == "form" %}
+        form_raw = await _form_body(request, api_config)
+{% elif param.name == "multipart" %}
+        multipart_raw = await _multipart_body(request, api_config)
+{% elif param.name == "binary" %}
+        binary = await _body(request, api_config.body_max_bytes)
 {% endif %}
-        service = {{ group.alias }}_service_impl
-{% if route.params %}
-        return await service.{{ route.method_name }}(
+{% endfor %}
+{% if route.has_decoded_params %}
+        try:
 {% for param in route.params %}
-            {{ param.name }}={{ param.name }},
-{% endfor %}
-        )
-{% else %}
-        return await service.{{ route.method_name }}()
+{% if param.name == "query" %}
+            query = {{ group.server_type_expr(param.decode_expr("query_raw", '"query"')) | safe }}
+{% elif param.name == "json" %}
+            json_body = {{ group.server_type_expr(param.decode_expr("json_body_raw", '"json"')) | safe }}
+{% elif param.name == "form" %}
+            form = {{ group.server_type_expr(param.decode_expr("form_raw", '"form"')) | safe }}
+{% elif param.name == "multipart" %}
+            multipart = {{ group.server_type_expr(param.decode_expr("multipart_raw", '"multipart"')) | safe }}
 {% endif %}
+{% endfor %}
+        except (TypeError, ValueError) as error:
+            return _bad_request_response(error)
+{% endif %}
+        try:
+            result = await service.{{ route.method_name }}(
+{% for param in route.params %}
+                {{ param.name }}={% if param.name == "json" %}json_body{% else %}{{ param.name }}{% endif %},
+{% endfor %}
+            )
+{% if route.is_raw_response %}
+            return _raw_response(
+                kind={{ route.response_kind_literal | safe }},
+                content_type={{ route.response_media_type_literal | safe }},
+                filename={{ route.response_filename_literal | safe }},
+                result=result,
+            )
+{% elif route.is_binary_schema_response %}
+            return _binary_schema_response(
+                content_type={{ route.response_media_type_literal | safe }},
+                result=result,
+                encoder={{ group.server_type_expr(route.response_binary_wire_name ~ ".to_binary_body") | safe }},
+            )
+{% else %}
+            return _wrap_response({{ route.response_envelope_literal | safe }}, result)
+{% endif %}
+        except ApiError as error:
+            return _wrap_api_error({{ route.response_envelope_literal | safe }}, error, {{ route.route_id_literal | safe }})
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
 {% elif route.supports_stream %}
 
     @router.api_route({{ route.url_literal | safe }}, methods=["GET"])
-{% if route.params %}
-    async def {{ group.alias }}_{{ route.subscribe_method_name }}(
-{% for param in route.params %}
-        {{ param.name }}: dict[str, Any] | None = None,
+    async def {{ group.alias }}_{{ route.subscribe_method_name }}(request: Request) -> Any:
+        service = service_impl
+{% for param in route.params if param.name == "open_data" %}
+        open_data_raw = _query_params(request)
 {% endfor %}
-    ) -> Any:
-{% else %}
-    async def {{ group.alias }}_{{ route.subscribe_method_name }}() -> Any:
-{% endif %}
-        service = {{ group.alias }}_service_impl
-{% if route.params %}
-        result = await service.{{ route.method_name }}(
-{% for param in route.params %}
-            {{ param.name }}={{ param.name }},
+{% for param in route.params if param.name == "open_data" %}
+        try:
+            open_data = {{ group.server_type_expr(param.decode_expr("open_data_raw", '"open_data"')) | safe }}
+        except (TypeError, ValueError) as error:
+            return _bad_request_response(error)
 {% endfor %}
-        )
-{% else %}
-        result = await service.{{ route.method_name }}()
-{% endif %}
-        if hasattr(result, "__aiter__"):
-            return StreamingResponse(result)
-        return result
+        stream = _SseStream(api_config.sse_queue_capacity)
+
+        async def body():
+            task = asyncio.create_task(
+                service.{{ route.method_name }}(
+{% for param in route.params if param.name == "open_data" %}
+                    open_data=open_data,
+{% endfor %}
+                    stream=stream,
+                )
+            )
+            try:
+                async for chunk in stream:
+                    yield chunk
+                await task
+            finally:
+                if not task.done():
+                    task.cancel()
+
+        return StreamingResponse(body(), media_type="text/event-stream")
 {% elif route.supports_channel %}
 
     @router.websocket({{ route.url_literal | safe }})
     async def {{ group.alias }}_{{ route.websocket_endpoint_name }}(websocket: WebSocket) -> None:
         await websocket.accept()
-        service = {{ group.alias }}_service_impl
-        await service.{{ route.method_name }}()
-        await websocket.close()
+        service = service_impl
+{% for param in route.params if param.name == "open_data" %}
+        open_data_raw = dict(websocket.query_params)
+{% endfor %}
+{% for param in route.params if param.name == "open_data" %}
+        try:
+            open_data = {{ group.server_type_expr(param.decode_expr("open_data_raw", '"open_data"')) | safe }}
+        except (TypeError, ValueError):
+            await websocket.close(code=1008)
+            return
+{% endfor %}
+        channel = _WebSocketChannel(websocket, {{ group.server_type_expr(route.client_message_type.decoder) if route.client_message_type else '_identity_decoder' }}, api_config)
+        try:
+            await service.{{ route.method_name }}(
+{% for param in route.params if param.name == "open_data" %}
+                open_data=open_data,
+{% endfor %}
+                channel=channel,
+            )
+        except _WebSocketClosed:
+            return
+        finally:
+            if not channel.closed:
+                await websocket.close()
 {% endif %}
-{% endfor %}{% endfor %}
+{% endfor %}
 
     return router
+
+
+{% endfor %}
+
+
+def _query_params(request: Request) -> dict[str, Any]:
+    values = dict(request.query_params)
+    return values
+
+
+async def _body(request: Request, max_bytes: int) -> bytes:
+    content_length = request.headers.get("content-length")
+    if content_length is not None:
+        try:
+            if int(content_length) > max_bytes:
+                raise PayloadTooLargeError("request body exceeds configured limit")
+        except ValueError:
+            pass
+    body = await request.body()
+    if len(body) > max_bytes:
+        raise PayloadTooLargeError("request body exceeds configured limit")
+    return body
+
+
+async def _json_body(request: Request, config: ApiServerConfig) -> Any:
+    body = await _body(request, config.body_max_bytes)
+    if not body:
+        return None
+    try:
+        value = json.loads(body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as err:
+        raise HTTPException(status_code=400, detail="invalid JSON body") from err
+    return value
+
+
+async def _form_body(request: Request, config: ApiServerConfig) -> dict[str, Any]:
+    _ensure_content_length(request, config.body_max_bytes)
+    values = await request.form(max_part_size=config.multipart_part_max_bytes)
+    result = {key: value for key, value in values.multi_items()}
+    return result
+
+
+async def _multipart_body(request: Request, config: ApiServerConfig) -> dict[str, Any]:
+    _ensure_content_length(request, config.body_max_bytes)
+    values = await request.form(max_part_size=config.multipart_part_max_bytes)
+    result: dict[str, Any] = {}
+    for key, value in values.multi_items():
+        size = getattr(value, "size", None)
+        if isinstance(size, int) and size > config.multipart_file_max_bytes:
+            raise PayloadTooLargeError("multipart file exceeds configured limit")
+        result[key] = value
+    return result
+
+
+def _ensure_content_length(request: Request, max_bytes: int) -> None:
+    content_length = request.headers.get("content-length")
+    if content_length is None:
+        return
+    try:
+        if int(content_length) > max_bytes:
+            raise PayloadTooLargeError("request body exceeds configured limit")
+    except ValueError:
+        return
+
+
+def _jsonable(value: Any) -> Any:
+    if isinstance(value, Enum):
+        return value.value
+    if hasattr(value, "to_mapping"):
+        return value.to_mapping()
+    if is_dataclass(value):
+        return _jsonable(asdict(value))
+    if isinstance(value, dict):
+        return {_json_key(key): _jsonable(item) for key, item in value.items() if item is not None}
+    if isinstance(value, (list, tuple)):
+        return [_jsonable(item) for item in value]
+    if isinstance(value, bytes):
+        return value.decode("utf-8")
+    return value
+
+
+def _json_key(value: Any) -> str:
+    if isinstance(value, Enum):
+        return str(value.value)
+    return str(value)
+
+
+def _bad_request_response(error: Exception) -> JSONResponse:
+    return JSONResponse({"detail": str(error) or "invalid request"}, status_code=400)
+
+
+def _payload_too_large_response(error: Exception) -> JSONResponse:
+    return JSONResponse({"detail": "payload too large"}, status_code=413)
+
+
+def _wrap_response(envelope: dict[str, Any], data: Any) -> Any:
+    payload = _jsonable(data)
+    kind = envelope.get("kind") or "none"
+    fields = envelope.get("fields") or {}
+    if kind == "none":
+        return payload
+    if kind == "code_message_data":
+        return {
+            fields.get("code", "code"): envelope.get("success_code", 0),
+            fields.get("message", "message"): envelope.get("success_message", "ok"),
+            fields.get("data", "data"): payload,
+        }
+    if kind == "ok_data_error":
+        return {
+            fields.get("ok", "ok"): True,
+            fields.get("data", "data"): payload,
+        }
+    return payload
+
+
+def _raw_response(
+    *,
+    kind: str,
+    content_type: str,
+    filename: str | None,
+    result: Any,
+) -> Response:
+    status = 200
+    headers: Mapping[str, str] | None = None
+    body = result
+    effective_content_type = content_type
+    effective_filename = filename
+    if isinstance(result, ApiRawResponse):
+        status = result.status
+        headers = result.headers
+        body = result.body
+        effective_content_type = result.content_type or content_type
+        effective_filename = result.filename or filename
+    if isinstance(body, Response):
+        return body
+    if kind == "file":
+        return FileResponse(
+            path=body if isinstance(body, (str, Path)) else Path(str(body)),
+            status_code=status,
+            media_type=effective_content_type,
+            filename=effective_filename,
+            headers=dict(headers or {}),
+        )
+    if kind == "byte_stream":
+        return StreamingResponse(
+            body,
+            status_code=status,
+            media_type=effective_content_type,
+            headers=dict(headers or {}),
+        )
+    if isinstance(body, str):
+        content = body.encode("utf-8")
+    else:
+        content = bytes(body or b"")
+    return Response(
+        content=content,
+        status_code=status,
+        media_type=effective_content_type,
+        headers=dict(headers or {}),
+    )
+
+
+def _binary_schema_response(
+    *,
+    content_type: str,
+    result: Any,
+    encoder: Any,
+) -> Response:
+    if isinstance(result, Response):
+        return result
+    status = 200
+    headers: Mapping[str, str] | None = None
+    body = result
+    effective_content_type = content_type
+    if isinstance(result, ApiRawResponse):
+        status = result.status
+        headers = result.headers
+        body = result.body
+        effective_content_type = result.content_type or content_type
+    if isinstance(body, (bytes, bytearray, memoryview)):
+        content = bytes(body)
+    else:
+        binary_body = encoder(body)
+        content = binary_body.to_bytes()
+        effective_content_type = binary_body.content_type or effective_content_type
+    return Response(
+        content=content,
+        status_code=status,
+        media_type=effective_content_type,
+        headers=dict(headers or {}),
+    )
+
+
+def _wrap_api_error(envelope: dict[str, Any], error: ApiError, route_id: str) -> Any:
+    payload = _jsonable(make_api_error_payload(_jsonable(error.payload), route_id))
+    kind = envelope.get("kind") or "none"
+    fields = envelope.get("fields") or {}
+    if kind == "none":
+        return JSONResponse(payload, status_code=500)
+    if kind == "code_message_data":
+        body = {
+            fields.get("code", "code"): payload.get("code", 0),
+            fields.get("message", "message"): payload.get("message", ""),
+            fields.get("data", "data"): None,
+        }
+        if envelope.get("error_identity") != "none":
+            body[fields.get("error", "error")] = payload
+        return body
+    if kind == "ok_data_error":
+        return {
+            fields.get("ok", "ok"): False,
+            fields.get("error", "error"): payload,
+        }
+    return JSONResponse(payload, status_code=500)
+
+
+class _SseStream:
+    def __init__(self, queue_capacity: int) -> None:
+        self._queue: asyncio.Queue[str | None] = asyncio.Queue(maxsize=max(1, queue_capacity))
+        self.closed = False
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self) -> str:
+        item = await self._queue.get()
+        if item is None:
+            raise StopAsyncIteration
+        return item
+
+    async def send(self, message: Any) -> None:
+        if self.closed:
+            return
+        await self._queue.put("data: " + json.dumps(_jsonable(message), ensure_ascii=False) + "\n\n")
+
+    async def close(self, close: Any) -> None:
+        if self.closed:
+            return
+        self.closed = True
+        await self._queue.put(
+            "event: close\n"
+            + "data: "
+            + json.dumps(_jsonable(close), ensure_ascii=False)
+            + "\n\n"
+        )
+        await self._queue.put(None)
+
+    async def abort(self, code: int = 1011, reason: str | None = None) -> None:
+        await self.close({"code": code, "reason": reason or ""})
+
+
+def _identity_decoder(value: Any, path: str) -> Any:
+    return value
+
+
+class _WebSocketChannel:
+    def __init__(self, websocket: WebSocket, message_decoder=_identity_decoder, config: ApiServerConfig | None = None) -> None:
+        self.websocket = websocket
+        self.message_decoder = message_decoder
+        self.config = config or ApiServerConfig()
+        self.closed = False
+
+    async def receive(self) -> Any:
+        try:
+            payload = await self.websocket.receive_text()
+        except WebSocketDisconnect as err:
+            self.closed = True
+            raise _WebSocketClosed() from err
+        if len(payload.encode("utf-8")) > self.config.websocket_message_max_bytes:
+            await self.abort(1009, "WebSocket message exceeds configured limit")
+            raise _WebSocketClosed()
+        try:
+            value = json.loads(payload)
+            return self.message_decoder(value, "message")
+        except (UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError) as err:
+            await self.abort(1003, "invalid WebSocket message")
+            raise _WebSocketClosed() from err
+
+    async def send(self, message: Any) -> None:
+        if self.closed:
+            return
+        await self.websocket.send_text(
+            json.dumps({"type": "message", "data": _jsonable(message)}, ensure_ascii=False)
+        )
+
+    async def close(self, close: Any) -> None:
+        if self.closed:
+            return
+        self.closed = True
+        await self._send_close(close, 1000)
+
+    async def abort(self, code: int = 1011, reason: str | None = None) -> None:
+        if self.closed:
+            return
+        self.closed = True
+        await self._send_close({"code": code, "reason": reason or ""}, code)
+
+    async def _send_close(self, close: Any, code: int) -> None:
+        try:
+            await self.websocket.send_text(
+                json.dumps({"type": "close", "data": _jsonable(close)}, ensure_ascii=False)
+            )
+        finally:
+            await self.websocket.close(code=code)
+
+
+class _WebSocketClosed(Exception):
+    pass
+
+
+class PayloadTooLargeError(HTTPException):
+    def __init__(self, detail: str = "payload too large") -> None:
+        super().__init__(status_code=413, detail=detail)

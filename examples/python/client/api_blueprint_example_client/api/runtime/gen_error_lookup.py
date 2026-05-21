@@ -29,6 +29,18 @@ API_ERRORS_BY_ID: dict[str, ApiErrorEntry] = {
             default="登录状态已失效，请重新登录",
         ),
     ),
+    "DemoErr.UNKNOWN": ApiErrorEntry(
+        id="DemoErr.UNKNOWN",
+        group="DemoErr",
+        key="UNKNOWN",
+        code=70002,
+        message="demo unknown error",
+        toast=ApiToastSpec(
+            key="DemoErr.UNKNOWN",
+            level="error",
+            default="demo unknown error",
+        ),
+    ),
     "DemoErr.RATE_LIMITED": ApiErrorEntry(
         id="DemoErr.RATE_LIMITED",
         group="DemoErr",
@@ -56,11 +68,27 @@ ROUTE_API_ERRORS_BY_CODE: dict[str, dict[int, ApiErrorEntry]] = {
         -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
         55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
     },
+    "api.binary.get.auditpacketresponse": {
+        -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
+        55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
+    },
+    "api.conflict.get.default": {
+        -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
+        55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
+    },
     "api.demo.get.abc": {
         -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
         55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
     },
     "api.demo.post.testpost": {
+        -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
+        55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
+    },
+    "api.demo.post.formsubmit": {
+        -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
+        55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
+    },
+    "api.demo.get.requestoptions": {
         -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
         55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
     },
@@ -95,7 +123,38 @@ ROUTE_API_ERRORS_BY_CODE: dict[str, dict[int, ApiErrorEntry]] = {
     "api.demo.get.errordemo": {
         -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
         55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
+        70002: API_ERRORS_BY_ID["DemoErr.UNKNOWN"],
         42901: API_ERRORS_BY_ID["DemoErr.RATE_LIMITED"],
+    },
+    "api.media.post.preview": {
+        -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
+        55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
+    },
+    "api.media.get.frame": {
+        -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
+        55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
+    },
+    "api.media.get.download": {
+        -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
+        55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
+    },
+    "api.media.get.downloaddynamic": {
+        -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
+        55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
+    },
+    "api.media.get.downloadfilenameedge": {
+        -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
+        55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
+    },
+    "api.media.get.errorframe": {
+        -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
+        55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
+        70002: API_ERRORS_BY_ID["DemoErr.UNKNOWN"],
+        42901: API_ERRORS_BY_ID["DemoErr.RATE_LIMITED"],
+    },
+    "api.media.get.mjpeg": {
+        -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
+        55555: API_ERRORS_BY_ID["CommonErr.TOKEN_EXPIRE"],
     },
     "api.hello.get.abc": {
         -1: API_ERRORS_BY_ID["CommonErr.UNKNOWN"],
@@ -180,6 +239,7 @@ class CommonErr:
 
 
 class DemoErr:
+    UNKNOWN: ApiErrorEntry = API_ERRORS_BY_ID["DemoErr.UNKNOWN"]
     RATE_LIMITED: ApiErrorEntry = API_ERRORS_BY_ID["DemoErr.RATE_LIMITED"]
 
 

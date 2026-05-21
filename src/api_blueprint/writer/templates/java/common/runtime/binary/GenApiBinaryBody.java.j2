@@ -1,0 +1,27 @@
+package {{ bp.root_package }}.runtime.binary;
+
+public interface GenApiBinaryBody {
+    String contentType();
+
+    byte[] toBytes();
+
+    static GenApiBinaryBody of(byte[] bytes) {
+        return of(bytes, "application/octet-stream");
+    }
+
+    static GenApiBinaryBody of(byte[] bytes, String contentType) {
+        byte[] payload = bytes == null ? new byte[0] : bytes.clone();
+        String mediaType = contentType == null || contentType.isBlank() ? "application/octet-stream" : contentType;
+        return new GenApiBinaryBody() {
+            @Override
+            public String contentType() {
+                return mediaType;
+            }
+
+            @Override
+            public byte[] toBytes() {
+                return payload.clone();
+            }
+        };
+    }
+}

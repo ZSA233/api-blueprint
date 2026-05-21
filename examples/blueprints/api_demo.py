@@ -83,6 +83,11 @@ class AssistantDone(Model):
     message_id = String(description='final message id')
 
 
+class RequestOptionsResponse(Model):
+    status = String(description='request options status')
+    delay_ms = Int(description='applied delay in milliseconds')
+
+
 with apibp.group('/demo') as views:
     views.GET(
         '/abc', summary='这是abc的summary', description='这是abc的description'
@@ -100,6 +105,33 @@ with apibp.group('/demo') as views:
     ).RSP(
         list    = Array[String](description='list'),
         map     = Map[String, ApiDemoMap](description='map')
+    )
+
+    views.POST(
+        '/form-submit',
+        operation_id='formSubmit',
+        summary='Form body example',
+        description='Covers application/x-www-form-urlencoded request generation',
+    ).REQ_FORM(
+        title   = String(description='title'),
+        count   = Int(description='count', default=1),
+        enabled = Bool(description='enabled', default=True),
+    ).RSP(
+        summary = String(description='summary'),
+        count   = Int(description='count'),
+        enabled = Bool(description='enabled'),
+    )
+
+    views.GET(
+        '/request-options',
+        operation_id='requestOptions',
+        summary='Request options conformance endpoint',
+        description='Used by generated clients to verify per-call headers and timeout behavior.',
+        headers=NoneHeader,
+    ).ARGS(
+        delay_ms = Int(description='optional server delay in milliseconds', default=0),
+    ).RSP(
+        RequestOptionsResponse,
     )
 
     views.PUT(

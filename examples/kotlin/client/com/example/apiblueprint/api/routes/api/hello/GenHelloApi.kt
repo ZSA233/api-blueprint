@@ -11,7 +11,7 @@ public open class GenHelloApi internal constructor(
 
     public open suspend fun abc(
         query: HelloAbcQuery,
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): HelloAbcResponse {
         return transport.request(
             ApiRequest(
@@ -19,97 +19,109 @@ public open class GenHelloApi internal constructor(
                 method = "GET",
                 path = "/api/hello/abc",
                 query = query.toQueryMap(),
-                headers = headers,
+                options = options,
                 responseSerializer = MapSerializer(String.serializer(), ApiHelloMap.serializer()),
+                responseKind = "json",
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }
 
     public open suspend fun mapEnum(
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): HelloMapEnumResponse {
         return transport.request(
             ApiRequest(
                 routeId = "api.hello.get.mapenum",
                 method = "GET",
                 path = "/api/hello/map-enum",
-                headers = headers,
+                options = options,
                 responseSerializer = MapSerializer(String.serializer(), ApiHelloMap.serializer()),
+                responseKind = "json",
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }
 
     public open suspend fun listEnum(
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): HelloListEnumResponse {
         return transport.request(
             ApiRequest(
                 routeId = "api.hello.get.listenum",
                 method = "GET",
                 path = "/api/hello/list-enum",
-                headers = headers,
+                options = options,
                 responseSerializer = ListSerializer(MapEnum.serializer()),
+                responseKind = "json",
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }
 
     public open suspend fun string(
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): HelloStringResponse {
         return transport.request(
             ApiRequest(
                 routeId = "api.hello.get.string",
                 method = "GET",
                 path = "/api/hello/string",
-                headers = headers,
+                options = options,
                 responseSerializer = String.serializer(),
+                responseKind = "json",
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }
 
     public open suspend fun uint64(
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): HelloUint64Response {
         return transport.request(
             ApiRequest(
                 routeId = "api.hello.get.uint64",
                 method = "GET",
                 path = "/api/hello/uint64",
-                headers = headers,
+                options = options,
                 responseSerializer = Long.serializer(),
+                responseKind = "json",
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }
 
     public open suspend fun stringEmun(
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): HelloStringEmunResponse {
         return transport.request(
             ApiRequest(
                 routeId = "api.hello.get.stringemun",
                 method = "GET",
                 path = "/api/hello/string-emun",
-                headers = headers,
+                options = options,
                 responseSerializer = MapEnum.serializer(),
+                responseKind = "json",
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }
 
     public open suspend fun helloWay(
         query: HelloHelloWayQuery,
-        headers: Map<String, String> = emptyMap(),
+        options: ApiRequestOptions = ApiRequestOptions(),
     ): Unit {
         return transport.request(
             ApiRequest(
@@ -117,10 +129,12 @@ public open class GenHelloApi internal constructor(
                 method = "GET",
                 path = "/api/hello/hello-way",
                 query = query.toQueryMap(),
-                headers = headers,
+                options = options,
                 responseSerializer = Unit.serializer(),
+                responseKind = "json",
                 responseMediaType = "application/json",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
             )
         )
     }

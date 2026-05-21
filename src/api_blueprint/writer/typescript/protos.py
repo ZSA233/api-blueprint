@@ -55,6 +55,7 @@ class TypeScriptTypeResolver:
         "byte": "number",
         "null": "null",
         "any": "any",
+        "file": "ApiFilePart",
     }
 
     def __init__(self, registry: "TypeScriptProtoRegistry"):

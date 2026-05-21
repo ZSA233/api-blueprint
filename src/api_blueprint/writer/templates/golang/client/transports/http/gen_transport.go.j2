@@ -8,7 +8,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime"
+	"mime/multipart"
 	nethttp "net/http"
+	"net/textproto"
 	"net/url"
 	"reflect"
 	"strings"
@@ -20,6 +23,10 @@ import (
 type HttpTransport struct {
 	config HttpConfig
 	client *nethttp.Client
+}
+
+type binaryBodyDecoder interface {
+	DecodeBinary(io.Reader) error
 }
 
 func NewHttpTransport(config HttpConfig) *HttpTransport {
@@ -57,29 +64,56 @@ func (transport *HttpTransport) Do(ctx context.Context, request runtime.Request,
 	if err != nil {
 		return err
 	}
+	applyHeaders(httpRequest.Header, transport.config.DefaultHeaders)
+	applyHeaders(httpRequest.Header, request.Headers)
 	if contentType != "" {
 		httpRequest.Header.Set("Content-Type", contentType)
 	}
 	if contentLength >= 0 {
 		httpRequest.ContentLength = contentLength
 	}
-	httpRequest.Header.Set("Accept", "application/json")
+	if httpRequest.Header.Get("Accept") == "" {
+		httpRequest.Header.Set("Accept", "application/json")
+	}
 
 	httpResponse, err := transport.client.Do(httpRequest)
 	if err != nil {
 		return err
 	}
-	defer httpResponse.Body.Close()
 
 	if httpResponse.StatusCode >= 400 {
+		defer httpResponse.Body.Close()
 		data, _ := io.ReadAll(httpResponse.Body)
 		if apiErr := decodeHTTPApiError(data, request.RouteID, request.ResponseEnvelope); apiErr != nil {
 			return apiErr
 		}
 		return runtime.HTTPError{StatusCode: httpResponse.StatusCode, Body: string(data)}
 	}
+	if request.ResponseKind == runtime.ResponseByteStream {
+		target, ok := response.(*runtime.StreamResponse)
+		if !ok {
+			httpResponse.Body.Close()
+			return fmt.Errorf("api-blueprint http transport expected *runtime.StreamResponse target, got %T", response)
+		}
+		*target = runtime.StreamResponse{
+			Body:               httpResponse.Body,
+			Headers:            map[string][]string(httpResponse.Header),
+			StatusCode:         httpResponse.StatusCode,
+			ContentType:        contentTypeHeader(httpResponse),
+			ContentDisposition: httpResponse.Header.Get("Content-Disposition"),
+			Filename:           filenameFromDisposition(httpResponse.Header.Get("Content-Disposition")),
+		}
+		return nil
+	}
+	defer httpResponse.Body.Close()
 	if response == nil || httpResponse.StatusCode == nethttp.StatusNoContent {
 		return nil
+	}
+	if request.ResponseKind == runtime.ResponseBytes || request.ResponseKind == runtime.ResponseFile {
+		return decodeRawResponse(httpResponse, request, response)
+	}
+	if request.ResponseKind == runtime.ResponseBinarySchema {
+		return decodeBinarySchemaResponse(httpResponse.Body, response)
 	}
 	return decodeResponse(httpResponse.Body, request.ResponseEnvelope, request.RouteID, response)
 }
@@ -103,6 +137,12 @@ func joinURL(base string, path string) (*url.URL, error) {
 	return endpoint, nil
 }
 
+func applyHeaders(target nethttp.Header, headers map[string]string) {
+	for name, value := range headers {
+		target.Set(name, value)
+	}
+}
+
 func encodeBody(request runtime.Request) (io.Reader, string, int64, error) {
 	switch {
 	case request.Binary != nil:
@@ -115,6 +155,8 @@ func encodeBody(request runtime.Request) (io.Reader, string, int64, error) {
 			_ = writer.CloseWithError(body.WriteBinary(writer))
 		}()
 		return reader, body.ContentType(), body.ContentLength(), nil
+	case request.Multipart != nil:
+		return encodeMultipart(request.Multipart)
 	case request.Form != nil:
 		values, err := encodeValues(request.Form)
 		if err != nil {
@@ -128,6 +170,150 @@ func encodeBody(request runtime.Request) (io.Reader, string, int64, error) {
 	default:
 		return nil, "", -1, nil
 	}
+}
+
+func encodeMultipart(input any) (io.Reader, string, int64, error) {
+	value, err := multipartStructValue(input)
+	if err != nil {
+		return nil, "", -1, err
+	}
+	reader, pipeWriter := io.Pipe()
+	writer := multipart.NewWriter(pipeWriter)
+	contentType := writer.FormDataContentType()
+	go func() {
+		err := writeMultipartFields(writer, value)
+		if closeErr := writer.Close(); err == nil {
+			err = closeErr
+		}
+		_ = pipeWriter.CloseWithError(err)
+	}()
+	return reader, contentType, -1, nil
+}
+
+func multipartStructValue(input any) (reflect.Value, error) {
+	value := reflect.ValueOf(input)
+	if value.Kind() == reflect.Pointer {
+		if value.IsNil() {
+			return reflect.Value{}, nil
+		}
+		value = value.Elem()
+	}
+	if value.Kind() != reflect.Struct {
+		return reflect.Value{}, fmt.Errorf("api-blueprint http transport expected multipart struct values, got %s", value.Kind())
+	}
+	return value, nil
+}
+
+func writeMultipartFields(writer *multipart.Writer, value reflect.Value) error {
+	if !value.IsValid() {
+		return nil
+	}
+	valueType := value.Type()
+	for i := 0; i < value.NumField(); i++ {
+		field := value.Field(i)
+		fieldType := valueType.Field(i)
+		key := formFieldName(fieldType)
+		if key == "" || key == "-" || field.IsZero() {
+			continue
+		}
+		if err := writeMultipartField(writer, key, field); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func writeMultipartField(writer *multipart.Writer, key string, field reflect.Value) error {
+	if field.Kind() == reflect.Pointer {
+		if field.IsNil() {
+			return nil
+		}
+		field = field.Elem()
+	}
+	if file, ok := field.Interface().(runtime.MultipartFile); ok {
+		return writeMultipartFile(writer, key, file)
+	}
+	return writer.WriteField(key, fmt.Sprint(field.Interface()))
+}
+
+func writeMultipartFile(writer *multipart.Writer, key string, file runtime.MultipartFile) error {
+	filename := file.Filename
+	if filename == "" {
+		filename = key
+	}
+	var part io.Writer
+	var err error
+	if file.ContentType != "" {
+		header := make(textproto.MIMEHeader)
+		header.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`, escapeQuotes(key), escapeQuotes(filename)))
+		header.Set("Content-Type", file.ContentType)
+		part, err = writer.CreatePart(header)
+	} else {
+		part, err = writer.CreateFormFile(key, filename)
+	}
+	if err != nil {
+		return err
+	}
+	reader := file.Reader
+	if reader == nil {
+		reader = bytes.NewReader(file.Bytes)
+	}
+	_, err = io.Copy(part, reader)
+	return err
+}
+
+func escapeQuotes(value string) string {
+	return strings.NewReplacer("\\", "\\\\", `"`, "\\\"").Replace(value)
+}
+
+func decodeRawResponse(httpResponse *nethttp.Response, request runtime.Request, response any) error {
+	target, ok := response.(*runtime.RawResponse)
+	if !ok {
+		return fmt.Errorf("api-blueprint http transport expected *runtime.RawResponse target, got %T", response)
+	}
+	data, err := io.ReadAll(httpResponse.Body)
+	if err != nil {
+		return err
+	}
+	if isJSONResponse(httpResponse) {
+		if apiErr := decodeEnvelopeAPIError(data, request.RouteID, request.ResponseEnvelope); apiErr != nil {
+			return apiErr
+		}
+	}
+	*target = runtime.RawResponse{
+		Body:               data,
+		Headers:            map[string][]string(httpResponse.Header),
+		StatusCode:         httpResponse.StatusCode,
+		ContentType:        contentTypeHeader(httpResponse),
+		ContentDisposition: httpResponse.Header.Get("Content-Disposition"),
+		Filename:           filenameFromDisposition(httpResponse.Header.Get("Content-Disposition")),
+	}
+	return nil
+}
+
+func decodeBinarySchemaResponse(reader io.Reader, response any) error {
+	target, ok := response.(binaryBodyDecoder)
+	if !ok {
+		return fmt.Errorf("api-blueprint http transport expected binary decoder target, got %T", response)
+	}
+	return target.DecodeBinary(reader)
+}
+
+func contentTypeHeader(response *nethttp.Response) string {
+	return strings.TrimSpace(strings.Split(response.Header.Get("Content-Type"), ";")[0])
+}
+
+func isJSONResponse(response *nethttp.Response) bool {
+	contentType := strings.ToLower(contentTypeHeader(response))
+	return contentType == "application/json" || strings.HasSuffix(contentType, "+json")
+}
+
+func filenameFromDisposition(disposition string) string {
+	_, params, err := mime.ParseMediaType(disposition)
+	if err != nil {
+		return ""
+	}
+	return params["filename"]
 }
 
 func decodeResponse(reader io.Reader, envelope runtime.ApiResponseEnvelope, routeID string, response any) error {
@@ -174,20 +360,8 @@ func decodeEnvelopeData(object map[string]json.RawMessage, field string, respons
 }
 
 func decodeHTTPApiError(data []byte, routeID string, envelope runtime.ApiResponseEnvelope) error {
-	var object map[string]json.RawMessage
-	if err := json.Unmarshal(data, &object); err == nil && object != nil {
-		switch envelope.Kind {
-		case "code_message_data":
-			payload := payloadFromCodeMessageEnvelope(object, envelope)
-			if payload.Code != 0 || payload.ID != "" || payload.Message != "" {
-				return newApiErrorFromPayload(payload, routeID, string(data))
-			}
-		case "ok_data_error":
-			payload := payloadFromNestedError(object, fieldName(envelope.Fields.Error, "error"))
-			if payload.Code != 0 || payload.ID != "" || payload.Message != "" {
-				return newApiErrorFromPayload(payload, routeID, string(data))
-			}
-		}
+	if apiErr := decodeEnvelopeAPIError(data, routeID, envelope); apiErr != nil {
+		return apiErr
 	}
 	var genericEnvelope struct {
 		Error runtime.ApiErrorPayload `json:"error,omitempty"`
@@ -198,6 +372,33 @@ func decodeHTTPApiError(data []byte, routeID string, envelope runtime.ApiRespons
 	var payload runtime.ApiErrorPayload
 	if err := json.Unmarshal(data, &payload); err == nil && (payload.Code != 0 || payload.ID != "") {
 		return newApiErrorFromPayload(payload, routeID, string(data))
+	}
+	return nil
+}
+
+func decodeEnvelopeAPIError(data []byte, routeID string, envelope runtime.ApiResponseEnvelope) error {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err == nil && object != nil {
+		switch envelope.Kind {
+		case "code_message_data":
+			code, hasCode := decodeEnvelopeCode(object, fieldName(envelope.Fields.Code, "code"))
+			if !hasCode || code == envelope.SuccessCode {
+				return nil
+			}
+			payload := payloadFromCodeMessageEnvelope(object, envelope)
+			if payload.Code != 0 || payload.ID != "" || payload.Message != "" {
+				return newApiErrorFromPayload(payload, routeID, string(data))
+			}
+		case "ok_data_error":
+			ok, hasOk := decodeEnvelopeBool(object, fieldName(envelope.Fields.Ok, "ok"))
+			if !hasOk || ok {
+				return nil
+			}
+			payload := payloadFromNestedError(object, fieldName(envelope.Fields.Error, "error"))
+			if payload.Code != 0 || payload.ID != "" || payload.Message != "" {
+				return newApiErrorFromPayload(payload, routeID, string(data))
+			}
+		}
 	}
 	return nil
 }
@@ -309,11 +510,7 @@ func encodeValues(input any) (url.Values, error) {
 	for i := 0; i < value.NumField(); i++ {
 		field := value.Field(i)
 		fieldType := valueType.Field(i)
-		key := fieldType.Tag.Get("form")
-		if key == "" {
-			key = fieldType.Tag.Get("json")
-		}
-		key = strings.Split(key, ",")[0]
+		key := formFieldName(fieldType)
 		if key == "" || key == "-" {
 			key = fieldType.Name
 		}
@@ -323,4 +520,12 @@ func encodeValues(input any) (url.Values, error) {
 		values.Set(key, fmt.Sprint(field.Interface()))
 	}
 	return values, nil
+}
+
+func formFieldName(fieldType reflect.StructField) string {
+	key := fieldType.Tag.Get("form")
+	if key == "" {
+		key = fieldType.Tag.Get("json")
+	}
+	return strings.Split(key, ",")[0]
 }

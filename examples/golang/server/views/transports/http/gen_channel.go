@@ -25,9 +25,15 @@ type httpWebSocketEnvelope struct {
 }
 
 func acceptDefaultHTTPChannel(ginCtx *gin.Context) (provider.Connection, func(), error) {
-	conn, err := websocket.Accept(ginCtx.Writer, ginCtx.Request, &websocket.AcceptOptions{
-		CompressionMode: websocket.CompressionContextTakeover,
-	})
+	config := ActiveServerConfig()
+	options := &websocket.AcceptOptions{
+		OriginPatterns:     append([]string(nil), config.WebSocketOriginPatterns...),
+		InsecureSkipVerify: config.WebSocketInsecureSkipVerify,
+	}
+	if config.WebSocketEnableCompression {
+		options.CompressionMode = websocket.CompressionContextTakeover
+	}
+	conn, err := websocket.Accept(ginCtx.Writer, ginCtx.Request, options)
 	if err != nil {
 		return nil, nil, err
 	}

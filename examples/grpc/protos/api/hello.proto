@@ -18,6 +18,7 @@ message AbcRequest {
   bool arg1 = 1;
   string arg3 = 2;
   float arg2 = 3;
+  HelloChannelMsgTypeEnum type = 4;
 }
 
 message AbcResponse {
@@ -68,6 +69,16 @@ message HelloWayRequest {
 }
 
 message HelloWayResponse {
+}
+
+enum HelloChannelMsgTypeEnum {
+  HELLOCHANNELMSGTYPEENUM_UNSPECIFIED = 0;
+  HELLOCHANNELMSGTYPEENUM_PING = 1;
+  HELLOCHANNELMSGTYPEENUM_PONG = 2;
+  HELLOCHANNELMSGTYPEENUM_JOIN = 3;
+  HELLOCHANNELMSGTYPEENUM_LEAVE = 4;
+  HELLOCHANNELMSGTYPEENUM_FORGEROUND = 5;
+  HELLOCHANNELMSGTYPEENUM_UPGRADE = 6;
 }
 
 enum MapEnum {

@@ -64,13 +64,16 @@ class KotlinRoute:
         self.query_proto = self._ensure_model(self.protocol.request.query.model, "Query")
         self.open_proto = self._ensure_model(self.protocol.request.open.model, "Open")
         self.form_proto = self._ensure_model(self.protocol.request.form.model, "Form")
+        self.multipart_proto = self._ensure_model(self.protocol.request.multipart.model, "Form")
         self.json_proto = self._ensure_model(self.protocol.request.json.model, "Json")
         self.binary_schema = self.protocol.request.binary_schema
         self.binary_proto = None if self.binary_schema is not None else self._ensure_model(
             self.protocol.request.binary.model, "Binary"
         )
 
+        self.response_kind = self.protocol.response.kind
         self.response_media_type = self.protocol.response.media_type
+        self.response_binary_schema = self.protocol.response.binary_schema
         self.response_payload_proto = self._ensure_model(self.protocol.response.model.model, "Response")
         self.response_payload_type = self._payload_response_type()
         self.response_type = self.response_payload_type
@@ -105,6 +108,10 @@ class KotlinRoute:
         return self.form_proto.name if self.form_proto else None
 
     @property
+    def multipart_type(self) -> str | None:
+        return self.multipart_proto.name if self.multipart_proto else None
+
+    @property
     def binary_type(self) -> str | None:
         if self.binary_schema is not None:
             return self.binary_schema.name
@@ -119,6 +126,16 @@ class KotlinRoute:
     @property
     def has_binary_schema(self) -> bool:
         return self.binary_schema is not None
+
+    @property
+    def has_response_binary_schema(self) -> bool:
+        return self.response_binary_schema is not None
+
+    @property
+    def response_binary_wire_type(self) -> str | None:
+        if self.response_binary_schema is None:
+            return None
+        return f"{self.response_binary_schema.name}Wire"
 
     @property
     def response_envelope_literal(self) -> str:
@@ -143,7 +160,20 @@ class KotlinRoute:
 
     @property
     def response_serializer_expr(self) -> str:
+        if self.response_kind in {"bytes", "file", "byte_stream", "binary_schema"}:
+            return "Unit.serializer()"
         return self.transport_response_type.serializer_expr()
+
+    @property
+    def response_decoder_expr(self) -> str:
+        if self.response_kind in {"bytes", "file"}:
+            filename = _kotlin_string(self.protocol.response.filename or "")
+            return f"{{ response -> response.toRawResponse({_kotlin_string(self.response_media_type)}, {filename}) }}"
+        if self.response_kind == "byte_stream":
+            return f"{{ response -> response.toStreamResponse({_kotlin_string(self.response_media_type)}) }}"
+        if self.response_kind == "binary_schema" and self.response_binary_wire_type is not None:
+            return f"{{ response -> {self.response_binary_wire_type}.parse(response.body) }}"
+        return "null"
 
     @property
     def server_message_type(self) -> str:
@@ -156,6 +186,28 @@ class KotlinRoute:
     @property
     def close_type(self) -> str:
         return self.close_proto.name if self.close_proto else "SocketCloseInfo"
+
+    @property
+    def server_message_serializer_expr(self) -> str:
+        return f"{self.server_message_type}.serializer()"
+
+    @property
+    def client_message_serializer_expr(self) -> str:
+        return f"{self.client_message_type}.serializer()"
+
+    @property
+    def close_serializer_expr(self) -> str:
+        return f"{self.close_type}.serializer()"
+
+    @property
+    def connection_query_expr(self) -> str:
+        if self.query_type and self.open_type:
+            return "query.toQueryMap() + open.toQueryMap()"
+        if self.open_type:
+            return "open.toQueryMap()"
+        if self.query_type:
+            return "query.toQueryMap()"
+        return "emptyMap()"
 
     @property
     def subscribe_method_name(self) -> str:
@@ -243,6 +295,12 @@ class KotlinRoute:
         return tuple(helpers)
 
     def _payload_response_type(self) -> KotlinResolvedType:
+        if self.response_kind in {"bytes", "file"}:
+            return KotlinResolvedType("ApiRawResponse", serializer="Unit.serializer()")
+        if self.response_kind == "byte_stream":
+            return KotlinResolvedType("ApiStreamResponse", serializer="Unit.serializer()")
+        if self.response_kind == "binary_schema" and self.response_binary_schema is not None:
+            return KotlinResolvedType(self.response_binary_schema.name, serializer="Unit.serializer()")
         if self.response_media_type != "application/json":
             return KotlinResolvedType("String", serializer="String.serializer()")
         if self.response_payload_proto is None:
@@ -264,7 +322,12 @@ class KotlinApiGroup:
     routes: list[KotlinRoute] = field(default_factory=list)
 
     def binary_schemas(self) -> list[KotlinBinarySchema]:
-        schemas = [route.binary_schema for route in self.routes if route.binary_schema is not None]
+        schemas = [
+            schema
+            for route in self.routes
+            for schema in (route.binary_schema, route.response_binary_schema)
+            if schema is not None
+        ]
         return unique_kotlin_binary_schemas(schemas)
 
     def message_helpers(self) -> tuple[KotlinMessageHelper, ...]:
@@ -273,6 +336,14 @@ class KotlinApiGroup:
             for helper in route.message_helpers():
                 helpers.setdefault(helper.name, helper)
         return tuple(helpers.values())
+
+    def query_map_protos(self) -> tuple[KotlinProto, ...]:
+        protos: "OrderedDict[str, KotlinProto]" = OrderedDict()
+        for route in self.routes:
+            for proto in (route.query_proto, route.open_proto):
+                if proto is not None and proto.fields:
+                    protos.setdefault(proto.name, proto)
+        return tuple(protos.values())
 
 
 class KotlinBlueprint(BaseBlueprint["KotlinWriter"]):

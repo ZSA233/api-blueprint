@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
+import re
 from collections import OrderedDict
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Mapping
+from typing import TYPE_CHECKING, Any
 
 from api_blueprint.engine.model import Model
 from api_blueprint.engine.router import Router
@@ -14,6 +15,7 @@ from api_blueprint.writer.core.sdk_names import RoutePublicNames
 
 from .naming import to_path_segments, to_py_class_name, to_py_identifier
 from .binary_schema import PythonBinarySchema, unique_python_binary_schemas
+from .schema_types import PythonDtoModel, PythonEnumModel, PythonResolvedType, PythonSchemaRegistry
 
 if TYPE_CHECKING:
     from .writer import PythonBaseWriter
@@ -23,21 +25,27 @@ if TYPE_CHECKING:
 class PythonRequestParam:
     name: str
     call_name: str
-    annotation: str = "dict[str, Any] | None"
-    default: str = "None"
-    converter: str = "_to_mapping"
+    annotation: str = "Any | None"
+    server_annotation: str | None = None
+    default: str | None = None
+    type: PythonResolvedType | None = None
+    transport_encode: bool = False
 
+    @property
+    def service_annotation(self) -> str:
+        return self.server_annotation or self.annotation
 
-@dataclass(frozen=True)
-class PythonRouteModelField:
-    name: str
-    type_expr: str
+    def encode_expr(self, value_expr: str) -> str:
+        if self.transport_encode:
+            return f"_api_to_transport({value_expr})"
+        if self.type is None:
+            return value_expr
+        return f"_api_to_json({value_expr})"
 
-
-@dataclass(frozen=True)
-class PythonRouteModel:
-    class_name: str
-    fields: tuple[PythonRouteModelField, ...]
+    def decode_expr(self, value_expr: str, path_expr: str) -> str:
+        if self.type is None:
+            return value_expr
+        return self.type.decode_expr(value_expr, path_expr)
 
 
 @dataclass(frozen=True)
@@ -45,6 +53,7 @@ class PythonMessageVariant:
     key: str
     method_name: str
     data_type: str
+    data_decode_expr: str
 
 
 @dataclass(frozen=True)
@@ -59,7 +68,7 @@ class PythonMessageHelper:
 
 
 class PythonRoute:
-    def __init__(self, router: Router, protocol: RouteProtocolContract, *, schemas: Mapping[str, Any]):
+    def __init__(self, router: Router, protocol: RouteProtocolContract, *, registry: PythonSchemaRegistry):
         self.router = router
         self.protocol = protocol
         self.contract = protocol.route
@@ -71,12 +80,20 @@ class PythonRoute:
         self.response_type = _model_name(protocol.response.model.model)
         self.response_envelope = protocol.response.envelope.envelope_spec()
         self.binary_schema = protocol.request.binary_schema
-        self.query_model = _route_model(schemas, protocol.request.query.schema, self.public_names.query)
-        self.json_model = _route_model(schemas, protocol.request.json.schema, self.public_names.json)
-        self.form_model = _route_model(schemas, protocol.request.form.schema, self.public_names.form)
-        self.open_model = _route_model(schemas, protocol.request.open.schema, self.public_names.open)
-        self.response_model = _route_model(schemas, protocol.response.model.schema, self.public_names.response)
-        self.message_payload_models = self._message_payload_models(schemas)
+        self.response_binary_schema = protocol.response.binary_schema
+        self.registry = registry
+        self.query_type = registry.resolve_schema(protocol.request.query.schema, class_name=self.public_names.query)
+        self.json_type = registry.resolve_schema(protocol.request.json.schema, class_name=self.public_names.json)
+        self.form_type = registry.resolve_schema(protocol.request.form.schema, class_name=self.public_names.form)
+        self.multipart_type = registry.resolve_schema(protocol.request.multipart.schema, class_name=self.public_names.form)
+        self.open_type = registry.resolve_schema(protocol.request.open.schema, class_name=self.public_names.open)
+        self.response_type_info = registry.resolve_schema(
+            protocol.response.model.schema,
+            class_name=self.public_names.response,
+        )
+        self.server_message_type = self._ensure_message_contract(protocol.server_message)
+        self.client_message_type = self._ensure_message_contract(protocol.client_message)
+        self.close_type = self._ensure_model_ref(protocol.close_model, self.public_names.close)
         self.params = self._request_params()
 
     @property
@@ -123,19 +140,90 @@ class PythonRoute:
 
     @property
     def response_type_literal(self) -> str:
-        if self.response_model is not None:
-            return repr(self.response_model.class_name)
+        if self.is_binary_schema_response:
+            return repr("binary_schema")
+        if self.is_raw_response:
+            return repr(self.raw_response_transport_type)
+        if self.response_type_info is not None:
+            return repr(self.response_type_info.annotation)
         if self.response_type is None:
             return "None"
         return repr(self.response_type)
 
     @property
     def response_class_name(self) -> str | None:
-        return self.response_model.class_name if self.response_model is not None else None
+        if self.response_type_info is None:
+            return None
+        return self.response_type_info.annotation
+
+    @property
+    def response_annotation(self) -> str:
+        if self.is_binary_schema_response:
+            return self.response_binary_schema.name
+        if self.protocol.response.kind in {"bytes", "file"}:
+            return "ApiRawResponse[bytes]"
+        if self.protocol.response.kind == "byte_stream":
+            return "ApiStreamResponse"
+        if self.response_type_info is None:
+            return "Any"
+        return self.response_type_info.annotation
+
+    @property
+    def service_response_annotation(self) -> str:
+        if self.is_binary_schema_response:
+            return self.response_binary_schema.name
+        if self.protocol.response.kind == "bytes":
+            return "bytes | ApiRawResponse[bytes]"
+        if self.protocol.response.kind == "file":
+            return "str | Path | ApiRawResponse[bytes]"
+        if self.protocol.response.kind == "byte_stream":
+            return "AsyncIterable[bytes] | Iterable[bytes] | ApiRawResponse[AsyncIterable[bytes] | Iterable[bytes]]"
+        return self.response_annotation
+
+    @property
+    def is_raw_response(self) -> bool:
+        return self.protocol.response.kind in {"bytes", "file", "byte_stream"}
+
+    @property
+    def is_binary_schema_response(self) -> bool:
+        return self.protocol.response.kind == "binary_schema" and self.response_binary_schema is not None
+
+    @property
+    def raw_response_transport_type(self) -> str:
+        if self.protocol.response.kind == "byte_stream":
+            return "stream"
+        return self.protocol.response.kind
+
+    @property
+    def response_kind_literal(self) -> str:
+        return json.dumps(self.protocol.response.kind)
+
+    @property
+    def response_media_type_literal(self) -> str:
+        return json.dumps(self.protocol.response.media_type)
+
+    @property
+    def response_filename_literal(self) -> str:
+        if self.protocol.response.filename is None:
+            return "None"
+        return repr(self.protocol.response.filename)
+
+    def response_decode_expr(self, value_expr: str) -> str:
+        if self.is_binary_schema_response:
+            return f"{self.response_binary_wire_name}.from_bytes({value_expr})"
+        if self.is_raw_response:
+            return value_expr
+        if self.response_type_info is None:
+            return value_expr
+        return self.response_type_info.decode_expr(value_expr, json.dumps(f"{self.method_name}.response"))
 
     @property
     def has_binary_schema(self) -> bool:
         return self.binary_schema is not None
+
+    @property
+    def has_response_binary_schema(self) -> bool:
+        return self.response_binary_schema is not None
 
     @property
     def binary_type_name(self) -> str | None:
@@ -148,6 +236,12 @@ class PythonRoute:
         if self.binary_schema is None:
             return None
         return f"{self.binary_schema.name}Wire"
+
+    @property
+    def response_binary_wire_name(self) -> str | None:
+        if self.response_binary_schema is None:
+            return None
+        return f"{self.response_binary_schema.name}Wire"
 
     @property
     def http_method_literal(self) -> str:
@@ -171,24 +265,35 @@ class PythonRoute:
             return ""
         return ", ".join(f"{param.call_name}={param.name}" for param in self.params)
 
+    @property
+    def has_decoded_params(self) -> bool:
+        return any(param.type is not None for param in self.params)
+
     def _request_params(self) -> list[PythonRequestParam]:
         params: list[PythonRequestParam] = []
         if self.protocol.request.query.model is not None:
-            annotation = _param_annotation(self.query_model)
-            params.append(PythonRequestParam("query", "query", annotation))
+            params.append(_request_param("query", "query", self.query_type))
         if self.protocol.request.json.model is not None:
-            annotation = _param_annotation(self.json_model)
-            params.append(PythonRequestParam("json", "json", annotation))
+            params.append(_request_param("json", "json", self.json_type))
         if self.protocol.request.form.model is not None:
-            annotation = _param_annotation(self.form_model)
-            params.append(PythonRequestParam("form", "form", annotation))
+            params.append(_request_param("form", "form", self.form_type))
+        if self.protocol.request.multipart.model is not None:
+            params.append(_request_param("multipart", "multipart", self.multipart_type, transport_encode=True))
         if self.binary_schema is not None:
-            params.append(PythonRequestParam("binary", "binary", f"{self.binary_schema.name} | ApiBinaryBody", "...", converter=""))
+            params.append(
+                PythonRequestParam(
+                    "binary",
+                    "binary",
+                    f"{self.binary_schema.name} | ApiBinaryBody",
+                    "bytes | None",
+                    None,
+                    type=None,
+                )
+            )
         elif self.protocol.request.binary.model is not None:
-            params.append(PythonRequestParam("binary", "binary", "bytes | None", "None", converter=""))
+            params.append(PythonRequestParam("binary", "binary", "bytes | None", "bytes | None", None, type=None))
         if self.protocol.request.open.model is not None:
-            annotation = _param_annotation(self.open_model)
-            params.append(PythonRequestParam("open_data", "open_data", annotation))
+            params.append(_request_param("open_data", "open_data", self.open_type))
         return params
 
     def message_helpers(self) -> tuple[PythonMessageHelper, ...]:
@@ -199,11 +304,17 @@ class PythonRoute:
                 continue
             variants: list[PythonMessageVariant] = []
             for variant in descriptor.variants:
+                data_type = self.registry.resolve_schema(variant.model, class_name=_message_payload_type(variant.model))
+                resolved = data_type or PythonResolvedType("Any")
                 variants.append(
                     PythonMessageVariant(
                         key=variant.key,
                         method_name=to_py_identifier(variant.key, default="variant"),
-                        data_type=_message_payload_type(variant.model),
+                        data_type=resolved.annotation,
+                        data_decode_expr=resolved.decode_expr(
+                            "typed_message.data",
+                            f"_field_path({json.dumps(descriptor.name)}, \"data\")",
+                        ),
                     )
                 )
             helpers.append(
@@ -219,21 +330,21 @@ class PythonRoute:
             )
         return tuple(helpers)
 
-    def _message_payload_models(self, schemas: Mapping[str, Any]) -> tuple[PythonRouteModel, ...]:
-        models: list[PythonRouteModel] = []
-        seen: set[str] = set()
-        for contract in (self.protocol.server_message, self.protocol.client_message):
-            descriptor = _descriptor_from_contract(contract)
-            if descriptor is None:
-                continue
-            for variant in descriptor.variants:
-                if variant.model in seen:
-                    continue
-                seen.add(variant.model)
-                model = _route_model(schemas, variant.model, _message_payload_type(variant.model))
-                if model is not None:
-                    models.append(model)
-        return tuple(models)
+    def _ensure_model_ref(self, model: object, class_name: str | None = None) -> PythonResolvedType:
+        schema_name = _model_name(model)
+        resolved = self.registry.resolve_schema(schema_name, class_name=class_name)
+        return resolved or PythonResolvedType("Any")
+
+    def _ensure_message_contract(self, contract: object) -> PythonResolvedType | None:
+        descriptor = _descriptor_from_contract(contract)
+        if descriptor is None:
+            single_model = getattr(contract, "single_model", None)
+            if single_model is None:
+                return None
+            return self._ensure_model_ref(single_model)
+        for variant in descriptor.variants:
+            self.registry.resolve_schema(variant.model, class_name=_message_payload_type(variant.model))
+        return PythonResolvedType(descriptor.name, f"{descriptor.name}.from_value")
 
 
 @dataclass
@@ -243,6 +354,7 @@ class PythonRouteGroup:
     legacy_segments: tuple[str, ...]
     client_class: str
     service_class: str
+    registry: PythonSchemaRegistry
     routes: list[PythonRoute] = field(default_factory=list)
 
     @property
@@ -254,26 +366,43 @@ class PythonRouteGroup:
         return "." * (len(self.segments) + 2)
 
     def binary_schemas(self) -> list[PythonBinarySchema]:
-        schemas = [route.binary_schema for route in self.routes if route.binary_schema is not None]
+        schemas = []
+        for route in self.routes:
+            if route.binary_schema is not None:
+                schemas.append(route.binary_schema)
+            if route.response_binary_schema is not None:
+                schemas.append(route.response_binary_schema)
         return unique_python_binary_schemas(schemas)
 
-    def route_models(self) -> tuple[PythonRouteModel, ...]:
-        result: list[PythonRouteModel] = []
-        seen: set[str] = set()
-        for route in self.routes:
-            for model in (
-                route.query_model,
-                route.json_model,
-                route.form_model,
-                route.open_model,
-                route.response_model,
-                *route.message_payload_models,
-            ):
-                if model is None or model.class_name in seen:
-                    continue
-                seen.add(model.class_name)
-                result.append(model)
-        return tuple(result)
+    def route_models(self) -> tuple[PythonDtoModel, ...]:
+        return self.registry.models()
+
+    def enums(self) -> tuple[PythonEnumModel, ...]:
+        return self.registry.enums()
+
+    def type_import_names(self) -> tuple[str, ...]:
+        names = [model.class_name for model in self.route_models()]
+        names.extend(enum.class_name for enum in self.enums())
+        names.extend(helper.name for helper in self.message_helpers())
+        return tuple(dict.fromkeys(names))
+
+    @property
+    def server_type_module_alias(self) -> str:
+        return f"{to_py_identifier('_'.join(self.segments), default='types')}_types"
+
+    def server_type_expr(self, expr: str) -> str:
+        result = expr
+        names = list(self.type_import_names())
+        for schema in self.binary_schemas():
+            names.append(schema.py_type)
+            names.append(f"{schema.py_type}Wire")
+        for name in sorted(dict.fromkeys(names), key=len, reverse=True):
+            result = re.sub(
+                rf"(?<![\w.]){re.escape(name)}(?=\.)",
+                f"{self.server_type_module_alias}.{name}",
+                result,
+            )
+        return result
 
     def message_helpers(self) -> tuple[PythonMessageHelper, ...]:
         helpers: "OrderedDict[str, PythonMessageHelper]" = OrderedDict()
@@ -296,24 +425,26 @@ class PythonBlueprint(BaseBlueprint["PythonBaseWriter"]):
     def collect(self) -> None:
         self.routes = []
         self.groups = OrderedDict()
+        schemas = self.writer.manifest_schemas()
         for _group, router in self.iter_router():
             protocol = self.writer.route_protocol_for(router)
             if not self.writer.route_selected(router, protocol):
                 continue
-            route = PythonRoute(router, protocol, schemas=self.writer.manifest_schemas())
-            self.routes.append(route)
             segments = self._group_segments(router)
             group = self.groups.get(segments)
             if group is None:
-                alias = route.contract.group_alias or segments[-1]
+                alias = protocol.route.group_alias or segments[-1]
                 group = PythonRouteGroup(
                     alias=alias,
                     segments=segments,
                     legacy_segments=self._legacy_group_segments(router),
-                    client_class=to_py_class_name(route.contract.client_class, default="ApiClient"),
-                    service_class=to_py_class_name(route.contract.service_name, default="ApiService"),
+                    client_class=to_py_class_name(protocol.route.client_class, default="ApiClient"),
+                    service_class=to_py_class_name(protocol.route.service_name, default="ApiService"),
+                    registry=PythonSchemaRegistry(schemas),
                 )
                 self.groups[segments] = group
+            route = PythonRoute(router, protocol, registry=group.registry)
+            self.routes.append(route)
             group.routes.append(route)
 
     def _group_segments(self, router: Router) -> tuple[str, ...]:
@@ -347,6 +478,24 @@ def _message_payload_type(schema_name: str) -> str:
     return to_py_class_name(schema_name.rsplit(".", 1)[-1], default="MessageData")
 
 
+def _request_param(
+    name: str,
+    call_name: str,
+    resolved: PythonResolvedType | None,
+    *,
+    transport_encode: bool = False,
+) -> PythonRequestParam:
+    if resolved is None:
+        return PythonRequestParam(name, call_name, "Any", type=None, transport_encode=transport_encode)
+    return PythonRequestParam(
+        name,
+        call_name,
+        resolved.annotation,
+        type=resolved,
+        transport_encode=transport_encode,
+    )
+
+
 def _descriptor_from_contract(contract: object) -> MessageHelperDescriptor | None:
     from api_blueprint.engine.connection import MessageContract
     from api_blueprint.writer.core.message_helpers import MessageVariantDescriptor
@@ -366,59 +515,3 @@ def _descriptor_from_contract(contract: object) -> MessageHelperDescriptor | Non
             for variant in contract.variants
         ),
     )
-
-
-def _route_model(schemas: Mapping[str, Any], schema_name: str | None, class_name: str) -> PythonRouteModel | None:
-    if not schema_name:
-        return None
-    schema = schemas.get(schema_name)
-    if not isinstance(schema, Mapping) or schema.get("type") != "object":
-        return None
-    fields = schema.get("fields")
-    if not isinstance(fields, Mapping):
-        return PythonRouteModel(class_name=class_name, fields=())
-    rendered: list[PythonRouteModelField] = []
-    for raw_name, raw_field in fields.items():
-        if not isinstance(raw_field, Mapping):
-            continue
-        name = to_py_identifier(str(raw_field.get("name") or raw_name), default="value")
-        rendered.append(PythonRouteModelField(name=name, type_expr=_python_type_for_value(raw_field)))
-    return PythonRouteModel(class_name=class_name, fields=tuple(rendered))
-
-
-def _param_annotation(model: PythonRouteModel | None) -> str:
-    if model is None:
-        return "Mapping[str, Any] | None"
-    return f"{model.class_name} | Mapping[str, Any] | None"
-
-
-def _python_type_for_value(value: Mapping[str, Any]) -> str:
-    value_type = str(value.get("type") or "Any")
-    if value.get("ref"):
-        return "dict[str, Any]"
-    if value_type == "array":
-        return "list[Any]"
-    if value_type == "map":
-        return "dict[Any, Any]"
-    return {
-        "string": "str",
-        "str": "str",
-        "int": "int",
-        "integer": "int",
-        "int8": "int",
-        "int16": "int",
-        "int32": "int",
-        "uint": "int",
-        "uint8": "int",
-        "uint16": "int",
-        "uint32": "int",
-        "int64": "int",
-        "uint64": "int",
-        "float": "float",
-        "float32": "float",
-        "float64": "float",
-        "number": "float",
-        "boolean": "bool",
-        "bool": "bool",
-        "binary": "bytes",
-    }.get(value_type, "Any")

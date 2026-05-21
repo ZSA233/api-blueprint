@@ -18,6 +18,14 @@ public class BinaryEncodeException(
     public val detail: String = message
 }
 
+public class BinaryDecodeException(
+    public val fieldPath: String,
+    message: String,
+    cause: Throwable? = null,
+) : IllegalArgumentException(if (fieldPath.isEmpty()) message else "$fieldPath: $message", cause) {
+    public val detail: String = message
+}
+
 public data class EncodedBinaryBlock(
     public val field: String,
     public val count: Long,
@@ -215,6 +223,122 @@ public class BinaryWriter(
     }
 }
 
+public class BinaryReader(
+    bytes: ByteArray,
+    private val endian: BinaryEndian = BinaryEndian.LITTLE,
+) {
+    private val source: Buffer = Buffer().write(bytes)
+
+    public fun readU8(path: String): Int = readByte(path).toInt() and 0xFF
+
+    public fun readU16(path: String): Int {
+        val b0 = readU8(path)
+        val b1 = readU8(path)
+        return if (endian == BinaryEndian.LITTLE) b0 or (b1 shl 8) else (b0 shl 8) or b1
+    }
+
+    public fun readU24(path: String): Int {
+        val b0 = readU8(path)
+        val b1 = readU8(path)
+        val b2 = readU8(path)
+        return if (endian == BinaryEndian.LITTLE) b0 or (b1 shl 8) or (b2 shl 16) else (b0 shl 16) or (b1 shl 8) or b2
+    }
+
+    public fun readU32(path: String): Long = readIntBytes(path) and 0xFFFF_FFFFL
+
+    public fun readU64(path: String): Long = readLongBytes(path)
+
+    public fun readI8(path: String): Int = readByte(path).toInt()
+
+    public fun readI16(path: String): Int {
+        val value = readU16(path)
+        return if (value and 0x8000 != 0) value - 0x1_0000 else value
+    }
+
+    public fun readI24(path: String): Int {
+        val value = readU24(path)
+        return if (value and 0x80_0000 != 0) value - 0x100_0000 else value
+    }
+
+    public fun readI32(path: String): Int = readIntBytes(path).toInt()
+
+    public fun readI64(path: String): Long = readLongBytes(path)
+
+    public fun readF32(path: String): Float = java.lang.Float.intBitsToFloat(readI32(path))
+
+    public fun readF64(path: String): Double = java.lang.Double.longBitsToDouble(readI64(path))
+
+    public fun readBool(path: String): Boolean = readU8(path) != 0
+
+    public fun readBytes(path: String, count: Long): ByteArray {
+        requireReadCount(path, count)
+        requireAvailable(path, count)
+        return source.readByteArray(count)
+    }
+
+    public fun readUtf8String(path: String, count: Long): String = readBytes(path, count).toString(Charsets.UTF_8)
+
+    public fun readZeroes(path: String, count: Long) {
+        val bytes = readBytes(path, count)
+        if (bytes.any { it.toInt() != 0 }) {
+            throw BinaryDecodeException(path, "reserved bytes must be zero")
+        }
+    }
+
+    public fun requireEOF(path: String) {
+        if (source.size != 0L) {
+            throw BinaryDecodeException(path, "unexpected trailing ${source.size} bytes")
+        }
+    }
+
+    private fun readByte(path: String): Byte {
+        requireAvailable(path, 1)
+        return source.readByte()
+    }
+
+    private fun readIntBytes(path: String): Long {
+        val bytes = readBytes(path, 4)
+        return if (endian == BinaryEndian.LITTLE) {
+            (bytes[0].toLong() and 0xFFL) or
+                ((bytes[1].toLong() and 0xFFL) shl 8) or
+                ((bytes[2].toLong() and 0xFFL) shl 16) or
+                ((bytes[3].toLong() and 0xFFL) shl 24)
+        } else {
+            ((bytes[0].toLong() and 0xFFL) shl 24) or
+                ((bytes[1].toLong() and 0xFFL) shl 16) or
+                ((bytes[2].toLong() and 0xFFL) shl 8) or
+                (bytes[3].toLong() and 0xFFL)
+        }
+    }
+
+    private fun readLongBytes(path: String): Long {
+        val bytes = readBytes(path, 8)
+        var value = 0L
+        if (endian == BinaryEndian.LITTLE) {
+            for (index in 0 until 8) {
+                value = value or ((bytes[index].toLong() and 0xFFL) shl (index * 8))
+            }
+        } else {
+            for (index in 0 until 8) {
+                value = value or ((bytes[index].toLong() and 0xFFL) shl ((7 - index) * 8))
+            }
+        }
+        return value
+    }
+
+    private fun requireReadCount(path: String, count: Long) {
+        if (count < 0L || count > Int.MAX_VALUE.toLong()) {
+            throw BinaryDecodeException(path, "invalid byte count $count")
+        }
+    }
+
+    private fun requireAvailable(path: String, count: Long) {
+        if (source.size < count) {
+            throw BinaryDecodeException(path, "expected $count bytes, got ${source.size}")
+        }
+    }
+}
+
 private val ZERO_CHUNK: ByteArray = ByteArray(8192)
 
 public fun joinBinaryPath(path: String, field: String): String {
@@ -233,6 +357,12 @@ public fun wrapBinaryField(path: String, error: BinaryEncodeException): BinaryEn
     BinaryEncodeException(joinBinaryPath(path, error.fieldPath), error.detail, error)
 
 public fun wrapBinaryIndex(path: String, index: Int, error: BinaryEncodeException): BinaryEncodeException =
+    wrapBinaryField(indexBinaryPath(path, index), error)
+
+public fun wrapBinaryField(path: String, error: BinaryDecodeException): BinaryDecodeException =
+    BinaryDecodeException(joinBinaryPath(path, error.fieldPath), error.detail, error)
+
+public fun wrapBinaryIndex(path: String, index: Int, error: BinaryDecodeException): BinaryDecodeException =
     wrapBinaryField(indexBinaryPath(path, index), error)
 
 public fun requireBinary(path: String, condition: Boolean, message: String) {

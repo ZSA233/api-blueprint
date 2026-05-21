@@ -40,6 +40,10 @@ _SAFE_LEGACY_TS_PASSTHROUGHS: dict[str, set[str]] = {
 }
 
 
+def _uses_shared_client_type(type_text: str) -> bool:
+    return "ApiFilePart" in type_text or "ApiRawResponse" in type_text
+
+
 def _group_module_key(slug: str, *, root: bool = False) -> str:
     prefix = "root" if root else "group"
     return f"{prefix}:{slug}"
@@ -87,14 +91,17 @@ class TypeScriptRoute:
         self.query_proto = self._ensure_model(self.protocol.request.query.model, "REQ", "QUERY")
         self.open_proto = self._ensure_model(self.protocol.request.open.model, "OPEN", "")
         self.form_proto = self._ensure_model(self.protocol.request.form.model, "REQ", "FORM")
+        self.multipart_proto = self._ensure_model(self.protocol.request.multipart.model, "REQ", "FORM")
         self.json_proto = self._ensure_model(self.protocol.request.json.model, "REQ", "JSON")
         self.binary_schema = self.protocol.request.binary_schema
+        self.response_binary_schema = self.protocol.response.binary_schema
         self.bin_proto = self.binary_schema is None and self.protocol.request.binary.model is not None
 
+        self.response_kind = self.protocol.response.kind
         self.response_media_type = self.protocol.response.media_type
         self.response_payload_proto = (
             self._ensure_model(self.protocol.response.model.model, "RSP", "JSON")
-            if self.response_media_type == "application/json"
+            if self.response_kind == "json" and self.response_media_type == "application/json"
             else None
         )
         self.response_envelope = self.protocol.response.envelope
@@ -111,7 +118,7 @@ class TypeScriptRoute:
 
     @property
     def has_body(self) -> bool:
-        return bool(self.json_proto or self.form_proto or self.bin_proto or self.has_binary_schema)
+        return bool(self.json_proto or self.form_proto or self.multipart_proto or self.bin_proto or self.has_binary_schema)
 
     @property
     def has_binary_schema(self) -> bool:
@@ -146,7 +153,13 @@ class TypeScriptRoute:
         return self._type_expr(self.form_proto)
 
     @property
+    def multipart_type_expr(self) -> str | None:
+        return self._type_expr(self.multipart_proto)
+
+    @property
     def response_type_expr(self) -> str:
+        if self.response_kind == "binary_schema" and self.response_binary_schema is not None:
+            return f"Types.{self.response_binary_schema.name}"
         return self._type_expr(self.response_alias) or "void"
 
     @property
@@ -156,6 +169,18 @@ class TypeScriptRoute:
     @property
     def response_envelope_literal(self) -> str:
         return json.dumps(self.response_envelope.envelope_spec(), ensure_ascii=False)
+
+    @property
+    def transport_response_type(self) -> str:
+        if self.response_kind == "binary_schema":
+            return "binary_schema"
+        if self.response_kind in {"bytes", "file"}:
+            return "blob"
+        if self.response_kind == "byte_stream":
+            return "stream"
+        if self.response_media_type == "application/json":
+            return "json"
+        return "text"
 
     def _ensure_model(self, model: Optional[Union[Type[Model], Model]], prefix: str, suffix: str) -> Optional[TypeScriptProto]:
         if model is None:
@@ -199,7 +224,13 @@ class TypeScriptRoute:
 
     def _ensure_response_alias(self) -> Optional[TypeScriptProto]:
         alias_base = self._route_model_name("RSP", "")
-        if self.response_media_type != "application/json":
+        if self.response_kind == "binary_schema" and self.response_binary_schema is not None:
+            return None
+        if self.response_kind in {"bytes", "file"}:
+            alias_type = TypeScriptResolvedType("ApiRawResponse<Blob>")
+        elif self.response_kind == "byte_stream":
+            alias_type = TypeScriptResolvedType("ApiRawResponse<ReadableStream<Uint8Array> | null>")
+        elif self.response_media_type != "application/json":
             alias_type = TypeScriptResolvedType("string")
         else:
             payload_proto = self.response_payload_proto
@@ -379,7 +410,12 @@ class TypeScriptViewGroup:
         return base
 
     def binary_schemas(self) -> list[TypeScriptBinarySchema]:
-        schemas = [route.binary_schema for route in self.routes if route.binary_schema is not None]
+        schemas = []
+        for route in self.routes:
+            if route.binary_schema is not None:
+                schemas.append(route.binary_schema)
+            if route.response_binary_schema is not None:
+                schemas.append(route.response_binary_schema)
         return unique_typescript_binary_schemas(schemas)
 
     def message_union_helpers(self) -> list["TypeScriptMessageUnionHelper"]:
@@ -522,6 +558,7 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
         collect(protocol.request.open.model)
         collect(protocol.close_model)
         collect(protocol.request.form.model)
+        collect(protocol.request.multipart.model)
         collect(protocol.request.json.model)
         collect(protocol.response.model.model)
         for recv in protocol.recvs:
@@ -570,6 +607,16 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                 path = self._relative_import_path(current_dir, module_dirs[dep_module] / "types.ts")
                 deps_map.setdefault(path, set()).add(dep.name)
         return [{"path": path, "names": sorted(names)} for path, names in sorted(deps_map.items(), key=lambda item: item[0])]
+
+    def module_needs_shared_client_types(self, module: str) -> bool:
+        protos = self.registry.filter(module=module)
+        for proto in protos:
+            if proto.alias_type is not None and _uses_shared_client_type(proto.alias_type.text):
+                return True
+            for field in proto.fields:
+                if _uses_shared_client_type(field.type.text):
+                    return True
+        return False
 
     def has_binary_schemas(self) -> bool:
         return any(group.binary_schemas() for group in self.groups.values())
@@ -1104,7 +1151,14 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                 stale_path.unlink()
         shared_sections = self.shared_sections()
         shared_imports = self.build_imports(SHARED_MODULE, module_dirs)
-        shared_context = {"sections": shared_sections, "imports": shared_imports, "exports": [], "message_helpers": []}
+        shared_context = {
+            "sections": shared_sections,
+            "imports": shared_imports,
+            "exports": [],
+            "message_helpers": [],
+            "client_api_path": "./client",
+            "needs_shared_client_types": self.module_needs_shared_client_types(SHARED_MODULE),
+        }
         shared_context["binary_schemas"] = []
         for tmpl in ["gen_types.ts", "types.ts"]:
             with self.writer.write_file(shared_dir / tmpl, overwrite=tmpl.startswith("gen_")) as handle:
@@ -1128,7 +1182,7 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
             binary_runtime_dir.mkdir(parents=True, exist_ok=True)
             with self.writer.write_file(binary_runtime_dir / "gen_runtime.ts", overwrite=True) as handle:
                 if handle:
-                    handle.write(render(self.writer.template_lang, "binary_runtime.ts", {}, ""))
+                    handle.write(render(self.writer.template_lang, "gen_binary_runtime.ts", {}, ""))
             with self.writer.write_file(binary_runtime_dir / "index.ts", overwrite=False) as handle:
                 if handle:
                     handle.write(self.render_passthrough("./gen_runtime"))
@@ -1175,6 +1229,8 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                 "imports": self.build_imports(group.module_key, module_dirs),
                 "exports": [],
                 "message_helpers": group.message_union_helpers(),
+                "client_api_path": self._relative_import_path(group_dir, shared_dir / "client.ts"),
+                "needs_shared_client_types": self.module_needs_shared_client_types(group.module_key),
             }
             binary_schemas = group.binary_schemas()
             models_context["binary_schemas"] = binary_schemas
@@ -1207,7 +1263,7 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
                         handle.write(
                             render(
                                 self.writer.template_lang,
-                                "binary_schema.ts",
+                                "gen_binary_schema.ts",
                                 {
                                     "binary_schemas": binary_schemas,
                                     "runtime_binary_path": self._relative_import_path(group_dir, binary_runtime_dir / "index.ts"),

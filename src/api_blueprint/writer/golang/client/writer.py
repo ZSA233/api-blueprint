@@ -6,6 +6,7 @@ import re
 import shutil
 import subprocess
 from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from typing import IO, Any, Generator, Mapping, Sequence
 
@@ -14,6 +15,7 @@ from api_blueprint.route_selection import normalize_selection_rules
 from api_blueprint.writer.core.base import BaseBlueprint, BaseWriter
 from api_blueprint.writer.core.errors import ApiErrorEntry, api_errors_from_manifest, route_api_errors_from_manifest
 from api_blueprint.writer.core.files import ensure_filepath_open
+from api_blueprint.writer.core.go_naming import to_go_package_name
 from api_blueprint.writer.core.planning import route_matches_rule
 from api_blueprint.writer.core.sdk_names import go_exported_field_name
 from api_blueprint.writer.core.templates import render
@@ -31,6 +33,13 @@ LEGACY_ROUTE_BINARY_DIRS = ("wire", "_gen_binary", "binary")
 
 class GolangClientBlueprint(BaseBlueprint["GolangClientWriter"]):
     pass
+
+
+@dataclass(frozen=True)
+class RootFacadeGroup:
+    group: GoClientGroup
+    import_alias: str
+    field_name: str
 
 
 class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
@@ -165,9 +174,11 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
                     "connection_method_name": _connection_method_name,
                     "connection_transport_method": _connection_transport_method,
                     "group": group,
-                    "has_binary_schemas": any(route.has_binary_schema for route in group.routes),
+                    "has_binary_schemas": bool(group.binary_schemas),
+                    "has_request_binary_schemas": any(route.has_binary_schema for route in group.routes),
                     "route_params": _route_params,
                     "route_response_type": _route_response_type,
+                    "route_response_value_type": _route_response_value_type,
                     "runtime_binary_import": self.runtime_binary_import,
                     "runtime_import": self.runtime_import,
                     "runtime_request_fields": _runtime_request_fields,
@@ -211,6 +222,7 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
                 "gen_client.go",
                 {
                     "groups": groups,
+                    "root_groups": _root_facade_groups(groups),
                     "http_import": _join_import(self.module, "transports", "http"),
                     "module": self.module,
                     "runtime_import": self.runtime_import,
@@ -402,10 +414,14 @@ def _route_aliases(
         (route.query_type, route.request.get("query_model")),
         (route.json_type, route.request.get("json_model")),
         (route.form_type, route.request.get("form_model")),
+        (route.multipart_type, route.request.get("multipart_model")),
         (route.binary_type, None if route.has_binary_schema else route.request.get("binary_model")),
         (route.open_type, route.connection.get("open_model")),
         (route.close_type, route.connection.get("close_model")),
-        (route.response_type, route.response.get("model")),
+        (
+            route.response_type,
+            None if route.response_kind in {"bytes", "file", "byte_stream", "binary_schema"} else route.response.get("model"),
+        ),
     )
     for alias, schema_name in aliases:
         if isinstance(schema_name, str) and schema_name:
@@ -523,10 +539,23 @@ def _connection_transport_method(route: GoClientRoute) -> str:
 
 
 def _route_response_type(route: GoClientRoute) -> str:
+    if route.response_kind == "byte_stream":
+        return "*runtime.StreamResponse"
+    if route.response_kind in {"bytes", "file"}:
+        return "*runtime.RawResponse"
+    if route.response_kind == "binary_schema" and route.response_binary_schema is not None:
+        return f"*{_go_type_name(str(route.response_binary_schema.get('name') or 'Packet'))}"
     response_model = route.response.get("model")
     if isinstance(response_model, str) and response_model:
         return f"*{route.response_type}"
     return "any"
+
+
+def _route_response_value_type(route: GoClientRoute) -> str:
+    response_type = _route_response_type(route)
+    if response_type.startswith("*"):
+        return response_type[1:]
+    return response_type
 
 
 def _route_params(route: GoClientRoute, *, include_open: bool) -> list[str]:
@@ -537,6 +566,8 @@ def _route_params(route: GoClientRoute, *, include_open: bool) -> list[str]:
         params.append(f"jsonBody {route.json_type}")
     if isinstance(route.request.get("form_model"), str):
         params.append(f"formBody {route.form_type}")
+    if isinstance(route.request.get("multipart_model"), str):
+        params.append(f"multipartBody {route.multipart_type}")
     if route.has_binary_schema:
         params.append("binaryBody runtimebinary.Body")
     elif isinstance(route.request.get("binary_model"), str):
@@ -554,8 +585,12 @@ def _runtime_request_fields(route: GoClientRoute) -> list[tuple[str, str]]:
         fields.append(("JSON", "jsonBody"))
     if isinstance(route.request.get("form_model"), str):
         fields.append(("Form", "formBody"))
+    if isinstance(route.request.get("multipart_model"), str):
+        fields.append(("Multipart", "multipartBody"))
     if route.has_binary_schema or isinstance(route.request.get("binary_model"), str):
         fields.append(("Binary", "binaryBody"))
+    fields.append(("BodyKind", f"runtime.RequestBodyKind({_code_literal(route.body_kind)})"))
+    fields.append(("ResponseKind", f"runtime.ResponseKind({_code_literal(route.response_kind)})"))
     return fields
 
 
@@ -598,6 +633,7 @@ def _go_type_for_schema_value(value: Mapping[str, Any], type_names: _TypeNames) 
         "boolean": "bool",
         "bool": "bool",
         "binary": "[]byte",
+        "file": "MultipartFile",
         "any": "any",
         "null": "any",
     }.get(value_type, "any")
@@ -620,6 +656,8 @@ def _go_type_for_route_schema_value(value: Mapping[str, Any], type_names: _TypeN
         return f"map[{key_type}]{value_go_type}"
     if value_type == "enum":
         return f"runtime.{_go_type_name(str(value.get('enum') or 'EnumValue'))}"
+    if value_type == "file":
+        return "runtime.MultipartFile"
     return _go_type_for_schema_value(value, type_names)
 
 
@@ -689,6 +727,26 @@ def _join_import(*parts: str) -> str:
 
 def _route_import(module: str, group: GoClientGroup) -> str:
     return _join_import(module, "routes", *group.segments)
+
+
+def _root_facade_groups(groups: tuple[GoClientGroup, ...]) -> tuple[RootFacadeGroup, ...]:
+    package_counts: dict[str, int] = {}
+    field_counts: dict[str, int] = {}
+    for group in groups:
+        package_counts[group.package] = package_counts.get(group.package, 0) + 1
+        field_name = group.client_class.removesuffix("Client")
+        field_counts[field_name] = field_counts.get(field_name, 0) + 1
+
+    facade_groups: list[RootFacadeGroup] = []
+    for group in groups:
+        import_alias = group.package
+        if package_counts[group.package] > 1:
+            import_alias = to_go_package_name("_".join(group.segments), fallback=group.package)
+        field_name = group.client_class.removesuffix("Client")
+        if field_counts[field_name] > 1:
+            field_name = _go_exported("_".join(group.segments))
+        facade_groups.append(RootFacadeGroup(group=group, import_alias=import_alias, field_name=field_name))
+    return tuple(facade_groups)
 
 
 def _root_package_name(module: str) -> str:

@@ -2,6 +2,10 @@
 
 package types
 
+import (
+	providers "example.com/project/golang/server/views/providers"
+)
+
 type HelloChannelMessage struct {
 	Type string `json:"type" xml:"type" form:"type" binding:"required"`
 	Data any    `json:"data" xml:"data" form:"data" binding:"required"`
@@ -11,6 +15,12 @@ type DefaultConnectionClose struct {
 	Code   int    `json:"code,omitempty" xml:"code,omitempty" form:"code,omitempty" binding:"omitempty"`
 	Reason string `json:"reason,omitempty" xml:"reason,omitempty" form:"reason,omitempty" binding:"omitempty"`
 	Error  string `json:"error,omitempty" xml:"error,omitempty" form:"error,omitempty" binding:"omitempty"`
+}
+
+type ConflictModel struct {
+	Default string `json:"default" xml:"default" form:"default" binding:"required"`
+	Class   string `json:"class_" xml:"class_" form:"class_" binding:"required"`
+	Enum    string `json:"enum" xml:"enum" form:"enum" binding:"required"`
 }
 
 type ApiDemoMap struct {
@@ -31,6 +41,11 @@ type ApiDemoA struct {
 	EnumColor  string         `json:"enum_color,omitempty" xml:"enum_color,omitempty" form:"enum_color,omitempty" binding:"omitempty"`
 	EnumStatus int            `json:"enum_status" xml:"enum_status" form:"enum_status" binding:"required"`
 	EnumList   []int          `json:"enum_list" xml:"enum_list" form:"enum_list" binding:"required"`
+}
+
+type RequestOptionsResponse struct {
+	Status  string `json:"status" xml:"status" form:"status" binding:"required"`
+	DelayMs int    `json:"delay_ms" xml:"delay_ms" form:"delay_ms" binding:"required"`
 }
 
 type ANON_Func1put_anon_kv struct {
@@ -86,6 +101,11 @@ type AssistantInput struct {
 
 type AssistantCancel struct {
 	Reason string `json:"reason,omitempty" xml:"reason,omitempty" form:"reason,omitempty" binding:"omitempty"`
+}
+
+type MediaPreviewRequest struct {
+	Title string                  `json:"title,omitempty" xml:"title,omitempty" form:"title,omitempty" binding:"omitempty"`
+	Image providers.MultipartFile `json:"image" xml:"image" form:"image" binding:"required"`
 }
 
 type ApiHelloMap struct {

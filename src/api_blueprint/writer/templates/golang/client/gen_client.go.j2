@@ -5,13 +5,13 @@ package {{ root_package }}
 import (
 	httptransport "{{ http_import }}"
 	runtime "{{ runtime_import }}"
-{% for group in groups %}	{{ group.package }} "{{ route_import(module, group) }}"
+{% for item in root_groups %}	{{ item.import_alias }} "{{ route_import(module, item.group) }}"
 {% endfor %})
 
 type HTTPConfig = httptransport.HttpConfig
 
 type Client struct {
-{% for group in groups %}	{{ group.client_class.removesuffix("Client") }} *{{ group.package }}.Client
+{% for item in root_groups %}	{{ item.field_name }} *{{ item.import_alias }}.Client
 {% endfor %}}
 
 func NewHTTP(config HTTPConfig) *Client {
@@ -21,6 +21,6 @@ func NewHTTP(config HTTPConfig) *Client {
 
 func NewClient(transport runtime.Transport) *Client {
 	return &Client{
-{% for group in groups %}		{{ group.client_class.removesuffix("Client") }}: {{ group.package }}.NewClient(transport),
+{% for item in root_groups %}		{{ item.field_name }}: {{ item.import_alias }}.NewClient(transport),
 {% endfor %}	}
 }

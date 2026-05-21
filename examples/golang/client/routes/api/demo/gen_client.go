@@ -23,14 +23,17 @@ type DemoClient = GenDemoClient
 
 var NewDemoClient = NewGenDemoClient
 
-func (client *GenDemoClient) Abc(ctx context.Context, query AbcQuery) (*AbcResponse, error) {
+func (client *GenDemoClient) Abc(ctx context.Context, query AbcQuery, opts ...runtime.RequestOption) (*AbcResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.demo.get.abc",
 		Method:           "GET",
 		Path:             "/api/demo/abc",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 		Query:            query,
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
+	request.ApplyOptions(opts...)
 	var response AbcResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
@@ -38,14 +41,17 @@ func (client *GenDemoClient) Abc(ctx context.Context, query AbcQuery) (*AbcRespo
 	return &response, nil
 }
 
-func (client *GenDemoClient) TestPost(ctx context.Context, jsonBody TestPostJSON) (*TestPostResponse, error) {
+func (client *GenDemoClient) TestPost(ctx context.Context, jsonBody TestPostJSON, opts ...runtime.RequestOption) (*TestPostResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.demo.post.testpost",
 		Method:           "POST",
 		Path:             "/api/demo/test_post",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 		JSON:             jsonBody,
+		BodyKind:         runtime.RequestBodyKind("json"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
+	request.ApplyOptions(opts...)
 	var response TestPostResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
@@ -53,7 +59,43 @@ func (client *GenDemoClient) TestPost(ctx context.Context, jsonBody TestPostJSON
 	return &response, nil
 }
 
-func (client *GenDemoClient) PutDemo(ctx context.Context, query PutDemoQuery, jsonBody PutDemoJSON) (*PutDemoResponse, error) {
+func (client *GenDemoClient) FormSubmit(ctx context.Context, formBody FormSubmitForm, opts ...runtime.RequestOption) (*FormSubmitResponse, error) {
+	request := runtime.Request{
+		RouteID:          "api.demo.post.formsubmit",
+		Method:           "POST",
+		Path:             "/api/demo/form-submit",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		Form:             formBody,
+		BodyKind:         runtime.RequestBodyKind("urlencoded"),
+		ResponseKind:     runtime.ResponseKind("json"),
+	}
+	request.ApplyOptions(opts...)
+	var response FormSubmitResponse
+	if err := client.transport.Do(ctx, request, &response); err != nil {
+		return nil, err
+	}
+	return &response, nil
+}
+
+func (client *GenDemoClient) RequestOptions(ctx context.Context, query RequestOptionsQuery, opts ...runtime.RequestOption) (*RequestOptionsResponse, error) {
+	request := runtime.Request{
+		RouteID:          "api.demo.get.requestoptions",
+		Method:           "GET",
+		Path:             "/api/demo/request-options",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		Query:            query,
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("json"),
+	}
+	request.ApplyOptions(opts...)
+	var response RequestOptionsResponse
+	if err := client.transport.Do(ctx, request, &response); err != nil {
+		return nil, err
+	}
+	return &response, nil
+}
+
+func (client *GenDemoClient) PutDemo(ctx context.Context, query PutDemoQuery, jsonBody PutDemoJSON, opts ...runtime.RequestOption) (*PutDemoResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.demo.put.z1put",
 		Method:           "PUT",
@@ -61,7 +103,10 @@ func (client *GenDemoClient) PutDemo(ctx context.Context, query PutDemoQuery, js
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 		Query:            query,
 		JSON:             jsonBody,
+		BodyKind:         runtime.RequestBodyKind("json"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
+	request.ApplyOptions(opts...)
 	var response PutDemoResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
@@ -69,14 +114,17 @@ func (client *GenDemoClient) PutDemo(ctx context.Context, query PutDemoQuery, js
 	return &response, nil
 }
 
-func (client *GenDemoClient) Delete(ctx context.Context, query DeleteQuery) (*DeleteResponse, error) {
+func (client *GenDemoClient) Delete(ctx context.Context, query DeleteQuery, opts ...runtime.RequestOption) (*DeleteResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.demo.delete.delete",
 		Method:           "DELETE",
 		Path:             "/api/demo/delete$",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 		Query:            query,
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("xml"),
 	}
+	request.ApplyOptions(opts...)
 	var response DeleteResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
@@ -104,14 +152,17 @@ func (client *GenDemoClient) OpenAssistantSession(ctx context.Context, openData 
 	return client.transport.ChannelUnsupported(ctx, request)
 }
 
-func (client *GenDemoClient) PostDeprecated(ctx context.Context, jsonBody PostDeprecatedJSON) (*PostDeprecatedResponse, error) {
+func (client *GenDemoClient) PostDeprecated(ctx context.Context, jsonBody PostDeprecatedJSON, opts ...runtime.RequestOption) (*PostDeprecatedResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.demo.post.postdeprecated",
 		Method:           "POST",
 		Path:             "/api/demo/post_deprecated",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 		JSON:             jsonBody,
+		BodyKind:         runtime.RequestBodyKind("json"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
+	request.ApplyOptions(opts...)
 	var response PostDeprecatedResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
@@ -119,13 +170,16 @@ func (client *GenDemoClient) PostDeprecated(ctx context.Context, jsonBody PostDe
 	return &response, nil
 }
 
-func (client *GenDemoClient) Raw(ctx context.Context) (*RawResponse, error) {
+func (client *GenDemoClient) Raw(ctx context.Context, opts ...runtime.RequestOption) (*RawResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.demo.post.raw",
 		Method:           "POST",
 		Path:             "/api/demo/raw",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
+	request.ApplyOptions(opts...)
 	var response RawResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
@@ -133,13 +187,16 @@ func (client *GenDemoClient) Raw(ctx context.Context) (*RawResponse, error) {
 	return &response, nil
 }
 
-func (client *GenDemoClient) MapModel(ctx context.Context) (*MapModelResponse, error) {
+func (client *GenDemoClient) MapModel(ctx context.Context, opts ...runtime.RequestOption) (*MapModelResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.demo.post.mapmodel",
 		Method:           "POST",
 		Path:             "/api/demo/map_model",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
+	request.ApplyOptions(opts...)
 	var response MapModelResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err
@@ -147,14 +204,17 @@ func (client *GenDemoClient) MapModel(ctx context.Context) (*MapModelResponse, e
 	return &response, nil
 }
 
-func (client *GenDemoClient) ErrorDemo(ctx context.Context, query ErrorDemoQuery) (*ErrorDemoResponse, error) {
+func (client *GenDemoClient) ErrorDemo(ctx context.Context, query ErrorDemoQuery, opts ...runtime.RequestOption) (*ErrorDemoResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.demo.get.errordemo",
 		Method:           "GET",
 		Path:             "/api/demo/error-demo",
 		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
 		Query:            query,
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("json"),
 	}
+	request.ApplyOptions(opts...)
 	var response ErrorDemoResponse
 	if err := client.transport.Do(ctx, request, &response); err != nil {
 		return nil, err

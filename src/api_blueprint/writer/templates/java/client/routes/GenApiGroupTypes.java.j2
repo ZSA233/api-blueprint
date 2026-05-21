@@ -1,0 +1,238 @@
+{% autoescape false %}package {{ bp.root_package }}.routes.{{ group.package_suffix }};
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+{% if group.message_helpers(writer) %}
+import com.fasterxml.jackson.databind.JsonNode;
+{% endif %}
+{% if group.runtime_types_ref == "GenApiTypes" %}
+import {{ bp.root_package }}.runtime.GenApiTypes;
+{% endif %}
+import {{ bp.root_package }}.runtime.GenApiFilePart;
+{% if group.message_helpers(writer) %}
+import {{ bp.root_package }}.runtime.GenApiJson;
+{% endif %}
+{% if group.binary_schemas() %}
+import {{ bp.root_package }}.runtime.binary.GenApiBinaryBody;
+import {{ bp.root_package }}.runtime.binary.GenBinaryRuntime;
+{% endif %}
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+public final class {{ group.types_class }} {
+    private {{ group.types_class }}() {
+    }
+{% for schema in writer.model_schemas_for_group(group) %}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record {{ schema.name }}(
+{%- for field in schema.fields %}
+        @JsonProperty({{ field.wire_name | code_literal }}) {{ field.java_type }} {{ field.java_name }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ) {
+    }
+{% endfor %}
+{% for helper in group.message_helpers(writer) %}
+
+    public record {{ helper.name }}(String type, JsonNode data) {
+    }
+
+    public static final class {{ helper.variants_class }} {
+        private {{ helper.variants_class }}() {
+        }
+{% for variant in helper.variants %}
+
+        public static {{ helper.name }} {{ variant.method_name }}({{ variant.data_type }} data) {
+            return new {{ helper.name }}({{ variant.key | code_literal }}, GenApiJson.MAPPER.valueToTree(data));
+        }
+{% endfor %}
+    }
+
+    public interface {{ helper.handlers_interface }}<R> {
+{% for variant in helper.variants %}        R {{ variant.method_name }}({{ variant.data_type }} data, {{ helper.name }} message) throws Exception;
+{% endfor %}    }
+
+    public static final class {{ helper.exception_class }} extends RuntimeException {
+        private final String kind;
+        private final String type;
+        private final {{ helper.name }} rawMessage;
+
+        public {{ helper.exception_class }}(String kind, {{ helper.name }} rawMessage) {
+            super("unsupported {{ helper.name }} type " + (rawMessage == null ? "" : rawMessage.type()));
+            this.kind = kind;
+            this.type = rawMessage == null ? "" : rawMessage.type();
+            this.rawMessage = rawMessage;
+        }
+
+        public String kind() {
+            return kind;
+        }
+
+        public String type() {
+            return type;
+        }
+
+        public {{ helper.name }} rawMessage() {
+            return rawMessage;
+        }
+    }
+
+    public static <R> R {{ helper.dispatch_method }}(
+        {{ helper.name }} message,
+        {{ helper.handlers_interface }}<R> handlers
+    ) throws Exception {
+        return switch (message.type()) {
+{% for variant in helper.variants %}            case {{ variant.key | code_literal }} -> handlers.{{ variant.method_name }}(
+                GenApiJson.MAPPER.treeToValue(message.data(), {{ variant.data_class }}),
+                message
+            );
+{% endfor %}            default -> throw new {{ helper.exception_class }}("unknown_type", message);
+        };
+    }
+{% endfor %}
+{% for schema in group.binary_schemas() %}
+{% for value_set in schema.value_sets %}
+
+    public static final class {{ value_set.values_class }} {
+        private {{ value_set.values_class }}() {
+        }
+{% for value in value_set.values %}
+
+        public static final {{ value_set.java_type }} {{ value.java_name }} = {{ value.literal }};
+{% endfor %}
+    }
+{% endfor %}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record {{ schema.name }}(
+{%- for section in schema.sections %}
+        @JsonProperty({{ schema.packet_field_name(section.raw_name) | code_literal }}) {{ section.name }} {{ schema.packet_field_name(section.raw_name) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ) {
+        public GenApiBinaryBody toBinaryBody() {
+            return {{ schema.name }}Wire.toBinaryBody(this);
+        }
+    }
+
+    public static final class {{ schema.state_type }} {
+{%- for field in schema.state_fields %}
+        public long {{ field.java_name }} = 0L;
+{%- endfor %}
+    }
+
+{% for object in schema.objects %}
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record {{ object.name }}(
+{%- for field in object.data_fields %}
+        @JsonProperty({{ field.name | code_literal }}) {{ field.java_type }} {{ field.java_name }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ) {
+    }
+
+{% endfor %}
+
+    public static final class {{ schema.name }}Wire {
+        public static final String CONTENT_TYPE = {{ schema.content_type | code_literal }};
+        public static final GenBinaryRuntime.BinaryEndian ENDIAN = {{ schema.endian }};
+
+        private {{ schema.name }}Wire() {
+        }
+
+        public static GenApiBinaryBody toBinaryBody({{ schema.name }} value) {
+            GenBinaryRuntime.BinaryWriter writer = new GenBinaryRuntime.BinaryWriter(ENDIAN);
+            write(value, writer);
+            return GenApiBinaryBody.of(writer.toByteArray(), CONTENT_TYPE);
+        }
+
+        public static GenApiBinaryBody toBinaryBody(byte[] bytes) {
+            return GenApiBinaryBody.of(bytes, CONTENT_TYPE);
+        }
+
+        public static {{ schema.name }} parse(byte[] bytes) {
+            GenBinaryRuntime.BinaryReader reader = new GenBinaryRuntime.BinaryReader(bytes, ENDIAN);
+            {{ schema.state_type }} state = new {{ schema.state_type }}();
+{%- for section in schema.sections %}
+            {{ section.name }} {{ schema.packet_field_name(section.raw_name) }};
+            try {
+                {{ schema.packet_field_name(section.raw_name) }} = {{ section.reader_name }}(reader, state, "");
+            } catch (GenBinaryRuntime.BinaryDecodeException error) {
+                throw GenBinaryRuntime.wrapBinaryField({{ (schema.name ~ "." ~ schema.packet_field_name(section.raw_name)) | code_literal }}, error);
+            }
+{%- endfor %}
+            reader.requireEOF({{ schema.name | code_literal }});
+            return new {{ schema.name }}(
+{%- for section in schema.sections %}
+                {{ schema.packet_field_name(section.raw_name) }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+            );
+        }
+
+        public static void write({{ schema.name }} value, GenBinaryRuntime.BinaryWriter writer) {
+            {{ schema.state_type }} state = new {{ schema.state_type }}();
+{%- for section in schema.sections %}
+            try {
+                {{ section.writer_name }}(value.{{ schema.packet_field_name(section.raw_name) }}(), writer, state, "");
+            } catch (GenBinaryRuntime.BinaryEncodeException error) {
+                throw GenBinaryRuntime.wrapBinaryField({{ (schema.name ~ "." ~ schema.packet_field_name(section.raw_name)) | code_literal }}, error);
+            }
+{%- endfor %}
+        }
+{% for object in schema.objects %}
+
+        public static void {{ object.writer_name }}(
+            {{ object.name }} value,
+            GenBinaryRuntime.BinaryWriter writer,
+            {{ schema.state_type }} state
+        ) {
+            {{ object.writer_name }}(value, writer, state, {{ object.path_name | code_literal }});
+        }
+
+        public static void {{ object.writer_name }}(
+            {{ object.name }} value,
+            GenBinaryRuntime.BinaryWriter writer,
+            {{ schema.state_type }} state,
+            String path
+        ) {
+            try {
+{%- for field in object.fields %}
+{%- for line in field.render_write_lines(object) %}
+                {{ line }}
+{%- endfor %}
+{%- endfor %}
+            } catch (GenBinaryRuntime.BinaryEncodeException error) {
+                if (path == null || path.isEmpty()) {
+                    throw error;
+                }
+                throw GenBinaryRuntime.wrapBinaryField(path, error);
+            }
+        }
+
+        public static {{ object.name }} {{ object.reader_name }}(
+            GenBinaryRuntime.BinaryReader reader,
+            {{ schema.state_type }} state,
+            String path
+        ) {
+            try {
+{%- for field in object.fields %}
+{%- for line in field.render_read_lines(object) %}
+                {{ line }}
+{%- endfor %}
+{%- endfor %}
+                return new {{ object.name }}(
+{%- for field in object.data_fields %}
+                    {{ field.java_name }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+                );
+            } catch (GenBinaryRuntime.BinaryDecodeException error) {
+                if (path == null || path.isEmpty()) {
+                    throw error;
+                }
+                throw GenBinaryRuntime.wrapBinaryField(path, error);
+            }
+        }
+{% endfor %}
+    }
+{% endfor %}
+}
+{% endautoescape %}

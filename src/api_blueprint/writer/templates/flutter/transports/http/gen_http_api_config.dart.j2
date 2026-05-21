@@ -1,0 +1,16 @@
+{% autoescape false %}import 'package:http/http.dart' as http;
+
+class HttpApiConfig {
+  final String baseUrl;
+  final Map<String, String> defaultHeaders;
+  final http.Client? client;
+  final Duration? timeout;
+
+  const HttpApiConfig({
+    this.baseUrl = {{ writer.rendered_base_url }},
+    this.defaultHeaders = const {},
+    this.client,
+    this.timeout,
+  });
+}
+{% endautoescape %}

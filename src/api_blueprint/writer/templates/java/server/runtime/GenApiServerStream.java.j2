@@ -1,0 +1,9 @@
+package {{ bp.root_package }}.runtime;
+
+public interface GenApiServerStream<Message, Close> {
+    void send(Message message) throws Exception;
+
+    void close(Close close) throws Exception;
+
+    void abort(int code, String reason) throws Exception;
+}

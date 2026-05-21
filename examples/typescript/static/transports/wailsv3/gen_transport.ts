@@ -5,6 +5,7 @@
 import type {
   ApiChannelBridge,
   ApiClientConfig,
+  ApiResponseEnvelope,
   ApiStreamBridge,
   ApiTransport,
   ChannelConnectOptions,
@@ -35,7 +36,7 @@ export class WailsV3Transport implements ApiTransport {
   constructor(protected readonly config: ApiClientConfig = {}, _defaultBaseUrl: string = "") {}
 
   async request<R>(options: RequestOptions<R>): Promise<R> {
-    const payload = await this.invokeOperation<unknown>(
+    const operation = this.invokeOperation<unknown>(
       options.namespace,
       options.service,
       options.operation,
@@ -45,6 +46,7 @@ export class WailsV3Transport implements ApiTransport {
         options.headers,
       ),
     );
+    const payload = await withWailsFrontendTimeout(operation, options.timeoutMs);
     return unwrapResponseEnvelope<R>(payload, options.routeId, options.responseEnvelope);
   }
 
@@ -156,3 +158,24 @@ export class WailsV3Transport implements ApiTransport {
   }
 }
 
+function withWailsFrontendTimeout<R>(operation: Promise<R>, timeoutMs?: number): Promise<R> {
+  if (timeoutMs == null) {
+    return operation;
+  }
+  // This limits frontend waiting only; the native Wails invocation may continue.
+  return new Promise<R>((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error(`Wails request timed out after ${timeoutMs} ms`));
+    }, timeoutMs);
+    operation.then(
+      (value) => {
+        clearTimeout(timeoutId);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timeoutId);
+        reject(error);
+      },
+    );
+  });
+}

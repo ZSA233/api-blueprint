@@ -4,7 +4,7 @@
 
 import type * as Types from "./types";
 import type * as Shared from "../../../runtime/types";
-import { ApiChannelBridge, ApiClientConfig, ApiStreamBridge, BaseClient } from "../../../runtime/client";
+import { ApiChannelBridge, ApiClientConfig, ApiRequestOptions, ApiStreamBridge, BaseClient } from "../../../runtime/client";
 
 import type { ApiBinaryBody } from "../../../runtime/binary/index";
 import {
@@ -27,30 +27,24 @@ export class BinaryClient extends BaseClient {
     request: {
       query?: Types.PacketQuery;
       binary: Types.DemoPacket;
-      headers?: Record<string, string>;
     },
-    init?: RequestInit,
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<Types.PacketResponse>;
 
   async packet(
     request: {
       query?: Types.PacketQuery;
       binary: ApiBinaryBody;
-      headers?: Record<string, string>;
     },
-    init?: RequestInit,
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<Types.PacketResponse>;
 
   async packet(
     request: {
       query?: Types.PacketQuery;
       binary: Types.DemoPacket | ApiBinaryBody;
-      headers?: Record<string, string>;
     },
-    init: RequestInit = {},
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<Types.PacketResponse> {
     return this.request<Types.PacketResponse>({
       routeId: "api.binary.post.packet",
@@ -61,11 +55,11 @@ export class BinaryClient extends BaseClient {
       namespace: "binary",
       query: request.query as unknown as Record<string, unknown> | undefined,
       binary: DemoPacketWire.toBinaryBody(request.binary),
-      headers: request.headers,
-      init,
+      headers: options?.headers,
+      init: options?.init,
       responseType: "json",
       responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
     });
   }
 
@@ -79,30 +73,24 @@ export class BinaryClient extends BaseClient {
     request: {
       query?: Types.AuditPacketQuery;
       binary: Types.AuditPacket;
-      headers?: Record<string, string>;
     },
-    init?: RequestInit,
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<Types.AuditPacketResponse>;
 
   async auditPacket(
     request: {
       query?: Types.AuditPacketQuery;
       binary: ApiBinaryBody;
-      headers?: Record<string, string>;
     },
-    init?: RequestInit,
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<Types.AuditPacketResponse>;
 
   async auditPacket(
     request: {
       query?: Types.AuditPacketQuery;
       binary: Types.AuditPacket | ApiBinaryBody;
-      headers?: Record<string, string>;
     },
-    init: RequestInit = {},
-    timeoutMs?: number,
+    options?: ApiRequestOptions,
   ): Promise<Types.AuditPacketResponse> {
     return this.request<Types.AuditPacketResponse>({
       routeId: "api.binary.post.auditpacket",
@@ -113,12 +101,38 @@ export class BinaryClient extends BaseClient {
       namespace: "binary",
       query: request.query as unknown as Record<string, unknown> | undefined,
       binary: AuditPacketWire.toBinaryBody(request.binary),
-      headers: request.headers,
-      init,
+      headers: options?.headers,
+      init: options?.init,
       responseType: "json",
       responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-      timeoutMs,
+      timeoutMs: options?.timeoutMs,
     });
+  }
+
+  /**
+   * Binary audit packet response example
+
+   * Tags: api
+   */
+
+  async auditPacketResponse(
+    request: {} = {},
+    options?: ApiRequestOptions,
+  ): Promise<Types.AuditPacket> {
+    const payload = await this.request<ArrayBuffer>({
+      routeId: "api.binary.get.auditpacketresponse",
+      method: "GET",
+      path: "/api/binary/audit-packet-response",
+      service: "BinaryService",
+      operation: "AuditPacketResponse",
+      namespace: "binary",
+      headers: options?.headers,
+      init: options?.init,
+      responseType: "binary_schema",
+      responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+      timeoutMs: options?.timeoutMs,
+    });
+    return AuditPacketWire.fromBytes(payload);
   }
 
 }

@@ -1,9 +1,9 @@
 package com.example.apiblueprint.api.routes.api.demo;
 
-import com.example.apiblueprint.api.runtime.ApiTransport;
+import com.example.apiblueprint.api.runtime.GenApiTransport;
 
 public class DemoApi extends GenDemoApi {
-    public DemoApi(ApiTransport transport) {
+    public DemoApi(GenApiTransport transport) {
         super(transport);
     }
 }

@@ -3,17 +3,42 @@ package com.example.apiblueprint.api.transports.http
 
 import com.example.apiblueprint.api.runtime.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerializationStrategy
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
 import okio.BufferedSink
+import java.io.File
+import java.io.IOException
 import java.net.URLEncoder
+import java.util.ArrayDeque
+import java.util.concurrent.TimeUnit
+import kotlin.time.Duration
 
 public class OkHttpApiTransport(
     private val config: HttpApiConfig = HttpApiConfig(),
@@ -26,7 +51,7 @@ public class OkHttpApiTransport(
     }
 
     public override suspend fun execute(request: ApiRequest<*>): ApiResponse = withContext(Dispatchers.IO) {
-        val mergedHeaders = config.defaultHeaders() + request.headers
+        val mergedHeaders = config.defaultHeaders() + request.options.headers
         val requestBuilder = Request.Builder().url(buildUrl(config.baseUrl, request.path, request.query))
         mergedHeaders.forEach { (key, value) -> requestBuilder.header(key, value) }
 
@@ -38,21 +63,51 @@ public class OkHttpApiTransport(
         }
 
         val okRequest = requestBuilder.method(request.method, effectiveBody).build()
-        httpClient.newCall(okRequest).execute().use { response ->
+        val response = clientWithTimeout(request.options.timeout ?: config.timeout).newCall(okRequest).execute()
+        if (request.responseKind == "byte_stream") {
+            return@withContext streamResponse(request, response)
+        }
+        response.use {
             ApiResponse(
                 statusCode = response.code,
-                body = response.body?.string().orEmpty(),
+                body = response.body?.bytes() ?: ByteArray(0),
                 headers = response.headers.toMap(),
             )
         }
     }
 
-    public override fun openStream(options: StreamConnectOptions): ApiStreamBridge<*, *> {
-        return InMemoryStreamBridge<Any?, SocketCloseInfo>()
+    public override fun <Recv, Close> openStream(options: StreamConnectOptions<Recv, Close>): ApiStreamBridge<Recv, Close> {
+        val requestBuilder = Request.Builder()
+            .url(buildUrl(config.baseUrl, options.path, options.query))
+            .get()
+        mergedHeaders(options.headers).forEach { (key, value) -> requestBuilder.header(key, value) }
+        requestBuilder.header("Accept", "text/event-stream")
+        return OkHttpEventStreamBridge(options, httpClient.newCall(requestBuilder.build()), json)
     }
 
-    public override fun openChannel(options: ChannelConnectOptions): ApiChannelBridge<*, *, *> {
-        return InMemoryChannelBridge<Any?, Any?, SocketCloseInfo>()
+    public override fun <Recv, Send, Close> openChannel(
+        options: ChannelConnectOptions<Recv, Send, Close>,
+    ): ApiChannelBridge<Recv, Send, Close> {
+        val requestBuilder = Request.Builder().url(buildWsUrl(config.baseUrl, options.path, options.query))
+        mergedHeaders(options.headers).forEach { (key, value) -> requestBuilder.header(key, value) }
+        if (options.protocols.isNotEmpty()) {
+            requestBuilder.header("Sec-WebSocket-Protocol", options.protocols.joinToString(","))
+        }
+        val bridge = OkHttpSocketBridge(options, json)
+        bridge.attach(httpClient.newWebSocket(requestBuilder.build(), bridge))
+        return bridge
+    }
+
+    private fun mergedHeaders(headers: Map<String, String>): Map<String, String> {
+        return runBlocking { config.defaultHeaders() } + headers
+    }
+
+    private fun clientWithTimeout(timeout: Duration?): OkHttpClient {
+        return if (timeout == null) {
+            httpClient
+        } else {
+            httpClient.newBuilder().callTimeout(timeout.inWholeMilliseconds, TimeUnit.MILLISECONDS).build()
+        }
     }
 
     private fun ApiRequest<*>.requestBody(): RequestBody? {
@@ -60,7 +115,11 @@ public class OkHttpApiTransport(
             return encodePayload(json, jsonSerializer).toRequestBody("application/json; charset=utf-8".toMediaType())
         }
         if (form != null) {
-            return encodePayload(form, formSerializer).toRequestBody("application/json; charset=utf-8".toMediaType())
+            return encodeFormPayload(form, formSerializer)
+                .toRequestBody("application/x-www-form-urlencoded; charset=utf-8".toMediaType())
+        }
+        if (multipart != null) {
+            return encodeMultipartPayload(multipart, multipartSerializer)
         }
         if (binary != null) {
             return object : RequestBody() {
@@ -76,6 +135,62 @@ public class OkHttpApiTransport(
         return null
     }
 
+    private fun streamResponse(request: ApiRequest<*>, response: Response): ApiResponse {
+        val headers = response.headers.toMap()
+        if (!response.isSuccessful) {
+            response.use {
+                return ApiResponse(
+                    statusCode = response.code,
+                    body = response.body?.string().orEmpty().toByteArray(Charsets.UTF_8),
+                    headers = headers,
+                )
+            }
+        }
+        val body = response.body
+        if (body == null) {
+            response.close()
+            return ApiResponse(
+                statusCode = response.code,
+                body = ByteArray(0),
+                headers = headers,
+                stream = ApiStreamResponse(
+                    body = ByteArray(0),
+                    contentType = request.responseMediaType,
+                    headers = headers,
+                ),
+            )
+        }
+        val contentType = body.contentType()?.toString() ?: headerValue(headers, "content-type") ?: request.responseMediaType
+        if (isJsonContentType(contentType)) {
+            response.use {
+                return ApiResponse(
+                    statusCode = response.code,
+                    body = body.bytes(),
+                    headers = headers,
+                )
+            }
+        }
+        return ApiResponse(
+            statusCode = response.code,
+            body = ByteArray(0),
+            headers = headers,
+            stream = ApiStreamResponse(
+                body = body.byteStream(),
+                contentType = contentType,
+                headers = headers,
+                closeAction = { response.close() },
+            ),
+        )
+    }
+
+    private fun headerValue(headers: Map<String, String>, name: String): String? =
+        headers.entries.firstOrNull { it.key.equals(name, ignoreCase = true) }?.value
+
+    private fun isJsonContentType(contentType: String): Boolean {
+        val normalized = contentType.substringBefore(";").trim().lowercase()
+        return normalized == "application/json" || normalized.endsWith("+json")
+    }
+
     @Suppress("UNCHECKED_CAST")
     private fun encodePayload(value: Any?, serializer: SerializationStrategy<*>?): String {
         if (serializer == null) {
@@ -83,25 +198,337 @@ public class OkHttpApiTransport(
         }
         return json.encodeToString(serializer as SerializationStrategy<Any?>, value)
     }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun encodeFormPayload(value: Any?, serializer: SerializationStrategy<*>?): String {
+        if (serializer == null) {
+            return value?.toString().orEmpty()
+        }
+        val element = json.encodeToJsonElement(serializer as SerializationStrategy<Any?>, value)
+        val fields = element as? JsonObject ?: return encode(element.toString())
+        return fields.entries
+            .filter { (_, item) -> item !is JsonNull }
+            .joinToString("&") { (key, item) -> encode(key) + "=" + encode(formValue(item)) }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun encodeMultipartPayload(value: Any?, serializer: SerializationStrategy<*>?): RequestBody {
+        val builder = MultipartBody.Builder().setType(MultipartBody.FORM)
+        val element = if (serializer == null) {
+            JsonObject(emptyMap())
+        } else {
+            json.encodeToJsonElement(serializer as SerializationStrategy<Any?>, value)
+        }
+        val fields = element as? JsonObject ?: JsonObject(emptyMap())
+        for ((key, item) in fields.entries) {
+            if (item is JsonNull) {
+                continue
+            }
+            val file = filePart(item)
+            if (file != null) {
+                val mediaType = file.contentType.toMediaType()
+                builder.addFormDataPart(
+                    key,
+                    file.filename.ifBlank { key },
+                    if (file.path.isNullOrBlank()) {
+                        file.bytes.toRequestBody(mediaType)
+                    } else {
+                        File(file.path).asRequestBody(mediaType)
+                    },
+                )
+            } else {
+                builder.addFormDataPart(key, formValue(item))
+            }
+        }
+        return builder.build()
+    }
+
+    private fun filePart(value: JsonElement): ApiFilePart? {
+        val jsonObject = value as? JsonObject ?: return null
+        val path = jsonObject["path"]?.jsonPrimitive?.contentOrNull
+        val bytes = jsonObject["bytes"] as? JsonArray
+        if (path.isNullOrBlank() && bytes == null) {
+            return null
+        }
+        return ApiFilePart(
+            filename = jsonObject["filename"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            contentType = jsonObject["contentType"]?.jsonPrimitive?.contentOrNull ?: "application/octet-stream",
+            bytes = bytes?.map { ((it.jsonPrimitive.intOrNull ?: 0) and 0xFF).toByte() }?.toByteArray() ?: ByteArray(0),
+            path = path,
+        )
+    }
+
+    private fun formValue(value: JsonElement): String {
+        return if (value is JsonPrimitive) {
+            value.content
+        } else {
+            value.toString()
+        }
+    }
 }
 
-private open class InMemoryStreamBridge<Recv, Close> : ApiStreamBridge<Recv, Close> {
+private class OkHttpEventStreamBridge<Recv, Close>(
+    private val options: StreamConnectOptions<Recv, Close>,
+    private val call: Call,
+    private val json: Json,
+) : ApiStreamBridge<Recv, Close> {
+    private val lock = Any()
     private val messageListeners = mutableListOf<(Recv) -> Unit>()
     private val closeListeners = mutableListOf<(Close) -> Unit>()
+    private var closed = false
 
-    public override fun close(code: Int?, reason: String?) {}
+    init {
+        call.enqueue(
+            object : Callback {
+                override fun onFailure(call: Call, e: IOException) {
+                    if (!call.isCanceled()) {
+                        emitClose(closePayload(code = 1006, error = e.message ?: e.toString()))
+                    }
+                }
+
+                override fun onResponse(call: Call, response: Response) {
+                    readResponse(response)
+                }
+            }
+        )
+    }
 
     public override fun onMessage(listener: (Recv) -> Unit) {
-        messageListeners += listener
+        synchronized(lock) {
+            messageListeners += listener
+        }
     }
 
     public override fun onClose(listener: (Close) -> Unit) {
-        closeListeners += listener
+        synchronized(lock) {
+            closeListeners += listener
+        }
+    }
+
+    public override fun close(code: Int?, reason: String?) {
+        call.cancel()
+        emitClose(closePayload(code = code ?: 1000, reason = reason))
+    }
+
+    private fun readResponse(response: Response) {
+        response.use {
+            if (!response.isSuccessful) {
+                val body = response.body?.string().orEmpty()
+                emitClose(closePayload(code = response.code, error = body.ifEmpty { response.message }))
+                return
+            }
+            val source = response.body?.source()
+            if (source == null) {
+                emitClose(closePayload(code = 1000))
+                return
+            }
+            val event = SseEvent()
+            while (true) {
+                val line = source.readUtf8Line() ?: break
+                if (line.isEmpty()) {
+                    dispatchEvent(event)
+                    event.clear()
+                    continue
+                }
+                event.accept(line)
+            }
+            dispatchEvent(event)
+            emitClose(closePayload(code = 1000))
+        }
+    }
+
+    private fun dispatchEvent(event: SseEvent) {
+        if (event.isEmpty()) {
+            return
+        }
+        val payload = event.payload(json)
+        if (event.name == "close") {
+            emitClose(payload)
+            return
+        }
+        val message = json.decodeFromJsonElement(options.messageSerializer, payload)
+        val listeners = synchronized(lock) { messageListeners.toList() }
+        listeners.forEach { listener -> listener(message) }
+    }
+
+    private fun emitClose(payload: JsonElement) {
+        val listeners = synchronized(lock) {
+            if (closed) {
+                return
+            }
+            closed = true
+            closeListeners.toList()
+        }
+        val close = json.decodeFromJsonElement(options.closeSerializer, payload)
+        listeners.forEach { listener -> listener(close) }
     }
 }
 
-private class InMemoryChannelBridge<Recv, Send, Close> : InMemoryStreamBridge<Recv, Close>(), ApiChannelBridge<Recv, Send, Close> {
-    public override fun send(message: Send) {}
+private class OkHttpSocketBridge<Recv, Send, Close>(
+    private val options: ChannelConnectOptions<Recv, Send, Close>,
+    private val json: Json,
+) : WebSocketListener(), ApiChannelBridge<Recv, Send, Close> {
+    private val lock = Any()
+    private val pending = ArrayDeque<Send>()
+    private val messageListeners = mutableListOf<(Recv) -> Unit>()
+    private val closeListeners = mutableListOf<(Close) -> Unit>()
+    private var socket: WebSocket? = null
+    private var opened = false
+    private var closed = false
+    private var requestedClose: Pair<Int, String?>? = null
+
+    public fun attach(webSocket: WebSocket) {
+        val closeRequest = synchronized(lock) {
+            socket = webSocket
+            requestedClose
+        }
+        if (closeRequest != null) {
+            webSocket.close(closeRequest.first, closeRequest.second)
+        }
+    }
+
+    public override fun onOpen(webSocket: WebSocket, response: Response) {
+        val queued = synchronized(lock) {
+            opened = true
+            val items = pending.toList()
+            pending.clear()
+            items
+        }
+        queued.forEach { message -> sendEncoded(webSocket, message) }
+    }
+
+    public override fun onMessage(webSocket: WebSocket, text: String) {
+        val payload = runCatching { json.parseToJsonElement(text) }.getOrElse { JsonPrimitive(text) }
+        val envelope = payload as? JsonObject
+        if (envelope != null && envelope["type"]?.jsonPrimitive?.contentOrNull == "close") {
+            emitClose(envelope["data"] ?: closePayload(code = 1000))
+            return
+        }
+        val messagePayload = if (envelope != null && envelope["type"]?.jsonPrimitive?.contentOrNull == "message") {
+            envelope["data"] ?: JsonNull
+        } else {
+            payload
+        }
+        val message = json.decodeFromJsonElement(options.messageSerializer, messagePayload)
+        val listeners = synchronized(lock) { messageListeners.toList() }
+        listeners.forEach { listener -> listener(message) }
+    }
+
+    public override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+        emitClose(closePayload(code = code, reason = reason))
+    }
+
+    public override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+        emitClose(closePayload(code = response?.code ?: 1006, error = t.message ?: t.toString()))
+    }
+
+    public override fun close(code: Int?, reason: String?) {
+        val closeCode = code ?: 1000
+        val target = synchronized(lock) {
+            requestedClose = closeCode to reason
+            pending.clear()
+            socket
+        }
+        if (target == null) {
+            emitClose(closePayload(code = closeCode, reason = reason))
+            return
+        }
+        target.close(closeCode, reason)
+    }
+
+    public override fun onMessage(listener: (Recv) -> Unit) {
+        synchronized(lock) {
+            messageListeners += listener
+        }
+    }
+
+    public override fun onClose(listener: (Close) -> Unit) {
+        synchronized(lock) {
+            closeListeners += listener
+        }
+    }
+
+    public override fun send(message: Send) {
+        val target = synchronized(lock) {
+            if (closed || requestedClose != null) {
+                return
+            }
+            if (opened) {
+                socket
+            } else {
+                pending.add(message)
+                null
+            }
+        }
+        if (target != null) {
+            sendEncoded(target, message)
+        }
+    }
+
+    private fun sendEncoded(webSocket: WebSocket, message: Send) {
+        webSocket.send(json.encodeToString(options.sendSerializer, message))
+    }
+
+    private fun emitClose(payload: JsonElement) {
+        val listeners = synchronized(lock) {
+            if (closed) {
+                return
+            }
+            closed = true
+            closeListeners.toList()
+        }
+        val close = json.decodeFromJsonElement(options.closeSerializer, payload)
+        listeners.forEach { listener -> listener(close) }
+    }
+}
+
+private class SseEvent {
+    var name: String = "message"
+        private set
+    private val data = mutableListOf<String>()
+
+    fun accept(line: String) {
+        if (line.startsWith(":")) {
+            return
+        }
+        val separator = line.indexOf(':')
+        val field = if (separator >= 0) line.substring(0, separator) else line
+        val rawValue = if (separator >= 0) line.substring(separator + 1) else ""
+        val value = rawValue.removePrefix(" ")
+        if (field == "event") {
+            name = value
+        } else if (field == "data") {
+            data += value
+        }
+    }
+
+    fun isEmpty(): Boolean = data.isEmpty() && name == "message"
+
+    fun clear() {
+        name = "message"
+        data.clear()
+    }
+
+    fun payload(json: Json): JsonElement {
+        if (data.isEmpty()) {
+            return JsonNull
+        }
+        return json.parseToJsonElement(data.joinToString("\n"))
+    }
+}
+
+private fun closePayload(code: Int? = null, reason: String? = null, error: String? = null): JsonElement {
+    return buildJsonObject {
+        if (code != null) {
+            put("code", code)
+        }
+        if (reason != null) {
+            put("reason", reason)
+        }
+        if (error != null) {
+            put("error", error)
+        }
+    }
 }
 
 private fun buildUrl(baseUrl: String, path: String, query: Map<String, String?> = emptyMap()): String {
@@ -114,6 +541,17 @@ private fun buildUrl(baseUrl: String, path: String, query: Map<String, String?> 
             encode(key) + "=" + encode(value ?: "")
         }
     return if (queryString.isEmpty()) base else "$base?$queryString"
+}
+
+private fun buildWsUrl(baseUrl: String, path: String, query: Map<String, String?> = emptyMap()): String {
+    val url = buildUrl(baseUrl, path, query)
+    if (url.startsWith("http://")) {
+        return "ws://" + url.removePrefix("http://")
+    }
+    if (url.startsWith("https://")) {
+        return "wss://" + url.removePrefix("https://")
+    }
+    return url
 }
 
 private fun encode(value: String): String = URLEncoder.encode(value, Charsets.UTF_8.name())

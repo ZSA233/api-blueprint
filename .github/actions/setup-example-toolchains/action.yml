@@ -1,5 +1,5 @@
 name: Setup Example Toolchains
-description: Install the shared Go, Java, Node, TypeScript, Wails, and proto toolchains used by example validation
+description: Install the shared Go, Java, Dart, Node, TypeScript, Wails, and proto toolchains used by example validation
 
 runs:
   using: composite
@@ -22,6 +22,8 @@ runs:
     - uses: actions/setup-node@v6
       with:
         node-version: "24"
+
+    - uses: dart-lang/setup-dart@v1
 
     - name: Install Wails Linux dependencies
       shell: bash

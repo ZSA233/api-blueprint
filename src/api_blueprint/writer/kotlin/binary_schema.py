@@ -55,6 +55,21 @@ WRITE_METHODS = {
     "f64": "writeF64",
     "bool": "writeBool",
 }
+READ_METHODS = {
+    "u8": "readU8",
+    "u16": "readU16",
+    "u24": "readU24",
+    "u32": "readU32",
+    "u64": "readU64",
+    "i8": "readI8",
+    "i16": "readI16",
+    "i24": "readI24",
+    "i32": "readI32",
+    "i64": "readI64",
+    "f32": "readF32",
+    "f64": "readF64",
+    "bool": "readBool",
+}
 INTEGER_TYPES = {"u8", "u16", "u24", "u32", "u64", "i8", "i16", "i24", "i32", "i64"}
 UNSIGNED_TYPES = {"u8", "u16", "u24", "u32", "u64"}
 EXPR_TOKEN_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*|\d+|[()+\-*/]")
@@ -226,6 +241,10 @@ class KotlinBinaryField:
     @property
     def write_method(self) -> str:
         return WRITE_METHODS[self.wire_type]
+
+    @property
+    def read_method(self) -> str:
+        return READ_METHODS[self.wire_type]
 
     @property
     def supports_binary_block(self) -> bool:
@@ -413,6 +432,10 @@ class KotlinBinaryObject:
     def writer_name(self) -> str:
         return "write" + kotlin_type_name(self.name)
 
+    @property
+    def reader_name(self) -> str:
+        return "read" + kotlin_type_name(self.name)
+
     def block_factory_name(self, field: KotlinBinaryField) -> str:
         return "new" + kotlin_type_name(f"{self.name}_{field.name}_block")
 
@@ -555,9 +578,13 @@ def kotlin_binary_state_fields(schemas: Iterable[KotlinBinarySchema]) -> list[Ko
 def compact_kotlin_binary_source(source: str) -> str:
     lines = [line.rstrip() for line in source.splitlines()]
     compacted: list[str] = []
-    for line in lines:
+    for index, line in enumerate(lines):
         stripped = line.strip()
         if not stripped:
+            previous_line = compacted[-1] if compacted else ""
+            next_line = _next_nonblank_line(lines, index + 1)
+            if _should_drop_kotlin_binary_blank(previous_line, next_line):
+                continue
             if compacted and compacted[-1] != "":
                 compacted.append("")
             continue
@@ -565,3 +592,24 @@ def compact_kotlin_binary_source(source: str) -> str:
             compacted.append("")
         compacted.append(line)
     return "\n".join(compacted).strip() + "\n"
+
+
+def _next_nonblank_line(lines: list[str], start: int) -> str:
+    for line in lines[start:]:
+        if line.strip():
+            return line
+    return ""
+
+
+def _kotlin_indent(line: str) -> int:
+    return len(line) - len(line.lstrip(" "))
+
+
+def _should_drop_kotlin_binary_blank(previous_line: str, next_line: str) -> bool:
+    if not previous_line.strip() or not next_line.strip():
+        return False
+    previous = previous_line.strip()
+    next_ = next_line.strip()
+    if previous == "try {" or next_.startswith("} catch"):
+        return True
+    return _kotlin_indent(previous_line) >= 12 and _kotlin_indent(next_line) >= 12

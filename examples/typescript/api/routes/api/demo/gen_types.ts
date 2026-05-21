@@ -59,6 +59,24 @@ export interface ErrorDemoResponse {
   status: string;
 }
 
+export interface FormSubmitForm {
+  /** title */
+  title: string;
+  /** count */
+  count?: number;
+  /** enabled */
+  enabled?: boolean;
+}
+
+export interface FormSubmitResponse {
+  /** summary */
+  summary: string;
+  /** count */
+  count: number;
+  /** enabled */
+  enabled: boolean;
+}
+
 export type MapModelResponse = Record<number, ApiDemoMap>;
 
 export interface PostDeprecatedJSON {
@@ -101,6 +119,11 @@ export interface RawResponse {
   list: Array<string>;
   /** list2 */
   list2: Record<number, Array<ApiDemoA>>;
+}
+
+export interface RequestOptionsQuery {
+  /** optional server delay in milliseconds */
+  delay_ms?: number;
 }
 
 export type SweepEventsResponse = void;
@@ -277,4 +300,3 @@ export function dispatchAssistantClientMessage<R>(
       throw new AssistantClientMessageDispatchError("unknown_type", message);
   }
 }
-
