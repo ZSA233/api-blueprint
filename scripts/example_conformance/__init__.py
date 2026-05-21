@@ -1,2 +1,1 @@
 """Example conformance automation package."""
-

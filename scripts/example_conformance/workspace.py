@@ -37,4 +37,3 @@ def validate_snapshot(repo_root: Path, workspace: ConformanceWorkspace) -> None:
 
 def compile_workspace(workspace: ConformanceWorkspace) -> None:
     example_validation.compile_generated_examples(workspace.blueprint)
-
