@@ -58,7 +58,7 @@ def test_python_client_writer_disambiguates_same_path_http_methods_with_contract
         output_dir / "api_blueprint_generated" / "api" / "routes" / "api" / "settings" / "gen_client.py"
     ).read_text(encoding="utf-8")
     assert "async def current_get(" in route_text
-    assert '        "GET",' in route_text
+    assert 'method="GET"' in route_text
     assert "async def current_put(" in route_text
-    assert '        "PUT",' in route_text
+    assert 'method="PUT"' in route_text
     _compile_generated_files(output_dir)

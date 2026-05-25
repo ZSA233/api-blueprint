@@ -164,19 +164,23 @@ def test_python_http_transport_performs_async_rpc_requests(tmp_path: Path):
 
     async def exercise_transport() -> dict[str, object]:
         result = await transport.request(
-            "POST",
-            "/api/demo/submit",
-            query={"trace": "1"},
-            json={"value": "abc"},
-            headers={"X-Trace-Id": "rpc-123"},
-            timeout=1.5,
+            transport_module.ApiRequest(
+                method="POST",
+                path="/api/demo/submit",
+                query={"trace": "1"},
+                json={"value": "abc"},
+                headers={"X-Trace-Id": "rpc-123"},
+                timeout=1.5,
+            )
         )
         stream = await transport.request(
-            "GET",
-            "/api/demo/stream",
-            response_type="stream",
-            headers={"X-Trace-Id": "stream-123"},
-            timeout=2.5,
+            transport_module.ApiRequest(
+                method="GET",
+                path="/api/demo/stream",
+                response_type="stream",
+                headers={"X-Trace-Id": "stream-123"},
+                timeout=2.5,
+            )
         )
         await stream.aclose()
         return result
@@ -204,10 +208,10 @@ def test_python_rpc_methods_forward_request_options_to_transport(tmp_path: Path)
 
     class CaptureTransport:
         def __init__(self) -> None:
-            self.kwargs: dict[str, object] | None = None
+            self.captured_request: object | None = None
 
-        async def request(self, method: str, path: str, **kwargs: object) -> dict[str, str]:
-            self.kwargs = kwargs
+        async def request(self, request: object) -> dict[str, str]:
+            self.captured_request = request
             return {"status": "ok"}
 
     transport = CaptureTransport()
@@ -216,6 +220,6 @@ def test_python_rpc_methods_forward_request_options_to_transport(tmp_path: Path)
     result = asyncio.run(client.ping(headers={"X-Trace-Id": "rpc-123"}, timeout=1.5))
 
     assert result.status == "ok"
-    assert transport.kwargs is not None
-    assert transport.kwargs["headers"] == {"X-Trace-Id": "rpc-123"}
-    assert transport.kwargs["timeout"] == 1.5
+    assert transport.captured_request is not None
+    assert transport.captured_request.headers == {"X-Trace-Id": "rpc-123"}
+    assert transport.captured_request.timeout == 1.5

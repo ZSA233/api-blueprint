@@ -76,7 +76,8 @@ def test_python_client_generates_package_root_layout_and_preserves_user_files(tm
     transport_text = (package_root / "transports" / "http" / "gen_client.py").read_text(encoding="utf-8")
 
     assert "class ApiClientTransport(Protocol):" in runtime_text
-    assert "async def request(" in runtime_text
+    assert "class ApiRequest:" in runtime_text
+    assert "async def request(self, request: ApiRequest) -> Any:" in runtime_text
     assert "headers: Mapping[str, str] | None = None" in runtime_text
     assert "timeout: float | None = None" in runtime_text
     assert "class ApiStreamBridge(Protocol" in runtime_text
@@ -105,14 +106,15 @@ def test_python_client_generates_package_root_layout_and_preserves_user_files(tm
     ) in route_text
     assert "query: PingQuery" in route_text
     assert "query: PingQuery | None" not in route_text
+    assert "ApiRequest(" in route_text
     assert "query=_api_to_json(query)" in route_text
     assert "headers=headers" in route_text
     assert "timeout=timeout" in route_text
     assert 'return PingResponse.from_value(payload, "ping.response")' in route_text
     assert "class HttpClientTransport(ApiClientTransport):" in transport_text
-    assert "async def request(" in transport_text
-    assert "headers: Mapping[str, str] | None = None" in transport_text
-    assert "timeout: float | None = None" in transport_text
+    assert "async def request(self, request: ApiRequest) -> Any:" in transport_text
+    assert "request.headers" in transport_text
+    assert "request.timeout" in transport_text
     assert (package_root / "client.py").read_text(encoding="utf-8") == "from .gen_client import *\n"
     assert "def create_client(" in (package_root / "gen_client.py").read_text(encoding="utf-8")
     assert user_client.read_text(encoding="utf-8") == "# user-owned client extension\n"

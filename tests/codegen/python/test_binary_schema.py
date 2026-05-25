@@ -194,7 +194,7 @@ content-type: application/vnd.audit-packet
     assert "return AuditPacketWire.from_bytes(payload)" in client_route
     assert 'endian="little"' in binary_types
     assert 'endian="\'little\'"' not in binary_types
-    assert 'if response_type == "binary_schema":' in client_transport
+    assert 'if request.response_type == "binary_schema":' in client_transport
     assert "return response.content" in client_transport
     assert "async def audit(self) -> AuditPacket:" in server_service
     assert "_binary_schema_response(" in server_adapter

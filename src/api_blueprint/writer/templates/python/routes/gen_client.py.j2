@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from {{ group.runtime_import_prefix }}runtime.client import ApiChannelBridge, ApiClientTransport, ApiRawResponse, ApiStreamBridge, ApiStreamResponse
+from {{ group.runtime_import_prefix }}runtime.client import ApiChannelBridge, ApiClientTransport, ApiRawResponse, ApiRequest, ApiStreamBridge, ApiStreamResponse
 from {{ group.runtime_import_prefix }}runtime.gen_codecs import (
     _api_to_json,
     _api_to_transport,
@@ -43,16 +43,18 @@ class {{ group.client_class }}:
     ) -> {{ route.response_annotation }}:
         response_type: str | None = {{ route.response_type_literal | safe }}
         payload = await self._transport.request(
-            {{ route.http_method_literal | safe }},
-            {{ route.url_literal | safe }},
-            route_id={{ route.route_id_literal | safe }},
+            ApiRequest(
+                method={{ route.http_method_literal | safe }},
+                path={{ route.url_literal | safe }},
+                route_id={{ route.route_id_literal | safe }},
 {% for param in route.params %}
-            {{ param.call_name }}={% if param.call_name == "binary" and route.has_binary_schema %}{{ route.binary_wire_name }}.to_binary_body({{ param.name }}){% else %}{{ param.encode_expr(param.name) }}{% endif %},
+                {{ param.call_name }}={% if param.call_name == "binary" and route.has_binary_schema %}{{ route.binary_wire_name }}.to_binary_body({{ param.name }}){% else %}{{ param.encode_expr(param.name) }}{% endif %},
 {% endfor %}
-            response_type=response_type,
-            response_envelope={{ route.response_envelope_literal | safe }},
-            headers=headers,
-            timeout=timeout,
+                response_type=response_type,
+                response_envelope={{ route.response_envelope_literal | safe }},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return {{ route.response_decode_expr("payload") | safe }}
 {% elif route.supports_stream %}

@@ -7,7 +7,7 @@ from urllib.parse import unquote
 
 import httpx
 
-from ...runtime.client import ApiChannelBridge, ApiClientTransport, ApiRawResponse, ApiResponseEnvelope, ApiStreamBridge, ApiStreamResponse
+from ...runtime.client import ApiChannelBridge, ApiClientTransport, ApiRawResponse, ApiRequest, ApiResponseEnvelope, ApiStreamBridge, ApiStreamResponse
 from ...runtime.binary import ApiBinaryBody, is_api_binary_body
 from ...runtime.errors import ApiError
 from ...runtime.gen_error_lookup import make_api_error_payload
@@ -28,77 +28,61 @@ class HttpClientTransport(ApiClientTransport):
         if self._owns_client:
             await self._client.aclose()
 
-    async def request(
-        self,
-        method: str,
-        path: str,
-        *,
-        route_id: str = "",
-        query: Mapping[str, Any] | None = None,
-        json: Any = None,
-        form: Mapping[str, Any] | None = None,
-        multipart: Mapping[str, Any] | None = None,
-        binary: bytes | ApiBinaryBody | None = None,
-        open_data: Mapping[str, Any] | None = None,
-        response_type: str | None = None,
-        response_envelope: ApiResponseEnvelope | None = None,
-        headers: Mapping[str, str] | None = None,
-        timeout: float | None = None,
-    ) -> Any:
+    async def request(self, request: ApiRequest) -> Any:
         request_kwargs: dict[str, Any] = {}
-        if headers is not None:
-            request_kwargs["headers"] = dict(headers)
-        if timeout is not None:
-            request_kwargs["timeout"] = timeout
-        if query:
-            request_kwargs["params"] = {key: value for key, value in query.items() if value is not None}
-        if json is not None:
-            request_kwargs["json"] = json
-        elif multipart is not None:
-            content_type, content = _multipart_content(multipart)
+        if request.headers is not None:
+            request_kwargs["headers"] = dict(request.headers)
+        if request.timeout is not None:
+            request_kwargs["timeout"] = request.timeout
+        if request.query:
+            request_kwargs["params"] = {key: value for key, value in request.query.items() if value is not None}
+        if request.json is not None:
+            request_kwargs["json"] = request.json
+        elif request.multipart is not None:
+            content_type, content = _multipart_content(request.multipart)
             request_kwargs["content"] = content
             _set_header(request_kwargs, "content-type", content_type)
-        elif form is not None:
-            request_kwargs["data"] = form
-        elif binary is not None:
-            request_kwargs["content"] = binary.to_bytes() if is_api_binary_body(binary) else binary
+        elif request.form is not None:
+            request_kwargs["data"] = request.form
+        elif request.binary is not None:
+            request_kwargs["content"] = request.binary.to_bytes() if is_api_binary_body(request.binary) else request.binary
             _set_header(request_kwargs, "content-type", (
-                binary.content_type if is_api_binary_body(binary) else "application/octet-stream"
+                request.binary.content_type if is_api_binary_body(request.binary) else "application/octet-stream"
             ))
-        elif open_data is not None:
-            request_kwargs["json"] = open_data
+        elif request.open_data is not None:
+            request_kwargs["json"] = request.open_data
 
-        if response_type == "stream":
-            request = self._client.build_request(method, self._url(path), **request_kwargs)
-            response = await self._client.send(request, stream=True)
+        if request.response_type == "stream":
+            http_request = self._client.build_request(request.method, self._url(request.path), **request_kwargs)
+            response = await self._client.send(http_request, stream=True)
             if response.is_error:
                 await response.aread()
-                payload = self._extract_error_payload(response, response_envelope)
+                payload = self._extract_error_payload(response, request.response_envelope)
                 await response.aclose()
                 if payload is not None:
-                    raise ApiError(make_api_error_payload(payload, route_id), route_id=route_id, raw=payload)
+                    raise ApiError(make_api_error_payload(payload, request.route_id), route_id=request.route_id, raw=payload)
                 response.raise_for_status()
             if _is_json_response(response):
                 await response.aread()
-                payload = self._extract_raw_error_payload(response, response_envelope)
+                payload = self._extract_raw_error_payload(response, request.response_envelope)
                 if payload is not None:
                     await response.aclose()
-                    raise ApiError(make_api_error_payload(payload, route_id), route_id=route_id, raw=payload)
+                    raise ApiError(make_api_error_payload(payload, request.route_id), route_id=request.route_id, raw=payload)
                 return _BufferedStreamResponse(response)
             return _HttpxStreamResponse(response)
 
-        response = await self._client.request(method, self._url(path), **request_kwargs)
+        response = await self._client.request(request.method, self._url(request.path), **request_kwargs)
         if response.is_error:
-            payload = self._extract_error_payload(response, response_envelope)
+            payload = self._extract_error_payload(response, request.response_envelope)
             if payload is not None:
-                raise ApiError(make_api_error_payload(payload, route_id), route_id=route_id, raw=payload)
+                raise ApiError(make_api_error_payload(payload, request.route_id), route_id=request.route_id, raw=payload)
             response.raise_for_status()
-        if response_type in {"bytes", "file"}:
-            payload = self._extract_raw_error_payload(response, response_envelope)
+        if request.response_type in {"bytes", "file"}:
+            payload = self._extract_raw_error_payload(response, request.response_envelope)
             if payload is not None:
-                raise ApiError(make_api_error_payload(payload, route_id), route_id=route_id, raw=payload)
+                raise ApiError(make_api_error_payload(payload, request.route_id), route_id=request.route_id, raw=payload)
             return _raw_response(response)
-        if response_type == "binary_schema":
+        if request.response_type == "binary_schema":
             return response.content
         if not response.content:
             return None
@@ -106,8 +90,8 @@ class HttpClientTransport(ApiClientTransport):
         content_type = response.headers.get("content-type", "").split(";", 1)[0].lower()
         if content_type == "application/json" or content_type.endswith("+json"):
             payload = response.json()
-            return self._unwrap_response_envelope(payload, route_id, response_envelope)
-        if response_type == "bytes":
+            return self._unwrap_response_envelope(payload, request.route_id, request.response_envelope)
+        if request.response_type == "bytes":
             return response.content
         return response.text
 
