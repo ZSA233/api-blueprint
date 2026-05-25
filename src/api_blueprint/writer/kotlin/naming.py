@@ -72,6 +72,18 @@ def to_kotlin_property_name(value: str, *, fallback: str = "value") -> str:
     return result
 
 
+def to_kotlin_constant_name(value: str, *, fallback: str = "VALUE") -> str:
+    tokens = split_tokens(value)
+    if not tokens:
+        return fallback
+    result = "_".join(token.upper() for token in tokens)
+    if result[:1].isdigit():
+        result = f"{fallback}_{result}"
+    if result.lower() in KOTLIN_KEYWORDS:
+        result += "_VALUE"
+    return result
+
+
 def to_package_path(package: str) -> str:
     return package.replace(".", "/")
 

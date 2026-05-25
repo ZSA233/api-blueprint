@@ -12,7 +12,13 @@ from api_blueprint.engine.connection import MessageContract
 from api_blueprint.writer.core.contract_adapters import RouteProtocolContract, route_protocol_from_router
 
 from .binary_schema import KotlinBinarySchema, unique_kotlin_binary_schemas
-from .naming import to_kotlin_package_path, to_kotlin_package_suffix, to_kotlin_property_name, to_kotlin_type_name
+from .naming import (
+    to_kotlin_constant_name,
+    to_kotlin_package_path,
+    to_kotlin_package_suffix,
+    to_kotlin_property_name,
+    to_kotlin_type_name,
+)
 from .protos import KotlinProto, KotlinProtoRegistry, KotlinResolvedType
 from .selection import KotlinRouteSelection
 
@@ -90,6 +96,11 @@ class KotlinRoute:
     @property
     def http_method(self) -> str:
         return self.http_methods[0] if self.http_methods else "GET"
+
+    @property
+    def http_route_info_name(self) -> str:
+        source = self.protocol.route.route_id or self.func_name or self.method_name
+        return f"HTTP_ROUTE_{to_kotlin_constant_name(source, fallback='ROUTE')}"
 
     @property
     def query_type(self) -> str | None:

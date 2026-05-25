@@ -155,7 +155,9 @@ content-encoding: identity,gzip,br
     assert "public typealias ApiBinaryContentDecoder = (ByteArray) -> ByteArray" in runtime_text
     assert "public val decompressedBinaryBodyMaxBytes: Long = 16L * 1024L * 1024L" in runtime_text
     assert "public val binaryContentDecoders: Map<String, ApiBinaryContentDecoder> = emptyMap()" in runtime_text
-    assert 'DemoPacketWire.parse(receiveBinarySchemaBytes(call, config, setOf("identity", "gzip", "br")))' in ktor_text
+    assert "private data class HttpRouteInfo(" in ktor_text
+    assert 'binaryContentEncodings = setOf("identity", "gzip", "br")' in ktor_text
+    assert "DemoPacketWire.parse(receiveBinarySchemaBytes(call, config, HTTP_ROUTE_API_BINARY_POST_PACKET.request))" in ktor_text
     assert "io.ktor.utils.io.readAvailable\n\nimport java.io.ByteArrayInputStream" not in ktor_text
     assert "io.ktor.utils.io.readAvailable\n\nimport java.nio.file.Files" not in plain_ktor_text
     assert "GZIPInputStream(ByteArrayInputStream(encoded))" in ktor_text

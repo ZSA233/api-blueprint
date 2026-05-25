@@ -109,9 +109,11 @@ def test_kotlin_http_codegen_emits_multipart_raw_and_binary_response_contracts(t
     assert "JsonArray(bytes.map { JsonPrimitive(it.toInt()) })" not in ktor
     assert "respondPayloadTooLarge(call)" in ktor
     assert "JsonPrimitive(it.toInt() and 0xFF)" not in ktor
-    assert "respondRaw(call, result, \"bytes\", \"image/jpeg\", \"\")" in ktor
-    assert 'respondRaw(call, result, "file", "application/octet-stream", "sample-é.txt")' in ktor
-    assert "respondRaw(call, result, \"byte_stream\", \"multipart/x-mixed-replace\", \"\")" in ktor
+    assert "private data class HttpRouteInfo(" in ktor
+    assert 'defaultFilename = "sample-é.txt"' in ktor
+    assert "respondRaw(call, result, HTTP_ROUTE_API_MEDIA_POST_PREVIEW.response)" in ktor
+    assert "respondRaw(call, result, HTTP_ROUTE_API_MEDIA_GET_DOWNLOAD.response)" in ktor
+    assert "respondRaw(call, result, HTTP_ROUTE_API_MEDIA_GET_MJPEG.response)" in ktor
     assert "respondOutputStream(contentType = contentType(response.contentType))" in ktor
     assert "val read = stream.body.read(buffer)" in ktor
     assert "contentDispositionAttachment(effectiveFilename)" in ktor
