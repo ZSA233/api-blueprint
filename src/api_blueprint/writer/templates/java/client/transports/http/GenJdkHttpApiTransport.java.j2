@@ -64,32 +64,33 @@ public class GenJdkHttpApiTransport implements GenApiTransport {
     @Override
     public <T> T execute(GenApiRequest<T> request) throws Exception {
         HttpRequest httpRequest = buildRequest(request);
-        if ("byte_stream".equals(request.responseKind())) {
+        var responseSpec = request.response();
+        if ("byte_stream".equals(responseSpec.kind())) {
             return executeByteStream(request, httpRequest);
         }
         HttpResponse<byte[]> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofByteArray());
         byte[] bodyBytes = response.body() == null ? new byte[0] : response.body();
         String body = new String(bodyBytes, StandardCharsets.UTF_8);
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            Optional<GenApiError> apiError = decodeApiError(request.routeId(), body, request.responseEnvelope());
+            Optional<GenApiError> apiError = decodeApiError(request.routeId(), body, responseSpec.envelope());
             if (apiError.isPresent()) {
                 throw apiError.get();
             }
             throw new GenApiException(response.statusCode(), body);
         }
-        if ("bytes".equals(request.responseKind()) || "file".equals(request.responseKind())) {
-            String responseContentType = firstHeader(response, "content-type").orElse(request.responseMediaType());
+        if ("bytes".equals(responseSpec.kind()) || "file".equals(responseSpec.kind())) {
+            String responseContentType = firstHeader(response, "content-type").orElse(responseSpec.mediaType());
             if (isJson(responseContentType)) {
-                Optional<GenApiError> apiError = decodeRawApiError(request.routeId(), body, request.responseEnvelope());
+                Optional<GenApiError> apiError = decodeRawApiError(request.routeId(), body, responseSpec.envelope());
                 if (apiError.isPresent()) {
                     throw apiError.get();
                 }
             }
-            return request.responseClass().cast(
+            return responseSpec.responseClass().cast(
                 new GenApiRawResponse(
                     bodyBytes,
                     responseContentType,
-                    firstHeader(response, "content-disposition").flatMap(this::filenameFromContentDisposition).orElse(request.responseFilename()),
+                    firstHeader(response, "content-disposition").flatMap(this::filenameFromContentDisposition).orElse(""),
                     response.headers().map()
                         .entrySet()
                         .stream()
@@ -97,44 +98,45 @@ public class GenJdkHttpApiTransport implements GenApiTransport {
                 )
             );
         }
-        if ("binary_schema".equals(request.responseKind())) {
-            if (request.binaryResponseDecoder() == null) {
+        if ("binary_schema".equals(responseSpec.kind())) {
+            if (responseSpec.binaryDecoder() == null) {
                 throw new IOException("Missing binary response decoder for " + request.routeId());
             }
-            return request.binaryResponseDecoder().apply(bodyBytes);
+            return responseSpec.binaryDecoder().apply(bodyBytes);
         }
         if (body.isBlank()) {
             return null;
         }
-        if (!"none".equals(request.responseEnvelope().kind())) {
+        if (!"none".equals(responseSpec.envelope().kind())) {
             return decodeEnvelope(request, body);
         }
-        if (!isJson(request.responseMediaType())) {
-            return request.responseClass().cast(body);
+        if (!isJson(responseSpec.mediaType())) {
+            return responseSpec.responseClass().cast(body);
         }
-        return objectMapper.readValue(body, request.responseClass());
+        return objectMapper.readValue(body, responseSpec.responseClass());
     }
 
     private <T> T executeByteStream(GenApiRequest<T> request, HttpRequest httpRequest) throws Exception {
+        var responseSpec = request.response();
         HttpResponse<InputStream> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofInputStream());
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             byte[] bodyBytes = readAndClose(response.body());
             String body = new String(bodyBytes, StandardCharsets.UTF_8);
-            Optional<GenApiError> apiError = decodeApiError(request.routeId(), body, request.responseEnvelope());
+            Optional<GenApiError> apiError = decodeApiError(request.routeId(), body, responseSpec.envelope());
             if (apiError.isPresent()) {
                 throw apiError.get();
             }
             throw new GenApiException(response.statusCode(), body);
         }
-        String responseContentType = firstHeader(response, "content-type").orElse(request.responseMediaType());
+        String responseContentType = firstHeader(response, "content-type").orElse(responseSpec.mediaType());
         if (isJson(responseContentType)) {
             byte[] bodyBytes = readAndClose(response.body());
             String body = new String(bodyBytes, StandardCharsets.UTF_8);
-            Optional<GenApiError> apiError = decodeRawApiError(request.routeId(), body, request.responseEnvelope());
+            Optional<GenApiError> apiError = decodeRawApiError(request.routeId(), body, responseSpec.envelope());
             if (apiError.isPresent()) {
                 throw apiError.get();
             }
-            return request.responseClass().cast(
+            return responseSpec.responseClass().cast(
                 new GenApiStreamResponse(
                     new ByteArrayInputStream(bodyBytes),
                     responseContentType,
@@ -145,7 +147,7 @@ public class GenJdkHttpApiTransport implements GenApiTransport {
                 )
             );
         }
-        return request.responseClass().cast(
+        return responseSpec.responseClass().cast(
             new GenApiStreamResponse(
                 response.body(),
                 responseContentType,
@@ -174,10 +176,11 @@ public class GenJdkHttpApiTransport implements GenApiTransport {
         if (timeout != null) {
             builder.timeout(timeout);
         }
-        Object json = request.json();
-        Object form = request.form();
-        Object multipart = request.multipart();
-        GenApiBinaryBody binary = request.binary();
+        var bodySpec = request.body();
+        Object json = bodySpec.json();
+        Object form = bodySpec.form();
+        Object multipart = bodySpec.multipart();
+        GenApiBinaryBody binary = bodySpec.binary();
         if (json != null) {
             builder.header("content-type", "application/json");
             builder.method(request.method(), HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(json), StandardCharsets.UTF_8));
@@ -399,7 +402,8 @@ public class GenJdkHttpApiTransport implements GenApiTransport {
 
     private <T> T decodeEnvelope(GenApiRequest<T> request, String body) throws IOException {
         JsonNode root = objectMapper.readTree(body);
-        GenApiResponseEnvelope envelope = request.responseEnvelope();
+        var responseSpec = request.response();
+        GenApiResponseEnvelope envelope = responseSpec.envelope();
         if ("code_message_data".equals(envelope.kind())) {
             int code = root.path(envelope.fields().code()).asInt(0);
             if (code == envelope.successCode()) {
@@ -407,7 +411,7 @@ public class GenJdkHttpApiTransport implements GenApiTransport {
                 if (data == null || data.isNull()) {
                     return null;
                 }
-                return objectMapper.convertValue(data, request.responseClass());
+                return objectMapper.convertValue(data, responseSpec.responseClass());
             }
             GenApiErrorPayload payload = parseCodeMessageEnvelopePayload(root, envelope, request.routeId());
             Optional<GenApiErrorEntry> entry = GenApiErrors.lookup(payload, request.routeId());
@@ -419,7 +423,7 @@ public class GenJdkHttpApiTransport implements GenApiTransport {
                 if (data == null || data.isNull()) {
                     return null;
                 }
-                return objectMapper.convertValue(data, request.responseClass());
+                return objectMapper.convertValue(data, responseSpec.responseClass());
             }
             GenApiErrorPayload payload = parseApiErrorPayload(root.path(envelope.fields().error()), request.routeId(), true);
             Optional<GenApiErrorEntry> entry = GenApiErrors.lookup(payload, request.routeId());

@@ -186,7 +186,9 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
             self._unlink_generated_file(plan.runtime.directory / stale_name)
         for output_name, template_path in (
             ("GenApiRequest.java", "GenApiRequest.java"),
+            ("GenApiRequestBodySpec.java", "GenApiRequestBodySpec.java"),
             ("GenApiRequestOptions.java", "GenApiRequestOptions.java"),
+            ("GenApiResponseSpec.java", "GenApiResponseSpec.java"),
             ("GenApiResponse.java", "GenApiResponse.java"),
             ("GenApiTransport.java", "GenApiTransport.java"),
             ("GenApiStreamBridge.java", "GenApiStreamBridge.java"),
