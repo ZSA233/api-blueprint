@@ -25,7 +25,7 @@ public open class GenMediaApi internal constructor(
                 responseKind = "bytes",
                 responseMediaType = "image/jpeg",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
-                responseDecoder = { response -> response.toRawResponse("image/jpeg", "") },
+                responseDecoder = { response -> response.toRawResponse("image/jpeg") },
             )
         )
     }
@@ -43,7 +43,7 @@ public open class GenMediaApi internal constructor(
                 responseKind = "bytes",
                 responseMediaType = "image/jpeg",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
-                responseDecoder = { response -> response.toRawResponse("image/jpeg", "") },
+                responseDecoder = { response -> response.toRawResponse("image/jpeg") },
             )
         )
     }
@@ -61,7 +61,7 @@ public open class GenMediaApi internal constructor(
                 responseKind = "file",
                 responseMediaType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
-                responseDecoder = { response -> response.toRawResponse("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "media-report.xlsx") },
+                responseDecoder = { response -> response.toRawResponse("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") },
             )
         )
     }
@@ -79,7 +79,7 @@ public open class GenMediaApi internal constructor(
                 responseKind = "file",
                 responseMediaType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
-                responseDecoder = { response -> response.toRawResponse("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "media-report.xlsx") },
+                responseDecoder = { response -> response.toRawResponse("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") },
             )
         )
     }
@@ -97,7 +97,7 @@ public open class GenMediaApi internal constructor(
                 responseKind = "file",
                 responseMediaType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
-                responseDecoder = { response -> response.toRawResponse("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "fallback-report.xlsx") },
+                responseDecoder = { response -> response.toRawResponse("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") },
             )
         )
     }
@@ -117,7 +117,7 @@ public open class GenMediaApi internal constructor(
                 responseKind = "bytes",
                 responseMediaType = "image/jpeg",
                 responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
-                responseDecoder = { response -> response.toRawResponse("image/jpeg", "") },
+                responseDecoder = { response -> response.toRawResponse("image/jpeg") },
             )
         )
     }

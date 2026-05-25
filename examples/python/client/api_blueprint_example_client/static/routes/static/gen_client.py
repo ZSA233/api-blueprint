@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from ...runtime.client import ApiChannelBridge, ApiClientTransport, ApiRawResponse, ApiStreamBridge, ApiStreamResponse
+from ...runtime.client import ApiChannelBridge, ApiClientTransport, ApiRawResponse, ApiRequest, ApiStreamBridge, ApiStreamResponse
 from ...runtime.gen_codecs import (
     _api_to_json,
     _api_to_transport,
@@ -37,13 +37,15 @@ class StaticClient:
     ) -> DocJsonResponse:
         response_type: str | None = 'DocJsonResponse'
         payload = await self._transport.request(
-            "GET",
-            "/static/doc.json",
-            route_id="static.static.get.docjson",
-            response_type=response_type,
-            response_envelope={"name": "NoEnvelope", "kind": "none", "error_identity": "none", "success_code": 0, "success_message": "ok", "fields": {}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="GET",
+                path="/static/doc.json",
+                route_id="static.static.get.docjson",
+                response_type=response_type,
+                response_envelope={"name": "NoEnvelope", "kind": "none", "error_identity": "none", "success_code": 0, "success_message": "ok", "fields": {}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return DocJsonResponse.from_value(payload, "doc_json.response")
 
@@ -55,12 +57,14 @@ class StaticClient:
     ) -> DochahaResponse:
         response_type: str | None = 'DochahaResponse'
         payload = await self._transport.request(
-            "GET",
-            "/static/dochaha",
-            route_id="static.static.get.dochaha",
-            response_type=response_type,
-            response_envelope={"name": "NoEnvelope", "kind": "none", "error_identity": "none", "success_code": 0, "success_message": "ok", "fields": {}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="GET",
+                path="/static/dochaha",
+                route_id="static.static.get.dochaha",
+                response_type=response_type,
+                response_envelope={"name": "NoEnvelope", "kind": "none", "error_identity": "none", "success_code": 0, "success_message": "ok", "fields": {}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return DochahaResponse.from_value(payload, "dochaha.response")

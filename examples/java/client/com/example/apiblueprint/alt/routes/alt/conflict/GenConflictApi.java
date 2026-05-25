@@ -3,9 +3,11 @@ package com.example.apiblueprint.alt.routes.alt.conflict;
 
 import com.example.apiblueprint.alt.runtime.GenApiChannelBridge;
 import com.example.apiblueprint.alt.runtime.GenApiRequest;
+import com.example.apiblueprint.alt.runtime.GenApiRequestBodySpec;
 import com.example.apiblueprint.alt.runtime.GenApiRequestOptions;
 import com.example.apiblueprint.alt.runtime.GenApiRawResponse;
 import com.example.apiblueprint.alt.runtime.GenApiResponseEnvelope;
+import com.example.apiblueprint.alt.runtime.GenApiResponseSpec;
 import com.example.apiblueprint.alt.runtime.GenApiStreamResponse;
 import com.example.apiblueprint.alt.runtime.GenApiStreamBridge;
 import com.example.apiblueprint.alt.runtime.GenApiTransport;
@@ -40,17 +42,20 @@ public class GenConflictApi {
             "GET",
             "/alt/conflict/default",
             query,
-            null,
-            null,
-            null,
-            null,
-            "none",
-            GenApiResponseEnvelope.of("OkDataErrorEnvelope", "ok_data_error", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            GenApiTypes.BlueprintsAltConflictConflictModel.class,
-            "application/json",
-            "json",
-            "",
-            null,
+            new GenApiRequestBodySpec(
+                null,
+                null,
+                null,
+                null,
+                "none"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("OkDataErrorEnvelope", "ok_data_error", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenApiTypes.BlueprintsAltConflictConflictModel.class,
+                "application/json",
+                "json",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );

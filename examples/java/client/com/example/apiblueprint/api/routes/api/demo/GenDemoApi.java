@@ -3,9 +3,11 @@ package com.example.apiblueprint.api.routes.api.demo;
 
 import com.example.apiblueprint.api.runtime.GenApiChannelBridge;
 import com.example.apiblueprint.api.runtime.GenApiRequest;
+import com.example.apiblueprint.api.runtime.GenApiRequestBodySpec;
 import com.example.apiblueprint.api.runtime.GenApiRequestOptions;
 import com.example.apiblueprint.api.runtime.GenApiRawResponse;
 import com.example.apiblueprint.api.runtime.GenApiResponseEnvelope;
+import com.example.apiblueprint.api.runtime.GenApiResponseSpec;
 import com.example.apiblueprint.api.runtime.GenApiStreamResponse;
 import com.example.apiblueprint.api.runtime.GenApiStreamBridge;
 import com.example.apiblueprint.api.runtime.GenApiTransport;
@@ -40,17 +42,20 @@ public class GenDemoApi {
             "GET",
             "/api/demo/abc",
             query,
-            null,
-            null,
-            null,
-            null,
-            "none",
-            GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            GenApiTypes.ApiDemoA.class,
-            "application/json",
-            "json",
-            "",
-            null,
+            new GenApiRequestBodySpec(
+                null,
+                null,
+                null,
+                null,
+                "none"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenApiTypes.ApiDemoA.class,
+                "application/json",
+                "json",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );
@@ -76,17 +81,20 @@ public class GenDemoApi {
             "POST",
             "/api/demo/test_post",
             null,
-            json,
-            null,
-            null,
-            null,
-            "json",
-            GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            GenDemoTypes.TestPostResponse.class,
-            "application/json",
-            "json",
-            "",
-            null,
+            new GenApiRequestBodySpec(
+                json,
+                null,
+                null,
+                null,
+                "json"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenDemoTypes.TestPostResponse.class,
+                "application/json",
+                "json",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );
@@ -112,17 +120,20 @@ public class GenDemoApi {
             "POST",
             "/api/demo/form-submit",
             null,
-            null,
-            form,
-            null,
-            null,
-            "urlencoded",
-            GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            GenDemoTypes.FormSubmitResponse.class,
-            "application/json",
-            "json",
-            "",
-            null,
+            new GenApiRequestBodySpec(
+                null,
+                form,
+                null,
+                null,
+                "urlencoded"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenDemoTypes.FormSubmitResponse.class,
+                "application/json",
+                "json",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );
@@ -148,17 +159,20 @@ public class GenDemoApi {
             "GET",
             "/api/demo/request-options",
             query,
-            null,
-            null,
-            null,
-            null,
-            "none",
-            GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            GenApiTypes.RequestOptionsResponse.class,
-            "application/json",
-            "json",
-            "",
-            null,
+            new GenApiRequestBodySpec(
+                null,
+                null,
+                null,
+                null,
+                "none"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenApiTypes.RequestOptionsResponse.class,
+                "application/json",
+                "json",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );
@@ -187,17 +201,20 @@ public class GenDemoApi {
             "PUT",
             "/api/demo/1put",
             query,
-            json,
-            null,
-            null,
-            null,
-            "json",
-            GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            GenDemoTypes.PutDemoResponse.class,
-            "application/json",
-            "json",
-            "",
-            null,
+            new GenApiRequestBodySpec(
+                json,
+                null,
+                null,
+                null,
+                "json"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenDemoTypes.PutDemoResponse.class,
+                "application/json",
+                "json",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );
@@ -223,17 +240,20 @@ public class GenDemoApi {
             "DELETE",
             "/api/demo/delete$",
             query,
-            null,
-            null,
-            null,
-            null,
-            "none",
-            GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            GenDemoTypes.DeleteResponse.class,
-            "application/xml",
-            "xml",
-            "",
-            null,
+            new GenApiRequestBodySpec(
+                null,
+                null,
+                null,
+                null,
+                "none"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenDemoTypes.DeleteResponse.class,
+                "application/xml",
+                "xml",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );
@@ -259,17 +279,20 @@ public class GenDemoApi {
             "STREAM",
             "/api/demo/sweep-events",
             null,
-            openData,
-            null,
-            null,
-            null,
-            "none",
-            GenApiResponseEnvelope.none(),
-            Object.class,
-            "application/json",
-            "json",
-            "",
-            null,
+            new GenApiRequestBodySpec(
+                openData,
+                null,
+                null,
+                null,
+                "none"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.none(),
+                Object.class,
+                "application/json",
+                "json",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );
@@ -295,17 +318,20 @@ public class GenDemoApi {
             "CHANNEL",
             "/api/demo/assistant-session",
             null,
-            openData,
-            null,
-            null,
-            null,
-            "none",
-            GenApiResponseEnvelope.none(),
-            Object.class,
-            "application/json",
-            "json",
-            "",
-            null,
+            new GenApiRequestBodySpec(
+                openData,
+                null,
+                null,
+                null,
+                "none"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.none(),
+                Object.class,
+                "application/json",
+                "json",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );
@@ -331,17 +357,20 @@ public class GenDemoApi {
             "POST",
             "/api/demo/post_deprecated",
             null,
-            json,
-            null,
-            null,
-            null,
-            "json",
-            GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            GenDemoTypes.PostDeprecatedResponse.class,
-            "application/json",
-            "json",
-            "",
-            null,
+            new GenApiRequestBodySpec(
+                json,
+                null,
+                null,
+                null,
+                "json"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenDemoTypes.PostDeprecatedResponse.class,
+                "application/json",
+                "json",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );
@@ -364,17 +393,20 @@ public class GenDemoApi {
             "POST",
             "/api/demo/raw",
             null,
-            null,
-            null,
-            null,
-            null,
-            "none",
-            GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            GenDemoTypes.RawResponse.class,
-            "application/json",
-            "json",
-            "",
-            null,
+            new GenApiRequestBodySpec(
+                null,
+                null,
+                null,
+                null,
+                "none"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenDemoTypes.RawResponse.class,
+                "application/json",
+                "json",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );
@@ -397,17 +429,20 @@ public class GenDemoApi {
             "POST",
             "/api/demo/map_model",
             null,
-            null,
-            null,
-            null,
-            null,
-            "none",
-            GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            GenDemoTypes.MapModelResponse.class,
-            "application/json",
-            "json",
-            "",
-            null,
+            new GenApiRequestBodySpec(
+                null,
+                null,
+                null,
+                null,
+                "none"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenDemoTypes.MapModelResponse.class,
+                "application/json",
+                "json",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );
@@ -433,17 +468,20 @@ public class GenDemoApi {
             "GET",
             "/api/demo/error-demo",
             query,
-            null,
-            null,
-            null,
-            null,
-            "none",
-            GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            GenDemoTypes.ErrorDemoResponse.class,
-            "application/json",
-            "json",
-            "",
-            null,
+            new GenApiRequestBodySpec(
+                null,
+                null,
+                null,
+                null,
+                "none"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenDemoTypes.ErrorDemoResponse.class,
+                "application/json",
+                "json",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );

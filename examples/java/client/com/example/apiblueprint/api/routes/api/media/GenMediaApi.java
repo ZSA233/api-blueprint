@@ -3,9 +3,11 @@ package com.example.apiblueprint.api.routes.api.media;
 
 import com.example.apiblueprint.api.runtime.GenApiChannelBridge;
 import com.example.apiblueprint.api.runtime.GenApiRequest;
+import com.example.apiblueprint.api.runtime.GenApiRequestBodySpec;
 import com.example.apiblueprint.api.runtime.GenApiRequestOptions;
 import com.example.apiblueprint.api.runtime.GenApiRawResponse;
 import com.example.apiblueprint.api.runtime.GenApiResponseEnvelope;
+import com.example.apiblueprint.api.runtime.GenApiResponseSpec;
 import com.example.apiblueprint.api.runtime.GenApiStreamResponse;
 import com.example.apiblueprint.api.runtime.GenApiStreamBridge;
 import com.example.apiblueprint.api.runtime.GenApiTransport;
@@ -40,17 +42,20 @@ public class GenMediaApi {
             "POST",
             "/api/media/preview",
             null,
-            null,
-            null,
-            multipart,
-            null,
-            "multipart",
-            GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            GenApiRawResponse.class,
-            "image/jpeg",
-            "bytes",
-            "",
-            null,
+            new GenApiRequestBodySpec(
+                null,
+                null,
+                multipart,
+                null,
+                "multipart"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenApiRawResponse.class,
+                "image/jpeg",
+                "bytes",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );
@@ -73,17 +78,20 @@ public class GenMediaApi {
             "GET",
             "/api/media/frame",
             null,
-            null,
-            null,
-            null,
-            null,
-            "none",
-            GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            GenApiRawResponse.class,
-            "image/jpeg",
-            "bytes",
-            "",
-            null,
+            new GenApiRequestBodySpec(
+                null,
+                null,
+                null,
+                null,
+                "none"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenApiRawResponse.class,
+                "image/jpeg",
+                "bytes",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );
@@ -106,17 +114,20 @@ public class GenMediaApi {
             "GET",
             "/api/media/download",
             null,
-            null,
-            null,
-            null,
-            null,
-            "none",
-            GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            GenApiRawResponse.class,
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "file",
-            "media-report.xlsx",
-            null,
+            new GenApiRequestBodySpec(
+                null,
+                null,
+                null,
+                null,
+                "none"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenApiRawResponse.class,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "file",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );
@@ -139,17 +150,20 @@ public class GenMediaApi {
             "GET",
             "/api/media/download-dynamic",
             null,
-            null,
-            null,
-            null,
-            null,
-            "none",
-            GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            GenApiRawResponse.class,
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "file",
-            "media-report.xlsx",
-            null,
+            new GenApiRequestBodySpec(
+                null,
+                null,
+                null,
+                null,
+                "none"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenApiRawResponse.class,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "file",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );
@@ -172,17 +186,20 @@ public class GenMediaApi {
             "GET",
             "/api/media/download-filename-edge",
             null,
-            null,
-            null,
-            null,
-            null,
-            "none",
-            GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            GenApiRawResponse.class,
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "file",
-            "fallback-report.xlsx",
-            null,
+            new GenApiRequestBodySpec(
+                null,
+                null,
+                null,
+                null,
+                "none"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenApiRawResponse.class,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "file",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );
@@ -208,17 +225,20 @@ public class GenMediaApi {
             "GET",
             "/api/media/error-frame",
             query,
-            null,
-            null,
-            null,
-            null,
-            "none",
-            GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            GenApiRawResponse.class,
-            "image/jpeg",
-            "bytes",
-            "",
-            null,
+            new GenApiRequestBodySpec(
+                null,
+                null,
+                null,
+                null,
+                "none"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenApiRawResponse.class,
+                "image/jpeg",
+                "bytes",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );
@@ -241,17 +261,20 @@ public class GenMediaApi {
             "GET",
             "/api/media/mjpeg",
             null,
-            null,
-            null,
-            null,
-            null,
-            "none",
-            GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            GenApiStreamResponse.class,
-            "multipart/x-mixed-replace; boundary=frame",
-            "byte_stream",
-            "",
-            null,
+            new GenApiRequestBodySpec(
+                null,
+                null,
+                null,
+                null,
+                "none"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenApiStreamResponse.class,
+                "multipart/x-mixed-replace; boundary=frame",
+                "byte_stream",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from ...runtime.client import ApiChannelBridge, ApiClientTransport, ApiRawResponse, ApiStreamBridge, ApiStreamResponse
+from ...runtime.client import ApiChannelBridge, ApiClientTransport, ApiRawResponse, ApiRequest, ApiStreamBridge, ApiStreamResponse
 from ...runtime.gen_codecs import (
     _api_to_json,
     _api_to_transport,

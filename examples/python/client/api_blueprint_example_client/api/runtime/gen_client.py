@@ -51,24 +51,25 @@ class ApiResponseEnvelope(TypedDict):
     fields: ApiResponseEnvelopeFields
 
 
+@dataclass(frozen=True)
+class ApiRequest:
+    method: str
+    path: str
+    route_id: str = ""
+    query: Mapping[str, Any] | None = None
+    json: Any = None
+    form: Mapping[str, Any] | None = None
+    multipart: Mapping[str, Any] | None = None
+    binary: bytes | ApiBinaryBody | None = None
+    open_data: Mapping[str, Any] | None = None
+    response_type: str | None = None
+    response_envelope: ApiResponseEnvelope | None = None
+    headers: Mapping[str, str] | None = None
+    timeout: float | None = None
+
+
 class ApiClientTransport(Protocol):
-    async def request(
-        self,
-        method: str,
-        path: str,
-        *,
-        route_id: str = "",
-        query: Mapping[str, Any] | None = None,
-        json: Any = None,
-        form: Mapping[str, Any] | None = None,
-        multipart: Mapping[str, Any] | None = None,
-        binary: bytes | ApiBinaryBody | None = None,
-        open_data: Mapping[str, Any] | None = None,
-        response_type: str | None = None,
-        response_envelope: ApiResponseEnvelope | None = None,
-        headers: Mapping[str, str] | None = None,
-        timeout: float | None = None,
-    ) -> Any:
+    async def request(self, request: ApiRequest) -> Any:
         ...
 
     def open_stream(

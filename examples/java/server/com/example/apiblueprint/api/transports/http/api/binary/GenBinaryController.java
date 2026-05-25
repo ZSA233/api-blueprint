@@ -59,6 +59,42 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 public class GenBinaryController {
+    private record HttpRouteInfo(HttpRequestInfo request, HttpResponseInfo response) {
+    }
+
+    private record HttpRequestInfo(Set<String> binaryContentEncodings) {
+    }
+
+    private record HttpResponseInfo(String kind, String mediaType, String defaultFilename) {
+    }
+
+    private static final HttpRouteInfo HTTP_ROUTE_API_BINARY_POST_PACKET = new HttpRouteInfo(
+        new HttpRequestInfo(Set.of("identity", "gzip", "br")),
+        new HttpResponseInfo(
+            "json",
+            "application/json",
+            ""
+        )
+    );
+
+    private static final HttpRouteInfo HTTP_ROUTE_API_BINARY_POST_AUDITPACKET = new HttpRouteInfo(
+        new HttpRequestInfo(Set.of("identity")),
+        new HttpResponseInfo(
+            "json",
+            "application/json",
+            ""
+        )
+    );
+
+    private static final HttpRouteInfo HTTP_ROUTE_API_BINARY_GET_AUDITPACKETRESPONSE = new HttpRouteInfo(
+        new HttpRequestInfo(Set.of()),
+        new HttpResponseInfo(
+            "binary_schema",
+            "application/octet-stream",
+            ""
+        )
+    );
+
     private final BinaryService service;
     private final ObjectMapper objectMapper;
     private final GenSpringServerConfig serverConfig;
@@ -87,7 +123,7 @@ public class GenBinaryController {
         try {
             query = objectMapper.convertValue(queryParams, GenBinaryTypes.PacketQuery.class);
             binary = GenBinaryTypes.DemoPacketWire.parse(
-                decodeBinarySchemaBody(binaryBody == null ? new byte[0] : binaryBody, contentEncoding, Set.of("identity", "gzip", "br"))
+                decodeBinarySchemaBody(binaryBody == null ? new byte[0] : binaryBody, contentEncoding, HTTP_ROUTE_API_BINARY_POST_PACKET.request())
             );
         } catch (PayloadTooLargeException error) {
             return payloadTooLargeResponse(error);
@@ -118,7 +154,7 @@ public class GenBinaryController {
         try {
             query = objectMapper.convertValue(queryParams, GenBinaryTypes.AuditPacketQuery.class);
             binary = GenBinaryTypes.AuditPacketWire.parse(
-                decodeBinarySchemaBody(binaryBody == null ? new byte[0] : binaryBody, contentEncoding, Set.of("identity"))
+                decodeBinarySchemaBody(binaryBody == null ? new byte[0] : binaryBody, contentEncoding, HTTP_ROUTE_API_BINARY_POST_AUDITPACKET.request())
             );
         } catch (PayloadTooLargeException error) {
             return payloadTooLargeResponse(error);
@@ -145,7 +181,7 @@ public class GenBinaryController {
         try {
             Object result = service.auditPacketResponse(
             );
-            return rawBytesResponse("application/octet-stream", "", GenBinaryTypes.AuditPacketWire.toBinaryBody((GenBinaryTypes.AuditPacket) result).toBytes());
+            return rawBytesResponse(HTTP_ROUTE_API_BINARY_GET_AUDITPACKETRESPONSE.response(), GenBinaryTypes.AuditPacketWire.toBinaryBody((GenBinaryTypes.AuditPacket) result).toBytes());
         } catch (GenApiError error) {
             return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.binary.get.auditpacketresponse");
         }
@@ -290,11 +326,11 @@ public class GenBinaryController {
         return property == null || property.value().isBlank() ? component.getName() : property.value();
     }
 
-    private byte[] decodeBinarySchemaBody(byte[] body, String contentEncoding, Set<String> allowedContentEncodings) {
+    private byte[] decodeBinarySchemaBody(byte[] body, String contentEncoding, HttpRequestInfo requestInfo) {
         String encoding = contentEncoding == null || contentEncoding.isBlank()
             ? "identity"
             : contentEncoding.trim().toLowerCase(Locale.ROOT);
-        if (!allowedContentEncodings.contains(encoding)) {
+        if (!requestInfo.binaryContentEncodings().contains(encoding)) {
             throw new UnsupportedContentEncodingException("unsupported binary Content-Encoding " + encoding);
         }
         if ("identity".equals(encoding)) {
@@ -351,32 +387,32 @@ public class GenBinaryController {
         return output.toByteArray();
     }
 
-    private ResponseEntity<?> rawResponse(String kind, String mediaType, String filename, Object result) throws IOException {
+    private ResponseEntity<?> rawResponse(HttpResponseInfo responseInfo, Object result) throws IOException {
         if (result instanceof GenApiRawResponse raw) {
-            ResponseEntity.BodyBuilder builder = rawResponseBuilder(kind, raw.contentType(), raw.filename().isBlank() ? filename : raw.filename());
+            ResponseEntity.BodyBuilder builder = rawResponseBuilder(responseInfo.kind(), raw.contentType(), raw.filename().isBlank() ? responseInfo.defaultFilename() : raw.filename());
             raw.headers().forEach(builder::header);
             return builder.body(raw.body());
         }
         if (result instanceof GenApiStreamResponse stream) {
-            ResponseEntity.BodyBuilder builder = rawResponseBuilder(kind, stream.contentType(), filename);
+            ResponseEntity.BodyBuilder builder = rawResponseBuilder(responseInfo.kind(), stream.contentType(), responseInfo.defaultFilename());
             stream.headers().forEach(builder::header);
             return builder.body(new InputStreamResource(stream.body()));
         }
         if (result instanceof GenApiBinaryBody binary) {
-            return rawResponseBuilder(kind, binary.contentType(), filename).body(binary.toBytes());
+            return rawResponseBuilder(responseInfo.kind(), binary.contentType(), responseInfo.defaultFilename()).body(binary.toBytes());
         }
         if (result instanceof byte[] bytes) {
-            return rawResponseBuilder(kind, mediaType, filename).body(bytes);
+            return rawResponseBuilder(responseInfo.kind(), responseInfo.mediaType(), responseInfo.defaultFilename()).body(bytes);
         }
         if (result instanceof String text) {
-            return rawResponseBuilder(kind, mediaType, filename).body(text.getBytes(StandardCharsets.UTF_8));
+            return rawResponseBuilder(responseInfo.kind(), responseInfo.mediaType(), responseInfo.defaultFilename()).body(text.getBytes(StandardCharsets.UTF_8));
         }
         byte[] bytes = result == null ? new byte[0] : objectMapper.writeValueAsBytes(result);
-        return rawResponseBuilder(kind, mediaType, filename).body(bytes);
+        return rawResponseBuilder(responseInfo.kind(), responseInfo.mediaType(), responseInfo.defaultFilename()).body(bytes);
     }
 
-    private ResponseEntity<byte[]> rawBytesResponse(String mediaType, String filename, byte[] body) {
-        return rawResponseBuilder("bytes", mediaType, filename).body(body == null ? new byte[0] : body);
+    private ResponseEntity<byte[]> rawBytesResponse(HttpResponseInfo responseInfo, byte[] body) {
+        return rawResponseBuilder(responseInfo.kind(), responseInfo.mediaType(), responseInfo.defaultFilename()).body(body == null ? new byte[0] : body);
     }
 
     private ResponseEntity.BodyBuilder rawResponseBuilder(String kind, String mediaType, String filename) {

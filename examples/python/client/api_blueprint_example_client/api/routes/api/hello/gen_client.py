@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from ....runtime.client import ApiChannelBridge, ApiClientTransport, ApiRawResponse, ApiStreamBridge, ApiStreamResponse
+from ....runtime.client import ApiChannelBridge, ApiClientTransport, ApiRawResponse, ApiRequest, ApiStreamBridge, ApiStreamResponse
 from ....runtime.gen_codecs import (
     _api_to_json,
     _api_to_transport,
@@ -42,14 +42,16 @@ class HelloClient:
     ) -> dict[str, ApiHelloMap]:
         response_type: str | None = 'dict[str, ApiHelloMap]'
         payload = await self._transport.request(
-            "GET",
-            "/api/hello/abc",
-            route_id="api.hello.get.abc",
-            query=_api_to_json(query),
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="GET",
+                path="/api/hello/abc",
+                route_id="api.hello.get.abc",
+                query=_api_to_json(query),
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return (lambda item, path: _decode_map(item, path, _decode_str, ApiHelloMap.from_value))(payload, "abc.response")
 
@@ -61,13 +63,15 @@ class HelloClient:
     ) -> dict[MapEnum, ApiHelloMap]:
         response_type: str | None = 'dict[MapEnum, ApiHelloMap]'
         payload = await self._transport.request(
-            "GET",
-            "/api/hello/map-enum",
-            route_id="api.hello.get.mapenum",
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="GET",
+                path="/api/hello/map-enum",
+                route_id="api.hello.get.mapenum",
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return (lambda item, path: _decode_map(item, path, MapEnum.from_value, ApiHelloMap.from_value))(payload, "map_enum.response")
 
@@ -79,13 +83,15 @@ class HelloClient:
     ) -> list[MapEnum]:
         response_type: str | None = 'list[MapEnum]'
         payload = await self._transport.request(
-            "GET",
-            "/api/hello/list-enum",
-            route_id="api.hello.get.listenum",
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="GET",
+                path="/api/hello/list-enum",
+                route_id="api.hello.get.listenum",
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return (lambda item, path: _decode_list(item, path, MapEnum.from_value))(payload, "list_enum.response")
 
@@ -97,13 +103,15 @@ class HelloClient:
     ) -> str:
         response_type: str | None = 'str'
         payload = await self._transport.request(
-            "GET",
-            "/api/hello/string",
-            route_id="api.hello.get.string",
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="GET",
+                path="/api/hello/string",
+                route_id="api.hello.get.string",
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return _decode_str(payload, "string.response")
 
@@ -115,13 +123,15 @@ class HelloClient:
     ) -> int:
         response_type: str | None = 'int'
         payload = await self._transport.request(
-            "GET",
-            "/api/hello/uint64",
-            route_id="api.hello.get.uint64",
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="GET",
+                path="/api/hello/uint64",
+                route_id="api.hello.get.uint64",
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return _decode_int(payload, "uint64.response")
 
@@ -133,13 +143,15 @@ class HelloClient:
     ) -> MapEnum:
         response_type: str | None = 'MapEnum'
         payload = await self._transport.request(
-            "GET",
-            "/api/hello/string-emun",
-            route_id="api.hello.get.stringemun",
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="GET",
+                path="/api/hello/string-emun",
+                route_id="api.hello.get.stringemun",
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return MapEnum.from_value(payload, "string_emun.response")
 
@@ -152,13 +164,15 @@ class HelloClient:
     ) -> Any:
         response_type: str | None = None
         payload = await self._transport.request(
-            "GET",
-            "/api/hello/hello-way",
-            route_id="api.hello.get.helloway",
-            query=_api_to_json(query),
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="GET",
+                path="/api/hello/hello-way",
+                route_id="api.hello.get.helloway",
+                query=_api_to_json(query),
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return payload

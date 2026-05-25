@@ -35,6 +35,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
@@ -52,6 +53,78 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 public class GenHelloController {
+    private record HttpRouteInfo(HttpRequestInfo request, HttpResponseInfo response) {
+    }
+
+    private record HttpRequestInfo(Set<String> binaryContentEncodings) {
+    }
+
+    private record HttpResponseInfo(String kind, String mediaType, String defaultFilename) {
+    }
+
+    private static final HttpRouteInfo HTTP_ROUTE_API_HELLO_GET_ABC = new HttpRouteInfo(
+        new HttpRequestInfo(Set.of()),
+        new HttpResponseInfo(
+            "json",
+            "application/json",
+            ""
+        )
+    );
+
+    private static final HttpRouteInfo HTTP_ROUTE_API_HELLO_GET_MAPENUM = new HttpRouteInfo(
+        new HttpRequestInfo(Set.of()),
+        new HttpResponseInfo(
+            "json",
+            "application/json",
+            ""
+        )
+    );
+
+    private static final HttpRouteInfo HTTP_ROUTE_API_HELLO_GET_LISTENUM = new HttpRouteInfo(
+        new HttpRequestInfo(Set.of()),
+        new HttpResponseInfo(
+            "json",
+            "application/json",
+            ""
+        )
+    );
+
+    private static final HttpRouteInfo HTTP_ROUTE_API_HELLO_GET_STRING = new HttpRouteInfo(
+        new HttpRequestInfo(Set.of()),
+        new HttpResponseInfo(
+            "json",
+            "application/json",
+            ""
+        )
+    );
+
+    private static final HttpRouteInfo HTTP_ROUTE_API_HELLO_GET_UINT64 = new HttpRouteInfo(
+        new HttpRequestInfo(Set.of()),
+        new HttpResponseInfo(
+            "json",
+            "application/json",
+            ""
+        )
+    );
+
+    private static final HttpRouteInfo HTTP_ROUTE_API_HELLO_GET_STRINGEMUN = new HttpRouteInfo(
+        new HttpRequestInfo(Set.of()),
+        new HttpResponseInfo(
+            "json",
+            "application/json",
+            ""
+        )
+    );
+
+    private static final HttpRouteInfo HTTP_ROUTE_API_HELLO_GET_HELLOWAY = new HttpRouteInfo(
+        new HttpRequestInfo(Set.of()),
+        new HttpResponseInfo(
+            "json",
+            "application/json",
+            ""
+        )
+    );
+
     private final HelloService service;
     private final ObjectMapper objectMapper;
     private final GenSpringServerConfig serverConfig;
@@ -317,32 +390,32 @@ public class GenHelloController {
         return property == null || property.value().isBlank() ? component.getName() : property.value();
     }
 
-    private ResponseEntity<?> rawResponse(String kind, String mediaType, String filename, Object result) throws IOException {
+    private ResponseEntity<?> rawResponse(HttpResponseInfo responseInfo, Object result) throws IOException {
         if (result instanceof GenApiRawResponse raw) {
-            ResponseEntity.BodyBuilder builder = rawResponseBuilder(kind, raw.contentType(), raw.filename().isBlank() ? filename : raw.filename());
+            ResponseEntity.BodyBuilder builder = rawResponseBuilder(responseInfo.kind(), raw.contentType(), raw.filename().isBlank() ? responseInfo.defaultFilename() : raw.filename());
             raw.headers().forEach(builder::header);
             return builder.body(raw.body());
         }
         if (result instanceof GenApiStreamResponse stream) {
-            ResponseEntity.BodyBuilder builder = rawResponseBuilder(kind, stream.contentType(), filename);
+            ResponseEntity.BodyBuilder builder = rawResponseBuilder(responseInfo.kind(), stream.contentType(), responseInfo.defaultFilename());
             stream.headers().forEach(builder::header);
             return builder.body(new InputStreamResource(stream.body()));
         }
         if (result instanceof GenApiBinaryBody binary) {
-            return rawResponseBuilder(kind, binary.contentType(), filename).body(binary.toBytes());
+            return rawResponseBuilder(responseInfo.kind(), binary.contentType(), responseInfo.defaultFilename()).body(binary.toBytes());
         }
         if (result instanceof byte[] bytes) {
-            return rawResponseBuilder(kind, mediaType, filename).body(bytes);
+            return rawResponseBuilder(responseInfo.kind(), responseInfo.mediaType(), responseInfo.defaultFilename()).body(bytes);
         }
         if (result instanceof String text) {
-            return rawResponseBuilder(kind, mediaType, filename).body(text.getBytes(StandardCharsets.UTF_8));
+            return rawResponseBuilder(responseInfo.kind(), responseInfo.mediaType(), responseInfo.defaultFilename()).body(text.getBytes(StandardCharsets.UTF_8));
         }
         byte[] bytes = result == null ? new byte[0] : objectMapper.writeValueAsBytes(result);
-        return rawResponseBuilder(kind, mediaType, filename).body(bytes);
+        return rawResponseBuilder(responseInfo.kind(), responseInfo.mediaType(), responseInfo.defaultFilename()).body(bytes);
     }
 
-    private ResponseEntity<byte[]> rawBytesResponse(String mediaType, String filename, byte[] body) {
-        return rawResponseBuilder("bytes", mediaType, filename).body(body == null ? new byte[0] : body);
+    private ResponseEntity<byte[]> rawBytesResponse(HttpResponseInfo responseInfo, byte[] body) {
+        return rawResponseBuilder(responseInfo.kind(), responseInfo.mediaType(), responseInfo.defaultFilename()).body(body == null ? new byte[0] : body);
     }
 
     private ResponseEntity.BodyBuilder rawResponseBuilder(String kind, String mediaType, String filename) {

@@ -47,6 +47,98 @@ import io.ktor.utils.io.readAvailable
 import java.nio.file.Files
 import java.io.Writer
 
+private data class HttpRouteInfo(
+    val request: HttpRequestInfo,
+    val response: HttpResponseInfo,
+)
+
+private data class HttpRequestInfo(
+    val binaryContentEncodings: Set<String> = emptySet(),
+)
+
+private data class HttpResponseInfo(
+    val kind: String = "json",
+    val mediaType: String = "application/json",
+    val defaultFilename: String = "",
+)
+
+private val HTTP_ROUTE_API_MEDIA_POST_PREVIEW = HttpRouteInfo(
+    request = HttpRequestInfo(
+        binaryContentEncodings = emptySet(),
+    ),
+    response = HttpResponseInfo(
+        kind = "bytes",
+        mediaType = "image/jpeg",
+        defaultFilename = "",
+    ),
+)
+
+private val HTTP_ROUTE_API_MEDIA_GET_FRAME = HttpRouteInfo(
+    request = HttpRequestInfo(
+        binaryContentEncodings = emptySet(),
+    ),
+    response = HttpResponseInfo(
+        kind = "bytes",
+        mediaType = "image/jpeg",
+        defaultFilename = "",
+    ),
+)
+
+private val HTTP_ROUTE_API_MEDIA_GET_DOWNLOAD = HttpRouteInfo(
+    request = HttpRequestInfo(
+        binaryContentEncodings = emptySet(),
+    ),
+    response = HttpResponseInfo(
+        kind = "file",
+        mediaType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        defaultFilename = "media-report.xlsx",
+    ),
+)
+
+private val HTTP_ROUTE_API_MEDIA_GET_DOWNLOADDYNAMIC = HttpRouteInfo(
+    request = HttpRequestInfo(
+        binaryContentEncodings = emptySet(),
+    ),
+    response = HttpResponseInfo(
+        kind = "file",
+        mediaType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        defaultFilename = "media-report.xlsx",
+    ),
+)
+
+private val HTTP_ROUTE_API_MEDIA_GET_DOWNLOADFILENAMEEDGE = HttpRouteInfo(
+    request = HttpRequestInfo(
+        binaryContentEncodings = emptySet(),
+    ),
+    response = HttpResponseInfo(
+        kind = "file",
+        mediaType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        defaultFilename = "fallback-report.xlsx",
+    ),
+)
+
+private val HTTP_ROUTE_API_MEDIA_GET_ERRORFRAME = HttpRouteInfo(
+    request = HttpRequestInfo(
+        binaryContentEncodings = emptySet(),
+    ),
+    response = HttpResponseInfo(
+        kind = "bytes",
+        mediaType = "image/jpeg",
+        defaultFilename = "",
+    ),
+)
+
+private val HTTP_ROUTE_API_MEDIA_GET_MJPEG = HttpRouteInfo(
+    request = HttpRequestInfo(
+        binaryContentEncodings = emptySet(),
+    ),
+    response = HttpResponseInfo(
+        kind = "byte_stream",
+        mediaType = "multipart/x-mixed-replace; boundary=frame",
+        defaultFilename = "",
+    ),
+)
+
 public fun Route.registerMediaRoutes(
     service: GenMediaService = MediaServiceStub(),
     config: ApiServerConfig = ApiServerConfig(),
@@ -69,7 +161,7 @@ public fun Route.registerMediaRoutes(
             val result = service.mediaPreview(
                 multipart = multipart
             )
-            respondRaw(call, result, "bytes", "image/jpeg", "")
+            respondRaw(call, result, HTTP_ROUTE_API_MEDIA_POST_PREVIEW.response)
         } catch (error: ApiError) {
             respondApiError(call, error, ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "api.media.post.preview")
         }
@@ -79,7 +171,7 @@ public fun Route.registerMediaRoutes(
         try {
             val result = service.mediaFrame(
             )
-            respondRaw(call, result, "bytes", "image/jpeg", "")
+            respondRaw(call, result, HTTP_ROUTE_API_MEDIA_GET_FRAME.response)
         } catch (error: ApiError) {
             respondApiError(call, error, ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "api.media.get.frame")
         }
@@ -89,7 +181,7 @@ public fun Route.registerMediaRoutes(
         try {
             val result = service.mediaDownload(
             )
-            respondRaw(call, result, "file", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "media-report.xlsx")
+            respondRaw(call, result, HTTP_ROUTE_API_MEDIA_GET_DOWNLOAD.response)
         } catch (error: ApiError) {
             respondApiError(call, error, ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "api.media.get.download")
         }
@@ -99,7 +191,7 @@ public fun Route.registerMediaRoutes(
         try {
             val result = service.mediaDownloadDynamic(
             )
-            respondRaw(call, result, "file", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "media-report.xlsx")
+            respondRaw(call, result, HTTP_ROUTE_API_MEDIA_GET_DOWNLOADDYNAMIC.response)
         } catch (error: ApiError) {
             respondApiError(call, error, ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "api.media.get.downloaddynamic")
         }
@@ -109,7 +201,7 @@ public fun Route.registerMediaRoutes(
         try {
             val result = service.mediaDownloadFilenameEdge(
             )
-            respondRaw(call, result, "file", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "fallback-report.xlsx")
+            respondRaw(call, result, HTTP_ROUTE_API_MEDIA_GET_DOWNLOADFILENAMEEDGE.response)
         } catch (error: ApiError) {
             respondApiError(call, error, ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "api.media.get.downloadfilenameedge")
         }
@@ -129,7 +221,7 @@ public fun Route.registerMediaRoutes(
             val result = service.mediaErrorFrame(
                 query = query
             )
-            respondRaw(call, result, "bytes", "image/jpeg", "")
+            respondRaw(call, result, HTTP_ROUTE_API_MEDIA_GET_ERRORFRAME.response)
         } catch (error: ApiError) {
             respondApiError(call, error, ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "api.media.get.errorframe")
         }
@@ -139,7 +231,7 @@ public fun Route.registerMediaRoutes(
         try {
             val result = service.mediaMjpeg(
             )
-            respondRaw(call, result, "byte_stream", "multipart/x-mixed-replace; boundary=frame", "")
+            respondRaw(call, result, HTTP_ROUTE_API_MEDIA_GET_MJPEG.response)
         } catch (error: ApiError) {
             respondApiError(call, error, ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "api.media.get.mjpeg")
         }
@@ -340,30 +432,30 @@ private suspend fun receiveFilePart(part: PartData.FileItem, config: ApiServerCo
     }
 }
 
-private suspend fun respondRawBytes(call: ApplicationCall, bytes: ByteArray, mediaType: String) {
-    call.respondBytes(bytes, contentType = contentType(mediaType))
+private suspend fun respondRawBytes(call: ApplicationCall, bytes: ByteArray, responseInfo: HttpResponseInfo) {
+    call.respondBytes(bytes, contentType = contentType(responseInfo.mediaType))
 }
 
-private suspend fun respondRaw(call: ApplicationCall, result: Any?, kind: String, mediaType: String, filename: String) {
+private suspend fun respondRaw(call: ApplicationCall, result: Any?, responseInfo: HttpResponseInfo) {
     if (result is ApiStreamResponse) {
-        respondStream(call, result, kind, filename)
+        respondStream(call, result, responseInfo)
         return
     }
-    if (kind == "byte_stream") {
-        respondStream(call, streamRawResponse(result, mediaType), kind, filename)
+    if (responseInfo.kind == "byte_stream") {
+        respondStream(call, streamRawResponse(result, responseInfo.mediaType), responseInfo)
         return
     }
     val response = when (result) {
         is ApiRawResponse -> result
-        is ApiBinaryBody -> ApiRawResponse(result.toByteArray(), result.contentType, filename)
-        is ByteArray -> ApiRawResponse(result, mediaType, filename)
-        is String -> ApiRawResponse(result.toByteArray(Charsets.UTF_8), mediaType, filename)
-        null -> ApiRawResponse(ByteArray(0), mediaType, filename)
-        else -> ApiRawResponse(result.toString().toByteArray(Charsets.UTF_8), mediaType, filename)
+        is ApiBinaryBody -> ApiRawResponse(result.toByteArray(), result.contentType, responseInfo.defaultFilename)
+        is ByteArray -> ApiRawResponse(result, responseInfo.mediaType, responseInfo.defaultFilename)
+        is String -> ApiRawResponse(result.toByteArray(Charsets.UTF_8), responseInfo.mediaType, responseInfo.defaultFilename)
+        null -> ApiRawResponse(ByteArray(0), responseInfo.mediaType, responseInfo.defaultFilename)
+        else -> ApiRawResponse(result.toString().toByteArray(Charsets.UTF_8), responseInfo.mediaType, responseInfo.defaultFilename)
     }
     response.headers.forEach { (key, value) -> call.response.headers.append(key, value) }
-    val effectiveFilename = response.filename.ifBlank { filename }
-    if (kind == "file" && effectiveFilename.isNotBlank()) {
+    val effectiveFilename = response.filename.ifBlank { responseInfo.defaultFilename }
+    if (responseInfo.kind == "file" && effectiveFilename.isNotBlank()) {
         call.response.headers.append(HttpHeaders.ContentDisposition, contentDispositionAttachment(effectiveFilename))
     }
     call.respondBytes(response.body, contentType = contentType(response.contentType))
@@ -382,12 +474,11 @@ private fun streamRawResponse(result: Any?, mediaType: String): ApiStreamRespons
 private suspend fun respondStream(
     call: ApplicationCall,
     response: ApiStreamResponse,
-    kind: String,
-    filename: String,
+    responseInfo: HttpResponseInfo,
 ) {
     response.headers.forEach { (key, value) -> call.response.headers.append(key, value) }
-    if (kind == "file" && filename.isNotBlank()) {
-        call.response.headers.append(HttpHeaders.ContentDisposition, contentDispositionAttachment(filename))
+    if (responseInfo.kind == "file" && responseInfo.defaultFilename.isNotBlank()) {
+        call.response.headers.append(HttpHeaders.ContentDisposition, contentDispositionAttachment(responseInfo.defaultFilename))
     }
     call.respondOutputStream(contentType = contentType(response.contentType)) {
         response.use { stream ->

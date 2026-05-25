@@ -77,11 +77,11 @@ public data class ApiResponse(
     public fun contentType(defaultValue: String = "application/octet-stream"): String =
         headers.entries.firstOrNull { it.key.equals("content-type", ignoreCase = true) }?.value ?: defaultValue
 
-    public fun filename(defaultValue: String = ""): String {
+    public fun filename(): String {
         val disposition = headers.entries.firstOrNull { it.key.equals("content-disposition", ignoreCase = true) }
             ?.value
-            ?: return defaultValue
-        return contentDispositionFilename(disposition)?.ifBlank { defaultValue } ?: defaultValue
+            ?: return ""
+        return contentDispositionFilename(disposition).orEmpty()
     }
 }
 
@@ -168,11 +168,11 @@ public class ApiStreamResponse(
     }
 }
 
-public fun ApiResponse.toRawResponse(defaultContentType: String, defaultFilename: String = ""): ApiRawResponse =
+public fun ApiResponse.toRawResponse(defaultContentType: String): ApiRawResponse =
     ApiRawResponse(
         body = body,
         contentType = contentType(defaultContentType),
-        filename = filename(defaultFilename),
+        filename = filename(),
         headers = headers,
     )
 

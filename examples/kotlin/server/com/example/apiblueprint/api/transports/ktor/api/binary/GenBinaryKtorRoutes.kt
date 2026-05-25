@@ -51,6 +51,54 @@ import java.nio.file.Files
 import java.io.Writer
 import java.util.zip.GZIPInputStream
 
+private data class HttpRouteInfo(
+    val request: HttpRequestInfo,
+    val response: HttpResponseInfo,
+)
+
+private data class HttpRequestInfo(
+    val binaryContentEncodings: Set<String> = emptySet(),
+)
+
+private data class HttpResponseInfo(
+    val kind: String = "json",
+    val mediaType: String = "application/json",
+    val defaultFilename: String = "",
+)
+
+private val HTTP_ROUTE_API_BINARY_POST_PACKET = HttpRouteInfo(
+    request = HttpRequestInfo(
+        binaryContentEncodings = setOf("identity", "gzip", "br"),
+    ),
+    response = HttpResponseInfo(
+        kind = "json",
+        mediaType = "application/json",
+        defaultFilename = "",
+    ),
+)
+
+private val HTTP_ROUTE_API_BINARY_POST_AUDITPACKET = HttpRouteInfo(
+    request = HttpRequestInfo(
+        binaryContentEncodings = setOf("identity"),
+    ),
+    response = HttpResponseInfo(
+        kind = "json",
+        mediaType = "application/json",
+        defaultFilename = "",
+    ),
+)
+
+private val HTTP_ROUTE_API_BINARY_GET_AUDITPACKETRESPONSE = HttpRouteInfo(
+    request = HttpRequestInfo(
+        binaryContentEncodings = emptySet(),
+    ),
+    response = HttpResponseInfo(
+        kind = "binary_schema",
+        mediaType = "application/octet-stream",
+        defaultFilename = "",
+    ),
+)
+
 public fun Route.registerBinaryRoutes(
     service: GenBinaryService = BinaryServiceStub(),
     config: ApiServerConfig = ApiServerConfig(),
@@ -67,7 +115,7 @@ public fun Route.registerBinaryRoutes(
             return@post
         }
         val binary = try {
-            DemoPacketWire.parse(receiveBinarySchemaBytes(call, config, setOf("identity", "gzip", "br")))
+            DemoPacketWire.parse(receiveBinarySchemaBytes(call, config, HTTP_ROUTE_API_BINARY_POST_PACKET.request))
         } catch (_: ApiPayloadTooLargeException) {
             respondPayloadTooLarge(call)
             return@post
@@ -100,7 +148,7 @@ public fun Route.registerBinaryRoutes(
             return@post
         }
         val binary = try {
-            AuditPacketWire.parse(receiveBinarySchemaBytes(call, config, setOf("identity")))
+            AuditPacketWire.parse(receiveBinarySchemaBytes(call, config, HTTP_ROUTE_API_BINARY_POST_AUDITPACKET.request))
         } catch (_: ApiPayloadTooLargeException) {
             respondPayloadTooLarge(call)
             return@post
@@ -126,7 +174,7 @@ public fun Route.registerBinaryRoutes(
         try {
             val result = service.auditPacketResponse(
             )
-            respondRawBytes(call, AuditPacketWire.toBinaryBody(result).toByteArray(), "application/octet-stream")
+            respondRawBytes(call, AuditPacketWire.toBinaryBody(result).toByteArray(), HTTP_ROUTE_API_BINARY_GET_AUDITPACKETRESPONSE.response)
         } catch (error: ApiError) {
             respondApiError(call, error, ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "api.binary.get.auditpacketresponse")
         }
@@ -301,10 +349,10 @@ private suspend fun receiveLimitedBytes(call: ApplicationCall, maxBytes: Long): 
 private suspend fun receiveBinarySchemaBytes(
     call: ApplicationCall,
     config: ApiServerConfig,
-    allowedContentEncodings: Set<String>,
+    requestInfo: HttpRequestInfo,
 ): ByteArray {
     val encoding = call.request.headers[HttpHeaders.ContentEncoding]?.trim()?.lowercase()?.ifBlank { "identity" } ?: "identity"
-    if (encoding !in allowedContentEncodings) {
+    if (encoding !in requestInfo.binaryContentEncodings) {
         throw ApiUnsupportedContentEncodingException()
     }
     val encoded = receiveLimitedBytes(call, config.binaryBodyMaxBytes)
@@ -380,30 +428,30 @@ private suspend fun receiveFilePart(part: PartData.FileItem, config: ApiServerCo
     }
 }
 
-private suspend fun respondRawBytes(call: ApplicationCall, bytes: ByteArray, mediaType: String) {
-    call.respondBytes(bytes, contentType = contentType(mediaType))
+private suspend fun respondRawBytes(call: ApplicationCall, bytes: ByteArray, responseInfo: HttpResponseInfo) {
+    call.respondBytes(bytes, contentType = contentType(responseInfo.mediaType))
 }
 
-private suspend fun respondRaw(call: ApplicationCall, result: Any?, kind: String, mediaType: String, filename: String) {
+private suspend fun respondRaw(call: ApplicationCall, result: Any?, responseInfo: HttpResponseInfo) {
     if (result is ApiStreamResponse) {
-        respondStream(call, result, kind, filename)
+        respondStream(call, result, responseInfo)
         return
     }
-    if (kind == "byte_stream") {
-        respondStream(call, streamRawResponse(result, mediaType), kind, filename)
+    if (responseInfo.kind == "byte_stream") {
+        respondStream(call, streamRawResponse(result, responseInfo.mediaType), responseInfo)
         return
     }
     val response = when (result) {
         is ApiRawResponse -> result
-        is ApiBinaryBody -> ApiRawResponse(result.toByteArray(), result.contentType, filename)
-        is ByteArray -> ApiRawResponse(result, mediaType, filename)
-        is String -> ApiRawResponse(result.toByteArray(Charsets.UTF_8), mediaType, filename)
-        null -> ApiRawResponse(ByteArray(0), mediaType, filename)
-        else -> ApiRawResponse(result.toString().toByteArray(Charsets.UTF_8), mediaType, filename)
+        is ApiBinaryBody -> ApiRawResponse(result.toByteArray(), result.contentType, responseInfo.defaultFilename)
+        is ByteArray -> ApiRawResponse(result, responseInfo.mediaType, responseInfo.defaultFilename)
+        is String -> ApiRawResponse(result.toByteArray(Charsets.UTF_8), responseInfo.mediaType, responseInfo.defaultFilename)
+        null -> ApiRawResponse(ByteArray(0), responseInfo.mediaType, responseInfo.defaultFilename)
+        else -> ApiRawResponse(result.toString().toByteArray(Charsets.UTF_8), responseInfo.mediaType, responseInfo.defaultFilename)
     }
     response.headers.forEach { (key, value) -> call.response.headers.append(key, value) }
-    val effectiveFilename = response.filename.ifBlank { filename }
-    if (kind == "file" && effectiveFilename.isNotBlank()) {
+    val effectiveFilename = response.filename.ifBlank { responseInfo.defaultFilename }
+    if (responseInfo.kind == "file" && effectiveFilename.isNotBlank()) {
         call.response.headers.append(HttpHeaders.ContentDisposition, contentDispositionAttachment(effectiveFilename))
     }
     call.respondBytes(response.body, contentType = contentType(response.contentType))
@@ -422,12 +470,11 @@ private fun streamRawResponse(result: Any?, mediaType: String): ApiStreamRespons
 private suspend fun respondStream(
     call: ApplicationCall,
     response: ApiStreamResponse,
-    kind: String,
-    filename: String,
+    responseInfo: HttpResponseInfo,
 ) {
     response.headers.forEach { (key, value) -> call.response.headers.append(key, value) }
-    if (kind == "file" && filename.isNotBlank()) {
-        call.response.headers.append(HttpHeaders.ContentDisposition, contentDispositionAttachment(filename))
+    if (responseInfo.kind == "file" && responseInfo.defaultFilename.isNotBlank()) {
+        call.response.headers.append(HttpHeaders.ContentDisposition, contentDispositionAttachment(responseInfo.defaultFilename))
     }
     call.respondOutputStream(contentType = contentType(response.contentType)) {
         response.use { stream ->

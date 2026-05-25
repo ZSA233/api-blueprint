@@ -26,7 +26,7 @@ class GenMediaApi {
         responseMediaType: "image/jpeg",
         responseKind: "bytes",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
-        decode: (value) => apiBlueprintRawResponse(value, defaultContentType: "image/jpeg", defaultFilename: ""),
+        decode: (value) => apiBlueprintRawResponse(value, defaultContentType: "image/jpeg"),
       ),
     );
   }
@@ -44,7 +44,7 @@ class GenMediaApi {
         responseMediaType: "image/jpeg",
         responseKind: "bytes",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
-        decode: (value) => apiBlueprintRawResponse(value, defaultContentType: "image/jpeg", defaultFilename: ""),
+        decode: (value) => apiBlueprintRawResponse(value, defaultContentType: "image/jpeg"),
       ),
     );
   }
@@ -62,7 +62,7 @@ class GenMediaApi {
         responseMediaType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         responseKind: "file",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
-        decode: (value) => apiBlueprintRawResponse(value, defaultContentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", defaultFilename: "media-report.xlsx"),
+        decode: (value) => apiBlueprintRawResponse(value, defaultContentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
       ),
     );
   }
@@ -80,7 +80,7 @@ class GenMediaApi {
         responseMediaType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         responseKind: "file",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
-        decode: (value) => apiBlueprintRawResponse(value, defaultContentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", defaultFilename: "media-report.xlsx"),
+        decode: (value) => apiBlueprintRawResponse(value, defaultContentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
       ),
     );
   }
@@ -98,7 +98,7 @@ class GenMediaApi {
         responseMediaType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         responseKind: "file",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
-        decode: (value) => apiBlueprintRawResponse(value, defaultContentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", defaultFilename: "fallback-report.xlsx"),
+        decode: (value) => apiBlueprintRawResponse(value, defaultContentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
       ),
     );
   }
@@ -117,7 +117,7 @@ class GenMediaApi {
         responseMediaType: "image/jpeg",
         responseKind: "bytes",
         responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
-        decode: (value) => apiBlueprintRawResponse(value, defaultContentType: "image/jpeg", defaultFilename: ""),
+        decode: (value) => apiBlueprintRawResponse(value, defaultContentType: "image/jpeg"),
       ),
     );
   }

@@ -124,9 +124,9 @@ class ApiBinaryPayload {
     return _apiBlueprintHeaderValue(headers, 'content-type') ?? defaultValue;
   }
 
-  String filename(String defaultValue) {
+  String filename() {
     final disposition = _apiBlueprintHeaderValue(headers, 'content-disposition');
-    if (disposition == null) return defaultValue;
+    if (disposition == null) return '';
     String? fallbackFilename;
     for (final part in disposition.split(';')) {
       final trimmed = part.trim();
@@ -143,7 +143,7 @@ class ApiBinaryPayload {
         }
       }
     }
-    return fallbackFilename ?? defaultValue;
+    return fallbackFilename ?? '';
   }
 }
 
@@ -356,17 +356,16 @@ Uint8List apiBlueprintReadBytes(Object? value) {
 ApiRawResponse apiBlueprintRawResponse(
   Object? value, {
   String defaultContentType = 'application/octet-stream',
-  String defaultFilename = '',
 }) {
   if (value is ApiBinaryPayload) {
     return ApiRawResponse(
       body: value.bytes,
       contentType: value.contentType(defaultContentType),
-      filename: value.filename(defaultFilename),
+      filename: value.filename(),
       headers: value.headers,
     );
   }
-  return ApiRawResponse(body: apiBlueprintReadBytes(value), contentType: defaultContentType, filename: defaultFilename);
+  return ApiRawResponse(body: apiBlueprintReadBytes(value), contentType: defaultContentType);
 }
 
 ApiStreamResponse apiBlueprintStreamResponse(

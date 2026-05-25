@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from ....runtime.client import ApiChannelBridge, ApiClientTransport, ApiRawResponse, ApiStreamBridge, ApiStreamResponse
+from ....runtime.client import ApiChannelBridge, ApiClientTransport, ApiRawResponse, ApiRequest, ApiStreamBridge, ApiStreamResponse
 from ....runtime.gen_codecs import (
     _api_to_json,
     _api_to_transport,
@@ -39,13 +39,15 @@ class ConflictClient:
     ) -> DefaultResponse:
         response_type: str | None = 'DefaultResponse'
         payload = await self._transport.request(
-            "GET",
-            "/api/conflict/default",
-            route_id="api.conflict.get.default",
-            query=_api_to_json(query),
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="GET",
+                path="/api/conflict/default",
+                route_id="api.conflict.get.default",
+                query=_api_to_json(query),
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return DefaultResponse.from_value(payload, "default.response")

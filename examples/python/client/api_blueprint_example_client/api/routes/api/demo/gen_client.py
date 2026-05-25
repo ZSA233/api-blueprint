@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from ....runtime.client import ApiChannelBridge, ApiClientTransport, ApiRawResponse, ApiStreamBridge, ApiStreamResponse
+from ....runtime.client import ApiChannelBridge, ApiClientTransport, ApiRawResponse, ApiRequest, ApiStreamBridge, ApiStreamResponse
 from ....runtime.gen_codecs import (
     _api_to_json,
     _api_to_transport,
@@ -75,14 +75,16 @@ class DemoClient:
     ) -> AbcResponse:
         response_type: str | None = 'AbcResponse'
         payload = await self._transport.request(
-            "GET",
-            "/api/demo/abc",
-            route_id="api.demo.get.abc",
-            query=_api_to_json(query),
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="GET",
+                path="/api/demo/abc",
+                route_id="api.demo.get.abc",
+                query=_api_to_json(query),
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return AbcResponse.from_value(payload, "abc.response")
 
@@ -95,14 +97,16 @@ class DemoClient:
     ) -> TestPostResponse:
         response_type: str | None = 'TestPostResponse'
         payload = await self._transport.request(
-            "POST",
-            "/api/demo/test_post",
-            route_id="api.demo.post.testpost",
-            json=_api_to_json(json),
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="POST",
+                path="/api/demo/test_post",
+                route_id="api.demo.post.testpost",
+                json=_api_to_json(json),
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return TestPostResponse.from_value(payload, "test_post.response")
 
@@ -115,14 +119,16 @@ class DemoClient:
     ) -> FormSubmitResponse:
         response_type: str | None = 'FormSubmitResponse'
         payload = await self._transport.request(
-            "POST",
-            "/api/demo/form-submit",
-            route_id="api.demo.post.formsubmit",
-            form=_api_to_json(form),
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="POST",
+                path="/api/demo/form-submit",
+                route_id="api.demo.post.formsubmit",
+                form=_api_to_json(form),
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return FormSubmitResponse.from_value(payload, "form_submit.response")
 
@@ -135,14 +141,16 @@ class DemoClient:
     ) -> RequestOptionsResponse:
         response_type: str | None = 'RequestOptionsResponse'
         payload = await self._transport.request(
-            "GET",
-            "/api/demo/request-options",
-            route_id="api.demo.get.requestoptions",
-            query=_api_to_json(query),
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="GET",
+                path="/api/demo/request-options",
+                route_id="api.demo.get.requestoptions",
+                query=_api_to_json(query),
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return RequestOptionsResponse.from_value(payload, "request_options.response")
 
@@ -156,15 +164,17 @@ class DemoClient:
     ) -> PutDemoResponse:
         response_type: str | None = 'PutDemoResponse'
         payload = await self._transport.request(
-            "PUT",
-            "/api/demo/1put",
-            route_id="api.demo.put.z1put",
-            query=_api_to_json(query),
-            json=_api_to_json(json),
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="PUT",
+                path="/api/demo/1put",
+                route_id="api.demo.put.z1put",
+                query=_api_to_json(query),
+                json=_api_to_json(json),
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return PutDemoResponse.from_value(payload, "put_demo.response")
 
@@ -177,14 +187,16 @@ class DemoClient:
     ) -> DeleteResponse:
         response_type: str | None = 'DeleteResponse'
         payload = await self._transport.request(
-            "DELETE",
-            "/api/demo/delete$",
-            route_id="api.demo.delete.delete",
-            query=_api_to_json(query),
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="DELETE",
+                path="/api/demo/delete$",
+                route_id="api.demo.delete.delete",
+                query=_api_to_json(query),
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return DeleteResponse.from_value(payload, "delete.response")
 
@@ -223,14 +235,16 @@ class DemoClient:
     ) -> PostDeprecatedResponse:
         response_type: str | None = 'PostDeprecatedResponse'
         payload = await self._transport.request(
-            "POST",
-            "/api/demo/post_deprecated",
-            route_id="api.demo.post.postdeprecated",
-            json=_api_to_json(json),
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="POST",
+                path="/api/demo/post_deprecated",
+                route_id="api.demo.post.postdeprecated",
+                json=_api_to_json(json),
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return PostDeprecatedResponse.from_value(payload, "post_deprecated.response")
 
@@ -242,13 +256,15 @@ class DemoClient:
     ) -> RawResponse:
         response_type: str | None = 'RawResponse'
         payload = await self._transport.request(
-            "POST",
-            "/api/demo/raw",
-            route_id="api.demo.post.raw",
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="POST",
+                path="/api/demo/raw",
+                route_id="api.demo.post.raw",
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return RawResponse.from_value(payload, "raw.response")
 
@@ -260,13 +276,15 @@ class DemoClient:
     ) -> dict[int, ApiDemoMap]:
         response_type: str | None = 'dict[int, ApiDemoMap]'
         payload = await self._transport.request(
-            "POST",
-            "/api/demo/map_model",
-            route_id="api.demo.post.mapmodel",
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="POST",
+                path="/api/demo/map_model",
+                route_id="api.demo.post.mapmodel",
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return (lambda item, path: _decode_map(item, path, _decode_int, ApiDemoMap.from_value))(payload, "map_model.response")
 
@@ -279,13 +297,15 @@ class DemoClient:
     ) -> ErrorDemoResponse:
         response_type: str | None = 'ErrorDemoResponse'
         payload = await self._transport.request(
-            "GET",
-            "/api/demo/error-demo",
-            route_id="api.demo.get.errordemo",
-            query=_api_to_json(query),
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="GET",
+                path="/api/demo/error-demo",
+                route_id="api.demo.get.errordemo",
+                query=_api_to_json(query),
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return ErrorDemoResponse.from_value(payload, "error_demo.response")

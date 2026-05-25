@@ -3,9 +3,11 @@ package com.example.apiblueprint.static_.routes.static_;
 
 import com.example.apiblueprint.static_.runtime.GenApiChannelBridge;
 import com.example.apiblueprint.static_.runtime.GenApiRequest;
+import com.example.apiblueprint.static_.runtime.GenApiRequestBodySpec;
 import com.example.apiblueprint.static_.runtime.GenApiRequestOptions;
 import com.example.apiblueprint.static_.runtime.GenApiRawResponse;
 import com.example.apiblueprint.static_.runtime.GenApiResponseEnvelope;
+import com.example.apiblueprint.static_.runtime.GenApiResponseSpec;
 import com.example.apiblueprint.static_.runtime.GenApiStreamResponse;
 import com.example.apiblueprint.static_.runtime.GenApiStreamBridge;
 import com.example.apiblueprint.static_.runtime.GenApiTransport;
@@ -37,17 +39,20 @@ public class GenStaticApi {
             "GET",
             "/static/doc.json",
             null,
-            null,
-            null,
-            null,
-            null,
-            "none",
-            GenApiResponseEnvelope.of("NoEnvelope", "none", "none", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            GenStaticTypes.DocJsonResponse.class,
-            "application/json",
-            "json",
-            "",
-            null,
+            new GenApiRequestBodySpec(
+                null,
+                null,
+                null,
+                null,
+                "none"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("NoEnvelope", "none", "none", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenStaticTypes.DocJsonResponse.class,
+                "application/json",
+                "json",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );
@@ -70,17 +75,20 @@ public class GenStaticApi {
             "GET",
             "/static/dochaha",
             null,
-            null,
-            null,
-            null,
-            null,
-            "none",
-            GenApiResponseEnvelope.of("NoEnvelope", "none", "none", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            GenStaticTypes.DochahaResponse.class,
-            "application/json",
-            "json",
-            "",
-            null,
+            new GenApiRequestBodySpec(
+                null,
+                null,
+                null,
+                null,
+                "none"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("NoEnvelope", "none", "none", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenStaticTypes.DochahaResponse.class,
+                "application/json",
+                "json",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );

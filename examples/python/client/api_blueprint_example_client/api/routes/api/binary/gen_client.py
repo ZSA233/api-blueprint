@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from ....runtime.client import ApiChannelBridge, ApiClientTransport, ApiRawResponse, ApiStreamBridge, ApiStreamResponse
+from ....runtime.client import ApiChannelBridge, ApiClientTransport, ApiRawResponse, ApiRequest, ApiStreamBridge, ApiStreamResponse
 from ....runtime.gen_codecs import (
     _api_to_json,
     _api_to_transport,
@@ -47,15 +47,17 @@ class BinaryClient:
     ) -> PacketResponse:
         response_type: str | None = 'PacketResponse'
         payload = await self._transport.request(
-            "POST",
-            "/api/binary/packet",
-            route_id="api.binary.post.packet",
-            query=_api_to_json(query),
-            binary=DemoPacketWire.to_binary_body(binary),
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="POST",
+                path="/api/binary/packet",
+                route_id="api.binary.post.packet",
+                query=_api_to_json(query),
+                binary=DemoPacketWire.to_binary_body(binary),
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return PacketResponse.from_value(payload, "packet.response")
 
@@ -69,15 +71,17 @@ class BinaryClient:
     ) -> AuditPacketResponse:
         response_type: str | None = 'AuditPacketResponse'
         payload = await self._transport.request(
-            "POST",
-            "/api/binary/audit-packet",
-            route_id="api.binary.post.auditpacket",
-            query=_api_to_json(query),
-            binary=AuditPacketWire.to_binary_body(binary),
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="POST",
+                path="/api/binary/audit-packet",
+                route_id="api.binary.post.auditpacket",
+                query=_api_to_json(query),
+                binary=AuditPacketWire.to_binary_body(binary),
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return AuditPacketResponse.from_value(payload, "audit_packet.response")
 
@@ -89,12 +93,14 @@ class BinaryClient:
     ) -> AuditPacket:
         response_type: str | None = 'binary_schema'
         payload = await self._transport.request(
-            "GET",
-            "/api/binary/audit-packet-response",
-            route_id="api.binary.get.auditpacketresponse",
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="GET",
+                path="/api/binary/audit-packet-response",
+                route_id="api.binary.get.auditpacketresponse",
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return AuditPacketWire.from_bytes(payload)

@@ -5,7 +5,7 @@ import asyncio
 import gzip
 import io
 import json
-from dataclasses import asdict, is_dataclass
+from dataclasses import asdict, dataclass, is_dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Any, AsyncIterable, Iterable, Mapping
@@ -32,6 +32,366 @@ from ...routes.api.media import gen_types as api_media_types
 
 from ...routes.api.hello.service import HelloService, HelloServiceStub
 from ...routes.api.hello import gen_types as api_hello_types
+
+
+@dataclass(frozen=True)
+class HttpRequestInfo:
+    binary_content_encodings: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class HttpResponseInfo:
+    kind: str = "json"
+    content_type: str = "application/json"
+    default_filename: str | None = None
+
+
+@dataclass(frozen=True)
+class HttpRouteInfo:
+    request: HttpRequestInfo = HttpRequestInfo()
+    response: HttpResponseInfo = HttpResponseInfo()
+
+
+_HTTP_ROUTE_API_API_CHANNEL_WS = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_BINARY_POST_PACKET = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=('identity', 'gzip', 'br'),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_BINARY_POST_AUDITPACKET = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=('identity',),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_BINARY_GET_AUDITPACKETRESPONSE = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="binary_schema",
+        content_type="application/octet-stream",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_CONFLICT_GET_DEFAULT = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_DEMO_GET_ABC = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_DEMO_POST_TESTPOST = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_DEMO_POST_FORMSUBMIT = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_DEMO_GET_REQUESTOPTIONS = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_DEMO_PUT_Z1PUT = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_DEMO_DELETE_DELETE = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="xml",
+        content_type="application/xml",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_DEMO_STREAM_SWEEPEVENTS = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_DEMO_CHANNEL_ASSISTANTSESSION = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_DEMO_POST_POSTDEPRECATED = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_DEMO_POST_RAW = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_DEMO_POST_MAPMODEL = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_DEMO_GET_ERRORDEMO = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_MEDIA_POST_PREVIEW = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="bytes",
+        content_type="image/jpeg",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_MEDIA_GET_FRAME = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="bytes",
+        content_type="image/jpeg",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_MEDIA_GET_DOWNLOAD = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="file",
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        default_filename='media-report.xlsx',
+    ),
+)
+
+_HTTP_ROUTE_API_MEDIA_GET_DOWNLOADDYNAMIC = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="file",
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        default_filename='media-report.xlsx',
+    ),
+)
+
+_HTTP_ROUTE_API_MEDIA_GET_DOWNLOADFILENAMEEDGE = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="file",
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        default_filename='fallback-report.xlsx',
+    ),
+)
+
+_HTTP_ROUTE_API_MEDIA_GET_ERRORFRAME = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="bytes",
+        content_type="image/jpeg",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_MEDIA_GET_MJPEG = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="byte_stream",
+        content_type="multipart/x-mixed-replace; boundary=frame",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_HELLO_GET_ABC = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_HELLO_GET_MAPENUM = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_HELLO_GET_LISTENUM = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_HELLO_GET_STRING = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_HELLO_GET_UINT64 = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_HELLO_GET_STRINGEMUN = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
+
+_HTTP_ROUTE_API_HELLO_GET_HELLOWAY = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
 
 
 def create_router(
@@ -93,11 +453,12 @@ def create_binary_router(
     @router.api_route("/api/binary/packet", methods=["POST"])
     async def binary_packet(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_BINARY_POST_PACKET
         query_raw = _query_params(request)
         binary_body = await _binary_body(
             request,
             api_config,
-            allowed_content_encodings=('identity', 'gzip', 'br'),
+            request_info=route_info.request,
         )
         try:
             query = api_binary_types.PacketQuery.from_value(query_raw, "query")
@@ -121,11 +482,12 @@ def create_binary_router(
     @router.api_route("/api/binary/audit-packet", methods=["POST"])
     async def binary_audit_packet(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_BINARY_POST_AUDITPACKET
         query_raw = _query_params(request)
         binary_body = await _binary_body(
             request,
             api_config,
-            allowed_content_encodings=('identity',),
+            request_info=route_info.request,
         )
         try:
             query = api_binary_types.AuditPacketQuery.from_value(query_raw, "query")
@@ -149,11 +511,12 @@ def create_binary_router(
     @router.api_route("/api/binary/audit-packet-response", methods=["GET"])
     async def binary_audit_packet_response(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_BINARY_GET_AUDITPACKETRESPONSE
         try:
             result = await service.audit_packet_response(
             )
             return _binary_schema_response(
-                content_type="application/octet-stream",
+                response_info=route_info.response,
                 result=result,
                 encoder=api_binary_types.AuditPacketWire.to_binary_body,
             )
@@ -178,6 +541,7 @@ def create_conflict_router(
     @router.api_route("/api/conflict/default", methods=["GET"])
     async def conflict_default(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_CONFLICT_GET_DEFAULT
         query_raw = _query_params(request)
         try:
             query = api_conflict_types.DefaultQuery.from_value(query_raw, "query")
@@ -211,6 +575,7 @@ def create_demo_router(
     @router.api_route("/api/demo/abc", methods=["GET"])
     async def demo_abc(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_DEMO_GET_ABC
         query_raw = _query_params(request)
         try:
             query = api_demo_types.AbcQuery.from_value(query_raw, "query")
@@ -232,6 +597,7 @@ def create_demo_router(
     @router.api_route("/api/demo/test_post", methods=["POST"])
     async def demo_test_post(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_DEMO_POST_TESTPOST
         json_body_raw = await _json_body(request, api_config)
         try:
             json_body = api_demo_types.TestPostJSON.from_value(json_body_raw, "json")
@@ -253,6 +619,7 @@ def create_demo_router(
     @router.api_route("/api/demo/form-submit", methods=["POST"])
     async def demo_form_submit(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_DEMO_POST_FORMSUBMIT
         form_raw = await _form_body(request, api_config)
         try:
             form = api_demo_types.FormSubmitForm.from_value(form_raw, "form")
@@ -274,6 +641,7 @@ def create_demo_router(
     @router.api_route("/api/demo/request-options", methods=["GET"])
     async def demo_request_options(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_DEMO_GET_REQUESTOPTIONS
         query_raw = _query_params(request)
         try:
             query = api_demo_types.RequestOptionsQuery.from_value(query_raw, "query")
@@ -295,6 +663,7 @@ def create_demo_router(
     @router.api_route("/api/demo/1put", methods=["PUT"])
     async def demo_put_demo(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_DEMO_PUT_Z1PUT
         query_raw = _query_params(request)
         json_body_raw = await _json_body(request, api_config)
         try:
@@ -319,6 +688,7 @@ def create_demo_router(
     @router.api_route("/api/demo/delete$", methods=["DELETE"])
     async def demo_delete(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_DEMO_DELETE_DELETE
         query_raw = _query_params(request)
         try:
             query = api_demo_types.DeleteQuery.from_value(query_raw, "query")
@@ -391,6 +761,7 @@ def create_demo_router(
     @router.api_route("/api/demo/post_deprecated", methods=["POST"])
     async def demo_post_deprecated(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_DEMO_POST_POSTDEPRECATED
         json_body_raw = await _json_body(request, api_config)
         try:
             json_body = api_demo_types.PostDeprecatedJSON.from_value(json_body_raw, "json")
@@ -412,6 +783,7 @@ def create_demo_router(
     @router.api_route("/api/demo/raw", methods=["POST"])
     async def demo_raw(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_DEMO_POST_RAW
         try:
             result = await service.raw(
             )
@@ -425,6 +797,7 @@ def create_demo_router(
     @router.api_route("/api/demo/map_model", methods=["POST"])
     async def demo_map_model(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_DEMO_POST_MAPMODEL
         try:
             result = await service.map_model(
             )
@@ -438,6 +811,7 @@ def create_demo_router(
     @router.api_route("/api/demo/error-demo", methods=["GET"])
     async def demo_error_demo(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_DEMO_GET_ERRORDEMO
         query_raw = _query_params(request)
         try:
             query = api_demo_types.ErrorDemoQuery.from_value(query_raw, "query")
@@ -471,6 +845,7 @@ def create_media_router(
     @router.api_route("/api/media/preview", methods=["POST"])
     async def media_media_preview(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_MEDIA_POST_PREVIEW
         multipart_raw = await _multipart_body(request, api_config)
         try:
             multipart = api_media_types.MediaPreviewForm.from_value(multipart_raw, "multipart")
@@ -483,9 +858,7 @@ def create_media_router(
                 multipart=multipart,
             )
             return _raw_response(
-                kind="bytes",
-                content_type="image/jpeg",
-                filename=None,
+                response_info=route_info.response,
                 result=result,
             )
 
@@ -497,13 +870,12 @@ def create_media_router(
     @router.api_route("/api/media/frame", methods=["GET"])
     async def media_media_frame(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_MEDIA_GET_FRAME
         try:
             result = await service.media_frame(
             )
             return _raw_response(
-                kind="bytes",
-                content_type="image/jpeg",
-                filename=None,
+                response_info=route_info.response,
                 result=result,
             )
 
@@ -515,13 +887,12 @@ def create_media_router(
     @router.api_route("/api/media/download", methods=["GET"])
     async def media_media_download(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_MEDIA_GET_DOWNLOAD
         try:
             result = await service.media_download(
             )
             return _raw_response(
-                kind="file",
-                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                filename='media-report.xlsx',
+                response_info=route_info.response,
                 result=result,
             )
 
@@ -533,13 +904,12 @@ def create_media_router(
     @router.api_route("/api/media/download-dynamic", methods=["GET"])
     async def media_media_download_dynamic(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_MEDIA_GET_DOWNLOADDYNAMIC
         try:
             result = await service.media_download_dynamic(
             )
             return _raw_response(
-                kind="file",
-                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                filename='media-report.xlsx',
+                response_info=route_info.response,
                 result=result,
             )
 
@@ -551,13 +921,12 @@ def create_media_router(
     @router.api_route("/api/media/download-filename-edge", methods=["GET"])
     async def media_media_download_filename_edge(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_MEDIA_GET_DOWNLOADFILENAMEEDGE
         try:
             result = await service.media_download_filename_edge(
             )
             return _raw_response(
-                kind="file",
-                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                filename='fallback-report.xlsx',
+                response_info=route_info.response,
                 result=result,
             )
 
@@ -569,6 +938,7 @@ def create_media_router(
     @router.api_route("/api/media/error-frame", methods=["GET"])
     async def media_media_error_frame(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_MEDIA_GET_ERRORFRAME
         query_raw = _query_params(request)
         try:
             query = api_media_types.MediaErrorFrameQuery.from_value(query_raw, "query")
@@ -581,9 +951,7 @@ def create_media_router(
                 query=query,
             )
             return _raw_response(
-                kind="bytes",
-                content_type="image/jpeg",
-                filename=None,
+                response_info=route_info.response,
                 result=result,
             )
 
@@ -595,13 +963,12 @@ def create_media_router(
     @router.api_route("/api/media/mjpeg", methods=["GET"])
     async def media_media_mjpeg(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_MEDIA_GET_MJPEG
         try:
             result = await service.media_mjpeg(
             )
             return _raw_response(
-                kind="byte_stream",
-                content_type="multipart/x-mixed-replace; boundary=frame",
-                filename=None,
+                response_info=route_info.response,
                 result=result,
             )
 
@@ -625,6 +992,7 @@ def create_hello_router(
     @router.api_route("/api/hello/abc", methods=["GET"])
     async def hello_abc(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_HELLO_GET_ABC
         query_raw = _query_params(request)
         try:
             query = api_hello_types.AbcQuery.from_value(query_raw, "query")
@@ -646,6 +1014,7 @@ def create_hello_router(
     @router.api_route("/api/hello/map-enum", methods=["GET"])
     async def hello_map_enum(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_HELLO_GET_MAPENUM
         try:
             result = await service.map_enum(
             )
@@ -659,6 +1028,7 @@ def create_hello_router(
     @router.api_route("/api/hello/list-enum", methods=["GET"])
     async def hello_list_enum(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_HELLO_GET_LISTENUM
         try:
             result = await service.list_enum(
             )
@@ -672,6 +1042,7 @@ def create_hello_router(
     @router.api_route("/api/hello/string", methods=["GET"])
     async def hello_string(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_HELLO_GET_STRING
         try:
             result = await service.string(
             )
@@ -685,6 +1056,7 @@ def create_hello_router(
     @router.api_route("/api/hello/uint64", methods=["GET"])
     async def hello_uint64(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_HELLO_GET_UINT64
         try:
             result = await service.uint64(
             )
@@ -698,6 +1070,7 @@ def create_hello_router(
     @router.api_route("/api/hello/string-emun", methods=["GET"])
     async def hello_string_emun(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_HELLO_GET_STRINGEMUN
         try:
             result = await service.string_emun(
             )
@@ -711,6 +1084,7 @@ def create_hello_router(
     @router.api_route("/api/hello/hello-way", methods=["GET"])
     async def hello_hello_way(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_API_HELLO_GET_HELLOWAY
         query_raw = _query_params(request)
         try:
             query = api_hello_types.HelloWayQuery.from_value(query_raw, "query")
@@ -785,9 +1159,10 @@ async def _binary_body(
     request: Request,
     config: ApiServerConfig,
     *,
-    allowed_content_encodings: tuple[str, ...],
+    request_info: HttpRequestInfo,
 ) -> bytes:
     encoding = _request_content_encoding(request)
+    allowed_content_encodings = request_info.binary_content_encodings or ("identity",)
     allowed = {item.strip().lower() for item in allowed_content_encodings if item.strip()}
     if not allowed:
         allowed = {"identity"}
@@ -906,25 +1281,23 @@ def _wrap_response(envelope: dict[str, Any], data: Any) -> Any:
 
 def _raw_response(
     *,
-    kind: str,
-    content_type: str,
-    filename: str | None,
+    response_info: HttpResponseInfo,
     result: Any,
 ) -> Response:
     status = 200
     headers: Mapping[str, str] | None = None
     body = result
-    effective_content_type = content_type
-    effective_filename = filename
+    effective_content_type = response_info.content_type
+    effective_filename = response_info.default_filename
     if isinstance(result, ApiRawResponse):
         status = result.status
         headers = result.headers
         body = result.body
-        effective_content_type = result.content_type or content_type
-        effective_filename = result.filename or filename
+        effective_content_type = result.content_type or response_info.content_type
+        effective_filename = result.filename or response_info.default_filename
     if isinstance(body, Response):
         return body
-    if kind == "file":
+    if response_info.kind == "file":
         return FileResponse(
             path=body if isinstance(body, (str, Path)) else Path(str(body)),
             status_code=status,
@@ -932,7 +1305,7 @@ def _raw_response(
             filename=effective_filename,
             headers=dict(headers or {}),
         )
-    if kind == "byte_stream":
+    if response_info.kind == "byte_stream":
         return StreamingResponse(
             body,
             status_code=status,
@@ -953,7 +1326,7 @@ def _raw_response(
 
 def _binary_schema_response(
     *,
-    content_type: str,
+    response_info: HttpResponseInfo,
     result: Any,
     encoder: Any,
 ) -> Response:
@@ -962,12 +1335,12 @@ def _binary_schema_response(
     status = 200
     headers: Mapping[str, str] | None = None
     body = result
-    effective_content_type = content_type
+    effective_content_type = response_info.content_type
     if isinstance(result, ApiRawResponse):
         status = result.status
         headers = result.headers
         body = result.body
-        effective_content_type = result.content_type or content_type
+        effective_content_type = result.content_type or response_info.content_type
     if isinstance(body, (bytes, bytearray, memoryview)):
         content = bytes(body)
     else:

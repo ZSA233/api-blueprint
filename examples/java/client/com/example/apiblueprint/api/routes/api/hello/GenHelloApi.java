@@ -3,9 +3,11 @@ package com.example.apiblueprint.api.routes.api.hello;
 
 import com.example.apiblueprint.api.runtime.GenApiChannelBridge;
 import com.example.apiblueprint.api.runtime.GenApiRequest;
+import com.example.apiblueprint.api.runtime.GenApiRequestBodySpec;
 import com.example.apiblueprint.api.runtime.GenApiRequestOptions;
 import com.example.apiblueprint.api.runtime.GenApiRawResponse;
 import com.example.apiblueprint.api.runtime.GenApiResponseEnvelope;
+import com.example.apiblueprint.api.runtime.GenApiResponseSpec;
 import com.example.apiblueprint.api.runtime.GenApiStreamResponse;
 import com.example.apiblueprint.api.runtime.GenApiStreamBridge;
 import com.example.apiblueprint.api.runtime.GenApiTransport;
@@ -40,17 +42,20 @@ public class GenHelloApi {
             "GET",
             "/api/hello/abc",
             query,
-            null,
-            null,
-            null,
-            null,
-            "none",
-            GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            GenHelloTypes.AbcResponse.class,
-            "application/json",
-            "json",
-            "",
-            null,
+            new GenApiRequestBodySpec(
+                null,
+                null,
+                null,
+                null,
+                "none"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenHelloTypes.AbcResponse.class,
+                "application/json",
+                "json",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );
@@ -73,17 +78,20 @@ public class GenHelloApi {
             "GET",
             "/api/hello/map-enum",
             null,
-            null,
-            null,
-            null,
-            null,
-            "none",
-            GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            GenHelloTypes.MapEnumResponse.class,
-            "application/json",
-            "json",
-            "",
-            null,
+            new GenApiRequestBodySpec(
+                null,
+                null,
+                null,
+                null,
+                "none"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenHelloTypes.MapEnumResponse.class,
+                "application/json",
+                "json",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );
@@ -106,17 +114,20 @@ public class GenHelloApi {
             "GET",
             "/api/hello/list-enum",
             null,
-            null,
-            null,
-            null,
-            null,
-            "none",
-            GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            GenHelloTypes.ListEnumResponse.class,
-            "application/json",
-            "json",
-            "",
-            null,
+            new GenApiRequestBodySpec(
+                null,
+                null,
+                null,
+                null,
+                "none"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenHelloTypes.ListEnumResponse.class,
+                "application/json",
+                "json",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );
@@ -139,17 +150,20 @@ public class GenHelloApi {
             "GET",
             "/api/hello/string",
             null,
-            null,
-            null,
-            null,
-            null,
-            "none",
-            GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            GenHelloTypes.StringResponse.class,
-            "application/json",
-            "json",
-            "",
-            null,
+            new GenApiRequestBodySpec(
+                null,
+                null,
+                null,
+                null,
+                "none"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenHelloTypes.StringResponse.class,
+                "application/json",
+                "json",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );
@@ -172,17 +186,20 @@ public class GenHelloApi {
             "GET",
             "/api/hello/uint64",
             null,
-            null,
-            null,
-            null,
-            null,
-            "none",
-            GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            GenHelloTypes.Uint64Response.class,
-            "application/json",
-            "json",
-            "",
-            null,
+            new GenApiRequestBodySpec(
+                null,
+                null,
+                null,
+                null,
+                "none"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenHelloTypes.Uint64Response.class,
+                "application/json",
+                "json",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );
@@ -205,17 +222,20 @@ public class GenHelloApi {
             "GET",
             "/api/hello/string-emun",
             null,
-            null,
-            null,
-            null,
-            null,
-            "none",
-            GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            GenHelloTypes.StringEmunResponse.class,
-            "application/json",
-            "json",
-            "",
-            null,
+            new GenApiRequestBodySpec(
+                null,
+                null,
+                null,
+                null,
+                "none"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenHelloTypes.StringEmunResponse.class,
+                "application/json",
+                "json",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );
@@ -241,17 +261,20 @@ public class GenHelloApi {
             "GET",
             "/api/hello/hello-way",
             query,
-            null,
-            null,
-            null,
-            null,
-            "none",
-            GenApiResponseEnvelope.of("NoEnvelope", "none", "none", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
-            Object.class,
-            "application/json",
-            "json",
-            "",
-            null,
+            new GenApiRequestBodySpec(
+                null,
+                null,
+                null,
+                null,
+                "none"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("NoEnvelope", "none", "none", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                Object.class,
+                "application/json",
+                "json",
+                null
+            ),
             effectiveOptions.headers(),
             effectiveOptions.timeout()
         );

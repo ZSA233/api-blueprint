@@ -5,7 +5,7 @@ import asyncio
 import gzip
 import io
 import json
-from dataclasses import asdict, is_dataclass
+from dataclasses import asdict, dataclass, is_dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Any, AsyncIterable, Iterable, Mapping
@@ -17,6 +17,36 @@ from ...runtime.errors import ApiError, make_api_error_payload
 from ...runtime.server import ApiRawResponse, ApiServerConfig
 from ...routes.alt.conflict.service import ConflictService, ConflictServiceStub
 from ...routes.alt.conflict import gen_types as alt_conflict_types
+
+
+@dataclass(frozen=True)
+class HttpRequestInfo:
+    binary_content_encodings: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class HttpResponseInfo:
+    kind: str = "json"
+    content_type: str = "application/json"
+    default_filename: str | None = None
+
+
+@dataclass(frozen=True)
+class HttpRouteInfo:
+    request: HttpRequestInfo = HttpRequestInfo()
+    response: HttpResponseInfo = HttpResponseInfo()
+
+
+_HTTP_ROUTE_ALT_CONFLICT_GET_DEFAULT = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
 
 
 def create_router(
@@ -41,6 +71,7 @@ def create_conflict_router(
     @router.api_route("/alt/conflict/default", methods=["GET"])
     async def conflict_default(request: Request) -> Any:
         service = service_impl
+        route_info = _HTTP_ROUTE_ALT_CONFLICT_GET_DEFAULT
         query_raw = _query_params(request)
         try:
             query = alt_conflict_types.DefaultQuery.from_value(query_raw, "query")
@@ -115,9 +146,10 @@ async def _binary_body(
     request: Request,
     config: ApiServerConfig,
     *,
-    allowed_content_encodings: tuple[str, ...],
+    request_info: HttpRequestInfo,
 ) -> bytes:
     encoding = _request_content_encoding(request)
+    allowed_content_encodings = request_info.binary_content_encodings or ("identity",)
     allowed = {item.strip().lower() for item in allowed_content_encodings if item.strip()}
     if not allowed:
         allowed = {"identity"}
@@ -236,25 +268,23 @@ def _wrap_response(envelope: dict[str, Any], data: Any) -> Any:
 
 def _raw_response(
     *,
-    kind: str,
-    content_type: str,
-    filename: str | None,
+    response_info: HttpResponseInfo,
     result: Any,
 ) -> Response:
     status = 200
     headers: Mapping[str, str] | None = None
     body = result
-    effective_content_type = content_type
-    effective_filename = filename
+    effective_content_type = response_info.content_type
+    effective_filename = response_info.default_filename
     if isinstance(result, ApiRawResponse):
         status = result.status
         headers = result.headers
         body = result.body
-        effective_content_type = result.content_type or content_type
-        effective_filename = result.filename or filename
+        effective_content_type = result.content_type or response_info.content_type
+        effective_filename = result.filename or response_info.default_filename
     if isinstance(body, Response):
         return body
-    if kind == "file":
+    if response_info.kind == "file":
         return FileResponse(
             path=body if isinstance(body, (str, Path)) else Path(str(body)),
             status_code=status,
@@ -262,7 +292,7 @@ def _raw_response(
             filename=effective_filename,
             headers=dict(headers or {}),
         )
-    if kind == "byte_stream":
+    if response_info.kind == "byte_stream":
         return StreamingResponse(
             body,
             status_code=status,
@@ -283,7 +313,7 @@ def _raw_response(
 
 def _binary_schema_response(
     *,
-    content_type: str,
+    response_info: HttpResponseInfo,
     result: Any,
     encoder: Any,
 ) -> Response:
@@ -292,12 +322,12 @@ def _binary_schema_response(
     status = 200
     headers: Mapping[str, str] | None = None
     body = result
-    effective_content_type = content_type
+    effective_content_type = response_info.content_type
     if isinstance(result, ApiRawResponse):
         status = result.status
         headers = result.headers
         body = result.body
-        effective_content_type = result.content_type or content_type
+        effective_content_type = result.content_type or response_info.content_type
     if isinstance(body, (bytes, bytearray, memoryview)):
         content = bytes(body)
     else:

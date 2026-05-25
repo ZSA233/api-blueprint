@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from ....runtime.client import ApiChannelBridge, ApiClientTransport, ApiRawResponse, ApiStreamBridge, ApiStreamResponse
+from ....runtime.client import ApiChannelBridge, ApiClientTransport, ApiRawResponse, ApiRequest, ApiStreamBridge, ApiStreamResponse
 from ....runtime.gen_codecs import (
     _api_to_json,
     _api_to_transport,
@@ -38,14 +38,16 @@ class MediaClient:
     ) -> ApiRawResponse[bytes]:
         response_type: str | None = 'bytes'
         payload = await self._transport.request(
-            "POST",
-            "/api/media/preview",
-            route_id="api.media.post.preview",
-            multipart=_api_to_transport(multipart),
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="POST",
+                path="/api/media/preview",
+                route_id="api.media.post.preview",
+                multipart=_api_to_transport(multipart),
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return payload
 
@@ -57,13 +59,15 @@ class MediaClient:
     ) -> ApiRawResponse[bytes]:
         response_type: str | None = 'bytes'
         payload = await self._transport.request(
-            "GET",
-            "/api/media/frame",
-            route_id="api.media.get.frame",
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="GET",
+                path="/api/media/frame",
+                route_id="api.media.get.frame",
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return payload
 
@@ -75,13 +79,15 @@ class MediaClient:
     ) -> ApiRawResponse[bytes]:
         response_type: str | None = 'file'
         payload = await self._transport.request(
-            "GET",
-            "/api/media/download",
-            route_id="api.media.get.download",
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="GET",
+                path="/api/media/download",
+                route_id="api.media.get.download",
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return payload
 
@@ -93,13 +99,15 @@ class MediaClient:
     ) -> ApiRawResponse[bytes]:
         response_type: str | None = 'file'
         payload = await self._transport.request(
-            "GET",
-            "/api/media/download-dynamic",
-            route_id="api.media.get.downloaddynamic",
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="GET",
+                path="/api/media/download-dynamic",
+                route_id="api.media.get.downloaddynamic",
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return payload
 
@@ -111,13 +119,15 @@ class MediaClient:
     ) -> ApiRawResponse[bytes]:
         response_type: str | None = 'file'
         payload = await self._transport.request(
-            "GET",
-            "/api/media/download-filename-edge",
-            route_id="api.media.get.downloadfilenameedge",
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="GET",
+                path="/api/media/download-filename-edge",
+                route_id="api.media.get.downloadfilenameedge",
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return payload
 
@@ -130,14 +140,16 @@ class MediaClient:
     ) -> ApiRawResponse[bytes]:
         response_type: str | None = 'bytes'
         payload = await self._transport.request(
-            "GET",
-            "/api/media/error-frame",
-            route_id="api.media.get.errorframe",
-            query=_api_to_json(query),
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="GET",
+                path="/api/media/error-frame",
+                route_id="api.media.get.errorframe",
+                query=_api_to_json(query),
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return payload
 
@@ -149,12 +161,14 @@ class MediaClient:
     ) -> ApiStreamResponse:
         response_type: str | None = 'stream'
         payload = await self._transport.request(
-            "GET",
-            "/api/media/mjpeg",
-            route_id="api.media.get.mjpeg",
-            response_type=response_type,
-            response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
-            headers=headers,
-            timeout=timeout,
+            ApiRequest(
+                method="GET",
+                path="/api/media/mjpeg",
+                route_id="api.media.get.mjpeg",
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
         )
         return payload
