@@ -248,10 +248,11 @@ content-encoding: identity,gzip,br
     assert "long decompressedBinaryBodyBytes" in server_config_text
     assert "Map<String, BinaryContentDecoder> binaryContentDecoders" in server_config_text
     assert "public interface BinaryContentDecoder" in server_config_text
+    assert "private record HttpRouteInfo(HttpRequestInfo request, HttpResponseInfo response)" in binary_controller_text
+    assert 'new HttpRequestInfo(Set.of("identity", "gzip", "br"))' in binary_controller_text
     assert (
-        'binary = GenBinaryTypes.DemoPacketWire.parse(\n'
-        '                decodeBinarySchemaBody(binaryBody == null ? new byte[0] : binaryBody, contentEncoding, Set.of("identity", "gzip", "br"))\n'
-        "            );"
+        "decodeBinarySchemaBody(binaryBody == null ? new byte[0] : binaryBody, "
+        "contentEncoding, HTTP_ROUTE_API_BINARY_POST_PACKET.request())"
     ) in binary_controller_text
     assert "@RequestHeader(name = HttpHeaders.CONTENT_ENCODING, required = false) String contentEncoding" in binary_controller_text
     assert "GZIPInputStream" in binary_controller_text

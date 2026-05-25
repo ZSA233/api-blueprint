@@ -10,7 +10,7 @@ from api_blueprint.writer.core.message_helpers import unique_named_message_helpe
 from api_blueprint.writer.core.sdk_names import RoutePublicNames
 
 from .binary_schema import JavaBinarySchema, unique_java_binary_schemas
-from .naming import to_java_member_name, to_java_package_path, to_java_package_suffix, to_java_type_name
+from .naming import to_java_constant_name, to_java_member_name, to_java_package_path, to_java_package_suffix, to_java_type_name
 
 
 JsonObject = dict[str, Any]
@@ -61,6 +61,11 @@ class JavaRoute:
     @property
     def operation_type_name(self) -> str:
         return self.public_names.operation
+
+    @property
+    def http_route_info_name(self) -> str:
+        source = self.route_id or self.operation or self.method_name
+        return f"HTTP_ROUTE_{to_java_constant_name(source, fallback='ROUTE')}"
 
     @property
     def is_rpc(self) -> bool:

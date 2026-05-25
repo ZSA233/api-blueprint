@@ -99,7 +99,10 @@ def test_java_http_codegen_emits_multipart_raw_and_binary_response_contracts(tmp
     assert "file.getBytes()" not in controller
     assert "serverConfig.multipartSingleFileBytes()" in controller
     assert "payloadTooLargeResponse(error)" in controller
-    assert "rawResponse(\"file\", \"application/octet-stream\", \"report.bin\", result)" in controller
+    assert "private record HttpRouteInfo(HttpRequestInfo request, HttpResponseInfo response)" in controller
+    assert "HTTP_ROUTE_API_MEDIA_GET_DOWNLOAD" in controller
+    assert 'new HttpResponseInfo(\n            "file",\n            "application/octet-stream",\n            "report.bin"' in controller
+    assert "rawResponse(HTTP_ROUTE_API_MEDIA_GET_DOWNLOAD.response(), result)" in controller
     assert "InputStreamResource" in controller
     assert "builder.body(new InputStreamResource(stream.body()))" in controller
     assert "\"; filename*=UTF-8''\" + encodeHeaderValue(filename)" in controller
