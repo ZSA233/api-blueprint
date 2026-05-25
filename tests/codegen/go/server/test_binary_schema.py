@@ -22,7 +22,7 @@ go 1.23.8
 
 endian: little
 content-type: application/octet-stream
-content-encoding: identity,gzip
+content-encoding: identity,gzip,br
 
 ## header
 
@@ -115,9 +115,18 @@ content-encoding: identity,gzip
     assert "binary.DemoPacket" in route_models
     assert "BindBinary bool" in req_provider
     assert 'strings.Contains(data, "B")' in req_provider
+    http_config = (output_dir / "transports" / "http" / "gen_config.go").read_text(encoding="utf-8")
+    assert "BinaryContentDecoders" in http_config
+    assert "map[string]BinaryContentDecoder" in http_config
     assert "gzip.NewReader" in http_runtime
+    assert "custom := binaryContentDecoder(config, encoding)" in http_runtime
+    assert "custom(ginCtx.Request.Body)" in http_runtime
     assert "decoder.DecodeBinary(reader)" in http_runtime
+    assert "binaryContentEncodingAllowed(encoding, allowedContentEncodings)" in http_runtime
+    assert "http.StatusUnsupportedMediaType" in http_runtime
+    assert "http.StatusRequestEntityTooLarge" in http_runtime
     assert '"req=QB|handle|rsp=json@CodeMessageDataEnvelope"' in http_route
+    assert '[]string{"identity", "gzip", "br"}' in http_route
 
     if shutil.which("go") is None:
         pytest.skip("go toolchain is not available")

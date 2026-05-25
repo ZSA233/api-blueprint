@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import os
-import struct
 import tempfile
 import asyncio
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -30,6 +28,7 @@ from api_blueprint_example_server.api.routes.api.binary.gen_types import (
     AuditPacketItem,
     AuditPacketQuery,
     AuditPacketResponse,
+    DemoPacket,
     PacketQuery,
     PacketResponse,
 )
@@ -87,7 +86,7 @@ from api_blueprint_example_server.api.routes.api.hello.gen_types import ApiHello
 from api_blueprint_example_server.api.routes.api.media.gen_types import MediaPreviewForm
 from api_blueprint_example_server.api.routes.api.media.gen_types import MediaErrorFrameQuery
 from api_blueprint_example_server.api.runtime.errors import ApiError, ApiErrorPayload, ApiToastPayload
-from api_blueprint_example_server.api.runtime.server import ApiRawResponse
+from api_blueprint_example_server.api.runtime.server import ApiRawResponse, ApiServerConfig
 from api_blueprint_example_server.api.transports.http.server import create_router as create_api_router
 from api_blueprint_example_server.static.routes.static.gen_types import DocJsonResponse, DochahaResponse
 from api_blueprint_example_server.static.transports.http.server import create_router as create_static_router
@@ -98,6 +97,19 @@ app = FastAPI()
 SAMPLE_JPEG = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00\x01\x00\x01\x00\x00\xff\xd9"
 SAMPLE_XLSX = b"PK\x03\x04api-blueprint media report\n"
 MJPEG_CHUNK = b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + SAMPLE_JPEG + b"\r\n"
+
+
+def br_stub_decoder(body: bytes) -> bytes:
+    prefix = b"BRSTUB\x00"
+    if not body.startswith(prefix):
+        raise ValueError("invalid br stub payload")
+    return body[len(prefix):]
+
+
+def api_server_config() -> ApiServerConfig | None:
+    if os.getenv("API_BLUEPRINT_ENABLE_BR_STUB") != "1":
+        return None
+    return ApiServerConfig(binary_content_decoders={"br": br_stub_decoder})
 
 
 @app.middleware("http")
@@ -243,30 +255,30 @@ class BinaryService:
     async def packet(
         self,
         query: PacketQuery,
-        binary: bytes | None = None,
+        binary: DemoPacket,
     ) -> PacketResponse:
-        packet = parse_packet(binary or b"")
+        item_ids = [item.id for item in binary.body.items]
+        first_label = binary.body.items[0].label if binary.body.items else ""
         return PacketResponse(
             trace="" if query.trace is None else query.trace,
-            version=packet.version,
-            item_count=len(packet.item_ids),
-            payload=packet.payload,
-            score_sum=round(packet.score_sum),
-            first_label=packet.first_label,
-            item_ids=packet.item_ids,
-            checksum=packet.checksum,
+            version=1,
+            item_count=len(item_ids),
+            payload=binary.body.payload.decode("utf-8"),
+            score_sum=round(sum(binary.body.scores)),
+            first_label=first_label,
+            item_ids=item_ids,
+            checksum=binary.body.checksum,
         )
 
     async def audit_packet(
         self,
         query: AuditPacketQuery,
-        binary: bytes | None = None,
+        binary: AuditPacket,
     ) -> AuditPacketResponse:
-        packet = parse_audit_packet(binary or b"")
         return AuditPacketResponse(
             trace="" if query.trace is None else query.trace,
-            item_count=packet.item_count,
-            checksum=packet.checksum,
+            item_count=binary.header.item_count,
+            checksum=binary.body.checksum,
         )
 
     async def audit_packet_response(self) -> AuditPacket:
@@ -385,26 +397,11 @@ app.include_router(
         demo_service=DemoService(),
         media_service=MediaService(),
         hello_service=HelloService(),
+        config=api_server_config(),
     )
 )
 app.include_router(create_alt_router(conflict_service=AltConflictService()))
 app.include_router(create_static_router(static_service=StaticService()))
-
-
-@dataclass(frozen=True)
-class ParsedPacket:
-    version: int
-    payload: str
-    score_sum: float
-    first_label: str
-    item_ids: list[int]
-    checksum: int
-
-
-@dataclass(frozen=True)
-class ParsedAuditPacket:
-    item_count: int
-    checksum: int
 
 
 def demo_model(label: str) -> AbcResponse:
@@ -418,78 +415,6 @@ def demo_model(label: str) -> AbcResponse:
         enum_status=StatusEnum.RUNNING,
         enum_list=[StatusEnum.PENDING, StatusEnum.RUNNING],
     )
-
-
-def parse_packet(data: bytes) -> ParsedPacket:
-    offset = 0
-    magic = data[offset : offset + 4].decode("utf-8")
-    offset += 4
-    if magic != "ABP1":
-        raise ValueError(f"binary magic mismatch: {magic}")
-    version, kind = struct.unpack_from("<HH", data, offset)
-    offset += 4
-    if kind != 1:
-        raise ValueError(f"binary kind mismatch: {kind}")
-    (flags,) = struct.unpack_from("<I", data, offset)
-    offset += 4
-    if flags & 1 == 0:
-        raise ValueError(f"binary flags missing payload bit: {flags}")
-    offset += 3
-    short_code = _read_u24(data, offset)
-    offset += 3
-    if short_code != 0x010203:
-        raise ValueError(f"binary short code mismatch: {short_code}")
-    offset += 3
-    item_count, payload_len, score_count = struct.unpack_from("<HIH", data, offset)
-    offset += 8
-    item_ids: list[int] = []
-    first_label = ""
-    for index in range(item_count):
-        item_id = struct.unpack_from("<I", data, offset)[0]
-        offset += 4
-        item_ids.append(item_id)
-        offset += 1
-        offset += 8
-        label_len = data[offset]
-        offset += 1
-        label = data[offset : offset + label_len].decode("utf-8")
-        offset += label_len
-        if index == 0:
-            first_label = label
-    payload = data[offset : offset + payload_len].decode("utf-8")
-    offset += payload_len
-    score_sum = 0.0
-    for _ in range(score_count):
-        score_sum += struct.unpack_from("<d", data, offset)[0]
-        offset += 8
-    checksum = struct.unpack_from("<I", data, offset)[0]
-    offset += 4
-    if offset != len(data):
-        raise ValueError(f"binary packet has trailing bytes: {len(data) - offset}")
-    return ParsedPacket(version, payload, score_sum, first_label, item_ids, checksum)
-
-
-def parse_audit_packet(data: bytes) -> ParsedAuditPacket:
-    offset = 0
-    (kind,) = struct.unpack_from("<H", data, offset)
-    offset += 2
-    if kind != 2:
-        raise ValueError(f"audit kind mismatch: {kind}")
-    (flags,) = struct.unpack_from("<I", data, offset)
-    offset += 4
-    if flags & 1 == 0:
-        raise ValueError(f"audit flags missing items bit: {flags}")
-    (item_count,) = struct.unpack_from("<H", data, offset)
-    offset += 2
-    for _ in range(item_count):
-        offset += 4
-        offset += 2
-    (checksum,) = struct.unpack_from("<I", data, offset)
-    offset += 4
-    if offset != len(data):
-        raise ValueError(f"audit packet has trailing bytes: {len(data) - offset}")
-    return ParsedAuditPacket(item_count=item_count, checksum=checksum)
-
 
 def build_audit_packet() -> AuditPacket:
     return AuditPacket(
@@ -505,11 +430,6 @@ def build_audit_packet() -> AuditPacket:
             checksum=2,
         ),
     )
-
-
-def _read_u24(data: bytes, offset: int) -> int:
-    return data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16)
-
 
 if __name__ == "__main__":
     addr = os.environ.get("API_BLUEPRINT_EXAMPLE_ADDR", "127.0.0.1:0")

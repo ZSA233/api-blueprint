@@ -36,6 +36,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		),
 		eng,
 		false,
+		[]string{"identity", "gzip", "br"},
 	)
 
 	httptransport.POST(
@@ -59,6 +60,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		),
 		eng,
 		false,
+		[]string{"identity"},
 	)
 
 	httptransport.GET(
@@ -82,6 +84,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		),
 		eng,
 		false,
+		[]string{},
 	)
 
 	return impl

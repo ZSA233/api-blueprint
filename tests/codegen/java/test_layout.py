@@ -65,6 +65,7 @@ def test_java_client_and_server_generate_layout_and_preserve_user_files(tmp_path
 
 endian: little
 content-type: application/octet-stream
+content-encoding: identity,gzip,br
 
 ## body
 
@@ -134,6 +135,9 @@ content-type: application/octet-stream
     binary_controller_text = (
         server_dir / package_root / "transports/http/api/binary/GenBinaryController.java"
     ).read_text(encoding="utf-8")
+    server_config_text = (server_dir / package_root / "transports/http/GenSpringServerConfig.java").read_text(
+        encoding="utf-8"
+    )
     service_text = (server_route_dir / "GenDemoService.java").read_text(encoding="utf-8")
     service_stub_text = (server_route_dir / "GenDemoServiceStub.java").read_text(encoding="utf-8")
     controller_text = (
@@ -158,9 +162,14 @@ content-type: application/octet-stream
     for generated_text in (
         service_text,
         controller_text,
+        binary_controller_text,
+        server_config_text,
     ):
         assert generated_text.startswith(JAVA_SERVER_GENERATED_HEADER)
         assert _max_consecutive_blank_lines(generated_text) <= 1
+    assert "GenApiBinaryBody;\n\nimport java.io.IOException;" not in controller_text
+    assert "GenApiBinaryBody;\n\nimport java.io.ByteArrayInputStream;" not in binary_controller_text
+    assert "RequestBody;\n\nimport org.springframework.web.bind.annotation.RequestHeader;" not in binary_controller_text
     assert (client_runtime_dir / "ApiClient.java").read_text(encoding="utf-8") == "// USER CLIENT FACADE\n"
     assert (client_route_dir / "DemoApi.java").read_text(encoding="utf-8") == "// USER ROUTE FACADE\n"
     assert (client_http_dir / "HttpApiClient.java").read_text(encoding="utf-8") == "// USER HTTP FACADE\n"
@@ -236,7 +245,18 @@ content-type: application/octet-stream
     assert "public static DemoPacket parse(byte[] bytes)" in binary_text
     assert "GenBinaryTypes.DemoPacket binary" in binary_service_text
     assert "GenBinaryTypes.DemoPacket binary;" in binary_controller_text
-    assert "binary = GenBinaryTypes.DemoPacketWire.parse(binaryBody == null ? new byte[0] : binaryBody);" in binary_controller_text
+    assert "long decompressedBinaryBodyBytes" in server_config_text
+    assert "Map<String, BinaryContentDecoder> binaryContentDecoders" in server_config_text
+    assert "public interface BinaryContentDecoder" in server_config_text
+    assert (
+        'binary = GenBinaryTypes.DemoPacketWire.parse(\n'
+        '                decodeBinarySchemaBody(binaryBody == null ? new byte[0] : binaryBody, contentEncoding, Set.of("identity", "gzip", "br"))\n'
+        "            );"
+    ) in binary_controller_text
+    assert "@RequestHeader(name = HttpHeaders.CONTENT_ENCODING, required = false) String contentEncoding" in binary_controller_text
+    assert "GZIPInputStream" in binary_controller_text
+    assert "serverConfig.binaryContentDecoders().get(encoding)" in binary_controller_text
+    assert "HttpStatus.UNSUPPORTED_MEDIA_TYPE" in binary_controller_text
     assert "return badRequestResponse(error);" in binary_controller_text
     assert "public static final String CONTENT_TYPE = \"application/octet-stream\"" in binary_text
 

@@ -44,8 +44,12 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import io.ktor.utils.io.readAvailable
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
 import java.nio.file.Files
 import java.io.Writer
+import java.util.zip.GZIPInputStream
 
 public fun Route.registerBinaryRoutes(
     service: GenBinaryService = BinaryServiceStub(),
@@ -63,9 +67,15 @@ public fun Route.registerBinaryRoutes(
             return@post
         }
         val binary = try {
-            DemoPacketWire.parse(receiveLimitedBytes(call, config.binaryBodyMaxBytes))
+            DemoPacketWire.parse(receiveBinarySchemaBytes(call, config, setOf("identity", "gzip", "br")))
         } catch (_: ApiPayloadTooLargeException) {
             respondPayloadTooLarge(call)
+            return@post
+        } catch (_: ApiUnsupportedContentEncodingException) {
+            respondUnsupportedContentEncoding(call)
+            return@post
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
             return@post
         }
         try {
@@ -90,9 +100,15 @@ public fun Route.registerBinaryRoutes(
             return@post
         }
         val binary = try {
-            AuditPacketWire.parse(receiveLimitedBytes(call, config.binaryBodyMaxBytes))
+            AuditPacketWire.parse(receiveBinarySchemaBytes(call, config, setOf("identity")))
         } catch (_: ApiPayloadTooLargeException) {
             respondPayloadTooLarge(call)
+            return@post
+        } catch (_: ApiUnsupportedContentEncodingException) {
+            respondUnsupportedContentEncoding(call)
+            return@post
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
             return@post
         }
         try {
@@ -280,6 +296,59 @@ private suspend fun receiveLimitedBytes(call: ApplicationCall, maxBytes: Long): 
         throw ApiPayloadTooLargeException()
     }
     return bytes
+}
+
+private suspend fun receiveBinarySchemaBytes(
+    call: ApplicationCall,
+    config: ApiServerConfig,
+    allowedContentEncodings: Set<String>,
+): ByteArray {
+    val encoding = call.request.headers[HttpHeaders.ContentEncoding]?.trim()?.lowercase()?.ifBlank { "identity" } ?: "identity"
+    if (encoding !in allowedContentEncodings) {
+        throw ApiUnsupportedContentEncodingException()
+    }
+    val encoded = receiveLimitedBytes(call, config.binaryBodyMaxBytes)
+    if (encoding == "identity") {
+        return encoded
+    }
+    val decoded = when (encoding) {
+        "gzip" -> try {
+            GZIPInputStream(ByteArrayInputStream(encoded)).use { input ->
+                readLimitedStream(input, config.decompressedBinaryBodyMaxBytes)
+            }
+        } catch (error: Throwable) {
+            throw IllegalArgumentException("invalid gzip request body", error)
+        }
+        else -> {
+            val decoder = config.binaryContentDecoders[encoding] ?: throw ApiUnsupportedContentEncodingException()
+            decoder(encoded)
+        }
+    }
+    if (config.decompressedBinaryBodyMaxBytes > 0 && decoded.size.toLong() > config.decompressedBinaryBodyMaxBytes) {
+        throw ApiPayloadTooLargeException()
+    }
+    return decoded
+}
+
+private fun readLimitedStream(input: InputStream, maxBytes: Long): ByteArray {
+    val output = ByteArrayOutputStream()
+    val buffer = ByteArray(8192)
+    var total = 0L
+    while (true) {
+        val read = input.read(buffer)
+        if (read < 0) {
+            break
+        }
+        if (read == 0) {
+            continue
+        }
+        total += read.toLong()
+        if (maxBytes > 0 && total > maxBytes) {
+            throw ApiPayloadTooLargeException()
+        }
+        output.write(buffer, 0, read)
+    }
+    return output.toByteArray()
 }
 
 private suspend fun receiveFilePart(part: PartData.FileItem, config: ApiServerConfig): String {
@@ -475,7 +544,17 @@ private suspend fun respondPayloadTooLarge(call: ApplicationCall) {
     )
 }
 
+private suspend fun respondUnsupportedContentEncoding(call: ApplicationCall) {
+    call.respondText(
+        "{\"detail\":\"unsupported content encoding\"}",
+        contentType = ContentType.Application.Json,
+        status = HttpStatusCode.UnsupportedMediaType,
+    )
+}
+
 private class ApiPayloadTooLargeException : IllegalArgumentException("payload too large")
+
+private class ApiUnsupportedContentEncodingException : IllegalArgumentException("unsupported content encoding")
 
 private fun encodeErrorBody(payload: ApiErrorPayload, envelope: ApiResponseEnvelope): String {
     val payloadElement = ApiJson.encodeToJsonElement(ApiErrorPayload.serializer(), payload)

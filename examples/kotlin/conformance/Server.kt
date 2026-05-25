@@ -44,6 +44,7 @@ fun main() {
     val addr = System.getenv("API_BLUEPRINT_EXAMPLE_ADDR") ?: "127.0.0.1:0"
     val host = addr.substringBefore(":")
     val port = addr.substringAfter(":", "0").toInt()
+    val apiServerConfig = apiServerConfig()
     embeddedServer(Netty, host = host, port = port) {
         install(WebSockets)
         routing {
@@ -71,7 +72,7 @@ fun main() {
                 )
             }
             registerDemoRoutes(DemoServiceImpl())
-            registerBinaryRoutes(BinaryServiceImpl())
+            registerBinaryRoutes(BinaryServiceImpl(), config = apiServerConfig)
             registerMediaRoutes(MediaServiceImpl())
             registerApiRoutes(ApiServiceImpl())
             registerHelloRoutes(HelloServiceImpl())
@@ -85,6 +86,21 @@ fun main() {
             }
         }
     }.start(wait = true)
+}
+
+private fun apiServerConfig(): ApiServerConfig {
+    if (System.getenv("API_BLUEPRINT_ENABLE_BR_STUB") != "1") {
+        return ApiServerConfig()
+    }
+    return ApiServerConfig(binaryContentDecoders = mapOf<String, ApiBinaryContentDecoder>("br" to ::decodeBrStub))
+}
+
+private fun decodeBrStub(body: ByteArray): ByteArray {
+    val prefix = byteArrayOf(66, 82, 83, 84, 85, 66, 0)
+    if (body.size < prefix.size || prefix.indices.any { body[it] != prefix[it] }) {
+        throw IllegalArgumentException("invalid br stub payload")
+    }
+    return body.copyOfRange(prefix.size, body.size)
 }
 
 private class ApiServiceImpl : ApiServiceStub() {

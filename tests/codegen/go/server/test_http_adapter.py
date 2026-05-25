@@ -37,12 +37,15 @@ def test_golang_server_codegen_emits_multipart_and_raw_response_contracts(tmp_pa
     assert "MultipartMemoryBytes:" in http_config and "8 * mib" in http_config
     assert "MultipartSingleFileBytes:" in http_config and "32 * mib" in http_config
     assert "DecompressedBinaryBytes:" in http_config and "16 * mib" in http_config
+    assert "type BinaryContentDecoder func(io.Reader) (io.ReadCloser, error)" in http_config
+    assert "BinaryContentDecoders" in http_config and "map[string]BinaryContentDecoder" in http_config
     assert "WebSocketInsecureSkipVerify" in http_config
     assert "bindMultipart" in http_runtime
     assert "http.MaxBytesReader(ginCtx.Writer, ginCtx.Request.Body, limit)" in http_runtime
     assert "ginCtx.Request.ParseMultipartForm(config.MultipartMemoryBytes)" in http_runtime
     assert "header.Size > maxBytes" in http_runtime
     assert "limitReader(gzipReader, config.DecompressedBinaryBytes" in http_runtime
+    assert "binaryContentDecoder(config, encoding)" in http_runtime
     assert "writeRawResponse" in http_runtime
     assert '"req=M|handle|rsp=bytes@CodeMessageDataEnvelope"' in http_route
 

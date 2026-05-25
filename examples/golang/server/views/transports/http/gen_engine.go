@@ -5,6 +5,7 @@ package httptransport
 import (
 	"bytes"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -55,6 +56,7 @@ func requireSessionScope(route provider.RouteInfo) error {
 func bindRequest[Q, B, P any](
 	ginCtx *gin.Context,
 	reqProvider *provider.ReqProvider[Q, B, P],
+	binaryContentEncodings []string,
 ) (*provider.REQ[Q, B], error) {
 	applyRequestBodyLimit(ginCtx)
 	var reqQ *Q
@@ -86,7 +88,7 @@ func bindRequest[Q, B, P any](
 		}
 	} else if reqProvider.BindBinary {
 		reqB = new(B)
-		if err := bindBinaryBody(ginCtx, reqB); err != nil {
+		if err := bindBinaryBody(ginCtx, reqB, binaryContentEncodings); err != nil {
 			return nil, err
 		}
 	}
@@ -202,7 +204,7 @@ func formFieldName(fieldType reflect.StructField) string {
 	return strings.Split(key, ",")[0]
 }
 
-func bindBinaryBody(ginCtx *gin.Context, target any) error {
+func bindBinaryBody(ginCtx *gin.Context, target any, allowedContentEncodings []string) error {
 	decoder, ok := target.(binaryBodyDecoder)
 	if !ok {
 		return fmt.Errorf("[httptransport] binary request body %T does not implement DecodeBinary(io.Reader)", target)
@@ -215,23 +217,82 @@ func bindBinaryBody(ginCtx *gin.Context, target any) error {
 	if encoding == "" {
 		encoding = "identity"
 	}
+	if !binaryContentEncodingAllowed(encoding, allowedContentEncodings) {
+		return newHTTPStatusError(http.StatusUnsupportedMediaType, fmt.Errorf("[httptransport] unsupported binary Content-Encoding %q", encoding))
+	}
 
+	reader, cleanup, err := binaryBodyReader(ginCtx, encoding)
+	if err != nil {
+		return err
+	}
+	if cleanup != nil {
+		defer cleanup()
+	}
+	if err := decoder.DecodeBinary(reader); err != nil {
+		if statusErr := asHTTPStatusError(err); statusErr != nil {
+			return statusErr
+		}
+		if strings.Contains(err.Error(), "http: request body too large") {
+			return newHTTPStatusError(http.StatusRequestEntityTooLarge, err)
+		}
+		return newHTTPStatusError(http.StatusBadRequest, fmt.Errorf("[httptransport] decode binary request body: %w", err))
+	}
+	return nil
+}
+
+func binaryContentEncodingAllowed(encoding string, allowed []string) bool {
+	if len(allowed) == 0 {
+		return encoding == "identity"
+	}
+	for _, item := range allowed {
+		if strings.EqualFold(strings.TrimSpace(item), encoding) {
+			return true
+		}
+	}
+	return false
+}
+
+func binaryBodyReader(ginCtx *gin.Context, encoding string) (io.Reader, func(), error) {
 	config := ActiveServerConfig()
-	var reader io.Reader = limitReader(ginCtx.Request.Body, config.DecompressedBinaryBytes, "binary request body")
 	switch encoding {
 	case "identity":
+		return limitReader(ginCtx.Request.Body, config.DecompressedBinaryBytes, "binary request body"), nil, nil
 	case "gzip":
 		gzipReader, err := gzip.NewReader(ginCtx.Request.Body)
 		if err != nil {
-			return fmt.Errorf("[httptransport] decode gzip request body: %w", err)
+			return nil, nil, newHTTPStatusError(http.StatusBadRequest, fmt.Errorf("[httptransport] decode gzip request body: %w", err))
 		}
-		defer gzipReader.Close()
-		reader = limitReader(gzipReader, config.DecompressedBinaryBytes, "decompressed binary request body")
+		return limitReader(gzipReader, config.DecompressedBinaryBytes, "decompressed binary request body"), func() {
+			_ = gzipReader.Close()
+		}, nil
 	default:
-		return fmt.Errorf("[httptransport] unsupported binary Content-Encoding %q", encoding)
+		custom := binaryContentDecoder(config, encoding)
+		if custom == nil {
+			return nil, nil, newHTTPStatusError(http.StatusUnsupportedMediaType, fmt.Errorf("[httptransport] unsupported binary Content-Encoding %q", encoding))
+		}
+		reader, err := custom(ginCtx.Request.Body)
+		if err != nil {
+			return nil, nil, newHTTPStatusError(http.StatusBadRequest, fmt.Errorf("[httptransport] decode %s request body: %w", encoding, err))
+		}
+		return limitReader(reader, config.DecompressedBinaryBytes, "decompressed binary request body"), func() {
+			_ = reader.Close()
+		}, nil
 	}
+}
 
-	return decoder.DecodeBinary(reader)
+func binaryContentDecoder(config ServerConfig, encoding string) BinaryContentDecoder {
+	if config.BinaryContentDecoders == nil {
+		return nil
+	}
+	if decoder := config.BinaryContentDecoders[encoding]; decoder != nil {
+		return decoder
+	}
+	for key, decoder := range config.BinaryContentDecoders {
+		if strings.EqualFold(strings.TrimSpace(key), encoding) {
+			return decoder
+		}
+	}
+	return nil
 }
 
 func applyRequestBodyLimit(ginCtx *gin.Context) {
@@ -260,7 +321,7 @@ func limitReader(reader io.Reader, maxBytes int64, label string) io.Reader {
 
 func (reader *maxBytesReader) Read(p []byte) (int, error) {
 	if reader.remaining <= 0 {
-		return 0, fmt.Errorf("[httptransport] %s exceeds configured limit", reader.label)
+		return 0, newHTTPStatusError(http.StatusRequestEntityTooLarge, fmt.Errorf("[httptransport] %s exceeds configured limit", reader.label))
 	}
 	if int64(len(p)) > reader.remaining {
 		p = p[:reader.remaining]
@@ -270,14 +331,53 @@ func (reader *maxBytesReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
-func newContext[Q, B, P any](ginCtx *gin.Context, executor *provider.RouteExecutor[Q, B, P]) *provider.Context[Q, B, P] {
+type httpStatusError struct {
+	status int
+	err    error
+}
+
+func newHTTPStatusError(status int, err error) error {
+	return &httpStatusError{status: status, err: err}
+}
+
+func (err *httpStatusError) Error() string {
+	if err == nil || err.err == nil {
+		return ""
+	}
+	return err.err.Error()
+}
+
+func (err *httpStatusError) Unwrap() error {
+	if err == nil {
+		return nil
+	}
+	return err.err
+}
+
+func asHTTPStatusError(err error) *httpStatusError {
+	var statusErr *httpStatusError
+	if err != nil && errors.As(err, &statusErr) {
+		return statusErr
+	}
+	return nil
+}
+
+func newContext[Q, B, P any](
+	ginCtx *gin.Context,
+	executor *provider.RouteExecutor[Q, B, P],
+	binaryContentEncodings ...[]string,
+) *provider.Context[Q, B, P] {
 	ctx := provider.NewHTTPContext[Q, B, P](
 		ginCtx.Request.Context(),
 		nil,
 		map[string]any{GinContextMetadataKey: ginCtx},
 	)
 	ctx.HeaderFn = ginCtx.GetHeader
-	req, err := bindRequest(ginCtx, executor.Indexer.Req)
+	var allowedBinaryContentEncodings []string
+	if len(binaryContentEncodings) > 0 {
+		allowedBinaryContentEncodings = binaryContentEncodings[0]
+	}
+	req, err := bindRequest(ginCtx, executor.Indexer.Req, allowedBinaryContentEncodings)
 	ctx.Req = &provider.ReqContext[Q, B, P]{
 		Request: req,
 		Error:   err,
@@ -293,6 +393,10 @@ func writeResponse[Q, B, P any](
 	rawResponse bool,
 ) {
 	if ginCtx.Writer.Written() {
+		return
+	}
+	if statusErr := asHTTPStatusError(err); statusErr != nil {
+		ginCtx.JSON(statusErr.status, gin.H{"detail": statusErr.Error()})
 		return
 	}
 	if rawResponse {
@@ -445,9 +549,10 @@ func hasHeader(headers map[string]string, key string) bool {
 func makeHandler[Q, B, P any](
 	executor *provider.RouteExecutor[Q, B, P],
 	rawResponse bool,
+	binaryContentEncodings []string,
 ) gin.HandlerFunc {
 	return func(ginCtx *gin.Context) {
-		ctx := newContext(ginCtx, executor)
+		ctx := newContext(ginCtx, executor, binaryContentEncodings)
 		execErr := executor.Run(ctx)
 		response, invokeErr := ctx.HandleResult()
 		if invokeErr == nil {
@@ -462,8 +567,9 @@ func GET[Q, B, P any](
 	executor *provider.RouteExecutor[Q, B, P],
 	engine *gin.Engine,
 	rawResponse bool,
+	binaryContentEncodings ...[]string,
 ) {
-	engine.GET(relativePath, makeHandler(executor, rawResponse))
+	engine.GET(relativePath, makeHandler(executor, rawResponse, firstBinaryContentEncodings(binaryContentEncodings)))
 }
 
 func POST[Q, B, P any](
@@ -471,8 +577,9 @@ func POST[Q, B, P any](
 	executor *provider.RouteExecutor[Q, B, P],
 	engine *gin.Engine,
 	rawResponse bool,
+	binaryContentEncodings ...[]string,
 ) {
-	engine.POST(relativePath, makeHandler(executor, rawResponse))
+	engine.POST(relativePath, makeHandler(executor, rawResponse, firstBinaryContentEncodings(binaryContentEncodings)))
 }
 
 func PUT[Q, B, P any](
@@ -480,8 +587,9 @@ func PUT[Q, B, P any](
 	executor *provider.RouteExecutor[Q, B, P],
 	engine *gin.Engine,
 	rawResponse bool,
+	binaryContentEncodings ...[]string,
 ) {
-	engine.PUT(relativePath, makeHandler(executor, rawResponse))
+	engine.PUT(relativePath, makeHandler(executor, rawResponse, firstBinaryContentEncodings(binaryContentEncodings)))
 }
 
 func DELETE[Q, B, P any](
@@ -489,6 +597,14 @@ func DELETE[Q, B, P any](
 	executor *provider.RouteExecutor[Q, B, P],
 	engine *gin.Engine,
 	rawResponse bool,
+	binaryContentEncodings ...[]string,
 ) {
-	engine.DELETE(relativePath, makeHandler(executor, rawResponse))
+	engine.DELETE(relativePath, makeHandler(executor, rawResponse, firstBinaryContentEncodings(binaryContentEncodings)))
+}
+
+func firstBinaryContentEncodings(values [][]string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	return values[0]
 }

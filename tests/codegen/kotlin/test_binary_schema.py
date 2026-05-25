@@ -113,3 +113,52 @@ content-encoding: identity,gzip
     assert "public data class GeneralResponse<T>(" not in runtime_models_text
     assert "override fun writeTo(sink: BufferedSink)" in http_text
     assert "binary.writeTo(sink)" in http_text
+
+
+def test_kotlin_server_decodes_binary_schema_content_encoding(tmp_path):
+    schema = parse_binary_schema(
+        """
+# packet DemoPacket
+
+endian: little
+content-type: application/octet-stream
+content-encoding: identity,gzip,br
+
+## header
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| magic | bytes | 4 | const="ABP1" | magic |
+""".strip(),
+        source_path="demo_packet.md",
+    )
+
+    bp = Blueprint(root="/api")
+    with bp.group("/binary") as views:
+        views.POST("/packet").REQ_BINARY(schema).RSP(payload=String(description="payload"))
+    with bp.group("/plain") as views:
+        views.GET("/ping").RSP(payload=String(description="payload"))
+
+    writer = KotlinServerWriter(tmp_path / "kotlin", package="com.example.generated")
+    writer.register(bp)
+    writer.gen()
+
+    root_dir = tmp_path / "kotlin" / "com" / "example" / "generated" / "api"
+    runtime_text = (root_dir / "runtime" / "GenApiServerResponse.kt").read_text(encoding="utf-8")
+    ktor_text = (root_dir / "transports" / "ktor" / "api" / "binary" / "GenBinaryKtorRoutes.kt").read_text(
+        encoding="utf-8"
+    )
+    plain_ktor_text = (root_dir / "transports" / "ktor" / "api" / "plain" / "GenPlainKtorRoutes.kt").read_text(
+        encoding="utf-8"
+    )
+
+    assert "public typealias ApiBinaryContentDecoder = (ByteArray) -> ByteArray" in runtime_text
+    assert "public val decompressedBinaryBodyMaxBytes: Long = 16L * 1024L * 1024L" in runtime_text
+    assert "public val binaryContentDecoders: Map<String, ApiBinaryContentDecoder> = emptyMap()" in runtime_text
+    assert 'DemoPacketWire.parse(receiveBinarySchemaBytes(call, config, setOf("identity", "gzip", "br")))' in ktor_text
+    assert "io.ktor.utils.io.readAvailable\n\nimport java.io.ByteArrayInputStream" not in ktor_text
+    assert "io.ktor.utils.io.readAvailable\n\nimport java.nio.file.Files" not in plain_ktor_text
+    assert "GZIPInputStream(ByteArrayInputStream(encoded))" in ktor_text
+    assert "config.binaryContentDecoders[encoding]" in ktor_text
+    assert "respondUnsupportedContentEncoding(call)" in ktor_text
+    assert "HttpStatusCode.UnsupportedMediaType" in ktor_text

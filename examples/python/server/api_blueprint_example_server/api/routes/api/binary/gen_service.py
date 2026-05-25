@@ -20,14 +20,14 @@ class BinaryService(Protocol):
     async def packet(
         self,
         query: PacketQuery,
-        binary: bytes | None,
+        binary: DemoPacket,
     ) -> PacketResponse:
         ...
 
     async def audit_packet(
         self,
         query: AuditPacketQuery,
-        binary: bytes | None,
+        binary: AuditPacket,
     ) -> AuditPacketResponse:
         ...
 
@@ -39,14 +39,14 @@ class BinaryServiceStub:
     async def packet(
         self,
         query: PacketQuery,
-        binary: bytes | None,
+        binary: DemoPacket,
     ) -> PacketResponse:
         raise NotImplementedError("packet")
 
     async def audit_packet(
         self,
         query: AuditPacketQuery,
-        binary: bytes | None,
+        binary: AuditPacket,
     ) -> AuditPacketResponse:
         raise NotImplementedError("audit_packet")
 

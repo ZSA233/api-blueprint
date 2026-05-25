@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import gzip
 import sys
 from pathlib import Path
 
@@ -18,12 +19,14 @@ from api_blueprint_example_client.api.routes.api.binary.gen_types import (
     AuditPacketFlags,
     AuditPacketHeader,
     AuditPacketItem,
+    AuditPacketWire,
     AuditPacketQuery,
     DemoPacket,
     DemoPacketBody,
     DemoPacketFlags,
     DemoPacketHeader,
     DemoPacketItem,
+    DemoPacketWire,
     PacketQuery,
 )
 from api_blueprint_example_client.api.routes.api.conflict.gen_types import DefaultQuery
@@ -179,7 +182,7 @@ async def check_form(api) -> None:
     assert response.enabled is True, response
 
 
-async def check_binary(api) -> None:
+async def check_binary(api, base_url: str) -> None:
     response = await api.binary.packet(query=PacketQuery(trace="python-typed"), binary=build_packet())
     expected = {
         "trace": "python-typed",
@@ -193,6 +196,63 @@ async def check_binary(api) -> None:
     }
     actual = response.__dict__ if hasattr(response, "__dict__") else response
     assert actual == expected, actual
+
+    packet_bytes = DemoPacketWire.to_binary_body(build_packet()).to_bytes()
+    async with httpx.AsyncClient(base_url=base_url) as client:
+        gzip_response = await client.post(
+            "/api/binary/packet",
+            params={"trace": "python-gzip"},
+            content=gzip.compress(packet_bytes),
+            headers={
+                "Content-Type": "application/octet-stream",
+                "Content-Encoding": "gzip",
+            },
+        )
+        assert gzip_response.status_code == 200, gzip_response.text
+        gzip_payload = gzip_response.json().get("data", gzip_response.json())
+        assert gzip_payload["trace"] == "python-gzip", gzip_payload
+        assert gzip_payload["payload"] == "payload-ok", gzip_payload
+
+        br_response = await client.post(
+            "/api/binary/packet",
+            params={"trace": "python-br"},
+            content=packet_bytes,
+            headers={
+                "Content-Type": "application/octet-stream",
+                "Content-Encoding": "br",
+            },
+        )
+        assert br_response.status_code == 415, br_response.text
+
+        audit_bytes = AuditPacketWire.to_binary_body(build_audit_packet()).to_bytes()
+        audit_gzip_response = await client.post(
+            "/api/binary/audit-packet",
+            params={"trace": "python-audit-gzip"},
+            content=gzip.compress(audit_bytes),
+            headers={
+                "Content-Type": "application/octet-stream",
+                "Content-Encoding": "gzip",
+            },
+        )
+        assert audit_gzip_response.status_code == 415, audit_gzip_response.text
+
+
+async def check_binary_br(base_url: str) -> None:
+    packet_bytes = DemoPacketWire.to_binary_body(build_packet()).to_bytes()
+    async with httpx.AsyncClient(base_url=base_url) as client:
+        response = await client.post(
+            "/api/binary/packet",
+            params={"trace": "python-br-registered"},
+            content=b"BRSTUB\x00" + packet_bytes,
+            headers={
+                "Content-Type": "application/octet-stream",
+                "Content-Encoding": "br",
+            },
+        )
+        assert response.status_code == 200, response.text
+        payload = response.json().get("data", response.json())
+        assert payload["trace"] == "python-br-registered", payload
+        assert payload["payload"] == "payload-ok", payload
 
 
 async def check_audit_binary(api) -> None:
@@ -372,7 +432,9 @@ async def main() -> None:
         if "form" in selected:
             await check_form(api)
         if "binary" in selected:
-            await check_binary(api)
+            await check_binary(api, sys.argv[1])
+        if "binary-br" in selected:
+            await check_binary_br(sys.argv[1])
         if "audit-binary" in selected:
             await check_audit_binary(api)
         if "binary-response" in selected:

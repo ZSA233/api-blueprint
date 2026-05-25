@@ -18,11 +18,12 @@ import com.example.apiblueprint.api.runtime.GenApiServerChannel;
 import com.example.apiblueprint.api.runtime.GenApiServerStream;
 import com.example.apiblueprint.api.runtime.GenApiStreamResponse;
 import com.example.apiblueprint.api.runtime.GenApiToastPayload;
-
 import com.example.apiblueprint.api.runtime.GenApiTypes;
-
 import com.example.apiblueprint.api.runtime.binary.GenApiBinaryBody;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.RecordComponent;
 import java.nio.charset.StandardCharsets;
@@ -36,7 +37,10 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.zip.GZIPInputStream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
@@ -44,6 +48,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -74,15 +79,20 @@ public class GenBinaryController {
     @RequestMapping(path = "/api/binary/packet", method = RequestMethod.POST)
     public Object packet(
         @RequestParam Map<String, String> queryParams,
-        @RequestBody(required = false) byte[] binaryBody
+        @RequestBody(required = false) byte[] binaryBody,
+        @RequestHeader(name = HttpHeaders.CONTENT_ENCODING, required = false) String contentEncoding
     ) throws Exception {
         GenBinaryTypes.PacketQuery query;
         GenBinaryTypes.DemoPacket binary;
         try {
             query = objectMapper.convertValue(queryParams, GenBinaryTypes.PacketQuery.class);
-            binary = GenBinaryTypes.DemoPacketWire.parse(binaryBody == null ? new byte[0] : binaryBody);
+            binary = GenBinaryTypes.DemoPacketWire.parse(
+                decodeBinarySchemaBody(binaryBody == null ? new byte[0] : binaryBody, contentEncoding, Set.of("identity", "gzip", "br"))
+            );
         } catch (PayloadTooLargeException error) {
             return payloadTooLargeResponse(error);
+        } catch (UnsupportedContentEncodingException error) {
+            return unsupportedContentEncodingResponse(error);
         } catch (RuntimeException error) {
             return badRequestResponse(error);
         }
@@ -100,15 +110,20 @@ public class GenBinaryController {
     @RequestMapping(path = "/api/binary/audit-packet", method = RequestMethod.POST)
     public Object auditPacket(
         @RequestParam Map<String, String> queryParams,
-        @RequestBody(required = false) byte[] binaryBody
+        @RequestBody(required = false) byte[] binaryBody,
+        @RequestHeader(name = HttpHeaders.CONTENT_ENCODING, required = false) String contentEncoding
     ) throws Exception {
         GenBinaryTypes.AuditPacketQuery query;
         GenBinaryTypes.AuditPacket binary;
         try {
             query = objectMapper.convertValue(queryParams, GenBinaryTypes.AuditPacketQuery.class);
-            binary = GenBinaryTypes.AuditPacketWire.parse(binaryBody == null ? new byte[0] : binaryBody);
+            binary = GenBinaryTypes.AuditPacketWire.parse(
+                decodeBinarySchemaBody(binaryBody == null ? new byte[0] : binaryBody, contentEncoding, Set.of("identity"))
+            );
         } catch (PayloadTooLargeException error) {
             return payloadTooLargeResponse(error);
+        } catch (UnsupportedContentEncodingException error) {
+            return unsupportedContentEncodingResponse(error);
         } catch (RuntimeException error) {
             return badRequestResponse(error);
         }
@@ -275,6 +290,67 @@ public class GenBinaryController {
         return property == null || property.value().isBlank() ? component.getName() : property.value();
     }
 
+    private byte[] decodeBinarySchemaBody(byte[] body, String contentEncoding, Set<String> allowedContentEncodings) {
+        String encoding = contentEncoding == null || contentEncoding.isBlank()
+            ? "identity"
+            : contentEncoding.trim().toLowerCase(Locale.ROOT);
+        if (!allowedContentEncodings.contains(encoding)) {
+            throw new UnsupportedContentEncodingException("unsupported binary Content-Encoding " + encoding);
+        }
+        if ("identity".equals(encoding)) {
+            if (serverConfig.decompressedBinaryBodyBytes() > 0 && body.length > serverConfig.decompressedBinaryBodyBytes()) {
+                throw new PayloadTooLargeException("binary request body exceeds configured limit");
+            }
+            return body;
+        }
+        byte[] decoded;
+        if ("gzip".equals(encoding)) {
+            try (GZIPInputStream input = new GZIPInputStream(new ByteArrayInputStream(body))) {
+                decoded = readLimitedStream(input, serverConfig.decompressedBinaryBodyBytes());
+            } catch (IOException error) {
+                throw new IllegalArgumentException("invalid gzip request body", error);
+            }
+        } else {
+            GenSpringServerConfig.BinaryContentDecoder decoder = serverConfig.binaryContentDecoders().get(encoding);
+            if (decoder == null) {
+                throw new UnsupportedContentEncodingException("unsupported binary Content-Encoding " + encoding);
+            }
+            try {
+                decoded = decoder.decode(body);
+            } catch (IOException error) {
+                throw new IllegalArgumentException("invalid " + encoding + " request body", error);
+            }
+            if (decoded == null) {
+                throw new IllegalArgumentException(encoding + " decoder returned null");
+            }
+            if (serverConfig.decompressedBinaryBodyBytes() > 0 && decoded.length > serverConfig.decompressedBinaryBodyBytes()) {
+                throw new PayloadTooLargeException("decompressed binary request body exceeds configured limit");
+            }
+        }
+        return decoded;
+    }
+
+    private byte[] readLimitedStream(InputStream input, long maxBytes) throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+        long total = 0;
+        while (true) {
+            int read = input.read(buffer);
+            if (read < 0) {
+                break;
+            }
+            if (read == 0) {
+                continue;
+            }
+            total += read;
+            if (maxBytes > 0 && total > maxBytes) {
+                throw new PayloadTooLargeException("decompressed binary request body exceeds configured limit");
+            }
+            output.write(buffer, 0, read);
+        }
+        return output.toByteArray();
+    }
+
     private ResponseEntity<?> rawResponse(String kind, String mediaType, String filename, Object result) throws IOException {
         if (result instanceof GenApiRawResponse raw) {
             ResponseEntity.BodyBuilder builder = rawResponseBuilder(kind, raw.contentType(), raw.filename().isBlank() ? filename : raw.filename());
@@ -341,8 +417,18 @@ public class GenBinaryController {
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(Map.of("detail", "payload too large"));
     }
 
+    private ResponseEntity<Map<String, Object>> unsupportedContentEncodingResponse(Exception error) {
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(Map.of("detail", "unsupported content encoding"));
+    }
+
     private static final class PayloadTooLargeException extends RuntimeException {
         PayloadTooLargeException(String message) {
+            super(message);
+        }
+    }
+
+    private static final class UnsupportedContentEncodingException extends RuntimeException {
+        UnsupportedContentEncodingException(String message) {
             super(message);
         }
     }

@@ -312,7 +312,7 @@ def parse_binary_schema(markdown: str, *, source_path: str | Path | None = None)
     )
     if not content_encoding:
         content_encoding = ("identity",)
-    unsupported_encodings = sorted(set(content_encoding) - {"identity", "gzip"})
+    unsupported_encodings = sorted(set(content_encoding) - {"identity", "gzip", "br"})
     if unsupported_encodings:
         raise BinarySchemaError(
             f"{source}: unsupported content-encoding: {', '.join(unsupported_encodings)}"

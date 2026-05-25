@@ -27,6 +27,7 @@ import com.example.apiblueprint.api.routes.api.media.MediaService;
 import com.example.apiblueprint.api.routes.api.media.GenMediaServiceStub;
 import com.example.apiblueprint.api.routes.api.media.GenMediaTypes;
 import com.example.apiblueprint.api.transports.http.api.GenApiController;
+import com.example.apiblueprint.api.transports.http.GenSpringServerConfig;
 import com.example.apiblueprint.api.transports.http.api.binary.GenBinaryController;
 import com.example.apiblueprint.api.transports.http.api.conflict.GenConflictController;
 import com.example.apiblueprint.api.transports.http.api.demo.GenDemoController;
@@ -82,6 +83,37 @@ public class ServerApp {
     @Bean
     public ObjectMapper objectMapper() {
         return new ObjectMapper();
+    }
+
+    @Bean
+    public GenSpringServerConfig genSpringServerConfig() {
+        if (!"1".equals(System.getenv("API_BLUEPRINT_ENABLE_BR_STUB"))) {
+            return GenSpringServerConfig.defaults();
+        }
+        GenSpringServerConfig defaults = GenSpringServerConfig.defaults();
+        return new GenSpringServerConfig(
+            defaults.sseTimeout(),
+            defaults.websocketAllowedOrigins(),
+            defaults.websocketInboundQueueCapacity(),
+            defaults.multipartSingleFileBytes(),
+            defaults.decompressedBinaryBodyBytes(),
+            Map.of("br", ServerApp::decodeBrStub)
+        );
+    }
+
+    private static byte[] decodeBrStub(byte[] body) throws IOException {
+        byte[] prefix = new byte[] {66, 82, 83, 84, 85, 66, 0};
+        if (body.length < prefix.length) {
+            throw new IOException("invalid br stub payload");
+        }
+        for (int index = 0; index < prefix.length; index++) {
+            if (body[index] != prefix[index]) {
+                throw new IOException("invalid br stub payload");
+            }
+        }
+        byte[] decoded = new byte[body.length - prefix.length];
+        System.arraycopy(body, prefix.length, decoded, 0, decoded.length);
+        return decoded;
     }
 
     @Bean

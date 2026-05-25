@@ -36,6 +36,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		),
 		eng,
 		false,
+		[]string{},
 	)
 
 	return impl

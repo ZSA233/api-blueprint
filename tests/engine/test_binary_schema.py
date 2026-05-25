@@ -13,7 +13,7 @@ VALID_SCHEMA = """
 
 endian: little
 content-type: application/octet-stream
-content-encoding: identity,gzip
+content-encoding: identity,gzip,br
 
 ## header
 
@@ -42,7 +42,7 @@ def test_markdown_binary_schema_parses_strict_heading_tables_and_renders_html() 
 
     assert schema.name == "DemoPacket"
     assert schema.endian == "little"
-    assert schema.content_encoding == ("identity", "gzip")
+    assert schema.content_encoding == ("identity", "gzip", "br")
     assert schema.sections[0].name == "DemoPacketHeader"
     assert schema.sections[1].fields[0].type == "DemoItem"
     assert schema.structs["DemoItem"].fields[1].count == "payload_len"
@@ -51,8 +51,8 @@ def test_markdown_binary_schema_parses_strict_heading_tables_and_renders_html() 
 
 def test_markdown_binary_schema_parses_fenced_metadata_block() -> None:
     fenced_schema = VALID_SCHEMA.replace(
-        "endian: little\ncontent-type: application/octet-stream\ncontent-encoding: identity,gzip",
-        "```yaml\nendian: little\ncontent-type: application/octet-stream\ncontent-encoding: identity,gzip\n```",
+        "endian: little\ncontent-type: application/octet-stream\ncontent-encoding: identity,gzip,br",
+        "```yaml\nendian: little\ncontent-type: application/octet-stream\ncontent-encoding: identity,gzip,br\n```",
     )
 
     schema = parse_binary_schema(fenced_schema, source_path="demo_packet.md")
@@ -60,8 +60,15 @@ def test_markdown_binary_schema_parses_fenced_metadata_block() -> None:
     assert schema.name == "DemoPacket"
     assert schema.endian == "little"
     assert schema.content_type == "application/octet-stream"
-    assert schema.content_encoding == ("identity", "gzip")
+    assert schema.content_encoding == ("identity", "gzip", "br")
     assert schema.sections[0].name == "DemoPacketHeader"
+
+
+def test_markdown_binary_schema_rejects_unknown_content_encoding() -> None:
+    bad_schema = VALID_SCHEMA.replace("content-encoding: identity,gzip,br", "content-encoding: identity,zstd")
+
+    with pytest.raises(BinarySchemaError, match="unsupported content-encoding: zstd"):
+        parse_binary_schema(bad_schema, source_path="bad_encoding.md")
 
 
 def test_markdown_binary_schema_rejects_dynamic_count_without_bound() -> None:

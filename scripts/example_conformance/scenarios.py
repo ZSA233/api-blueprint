@@ -89,10 +89,17 @@ def scenario_registry() -> dict[str, Scenario]:
         ),
         "binary": Scenario(
             name="binary",
-            categories=("binary",),
+            categories=("binary", "content-encoding"),
             clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
             route_ids=("api.binary.post.packet",),
-            description="binary schema body calls",
+            description="binary schema body calls and request content-encoding checks",
+        ),
+        "binary-br": Scenario(
+            name="binary-br",
+            categories=("binary", "content-encoding"),
+            clients=("python",),
+            route_ids=("api.binary.post.packet",),
+            description="binary schema request with registered br stub decoder",
         ),
         "audit-binary": Scenario(
             name="audit-binary",
@@ -275,7 +282,7 @@ def server_supports_scenario(server: str, scenario: Scenario) -> bool:
         return capability.supports_rpc
     if scenario.name == "form":
         return capability.supports_form
-    if scenario.name in {"binary", "audit-binary", "binary-response"}:
+    if scenario.name in {"binary", "binary-br", "audit-binary", "binary-response"}:
         return capability.supports_binary
     if scenario.name in {"media", "media-filename-edge", "media-error"}:
         return capability.supports_media

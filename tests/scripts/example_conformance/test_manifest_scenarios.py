@@ -80,6 +80,7 @@ def test_scenario_registry_exposes_expanded_examples() -> None:
         "enum",
         "map",
         "deprecated",
+        "binary-br",
         "audit-binary",
         "single-channel",
     }
@@ -96,6 +97,7 @@ def test_scenario_registry_exposes_expanded_examples() -> None:
         "api.hello.get.mapenum",
     )
     assert registry["deprecated"].route_ids == ("api.demo.post.postdeprecated",)
+    assert registry["binary-br"].route_ids == ("api.binary.post.packet",)
     assert registry["audit-binary"].route_ids == ("api.binary.post.auditpacket",)
     assert registry["single-channel"].route_ids == ("api.api.channel.ws",)
 
@@ -120,7 +122,7 @@ def test_expanded_scenarios_are_gated_by_server_capabilities() -> None:
         "deprecated",
         "single-channel",
     }
-    binary_names = {"audit-binary"}
+    binary_names = {"binary-br", "audit-binary"}
 
     for name in rpc_names:
         assert scenarios.server_supports_scenario("go", scenarios.scenario_registry()[name]) is True

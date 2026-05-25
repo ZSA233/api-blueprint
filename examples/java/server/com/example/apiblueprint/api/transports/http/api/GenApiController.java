@@ -18,7 +18,6 @@ import com.example.apiblueprint.api.runtime.GenApiServerChannel;
 import com.example.apiblueprint.api.runtime.GenApiServerStream;
 import com.example.apiblueprint.api.runtime.GenApiStreamResponse;
 import com.example.apiblueprint.api.runtime.GenApiToastPayload;
-
 import com.example.apiblueprint.api.runtime.binary.GenApiBinaryBody;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -49,7 +48,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;

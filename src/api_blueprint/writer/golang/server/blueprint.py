@@ -225,6 +225,11 @@ class GolangRouterGroup:
                     "bind_form": view.bind_form,
                     "bind_multipart": view.bind_multipart,
                     "bind_binary": view.bind_binary,
+                    "binary_content_encodings": (
+                        list(view.protocol.request.binary_schema.content_encoding)
+                        if view.protocol.request.binary_schema is not None
+                        else []
+                    ),
                 }
 
     def protos(self) -> Generator[GolangProto, None, None]:

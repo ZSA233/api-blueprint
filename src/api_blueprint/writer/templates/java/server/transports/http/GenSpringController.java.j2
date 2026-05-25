@@ -1,4 +1,5 @@
 {% autoescape false %}{% set channel_routes = group.routes | selectattr("kind", "equalto", "channel") | list -%}
+{% set binary_schema_routes = group.routes | selectattr("binary_schema") | list -%}
 package {{ bp.root_package }}.transports.http.{{ group.package_suffix }};
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -18,11 +19,18 @@ import {{ bp.root_package }}.runtime.GenApiServerChannel;
 import {{ bp.root_package }}.runtime.GenApiServerStream;
 import {{ bp.root_package }}.runtime.GenApiStreamResponse;
 import {{ bp.root_package }}.runtime.GenApiToastPayload;
-{% if group.runtime_types_ref == "GenApiTypes" %}
+{% if group.runtime_types_ref == "GenApiTypes" -%}
 import {{ bp.root_package }}.runtime.GenApiTypes;
-{% endif %}
+{% endif -%}
 import {{ bp.root_package }}.runtime.binary.GenApiBinaryBody;
+{% if binary_schema_routes -%}
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+{% endif -%}
 import java.io.IOException;
+{% if binary_schema_routes -%}
+import java.io.InputStream;
+{% endif -%}
 import java.lang.reflect.Constructor;
 import java.lang.reflect.RecordComponent;
 import java.nio.charset.StandardCharsets;
@@ -36,7 +44,14 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.LinkedHashMap;
+{% if binary_schema_routes -%}
+import java.util.Locale;
+{% endif -%}
 import java.util.Map;
+{% if binary_schema_routes -%}
+import java.util.Set;
+import java.util.zip.GZIPInputStream;
+{% endif -%}
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
@@ -44,6 +59,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
+{% if binary_schema_routes -%}
+import org.springframework.web.bind.annotation.RequestHeader;
+{% endif -%}
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -51,7 +69,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-{% if channel_routes %}
+{% if channel_routes -%}
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -87,7 +105,8 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
     public Object {{ route.method_name }}(
         @RequestParam Map<String, String> queryParams{% if route.json_model %},
         @RequestBody(required = false) {{ writer.schema_type(route.json_model, group) }} json{% elif route.binary_schema or route.binary_model %},
-        @RequestBody(required = false) byte[] binaryBody{% elif route.multipart_model %},
+        @RequestBody(required = false) byte[] binaryBody{% if route.binary_schema %},
+        @RequestHeader(name = HttpHeaders.CONTENT_ENCODING, required = false) String contentEncoding{% endif %}{% elif route.multipart_model %},
         MultipartHttpServletRequest multipartRequest{% endif %}
     ) throws Exception {
 {%- if route.query_model %}
@@ -114,10 +133,16 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
             multipart = multipartBody(multipartRequest, {{ writer.schema_class_literal(route.multipart_model, group) }});
 {%- endif %}
 {%- if route.binary_schema %}
-            binary = {{ group.types_class }}.{{ route.binary_schema_type }}Wire.parse(binaryBody == null ? new byte[0] : binaryBody);
+            binary = {{ group.types_class }}.{{ route.binary_schema_type }}Wire.parse(
+                decodeBinarySchemaBody(binaryBody == null ? new byte[0] : binaryBody, contentEncoding, {{ route.binary_content_encodings_set }})
+            );
 {%- endif %}
         } catch (PayloadTooLargeException error) {
             return payloadTooLargeResponse(error);
+{%- if route.binary_schema %}
+        } catch (UnsupportedContentEncodingException error) {
+            return unsupportedContentEncodingResponse(error);
+{%- endif %}
         } catch (RuntimeException error) {
             return badRequestResponse(error);
         }
@@ -469,6 +494,69 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
         return property == null || property.value().isBlank() ? component.getName() : property.value();
     }
 
+{% if binary_schema_routes %}
+    private byte[] decodeBinarySchemaBody(byte[] body, String contentEncoding, Set<String> allowedContentEncodings) {
+        String encoding = contentEncoding == null || contentEncoding.isBlank()
+            ? "identity"
+            : contentEncoding.trim().toLowerCase(Locale.ROOT);
+        if (!allowedContentEncodings.contains(encoding)) {
+            throw new UnsupportedContentEncodingException("unsupported binary Content-Encoding " + encoding);
+        }
+        if ("identity".equals(encoding)) {
+            if (serverConfig.decompressedBinaryBodyBytes() > 0 && body.length > serverConfig.decompressedBinaryBodyBytes()) {
+                throw new PayloadTooLargeException("binary request body exceeds configured limit");
+            }
+            return body;
+        }
+        byte[] decoded;
+        if ("gzip".equals(encoding)) {
+            try (GZIPInputStream input = new GZIPInputStream(new ByteArrayInputStream(body))) {
+                decoded = readLimitedStream(input, serverConfig.decompressedBinaryBodyBytes());
+            } catch (IOException error) {
+                throw new IllegalArgumentException("invalid gzip request body", error);
+            }
+        } else {
+            GenSpringServerConfig.BinaryContentDecoder decoder = serverConfig.binaryContentDecoders().get(encoding);
+            if (decoder == null) {
+                throw new UnsupportedContentEncodingException("unsupported binary Content-Encoding " + encoding);
+            }
+            try {
+                decoded = decoder.decode(body);
+            } catch (IOException error) {
+                throw new IllegalArgumentException("invalid " + encoding + " request body", error);
+            }
+            if (decoded == null) {
+                throw new IllegalArgumentException(encoding + " decoder returned null");
+            }
+            if (serverConfig.decompressedBinaryBodyBytes() > 0 && decoded.length > serverConfig.decompressedBinaryBodyBytes()) {
+                throw new PayloadTooLargeException("decompressed binary request body exceeds configured limit");
+            }
+        }
+        return decoded;
+    }
+
+    private byte[] readLimitedStream(InputStream input, long maxBytes) throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+        long total = 0;
+        while (true) {
+            int read = input.read(buffer);
+            if (read < 0) {
+                break;
+            }
+            if (read == 0) {
+                continue;
+            }
+            total += read;
+            if (maxBytes > 0 && total > maxBytes) {
+                throw new PayloadTooLargeException("decompressed binary request body exceeds configured limit");
+            }
+            output.write(buffer, 0, read);
+        }
+        return output.toByteArray();
+    }
+
+{% endif %}
     private ResponseEntity<?> rawResponse(String kind, String mediaType, String filename, Object result) throws IOException {
         if (result instanceof GenApiRawResponse raw) {
             ResponseEntity.BodyBuilder builder = rawResponseBuilder(kind, raw.contentType(), raw.filename().isBlank() ? filename : raw.filename());
@@ -535,12 +623,26 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(Map.of("detail", "payload too large"));
     }
 
+{% if binary_schema_routes %}
+    private ResponseEntity<Map<String, Object>> unsupportedContentEncodingResponse(Exception error) {
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(Map.of("detail", "unsupported content encoding"));
+    }
+
+{% endif %}
     private static final class PayloadTooLargeException extends RuntimeException {
         PayloadTooLargeException(String message) {
             super(message);
         }
     }
 
+{% if binary_schema_routes %}
+    private static final class UnsupportedContentEncodingException extends RuntimeException {
+        UnsupportedContentEncodingException(String message) {
+            super(message);
+        }
+    }
+
+{% endif %}
     private Object wrapApiErrorResponse(GenApiResponseEnvelope envelopeSpec, GenApiError error, String routeId) {
         GenApiErrorPayload payload = normalizeApiErrorPayload(error.payload(), routeId);
         if ("none".equals(envelopeSpec.kind())) {

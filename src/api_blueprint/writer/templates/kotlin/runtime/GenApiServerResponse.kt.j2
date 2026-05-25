@@ -9,6 +9,8 @@ import java.io.InputStream
 
 private const val API_STREAM_CHUNK_SIZE: Int = 8192
 
+public typealias ApiBinaryContentDecoder = (ByteArray) -> ByteArray
+
 public data class ApiServerResponse(
     public val statusCode: Int,
     public val body: String,
@@ -19,6 +21,8 @@ public data class ApiServerResponse(
 public data class ApiServerConfig(
     public val multipartSingleFileMaxBytes: Long = 32L * 1024L * 1024L,
     public val binaryBodyMaxBytes: Long = 16L * 1024L * 1024L,
+    public val decompressedBinaryBodyMaxBytes: Long = 16L * 1024L * 1024L,
+    public val binaryContentDecoders: Map<String, ApiBinaryContentDecoder> = emptyMap(),
     public val websocketMessageMaxBytes: Long = 1L * 1024L * 1024L,
 )
 

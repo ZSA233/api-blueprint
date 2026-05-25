@@ -34,7 +34,7 @@ with bp.group("/binary") as views:
 ```yaml
 endian: little
 content-type: application/octet-stream
-content-encoding: identity,gzip
+content-encoding: identity,gzip,br
 ```
 
 ## header
@@ -187,9 +187,9 @@ Go / TypeScript / Flutter / Kotlin / Python / Java clients generate, from the sa
 
 For binary schema responses, Go / Python / Kotlin / Java server adapters encode typed packet return values as HTTP bytes, and Go / TypeScript / Flutter / Kotlin / Java / Python clients decode successful HTTP bytes into typed packets. Wails/gRPC do not inherit HTTP raw response semantics; those routes fail `api-gen check` with an explicit unsupported contract error that points to transport-native bytes / chunk modeling.
 
-Java server controllers parse `.REQ_BINARY_SCHEMA(...)` request bytes into the generated typed packet before calling the generated service interface. This is still protocol-contract code; HTTP content-encoding orchestration remains owned by the transport/runtime layer.
+Go / Python / Kotlin / Java server adapters parse `.REQ_BINARY_SCHEMA(...)` request bytes into the generated typed packet before calling the generated service interface.
 
-HTTP adapters use the route binary schema content type, falling back to `application/octet-stream`; server adapters accept `identity` or `gzip` according to the schema.
+HTTP adapters use the route binary schema content type, falling back to `application/octet-stream`. For request bodies, `content-encoding` is a route whitelist for `.REQ_BINARY_SCHEMA(...)`: an empty header is `identity`, `gzip` is decoded by built-in server helpers, and extensions such as `br` require an app-registered server decoder. Generated clients still send identity bodies unless caller code explicitly provides compressed bytes and the matching `Content-Encoding` header.
 
 ## Check And Inspect
 

@@ -83,6 +83,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		),
 		eng,
 		{{ register.raw_response | tojson }},
+		[]string{{ "{" }}{% for encoding in register.binary_content_encodings %}{{ encoding | tojson }}{% if not loop.last %}, {% endif %}{% endfor %}{{ "}" }},
 	)
 	{% endif %}
 {% endfor %}

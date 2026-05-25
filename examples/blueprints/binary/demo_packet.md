@@ -3,7 +3,7 @@
 ```yaml
 endian: little
 content-type: application/octet-stream
-content-encoding: identity,gzip
+content-encoding: identity,gzip,br
 ```
 
 ## header

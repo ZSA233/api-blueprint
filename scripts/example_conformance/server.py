@@ -39,12 +39,14 @@ def reserve_local_addr() -> str:
     return f"{host}:{port}"
 
 
-def start_go_server(server_dir: Path) -> ServerProcess:
+def start_go_server(server_dir: Path, *, extra_env: dict[str, str] | None = None) -> ServerProcess:
     addr = reserve_local_addr()
     output_path = server_dir / ".conformance-server.log"
     output = output_path.open("w", encoding="utf-8")
     env = os.environ.copy()
     env["API_BLUEPRINT_EXAMPLE_ADDR"] = addr
+    if extra_env:
+        env.update(extra_env)
     process = subprocess.Popen(
         ["go", "run", "."],
         cwd=server_dir,
@@ -65,19 +67,28 @@ def start_go_server(server_dir: Path) -> ServerProcess:
     return server
 
 
-def start_server(server_name: str, blueprint: example_validation.BlueprintExampleWorkspace) -> ServerProcess:
+def start_server(
+    server_name: str,
+    blueprint: example_validation.BlueprintExampleWorkspace,
+    *,
+    extra_env: dict[str, str] | None = None,
+) -> ServerProcess:
     if server_name == "go":
-        return start_go_server(blueprint.golang_server_dir)
+        return start_go_server(blueprint.golang_server_dir, extra_env=extra_env)
     if server_name == "java":
-        return start_java_server(blueprint)
+        return start_java_server(blueprint, extra_env=extra_env)
     if server_name == "kotlin":
-        return start_kotlin_server(blueprint)
+        return start_kotlin_server(blueprint, extra_env=extra_env)
     if server_name == "python":
-        return start_python_server(blueprint)
+        return start_python_server(blueprint, extra_env=extra_env)
     raise ValueError(f"unknown conformance server: {server_name}")
 
 
-def start_java_server(blueprint: example_validation.BlueprintExampleWorkspace) -> ServerProcess:
+def start_java_server(
+    blueprint: example_validation.BlueprintExampleWorkspace,
+    *,
+    extra_env: dict[str, str] | None = None,
+) -> ServerProcess:
     gradle_bin = example_validation.resolve_gradle_bin()
     if gradle_bin is None:
         raise RuntimeError("Gradle is required for Java conformance server")
@@ -106,6 +117,8 @@ def start_java_server(blueprint: example_validation.BlueprintExampleWorkspace) -
         output = output_path.open("w", encoding="utf-8")
         env = os.environ.copy()
         env["API_BLUEPRINT_EXAMPLE_ADDR"] = addr
+        if extra_env:
+            env.update(extra_env)
         process = subprocess.Popen(
             [str(executable)],
             cwd=project_dir,
@@ -129,7 +142,11 @@ def start_java_server(blueprint: example_validation.BlueprintExampleWorkspace) -
         raise
 
 
-def start_kotlin_server(blueprint: example_validation.BlueprintExampleWorkspace) -> ServerProcess:
+def start_kotlin_server(
+    blueprint: example_validation.BlueprintExampleWorkspace,
+    *,
+    extra_env: dict[str, str] | None = None,
+) -> ServerProcess:
     gradle_bin = example_validation.resolve_gradle_bin()
     if gradle_bin is None:
         raise RuntimeError("Gradle is required for Kotlin conformance server")
@@ -157,6 +174,8 @@ def start_kotlin_server(blueprint: example_validation.BlueprintExampleWorkspace)
         output = output_path.open("w", encoding="utf-8")
         env = os.environ.copy()
         env["API_BLUEPRINT_EXAMPLE_ADDR"] = addr
+        if extra_env:
+            env.update(extra_env)
         process = subprocess.Popen(
             [str(executable)],
             cwd=project_dir,
@@ -180,13 +199,19 @@ def start_kotlin_server(blueprint: example_validation.BlueprintExampleWorkspace)
         raise
 
 
-def start_python_server(blueprint: example_validation.BlueprintExampleWorkspace) -> ServerProcess:
+def start_python_server(
+    blueprint: example_validation.BlueprintExampleWorkspace,
+    *,
+    extra_env: dict[str, str] | None = None,
+) -> ServerProcess:
     addr = reserve_local_addr()
     output_path = blueprint.python_dir / ".conformance-server.log"
     output = output_path.open("w", encoding="utf-8")
     env = os.environ.copy()
     env["API_BLUEPRINT_EXAMPLE_ADDR"] = addr
     env["PYTHONPATH"] = str(blueprint.python_dir / "server") + os.pathsep + env.get("PYTHONPATH", "")
+    if extra_env:
+        env.update(extra_env)
     process = subprocess.Popen(
         [sys.executable, "conformance/server_app.py"],
         cwd=blueprint.python_dir,

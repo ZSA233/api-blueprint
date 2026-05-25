@@ -18,9 +18,7 @@ import com.example.apiblueprint.alt.runtime.GenApiServerChannel;
 import com.example.apiblueprint.alt.runtime.GenApiServerStream;
 import com.example.apiblueprint.alt.runtime.GenApiStreamResponse;
 import com.example.apiblueprint.alt.runtime.GenApiToastPayload;
-
 import com.example.apiblueprint.alt.runtime.GenApiTypes;
-
 import com.example.apiblueprint.alt.runtime.binary.GenApiBinaryBody;
 import java.io.IOException;
 import java.lang.reflect.Constructor;

@@ -124,6 +124,12 @@ class KotlinRoute:
         return f"{self.binary_schema.name}Wire"
 
     @property
+    def binary_content_encodings_set(self) -> str:
+        encodings = tuple(self.binary_schema.content_encoding or ("identity",)) if self.binary_schema is not None else ("identity",)
+        values = ", ".join(_kotlin_string(encoding) for encoding in encodings)
+        return f"setOf({values})"
+
+    @property
     def has_binary_schema(self) -> bool:
         return self.binary_schema is not None
 

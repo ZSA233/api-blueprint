@@ -133,6 +133,15 @@ class JavaRoute:
         return JavaBinarySchema(self.binary_schema).name
 
     @property
+    def binary_content_encodings_set(self) -> str:
+        if self.binary_schema is None:
+            return "Set.of(\"identity\")"
+        raw_encodings = self.binary_schema.get("content_encoding")
+        encodings = raw_encodings if isinstance(raw_encodings, list) and raw_encodings else ["identity"]
+        values = ", ".join(_java_string(str(encoding)) for encoding in encodings)
+        return f"Set.of({values})"
+
+    @property
     def response_kind(self) -> str:
         return str(self.response.get("kind") or "json")
 

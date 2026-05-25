@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import asyncio
+import gzip
+import io
 import json
 from dataclasses import asdict, is_dataclass
 from enum import Enum
@@ -92,9 +94,14 @@ def create_binary_router(
     async def binary_packet(request: Request) -> Any:
         service = service_impl
         query_raw = _query_params(request)
-        binary = await _body(request, api_config.body_max_bytes)
+        binary_body = await _binary_body(
+            request,
+            api_config,
+            allowed_content_encodings=('identity', 'gzip', 'br'),
+        )
         try:
             query = api_binary_types.PacketQuery.from_value(query_raw, "query")
+            binary = api_binary_types.DemoPacketWire.from_bytes(binary_body)
 
         except (TypeError, ValueError) as error:
             return _bad_request_response(error)
@@ -115,9 +122,14 @@ def create_binary_router(
     async def binary_audit_packet(request: Request) -> Any:
         service = service_impl
         query_raw = _query_params(request)
-        binary = await _body(request, api_config.body_max_bytes)
+        binary_body = await _binary_body(
+            request,
+            api_config,
+            allowed_content_encodings=('identity',),
+        )
         try:
             query = api_binary_types.AuditPacketQuery.from_value(query_raw, "query")
+            binary = api_binary_types.AuditPacketWire.from_bytes(binary_body)
 
         except (TypeError, ValueError) as error:
             return _bad_request_response(error)
@@ -769,6 +781,68 @@ async def _multipart_body(request: Request, config: ApiServerConfig) -> dict[str
     return result
 
 
+async def _binary_body(
+    request: Request,
+    config: ApiServerConfig,
+    *,
+    allowed_content_encodings: tuple[str, ...],
+) -> bytes:
+    encoding = _request_content_encoding(request)
+    allowed = {item.strip().lower() for item in allowed_content_encodings if item.strip()}
+    if not allowed:
+        allowed = {"identity"}
+    if encoding not in allowed:
+        raise UnsupportedContentEncodingError(f"unsupported binary Content-Encoding: {encoding}")
+
+    encoded = await _body(request, config.body_max_bytes)
+    if encoding == "identity":
+        return encoded
+    if encoding == "gzip":
+        try:
+            decoded = _gzip_decode(encoded, config.decompressed_binary_max_bytes)
+        except OSError as error:
+            raise HTTPException(status_code=400, detail="invalid gzip request body") from error
+    else:
+        decoder = config.binary_content_decoders.get(encoding)
+        if decoder is None:
+            raise UnsupportedContentEncodingError(f"unsupported binary Content-Encoding: {encoding}")
+        try:
+            decoded = decoder(encoded)
+        except Exception as error:
+            raise HTTPException(status_code=400, detail=f"invalid {encoding} request body") from error
+        if not isinstance(decoded, (bytes, bytearray, memoryview)):
+            raise HTTPException(status_code=400, detail=f"{encoding} decoder did not return bytes")
+        decoded = bytes(decoded)
+    if config.decompressed_binary_max_bytes > 0 and len(decoded) > config.decompressed_binary_max_bytes:
+        raise PayloadTooLargeError("decompressed binary request body exceeds configured limit")
+    return decoded
+
+
+def _gzip_decode(encoded: bytes, max_bytes: int) -> bytes:
+    with gzip.GzipFile(fileobj=io.BytesIO(encoded), mode="rb") as source:
+        return _read_limited_binary_stream(source, max_bytes, "decompressed binary request body")
+
+
+def _read_limited_binary_stream(source: Any, max_bytes: int, label: str) -> bytes:
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = source.read(8192)
+        if not chunk:
+            break
+        total += len(chunk)
+        if max_bytes > 0 and total > max_bytes:
+            raise PayloadTooLargeError(f"{label} exceeds configured limit")
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+def _request_content_encoding(request: Request) -> str:
+    encoding = request.headers.get("content-encoding", "")
+    encoding = encoding.strip().lower()
+    return encoding or "identity"
+
+
 def _ensure_content_length(request: Request, max_bytes: int) -> None:
     content_length = request.headers.get("content-length")
     if content_length is None:
@@ -1028,3 +1102,8 @@ class _WebSocketClosed(Exception):
 class PayloadTooLargeError(HTTPException):
     def __init__(self, detail: str = "payload too large") -> None:
         super().__init__(status_code=413, detail=detail)
+
+
+class UnsupportedContentEncodingError(HTTPException):
+    def __init__(self, detail: str = "unsupported content encoding") -> None:
+        super().__init__(status_code=415, detail=detail)

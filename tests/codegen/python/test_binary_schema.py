@@ -3,12 +3,13 @@ from __future__ import annotations
 from .helpers import *
 
 
-def test_python_server_binary_schema_service_contract_uses_raw_bytes(tmp_path: Path):
+def test_python_server_binary_schema_service_contract_uses_typed_packet(tmp_path: Path):
     schema = parse_binary_schema(
         """
 # packet DemoPacket
 
 endian: little
+content-encoding: identity,gzip,br
 
 ## header
 
@@ -33,12 +34,93 @@ endian: little
     adapter_text = (
         output_dir / "api_blueprint_generated" / "api" / "transports" / "http" / "gen_server.py"
     ).read_text(encoding="utf-8")
+    runtime_text = (
+        output_dir / "api_blueprint_generated" / "api" / "runtime" / "gen_server.py"
+    ).read_text(encoding="utf-8")
 
-    assert "binary: bytes | None" in service_text
+    assert "binary: DemoPacket" in service_text
     assert "binary: bytes | None = None" not in service_text
     assert "binary: dict[str, Any] | None = None" not in service_text
-    assert "binary = await _body(request, api_config.body_max_bytes)" in adapter_text
+    assert "binary_body = await _binary_body(" in adapter_text
+    assert "binary = api_binary_types.DemoPacketWire.from_bytes(binary_body)" in adapter_text
+    assert "allowed_content_encodings=('identity', 'gzip', 'br')" in adapter_text
+    assert "_gzip_decode(encoded, config.decompressed_binary_max_bytes)" in adapter_text
+    assert "_read_limited_binary_stream(source, max_bytes" in adapter_text
+    assert "UnsupportedContentEncodingError" in adapter_text
+    assert "decompressed_binary_max_bytes: int = 16 * 1024 * 1024" in runtime_text
+    assert "binary_content_decoders: Mapping[str, Callable[[bytes], bytes]]" in runtime_text
     _compile_generated_files(output_dir)
+    asyncio.run(_assert_python_server_br_stub_decoder(output_dir))
+
+
+async def _assert_python_server_br_stub_decoder(output_dir: Path) -> None:
+    module_prefix = "api_blueprint_generated"
+    for name in list(sys.modules):
+        if name == module_prefix or name.startswith(module_prefix + "."):
+            del sys.modules[name]
+    sys.path.insert(0, str(output_dir))
+    try:
+        from fastapi import FastAPI
+
+        gen_server = importlib.import_module("api_blueprint_generated.api.transports.http.gen_server")
+        runtime_server = importlib.import_module("api_blueprint_generated.api.runtime.server")
+        gen_types = importlib.import_module("api_blueprint_generated.api.routes.api.binary.gen_types")
+
+        class BinaryService:
+            async def packet(self, binary):
+                assert isinstance(binary, gen_types.DemoPacket)
+                return gen_types.PacketResponse(status="decoded")
+
+        default_app = FastAPI()
+        default_app.include_router(gen_server.create_router(binary_service=BinaryService()))
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=default_app),
+            base_url="http://testserver",
+        ) as client:
+            response = await client.post(
+                "/api/binary/packet",
+                content=b"BRSTUB\x00ABP1",
+                headers={"Content-Encoding": "br"},
+            )
+            assert response.status_code == 415, response.text
+
+        def decode_br_stub(body: bytes) -> bytes:
+            prefix = b"BRSTUB\x00"
+            if not body.startswith(prefix):
+                raise ValueError("invalid br stub payload")
+            return body[len(prefix):]
+
+        registered_app = FastAPI()
+        registered_app.include_router(
+            gen_server.create_router(
+                binary_service=BinaryService(),
+                config=runtime_server.ApiServerConfig(binary_content_decoders={"br": decode_br_stub}),
+            )
+        )
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=registered_app),
+            base_url="http://testserver",
+        ) as client:
+            response = await client.post(
+                "/api/binary/packet",
+                content=b"BRSTUB\x00ABP1",
+                headers={"Content-Encoding": "br"},
+            )
+            assert response.status_code == 200, response.text
+            assert response.json()["data"]["status"] == "decoded"
+
+            response = await client.post(
+                "/api/binary/packet",
+                content=b"ABP1",
+                headers={"Content-Encoding": "br"},
+            )
+            assert response.status_code == 400, response.text
+    finally:
+        sys.path.remove(str(output_dir))
+        for name in list(sys.modules):
+            if name == module_prefix or name.startswith(module_prefix + "."):
+                del sys.modules[name]
+
 
 def test_python_codegen_generates_binary_schema_response_encoder_and_decoder(tmp_path: Path):
     schema = parse_binary_schema(

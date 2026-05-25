@@ -2,15 +2,21 @@
 
 package httptransport
 
-import "sync"
+import (
+	"io"
+	"sync"
+)
 
 const mib int64 = 1024 * 1024
+
+type BinaryContentDecoder func(io.Reader) (io.ReadCloser, error)
 
 type ServerConfig struct {
 	MaxRequestBodyBytes         int64
 	MultipartMemoryBytes        int64
 	MultipartSingleFileBytes    int64
 	DecompressedBinaryBytes     int64
+	BinaryContentDecoders       map[string]BinaryContentDecoder
 	WebSocketOriginPatterns     []string
 	WebSocketInsecureSkipVerify bool
 	WebSocketEnableCompression  bool
@@ -22,6 +28,7 @@ func DefaultServerConfig() ServerConfig {
 		MultipartMemoryBytes:        8 * mib,
 		MultipartSingleFileBytes:    32 * mib,
 		DecompressedBinaryBytes:     16 * mib,
+		BinaryContentDecoders:       nil,
 		WebSocketOriginPatterns:     nil,
 		WebSocketInsecureSkipVerify: false,
 		WebSocketEnableCompression:  false,
@@ -58,6 +65,13 @@ func normalizeServerConfig(config ServerConfig) ServerConfig {
 	}
 	if config.DecompressedBinaryBytes <= 0 {
 		config.DecompressedBinaryBytes = defaults.DecompressedBinaryBytes
+	}
+	if config.BinaryContentDecoders != nil {
+		decoders := make(map[string]BinaryContentDecoder, len(config.BinaryContentDecoders))
+		for key, decoder := range config.BinaryContentDecoders {
+			decoders[key] = decoder
+		}
+		config.BinaryContentDecoders = decoders
 	}
 	if config.WebSocketOriginPatterns != nil {
 		config.WebSocketOriginPatterns = append([]string(nil), config.WebSocketOriginPatterns...)

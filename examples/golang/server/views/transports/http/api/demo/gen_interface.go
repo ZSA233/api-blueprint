@@ -36,6 +36,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		),
 		eng,
 		false,
+		[]string{},
 	)
 
 	httptransport.POST(
@@ -59,6 +60,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		),
 		eng,
 		false,
+		[]string{},
 	)
 
 	httptransport.POST(
@@ -82,6 +84,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		),
 		eng,
 		false,
+		[]string{},
 	)
 
 	httptransport.GET(
@@ -105,6 +108,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		),
 		eng,
 		false,
+		[]string{},
 	)
 
 	httptransport.PUT(
@@ -128,6 +132,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		),
 		eng,
 		false,
+		[]string{},
 	)
 
 	httptransport.DELETE(
@@ -151,6 +156,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		),
 		eng,
 		false,
+		[]string{},
 	)
 
 	httptransport.STREAM(
@@ -220,6 +226,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		),
 		eng,
 		false,
+		[]string{},
 	)
 
 	httptransport.POST(
@@ -243,6 +250,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		),
 		eng,
 		true,
+		[]string{},
 	)
 
 	httptransport.POST(
@@ -266,6 +274,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		),
 		eng,
 		false,
+		[]string{},
 	)
 
 	httptransport.GET(
@@ -289,6 +298,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		),
 		eng,
 		false,
+		[]string{},
 	)
 
 	return impl

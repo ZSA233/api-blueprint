@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterable, BinaryIO, Generic, Iterable, Mapping, Protocol, TypeVar
+from typing import Any, AsyncIterable, BinaryIO, Callable, Generic, Iterable, Mapping, Protocol, TypeVar
 
 
 RecvT = TypeVar("RecvT")
@@ -17,10 +17,12 @@ ApiUploadFile = bytes | bytearray | memoryview | BinaryIO | tuple[str, bytes] | 
 @dataclass(frozen=True)
 class ApiServerConfig:
     body_max_bytes: int = 16 * 1024 * 1024
+    decompressed_binary_max_bytes: int = 16 * 1024 * 1024
     multipart_file_max_bytes: int = 32 * 1024 * 1024
     multipart_part_max_bytes: int = 32 * 1024 * 1024
     sse_queue_capacity: int = 256
     websocket_message_max_bytes: int = 1 * 1024 * 1024
+    binary_content_decoders: Mapping[str, Callable[[bytes], bytes]] = field(default_factory=dict)
 
 
 @dataclass

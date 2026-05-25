@@ -238,6 +238,12 @@ class PythonRoute:
         return f"{self.binary_schema.name}Wire"
 
     @property
+    def binary_content_encodings_literal(self) -> str:
+        if self.binary_schema is None:
+            return repr(("identity",))
+        return repr(tuple(self.binary_schema.content_encoding or ("identity",)))
+
+    @property
     def response_binary_wire_name(self) -> str | None:
         if self.response_binary_schema is None:
             return None
@@ -267,7 +273,7 @@ class PythonRoute:
 
     @property
     def has_decoded_params(self) -> bool:
-        return any(param.type is not None for param in self.params)
+        return self.has_binary_schema or any(param.type is not None for param in self.params)
 
     def _request_params(self) -> list[PythonRequestParam]:
         params: list[PythonRequestParam] = []
@@ -285,7 +291,7 @@ class PythonRoute:
                     "binary",
                     "binary",
                     f"{self.binary_schema.name} | ApiBinaryBody",
-                    "bytes | None",
+                    self.binary_schema.name,
                     None,
                     type=None,
                 )

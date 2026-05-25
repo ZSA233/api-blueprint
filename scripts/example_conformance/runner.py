@@ -127,70 +127,93 @@ def _run_against_workspace(
     selected_scenarios: tuple[scenarios.Scenario, ...],
 ) -> None:
     for server_name in server_names:
-        reporter.print_group(server_name)
-        active_server = reporter.run_sub_stage(
-            "server/setup",
-            lambda server_name=server_name: server.start_server(server_name, conf_workspace.blueprint),
-            success_detail=lambda active: active.base_url,
-        )
-        try:
-            _run_server_safety_scenarios(active_server.base_url, server_name, selected_scenarios)
-            client_selected_scenarios = tuple(
-                scenario for scenario in selected_scenarios if scenario.clients != ("server",)
+        for server_label, server_env, server_scenarios in _server_scenario_groups(selected_scenarios):
+            reporter.print_group(server_name if server_label == "default" else f"{server_name} [{server_label}]")
+            active_server = reporter.run_sub_stage(
+                "server/setup",
+                lambda server_name=server_name, server_env=server_env: server.start_server(
+                    server_name,
+                    conf_workspace.blueprint,
+                    extra_env=server_env,
+                ),
+                success_detail=lambda active: active.base_url,
             )
-            for client in clients:
-                if not client_selected_scenarios:
-                    continue
-                client_scenarios = scenarios.runnable_scenarios_for_client(client, client_selected_scenarios)
-                unsupported_by_server = tuple(
-                    scenario for scenario in client_scenarios if not scenarios.server_supports_scenario(server_name, scenario)
+            try:
+                _run_server_safety_scenarios(active_server.base_url, server_name, server_scenarios)
+                client_selected_scenarios = tuple(
+                    scenario for scenario in server_scenarios if scenario.clients != ("server",)
                 )
-                client_scenarios = tuple(
-                    scenario for scenario in client_scenarios if scenarios.server_supports_scenario(server_name, scenario)
-                )
-                if unsupported_by_server:
-                    reporter.print_skipped(
-                        client,
-                        "no runnable scenarios for server "
-                        + server_name
-                        + ": "
-                        + ",".join(scenario.name for scenario in unsupported_by_server),
+                for client in clients:
+                    if not client_selected_scenarios:
+                        continue
+                    client_scenarios = scenarios.runnable_scenarios_for_client(client, client_selected_scenarios)
+                    unsupported_by_server = tuple(
+                        scenario for scenario in client_scenarios if not scenarios.server_supports_scenario(server_name, scenario)
                     )
-                if unsupported_by_server and not client_scenarios:
-                    continue
-                if not client_scenarios:
-                    reporter.print_skipped(
-                        client,
-                        "no runnable scenarios for client",
+                    client_scenarios = tuple(
+                        scenario for scenario in client_scenarios if scenarios.server_supports_scenario(server_name, scenario)
                     )
-                    continue
-                reporter.print_group(f"  {client}")
-                prepared_runner = _run_client_stage(
-                    f"{client}/setup",
-                    lambda client=client: _prepare_client_runner(conf_workspace.blueprint, client),
-                )
-                try:
-                    for scenario in client_scenarios:
-                        _run_client_stage(
-                            f"{client}/{scenario.name}",
-                            lambda scenario=scenario, prepared_runner=prepared_runner: prepared_runner.run(
-                                active_server.base_url,
-                                scenario.name,
-                            ),
+                    if unsupported_by_server:
+                        reporter.print_skipped(
+                            client,
+                            "no runnable scenarios for server "
+                            + server_name
+                            + ": "
+                            + ",".join(scenario.name for scenario in unsupported_by_server),
                         )
-                finally:
-                    prepared_runner.close()
-        except Exception:
-            _replay_server_log(server_name, active_server.output_path)
-            raise
-        finally:
-            active_server.stop()
-            server.cleanup_server_log(active_server.output_path)
+                    if unsupported_by_server and not client_scenarios:
+                        continue
+                    if not client_scenarios:
+                        reporter.print_skipped(
+                            client,
+                            "no runnable scenarios for client",
+                        )
+                        continue
+                    reporter.print_group(f"  {client}")
+                    prepared_runner = _run_client_stage(
+                        f"{client}/setup",
+                        lambda client=client: _prepare_client_runner(conf_workspace.blueprint, client),
+                    )
+                    try:
+                        for scenario in client_scenarios:
+                            _run_client_stage(
+                                f"{client}/{scenario.name}",
+                                lambda scenario=scenario, prepared_runner=prepared_runner: prepared_runner.run(
+                                    active_server.base_url,
+                                    scenario.name,
+                                ),
+                            )
+                    finally:
+                        prepared_runner.close()
+            except Exception:
+                _replay_server_log(server_name, active_server.output_path)
+                raise
+            finally:
+                active_server.stop()
+                server.cleanup_server_log(active_server.output_path)
     reporter.print_summary(
         server=",".join(server_names),
         clients=clients,
         scenarios=tuple(scenario.name for scenario in selected_scenarios),
     )
+
+
+def _server_scenario_groups(
+    selected_scenarios: tuple[scenarios.Scenario, ...],
+) -> tuple[tuple[str, dict[str, str], tuple[scenarios.Scenario, ...]], ...]:
+    default_scenarios: list[scenarios.Scenario] = []
+    br_stub_scenarios: list[scenarios.Scenario] = []
+    for scenario in selected_scenarios:
+        if scenario.name == "binary-br":
+            br_stub_scenarios.append(scenario)
+        else:
+            default_scenarios.append(scenario)
+    groups: list[tuple[str, dict[str, str], tuple[scenarios.Scenario, ...]]] = []
+    if default_scenarios:
+        groups.append(("default", {}, tuple(default_scenarios)))
+    if br_stub_scenarios:
+        groups.append(("br-stub", {"API_BLUEPRINT_ENABLE_BR_STUB": "1"}, tuple(br_stub_scenarios)))
+    return tuple(groups)
 
 
 def _run_server_safety_scenarios(
