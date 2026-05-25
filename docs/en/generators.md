@@ -58,7 +58,7 @@ Go route core is generated under `<out_dir>/routes/<go-root-segment>/**`, provid
 
 `providers` is a global transport-neutral runtime under the generated package root and is not split per blueprint root. TypeScript's per-root `runtime` mainly isolates model and client names; it is not the same responsibility as Go provider hooks.
 
-When a provider implementation must vary by root, route, or transport, do not parse the request path. The generator writes `RouteInfo` into every route executor and exposes it through `Context.Route` and `ProviderSpec.Route`:
+When a provider implementation must vary by root, route, or transport, do not parse the request path. The generator writes `RouteInfo` into every route executor and exposes it through `Context.Route` and `ProviderSpec.Route`. HTTP-only route metadata is grouped under `RouteInfo.HTTP`, including the binary request `Content-Encoding` whitelist, the `HTTP_RAW_RESPONSE()` manual response flag, and the file response default download name:
 
 ```go
 providers.RegisterProviderFactory(providers.PROV_RSP, func(spec providers.ProviderSpec) providers.Provider {

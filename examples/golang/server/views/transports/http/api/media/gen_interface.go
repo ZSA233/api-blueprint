@@ -29,14 +29,20 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Methods:   []string{"POST"},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope(""),
-				Filename:  "",
+				HTTP: sharedprovider.HTTPRouteInfo{
+					Request: sharedprovider.HTTPRequestInfo{
+						BinaryContentEncodings: []string{},
+					},
+					Response: sharedprovider.HTTPResponseInfo{
+						ManualResponse:  false,
+						DefaultFilename: "",
+					},
+				},
 			},
 			"req=M|auth|handle|rsp=bytes@CodeMessageDataEnvelope",
 			impl.MediaPreview,
 		),
 		eng,
-		false,
-		[]string{},
 	)
 
 	httptransport.GET(
@@ -53,14 +59,20 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Methods:   []string{"GET"},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope(""),
-				Filename:  "",
+				HTTP: sharedprovider.HTTPRouteInfo{
+					Request: sharedprovider.HTTPRequestInfo{
+						BinaryContentEncodings: []string{},
+					},
+					Response: sharedprovider.HTTPResponseInfo{
+						ManualResponse:  false,
+						DefaultFilename: "",
+					},
+				},
 			},
 			"req|auth|handle|rsp=bytes@CodeMessageDataEnvelope",
 			impl.MediaFrame,
 		),
 		eng,
-		false,
-		[]string{},
 	)
 
 	httptransport.GET(
@@ -77,14 +89,20 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Methods:   []string{"GET"},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope(""),
-				Filename:  "media-report.xlsx",
+				HTTP: sharedprovider.HTTPRouteInfo{
+					Request: sharedprovider.HTTPRequestInfo{
+						BinaryContentEncodings: []string{},
+					},
+					Response: sharedprovider.HTTPResponseInfo{
+						ManualResponse:  false,
+						DefaultFilename: "media-report.xlsx",
+					},
+				},
 			},
 			"req|auth|handle|rsp=file@CodeMessageDataEnvelope",
 			impl.MediaDownload,
 		),
 		eng,
-		false,
-		[]string{},
 	)
 
 	httptransport.GET(
@@ -101,14 +119,20 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Methods:   []string{"GET"},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope(""),
-				Filename:  "media-report.xlsx",
+				HTTP: sharedprovider.HTTPRouteInfo{
+					Request: sharedprovider.HTTPRequestInfo{
+						BinaryContentEncodings: []string{},
+					},
+					Response: sharedprovider.HTTPResponseInfo{
+						ManualResponse:  false,
+						DefaultFilename: "media-report.xlsx",
+					},
+				},
 			},
 			"req|auth|handle|rsp=file@CodeMessageDataEnvelope",
 			impl.MediaDownloadDynamic,
 		),
 		eng,
-		false,
-		[]string{},
 	)
 
 	httptransport.GET(
@@ -125,14 +149,20 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Methods:   []string{"GET"},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope(""),
-				Filename:  "fallback-report.xlsx",
+				HTTP: sharedprovider.HTTPRouteInfo{
+					Request: sharedprovider.HTTPRequestInfo{
+						BinaryContentEncodings: []string{},
+					},
+					Response: sharedprovider.HTTPResponseInfo{
+						ManualResponse:  false,
+						DefaultFilename: "fallback-report.xlsx",
+					},
+				},
 			},
 			"req|auth|handle|rsp=file@CodeMessageDataEnvelope",
 			impl.MediaDownloadFilenameEdge,
 		),
 		eng,
-		false,
-		[]string{},
 	)
 
 	httptransport.GET(
@@ -149,14 +179,20 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Methods:   []string{"GET"},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope(""),
-				Filename:  "",
+				HTTP: sharedprovider.HTTPRouteInfo{
+					Request: sharedprovider.HTTPRequestInfo{
+						BinaryContentEncodings: []string{},
+					},
+					Response: sharedprovider.HTTPResponseInfo{
+						ManualResponse:  false,
+						DefaultFilename: "",
+					},
+				},
 			},
 			"req=Q|auth|handle|rsp=bytes@CodeMessageDataEnvelope",
 			impl.MediaErrorFrame,
 		),
 		eng,
-		false,
-		[]string{},
 	)
 
 	httptransport.GET(
@@ -173,14 +209,20 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Methods:   []string{"GET"},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope(""),
-				Filename:  "",
+				HTTP: sharedprovider.HTTPRouteInfo{
+					Request: sharedprovider.HTTPRequestInfo{
+						BinaryContentEncodings: []string{},
+					},
+					Response: sharedprovider.HTTPResponseInfo{
+						ManualResponse:  false,
+						DefaultFilename: "",
+					},
+				},
 			},
 			"req|auth|handle|rsp=byte_stream@CodeMessageDataEnvelope",
 			impl.MediaMjpeg,
 		),
 		eng,
-		false,
-		[]string{},
 	)
 
 	return impl

@@ -56,7 +56,7 @@ func requireSessionScope(route provider.RouteInfo) error {
 func bindRequest[Q, B, P any](
 	ginCtx *gin.Context,
 	reqProvider *provider.ReqProvider[Q, B, P],
-	binaryContentEncodings []string,
+	route provider.RouteInfo,
 ) (*provider.REQ[Q, B], error) {
 	applyRequestBodyLimit(ginCtx)
 	var reqQ *Q
@@ -88,7 +88,7 @@ func bindRequest[Q, B, P any](
 		}
 	} else if reqProvider.BindBinary {
 		reqB = new(B)
-		if err := bindBinaryBody(ginCtx, reqB, binaryContentEncodings); err != nil {
+		if err := bindBinaryBody(ginCtx, reqB, route.HTTP.Request.BinaryContentEncodings); err != nil {
 			return nil, err
 		}
 	}
@@ -365,7 +365,6 @@ func asHTTPStatusError(err error) *httpStatusError {
 func newContext[Q, B, P any](
 	ginCtx *gin.Context,
 	executor *provider.RouteExecutor[Q, B, P],
-	binaryContentEncodings ...[]string,
 ) *provider.Context[Q, B, P] {
 	ctx := provider.NewHTTPContext[Q, B, P](
 		ginCtx.Request.Context(),
@@ -373,11 +372,7 @@ func newContext[Q, B, P any](
 		map[string]any{GinContextMetadataKey: ginCtx},
 	)
 	ctx.HeaderFn = ginCtx.GetHeader
-	var allowedBinaryContentEncodings []string
-	if len(binaryContentEncodings) > 0 {
-		allowedBinaryContentEncodings = binaryContentEncodings[0]
-	}
-	req, err := bindRequest(ginCtx, executor.Indexer.Req, allowedBinaryContentEncodings)
+	req, err := bindRequest(ginCtx, executor.Indexer.Req, executor.Route)
 	ctx.Req = &provider.ReqContext[Q, B, P]{
 		Request: req,
 		Error:   err,
@@ -390,7 +385,7 @@ func writeResponse[Q, B, P any](
 	rspProvider *provider.RspProvider[Q, B, P],
 	response *P,
 	err error,
-	rawResponse bool,
+	route provider.RouteInfo,
 ) {
 	if ginCtx.Writer.Written() {
 		return
@@ -399,7 +394,7 @@ func writeResponse[Q, B, P any](
 		ginCtx.JSON(statusErr.status, gin.H{"detail": statusErr.Error()})
 		return
 	}
-	if rawResponse {
+	if route.HTTP.Response.ManualResponse {
 		if err != nil {
 			_ = ginCtx.AbortWithError(http.StatusInternalServerError, err)
 		}
@@ -436,7 +431,7 @@ func writeResponse[Q, B, P any](
 			ginCtx.JSON(code, payload)
 			return
 		}
-		writeRawResponse(ginCtx, rspProvider.Type, rspProvider.Route.Filename, response)
+		writeRawResponse(ginCtx, rspProvider.Type, rspProvider.Route.HTTP.Response.DefaultFilename, response)
 	case "binary_schema":
 		if err != nil {
 			code, payload := provider.NewRSP_JSON(rspProvider, response, err)
@@ -548,17 +543,15 @@ func hasHeader(headers map[string]string, key string) bool {
 
 func makeHandler[Q, B, P any](
 	executor *provider.RouteExecutor[Q, B, P],
-	rawResponse bool,
-	binaryContentEncodings []string,
 ) gin.HandlerFunc {
 	return func(ginCtx *gin.Context) {
-		ctx := newContext(ginCtx, executor, binaryContentEncodings)
+		ctx := newContext(ginCtx, executor)
 		execErr := executor.Run(ctx)
 		response, invokeErr := ctx.HandleResult()
 		if invokeErr == nil {
 			invokeErr = execErr
 		}
-		writeResponse(ginCtx, executor.Indexer.Rsp, response, invokeErr, rawResponse)
+		writeResponse(ginCtx, executor.Indexer.Rsp, response, invokeErr, executor.Route)
 	}
 }
 
@@ -566,45 +559,30 @@ func GET[Q, B, P any](
 	relativePath string,
 	executor *provider.RouteExecutor[Q, B, P],
 	engine *gin.Engine,
-	rawResponse bool,
-	binaryContentEncodings ...[]string,
 ) {
-	engine.GET(relativePath, makeHandler(executor, rawResponse, firstBinaryContentEncodings(binaryContentEncodings)))
+	engine.GET(relativePath, makeHandler(executor))
 }
 
 func POST[Q, B, P any](
 	relativePath string,
 	executor *provider.RouteExecutor[Q, B, P],
 	engine *gin.Engine,
-	rawResponse bool,
-	binaryContentEncodings ...[]string,
 ) {
-	engine.POST(relativePath, makeHandler(executor, rawResponse, firstBinaryContentEncodings(binaryContentEncodings)))
+	engine.POST(relativePath, makeHandler(executor))
 }
 
 func PUT[Q, B, P any](
 	relativePath string,
 	executor *provider.RouteExecutor[Q, B, P],
 	engine *gin.Engine,
-	rawResponse bool,
-	binaryContentEncodings ...[]string,
 ) {
-	engine.PUT(relativePath, makeHandler(executor, rawResponse, firstBinaryContentEncodings(binaryContentEncodings)))
+	engine.PUT(relativePath, makeHandler(executor))
 }
 
 func DELETE[Q, B, P any](
 	relativePath string,
 	executor *provider.RouteExecutor[Q, B, P],
 	engine *gin.Engine,
-	rawResponse bool,
-	binaryContentEncodings ...[]string,
 ) {
-	engine.DELETE(relativePath, makeHandler(executor, rawResponse, firstBinaryContentEncodings(binaryContentEncodings)))
-}
-
-func firstBinaryContentEncodings(values [][]string) []string {
-	if len(values) == 0 {
-		return nil
-	}
-	return values[0]
+	engine.DELETE(relativePath, makeHandler(executor))
 }

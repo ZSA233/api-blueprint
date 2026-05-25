@@ -43,6 +43,10 @@ go 1.23.8
     assert "func (ctx *Context[Q, B, P]) Next()" in provider_context_text
     assert "ctx.Gin.Next()" not in provider_context_text
     assert "type RouteInfo struct" in provider_context_text
+    assert "type HTTPRouteInfo struct" in provider_context_text
+    assert "type HTTPRequestInfo struct" in provider_context_text
+    assert "type HTTPResponseInfo struct" in provider_context_text
+    assert "HTTP      HTTPRouteInfo" in provider_context_text
     assert "Route    *RouteInfo" in provider_context_text
     assert "type ProviderSpec struct" in provider_text
     assert "Handler any" in provider_text

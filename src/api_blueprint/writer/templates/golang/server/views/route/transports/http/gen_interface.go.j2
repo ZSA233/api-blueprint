@@ -30,7 +30,11 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Methods:   []string{{ "{" }}{% for method in register.methods %}{{ method | tojson }}{% if not loop.last %}, {% endif %}{% endfor %}{{ "}" }},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope({{ register.connection_scope | tojson }}),
-				Filename:  {{ register.default_filename | tojson }},
+				HTTP: sharedprovider.HTTPRouteInfo{
+					Response: sharedprovider.HTTPResponseInfo{
+						DefaultFilename: {{ register.default_filename | tojson }},
+					},
+				},
 			},
 			{{ register.provider | tojson }},
 			nil,
@@ -53,7 +57,11 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Methods:   []string{{ "{" }}{% for method in register.methods %}{{ method | tojson }}{% if not loop.last %}, {% endif %}{% endfor %}{{ "}" }},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope({{ register.connection_scope | tojson }}),
-				Filename:  {{ register.default_filename | tojson }},
+				HTTP: sharedprovider.HTTPRouteInfo{
+					Response: sharedprovider.HTTPResponseInfo{
+						DefaultFilename: {{ register.default_filename | tojson }},
+					},
+				},
 			},
 			{{ register.provider | tojson }},
 			nil,
@@ -76,14 +84,20 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Methods:   []string{{ "{" }}{% for method in register.methods %}{{ method | tojson }}{% if not loop.last %}, {% endif %}{% endfor %}{{ "}" }},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope({{ register.connection_scope | tojson }}),
-				Filename:  {{ register.default_filename | tojson }},
+				HTTP: sharedprovider.HTTPRouteInfo{
+					Request: sharedprovider.HTTPRequestInfo{
+						BinaryContentEncodings: []string{{ "{" }}{% for encoding in register.binary_content_encodings %}{{ encoding | tojson }}{% if not loop.last %}, {% endif %}{% endfor %}{{ "}" }},
+					},
+					Response: sharedprovider.HTTPResponseInfo{
+						ManualResponse:  {{ register.raw_response | tojson }},
+						DefaultFilename: {{ register.default_filename | tojson }},
+					},
+				},
 			},
 			{{ register.provider | tojson }},
 			impl.{{ register.func }},
 		),
 		eng,
-		{{ register.raw_response | tojson }},
-		[]string{{ "{" }}{% for encoding in register.binary_content_encodings %}{{ encoding | tojson }}{% if not loop.last %}, {% endif %}{% endfor %}{{ "}" }},
 	)
 	{% endif %}
 {% endfor %}

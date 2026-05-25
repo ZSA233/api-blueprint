@@ -35,6 +35,20 @@ type WailsRouteContext struct {
 	Metadata  map[string]any
 }
 
+type HTTPRequestInfo struct {
+	BinaryContentEncodings []string
+}
+
+type HTTPResponseInfo struct {
+	ManualResponse  bool
+	DefaultFilename string
+}
+
+type HTTPRouteInfo struct {
+	Request  HTTPRequestInfo
+	Response HTTPResponseInfo
+}
+
 type RouteInfo struct {
 	Root      string
 	Group     string
@@ -46,7 +60,7 @@ type RouteInfo struct {
 	Methods   []string
 	Transport TransportKind
 	Scope     ConnectionScope
-	Filename  string
+	HTTP      HTTPRouteInfo
 }
 
 type ContextInterface interface {

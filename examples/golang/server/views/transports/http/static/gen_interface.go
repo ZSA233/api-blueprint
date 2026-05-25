@@ -29,14 +29,20 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Methods:   []string{"GET"},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope(""),
-				Filename:  "",
+				HTTP: sharedprovider.HTTPRouteInfo{
+					Request: sharedprovider.HTTPRequestInfo{
+						BinaryContentEncodings: []string{},
+					},
+					Response: sharedprovider.HTTPResponseInfo{
+						ManualResponse:  false,
+						DefaultFilename: "",
+					},
+				},
 			},
 			"req|handle|rsp=json@NoEnvelope",
 			impl.DocJson,
 		),
 		eng,
-		false,
-		[]string{},
 	)
 
 	httptransport.GET(
@@ -53,14 +59,20 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Methods:   []string{"GET"},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope(""),
-				Filename:  "",
+				HTTP: sharedprovider.HTTPRouteInfo{
+					Request: sharedprovider.HTTPRequestInfo{
+						BinaryContentEncodings: []string{},
+					},
+					Response: sharedprovider.HTTPResponseInfo{
+						ManualResponse:  false,
+						DefaultFilename: "",
+					},
+				},
 			},
 			"req|handle|rsp=json@NoEnvelope",
 			impl.Dochaha,
 		),
 		eng,
-		false,
-		[]string{},
 	)
 
 	return impl

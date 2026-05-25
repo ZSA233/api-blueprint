@@ -48,6 +48,9 @@ def test_golang_server_codegen_emits_multipart_and_raw_response_contracts(tmp_pa
     assert "binaryContentDecoder(config, encoding)" in http_runtime
     assert "writeRawResponse" in http_runtime
     assert '"req=M|handle|rsp=bytes@CodeMessageDataEnvelope"' in http_route
+    assert "HTTP: sharedprovider.HTTPRouteInfo{" in http_route
+    assert 'DefaultFilename: "report.xls"' in http_route
+    assert "writeRawResponse(ginCtx, rspProvider.Type, rspProvider.Route.HTTP.Response.DefaultFilename, response)" in http_runtime
 
 def test_golang_writer_can_generate_core_without_http_adapter(tmp_path):
     output_dir = tmp_path / "golang"
@@ -169,8 +172,11 @@ go 1.23.8
     assert 'Path:      "/api/demo/ping"' in route_adapter_text
     assert 'Methods:   []string{"GET"}' in route_adapter_text
     assert "Transport: sharedprovider.TransportHTTP" in route_adapter_text
+    assert "HTTP: sharedprovider.HTTPRouteInfo{" in route_adapter_text
     assert "\n\t\t\t\"\",\n" in route_adapter_text
     assert "eng,\n\n\t\tfalse," not in route_adapter_text
+    assert "rawResponse bool" not in (output_dir / "transports" / "http" / "gen_engine.go").read_text(encoding="utf-8")
+    assert "binaryContentEncodings" not in (output_dir / "transports" / "http" / "gen_engine.go").read_text(encoding="utf-8")
     assert "NewRouteExecutorWithPlan" not in route_adapter_text
     assert 'github.com/gin-gonic/gin' not in core_route.read_text(encoding="utf-8")
     assert "func NewImpl(eng *gin.Engine)" not in core_route.read_text(encoding="utf-8")
@@ -203,6 +209,9 @@ go 1.23.8
     assert "sharedprovider.NewRouteExecutor(" in route_adapter
     assert 'RouteID:   "api.demo.post.callback"' in route_adapter
     assert "\n\t\t\t\"\",\n" in route_adapter
-    assert "eng,\n\t\ttrue," in route_adapter
+    assert "ManualResponse:  true" in route_adapter
+    assert "eng,\n\t)" in route_adapter
+    assert "eng,\n\t\ttrue," not in route_adapter
     assert "if ginCtx.Writer.Written() {" in http_runtime
+    assert "route.HTTP.Response.ManualResponse" in http_runtime
     assert "ginCtx.JSON(http.StatusOK, response)" in http_runtime

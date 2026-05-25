@@ -58,7 +58,7 @@ Go route core 生成在 `<out_dir>/routes/<go-root-segment>/**`，provider runti
 
 `providers` 是生成包根下的全局 transport-neutral runtime，不按 blueprint root 拆分。TypeScript 的 per-root `runtime` 主要服务模型和 client 命名隔离，和 Go provider hook 不是同一类职责。
 
-需要按 root、route 或 transport 切换 provider 实现时，不要解析请求 path。生成器会在每个 route executor 构造期写入 `RouteInfo`，并把它挂到 `Context.Route` 与 `ProviderSpec.Route`：
+需要按 root、route 或 transport 切换 provider 实现时，不要解析请求 path。生成器会在每个 route executor 构造期写入 `RouteInfo`，并把它挂到 `Context.Route` 与 `ProviderSpec.Route`。HTTP-only route 元数据收束在 `RouteInfo.HTTP` 下，例如 binary request `Content-Encoding` 白名单、`HTTP_RAW_RESPONSE()` 手写响应标记和 file response 默认下载名：
 
 ```go
 providers.RegisterProviderFactory(providers.PROV_RSP, func(spec providers.ProviderSpec) providers.Provider {

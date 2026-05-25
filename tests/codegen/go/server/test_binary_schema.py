@@ -126,7 +126,12 @@ content-encoding: identity,gzip,br
     assert "http.StatusUnsupportedMediaType" in http_runtime
     assert "http.StatusRequestEntityTooLarge" in http_runtime
     assert '"req=QB|handle|rsp=json@CodeMessageDataEnvelope"' in http_route
-    assert '[]string{"identity", "gzip", "br"}' in http_route
+    assert "HTTP: sharedprovider.HTTPRouteInfo{" in http_route
+    assert "Request: sharedprovider.HTTPRequestInfo{" in http_route
+    assert 'BinaryContentEncodings: []string{"identity", "gzip", "br"}' in http_route
+    assert "bindRequest(ginCtx, executor.Indexer.Req, executor.Route)" in http_runtime
+    assert "route.HTTP.Request.BinaryContentEncodings" in http_runtime
+    assert "firstBinaryContentEncodings" not in http_runtime
 
     if shutil.which("go") is None:
         pytest.skip("go toolchain is not available")
@@ -253,9 +258,9 @@ content-type: application/vnd.audit-packet
     assert "func WriteAuditPacket(value *AuditPacket, writer *binaryruntime.Writer) error" in binary_text
     assert "type RSP_Audit = binary.AuditPacket" in route_types
     assert '"req|handle|rsp=binary_schema@CodeMessageDataEnvelope"' in http_route
-    assert 'Filename:  "audit.bin"' in http_route
+    assert 'DefaultFilename: "audit.bin"' in http_route
     assert "writeBinarySchemaResponse" in http_runtime
-    assert "writeRawResponse(ginCtx, rspProvider.Type, rspProvider.Route.Filename, response)" in http_runtime
+    assert "writeRawResponse(ginCtx, rspProvider.Type, rspProvider.Route.HTTP.Response.DefaultFilename, response)" in http_runtime
 
     if shutil.which("go") is None:
         return

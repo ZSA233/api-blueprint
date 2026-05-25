@@ -29,14 +29,20 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Methods:   []string{"GET"},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope(""),
-				Filename:  "",
+				HTTP: sharedprovider.HTTPRouteInfo{
+					Request: sharedprovider.HTTPRequestInfo{
+						BinaryContentEncodings: []string{},
+					},
+					Response: sharedprovider.HTTPResponseInfo{
+						ManualResponse:  false,
+						DefaultFilename: "",
+					},
+				},
 			},
 			"req=Q|auth|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.Abc,
 		),
 		eng,
-		false,
-		[]string{},
 	)
 
 	httptransport.POST(
@@ -53,14 +59,20 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Methods:   []string{"POST"},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope(""),
-				Filename:  "",
+				HTTP: sharedprovider.HTTPRouteInfo{
+					Request: sharedprovider.HTTPRequestInfo{
+						BinaryContentEncodings: []string{},
+					},
+					Response: sharedprovider.HTTPResponseInfo{
+						ManualResponse:  false,
+						DefaultFilename: "",
+					},
+				},
 			},
 			"req=J|auth|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.TestPost,
 		),
 		eng,
-		false,
-		[]string{},
 	)
 
 	httptransport.POST(
@@ -77,14 +89,20 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Methods:   []string{"POST"},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope(""),
-				Filename:  "",
+				HTTP: sharedprovider.HTTPRouteInfo{
+					Request: sharedprovider.HTTPRequestInfo{
+						BinaryContentEncodings: []string{},
+					},
+					Response: sharedprovider.HTTPResponseInfo{
+						ManualResponse:  false,
+						DefaultFilename: "",
+					},
+				},
 			},
 			"req=F|auth|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.FormSubmit,
 		),
 		eng,
-		false,
-		[]string{},
 	)
 
 	httptransport.GET(
@@ -101,14 +119,20 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Methods:   []string{"GET"},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope(""),
-				Filename:  "",
+				HTTP: sharedprovider.HTTPRouteInfo{
+					Request: sharedprovider.HTTPRequestInfo{
+						BinaryContentEncodings: []string{},
+					},
+					Response: sharedprovider.HTTPResponseInfo{
+						ManualResponse:  false,
+						DefaultFilename: "",
+					},
+				},
 			},
 			"req=Q|auth|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.RequestOptions,
 		),
 		eng,
-		false,
-		[]string{},
 	)
 
 	httptransport.PUT(
@@ -125,14 +149,20 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Methods:   []string{"PUT"},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope(""),
-				Filename:  "",
+				HTTP: sharedprovider.HTTPRouteInfo{
+					Request: sharedprovider.HTTPRequestInfo{
+						BinaryContentEncodings: []string{},
+					},
+					Response: sharedprovider.HTTPResponseInfo{
+						ManualResponse:  false,
+						DefaultFilename: "",
+					},
+				},
 			},
 			"req=QJ|auth|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.PutDemo,
 		),
 		eng,
-		false,
-		[]string{},
 	)
 
 	httptransport.DELETE(
@@ -149,14 +179,20 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Methods:   []string{"DELETE"},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope(""),
-				Filename:  "",
+				HTTP: sharedprovider.HTTPRouteInfo{
+					Request: sharedprovider.HTTPRequestInfo{
+						BinaryContentEncodings: []string{},
+					},
+					Response: sharedprovider.HTTPResponseInfo{
+						ManualResponse:  false,
+						DefaultFilename: "",
+					},
+				},
 			},
 			"req=Q|auth|handle|rsp=xml@CodeMessageDataEnvelope",
 			impl.Delete,
 		),
 		eng,
-		false,
-		[]string{},
 	)
 
 	httptransport.STREAM(
@@ -173,7 +209,11 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Methods:   []string{"STREAM"},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope("session"),
-				Filename:  "",
+				HTTP: sharedprovider.HTTPRouteInfo{
+					Response: sharedprovider.HTTPResponseInfo{
+						DefaultFilename: "",
+					},
+				},
 			},
 			"req=Q|auth",
 			nil,
@@ -196,7 +236,11 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Methods:   []string{"CHANNEL"},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope("session"),
-				Filename:  "",
+				HTTP: sharedprovider.HTTPRouteInfo{
+					Response: sharedprovider.HTTPResponseInfo{
+						DefaultFilename: "",
+					},
+				},
 			},
 			"req=Q|auth",
 			nil,
@@ -219,14 +263,20 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Methods:   []string{"POST"},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope(""),
-				Filename:  "",
+				HTTP: sharedprovider.HTTPRouteInfo{
+					Request: sharedprovider.HTTPRequestInfo{
+						BinaryContentEncodings: []string{},
+					},
+					Response: sharedprovider.HTTPResponseInfo{
+						ManualResponse:  false,
+						DefaultFilename: "",
+					},
+				},
 			},
 			"req=J|auth|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.PostDeprecated,
 		),
 		eng,
-		false,
-		[]string{},
 	)
 
 	httptransport.POST(
@@ -243,14 +293,20 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Methods:   []string{"POST"},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope(""),
-				Filename:  "",
+				HTTP: sharedprovider.HTTPRouteInfo{
+					Request: sharedprovider.HTTPRequestInfo{
+						BinaryContentEncodings: []string{},
+					},
+					Response: sharedprovider.HTTPResponseInfo{
+						ManualResponse:  true,
+						DefaultFilename: "",
+					},
+				},
 			},
 			"req|auth|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.Raw,
 		),
 		eng,
-		true,
-		[]string{},
 	)
 
 	httptransport.POST(
@@ -267,14 +323,20 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Methods:   []string{"POST"},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope(""),
-				Filename:  "",
+				HTTP: sharedprovider.HTTPRouteInfo{
+					Request: sharedprovider.HTTPRequestInfo{
+						BinaryContentEncodings: []string{},
+					},
+					Response: sharedprovider.HTTPResponseInfo{
+						ManualResponse:  false,
+						DefaultFilename: "",
+					},
+				},
 			},
 			"req|auth|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.MapModel,
 		),
 		eng,
-		false,
-		[]string{},
 	)
 
 	httptransport.GET(
@@ -291,14 +353,20 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 				Methods:   []string{"GET"},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope(""),
-				Filename:  "",
+				HTTP: sharedprovider.HTTPRouteInfo{
+					Request: sharedprovider.HTTPRequestInfo{
+						BinaryContentEncodings: []string{},
+					},
+					Response: sharedprovider.HTTPResponseInfo{
+						ManualResponse:  false,
+						DefaultFilename: "",
+					},
+				},
 			},
 			"req=Q|auth|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.ErrorDemo,
 		),
 		eng,
-		false,
-		[]string{},
 	)
 
 	return impl
