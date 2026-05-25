@@ -195,8 +195,7 @@ class FlutterRoute:
     @property
     def decoder_expr(self) -> str:
         if self.response_kind in {"bytes", "file"}:
-            filename = json.dumps(self.protocol.response.filename or "")
-            return f"(value) => apiBlueprintRawResponse(value, defaultContentType: {json.dumps(self.response_media_type)}, defaultFilename: {filename})"
+            return f"(value) => apiBlueprintRawResponse(value, defaultContentType: {json.dumps(self.response_media_type)})"
         if self.response_kind == "byte_stream":
             return f"(value) => apiBlueprintStreamResponse(value, defaultContentType: {json.dumps(self.response_media_type)})"
         if self.response_kind == "binary_schema" and self.response_binary_schema_obj is not None:

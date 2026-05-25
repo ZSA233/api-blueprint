@@ -32,6 +32,7 @@ def test_flutter_http_codegen_emits_multipart_raw_and_binary_response_contracts(
     bp = Blueprint(root="/api")
     with bp.group("/media") as views:
         views.POST("/preview").REQ_MULTIPART(MediaUpload).RSP_BYTES(content_type="image/jpeg")
+        views.GET("/download").RSP_FILE(content_type="application/octet-stream", filename="sample-é.txt")
         views.GET("/mjpeg").RSP_BYTE_STREAM(content_type="multipart/x-mixed-replace")
         views.GET("/packet").RSP_BINARY_SCHEMA(_demo_packet_schema())
 
@@ -60,8 +61,12 @@ def test_flutter_http_codegen_emits_multipart_raw_and_binary_response_contracts(
     assert "final ApiFilePart? image;" in runtime_types
     assert "multipart: multipart" in route_client
     assert 'responseKind: "bytes"' in route_client
+    assert 'responseKind: "file"' in route_client
     assert 'responseKind: "byte_stream"' in route_client
     assert "apiBlueprintRawResponse(value, defaultContentType: \"image/jpeg\"" in route_client
+    assert "apiBlueprintRawResponse(value, defaultContentType: \"application/octet-stream\")" in route_client
+    assert "defaultFilename" not in route_client
+    assert "String defaultFilename" not in runtime
     assert "apiBlueprintStreamResponse(value, defaultContentType: \"multipart/x-mixed-replace\"" in route_client
     assert "decodeDemoPacket(apiBlueprintReadBytes(value))" in route_client
     assert "http.MultipartRequest(request.method, url)" in transport
