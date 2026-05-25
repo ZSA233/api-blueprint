@@ -131,6 +131,15 @@ class PythonRoute:
         return json.dumps(self.contract.route_id)
 
     @property
+    def http_route_info_name(self) -> str:
+        source = self.contract.route_id or self.method_name
+        tokens = [token for token in re.split(r"[^0-9A-Za-z]+", source) if token]
+        name = "_".join(token.upper() for token in tokens) or "ROUTE"
+        if name[:1].isdigit():
+            name = f"ROUTE_{name}"
+        return f"_HTTP_ROUTE_{name}"
+
+    @property
     def response_envelope_literal(self) -> str:
         return json.dumps(self.response_envelope, ensure_ascii=False)
 

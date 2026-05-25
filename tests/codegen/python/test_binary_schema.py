@@ -43,7 +43,9 @@ content-encoding: identity,gzip,br
     assert "binary: dict[str, Any] | None = None" not in service_text
     assert "binary_body = await _binary_body(" in adapter_text
     assert "binary = api_binary_types.DemoPacketWire.from_bytes(binary_body)" in adapter_text
-    assert "allowed_content_encodings=('identity', 'gzip', 'br')" in adapter_text
+    assert "class HttpRouteInfo:" in adapter_text
+    assert "binary_content_encodings=('identity', 'gzip', 'br')" in adapter_text
+    assert "request_info=route_info.request" in adapter_text
     assert "_gzip_decode(encoded, config.decompressed_binary_max_bytes)" in adapter_text
     assert "_read_limited_binary_stream(source, max_bytes" in adapter_text
     assert "UnsupportedContentEncodingError" in adapter_text
