@@ -86,8 +86,9 @@ def test_kotlin_http_codegen_emits_multipart_raw_and_binary_response_contracts(t
     assert "public fun parse(bytes: ByteArray): DemoPacket" in route_types
     assert "public val image: ApiFilePart" in runtime_types
     assert "multipartSerializer = MediaUpload.serializer()" in route_client
-    assert 'responseDecoder = { response -> response.toRawResponse("image/jpeg", "") }' in route_client
-    assert 'responseDecoder = { response -> response.toRawResponse("application/octet-stream", "sample-é.txt") }' in route_client
+    assert 'responseDecoder = { response -> response.toRawResponse("image/jpeg") }' in route_client
+    assert 'responseDecoder = { response -> response.toRawResponse("application/octet-stream") }' in route_client
+    assert 'response.toRawResponse("application/octet-stream", "sample-é.txt")' not in route_client
     assert 'responseKind = "byte_stream"' in route_client
     assert 'responseDecoder = { response -> response.toStreamResponse("multipart/x-mixed-replace") }' in route_client
     assert "responseDecoder = { response -> DemoPacketWire.parse(response.body) }" in route_client
