@@ -7,7 +7,7 @@ Language: [中文](README.md) | English
 
 ## Overview
 
-`api-blueprint` defines API contracts with a Python DSL, then generates documentation services and multi-language code from the same protocol source of truth. It is built for maintaining HTTP APIs, long-connection messages, binary request / response bodies, media uploads / raw responses, and gRPC proto in one checkable, generatable, regression-friendly workflow.
+`api-blueprint` defines API contracts with a Python DSL, then generates documentation services and multi-language code from the same protocol source of truth. It is built for maintaining HTTP APIs, `STREAM` / `CHANNEL` messages, binary request / response bodies, media uploads / raw responses, and gRPC proto in one checkable, generatable, regression-friendly workflow.
 
 The core flow is:
 
@@ -99,7 +99,7 @@ For fuller project layout, config fields, DSL, generator output, typed errors, R
 | Flutter client | Preview | Generate a pure Dart package, DTOs, typed errors, binary codecs, HTTP multipart/raw/binary response clients, and SSE/WebSocket clients |
 | Kotlin client/server | Preview | Generate OkHttp HTTP/SSE/WebSocket clients, Ktor HTTP/SSE/WebSocket server scaffolds, multipart/raw/binary request/response adapters, models, and long-connection message helpers |
 | Java client/server | Preview | Generate Java 17 HttpClient clients, Spring MVC/SSE/WebSocket server scaffolds, record DTOs, HTTP multipart/raw/binary request/response adapters, and long-connection message helpers |
-| Go / Python client | Preview | Generate non-server clients for scripts, tools, or services; the Python client uses recursive dataclass DTOs, shared runtime codecs, multipart/raw support, long-connection message helpers, and binary writers/response codecs |
+| Go client / Python client | Preview | Generate non-server clients for scripts, tools, or services; the Python client uses recursive dataclass DTOs, shared runtime codecs, multipart/raw support, long-connection message helpers, and binary writers/response codecs |
 | Python server | Preview | Generate FastAPI HTTP/SSE/WebSocket server scaffolds, multipart/raw/binary request/response adapters, typed service contracts, and long-connection message helpers |
 | Wails v2/v3 | Preview / Experimental | Generate Go + TypeScript overlays; file/stream-style capabilities are modeled with Wails RPC descriptors or STREAM/CHANNEL chunks |
 | gRPC proto / stubs | Available | Emit proto from ContractGraph and generate Go/Python stubs; bytes/file/stream-style capabilities are modeled with protobuf bytes or streaming chunks |
