@@ -27,7 +27,7 @@ Blueprint DSL -> ContractGraph -> api-gen check / inspect / generate -> generate
 The stable installation entrypoint points to the GitHub `stable` branch:
 
 ```sh
-uv pip install "git+https://github.com/zsa233/api-blueprint@stable"
+uv tool install "git+https://github.com/zsa233/api-blueprint@stable"
 ```
 
 When developing this repository, use:
