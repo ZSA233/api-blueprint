@@ -21,6 +21,13 @@ public open class BinaryServiceStub : GenBinaryService {
         throw NotImplementedError("api.binary.post.auditpacket is not implemented")
     }
 
+    public override suspend fun widePacket(
+        query: BinaryWidePacketQuery,
+        binary: WidePacket
+    ): BinaryWidePacketResponse {
+        throw NotImplementedError("api.binary.post.widepacket is not implemented")
+    }
+
     public override suspend fun auditPacketResponse(
     ): AuditPacket {
         throw NotImplementedError("api.binary.get.auditpacketresponse is not implemented")

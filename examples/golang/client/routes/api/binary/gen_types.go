@@ -24,3 +24,13 @@ type AuditPacketResponse struct {
 	ItemCount uint   `json:"item_count" form:"item_count"`
 	Checksum  uint   `json:"checksum" form:"checksum"`
 }
+
+type WidePacketQuery struct {
+	Trace string `json:"trace,omitempty" form:"trace,omitempty"`
+}
+type WidePacketResponse struct {
+	Trace       string `json:"trace" form:"trace"`
+	PayloadSize uint64 `json:"payload_size" form:"payload_size"`
+	SignedWide  int64  `json:"signed_wide" form:"signed_wide"`
+	Checksum    uint64 `json:"checksum" form:"checksum"`
+}

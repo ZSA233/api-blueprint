@@ -88,6 +88,17 @@ private val HTTP_ROUTE_API_BINARY_POST_AUDITPACKET = HttpRouteInfo(
     ),
 )
 
+private val HTTP_ROUTE_API_BINARY_POST_WIDEPACKET = HttpRouteInfo(
+    request = HttpRequestInfo(
+        binaryContentEncodings = setOf("identity"),
+    ),
+    response = HttpResponseInfo(
+        kind = "json",
+        mediaType = "application/json",
+        defaultFilename = "",
+    ),
+)
+
 private val HTTP_ROUTE_API_BINARY_GET_AUDITPACKETRESPONSE = HttpRouteInfo(
     request = HttpRequestInfo(
         binaryContentEncodings = emptySet(),
@@ -167,6 +178,39 @@ public fun Route.registerBinaryRoutes(
             respondSuccess(call, result, BinaryAuditPacketResponse.serializer(), ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "application/json")
         } catch (error: ApiError) {
             respondApiError(call, error, ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "api.binary.post.auditpacket")
+        }
+    }
+
+    post("/api/binary/wide-packet") {
+        val query = try {
+            decodeParameters(call.request.queryParameters, BinaryWidePacketQuery.serializer())
+        } catch (_: SerializationException) {
+            respondBadRequest(call)
+            return@post
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@post
+        }
+        val binary = try {
+            WidePacketWire.parse(receiveBinarySchemaBytes(call, config, HTTP_ROUTE_API_BINARY_POST_WIDEPACKET.request))
+        } catch (_: ApiPayloadTooLargeException) {
+            respondPayloadTooLarge(call)
+            return@post
+        } catch (_: ApiUnsupportedContentEncodingException) {
+            respondUnsupportedContentEncoding(call)
+            return@post
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@post
+        }
+        try {
+            val result = service.widePacket(
+                query = query,
+                binary = binary
+            )
+            respondSuccess(call, result, BinaryWidePacketResponse.serializer(), ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "application/json")
+        } catch (error: ApiError) {
+            respondApiError(call, error, ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "api.binary.post.widepacket")
         }
     }
 

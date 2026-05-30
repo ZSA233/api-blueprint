@@ -21,6 +21,11 @@ public interface GenBinaryService {
         GenBinaryTypes.AuditPacket binary
     ) throws Exception;
 
+    GenBinaryTypes.WidePacketResponse widePacket(
+        GenBinaryTypes.WidePacketQuery query,
+        GenBinaryTypes.WidePacket binary
+    ) throws Exception;
+
     GenBinaryTypes.AuditPacket auditPacketResponse(
     ) throws Exception;
 

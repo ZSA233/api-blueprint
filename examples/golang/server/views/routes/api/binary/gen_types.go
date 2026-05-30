@@ -58,6 +58,30 @@ type CTX_AuditPacket = providers.Context[
 	RSP_AuditPacket_BODY,
 ]
 
+type REQ_WidePacket_QUERY struct {
+	Trace string `json:"trace,omitempty" xml:"trace,omitempty" form:"trace,omitempty" binding:"omitempty"`
+}
+
+type REQ_WidePacket = providers.REQ[
+	REQ_WidePacket_QUERY,
+	binary.WidePacket,
+]
+
+type RSP_WidePacket_BODY struct {
+	Trace       string `json:"trace" xml:"trace" form:"trace" binding:"required"`
+	PayloadSize uint64 `json:"payload_size" xml:"payload_size" form:"payload_size" binding:"required"`
+	SignedWide  int64  `json:"signed_wide" xml:"signed_wide" form:"signed_wide" binding:"required"`
+	Checksum    uint64 `json:"checksum" xml:"checksum" form:"checksum" binding:"required"`
+}
+
+type RSP_WidePacket = RSP_WidePacket_BODY
+
+type CTX_WidePacket = providers.Context[
+	REQ_WidePacket_QUERY,
+	binary.WidePacket,
+	RSP_WidePacket_BODY,
+]
+
 type REQ_AuditPacketResponse = providers.REQ[
 	any,
 	any,

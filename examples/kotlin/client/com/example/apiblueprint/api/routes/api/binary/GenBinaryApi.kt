@@ -99,6 +99,50 @@ public open class GenBinaryApi internal constructor(
         )
     }
 
+    public open suspend fun widePacket(
+        query: BinaryWidePacketQuery,
+        binary: WidePacket,
+        options: ApiRequestOptions = ApiRequestOptions(),
+    ): BinaryWidePacketResponse {
+        return transport.request(
+            ApiRequest(
+                routeId = "api.binary.post.widepacket",
+                method = "POST",
+                path = "/api/binary/wide-packet",
+                query = query.toQueryMap(),
+                options = options,
+                binary = WidePacketWire.toBinaryBody(binary),
+                responseSerializer = BinaryWidePacketResponse.serializer(),
+                responseKind = "json",
+                responseMediaType = "application/json",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
+            )
+        )
+    }
+
+    public open suspend fun widePacket(
+        query: BinaryWidePacketQuery,
+        binary: ApiBinaryBody,
+        options: ApiRequestOptions = ApiRequestOptions(),
+    ): BinaryWidePacketResponse {
+        return transport.request(
+            ApiRequest(
+                routeId = "api.binary.post.widepacket",
+                method = "POST",
+                path = "/api/binary/wide-packet",
+                query = query.toQueryMap(),
+                options = options,
+                binary = binary,
+                responseSerializer = BinaryWidePacketResponse.serializer(),
+                responseKind = "json",
+                responseMediaType = "application/json",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
+            )
+        )
+    }
+
     public open suspend fun auditPacketResponse(
         options: ApiRequestOptions = ApiRequestOptions(),
     ): AuditPacket {
@@ -122,6 +166,10 @@ public open class GenBinaryApi internal constructor(
     )
 
     private fun BinaryAuditPacketQuery.toQueryMap(): Map<String, String?> = mapOf(
+        "trace" to trace?.toString()
+    )
+
+    private fun BinaryWidePacketQuery.toQueryMap(): Map<String, String?> = mapOf(
         "trace" to trace?.toString()
     )
 }

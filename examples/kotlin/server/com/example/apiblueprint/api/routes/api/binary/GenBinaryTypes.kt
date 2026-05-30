@@ -63,6 +63,21 @@ public data class BinaryPacketResponse(
     public val checksum: Int
 )
 
+@Serializable
+public data class BinaryWidePacketQuery(
+    public val trace: String? = null
+)
+
+@Serializable
+public data class BinaryWidePacketResponse(
+    public val trace: String,
+    @SerialName("payload_size")
+    public val payloadSize: Long,
+    @SerialName("signed_wide")
+    public val signedWide: Long,
+    public val checksum: Long
+)
+
 public object DemoPacketKindValues {
     public const val Metric: Int = 1
     public const val Debug: Int = 2
@@ -990,6 +1005,267 @@ public object AuditPacketWire {
         } catch (error: BinaryEncodeException) {
             throw wrapBinaryField(path, error)
         }
+    }
+
+}
+
+public data class WidePacket(
+    public val header: WidePacketHeader,
+    public val body: WidePacketBody
+)
+
+public fun WidePacket.toBinaryBody(): ApiBinaryBody = WidePacketWire.toBinaryBody(this)
+
+public class WidePacketBinaryState {
+    public var payloadLen: Long = 0L
+    public var signedWide: Long = 0L
+    public var marker: Long = 0L
+    public var checksum: Long = 0L
+}
+
+public data class WidePacketHeader(
+    public val payloadLen: Long,
+    public val signedWide: Long,
+    public val magic: ByteArray = byteArrayOf(87, 73, 68, 49),
+    public val marker: Long = 9007199254740991L
+)
+
+public data class WidePacketBody(
+    public val payload: ByteArray,
+    public val checksum: Long
+)
+
+public object WidePacketWire {
+    public const val CONTENT_TYPE: String = "application/octet-stream"
+    public val ENDIAN: BinaryEndian = BinaryEndian.LITTLE
+
+    public fun body(
+        contentLength: Long? = null,
+        write: (BinaryWriter) -> Unit,
+    ): ApiBinaryBody = StreamingBinaryBody(
+        contentType = CONTENT_TYPE,
+        contentLength = contentLength,
+        endian = ENDIAN,
+        write = write,
+    )
+
+    public fun toBinaryBody(value: WidePacket): ApiBinaryBody = body { writer ->
+        write(value, writer)
+    }
+
+    public fun parse(bytes: ByteArray): WidePacket {
+        val reader = BinaryReader(bytes, ENDIAN)
+        val state = WidePacketBinaryState()
+        val header = readWidePacketHeader(reader, state, "WidePacket.header")
+        val body = readWidePacketBody(reader, state, "WidePacket.body")
+        reader.requireEOF("WidePacket")
+        return WidePacket(
+            header = header,
+            body = body
+        )
+    }
+
+    public fun write(value: WidePacket, writer: BinaryWriter) {
+        val state = WidePacketBinaryState()
+        writeWidePacketHeader(value.header, writer, state, "WidePacket.header")
+        writeWidePacketBody(value.body, writer, state, "WidePacket.body")
+    }
+
+    public fun readWidePacketHeader(
+        reader: BinaryReader,
+        state: WidePacketBinaryState = WidePacketBinaryState(),
+        path: String = "WidePacketHeader",
+    ): WidePacketHeader {
+        try {
+            val magic = reader.readBytes("magic", 4L)
+            requireBinary("magic", magic.contentEquals(byteArrayOf(87, 73, 68, 49)), "const mismatch")
+            val payloadLen = reader.readU64("payload_len")
+            requireRange("payload_len", payloadLen, 0L, Long.MAX_VALUE)
+            requireRange("payload_len", payloadLen, Long.MIN_VALUE, 32L)
+            state.payloadLen = payloadLen
+            val signedWide = reader.readI64("signed_wide")
+            requireRange("signed_wide", signedWide, - 5000000000L, Long.MAX_VALUE)
+            requireRange("signed_wide", signedWide, Long.MIN_VALUE, 5000000000L)
+            state.signedWide = signedWide
+            val marker = reader.readU64("marker")
+            requireBinary("marker", marker == 9007199254740991L, "const mismatch")
+            state.marker = marker
+            return WidePacketHeader(
+                payloadLen = payloadLen,
+                signedWide = signedWide,
+                magic = magic,
+                marker = marker
+            )
+        } catch (error: BinaryDecodeException) {
+            throw wrapBinaryField(path, error)
+        }
+    }
+
+    public fun writeWidePacketHeader(
+        value: WidePacketHeader,
+        writer: BinaryWriter,
+        state: WidePacketBinaryState = WidePacketBinaryState(),
+        path: String = "WidePacketHeader",
+    ) {
+        try {
+            requireBinary("magic", value.magic.contentEquals(byteArrayOf(87, 73, 68, 49)), "const mismatch")
+            writer.writeBytesExact("magic", value.magic, 4L)
+            requireRange("payload_len", value.payloadLen, 0L, Long.MAX_VALUE)
+            requireRange("payload_len", value.payloadLen, Long.MIN_VALUE, 32L)
+            writer.writeU64("payload_len", value.payloadLen)
+            state.payloadLen = value.payloadLen
+            requireRange("signed_wide", value.signedWide, - 5000000000L, Long.MAX_VALUE)
+            requireRange("signed_wide", value.signedWide, Long.MIN_VALUE, 5000000000L)
+            writer.writeI64("signed_wide", value.signedWide)
+            state.signedWide = value.signedWide
+            requireBinary("marker", value.marker == 9007199254740991L, "const mismatch")
+            writer.writeU64("marker", value.marker)
+            state.marker = value.marker
+        } catch (error: BinaryEncodeException) {
+            throw wrapBinaryField(path, error)
+        }
+    }
+
+    public fun writeWidePacketHeader(
+        writer: BinaryWriter,
+        payloadLen: Long,
+        signedWide: Long,
+        magic: ByteArray = byteArrayOf(87, 73, 68, 49),
+        marker: Long = 9007199254740991L,
+        state: WidePacketBinaryState = WidePacketBinaryState(),
+        path: String = "WidePacketHeader",
+    ) {
+        try {
+            requireBinary("magic", magic.contentEquals(byteArrayOf(87, 73, 68, 49)), "const mismatch")
+            writer.writeBytesExact("magic", magic, 4L)
+            requireRange("payload_len", payloadLen, 0L, Long.MAX_VALUE)
+            requireRange("payload_len", payloadLen, Long.MIN_VALUE, 32L)
+            writer.writeU64("payload_len", payloadLen)
+            state.payloadLen = payloadLen
+            requireRange("signed_wide", signedWide, - 5000000000L, Long.MAX_VALUE)
+            requireRange("signed_wide", signedWide, Long.MIN_VALUE, 5000000000L)
+            writer.writeI64("signed_wide", signedWide)
+            state.signedWide = signedWide
+            requireBinary("marker", marker == 9007199254740991L, "const mismatch")
+            writer.writeU64("marker", marker)
+            state.marker = marker
+        } catch (error: BinaryEncodeException) {
+            throw wrapBinaryField(path, error)
+        }
+    }
+
+    public fun readWidePacketBody(
+        reader: BinaryReader,
+        state: WidePacketBinaryState = WidePacketBinaryState(),
+        path: String = "WidePacketBody",
+    ): WidePacketBody {
+        try {
+            val payload = reader.readBytes("payload", state.payloadLen)
+            val checksum = reader.readU64("checksum")
+            requireBinary("checksum", checksum == state.payloadLen, "assert mismatch")
+            state.checksum = checksum
+            return WidePacketBody(
+                payload = payload,
+                checksum = checksum
+            )
+        } catch (error: BinaryDecodeException) {
+            throw wrapBinaryField(path, error)
+        }
+    }
+
+    public fun writeWidePacketBody(
+        value: WidePacketBody,
+        writer: BinaryWriter,
+        state: WidePacketBinaryState = WidePacketBinaryState(),
+        path: String = "WidePacketBody",
+    ) {
+        try {
+            val payloadCount = state.payloadLen
+            requireSize("payload", binarySize(value.payload), payloadCount)
+            writer.writeBytes("payload", value.payload)
+            requireBinary("checksum", value.checksum == state.payloadLen, "assert mismatch")
+            writer.writeU64("checksum", value.checksum)
+            state.checksum = value.checksum
+        } catch (error: BinaryEncodeException) {
+            throw wrapBinaryField(path, error)
+        }
+    }
+
+    public fun writeWidePacketBody(
+        writer: BinaryWriter,
+        payload: ByteArray,
+        checksum: Long,
+        state: WidePacketBinaryState = WidePacketBinaryState(),
+        path: String = "WidePacketBody",
+    ) {
+        try {
+            val payloadCount = state.payloadLen
+            requireSize("payload", binarySize(payload), payloadCount)
+            writer.writeBytes("payload", payload)
+            requireBinary("checksum", checksum == state.payloadLen, "assert mismatch")
+            writer.writeU64("checksum", checksum)
+            state.checksum = checksum
+        } catch (error: BinaryEncodeException) {
+            throw wrapBinaryField(path, error)
+        }
+    }
+
+    public fun writeWidePacketBody(
+        writer: BinaryWriter,
+        payload: ByteString,
+        checksum: Long,
+        state: WidePacketBinaryState = WidePacketBinaryState(),
+        path: String = "WidePacketBody",
+    ) {
+        try {
+            val payloadCount = state.payloadLen
+            requireSize("payload", binarySize(payload), payloadCount)
+            writer.writeByteString("payload", payload)
+            requireBinary("checksum", checksum == state.payloadLen, "assert mismatch")
+            writer.writeU64("checksum", checksum)
+            state.checksum = checksum
+        } catch (error: BinaryEncodeException) {
+            throw wrapBinaryField(path, error)
+        }
+    }
+
+    public fun newWidePacketBodyPayloadBlock(
+        bytes: ByteString,
+        count: Long,
+    ): EncodedBinaryBlock = EncodedBinaryBlock(
+        field = "WidePacketBody.payload",
+        count = count,
+        bytes = bytes,
+    )
+
+    public fun writeWidePacketBodyPayloadBlock(
+        writer: BinaryWriter,
+        block: EncodedBinaryBlock,
+        state: WidePacketBinaryState = WidePacketBinaryState(),
+        path: String = "WidePacketBody.payload",
+    ) {
+        val payloadCount = state.payloadLen
+        requireBinary(path, block.field == "WidePacketBody.payload", "block field ${block.field} does not match " + "WidePacketBody.payload")
+        requireSize("$path.count", block.count, payloadCount)
+
+        requireSize("$path.bytes", block.byteSize, block.count)
+
+        writer.writeBlock(path, block)
+    }
+
+    public fun writeWidePacketBodyPayloadFragment(
+        writer: BinaryWriter,
+        block: EncodedBinaryBlock,
+        state: WidePacketBinaryState = WidePacketBinaryState(),
+        path: String = "WidePacketBody.payload",
+    ) {
+        val payloadCount = state.payloadLen
+        requireBinary(path, block.field == "WidePacketBody.payload", "block field ${block.field} does not match " + "WidePacketBody.payload")
+        requireRange("$path.count", block.count, 0L, payloadCount)
+
+        requireSize("$path.bytes", block.byteSize, block.count)
+
+        writer.writeBlock(path, block)
     }
 
 }

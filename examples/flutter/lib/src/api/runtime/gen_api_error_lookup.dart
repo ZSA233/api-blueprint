@@ -77,6 +77,10 @@ final routeApiErrorsByCode = <String, Map<int, ApiErrorPayload>>{
     -1: apiErrorsById["CommonErr.UNKNOWN"]!,
     55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,
   },
+  "api.binary.post.widepacket": {
+    -1: apiErrorsById["CommonErr.UNKNOWN"]!,
+    55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,
+  },
   "api.binary.get.auditpacketresponse": {
     -1: apiErrorsById["CommonErr.UNKNOWN"]!,
     55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,

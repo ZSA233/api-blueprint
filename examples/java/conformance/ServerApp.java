@@ -425,6 +425,16 @@ public class ServerApp {
         }
 
         @Override
+        public GenBinaryTypes.WidePacketResponse widePacket(GenBinaryTypes.WidePacketQuery query, GenBinaryTypes.WidePacket binary) {
+            return new GenBinaryTypes.WidePacketResponse(
+                query.trace(),
+                Long.valueOf(binary.body().payload().length),
+                binary.header().signedWide(),
+                binary.body().checksum()
+            );
+        }
+
+        @Override
         public GenBinaryTypes.AuditPacket auditPacketResponse() {
             return new GenBinaryTypes.AuditPacket(
                 new GenBinaryTypes.AuditPacketHeader(GenBinaryTypes.AuditPacketFlagsValues.HASITEMS, 2),

@@ -119,6 +119,7 @@ content-type: application/octet-stream
 | field | type | count | rule | comment |
 |---|---|---:|---|---|
 | payload_len | u64 | 1 | min=0,max=64,sizeof=payload | payload bytes |
+| signed_wide | i64 | 1 | min=-5000000000,max=5000000000 | signed wide |
 | marker | u64 | 1 | const=9223372036854775808 | wide marker |
 
 ## body
@@ -159,6 +160,9 @@ content-type: application/octet-stream
     )
     assert "try writer.writeU64(\"payload_len\", value.payloadLen)" in binary_text
     assert "state.payloadLen = value.payloadLen" in binary_text
+    assert "try apiBinaryRequireRange(\"signed_wide\", value.signedWide, Int64(-5000000000), Int64.max)" in binary_text
+    assert "try apiBinaryRequireRangeDecode(\"signed_wide\", signedWide, Int64(-5000000000), Int64.max)" in binary_text
+    assert "- Int64(" not in binary_text
     assert "let payloadCount = try apiBinaryCheckedInt(\"payload\", state.payloadLen)" in binary_text
     assert "try apiBinaryRequireSize(\"payload\", apiBinarySize(value.payload), payloadCount)" in binary_text
     assert "let payloadCount = try apiBinaryCheckedIntDecode(\"payload\", state.payloadLen)" in binary_text

@@ -212,3 +212,89 @@ class AuditPacketResponse:
         result["item_count"] = _api_to_transport(self.item_count)
         result["checksum"] = _api_to_transport(self.checksum)
         return result
+
+
+@dataclass(kw_only=True)
+class WidePacketQuery:
+    trace: str | None = None
+
+    @classmethod
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
+        if not isinstance(value, Mapping):
+            raise TypeError("WidePacketQuery: expected object")
+        return cls._from_mapping(value, "WidePacketQuery")
+
+    @classmethod
+    def from_value(cls, value: object, path: str = "WidePacketQuery") -> Self:
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, Mapping):
+            raise TypeError(f"{path}: expected object")
+        return cls._from_mapping(value, path)
+
+    @classmethod
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
+        return cls(
+            trace=_decode_optional(_decode_str, value.get("trace", _MISSING), _field_path(path, "trace")),
+        )
+
+    def to_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        if self.trace is not None:
+            result["trace"] = _api_to_json(self.trace)
+
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        if self.trace is not None:
+            result["trace"] = _api_to_transport(self.trace)
+
+        return result
+
+
+@dataclass(kw_only=True)
+class WidePacketResponse:
+    trace: str
+    payload_size: int
+    signed_wide: int
+    checksum: int
+
+    @classmethod
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
+        if not isinstance(value, Mapping):
+            raise TypeError("WidePacketResponse: expected object")
+        return cls._from_mapping(value, "WidePacketResponse")
+
+    @classmethod
+    def from_value(cls, value: object, path: str = "WidePacketResponse") -> Self:
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, Mapping):
+            raise TypeError(f"{path}: expected object")
+        return cls._from_mapping(value, path)
+
+    @classmethod
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
+        return cls(
+            trace=_decode_required(_decode_str, value.get("trace", _MISSING), _field_path(path, "trace")),
+            payload_size=_decode_required(_decode_int, value.get("payload_size", _MISSING), _field_path(path, "payload_size")),
+            signed_wide=_decode_required(_decode_int, value.get("signed_wide", _MISSING), _field_path(path, "signed_wide")),
+            checksum=_decode_required(_decode_int, value.get("checksum", _MISSING), _field_path(path, "checksum")),
+        )
+
+    def to_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["trace"] = _api_to_json(self.trace)
+        result["payload_size"] = _api_to_json(self.payload_size)
+        result["signed_wide"] = _api_to_json(self.signed_wide)
+        result["checksum"] = _api_to_json(self.checksum)
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["trace"] = _api_to_transport(self.trace)
+        result["payload_size"] = _api_to_transport(self.payload_size)
+        result["signed_wide"] = _api_to_transport(self.signed_wide)
+        result["checksum"] = _api_to_transport(self.checksum)
+        return result

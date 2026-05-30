@@ -16,6 +16,10 @@ func (impl *_GenRouter) AuditPacket(ctx *CTX_AuditPacket, req *REQ_AuditPacket) 
 	return nil, fmt.Errorf("not implemented")
 }
 
+func (impl *_GenRouter) WidePacket(ctx *CTX_WidePacket, req *REQ_WidePacket) (rsp *RSP_WidePacket, err error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
 func (impl *_GenRouter) AuditPacketResponse(ctx *CTX_AuditPacketResponse, req *REQ_AuditPacketResponse) (rsp *RSP_AuditPacketResponse, err error) {
 	return nil, fmt.Errorf("not implemented")
 }

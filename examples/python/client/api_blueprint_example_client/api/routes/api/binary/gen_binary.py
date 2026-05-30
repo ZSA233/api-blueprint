@@ -620,3 +620,174 @@ def read_auditpacket_item(
         id=id,
         code=code,
     )
+
+
+@dataclass
+class WidePacket:
+    header: WidePacketHeader
+    body: WidePacketBody
+
+
+class WidePacketWire:
+    CONTENT_TYPE = "application/octet-stream"
+
+    @staticmethod
+    def body(write, content_length: int | None = None) -> ApiBinaryBody:
+        return StreamingBinaryBody(
+            write=write,
+            content_length=content_length,
+            content_type="application/octet-stream",
+            endian="little",
+        )
+
+    @staticmethod
+    def to_binary_body(value: WidePacket | ApiBinaryBody) -> ApiBinaryBody:
+        if is_api_binary_body(value):
+            return value
+        return WidePacketWire.body(lambda writer: write_widepacket(value, writer))
+
+    @staticmethod
+    def from_bytes(data: bytes | bytearray | memoryview) -> WidePacket:
+        return parse_widepacket(data)
+
+
+def parse_widepacket(data: bytes | bytearray | memoryview | BinaryReader) -> WidePacket:
+    reader = data if isinstance(data, BinaryReader) else BinaryReader(data, endian="little")
+    state = {
+        "payload_len": 0,
+        "signed_wide": 0,
+        "marker": 0,
+        "checksum": 0,
+    }
+    return WidePacket(
+        header=read_widepacket_widepacketheader(reader, state, path="WidePacket.header"),
+        body=read_widepacket_widepacketbody(reader, state, path="WidePacket.body"),
+    )
+
+
+def write_widepacket(value: WidePacket, writer: BinaryWriter) -> None:
+    state = {
+        "payload_len": 0,
+        "signed_wide": 0,
+        "marker": 0,
+        "checksum": 0,
+    }
+    try:
+        write_widepacket_widepacketheader(value.header, writer, state, path="")
+    except BinaryEncodeError as err:
+        raise wrap_binary_field("WidePacket.header", err) from err
+    try:
+        write_widepacket_widepacketbody(value.body, writer, state, path="")
+    except BinaryEncodeError as err:
+        raise wrap_binary_field("WidePacket.body", err) from err
+
+
+@dataclass
+class WidePacketHeader:
+    payload_len: int
+    signed_wide: int
+
+
+def write_widepacket_widepacketheader(
+    value: WidePacketHeader,
+    writer: BinaryWriter,
+    state: dict[str, int],
+    path: str = "WidePacketHeader",
+) -> None:
+    try:
+        require_binary("magic", b'WID1' == b'WID1', "const mismatch")
+        require_size("magic", len(b'WID1'), 4)
+        writer.write_bytes("magic", b'WID1')
+        require_range("payload_len", int(value.payload_len), 0, 2**63 - 1)
+        require_range("payload_len", int(value.payload_len), -(2**63), 32)
+        writer.write_u64("payload_len", value.payload_len)
+        state["payload_len"] = int(value.payload_len)
+        require_range("signed_wide", int(value.signed_wide), - 5000000000, 2**63 - 1)
+        require_range("signed_wide", int(value.signed_wide), -(2**63), 5000000000)
+        writer.write_i64("signed_wide", value.signed_wide)
+        state["signed_wide"] = int(value.signed_wide)
+        require_binary("marker", int(9007199254740991) == int(9007199254740991), "const mismatch")
+        writer.write_u64("marker", 9007199254740991)
+        state["marker"] = int(9007199254740991)
+
+    except BinaryEncodeError as err:
+        if not path:
+            raise
+        raise wrap_binary_field(path, err) from err
+
+
+def read_widepacket_widepacketheader(
+    reader: BinaryReader,
+    state: dict[str, int],
+    path: str = "WidePacketHeader",
+) -> WidePacketHeader:
+    try:
+        magic = reader.read_bytes("magic", 4)
+        require_binary_decode("magic", magic == b'WID1', "const mismatch")
+        payload_len = reader.read_u64("payload_len")
+        require_binary_decode("payload_len", int(payload_len) >= int(0), "below min")
+        require_binary_decode("payload_len", int(payload_len) <= int(32), "exceeds max")
+        state["payload_len"] = int(payload_len)
+        signed_wide = reader.read_i64("signed_wide")
+        require_binary_decode("signed_wide", int(signed_wide) >= int(- 5000000000), "below min")
+        require_binary_decode("signed_wide", int(signed_wide) <= int(5000000000), "exceeds max")
+        state["signed_wide"] = int(signed_wide)
+        marker = reader.read_u64("marker")
+        require_binary_decode("marker", int(marker) == int(9007199254740991), "const mismatch")
+        state["marker"] = int(marker)
+
+    except BinaryDecodeError as err:
+        if not path:
+            raise
+        raise wrap_binary_field(path, err) from err
+    return WidePacketHeader(
+        payload_len=payload_len,
+        signed_wide=signed_wide,
+    )
+
+
+@dataclass
+class WidePacketBody:
+    payload: bytes
+    checksum: int
+
+
+def write_widepacket_widepacketbody(
+    value: WidePacketBody,
+    writer: BinaryWriter,
+    state: dict[str, int],
+    path: str = "WidePacketBody",
+) -> None:
+    try:
+        payload_count = state.get("payload_len", 0)
+        require_size("payload", len(value.payload), payload_count)
+        writer.write_bytes("payload", value.payload)
+        require_binary("checksum", int(value.checksum) == state.get("payload_len", 0), "assert mismatch")
+        writer.write_u64("checksum", value.checksum)
+        state["checksum"] = int(value.checksum)
+
+    except BinaryEncodeError as err:
+        if not path:
+            raise
+        raise wrap_binary_field(path, err) from err
+
+
+def read_widepacket_widepacketbody(
+    reader: BinaryReader,
+    state: dict[str, int],
+    path: str = "WidePacketBody",
+) -> WidePacketBody:
+    try:
+        payload = reader.read_bytes("payload", state.get("payload_len", 0))
+        checksum = reader.read_u64("checksum")
+        require_binary_decode("checksum", int(checksum) == state.get("payload_len", 0), "assert mismatch")
+        state["checksum"] = int(checksum)
+
+    except BinaryDecodeError as err:
+        if not path:
+            raise
+        raise wrap_binary_field(path, err) from err
+    return WidePacketBody(
+        payload=payload,
+        checksum=checksum,
+    )

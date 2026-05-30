@@ -17,6 +17,11 @@ public interface GenBinaryService {
         binary: AuditPacket
     ): BinaryAuditPacketResponse
 
+    public suspend fun widePacket(
+        query: BinaryWidePacketQuery,
+        binary: WidePacket
+    ): BinaryWidePacketResponse
+
     public suspend fun auditPacketResponse(
     ): AuditPacket
 

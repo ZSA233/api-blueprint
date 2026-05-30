@@ -85,6 +85,17 @@ _HTTP_ROUTE_API_BINARY_POST_AUDITPACKET = HttpRouteInfo(
     ),
 )
 
+_HTTP_ROUTE_API_BINARY_POST_WIDEPACKET = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=('identity',),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
+
 _HTTP_ROUTE_API_BINARY_GET_AUDITPACKETRESPONSE = HttpRouteInfo(
     request=HttpRequestInfo(
         binary_content_encodings=(),
@@ -505,6 +516,35 @@ def create_binary_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.binary.post.auditpacket")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
+
+    @router.api_route("/api/binary/wide-packet", methods=["POST"])
+    async def binary_wide_packet(request: Request) -> Any:
+        service = service_impl
+        route_info = _HTTP_ROUTE_API_BINARY_POST_WIDEPACKET
+        query_raw = _query_params(request)
+        binary_body = await _binary_body(
+            request,
+            api_config,
+            request_info=route_info.request,
+        )
+        try:
+            query = api_binary_types.WidePacketQuery.from_value(query_raw, "query")
+            binary = api_binary_types.WidePacketWire.from_bytes(binary_body)
+
+        except (TypeError, ValueError) as error:
+            return _bad_request_response(error)
+
+        try:
+            result = await service.wide_packet(
+                query=query,
+                binary=binary,
+            )
+            return _wrap_response({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, result)
+
+        except ApiError as error:
+            return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.binary.post.widepacket")
         except PayloadTooLargeError as error:
             return _payload_too_large_response(error)
 

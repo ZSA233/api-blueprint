@@ -667,3 +667,197 @@ public func encodeAuditPacket(_ value: AuditPacket) throws -> Data {
 public func decodeAuditPacket(_ data: Data) throws -> AuditPacket {
     try AuditPacketWire.decode(data)
 }
+
+public struct WidePacket: Codable, Sendable {
+    public var header: WidePacketHeader
+    public var body: WidePacketBody
+
+    public init(
+        header: WidePacketHeader,
+        body: WidePacketBody
+    ) {
+        self.header = header
+        self.body = body
+    }
+
+    public func encode() throws -> Data {
+        try encodeWidePacket(self)
+    }
+
+    public static func decode(from data: Data) throws -> WidePacket {
+        try decodeWidePacket(data)
+    }
+}
+
+public final class WidePacketBinaryState {
+    public var payloadLen: UInt64 = 0
+    public init() {}
+}
+
+public struct WidePacketHeader: Codable, Sendable {
+    public var payloadLen: UInt64
+    public var signedWide: Int64
+
+    public init(
+        payloadLen: UInt64,
+        signedWide: Int64
+    ) {
+        self.payloadLen = payloadLen
+        self.signedWide = signedWide
+    }
+}
+
+public struct WidePacketBody: Codable, Sendable {
+    public var payload: Data
+    public var checksum: UInt64
+
+    public init(
+        payload: Data,
+        checksum: UInt64
+    ) {
+        self.payload = payload
+        self.checksum = checksum
+    }
+}
+
+public enum WidePacketWire {
+    public static let contentType: String = "application/octet-stream"
+    public static let endian: APIBinaryEndian = .little
+
+    public static func encode(_ value: WidePacket) throws -> Data {
+        let writer = APIBinaryWriter(endian: endian)
+        try write(value, writer: writer)
+        return writer.data
+    }
+
+    public static func decode(_ data: Data) throws -> WidePacket {
+        let reader = APIBinaryReader(data, endian: endian)
+        let state = WidePacketBinaryState()
+        let header = try readWidePacketHeader(reader: reader, state: state, path: "WidePacket.header")
+        let body = try readWidePacketBody(reader: reader, state: state, path: "WidePacket.body")
+        try reader.requireEOF("WidePacket")
+        return WidePacket(
+            header: header,
+            body: body
+        )
+    }
+
+    public static func write(_ value: WidePacket, writer: APIBinaryWriter) throws {
+        let state = WidePacketBinaryState()
+        do {
+            try writeWidePacketHeader(value.header, writer: writer, state: state, path: "")
+        } catch let error as APIBinaryEncodeError {
+            throw apiBinaryWrapField("WidePacket.header", error)
+        }
+        do {
+            try writeWidePacketBody(value.body, writer: writer, state: state, path: "")
+        } catch let error as APIBinaryEncodeError {
+            throw apiBinaryWrapField("WidePacket.body", error)
+        }
+    }
+
+    public static func readWidePacketHeader(
+        reader: APIBinaryReader,
+        state: WidePacketBinaryState = WidePacketBinaryState(),
+        path: String = "WidePacketHeader"
+    ) throws -> WidePacketHeader {
+        do {
+            let magic = try reader.readBytes("magic", 4)
+            try apiBinaryRequireDecode("magic", magic == Data([87, 73, 68, 49]), "const mismatch")
+            let payloadLen = try reader.readU64("payload_len")
+            try apiBinaryRequireRangeDecode("payload_len", payloadLen, UInt64(0), UInt64.max)
+            try apiBinaryRequireRangeDecode("payload_len", payloadLen, UInt64.min, UInt64(32))
+            state.payloadLen = payloadLen
+            let signedWide = try reader.readI64("signed_wide")
+            try apiBinaryRequireRangeDecode("signed_wide", signedWide, Int64(-5000000000), Int64.max)
+            try apiBinaryRequireRangeDecode("signed_wide", signedWide, Int64.min, Int64(5000000000))
+            let marker = try reader.readU64("marker")
+            try apiBinaryRequireDecode("marker", marker == UInt64(9007199254740991), "const mismatch")
+            return WidePacketHeader(
+                payloadLen: payloadLen,
+                signedWide: signedWide
+            )
+        } catch let error as APIBinaryDecodeError {
+            if path.isEmpty {
+                throw error
+            }
+            throw apiBinaryWrapField(path, error)
+        }
+    }
+
+    public static func writeWidePacketHeader(
+        _ value: WidePacketHeader,
+        writer: APIBinaryWriter,
+        state: WidePacketBinaryState = WidePacketBinaryState(),
+        path: String = "WidePacketHeader"
+    ) throws {
+        do {
+            try apiBinaryRequire("magic", Data([87, 73, 68, 49]) == Data([87, 73, 68, 49]), "const mismatch")
+            try writer.writeBytesExact("magic", Data([87, 73, 68, 49]), 4)
+            try apiBinaryRequireRange("payload_len", value.payloadLen, UInt64(0), UInt64.max)
+            try apiBinaryRequireRange("payload_len", value.payloadLen, UInt64.min, UInt64(32))
+            try writer.writeU64("payload_len", value.payloadLen)
+            state.payloadLen = value.payloadLen
+            try apiBinaryRequireRange("signed_wide", value.signedWide, Int64(-5000000000), Int64.max)
+            try apiBinaryRequireRange("signed_wide", value.signedWide, Int64.min, Int64(5000000000))
+            try writer.writeI64("signed_wide", value.signedWide)
+            try apiBinaryRequire("marker", UInt64(9007199254740991) == UInt64(9007199254740991), "const mismatch")
+            try writer.writeU64("marker", UInt64(9007199254740991))
+        } catch let error as APIBinaryEncodeError {
+            if path.isEmpty {
+                throw error
+            }
+            throw apiBinaryWrapField(path, error)
+        }
+    }
+
+    public static func readWidePacketBody(
+        reader: APIBinaryReader,
+        state: WidePacketBinaryState = WidePacketBinaryState(),
+        path: String = "WidePacketBody"
+    ) throws -> WidePacketBody {
+        do {
+            let payloadCount = try apiBinaryCheckedIntDecode("payload", state.payloadLen)
+            let payload = try reader.readBytes("payload", payloadCount)
+            let checksum = try reader.readU64("checksum")
+            try apiBinaryRequireDecode("checksum", checksum == apiBinaryCheckedUInt64Decode("checksum", state.payloadLen), "assert mismatch")
+            return WidePacketBody(
+                payload: payload,
+                checksum: checksum
+            )
+        } catch let error as APIBinaryDecodeError {
+            if path.isEmpty {
+                throw error
+            }
+            throw apiBinaryWrapField(path, error)
+        }
+    }
+
+    public static func writeWidePacketBody(
+        _ value: WidePacketBody,
+        writer: APIBinaryWriter,
+        state: WidePacketBinaryState = WidePacketBinaryState(),
+        path: String = "WidePacketBody"
+    ) throws {
+        do {
+            let payloadCount = try apiBinaryCheckedInt("payload", state.payloadLen)
+            try apiBinaryRequireSize("payload", apiBinarySize(value.payload), payloadCount)
+            try writer.writeBytes("payload", value.payload)
+            try apiBinaryRequire("checksum", value.checksum == apiBinaryCheckedUInt64("checksum", state.payloadLen), "assert mismatch")
+            try writer.writeU64("checksum", value.checksum)
+        } catch let error as APIBinaryEncodeError {
+            if path.isEmpty {
+                throw error
+            }
+            throw apiBinaryWrapField(path, error)
+        }
+    }
+}
+
+public func encodeWidePacket(_ value: WidePacket) throws -> Data {
+    try WidePacketWire.encode(value)
+}
+
+public func decodeWidePacket(_ data: Data) throws -> WidePacket {
+    try WidePacketWire.decode(data)
+}

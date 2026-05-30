@@ -23,6 +23,14 @@ with apibp.group("/binary") as views:
         item_count=Uint(description="item count"),
         checksum=Uint(description="checksum"),
     )
+    views.POST("/wide-packet", summary="Wide integer binary packet example").ARGS(
+        trace=String(description="trace id", omitempty=True),
+    ).REQ_BINARY("./binary/wide_packet.md").RSP(
+        trace=String(description="trace id"),
+        payload_size=Uint64(description="payload byte size"),
+        signed_wide=Int64(description="signed wide value"),
+        checksum=Uint64(description="checksum"),
+    )
     views.GET(
         "/audit-packet-response",
         operation_id="auditPacketResponse",

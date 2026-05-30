@@ -153,6 +153,71 @@ public class GenBinaryApi {
         return transport.execute(request);
     }
 
+    public GenBinaryTypes.WidePacketResponse widePacket(
+        GenBinaryTypes.WidePacketQuery query,
+        GenBinaryTypes.WidePacket binary
+    ) throws Exception {
+        return widePacket(
+            query,
+            binary,
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenBinaryTypes.WidePacketResponse widePacket(
+        GenBinaryTypes.WidePacketQuery query,
+        GenBinaryTypes.WidePacket binary,
+        GenApiRequestOptions options
+    ) throws Exception {
+        return widePacket(
+            query,
+            GenBinaryTypes.WidePacketWire.toBinaryBody(binary),
+            options
+        );
+    }
+
+    public GenBinaryTypes.WidePacketResponse widePacket(
+        GenBinaryTypes.WidePacketQuery query,
+        GenApiBinaryBody binaryBody
+    ) throws Exception {
+        return widePacket(
+            query,
+            binaryBody,
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenBinaryTypes.WidePacketResponse widePacket(
+        GenBinaryTypes.WidePacketQuery query,
+        GenApiBinaryBody binaryBody,
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
+        GenApiRequest<GenBinaryTypes.WidePacketResponse> request = new GenApiRequest<>(
+            "api.binary.post.widepacket",
+            "POST",
+            "/api/binary/wide-packet",
+            query,
+            new GenApiRequestBodySpec(
+                null,
+                null,
+                null,
+                binaryBody,
+                "binary_schema"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenBinaryTypes.WidePacketResponse.class,
+                "application/json",
+                "json",
+                null
+            ),
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
+        );
+        return transport.execute(request);
+    }
+
     public GenBinaryTypes.AuditPacket auditPacketResponse(
     ) throws Exception {
         return auditPacketResponse(

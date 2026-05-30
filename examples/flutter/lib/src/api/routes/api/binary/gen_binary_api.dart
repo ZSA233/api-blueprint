@@ -56,6 +56,28 @@ class GenBinaryApi {
     );
   }
 
+  Future<BinaryWidePacketResponse> widePacket({
+    BinaryWidePacketQuery? query,
+    required WidePacket widePacket,
+    ApiRequestOptions options = const ApiRequestOptions(),
+  }) {
+    return transport.request(
+      ApiRequest<BinaryWidePacketResponse>(
+        routeId: "api.binary.post.widepacket",
+        method: "POST",
+        path: "/api/binary/wide-packet",
+        query: query?.toQueryMap() ?? const <String, String?>{},
+        options: options,
+        binary: encodeWidePacket(widePacket),
+        binaryContentType: "application/octet-stream",
+        responseMediaType: "application/json",
+        responseKind: "json",
+        responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+        decode: BinaryWidePacketResponse.fromJsonValue,
+      ),
+    );
+  }
+
   Future<AuditPacket> auditPacketResponse({
     ApiRequestOptions options = const ApiRequestOptions(),
   }) {

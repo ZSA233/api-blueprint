@@ -825,3 +825,218 @@ export function readAuditPacketItem(
     throw wrapBinaryField(path, error);
   }
 }
+
+export interface WidePacket {
+  header: WidePacketHeader;
+  body: WidePacketBody;
+}
+
+export function WidePacketToBinaryBody(value: WidePacket | ApiBinaryBody): ApiBinaryBody {
+  return WidePacketWire.toBinaryBody(value);
+}
+
+export function WidePacketFromBytes(value: Uint8Array | ArrayBuffer): WidePacket {
+  return WidePacketWire.fromBytes(value);
+}
+
+interface WidePacketBinaryState {
+  payload_len: number;
+  signed_wide: number;
+  marker: number;
+  checksum: number;
+}
+
+function newWidePacketBinaryState(): WidePacketBinaryState {
+  return {
+    payload_len: 0,
+    signed_wide: 0,
+    marker: 0,
+    checksum: 0,
+  };
+}
+
+export interface WidePacketHeader {
+  payload_len: number;
+  signed_wide: number;
+}
+
+export interface WidePacketBody {
+  payload: Uint8Array;
+  checksum: number;
+}
+
+export const WidePacketWire = {
+  CONTENT_TYPE: "application/octet-stream",
+
+  body(options: { contentLength?: number; write: (writer: BinaryWriter) => void }): ApiBinaryBody {
+    return new StreamingBinaryBody({
+      contentType: "application/octet-stream",
+      contentLength: options.contentLength,
+      endian: "little",
+      write: options.write,
+    });
+  },
+
+  toBinaryBody(value: WidePacket | ApiBinaryBody): ApiBinaryBody {
+    if (isApiBinaryBody(value)) {
+      return value;
+    }
+    return this.body({ write: (writer) => this.write(value, writer) });
+  },
+
+  fromBytes(value: Uint8Array | ArrayBuffer): WidePacket {
+    return parseWidePacket(value);
+  },
+
+  write(value: WidePacket, writer: BinaryWriter): void {
+    const state = newWidePacketBinaryState();
+    writeWidePacketHeader(value.header, writer, state, "WidePacket.header");
+    writeWidePacketBody(value.body, writer, state, "WidePacket.body");
+  },
+};
+
+export function parseWidePacket(value: Uint8Array | ArrayBuffer | BinaryReader): WidePacket {
+  const reader = value instanceof BinaryReader ? value : new BinaryReader(value, "little");
+  const state = newWidePacketBinaryState();
+  return {
+    header: readWidePacketHeader(reader, state, "WidePacket.header"),
+    body: readWidePacketBody(reader, state, "WidePacket.body"),
+  };
+}
+
+export function writeWidePacketHeader(
+  value: WidePacketHeader,
+  writer: BinaryWriter,
+  state: WidePacketBinaryState = newWidePacketBinaryState(),
+  path = "WidePacketHeader",
+): void {
+  try {
+
+    requireBinary("magic", bytesEqual(new Uint8Array([87, 73, 68, 49]), new Uint8Array([87, 73, 68, 49])), "const mismatch");
+    requireSize("magic", binarySize(new Uint8Array([87, 73, 68, 49])), 4);
+    writer.writeBytes("magic", new Uint8Array([87, 73, 68, 49]));
+
+    requireRange("payload_len", value.payload_len, 0, Number.MAX_SAFE_INTEGER);
+    requireRange("payload_len", value.payload_len, Number.MIN_SAFE_INTEGER, 32);
+    writer.writeU64("payload_len", value.payload_len);
+    state.payload_len = Number(value.payload_len);
+
+    requireRange("signed_wide", value.signed_wide, - 5000000000, Number.MAX_SAFE_INTEGER);
+    requireRange("signed_wide", value.signed_wide, Number.MIN_SAFE_INTEGER, 5000000000);
+    writer.writeI64("signed_wide", value.signed_wide);
+    state.signed_wide = Number(value.signed_wide);
+
+    requireBinary("marker", 9007199254740991 === 9007199254740991, "const mismatch");
+    writer.writeU64("marker", 9007199254740991);
+    state.marker = Number(9007199254740991);
+
+  } catch (error) {
+    throw wrapBinaryField(path, error);
+  }
+}
+
+export function readWidePacketHeader(
+  reader: BinaryReader,
+  state: WidePacketBinaryState = newWidePacketBinaryState(),
+  path = "WidePacketHeader",
+): WidePacketHeader {
+  try {
+
+    const magic = reader.readBytes("magic", 4);
+    requireDecode("magic", bytesEqual(magic, new Uint8Array([87, 73, 68, 49])), "const mismatch");
+
+    const payload_len = reader.readU64("payload_len");
+    requireDecode("payload_len", payload_len >= 0, "below min");
+    requireDecode("payload_len", payload_len <= 32, "exceeds max");
+    state.payload_len = Number(payload_len);
+
+    const signed_wide = reader.readI64("signed_wide");
+    requireDecode("signed_wide", signed_wide >= - 5000000000, "below min");
+    requireDecode("signed_wide", signed_wide <= 5000000000, "exceeds max");
+    state.signed_wide = Number(signed_wide);
+
+    const marker = reader.readU64("marker");
+    requireDecode("marker", marker === 9007199254740991, "const mismatch");
+    state.marker = Number(marker);
+
+    return {
+      payload_len,
+      signed_wide,
+    };
+  } catch (error) {
+    throw wrapBinaryField(path, error);
+  }
+}
+
+export function writeWidePacketBody(
+  value: WidePacketBody,
+  writer: BinaryWriter,
+  state: WidePacketBinaryState = newWidePacketBinaryState(),
+  path = "WidePacketBody",
+): void {
+  try {
+
+    const payloadCount = state.payload_len;
+    requireSize("payload", binarySize(value.payload), payloadCount);
+    writer.writeBytes("payload", value.payload);
+
+    requireBinary("checksum", value.checksum === state.payload_len, "assert mismatch");
+    writer.writeU64("checksum", value.checksum);
+    state.checksum = Number(value.checksum);
+
+  } catch (error) {
+    throw wrapBinaryField(path, error);
+  }
+}
+
+export function readWidePacketBody(
+  reader: BinaryReader,
+  state: WidePacketBinaryState = newWidePacketBinaryState(),
+  path = "WidePacketBody",
+): WidePacketBody {
+  try {
+
+    const payload = reader.readBytes("payload", state.payload_len);
+
+    const checksum = reader.readU64("checksum");
+    requireDecode("checksum", checksum === state.payload_len, "assert mismatch");
+    state.checksum = Number(checksum);
+
+    return {
+      payload,
+      checksum,
+    };
+  } catch (error) {
+    throw wrapBinaryField(path, error);
+  }
+}
+
+export function newWidePacketBody_payload_block(bytes: Uint8Array, count: number): EncodedBinaryBlock {
+  return new EncodedBinaryBlock("WidePacketBody.payload", count, bytes);
+}
+
+export function writeWidePacketBody_payload_block(
+  writer: BinaryWriter,
+  block: EncodedBinaryBlock,
+  state: WidePacketBinaryState,
+  path = "WidePacketBody.payload",
+): void {
+  const expectedCount = state.payload_len;
+  requireBinary(path, block.field === "WidePacketBody.payload", `block field ${block.field} does not match WidePacketBody.payload`);
+  requireSize(`${path}.count`, block.count, expectedCount);
+  requireSize(`${path}.bytes`, block.byteSize, block.count);
+  writer.writeBlock(path, block);
+}
+
+export function writeWidePacketBody_payload_fragment(
+  writer: BinaryWriter,
+  block: EncodedBinaryBlock,
+  state: WidePacketBinaryState,
+  path = "WidePacketBody.payload",
+): void {
+  const expectedCount = state.payload_len;
+  requireBinary(path, block.field === "WidePacketBody.payload", `block field ${block.field} does not match WidePacketBody.payload`);
+  requireRange(`${path}.count`, block.count, 0, expectedCount);
+  requireSize(`${path}.bytes`, block.byteSize, block.count);
+  writer.writeBlock(path, block);
+}

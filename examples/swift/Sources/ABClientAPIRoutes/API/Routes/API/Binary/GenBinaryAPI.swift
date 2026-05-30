@@ -69,6 +69,36 @@ open class GenBinaryAPI {
         )
     }
 
+    public func widePacket(
+        query: BinaryWidePacketQuery? = nil,
+        binary: WidePacket? = nil,
+        options: APIRequestOptions = APIRequestOptions()
+    ) async throws -> BinaryWidePacketResponse {
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
+        let formBody: [String: String?]? = nil
+        let multipartBody: [String: Any?]? = nil
+        let binaryBody = try binary?.encode()
+        return try await transport.request(
+            APIRequest<BinaryWidePacketResponse>(
+                routeID: "api.binary.post.widepacket",
+                method: "POST",
+                path: "/api/binary/wide-packet",
+                query: query?.toQueryItems() ?? [],
+                options: options,
+                json: jsonBody,
+                form: formBody,
+                multipart: multipartBody,
+                binary: binaryBody,
+                binaryContentType: "application/octet-stream",
+                responseMediaType: "application/json",
+                responseKind: "json",
+                responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { data, envelope, coding in try apiDecodeResponse(BinaryWidePacketResponse.self, from: data, envelope: envelope, routeID: "api.binary.post.widepacket", coding: coding) },
+                decode: { value in try apiDecodeValue(BinaryWidePacketResponse.self, from: value) }
+            )
+        )
+    }
+
     public func auditPacketResponse(
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> AuditPacket {

@@ -108,6 +108,13 @@ def scenario_registry() -> dict[str, Scenario]:
             route_ids=("api.binary.post.auditpacket",),
             description="second binary schema body calls",
         ),
+        "wide-binary": Scenario(
+            name="wide-binary",
+            categories=("binary",),
+            clients=("swift",),
+            route_ids=("api.binary.post.widepacket",),
+            description="Swift binary schema i64/u64 edge calls",
+        ),
         "binary-response": Scenario(
             name="binary-response",
             categories=("binary", "raw-response"),
@@ -282,7 +289,7 @@ def server_supports_scenario(server: str, scenario: Scenario) -> bool:
         return capability.supports_rpc
     if scenario.name == "form":
         return capability.supports_form
-    if scenario.name in {"binary", "binary-br", "audit-binary", "binary-response"}:
+    if scenario.name in {"binary", "binary-br", "audit-binary", "wide-binary", "binary-response"}:
         return capability.supports_binary
     if scenario.name in {"media", "media-filename-edge", "media-error"}:
         return capability.supports_media

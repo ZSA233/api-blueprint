@@ -5,5 +5,6 @@ package binary
 type RouterInterface interface {
 	Packet(ctx *CTX_Packet, req *REQ_Packet) (rsp *RSP_Packet, err error)
 	AuditPacket(ctx *CTX_AuditPacket, req *REQ_AuditPacket) (rsp *RSP_AuditPacket, err error)
+	WidePacket(ctx *CTX_WidePacket, req *REQ_WidePacket) (rsp *RSP_WidePacket, err error)
 	AuditPacketResponse(ctx *CTX_AuditPacketResponse, req *REQ_AuditPacketResponse) (rsp *RSP_AuditPacketResponse, err error)
 }

@@ -17,12 +17,13 @@ def test_preserved_harnesses_dispatch_expanded_scenarios() -> None:
         "audit-binary",
         "single-channel",
     )
+    swift_expected = expected + ("wide-binary",)
     harnesses = [
         (root / "examples/golang/conformance/main.go", expected),
         (root / "examples/typescript/conformance.ts", expected),
         (root / "examples/kotlin/conformance/Conformance.kt", expected),
         (root / "examples/flutter/test/conformance_test.dart", expected),
-        (root / "examples/swift/Conformance/Sources/SwiftConformance/main.swift", expected),
+        (root / "examples/swift/Conformance/Sources/SwiftConformance/main.swift", swift_expected),
         (root / "examples/java/conformance/Conformance.java", expected),
         (root / "examples/python/conformance/client.py", expected),
     ]

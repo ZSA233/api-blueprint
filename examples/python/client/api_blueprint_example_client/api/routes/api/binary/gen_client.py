@@ -26,10 +26,14 @@ from .gen_types import (
     PacketResponse,
     AuditPacketQuery,
     AuditPacketResponse,
+    WidePacketQuery,
+    WidePacketResponse,
     DemoPacket,
     DemoPacketWire,
     AuditPacket,
     AuditPacketWire,
+    WidePacket,
+    WidePacketWire,
 )
 
 
@@ -84,6 +88,30 @@ class BinaryClient:
             )
         )
         return AuditPacketResponse.from_value(payload, "audit_packet.response")
+
+    async def wide_packet(
+        self,
+        query: WidePacketQuery,
+        binary: WidePacket | ApiBinaryBody,
+        *,
+        headers: Mapping[str, str] | None = None,
+        timeout: float | None = None,
+    ) -> WidePacketResponse:
+        response_type: str | None = 'WidePacketResponse'
+        payload = await self._transport.request(
+            ApiRequest(
+                method="POST",
+                path="/api/binary/wide-packet",
+                route_id="api.binary.post.widepacket",
+                query=_api_to_json(query),
+                binary=WidePacketWire.to_binary_body(binary),
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
+        )
+        return WidePacketResponse.from_value(payload, "wide_packet.response")
 
     async def audit_packet_response(
         self,

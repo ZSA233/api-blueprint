@@ -99,6 +99,10 @@ var routeApiErrorsByCode = map[string]map[ApiErrorCode]ApiErrorEntry{
 		CommonErrUnknown:     ApiErrorsByID["CommonErr.UNKNOWN"],
 		CommonErrTokenExpire: ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
 	},
+	"api.binary.post.widepacket": {
+		CommonErrUnknown:     ApiErrorsByID["CommonErr.UNKNOWN"],
+		CommonErrTokenExpire: ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
+	},
 	"api.binary.get.auditpacketresponse": {
 		CommonErrUnknown:     ApiErrorsByID["CommonErr.UNKNOWN"],
 		CommonErrTokenExpire: ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],

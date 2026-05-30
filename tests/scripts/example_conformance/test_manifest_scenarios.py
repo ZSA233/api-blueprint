@@ -93,6 +93,7 @@ def test_scenario_registry_exposes_expanded_examples() -> None:
         "deprecated",
         "binary-br",
         "audit-binary",
+        "wide-binary",
         "single-channel",
     }
     assert expected <= set(registry)
@@ -110,6 +111,8 @@ def test_scenario_registry_exposes_expanded_examples() -> None:
     assert registry["deprecated"].route_ids == ("api.demo.post.postdeprecated",)
     assert registry["binary-br"].route_ids == ("api.binary.post.packet",)
     assert registry["audit-binary"].route_ids == ("api.binary.post.auditpacket",)
+    assert registry["wide-binary"].route_ids == ("api.binary.post.widepacket",)
+    assert registry["wide-binary"].clients == ("swift",)
     assert registry["single-channel"].route_ids == ("api.api.channel.ws",)
 
 def test_user_visible_example_routes_have_conformance_status() -> None:
@@ -133,7 +136,7 @@ def test_expanded_scenarios_are_gated_by_server_capabilities() -> None:
         "deprecated",
         "single-channel",
     }
-    binary_names = {"binary-br", "audit-binary"}
+    binary_names = {"binary-br", "audit-binary", "wide-binary"}
 
     for name in rpc_names:
         assert scenarios.server_supports_scenario("go", scenarios.scenario_registry()[name]) is True

@@ -31,6 +31,9 @@ from api_blueprint_example_server.api.routes.api.binary.gen_types import (
     DemoPacket,
     PacketQuery,
     PacketResponse,
+    WidePacket,
+    WidePacketQuery,
+    WidePacketResponse,
 )
 from api_blueprint_example_server.api.routes.api.conflict.gen_types import (
     DefaultQuery,
@@ -283,6 +286,18 @@ class BinaryService:
 
     async def audit_packet_response(self) -> AuditPacket:
         return build_audit_packet()
+
+    async def wide_packet(
+        self,
+        query: WidePacketQuery,
+        binary: WidePacket,
+    ) -> WidePacketResponse:
+        return WidePacketResponse(
+            trace="" if query.trace is None else query.trace,
+            payload_size=len(binary.body.payload),
+            signed_wide=binary.header.signed_wide,
+            checksum=binary.body.checksum,
+        )
 
 
 class MediaService:

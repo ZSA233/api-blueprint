@@ -52,6 +52,21 @@ public final class GenBinaryTypes {
     ) {
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record WidePacketQuery(
+        @JsonProperty("trace") String trace
+    ) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record WidePacketResponse(
+        @JsonProperty("trace") String trace,
+        @JsonProperty("payload_size") Long payloadSize,
+        @JsonProperty("signed_wide") Long signedWide,
+        @JsonProperty("checksum") Long checksum
+    ) {
+    }
+
     public static final class DemoPacketKindValues {
         private DemoPacketKindValues() {
         }
@@ -746,6 +761,211 @@ public final class GenBinaryTypes {
                 return new AuditPacketItem(
                     id,
                     code
+                );
+            } catch (GenBinaryRuntime.BinaryDecodeException error) {
+                if (path == null || path.isEmpty()) {
+                    throw error;
+                }
+                throw GenBinaryRuntime.wrapBinaryField(path, error);
+            }
+        }
+
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record WidePacket(
+        @JsonProperty("header") WidePacketHeader header,
+        @JsonProperty("body") WidePacketBody body
+    ) {
+        public GenApiBinaryBody toBinaryBody() {
+            return WidePacketWire.toBinaryBody(this);
+        }
+    }
+
+    public static final class WidePacketBinaryState {
+        public long payloadLen = 0L;
+        public long signedWide = 0L;
+        public long marker = 0L;
+        public long checksum = 0L;
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record WidePacketHeader(
+        @JsonProperty("payload_len") Long payloadLen,
+        @JsonProperty("signed_wide") Long signedWide
+    ) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record WidePacketBody(
+        @JsonProperty("payload") byte[] payload,
+        @JsonProperty("checksum") Long checksum
+    ) {
+    }
+
+    public static final class WidePacketWire {
+        public static final String CONTENT_TYPE = "application/octet-stream";
+        public static final GenBinaryRuntime.BinaryEndian ENDIAN = GenBinaryRuntime.BinaryEndian.LITTLE;
+
+        private WidePacketWire() {
+        }
+
+        public static GenApiBinaryBody toBinaryBody(WidePacket value) {
+            GenBinaryRuntime.BinaryWriter writer = new GenBinaryRuntime.BinaryWriter(ENDIAN);
+            write(value, writer);
+            return GenApiBinaryBody.of(writer.toByteArray(), CONTENT_TYPE);
+        }
+
+        public static GenApiBinaryBody toBinaryBody(byte[] bytes) {
+            return GenApiBinaryBody.of(bytes, CONTENT_TYPE);
+        }
+
+        public static WidePacket parse(byte[] bytes) {
+            GenBinaryRuntime.BinaryReader reader = new GenBinaryRuntime.BinaryReader(bytes, ENDIAN);
+            WidePacketBinaryState state = new WidePacketBinaryState();
+            WidePacketHeader header;
+            try {
+                header = readWidePacketHeader(reader, state, "");
+            } catch (GenBinaryRuntime.BinaryDecodeException error) {
+                throw GenBinaryRuntime.wrapBinaryField("WidePacket.header", error);
+            }
+            WidePacketBody body;
+            try {
+                body = readWidePacketBody(reader, state, "");
+            } catch (GenBinaryRuntime.BinaryDecodeException error) {
+                throw GenBinaryRuntime.wrapBinaryField("WidePacket.body", error);
+            }
+            reader.requireEOF("WidePacket");
+            return new WidePacket(
+                header,
+                body
+            );
+        }
+
+        public static void write(WidePacket value, GenBinaryRuntime.BinaryWriter writer) {
+            WidePacketBinaryState state = new WidePacketBinaryState();
+            try {
+                writeWidePacketHeader(value.header(), writer, state, "");
+            } catch (GenBinaryRuntime.BinaryEncodeException error) {
+                throw GenBinaryRuntime.wrapBinaryField("WidePacket.header", error);
+            }
+            try {
+                writeWidePacketBody(value.body(), writer, state, "");
+            } catch (GenBinaryRuntime.BinaryEncodeException error) {
+                throw GenBinaryRuntime.wrapBinaryField("WidePacket.body", error);
+            }
+        }
+
+        public static void writeWidePacketHeader(
+            WidePacketHeader value,
+            GenBinaryRuntime.BinaryWriter writer,
+            WidePacketBinaryState state
+        ) {
+            writeWidePacketHeader(value, writer, state, "WidePacketHeader");
+        }
+
+        public static void writeWidePacketHeader(
+            WidePacketHeader value,
+            GenBinaryRuntime.BinaryWriter writer,
+            WidePacketBinaryState state,
+            String path
+        ) {
+            try {
+                GenBinaryRuntime.requireBinary("magic", GenBinaryRuntime.bytesEqual(new byte[] {(byte) 87, (byte) 73, (byte) 68, (byte) 49}, new byte[] {(byte) 87, (byte) 73, (byte) 68, (byte) 49}), "const mismatch");
+                GenBinaryRuntime.requireSize("magic", GenBinaryRuntime.binarySize(new byte[] {(byte) 87, (byte) 73, (byte) 68, (byte) 49}), 4L);
+                writer.writeBytes("magic", new byte[] {(byte) 87, (byte) 73, (byte) 68, (byte) 49});
+                GenBinaryRuntime.requireRange("payload_len", value.payloadLen().longValue(), 0L, Long.MAX_VALUE);
+                GenBinaryRuntime.requireRange("payload_len", value.payloadLen().longValue(), Long.MIN_VALUE, 32L);
+                writer.writeU64("payload_len", value.payloadLen());
+                state.payloadLen = value.payloadLen().longValue();
+                GenBinaryRuntime.requireRange("signed_wide", value.signedWide().longValue(), - 5000000000L, Long.MAX_VALUE);
+                GenBinaryRuntime.requireRange("signed_wide", value.signedWide().longValue(), Long.MIN_VALUE, 5000000000L);
+                writer.writeI64("signed_wide", value.signedWide());
+                state.signedWide = value.signedWide().longValue();
+                GenBinaryRuntime.requireBinary("marker", 9007199254740991L == 9007199254740991L, "const mismatch");
+                writer.writeU64("marker", 9007199254740991L);
+                state.marker = 9007199254740991L;
+            } catch (GenBinaryRuntime.BinaryEncodeException error) {
+                if (path == null || path.isEmpty()) {
+                    throw error;
+                }
+                throw GenBinaryRuntime.wrapBinaryField(path, error);
+            }
+        }
+
+        public static WidePacketHeader readWidePacketHeader(
+            GenBinaryRuntime.BinaryReader reader,
+            WidePacketBinaryState state,
+            String path
+        ) {
+            try {
+                byte[] magic = reader.readBytes("magic", 4L);
+                GenBinaryRuntime.requireDecodeBinary("magic", GenBinaryRuntime.bytesEqual(magic, new byte[] {(byte) 87, (byte) 73, (byte) 68, (byte) 49}), "const mismatch");
+                Long payloadLen = reader.readU64("payload_len");
+                GenBinaryRuntime.requireDecodeRange("payload_len", payloadLen.longValue(), 0L, Long.MAX_VALUE);
+                GenBinaryRuntime.requireDecodeRange("payload_len", payloadLen.longValue(), Long.MIN_VALUE, 32L);
+                state.payloadLen = payloadLen.longValue();
+                Long signedWide = reader.readI64("signed_wide");
+                GenBinaryRuntime.requireDecodeRange("signed_wide", signedWide.longValue(), - 5000000000L, Long.MAX_VALUE);
+                GenBinaryRuntime.requireDecodeRange("signed_wide", signedWide.longValue(), Long.MIN_VALUE, 5000000000L);
+                state.signedWide = signedWide.longValue();
+                Long marker = reader.readU64("marker");
+                GenBinaryRuntime.requireDecodeBinary("marker", marker.longValue() == 9007199254740991L, "const mismatch");
+                state.marker = marker.longValue();
+                return new WidePacketHeader(
+                    payloadLen,
+                    signedWide
+                );
+            } catch (GenBinaryRuntime.BinaryDecodeException error) {
+                if (path == null || path.isEmpty()) {
+                    throw error;
+                }
+                throw GenBinaryRuntime.wrapBinaryField(path, error);
+            }
+        }
+
+        public static void writeWidePacketBody(
+            WidePacketBody value,
+            GenBinaryRuntime.BinaryWriter writer,
+            WidePacketBinaryState state
+        ) {
+            writeWidePacketBody(value, writer, state, "WidePacketBody");
+        }
+
+        public static void writeWidePacketBody(
+            WidePacketBody value,
+            GenBinaryRuntime.BinaryWriter writer,
+            WidePacketBinaryState state,
+            String path
+        ) {
+            try {
+                long payloadCount = state.payloadLen;
+                GenBinaryRuntime.requireSize("payload", GenBinaryRuntime.binarySize(value.payload()), payloadCount);
+                writer.writeBytes("payload", value.payload());
+                GenBinaryRuntime.requireBinary("checksum", value.checksum().longValue() == state.payloadLen, "assert mismatch");
+                writer.writeU64("checksum", value.checksum());
+                state.checksum = value.checksum().longValue();
+            } catch (GenBinaryRuntime.BinaryEncodeException error) {
+                if (path == null || path.isEmpty()) {
+                    throw error;
+                }
+                throw GenBinaryRuntime.wrapBinaryField(path, error);
+            }
+        }
+
+        public static WidePacketBody readWidePacketBody(
+            GenBinaryRuntime.BinaryReader reader,
+            WidePacketBinaryState state,
+            String path
+        ) {
+            try {
+                byte[] payload = reader.readBytes("payload", state.payloadLen);
+                Long checksum = reader.readU64("checksum");
+                GenBinaryRuntime.requireDecodeBinary("checksum", checksum.longValue() == state.payloadLen, "assert mismatch");
+                state.checksum = checksum.longValue();
+                return new WidePacketBody(
+                    payload,
+                    checksum
                 );
             } catch (GenBinaryRuntime.BinaryDecodeException error) {
                 if (path == null || path.isEmpty()) {

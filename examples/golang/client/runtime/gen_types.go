@@ -85,6 +85,17 @@ type RSPAuditPacket struct {
 	Checksum  uint   `json:"checksum" form:"checksum"`
 }
 
+type REQWidePacketQUERY struct {
+	Trace string `json:"trace,omitempty" form:"trace,omitempty"`
+}
+
+type RSPWidePacket struct {
+	Trace       string `json:"trace" form:"trace"`
+	PayloadSize uint64 `json:"payload_size" form:"payload_size"`
+	SignedWide  int64  `json:"signed_wide" form:"signed_wide"`
+	Checksum    uint64 `json:"checksum" form:"checksum"`
+}
+
 type ApiDemoA struct {
 	Bc         string         `json:"bc" form:"bc"`
 	A          int            `json:"a" form:"a"`

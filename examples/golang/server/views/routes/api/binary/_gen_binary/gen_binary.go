@@ -819,3 +819,206 @@ func readAuditPacketItem(reader *binaryruntime.Reader, state *auditPacketBinaryS
 	}
 	return nil
 }
+
+type WidePacket struct {
+	Header WidePacketHeader
+	Body   WidePacketBody
+}
+
+func (msg *WidePacket) ContentType() string {
+	return "application/octet-stream"
+}
+
+func (msg *WidePacket) ContentLength() int64 {
+	return -1
+}
+
+func (msg *WidePacket) WriteBinary(output io.Writer) error {
+	writer := binaryruntime.NewWriter(output, binaryruntime.LittleEndian)
+	return WriteWidePacket(msg, writer)
+}
+
+type widePacketBinaryState struct {
+	PayloadLen uint64
+	SignedWide uint64
+	Marker     uint64
+	Checksum   uint64
+}
+
+func ParseWidePacket(r io.Reader) (*WidePacket, error) {
+	reader := binaryruntime.NewReader(r, stdbinary.LittleEndian)
+	state := &widePacketBinaryState{}
+	var out WidePacket
+	if err := readWidePacketHeader(reader, state, &out.Header); err != nil {
+		return nil, binaryruntime.WrapField("WidePacket.header", err)
+	}
+	if err := readWidePacketBody(reader, state, &out.Body); err != nil {
+		return nil, binaryruntime.WrapField("WidePacket.body", err)
+	}
+	return &out, nil
+}
+
+func (msg *WidePacket) DecodeBinary(r io.Reader) error {
+	parsed, err := ParseWidePacket(r)
+	if err != nil {
+		return err
+	}
+	*msg = *parsed
+	return nil
+}
+
+func WriteWidePacket(value *WidePacket, writer *binaryruntime.Writer) error {
+	state := &widePacketBinaryState{}
+	if err := writeWidePacketHeader(&value.Header, writer, state); err != nil {
+		return binaryruntime.WrapField("WidePacket.header", err)
+	}
+	if err := writeWidePacketBody(&value.Body, writer, state); err != nil {
+		return binaryruntime.WrapField("WidePacket.body", err)
+	}
+	return nil
+}
+
+type WidePacketHeader struct {
+	Magic      [4]byte
+	PayloadLen uint64
+	SignedWide int64
+	Marker     uint64
+}
+
+func WriteWidePacketHeader(value *WidePacketHeader, writer *binaryruntime.Writer, state *widePacketBinaryState) error {
+	if err := writeWidePacketHeader(value, writer, state); err != nil {
+		return binaryruntime.WrapField("WidePacketHeader", err)
+	}
+	return nil
+}
+
+func writeWidePacketHeader(value *WidePacketHeader, writer *binaryruntime.Writer, state *widePacketBinaryState) error {
+	MagicCount := uint64(4)
+	if err := binaryruntime.RequireSize("magic", uint64(len(value.Magic)), uint64(MagicCount)); err != nil {
+		return err
+	}
+	if err := binaryruntime.Require("magic", string(value.Magic[:]) == string([]byte("WID1")), "const mismatch"); err != nil {
+		return err
+	}
+	if err := writer.WriteBytes("magic", value.Magic[:]); err != nil {
+		return err
+	}
+	if err := binaryruntime.RequireRange("payload_len", uint64(value.PayloadLen), uint64(0), ^uint64(0)); err != nil {
+		return err
+	}
+	if err := binaryruntime.RequireRange("payload_len", uint64(value.PayloadLen), 0, uint64(32)); err != nil {
+		return err
+	}
+	if err := writer.WriteUint64("payload_len", value.PayloadLen); err != nil {
+		return err
+	}
+	state.PayloadLen = uint64(value.PayloadLen)
+	if err := binaryruntime.RequireSignedRange("signed_wide", int64(value.SignedWide), -int64(5000000000), int64(^uint64(0)>>1)); err != nil {
+		return err
+	}
+	if err := binaryruntime.RequireSignedRange("signed_wide", int64(value.SignedWide), -int64(^uint64(0)>>1)-1, int64(5000000000)); err != nil {
+		return err
+	}
+	if err := writer.WriteInt64("signed_wide", value.SignedWide); err != nil {
+		return err
+	}
+	state.SignedWide = uint64(value.SignedWide)
+	if err := binaryruntime.Require("marker", uint64(value.Marker) == uint64(uint64(9007199254740991)), "const mismatch"); err != nil {
+		return err
+	}
+	if err := writer.WriteUint64("marker", value.Marker); err != nil {
+		return err
+	}
+	state.Marker = uint64(value.Marker)
+	return nil
+}
+
+func readWidePacketHeader(reader *binaryruntime.Reader, state *widePacketBinaryState, out *WidePacketHeader) error {
+	var fixed [28]byte
+	if n, err := reader.ReadFullCount(fixed[:]); err != nil {
+		return binaryruntime.WrapField(binaryruntime.FixedFieldName(n, []binaryruntime.FixedField{
+			{End: 4, Path: "magic"},
+			{End: 12, Path: "payload_len"},
+			{End: 20, Path: "signed_wide"},
+			{End: 28, Path: "marker"},
+		}), binaryruntime.ReadFailed(err))
+	}
+	copy(out.Magic[:], fixed[0:4])
+	if out.Magic != [4]byte{87, 73, 68, 49} {
+		return binaryruntime.WrapField("magic", binaryruntime.ErrConstMismatch)
+	}
+	out.PayloadLen = reader.Order.Uint64(fixed[4:12])
+	state.PayloadLen = uint64(out.PayloadLen)
+	if uint64(out.PayloadLen) < uint64(0) {
+		return binaryruntime.WrapField("payload_len", binaryruntime.ErrBelowMin)
+	}
+	if uint64(out.PayloadLen) > uint64(32) {
+		return binaryruntime.WrapField("payload_len", binaryruntime.ErrExceedsMax)
+	}
+	out.SignedWide = int64(reader.Order.Uint64(fixed[12:20]))
+	state.SignedWide = uint64(out.SignedWide)
+	if int64(out.SignedWide) < -int64(5000000000) {
+		return binaryruntime.WrapField("signed_wide", binaryruntime.ErrBelowMin)
+	}
+	if int64(out.SignedWide) > int64(5000000000) {
+		return binaryruntime.WrapField("signed_wide", binaryruntime.ErrExceedsMax)
+	}
+	out.Marker = reader.Order.Uint64(fixed[20:28])
+	state.Marker = uint64(out.Marker)
+	if uint64(out.Marker) != uint64(9007199254740991) {
+		return binaryruntime.WrapField("marker", binaryruntime.ErrConstMismatch)
+	}
+	return nil
+}
+
+type WidePacketBody struct {
+	Payload  []byte
+	Checksum uint64
+}
+
+func WriteWidePacketBody(value *WidePacketBody, writer *binaryruntime.Writer, state *widePacketBinaryState) error {
+	if err := writeWidePacketBody(value, writer, state); err != nil {
+		return binaryruntime.WrapField("WidePacketBody", err)
+	}
+	return nil
+}
+
+func writeWidePacketBody(value *WidePacketBody, writer *binaryruntime.Writer, state *widePacketBinaryState) error {
+	PayloadCount := state.PayloadLen
+	if err := binaryruntime.RequireSize("payload", uint64(len(value.Payload)), uint64(PayloadCount)); err != nil {
+		return err
+	}
+	if err := writer.WriteBytes("payload", value.Payload[:]); err != nil {
+		return err
+	}
+	if err := binaryruntime.Require("checksum", uint64(value.Checksum) == state.PayloadLen, "assert mismatch"); err != nil {
+		return err
+	}
+	if err := writer.WriteUint64("checksum", value.Checksum); err != nil {
+		return err
+	}
+	state.Checksum = uint64(value.Checksum)
+	return nil
+}
+
+func readWidePacketBody(reader *binaryruntime.Reader, state *widePacketBinaryState, out *WidePacketBody) error {
+	payloadCount := state.PayloadLen
+	if payloadCount > uint64(binaryruntime.MaxInt) {
+		return binaryruntime.WrapField("payload", binaryruntime.CountExceedsIntMax(payloadCount))
+	}
+	payloadValue, err := reader.ReadBytes(int(payloadCount))
+	if err != nil {
+		return binaryruntime.WrapField("payload", binaryruntime.ReadFailed(err))
+	}
+	out.Payload = payloadValue
+	checksumValue, err := reader.ReadUint64()
+	if err != nil {
+		return binaryruntime.WrapField("checksum", binaryruntime.ReadFailed(err))
+	}
+	out.Checksum = checksumValue
+	state.Checksum = uint64(out.Checksum)
+	if uint64(out.Checksum) != state.PayloadLen {
+		return binaryruntime.WrapField("checksum", binaryruntime.ErrAssertMismatch)
+	}
+	return nil
+}

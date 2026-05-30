@@ -173,7 +173,31 @@ def compile_swift_numeric_expr(
         return swift_code("Int64.min")
     tokens = _swift_expr_tokens(expr)
     rendered: list[str] = []
-    for token in tokens:
+    index = 0
+    while index < len(tokens):
+        token = tokens[index]
+        is_unary_minus = (
+            token == "-"
+            and index + 1 < len(tokens)
+            and (index == 0 or tokens[index - 1] in EXPR_OPERATOR_TOKENS - {")"})
+        )
+        if is_unary_minus:
+            next_token = tokens[index + 1]
+            if next_token.isdigit():
+                rendered.append(swift_numeric_literal(f"-{next_token}", target_type))
+            elif next_token not in EXPR_OPERATOR_TOKENS:
+                call = (
+                    f"{_checked_numeric_helper(target_type, decode=decode)}"
+                    f"({swift_string_literal(path)}, state.{swift_binary_field_name(next_token)})"
+                )
+                rendered_call = f"try {call}" if include_try else call
+                rendered.append(f"-({rendered_call})")
+            else:
+                rendered.append(token)
+                index += 1
+                continue
+            index += 2
+            continue
         if token.isdigit():
             rendered.append(swift_numeric_literal(token, target_type))
         elif token in EXPR_OPERATOR_TOKENS:
@@ -184,6 +208,7 @@ def compile_swift_numeric_expr(
                 f"({swift_string_literal(path)}, state.{swift_binary_field_name(token)})"
             )
             rendered.append(f"try {call}" if include_try else call)
+        index += 1
     return swift_code(" ".join(rendered))
 
 

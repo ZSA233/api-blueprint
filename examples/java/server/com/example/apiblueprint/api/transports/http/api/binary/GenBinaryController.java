@@ -86,6 +86,15 @@ public class GenBinaryController {
         )
     );
 
+    private static final HttpRouteInfo HTTP_ROUTE_API_BINARY_POST_WIDEPACKET = new HttpRouteInfo(
+        new HttpRequestInfo(Set.of("identity")),
+        new HttpResponseInfo(
+            "json",
+            "application/json",
+            ""
+        )
+    );
+
     private static final HttpRouteInfo HTTP_ROUTE_API_BINARY_GET_AUDITPACKETRESPONSE = new HttpRouteInfo(
         new HttpRequestInfo(Set.of()),
         new HttpResponseInfo(
@@ -171,6 +180,37 @@ public class GenBinaryController {
             return wrapResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
         } catch (GenApiError error) {
             return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.binary.post.auditpacket");
+        }
+    }
+
+    @RequestMapping(path = "/api/binary/wide-packet", method = RequestMethod.POST)
+    public Object widePacket(
+        @RequestParam Map<String, String> queryParams,
+        @RequestBody(required = false) byte[] binaryBody,
+        @RequestHeader(name = HttpHeaders.CONTENT_ENCODING, required = false) String contentEncoding
+    ) throws Exception {
+        GenBinaryTypes.WidePacketQuery query;
+        GenBinaryTypes.WidePacket binary;
+        try {
+            query = objectMapper.convertValue(queryParams, GenBinaryTypes.WidePacketQuery.class);
+            binary = GenBinaryTypes.WidePacketWire.parse(
+                decodeBinarySchemaBody(binaryBody == null ? new byte[0] : binaryBody, contentEncoding, HTTP_ROUTE_API_BINARY_POST_WIDEPACKET.request())
+            );
+        } catch (PayloadTooLargeException error) {
+            return payloadTooLargeResponse(error);
+        } catch (UnsupportedContentEncodingException error) {
+            return unsupportedContentEncodingResponse(error);
+        } catch (RuntimeException error) {
+            return badRequestResponse(error);
+        }
+        try {
+            Object result = service.widePacket(
+                query,
+                binary
+            );
+            return wrapResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), result);
+        } catch (GenApiError error) {
+            return wrapApiErrorResponse(GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), error, "api.binary.post.widepacket");
         }
     }
 

@@ -11,8 +11,11 @@ from .gen_types import (
     PacketResponse,
     AuditPacketQuery,
     AuditPacketResponse,
+    WidePacketQuery,
+    WidePacketResponse,
     DemoPacket,
     AuditPacket,
+    WidePacket,
 )
 
 
@@ -29,6 +32,13 @@ class BinaryService(Protocol):
         query: AuditPacketQuery,
         binary: AuditPacket,
     ) -> AuditPacketResponse:
+        ...
+
+    async def wide_packet(
+        self,
+        query: WidePacketQuery,
+        binary: WidePacket,
+    ) -> WidePacketResponse:
         ...
 
     async def audit_packet_response(self) -> AuditPacket:
@@ -49,6 +59,13 @@ class BinaryServiceStub:
         binary: AuditPacket,
     ) -> AuditPacketResponse:
         raise NotImplementedError("audit_packet")
+
+    async def wide_packet(
+        self,
+        query: WidePacketQuery,
+        binary: WidePacket,
+    ) -> WidePacketResponse:
+        raise NotImplementedError("wide_packet")
 
     async def audit_packet_response(self) -> AuditPacket:
         raise NotImplementedError("audit_packet_response")

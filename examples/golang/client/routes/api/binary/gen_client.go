@@ -62,6 +62,25 @@ func (client *GenBinaryClient) AuditPacket(ctx context.Context, query AuditPacke
 	return &response, nil
 }
 
+func (client *GenBinaryClient) WidePacket(ctx context.Context, query WidePacketQuery, binaryBody runtimebinary.Body, opts ...runtime.RequestOption) (*WidePacketResponse, error) {
+	request := runtime.Request{
+		RouteID:          "api.binary.post.widepacket",
+		Method:           "POST",
+		Path:             "/api/binary/wide-packet",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		Query:            query,
+		Binary:           binaryBody,
+		BodyKind:         runtime.RequestBodyKind("binary_schema"),
+		ResponseKind:     runtime.ResponseKind("json"),
+	}
+	request.ApplyOptions(opts...)
+	var response WidePacketResponse
+	if err := client.transport.Do(ctx, request, &response); err != nil {
+		return nil, err
+	}
+	return &response, nil
+}
+
 func (client *GenBinaryClient) AuditPacketResponse(ctx context.Context, opts ...runtime.RequestOption) (*AuditPacket, error) {
 	request := runtime.Request{
 		RouteID:          "api.binary.get.auditpacketresponse",

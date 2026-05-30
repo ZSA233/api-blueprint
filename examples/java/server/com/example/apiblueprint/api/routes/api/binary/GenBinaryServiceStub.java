@@ -28,6 +28,14 @@ public class GenBinaryServiceStub implements BinaryService {
     }
 
     @Override
+    public GenBinaryTypes.WidePacketResponse widePacket(
+        GenBinaryTypes.WidePacketQuery query,
+        GenBinaryTypes.WidePacket binary
+    ) throws Exception {
+        throw new UnsupportedOperationException("widePacket");
+    }
+
+    @Override
     public GenBinaryTypes.AuditPacket auditPacketResponse(
     ) throws Exception {
         throw new UnsupportedOperationException("auditPacketResponse");

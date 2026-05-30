@@ -75,6 +75,36 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		eng,
 	)
 
+	httptransport.POST(
+		"/api/binary/wide-packet",
+		sharedprovider.NewRouteExecutor(
+			sharedprovider.RouteInfo{
+				Root:      "api",
+				Group:     "binary",
+				Namespace: "binary",
+				Service:   "BinaryService",
+				Operation: "WidePacket",
+				RouteID:   "api.binary.post.widepacket",
+				Path:      "/api/binary/wide-packet",
+				Methods:   []string{"POST"},
+				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope(""),
+				HTTP: sharedprovider.HTTPRouteInfo{
+					Request: sharedprovider.HTTPRequestInfo{
+						BinaryContentEncodings: []string{"identity"},
+					},
+					Response: sharedprovider.HTTPResponseInfo{
+						ManualResponse:  false,
+						DefaultFilename: "",
+					},
+				},
+			},
+			"req=QB|auth|handle|rsp=json@CodeMessageDataEnvelope",
+			impl.WidePacket,
+		),
+		eng,
+	)
+
 	httptransport.GET(
 		"/api/binary/audit-packet-response",
 		sharedprovider.NewRouteExecutor(

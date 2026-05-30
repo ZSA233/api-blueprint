@@ -56,6 +56,20 @@ func (impl *Router) AuditPacket(ctx *CTX_AuditPacket, req *REQ_AuditPacket) (rsp
 	}, nil
 }
 
+func (impl *Router) WidePacket(ctx *CTX_WidePacket, req *REQ_WidePacket) (rsp *RSP_WidePacket, err error) {
+	packet := req.B
+	trace := ""
+	if req.Q != nil {
+		trace = req.Q.Trace
+	}
+	return &RSP_WidePacket{
+		Trace:       trace,
+		PayloadSize: uint64(len(packet.Body.Payload)),
+		SignedWide:  packet.Header.SignedWide,
+		Checksum:    packet.Body.Checksum,
+	}, nil
+}
+
 func (impl *Router) AuditPacketResponse(ctx *CTX_AuditPacketResponse, req *REQ_AuditPacketResponse) (rsp *RSP_AuditPacketResponse, err error) {
 	return &RSP_AuditPacketResponse{
 		Header: binaryschema.AuditPacketHeader{

@@ -202,3 +202,94 @@ class BinaryPacketResponse {
     };
   }
 }
+
+class BinaryWidePacketQuery {
+  final String? trace;
+
+  const BinaryWidePacketQuery({
+    this.trace,
+  });
+
+  factory BinaryWidePacketQuery.fromJson(Map<String, Object?> json) {
+    return BinaryWidePacketQuery(
+      trace: apiBlueprintReadString(json["trace"]),
+    );
+  }
+
+  factory BinaryWidePacketQuery.fromJsonValue(Object? value) {
+    final codec = apiJsonCodecs.find<BinaryWidePacketQuery>();
+    if (codec != null) {
+      return codec.fromJson(value);
+    }
+    return BinaryWidePacketQuery.fromJson(apiBlueprintReadObject(value));
+  }
+
+  Map<String, Object?> toJson() {
+    final codec = apiJsonCodecs.find<BinaryWidePacketQuery>();
+    if (codec != null) {
+      return apiBlueprintReadObject(codec.toJson(this));
+    }
+    return {
+      "trace": apiBlueprintToJson(trace),
+    };
+  }
+
+  Map<String, String?> toQueryMap() {
+    return {
+      "trace": apiBlueprintToQueryValue(trace),
+    };
+  }
+}
+
+class BinaryWidePacketResponse {
+  final String? trace;
+  final int? payloadSize;
+  final int? signedWide;
+  final int? checksum;
+
+  const BinaryWidePacketResponse({
+    this.trace,
+    this.payloadSize,
+    this.signedWide,
+    this.checksum,
+  });
+
+  factory BinaryWidePacketResponse.fromJson(Map<String, Object?> json) {
+    return BinaryWidePacketResponse(
+      trace: apiBlueprintReadString(json["trace"]),
+      payloadSize: apiBlueprintReadInt(json["payload_size"]),
+      signedWide: apiBlueprintReadInt(json["signed_wide"]),
+      checksum: apiBlueprintReadInt(json["checksum"]),
+    );
+  }
+
+  factory BinaryWidePacketResponse.fromJsonValue(Object? value) {
+    final codec = apiJsonCodecs.find<BinaryWidePacketResponse>();
+    if (codec != null) {
+      return codec.fromJson(value);
+    }
+    return BinaryWidePacketResponse.fromJson(apiBlueprintReadObject(value));
+  }
+
+  Map<String, Object?> toJson() {
+    final codec = apiJsonCodecs.find<BinaryWidePacketResponse>();
+    if (codec != null) {
+      return apiBlueprintReadObject(codec.toJson(this));
+    }
+    return {
+      "trace": apiBlueprintToJson(trace),
+      "payload_size": apiBlueprintToJson(payloadSize),
+      "signed_wide": apiBlueprintToJson(signedWide),
+      "checksum": apiBlueprintToJson(checksum),
+    };
+  }
+
+  Map<String, String?> toQueryMap() {
+    return {
+      "trace": apiBlueprintToQueryValue(trace),
+      "payload_size": apiBlueprintToQueryValue(payloadSize),
+      "signed_wide": apiBlueprintToQueryValue(signedWide),
+      "checksum": apiBlueprintToQueryValue(checksum),
+    };
+  }
+}

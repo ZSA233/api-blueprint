@@ -596,3 +596,165 @@ AuditPacketItem _readAuditPacketItem(
     code: code,
   );
 }
+
+class WidePacket {
+  final Uint8List? magic;
+  final int? payloadLen;
+  final int? signedWide;
+  final int? marker;
+  final Uint8List? payload;
+  final int? checksum;
+
+  const WidePacket({
+    this.magic,
+    this.payloadLen,
+    this.signedWide,
+    this.marker,
+    this.payload,
+    this.checksum,
+  });
+}
+
+class WidePacketHeader {
+  final Uint8List? magic;
+  final int? payloadLen;
+  final int? signedWide;
+  final int? marker;
+
+  const WidePacketHeader({
+    this.magic,
+    this.payloadLen,
+    this.signedWide,
+    this.marker,
+  });
+}
+
+class WidePacketBody {
+  final Uint8List? payload;
+  final int? checksum;
+
+  const WidePacketBody({
+    this.payload,
+    this.checksum,
+  });
+}
+
+Uint8List encodeWidePacket(WidePacket value) {
+  final writer = ApiBinaryWriter(endian: Endian.little);
+  final state = <String, int>{
+    "payloadLen": 0,
+    "signedWide": 0,
+    "marker": 0,
+    "checksum": 0,
+  };
+  _writeWidePacketHeader(value, writer, state, "WidePacket.widePacketHeader");
+  _writeWidePacketBody(value, writer, state, "WidePacket.widePacketBody");
+  return writer.takeBytes();
+}
+
+WidePacket decodeWidePacket(Uint8List bytes) {
+  final reader = ApiBinaryReader(bytes, endian: Endian.little);
+  final state = <String, int>{
+    "payloadLen": 0,
+    "signedWide": 0,
+    "marker": 0,
+    "checksum": 0,
+  };
+  final widePacketHeader = _readWidePacketHeader(reader, state, "WidePacket.widePacketHeader");
+  final widePacketBody = _readWidePacketBody(reader, state, "WidePacket.widePacketBody");
+  reader.requireDone();
+  return WidePacket(
+    magic: widePacketHeader.magic,
+    payloadLen: widePacketHeader.payloadLen,
+    signedWide: widePacketHeader.signedWide,
+    marker: widePacketHeader.marker,
+    payload: widePacketBody.payload,
+    checksum: widePacketBody.checksum,
+  );
+}
+
+void _writeWidePacketHeader(
+  WidePacket value,
+  ApiBinaryWriter writer,
+  Map<String, int> state,
+  String path,
+) {
+    final _magic = value.magic ?? Uint8List.fromList([87, 73, 68, 49]);
+    final _magicCount = 4;
+    apiBinaryRequireSize(apiBinaryJoinPath(path, "magic"), apiBinarySize(_magic), _magicCount);
+      apiBinaryRequireCondition(apiBinaryJoinPath(path, "magic"), apiBinaryBytesEqual(_magic, Uint8List.fromList([87, 73, 68, 49])), 'const mismatch');
+    writer.writeBytes(apiBinaryJoinPath(path, "magic"), _magic);
+    final _payloadLen = apiBinaryRequire<int>(value.payloadLen, apiBinaryJoinPath(path, "payload_len"));
+      apiBinaryRequireRange(apiBinaryJoinPath(path, "payload_len"), _payloadLen, 0, 9223372036854775807);
+      apiBinaryRequireRange(apiBinaryJoinPath(path, "payload_len"), _payloadLen, -9223372036854775808, 32);
+    writer.writeU64(apiBinaryJoinPath(path, "payload_len"), _payloadLen);
+    state["payloadLen"] = _payloadLen;
+    final _signedWide = apiBinaryRequire<int>(value.signedWide, apiBinaryJoinPath(path, "signed_wide"));
+      apiBinaryRequireRange(apiBinaryJoinPath(path, "signed_wide"), _signedWide, - 5000000000, 9223372036854775807);
+      apiBinaryRequireRange(apiBinaryJoinPath(path, "signed_wide"), _signedWide, -9223372036854775808, 5000000000);
+    writer.writeI64(apiBinaryJoinPath(path, "signed_wide"), _signedWide);
+    state["signedWide"] = _signedWide;
+    final _marker = value.marker ?? 9007199254740991;
+      apiBinaryRequireCondition(apiBinaryJoinPath(path, "marker"), _marker == 9007199254740991, 'const mismatch');
+    writer.writeU64(apiBinaryJoinPath(path, "marker"), _marker);
+    state["marker"] = _marker;
+}
+
+WidePacketHeader _readWidePacketHeader(
+  ApiBinaryReader reader,
+  Map<String, int> state,
+  String path,
+) {
+    final magic = reader.readBytes(apiBinaryJoinPath(path, "magic"), 4);
+      apiBinaryRequireCondition(apiBinaryJoinPath(path, "magic"), apiBinaryBytesEqual(magic, Uint8List.fromList([87, 73, 68, 49])), 'const mismatch');
+    final payloadLen = reader.readU64(apiBinaryJoinPath(path, "payload_len"));
+      apiBinaryRequireRange(apiBinaryJoinPath(path, "payload_len"), payloadLen, 0, 9223372036854775807);
+      apiBinaryRequireRange(apiBinaryJoinPath(path, "payload_len"), payloadLen, -9223372036854775808, 32);
+    state["payloadLen"] = payloadLen;
+    final signedWide = reader.readI64(apiBinaryJoinPath(path, "signed_wide"));
+      apiBinaryRequireRange(apiBinaryJoinPath(path, "signed_wide"), signedWide, - 5000000000, 9223372036854775807);
+      apiBinaryRequireRange(apiBinaryJoinPath(path, "signed_wide"), signedWide, -9223372036854775808, 5000000000);
+    state["signedWide"] = signedWide;
+    final marker = reader.readU64(apiBinaryJoinPath(path, "marker"));
+      apiBinaryRequireCondition(apiBinaryJoinPath(path, "marker"), marker == 9007199254740991, 'const mismatch');
+    state["marker"] = marker;
+
+  return WidePacketHeader(
+    magic: magic,
+    payloadLen: payloadLen,
+    signedWide: signedWide,
+    marker: marker,
+  );
+}
+
+void _writeWidePacketBody(
+  WidePacket value,
+  ApiBinaryWriter writer,
+  Map<String, int> state,
+  String path,
+) {
+    final _payload = apiBinaryRequire<Uint8List>(value.payload, apiBinaryJoinPath(path, "payload"));
+    final _payloadCount = (state["payloadLen"] ?? 0);
+    apiBinaryRequireSize(apiBinaryJoinPath(path, "payload"), apiBinarySize(_payload), _payloadCount);
+    writer.writeBytes(apiBinaryJoinPath(path, "payload"), _payload);
+    final _checksum = apiBinaryRequire<int>(value.checksum, apiBinaryJoinPath(path, "checksum"));
+      apiBinaryRequireCondition(apiBinaryJoinPath(path, "checksum"), _checksum == (state["payloadLen"] ?? 0), 'assert mismatch');
+    writer.writeU64(apiBinaryJoinPath(path, "checksum"), _checksum);
+    state["checksum"] = _checksum;
+}
+
+WidePacketBody _readWidePacketBody(
+  ApiBinaryReader reader,
+  Map<String, int> state,
+  String path,
+) {
+    final payload = reader.readBytes(apiBinaryJoinPath(path, "payload"), (state["payloadLen"] ?? 0));
+    final checksum = reader.readU64(apiBinaryJoinPath(path, "checksum"));
+      apiBinaryRequireCondition(apiBinaryJoinPath(path, "checksum"), checksum == (state["payloadLen"] ?? 0), 'assert mismatch');
+    state["checksum"] = checksum;
+
+  return WidePacketBody(
+    payload: payload,
+    checksum: checksum,
+  );
+}

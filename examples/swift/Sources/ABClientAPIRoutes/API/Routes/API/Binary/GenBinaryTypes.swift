@@ -171,3 +171,79 @@ public struct BinaryPacketResponse: Codable, Sendable {
         try apiBlueprintMultipartFields(self)
     }
 }
+
+public struct BinaryWidePacketQuery: Codable, Sendable {
+    /// trace id
+    public var trace: String?
+
+    public init(
+        trace: String? = nil
+    ) {
+        self.trace = trace
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case trace = "trace"
+    }
+
+    public func toQueryItems() -> [URLQueryItem] {
+        [
+            URLQueryItem(name: "trace", value: apiBlueprintQueryValue(trace)),
+        ].filter { $0.value != nil }
+    }
+
+    public func toFormFields() throws -> [String: String?] {
+        try apiBlueprintFormFields(self)
+    }
+
+    public func toMultipartFields() throws -> [String: Any?] {
+        try apiBlueprintMultipartFields(self)
+    }
+}
+
+public struct BinaryWidePacketResponse: Codable, Sendable {
+    /// trace id
+    public var trace: String
+    /// payload byte size
+    public var payloadSize: Int
+    /// signed wide value
+    public var signedWide: Int
+    /// checksum
+    public var checksum: Int
+
+    public init(
+        trace: String,
+        payloadSize: Int,
+        signedWide: Int,
+        checksum: Int
+    ) {
+        self.trace = trace
+        self.payloadSize = payloadSize
+        self.signedWide = signedWide
+        self.checksum = checksum
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case trace = "trace"
+        case payloadSize = "payload_size"
+        case signedWide = "signed_wide"
+        case checksum = "checksum"
+    }
+
+    public func toQueryItems() -> [URLQueryItem] {
+        [
+            URLQueryItem(name: "trace", value: apiBlueprintQueryValue(trace)),
+            URLQueryItem(name: "payload_size", value: apiBlueprintQueryValue(payloadSize)),
+            URLQueryItem(name: "signed_wide", value: apiBlueprintQueryValue(signedWide)),
+            URLQueryItem(name: "checksum", value: apiBlueprintQueryValue(checksum)),
+        ].filter { $0.value != nil }
+    }
+
+    public func toFormFields() throws -> [String: String?] {
+        try apiBlueprintFormFields(self)
+    }
+
+    public func toMultipartFields() throws -> [String: Any?] {
+        try apiBlueprintMultipartFields(self)
+    }
+}

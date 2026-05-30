@@ -33,7 +33,7 @@ struct SwiftConformance {
         let selected = scenarioSet(
             CommandLine.arguments.count > 2
                 ? CommandLine.arguments[2]
-                : "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel"
+                : "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,wide-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel"
         )
         let client = HTTPAPIClient.create(baseURL: baseURL)
 
@@ -72,6 +72,9 @@ struct SwiftConformance {
         }
         if selected.contains("audit-binary") {
             try await checkAuditBinary(client)
+        }
+        if selected.contains("wide-binary") {
+            try await checkWideBinary(client)
         }
         if selected.contains("binary-response") {
             try await checkBinaryResponse(client)
@@ -199,6 +202,27 @@ private func checkAuditBinary(_ client: ABClient) async throws {
     try expectEqual(response.trace, "swift-audit", "audit.trace")
     try expectEqual(response.itemCount, 2, "audit.itemCount")
     try expectEqual(response.checksum, 2, "audit.checksum")
+}
+
+private func checkWideBinary(_ client: ABClient) async throws {
+    let payload = Data("wide-payload".utf8)
+    let response = try await client.api.binary.widePacket(
+        query: BinaryWidePacketQuery(trace: "swift-wide"),
+        binary: WidePacket(
+            header: WidePacketHeader(
+                payloadLen: UInt64(payload.count),
+                signedWide: -4_000_000_000
+            ),
+            body: WidePacketBody(
+                payload: payload,
+                checksum: UInt64(payload.count)
+            )
+        )
+    )
+    try expectEqual(response.trace, "swift-wide", "wideBinary.trace")
+    try expectEqual(response.payloadSize, payload.count, "wideBinary.payloadSize")
+    try expectEqual(response.signedWide, -4_000_000_000, "wideBinary.signedWide")
+    try expectEqual(response.checksum, payload.count, "wideBinary.checksum")
 }
 
 private func checkBinaryResponse(_ client: ABClient) async throws {

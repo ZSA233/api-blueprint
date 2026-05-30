@@ -10,6 +10,7 @@ import type { ApiBinaryBody } from "../../../runtime/binary/index";
 import {
   DemoPacketWire,
   AuditPacketWire,
+  WidePacketWire,
 } from "./gen_binary";
 
 export class BinaryClient extends BaseClient {
@@ -101,6 +102,52 @@ export class BinaryClient extends BaseClient {
       namespace: "binary",
       query: request.query as unknown as Record<string, unknown> | undefined,
       binary: AuditPacketWire.toBinaryBody(request.binary),
+      headers: options?.headers,
+      init: options?.init,
+      responseType: "json",
+      responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+      timeoutMs: options?.timeoutMs,
+    });
+  }
+
+  /**
+   * Wide integer binary packet example
+
+   * Tags: api
+   */
+
+  async widePacket(
+    request: {
+      query?: Types.WidePacketQuery;
+      binary: Types.WidePacket;
+    },
+    options?: ApiRequestOptions,
+  ): Promise<Types.WidePacketResponse>;
+
+  async widePacket(
+    request: {
+      query?: Types.WidePacketQuery;
+      binary: ApiBinaryBody;
+    },
+    options?: ApiRequestOptions,
+  ): Promise<Types.WidePacketResponse>;
+
+  async widePacket(
+    request: {
+      query?: Types.WidePacketQuery;
+      binary: Types.WidePacket | ApiBinaryBody;
+    },
+    options?: ApiRequestOptions,
+  ): Promise<Types.WidePacketResponse> {
+    return this.request<Types.WidePacketResponse>({
+      routeId: "api.binary.post.widepacket",
+      method: "POST",
+      path: "/api/binary/wide-packet",
+      service: "BinaryService",
+      operation: "WidePacket",
+      namespace: "binary",
+      query: request.query as unknown as Record<string, unknown> | undefined,
+      binary: WidePacketWire.toBinaryBody(request.binary),
       headers: options?.headers,
       init: options?.init,
       responseType: "json",

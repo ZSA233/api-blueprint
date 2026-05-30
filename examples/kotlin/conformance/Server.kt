@@ -4,12 +4,15 @@ import com.example.apiblueprint.api.routes.api.binary.BinaryPacketResponse
 import com.example.apiblueprint.api.routes.api.binary.BinaryPacketQuery
 import com.example.apiblueprint.api.routes.api.binary.BinaryAuditPacketResponse
 import com.example.apiblueprint.api.routes.api.binary.BinaryAuditPacketQuery
+import com.example.apiblueprint.api.routes.api.binary.BinaryWidePacketResponse
+import com.example.apiblueprint.api.routes.api.binary.BinaryWidePacketQuery
 import com.example.apiblueprint.api.routes.api.binary.AuditPacket
 import com.example.apiblueprint.api.routes.api.binary.AuditPacketBody
 import com.example.apiblueprint.api.routes.api.binary.AuditPacketFlagsValues
 import com.example.apiblueprint.api.routes.api.binary.AuditPacketHeader
 import com.example.apiblueprint.api.routes.api.binary.AuditPacketItem
 import com.example.apiblueprint.api.routes.api.binary.DemoPacket
+import com.example.apiblueprint.api.routes.api.binary.WidePacket
 import com.example.apiblueprint.api.routes.api.binary.BinaryServiceStub
 import com.example.apiblueprint.api.routes.api.conflict.ConflictDefaultQuery
 import com.example.apiblueprint.api.routes.api.conflict.ConflictServiceStub
@@ -228,6 +231,15 @@ private class BinaryServiceImpl : BinaryServiceStub() {
             trace = query.trace.orEmpty(),
             itemCount = binary.header.itemCount,
             checksum = binary.body.checksum.toInt(),
+        )
+    }
+
+    override suspend fun widePacket(query: BinaryWidePacketQuery, binary: WidePacket): BinaryWidePacketResponse {
+        return BinaryWidePacketResponse(
+            trace = query.trace.orEmpty(),
+            payloadSize = binary.body.payload.size.toLong(),
+            signedWide = binary.header.signedWide,
+            checksum = binary.body.checksum,
         )
     }
 

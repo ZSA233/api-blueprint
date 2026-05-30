@@ -42,3 +42,19 @@ export interface PacketResponse {
   /** checksum */
   checksum: number;
 }
+
+export interface WidePacketQuery {
+  /** trace id */
+  trace?: string;
+}
+
+export interface WidePacketResponse {
+  /** trace id */
+  trace: string;
+  /** payload byte size */
+  payload_size: number;
+  /** signed wide value */
+  signed_wide: number;
+  /** checksum */
+  checksum: number;
+}
