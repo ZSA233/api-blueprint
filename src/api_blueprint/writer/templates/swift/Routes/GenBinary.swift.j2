@@ -1,13 +1,222 @@
 import Foundation
 import {{ package_plan.runtime.module_name }}
 
-{% for schema in binary_schemas %}
-public struct {{ schema.name }}: Codable, Sendable {
-    public var data: Data
+{% macro check_encode(field, receiver, int_expr, path) -%}
+{% if field.const_value %}
+{% if field.is_bytes or field.is_string or field.typ == "bool" %}
+    try apiBinaryRequire({{ path | code_literal }}, {{ receiver }} == {{ field.default_expr }}, "const mismatch")
+{% else %}
+    try apiBinaryRequire({{ path | code_literal }}, {{ int_expr }} == {{ field.const_long_expr }}, "const mismatch")
+{% endif %}
+{% endif %}
+{% if field.min_value and field.supports_numeric_rules %}
+    try apiBinaryRequireRange({{ path | code_literal }}, {{ int_expr }}, {{ field.min_expr }}, Int.max)
+{% endif %}
+{% if field.max_value and field.supports_numeric_rules %}
+    try apiBinaryRequireRange({{ path | code_literal }}, {{ int_expr }}, Int.min, {{ field.max_expr }})
+{% endif %}
+{% if field.assert_value and field.supports_numeric_rules %}
+    try apiBinaryRequire({{ path | code_literal }}, {{ int_expr }} == {{ field.assert_expr }}, "assert mismatch")
+{% endif %}
+{% if field.bitflags_zero_mask %}
+    try apiBinaryRequire({{ path | code_literal }}, ({{ int_expr }} & {{ field.bitflags_zero_mask }}) == 0, "reserved bits must be zero")
+{% endif %}
+{%- endmacro %}
 
-    public init(data: Data = Data()) {
-        self.data = data
+{% macro check_decode(field, receiver, int_expr, path) -%}
+{% if field.const_value %}
+{% if field.is_bytes or field.is_string or field.typ == "bool" %}
+    try apiBinaryRequireDecode({{ path | code_literal }}, {{ receiver }} == {{ field.default_expr }}, "const mismatch")
+{% else %}
+    try apiBinaryRequireDecode({{ path | code_literal }}, {{ int_expr }} == {{ field.const_long_expr }}, "const mismatch")
+{% endif %}
+{% endif %}
+{% if field.min_value and field.supports_numeric_rules %}
+    try apiBinaryRequireRangeDecode({{ path | code_literal }}, {{ int_expr }}, {{ field.min_expr }}, Int.max)
+{% endif %}
+{% if field.max_value and field.supports_numeric_rules %}
+    try apiBinaryRequireRangeDecode({{ path | code_literal }}, {{ int_expr }}, Int.min, {{ field.max_expr }})
+{% endif %}
+{% if field.assert_value and field.supports_numeric_rules %}
+    try apiBinaryRequireDecode({{ path | code_literal }}, {{ int_expr }} == {{ field.assert_expr }}, "assert mismatch")
+{% endif %}
+{% if field.bitflags_zero_mask %}
+    try apiBinaryRequireDecode({{ path | code_literal }}, ({{ int_expr }} & {{ field.bitflags_zero_mask }}) == 0, "reserved bits must be zero")
+{% endif %}
+{%- endmacro %}
+
+{% macro write_field(field, object) -%}
+{% set path = field.name %}
+{% set receiver = field.write_value_expr %}
+{% if field.is_hidden %}
+    try writer.writeZeroes({{ path | code_literal }}, {{ field.count_expr }})
+{% elif field.is_bytes %}
+{% if field.fixed_bytes %}
+{{ check_encode(field, receiver, field.write_int_expr, path) }}
+    try writer.writeBytesExact({{ path | code_literal }}, {{ receiver }}, {{ field.count_expr }})
+{% else %}
+    let {{ field.count_var }} = {{ field.count_expr }}
+{% if field.min_value %}
+    try apiBinaryRequireRange({{ path | code_literal }}, {{ field.count_var }}, {{ field.min_expr }}, Int.max)
+{% endif %}
+{% if field.max_value %}
+    try apiBinaryRequireRange({{ path | code_literal }}, {{ field.count_var }}, Int.min, {{ field.max_expr }})
+{% endif %}
+    try apiBinaryRequireSize({{ path | code_literal }}, apiBinarySize({{ receiver }}), {{ field.count_var }})
+{{ check_encode(field, receiver, field.write_int_expr, path) }}
+    try writer.writeBytes({{ path | code_literal }}, {{ receiver }})
+{% endif %}
+{% elif field.is_string %}
+    let {{ field.count_var }} = {{ field.count_expr }}
+{% if field.min_value %}
+    try apiBinaryRequireRange({{ path | code_literal }}, {{ field.count_var }}, {{ field.min_expr }}, Int.max)
+{% endif %}
+{% if field.max_value %}
+    try apiBinaryRequireRange({{ path | code_literal }}, {{ field.count_var }}, Int.min, {{ field.max_expr }})
+{% endif %}
+    try apiBinaryRequireSize({{ path | code_literal }}, apiBinarySize({{ receiver }}), {{ field.count_var }})
+{{ check_encode(field, receiver, field.write_int_expr, path) }}
+    try writer.writeUTF8String({{ path | code_literal }}, {{ receiver }})
+{% elif field.is_array %}
+    let {{ field.count_var }} = {{ field.count_expr }}
+    try apiBinaryRequire({{ path | code_literal }}, {{ field.count_var }} >= 0, "invalid count \({{ field.count_var }})")
+{% if field.min_value %}
+    try apiBinaryRequireRange({{ path | code_literal }}, {{ field.count_var }}, {{ field.min_expr }}, Int.max)
+{% endif %}
+{% if field.max_value %}
+    try apiBinaryRequireRange({{ path | code_literal }}, {{ field.count_var }}, Int.min, {{ field.max_expr }})
+{% endif %}
+    try apiBinaryRequireSize({{ path | code_literal }}, apiBinarySize({{ receiver }}), {{ field.count_var }})
+{% if field.is_scalar %}
+    for (index, item) in {{ receiver }}.enumerated() {
+        do {
+            try writer.{{ field.write_method }}("", item)
+        } catch let error as APIBinaryEncodeError {
+            throw apiBinaryWrapIndex({{ path | code_literal }}, index, error)
+        }
     }
+{% else %}
+    for (index, item) in {{ receiver }}.enumerated() {
+        do {
+            try {{ field.schema.name }}Wire.write{{ field.single_swift_type }}(item, writer: writer, state: state, path: "")
+        } catch let error as APIBinaryEncodeError {
+            throw apiBinaryWrapIndex({{ path | code_literal }}, index, error)
+        }
+    }
+{% endif %}
+{% elif field.is_scalar %}
+{{ check_encode(field, receiver, field.write_int_expr, path) }}
+{% if field.sizeof_value and object.has_field(field.sizeof_value) %}
+    try apiBinaryRequireSize({{ (path ~ "." ~ field.sizeof_value) | code_literal }}, apiBinarySize(value.{{ field.sizeof_swift_name }}), {{ field.write_int_expr }})
+{% endif %}
+    try writer.{{ field.write_method }}({{ path | code_literal }}, {{ receiver }})
+{% if field.can_store_var %}
+    state.{{ field.swift_name }} = {{ field.write_int_expr }}
+{% endif %}
+{% else %}
+    do {
+        try {{ field.schema.name }}Wire.write{{ field.single_swift_type }}({{ receiver }}, writer: writer, state: state, path: "")
+    } catch let error as APIBinaryEncodeError {
+        throw apiBinaryWrapField({{ path | code_literal }}, error)
+    }
+{{ check_encode(field, receiver, field.write_int_expr, path) }}
+{% endif %}
+{%- endmacro %}
+
+{% macro read_field(field, object) -%}
+{% set path = field.name %}
+{% if field.is_padding %}
+    _ = try reader.readBytes({{ path | code_literal }}, {{ field.count_expr }})
+{% elif field.is_reserved %}
+    try reader.readZeroes({{ path | code_literal }}, {{ field.count_expr }})
+{% elif field.is_bytes %}
+{% if not field.fixed_bytes %}
+    let {{ field.count_var }} = {{ field.count_expr }}
+{% if field.min_value %}
+    try apiBinaryRequireRangeDecode({{ path | code_literal }}, {{ field.count_var }}, {{ field.min_expr }}, Int.max)
+{% endif %}
+{% if field.max_value %}
+    try apiBinaryRequireRangeDecode({{ path | code_literal }}, {{ field.count_var }}, Int.min, {{ field.max_expr }})
+{% endif %}
+    let {{ field.swift_name }} = try reader.readBytes({{ path | code_literal }}, {{ field.count_var }})
+{% else %}
+    let {{ field.swift_name }} = try reader.readBytes({{ path | code_literal }}, {{ field.count_expr }})
+{% endif %}
+{{ check_decode(field, field.swift_name, field.local_int_expr, path) }}
+{% elif field.is_string %}
+    let {{ field.count_var }} = {{ field.count_expr }}
+{% if field.min_value %}
+    try apiBinaryRequireRangeDecode({{ path | code_literal }}, {{ field.count_var }}, {{ field.min_expr }}, Int.max)
+{% endif %}
+{% if field.max_value %}
+    try apiBinaryRequireRangeDecode({{ path | code_literal }}, {{ field.count_var }}, Int.min, {{ field.max_expr }})
+{% endif %}
+    let {{ field.swift_name }} = try reader.readUTF8String({{ path | code_literal }}, {{ field.count_var }})
+{{ check_decode(field, field.swift_name, field.local_int_expr, path) }}
+{% elif field.is_array %}
+    let {{ field.count_var }} = {{ field.count_expr }}
+    try apiBinaryRequireDecode({{ path | code_literal }}, {{ field.count_var }} >= 0, "invalid count \({{ field.count_var }})")
+{% if field.min_value %}
+    try apiBinaryRequireRangeDecode({{ path | code_literal }}, {{ field.count_var }}, {{ field.min_expr }}, Int.max)
+{% endif %}
+{% if field.max_value %}
+    try apiBinaryRequireRangeDecode({{ path | code_literal }}, {{ field.count_var }}, Int.min, {{ field.max_expr }})
+{% endif %}
+    var {{ field.swift_name }}: [{{ field.single_swift_type }}] = []
+    {{ field.swift_name }}.reserveCapacity({{ field.count_var }})
+    for index in 0..<{{ field.count_var }} {
+{% if field.is_scalar %}
+        do {
+            let item = try reader.{{ field.read_method }}({{ path | code_literal }})
+            {{ field.swift_name }}.append(item)
+        } catch let error as APIBinaryDecodeError {
+            throw apiBinaryWrapIndex({{ path | code_literal }}, index, error)
+        }
+{% else %}
+        do {
+            let item = try {{ field.schema.name }}Wire.read{{ field.single_swift_type }}(reader: reader, state: state, path: "")
+            {{ field.swift_name }}.append(item)
+        } catch let error as APIBinaryDecodeError {
+            throw apiBinaryWrapIndex({{ path | code_literal }}, index, error)
+        }
+{% endif %}
+    }
+{% elif field.is_scalar %}
+    let {{ field.swift_name }} = try reader.{{ field.read_method }}({{ path | code_literal }})
+{{ check_decode(field, field.swift_name, field.local_int_expr, path) }}
+{% if field.can_store_var %}
+    state.{{ field.swift_name }} = {{ field.local_int_expr }}
+{% endif %}
+{% else %}
+    let {{ field.swift_name }}: {{ field.single_swift_type }}
+    do {
+        {{ field.swift_name }} = try {{ field.schema.name }}Wire.read{{ field.single_swift_type }}(reader: reader, state: state, path: "")
+    } catch let error as APIBinaryDecodeError {
+        throw apiBinaryWrapField({{ path | code_literal }}, error)
+    }
+{{ check_decode(field, field.swift_name, field.local_int_expr, path) }}
+{% endif %}
+{%- endmacro %}
+
+{% for schema in binary_schemas %}
+{% for value_set in schema.value_sets %}
+public enum {{ value_set.values_object }} {
+{% for value in value_set.values %}    public static let {{ value_set.value_name(value.name) }}: {{ value_set.swift_type }} = {{ value_set.value_literal(value.value) }}
+{% endfor %}}
+
+{% endfor %}
+public struct {{ schema.name }}: Codable, Sendable {
+{% for section in schema.sections %}    public var {{ schema.packet_field_name(section.name) }}: {{ section.name }}
+{% endfor %}
+{% if schema.sections %}
+    public init(
+{% for section in schema.sections %}        {{ schema.packet_field_name(section.name) }}: {{ section.name }}{% if not loop.last %},{% endif %}
+{% endfor %}    ) {
+{% for section in schema.sections %}        self.{{ schema.packet_field_name(section.name) }} = {{ schema.packet_field_name(section.name) }}
+{% endfor %}    }
+{% else %}
+    public init() {}
+{% endif %}
 
     public func encode() throws -> Data {
         try {{ schema.encode_func }}(self)
@@ -18,11 +227,100 @@ public struct {{ schema.name }}: Codable, Sendable {
     }
 }
 
+public final class {{ schema.state_type }} {
+{% for field in schema.state_fields %}    public var {{ field.swift_name }}: Int = 0
+{% endfor %}    public init() {}
+}
+
+{% for object in schema.objects %}
+public struct {{ object.name }}: Codable, Sendable {
+{% for field in object.data_fields %}    public var {{ field.swift_name }}: {{ field.swift_type }}
+{% endfor %}
+{% if object.data_fields %}
+    public init(
+{% for field in object.data_fields %}        {{ field.swift_name }}: {{ field.swift_type }}{% if not loop.last %},{% endif %}
+{% endfor %}    ) {
+{% for field in object.data_fields %}        self.{{ field.swift_name }} = {{ field.swift_name }}
+{% endfor %}    }
+{% else %}
+    public init() {}
+{% endif %}
+}
+
+{% endfor %}
+public enum {{ schema.name }}Wire {
+    public static let contentType: String = "{{ schema.content_type }}"
+    public static let endian: APIBinaryEndian = {{ schema.endian }}
+
+    public static func encode(_ value: {{ schema.name }}) throws -> Data {
+        let writer = APIBinaryWriter(endian: endian)
+        try write(value, writer: writer)
+        return writer.data
+    }
+
+    public static func decode(_ data: Data) throws -> {{ schema.name }} {
+        let reader = APIBinaryReader(data, endian: endian)
+        let state = {{ schema.state_type }}()
+{% for section in schema.sections %}        let {{ schema.packet_field_name(section.name) }} = try read{{ section.name }}(reader: reader, state: state, path: "{{ schema.name }}.{{ schema.packet_field_name(section.name) }}")
+{% endfor %}        try reader.requireEOF("{{ schema.name }}")
+        return {{ schema.name }}(
+{% for section in schema.sections %}            {{ schema.packet_field_name(section.name) }}: {{ schema.packet_field_name(section.name) }}{% if not loop.last %},{% endif %}
+{% endfor %}        )
+    }
+
+    public static func write(_ value: {{ schema.name }}, writer: APIBinaryWriter) throws {
+        let state = {{ schema.state_type }}()
+{% for section in schema.sections %}        do {
+            try write{{ section.name }}(value.{{ schema.packet_field_name(section.name) }}, writer: writer, state: state, path: "")
+        } catch let error as APIBinaryEncodeError {
+            throw apiBinaryWrapField("{{ schema.name }}.{{ schema.packet_field_name(section.name) }}", error)
+        }
+{% endfor %}    }
+{% for object in schema.objects %}
+
+    public static func {{ object.reader_name }}(
+        reader: APIBinaryReader,
+        state: {{ schema.state_type }} = {{ schema.state_type }}(),
+        path: String = "{{ object.path_name }}"
+    ) throws -> {{ object.name }} {
+        do {
+{{ read_field(object.fields[0], object) | indent(8, false) if object.fields else "" }}{% for field in object.fields[1:] %}
+{{ read_field(field, object) | indent(8, false) }}{% endfor %}
+            return {{ object.name }}(
+{% for field in object.data_fields %}                {{ field.swift_name }}: {{ field.swift_name }}{% if not loop.last %},{% endif %}
+{% endfor %}            )
+        } catch let error as APIBinaryDecodeError {
+            if path.isEmpty {
+                throw error
+            }
+            throw apiBinaryWrapField(path, error)
+        }
+    }
+
+    public static func {{ object.writer_name }}(
+        _ value: {{ object.name }},
+        writer: APIBinaryWriter,
+        state: {{ schema.state_type }} = {{ schema.state_type }}(),
+        path: String = "{{ object.path_name }}"
+    ) throws {
+        do {
+{{ write_field(object.fields[0], object) | indent(8, false) if object.fields else "" }}{% for field in object.fields[1:] %}
+{{ write_field(field, object) | indent(8, false) }}{% endfor %}
+        } catch let error as APIBinaryEncodeError {
+            if path.isEmpty {
+                throw error
+            }
+            throw apiBinaryWrapField(path, error)
+        }
+    }
+{% endfor %}
+}
+
 public func {{ schema.encode_func }}(_ value: {{ schema.name }}) throws -> Data {
-    value.data
+    try {{ schema.name }}Wire.encode(value)
 }
 
 public func {{ schema.decode_func }}(_ data: Data) throws -> {{ schema.name }} {
-    {{ schema.name }}(data: data)
+    try {{ schema.name }}Wire.decode(data)
 }
 {% endfor %}

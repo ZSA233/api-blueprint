@@ -12,6 +12,359 @@ public enum APIBinaryError: Error, CustomStringConvertible {
     }
 }
 
+public enum APIBinaryEndian: Sendable {
+    case little
+    case big
+}
+
+public struct APIBinaryEncodeError: Error, Sendable, CustomStringConvertible {
+    public let fieldPath: String
+    public let detail: String
+
+    public init(_ fieldPath: String, _ detail: String) {
+        self.fieldPath = fieldPath
+        self.detail = detail
+    }
+
+    public var description: String {
+        fieldPath.isEmpty ? detail : "\(fieldPath): \(detail)"
+    }
+}
+
+public struct APIBinaryDecodeError: Error, Sendable, CustomStringConvertible {
+    public let fieldPath: String
+    public let detail: String
+
+    public init(_ fieldPath: String, _ detail: String) {
+        self.fieldPath = fieldPath
+        self.detail = detail
+    }
+
+    public var description: String {
+        fieldPath.isEmpty ? detail : "\(fieldPath): \(detail)"
+    }
+}
+
+public final class APIBinaryWriter {
+    public private(set) var data: Data
+    public let endian: APIBinaryEndian
+
+    public init(endian: APIBinaryEndian = .little, data: Data = Data()) {
+        self.endian = endian
+        self.data = data
+    }
+
+    public func writeU8(_ path: String, _ value: Int) throws {
+        try apiBinaryRequireRange(path, value, 0, 0xFF)
+        data.append(UInt8(value & 0xFF))
+    }
+
+    public func writeU16(_ path: String, _ value: Int) throws {
+        try apiBinaryRequireRange(path, value, 0, 0xFFFF)
+        appendInteger(UInt64(value), byteCount: 2)
+    }
+
+    public func writeU24(_ path: String, _ value: Int) throws {
+        try apiBinaryRequireRange(path, value, 0, 0xFF_FFFF)
+        appendInteger(UInt64(value), byteCount: 3)
+    }
+
+    public func writeU32(_ path: String, _ value: Int) throws {
+        try apiBinaryRequireRange(path, value, 0, 0xFFFF_FFFF)
+        appendInteger(UInt64(value), byteCount: 4)
+    }
+
+    public func writeU64(_ path: String, _ value: UInt64) throws {
+        appendInteger(value, byteCount: 8)
+    }
+
+    public func writeI8(_ path: String, _ value: Int) throws {
+        try apiBinaryRequireRange(path, value, Int(Int8.min), Int(Int8.max))
+        data.append(UInt8(bitPattern: Int8(value)))
+    }
+
+    public func writeI16(_ path: String, _ value: Int) throws {
+        try apiBinaryRequireRange(path, value, Int(Int16.min), Int(Int16.max))
+        appendInteger(UInt64(UInt16(bitPattern: Int16(value))), byteCount: 2)
+    }
+
+    public func writeI24(_ path: String, _ value: Int) throws {
+        try apiBinaryRequireRange(path, value, -0x80_0000, 0x7F_FFFF)
+        let encoded = value < 0 ? UInt64(value + 0x1_000000) : UInt64(value)
+        appendInteger(encoded, byteCount: 3)
+    }
+
+    public func writeI32(_ path: String, _ value: Int) throws {
+        try apiBinaryRequireRange(path, value, Int(Int32.min), Int(Int32.max))
+        appendInteger(UInt64(UInt32(bitPattern: Int32(value))), byteCount: 4)
+    }
+
+    public func writeI64(_ path: String, _ value: Int64) throws {
+        appendInteger(UInt64(bitPattern: value), byteCount: 8)
+    }
+
+    public func writeF32(_ path: String, _ value: Float) throws {
+        appendInteger(UInt64(value.bitPattern), byteCount: 4)
+    }
+
+    public func writeF64(_ path: String, _ value: Double) throws {
+        appendInteger(value.bitPattern, byteCount: 8)
+    }
+
+    public func writeBool(_ path: String, _ value: Bool) throws {
+        data.append(value ? 1 : 0)
+    }
+
+    public func writeBytes(_ path: String, _ value: Data) throws {
+        data.append(value)
+    }
+
+    public func writeBytesExact(_ path: String, _ value: Data, _ size: Int) throws {
+        try apiBinaryRequireSize(path, value.count, size)
+        data.append(value)
+    }
+
+    public func writeUTF8String(_ path: String, _ value: String) throws {
+        data.append(contentsOf: value.utf8)
+    }
+
+    public func writeUTF8StringExact(_ path: String, _ value: String, _ size: Int) throws {
+        let encoded = Data(value.utf8)
+        try apiBinaryRequireSize(path, encoded.count, size)
+        data.append(encoded)
+    }
+
+    public func writeZeroes(_ path: String, _ count: Int) throws {
+        try apiBinaryRequire(path, count >= 0, "invalid zero byte count \(count)")
+        var remaining = count
+        while remaining > 0 {
+            let chunk = min(remaining, apiBinaryZeroChunk.count)
+            data.append(contentsOf: apiBinaryZeroChunk.prefix(chunk))
+            remaining -= chunk
+        }
+    }
+
+    private func appendInteger(_ value: UInt64, byteCount: Int) {
+        if endian == .little {
+            for index in 0..<byteCount {
+                data.append(UInt8((value >> UInt64(index * 8)) & 0xFF))
+            }
+        } else {
+            for index in (0..<byteCount).reversed() {
+                data.append(UInt8((value >> UInt64(index * 8)) & 0xFF))
+            }
+        }
+    }
+}
+
+public final class APIBinaryReader {
+    public let data: Data
+    public let endian: APIBinaryEndian
+    public private(set) var offset: Int = 0
+
+    public init(_ data: Data, endian: APIBinaryEndian = .little) {
+        self.data = data
+        self.endian = endian
+    }
+
+    public func readU8(_ path: String) throws -> Int {
+        Int(try readByte(path))
+    }
+
+    public func readU16(_ path: String) throws -> Int {
+        Int(try readInteger(path, byteCount: 2))
+    }
+
+    public func readU24(_ path: String) throws -> Int {
+        Int(try readInteger(path, byteCount: 3))
+    }
+
+    public func readU32(_ path: String) throws -> Int {
+        Int(try readInteger(path, byteCount: 4))
+    }
+
+    public func readU64(_ path: String) throws -> UInt64 {
+        try readInteger(path, byteCount: 8)
+    }
+
+    public func readI8(_ path: String) throws -> Int {
+        let raw = try readByte(path)
+        return raw >= 0x80 ? Int(raw) - 0x100 : Int(raw)
+    }
+
+    public func readI16(_ path: String) throws -> Int {
+        let raw = Int(try readInteger(path, byteCount: 2))
+        return raw >= 0x8000 ? raw - 0x1_0000 : raw
+    }
+
+    public func readI24(_ path: String) throws -> Int {
+        let raw = Int(try readInteger(path, byteCount: 3))
+        return raw >= 0x80_0000 ? raw - 0x1_000000 : raw
+    }
+
+    public func readI32(_ path: String) throws -> Int {
+        let raw = UInt32(try readInteger(path, byteCount: 4))
+        return Int(Int32(bitPattern: raw))
+    }
+
+    public func readI64(_ path: String) throws -> Int64 {
+        Int64(bitPattern: try readInteger(path, byteCount: 8))
+    }
+
+    public func readF32(_ path: String) throws -> Float {
+        Float(bitPattern: UInt32(try readInteger(path, byteCount: 4)))
+    }
+
+    public func readF64(_ path: String) throws -> Double {
+        Double(bitPattern: try readInteger(path, byteCount: 8))
+    }
+
+    public func readBool(_ path: String) throws -> Bool {
+        try readU8(path) != 0
+    }
+
+    public func readBytes(_ path: String, _ count: Int) throws -> Data {
+        try requireAvailable(path, count)
+        let start = offset
+        offset += count
+        return data.subdata(in: start..<offset)
+    }
+
+    public func readUTF8String(_ path: String, _ count: Int) throws -> String {
+        let bytes = try readBytes(path, count)
+        guard let value = String(data: bytes, encoding: .utf8) else {
+            throw APIBinaryDecodeError(path, "invalid UTF-8 string")
+        }
+        return value
+    }
+
+    public func readZeroes(_ path: String, _ count: Int) throws {
+        let bytes = try readBytes(path, count)
+        if bytes.contains(where: { $0 != 0 }) {
+            throw APIBinaryDecodeError(path, "reserved bytes must be zero")
+        }
+    }
+
+    public func requireEOF(_ path: String) throws {
+        let remaining = data.count - offset
+        if remaining != 0 {
+            throw APIBinaryDecodeError(path, "unexpected trailing \(remaining) bytes")
+        }
+    }
+
+    private func readByte(_ path: String) throws -> UInt8 {
+        try requireAvailable(path, 1)
+        let value = data[offset]
+        offset += 1
+        return value
+    }
+
+    private func readInteger(_ path: String, byteCount: Int) throws -> UInt64 {
+        try requireAvailable(path, byteCount)
+        var value: UInt64 = 0
+        if endian == .little {
+            for index in 0..<byteCount {
+                value |= UInt64(data[offset + index]) << UInt64(index * 8)
+            }
+        } else {
+            for index in 0..<byteCount {
+                value = (value << 8) | UInt64(data[offset + index])
+            }
+        }
+        offset += byteCount
+        return value
+    }
+
+    private func requireAvailable(_ path: String, _ count: Int) throws {
+        if count < 0 {
+            throw APIBinaryDecodeError(path, "invalid byte count \(count)")
+        }
+        if data.count - offset < count {
+            throw APIBinaryDecodeError(path, "expected \(count) bytes, got \(data.count - offset)")
+        }
+    }
+}
+
+private let apiBinaryZeroChunk = Data(repeating: 0, count: 8192)
+
 public func apiBinaryData(_ value: Data) -> Data {
     value
+}
+
+public func apiBinarySize(_ value: Data) -> Int {
+    value.count
+}
+
+public func apiBinarySize(_ value: String) -> Int {
+    value.utf8.count
+}
+
+public func apiBinarySize<T>(_ value: [T]) -> Int {
+    value.count
+}
+
+public func apiBinaryJoinPath(_ path: String, _ field: String) -> String {
+    if path.isEmpty {
+        return field
+    }
+    if field.isEmpty {
+        return path
+    }
+    return "\(path).\(field)"
+}
+
+public func apiBinaryIndexPath(_ path: String, _ index: Int) -> String {
+    "\(path)[\(index)]"
+}
+
+public func apiBinaryWrapField(_ path: String, _ error: APIBinaryEncodeError) -> APIBinaryEncodeError {
+    APIBinaryEncodeError(apiBinaryJoinPath(path, error.fieldPath), error.detail)
+}
+
+public func apiBinaryWrapIndex(_ path: String, _ index: Int, _ error: APIBinaryEncodeError) -> APIBinaryEncodeError {
+    apiBinaryWrapField(apiBinaryIndexPath(path, index), error)
+}
+
+public func apiBinaryWrapField(_ path: String, _ error: APIBinaryDecodeError) -> APIBinaryDecodeError {
+    APIBinaryDecodeError(apiBinaryJoinPath(path, error.fieldPath), error.detail)
+}
+
+public func apiBinaryWrapIndex(_ path: String, _ index: Int, _ error: APIBinaryDecodeError) -> APIBinaryDecodeError {
+    apiBinaryWrapField(apiBinaryIndexPath(path, index), error)
+}
+
+public func apiBinaryRequire(_ path: String, _ condition: Bool, _ message: String) throws {
+    if !condition {
+        throw APIBinaryEncodeError(path, message)
+    }
+}
+
+public func apiBinaryRequireDecode(_ path: String, _ condition: Bool, _ message: String) throws {
+    if !condition {
+        throw APIBinaryDecodeError(path, message)
+    }
+}
+
+public func apiBinaryRequireRange(_ path: String, _ value: Int, _ min: Int, _ max: Int) throws {
+    if value < min || value > max {
+        throw APIBinaryEncodeError(path, "value \(value) is outside range \(min)..\(max)")
+    }
+}
+
+public func apiBinaryRequireRangeDecode(_ path: String, _ value: Int, _ min: Int, _ max: Int) throws {
+    if value < min || value > max {
+        throw APIBinaryDecodeError(path, "value \(value) is outside range \(min)..\(max)")
+    }
+}
+
+public func apiBinaryRequireSize(_ path: String, _ actual: Int, _ expected: Int) throws {
+    if actual != expected {
+        throw APIBinaryEncodeError(path, "size \(actual) does not match expected \(expected)")
+    }
+}
+
+public func apiBinaryRequireSizeDecode(_ path: String, _ actual: Int, _ expected: Int) throws {
+    if actual != expected {
+        throw APIBinaryDecodeError(path, "size \(actual) does not match expected \(expected)")
+    }
 }

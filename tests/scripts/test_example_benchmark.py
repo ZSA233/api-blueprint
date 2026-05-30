@@ -244,6 +244,9 @@ def test_swift_binary_benchmark_uses_swift_package_product_with_fake_subprocess(
     assert commands == [["swift", "run", "-c", "release", "SwiftBinaryBenchmark", "1"]]
     assert '.product(name: "ABClientAPIRoutes", package: "swift")' in package_source
     assert "import ABClientAPIRoutes" in benchmark_source
+    assert "DemoPacketHeader(" in benchmark_source
+    assert "DemoPacketItem(" in benchmark_source
+    assert "DemoPacket(data:" not in benchmark_source
     assert "encodeDemoPacket(packet)" in benchmark_source
     assert "decodeDemoPacket(data)" in benchmark_source
 

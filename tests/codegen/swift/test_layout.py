@@ -151,7 +151,20 @@ def test_swift_writer_generates_spm_runtime_routes_transport_and_preserved_files
     assert "case cancel(AssistantCancel)" in route_types
     assert "public static func input" not in route_types
     assert "public struct DemoPacket: Codable, Sendable" in route_binary
+    assert "public enum DemoPacketWire" in route_binary
+    assert "public struct DemoPacketBody: Codable, Sendable" in route_binary
+    assert "public var payload: Data" in route_binary
+    assert "public var data: Data" not in route_binary
+    assert "let payload = try reader.readBytes(\"payload\", 4)" in route_binary
+    assert "try writer.writeBytesExact(\"payload\", value.payload, 4)" in route_binary
+    assert "public static func encode(_ value: DemoPacket) throws -> Data" in route_binary
     assert "public func encodeDemoPacket(_ value: DemoPacket) throws -> Data" in route_binary
+    assert "public final class APIBinaryWriter" in binary_runtime
+    assert "public final class APIBinaryReader" in binary_runtime
+    assert "public struct APIBinaryEncodeError" in binary_runtime
+    assert "public struct APIBinaryDecodeError" in binary_runtime
+    assert "public func readU24(_ path: String) throws -> Int" in binary_runtime
+    assert "public func apiBinaryWrapIndex(_ path: String, _ index: Int, _ error: APIBinaryDecodeError)" in binary_runtime
 
     assert 'baseURL: URL? = URL(string: "http://localhost:2333")' in http_config
     assert "public let byteStreamChunkSize: Int" in http_config

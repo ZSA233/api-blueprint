@@ -186,7 +186,7 @@ private func checkForm(_ client: ABClient) async throws {
 private func checkBinary(_ client: ABClient) async throws {
     let response = try await client.api.binary.packet(
         query: BinaryPacketQuery(trace: "swift-typed"),
-        binary: DemoPacket(data: demoPacketBytes())
+        binary: try decodeDemoPacket(demoPacketBytes())
     )
     try expectBinaryResponse(response, trace: "swift-typed")
 }
@@ -194,7 +194,7 @@ private func checkBinary(_ client: ABClient) async throws {
 private func checkAuditBinary(_ client: ABClient) async throws {
     let response = try await client.api.binary.auditPacket(
         query: BinaryAuditPacketQuery(trace: "swift-audit"),
-        binary: AuditPacket(data: auditPacketBytes())
+        binary: try decodeAuditPacket(auditPacketBytes())
     )
     try expectEqual(response.trace, "swift-audit", "audit.trace")
     try expectEqual(response.itemCount, 2, "audit.itemCount")
@@ -203,7 +203,7 @@ private func checkAuditBinary(_ client: ABClient) async throws {
 
 private func checkBinaryResponse(_ client: ABClient) async throws {
     let response = try await client.api.binary.auditPacketResponse()
-    try expectEqual(response.data, auditPacketBytes(), "binary response bytes")
+    try expectEqual(try encodeAuditPacket(response), auditPacketBytes(), "binary response bytes")
 }
 
 private func checkMedia(_ client: ABClient) async throws {

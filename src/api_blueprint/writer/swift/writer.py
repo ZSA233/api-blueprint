@@ -20,6 +20,7 @@ from api_blueprint.writer.core.errors import (
 from api_blueprint.writer.core.files import ensure_filepath_open
 from api_blueprint.writer.core.templates import render
 
+from .binary_schema import compact_swift_binary_source
 from .blueprint import SwiftBlueprint
 from .naming import to_swift_identifier, to_swift_module_name
 from .planner import build_swift_package_plan
@@ -244,7 +245,11 @@ class SwiftWriter(BaseWriter[SwiftBlueprint]):
         with self.write_file(plan.runtime.binary_runtime_file, overwrite=True) as handle:
             if handle:
                 handle.write(SWIFT_CLIENT_GENERATED_HEADER)
-                handle.write(render("swift", "GenBinaryRuntime.swift", context, "Runtime/Binary"))
+                handle.write(
+                    compact_swift_binary_source(
+                        render("swift", "GenBinaryRuntime.swift", context, "Runtime/Binary")
+                    )
+                )
 
         for output_name, template_name in plan.runtime_http_transport.generated_files:
             with self.write_file(plan.runtime_http_transport.directory / output_name, overwrite=True) as handle:
@@ -312,11 +317,13 @@ class SwiftWriter(BaseWriter[SwiftBlueprint]):
                 if handle:
                     handle.write(SWIFT_CLIENT_GENERATED_HEADER)
                     handle.write(
-                        render(
-                            "swift",
-                            "GenBinary.swift",
-                            {**context, "binary_schemas": route_group.group.binary_schemas()},
-                            "Routes",
+                        compact_swift_binary_source(
+                            render(
+                                "swift",
+                                "GenBinary.swift",
+                                {**context, "binary_schemas": route_group.group.binary_schemas()},
+                                "Routes",
+                            )
                         )
                     )
 

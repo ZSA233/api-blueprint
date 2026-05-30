@@ -219,14 +219,36 @@ import Foundation
 import ABClientAPIRoutes
 
 let count = Int(CommandLine.arguments.dropFirst().first ?? "0") ?? 0
-let packet = DemoPacket(data: Data([1, 2, 3, 4, 97, 98, 99]))
+let packet = DemoPacket(
+    header: DemoPacketHeader(
+        flags: 0,
+        shortCode: 1,
+        signedDelta: 0,
+        itemCount: 1,
+        payloadLen: 4
+    ),
+    body: DemoPacketBody(
+        items: [
+            DemoPacketItem(
+                id: 1,
+                enabled: true,
+                value: 1.25,
+                labelLen: 3,
+                label: Data("abc".utf8)
+            )
+        ],
+        payload: Data([1, 2, 3, 4]),
+        scores: [1.0, 2.0],
+        checksum: 5
+    )
+)
 let started = DispatchTime.now().uptimeNanoseconds
 var total = 0
 
 for _ in 0..<count {
     let data = try encodeDemoPacket(packet)
     let parsed = try decodeDemoPacket(data)
-    total += data.count + parsed.data.count
+    total += data.count + parsed.body.items.count
 }
 
 let elapsed = DispatchTime.now().uptimeNanoseconds - started

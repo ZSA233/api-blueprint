@@ -2,11 +2,29 @@
 import Foundation
 import ABClientRuntime
 
-public struct DemoPacket: Codable, Sendable {
-    public var data: Data
+public enum DemoPacketKindValues {
+    public static let metric: Int = 1
+    public static let debug: Int = 2
+}
 
-    public init(data: Data = Data()) {
-        self.data = data
+public enum DemoPacketFlagsValues {
+    public static let hasPayload: Int = 1
+    public static let hasScores: Int = 2
+    public static let fastPath: Int = 4
+    public static let mode: Int = 24
+    public static let reserved: Int = 4294967264
+}
+
+public struct DemoPacket: Codable, Sendable {
+    public var header: DemoPacketHeader
+    public var body: DemoPacketBody
+
+    public init(
+        header: DemoPacketHeader,
+        body: DemoPacketBody
+    ) {
+        self.header = header
+        self.body = body
     }
 
     public func encode() throws -> Data {
@@ -18,19 +36,406 @@ public struct DemoPacket: Codable, Sendable {
     }
 }
 
+public final class DemoPacketBinaryState {
+    public var version: Int = 0
+    public var kind: Int = 0
+    public var flags: Int = 0
+    public var shortCode: Int = 0
+    public var signedDelta: Int = 0
+    public var itemCount: Int = 0
+    public var payloadLen: Int = 0
+    public var scoreCount: Int = 0
+    public var checksum: Int = 0
+    public var id: Int = 0
+    public var labelLen: Int = 0
+    public init() {}
+}
+
+public struct DemoPacketHeader: Codable, Sendable {
+    public var flags: Int
+    public var shortCode: Int
+    public var signedDelta: Int
+    public var itemCount: Int
+    public var payloadLen: Int
+
+    public init(
+        flags: Int,
+        shortCode: Int,
+        signedDelta: Int,
+        itemCount: Int,
+        payloadLen: Int
+    ) {
+        self.flags = flags
+        self.shortCode = shortCode
+        self.signedDelta = signedDelta
+        self.itemCount = itemCount
+        self.payloadLen = payloadLen
+    }
+}
+
+public struct DemoPacketBody: Codable, Sendable {
+    public var items: [DemoPacketItem]
+    public var payload: Data
+    public var scores: [Double]
+    public var checksum: Int
+
+    public init(
+        items: [DemoPacketItem],
+        payload: Data,
+        scores: [Double],
+        checksum: Int
+    ) {
+        self.items = items
+        self.payload = payload
+        self.scores = scores
+        self.checksum = checksum
+    }
+}
+
+public struct DemoPacketItem: Codable, Sendable {
+    public var id: Int
+    public var enabled: Bool
+    public var value: Double
+    public var labelLen: Int
+    public var label: Data
+
+    public init(
+        id: Int,
+        enabled: Bool,
+        value: Double,
+        labelLen: Int,
+        label: Data
+    ) {
+        self.id = id
+        self.enabled = enabled
+        self.value = value
+        self.labelLen = labelLen
+        self.label = label
+    }
+}
+
+public enum DemoPacketWire {
+    public static let contentType: String = "application/octet-stream"
+    public static let endian: APIBinaryEndian = .little
+
+    public static func encode(_ value: DemoPacket) throws -> Data {
+        let writer = APIBinaryWriter(endian: endian)
+        try write(value, writer: writer)
+        return writer.data
+    }
+
+    public static func decode(_ data: Data) throws -> DemoPacket {
+        let reader = APIBinaryReader(data, endian: endian)
+        let state = DemoPacketBinaryState()
+        let header = try readDemoPacketHeader(reader: reader, state: state, path: "DemoPacket.header")
+        let body = try readDemoPacketBody(reader: reader, state: state, path: "DemoPacket.body")
+        try reader.requireEOF("DemoPacket")
+        return DemoPacket(
+            header: header,
+            body: body
+        )
+    }
+
+    public static func write(_ value: DemoPacket, writer: APIBinaryWriter) throws {
+        let state = DemoPacketBinaryState()
+        do {
+            try writeDemoPacketHeader(value.header, writer: writer, state: state, path: "")
+        } catch let error as APIBinaryEncodeError {
+            throw apiBinaryWrapField("DemoPacket.header", error)
+        }
+        do {
+            try writeDemoPacketBody(value.body, writer: writer, state: state, path: "")
+        } catch let error as APIBinaryEncodeError {
+            throw apiBinaryWrapField("DemoPacket.body", error)
+        }
+    }
+
+    public static func readDemoPacketHeader(
+        reader: APIBinaryReader,
+        state: DemoPacketBinaryState = DemoPacketBinaryState(),
+        path: String = "DemoPacketHeader"
+    ) throws -> DemoPacketHeader {
+        do {
+            let magic = try reader.readBytes("magic", 4)
+            try apiBinaryRequireDecode("magic", magic == Data([65, 66, 80, 49]), "const mismatch")
+            let version = try reader.readU16("version")
+            try apiBinaryRequireDecode("version", Int(version) == 1, "const mismatch")
+            state.version = Int(version)
+            let kind = try reader.readU16("kind")
+            try apiBinaryRequireDecode("kind", Int(kind) == 1, "const mismatch")
+            state.kind = Int(kind)
+            let flags = try reader.readU32("flags")
+            try apiBinaryRequireRangeDecode("flags", Int(flags), 0, Int.max)
+            try apiBinaryRequireDecode("flags", (Int(flags) & 4294967264) == 0, "reserved bits must be zero")
+            state.flags = Int(flags)
+            _ = try reader.readBytes("header_pad", 1)
+            try reader.readZeroes("reserved0", 2)
+            let shortCode = try reader.readU24("short_code")
+            try apiBinaryRequireRangeDecode("short_code", Int(shortCode), 1, Int.max)
+            try apiBinaryRequireRangeDecode("short_code", Int(shortCode), Int.min, 16777215)
+            state.shortCode = Int(shortCode)
+            let signedDelta = try reader.readI24("signed_delta")
+            try apiBinaryRequireRangeDecode("signed_delta", Int(signedDelta), 0, Int.max)
+            try apiBinaryRequireRangeDecode("signed_delta", Int(signedDelta), Int.min, 8388607)
+            state.signedDelta = Int(signedDelta)
+            let itemCount = try reader.readU16("item_count")
+            try apiBinaryRequireRangeDecode("item_count", Int(itemCount), 1, Int.max)
+            try apiBinaryRequireRangeDecode("item_count", Int(itemCount), Int.min, 8)
+            state.itemCount = Int(itemCount)
+            let payloadLen = try reader.readU32("payload_len")
+            try apiBinaryRequireRangeDecode("payload_len", Int(payloadLen), 0, Int.max)
+            try apiBinaryRequireRangeDecode("payload_len", Int(payloadLen), Int.min, 64)
+            state.payloadLen = Int(payloadLen)
+            let scoreCount = try reader.readU16("score_count")
+            try apiBinaryRequireDecode("score_count", Int(scoreCount) == 2, "const mismatch")
+            try apiBinaryRequireRangeDecode("score_count", Int(scoreCount), Int.min, 4)
+            state.scoreCount = Int(scoreCount)
+            return DemoPacketHeader(
+                flags: flags,
+                shortCode: shortCode,
+                signedDelta: signedDelta,
+                itemCount: itemCount,
+                payloadLen: payloadLen
+            )
+        } catch let error as APIBinaryDecodeError {
+            if path.isEmpty {
+                throw error
+            }
+            throw apiBinaryWrapField(path, error)
+        }
+    }
+
+    public static func writeDemoPacketHeader(
+        _ value: DemoPacketHeader,
+        writer: APIBinaryWriter,
+        state: DemoPacketBinaryState = DemoPacketBinaryState(),
+        path: String = "DemoPacketHeader"
+    ) throws {
+        do {
+            try apiBinaryRequire("magic", Data([65, 66, 80, 49]) == Data([65, 66, 80, 49]), "const mismatch")
+            try writer.writeBytesExact("magic", Data([65, 66, 80, 49]), 4)
+            try apiBinaryRequire("version", Int(1) == 1, "const mismatch")
+            try writer.writeU16("version", 1)
+            state.version = Int(1)
+            try apiBinaryRequire("kind", Int(1) == 1, "const mismatch")
+            try writer.writeU16("kind", 1)
+            state.kind = Int(1)
+            try apiBinaryRequireRange("flags", Int(value.flags), 0, Int.max)
+            try apiBinaryRequire("flags", (Int(value.flags) & 4294967264) == 0, "reserved bits must be zero")
+            try writer.writeU32("flags", value.flags)
+            state.flags = Int(value.flags)
+            try writer.writeZeroes("header_pad", 1)
+            try writer.writeZeroes("reserved0", 2)
+            try apiBinaryRequireRange("short_code", Int(value.shortCode), 1, Int.max)
+            try apiBinaryRequireRange("short_code", Int(value.shortCode), Int.min, 16777215)
+            try writer.writeU24("short_code", value.shortCode)
+            state.shortCode = Int(value.shortCode)
+            try apiBinaryRequireRange("signed_delta", Int(value.signedDelta), 0, Int.max)
+            try apiBinaryRequireRange("signed_delta", Int(value.signedDelta), Int.min, 8388607)
+            try writer.writeI24("signed_delta", value.signedDelta)
+            state.signedDelta = Int(value.signedDelta)
+            try apiBinaryRequireRange("item_count", Int(value.itemCount), 1, Int.max)
+            try apiBinaryRequireRange("item_count", Int(value.itemCount), Int.min, 8)
+            try writer.writeU16("item_count", value.itemCount)
+            state.itemCount = Int(value.itemCount)
+            try apiBinaryRequireRange("payload_len", Int(value.payloadLen), 0, Int.max)
+            try apiBinaryRequireRange("payload_len", Int(value.payloadLen), Int.min, 64)
+            try writer.writeU32("payload_len", value.payloadLen)
+            state.payloadLen = Int(value.payloadLen)
+            try apiBinaryRequire("score_count", Int(2) == 2, "const mismatch")
+            try apiBinaryRequireRange("score_count", Int(2), Int.min, 4)
+            try writer.writeU16("score_count", 2)
+            state.scoreCount = Int(2)
+        } catch let error as APIBinaryEncodeError {
+            if path.isEmpty {
+                throw error
+            }
+            throw apiBinaryWrapField(path, error)
+        }
+    }
+
+    public static func readDemoPacketBody(
+        reader: APIBinaryReader,
+        state: DemoPacketBinaryState = DemoPacketBinaryState(),
+        path: String = "DemoPacketBody"
+    ) throws -> DemoPacketBody {
+        do {
+            let itemsCount = state.itemCount
+            try apiBinaryRequireDecode("items", itemsCount >= 0, "invalid count \(itemsCount)")
+            var items: [DemoPacketItem] = []
+            items.reserveCapacity(itemsCount)
+            for index in 0..<itemsCount {
+                do {
+                    let item = try DemoPacketWire.readDemoPacketItem(reader: reader, state: state, path: "")
+                    items.append(item)
+                } catch let error as APIBinaryDecodeError {
+                    throw apiBinaryWrapIndex("items", index, error)
+                }
+            }
+            let payloadCount = state.payloadLen
+            let payload = try reader.readBytes("payload", payloadCount)
+            let scoresCount = state.scoreCount
+            try apiBinaryRequireDecode("scores", scoresCount >= 0, "invalid count \(scoresCount)")
+            var scores: [Double] = []
+            scores.reserveCapacity(scoresCount)
+            for index in 0..<scoresCount {
+                do {
+                    let item = try reader.readF64("scores")
+                    scores.append(item)
+                } catch let error as APIBinaryDecodeError {
+                    throw apiBinaryWrapIndex("scores", index, error)
+                }
+            }
+            let checksum = try reader.readU32("checksum")
+            try apiBinaryRequireDecode("checksum", Int(checksum) == state.itemCount + state.payloadLen, "assert mismatch")
+            state.checksum = Int(checksum)
+            return DemoPacketBody(
+                items: items,
+                payload: payload,
+                scores: scores,
+                checksum: checksum
+            )
+        } catch let error as APIBinaryDecodeError {
+            if path.isEmpty {
+                throw error
+            }
+            throw apiBinaryWrapField(path, error)
+        }
+    }
+
+    public static func writeDemoPacketBody(
+        _ value: DemoPacketBody,
+        writer: APIBinaryWriter,
+        state: DemoPacketBinaryState = DemoPacketBinaryState(),
+        path: String = "DemoPacketBody"
+    ) throws {
+        do {
+            let itemsCount = state.itemCount
+            try apiBinaryRequire("items", itemsCount >= 0, "invalid count \(itemsCount)")
+            try apiBinaryRequireSize("items", apiBinarySize(value.items), itemsCount)
+            for (index, item) in value.items.enumerated() {
+                do {
+                    try DemoPacketWire.writeDemoPacketItem(item, writer: writer, state: state, path: "")
+                } catch let error as APIBinaryEncodeError {
+                    throw apiBinaryWrapIndex("items", index, error)
+                }
+            }
+            let payloadCount = state.payloadLen
+            try apiBinaryRequireSize("payload", apiBinarySize(value.payload), payloadCount)
+            try writer.writeBytes("payload", value.payload)
+            let scoresCount = state.scoreCount
+            try apiBinaryRequire("scores", scoresCount >= 0, "invalid count \(scoresCount)")
+            try apiBinaryRequireSize("scores", apiBinarySize(value.scores), scoresCount)
+            for (index, item) in value.scores.enumerated() {
+                do {
+                    try writer.writeF64("", item)
+                } catch let error as APIBinaryEncodeError {
+                    throw apiBinaryWrapIndex("scores", index, error)
+                }
+            }
+            try apiBinaryRequire("checksum", Int(value.checksum) == state.itemCount + state.payloadLen, "assert mismatch")
+            try writer.writeU32("checksum", value.checksum)
+            state.checksum = Int(value.checksum)
+        } catch let error as APIBinaryEncodeError {
+            if path.isEmpty {
+                throw error
+            }
+            throw apiBinaryWrapField(path, error)
+        }
+    }
+
+    public static func readDemoPacketItem(
+        reader: APIBinaryReader,
+        state: DemoPacketBinaryState = DemoPacketBinaryState(),
+        path: String = "Item"
+    ) throws -> DemoPacketItem {
+        do {
+            let id = try reader.readU32("id")
+            try apiBinaryRequireRangeDecode("id", Int(id), 1, Int.max)
+            try apiBinaryRequireRangeDecode("id", Int(id), Int.min, 999)
+            state.id = Int(id)
+            let enabled = try reader.readBool("enabled")
+            let value = try reader.readF64("value")
+            let labelLen = try reader.readU8("label_len")
+            try apiBinaryRequireRangeDecode("label_len", Int(labelLen), 1, Int.max)
+            try apiBinaryRequireRangeDecode("label_len", Int(labelLen), Int.min, 16)
+            state.labelLen = Int(labelLen)
+            let labelCount = state.labelLen
+            let label = try reader.readBytes("label", labelCount)
+            return DemoPacketItem(
+                id: id,
+                enabled: enabled,
+                value: value,
+                labelLen: labelLen,
+                label: label
+            )
+        } catch let error as APIBinaryDecodeError {
+            if path.isEmpty {
+                throw error
+            }
+            throw apiBinaryWrapField(path, error)
+        }
+    }
+
+    public static func writeDemoPacketItem(
+        _ value: DemoPacketItem,
+        writer: APIBinaryWriter,
+        state: DemoPacketBinaryState = DemoPacketBinaryState(),
+        path: String = "Item"
+    ) throws {
+        do {
+            try apiBinaryRequireRange("id", Int(value.id), 1, Int.max)
+            try apiBinaryRequireRange("id", Int(value.id), Int.min, 999)
+            try writer.writeU32("id", value.id)
+            state.id = Int(value.id)
+            try writer.writeBool("enabled", value.enabled)
+            try writer.writeF64("value", value.value)
+            try apiBinaryRequireRange("label_len", Int(value.labelLen), 1, Int.max)
+            try apiBinaryRequireRange("label_len", Int(value.labelLen), Int.min, 16)
+            try apiBinaryRequireSize("label_len.label", apiBinarySize(value.label), Int(value.labelLen))
+            try writer.writeU8("label_len", value.labelLen)
+            state.labelLen = Int(value.labelLen)
+            let labelCount = state.labelLen
+            try apiBinaryRequireSize("label", apiBinarySize(value.label), labelCount)
+            try writer.writeBytes("label", value.label)
+        } catch let error as APIBinaryEncodeError {
+            if path.isEmpty {
+                throw error
+            }
+            throw apiBinaryWrapField(path, error)
+        }
+    }
+}
+
 public func encodeDemoPacket(_ value: DemoPacket) throws -> Data {
-    value.data
+    try DemoPacketWire.encode(value)
 }
 
 public func decodeDemoPacket(_ data: Data) throws -> DemoPacket {
-    DemoPacket(data: data)
+    try DemoPacketWire.decode(data)
+}
+
+public enum AuditPacketKindValues {
+    public static let metric: Int = 1
+    public static let audit: Int = 2
+}
+
+public enum AuditPacketFlagsValues {
+    public static let hasItems: Int = 1
+    public static let mode: Int = 6
+    public static let reserved: Int = 4294967288
 }
 
 public struct AuditPacket: Codable, Sendable {
-    public var data: Data
+    public var header: AuditPacketHeader
+    public var body: AuditPacketBody
 
-    public init(data: Data = Data()) {
-        self.data = data
+    public init(
+        header: AuditPacketHeader,
+        body: AuditPacketBody
+    ) {
+        self.header = header
+        self.body = body
     }
 
     public func encode() throws -> Data {
@@ -42,10 +447,259 @@ public struct AuditPacket: Codable, Sendable {
     }
 }
 
+public final class AuditPacketBinaryState {
+    public var kind: Int = 0
+    public var flags: Int = 0
+    public var itemCount: Int = 0
+    public var checksum: Int = 0
+    public var id: Int = 0
+    public var code: Int = 0
+    public init() {}
+}
+
+public struct AuditPacketHeader: Codable, Sendable {
+    public var flags: Int
+    public var itemCount: Int
+
+    public init(
+        flags: Int,
+        itemCount: Int
+    ) {
+        self.flags = flags
+        self.itemCount = itemCount
+    }
+}
+
+public struct AuditPacketBody: Codable, Sendable {
+    public var items: [AuditPacketItem]
+    public var checksum: Int
+
+    public init(
+        items: [AuditPacketItem],
+        checksum: Int
+    ) {
+        self.items = items
+        self.checksum = checksum
+    }
+}
+
+public struct AuditPacketItem: Codable, Sendable {
+    public var id: Int
+    public var code: Int
+
+    public init(
+        id: Int,
+        code: Int
+    ) {
+        self.id = id
+        self.code = code
+    }
+}
+
+public enum AuditPacketWire {
+    public static let contentType: String = "application/octet-stream"
+    public static let endian: APIBinaryEndian = .little
+
+    public static func encode(_ value: AuditPacket) throws -> Data {
+        let writer = APIBinaryWriter(endian: endian)
+        try write(value, writer: writer)
+        return writer.data
+    }
+
+    public static func decode(_ data: Data) throws -> AuditPacket {
+        let reader = APIBinaryReader(data, endian: endian)
+        let state = AuditPacketBinaryState()
+        let header = try readAuditPacketHeader(reader: reader, state: state, path: "AuditPacket.header")
+        let body = try readAuditPacketBody(reader: reader, state: state, path: "AuditPacket.body")
+        try reader.requireEOF("AuditPacket")
+        return AuditPacket(
+            header: header,
+            body: body
+        )
+    }
+
+    public static func write(_ value: AuditPacket, writer: APIBinaryWriter) throws {
+        let state = AuditPacketBinaryState()
+        do {
+            try writeAuditPacketHeader(value.header, writer: writer, state: state, path: "")
+        } catch let error as APIBinaryEncodeError {
+            throw apiBinaryWrapField("AuditPacket.header", error)
+        }
+        do {
+            try writeAuditPacketBody(value.body, writer: writer, state: state, path: "")
+        } catch let error as APIBinaryEncodeError {
+            throw apiBinaryWrapField("AuditPacket.body", error)
+        }
+    }
+
+    public static func readAuditPacketHeader(
+        reader: APIBinaryReader,
+        state: AuditPacketBinaryState = AuditPacketBinaryState(),
+        path: String = "AuditPacketHeader"
+    ) throws -> AuditPacketHeader {
+        do {
+            let kind = try reader.readU16("kind")
+            try apiBinaryRequireDecode("kind", Int(kind) == 2, "const mismatch")
+            state.kind = Int(kind)
+            let flags = try reader.readU32("flags")
+            try apiBinaryRequireRangeDecode("flags", Int(flags), 0, Int.max)
+            try apiBinaryRequireDecode("flags", (Int(flags) & 4294967288) == 0, "reserved bits must be zero")
+            state.flags = Int(flags)
+            let itemCount = try reader.readU16("item_count")
+            try apiBinaryRequireRangeDecode("item_count", Int(itemCount), 1, Int.max)
+            try apiBinaryRequireRangeDecode("item_count", Int(itemCount), Int.min, 4)
+            state.itemCount = Int(itemCount)
+            return AuditPacketHeader(
+                flags: flags,
+                itemCount: itemCount
+            )
+        } catch let error as APIBinaryDecodeError {
+            if path.isEmpty {
+                throw error
+            }
+            throw apiBinaryWrapField(path, error)
+        }
+    }
+
+    public static func writeAuditPacketHeader(
+        _ value: AuditPacketHeader,
+        writer: APIBinaryWriter,
+        state: AuditPacketBinaryState = AuditPacketBinaryState(),
+        path: String = "AuditPacketHeader"
+    ) throws {
+        do {
+            try apiBinaryRequire("kind", Int(2) == 2, "const mismatch")
+            try writer.writeU16("kind", 2)
+            state.kind = Int(2)
+            try apiBinaryRequireRange("flags", Int(value.flags), 0, Int.max)
+            try apiBinaryRequire("flags", (Int(value.flags) & 4294967288) == 0, "reserved bits must be zero")
+            try writer.writeU32("flags", value.flags)
+            state.flags = Int(value.flags)
+            try apiBinaryRequireRange("item_count", Int(value.itemCount), 1, Int.max)
+            try apiBinaryRequireRange("item_count", Int(value.itemCount), Int.min, 4)
+            try writer.writeU16("item_count", value.itemCount)
+            state.itemCount = Int(value.itemCount)
+        } catch let error as APIBinaryEncodeError {
+            if path.isEmpty {
+                throw error
+            }
+            throw apiBinaryWrapField(path, error)
+        }
+    }
+
+    public static func readAuditPacketBody(
+        reader: APIBinaryReader,
+        state: AuditPacketBinaryState = AuditPacketBinaryState(),
+        path: String = "AuditPacketBody"
+    ) throws -> AuditPacketBody {
+        do {
+            let itemsCount = state.itemCount
+            try apiBinaryRequireDecode("items", itemsCount >= 0, "invalid count \(itemsCount)")
+            var items: [AuditPacketItem] = []
+            items.reserveCapacity(itemsCount)
+            for index in 0..<itemsCount {
+                do {
+                    let item = try AuditPacketWire.readAuditPacketItem(reader: reader, state: state, path: "")
+                    items.append(item)
+                } catch let error as APIBinaryDecodeError {
+                    throw apiBinaryWrapIndex("items", index, error)
+                }
+            }
+            let checksum = try reader.readU32("checksum")
+            try apiBinaryRequireDecode("checksum", Int(checksum) == state.itemCount, "assert mismatch")
+            state.checksum = Int(checksum)
+            return AuditPacketBody(
+                items: items,
+                checksum: checksum
+            )
+        } catch let error as APIBinaryDecodeError {
+            if path.isEmpty {
+                throw error
+            }
+            throw apiBinaryWrapField(path, error)
+        }
+    }
+
+    public static func writeAuditPacketBody(
+        _ value: AuditPacketBody,
+        writer: APIBinaryWriter,
+        state: AuditPacketBinaryState = AuditPacketBinaryState(),
+        path: String = "AuditPacketBody"
+    ) throws {
+        do {
+            let itemsCount = state.itemCount
+            try apiBinaryRequire("items", itemsCount >= 0, "invalid count \(itemsCount)")
+            try apiBinaryRequireSize("items", apiBinarySize(value.items), itemsCount)
+            for (index, item) in value.items.enumerated() {
+                do {
+                    try AuditPacketWire.writeAuditPacketItem(item, writer: writer, state: state, path: "")
+                } catch let error as APIBinaryEncodeError {
+                    throw apiBinaryWrapIndex("items", index, error)
+                }
+            }
+            try apiBinaryRequire("checksum", Int(value.checksum) == state.itemCount, "assert mismatch")
+            try writer.writeU32("checksum", value.checksum)
+            state.checksum = Int(value.checksum)
+        } catch let error as APIBinaryEncodeError {
+            if path.isEmpty {
+                throw error
+            }
+            throw apiBinaryWrapField(path, error)
+        }
+    }
+
+    public static func readAuditPacketItem(
+        reader: APIBinaryReader,
+        state: AuditPacketBinaryState = AuditPacketBinaryState(),
+        path: String = "Item"
+    ) throws -> AuditPacketItem {
+        do {
+            let id = try reader.readU32("id")
+            try apiBinaryRequireRangeDecode("id", Int(id), 1, Int.max)
+            state.id = Int(id)
+            let code = try reader.readU16("code")
+            try apiBinaryRequireRangeDecode("code", Int(code), 1, Int.max)
+            try apiBinaryRequireRangeDecode("code", Int(code), Int.min, 999)
+            state.code = Int(code)
+            return AuditPacketItem(
+                id: id,
+                code: code
+            )
+        } catch let error as APIBinaryDecodeError {
+            if path.isEmpty {
+                throw error
+            }
+            throw apiBinaryWrapField(path, error)
+        }
+    }
+
+    public static func writeAuditPacketItem(
+        _ value: AuditPacketItem,
+        writer: APIBinaryWriter,
+        state: AuditPacketBinaryState = AuditPacketBinaryState(),
+        path: String = "Item"
+    ) throws {
+        do {
+            try apiBinaryRequireRange("id", Int(value.id), 1, Int.max)
+            try writer.writeU32("id", value.id)
+            state.id = Int(value.id)
+            try apiBinaryRequireRange("code", Int(value.code), 1, Int.max)
+            try apiBinaryRequireRange("code", Int(value.code), Int.min, 999)
+            try writer.writeU16("code", value.code)
+            state.code = Int(value.code)
+        } catch let error as APIBinaryEncodeError {
+            if path.isEmpty {
+                throw error
+            }
+            throw apiBinaryWrapField(path, error)
+        }
+    }
+}
+
 public func encodeAuditPacket(_ value: AuditPacket) throws -> Data {
-    value.data
+    try AuditPacketWire.encode(value)
 }
 
 public func decodeAuditPacket(_ data: Data) throws -> AuditPacket {
-    AuditPacket(data: data)
+    try AuditPacketWire.decode(data)
 }
