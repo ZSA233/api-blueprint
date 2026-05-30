@@ -19,13 +19,13 @@ open class Gen{{ group.class_name }} {
 {% elif route.binary_type %}        binary: Data? = nil,
 {% endif %}        options: APIRequestOptions = APIRequestOptions()
     ) async throws -> {{ route.response_type.text }} {
-{% if route.json_type %}        let jsonBody: Any?
+{% if route.json_type %}        let jsonBody: ((APICodingConfig) throws -> Data)?
         if let json {
-            jsonBody = try apiEncodeJSONObject(json)
+            jsonBody = { coding in try apiEncodeJSONData(json, coding: coding) }
         } else {
             jsonBody = nil
         }
-{% else %}        let jsonBody: Any? = nil
+{% else %}        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
 {% endif %}{% if route.form_type %}        let formBody = try form?.toFormFields()
 {% else %}        let formBody: [String: String?]? = nil
 {% endif %}{% if route.multipart_type %}        let multipartBody = try multipart?.toMultipartFields()
@@ -48,6 +48,7 @@ open class Gen{{ group.class_name }} {
                 responseMediaType: {{ route.response_media_type | code_literal }},
                 responseKind: {{ route.response_kind | code_literal }},
                 responseEnvelope: {{ route.response_envelope_literal | safe }},
+                decodeData: {{ route.data_decoder_expr | safe }},
                 decode: {{ route.decoder_expr }}
             )
         )
@@ -58,8 +59,8 @@ open class Gen{{ group.class_name }} {
 {% if route.query_type %}        query: {{ route.query_type }}? = nil,
 {% endif %}{% if route.open_type %}        openPayload: {{ route.open_type }}? = nil,
 {% endif %}        headers: [String: String] = [:]
-    ) -> APIStreamBridge<{{ route.server_message_type }}, {{ route.close_type }}> {
-        transport.openStream(
+    ) throws -> APIStreamBridge<{{ route.server_message_type }}, {{ route.close_type }}> {
+        try transport.openStream(
             APIStreamConnectOptions<{{ route.server_message_type }}, {{ route.close_type }}>(
                 routeID: {{ route.protocol.route.route_id | code_literal }},
                 connectionKind: "stream",
@@ -79,8 +80,8 @@ open class Gen{{ group.class_name }} {
 {% endif %}{% if route.open_type %}        openPayload: {{ route.open_type }}? = nil,
 {% endif %}        headers: [String: String] = [:],
         protocols: [String] = []
-    ) -> APIChannelBridge<{{ route.server_message_type }}, {{ route.client_message_type }}, {{ route.close_type }}> {
-        transport.openChannel(
+    ) throws -> APIChannelBridge<{{ route.server_message_type }}, {{ route.client_message_type }}, {{ route.close_type }}> {
+        try transport.openChannel(
             APIChannelConnectOptions<{{ route.server_message_type }}, {{ route.client_message_type }}, {{ route.close_type }}>(
                 routeID: {{ route.protocol.route.route_id | code_literal }},
                 connectionKind: "channel",
@@ -91,7 +92,7 @@ open class Gen{{ group.class_name }} {
                 protocols: protocols,
                 delivery: {{ route.connection_delivery | code_literal }},
                 decodeMessage: { value in try apiDecodeValue({{ route.server_message_type }}.self, from: value) },
-                encodeMessage: { message in try apiEncodeJSONObject(message) },
+                encodeMessage: { message, coding in try apiEncodeJSONData(message, coding: coding) },
                 decodeClose: { value in try apiDecodeValue({{ route.close_type }}.self, from: value) }
             )
         )

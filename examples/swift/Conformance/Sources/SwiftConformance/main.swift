@@ -307,7 +307,7 @@ private func checkTypedErrors(_ client: ABClient) async throws {
 }
 
 private func checkSSE(_ client: ABClient) async throws {
-    let bridge = client.api.demo.subscribeSweepEvents(openPayload: SweepOpen(runId: "swift-sse"))
+    let bridge = try client.api.demo.subscribeSweepEvents(openPayload: SweepOpen(runId: "swift-sse"))
     let received = try await withTimeout(label: "sse.message") {
         try await nextMessage(bridge.messages, label: "sse.message")
     }
@@ -326,7 +326,7 @@ private func checkSSE(_ client: ABClient) async throws {
 }
 
 private func checkWebSocket(_ client: ABClient) async throws {
-    let channel = client.api.demo.openAssistantSession(openPayload: AssistantOpen(sessionId: "swift-ws"))
+    let channel = try client.api.demo.openAssistantSession(openPayload: AssistantOpen(sessionId: "swift-ws"))
     try await channel.send(.input(AssistantInput(text: "hello")))
 
     let received = try await withTimeout(label: "websocket.message") {
@@ -353,7 +353,7 @@ private func checkWebSocket(_ client: ABClient) async throws {
 }
 
 private func checkSingleChannel(_ client: ABClient) async throws {
-    let channel = client.api.api.openHelloChannel()
+    let channel = try client.api.api.openHelloChannel()
     try await channel.send(HelloChannelMessage(type_: .ping, data: .object(["source": .string("swift")])))
 
     let received = try await withTimeout(label: "single-channel.message") {

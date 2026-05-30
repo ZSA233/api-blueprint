@@ -32,19 +32,22 @@ public typealias APIHTTPStreamStart = (
 
 public func apiHTTPEventStreamBridge<Recv, Close>(
     routeID: String,
+    streamBufferLimit: Int,
+    maxSSEEventBytes: Int,
     start: @escaping APIHTTPStreamStart,
     decodeMessage: @escaping (Any?) throws -> Recv,
     decodeClose: @escaping (Any?) throws -> Close
 ) -> APIStreamBridge<Recv, Close> {
     let state = APIHTTPEventStreamState(
         start: start,
+        maxSSEEventBytes: maxSSEEventBytes,
         decodeMessage: decodeMessage,
         decodeClose: decodeClose
     )
-    let messages = AsyncThrowingStream<Recv, Error> { continuation in
+    let messages = AsyncThrowingStream<Recv, Error>(bufferingPolicy: .bufferingNewest(max(1, streamBufferLimit))) { continuation in
         state.setMessageContinuation(continuation)
     }
-    let closes = AsyncStream<Close> { continuation in
+    let closes = AsyncStream<Close>(bufferingPolicy: .bufferingNewest(1)) { continuation in
         state.setCloseContinuation(continuation)
     }
     state.start()
@@ -61,20 +64,25 @@ public func apiHTTPEventStreamBridge<Recv, Close>(
 public func apiHTTPWebSocketBridge<Recv, Send, Close>(
     routeID: String,
     socket: URLSessionWebSocketTask,
+    coding: APICodingConfig,
+    streamBufferLimit: Int,
+    maxWebSocketMessageBytes: Int,
     decodeMessage: @escaping (Any?) throws -> Recv,
-    encodeMessage: @escaping (Send) throws -> Any?,
+    encodeMessage: @escaping (Send, APICodingConfig) throws -> Data,
     decodeClose: @escaping (Any?) throws -> Close
 ) -> APIChannelBridge<Recv, Send, Close> {
     let state = APIHTTPWebSocketState(
         socket: socket,
+        coding: coding,
+        maxWebSocketMessageBytes: maxWebSocketMessageBytes,
         decodeMessage: decodeMessage,
         encodeMessage: encodeMessage,
         decodeClose: decodeClose
     )
-    let messages = AsyncThrowingStream<Recv, Error> { continuation in
+    let messages = AsyncThrowingStream<Recv, Error>(bufferingPolicy: .bufferingNewest(max(1, streamBufferLimit))) { continuation in
         state.setMessageContinuation(continuation)
     }
-    let closes = AsyncStream<Close> { continuation in
+    let closes = AsyncStream<Close>(bufferingPolicy: .bufferingNewest(1)) { continuation in
         state.setCloseContinuation(continuation)
     }
     state.start()
@@ -96,7 +104,7 @@ private final class APIHTTPEventStreamState<Recv, Close> {
     private let startHandler: APIHTTPStreamStart
     private let decodeMessage: (Any?) throws -> Recv
     private let decodeClose: (Any?) throws -> Close
-    private var parser = APIHTTPSSEParser()
+    private var parser: APIHTTPSSEParser
     private var pendingData = Data()
     private var messageContinuation: AsyncThrowingStream<Recv, Error>.Continuation?
     private var closeContinuation: AsyncStream<Close>.Continuation?
@@ -105,10 +113,12 @@ private final class APIHTTPEventStreamState<Recv, Close> {
 
     init(
         start: @escaping APIHTTPStreamStart,
+        maxSSEEventBytes: Int,
         decodeMessage: @escaping (Any?) throws -> Recv,
         decodeClose: @escaping (Any?) throws -> Close
     ) {
         self.startHandler = start
+        self.parser = APIHTTPSSEParser(maxEventBytes: maxSSEEventBytes)
         self.decodeMessage = decodeMessage
         self.decodeClose = decodeClose
     }
@@ -172,7 +182,7 @@ private final class APIHTTPEventStreamState<Recv, Close> {
         lock.unlock()
 
         do {
-            for event in parser.accept(text) {
+            for event in try parser.accept(text) {
                 try dispatch(event)
             }
         } catch {
@@ -195,7 +205,7 @@ private final class APIHTTPEventStreamState<Recv, Close> {
                 return
             }
             do {
-                for event in parser.accept(text) {
+                for event in try parser.accept(text) {
                     try dispatch(event)
                 }
             } catch {
@@ -260,8 +270,10 @@ private final class APIHTTPEventStreamState<Recv, Close> {
 private final class APIHTTPWebSocketState<Recv, Send, Close> {
     private let lock = NSLock()
     private let socket: URLSessionWebSocketTask
+    private let coding: APICodingConfig
+    private let maxWebSocketMessageBytes: Int
     private let decodeMessage: (Any?) throws -> Recv
-    private let encodeMessage: (Send) throws -> Any?
+    private let encodeMessage: (Send, APICodingConfig) throws -> Data
     private let decodeClose: (Any?) throws -> Close
     private var messageContinuation: AsyncThrowingStream<Recv, Error>.Continuation?
     private var closeContinuation: AsyncStream<Close>.Continuation?
@@ -269,11 +281,15 @@ private final class APIHTTPWebSocketState<Recv, Send, Close> {
 
     init(
         socket: URLSessionWebSocketTask,
+        coding: APICodingConfig,
+        maxWebSocketMessageBytes: Int,
         decodeMessage: @escaping (Any?) throws -> Recv,
-        encodeMessage: @escaping (Send) throws -> Any?,
+        encodeMessage: @escaping (Send, APICodingConfig) throws -> Data,
         decodeClose: @escaping (Any?) throws -> Close
     ) {
         self.socket = socket
+        self.coding = coding
+        self.maxWebSocketMessageBytes = maxWebSocketMessageBytes
         self.decodeMessage = decodeMessage
         self.encodeMessage = encodeMessage
         self.decodeClose = decodeClose
@@ -300,8 +316,8 @@ private final class APIHTTPWebSocketState<Recv, Send, Close> {
     }
 
     func send(_ message: Send) async throws {
-        let payload = try encodeMessage(message)
-        let data = try JSONSerialization.data(withJSONObject: payload ?? NSNull(), options: [.fragmentsAllowed])
+        let data = try encodeMessage(message, coding)
+        try validateWebSocketPayloadSize(data.count)
         let text = String(data: data, encoding: .utf8) ?? "null"
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             socket.send(.string(text)) { error in
@@ -329,6 +345,7 @@ private final class APIHTTPWebSocketState<Recv, Send, Close> {
                 self.handleReceiveFailure(error)
             case .success(let message):
                 do {
+                    try self.validateWebSocketMessageSize(message)
                     let value = try apiHTTPWebSocketJSON(message)
                     let payload = apiHTTPWebSocketPayload(value)
                     switch payload {
@@ -343,6 +360,24 @@ private final class APIHTTPWebSocketState<Recv, Send, Close> {
                     self.finish(throwing: error)
                 }
             }
+        }
+    }
+
+    private func validateWebSocketMessageSize(_ message: URLSessionWebSocketTask.Message) throws {
+        switch message {
+        case .string(let text):
+            try validateWebSocketPayloadSize(text.utf8.count)
+        case .data(let data):
+            try validateWebSocketPayloadSize(data.count)
+        @unknown default:
+            throw APIDecodeError.invalidResponse("unsupported WebSocket message")
+        }
+    }
+
+    private func validateWebSocketPayloadSize(_ size: Int) throws {
+        if size > maxWebSocketMessageBytes {
+            socket.cancel(with: .messageTooBig, reason: nil)
+            throw APITransportError.payloadTooLarge(kind: "websocket", limit: maxWebSocketMessageBytes)
         }
     }
 
@@ -413,14 +448,25 @@ private struct APIHTTPSSEEvent {
 
 private final class APIHTTPSSEParser {
     private var buffer = ""
+    private let maxEventBytes: Int
 
-    func accept(_ text: String) -> [APIHTTPSSEEvent] {
+    init(maxEventBytes: Int) {
+        self.maxEventBytes = maxEventBytes
+    }
+
+    func accept(_ text: String) throws -> [APIHTTPSSEEvent] {
         buffer += text
+        if buffer.utf8.count > maxEventBytes {
+            throw APITransportError.payloadTooLarge(kind: "sse", limit: maxEventBytes)
+        }
         var events: [APIHTTPSSEEvent] = []
         while let boundary = nextBoundary() {
             let block = String(buffer[..<boundary.lowerBound])
             buffer.removeSubrange(buffer.startIndex..<boundary.upperBound)
             if !block.isEmpty {
+                if block.utf8.count > maxEventBytes {
+                    throw APITransportError.payloadTooLarge(kind: "sse", limit: maxEventBytes)
+                }
                 events.append(parse(block))
             }
         }

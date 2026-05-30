@@ -83,10 +83,14 @@ def test_swift_writer_generates_spm_runtime_routes_transport_and_preserved_files
 
     assert "public protocol APITransport" in runtime_transport
     assert "func request<Response>(_ request: APIRequest<Response>) async throws -> Response" in runtime_transport
-    assert "func openStream<Recv, Close>" in runtime_transport
-    assert "func openChannel<Recv, Send, Close>" in runtime_transport
+    assert "func openStream<Recv, Close>(_ options: APIStreamConnectOptions<Recv, Close>) throws -> APIStreamBridge" in runtime_transport
+    assert "func openChannel<Recv, Send, Close>(_ options: APIChannelConnectOptions<Recv, Send, Close>) throws -> APIChannelBridge" in runtime_transport
+    assert "public struct APICodingConfig: Sendable" in runtime_transport
+    assert "public enum APITransportError" in runtime_transport
     assert "public struct APIRequestOptions" in runtime_transport
     assert "public struct APIRequest<Response>" in runtime_transport
+    assert "public var json: ((APICodingConfig) throws -> Data)?" in runtime_transport
+    assert "public var decodeData: (Data, APIResponseEnvelope, APICodingConfig) throws -> Response" in runtime_transport
     assert "public struct APIRawResponse" in runtime_transport
     assert "public struct APIStreamResponse" in runtime_transport
     assert "public struct APIFilePart: Codable, Sendable" in runtime_transport
@@ -118,8 +122,9 @@ def test_swift_writer_generates_spm_runtime_routes_transport_and_preserved_files
     assert "public func ping(" in route_client
     assert "query: query?.toQueryItems() ?? []" in route_client
     assert "public func submit(" in route_client
-    assert "let jsonBody: Any?" in route_client
-    assert "try apiEncodeJSONObject(json)" in route_client
+    assert "let jsonBody: ((APICodingConfig) throws -> Data)?" in route_client
+    assert "try apiEncodeJSONData(json, coding: coding)" in route_client
+    assert "try apiEncodeJSONObject(json)" not in route_client
     assert "public func form(" in route_client
     assert "let formBody = try form?.toFormFields()" in route_client
     assert "public func preview(" in route_client
@@ -131,10 +136,11 @@ def test_swift_writer_generates_spm_runtime_routes_transport_and_preserved_files
     assert 'responseKind: "file"' in route_client
     assert 'responseKind: "byte_stream"' in route_client
     assert 'responseKind: "binary_schema"' in route_client
+    assert "decodeData: { data, envelope, coding in try apiDecodeResponse(" in route_client
     assert "public func subscribeEvents(" in route_client
-    assert ") -> APIStreamBridge<AssistantServerMessage, CloseInfo>" in route_client
+    assert ") throws -> APIStreamBridge<AssistantServerMessage, CloseInfo>" in route_client
     assert "public func openAssistant(" in route_client
-    assert ") -> APIChannelBridge<AssistantServerMessage, AssistantClientMessage, CloseInfo>" in route_client
+    assert ") throws -> APIChannelBridge<AssistantServerMessage, AssistantClientMessage, CloseInfo>" in route_client
     assert 'delivery: "unordered"' in route_client
 
     assert "import ABClientRuntime" in route_types
@@ -147,13 +153,29 @@ def test_swift_writer_generates_spm_runtime_routes_transport_and_preserved_files
     assert "public struct DemoPacket: Codable, Sendable" in route_binary
     assert "public func encodeDemoPacket(_ value: DemoPacket) throws -> Data" in route_binary
 
-    assert 'baseURL: URL? = URL(string: "http://localhost:2333")!' in http_config
+    assert 'baseURL: URL? = URL(string: "http://localhost:2333")' in http_config
+    assert "public let byteStreamChunkSize: Int" in http_config
+    assert "public let maxErrorBodyBytes: Int" in http_config
+    assert "public let maxSSEEventBytes: Int" in http_config
+    assert "public let maxWebSocketMessageBytes: Int" in http_config
+    assert "public let streamBufferLimit: Int" in http_config
+    assert "public let coding: APICodingConfig" in http_config
     assert "public final class URLSessionAPITransport: APITransport" in http_transport
     assert "application/x-www-form-urlencoded" in http_transport
     assert "CharacterSet.alphanumerics" in http_transport
     assert 'allowed.insert(charactersIn: "-._~")' in http_transport
     assert ".urlQueryAllowed" not in http_transport
+    assert "components.url!" not in http_transport
+    assert "URLComponents(string: raw)!" not in http_transport
+    assert "Data([byte])" not in http_transport
+    assert "request.json" in http_transport
+    assert "try json(config.coding)" in http_transport
     assert "multipart/form-data; boundary=" in http_transport
+    assert "InputStream(url: fileURL)" in http_transport
+    assert "filename*=UTF-8''" in http_transport
+    assert "validateHeaderValue(file.filename)" in http_transport
+    assert "APITransportError.invalidHeaderValue" in http_transport
+    assert "APITransportError.payloadTooLarge" in http_transport
     assert "httpResponse.statusCode >= 400 || isJSONResponse(httpResponse)" in http_transport
     assert "validateStatus(httpResponse, body: Data()" not in http_transport
     assert "apiHTTPEventStreamBridge(" in http_transport
@@ -163,6 +185,10 @@ def test_swift_writer_generates_spm_runtime_routes_transport_and_preserved_files
     assert "public func apiHTTPEventStreamBridge" in http_connection
     assert "public func apiHTTPWebSocketBridge" in http_connection
     assert "private final class APIHTTPSSEParser" in http_connection
+    assert "bufferingPolicy: .bufferingNewest(max(1, streamBufferLimit))" in http_connection
+    assert "bufferingPolicy: .bufferingNewest(1)" in http_connection
+    assert "APITransportError.payloadTooLarge(kind: \"sse\"" in http_connection
+    assert "APITransportError.payloadTooLarge(kind: \"websocket\"" in http_connection
     assert 'buffer.range(of: "\\n\\n")' in http_connection
     assert 'buffer.range(of: "\\r\\n\\r\\n")' in http_connection
     assert 'dataLines.joined(separator: "\\n")' in http_connection
@@ -302,8 +328,8 @@ def test_swift_transport_runtime_profiles_are_isolated_to_transport_templates(tm
 
     assert ".iOS(.v15)" in modern_package
     assert ".iOS(.v14)" in compat_package
-    assert "try await config.session.data(for: urlRequest)" in modern_transport
-    assert "try await config.session.bytes(for: urlRequest)" in modern_transport
+    assert "try await config.session.data(for: built.request)" in modern_transport
+    assert "try await config.session.bytes(for: built.request)" in modern_transport
     assert "performCompatDataTask" not in modern_transport
     assert "apiHTTPEventStreamBridge" in modern_transport
     assert "apiHTTPWebSocketBridge" in modern_transport

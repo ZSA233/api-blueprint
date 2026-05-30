@@ -14,7 +14,7 @@ open class GenBinaryAPI {
         binary: DemoPacket? = nil,
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> BinaryPacketResponse {
-        let jsonBody: Any? = nil
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
         let formBody: [String: String?]? = nil
         let multipartBody: [String: Any?]? = nil
         let binaryBody = try binary?.encode()
@@ -33,6 +33,7 @@ open class GenBinaryAPI {
                 responseMediaType: "application/json",
                 responseKind: "json",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { data, envelope, coding in try apiDecodeResponse(BinaryPacketResponse.self, from: data, envelope: envelope, routeID: "api.binary.post.packet", coding: coding) },
                 decode: { value in try apiDecodeValue(BinaryPacketResponse.self, from: value) }
             )
         )
@@ -43,7 +44,7 @@ open class GenBinaryAPI {
         binary: AuditPacket? = nil,
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> BinaryAuditPacketResponse {
-        let jsonBody: Any? = nil
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
         let formBody: [String: String?]? = nil
         let multipartBody: [String: Any?]? = nil
         let binaryBody = try binary?.encode()
@@ -62,6 +63,7 @@ open class GenBinaryAPI {
                 responseMediaType: "application/json",
                 responseKind: "json",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { data, envelope, coding in try apiDecodeResponse(BinaryAuditPacketResponse.self, from: data, envelope: envelope, routeID: "api.binary.post.auditpacket", coding: coding) },
                 decode: { value in try apiDecodeValue(BinaryAuditPacketResponse.self, from: value) }
             )
         )
@@ -70,7 +72,7 @@ open class GenBinaryAPI {
     public func auditPacketResponse(
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> AuditPacket {
-        let jsonBody: Any? = nil
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
         let formBody: [String: String?]? = nil
         let multipartBody: [String: Any?]? = nil
         let binaryBody: Data? = nil
@@ -89,6 +91,7 @@ open class GenBinaryAPI {
                 responseMediaType: "application/octet-stream",
                 responseKind: "binary_schema",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { data, _, _ in try decodeAuditPacket(data) },
                 decode: { value in try decodeAuditPacket(try apiDecodeData(value)) }
             )
         )

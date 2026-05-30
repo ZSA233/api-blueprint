@@ -13,7 +13,7 @@ open class GenConflictAPI {
         query: ConflictDefaultQuery? = nil,
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> ConflictModel {
-        let jsonBody: Any? = nil
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
         let formBody: [String: String?]? = nil
         let multipartBody: [String: Any?]? = nil
         let binaryBody: Data? = nil
@@ -32,6 +32,7 @@ open class GenConflictAPI {
                 responseMediaType: "application/json",
                 responseKind: "json",
                 responseEnvelope: APIResponseEnvelope(name: "OkDataErrorEnvelope", kind: "ok_data_error", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { data, envelope, coding in try apiDecodeResponse(ConflictModel.self, from: data, envelope: envelope, routeID: "alt.conflict.get.default", coding: coding) },
                 decode: { value in try apiDecodeValue(ConflictModel.self, from: value) }
             )
         )

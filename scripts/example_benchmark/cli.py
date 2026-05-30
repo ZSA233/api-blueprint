@@ -45,7 +45,7 @@ def build_parser() -> argparse.ArgumentParser:
     sdk_parser.add_argument(
         "--clients",
         default="python",
-        help="Comma-separated generated clients: go,typescript,kotlin,flutter,java,python, or all.",
+        help="Comma-separated generated clients: go,typescript,kotlin,flutter,swift,java,python, or all.",
     )
     sdk_parser.add_argument(
         "--scenario",

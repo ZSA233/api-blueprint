@@ -204,6 +204,24 @@ class SwiftRoute:
         return "{ value in try apiDecodeValue(" + self.response_type.text + ".self, from: value) }"
 
     @property
+    def data_decoder_expr(self) -> str:
+        if self.response_kind in {"bytes", "file", "byte_stream"}:
+            return '{ _, _, _ in throw APIDecodeError.invalidResponse("response is decoded from transport metadata") }'
+        if self.response_kind == "binary_schema" and self.response_binary_schema_obj is not None:
+            return "{ data, _, _ in try " + self.response_binary_schema_obj.decode_func + "(data) }"
+        if self.response_media_type != "application/json":
+            return "{ value, _, _ in try apiDecodeString(value) }"
+        if self.response_payload_proto is None:
+            return "{ _, _, _ in () }"
+        return (
+            "{ data, envelope, coding in try apiDecodeResponse("
+            + self.response_type.text
+            + ".self, from: data, envelope: envelope, routeID: "
+            + json.dumps(self.protocol.route.route_id)
+            + ", coding: coding) }"
+        )
+
+    @property
     def query_to_items_expr(self) -> str:
         return "query?.toQueryItems() ?? []" if self.query_type else "[]"
 

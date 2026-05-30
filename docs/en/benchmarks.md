@@ -25,12 +25,13 @@ make example-benchmark
 The `binary` subcommand migrates the older `scripts/benchmark_binary.py` / `scripts/benchmark_binary_client.py` flow and compares generated binary schema codec read/write cost.
 
 ```sh
-uv run python -m scripts.example_benchmark binary --target go,typescript,python,kotlin,java --count 10000
+uv run python -m scripts.example_benchmark binary --target go,typescript,python,kotlin,java,swift --count 10000
 ```
 
-- `--target` supports `go`, `typescript`, `python`, `kotlin`, `java`, and `all`.
+- `--target` supports `go`, `typescript`, `python`, `kotlin`, `java`, `swift`, and `all`.
 - `--count` controls the operation count per target.
 - `--compare-head` keeps the older Go target HEAD comparison.
+- The Swift benchmark creates a temporary SwiftPM executable, depends on the current `examples/swift` `ABClientAPIRoutes` product, and requires a local `swift` toolchain.
 - The old scripts remain compatibility wrappers; new calls should prefer `python -m scripts.example_benchmark binary`.
 
 ## Protocol

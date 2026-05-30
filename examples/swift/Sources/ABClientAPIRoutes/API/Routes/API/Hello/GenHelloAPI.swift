@@ -13,7 +13,7 @@ open class GenHelloAPI {
         query: HelloAbcQuery? = nil,
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> HelloAbcResponse {
-        let jsonBody: Any? = nil
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
         let formBody: [String: String?]? = nil
         let multipartBody: [String: Any?]? = nil
         let binaryBody: Data? = nil
@@ -32,6 +32,7 @@ open class GenHelloAPI {
                 responseMediaType: "application/json",
                 responseKind: "json",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { data, envelope, coding in try apiDecodeResponse(HelloAbcResponse.self, from: data, envelope: envelope, routeID: "api.hello.get.abc", coding: coding) },
                 decode: { value in try apiDecodeValue(HelloAbcResponse.self, from: value) }
             )
         )
@@ -40,7 +41,7 @@ open class GenHelloAPI {
     public func mapEnum(
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> HelloMapEnumResponse {
-        let jsonBody: Any? = nil
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
         let formBody: [String: String?]? = nil
         let multipartBody: [String: Any?]? = nil
         let binaryBody: Data? = nil
@@ -59,6 +60,7 @@ open class GenHelloAPI {
                 responseMediaType: "application/json",
                 responseKind: "json",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { data, envelope, coding in try apiDecodeResponse(HelloMapEnumResponse.self, from: data, envelope: envelope, routeID: "api.hello.get.mapenum", coding: coding) },
                 decode: { value in try apiDecodeValue(HelloMapEnumResponse.self, from: value) }
             )
         )
@@ -67,7 +69,7 @@ open class GenHelloAPI {
     public func listEnum(
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> HelloListEnumResponse {
-        let jsonBody: Any? = nil
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
         let formBody: [String: String?]? = nil
         let multipartBody: [String: Any?]? = nil
         let binaryBody: Data? = nil
@@ -86,6 +88,7 @@ open class GenHelloAPI {
                 responseMediaType: "application/json",
                 responseKind: "json",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { data, envelope, coding in try apiDecodeResponse(HelloListEnumResponse.self, from: data, envelope: envelope, routeID: "api.hello.get.listenum", coding: coding) },
                 decode: { value in try apiDecodeValue(HelloListEnumResponse.self, from: value) }
             )
         )
@@ -94,7 +97,7 @@ open class GenHelloAPI {
     public func string(
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> HelloStringResponse {
-        let jsonBody: Any? = nil
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
         let formBody: [String: String?]? = nil
         let multipartBody: [String: Any?]? = nil
         let binaryBody: Data? = nil
@@ -113,6 +116,7 @@ open class GenHelloAPI {
                 responseMediaType: "application/json",
                 responseKind: "json",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { data, envelope, coding in try apiDecodeResponse(HelloStringResponse.self, from: data, envelope: envelope, routeID: "api.hello.get.string", coding: coding) },
                 decode: { value in try apiDecodeValue(HelloStringResponse.self, from: value) }
             )
         )
@@ -121,7 +125,7 @@ open class GenHelloAPI {
     public func uint64(
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> HelloUint64Response {
-        let jsonBody: Any? = nil
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
         let formBody: [String: String?]? = nil
         let multipartBody: [String: Any?]? = nil
         let binaryBody: Data? = nil
@@ -140,6 +144,7 @@ open class GenHelloAPI {
                 responseMediaType: "application/json",
                 responseKind: "json",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { data, envelope, coding in try apiDecodeResponse(HelloUint64Response.self, from: data, envelope: envelope, routeID: "api.hello.get.uint64", coding: coding) },
                 decode: { value in try apiDecodeValue(HelloUint64Response.self, from: value) }
             )
         )
@@ -148,7 +153,7 @@ open class GenHelloAPI {
     public func stringEmun(
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> HelloStringEmunResponse {
-        let jsonBody: Any? = nil
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
         let formBody: [String: String?]? = nil
         let multipartBody: [String: Any?]? = nil
         let binaryBody: Data? = nil
@@ -167,6 +172,7 @@ open class GenHelloAPI {
                 responseMediaType: "application/json",
                 responseKind: "json",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { data, envelope, coding in try apiDecodeResponse(HelloStringEmunResponse.self, from: data, envelope: envelope, routeID: "api.hello.get.stringemun", coding: coding) },
                 decode: { value in try apiDecodeValue(HelloStringEmunResponse.self, from: value) }
             )
         )
@@ -176,7 +182,7 @@ open class GenHelloAPI {
         query: HelloHelloWayQuery? = nil,
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> Void {
-        let jsonBody: Any? = nil
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
         let formBody: [String: String?]? = nil
         let multipartBody: [String: Any?]? = nil
         let binaryBody: Data? = nil
@@ -195,6 +201,7 @@ open class GenHelloAPI {
                 responseMediaType: "application/json",
                 responseKind: "json",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { _, _, _ in () },
                 decode: { _ in () }
             )
         )

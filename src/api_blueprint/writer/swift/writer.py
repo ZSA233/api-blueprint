@@ -72,7 +72,7 @@ class SwiftWriter(BaseWriter[SwiftBlueprint]):
         if base_url_expr is not None:
             self.rendered_base_url = base_url_expr
         elif self.base_url:
-            self.rendered_base_url = f'URL(string: {json.dumps(self.base_url)})!'
+            self.rendered_base_url = f'URL(string: {json.dumps(self.base_url)})'
         else:
             self.rendered_base_url = "nil"
         self.selection = SwiftRouteSelection(include=include, exclude=exclude)

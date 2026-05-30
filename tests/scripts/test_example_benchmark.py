@@ -38,6 +38,7 @@ def test_example_benchmark_help_and_list() -> None:
     assert list_result.returncode == 0, list_result.stdout + list_result.stderr
     assert "binary targets:" in list_result.stdout
     assert "- go" in list_result.stdout
+    assert "- swift" in list_result.stdout
     assert "protocol servers:" in list_result.stdout
     assert "protocol scenarios:" in list_result.stdout
     assert "sdk smoke scenarios:" in list_result.stdout
@@ -214,6 +215,37 @@ def test_java_binary_benchmark_uses_generated_names_with_fake_subprocess(
     assert "routes.api.binary.GenBinaryTypes" in benchmark_source
     assert "runtime.binary.ApiBinaryBody" not in benchmark_source
     assert "routes.api.binary.BinaryTypes" not in benchmark_source
+
+
+def test_swift_binary_benchmark_uses_swift_package_product_with_fake_subprocess(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[2]
+    commands: list[list[str]] = []
+    package_source = ""
+    benchmark_source = ""
+
+    monkeypatch.setattr(binary, "_require_tool", lambda tool: True)
+
+    def fake_run(command: list[str], cwd: Path, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
+        nonlocal package_source, benchmark_source
+        commands.append(command)
+        package_source = (cwd / "Package.swift").read_text(encoding="utf-8")
+        benchmark_source = (cwd / "Sources" / "SwiftBinaryBenchmark" / "main.swift").read_text(encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0, stdout="iterations=1\n", stderr="")
+
+    monkeypatch.setattr(binary, "_run", fake_run)
+
+    result = binary.run_swift(
+        binary.BenchmarkContext(repo_root=repo_root, count=1, env={}, compare_head=False)
+    )
+
+    assert result == binary.BenchmarkResult(target="swift", returncode=0)
+    assert commands == [["swift", "run", "-c", "release", "SwiftBinaryBenchmark", "1"]]
+    assert '.product(name: "ABClientAPIRoutes", package: "swift")' in package_source
+    assert "import ABClientAPIRoutes" in benchmark_source
+    assert "encodeDemoPacket(packet)" in benchmark_source
+    assert "decodeDemoPacket(data)" in benchmark_source
 
 
 def test_protocol_benchmark_suppresses_setup_noise(

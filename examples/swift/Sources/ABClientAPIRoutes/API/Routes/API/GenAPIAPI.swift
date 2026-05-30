@@ -12,8 +12,8 @@ open class GenAPIAPI {
     public func openHelloChannel(
         headers: [String: String] = [:],
         protocols: [String] = []
-    ) -> APIChannelBridge<HelloChannelMessage, HelloChannelMessage, DefaultConnectionClose> {
-        transport.openChannel(
+    ) throws -> APIChannelBridge<HelloChannelMessage, HelloChannelMessage, DefaultConnectionClose> {
+        try transport.openChannel(
             APIChannelConnectOptions<HelloChannelMessage, HelloChannelMessage, DefaultConnectionClose>(
                 routeID: "api.api.channel.ws",
                 connectionKind: "channel",
@@ -24,7 +24,7 @@ open class GenAPIAPI {
                 protocols: protocols,
                 delivery: "ordered",
                 decodeMessage: { value in try apiDecodeValue(HelloChannelMessage.self, from: value) },
-                encodeMessage: { message in try apiEncodeJSONObject(message) },
+                encodeMessage: { message, coding in try apiEncodeJSONData(message, coding: coding) },
                 decodeClose: { value in try apiDecodeValue(DefaultConnectionClose.self, from: value) }
             )
         )

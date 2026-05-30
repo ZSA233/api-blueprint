@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-TARGETS = ("go", "typescript", "python", "kotlin", "java")
+TARGETS = ("go", "typescript", "python", "kotlin", "java", "swift")
 CLIENT_MODULE = "example.com/project/golang/client"
 CLIENT_ROUTE_PACKAGE = f"{CLIENT_MODULE}/routes/api/binary"
 
@@ -211,6 +211,26 @@ public final class JavaBinaryBenchmark {
         System.out.println("iterations=" + count + " elapsed_ns=" + elapsed + " ns_per_op=" + ((double) elapsed / (double) count) + " bytes=" + total);
     }
 }
+"""
+
+
+SWIFT_BENCHMARK_SOURCE = r"""
+import Foundation
+import ABClientAPIRoutes
+
+let count = Int(CommandLine.arguments.dropFirst().first ?? "0") ?? 0
+let packet = DemoPacket(data: Data([1, 2, 3, 4, 97, 98, 99]))
+let started = DispatchTime.now().uptimeNanoseconds
+var total = 0
+
+for _ in 0..<count {
+    let data = try encodeDemoPacket(packet)
+    let parsed = try decodeDemoPacket(data)
+    total += data.count + parsed.data.count
+}
+
+let elapsed = DispatchTime.now().uptimeNanoseconds - started
+print("iterations=\(count) elapsed_ns=\(elapsed) ns_per_op=\(Double(elapsed) / Double(count)) bytes=\(total)")
 """
 
 
@@ -486,12 +506,58 @@ def run_java(ctx: BenchmarkContext) -> BenchmarkResult:
         return BenchmarkResult(target="java", returncode=result.returncode)
 
 
+def run_swift(ctx: BenchmarkContext) -> BenchmarkResult:
+    if not _require_tool("swift"):
+        return _missing_tool("swift", "swift")
+    with tempfile.TemporaryDirectory(prefix="api-blueprint-binary-bench-swift-") as raw_bench_dir:
+        bench_dir = Path(raw_bench_dir)
+        source_dir = bench_dir / "Sources" / "SwiftBinaryBenchmark"
+        source_dir.mkdir(parents=True, exist_ok=True)
+        swift_package = ctx.repo_root / "examples" / "swift"
+        package_path = str(swift_package).replace("\\", "\\\\").replace('"', '\\"')
+        (bench_dir / "Package.swift").write_text(
+            textwrap.dedent(
+                f"""
+                // swift-tools-version: 5.9
+                import PackageDescription
+
+                let package = Package(
+                    name: "SwiftBinaryBenchmark",
+                    platforms: [.macOS(.v12)],
+                    products: [
+                        .executable(name: "SwiftBinaryBenchmark", targets: ["SwiftBinaryBenchmark"])
+                    ],
+                    dependencies: [
+                        .package(path: "{package_path}")
+                    ],
+                    targets: [
+                        .executableTarget(
+                            name: "SwiftBinaryBenchmark",
+                            dependencies: [
+                                .product(name: "ABClientAPIRoutes", package: "swift")
+                            ]
+                        )
+                    ]
+                )
+                """
+            ).strip()
+            + "\n",
+            encoding="utf-8",
+        )
+        (source_dir / "main.swift").write_text(textwrap.dedent(SWIFT_BENCHMARK_SOURCE).strip() + "\n", encoding="utf-8")
+        result = _run(["swift", "run", "-c", "release", "SwiftBinaryBenchmark", str(ctx.count)], bench_dir, ctx.env)
+        print("\n== swift ==")
+        _print_process_output(result)
+        return BenchmarkResult(target="swift", returncode=result.returncode)
+
+
 RUNNERS: dict[str, Callable[[BenchmarkContext], BenchmarkResult]] = {
     "go": run_go,
     "typescript": run_typescript,
     "python": run_python,
     "kotlin": run_kotlin,
     "java": run_java,
+    "swift": run_swift,
 }
 
 

@@ -11,43 +11,29 @@ public final class URLSessionAPITransport: APITransport {
     }
 
     public func request<Response>(_ request: APIRequest<Response>) async throws -> Response {
-        let urlRequest = try buildRequest(request)
+        let built = try buildRequest(request)
+        defer { built.cleanup() }
 {% if writer.modern_runtime %}
         if request.responseKind == "byte_stream" {
-            let (bytes, response) = try await config.session.bytes(for: urlRequest)
+            let (bytes, response) = try await config.session.bytes(for: built.request)
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw APIDecodeError.invalidResponse("expected HTTP response")
             }
             if httpResponse.statusCode >= 400 || isJSONResponse(httpResponse) {
-                var data = Data()
-                for try await byte in bytes {
-                    data.append(byte)
-                }
+                let data = try await collectLimitedBytes(bytes, limit: config.maxErrorBodyBytes)
                 try validateStatus(httpResponse, body: data, routeID: request.routeID, envelope: request.responseEnvelope)
-                try validateEnvelopeStatus(data, response: httpResponse, routeID: request.routeID, envelope: request.responseEnvelope)
-                let stream = AsyncThrowingStream<Data, Error> { continuation in
-                    continuation.yield(data)
-                    continuation.finish()
+                if isJSONResponse(httpResponse) {
+                    try validateEnvelopeStatus(data, response: httpResponse, routeID: request.routeID, envelope: request.responseEnvelope)
                 }
+                let stream = singleDataStream(data)
                 return try request.decode(streamResponse(stream, response: httpResponse, defaultContentType: request.responseMediaType))
             }
-            let stream = AsyncThrowingStream<Data, Error> { continuation in
-                Task {
-                    do {
-                        for try await byte in bytes {
-                            continuation.yield(Data([byte]))
-                        }
-                        continuation.finish()
-                    } catch {
-                        continuation.finish(throwing: error)
-                    }
-                }
-            }
+            let stream = chunkedByteStream(bytes)
             return try request.decode(streamResponse(stream, response: httpResponse, defaultContentType: request.responseMediaType))
         }
-        let (data, response) = try await config.session.data(for: urlRequest)
+        let (data, response) = try await config.session.data(for: built.request)
 {% else %}
-        let (data, response) = try await performCompatDataTask(urlRequest)
+        let (data, response) = try await performCompatDataTask(built.request)
 {% endif %}
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIDecodeError.invalidResponse("expected HTTP response")
@@ -64,10 +50,7 @@ public final class URLSessionAPITransport: APITransport {
             if isJSONResponse(httpResponse) {
                 try validateEnvelopeStatus(data, response: httpResponse, routeID: request.routeID, envelope: request.responseEnvelope)
             }
-            let stream = AsyncThrowingStream<Data, Error> { continuation in
-                continuation.yield(data)
-                continuation.finish()
-            }
+            let stream = chunkedDataStream(data)
             return try request.decode(streamResponse(stream, response: httpResponse, defaultContentType: request.responseMediaType))
         }
         if request.responseKind == "binary_schema" {
@@ -76,17 +59,17 @@ public final class URLSessionAPITransport: APITransport {
         if !isJSONResponse(httpResponse) {
             return try request.decode(String(data: data, encoding: .utf8) ?? "")
         }
-        let json = data.isEmpty ? nil : try JSONSerialization.jsonObject(with: data, options: [])
-        let payload = try unwrapResponseEnvelope(json, body: data, envelope: request.responseEnvelope, routeID: request.routeID)
-        return try request.decode(payload)
+        return try decodeJSONResponse(request, data: data)
     }
 
-    public func openStream<Recv, Close>(_ options: APIStreamConnectOptions<Recv, Close>) -> APIStreamBridge<Recv, Close> {
-        var request = buildConnectionRequest(path: options.path, query: options.query, headers: options.headers)
+    public func openStream<Recv, Close>(_ options: APIStreamConnectOptions<Recv, Close>) throws -> APIStreamBridge<Recv, Close> {
+        var request = try buildConnectionRequest(path: options.path, query: options.query, headers: options.headers)
         request.httpMethod = "GET"
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
         return apiHTTPEventStreamBridge(
             routeID: options.routeID,
+            streamBufferLimit: config.streamBufferLimit,
+            maxSSEEventBytes: config.maxSSEEventBytes,
             start: { onResponse, onData, onComplete in
 {% if writer.modern_runtime %}
                 self.performModernEventStreamTask(request, onResponse: onResponse, onData: onData, onComplete: onComplete)
@@ -99,41 +82,47 @@ public final class URLSessionAPITransport: APITransport {
         )
     }
 
-    public func openChannel<Recv, Send, Close>(_ options: APIChannelConnectOptions<Recv, Send, Close>) -> APIChannelBridge<Recv, Send, Close> {
-        let request = buildWebSocketRequest(path: options.path, query: options.query, headers: options.headers, protocols: options.protocols)
+    public func openChannel<Recv, Send, Close>(_ options: APIChannelConnectOptions<Recv, Send, Close>) throws -> APIChannelBridge<Recv, Send, Close> {
+        let request = try buildWebSocketRequest(path: options.path, query: options.query, headers: options.headers, protocols: options.protocols)
         let socket = config.session.webSocketTask(with: request)
         return apiHTTPWebSocketBridge(
             routeID: options.routeID,
             socket: socket,
+            coding: config.coding,
+            streamBufferLimit: config.streamBufferLimit,
+            maxWebSocketMessageBytes: config.maxWebSocketMessageBytes,
             decodeMessage: options.decodeMessage,
             encodeMessage: options.encodeMessage,
             decodeClose: options.decodeClose
         )
     }
 
-    private func buildRequest<Response>(_ request: APIRequest<Response>) throws -> URLRequest {
-        let url = buildURL(path: request.path, query: request.query)
+    private func buildRequest<Response>(_ request: APIRequest<Response>) throws -> APIBuiltRequest {
+        let url = try buildURL(path: request.path, query: request.query)
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = request.method
-        for (name, value) in config.defaultHeaders {
-            urlRequest.setValue(value, forHTTPHeaderField: name)
-        }
-        for (name, value) in request.options.headers {
-            urlRequest.setValue(value, forHTTPHeaderField: name)
-        }
+        try applyHeaders(config.defaultHeaders, to: &urlRequest)
+        try applyHeaders(request.options.headers, to: &urlRequest)
         if let timeout = request.options.timeout ?? config.timeout {
             urlRequest.timeoutInterval = timeout
         }
+        var cleanup: () -> Void = {}
         if let json = request.json {
             urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            urlRequest.httpBody = try JSONSerialization.data(withJSONObject: json, options: [])
+            urlRequest.httpBody = try json(config.coding)
         } else if let form = request.form {
             urlRequest.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
             urlRequest.httpBody = encodeForm(form).data(using: .utf8)
         } else if let multipart = request.multipart {
             let boundary = "api-blueprint-\(UUID().uuidString)"
             urlRequest.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-            urlRequest.httpBody = encodeMultipart(multipart, boundary: boundary)
+            let body = try encodeMultipart(multipart, boundary: boundary)
+            if let data = body.data {
+                urlRequest.httpBody = data
+            } else if let fileURL = body.fileURL {
+                urlRequest.httpBodyStream = InputStream(url: fileURL)
+                cleanup = body.cleanup
+            }
         } else if let binary = request.binary {
             urlRequest.setValue(request.binaryContentType ?? "application/octet-stream", forHTTPHeaderField: "Content-Type")
             urlRequest.httpBody = binary
@@ -141,64 +130,61 @@ public final class URLSessionAPITransport: APITransport {
         if urlRequest.value(forHTTPHeaderField: "Accept") == nil {
             urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
         }
-        return urlRequest
+        return APIBuiltRequest(request: urlRequest, cleanup: cleanup)
     }
 
-    private func buildURL(path: String, query: [URLQueryItem]) -> URL {
+    private func buildURL(path: String, query: [URLQueryItem]) throws -> URL {
         let normalizedPath = path.hasPrefix("/") ? path : "/\(path)"
-        let base = config.baseURL ?? URL(string: "http://localhost")!
+        guard let base = config.baseURL ?? URL(string: "http://localhost") else {
+            throw APITransportError.invalidURL("http://localhost")
+        }
         let raw = base.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + normalizedPath
-        var components = URLComponents(string: raw)!
+        guard var components = URLComponents(string: raw) else {
+            throw APITransportError.invalidURL(raw)
+        }
         let existing = components.queryItems ?? []
         components.queryItems = (existing + query).filter { $0.value != nil }
-        return components.url!
+        guard let url = components.url else {
+            throw APITransportError.invalidURL(raw)
+        }
+        return url
     }
 
-    private func buildConnectionRequest(path: String, query: [URLQueryItem], headers: [String: String]) -> URLRequest {
-        var request = URLRequest(url: buildURL(path: path, query: query))
-        for (name, value) in config.defaultHeaders {
-            request.setValue(value, forHTTPHeaderField: name)
-        }
-        for (name, value) in headers {
-            request.setValue(value, forHTTPHeaderField: name)
-        }
+    private func buildConnectionRequest(path: String, query: [URLQueryItem], headers: [String: String]) throws -> URLRequest {
+        var request = URLRequest(url: try buildURL(path: path, query: query))
+        try applyHeaders(config.defaultHeaders, to: &request)
+        try applyHeaders(headers, to: &request)
         if let timeout = config.timeout {
             request.timeoutInterval = timeout
         }
         return request
     }
 
-    private func buildWebSocketRequest(path: String, query: [URLQueryItem], headers: [String: String], protocols: [String]) -> URLRequest {
-        var components = URLComponents(url: buildURL(path: path, query: query), resolvingAgainstBaseURL: false)!
+    private func buildWebSocketRequest(path: String, query: [URLQueryItem], headers: [String: String], protocols: [String]) throws -> URLRequest {
+        let httpURL = try buildURL(path: path, query: query)
+        guard var components = URLComponents(url: httpURL, resolvingAgainstBaseURL: false) else {
+            throw APITransportError.invalidURL(httpURL.absoluteString)
+        }
         if components.scheme == "http" {
             components.scheme = "ws"
         } else if components.scheme == "https" {
             components.scheme = "wss"
         }
-        var request = URLRequest(url: components.url!)
-        for (name, value) in config.defaultHeaders {
-            request.setValue(value, forHTTPHeaderField: name)
+        guard let url = components.url else {
+            throw APITransportError.invalidURL(httpURL.absoluteString)
         }
-        for (name, value) in headers {
-            request.setValue(value, forHTTPHeaderField: name)
-        }
+        var request = URLRequest(url: url)
+        try applyHeaders(config.defaultHeaders, to: &request)
+        try applyHeaders(headers, to: &request)
         if !protocols.isEmpty {
-            request.setValue(protocols.joined(separator: ", "), forHTTPHeaderField: "Sec-WebSocket-Protocol")
+            let value = protocols.joined(separator: ", ")
+            try validateHeaderValue(value)
+            request.setValue(value, forHTTPHeaderField: "Sec-WebSocket-Protocol")
         }
         if let timeout = config.timeout {
             request.timeoutInterval = timeout
         }
         return request
-    }
-
-    private func buildWebSocketURL(path: String, query: [URLQueryItem]) -> URL {
-        var components = URLComponents(url: buildURL(path: path, query: query), resolvingAgainstBaseURL: false)!
-        if components.scheme == "http" {
-            components.scheme = "ws"
-        } else if components.scheme == "https" {
-            components.scheme = "wss"
-        }
-        return components.url!
     }
 
 {% if writer.modern_runtime %}
@@ -215,8 +201,17 @@ public final class URLSessionAPITransport: APITransport {
                     throw APIDecodeError.invalidResponse("expected HTTP response")
                 }
                 try onResponse(httpResponse)
+                var chunk = Data()
+                chunk.reserveCapacity(max(1, config.byteStreamChunkSize))
                 for try await byte in bytes {
-                    onData(Data([byte]))
+                    chunk.append(byte)
+                    if chunk.count >= max(1, config.byteStreamChunkSize) {
+                        onData(chunk)
+                        chunk.removeAll(keepingCapacity: true)
+                    }
+                }
+                if !chunk.isEmpty {
+                    onData(chunk)
                 }
                 onComplete(nil)
             } catch {
@@ -267,9 +262,24 @@ public final class URLSessionAPITransport: APITransport {
     }
 
 {% endif %}
+    private func decodeJSONResponse<Response>(_ request: APIRequest<Response>, data: Data) throws -> Response {
+        do {
+            return try request.decodeData(data, request.responseEnvelope, config.coding)
+        } catch let error as APIError {
+            throw APIError(
+                payload: error.payload,
+                routeID: error.routeID.isEmpty ? request.routeID : error.routeID,
+                raw: error.raw ?? String(data: data, encoding: .utf8) ?? ""
+            )
+        }
+    }
+
     private func validateStatus(_ response: HTTPURLResponse, body: Data, routeID: String, envelope: APIResponseEnvelope) throws {
         if response.statusCode < 400 {
             return
+        }
+        if body.count > config.maxErrorBodyBytes {
+            throw APITransportError.payloadTooLarge(kind: "error", limit: config.maxErrorBodyBytes)
         }
         let text = String(data: body, encoding: .utf8) ?? ""
         if let json = try? JSONSerialization.jsonObject(with: body, options: []) {
@@ -367,36 +377,228 @@ public final class URLSessionAPITransport: APITransport {
             guard let value else {
                 return nil
             }
-            return "\(escape(name))=\(escape(value))"
+            return "\(escapeFormComponent(name))=\(escapeFormComponent(value))"
         }.joined(separator: "&")
     }
 
-    private func escape(_ value: String) -> String {
+    private func escapeFormComponent(_ value: String) -> String {
         var allowed = CharacterSet.alphanumerics
         allowed.insert(charactersIn: "-._~")
         return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
     }
 
-    private func encodeMultipart(_ fields: [String: Any?], boundary: String) -> Data {
+    private func applyHeaders(_ headers: [String: String], to request: inout URLRequest) throws {
+        for (name, value) in headers {
+            try validateHeaderValue(name)
+            try validateHeaderValue(value)
+            request.setValue(value, forHTTPHeaderField: name)
+        }
+    }
+
+    private func validateHeaderValue(_ value: String) throws {
+        if value.contains("\r") || value.contains("\n") {
+            throw APITransportError.invalidHeaderValue(value)
+        }
+    }
+
+    private func encodeMultipart(_ fields: [String: Any?], boundary: String) throws -> APIMultipartBody {
+        if fieldsContainsFileURL(fields) {
+            return try encodeMultipartToTemporaryFile(fields, boundary: boundary)
+        }
         var data = Data()
+        try writeMultipartParts(fields, boundary: boundary) { chunk in
+            data.append(chunk)
+        }
+        if data.count > config.multipartMemoryThreshold {
+            return try writeTemporaryBody(data)
+        }
+        return APIMultipartBody(data: data)
+    }
+
+    private func fieldsContainsFileURL(_ fields: [String: Any?]) -> Bool {
+        fields.values.contains { value in
+            guard let file = value as? APIFilePart else {
+                return false
+            }
+            return file.fileURL != nil
+        }
+    }
+
+    private func writeMultipartParts(
+        _ fields: [String: Any?],
+        boundary: String,
+        append: (Data) throws -> Void
+    ) throws {
         for (name, value) in fields {
             guard let value else {
                 continue
             }
-            data.append("--\(boundary)\r\n".data(using: .utf8)!)
+            try validateHeaderValue(name)
+            try append(Data("--\(boundary)\r\n".utf8))
             if let file = value as? APIFilePart {
-                data.append("Content-Disposition: form-data; name=\"\(name)\"; filename=\"\(file.filename)\"\r\n".data(using: .utf8)!)
-                data.append("Content-Type: \(file.contentType)\r\n\r\n".data(using: .utf8)!)
-                data.append(file.data)
-                data.append("\r\n".data(using: .utf8)!)
+                try validateHeaderValue(file.filename)
+                try validateHeaderValue(file.contentType)
+                let disposition = multipartFileDisposition(name: name, filename: file.filename)
+                try append(Data("Content-Disposition: \(disposition)\r\n".utf8))
+                try append(Data("Content-Type: \(file.contentType)\r\n\r\n".utf8))
+                if let data = file.data {
+                    try append(data)
+                } else if let fileURL = file.fileURL {
+                    try appendFile(fileURL, append: append)
+                }
+                try append(Data("\r\n".utf8))
             } else {
-                data.append("Content-Disposition: form-data; name=\"\(name)\"\r\n\r\n".data(using: .utf8)!)
-                data.append(String(describing: value).data(using: .utf8)!)
-                data.append("\r\n".data(using: .utf8)!)
+                try append(Data("Content-Disposition: form-data; name=\"\(quoteHeaderValue(name))\"\r\n\r\n".utf8))
+                try append(Data(String(describing: value).utf8))
+                try append(Data("\r\n".utf8))
             }
         }
-        data.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        try append(Data("--\(boundary)--\r\n".utf8))
+    }
+
+    private func multipartFileDisposition(name: String, filename: String) -> String {
+        var disposition = "form-data; name=\"\(quoteHeaderValue(name))\"; filename=\"\(quoteHeaderValue(filename))\""
+        if !filename.unicodeScalars.allSatisfy({ $0.isASCII }) {
+            disposition += "; filename*=UTF-8''\(escapeRFC5987(filename))"
+        }
+        return disposition
+    }
+
+    private func quoteHeaderValue(_ value: String) -> String {
+        value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+    }
+
+    private func escapeRFC5987(_ value: String) -> String {
+        var allowed = CharacterSet.alphanumerics
+        allowed.insert(charactersIn: "-._~")
+        return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
+    }
+
+    private func appendFile(_ fileURL: URL, append: (Data) throws -> Void) throws {
+        do {
+            let handle = try FileHandle(forReadingFrom: fileURL)
+            defer { try? handle.close() }
+            while true {
+                let chunk = handle.readData(ofLength: max(1, config.byteStreamChunkSize))
+                if chunk.isEmpty {
+                    break
+                }
+                try append(chunk)
+            }
+        } catch {
+            throw APITransportError.fileReadFailed(fileURL.path)
+        }
+    }
+
+    private func encodeMultipartToTemporaryFile(_ fields: [String: Any?], boundary: String) throws -> APIMultipartBody {
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("api-blueprint-\(UUID().uuidString).multipart")
+        _ = FileManager.default.createFile(atPath: tempURL.path, contents: nil)
+        let handle = try FileHandle(forWritingTo: tempURL)
+        do {
+            try writeMultipartParts(fields, boundary: boundary) { chunk in
+                try handle.write(contentsOf: chunk)
+            }
+            try? handle.close()
+        } catch {
+            try? handle.close()
+            try? FileManager.default.removeItem(at: tempURL)
+            throw error
+        }
+        return APIMultipartBody(fileURL: tempURL, cleanup: {
+            try? FileManager.default.removeItem(at: tempURL)
+        })
+    }
+
+    private func writeTemporaryBody(_ data: Data) throws -> APIMultipartBody {
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("api-blueprint-\(UUID().uuidString).body")
+        try data.write(to: tempURL)
+        return APIMultipartBody(fileURL: tempURL, cleanup: {
+            try? FileManager.default.removeItem(at: tempURL)
+        })
+    }
+
+{% if writer.modern_runtime %}
+    private func collectLimitedBytes<Bytes: AsyncSequence>(_ bytes: Bytes, limit: Int) async throws -> Data where Bytes.Element == UInt8 {
+        var data = Data()
+        for try await byte in bytes {
+            if data.count >= limit {
+                throw APITransportError.payloadTooLarge(kind: "error", limit: limit)
+            }
+            data.append(byte)
+        }
         return data
+    }
+
+    private func chunkedByteStream<Bytes: AsyncSequence>(_ bytes: Bytes) -> AsyncThrowingStream<Data, Error> where Bytes.Element == UInt8 {
+        AsyncThrowingStream<Data, Error>(bufferingPolicy: .bufferingNewest(max(1, config.streamBufferLimit))) { continuation in
+            Task {
+                do {
+                    var chunk = Data()
+                    chunk.reserveCapacity(max(1, config.byteStreamChunkSize))
+                    for try await byte in bytes {
+                        chunk.append(byte)
+                        if chunk.count >= max(1, config.byteStreamChunkSize) {
+                            continuation.yield(chunk)
+                            chunk.removeAll(keepingCapacity: true)
+                        }
+                    }
+                    if !chunk.isEmpty {
+                        continuation.yield(chunk)
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+        }
+    }
+
+{% endif %}
+    private func singleDataStream(_ data: Data) -> AsyncThrowingStream<Data, Error> {
+        AsyncThrowingStream<Data, Error>(bufferingPolicy: .bufferingNewest(1)) { continuation in
+            continuation.yield(data)
+            continuation.finish()
+        }
+    }
+
+    private func chunkedDataStream(_ data: Data) -> AsyncThrowingStream<Data, Error> {
+        AsyncThrowingStream<Data, Error>(bufferingPolicy: .bufferingNewest(max(1, config.streamBufferLimit))) { continuation in
+            if data.isEmpty {
+                continuation.finish()
+                return
+            }
+            var offset = 0
+            let chunkSize = max(1, config.byteStreamChunkSize)
+            while offset < data.count {
+                let end = min(offset + chunkSize, data.count)
+                continuation.yield(data.subdata(in: offset..<end))
+                offset = end
+            }
+            continuation.finish()
+        }
+    }
+}
+
+private struct APIBuiltRequest {
+    var request: URLRequest
+    var cleanup: () -> Void = {}
+}
+
+private struct APIMultipartBody {
+    var data: Data?
+    var fileURL: URL?
+    var cleanup: () -> Void
+
+    init(data: Data) {
+        self.data = data
+        self.fileURL = nil
+        self.cleanup = {}
+    }
+
+    init(fileURL: URL, cleanup: @escaping () -> Void) {
+        self.data = nil
+        self.fileURL = fileURL
+        self.cleanup = cleanup
     }
 }
 

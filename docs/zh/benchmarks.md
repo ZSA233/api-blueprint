@@ -25,12 +25,13 @@ make example-benchmark
 `binary` 子命令迁移自旧的 `scripts/benchmark_binary.py` / `scripts/benchmark_binary_client.py`，用于比较生成的 binary schema codec 读写成本。
 
 ```sh
-uv run python -m scripts.example_benchmark binary --target go,typescript,python,kotlin,java --count 10000
+uv run python -m scripts.example_benchmark binary --target go,typescript,python,kotlin,java,swift --count 10000
 ```
 
-- `--target` 支持 `go`、`typescript`、`python`、`kotlin`、`java` 和 `all`。
+- `--target` 支持 `go`、`typescript`、`python`、`kotlin`、`java`、`swift` 和 `all`。
 - `--count` 控制每个 target 的操作次数。
 - `--compare-head` 保留 Go target 的旧 HEAD 对比能力。
+- Swift benchmark 会创建临时 SwiftPM executable，依赖当前 `examples/swift` 的 `ABClientAPIRoutes` product，并要求本机可用 `swift` toolchain。
 - 旧脚本仍作为兼容 wrapper 保留，推荐新调用使用 `python -m scripts.example_benchmark binary`。
 
 ## Protocol

@@ -13,7 +13,7 @@ open class GenDemoAPI {
         query: DemoAbcQuery? = nil,
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> ApiDemoA {
-        let jsonBody: Any? = nil
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
         let formBody: [String: String?]? = nil
         let multipartBody: [String: Any?]? = nil
         let binaryBody: Data? = nil
@@ -32,6 +32,7 @@ open class GenDemoAPI {
                 responseMediaType: "application/json",
                 responseKind: "json",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { data, envelope, coding in try apiDecodeResponse(ApiDemoA.self, from: data, envelope: envelope, routeID: "api.demo.get.abc", coding: coding) },
                 decode: { value in try apiDecodeValue(ApiDemoA.self, from: value) }
             )
         )
@@ -41,9 +42,9 @@ open class GenDemoAPI {
         json: DemoTestPostJSON? = nil,
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> DemoTestPostResponse {
-        let jsonBody: Any?
+        let jsonBody: ((APICodingConfig) throws -> Data)?
         if let json {
-            jsonBody = try apiEncodeJSONObject(json)
+            jsonBody = { coding in try apiEncodeJSONData(json, coding: coding) }
         } else {
             jsonBody = nil
         }
@@ -65,6 +66,7 @@ open class GenDemoAPI {
                 responseMediaType: "application/json",
                 responseKind: "json",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { data, envelope, coding in try apiDecodeResponse(DemoTestPostResponse.self, from: data, envelope: envelope, routeID: "api.demo.post.testpost", coding: coding) },
                 decode: { value in try apiDecodeValue(DemoTestPostResponse.self, from: value) }
             )
         )
@@ -74,7 +76,7 @@ open class GenDemoAPI {
         form: DemoFormSubmitForm? = nil,
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> DemoFormSubmitResponse {
-        let jsonBody: Any? = nil
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
         let formBody = try form?.toFormFields()
         let multipartBody: [String: Any?]? = nil
         let binaryBody: Data? = nil
@@ -93,6 +95,7 @@ open class GenDemoAPI {
                 responseMediaType: "application/json",
                 responseKind: "json",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { data, envelope, coding in try apiDecodeResponse(DemoFormSubmitResponse.self, from: data, envelope: envelope, routeID: "api.demo.post.formsubmit", coding: coding) },
                 decode: { value in try apiDecodeValue(DemoFormSubmitResponse.self, from: value) }
             )
         )
@@ -102,7 +105,7 @@ open class GenDemoAPI {
         query: DemoRequestOptionsQuery? = nil,
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> RequestOptionsResponse {
-        let jsonBody: Any? = nil
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
         let formBody: [String: String?]? = nil
         let multipartBody: [String: Any?]? = nil
         let binaryBody: Data? = nil
@@ -121,6 +124,7 @@ open class GenDemoAPI {
                 responseMediaType: "application/json",
                 responseKind: "json",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { data, envelope, coding in try apiDecodeResponse(RequestOptionsResponse.self, from: data, envelope: envelope, routeID: "api.demo.get.requestoptions", coding: coding) },
                 decode: { value in try apiDecodeValue(RequestOptionsResponse.self, from: value) }
             )
         )
@@ -131,9 +135,9 @@ open class GenDemoAPI {
         json: DemoPutDemoJSON? = nil,
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> DemoPutDemoResponse {
-        let jsonBody: Any?
+        let jsonBody: ((APICodingConfig) throws -> Data)?
         if let json {
-            jsonBody = try apiEncodeJSONObject(json)
+            jsonBody = { coding in try apiEncodeJSONData(json, coding: coding) }
         } else {
             jsonBody = nil
         }
@@ -155,6 +159,7 @@ open class GenDemoAPI {
                 responseMediaType: "application/json",
                 responseKind: "json",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { data, envelope, coding in try apiDecodeResponse(DemoPutDemoResponse.self, from: data, envelope: envelope, routeID: "api.demo.put.z1put", coding: coding) },
                 decode: { value in try apiDecodeValue(DemoPutDemoResponse.self, from: value) }
             )
         )
@@ -164,7 +169,7 @@ open class GenDemoAPI {
         query: DemoDeleteQuery? = nil,
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> String {
-        let jsonBody: Any? = nil
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
         let formBody: [String: String?]? = nil
         let multipartBody: [String: Any?]? = nil
         let binaryBody: Data? = nil
@@ -183,6 +188,7 @@ open class GenDemoAPI {
                 responseMediaType: "application/xml",
                 responseKind: "xml",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { value, _, _ in try apiDecodeString(value) },
                 decode: { value in try apiDecodeString(value) }
             )
         )
@@ -191,8 +197,8 @@ open class GenDemoAPI {
     public func subscribeSweepEvents(
         openPayload: SweepOpen? = nil,
         headers: [String: String] = [:]
-    ) -> APIStreamBridge<SweepStreamMessage, ConnectionClose> {
-        transport.openStream(
+    ) throws -> APIStreamBridge<SweepStreamMessage, ConnectionClose> {
+        try transport.openStream(
             APIStreamConnectOptions<SweepStreamMessage, ConnectionClose>(
                 routeID: "api.demo.stream.sweepevents",
                 connectionKind: "stream",
@@ -210,8 +216,8 @@ open class GenDemoAPI {
         openPayload: AssistantOpen? = nil,
         headers: [String: String] = [:],
         protocols: [String] = []
-    ) -> APIChannelBridge<AssistantServerMessage, AssistantClientMessage, ConnectionClose> {
-        transport.openChannel(
+    ) throws -> APIChannelBridge<AssistantServerMessage, AssistantClientMessage, ConnectionClose> {
+        try transport.openChannel(
             APIChannelConnectOptions<AssistantServerMessage, AssistantClientMessage, ConnectionClose>(
                 routeID: "api.demo.channel.assistantsession",
                 connectionKind: "channel",
@@ -222,7 +228,7 @@ open class GenDemoAPI {
                 protocols: protocols,
                 delivery: "ordered",
                 decodeMessage: { value in try apiDecodeValue(AssistantServerMessage.self, from: value) },
-                encodeMessage: { message in try apiEncodeJSONObject(message) },
+                encodeMessage: { message, coding in try apiEncodeJSONData(message, coding: coding) },
                 decodeClose: { value in try apiDecodeValue(ConnectionClose.self, from: value) }
             )
         )
@@ -232,9 +238,9 @@ open class GenDemoAPI {
         json: DemoPostDeprecatedJSON? = nil,
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> DemoPostDeprecatedResponse {
-        let jsonBody: Any?
+        let jsonBody: ((APICodingConfig) throws -> Data)?
         if let json {
-            jsonBody = try apiEncodeJSONObject(json)
+            jsonBody = { coding in try apiEncodeJSONData(json, coding: coding) }
         } else {
             jsonBody = nil
         }
@@ -256,6 +262,7 @@ open class GenDemoAPI {
                 responseMediaType: "application/json",
                 responseKind: "json",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { data, envelope, coding in try apiDecodeResponse(DemoPostDeprecatedResponse.self, from: data, envelope: envelope, routeID: "api.demo.post.postdeprecated", coding: coding) },
                 decode: { value in try apiDecodeValue(DemoPostDeprecatedResponse.self, from: value) }
             )
         )
@@ -264,7 +271,7 @@ open class GenDemoAPI {
     public func raw(
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> DemoRawResponse {
-        let jsonBody: Any? = nil
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
         let formBody: [String: String?]? = nil
         let multipartBody: [String: Any?]? = nil
         let binaryBody: Data? = nil
@@ -283,6 +290,7 @@ open class GenDemoAPI {
                 responseMediaType: "application/json",
                 responseKind: "json",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { data, envelope, coding in try apiDecodeResponse(DemoRawResponse.self, from: data, envelope: envelope, routeID: "api.demo.post.raw", coding: coding) },
                 decode: { value in try apiDecodeValue(DemoRawResponse.self, from: value) }
             )
         )
@@ -291,7 +299,7 @@ open class GenDemoAPI {
     public func mapModel(
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> DemoMapModelResponse {
-        let jsonBody: Any? = nil
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
         let formBody: [String: String?]? = nil
         let multipartBody: [String: Any?]? = nil
         let binaryBody: Data? = nil
@@ -310,6 +318,7 @@ open class GenDemoAPI {
                 responseMediaType: "application/json",
                 responseKind: "json",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { data, envelope, coding in try apiDecodeResponse(DemoMapModelResponse.self, from: data, envelope: envelope, routeID: "api.demo.post.mapmodel", coding: coding) },
                 decode: { value in try apiDecodeValue(DemoMapModelResponse.self, from: value) }
             )
         )
@@ -319,7 +328,7 @@ open class GenDemoAPI {
         query: DemoErrorDemoQuery? = nil,
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> DemoErrorDemoResponse {
-        let jsonBody: Any? = nil
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
         let formBody: [String: String?]? = nil
         let multipartBody: [String: Any?]? = nil
         let binaryBody: Data? = nil
@@ -338,6 +347,7 @@ open class GenDemoAPI {
                 responseMediaType: "application/json",
                 responseKind: "json",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { data, envelope, coding in try apiDecodeResponse(DemoErrorDemoResponse.self, from: data, envelope: envelope, routeID: "api.demo.get.errordemo", coding: coding) },
                 decode: { value in try apiDecodeValue(DemoErrorDemoResponse.self, from: value) }
             )
         )

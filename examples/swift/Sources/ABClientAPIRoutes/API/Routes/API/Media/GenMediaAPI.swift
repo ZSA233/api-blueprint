@@ -13,7 +13,7 @@ open class GenMediaAPI {
         multipart: MediaPreviewRequest? = nil,
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> APIRawResponse {
-        let jsonBody: Any? = nil
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
         let formBody: [String: String?]? = nil
         let multipartBody = try multipart?.toMultipartFields()
         let binaryBody: Data? = nil
@@ -32,6 +32,7 @@ open class GenMediaAPI {
                 responseMediaType: "image/jpeg",
                 responseKind: "bytes",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { _, _, _ in throw APIDecodeError.invalidResponse("response is decoded from transport metadata") },
                 decode: { value in try apiDecodeRawResponse(value) }
             )
         )
@@ -40,7 +41,7 @@ open class GenMediaAPI {
     public func mediaFrame(
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> APIRawResponse {
-        let jsonBody: Any? = nil
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
         let formBody: [String: String?]? = nil
         let multipartBody: [String: Any?]? = nil
         let binaryBody: Data? = nil
@@ -59,6 +60,7 @@ open class GenMediaAPI {
                 responseMediaType: "image/jpeg",
                 responseKind: "bytes",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { _, _, _ in throw APIDecodeError.invalidResponse("response is decoded from transport metadata") },
                 decode: { value in try apiDecodeRawResponse(value) }
             )
         )
@@ -67,7 +69,7 @@ open class GenMediaAPI {
     public func mediaDownload(
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> APIRawResponse {
-        let jsonBody: Any? = nil
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
         let formBody: [String: String?]? = nil
         let multipartBody: [String: Any?]? = nil
         let binaryBody: Data? = nil
@@ -86,6 +88,7 @@ open class GenMediaAPI {
                 responseMediaType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 responseKind: "file",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { _, _, _ in throw APIDecodeError.invalidResponse("response is decoded from transport metadata") },
                 decode: { value in try apiDecodeRawResponse(value) }
             )
         )
@@ -94,7 +97,7 @@ open class GenMediaAPI {
     public func mediaDownloadDynamic(
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> APIRawResponse {
-        let jsonBody: Any? = nil
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
         let formBody: [String: String?]? = nil
         let multipartBody: [String: Any?]? = nil
         let binaryBody: Data? = nil
@@ -113,6 +116,7 @@ open class GenMediaAPI {
                 responseMediaType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 responseKind: "file",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { _, _, _ in throw APIDecodeError.invalidResponse("response is decoded from transport metadata") },
                 decode: { value in try apiDecodeRawResponse(value) }
             )
         )
@@ -121,7 +125,7 @@ open class GenMediaAPI {
     public func mediaDownloadFilenameEdge(
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> APIRawResponse {
-        let jsonBody: Any? = nil
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
         let formBody: [String: String?]? = nil
         let multipartBody: [String: Any?]? = nil
         let binaryBody: Data? = nil
@@ -140,6 +144,7 @@ open class GenMediaAPI {
                 responseMediaType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 responseKind: "file",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { _, _, _ in throw APIDecodeError.invalidResponse("response is decoded from transport metadata") },
                 decode: { value in try apiDecodeRawResponse(value) }
             )
         )
@@ -149,7 +154,7 @@ open class GenMediaAPI {
         query: MediaMediaErrorFrameQuery? = nil,
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> APIRawResponse {
-        let jsonBody: Any? = nil
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
         let formBody: [String: String?]? = nil
         let multipartBody: [String: Any?]? = nil
         let binaryBody: Data? = nil
@@ -168,6 +173,7 @@ open class GenMediaAPI {
                 responseMediaType: "image/jpeg",
                 responseKind: "bytes",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { _, _, _ in throw APIDecodeError.invalidResponse("response is decoded from transport metadata") },
                 decode: { value in try apiDecodeRawResponse(value) }
             )
         )
@@ -176,7 +182,7 @@ open class GenMediaAPI {
     public func mediaMjpeg(
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> APIStreamResponse {
-        let jsonBody: Any? = nil
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
         let formBody: [String: String?]? = nil
         let multipartBody: [String: Any?]? = nil
         let binaryBody: Data? = nil
@@ -195,6 +201,7 @@ open class GenMediaAPI {
                 responseMediaType: "multipart/x-mixed-replace; boundary=frame",
                 responseKind: "byte_stream",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { _, _, _ in throw APIDecodeError.invalidResponse("response is decoded from transport metadata") },
                 decode: { value in try apiDecodeStreamResponse(value) }
             )
         )

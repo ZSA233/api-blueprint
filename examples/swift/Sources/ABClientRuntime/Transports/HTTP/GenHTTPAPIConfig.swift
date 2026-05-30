@@ -5,20 +5,41 @@ import FoundationNetworking
 #endif
 
 public struct HTTPAPIConfig {
-    public var baseURL: URL?
-    public var defaultHeaders: [String: String]
-    public var timeout: TimeInterval?
-    public var session: URLSession
+    public let baseURL: URL?
+    public let defaultHeaders: [String: String]
+    public let timeout: TimeInterval?
+    public let session: URLSession
+    public let byteStreamChunkSize: Int
+    public let maxErrorBodyBytes: Int
+    public let maxSSEEventBytes: Int
+    public let maxWebSocketMessageBytes: Int
+    public let streamBufferLimit: Int
+    public let multipartMemoryThreshold: Int
+    public let coding: APICodingConfig
 
     public init(
-        baseURL: URL? = URL(string: "http://localhost:2333")!,
+        baseURL: URL? = URL(string: "http://localhost:2333"),
         defaultHeaders: [String: String] = [:],
         timeout: TimeInterval? = nil,
-        session: URLSession = .shared
+        session: URLSession = .shared,
+        byteStreamChunkSize: Int = 64 * 1024,
+        maxErrorBodyBytes: Int = 1024 * 1024,
+        maxSSEEventBytes: Int = 1024 * 1024,
+        maxWebSocketMessageBytes: Int = 1024 * 1024,
+        streamBufferLimit: Int = 64,
+        multipartMemoryThreshold: Int = 8 * 1024 * 1024,
+        coding: APICodingConfig = APICodingConfig()
     ) {
         self.baseURL = baseURL
         self.defaultHeaders = defaultHeaders
         self.timeout = timeout
         self.session = session
+        self.byteStreamChunkSize = byteStreamChunkSize
+        self.maxErrorBodyBytes = maxErrorBodyBytes
+        self.maxSSEEventBytes = maxSSEEventBytes
+        self.maxWebSocketMessageBytes = maxWebSocketMessageBytes
+        self.streamBufferLimit = streamBufferLimit
+        self.multipartMemoryThreshold = multipartMemoryThreshold
+        self.coding = coding
     }
 }

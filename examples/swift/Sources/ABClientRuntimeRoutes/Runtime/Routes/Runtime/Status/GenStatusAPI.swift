@@ -12,7 +12,7 @@ open class GenStatusAPI {
     public func runtimeCurrentStatus(
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> RuntimeStatus {
-        let jsonBody: Any? = nil
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
         let formBody: [String: String?]? = nil
         let multipartBody: [String: Any?]? = nil
         let binaryBody: Data? = nil
@@ -31,6 +31,7 @@ open class GenStatusAPI {
                 responseMediaType: "application/json",
                 responseKind: "json",
                 responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { data, envelope, coding in try apiDecodeResponse(RuntimeStatus.self, from: data, envelope: envelope, routeID: "runtime.status.get.current", coding: coding) },
                 decode: { value in try apiDecodeValue(RuntimeStatus.self, from: value) }
             )
         )
