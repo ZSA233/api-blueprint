@@ -2,28 +2,20 @@
 import Foundation
 
 public struct ApiDemoA: Codable, Sendable {
-
     /// bc
     public var bc: String
-
     /// a
     public var a: Int
-
     /// efg
     public var efg: Double
-
     /// hijk
     public var hijk: [Int]
-
     /// [ApiDemoSubA] lmnop
     public var lmnop: [ApiDemoSubA]?
-
     /// color
     public var enumColor: ColorEnum?
-
     /// status
     public var enumStatus: StatusEnum
-
     /// status
     public var enumList: [StatusEnum]
 
@@ -81,7 +73,6 @@ public struct ApiDemoA: Codable, Sendable {
 }
 
 public struct ApiDemoMap: Codable, Sendable {
-
     /// haha
     public var haha: Int
 
@@ -111,10 +102,8 @@ public struct ApiDemoMap: Codable, Sendable {
 }
 
 public struct ApiDemoSubA: Codable, Sendable {
-
     /// hello
     public var hello: [String: Int]
-
     /// [ApiDemoMap] amap
     public var amap: [ApiDemoMap]
 
@@ -148,7 +137,6 @@ public struct ApiDemoSubA: Codable, Sendable {
 }
 
 public struct ApiHelloMap: Codable, Sendable {
-
     /// haha
     public var haha: Int
 
@@ -178,7 +166,6 @@ public struct ApiHelloMap: Codable, Sendable {
 }
 
 public struct AssistantCancel: Codable, Sendable {
-
     /// cancel reason
     public var reason: String?
 
@@ -208,7 +195,6 @@ public struct AssistantCancel: Codable, Sendable {
 }
 
 public struct AssistantDelta: Codable, Sendable {
-
     /// assistant delta
     public var text: String
 
@@ -238,7 +224,6 @@ public struct AssistantDelta: Codable, Sendable {
 }
 
 public struct AssistantDone: Codable, Sendable {
-
     /// final message id
     public var messageId: String
 
@@ -268,7 +253,6 @@ public struct AssistantDone: Codable, Sendable {
 }
 
 public struct AssistantInput: Codable, Sendable {
-
     /// user input
     public var text: String
 
@@ -298,7 +282,6 @@ public struct AssistantInput: Codable, Sendable {
 }
 
 public struct AssistantOpen: Codable, Sendable {
-
     /// assistant session id
     public var sessionId: String
 
@@ -328,11 +311,8 @@ public struct AssistantOpen: Codable, Sendable {
 }
 
 public enum ColorEnum: String, Codable, Sendable, APIWireValue {
-
     case red = "red"
-
     case green = "green"
-
     case blue = "blue"
 
     public var apiWireString: String {
@@ -341,13 +321,10 @@ public enum ColorEnum: String, Codable, Sendable, APIWireValue {
 }
 
 public struct ConflictModel: Codable, Sendable {
-
     /// reserved keyword field
     public var default_: String
-
     /// python-safe class field
     public var class_: String
-
     /// reserved enum value
     public var enum_: KeywordEnum
 
@@ -385,13 +362,10 @@ public struct ConflictModel: Codable, Sendable {
 }
 
 public struct ConnectionClose: Codable, Sendable {
-
     /// logical close code
     public var code: Int
-
     /// close reason
     public var reason: String?
-
     /// machine-readable error key
     public var error: String?
 
@@ -429,13 +403,10 @@ public struct ConnectionClose: Codable, Sendable {
 }
 
 public struct DefaultConnectionClose: Codable, Sendable {
-
     /// logical close code
     public var code: Int?
-
     /// close reason
     public var reason: String?
-
     /// machine-readable error key
     public var error: String?
 
@@ -473,10 +444,8 @@ public struct DefaultConnectionClose: Codable, Sendable {
 }
 
 public struct HelloChannelMessage: Codable, Sendable {
-
     /// 消息类型
     public var type_: HelloChannelMsgTypeEnum
-
     /// 消息内容
     public var data: APIJSONValue
 
@@ -510,17 +479,11 @@ public struct HelloChannelMessage: Codable, Sendable {
 }
 
 public enum HelloChannelMsgTypeEnum: String, Codable, Sendable, APIWireValue {
-
     case ping = "ping"
-
     case pong = "pong"
-
     case join = "join"
-
     case leave = "leave"
-
     case forgeround = "forgeround"
-
     case upgrade = "upgrade"
 
     public var apiWireString: String {
@@ -529,7 +492,6 @@ public enum HelloChannelMsgTypeEnum: String, Codable, Sendable, APIWireValue {
 }
 
 public enum HelloWayEnum: String, Codable, Sendable, APIWireValue {
-
     case asd = "ASD"
 
     public var apiWireString: String {
@@ -538,9 +500,7 @@ public enum HelloWayEnum: String, Codable, Sendable, APIWireValue {
 }
 
 public enum KeywordEnum: String, Codable, Sendable, APIWireValue {
-
     case default_ = "default"
-
     case class_ = "class"
 
     public var apiWireString: String {
@@ -549,9 +509,7 @@ public enum KeywordEnum: String, Codable, Sendable, APIWireValue {
 }
 
 public enum MapEnum: String, Codable, Sendable, APIWireValue {
-
     case a = "a"
-
     case b = "b"
 
     public var apiWireString: String {
@@ -560,10 +518,8 @@ public enum MapEnum: String, Codable, Sendable, APIWireValue {
 }
 
 public struct MediaPreviewRequest: Codable, Sendable {
-
     /// preview title
     public var title: String?
-
     /// source image
     public var image: APIFilePart
 
@@ -597,10 +553,8 @@ public struct MediaPreviewRequest: Codable, Sendable {
 }
 
 public struct RequestOptionsResponse: Codable, Sendable {
-
     /// request options status
     public var status: String
-
     /// applied delay in milliseconds
     public var delayMs: Int
 
@@ -634,11 +588,8 @@ public struct RequestOptionsResponse: Codable, Sendable {
 }
 
 public enum StatusEnum: Int, Codable, Sendable, APIWireValue {
-
     case pending = 1
-
     case running = 2
-
     case finished = 3
 
     public var apiWireString: String {
@@ -647,10 +598,8 @@ public enum StatusEnum: Int, Codable, Sendable, APIWireValue {
 }
 
 public struct SweepLog: Codable, Sendable {
-
     /// log level
     public var level: String
-
     /// log message
     public var message: String
 
@@ -684,10 +633,8 @@ public struct SweepLog: Codable, Sendable {
 }
 
 public struct SweepOpen: Codable, Sendable {
-
     /// run id
     public var runId: String
-
     /// optional replay cursor
     public var replayFrom: String?
 
@@ -721,10 +668,8 @@ public struct SweepOpen: Codable, Sendable {
 }
 
 public struct SweepProgress: Codable, Sendable {
-
     /// current step
     public var current: Int
-
     /// total steps
     public var total: Int
 
@@ -758,7 +703,6 @@ public struct SweepProgress: Codable, Sendable {
 }
 
 public struct SweepState: Codable, Sendable {
-
     /// current sweep state
     public var status: String
 
@@ -788,7 +732,6 @@ public struct SweepState: Codable, Sendable {
 }
 
 public struct RuntimeStatus: Codable, Sendable {
-
     /// runtime root status
     public var status: String
 

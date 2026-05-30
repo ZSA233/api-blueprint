@@ -19,12 +19,12 @@ public final class URLSessionAPITransport: APITransport {
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw APIDecodeError.invalidResponse("expected HTTP response")
             }
-            try validateStatus(httpResponse, body: Data(), routeID: request.routeID, envelope: request.responseEnvelope)
-            if isJSONResponse(httpResponse) {
+            if httpResponse.statusCode >= 400 || isJSONResponse(httpResponse) {
                 var data = Data()
                 for try await byte in bytes {
                     data.append(byte)
                 }
+                try validateStatus(httpResponse, body: data, routeID: request.routeID, envelope: request.responseEnvelope)
                 try validateEnvelopeStatus(data, response: httpResponse, routeID: request.routeID, envelope: request.responseEnvelope)
                 let stream = AsyncThrowingStream<Data, Error> { continuation in
                     continuation.yield(data)
@@ -329,7 +329,9 @@ public final class URLSessionAPITransport: APITransport {
     }
 
     private func escape(_ value: String) -> String {
-        value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? value
+        var allowed = CharacterSet.alphanumerics
+        allowed.insert(charactersIn: "-._~")
+        return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
     }
 
     private func encodeMultipart(_ fields: [String: Any?], boundary: String) -> Data {

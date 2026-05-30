@@ -94,9 +94,17 @@ def test_swift_writer_generates_spm_runtime_routes_transport_and_preserved_files
     assert "public enum APIJSONValue" in runtime_transport
     assert "public struct APIErrorPayload" in runtime_errors
     assert "public struct APIError: Error" in runtime_errors
+    assert "let fallback = code.flatMap { lookupAPIError(code: $0) }" in runtime_errors
+    assert 'let nested = apiBlueprintObject(apiBlueprintValue(object, "error"))' in runtime_errors
+    assert "private func apiBlueprintValue(_ object: [String: Any?]?, _ key: String) -> Any?" in runtime_errors
+    assert runtime_errors.count("guard let object = apiBlueprintObject(value)") == 2
+    assert "fallback?.id" in runtime_errors
+    assert "fallback?.toastKey" in runtime_errors
     assert "public enum APIErrorCodes" in runtime_error_lookup
     assert "public static let commonErrUnknown = 40000" in runtime_error_lookup
     assert "public static let demoErrUnknown = 40001" in runtime_error_lookup
+    assert 'toastKey: "common.unknown"' in runtime_error_lookup
+    assert 'toastDefault: "Common unknown"' in runtime_error_lookup
 
     assert "public struct SubmitJSON: Codable, Sendable" in runtime_types
     assert "public var keyword: KeywordEnum?" in runtime_types
@@ -142,7 +150,12 @@ def test_swift_writer_generates_spm_runtime_routes_transport_and_preserved_files
     assert 'baseURL: URL? = URL(string: "http://localhost:2333")!' in http_config
     assert "public final class URLSessionAPITransport: APITransport" in http_transport
     assert "application/x-www-form-urlencoded" in http_transport
+    assert "CharacterSet.alphanumerics" in http_transport
+    assert 'allowed.insert(charactersIn: "-._~")' in http_transport
+    assert ".urlQueryAllowed" not in http_transport
     assert "multipart/form-data; boundary=" in http_transport
+    assert "httpResponse.statusCode >= 400 || isJSONResponse(httpResponse)" in http_transport
+    assert "validateStatus(httpResponse, body: Data()" not in http_transport
     assert "apiHTTPEventStreamBridge(" in http_transport
     assert "apiHTTPWebSocketBridge(" in http_transport
     assert "performModernEventStreamTask" in http_transport
@@ -156,6 +169,33 @@ def test_swift_writer_generates_spm_runtime_routes_transport_and_preserved_files
     assert 'if type == "message"' in http_connection
     assert 'if type == "close"' in http_connection
     assert "return .message(value)" in http_connection
+
+    assert "{\n\n    public static let" not in runtime_error_lookup
+    assert "commonErrUnknown = 40000\n\n    public static let demoErrUnknown" not in runtime_error_lookup
+    assert "switch code {\n\n" not in runtime_error_lookup
+    assert "{\n\n    case " not in runtime_types
+    assert "{\n\n    case " not in route_types
+    assert "switch type {\n\n" not in route_types
+    assert "\n\n        case ." not in route_types
+    assert 'case delta = "delta"\n    }' in route_types
+    assert "self = .delta(try container.decode(AssistantDelta.self, forKey: .data))\n        }" in route_types
+    assert "try container.encode(data, forKey: .data)\n        }" in route_types
+    assert "\n}\n\n    public init(from decoder" not in route_types
+    assert "(\n\n        headers" not in route_client
+
+
+def test_swift_writer_preserves_package_identity_when_module_is_shorter(tmp_path: Path) -> None:
+    out_dir = tmp_path / "swift"
+
+    write_demo_swift_package(out_dir, package="api-blueprint-client", module="ABClient")
+
+    package_manifest = (out_dir / "Package.swift").read_text(encoding="utf-8")
+
+    assert 'name: "api-blueprint-client"' in package_manifest
+    assert '.library(name: "ABClient", targets: ["ABClient"])' in package_manifest
+    assert '.library(name: "ABClientRuntime", targets: ["ABClientRuntime"])' in package_manifest
+    assert '.library(name: "ABClientAPIRoutes", targets: ["ABClientAPIRoutes"])' in package_manifest
+    assert "apiBlueprintClient" not in package_manifest
 
 
 def test_swift_writer_generates_one_target_per_root_and_shared_runtime_once(tmp_path: Path) -> None:

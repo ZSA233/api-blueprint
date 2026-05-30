@@ -3,7 +3,6 @@ import Foundation
 import ABClientRuntime
 
 public struct MediaMediaErrorFrameQuery: Codable, Sendable {
-
     /// ok/rate_limit
     public var mode: String?
 

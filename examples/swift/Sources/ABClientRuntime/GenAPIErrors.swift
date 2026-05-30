@@ -62,43 +62,81 @@ public struct APIHTTPError: Error, Sendable {
 }
 
 public func apiErrorPayload(from value: Any?, routeID: String = "") -> APIErrorPayload {
-    guard let object = value as? [String: Any?] else {
+    guard let object = apiBlueprintObject(value) else {
         return APIErrorPayload(id: nil, group: nil, key: nil, message: nil)
     }
-    let nested = object["error"] as? [String: Any?]
+    let nested = apiBlueprintObject(apiBlueprintValue(object, "error"))
+    let primary = nested ?? object
+    let code = apiBlueprintInt(apiBlueprintValue(primary, "code")) ?? apiBlueprintInt(apiBlueprintValue(object, "code"))
+    let fallback = code.flatMap { lookupAPIError(code: $0) }
+    let toast = apiBlueprintObject(apiBlueprintValue(primary, "toast")) ?? apiBlueprintObject(apiBlueprintValue(object, "toast"))
     return APIErrorPayload(
-        id: (nested?["id"] as? String) ?? object["id"] as? String,
-        group: (nested?["group"] as? String) ?? object["group"] as? String,
-        key: (nested?["key"] as? String) ?? object["key"] as? String,
-        code: object["code"] as? Int,
-        message: object["message"] as? String,
-        toastKey: (nested?["toast"] as? [String: Any?])?["key"] as? String,
-        toastDefault: (nested?["toast"] as? [String: Any?])?["default"] as? String,
-        toastText: (nested?["toast"] as? [String: Any?])?["text"] as? String,
-        toastLevel: (nested?["toast"] as? [String: Any?])?["level"] as? String
+        id: apiBlueprintString(apiBlueprintValue(primary, "id")) ?? apiBlueprintString(apiBlueprintValue(object, "id")) ?? fallback?.id,
+        group: apiBlueprintString(apiBlueprintValue(primary, "group")) ?? apiBlueprintString(apiBlueprintValue(object, "group")) ?? fallback?.group,
+        key: apiBlueprintString(apiBlueprintValue(primary, "key")) ?? apiBlueprintString(apiBlueprintValue(object, "key")) ?? fallback?.key,
+        code: code ?? fallback?.code,
+        message: apiBlueprintString(apiBlueprintValue(primary, "message")) ?? apiBlueprintString(apiBlueprintValue(object, "message")) ?? fallback?.message,
+        toastKey: apiBlueprintString(apiBlueprintValue(toast, "key")) ?? fallback?.toastKey,
+        toastDefault: apiBlueprintString(apiBlueprintValue(toast, "default")) ?? fallback?.toastDefault,
+        toastText: apiBlueprintString(apiBlueprintValue(toast, "text")) ?? fallback?.toastText,
+        toastLevel: apiBlueprintString(apiBlueprintValue(toast, "level")) ?? fallback?.toastLevel
     )
+}
+
+private func apiBlueprintValue(_ object: [String: Any?]?, _ key: String) -> Any? {
+    guard let object else {
+        return nil
+    }
+    return object[key] ?? nil
+}
+
+private func apiBlueprintString(_ value: Any?) -> String? {
+    value as? String
+}
+
+private func apiBlueprintInt(_ value: Any?) -> Int? {
+    if let value = value as? Int {
+        return value
+    }
+    if let value = value as? NSNumber {
+        return value.intValue
+    }
+    if let value = value as? String {
+        return Int(value)
+    }
+    return nil
+}
+
+private func apiBlueprintObject(_ value: Any?) -> [String: Any?]? {
+    if let value = value as? [String: Any?] {
+        return value
+    }
+    if let value = value as? [String: Any] {
+        return value.mapValues { Optional.some($0) }
+    }
+    return nil
 }
 
 public func apiUnwrapResponseEnvelope(_ value: Any?, envelope: APIResponseEnvelope, routeID: String) throws -> Any? {
     if envelope.kind == "none" {
         return value
     }
-    guard let object = value as? [String: Any?] else {
+    guard let object = apiBlueprintObject(value) else {
         return value
     }
     if envelope.kind == "code_message_data" {
-        let rawCode = object[envelope.fields.code]
+        let rawCode = apiBlueprintValue(object, envelope.fields.code)
         let code = rawCode as? Int ?? Int(String(describing: rawCode ?? ""))
         if code == nil || code == envelope.successCode {
-            return object[envelope.fields.data] ?? nil
+            return apiBlueprintValue(object, envelope.fields.data)
         }
         throw APIError(payload: apiErrorPayload(from: object, routeID: routeID), routeID: routeID)
     }
     if envelope.kind == "ok_data_error" {
-        if object[envelope.fields.ok] as? Bool == false {
+        if apiBlueprintValue(object, envelope.fields.ok) as? Bool == false {
             throw APIError(payload: apiErrorPayload(from: object, routeID: routeID), routeID: routeID)
         }
-        return object[envelope.fields.data] ?? nil
+        return apiBlueprintValue(object, envelope.fields.data)
     }
     return value
 }

@@ -3,10 +3,8 @@ import Foundation
 import ABClientRuntime
 
 public struct AnonDeleteAnonList: Codable, Sendable {
-
     /// kv1
     public var kv1: Int
-
     /// kv2
     public var kv2: [String]
 
@@ -40,10 +38,8 @@ public struct AnonDeleteAnonList: Codable, Sendable {
 }
 
 public struct AnonFunc1putAnonKv: Codable, Sendable {
-
     /// kv1
     public var kv1: Int
-
     /// kv2
     public var kv2: [Double]
 
@@ -77,13 +73,10 @@ public struct AnonFunc1putAnonKv: Codable, Sendable {
 }
 
 public struct DemoAbcQuery: Codable, Sendable {
-
     /// arg1
     public var arg1: Bool?
-
     /// arg3
     public var arg3: String?
-
     /// arg2
     public var arg2: Double?
 
@@ -121,10 +114,8 @@ public struct DemoAbcQuery: Codable, Sendable {
 }
 
 public struct DemoDeleteQuery: Codable, Sendable {
-
     /// arg1
     public var arg1: String?
-
     /// arg2
     public var arg2: Double?
 
@@ -158,10 +149,8 @@ public struct DemoDeleteQuery: Codable, Sendable {
 }
 
 public struct DemoDeleteResponse: Codable, Sendable {
-
     /// list
     public var list: [String]
-
     public var anonList: [AnonDeleteAnonList]
 
     public init(
@@ -194,7 +183,6 @@ public struct DemoDeleteResponse: Codable, Sendable {
 }
 
 public struct DemoErrorDemoQuery: Codable, Sendable {
-
     /// ok/token/rate_limit/unknown
     public var mode: String?
 
@@ -224,7 +212,6 @@ public struct DemoErrorDemoQuery: Codable, Sendable {
 }
 
 public struct DemoErrorDemoResponse: Codable, Sendable {
-
     /// status
     public var status: String
 
@@ -254,13 +241,10 @@ public struct DemoErrorDemoResponse: Codable, Sendable {
 }
 
 public struct DemoFormSubmitForm: Codable, Sendable {
-
     /// title
     public var title: String
-
     /// count
     public var count: Int?
-
     /// enabled
     public var enabled: Bool?
 
@@ -298,13 +282,10 @@ public struct DemoFormSubmitForm: Codable, Sendable {
 }
 
 public struct DemoFormSubmitResponse: Codable, Sendable {
-
     /// summary
     public var summary: String
-
     /// count
     public var count: Int
-
     /// enabled
     public var enabled: Bool
 
@@ -344,10 +325,8 @@ public struct DemoFormSubmitResponse: Codable, Sendable {
 public typealias DemoMapModelResponse = [String: ApiDemoMap]
 
 public struct DemoPostDeprecatedJSON: Codable, Sendable {
-
     /// req1
     public var req1: String
-
     /// req2
     public var req2: Int?
 
@@ -381,7 +360,6 @@ public struct DemoPostDeprecatedJSON: Codable, Sendable {
 }
 
 public struct DemoPostDeprecatedResponse: Codable, Sendable {
-
     /// list
     public var list: [String]
 
@@ -411,10 +389,8 @@ public struct DemoPostDeprecatedResponse: Codable, Sendable {
 }
 
 public struct DemoPutDemoJSON: Codable, Sendable {
-
     /// req1
     public var req1: String
-
     /// req2
     public var req2: Int?
 
@@ -448,13 +424,10 @@ public struct DemoPutDemoJSON: Codable, Sendable {
 }
 
 public struct DemoPutDemoQuery: Codable, Sendable {
-
     /// arg1
     public var arg1: String?
-
     /// arg2
     public var arg2: Double?
-
     /// arg3
     public var arg3: String?
 
@@ -492,10 +465,8 @@ public struct DemoPutDemoQuery: Codable, Sendable {
 }
 
 public struct DemoPutDemoResponse: Codable, Sendable {
-
     /// list
     public var list: [String]
-
     public var anonKv: AnonFunc1putAnonKv
 
     public init(
@@ -528,10 +499,8 @@ public struct DemoPutDemoResponse: Codable, Sendable {
 }
 
 public struct DemoRawResponse: Codable, Sendable {
-
     /// list
     public var list: [String]
-
     /// list2
     public var list2: [String: [ApiDemoA]]
 
@@ -565,7 +534,6 @@ public struct DemoRawResponse: Codable, Sendable {
 }
 
 public struct DemoRequestOptionsQuery: Codable, Sendable {
-
     /// optional server delay in milliseconds
     public var delayMs: Int?
 
@@ -595,10 +563,8 @@ public struct DemoRequestOptionsQuery: Codable, Sendable {
 }
 
 public struct DemoTestPostJSON: Codable, Sendable {
-
     /// req1
     public var req1: String
-
     /// req2
     public var req2: Int?
 
@@ -632,10 +598,8 @@ public struct DemoTestPostJSON: Codable, Sendable {
 }
 
 public struct DemoTestPostResponse: Codable, Sendable {
-
     /// list
     public var list: [String]
-
     /// [str: ApiDemoMap] map
     public var map: [String: ApiDemoMap]
 
@@ -669,11 +633,8 @@ public struct DemoTestPostResponse: Codable, Sendable {
 }
 
 public enum SweepStreamMessage: Codable, Sendable {
-
     case state(SweepState)
-
     case progress(SweepProgress)
-
     case log(SweepLog)
 
     private enum CodingKeys: String, CodingKey {
@@ -682,58 +643,43 @@ public enum SweepStreamMessage: Codable, Sendable {
     }
 
     private enum MessageType: String, Codable {
-
         case state = "state"
-
         case progress = "progress"
-
         case log = "log"
-
     }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let type = try container.decode(MessageType.self, forKey: .type)
         switch type {
-
         case .state:
             self = .state(try container.decode(SweepState.self, forKey: .data))
-
         case .progress:
             self = .progress(try container.decode(SweepProgress.self, forKey: .data))
-
         case .log:
             self = .log(try container.decode(SweepLog.self, forKey: .data))
-
         }
     }
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         switch self {
-
         case .state(let data):
             try container.encode(MessageType.state, forKey: .type)
             try container.encode(data, forKey: .data)
-
         case .progress(let data):
             try container.encode(MessageType.progress, forKey: .type)
             try container.encode(data, forKey: .data)
-
         case .log(let data):
             try container.encode(MessageType.log, forKey: .type)
             try container.encode(data, forKey: .data)
-
         }
     }
 }
 
 public enum AssistantServerMessage: Codable, Sendable {
-
     case delta(AssistantDelta)
-
     case done(AssistantDone)
-
     case log(SweepLog)
 
     private enum CodingKeys: String, CodingKey {
@@ -742,56 +688,42 @@ public enum AssistantServerMessage: Codable, Sendable {
     }
 
     private enum MessageType: String, Codable {
-
         case delta = "delta"
-
         case done = "done"
-
         case log = "log"
-
     }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let type = try container.decode(MessageType.self, forKey: .type)
         switch type {
-
         case .delta:
             self = .delta(try container.decode(AssistantDelta.self, forKey: .data))
-
         case .done:
             self = .done(try container.decode(AssistantDone.self, forKey: .data))
-
         case .log:
             self = .log(try container.decode(SweepLog.self, forKey: .data))
-
         }
     }
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         switch self {
-
         case .delta(let data):
             try container.encode(MessageType.delta, forKey: .type)
             try container.encode(data, forKey: .data)
-
         case .done(let data):
             try container.encode(MessageType.done, forKey: .type)
             try container.encode(data, forKey: .data)
-
         case .log(let data):
             try container.encode(MessageType.log, forKey: .type)
             try container.encode(data, forKey: .data)
-
         }
     }
 }
 
 public enum AssistantClientMessage: Codable, Sendable {
-
     case input(AssistantInput)
-
     case cancel(AssistantCancel)
 
     private enum CodingKeys: String, CodingKey {
@@ -800,39 +732,30 @@ public enum AssistantClientMessage: Codable, Sendable {
     }
 
     private enum MessageType: String, Codable {
-
         case input = "input"
-
         case cancel = "cancel"
-
     }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let type = try container.decode(MessageType.self, forKey: .type)
         switch type {
-
         case .input:
             self = .input(try container.decode(AssistantInput.self, forKey: .data))
-
         case .cancel:
             self = .cancel(try container.decode(AssistantCancel.self, forKey: .data))
-
         }
     }
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         switch self {
-
         case .input(let data):
             try container.encode(MessageType.input, forKey: .type)
             try container.encode(data, forKey: .data)
-
         case .cancel(let data):
             try container.encode(MessageType.cancel, forKey: .type)
             try container.encode(data, forKey: .data)
-
         }
     }
 }

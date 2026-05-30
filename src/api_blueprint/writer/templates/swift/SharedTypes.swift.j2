@@ -1,9 +1,8 @@
-{% autoescape false %}
+{% autoescape false -%}
 {% for proto in protos %}
 {% if proto.kind == "enum" %}
 public enum {{ proto.name }}: {{ proto.raw_value_type }}, Codable, Sendable, APIWireValue {
-{% for name, value in proto.enum_members or [] %}
-    case {{ name }} = {{ proto.enum_wire_literal(value) }}
+{% for name, value in proto.enum_members or [] %}    case {{ name }} = {{ proto.enum_wire_literal(value) }}
 {% endfor %}
 
     public var apiWireString: String {
@@ -14,8 +13,7 @@ public enum {{ proto.name }}: {{ proto.raw_value_type }}, Codable, Sendable, API
 public typealias {{ proto.name }} = {{ proto.alias_type.text }}
 {% elif proto.kind == "data" %}
 public struct {{ proto.name }}: Codable, Sendable {
-{% for field in proto.fields %}
-{% if field.description %}    /// {{ field.description }}
+{% for field in proto.fields %}{% if field.description %}    /// {{ field.description }}
 {% endif %}    public var {{ field.name }}: {{ field.swift_type }}
 {% endfor %}
 
@@ -43,6 +41,9 @@ public struct {{ proto.name }}: Codable, Sendable {
         try apiBlueprintMultipartFields(self)
     }
 }
+{% endif %}
+{% if not loop.last %}
+
 {% endif %}
 {% endfor %}
 {% endautoescape %}

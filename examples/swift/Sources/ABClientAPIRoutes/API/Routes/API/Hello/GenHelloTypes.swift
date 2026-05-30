@@ -3,16 +3,12 @@ import Foundation
 import ABClientRuntime
 
 public struct HelloAbcQuery: Codable, Sendable {
-
     /// arg1
     public var arg1: Bool?
-
     /// arg3
     public var arg3: String?
-
     /// arg2
     public var arg2: Double?
-
     /// 消息类型
     public var type_: HelloChannelMsgTypeEnum
 
@@ -56,7 +52,6 @@ public struct HelloAbcQuery: Codable, Sendable {
 public typealias HelloAbcResponse = [String: ApiHelloMap]
 
 public struct HelloHelloWayQuery: Codable, Sendable {
-
     /// hello-way
     public var arg1: HelloWayEnum?
 

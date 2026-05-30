@@ -85,6 +85,7 @@ content-type: application/octet-stream
 def write_demo_swift_package(
     out_dir: Path,
     *,
+    package: str = "ApiBlueprintExampleClient",
     runtime_profile: str = "modern",
     base_url: str = "http://localhost:2333",
     module: str | None = "ABClient",
@@ -133,7 +134,7 @@ def write_demo_swift_package(
 
     writer = SwiftWriter(
         out_dir,
-        package="ApiBlueprintExampleClient",
+        package=package,
         module=module,
         base_url=base_url,
         runtime_profile=runtime_profile,

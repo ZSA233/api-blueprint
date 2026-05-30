@@ -63,7 +63,7 @@ class SwiftWriter(BaseWriter[SwiftBlueprint]):
         contract_graph: ContractGraph | None = None,
     ):
         super().__init__(working_dir)
-        self.package_name = to_swift_module_name(package)
+        self.package_name = package
         self.module_stem = to_swift_module_name(module or package)
         self.package = self.module_stem
         self.base_url = base_url or ""

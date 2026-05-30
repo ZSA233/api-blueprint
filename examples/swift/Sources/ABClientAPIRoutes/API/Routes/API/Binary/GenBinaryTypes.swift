@@ -3,7 +3,6 @@ import Foundation
 import ABClientRuntime
 
 public struct BinaryAuditPacketQuery: Codable, Sendable {
-
     /// trace id
     public var trace: String?
 
@@ -33,13 +32,10 @@ public struct BinaryAuditPacketQuery: Codable, Sendable {
 }
 
 public struct BinaryAuditPacketResponse: Codable, Sendable {
-
     /// trace id
     public var trace: String
-
     /// item count
     public var itemCount: Int
-
     /// checksum
     public var checksum: Int
 
@@ -77,7 +73,6 @@ public struct BinaryAuditPacketResponse: Codable, Sendable {
 }
 
 public struct BinaryPacketQuery: Codable, Sendable {
-
     /// trace id
     public var trace: String?
 
@@ -107,28 +102,20 @@ public struct BinaryPacketQuery: Codable, Sendable {
 }
 
 public struct BinaryPacketResponse: Codable, Sendable {
-
     /// trace id
     public var trace: String
-
     /// packet version
     public var version: Int
-
     /// item count
     public var itemCount: Int
-
     /// payload
     public var payload: String
-
     /// score sum
     public var scoreSum: Double
-
     /// first item label
     public var firstLabel: String
-
     /// item ids
     public var itemIds: [Int]
-
     /// checksum
     public var checksum: Int
 

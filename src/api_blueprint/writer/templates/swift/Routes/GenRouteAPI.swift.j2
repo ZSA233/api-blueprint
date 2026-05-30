@@ -56,8 +56,7 @@ open class Gen{{ group.class_name }} {
 
     public func {{ route.subscribe_method_name }}(
 {% if route.query_type %}        query: {{ route.query_type }}? = nil,
-{% endif %}
-{% if route.open_type %}        openPayload: {{ route.open_type }}? = nil,
+{% endif %}{% if route.open_type %}        openPayload: {{ route.open_type }}? = nil,
 {% endif %}        headers: [String: String] = [:]
     ) -> APIStreamBridge<{{ route.server_message_type }}, {{ route.close_type }}> {
         transport.openStream(
@@ -77,8 +76,7 @@ open class Gen{{ group.class_name }} {
 
     public func {{ route.open_channel_method_name }}(
 {% if route.query_type %}        query: {{ route.query_type }}? = nil,
-{% endif %}
-{% if route.open_type %}        openPayload: {{ route.open_type }}? = nil,
+{% endif %}{% if route.open_type %}        openPayload: {{ route.open_type }}? = nil,
 {% endif %}        headers: [String: String] = [:],
         protocols: [String] = []
     ) -> APIChannelBridge<{{ route.server_message_type }}, {{ route.client_message_type }}, {{ route.close_type }}> {

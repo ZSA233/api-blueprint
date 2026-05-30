@@ -10,7 +10,6 @@ open class GenAPIAPI {
     }
 
     public func openHelloChannel(
-
         headers: [String: String] = [:],
         protocols: [String] = []
     ) -> APIChannelBridge<HelloChannelMessage, HelloChannelMessage, DefaultConnectionClose> {

@@ -3,7 +3,6 @@ import Foundation
 import ABClientRuntime
 
 public struct ConflictDefaultQuery: Codable, Sendable {
-
     /// reserved query field
     public var class_: String?
 

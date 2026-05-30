@@ -5,8 +5,7 @@ import {{ package_plan.runtime.module_name }}
 {% for helper in group.message_helpers() %}
 
 public enum {{ helper.name }}: Codable, Sendable {
-{% for variant in helper.variants %}
-    case {{ variant.case_name }}({{ variant.data_type }})
+{% for variant in helper.variants %}    case {{ variant.case_name }}({{ variant.data_type }})
 {% endfor %}
 
     private enum CodingKeys: String, CodingKey {
@@ -15,31 +14,25 @@ public enum {{ helper.name }}: Codable, Sendable {
     }
 
     private enum MessageType: String, Codable {
-{% for variant in helper.variants %}
-        case {{ variant.case_name }} = {{ variant.key | code_literal }}
-{% endfor %}
-    }
+{% for variant in helper.variants %}        case {{ variant.case_name }} = {{ variant.key | code_literal }}
+{% endfor %}    }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let type = try container.decode(MessageType.self, forKey: .type)
         switch type {
-{% for variant in helper.variants %}
-        case .{{ variant.case_name }}:
+{% for variant in helper.variants %}        case .{{ variant.case_name }}:
             self = .{{ variant.case_name }}(try container.decode({{ variant.data_type }}.self, forKey: .data))
-{% endfor %}
-        }
+{% endfor %}        }
     }
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         switch self {
-{% for variant in helper.variants %}
-        case .{{ variant.case_name }}(let data):
+{% for variant in helper.variants %}        case .{{ variant.case_name }}(let data):
             try container.encode(MessageType.{{ variant.case_name }}, forKey: .type)
             try container.encode(data, forKey: .data)
-{% endfor %}
-        }
+{% endfor %}        }
     }
 }
 {% endfor %}

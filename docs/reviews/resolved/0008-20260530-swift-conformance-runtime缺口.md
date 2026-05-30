@@ -59,16 +59,21 @@ uv run python -m scripts.example_conformance run \
   - `APIErrorPayload` 增加 `toastText`。
   - 新增 `examples/swift/Conformance` 并接入 `scripts/example_conformance` Swift client 矩阵。
   - 后续补齐 Swift SSE/WebSocket transport bridge，将 `sse`、`websocket`、`single-channel` 加入 Swift conformance，并新增 Swift narrow product smoke。
+  - 后续修复 typed error lookup 未被 runtime 使用、modern byte_stream JSON 错误体丢失、urlencoded form 分隔符转义错误和 SwiftPM `Package(name:)` 被 module normalization 改写的问题。
+  - 同步整理 Swift generated 模板空行，去除 enum cases、static lets、switch cases 与 route 参数列表中由模板循环产生的多余空行。
 - 验证命令：
   - `swift build`（`examples/swift`）
   - `swift build -c release`（`examples/swift/Conformance`）
+  - `swift build`（`examples/swift/Narrow`）
   - `uv run pytest tests/scripts/example_conformance -q`
   - `uv run pytest tests/codegen/shared tests/codegen/flutter tests/codegen/typescript tests/codegen/go/client -q`
   - `uv run pytest tests/codegen/swift tests/codegen/shared/test_generated_ownership.py tests/contract/graph/test_artifacts.py -q`
   - `uv run pytest tests/cli/config tests/cli/apigen -q`
   - `uv run api-gen check -c examples/api-blueprint.toml`
   - `uv run python scripts/example_validation.py --mode compile --scope blueprint`
+  - `uv run api-gen generate -c examples/api-blueprint.toml --target swift.client`
   - `uv run python -m scripts.example_conformance run --servers python --clients swift --scenario rpc,raw,xml,static,header,scalar,enum,map,deprecated,form,binary,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,error,naming`
   - `uv run python -m scripts.example_conformance run --servers go,java,kotlin,python --clients swift --scenario sse,websocket,single-channel`
   - `uv run python -m scripts.example_conformance run --servers go,java,kotlin,python --clients swift --scenario rpc,raw,xml,static,header,scalar,enum,map,deprecated,form,binary,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,error,naming,sse,websocket,single-channel`
+  - `uv run python -m scripts.example_conformance run --servers go,java,kotlin,python --clients swift --scenario rpc,form,media-error,error,sse,websocket,single-channel`
   - 临时生成 `runtime_profile = "ios14-compat"` Swift package 并执行 `swift build`

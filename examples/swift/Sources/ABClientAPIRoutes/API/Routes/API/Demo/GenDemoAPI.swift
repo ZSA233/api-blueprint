@@ -189,7 +189,6 @@ open class GenDemoAPI {
     }
 
     public func subscribeSweepEvents(
-
         openPayload: SweepOpen? = nil,
         headers: [String: String] = [:]
     ) -> APIStreamBridge<SweepStreamMessage, ConnectionClose> {
@@ -208,7 +207,6 @@ open class GenDemoAPI {
     }
 
     public func openAssistantSession(
-
         openPayload: AssistantOpen? = nil,
         headers: [String: String] = [:],
         protocols: [String] = []

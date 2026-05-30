@@ -2,56 +2,58 @@
 import Foundation
 
 public enum APIErrorCodes {
-
     public static let commonErrUnknown = -1
-
     public static let tokenExpire = 55555
-
     public static let demoErrUnknown = 70002
-
     public static let rateLimited = 42901
-
 }
 
 public func lookupAPIError(code: Int) -> APIErrorPayload? {
     switch code {
-
     case APIErrorCodes.commonErrUnknown:
         return APIErrorPayload(
             id: "CommonErr.UNKNOWN",
             group: "CommonErr",
             key: "UNKNOWN",
             code: -1,
-            message: "未知错误"
+            message: "未知错误",
+            toastKey: "CommonErr.UNKNOWN",
+            toastDefault: "未知错误",
+            toastLevel: "error"
         )
-
     case APIErrorCodes.tokenExpire:
         return APIErrorPayload(
             id: "CommonErr.TOKEN_EXPIRE",
             group: "CommonErr",
             key: "TOKEN_EXPIRE",
             code: 55555,
-            message: "token登录态失效"
+            message: "token登录态失效",
+            toastKey: "auth.token_expire",
+            toastDefault: "登录状态已失效，请重新登录",
+            toastLevel: "warning"
         )
-
     case APIErrorCodes.demoErrUnknown:
         return APIErrorPayload(
             id: "DemoErr.UNKNOWN",
             group: "DemoErr",
             key: "UNKNOWN",
             code: 70002,
-            message: "demo unknown error"
+            message: "demo unknown error",
+            toastKey: "DemoErr.UNKNOWN",
+            toastDefault: "demo unknown error",
+            toastLevel: "error"
         )
-
     case APIErrorCodes.rateLimited:
         return APIErrorPayload(
             id: "DemoErr.RATE_LIMITED",
             group: "DemoErr",
             key: "RATE_LIMITED",
             code: 42901,
-            message: "请求过于频繁"
+            message: "请求过于频繁",
+            toastKey: "demo.rate_limited",
+            toastDefault: "请求过于频繁，请稍后再试",
+            toastLevel: "warning"
         )
-
     default:
         return nil
     }
