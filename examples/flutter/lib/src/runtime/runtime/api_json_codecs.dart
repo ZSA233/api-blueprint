@@ -1,0 +1,32 @@
+abstract interface class ApiJsonCodec<T> {
+  T fromJson(Object? value);
+  Object? toJson(T value);
+}
+
+class ApiJsonCodecs {
+  final Map<Type, ApiJsonCodec<Object?>> _codecs;
+
+  const ApiJsonCodecs([this._codecs = const {}]);
+
+  ApiJsonCodec<T>? find<T>() {
+    final codec = _codecs[T];
+    if (codec == null) {
+      return null;
+    }
+    return _TypedApiJsonCodec<T>(codec);
+  }
+}
+
+class _TypedApiJsonCodec<T> implements ApiJsonCodec<T> {
+  final ApiJsonCodec<Object?> _inner;
+
+  const _TypedApiJsonCodec(this._inner);
+
+  @override
+  T fromJson(Object? value) => _inner.fromJson(value) as T;
+
+  @override
+  Object? toJson(T value) => _inner.toJson(value);
+}
+
+const apiJsonCodecs = ApiJsonCodecs();

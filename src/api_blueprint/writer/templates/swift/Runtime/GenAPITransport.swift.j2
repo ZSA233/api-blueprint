@@ -398,7 +398,7 @@ public func apiDecodeValue<T: Decodable>(_ type: T.Type, from value: Any?) throw
     guard let value else {
         throw APIDecodeError.expectedValue(String(describing: type))
     }
-    let data = try JSONSerialization.data(withJSONObject: value, options: [])
+    let data = try JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed])
     return try APICoding.jsonDecoder.decode(T.self, from: data)
 }
 
@@ -470,5 +470,55 @@ public func apiBlueprintFormFields<T: Encodable>(_ value: T) throws -> [String: 
 
 public func apiBlueprintMultipartFields<T: Encodable>(_ value: T) throws -> [String: Any?] {
     let object = try apiEncodeJSONObject(value)
-    return object as? [String: Any?] ?? [:]
+    var fields = object as? [String: Any?] ?? [:]
+    for child in Mirror(reflecting: value).children {
+        guard let label = child.label,
+              let file = apiBlueprintUnwrapFilePart(child.value) else {
+            continue
+        }
+        for key in apiBlueprintMultipartFieldKeys(for: label) where fields.keys.contains(key) {
+            fields[key] = file
+            break
+        }
+    }
+    return fields
+}
+
+private func apiBlueprintUnwrapFilePart(_ value: Any) -> APIFilePart? {
+    if let file = value as? APIFilePart {
+        return file
+    }
+    let mirror = Mirror(reflecting: value)
+    if mirror.displayStyle == .optional, let wrapped = mirror.children.first?.value {
+        return apiBlueprintUnwrapFilePart(wrapped)
+    }
+    return nil
+}
+
+private func apiBlueprintMultipartFieldKeys(for label: String) -> [String] {
+    var keys = [label]
+    if label.hasSuffix("_") {
+        keys.append(String(label.dropLast()))
+    }
+    let snake = apiBlueprintCamelToSnake(label)
+    if !keys.contains(snake) {
+        keys.append(snake)
+    }
+    return keys
+}
+
+private func apiBlueprintCamelToSnake(_ value: String) -> String {
+    var result = ""
+    for scalar in value.unicodeScalars {
+        let character = Character(scalar)
+        if CharacterSet.uppercaseLetters.contains(scalar) {
+            if !result.isEmpty {
+                result.append("_")
+            }
+            result.append(String(character).lowercased())
+        } else {
+            result.append(character)
+        }
+    }
+    return result
 }

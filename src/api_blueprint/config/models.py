@@ -87,6 +87,8 @@ class TargetConfig(BaseModel):
             raise ValueError(f"target[{self.id}] flutter-client requires package")
         if self.kind == "swift-client" and not self.package:
             raise ValueError(f"target[{self.id}] swift-client requires package")
+        if self.kind == "swift-client" and self.module is None:
+            self.module = self.package
         if self.kind == "grpc-proto" and not self.package:
             raise ValueError(f"target[{self.id}] grpc-proto requires package")
         if self.kind != "grpc-proto" and self.proto_files:

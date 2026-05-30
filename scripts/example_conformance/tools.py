@@ -12,6 +12,7 @@ def missing_tools_for_clients(clients: tuple[str, ...]) -> tuple[str, ...]:
         "typescript": ("node", "tsc"),
         "kotlin": (),
         "flutter": ("dart",),
+        "swift": (),
         "java": (),
         "python": (),
     }
@@ -27,6 +28,10 @@ def missing_tools_for_clients(clients: tuple[str, ...]) -> tuple[str, ...]:
     if "java" in clients and example_validation.resolve_gradle_bin() is None:
         missing.append(
             f"gradle: required for java conformance; set {example_validation.GRADLE_BIN_ENV} if needed"
+        )
+    if "swift" in clients and example_validation.resolve_swift_bin() is None:
+        missing.append(
+            f"swift: required for swift conformance; set {example_validation.SWIFT_BIN_ENV} if needed"
         )
     return tuple(missing)
 

@@ -1,4 +1,8 @@
 import Foundation
+import {{ package_plan.runtime.module_name }}
+
+public typealias APITransport = {{ package_plan.runtime.module_name }}.APITransport
+public typealias APIRequestOptions = {{ package_plan.runtime.module_name }}.APIRequestOptions
 
 open class {{ bp.gen_root_client }} {
     public let transport: APITransport

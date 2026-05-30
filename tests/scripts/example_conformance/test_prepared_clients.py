@@ -79,6 +79,44 @@ def test_prepare_flutter_runner_runs_pub_get_once_and_reuses_test_process(
         (("dart", "test", "test/conformance_test.dart"), "websocket"),
     ]
 
+def test_prepare_swift_runner_builds_once_and_reuses_executable(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    swift_dir = tmp_path / "swift"
+    conformance_dir = swift_dir / "Conformance"
+    conformance_dir.mkdir(parents=True)
+    (conformance_dir / "Package.swift").write_text(
+        "// swift-tools-version: 5.9\n",
+        encoding="utf-8",
+    )
+    calls: list[tuple[tuple[str, ...], Path | None]] = []
+
+    def fake_run(args: list[str], cwd: Path | None = None, check: bool = False, **kwargs: object) -> None:
+        calls.append((tuple(args), cwd))
+        if args[:3] == ["/usr/bin/swift", "build", "-c"]:
+            executable = conformance_dir / ".build" / "release" / "SwiftConformance"
+            executable.parent.mkdir(parents=True, exist_ok=True)
+            executable.write_text("#!/bin/sh\n", encoding="utf-8")
+
+    monkeypatch.setattr(runner.example_validation, "resolve_swift_bin", lambda: "/usr/bin/swift")
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+
+    prepared = runner._prepare_swift_runner(swift_dir)
+    try:
+        prepared.run("http://127.0.0.1:12345", "rpc")
+        prepared.run("http://127.0.0.1:12345", "media")
+    finally:
+        prepared.close()
+
+    build_calls = [call for call in calls if call[0][:2] == ("/usr/bin/swift", "build")]
+    scenario_calls = [call for call in calls if call[0][0] != "/usr/bin/swift"]
+    assert len(build_calls) == 1
+    assert [call[0][-2:] for call in scenario_calls] == [
+        ("http://127.0.0.1:12345", "rpc"),
+        ("http://127.0.0.1:12345", "media"),
+    ]
+
 def test_prepare_java_runner_builds_once_and_reuses_executable(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

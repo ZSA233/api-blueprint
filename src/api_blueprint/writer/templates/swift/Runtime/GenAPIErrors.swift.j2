@@ -8,6 +8,7 @@ public struct APIErrorPayload: Codable, Sendable, Equatable {
     public var message: String?
     public var toastKey: String?
     public var toastDefault: String?
+    public var toastText: String?
     public var toastLevel: String?
 
     public init(
@@ -18,6 +19,7 @@ public struct APIErrorPayload: Codable, Sendable, Equatable {
         message: String? = nil,
         toastKey: String? = nil,
         toastDefault: String? = nil,
+        toastText: String? = nil,
         toastLevel: String? = nil
     ) {
         self.id = id
@@ -27,6 +29,7 @@ public struct APIErrorPayload: Codable, Sendable, Equatable {
         self.message = message
         self.toastKey = toastKey
         self.toastDefault = toastDefault
+        self.toastText = toastText
         self.toastLevel = toastLevel
     }
 }
@@ -70,6 +73,7 @@ public func apiErrorPayload(from value: Any?, routeID: String = "") -> APIErrorP
         message: object["message"] as? String,
         toastKey: (nested?["toast"] as? [String: Any?])?["key"] as? String,
         toastDefault: (nested?["toast"] as? [String: Any?])?["default"] as? String,
+        toastText: (nested?["toast"] as? [String: Any?])?["text"] as? String,
         toastLevel: (nested?["toast"] as? [String: Any?])?["level"] as? String
     )
 }

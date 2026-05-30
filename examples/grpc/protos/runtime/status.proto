@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package example.api.runtime.status;
+
+option go_package = "example.com/project/grpc/go/runtime/status;status";
+
+service StatusService {
+  rpc RuntimeCurrentStatus (RuntimeCurrentStatusRequest) returns (RuntimeCurrentStatusResponse);
+}
+
+message RuntimeCurrentStatusRequest {
+}
+
+message RuntimeCurrentStatusResponse {
+  string status = 1;
+}

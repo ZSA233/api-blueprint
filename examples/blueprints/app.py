@@ -43,3 +43,15 @@ altbp = Blueprint(
     ],
     response_envelope=OkDataErrorEnvelope,
 )
+
+
+runtimebp = Blueprint(
+    root='/runtime',
+    tags=['api'],
+    providers=[
+        provider.Req(),
+        provider.Handle(),
+        provider.Rsp(),
+    ],
+    response_envelope=CodeMessageDataEnvelope,
+)

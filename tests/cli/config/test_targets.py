@@ -101,10 +101,11 @@ def test_resolve_config_converts_vnext_target_outputs_to_absolute_paths() -> Non
     assert targets["java.client"].base_url == "http://localhost:2333"
     assert targets["swift.client"].out_dir == (EXAMPLE_CONFIG.parent / "swift").resolve()
     assert targets["swift.client"].package == "ApiBlueprintExampleClient"
+    assert targets["swift.client"].module == "ABClient"
     assert targets["swift.client"].base_url == "http://localhost:2333"
     assert targets["swift.client"].runtime_profile == "modern"
     assert targets["swift.client"].include == ("tag:api",)
-    assert targets["swift.client"].exclude == ("path:/alt/**", "path:/api/ws")
+    assert targets["swift.client"].exclude == ()
     assert targets["wails.v3"].overlay_name == "wailsv3"
     assert targets["wails.v2"].overlay_name == "wailsv2"
     assert targets["grpc.proto"].out_dir == (EXAMPLE_CONFIG.parent / "grpc" / "protos").resolve()
@@ -175,6 +176,21 @@ out_dir = "swift"
     with pytest.raises(ValueError, match="swift-client requires package"):
         Config.load(config_path)
 
+    module_only_config_path = tmp_path / "module-only-api-blueprint.toml"
+    module_only_config_path.write_text(
+        """
+[[swift.client]]
+id = "swift.client"
+out_dir = "swift"
+module = "ABClient"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="swift-client requires package"):
+        Config.load(module_only_config_path)
+
 def test_swift_client_runtime_profile_defaults_and_rejects_invalid_values(tmp_path) -> None:
     config_path = tmp_path / "api-blueprint.toml"
     config_path.write_text(
@@ -193,7 +209,10 @@ package = "ApiBlueprintExampleClient"
     resolved = resolve_config(config_path)
 
     assert config.targets[0].runtime_profile == "modern"
+    assert config.targets[0].module == "ApiBlueprintExampleClient"
     assert resolved.targets[0].runtime_profile == "modern"
+    assert resolved.targets[0].module == "ApiBlueprintExampleClient"
+    assert target_manifest(resolved.targets[0], tmp_path)["module"] == "ApiBlueprintExampleClient"
     assert target_manifest(resolved.targets[0], tmp_path)["runtime_profile"] == "modern"
 
     bad_config_path = tmp_path / "bad-api-blueprint.toml"
@@ -212,6 +231,32 @@ runtime_profile = "legacy"
 
     with pytest.raises(ValueError, match="runtime_profile"):
         Config.load(bad_config_path)
+
+def test_swift_client_module_can_differ_from_package(tmp_path) -> None:
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[targets]]
+id = "swift.client"
+kind = "swift-client"
+out_dir = "swift"
+package = "ApiBlueprintExampleClient"
+module = "ABClient"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    config = Config.load(config_path)
+    resolved = resolve_config(config_path)
+    manifest = target_manifest(resolved.targets[0], tmp_path)
+
+    assert config.targets[0].package == "ApiBlueprintExampleClient"
+    assert config.targets[0].module == "ABClient"
+    assert resolved.targets[0].package == "ApiBlueprintExampleClient"
+    assert resolved.targets[0].module == "ABClient"
+    assert manifest["package"] == "ApiBlueprintExampleClient"
+    assert manifest["module"] == "ABClient"
 
 def test_targets_require_unique_ids(tmp_path) -> None:
     config_path = tmp_path / "api-blueprint.toml"

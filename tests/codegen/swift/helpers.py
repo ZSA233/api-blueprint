@@ -87,6 +87,8 @@ def write_demo_swift_package(
     *,
     runtime_profile: str = "modern",
     base_url: str = "http://localhost:2333",
+    module: str | None = "ABClient",
+    include_alt: bool = False,
 ) -> SwiftWriter:
     class CommonErr(Model):
         UNKNOWN = Error(
@@ -122,13 +124,21 @@ def write_demo_swift_package(
             delta=AssistantDelta,
         ).CLOSE(CloseInfo)
 
+    blueprints = [bp]
+    if include_alt:
+        alt = Blueprint(root="/alt")
+        with alt.group("/demo") as views:
+            views.GET("/ping").RSP(SubmitResponse)
+        blueprints.append(alt)
+
     writer = SwiftWriter(
         out_dir,
         package="ApiBlueprintExampleClient",
+        module=module,
         base_url=base_url,
         runtime_profile=runtime_profile,
     )
-    writer.register(bp)
+    writer.register(*blueprints)
     writer.gen()
     return writer
 

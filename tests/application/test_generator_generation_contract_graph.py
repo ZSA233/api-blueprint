@@ -178,7 +178,7 @@ base_url = "http://localhost:2333"
         tmp_path
         / "swift"
         / "Sources"
-        / "ApiBlueprintExampleClient"
+        / "ApiBlueprintExampleClientAPIRoutes"
         / "API"
         / "Routes"
         / "API"

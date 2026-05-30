@@ -308,3 +308,7 @@ type BlueprintsAltConflictConflictModel struct {
 	Class   string      `json:"class_" form:"class_"`
 	Enum    KeywordEnum `json:"enum" form:"enum"`
 }
+
+type RuntimeStatus struct {
+	Status string `json:"status" form:"status"`
+}

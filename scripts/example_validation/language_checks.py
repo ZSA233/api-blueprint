@@ -246,47 +246,51 @@ def _validate_flutter_sources(flutter_dir: Path) -> None:
 def _validate_swift_sources(swift_dir: Path) -> None:
     expected = (
         "Package.swift",
-        "Sources/ApiBlueprintExampleClient/GenApiBlueprintExampleClient.swift",
-        "Sources/ApiBlueprintExampleClient/API/Runtime/GenAPITransport.swift",
-        "Sources/ApiBlueprintExampleClient/API/Runtime/GenAPIErrors.swift",
-        "Sources/ApiBlueprintExampleClient/API/Runtime/GenAPIErrorLookup.swift",
-        "Sources/ApiBlueprintExampleClient/API/Runtime/GenAPITypes.swift",
-        "Sources/ApiBlueprintExampleClient/API/Runtime/Binary/GenBinaryRuntime.swift",
-        "Sources/ApiBlueprintExampleClient/API/Routes/API/Demo/GenDemoAPI.swift",
-        "Sources/ApiBlueprintExampleClient/API/Routes/API/Demo/GenDemoTypes.swift",
-        "Sources/ApiBlueprintExampleClient/API/Routes/API/Binary/GenBinary.swift",
-        "Sources/ApiBlueprintExampleClient/API/Routes/API/Hello/GenHelloAPI.swift",
-        "Sources/ApiBlueprintExampleClient/API/Transports/HTTP/GenHTTPAPIConfig.swift",
-        "Sources/ApiBlueprintExampleClient/API/Transports/HTTP/GenURLSessionAPITransport.swift",
-        "Sources/ApiBlueprintExampleClient/API/Transports/HTTP/GenHTTPConnection.swift",
-        "Sources/ApiBlueprintExampleClient/API/Transports/HTTP/HTTPAPIClient.swift",
+        "Sources/ABClient/GenABClient.swift",
+        "Sources/ABClient/Transports/HTTP/HTTPAPIClient.swift",
+        "Sources/ABClientRuntime/GenAPITransport.swift",
+        "Sources/ABClientRuntime/GenAPIErrors.swift",
+        "Sources/ABClientRuntime/GenAPIErrorLookup.swift",
+        "Sources/ABClientRuntime/GenAPITypes.swift",
+        "Sources/ABClientRuntime/Binary/GenBinaryRuntime.swift",
+        "Sources/ABClientRuntime/Transports/HTTP/GenHTTPAPIConfig.swift",
+        "Sources/ABClientRuntime/Transports/HTTP/GenURLSessionAPITransport.swift",
+        "Sources/ABClientRuntime/Transports/HTTP/GenHTTPConnection.swift",
+        "Sources/ABClientAPIRoutes/API/Routes/API/Demo/GenDemoAPI.swift",
+        "Sources/ABClientAPIRoutes/API/Routes/API/Demo/GenDemoTypes.swift",
+        "Sources/ABClientAPIRoutes/API/Routes/API/Binary/GenBinary.swift",
+        "Sources/ABClientAPIRoutes/API/Routes/API/Hello/GenHelloAPI.swift",
+        "Sources/ABClientAltRoutes/Alt/Routes/Alt/Conflict/GenConflictAPI.swift",
+        "Sources/ABClientRuntimeRoutes/Runtime/Routes/Runtime/Status/GenStatusAPI.swift",
     )
     missing = [path for path in expected if not (swift_dir / path).is_file()]
     if missing:
         raise ExampleValidationError("swift example missing generated files:\n" + "\n".join(missing))
 
-    runtime = (
-        swift_dir / "Sources/ApiBlueprintExampleClient/API/Runtime/GenAPITransport.swift"
-    ).read_text(encoding="utf-8")
-    runtime_errors = (
-        swift_dir / "Sources/ApiBlueprintExampleClient/API/Runtime/GenAPIErrors.swift"
-    ).read_text(encoding="utf-8")
-    types = (swift_dir / "Sources/ApiBlueprintExampleClient/API/Runtime/GenAPITypes.swift").read_text(
+    runtime = (swift_dir / "Sources/ABClientRuntime/GenAPITransport.swift").read_text(encoding="utf-8")
+    runtime_errors = (swift_dir / "Sources/ABClientRuntime/GenAPIErrors.swift").read_text(encoding="utf-8")
+    types = (swift_dir / "Sources/ABClientRuntime/GenAPITypes.swift").read_text(encoding="utf-8")
+    demo_api = (swift_dir / "Sources/ABClientAPIRoutes/API/Routes/API/Demo/GenDemoAPI.swift").read_text(
         encoding="utf-8"
     )
-    demo_api = (swift_dir / "Sources/ApiBlueprintExampleClient/API/Routes/API/Demo/GenDemoAPI.swift").read_text(
+    demo_types = (swift_dir / "Sources/ABClientAPIRoutes/API/Routes/API/Demo/GenDemoTypes.swift").read_text(
         encoding="utf-8"
     )
-    demo_types = (
-        swift_dir / "Sources/ApiBlueprintExampleClient/API/Routes/API/Demo/GenDemoTypes.swift"
-    ).read_text(encoding="utf-8")
-    binary = (
-        swift_dir / "Sources/ApiBlueprintExampleClient/API/Routes/API/Binary/GenBinary.swift"
-    ).read_text(encoding="utf-8")
+    binary = (swift_dir / "Sources/ABClientAPIRoutes/API/Routes/API/Binary/GenBinary.swift").read_text(
+        encoding="utf-8"
+    )
     transport = (
-        swift_dir / "Sources/ApiBlueprintExampleClient/API/Transports/HTTP/GenURLSessionAPITransport.swift"
+        swift_dir / "Sources/ABClientRuntime/Transports/HTTP/GenURLSessionAPITransport.swift"
     ).read_text(encoding="utf-8")
-    haystack = "\n".join((runtime, runtime_errors, types, demo_api, demo_types, binary, transport))
+    aggregate = (swift_dir / "Sources/ABClient/GenABClient.swift").read_text(encoding="utf-8")
+    runtime_root = (
+        swift_dir / "Sources/ABClientRuntimeRoutes/Runtime/Routes/Runtime/Status/GenStatusAPI.swift"
+    ).read_text(
+        encoding="utf-8"
+    )
+    haystack = "\n".join(
+        (runtime, runtime_errors, types, demo_api, demo_types, binary, transport, aggregate, runtime_root)
+    )
     required_snippets = (
         "// Code generated by api-blueprint (Swift client); DO NOT EDIT.",
         "public protocol APITransport",
@@ -301,6 +305,11 @@ def _validate_swift_sources(swift_dir: Path) -> None:
         "public enum AssistantClientMessage: Codable, Sendable",
         "public struct DemoPacket: Codable, Sendable",
         "public final class URLSessionAPITransport: APITransport",
+        "import ABClientAltRoutes",
+        "import ABClientRuntimeRoutes",
+        "public lazy var alt = ABClientAltRoutes.AltRootClient(transport: transport)",
+        "public lazy var runtime = ABClientRuntimeRoutes.RuntimeRootClient(transport: transport)",
+        'path: "/runtime/status/current"',
     )
     missing_snippets = [snippet for snippet in required_snippets if snippet not in haystack]
     if missing_snippets:

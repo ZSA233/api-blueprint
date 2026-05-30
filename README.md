@@ -97,7 +97,7 @@ api-gen generate -c api-blueprint.toml
 | Go server | 可用 | 生成 Go 路由、provider、长连接 message helper、HTTP/Wails adapter、multipart/raw media、binary schema 请求/响应和 runtime |
 | TypeScript client | 预览 | 生成 transport-neutral client、长连接 message helper、HTTP multipart/raw adapter、binary schema 响应解码和 Wails facade |
 | Flutter client | 预览 | 生成纯 Dart package、DTO、typed error、binary codec、HTTP multipart/raw/binary response client 和 SSE/WebSocket client |
-| Swift client | 预览 | 生成 iOS Swift Package、DTO、typed error、HTTP transport、multipart/raw/binary response client 和 STREAM/CHANNEL 协议桥接，不生成 UI、鉴权、缓存或 session engine |
+| Swift client | 预览 | 生成 iOS Swift Package 多 target SDK、短 module stem、root routes module、DTO、typed error、共享 HTTP transport、multipart/raw/binary response client 和 STREAM/CHANNEL 协议桥接，不生成 UI、鉴权、缓存或 session engine |
 | Kotlin client/server | 预览 | 生成 OkHttp HTTP/SSE/WebSocket client、Ktor HTTP/SSE/WebSocket server scaffold、multipart/raw/binary request/response adapter、模型和长连接 message helper |
 | Java client/server | 预览 | 生成 Java 17 HttpClient client、Spring MVC/SSE/WebSocket server scaffold、record DTO、HTTP multipart/raw/binary request/response adapter 和长连接 message helper |
 | Go client / Python client | 预览 | 生成服务端之外的脚本或工具侧客户端；Python client 使用递归 dataclass DTO、共享 runtime codec，并提供 multipart/raw、长连接 message helper 与 binary writer/response codec |
@@ -137,4 +137,4 @@ make example-golang-suite
 make example-java-suite
 ```
 
-`make example-conformance` 默认从真实 Go HTTP server 开始跑协议互通；可用 `EXAMPLE_CONFORMANCE_SERVERS`、`EXAMPLE_CONFORMANCE_CLIENTS` 和 `EXAMPLE_CONFORMANCE_SCENARIOS` 选择矩阵，完整矩阵可设为 `EXAMPLE_CONFORMANCE_SERVERS=all EXAMPLE_CONFORMANCE_CLIENTS=all`。benchmark 是可选趋势工具，不作为默认 CI 阈值；除 binary / protocol 外，也提供 generated client SDK smoke 入口，见 [Benchmark](docs/zh/benchmarks.md)。`example-golang-suite` 和 `example-java-suite` 是保留的手动端到端增强验证。正式发布前的版本、构建、安装和 GitHub Release 流程见 [发布流程](docs/release-process.md)。
+`make example-conformance` 默认从真实 Go HTTP server 开始跑协议互通；可用 `EXAMPLE_CONFORMANCE_SERVERS`、`EXAMPLE_CONFORMANCE_CLIENTS` 和 `EXAMPLE_CONFORMANCE_SCENARIOS` 选择矩阵，完整矩阵可设为 `EXAMPLE_CONFORMANCE_SERVERS=all EXAMPLE_CONFORMANCE_CLIENTS=all`（Swift 场景需要可用 Swift toolchain）。benchmark 是可选趋势工具，不作为默认 CI 阈值；除 binary / protocol 外，也提供 generated client SDK smoke 入口，见 [Benchmark](docs/zh/benchmarks.md)。`example-golang-suite` 和 `example-java-suite` 是保留的手动端到端增强验证。正式发布前的版本、构建、安装和 GitHub Release 流程见 [发布流程](docs/release-process.md)。

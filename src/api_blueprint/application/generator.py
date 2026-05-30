@@ -43,7 +43,7 @@ EXPLAIN_TARGET_KIND_FIELDS: dict[str, tuple[str, ...]] = {
     "java-server": ("package", "include", "exclude"),
     "java-client": ("package", "base_url", "base_url_expr", "include", "exclude"),
     "flutter-client": ("package", "base_url", "base_url_expr", "include", "exclude"),
-    "swift-client": ("package", "base_url", "base_url_expr", "runtime_profile", "include", "exclude"),
+    "swift-client": ("package", "module", "base_url", "base_url_expr", "runtime_profile", "include", "exclude"),
     "python-server": ("python_package_root", "include", "exclude"),
     "python-client": ("python_package_root", "base_url", "base_url_expr", "include", "exclude"),
     "http-transport": ("server", "clients"),
@@ -265,6 +265,7 @@ def generate(config_path: str | Path | None, target_ids: Sequence[str] = ()) -> 
             writer = swift.SwiftWriter(
                 output,
                 package=target.package or "",
+                module=target.module,
                 base_url=target.base_url or "",
                 base_url_expr=target.base_url_expr,
                 runtime_profile=target.runtime_profile,

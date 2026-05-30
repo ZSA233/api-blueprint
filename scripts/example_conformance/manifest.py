@@ -80,6 +80,18 @@ def client_manifest() -> dict[str, ClientCapability]:
             supports_websocket=True,
             supports_media=True,
         ),
+        "swift": ClientCapability(
+            name="swift",
+            command_label="Swift",
+            supports_rpc=True,
+            supports_binary=True,
+            supports_form=True,
+            supports_typed_error=True,
+            supports_sse=False,
+            supports_websocket=False,
+            connection_policy="protocol-bridge",
+            supports_media=True,
+        ),
         "java": ClientCapability(
             name="java",
             command_label="Java",

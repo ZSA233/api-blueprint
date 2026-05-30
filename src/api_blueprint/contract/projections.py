@@ -9,6 +9,66 @@ from api_blueprint.writer.core.planning import route_matches_rule
 
 
 JsonObject = dict[str, Any]
+SWIFT_KEYWORDS = frozenset(
+    {
+        "Any",
+        "Self",
+        "Type",
+        "actor",
+        "as",
+        "associatedtype",
+        "async",
+        "await",
+        "break",
+        "case",
+        "catch",
+        "class",
+        "continue",
+        "default",
+        "defer",
+        "deinit",
+        "do",
+        "else",
+        "enum",
+        "extension",
+        "fallthrough",
+        "false",
+        "fileprivate",
+        "for",
+        "func",
+        "guard",
+        "if",
+        "import",
+        "in",
+        "init",
+        "inout",
+        "internal",
+        "is",
+        "let",
+        "nil",
+        "open",
+        "operator",
+        "private",
+        "protocol",
+        "public",
+        "repeat",
+        "return",
+        "self",
+        "static",
+        "struct",
+        "subscript",
+        "super",
+        "switch",
+        "throw",
+        "throws",
+        "true",
+        "try",
+        "typealias",
+        "var",
+        "where",
+        "while",
+    }
+)
 
 AGENT_MANIFEST_KIND = "api-blueprint.agent"
 INDEX_MANIFEST_KIND = "api-blueprint.index"
@@ -389,6 +449,7 @@ def _target_level_artifacts(target: Mapping[str, Any], routes: list[JsonObject])
 def _route_artifacts(routes: list[JsonObject], targets: list[JsonObject]) -> dict[str, JsonObject]:
     result: dict[str, JsonObject] = {}
     targets_by_id = {_string(target.get("id")): target for target in targets if _string(target.get("id"))}
+    target_contexts = _target_artifact_contexts(routes, targets)
     for route in routes:
         route_id = _route_id(route)
         result[route_id] = {}
@@ -398,16 +459,57 @@ def _route_artifacts(routes: list[JsonObject], targets: list[JsonObject]) -> dic
                 continue
             if not _target_selects_route(target, route):
                 continue
-            artifact = _artifact_for_route(target, route, targets_by_id)
+            artifact = _artifact_for_route(target, route, targets_by_id, target_contexts.get(target_id))
             if artifact:
                 result[route_id][target_id] = artifact
     return result
+
+
+def _target_artifact_contexts(
+    routes: list[JsonObject],
+    targets: list[JsonObject],
+) -> dict[str, JsonObject]:
+    result: dict[str, JsonObject] = {}
+    for target in targets:
+        target_id = _string(target.get("id"))
+        if not target_id:
+            continue
+        if _string(target.get("kind")) == "swift-client":
+            result[target_id] = {
+                "swift_root_modules": _swift_root_modules_for_target(target, routes),
+            }
+    return result
+
+
+def _swift_root_modules_for_target(target: Mapping[str, Any], routes: list[JsonObject]) -> dict[str, str]:
+    module = _swift_module_name(
+        _string(target.get("module")) or _string(target.get("package")) or "ApiBlueprintGenerated"
+    )
+    used = {module, f"{module}Runtime"}
+    root_modules: dict[str, str] = {}
+    for route in routes:
+        if not _target_selects_route(target, route):
+            continue
+        root, _group = _split_service_id(_string(route.get("service_id")))
+        if root in root_modules:
+            continue
+        root_type = _swift_type_name(root, fallback="API")
+        base = _swift_module_name(f"{module}{root_type}Routes")
+        candidate = base
+        suffix = 2
+        while candidate in used:
+            candidate = f"{base}{suffix}"
+            suffix += 1
+        used.add(candidate)
+        root_modules[root] = candidate
+    return root_modules
 
 
 def _artifact_for_route(
     target: Mapping[str, Any],
     route: Mapping[str, Any],
     targets_by_id: Mapping[str, Mapping[str, Any]] | None = None,
+    target_context: Mapping[str, Any] | None = None,
 ) -> JsonObject:
     kind = _string(target.get("kind"))
     out_dir = _string(target.get("out_dir"))
@@ -512,22 +614,34 @@ def _artifact_for_route(
             files.extend([_join(base, "gen_binary.dart"), _join(base, "binary.dart")])
         imports = [f"package:{package}/{package}.dart"]
     elif kind == "swift-client":
-        package = _string(target.get("package")) or "ApiBlueprintGenerated"
-        swift_root = _swift_path_segment(root)
-        swift_route_path = "/".join(_swift_path_segment(part) for part in route_path.split("/") if part)
+        module = _swift_module_name(
+            _string(target.get("module")) or _string(target.get("package")) or "ApiBlueprintGenerated"
+        )
+        swift_root = _swift_path(root, fallback="API")
+        swift_runtime_module = f"{module}Runtime"
+        root_modules = (
+            target_context.get("swift_root_modules")
+            if target_context is not None and isinstance(target_context.get("swift_root_modules"), Mapping)
+            else {}
+        )
+        swift_root_module = _string(root_modules.get(root)) if isinstance(root_modules, Mapping) else ""
+        if not swift_root_module:
+            swift_root_module = _swift_module_name(f"{module}{_swift_type_name(root, fallback='API')}Routes")
+        swift_route_path = _swift_path(route_path, fallback="API")
         swift_group = _swift_path_segment(group)
-        base = _join(out_dir, "Sources", package, swift_root, "Routes", swift_route_path)
-        transport_base = _join(out_dir, "Sources", package, swift_root, "Transports", "HTTP")
+        base = _join(out_dir, "Sources", swift_root_module, swift_root, "Routes", swift_route_path)
+        transport_base = _join(out_dir, "Sources", swift_runtime_module, "Transports", "HTTP")
+        aggregate_transport_base = _join(out_dir, "Sources", module, "Transports", "HTTP")
         files = [
             _join(base, f"Gen{swift_group}Types.swift"),
             _join(base, f"Gen{swift_group}API.swift"),
             _join(base, f"{swift_group}API.swift"),
             _join(transport_base, "GenURLSessionAPITransport.swift"),
-            _join(transport_base, "HTTPAPIClient.swift"),
+            _join(aggregate_transport_base, "HTTPAPIClient.swift"),
         ]
         if has_binary_schema:
             files.append(_join(base, "GenBinary.swift"))
-        imports = [package]
+        imports = [module, swift_runtime_module, swift_root_module]
     elif kind == "python-server":
         package_root = _string(target.get("python_package_root")) or "api_blueprint_generated"
         package_parts = _python_package_parts(package_root)
@@ -750,19 +864,47 @@ def _dart_file_stem(value: str) -> str:
     return safe
 
 
+def _swift_split_tokens(value: str) -> list[str]:
+    tokens: list[str] = []
+    for segment in value.split("/"):
+        if not segment:
+            continue
+        tokens.extend(token for token in re.split(r"[^0-9A-Za-z]+", segment) if token)
+    return tokens
+
+
+def _swift_cap_token(token: str) -> str:
+    if not token:
+        return ""
+    if token.lower() == "api":
+        return "API"
+    if token.isupper():
+        return token[:1].upper() + token[1:].lower()
+    return token[:1].upper() + token[1:]
+
+
+def _swift_type_name(value: str, *, fallback: str = "GeneratedType") -> str:
+    result = "".join(_swift_cap_token(token) for token in _swift_split_tokens(value))
+    if not result:
+        result = fallback
+    if not result[0].isalpha():
+        result = fallback + result
+    if result in SWIFT_KEYWORDS:
+        return f"{result}_"
+    return result
+
+
+def _swift_path(value: str, *, fallback: str = "Root") -> str:
+    parts = [_swift_type_name(part, fallback=fallback) for part in value.strip("/").split("/") if part]
+    return "/".join(parts or [fallback])
+
+
+def _swift_module_name(value: str) -> str:
+    return _swift_type_name(value, fallback="ApiBlueprintGenerated")
+
+
 def _swift_path_segment(value: str) -> str:
-    pascal = "".join(
-        "API" if part.lower() == "api" else part[:1].upper() + part[1:]
-        for part in re.split(r"[^A-Za-z0-9]+", value)
-        if part
-    )
-    if not pascal:
-        pascal = "Root"
-    if not pascal[0].isalpha():
-        pascal = f"Root{pascal}"
-    if pascal in {"Class", "Enum", "Protocol", "Struct", "Import", "Switch"}:
-        pascal = f"{pascal}_"
-    return pascal
+    return _swift_type_name(value, fallback="Root")
 
 
 def _route_id(route: Mapping[str, Any]) -> str:

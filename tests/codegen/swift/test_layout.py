@@ -5,25 +5,30 @@ from .helpers import *
 
 def test_swift_writer_generates_spm_runtime_routes_transport_and_preserved_files(tmp_path: Path) -> None:
     out_dir = tmp_path / "swift"
-    source_dir = out_dir / "Sources" / "ApiBlueprintExampleClient"
-    api_dir = source_dir / "API"
+    aggregate_dir = out_dir / "Sources" / "ABClient"
+    runtime_dir = out_dir / "Sources" / "ABClientRuntime"
+    root_source_dir = out_dir / "Sources" / "ABClientAPIRoutes"
+    api_dir = root_source_dir / "API"
     route_dir = api_dir / "Routes" / "API" / "Demo"
-    runtime_dir = api_dir / "Runtime"
-    http_dir = api_dir / "Transports" / "HTTP"
+    runtime_http_dir = runtime_dir / "Transports" / "HTTP"
+    aggregate_http_dir = aggregate_dir / "Transports" / "HTTP"
     route_dir.mkdir(parents=True)
     runtime_dir.mkdir(parents=True)
-    http_dir.mkdir(parents=True)
+    runtime_http_dir.mkdir(parents=True)
+    aggregate_http_dir.mkdir(parents=True)
+    (aggregate_dir / "API").mkdir(parents=True)
     (out_dir / "Package.swift").write_text("// USER PACKAGE\n", encoding="utf-8")
-    (source_dir / "ApiBlueprintExampleClient.swift").write_text("// USER PACKAGE FACADE\n", encoding="utf-8")
+    (aggregate_dir / "ABClient.swift").write_text("// USER PACKAGE FACADE\n", encoding="utf-8")
     (api_dir / "APIRootClient.swift").write_text("// USER ROOT FACADE\n", encoding="utf-8")
     (runtime_dir / "APICoding.swift").write_text("// USER CODING\n", encoding="utf-8")
     (route_dir / "DemoAPI.swift").write_text("// USER ROUTE FACADE\n", encoding="utf-8")
     (route_dir / "DemoTypes.swift").write_text("// USER TYPES FACADE\n", encoding="utf-8")
-    (http_dir / "HTTPAPIClient.swift").write_text("// USER HTTP FACADE\n", encoding="utf-8")
+    (aggregate_http_dir / "HTTPAPIClient.swift").write_text("// USER HTTP FACADE\n", encoding="utf-8")
 
     write_demo_swift_package(out_dir)
 
-    generated_package_facade = (source_dir / "GenApiBlueprintExampleClient.swift").read_text(encoding="utf-8")
+    package_manifest = (out_dir / "Package.swift").read_text(encoding="utf-8")
+    generated_package_facade = (aggregate_dir / "GenABClient.swift").read_text(encoding="utf-8")
     generated_root = (api_dir / "GenAPIRootClient.swift").read_text(encoding="utf-8")
     runtime_transport = (runtime_dir / "GenAPITransport.swift").read_text(encoding="utf-8")
     runtime_errors = (runtime_dir / "GenAPIErrors.swift").read_text(encoding="utf-8")
@@ -33,9 +38,15 @@ def test_swift_writer_generates_spm_runtime_routes_transport_and_preserved_files
     route_client = (route_dir / "GenDemoAPI.swift").read_text(encoding="utf-8")
     route_types = (route_dir / "GenDemoTypes.swift").read_text(encoding="utf-8")
     route_binary = (route_dir / "GenBinary.swift").read_text(encoding="utf-8")
-    http_config = (http_dir / "GenHTTPAPIConfig.swift").read_text(encoding="utf-8")
-    http_transport = (http_dir / "GenURLSessionAPITransport.swift").read_text(encoding="utf-8")
-    http_connection = (http_dir / "GenHTTPConnection.swift").read_text(encoding="utf-8")
+    http_config = (runtime_http_dir / "GenHTTPAPIConfig.swift").read_text(encoding="utf-8")
+    http_transport = (runtime_http_dir / "GenURLSessionAPITransport.swift").read_text(encoding="utf-8")
+    http_connection = (runtime_http_dir / "GenHTTPConnection.swift").read_text(encoding="utf-8")
+
+    assert package_manifest.startswith("// swift-tools-version: 5.9\n" + SWIFT_CLIENT_GENERATED_HEADER)
+    assert 'name: "ApiBlueprintExampleClient"' in package_manifest
+    assert '.library(name: "ABClientRuntime"' in package_manifest
+    assert '.library(name: "ABClientAPIRoutes"' in package_manifest
+    assert 'exclude: ["API"]' in package_manifest
 
     for generated_text in (
         generated_package_facade,
@@ -54,16 +65,19 @@ def test_swift_writer_generates_spm_runtime_routes_transport_and_preserved_files
     ):
         assert generated_text.startswith(SWIFT_CLIENT_GENERATED_HEADER)
 
-    assert (out_dir / "Package.swift").read_text(encoding="utf-8") == "// USER PACKAGE\n"
-    assert (source_dir / "ApiBlueprintExampleClient.swift").read_text(encoding="utf-8") == "// USER PACKAGE FACADE\n"
+    assert (aggregate_dir / "ABClient.swift").read_text(encoding="utf-8") == "// USER PACKAGE FACADE\n"
     assert (api_dir / "APIRootClient.swift").read_text(encoding="utf-8") == "// USER ROOT FACADE\n"
     assert (runtime_dir / "APICoding.swift").read_text(encoding="utf-8") == "// USER CODING\n"
     assert (route_dir / "DemoAPI.swift").read_text(encoding="utf-8") == "// USER ROUTE FACADE\n"
     assert (route_dir / "DemoTypes.swift").read_text(encoding="utf-8") == "// USER TYPES FACADE\n"
-    assert (http_dir / "HTTPAPIClient.swift").read_text(encoding="utf-8") == "// USER HTTP FACADE\n"
+    assert (aggregate_http_dir / "HTTPAPIClient.swift").read_text(encoding="utf-8") == "// USER HTTP FACADE\n"
 
-    assert "open class GenApiBlueprintExampleClient" in generated_package_facade
-    assert "public lazy var api = APIRootClient(transport: transport)" in generated_package_facade
+    assert "import ABClientRuntime" in generated_package_facade
+    assert "import ABClientAPIRoutes" in generated_package_facade
+    assert "open class GenABClient" in generated_package_facade
+    assert "public lazy var api = ABClientAPIRoutes.APIRootClient(transport: transport)" in generated_package_facade
+    assert "import ABClientRuntime" in generated_root
+    assert "public typealias APITransport = ABClientRuntime.APITransport" in generated_root
     assert "open class GenAPIRootClient" in generated_root
     assert "public lazy var demo = DemoAPI(transport: transport)" in generated_root
 
@@ -92,6 +106,7 @@ def test_swift_writer_generates_spm_runtime_routes_transport_and_preserved_files
     assert "case default_ = \"default\"" in runtime_types
     assert "case class_ = \"class\"" in runtime_types
 
+    assert "import ABClientRuntime" in route_client
     assert "public func ping(" in route_client
     assert "query: query?.toQueryItems() ?? []" in route_client
     assert "public func submit(" in route_client
@@ -114,6 +129,7 @@ def test_swift_writer_generates_spm_runtime_routes_transport_and_preserved_files
     assert ") -> APIChannelBridge<AssistantServerMessage, AssistantClientMessage, CloseInfo>" in route_client
     assert 'delivery: "unordered"' in route_client
 
+    assert "import ABClientRuntime" in route_types
     assert "public enum AssistantServerMessage: Codable, Sendable" in route_types
     assert "case delta(AssistantDelta)" in route_types
     assert "public enum AssistantClientMessage: Codable, Sendable" in route_types
@@ -132,6 +148,75 @@ def test_swift_writer_generates_spm_runtime_routes_transport_and_preserved_files
     assert "public func apiHTTPWebSocketBridge" in http_connection
 
 
+def test_swift_writer_generates_one_target_per_root_and_shared_runtime_once(tmp_path: Path) -> None:
+    out_dir = tmp_path / "swift"
+
+    write_demo_swift_package(out_dir, include_alt=True)
+
+    package_manifest = (out_dir / "Package.swift").read_text(encoding="utf-8")
+    aggregate_facade = (out_dir / "Sources" / "ABClient" / "GenABClient.swift").read_text(encoding="utf-8")
+    runtime_types = (out_dir / "Sources" / "ABClientRuntime" / "GenAPITypes.swift").read_text(
+        encoding="utf-8"
+    )
+    alt_route = (
+        out_dir / "Sources" / "ABClientAltRoutes" / "Alt" / "Routes" / "Alt" / "Demo" / "GenDemoAPI.swift"
+    ).read_text(encoding="utf-8")
+
+    assert '.target(\n            name: "ABClientAPIRoutes"' in package_manifest
+    assert '.target(\n            name: "ABClientAltRoutes"' in package_manifest
+    assert "import ABClientAPIRoutes" in aggregate_facade
+    assert "import ABClientAltRoutes" in aggregate_facade
+    assert "public lazy var api = ABClientAPIRoutes.APIRootClient(transport: transport)" in aggregate_facade
+    assert "public lazy var alt = ABClientAltRoutes.AltRootClient(transport: transport)" in aggregate_facade
+    assert len(list(out_dir.rglob("GenURLSessionAPITransport.swift"))) == 1
+    assert runtime_types.count("public struct SubmitResponse: Codable, Sendable") == 1
+    assert "public func ping(" in alt_route
+
+
+def test_swift_writer_dedupes_root_module_and_aggregate_property_names(tmp_path: Path) -> None:
+    out_dir = tmp_path / "swift"
+    first = Blueprint(root="/api")
+    with first.group("/demo") as views:
+        views.GET("/ping").RSP(message=String(description="message"))
+    second = Blueprint(root="/API")
+    with second.group("/demo") as views:
+        views.GET("/pong").RSP(message=String(description="message"))
+
+    writer = SwiftWriter(out_dir, package="ApiBlueprintExampleClient", module="ABClient")
+    writer.register(first, second)
+    writer.gen()
+
+    package_manifest = (out_dir / "Package.swift").read_text(encoding="utf-8")
+    aggregate_facade = (
+        out_dir / "Sources" / "ABClient" / "GenABClient.swift"
+    ).read_text(encoding="utf-8")
+
+    assert '.library(name: "ABClientAPIRoutes", targets: ["ABClientAPIRoutes"])' in package_manifest
+    assert '.library(name: "ABClientAPIRoutes2", targets: ["ABClientAPIRoutes2"])' in package_manifest
+    assert "public lazy var api = ABClientAPIRoutes.APIRootClient(transport: transport)" in aggregate_facade
+    assert "public lazy var api2 = ABClientAPIRoutes2.APIRootClient(transport: transport)" in aggregate_facade
+
+
+def test_swift_writer_routes_suffix_avoids_runtime_root_module_collision(tmp_path: Path) -> None:
+    out_dir = tmp_path / "swift"
+    bp = Blueprint(root="/runtime")
+    with bp.group("/demo") as views:
+        views.GET("/ping").RSP(message=String(description="message"))
+
+    writer = SwiftWriter(out_dir, package="ApiBlueprintExampleClient", module="ABClient")
+    writer.register(bp)
+    writer.gen()
+
+    package_manifest = (out_dir / "Package.swift").read_text(encoding="utf-8")
+    aggregate_facade = (out_dir / "Sources" / "ABClient" / "GenABClient.swift").read_text(encoding="utf-8")
+
+    assert '.library(name: "ABClientRuntime", targets: ["ABClientRuntime"])' in package_manifest
+    assert '.library(name: "ABClientRuntimeRoutes", targets: ["ABClientRuntimeRoutes"])' in package_manifest
+    assert "ABClientRuntime2" not in package_manifest
+    assert "import ABClientRuntimeRoutes" in aggregate_facade
+    assert "public lazy var runtime = ABClientRuntimeRoutes.RuntimeRootClient(transport: transport)" in aggregate_facade
+
+
 def test_swift_transport_runtime_profiles_are_isolated_to_transport_templates(tmp_path: Path) -> None:
     modern_dir = tmp_path / "modern"
     compat_dir = tmp_path / "compat"
@@ -143,8 +228,7 @@ def test_swift_transport_runtime_profiles_are_isolated_to_transport_templates(tm
     modern_transport = (
         modern_dir
         / "Sources"
-        / "ApiBlueprintExampleClient"
-        / "API"
+        / "ABClientRuntime"
         / "Transports"
         / "HTTP"
         / "GenURLSessionAPITransport.swift"
@@ -152,8 +236,7 @@ def test_swift_transport_runtime_profiles_are_isolated_to_transport_templates(tm
     compat_transport = (
         compat_dir
         / "Sources"
-        / "ApiBlueprintExampleClient"
-        / "API"
+        / "ABClientRuntime"
         / "Transports"
         / "HTTP"
         / "GenURLSessionAPITransport.swift"

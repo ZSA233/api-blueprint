@@ -337,6 +337,11 @@ public final class GenApiErrors {
             "alt.conflict.get.default",
             Map.ofEntries(
             )
+        ),
+        Map.entry(
+            "runtime.status.get.current",
+            Map.ofEntries(
+            )
         )
     );
 

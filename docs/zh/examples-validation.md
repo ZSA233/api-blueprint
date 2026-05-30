@@ -7,7 +7,7 @@
 - `examples/blueprints/`：Blueprint 真源。
 - `examples/api-blueprint.index.json`：轻量接口目录快照；日常理解项目时优先用 `api-gen inspect` 按需查询，完整 contract、agent 与 shards 快照是可选输出，主要用于离线导航、归档和 drift 验证。
 - `examples/golang/server/`、`examples/golang/client/`、`examples/typescript/`、`examples/flutter/`、`examples/kotlin/`、`examples/java/client/`、`examples/java/server/`、`examples/python/`：Blueprint 生成快照。
-- `examples/golang/conformance/`、`examples/typescript/conformance.ts`、`examples/kotlin/conformance/`、`examples/java/conformance/`、`examples/python/conformance/`、`examples/flutter/test/conformance_test.dart`：手写 preserved conformance harness，用于调用生成物并连接真实服务端；刷新生成快照时必须保留。
+- `examples/golang/conformance/`、`examples/typescript/conformance.ts`、`examples/kotlin/conformance/`、`examples/java/conformance/`、`examples/python/conformance/`、`examples/flutter/test/conformance_test.dart`、`examples/swift/Conformance/`：手写 preserved conformance harness，用于调用生成物并连接真实服务端；刷新生成快照时必须保留。
 - `examples/java/suite/`：手写 Gradle Java 17 application，用于运行 generated Java client/server 的核心 round-trip。
 - `examples/wails-harness/v2/`、`examples/wails-harness/v3/`：手写最小 Wails harness，消费共享生成产物。
 - `examples/wails-hello/`：独立 Wails v3 hello 示例；`blueprints/` 是真源，`golang/` 与 `typescript/` 是生成快照，`app/` 是手写 Wails app shell。
@@ -53,7 +53,7 @@ uv run python scripts/example_validation.py --scope blueprint --mode java-suite
 uv run python -m scripts.example_conformance list
 uv run python -m scripts.example_conformance generate --keep-workspace
 uv run python -m scripts.example_conformance run --servers go,kotlin --clients typescript,flutter --scenario request-options,media-filename-edge,media-error
-uv run python -m scripts.example_conformance check --servers go,java,kotlin,python --clients go,typescript,kotlin,flutter,java,python
+uv run python -m scripts.example_conformance check --servers go,java,kotlin,python --clients go,typescript,kotlin,flutter,swift,java,python
 uv run python -m scripts.example_conformance refresh --servers go --clients go,typescript,kotlin,flutter
 ```
 
@@ -72,13 +72,13 @@ make example-conformance-refresh
 - `check`：临时生成、做 snapshot drift、编译/分析，再跑互通。
 - `refresh`：刷新仓库 examples，然后做编译/分析和互通。
 - `EXAMPLE_CONFORMANCE_SERVERS`：选择服务端矩阵项，默认 `go`；可设为 `all` 跑 Go / Java / Kotlin / Python server。
-- `EXAMPLE_CONFORMANCE_CLIENTS`：选择客户端矩阵项，默认 `go,typescript,kotlin,flutter`；可设为 `all` 跑 Go / TypeScript / Kotlin / Flutter / Java / Python client。
+- `EXAMPLE_CONFORMANCE_CLIENTS`：选择客户端矩阵项，默认 `go,typescript,kotlin,flutter`；可设为 `all` 跑 Go / TypeScript / Kotlin / Flutter / Swift / Java / Python client，其中 Swift 需要可用 Swift toolchain 或设置 `API_BLUEPRINT_SWIFT_BIN`。
 - `EXAMPLE_CONFORMANCE_SCENARIOS`：选择场景矩阵项，空值表示全部场景。
 - `EXAMPLE_CONFORMANCE_KEEP_WORKSPACE=1`：对 `generate`、`run`、`check` 保留临时 workspace，便于排查失败。
 
 conformance 成功时输出按阶段收敛为一行状态，例如生成、snapshot、编译和 server 启动；运行层级是 `server -> client -> setup/scenario`。每个 client 会先输出 `client/setup`，表示正在冷启动或准备测试执行环境，例如 Go build、TypeScript compile、`dart pub get` 或 Gradle `installDist`；之后每个 `client/scenario` 会逐项执行并在该项完成时立即输出结果。生成器、`dart pub get`、Gradle、`go test` 等详细输出默认隐藏。某个阶段失败时，runner 会把该阶段捕获到的 stdout/stderr 回放到 stderr；client 场景失败时还会回放当前 server log，便于直接定位服务端或互通问题。状态文本在 TTY 下自动着色；可用 `FORCE_COLOR=1` 强制开启，或用 `NO_COLOR=1` 关闭。
 
-当前服务端矩阵启用 Go HTTP、Java Spring、Kotlin Ktor 与 Python FastAPI；客户端矩阵启用 Go、TypeScript、Kotlin、Flutter、Java 与 Python。runner 会按 server capability、client capability 和 scenario registry 的交集执行，暂不支持的组合必须写入 manifest 并输出 skipped 或显式 unsupported，不能静默漏测。TypeScript / Kotlin / Flutter 覆盖 SSE 和 WebSocket 真实互通；Java / Python client 暂以默认 transport 的 unsupported contract 覆盖长连接场景。
+当前服务端矩阵启用 Go HTTP、Java Spring、Kotlin Ktor 与 Python FastAPI；客户端矩阵启用 Go、TypeScript、Kotlin、Flutter、Swift、Java 与 Python。runner 会按 server capability、client capability 和 scenario registry 的交集执行，暂不支持的组合必须写入 manifest 并输出 skipped 或显式 unsupported，不能静默漏测。Swift 覆盖 HTTP RPC、urlencoded、multipart media、binary_schema、bytes/file/byte_stream raw response、request options、typed error 和命名/多 root 场景；Swift SSE/WebSocket 仍不加入可运行场景。TypeScript / Kotlin / Flutter 覆盖 SSE 和 WebSocket 真实互通；Java / Python client 暂以默认 transport 的 unsupported contract 覆盖长连接场景。
 
 场景 registry 会把 DSL 覆盖类别映射到自动化用例：query/json/form/binary/raw/XML、static/no-envelope、request options header/timeout、media filename edge、raw media typed error、scalar、enum、map、deprecated、typed error、命名冲突、多 blueprint root、response envelope、binary response、audit-binary、SSE、WebSocket、单模型 channel 与第二个 binary schema。server-only safety probes 覆盖 bad JSON、bad query、malformed WebSocket frame、WebSocket early close 和 bad binary，目标是确认服务端不会 5xx 崩溃、进程退出或连接悬挂。
 

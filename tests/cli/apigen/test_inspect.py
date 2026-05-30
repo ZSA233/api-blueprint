@@ -299,6 +299,7 @@ exclude = ["path:/api/demo/ws"]
 id = "swift.client"
 out_dir = "swift"
 package = "ApiBlueprintExampleClient"
+module = "ABClient"
 base_url = "http://localhost:2333"
 runtime_profile = "ios14-compat"
 include = ["tag:api"]
@@ -351,6 +352,7 @@ exclude = ["path:/api/demo/ping"]
     assert swift_client.exit_code == 0, swift_client.output
     assert "kind: swift-client" in swift_client.output
     assert "package: ApiBlueprintExampleClient" in swift_client.output
+    assert "module: ABClient" in swift_client.output
     assert "base_url: http://localhost:2333" in swift_client.output
     assert "runtime_profile: ios14-compat" in swift_client.output
     assert "include: [tag:api]" in swift_client.output

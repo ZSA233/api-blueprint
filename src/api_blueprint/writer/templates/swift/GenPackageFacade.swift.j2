@@ -1,4 +1,12 @@
 import Foundation
+import {{ plan.runtime.module_name }}
+{% for root in plan.roots %}import {{ root.module_name }}
+{% endfor %}
+
+public typealias APITransport = {{ plan.runtime.module_name }}.APITransport
+public typealias APIRequestOptions = {{ plan.runtime.module_name }}.APIRequestOptions
+public typealias HTTPAPIConfig = {{ plan.runtime.module_name }}.HTTPAPIConfig
+public typealias URLSessionAPITransport = {{ plan.runtime.module_name }}.URLSessionAPITransport
 
 open class Gen{{ writer.package }} {
     public let transport: APITransport
@@ -6,7 +14,7 @@ open class Gen{{ writer.package }} {
     public init(transport: APITransport) {
         self.transport = transport
     }
-{% for bp in bps %}
-    public lazy var {{ bp.root_property }} = {{ bp.root_client }}(transport: transport)
+{% for root in plan.roots %}
+    public lazy var {{ root.aggregate_property_name }} = {{ root.module_name }}.{{ root.bp.root_client }}(transport: transport)
 {% endfor %}
 }

@@ -17,6 +17,7 @@ def test_cli_list_reports_servers_clients_and_scenarios(capsys: pytest.CaptureFi
     assert "- java enabled label=Java Spring rpc=yes" in output
     assert "clients:" in output
     assert "- kotlin rpc=yes sse=yes websocket=yes" in output
+    assert "- swift rpc=yes sse=no websocket=no binary=yes form=yes connection=protocol-bridge" in output
     assert "- python rpc=yes sse=unsupported-contract websocket=unsupported-contract" in output
     assert "scenarios:" in output
     assert "- binary" in output
@@ -138,13 +139,15 @@ def test_tools_reports_missing_language_binaries(monkeypatch: pytest.MonkeyPatch
 
     monkeypatch.setattr(tools.shutil, "which", fake_which)
     monkeypatch.setattr(tools.example_validation, "resolve_gradle_bin", lambda: None)
+    monkeypatch.setattr(tools.example_validation, "resolve_swift_bin", lambda: None)
 
-    missing = tools.missing_tools_for_clients(("go", "typescript", "kotlin", "flutter", "java", "python"))
+    missing = tools.missing_tools_for_clients(("go", "typescript", "kotlin", "flutter", "swift", "java", "python"))
 
     assert "go: required for go conformance" in missing
     assert "tsc: required for typescript conformance" in missing
     assert "gradle: required for kotlin conformance; set API_BLUEPRINT_GRADLE_BIN if needed" in missing
     assert "dart: required for flutter conformance" in missing
+    assert "swift: required for swift conformance; set API_BLUEPRINT_SWIFT_BIN if needed" in missing
     assert "gradle: required for java conformance; set API_BLUEPRINT_GRADLE_BIN if needed" in missing
     assert "python: required for python conformance" not in missing
 

@@ -215,9 +215,10 @@ var routeApiErrorsByCode = map[string]map[ApiErrorCode]ApiErrorEntry{
 		CommonErrUnknown:     ApiErrorsByID["CommonErr.UNKNOWN"],
 		CommonErrTokenExpire: ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
 	},
-	"static.static.get.docjson": {},
-	"static.static.get.dochaha": {},
-	"alt.conflict.get.default":  {},
+	"static.static.get.docjson":  {},
+	"static.static.get.dochaha":  {},
+	"alt.conflict.get.default":   {},
+	"runtime.status.get.current": {},
 }
 
 func LookupApiErrorByID(id string) (ApiErrorEntry, bool) {

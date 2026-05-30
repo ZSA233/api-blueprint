@@ -20,77 +20,77 @@ def scenario_registry() -> dict[str, Scenario]:
         "rpc": Scenario(
             name="rpc",
             categories=("query", "json", "envelope"),
-            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            clients=("go", "typescript", "kotlin", "flutter", "swift", "java", "python"),
             route_ids=("api.demo.post.testpost", "api.demo.put.z1put"),
             description="query/json RPC calls",
         ),
         "raw": Scenario(
             name="raw",
             categories=("raw", "envelope"),
-            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            clients=("go", "typescript", "kotlin", "flutter", "swift", "java", "python"),
             route_ids=("api.demo.post.raw",),
             description="HTTP raw response JSON payloads",
         ),
         "xml": Scenario(
             name="xml",
             categories=("xml", "envelope"),
-            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            clients=("go", "typescript", "kotlin", "flutter", "swift", "java", "python"),
             route_ids=("api.demo.delete.delete",),
             description="XML response decoding",
         ),
         "static": Scenario(
             name="static",
             categories=("static", "no-envelope"),
-            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            clients=("go", "typescript", "kotlin", "flutter", "swift", "java", "python"),
             route_ids=("static.static.get.docjson", "static.static.get.dochaha"),
             description="static root routes with no response envelope",
         ),
         "header": Scenario(
             name="header",
             categories=("header", "query", "envelope"),
-            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            clients=("go", "typescript", "kotlin", "flutter", "swift", "java", "python"),
             route_ids=("api.demo.get.abc",),
             description="required x-token header handling",
         ),
         "scalar": Scenario(
             name="scalar",
             categories=("scalar", "envelope"),
-            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            clients=("go", "typescript", "kotlin", "flutter", "swift", "java", "python"),
             route_ids=("api.hello.get.string", "api.hello.get.uint64"),
             description="scalar response bodies",
         ),
         "enum": Scenario(
             name="enum",
             categories=("enum", "envelope"),
-            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            clients=("go", "typescript", "kotlin", "flutter", "swift", "java", "python"),
             route_ids=("api.hello.get.stringemun", "api.hello.get.listenum"),
             description="enum response bodies",
         ),
         "map": Scenario(
             name="map",
             categories=("map", "enum", "envelope"),
-            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            clients=("go", "typescript", "kotlin", "flutter", "swift", "java", "python"),
             route_ids=("api.demo.post.mapmodel", "api.hello.get.abc", "api.hello.get.mapenum"),
             description="map and enum-key map response bodies",
         ),
         "deprecated": Scenario(
             name="deprecated",
             categories=("deprecated", "json", "envelope"),
-            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            clients=("go", "typescript", "kotlin", "flutter", "swift", "java", "python"),
             route_ids=("api.demo.post.postdeprecated",),
             description="deprecated route remains callable",
         ),
         "form": Scenario(
             name="form",
             categories=("form", "envelope"),
-            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            clients=("go", "typescript", "kotlin", "flutter", "swift", "java", "python"),
             route_ids=("api.demo.post.formsubmit",),
             description="application form body calls",
         ),
         "binary": Scenario(
             name="binary",
             categories=("binary", "content-encoding"),
-            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            clients=("go", "typescript", "kotlin", "flutter", "swift", "java", "python"),
             route_ids=("api.binary.post.packet",),
             description="binary schema body calls and request content-encoding checks",
         ),
@@ -104,21 +104,21 @@ def scenario_registry() -> dict[str, Scenario]:
         "audit-binary": Scenario(
             name="audit-binary",
             categories=("binary",),
-            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            clients=("go", "typescript", "kotlin", "flutter", "swift", "java", "python"),
             route_ids=("api.binary.post.auditpacket",),
             description="second binary schema body calls",
         ),
         "binary-response": Scenario(
             name="binary-response",
             categories=("binary", "raw-response"),
-            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            clients=("go", "typescript", "kotlin", "flutter", "swift", "java", "python"),
             route_ids=("api.binary.get.auditpacketresponse",),
             description="binary schema typed response calls",
         ),
         "media": Scenario(
             name="media",
             categories=("multipart", "raw-response", "stream"),
-            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            clients=("go", "typescript", "kotlin", "flutter", "swift", "java", "python"),
             route_ids=(
                 "api.media.post.preview",
                 "api.media.get.frame",
@@ -131,28 +131,28 @@ def scenario_registry() -> dict[str, Scenario]:
         "request-options": Scenario(
             name="request-options",
             categories=("request-options", "header", "timeout"),
-            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            clients=("go", "typescript", "kotlin", "flutter", "swift", "java", "python"),
             route_ids=("api.demo.get.requestoptions",),
             description="generated client per-call headers and timeout options",
         ),
         "media-filename-edge": Scenario(
             name="media-filename-edge",
             categories=("raw-response", "filename"),
-            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            clients=("go", "typescript", "kotlin", "flutter", "swift", "java", "python"),
             route_ids=("api.media.get.downloadfilenameedge",),
             description="raw file response filename* parsing",
         ),
         "media-error": Scenario(
             name="media-error",
             categories=("raw-response", "typed-error"),
-            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            clients=("go", "typescript", "kotlin", "flutter", "swift", "java", "python"),
             route_ids=("api.media.get.errorframe",),
             description="raw media success with typed JSON envelope errors",
         ),
         "error": Scenario(
             name="error",
             categories=("typed-error", "envelope"),
-            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            clients=("go", "typescript", "kotlin", "flutter", "swift", "java", "python"),
             route_ids=("api.demo.get.errordemo",),
             description="declared, route-local, and unknown typed errors",
         ),
@@ -180,7 +180,7 @@ def scenario_registry() -> dict[str, Scenario]:
         "naming": Scenario(
             name="naming",
             categories=("naming-conflict", "multi-blueprint"),
-            clients=("go", "typescript", "kotlin", "flutter", "java", "python"),
+            clients=("go", "typescript", "kotlin", "flutter", "swift", "java", "python"),
             route_ids=("api.conflict.get.default", "alt.conflict.get.default"),
             description="reserved names, same model names, and multi-blueprint roots",
         ),
@@ -244,7 +244,7 @@ def coverage_by_category() -> dict[str, set[str]]:
 
 
 def unsupported_route_ids() -> tuple[str, ...]:
-    return ()
+    return ("runtime.status.get.current",)
 
 
 def scenario_names_from_cli(raw: str | None) -> tuple[str, ...]:

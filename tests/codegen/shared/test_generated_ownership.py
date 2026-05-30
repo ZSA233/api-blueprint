@@ -41,7 +41,6 @@ PRESERVED_TEMPLATE_PATHS = {
     "kotlin/runtime/ApiClient.kt.j2",
     "kotlin/server/routes/ApiService.kt.j2",
     "kotlin/transports/http/HttpApiClient.kt.j2",
-    "swift/Package.swift.j2",
     "swift/PackageFacade.swift.j2",
     "swift/RootClient.swift.j2",
     "swift/SharedTypes.swift.j2",
@@ -101,7 +100,8 @@ def _is_protoc_output(path: Path) -> bool:
 
 def _is_owned_generated_path(path: Path) -> bool:
     return (
-        path.name.startswith("gen_")
+        path.name in {"Package.swift", "Package.swift.j2"}
+        or path.name.startswith("gen_")
         or path.name.startswith("Gen")
         or any(part.startswith("_gen_") for part in path.parts)
     )

@@ -30,7 +30,7 @@ def build_parser() -> argparse.ArgumentParser:
         command.add_argument(
             "--clients",
             default="go,typescript,kotlin,flutter",
-            help="Comma-separated clients: go,typescript,kotlin,flutter,java,python, or all.",
+            help="Comma-separated clients: go,typescript,kotlin,flutter,swift,java,python, or all.",
         )
         command.add_argument(
             "--scenario",

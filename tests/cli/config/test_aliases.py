@@ -74,7 +74,8 @@ base_url = "http://localhost:2333"
 [[swift.client]]
 id = "swift.client"
 out_dir = "swift"
-module = "ApiBlueprintExampleClient"
+package = "ApiBlueprintExampleClient"
+module = "ABClient"
 base_url = "http://localhost:2333"
 runtime_profile = "ios14-compat"
 
@@ -186,7 +187,7 @@ module = "pb"
     assert config.targets[7].package == "com.example.generated"
     assert config.targets[8].module is None
     assert config.targets[8].package == "api_blueprint_example"
-    assert config.targets[9].module is None
+    assert config.targets[9].module == "ABClient"
     assert config.targets[9].package == "ApiBlueprintExampleClient"
     assert config.targets[9].runtime_profile == "ios14-compat"
     assert config.targets[10].python_package_root == "server_app"
@@ -285,22 +286,24 @@ package = "com.example.other"
     with pytest.raises(ValueError, match=rf"\[\[{alias}\]\].*module and package must match"):
         Config.load(config_path)
 
-def test_swift_alias_rejects_conflicting_module_and_package(tmp_path) -> None:
+def test_swift_alias_allows_distinct_module_and_package(tmp_path) -> None:
     config_path = tmp_path / "api-blueprint.toml"
     config_path.write_text(
         """
 [[swift.client]]
 id = "swift.client"
 out_dir = "swift"
-module = "ApiBlueprintExampleClient"
-package = "OtherClient"
+package = "ApiBlueprintExampleClient"
+module = "ABClient"
 """.strip()
         + "\n",
         encoding="utf-8",
     )
 
-    with pytest.raises(ValueError, match=r"\[\[swift.client\]\].*module and package must match"):
-        Config.load(config_path)
+    config = Config.load(config_path)
+
+    assert config.targets[0].package == "ApiBlueprintExampleClient"
+    assert config.targets[0].module == "ABClient"
 
 def test_alias_target_tables_reject_unknown_alias_table(tmp_path) -> None:
     config_path = tmp_path / "api-blueprint.toml"

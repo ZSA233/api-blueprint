@@ -316,4 +316,10 @@ public final class GenApiTypes {
     ) {
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record RuntimeStatus(
+        @JsonProperty("status") String status
+    ) {
+    }
+
 }

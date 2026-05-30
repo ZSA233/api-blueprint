@@ -271,6 +271,8 @@ def _prepare_client_runner(ws: example_validation.BlueprintExampleWorkspace, cli
         return _prepare_kotlin_runner(ws.kotlin_client_dir, ws.kotlin_conformance_dir)
     if client == "flutter":
         return _prepare_flutter_runner(ws.flutter_dir)
+    if client == "swift":
+        return _prepare_swift_runner(ws.swift_dir)
     if client == "java":
         return _prepare_java_runner(ws.java_client_dir, ws.java_conformance_dir)
     if client == "python":
@@ -382,6 +384,37 @@ class FlutterConformanceRunner:
 def _prepare_flutter_runner(flutter_dir: Path) -> FlutterConformanceRunner:
     subprocess.run(["dart", "pub", "get"], cwd=flutter_dir, check=True)
     return FlutterConformanceRunner(flutter_dir)
+
+
+class SwiftConformanceRunner:
+    def __init__(self, conformance_dir: Path, executable: Path) -> None:
+        self.conformance_dir = conformance_dir
+        self.executable = executable
+
+    def run(self, base_url: str, scenario_arg: str) -> None:
+        subprocess.run([str(self.executable), base_url, scenario_arg], cwd=self.conformance_dir, check=True)
+
+    def close(self) -> None:
+        shutil.rmtree(self.conformance_dir / ".build", ignore_errors=True)
+
+
+def _prepare_swift_runner(swift_dir: Path) -> SwiftConformanceRunner:
+    swift_bin = example_validation.resolve_swift_bin()
+    if swift_bin is None:
+        raise RuntimeError("Swift toolchain is required for Swift conformance")
+    conformance_dir = swift_dir / "Conformance"
+    package_manifest = conformance_dir / "Package.swift"
+    if not package_manifest.is_file():
+        raise RuntimeError(f"Swift conformance package is missing: {package_manifest}")
+    try:
+        subprocess.run([swift_bin, "build", "-c", "release"], cwd=conformance_dir, check=True)
+        executable = conformance_dir / ".build" / "release" / "SwiftConformance"
+        if not executable.is_file():
+            raise RuntimeError(f"Swift conformance executable is missing: {executable}")
+        return SwiftConformanceRunner(conformance_dir, executable)
+    except Exception:
+        shutil.rmtree(conformance_dir / ".build", ignore_errors=True)
+        raise
 
 
 class JavaConformanceRunner:

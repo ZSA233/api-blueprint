@@ -31,4 +31,5 @@ export const WAILS_V3_BINDINGS: Record<string, string> = {
   "hello.HelloService.Uint64": "example.com/project/golang/server/views/transports/wailsv3/api/hello.HelloService.Uint64",
   "static.StaticService.Dochaha": "example.com/project/golang/server/views/transports/wailsv3/static.StaticService.Dochaha",
   "static.StaticService.DocJson": "example.com/project/golang/server/views/transports/wailsv3/static.StaticService.DocJson",
+  "status.StatusService.RuntimeCurrentStatus": "example.com/project/golang/server/views/transports/wailsv3/runtime/status.StatusService.RuntimeCurrentStatus",
 };

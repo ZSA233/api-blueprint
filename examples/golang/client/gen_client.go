@@ -10,6 +10,7 @@ import (
 	demo "example.com/project/golang/client/routes/api/demo"
 	hello "example.com/project/golang/client/routes/api/hello"
 	media "example.com/project/golang/client/routes/api/media"
+	status "example.com/project/golang/client/routes/runtime/status"
 	static "example.com/project/golang/client/routes/static"
 	runtime "example.com/project/golang/client/runtime"
 	httptransport "example.com/project/golang/client/transports/http"
@@ -26,6 +27,7 @@ type Client struct {
 	Hello       *hello.Client
 	Static      *static.Client
 	AltConflict *alt_conflict.Client
+	Status      *status.Client
 }
 
 func NewHTTP(config HTTPConfig) *Client {
@@ -43,5 +45,6 @@ func NewClient(transport runtime.Transport) *Client {
 		Hello:       hello.NewClient(transport),
 		Static:      static.NewClient(transport),
 		AltConflict: alt_conflict.NewClient(transport),
+		Status:      status.NewClient(transport),
 	}
 }

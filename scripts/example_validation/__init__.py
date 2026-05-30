@@ -49,6 +49,7 @@ from .tools import (
     collect_missing_validation_requirements,
     ensure_validation_requirements,
     resolve_gradle_bin,
+    resolve_swift_bin,
     resolve_wails_bin,
 )
 from .workspace import (
