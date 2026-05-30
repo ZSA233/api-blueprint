@@ -13,9 +13,9 @@ def test_manifest_marks_matrix_capabilities() -> None:
     assert clients["flutter"].supports_sse is True
     assert clients["swift"].supports_rpc is True
     assert clients["swift"].supports_binary is True
-    assert clients["swift"].supports_sse is False
-    assert clients["swift"].supports_websocket is False
-    assert clients["swift"].connection_policy == "protocol-bridge"
+    assert clients["swift"].supports_sse is True
+    assert clients["swift"].supports_websocket is True
+    assert clients["swift"].connection_policy == "native"
     assert clients["kotlin"].supports_rpc is True
     assert clients["kotlin"].supports_sse is True
     assert clients["kotlin"].supports_websocket is True
@@ -68,6 +68,9 @@ def test_scenario_registry_covers_required_dsl_categories() -> None:
     assert "swift" in coverage["binary"]
     assert "swift" in coverage["multipart"]
     assert "swift" in coverage["typed-error"]
+    assert "swift" in coverage["sse"]
+    assert "swift" in coverage["websocket"]
+    assert "swift" in coverage["single-channel"]
     assert "python" in coverage["binary"]
     assert "flutter" in coverage["sse"]
     assert "kotlin" in coverage["sse"]

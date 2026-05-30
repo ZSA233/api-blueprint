@@ -97,7 +97,7 @@ For fuller project layout, config fields, DSL, generator output, typed errors, R
 | Go server | Available | Generate Go routes, providers, long-connection message helpers, HTTP/Wails adapters, multipart/raw media, binary schema requests/responses, and runtime |
 | TypeScript client | Preview | Generate transport-neutral clients, long-connection message helpers, HTTP multipart/raw adapters, binary schema response decoding, and Wails facades |
 | Flutter client | Preview | Generate a pure Dart package, DTOs, typed errors, binary codecs, HTTP multipart/raw/binary response clients, and SSE/WebSocket clients |
-| Swift client | Preview | Generate an iOS Swift Package multi-target SDK, short module stem, root routes modules, DTOs, typed errors, shared HTTP transport, multipart/raw/binary response clients, and STREAM/CHANNEL protocol bridges, without UI, auth, cache, or a session engine |
+| Swift client | Preview | Generate an iOS Swift Package multi-target SDK, short module stem, root routes modules, DTOs, typed errors, shared URLSession HTTP/SSE/WebSocket transport, and multipart/raw/binary response clients, without UI, auth, cache, or a session engine |
 | Kotlin client/server | Preview | Generate OkHttp HTTP/SSE/WebSocket clients, Ktor HTTP/SSE/WebSocket server scaffolds, multipart/raw/binary request/response adapters, models, and long-connection message helpers |
 | Java client/server | Preview | Generate Java 17 HttpClient clients, Spring MVC/SSE/WebSocket server scaffolds, record DTOs, HTTP multipart/raw/binary request/response adapters, and long-connection message helpers |
 | Go client / Python client | Preview | Generate non-server clients for scripts, tools, or services; the Python client uses recursive dataclass DTOs, shared runtime codecs, multipart/raw support, long-connection message helpers, and binary writers/response codecs |
@@ -105,7 +105,7 @@ For fuller project layout, config fields, DSL, generator output, typed errors, R
 | Wails v2/v3 | Preview / Experimental | Generate Go + TypeScript overlays; file/stream-style capabilities are modeled with Wails RPC descriptors or STREAM/CHANNEL chunks |
 | gRPC proto / stubs | Available | Emit proto from ContractGraph and generate Go/Python stubs; bytes/file/stream-style capabilities are modeled with protobuf bytes or streaming chunks |
 
-See [Generators and output layout](docs/en/generators.md) for generated ownership, per-request options, stream/file paths, server-adapter safety defaults, and production escape hatches. Default adapters are protocol bridges rather than complete production runtimes; production projects should prefer narrow route/client/router entrypoints and use native clients, custom transports, service implementations, middleware, or app shells for auth, rate limits, cookies, TLS/proxy, retry, and file permission policy.
+See [Generators and output layout](docs/en/generators.md) for generated ownership, per-request options, stream/file paths, server-adapter safety defaults, and production escape hatches. Default adapters are protocol bridges rather than complete production runtimes; production projects should prefer narrow route/client/router entrypoints and use native clients, custom transports, service implementations, middleware, or app shells for auth, rate limits, cookies, TLS/proxy, retry, and file permission policy. `include` / `exclude` is the stable generation-time trim boundary; unused imports or narrow products are language toolchain optimizations, not a cross-language struct-level dead-strip contract.
 
 ## Next Steps
 

@@ -3,16 +3,58 @@ import Foundation
 import FoundationNetworking
 #endif
 
-public func apiHTTPEmptyStreamBridge<Recv, Close>(routeID: String) -> APIStreamBridge<Recv, Close> {
-    APIStreamBridge(
+public final class APIHTTPCancellable {
+    private let lock = NSLock()
+    private var didCancel = false
+    private let cancelHandler: () -> Void
+
+    public init(_ cancel: @escaping () -> Void) {
+        self.cancelHandler = cancel
+    }
+
+    public func cancel() {
+        lock.lock()
+        if didCancel {
+            lock.unlock()
+            return
+        }
+        didCancel = true
+        lock.unlock()
+        cancelHandler()
+    }
+}
+
+public typealias APIHTTPStreamStart = (
+    _ onResponse: @escaping (HTTPURLResponse) throws -> Void,
+    _ onData: @escaping (Data) -> Void,
+    _ onComplete: @escaping (Error?) -> Void
+) -> APIHTTPCancellable
+
+public func apiHTTPEventStreamBridge<Recv, Close>(
+    routeID: String,
+    start: @escaping APIHTTPStreamStart,
+    decodeMessage: @escaping (Any?) throws -> Recv,
+    decodeClose: @escaping (Any?) throws -> Close
+) -> APIStreamBridge<Recv, Close> {
+    let state = APIHTTPEventStreamState(
+        start: start,
+        decodeMessage: decodeMessage,
+        decodeClose: decodeClose
+    )
+    let messages = AsyncThrowingStream<Recv, Error> { continuation in
+        state.setMessageContinuation(continuation)
+    }
+    let closes = AsyncStream<Close> { continuation in
+        state.setCloseContinuation(continuation)
+    }
+    state.start()
+    return APIStreamBridge(
         routeID: routeID,
-        messages: AsyncThrowingStream { continuation in
-            continuation.finish()
-        },
-        closes: AsyncStream { continuation in
-            continuation.finish()
-        },
-        close: { _, _ in }
+        messages: messages,
+        closes: closes,
+        close: { code, reason in
+            state.cancel(code: code, reason: reason)
+        }
     )
 }
 
@@ -23,47 +65,456 @@ public func apiHTTPWebSocketBridge<Recv, Send, Close>(
     encodeMessage: @escaping (Send) throws -> Any?,
     decodeClose: @escaping (Any?) throws -> Close
 ) -> APIChannelBridge<Recv, Send, Close> {
-    socket.resume()
+    let state = APIHTTPWebSocketState(
+        socket: socket,
+        decodeMessage: decodeMessage,
+        encodeMessage: encodeMessage,
+        decodeClose: decodeClose
+    )
     let messages = AsyncThrowingStream<Recv, Error> { continuation in
-        func receiveNext() {
-            socket.receive { result in
-                switch result {
-                case .failure(let error):
-                    continuation.finish(throwing: error)
-                case .success(let message):
-                    do {
-                        switch message {
-                        case .string(let text):
-                            let data = Data(text.utf8)
-                            let json = try JSONSerialization.jsonObject(with: data, options: [])
-                            continuation.yield(try decodeMessage(json))
-                        case .data(let data):
-                            let json = try JSONSerialization.jsonObject(with: data, options: [])
-                            continuation.yield(try decodeMessage(json))
-                        @unknown default:
-                            break
-                        }
-                        receiveNext()
-                    } catch {
-                        continuation.finish(throwing: error)
-                    }
-                }
-            }
-        }
-        receiveNext()
+        state.setMessageContinuation(continuation)
     }
+    let closes = AsyncStream<Close> { continuation in
+        state.setCloseContinuation(continuation)
+    }
+    state.start()
     return APIChannelBridge(
         routeID: routeID,
         messages: messages,
-        closes: AsyncStream { continuation in continuation.finish() },
+        closes: closes,
         send: { message in
-            let payload = try encodeMessage(message)
-            let data = try JSONSerialization.data(withJSONObject: payload ?? NSNull(), options: [])
-            let text = String(data: data, encoding: .utf8) ?? "{}"
-            try await socket.send(.string(text))
+            try await state.send(message)
         },
         close: { code, reason in
-            socket.cancel(with: URLSessionWebSocketTask.CloseCode(rawValue: code ?? 1000) ?? .normalClosure, reason: reason?.data(using: .utf8))
+            state.close(code: code, reason: reason)
         }
     )
+}
+
+private final class APIHTTPEventStreamState<Recv, Close> {
+    private let lock = NSLock()
+    private let startHandler: APIHTTPStreamStart
+    private let decodeMessage: (Any?) throws -> Recv
+    private let decodeClose: (Any?) throws -> Close
+    private var parser = APIHTTPSSEParser()
+    private var pendingData = Data()
+    private var messageContinuation: AsyncThrowingStream<Recv, Error>.Continuation?
+    private var closeContinuation: AsyncStream<Close>.Continuation?
+    private var cancellable: APIHTTPCancellable?
+    private var didClose = false
+
+    init(
+        start: @escaping APIHTTPStreamStart,
+        decodeMessage: @escaping (Any?) throws -> Recv,
+        decodeClose: @escaping (Any?) throws -> Close
+    ) {
+        self.startHandler = start
+        self.decodeMessage = decodeMessage
+        self.decodeClose = decodeClose
+    }
+
+    func setMessageContinuation(_ continuation: AsyncThrowingStream<Recv, Error>.Continuation) {
+        lock.lock()
+        messageContinuation = continuation
+        lock.unlock()
+        continuation.onTermination = { [weak self] _ in
+            self?.cancellable?.cancel()
+        }
+    }
+
+    func setCloseContinuation(_ continuation: AsyncStream<Close>.Continuation) {
+        lock.lock()
+        closeContinuation = continuation
+        lock.unlock()
+    }
+
+    func start() {
+        let handle = startHandler(
+            { response in try self.handleResponse(response) },
+            { data in self.handleData(data) },
+            { error in self.handleComplete(error) }
+        )
+        lock.lock()
+        cancellable = handle
+        let shouldCancel = didClose
+        lock.unlock()
+        if shouldCancel {
+            handle.cancel()
+        }
+    }
+
+    func cancel(code: Int?, reason: String?) {
+        lock.lock()
+        let handle = cancellable
+        lock.unlock()
+        handle?.cancel()
+        emitClose(apiHTTPClosePayload(code: code, reason: reason))
+    }
+
+    private func handleResponse(_ response: HTTPURLResponse) throws {
+        if response.statusCode < 200 || response.statusCode >= 300 {
+            throw APIHTTPError(statusCode: response.statusCode, body: "")
+        }
+    }
+
+    private func handleData(_ data: Data) {
+        lock.lock()
+        if didClose {
+            lock.unlock()
+            return
+        }
+        pendingData.append(data)
+        guard let text = String(data: pendingData, encoding: .utf8) else {
+            lock.unlock()
+            return
+        }
+        pendingData.removeAll(keepingCapacity: true)
+        lock.unlock()
+
+        do {
+            for event in parser.accept(text) {
+                try dispatch(event)
+            }
+        } catch {
+            finish(throwing: error)
+        }
+    }
+
+    private func handleComplete(_ error: Error?) {
+        if let error {
+            finish(throwing: error)
+            return
+        }
+        lock.lock()
+        let remaining = pendingData
+        pendingData.removeAll()
+        lock.unlock()
+        if !remaining.isEmpty {
+            guard let text = String(data: remaining, encoding: .utf8) else {
+                finish(throwing: APIDecodeError.invalidResponse("invalid SSE UTF-8"))
+                return
+            }
+            do {
+                for event in parser.accept(text) {
+                    try dispatch(event)
+                }
+            } catch {
+                finish(throwing: error)
+                return
+            }
+        }
+        emitClose([:])
+    }
+
+    private func dispatch(_ event: APIHTTPSSEEvent) throws {
+        let payload = try apiHTTPJSONPayload(event.data)
+        if event.name == "close" {
+            emitClose(payload ?? [:])
+            return
+        }
+        let message = try decodeMessage(payload)
+        lock.lock()
+        let continuation = messageContinuation
+        let closed = didClose
+        lock.unlock()
+        if !closed {
+            continuation?.yield(message)
+        }
+    }
+
+    private func emitClose(_ payload: Any?) {
+        do {
+            let close = try decodeClose(payload)
+            lock.lock()
+            if didClose {
+                lock.unlock()
+                return
+            }
+            didClose = true
+            let messages = messageContinuation
+            let closes = closeContinuation
+            lock.unlock()
+            closes?.yield(close)
+            closes?.finish()
+            messages?.finish()
+        } catch {
+            finish(throwing: error)
+        }
+    }
+
+    private func finish(throwing error: Error) {
+        lock.lock()
+        if didClose {
+            lock.unlock()
+            return
+        }
+        didClose = true
+        let messages = messageContinuation
+        let closes = closeContinuation
+        lock.unlock()
+        closes?.finish()
+        messages?.finish(throwing: error)
+    }
+}
+
+private final class APIHTTPWebSocketState<Recv, Send, Close> {
+    private let lock = NSLock()
+    private let socket: URLSessionWebSocketTask
+    private let decodeMessage: (Any?) throws -> Recv
+    private let encodeMessage: (Send) throws -> Any?
+    private let decodeClose: (Any?) throws -> Close
+    private var messageContinuation: AsyncThrowingStream<Recv, Error>.Continuation?
+    private var closeContinuation: AsyncStream<Close>.Continuation?
+    private var didClose = false
+
+    init(
+        socket: URLSessionWebSocketTask,
+        decodeMessage: @escaping (Any?) throws -> Recv,
+        encodeMessage: @escaping (Send) throws -> Any?,
+        decodeClose: @escaping (Any?) throws -> Close
+    ) {
+        self.socket = socket
+        self.decodeMessage = decodeMessage
+        self.encodeMessage = encodeMessage
+        self.decodeClose = decodeClose
+    }
+
+    func setMessageContinuation(_ continuation: AsyncThrowingStream<Recv, Error>.Continuation) {
+        lock.lock()
+        messageContinuation = continuation
+        lock.unlock()
+        continuation.onTermination = { [weak self] _ in
+            self?.socket.cancel(with: .normalClosure, reason: nil)
+        }
+    }
+
+    func setCloseContinuation(_ continuation: AsyncStream<Close>.Continuation) {
+        lock.lock()
+        closeContinuation = continuation
+        lock.unlock()
+    }
+
+    func start() {
+        socket.resume()
+        receiveNext()
+    }
+
+    func send(_ message: Send) async throws {
+        let payload = try encodeMessage(message)
+        let data = try JSONSerialization.data(withJSONObject: payload ?? NSNull(), options: [.fragmentsAllowed])
+        let text = String(data: data, encoding: .utf8) ?? "null"
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            socket.send(.string(text)) { error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                continuation.resume()
+            }
+        }
+    }
+
+    func close(code: Int?, reason: String?) {
+        socket.cancel(
+            with: URLSessionWebSocketTask.CloseCode(rawValue: code ?? 1000) ?? .normalClosure,
+            reason: reason?.data(using: .utf8)
+        )
+        emitClose(apiHTTPClosePayload(code: code, reason: reason))
+    }
+
+    private func receiveNext() {
+        socket.receive { result in
+            switch result {
+            case .failure(let error):
+                self.handleReceiveFailure(error)
+            case .success(let message):
+                do {
+                    let value = try apiHTTPWebSocketJSON(message)
+                    let payload = apiHTTPWebSocketPayload(value)
+                    switch payload {
+                    case .message(let data):
+                        let decoded = try self.decodeMessage(data)
+                        self.yieldMessage(decoded)
+                        self.receiveNext()
+                    case .close(let data):
+                        self.emitClose(data ?? [:])
+                    }
+                } catch {
+                    self.finish(throwing: error)
+                }
+            }
+        }
+    }
+
+    private func yieldMessage(_ message: Recv) {
+        lock.lock()
+        let continuation = messageContinuation
+        let closed = didClose
+        lock.unlock()
+        if !closed {
+            continuation?.yield(message)
+        }
+    }
+
+    private func handleReceiveFailure(_ error: Error) {
+        lock.lock()
+        let closed = didClose
+        lock.unlock()
+        if closed {
+            return
+        }
+        let payload = apiHTTPWebSocketClosePayload(socket: socket)
+        if !payload.isEmpty {
+            emitClose(payload)
+            return
+        }
+        finish(throwing: error)
+    }
+
+    private func emitClose(_ payload: Any?) {
+        do {
+            let close = try decodeClose(payload)
+            lock.lock()
+            if didClose {
+                lock.unlock()
+                return
+            }
+            didClose = true
+            let messages = messageContinuation
+            let closes = closeContinuation
+            lock.unlock()
+            closes?.yield(close)
+            closes?.finish()
+            messages?.finish()
+        } catch {
+            finish(throwing: error)
+        }
+    }
+
+    private func finish(throwing error: Error) {
+        lock.lock()
+        if didClose {
+            lock.unlock()
+            return
+        }
+        didClose = true
+        let messages = messageContinuation
+        let closes = closeContinuation
+        lock.unlock()
+        closes?.finish()
+        messages?.finish(throwing: error)
+    }
+}
+
+private struct APIHTTPSSEEvent {
+    let name: String
+    let data: String
+}
+
+private final class APIHTTPSSEParser {
+    private var buffer = ""
+
+    func accept(_ text: String) -> [APIHTTPSSEEvent] {
+        buffer += text
+        var events: [APIHTTPSSEEvent] = []
+        while let boundary = nextBoundary() {
+            let block = String(buffer[..<boundary.lowerBound])
+            buffer.removeSubrange(buffer.startIndex..<boundary.upperBound)
+            if !block.isEmpty {
+                events.append(parse(block))
+            }
+        }
+        return events
+    }
+
+    private func nextBoundary() -> Range<String.Index>? {
+        let lf = buffer.range(of: "\n\n")
+        let crlf = buffer.range(of: "\r\n\r\n")
+        switch (lf, crlf) {
+        case (nil, nil):
+            return nil
+        case (.some(let range), nil), (nil, .some(let range)):
+            return range
+        case (.some(let left), .some(let right)):
+            return left.lowerBound < right.lowerBound ? left : right
+        }
+    }
+
+    private func parse(_ block: String) -> APIHTTPSSEEvent {
+        var name = "message"
+        var dataLines: [String] = []
+        for rawLine in block.replacingOccurrences(of: "\r\n", with: "\n").split(separator: "\n", omittingEmptySubsequences: false) {
+            let line = String(rawLine)
+            if line.hasPrefix("event:") {
+                name = line.dropFirst("event:".count).trimmingCharacters(in: .whitespaces)
+            } else if line.hasPrefix("data:") {
+                dataLines.append(apiHTTPTrimLeft(String(line.dropFirst("data:".count))))
+            }
+        }
+        return APIHTTPSSEEvent(name: name, data: dataLines.joined(separator: "\n"))
+    }
+}
+
+private enum APIHTTPWebSocketPayload {
+    case message(Any?)
+    case close(Any?)
+}
+
+private func apiHTTPJSONPayload(_ text: String) throws -> Any? {
+    if text.isEmpty {
+        return nil
+    }
+    return try JSONSerialization.jsonObject(with: Data(text.utf8), options: [.fragmentsAllowed])
+}
+
+private func apiHTTPWebSocketJSON(_ message: URLSessionWebSocketTask.Message) throws -> Any? {
+    switch message {
+    case .string(let text):
+        return try apiHTTPJSONPayload(text)
+    case .data(let data):
+        return try JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
+    @unknown default:
+        throw APIDecodeError.invalidResponse("unsupported WebSocket message")
+    }
+}
+
+private func apiHTTPWebSocketPayload(_ value: Any?) -> APIHTTPWebSocketPayload {
+    guard let object = value as? [String: Any], let type = object["type"] as? String else {
+        return .message(value)
+    }
+    if type == "close" {
+        return .close(object["data"])
+    }
+    if type == "message" {
+        return .message(object["data"])
+    }
+    return .message(value)
+}
+
+private func apiHTTPWebSocketClosePayload(socket: URLSessionWebSocketTask) -> [String: Any] {
+    var payload: [String: Any] = [:]
+    let code = socket.closeCode.rawValue
+    if code != 0 {
+        payload["code"] = code
+    }
+    if let data = socket.closeReason, let reason = String(data: data, encoding: .utf8), !reason.isEmpty {
+        payload["reason"] = reason
+    }
+    return payload
+}
+
+private func apiHTTPClosePayload(code: Int?, reason: String?) -> [String: Any] {
+    var payload: [String: Any] = ["code": code ?? 1000]
+    if let reason {
+        payload["reason"] = reason
+    }
+    return payload
+}
+
+private func apiHTTPTrimLeft(_ text: String) -> String {
+    var result = text
+    while let first = result.first, first.isWhitespace {
+        result.removeFirst()
+    }
+    return result
 }

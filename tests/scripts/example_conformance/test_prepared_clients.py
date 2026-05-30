@@ -104,8 +104,8 @@ def test_prepare_swift_runner_builds_once_and_reuses_executable(
 
     prepared = runner._prepare_swift_runner(swift_dir)
     try:
-        prepared.run("http://127.0.0.1:12345", "rpc")
-        prepared.run("http://127.0.0.1:12345", "media")
+        prepared.run("http://127.0.0.1:12345", "sse")
+        prepared.run("http://127.0.0.1:12345", "websocket")
     finally:
         prepared.close()
 
@@ -113,8 +113,8 @@ def test_prepare_swift_runner_builds_once_and_reuses_executable(
     scenario_calls = [call for call in calls if call[0][0] != "/usr/bin/swift"]
     assert len(build_calls) == 1
     assert [call[0][-2:] for call in scenario_calls] == [
-        ("http://127.0.0.1:12345", "rpc"),
-        ("http://127.0.0.1:12345", "media"),
+        ("http://127.0.0.1:12345", "sse"),
+        ("http://127.0.0.1:12345", "websocket"),
     ]
 
 def test_prepare_java_runner_builds_once_and_reuses_executable(

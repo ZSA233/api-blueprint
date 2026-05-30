@@ -143,9 +143,19 @@ def test_swift_writer_generates_spm_runtime_routes_transport_and_preserved_files
     assert "public final class URLSessionAPITransport: APITransport" in http_transport
     assert "application/x-www-form-urlencoded" in http_transport
     assert "multipart/form-data; boundary=" in http_transport
-    assert "apiHTTPEmptyStreamBridge(routeID: options.routeID)" in http_transport
+    assert "apiHTTPEventStreamBridge(" in http_transport
     assert "apiHTTPWebSocketBridge(" in http_transport
+    assert "performModernEventStreamTask" in http_transport
+    assert 'request.setValue("text/event-stream", forHTTPHeaderField: "Accept")' in http_transport
+    assert "public func apiHTTPEventStreamBridge" in http_connection
     assert "public func apiHTTPWebSocketBridge" in http_connection
+    assert "private final class APIHTTPSSEParser" in http_connection
+    assert 'buffer.range(of: "\\n\\n")' in http_connection
+    assert 'buffer.range(of: "\\r\\n\\r\\n")' in http_connection
+    assert 'dataLines.joined(separator: "\\n")' in http_connection
+    assert 'if type == "message"' in http_connection
+    assert 'if type == "close"' in http_connection
+    assert "return .message(value)" in http_connection
 
 
 def test_swift_writer_generates_one_target_per_root_and_shared_runtime_once(tmp_path: Path) -> None:
@@ -233,6 +243,14 @@ def test_swift_transport_runtime_profiles_are_isolated_to_transport_templates(tm
         / "HTTP"
         / "GenURLSessionAPITransport.swift"
     ).read_text(encoding="utf-8")
+    modern_connection = (
+        modern_dir
+        / "Sources"
+        / "ABClientRuntime"
+        / "Transports"
+        / "HTTP"
+        / "GenHTTPConnection.swift"
+    ).read_text(encoding="utf-8")
     compat_transport = (
         compat_dir
         / "Sources"
@@ -247,6 +265,14 @@ def test_swift_transport_runtime_profiles_are_isolated_to_transport_templates(tm
     assert "try await config.session.data(for: urlRequest)" in modern_transport
     assert "try await config.session.bytes(for: urlRequest)" in modern_transport
     assert "performCompatDataTask" not in modern_transport
+    assert "apiHTTPEventStreamBridge" in modern_transport
+    assert "apiHTTPWebSocketBridge" in modern_transport
+    assert "APIHTTPSSEParser" in modern_connection
+    assert 'type == "message"' in modern_connection
+    assert 'type == "close"' in modern_connection
     assert "performCompatDataTask" in compat_transport
+    assert "performCompatEventStreamTask" in compat_transport
+    assert "URLSessionDataDelegate" in compat_transport
+    assert "didReceive data: Data" in compat_transport
     assert ".data(for:" not in compat_transport
     assert ".bytes(for:" not in compat_transport

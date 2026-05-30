@@ -97,7 +97,7 @@ api-gen generate -c api-blueprint.toml
 | Go server | 可用 | 生成 Go 路由、provider、长连接 message helper、HTTP/Wails adapter、multipart/raw media、binary schema 请求/响应和 runtime |
 | TypeScript client | 预览 | 生成 transport-neutral client、长连接 message helper、HTTP multipart/raw adapter、binary schema 响应解码和 Wails facade |
 | Flutter client | 预览 | 生成纯 Dart package、DTO、typed error、binary codec、HTTP multipart/raw/binary response client 和 SSE/WebSocket client |
-| Swift client | 预览 | 生成 iOS Swift Package 多 target SDK、短 module stem、root routes module、DTO、typed error、共享 HTTP transport、multipart/raw/binary response client 和 STREAM/CHANNEL 协议桥接，不生成 UI、鉴权、缓存或 session engine |
+| Swift client | 预览 | 生成 iOS Swift Package 多 target SDK、短 module stem、root routes module、DTO、typed error、共享 URLSession HTTP/SSE/WebSocket transport 和 multipart/raw/binary response client，不生成 UI、鉴权、缓存或 session engine |
 | Kotlin client/server | 预览 | 生成 OkHttp HTTP/SSE/WebSocket client、Ktor HTTP/SSE/WebSocket server scaffold、multipart/raw/binary request/response adapter、模型和长连接 message helper |
 | Java client/server | 预览 | 生成 Java 17 HttpClient client、Spring MVC/SSE/WebSocket server scaffold、record DTO、HTTP multipart/raw/binary request/response adapter 和长连接 message helper |
 | Go client / Python client | 预览 | 生成服务端之外的脚本或工具侧客户端；Python client 使用递归 dataclass DTO、共享 runtime codec，并提供 multipart/raw、长连接 message helper 与 binary writer/response codec |
@@ -105,7 +105,7 @@ api-gen generate -c api-blueprint.toml
 | Wails v2/v3 | 预览 / 实验性 | 生成 Go + TypeScript overlay；文件/stream 等能力使用 Wails RPC descriptor 或 STREAM/CHANNEL chunk 建模 |
 | gRPC proto / stubs | 可用 | 从 ContractGraph 输出 proto，并生成 Go/Python stub；bytes/file/stream 使用 protobuf bytes 或 streaming chunk 建模 |
 
-生成物 ownership、单次请求选项、stream/file 路径、server adapter 安全默认和生产逃生通道详见 [生成器与目录布局](docs/zh/generators.md)。默认 adapter 是协议桥接层，不是完整生产运行时；生产项目应优先使用具体 route/client/router 的窄入口，并通过原生 client、custom transport、service implementation、middleware 或 app shell 承载鉴权、限流、cookie、TLS/proxy、重试和文件权限策略。
+生成物 ownership、单次请求选项、stream/file 路径、server adapter 安全默认和生产逃生通道详见 [生成器与目录布局](docs/zh/generators.md)。默认 adapter 是协议桥接层，不是完整生产运行时；生产项目应优先使用具体 route/client/router 的窄入口，并通过原生 client、custom transport、service implementation、middleware 或 app shell 承载鉴权、限流、cookie、TLS/proxy、重试和文件权限策略。`include` / `exclude` 是稳定的生成期裁剪边界；不 import、不引用或只链接窄 product 属于语言工具链优化，不是跨语言结构体级 dead-strip 契约。
 
 ## 下一步
 

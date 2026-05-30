@@ -141,6 +141,8 @@ BLUEPRINT_SWIFT_PRESERVED = (
     "Sources/ABClientRuntimeRoutes/Runtime/Routes/Runtime/Status/StatusTypes.swift",
     "Conformance/Package.swift",
     "Conformance/Sources/SwiftConformance/main.swift",
+    "Narrow/Package.swift",
+    "Narrow/Sources/SwiftNarrowEntrypoint/main.swift",
 )
 WAILS_HELLO_GOLANG_PRESERVED = (
     "go.mod",

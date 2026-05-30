@@ -45,7 +45,7 @@ uv run python -m scripts.example_conformance run \
 
 ## 后续处置建议
 
-- Swift SSE/WebSocket 暂不加入可运行 conformance 场景，等 generated transport 真正支持可验证生命周期后再扩展。
+- Swift SSE/WebSocket 已在后续补齐可运行 URLSession bridge，并加入可运行 conformance 场景；后续若扩展重连、鉴权刷新或复杂 backpressure，应继续保持在宿主应用或 custom transport 层，不进入生成器默认 session engine。
 - 若后续改造 Swift multipart DTO 生成方式，应保留 `APIFilePart` 不被 JSON 中间表示吞掉这一契约。
 
 ## 修复记录 / Resolution
@@ -58,6 +58,7 @@ uv run python -m scripts.example_conformance run \
   - raw response 分支识别 JSON typed-error envelope 并保留 raw body。
   - `APIErrorPayload` 增加 `toastText`。
   - 新增 `examples/swift/Conformance` 并接入 `scripts/example_conformance` Swift client 矩阵。
+  - 后续补齐 Swift SSE/WebSocket transport bridge，将 `sse`、`websocket`、`single-channel` 加入 Swift conformance，并新增 Swift narrow product smoke。
 - 验证命令：
   - `swift build`（`examples/swift`）
   - `swift build -c release`（`examples/swift/Conformance`）
@@ -68,3 +69,6 @@ uv run python -m scripts.example_conformance run \
   - `uv run api-gen check -c examples/api-blueprint.toml`
   - `uv run python scripts/example_validation.py --mode compile --scope blueprint`
   - `uv run python -m scripts.example_conformance run --servers python --clients swift --scenario rpc,raw,xml,static,header,scalar,enum,map,deprecated,form,binary,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,error,naming`
+  - `uv run python -m scripts.example_conformance run --servers go,java,kotlin,python --clients swift --scenario sse,websocket,single-channel`
+  - `uv run python -m scripts.example_conformance run --servers go,java,kotlin,python --clients swift --scenario rpc,raw,xml,static,header,scalar,enum,map,deprecated,form,binary,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,error,naming,sse,websocket,single-channel`
+  - 临时生成 `runtime_profile = "ios14-compat"` Swift package 并执行 `swift build`

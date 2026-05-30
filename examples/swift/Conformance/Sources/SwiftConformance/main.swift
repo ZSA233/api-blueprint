@@ -33,7 +33,7 @@ struct SwiftConformance {
         let selected = scenarioSet(
             CommandLine.arguments.count > 2
                 ? CommandLine.arguments[2]
-                : "rpc,binary,form,error,naming,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,request-options,media-filename-edge,media-error"
+                : "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel"
         )
         let client = HTTPAPIClient.create(baseURL: baseURL)
 
@@ -90,6 +90,15 @@ struct SwiftConformance {
         }
         if selected.contains("error") {
             try await checkTypedErrors(client)
+        }
+        if selected.contains("sse") {
+            try await checkSSE(client)
+        }
+        if selected.contains("websocket") {
+            try await checkWebSocket(client)
+        }
+        if selected.contains("single-channel") {
+            try await checkSingleChannel(client)
         }
         if selected.contains("naming") {
             try await checkNaming(client)
@@ -297,6 +306,67 @@ private func checkTypedErrors(_ client: ABClient) async throws {
     try expectEqual(unknown.payload.message, "example undefined business error", "unknown.message")
 }
 
+private func checkSSE(_ client: ABClient) async throws {
+    let bridge = client.api.demo.subscribeSweepEvents(openPayload: SweepOpen(runId: "swift-sse"))
+    let received = try await withTimeout(label: "sse.message") {
+        try await nextMessage(bridge.messages, label: "sse.message")
+    }
+    switch received {
+    case .state(let state):
+        try expectContains(state.status, "swift-sse", "sse.message.status")
+    default:
+        throw ConformanceFailure(message: "sse.message=\(received) expected state")
+    }
+
+    let closed = try await withTimeout(label: "sse.close") {
+        try await nextClose(bridge.closes, label: "sse.close")
+    }
+    try expectEqual(closed.code, 1000, "sse.close.code")
+    try expectEqual(closed.reason, "example stream complete", "sse.close.reason")
+}
+
+private func checkWebSocket(_ client: ABClient) async throws {
+    let channel = client.api.demo.openAssistantSession(openPayload: AssistantOpen(sessionId: "swift-ws"))
+    try await channel.send(.input(AssistantInput(text: "hello")))
+
+    let received = try await withTimeout(label: "websocket.message") {
+        try await nextMessage(channel.messages, label: "websocket.message")
+    }
+    let text: String
+    switch received {
+    case .delta(let delta):
+        text = delta.text
+    case .done(let done):
+        text = done.messageId
+    case .log(let log):
+        text = "\(log.level):\(log.message)"
+    }
+    try expectContains(text, "swift-ws", "websocket.message.session")
+    try expectContains(text, "hello", "websocket.message.text")
+
+    try await channel.send(.cancel(AssistantCancel(reason: "swift complete")))
+    let closed = try await withTimeout(label: "websocket.close") {
+        try await nextClose(channel.closes, label: "websocket.close")
+    }
+    try expectEqual(closed.code, 1000, "websocket.close.code")
+    try expectEqual(closed.reason, "swift complete", "websocket.close.reason")
+}
+
+private func checkSingleChannel(_ client: ABClient) async throws {
+    let channel = client.api.api.openHelloChannel()
+    try await channel.send(HelloChannelMessage(type_: .ping, data: .object(["source": .string("swift")])))
+
+    let received = try await withTimeout(label: "single-channel.message") {
+        try await nextMessage(channel.messages, label: "single-channel.message")
+    }
+    try expectEqual(received.type_, .pong, "single-channel.type")
+
+    let closed = try await withTimeout(label: "single-channel.close") {
+        try await nextClose(channel.closes, label: "single-channel.close")
+    }
+    try expectEqual(closed.code, 1000, "single-channel.close.code")
+}
+
 private func checkNaming(_ client: ABClient) async throws {
     let apiResponse = try await client.api.conflict.default_(
         query: ABClientAPIRoutes.ConflictDefaultQuery(class_: "swift-api")
@@ -364,6 +434,39 @@ private func rawHTTP(
         throw ConformanceFailure(message: "\(method) \(path) status=\(http.statusCode) body=\(text)")
     }
     return (data, http)
+}
+
+private func nextMessage<T>(_ stream: AsyncThrowingStream<T, Error>, label: String) async throws -> T {
+    var iterator = stream.makeAsyncIterator()
+    guard let value = try await iterator.next() else {
+        throw ConformanceFailure(message: "\(label) ended before first message")
+    }
+    return value
+}
+
+private func nextClose<T>(_ stream: AsyncStream<T>, label: String) async throws -> T {
+    var iterator = stream.makeAsyncIterator()
+    if let value = await iterator.next() {
+        return value
+    }
+    throw ConformanceFailure(message: "\(label) ended before close payload")
+}
+
+private func withTimeout<T>(label: String, seconds: UInt64 = 5, _ operation: @escaping () async throws -> T) async throws -> T {
+    try await withThrowingTaskGroup(of: T.self) { group in
+        group.addTask {
+            try await operation()
+        }
+        group.addTask {
+            try await Task.sleep(nanoseconds: seconds * 1_000_000_000)
+            throw ConformanceFailure(message: "\(label) timed out")
+        }
+        guard let result = try await group.next() else {
+            throw ConformanceFailure(message: "\(label) produced no result")
+        }
+        group.cancelAll()
+        return result
+    }
 }
 
 private func expectEqual<T: Equatable>(_ actual: T, _ expected: T, _ label: String) throws {

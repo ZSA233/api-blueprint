@@ -17,7 +17,7 @@ def test_cli_list_reports_servers_clients_and_scenarios(capsys: pytest.CaptureFi
     assert "- java enabled label=Java Spring rpc=yes" in output
     assert "clients:" in output
     assert "- kotlin rpc=yes sse=yes websocket=yes" in output
-    assert "- swift rpc=yes sse=no websocket=no binary=yes form=yes connection=protocol-bridge" in output
+    assert "- swift rpc=yes sse=yes websocket=yes binary=yes form=yes connection=native" in output
     assert "- python rpc=yes sse=unsupported-contract websocket=unsupported-contract" in output
     assert "scenarios:" in output
     assert "- binary" in output

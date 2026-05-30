@@ -17,14 +17,12 @@ def test_preserved_harnesses_dispatch_expanded_scenarios() -> None:
         "audit-binary",
         "single-channel",
     )
-    expected_without_websocket = tuple(name for name in expected if name != "single-channel")
-
     harnesses = [
         (root / "examples/golang/conformance/main.go", expected),
         (root / "examples/typescript/conformance.ts", expected),
         (root / "examples/kotlin/conformance/Conformance.kt", expected),
         (root / "examples/flutter/test/conformance_test.dart", expected),
-        (root / "examples/swift/Conformance/Sources/SwiftConformance/main.swift", expected_without_websocket),
+        (root / "examples/swift/Conformance/Sources/SwiftConformance/main.swift", expected),
         (root / "examples/java/conformance/Conformance.java", expected),
         (root / "examples/python/conformance/client.py", expected),
     ]
@@ -70,10 +68,16 @@ def test_prepare_blueprint_outputs_preserves_swift_conformance_sources(tmp_path:
     target_root = tmp_path / "target"
     package_file = source_root / "swift" / "Conformance" / "Package.swift"
     source_file = source_root / "swift" / "Conformance" / "Sources" / "SwiftConformance" / "main.swift"
+    narrow_package_file = source_root / "swift" / "Narrow" / "Package.swift"
+    narrow_source_file = source_root / "swift" / "Narrow" / "Sources" / "SwiftNarrowEntrypoint" / "main.swift"
     source_file.parent.mkdir(parents=True)
     package_file.parent.mkdir(parents=True, exist_ok=True)
+    narrow_source_file.parent.mkdir(parents=True)
+    narrow_package_file.parent.mkdir(parents=True, exist_ok=True)
     package_file.write_text("// swift-tools-version: 5.9\n", encoding="utf-8")
     source_file.write_text("print(\"swift conformance\")\n", encoding="utf-8")
+    narrow_package_file.write_text("// swift-tools-version: 5.9\n", encoding="utf-8")
+    narrow_source_file.write_text("print(\"swift narrow\")\n", encoding="utf-8")
 
     example_validation._prepare_blueprint_outputs(source_root=source_root, target_root=target_root)
 
@@ -83,6 +87,12 @@ def test_prepare_blueprint_outputs_preserves_swift_conformance_sources(tmp_path:
     assert (
         target_root / "swift" / "Conformance" / "Sources" / "SwiftConformance" / "main.swift"
     ).read_text(encoding="utf-8") == "print(\"swift conformance\")\n"
+    assert (target_root / "swift" / "Narrow" / "Package.swift").read_text(encoding="utf-8") == (
+        "// swift-tools-version: 5.9\n"
+    )
+    assert (
+        target_root / "swift" / "Narrow" / "Sources" / "SwiftNarrowEntrypoint" / "main.swift"
+    ).read_text(encoding="utf-8") == "print(\"swift narrow\")\n"
 
 def test_kotlin_conformance_harness_shuts_down_okhttp_clients() -> None:
     text = (REPO_ROOT / "examples/kotlin/conformance/Conformance.kt").read_text(

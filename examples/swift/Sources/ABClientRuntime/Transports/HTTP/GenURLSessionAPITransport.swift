@@ -81,13 +81,24 @@ public final class URLSessionAPITransport: APITransport {
     }
 
     public func openStream<Recv, Close>(_ options: APIStreamConnectOptions<Recv, Close>) -> APIStreamBridge<Recv, Close> {
-        // SSE is a protocol bridge only; apps can wrap APITransport for custom lifecycle/backpressure policy.
-        return apiHTTPEmptyStreamBridge(routeID: options.routeID)
+        var request = buildConnectionRequest(path: options.path, query: options.query, headers: options.headers)
+        request.httpMethod = "GET"
+        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        return apiHTTPEventStreamBridge(
+            routeID: options.routeID,
+            start: { onResponse, onData, onComplete in
+
+                self.performModernEventStreamTask(request, onResponse: onResponse, onData: onData, onComplete: onComplete)
+
+            },
+            decodeMessage: options.decodeMessage,
+            decodeClose: options.decodeClose
+        )
     }
 
     public func openChannel<Recv, Send, Close>(_ options: APIChannelConnectOptions<Recv, Send, Close>) -> APIChannelBridge<Recv, Send, Close> {
-        let url = buildWebSocketURL(path: options.path, query: options.query)
-        let socket = config.session.webSocketTask(with: url, protocols: options.protocols)
+        let request = buildWebSocketRequest(path: options.path, query: options.query, headers: options.headers, protocols: options.protocols)
+        let socket = config.session.webSocketTask(with: request)
         return apiHTTPWebSocketBridge(
             routeID: options.routeID,
             socket: socket,
@@ -140,6 +151,43 @@ public final class URLSessionAPITransport: APITransport {
         return components.url!
     }
 
+    private func buildConnectionRequest(path: String, query: [URLQueryItem], headers: [String: String]) -> URLRequest {
+        var request = URLRequest(url: buildURL(path: path, query: query))
+        for (name, value) in config.defaultHeaders {
+            request.setValue(value, forHTTPHeaderField: name)
+        }
+        for (name, value) in headers {
+            request.setValue(value, forHTTPHeaderField: name)
+        }
+        if let timeout = config.timeout {
+            request.timeoutInterval = timeout
+        }
+        return request
+    }
+
+    private func buildWebSocketRequest(path: String, query: [URLQueryItem], headers: [String: String], protocols: [String]) -> URLRequest {
+        var components = URLComponents(url: buildURL(path: path, query: query), resolvingAgainstBaseURL: false)!
+        if components.scheme == "http" {
+            components.scheme = "ws"
+        } else if components.scheme == "https" {
+            components.scheme = "wss"
+        }
+        var request = URLRequest(url: components.url!)
+        for (name, value) in config.defaultHeaders {
+            request.setValue(value, forHTTPHeaderField: name)
+        }
+        for (name, value) in headers {
+            request.setValue(value, forHTTPHeaderField: name)
+        }
+        if !protocols.isEmpty {
+            request.setValue(protocols.joined(separator: ", "), forHTTPHeaderField: "Sec-WebSocket-Protocol")
+        }
+        if let timeout = config.timeout {
+            request.timeoutInterval = timeout
+        }
+        return request
+    }
+
     private func buildWebSocketURL(path: String, query: [URLQueryItem]) -> URL {
         var components = URLComponents(url: buildURL(path: path, query: query), resolvingAgainstBaseURL: false)!
         if components.scheme == "http" {
@@ -148,6 +196,32 @@ public final class URLSessionAPITransport: APITransport {
             components.scheme = "wss"
         }
         return components.url!
+    }
+
+    private func performModernEventStreamTask(
+        _ request: URLRequest,
+        onResponse: @escaping (HTTPURLResponse) throws -> Void,
+        onData: @escaping (Data) -> Void,
+        onComplete: @escaping (Error?) -> Void
+    ) -> APIHTTPCancellable {
+        let task = Task {
+            do {
+                let (bytes, response) = try await config.session.bytes(for: request)
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw APIDecodeError.invalidResponse("expected HTTP response")
+                }
+                try onResponse(httpResponse)
+                for try await byte in bytes {
+                    onData(Data([byte]))
+                }
+                onComplete(nil)
+            } catch {
+                onComplete(error)
+            }
+        }
+        return APIHTTPCancellable {
+            task.cancel()
+        }
     }
 
     private func validateStatus(_ response: HTTPURLResponse, body: Data, routeID: String, envelope: APIResponseEnvelope) throws {
