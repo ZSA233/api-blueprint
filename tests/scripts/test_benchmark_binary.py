@@ -18,7 +18,7 @@ def test_benchmark_binary_script_exposes_all_targets() -> None:
     assert result.returncode == 0, result.stdout + result.stderr
     help_text = result.stdout + result.stderr
     assert "--target" in help_text
-    assert "go,typescript,python,kotlin,java,all" in help_text
+    assert "go,typescript,python,kotlin,java,swift,all" in help_text
     assert "--count" in help_text
 
 

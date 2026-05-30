@@ -31,8 +31,9 @@ def test_example_blueprints_build_into_shared_fastapi_app(example_entrypoints):
     assert "/api/media/download-filename-edge" in paths
     assert "/api/media/error-frame" in paths
     assert "/api/hello/hello-way" in paths
+    assert "/runtime/status/current" in paths
     assert "/static/doc.json" in paths
-    assert len(paths) == 38
+    assert len(paths) == 40
 
     openapi = app.openapi()
     assert "text/event-stream" in openapi["paths"]["/api/demo/sweep-events"]["get"]["responses"]["200"]["content"]
