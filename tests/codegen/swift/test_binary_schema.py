@@ -85,13 +85,17 @@ content-type: application/octet-stream
     assert "public var payload: Data" in binary_text
     assert "public var items: [DemoPacketItem]" in binary_text
     assert "try writer.writeBytesExact(\"magic\", Data([65, 66, 80, 49]), 4)" in binary_text
-    assert "try apiBinaryRequireDecode(\"flags\", (Int(flags) & 4294967294) == 0" in binary_text
+    assert "try apiBinaryRequireDecode(\"flags\", (flags & 4294967294) == 0" in binary_text
     assert "try apiBinaryRequireSize(\"items\", apiBinarySize(value.items), itemsCount)" in binary_text
-    assert "let itemsCount = state.itemCount" in binary_text
+    assert "let itemsCount = try apiBinaryCheckedInt(\"items\", state.itemCount)" in binary_text
     assert "try DemoPacketWire.writeDemoPacketItem(item, writer: writer, state: state, path: \"\")" in binary_text
-    assert "let payloadCount = state.payloadLen" in binary_text
+    assert "let payloadCount = try apiBinaryCheckedInt(\"payload\", state.payloadLen)" in binary_text
     assert "let payload = try reader.readBytes(\"payload\", payloadCount)" in binary_text
-    assert "try apiBinaryRequire(\"checksum\", Int(value.checksum) == state.itemCount + state.payloadLen" in binary_text
+    assert (
+        "try apiBinaryRequire(\"checksum\", value.checksum == "
+        "apiBinaryCheckedInt(\"checksum\", state.itemCount) + "
+        "apiBinaryCheckedInt(\"checksum\", state.payloadLen)"
+    ) in binary_text
     assert "public static func encode(_ value: DemoPacket) throws -> Data" in binary_text
     assert "public static func decode(_ data: Data) throws -> DemoPacket" in binary_text
     assert "public func encodeDemoPacket(_ value: DemoPacket) throws -> Data" in binary_text
@@ -100,3 +104,69 @@ content-type: application/octet-stream
     assert "binary: DemoPacket? = nil" in route_client
     assert "let binaryBody = try binary?.encode()" in route_client
     assert "decodeData: { data, _, _ in try decodeDemoPacket(data) }" in route_client
+
+
+def test_swift_binary_schema_uses_checked_width_conversions_for_u64_counts(tmp_path: Path) -> None:
+    schema = parse_binary_schema(
+        """
+# packet WidePacket
+
+endian: little
+content-type: application/octet-stream
+
+## header
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| payload_len | u64 | 1 | min=0,max=64,sizeof=payload | payload bytes |
+| marker | u64 | 1 | const=9223372036854775808 | wide marker |
+
+## body
+
+| field | type | count | rule | comment |
+|---|---|---:|---|---|
+| payload | bytes | payload_len | | payload |
+| checksum | u64 | 1 | assert=payload_len | checksum |
+""",
+        source_path="wide_packet.md",
+    )
+
+    bp = Blueprint(root="/api")
+    with bp.group("/binary") as views:
+        views.POST("/wide").REQ_BINARY(schema).RSP(payload=String(description="payload"))
+
+    writer = SwiftWriter(tmp_path / "swift", package="ApiBlueprintExampleClient", module="ABClient")
+    writer.register(bp)
+    writer.gen()
+
+    route_dir = tmp_path / "swift" / "Sources" / "ABClientAPIRoutes" / "API" / "Routes" / "API" / "Binary"
+    runtime_binary = (
+        tmp_path / "swift" / "Sources" / "ABClientRuntime" / "Binary" / "GenBinaryRuntime.swift"
+    ).read_text(encoding="utf-8")
+    binary_text = (route_dir / "GenBinary.swift").read_text(encoding="utf-8")
+
+    assert "public func apiBinaryCheckedInt(_ path: String, _ value: UInt64) throws -> Int" in runtime_binary
+    assert (
+        "public func apiBinaryCheckedIntDecode(_ path: String, _ value: UInt64) throws -> Int"
+        in runtime_binary
+    )
+    assert "public var payloadLen: UInt64 = 0" in binary_text
+    assert "public var payloadLen: UInt64" in binary_text
+    assert "try apiBinaryRequireRange(\"payload_len\", value.payloadLen, UInt64(0), UInt64.max)" in binary_text
+    assert (
+        "try apiBinaryRequireRange(\"payload_len\", value.payloadLen, UInt64.min, UInt64(64))"
+        in binary_text
+    )
+    assert "try writer.writeU64(\"payload_len\", value.payloadLen)" in binary_text
+    assert "state.payloadLen = value.payloadLen" in binary_text
+    assert "let payloadCount = try apiBinaryCheckedInt(\"payload\", state.payloadLen)" in binary_text
+    assert "try apiBinaryRequireSize(\"payload\", apiBinarySize(value.payload), payloadCount)" in binary_text
+    assert "let payloadCount = try apiBinaryCheckedIntDecode(\"payload\", state.payloadLen)" in binary_text
+    assert "try apiBinaryRequireDecode(\"marker\", marker == UInt64(9223372036854775808)" in binary_text
+    assert "try writer.writeU64(\"marker\", UInt64(9223372036854775808))" in binary_text
+    assert (
+        "try apiBinaryRequire(\"checksum\", value.checksum == "
+        "apiBinaryCheckedUInt64(\"checksum\", state.payloadLen)"
+    ) in binary_text
+    assert "Int(value.payloadLen)" not in binary_text
+    assert "Int(marker)" not in binary_text

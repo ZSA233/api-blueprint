@@ -6,20 +6,20 @@ import {{ package_plan.runtime.module_name }}
 {% if field.is_bytes or field.is_string or field.typ == "bool" %}
     try apiBinaryRequire({{ path | code_literal }}, {{ receiver }} == {{ field.default_expr }}, "const mismatch")
 {% else %}
-    try apiBinaryRequire({{ path | code_literal }}, {{ int_expr }} == {{ field.const_long_expr }}, "const mismatch")
+    try apiBinaryRequire({{ path | code_literal }}, {{ int_expr }} == {{ field.const_encode_expr(path) }}, "const mismatch")
 {% endif %}
 {% endif %}
 {% if field.min_value and field.supports_numeric_rules %}
-    try apiBinaryRequireRange({{ path | code_literal }}, {{ int_expr }}, {{ field.min_expr }}, Int.max)
+    try apiBinaryRequireRange({{ path | code_literal }}, {{ int_expr }}, {{ field.min_encode_expr(path) }}, {{ field.numeric_upper_bound_expr }})
 {% endif %}
 {% if field.max_value and field.supports_numeric_rules %}
-    try apiBinaryRequireRange({{ path | code_literal }}, {{ int_expr }}, Int.min, {{ field.max_expr }})
+    try apiBinaryRequireRange({{ path | code_literal }}, {{ int_expr }}, {{ field.numeric_lower_bound_expr }}, {{ field.max_encode_expr(path) }})
 {% endif %}
 {% if field.assert_value and field.supports_numeric_rules %}
-    try apiBinaryRequire({{ path | code_literal }}, {{ int_expr }} == {{ field.assert_expr }}, "assert mismatch")
+    try apiBinaryRequire({{ path | code_literal }}, {{ int_expr }} == {{ field.assert_encode_expr(path) }}, "assert mismatch")
 {% endif %}
 {% if field.bitflags_zero_mask %}
-    try apiBinaryRequire({{ path | code_literal }}, ({{ int_expr }} & {{ field.bitflags_zero_mask }}) == 0, "reserved bits must be zero")
+    try apiBinaryRequire({{ path | code_literal }}, ({{ int_expr }} & {{ field.bitflags_zero_mask_expr }}) == 0, "reserved bits must be zero")
 {% endif %}
 {%- endmacro %}
 
@@ -28,20 +28,20 @@ import {{ package_plan.runtime.module_name }}
 {% if field.is_bytes or field.is_string or field.typ == "bool" %}
     try apiBinaryRequireDecode({{ path | code_literal }}, {{ receiver }} == {{ field.default_expr }}, "const mismatch")
 {% else %}
-    try apiBinaryRequireDecode({{ path | code_literal }}, {{ int_expr }} == {{ field.const_long_expr }}, "const mismatch")
+    try apiBinaryRequireDecode({{ path | code_literal }}, {{ int_expr }} == {{ field.const_decode_expr(path) }}, "const mismatch")
 {% endif %}
 {% endif %}
 {% if field.min_value and field.supports_numeric_rules %}
-    try apiBinaryRequireRangeDecode({{ path | code_literal }}, {{ int_expr }}, {{ field.min_expr }}, Int.max)
+    try apiBinaryRequireRangeDecode({{ path | code_literal }}, {{ int_expr }}, {{ field.min_decode_expr(path) }}, {{ field.numeric_upper_bound_expr }})
 {% endif %}
 {% if field.max_value and field.supports_numeric_rules %}
-    try apiBinaryRequireRangeDecode({{ path | code_literal }}, {{ int_expr }}, Int.min, {{ field.max_expr }})
+    try apiBinaryRequireRangeDecode({{ path | code_literal }}, {{ int_expr }}, {{ field.numeric_lower_bound_expr }}, {{ field.max_decode_expr(path) }})
 {% endif %}
 {% if field.assert_value and field.supports_numeric_rules %}
-    try apiBinaryRequireDecode({{ path | code_literal }}, {{ int_expr }} == {{ field.assert_expr }}, "assert mismatch")
+    try apiBinaryRequireDecode({{ path | code_literal }}, {{ int_expr }} == {{ field.assert_decode_expr(path) }}, "assert mismatch")
 {% endif %}
 {% if field.bitflags_zero_mask %}
-    try apiBinaryRequireDecode({{ path | code_literal }}, ({{ int_expr }} & {{ field.bitflags_zero_mask }}) == 0, "reserved bits must be zero")
+    try apiBinaryRequireDecode({{ path | code_literal }}, ({{ int_expr }} & {{ field.bitflags_zero_mask_expr }}) == 0, "reserved bits must be zero")
 {% endif %}
 {%- endmacro %}
 
@@ -49,42 +49,42 @@ import {{ package_plan.runtime.module_name }}
 {% set path = field.name %}
 {% set receiver = field.write_value_expr %}
 {% if field.is_hidden %}
-    try writer.writeZeroes({{ path | code_literal }}, {{ field.count_expr }})
+    try writer.writeZeroes({{ path | code_literal }}, {{ field.count_encode_expr(path) }})
 {% elif field.is_bytes %}
 {% if field.fixed_bytes %}
 {{ check_encode(field, receiver, field.write_int_expr, path) }}
-    try writer.writeBytesExact({{ path | code_literal }}, {{ receiver }}, {{ field.count_expr }})
+    try writer.writeBytesExact({{ path | code_literal }}, {{ receiver }}, {{ field.count_encode_expr(path) }})
 {% else %}
-    let {{ field.count_var }} = {{ field.count_expr }}
+    let {{ field.count_var }} = {{ field.count_encode_expr(path) }}
 {% if field.min_value %}
-    try apiBinaryRequireRange({{ path | code_literal }}, {{ field.count_var }}, {{ field.min_expr }}, Int.max)
+    try apiBinaryRequireRange({{ path | code_literal }}, {{ field.count_var }}, {{ field.min_count_encode_expr(path) }}, Int.max)
 {% endif %}
 {% if field.max_value %}
-    try apiBinaryRequireRange({{ path | code_literal }}, {{ field.count_var }}, Int.min, {{ field.max_expr }})
+    try apiBinaryRequireRange({{ path | code_literal }}, {{ field.count_var }}, Int.min, {{ field.max_count_encode_expr(path) }})
 {% endif %}
     try apiBinaryRequireSize({{ path | code_literal }}, apiBinarySize({{ receiver }}), {{ field.count_var }})
 {{ check_encode(field, receiver, field.write_int_expr, path) }}
     try writer.writeBytes({{ path | code_literal }}, {{ receiver }})
 {% endif %}
 {% elif field.is_string %}
-    let {{ field.count_var }} = {{ field.count_expr }}
+    let {{ field.count_var }} = {{ field.count_encode_expr(path) }}
 {% if field.min_value %}
-    try apiBinaryRequireRange({{ path | code_literal }}, {{ field.count_var }}, {{ field.min_expr }}, Int.max)
+    try apiBinaryRequireRange({{ path | code_literal }}, {{ field.count_var }}, {{ field.min_count_encode_expr(path) }}, Int.max)
 {% endif %}
 {% if field.max_value %}
-    try apiBinaryRequireRange({{ path | code_literal }}, {{ field.count_var }}, Int.min, {{ field.max_expr }})
+    try apiBinaryRequireRange({{ path | code_literal }}, {{ field.count_var }}, Int.min, {{ field.max_count_encode_expr(path) }})
 {% endif %}
     try apiBinaryRequireSize({{ path | code_literal }}, apiBinarySize({{ receiver }}), {{ field.count_var }})
 {{ check_encode(field, receiver, field.write_int_expr, path) }}
     try writer.writeUTF8String({{ path | code_literal }}, {{ receiver }})
 {% elif field.is_array %}
-    let {{ field.count_var }} = {{ field.count_expr }}
+    let {{ field.count_var }} = {{ field.count_encode_expr(path) }}
     try apiBinaryRequire({{ path | code_literal }}, {{ field.count_var }} >= 0, "invalid count \({{ field.count_var }})")
 {% if field.min_value %}
-    try apiBinaryRequireRange({{ path | code_literal }}, {{ field.count_var }}, {{ field.min_expr }}, Int.max)
+    try apiBinaryRequireRange({{ path | code_literal }}, {{ field.count_var }}, {{ field.min_count_encode_expr(path) }}, Int.max)
 {% endif %}
 {% if field.max_value %}
-    try apiBinaryRequireRange({{ path | code_literal }}, {{ field.count_var }}, Int.min, {{ field.max_expr }})
+    try apiBinaryRequireRange({{ path | code_literal }}, {{ field.count_var }}, Int.min, {{ field.max_count_encode_expr(path) }})
 {% endif %}
     try apiBinaryRequireSize({{ path | code_literal }}, apiBinarySize({{ receiver }}), {{ field.count_var }})
 {% if field.is_scalar %}
@@ -107,7 +107,7 @@ import {{ package_plan.runtime.module_name }}
 {% elif field.is_scalar %}
 {{ check_encode(field, receiver, field.write_int_expr, path) }}
 {% if field.sizeof_value and object.has_field(field.sizeof_value) %}
-    try apiBinaryRequireSize({{ (path ~ "." ~ field.sizeof_value) | code_literal }}, apiBinarySize(value.{{ field.sizeof_swift_name }}), {{ field.write_int_expr }})
+    try apiBinaryRequireSize({{ (path ~ "." ~ field.sizeof_value) | code_literal }}, apiBinarySize(value.{{ field.sizeof_swift_name }}), {{ field.encode_count_value_expr(path ~ "." ~ field.sizeof_value) }})
 {% endif %}
     try writer.{{ field.write_method }}({{ path | code_literal }}, {{ receiver }})
 {% if field.can_store_var %}
@@ -126,41 +126,41 @@ import {{ package_plan.runtime.module_name }}
 {% macro read_field(field, object) -%}
 {% set path = field.name %}
 {% if field.is_padding %}
-    _ = try reader.readBytes({{ path | code_literal }}, {{ field.count_expr }})
+    _ = try reader.readBytes({{ path | code_literal }}, {{ field.count_decode_expr(path) }})
 {% elif field.is_reserved %}
-    try reader.readZeroes({{ path | code_literal }}, {{ field.count_expr }})
+    try reader.readZeroes({{ path | code_literal }}, {{ field.count_decode_expr(path) }})
 {% elif field.is_bytes %}
 {% if not field.fixed_bytes %}
-    let {{ field.count_var }} = {{ field.count_expr }}
+    let {{ field.count_var }} = {{ field.count_decode_expr(path) }}
 {% if field.min_value %}
-    try apiBinaryRequireRangeDecode({{ path | code_literal }}, {{ field.count_var }}, {{ field.min_expr }}, Int.max)
+    try apiBinaryRequireRangeDecode({{ path | code_literal }}, {{ field.count_var }}, {{ field.min_count_decode_expr(path) }}, Int.max)
 {% endif %}
 {% if field.max_value %}
-    try apiBinaryRequireRangeDecode({{ path | code_literal }}, {{ field.count_var }}, Int.min, {{ field.max_expr }})
+    try apiBinaryRequireRangeDecode({{ path | code_literal }}, {{ field.count_var }}, Int.min, {{ field.max_count_decode_expr(path) }})
 {% endif %}
     let {{ field.swift_name }} = try reader.readBytes({{ path | code_literal }}, {{ field.count_var }})
 {% else %}
-    let {{ field.swift_name }} = try reader.readBytes({{ path | code_literal }}, {{ field.count_expr }})
+    let {{ field.swift_name }} = try reader.readBytes({{ path | code_literal }}, {{ field.count_decode_expr(path) }})
 {% endif %}
 {{ check_decode(field, field.swift_name, field.local_int_expr, path) }}
 {% elif field.is_string %}
-    let {{ field.count_var }} = {{ field.count_expr }}
+    let {{ field.count_var }} = {{ field.count_decode_expr(path) }}
 {% if field.min_value %}
-    try apiBinaryRequireRangeDecode({{ path | code_literal }}, {{ field.count_var }}, {{ field.min_expr }}, Int.max)
+    try apiBinaryRequireRangeDecode({{ path | code_literal }}, {{ field.count_var }}, {{ field.min_count_decode_expr(path) }}, Int.max)
 {% endif %}
 {% if field.max_value %}
-    try apiBinaryRequireRangeDecode({{ path | code_literal }}, {{ field.count_var }}, Int.min, {{ field.max_expr }})
+    try apiBinaryRequireRangeDecode({{ path | code_literal }}, {{ field.count_var }}, Int.min, {{ field.max_count_decode_expr(path) }})
 {% endif %}
     let {{ field.swift_name }} = try reader.readUTF8String({{ path | code_literal }}, {{ field.count_var }})
 {{ check_decode(field, field.swift_name, field.local_int_expr, path) }}
 {% elif field.is_array %}
-    let {{ field.count_var }} = {{ field.count_expr }}
+    let {{ field.count_var }} = {{ field.count_decode_expr(path) }}
     try apiBinaryRequireDecode({{ path | code_literal }}, {{ field.count_var }} >= 0, "invalid count \({{ field.count_var }})")
 {% if field.min_value %}
-    try apiBinaryRequireRangeDecode({{ path | code_literal }}, {{ field.count_var }}, {{ field.min_expr }}, Int.max)
+    try apiBinaryRequireRangeDecode({{ path | code_literal }}, {{ field.count_var }}, {{ field.min_count_decode_expr(path) }}, Int.max)
 {% endif %}
 {% if field.max_value %}
-    try apiBinaryRequireRangeDecode({{ path | code_literal }}, {{ field.count_var }}, Int.min, {{ field.max_expr }})
+    try apiBinaryRequireRangeDecode({{ path | code_literal }}, {{ field.count_var }}, Int.min, {{ field.max_count_decode_expr(path) }})
 {% endif %}
     var {{ field.swift_name }}: [{{ field.single_swift_type }}] = []
     {{ field.swift_name }}.reserveCapacity({{ field.count_var }})
@@ -228,7 +228,7 @@ public struct {{ schema.name }}: Codable, Sendable {
 }
 
 public final class {{ schema.state_type }} {
-{% for field in schema.state_fields %}    public var {{ field.swift_name }}: Int = 0
+{% for field in schema.state_fields %}    public var {{ field.swift_name }}: {{ field.swift_type }} = 0
 {% endfor %}    public init() {}
 }
 

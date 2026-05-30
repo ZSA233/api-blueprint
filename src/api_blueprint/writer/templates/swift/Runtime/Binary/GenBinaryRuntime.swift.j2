@@ -350,10 +350,136 @@ public func apiBinaryRequireRange(_ path: String, _ value: Int, _ min: Int, _ ma
     }
 }
 
+public func apiBinaryRequireRange(_ path: String, _ value: Int64, _ min: Int64, _ max: Int64) throws {
+    if value < min || value > max {
+        throw APIBinaryEncodeError(path, "value \(value) is outside range \(min)..\(max)")
+    }
+}
+
+public func apiBinaryRequireRange(_ path: String, _ value: UInt64, _ min: UInt64, _ max: UInt64) throws {
+    if value < min || value > max {
+        throw APIBinaryEncodeError(path, "value \(value) is outside range \(min)..\(max)")
+    }
+}
+
 public func apiBinaryRequireRangeDecode(_ path: String, _ value: Int, _ min: Int, _ max: Int) throws {
     if value < min || value > max {
         throw APIBinaryDecodeError(path, "value \(value) is outside range \(min)..\(max)")
     }
+}
+
+public func apiBinaryRequireRangeDecode(_ path: String, _ value: Int64, _ min: Int64, _ max: Int64) throws {
+    if value < min || value > max {
+        throw APIBinaryDecodeError(path, "value \(value) is outside range \(min)..\(max)")
+    }
+}
+
+public func apiBinaryRequireRangeDecode(_ path: String, _ value: UInt64, _ min: UInt64, _ max: UInt64) throws {
+    if value < min || value > max {
+        throw APIBinaryDecodeError(path, "value \(value) is outside range \(min)..\(max)")
+    }
+}
+
+public func apiBinaryCheckedInt(_ path: String, _ value: Int) throws -> Int {
+    value
+}
+
+public func apiBinaryCheckedInt(_ path: String, _ value: Int64) throws -> Int {
+    guard let exact = Int(exactly: value) else {
+        throw APIBinaryEncodeError(path, "value \(value) cannot be represented as Int")
+    }
+    return exact
+}
+
+public func apiBinaryCheckedInt(_ path: String, _ value: UInt64) throws -> Int {
+    guard let exact = Int(exactly: value) else {
+        throw APIBinaryEncodeError(path, "value \(value) cannot be represented as Int")
+    }
+    return exact
+}
+
+public func apiBinaryCheckedInt64(_ path: String, _ value: Int) throws -> Int64 {
+    Int64(value)
+}
+
+public func apiBinaryCheckedInt64(_ path: String, _ value: Int64) throws -> Int64 {
+    value
+}
+
+public func apiBinaryCheckedInt64(_ path: String, _ value: UInt64) throws -> Int64 {
+    guard let exact = Int64(exactly: value) else {
+        throw APIBinaryEncodeError(path, "value \(value) cannot be represented as Int64")
+    }
+    return exact
+}
+
+public func apiBinaryCheckedUInt64(_ path: String, _ value: Int) throws -> UInt64 {
+    guard value >= 0 else {
+        throw APIBinaryEncodeError(path, "value \(value) cannot be represented as UInt64")
+    }
+    return UInt64(value)
+}
+
+public func apiBinaryCheckedUInt64(_ path: String, _ value: Int64) throws -> UInt64 {
+    guard value >= 0 else {
+        throw APIBinaryEncodeError(path, "value \(value) cannot be represented as UInt64")
+    }
+    return UInt64(value)
+}
+
+public func apiBinaryCheckedUInt64(_ path: String, _ value: UInt64) throws -> UInt64 {
+    value
+}
+
+public func apiBinaryCheckedIntDecode(_ path: String, _ value: Int) throws -> Int {
+    value
+}
+
+public func apiBinaryCheckedIntDecode(_ path: String, _ value: Int64) throws -> Int {
+    guard let exact = Int(exactly: value) else {
+        throw APIBinaryDecodeError(path, "value \(value) cannot be represented as Int")
+    }
+    return exact
+}
+
+public func apiBinaryCheckedIntDecode(_ path: String, _ value: UInt64) throws -> Int {
+    guard let exact = Int(exactly: value) else {
+        throw APIBinaryDecodeError(path, "value \(value) cannot be represented as Int")
+    }
+    return exact
+}
+
+public func apiBinaryCheckedInt64Decode(_ path: String, _ value: Int) throws -> Int64 {
+    Int64(value)
+}
+
+public func apiBinaryCheckedInt64Decode(_ path: String, _ value: Int64) throws -> Int64 {
+    value
+}
+
+public func apiBinaryCheckedInt64Decode(_ path: String, _ value: UInt64) throws -> Int64 {
+    guard let exact = Int64(exactly: value) else {
+        throw APIBinaryDecodeError(path, "value \(value) cannot be represented as Int64")
+    }
+    return exact
+}
+
+public func apiBinaryCheckedUInt64Decode(_ path: String, _ value: Int) throws -> UInt64 {
+    guard value >= 0 else {
+        throw APIBinaryDecodeError(path, "value \(value) cannot be represented as UInt64")
+    }
+    return UInt64(value)
+}
+
+public func apiBinaryCheckedUInt64Decode(_ path: String, _ value: Int64) throws -> UInt64 {
+    guard value >= 0 else {
+        throw APIBinaryDecodeError(path, "value \(value) cannot be represented as UInt64")
+    }
+    return UInt64(value)
+}
+
+public func apiBinaryCheckedUInt64Decode(_ path: String, _ value: UInt64) throws -> UInt64 {
+    value
 }
 
 public func apiBinaryRequireSize(_ path: String, _ actual: Int, _ expected: Int) throws {

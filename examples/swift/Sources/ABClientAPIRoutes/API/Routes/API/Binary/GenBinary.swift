@@ -37,16 +37,9 @@ public struct DemoPacket: Codable, Sendable {
 }
 
 public final class DemoPacketBinaryState {
-    public var version: Int = 0
-    public var kind: Int = 0
-    public var flags: Int = 0
-    public var shortCode: Int = 0
-    public var signedDelta: Int = 0
     public var itemCount: Int = 0
     public var payloadLen: Int = 0
     public var scoreCount: Int = 0
-    public var checksum: Int = 0
-    public var id: Int = 0
     public var labelLen: Int = 0
     public init() {}
 }
@@ -159,37 +152,32 @@ public enum DemoPacketWire {
             let magic = try reader.readBytes("magic", 4)
             try apiBinaryRequireDecode("magic", magic == Data([65, 66, 80, 49]), "const mismatch")
             let version = try reader.readU16("version")
-            try apiBinaryRequireDecode("version", Int(version) == 1, "const mismatch")
-            state.version = Int(version)
+            try apiBinaryRequireDecode("version", version == 1, "const mismatch")
             let kind = try reader.readU16("kind")
-            try apiBinaryRequireDecode("kind", Int(kind) == 1, "const mismatch")
-            state.kind = Int(kind)
+            try apiBinaryRequireDecode("kind", kind == 1, "const mismatch")
             let flags = try reader.readU32("flags")
-            try apiBinaryRequireRangeDecode("flags", Int(flags), 0, Int.max)
-            try apiBinaryRequireDecode("flags", (Int(flags) & 4294967264) == 0, "reserved bits must be zero")
-            state.flags = Int(flags)
+            try apiBinaryRequireRangeDecode("flags", flags, 0, Int.max)
+            try apiBinaryRequireDecode("flags", (flags & 4294967264) == 0, "reserved bits must be zero")
             _ = try reader.readBytes("header_pad", 1)
             try reader.readZeroes("reserved0", 2)
             let shortCode = try reader.readU24("short_code")
-            try apiBinaryRequireRangeDecode("short_code", Int(shortCode), 1, Int.max)
-            try apiBinaryRequireRangeDecode("short_code", Int(shortCode), Int.min, 16777215)
-            state.shortCode = Int(shortCode)
+            try apiBinaryRequireRangeDecode("short_code", shortCode, 1, Int.max)
+            try apiBinaryRequireRangeDecode("short_code", shortCode, Int.min, 16777215)
             let signedDelta = try reader.readI24("signed_delta")
-            try apiBinaryRequireRangeDecode("signed_delta", Int(signedDelta), 0, Int.max)
-            try apiBinaryRequireRangeDecode("signed_delta", Int(signedDelta), Int.min, 8388607)
-            state.signedDelta = Int(signedDelta)
+            try apiBinaryRequireRangeDecode("signed_delta", signedDelta, 0, Int.max)
+            try apiBinaryRequireRangeDecode("signed_delta", signedDelta, Int.min, 8388607)
             let itemCount = try reader.readU16("item_count")
-            try apiBinaryRequireRangeDecode("item_count", Int(itemCount), 1, Int.max)
-            try apiBinaryRequireRangeDecode("item_count", Int(itemCount), Int.min, 8)
-            state.itemCount = Int(itemCount)
+            try apiBinaryRequireRangeDecode("item_count", itemCount, 1, Int.max)
+            try apiBinaryRequireRangeDecode("item_count", itemCount, Int.min, 8)
+            state.itemCount = itemCount
             let payloadLen = try reader.readU32("payload_len")
-            try apiBinaryRequireRangeDecode("payload_len", Int(payloadLen), 0, Int.max)
-            try apiBinaryRequireRangeDecode("payload_len", Int(payloadLen), Int.min, 64)
-            state.payloadLen = Int(payloadLen)
+            try apiBinaryRequireRangeDecode("payload_len", payloadLen, 0, Int.max)
+            try apiBinaryRequireRangeDecode("payload_len", payloadLen, Int.min, 64)
+            state.payloadLen = payloadLen
             let scoreCount = try reader.readU16("score_count")
-            try apiBinaryRequireDecode("score_count", Int(scoreCount) == 2, "const mismatch")
-            try apiBinaryRequireRangeDecode("score_count", Int(scoreCount), Int.min, 4)
-            state.scoreCount = Int(scoreCount)
+            try apiBinaryRequireDecode("score_count", scoreCount == 2, "const mismatch")
+            try apiBinaryRequireRangeDecode("score_count", scoreCount, Int.min, 4)
+            state.scoreCount = scoreCount
             return DemoPacketHeader(
                 flags: flags,
                 shortCode: shortCode,
@@ -214,38 +202,33 @@ public enum DemoPacketWire {
         do {
             try apiBinaryRequire("magic", Data([65, 66, 80, 49]) == Data([65, 66, 80, 49]), "const mismatch")
             try writer.writeBytesExact("magic", Data([65, 66, 80, 49]), 4)
-            try apiBinaryRequire("version", Int(1) == 1, "const mismatch")
+            try apiBinaryRequire("version", 1 == 1, "const mismatch")
             try writer.writeU16("version", 1)
-            state.version = Int(1)
-            try apiBinaryRequire("kind", Int(1) == 1, "const mismatch")
+            try apiBinaryRequire("kind", 1 == 1, "const mismatch")
             try writer.writeU16("kind", 1)
-            state.kind = Int(1)
-            try apiBinaryRequireRange("flags", Int(value.flags), 0, Int.max)
-            try apiBinaryRequire("flags", (Int(value.flags) & 4294967264) == 0, "reserved bits must be zero")
+            try apiBinaryRequireRange("flags", value.flags, 0, Int.max)
+            try apiBinaryRequire("flags", (value.flags & 4294967264) == 0, "reserved bits must be zero")
             try writer.writeU32("flags", value.flags)
-            state.flags = Int(value.flags)
             try writer.writeZeroes("header_pad", 1)
             try writer.writeZeroes("reserved0", 2)
-            try apiBinaryRequireRange("short_code", Int(value.shortCode), 1, Int.max)
-            try apiBinaryRequireRange("short_code", Int(value.shortCode), Int.min, 16777215)
+            try apiBinaryRequireRange("short_code", value.shortCode, 1, Int.max)
+            try apiBinaryRequireRange("short_code", value.shortCode, Int.min, 16777215)
             try writer.writeU24("short_code", value.shortCode)
-            state.shortCode = Int(value.shortCode)
-            try apiBinaryRequireRange("signed_delta", Int(value.signedDelta), 0, Int.max)
-            try apiBinaryRequireRange("signed_delta", Int(value.signedDelta), Int.min, 8388607)
+            try apiBinaryRequireRange("signed_delta", value.signedDelta, 0, Int.max)
+            try apiBinaryRequireRange("signed_delta", value.signedDelta, Int.min, 8388607)
             try writer.writeI24("signed_delta", value.signedDelta)
-            state.signedDelta = Int(value.signedDelta)
-            try apiBinaryRequireRange("item_count", Int(value.itemCount), 1, Int.max)
-            try apiBinaryRequireRange("item_count", Int(value.itemCount), Int.min, 8)
+            try apiBinaryRequireRange("item_count", value.itemCount, 1, Int.max)
+            try apiBinaryRequireRange("item_count", value.itemCount, Int.min, 8)
             try writer.writeU16("item_count", value.itemCount)
-            state.itemCount = Int(value.itemCount)
-            try apiBinaryRequireRange("payload_len", Int(value.payloadLen), 0, Int.max)
-            try apiBinaryRequireRange("payload_len", Int(value.payloadLen), Int.min, 64)
+            state.itemCount = value.itemCount
+            try apiBinaryRequireRange("payload_len", value.payloadLen, 0, Int.max)
+            try apiBinaryRequireRange("payload_len", value.payloadLen, Int.min, 64)
             try writer.writeU32("payload_len", value.payloadLen)
-            state.payloadLen = Int(value.payloadLen)
-            try apiBinaryRequire("score_count", Int(2) == 2, "const mismatch")
-            try apiBinaryRequireRange("score_count", Int(2), Int.min, 4)
+            state.payloadLen = value.payloadLen
+            try apiBinaryRequire("score_count", 2 == 2, "const mismatch")
+            try apiBinaryRequireRange("score_count", 2, Int.min, 4)
             try writer.writeU16("score_count", 2)
-            state.scoreCount = Int(2)
+            state.scoreCount = 2
         } catch let error as APIBinaryEncodeError {
             if path.isEmpty {
                 throw error
@@ -260,7 +243,7 @@ public enum DemoPacketWire {
         path: String = "DemoPacketBody"
     ) throws -> DemoPacketBody {
         do {
-            let itemsCount = state.itemCount
+            let itemsCount = try apiBinaryCheckedIntDecode("items", state.itemCount)
             try apiBinaryRequireDecode("items", itemsCount >= 0, "invalid count \(itemsCount)")
             var items: [DemoPacketItem] = []
             items.reserveCapacity(itemsCount)
@@ -272,9 +255,9 @@ public enum DemoPacketWire {
                     throw apiBinaryWrapIndex("items", index, error)
                 }
             }
-            let payloadCount = state.payloadLen
+            let payloadCount = try apiBinaryCheckedIntDecode("payload", state.payloadLen)
             let payload = try reader.readBytes("payload", payloadCount)
-            let scoresCount = state.scoreCount
+            let scoresCount = try apiBinaryCheckedIntDecode("scores", state.scoreCount)
             try apiBinaryRequireDecode("scores", scoresCount >= 0, "invalid count \(scoresCount)")
             var scores: [Double] = []
             scores.reserveCapacity(scoresCount)
@@ -287,8 +270,7 @@ public enum DemoPacketWire {
                 }
             }
             let checksum = try reader.readU32("checksum")
-            try apiBinaryRequireDecode("checksum", Int(checksum) == state.itemCount + state.payloadLen, "assert mismatch")
-            state.checksum = Int(checksum)
+            try apiBinaryRequireDecode("checksum", checksum == apiBinaryCheckedIntDecode("checksum", state.itemCount) + apiBinaryCheckedIntDecode("checksum", state.payloadLen), "assert mismatch")
             return DemoPacketBody(
                 items: items,
                 payload: payload,
@@ -310,7 +292,7 @@ public enum DemoPacketWire {
         path: String = "DemoPacketBody"
     ) throws {
         do {
-            let itemsCount = state.itemCount
+            let itemsCount = try apiBinaryCheckedInt("items", state.itemCount)
             try apiBinaryRequire("items", itemsCount >= 0, "invalid count \(itemsCount)")
             try apiBinaryRequireSize("items", apiBinarySize(value.items), itemsCount)
             for (index, item) in value.items.enumerated() {
@@ -320,10 +302,10 @@ public enum DemoPacketWire {
                     throw apiBinaryWrapIndex("items", index, error)
                 }
             }
-            let payloadCount = state.payloadLen
+            let payloadCount = try apiBinaryCheckedInt("payload", state.payloadLen)
             try apiBinaryRequireSize("payload", apiBinarySize(value.payload), payloadCount)
             try writer.writeBytes("payload", value.payload)
-            let scoresCount = state.scoreCount
+            let scoresCount = try apiBinaryCheckedInt("scores", state.scoreCount)
             try apiBinaryRequire("scores", scoresCount >= 0, "invalid count \(scoresCount)")
             try apiBinaryRequireSize("scores", apiBinarySize(value.scores), scoresCount)
             for (index, item) in value.scores.enumerated() {
@@ -333,9 +315,8 @@ public enum DemoPacketWire {
                     throw apiBinaryWrapIndex("scores", index, error)
                 }
             }
-            try apiBinaryRequire("checksum", Int(value.checksum) == state.itemCount + state.payloadLen, "assert mismatch")
+            try apiBinaryRequire("checksum", value.checksum == apiBinaryCheckedInt("checksum", state.itemCount) + apiBinaryCheckedInt("checksum", state.payloadLen), "assert mismatch")
             try writer.writeU32("checksum", value.checksum)
-            state.checksum = Int(value.checksum)
         } catch let error as APIBinaryEncodeError {
             if path.isEmpty {
                 throw error
@@ -351,16 +332,15 @@ public enum DemoPacketWire {
     ) throws -> DemoPacketItem {
         do {
             let id = try reader.readU32("id")
-            try apiBinaryRequireRangeDecode("id", Int(id), 1, Int.max)
-            try apiBinaryRequireRangeDecode("id", Int(id), Int.min, 999)
-            state.id = Int(id)
+            try apiBinaryRequireRangeDecode("id", id, 1, Int.max)
+            try apiBinaryRequireRangeDecode("id", id, Int.min, 999)
             let enabled = try reader.readBool("enabled")
             let value = try reader.readF64("value")
             let labelLen = try reader.readU8("label_len")
-            try apiBinaryRequireRangeDecode("label_len", Int(labelLen), 1, Int.max)
-            try apiBinaryRequireRangeDecode("label_len", Int(labelLen), Int.min, 16)
-            state.labelLen = Int(labelLen)
-            let labelCount = state.labelLen
+            try apiBinaryRequireRangeDecode("label_len", labelLen, 1, Int.max)
+            try apiBinaryRequireRangeDecode("label_len", labelLen, Int.min, 16)
+            state.labelLen = labelLen
+            let labelCount = try apiBinaryCheckedIntDecode("label", state.labelLen)
             let label = try reader.readBytes("label", labelCount)
             return DemoPacketItem(
                 id: id,
@@ -384,18 +364,17 @@ public enum DemoPacketWire {
         path: String = "Item"
     ) throws {
         do {
-            try apiBinaryRequireRange("id", Int(value.id), 1, Int.max)
-            try apiBinaryRequireRange("id", Int(value.id), Int.min, 999)
+            try apiBinaryRequireRange("id", value.id, 1, Int.max)
+            try apiBinaryRequireRange("id", value.id, Int.min, 999)
             try writer.writeU32("id", value.id)
-            state.id = Int(value.id)
             try writer.writeBool("enabled", value.enabled)
             try writer.writeF64("value", value.value)
-            try apiBinaryRequireRange("label_len", Int(value.labelLen), 1, Int.max)
-            try apiBinaryRequireRange("label_len", Int(value.labelLen), Int.min, 16)
-            try apiBinaryRequireSize("label_len.label", apiBinarySize(value.label), Int(value.labelLen))
+            try apiBinaryRequireRange("label_len", value.labelLen, 1, Int.max)
+            try apiBinaryRequireRange("label_len", value.labelLen, Int.min, 16)
+            try apiBinaryRequireSize("label_len.label", apiBinarySize(value.label), value.labelLen)
             try writer.writeU8("label_len", value.labelLen)
-            state.labelLen = Int(value.labelLen)
-            let labelCount = state.labelLen
+            state.labelLen = value.labelLen
+            let labelCount = try apiBinaryCheckedInt("label", state.labelLen)
             try apiBinaryRequireSize("label", apiBinarySize(value.label), labelCount)
             try writer.writeBytes("label", value.label)
         } catch let error as APIBinaryEncodeError {
@@ -448,12 +427,7 @@ public struct AuditPacket: Codable, Sendable {
 }
 
 public final class AuditPacketBinaryState {
-    public var kind: Int = 0
-    public var flags: Int = 0
     public var itemCount: Int = 0
-    public var checksum: Int = 0
-    public var id: Int = 0
-    public var code: Int = 0
     public init() {}
 }
 
@@ -539,16 +513,14 @@ public enum AuditPacketWire {
     ) throws -> AuditPacketHeader {
         do {
             let kind = try reader.readU16("kind")
-            try apiBinaryRequireDecode("kind", Int(kind) == 2, "const mismatch")
-            state.kind = Int(kind)
+            try apiBinaryRequireDecode("kind", kind == 2, "const mismatch")
             let flags = try reader.readU32("flags")
-            try apiBinaryRequireRangeDecode("flags", Int(flags), 0, Int.max)
-            try apiBinaryRequireDecode("flags", (Int(flags) & 4294967288) == 0, "reserved bits must be zero")
-            state.flags = Int(flags)
+            try apiBinaryRequireRangeDecode("flags", flags, 0, Int.max)
+            try apiBinaryRequireDecode("flags", (flags & 4294967288) == 0, "reserved bits must be zero")
             let itemCount = try reader.readU16("item_count")
-            try apiBinaryRequireRangeDecode("item_count", Int(itemCount), 1, Int.max)
-            try apiBinaryRequireRangeDecode("item_count", Int(itemCount), Int.min, 4)
-            state.itemCount = Int(itemCount)
+            try apiBinaryRequireRangeDecode("item_count", itemCount, 1, Int.max)
+            try apiBinaryRequireRangeDecode("item_count", itemCount, Int.min, 4)
+            state.itemCount = itemCount
             return AuditPacketHeader(
                 flags: flags,
                 itemCount: itemCount
@@ -568,17 +540,15 @@ public enum AuditPacketWire {
         path: String = "AuditPacketHeader"
     ) throws {
         do {
-            try apiBinaryRequire("kind", Int(2) == 2, "const mismatch")
+            try apiBinaryRequire("kind", 2 == 2, "const mismatch")
             try writer.writeU16("kind", 2)
-            state.kind = Int(2)
-            try apiBinaryRequireRange("flags", Int(value.flags), 0, Int.max)
-            try apiBinaryRequire("flags", (Int(value.flags) & 4294967288) == 0, "reserved bits must be zero")
+            try apiBinaryRequireRange("flags", value.flags, 0, Int.max)
+            try apiBinaryRequire("flags", (value.flags & 4294967288) == 0, "reserved bits must be zero")
             try writer.writeU32("flags", value.flags)
-            state.flags = Int(value.flags)
-            try apiBinaryRequireRange("item_count", Int(value.itemCount), 1, Int.max)
-            try apiBinaryRequireRange("item_count", Int(value.itemCount), Int.min, 4)
+            try apiBinaryRequireRange("item_count", value.itemCount, 1, Int.max)
+            try apiBinaryRequireRange("item_count", value.itemCount, Int.min, 4)
             try writer.writeU16("item_count", value.itemCount)
-            state.itemCount = Int(value.itemCount)
+            state.itemCount = value.itemCount
         } catch let error as APIBinaryEncodeError {
             if path.isEmpty {
                 throw error
@@ -593,7 +563,7 @@ public enum AuditPacketWire {
         path: String = "AuditPacketBody"
     ) throws -> AuditPacketBody {
         do {
-            let itemsCount = state.itemCount
+            let itemsCount = try apiBinaryCheckedIntDecode("items", state.itemCount)
             try apiBinaryRequireDecode("items", itemsCount >= 0, "invalid count \(itemsCount)")
             var items: [AuditPacketItem] = []
             items.reserveCapacity(itemsCount)
@@ -606,8 +576,7 @@ public enum AuditPacketWire {
                 }
             }
             let checksum = try reader.readU32("checksum")
-            try apiBinaryRequireDecode("checksum", Int(checksum) == state.itemCount, "assert mismatch")
-            state.checksum = Int(checksum)
+            try apiBinaryRequireDecode("checksum", checksum == apiBinaryCheckedIntDecode("checksum", state.itemCount), "assert mismatch")
             return AuditPacketBody(
                 items: items,
                 checksum: checksum
@@ -627,7 +596,7 @@ public enum AuditPacketWire {
         path: String = "AuditPacketBody"
     ) throws {
         do {
-            let itemsCount = state.itemCount
+            let itemsCount = try apiBinaryCheckedInt("items", state.itemCount)
             try apiBinaryRequire("items", itemsCount >= 0, "invalid count \(itemsCount)")
             try apiBinaryRequireSize("items", apiBinarySize(value.items), itemsCount)
             for (index, item) in value.items.enumerated() {
@@ -637,9 +606,8 @@ public enum AuditPacketWire {
                     throw apiBinaryWrapIndex("items", index, error)
                 }
             }
-            try apiBinaryRequire("checksum", Int(value.checksum) == state.itemCount, "assert mismatch")
+            try apiBinaryRequire("checksum", value.checksum == apiBinaryCheckedInt("checksum", state.itemCount), "assert mismatch")
             try writer.writeU32("checksum", value.checksum)
-            state.checksum = Int(value.checksum)
         } catch let error as APIBinaryEncodeError {
             if path.isEmpty {
                 throw error
@@ -655,12 +623,10 @@ public enum AuditPacketWire {
     ) throws -> AuditPacketItem {
         do {
             let id = try reader.readU32("id")
-            try apiBinaryRequireRangeDecode("id", Int(id), 1, Int.max)
-            state.id = Int(id)
+            try apiBinaryRequireRangeDecode("id", id, 1, Int.max)
             let code = try reader.readU16("code")
-            try apiBinaryRequireRangeDecode("code", Int(code), 1, Int.max)
-            try apiBinaryRequireRangeDecode("code", Int(code), Int.min, 999)
-            state.code = Int(code)
+            try apiBinaryRequireRangeDecode("code", code, 1, Int.max)
+            try apiBinaryRequireRangeDecode("code", code, Int.min, 999)
             return AuditPacketItem(
                 id: id,
                 code: code
@@ -680,13 +646,11 @@ public enum AuditPacketWire {
         path: String = "Item"
     ) throws {
         do {
-            try apiBinaryRequireRange("id", Int(value.id), 1, Int.max)
+            try apiBinaryRequireRange("id", value.id, 1, Int.max)
             try writer.writeU32("id", value.id)
-            state.id = Int(value.id)
-            try apiBinaryRequireRange("code", Int(value.code), 1, Int.max)
-            try apiBinaryRequireRange("code", Int(value.code), Int.min, 999)
+            try apiBinaryRequireRange("code", value.code, 1, Int.max)
+            try apiBinaryRequireRange("code", value.code, Int.min, 999)
             try writer.writeU16("code", value.code)
-            state.code = Int(value.code)
         } catch let error as APIBinaryEncodeError {
             if path.isEmpty {
                 throw error
