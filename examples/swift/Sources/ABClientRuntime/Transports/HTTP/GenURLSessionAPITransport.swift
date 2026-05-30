@@ -45,13 +45,6 @@ public final class URLSessionAPITransport: APITransport {
             }
             return try request.decode(rawResponse(data, response: httpResponse, defaultContentType: request.responseMediaType))
         }
-        if request.responseKind == "byte_stream" {
-            if isJSONResponse(httpResponse) {
-                try validateEnvelopeStatus(data, response: httpResponse, routeID: request.routeID, envelope: request.responseEnvelope)
-            }
-            let stream = chunkedDataStream(data)
-            return try request.decode(streamResponse(stream, response: httpResponse, defaultContentType: request.responseMediaType))
-        }
         if request.responseKind == "binary_schema" {
             return try request.decode(data)
         }
@@ -281,14 +274,20 @@ public final class URLSessionAPITransport: APITransport {
         )
     }
 
-    private func streamResponse(_ stream: AsyncThrowingStream<Data, Error>, response: HTTPURLResponse, defaultContentType: String) -> APIStreamResponse {
+    private func streamResponse(
+        _ stream: AsyncThrowingStream<Data, Error>,
+        response: HTTPURLResponse,
+        defaultContentType: String,
+        cancel: @escaping @Sendable () -> Void = {}
+    ) -> APIStreamResponse {
         APIStreamResponse(
             body: stream,
             headers: headers(response),
             statusCode: response.statusCode,
             contentType: response.value(forHTTPHeaderField: "Content-Type") ?? defaultContentType,
             contentDisposition: response.value(forHTTPHeaderField: "Content-Disposition") ?? "",
-            filename: filename(response)
+            filename: filename(response),
+            cancel: cancel
         )
     }
 
@@ -487,18 +486,15 @@ public final class URLSessionAPITransport: APITransport {
 
     private func chunkedByteStream<Bytes: AsyncSequence>(_ bytes: Bytes) -> AsyncThrowingStream<Data, Error> where Bytes.Element == UInt8 {
         AsyncThrowingStream<Data, Error>(bufferingPolicy: .bufferingNewest(max(1, config.streamBufferLimit))) { continuation in
-            Task {
+            let accumulator = APIHTTPByteStreamAccumulator(chunkSize: max(1, config.byteStreamChunkSize))
+            let readerTask = Task {
                 do {
-                    var chunk = Data()
-                    chunk.reserveCapacity(max(1, config.byteStreamChunkSize))
                     for try await byte in bytes {
-                        chunk.append(byte)
-                        if chunk.count >= max(1, config.byteStreamChunkSize) {
+                        if let chunk = accumulator.append(byte) {
                             continuation.yield(chunk)
-                            chunk.removeAll(keepingCapacity: true)
                         }
                     }
-                    if !chunk.isEmpty {
+                    if let chunk = accumulator.finish() {
                         continuation.yield(chunk)
                     }
                     continuation.finish()
@@ -506,29 +502,28 @@ public final class URLSessionAPITransport: APITransport {
                     continuation.finish(throwing: error)
                 }
             }
+            let flushTask = Task {
+                while !Task.isCancelled {
+                    try? await Task.sleep(nanoseconds: 10_000_000)
+                    if Task.isCancelled {
+                        break
+                    }
+                    if let chunk = accumulator.flush() {
+                        continuation.yield(chunk)
+                    }
+                }
+            }
+            continuation.onTermination = { _ in
+                accumulator.cancel()
+                readerTask.cancel()
+                flushTask.cancel()
+            }
         }
     }
 
     private func singleDataStream(_ data: Data) -> AsyncThrowingStream<Data, Error> {
         AsyncThrowingStream<Data, Error>(bufferingPolicy: .bufferingNewest(1)) { continuation in
             continuation.yield(data)
-            continuation.finish()
-        }
-    }
-
-    private func chunkedDataStream(_ data: Data) -> AsyncThrowingStream<Data, Error> {
-        AsyncThrowingStream<Data, Error>(bufferingPolicy: .bufferingNewest(max(1, config.streamBufferLimit))) { continuation in
-            if data.isEmpty {
-                continuation.finish()
-                return
-            }
-            var offset = 0
-            let chunkSize = max(1, config.byteStreamChunkSize)
-            while offset < data.count {
-                let end = min(offset + chunkSize, data.count)
-                continuation.yield(data.subdata(in: offset..<end))
-                offset = end
-            }
             continuation.finish()
         }
     }
@@ -554,5 +549,65 @@ private struct APIMultipartBody {
         self.data = nil
         self.fileURL = fileURL
         self.cleanup = cleanup
+    }
+}
+
+private final class APIHTTPByteStreamAccumulator {
+    private let lock = NSLock()
+    private let chunkSize: Int
+    private var chunk = Data()
+    private var closed = false
+
+    init(chunkSize: Int) {
+        self.chunkSize = chunkSize
+        chunk.reserveCapacity(chunkSize)
+    }
+
+    func append(_ byte: UInt8) -> Data? {
+        lock.lock()
+        defer { lock.unlock() }
+        if closed {
+            return nil
+        }
+        chunk.append(byte)
+        if chunk.count >= chunkSize {
+            let data = chunk
+            chunk.removeAll(keepingCapacity: true)
+            return data
+        }
+        return nil
+    }
+
+    func flush() -> Data? {
+        lock.lock()
+        defer { lock.unlock() }
+        if closed || chunk.isEmpty {
+            return nil
+        }
+        let data = chunk
+        chunk.removeAll(keepingCapacity: true)
+        return data
+    }
+
+    func finish() -> Data? {
+        lock.lock()
+        defer { lock.unlock() }
+        if closed {
+            return nil
+        }
+        closed = true
+        if chunk.isEmpty {
+            return nil
+        }
+        let data = chunk
+        chunk.removeAll(keepingCapacity: true)
+        return data
+    }
+
+    func cancel() {
+        lock.lock()
+        closed = true
+        chunk.removeAll(keepingCapacity: false)
+        lock.unlock()
     }
 }

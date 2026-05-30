@@ -27,7 +27,9 @@ def run_conformance(
     clients: tuple[str, ...],
     scenario_names: tuple[str, ...],
     keep_workspace: bool,
+    swift_runtime_profile: str = "modern",
 ) -> None:
+    swift_runtime_profile = _effective_swift_runtime_profile(clients, swift_runtime_profile)
     for item in servers:
         manifest.require_enabled_server(item)
     available_clients = set(manifest.client_manifest())
@@ -36,7 +38,13 @@ def run_conformance(
         raise ValueError(f"unknown conformance client: {', '.join(unknown_clients)}")
     selected_scenarios = scenarios.filter_scenarios(scenario_names)
     tools.ensure_tools_for_targets(servers, clients)
-    conf_workspace = reporter.run_stage("generate examples", lambda: workspace.prepare_generated_workspace(repo_root))
+    conf_workspace = reporter.run_stage(
+        "generate examples",
+        lambda: workspace.prepare_generated_workspace(
+            repo_root,
+            swift_runtime_profile=swift_runtime_profile,
+        ),
+    )
     try:
         _run_against_workspace(
             conf_workspace,
@@ -63,14 +71,28 @@ def check_conformance(
     clients: tuple[str, ...],
     scenario_names: tuple[str, ...],
     keep_workspace: bool,
+    swift_runtime_profile: str = "modern",
 ) -> None:
+    swift_runtime_profile = _effective_swift_runtime_profile(clients, swift_runtime_profile)
     for item in servers:
         manifest.require_enabled_server(item)
     selected_scenarios = scenarios.filter_scenarios(scenario_names)
     tools.ensure_tools_for_targets(servers, clients)
-    conf_workspace = reporter.run_stage("generate examples", lambda: workspace.prepare_generated_workspace(repo_root))
+    conf_workspace = reporter.run_stage(
+        "generate examples",
+        lambda: workspace.prepare_generated_workspace(
+            repo_root,
+            swift_runtime_profile=swift_runtime_profile,
+        ),
+    )
     try:
-        reporter.run_stage("check snapshot drift", lambda: workspace.validate_snapshot(repo_root, conf_workspace))
+        if swift_runtime_profile == "modern":
+            reporter.run_stage("check snapshot drift", lambda: workspace.validate_snapshot(repo_root, conf_workspace))
+        else:
+            reporter.print_skipped(
+                "check snapshot drift",
+                "swift runtime profile override uses a temporary generated package",
+            )
         reporter.run_stage("compile generated examples", lambda: workspace.compile_workspace(conf_workspace))
         _run_against_workspace(
             conf_workspace,
@@ -104,19 +126,42 @@ def refresh_and_check(
     servers: tuple[str, ...],
     clients: tuple[str, ...],
     scenario_names: tuple[str, ...],
+    swift_runtime_profile: str = "modern",
 ) -> None:
+    swift_runtime_profile = _effective_swift_runtime_profile(clients, swift_runtime_profile)
     for item in servers:
         manifest.require_enabled_server(item)
     selected_scenarios = scenarios.filter_scenarios(scenario_names)
     tools.ensure_tools_for_targets(servers, clients)
-    conf_workspace = reporter.run_stage("refresh examples", lambda: workspace.refresh_repo_workspace(repo_root))
-    reporter.run_stage("compile generated examples", lambda: workspace.compile_workspace(conf_workspace))
-    _run_against_workspace(
-        conf_workspace,
-        server_names=servers,
-        clients=clients,
-        selected_scenarios=selected_scenarios,
+    if swift_runtime_profile == "modern":
+        conf_workspace = reporter.run_stage("refresh examples", lambda: workspace.refresh_repo_workspace(repo_root))
+        reporter.run_stage("compile generated examples", lambda: workspace.compile_workspace(conf_workspace))
+        _run_against_workspace(
+            conf_workspace,
+            server_names=servers,
+            clients=clients,
+            selected_scenarios=selected_scenarios,
+        )
+        return
+
+    conf_workspace = reporter.run_stage(
+        "generate examples",
+        lambda: workspace.prepare_generated_workspace(
+            repo_root,
+            swift_runtime_profile=swift_runtime_profile,
+        ),
     )
+    try:
+        reporter.run_stage("compile generated examples", lambda: workspace.compile_workspace(conf_workspace))
+        _run_against_workspace(
+            conf_workspace,
+            server_names=servers,
+            clients=clients,
+            selected_scenarios=selected_scenarios,
+        )
+    finally:
+        if conf_workspace.temporary:
+            shutil.rmtree(conf_workspace.root, ignore_errors=True)
 
 
 def _run_against_workspace(
@@ -196,6 +241,13 @@ def _run_against_workspace(
         clients=clients,
         scenarios=tuple(scenario.name for scenario in selected_scenarios),
     )
+
+
+def _effective_swift_runtime_profile(clients: tuple[str, ...], swift_runtime_profile: str) -> str:
+    swift_runtime_profile = example_validation.validate_swift_runtime_profile(swift_runtime_profile)
+    if "swift" not in clients:
+        return "modern"
+    return swift_runtime_profile
 
 
 def _server_scenario_groups(

@@ -47,6 +47,8 @@ def test_makefile_exposes_example_validation_and_release_preflight_uses_it():
     assert 'EXAMPLE_CONFORMANCE_CLIENTS ?= go,typescript,kotlin,flutter' in text
     assert 'EXAMPLE_CONFORMANCE_SCENARIOS ?=' in text
     assert 'EXAMPLE_CONFORMANCE_KEEP_WORKSPACE ?= 0' in text
+    assert 'EXAMPLE_CONFORMANCE_SWIFT_RUNTIME_PROFILE ?= modern' in text
+    assert '--swift-runtime-profile "$(EXAMPLE_CONFORMANCE_SWIFT_RUNTIME_PROFILE)"' in text
     assert 'EXAMPLE_BENCH_SERVERS ?= go' in text
     assert 'EXAMPLE_BENCH_SCENARIOS ?= rpc-json,binary' in text
     assert 'EXAMPLE_BENCH_REQUESTS ?= 1000' in text

@@ -291,6 +291,7 @@ public struct APIStreamResponse {
     public var contentType: String
     public var contentDisposition: String
     public var filename: String?
+    private let cancelHandler: @Sendable () -> Void
 
     public init(
         body: AsyncThrowingStream<Data, Error>,
@@ -298,7 +299,8 @@ public struct APIStreamResponse {
         statusCode: Int = 200,
         contentType: String = "application/octet-stream",
         contentDisposition: String = "",
-        filename: String? = nil
+        filename: String? = nil,
+        cancel: @escaping @Sendable () -> Void = {}
     ) {
         self.body = body
         self.headers = headers
@@ -306,6 +308,11 @@ public struct APIStreamResponse {
         self.contentType = contentType
         self.contentDisposition = contentDisposition
         self.filename = filename
+        self.cancelHandler = cancel
+    }
+
+    public func cancel() {
+        cancelHandler()
     }
 }
 

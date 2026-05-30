@@ -5,6 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from scripts import example_validation
 from scripts.example_conformance import manifest, runner, scenarios
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -37,6 +38,12 @@ def build_parser() -> argparse.ArgumentParser:
             default="",
             help="Comma-separated scenarios. Defaults to every registered scenario.",
         )
+        command.add_argument(
+            "--swift-runtime-profile",
+            choices=example_validation.SWIFT_RUNTIME_PROFILES,
+            default="modern",
+            help="Swift client runtime profile for temporary conformance workspaces.",
+        )
         if name != "refresh":
             command.add_argument("--keep-workspace", action="store_true", help="Keep temporary workspace after the run.")
     return parser
@@ -64,6 +71,7 @@ def main(argv: list[str] | None = None) -> int:
                 clients=clients,
                 scenario_names=scenario_names,
                 keep_workspace=args.keep_workspace,
+                swift_runtime_profile=args.swift_runtime_profile,
             )
             return 0
         if args.command == "check":
@@ -73,6 +81,7 @@ def main(argv: list[str] | None = None) -> int:
                 clients=clients,
                 scenario_names=scenario_names,
                 keep_workspace=args.keep_workspace,
+                swift_runtime_profile=args.swift_runtime_profile,
             )
             return 0
         if args.command == "refresh":
@@ -81,6 +90,7 @@ def main(argv: list[str] | None = None) -> int:
                 servers=servers,
                 clients=clients,
                 scenario_names=scenario_names,
+                swift_runtime_profile=args.swift_runtime_profile,
             )
             return 0
     except (RuntimeError, ValueError, FileNotFoundError, ModuleNotFoundError, subprocess.CalledProcessError) as exc:

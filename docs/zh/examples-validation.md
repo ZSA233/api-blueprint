@@ -74,7 +74,10 @@ make example-conformance-refresh
 - `EXAMPLE_CONFORMANCE_SERVERS`：选择服务端矩阵项，默认 `go`；可设为 `all` 跑 Go / Java / Kotlin / Python server。
 - `EXAMPLE_CONFORMANCE_CLIENTS`：选择客户端矩阵项，默认 `go,typescript,kotlin,flutter`；可设为 `all` 跑 Go / TypeScript / Kotlin / Flutter / Swift / Java / Python client，其中 Swift 需要可用 Swift toolchain 或设置 `API_BLUEPRINT_SWIFT_BIN`。
 - `EXAMPLE_CONFORMANCE_SCENARIOS`：选择场景矩阵项，空值表示全部场景。
+- `EXAMPLE_CONFORMANCE_SWIFT_RUNTIME_PROFILE`：选择 Swift conformance 临时 workspace 的 runtime profile，默认 `modern`；可设为 `ios14-compat` 验证 iOS 14 兼容 transport，不会刷新或提交第二套 Swift snapshot。
 - `EXAMPLE_CONFORMANCE_KEEP_WORKSPACE=1`：对 `generate`、`run`、`check` 保留临时 workspace，便于排查失败。
+
+`example-compile-check` 在 Swift toolchain 可用时会编译 `examples/swift` modern 快照、`examples/swift/Narrow`，并额外生成临时 `ios14-compat` Swift package 做 `swift build` smoke。需要验证 SwiftPM 在 iOS Simulator SDK 下也能构建时，可设置 `API_BLUEPRINT_SWIFT_IOS_SMOKE=1`；该检查依赖本机 `xcodebuild`，因此默认关闭。
 
 conformance 成功时输出按阶段收敛为一行状态，例如生成、snapshot、编译和 server 启动；运行层级是 `server -> client -> setup/scenario`。每个 client 会先输出 `client/setup`，表示正在冷启动或准备测试执行环境，例如 Go build、TypeScript compile、`dart pub get` 或 Gradle `installDist`；之后每个 `client/scenario` 会逐项执行并在该项完成时立即输出结果。生成器、`dart pub get`、Gradle、`go test` 等详细输出默认隐藏。某个阶段失败时，runner 会把该阶段捕获到的 stdout/stderr 回放到 stderr；client 场景失败时还会回放当前 server log，便于直接定位服务端或互通问题。状态文本在 TTY 下自动着色；可用 `FORCE_COLOR=1` 强制开启，或用 `NO_COLOR=1` 关闭。
 

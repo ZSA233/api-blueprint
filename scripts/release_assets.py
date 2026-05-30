@@ -149,6 +149,7 @@ def validate_config(repo_root: Path) -> None:
         Path("scripts/example_validation/models.py"),
         Path("scripts/example_validation/runner.py"),
         Path("scripts/example_validation/snapshot.py"),
+        Path("scripts/example_validation/swift_smoke.py"),
         Path("scripts/example_validation/tools.py"),
         Path("scripts/example_validation/workspace.py"),
     ]

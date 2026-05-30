@@ -16,8 +16,15 @@ class ConformanceWorkspace:
         return self.blueprint.root
 
 
-def prepare_generated_workspace(repo_root: Path) -> ConformanceWorkspace:
+def prepare_generated_workspace(repo_root: Path, *, swift_runtime_profile: str = "modern") -> ConformanceWorkspace:
+    swift_runtime_profile = example_validation.validate_swift_runtime_profile(swift_runtime_profile)
     workspace = example_validation.prepare_blueprint_workspace(repo_root)
+    if swift_runtime_profile != "modern":
+        example_validation.write_swift_client_config_override(
+            workspace.config_path,
+            workspace.config_path,
+            runtime_profile=swift_runtime_profile,
+        )
     example_validation.regenerate_blueprint_examples(workspace)
     return ConformanceWorkspace(workspace, temporary=True)
 

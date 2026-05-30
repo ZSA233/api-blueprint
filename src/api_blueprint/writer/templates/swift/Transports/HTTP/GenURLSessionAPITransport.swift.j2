@@ -33,6 +33,9 @@ public final class URLSessionAPITransport: APITransport {
         }
         let (data, response) = try await config.session.data(for: built.request)
 {% else %}
+        if request.responseKind == "byte_stream" {
+            return try await performCompatByteStreamRequest(built: built, request: request)
+        }
         let (data, response) = try await performCompatDataTask(built.request)
 {% endif %}
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -45,13 +48,6 @@ public final class URLSessionAPITransport: APITransport {
                 try validateEnvelopeStatus(data, response: httpResponse, routeID: request.routeID, envelope: request.responseEnvelope)
             }
             return try request.decode(rawResponse(data, response: httpResponse, defaultContentType: request.responseMediaType))
-        }
-        if request.responseKind == "byte_stream" {
-            if isJSONResponse(httpResponse) {
-                try validateEnvelopeStatus(data, response: httpResponse, routeID: request.routeID, envelope: request.responseEnvelope)
-            }
-            let stream = chunkedDataStream(data)
-            return try request.decode(streamResponse(stream, response: httpResponse, defaultContentType: request.responseMediaType))
         }
         if request.responseKind == "binary_schema" {
             return try request.decode(data)
@@ -242,6 +238,44 @@ public final class URLSessionAPITransport: APITransport {
         }
     }
 
+    private func performCompatByteStreamRequest<Response>(
+        built: APIBuiltRequest,
+        request: APIRequest<Response>
+    ) async throws -> Response {
+        let bridge = APIHTTPCompatByteStreamTask(
+            request: built.request,
+            configuration: config.session.configuration,
+            chunkSize: max(1, config.byteStreamChunkSize),
+            maxErrorBodyBytes: config.maxErrorBodyBytes,
+            streamBufferLimit: max(1, config.streamBufferLimit),
+            shouldBufferResponse: { response in
+                response.statusCode >= 400 || self.isJSONResponse(response)
+            },
+            bufferedResponse: { response, data in
+                try self.validateStatus(response, body: data, routeID: request.routeID, envelope: request.responseEnvelope)
+                if self.isJSONResponse(response) {
+                    try self.validateEnvelopeStatus(
+                        data,
+                        response: response,
+                        routeID: request.routeID,
+                        envelope: request.responseEnvelope
+                    )
+                }
+                let stream = self.singleDataStream(data)
+                return self.streamResponse(stream, response: response, defaultContentType: request.responseMediaType)
+            },
+            streamingResponse: { stream, response, cancel in
+                self.streamResponse(
+                    stream,
+                    response: response,
+                    defaultContentType: request.responseMediaType,
+                    cancel: cancel
+                )
+            }
+        )
+        return try request.decode(try await bridge.start())
+    }
+
     private func performCompatEventStreamTask(
         _ request: URLRequest,
         onResponse: @escaping (HTTPURLResponse) throws -> Void,
@@ -324,14 +358,20 @@ public final class URLSessionAPITransport: APITransport {
         )
     }
 
-    private func streamResponse(_ stream: AsyncThrowingStream<Data, Error>, response: HTTPURLResponse, defaultContentType: String) -> APIStreamResponse {
+    private func streamResponse(
+        _ stream: AsyncThrowingStream<Data, Error>,
+        response: HTTPURLResponse,
+        defaultContentType: String,
+        cancel: @escaping @Sendable () -> Void = {}
+    ) -> APIStreamResponse {
         APIStreamResponse(
             body: stream,
             headers: headers(response),
             statusCode: response.statusCode,
             contentType: response.value(forHTTPHeaderField: "Content-Type") ?? defaultContentType,
             contentDisposition: response.value(forHTTPHeaderField: "Content-Disposition") ?? "",
-            filename: filename(response)
+            filename: filename(response),
+            cancel: cancel
         )
     }
 
@@ -531,24 +571,37 @@ public final class URLSessionAPITransport: APITransport {
 
     private func chunkedByteStream<Bytes: AsyncSequence>(_ bytes: Bytes) -> AsyncThrowingStream<Data, Error> where Bytes.Element == UInt8 {
         AsyncThrowingStream<Data, Error>(bufferingPolicy: .bufferingNewest(max(1, config.streamBufferLimit))) { continuation in
-            Task {
+            let accumulator = APIHTTPByteStreamAccumulator(chunkSize: max(1, config.byteStreamChunkSize))
+            let readerTask = Task {
                 do {
-                    var chunk = Data()
-                    chunk.reserveCapacity(max(1, config.byteStreamChunkSize))
                     for try await byte in bytes {
-                        chunk.append(byte)
-                        if chunk.count >= max(1, config.byteStreamChunkSize) {
+                        if let chunk = accumulator.append(byte) {
                             continuation.yield(chunk)
-                            chunk.removeAll(keepingCapacity: true)
                         }
                     }
-                    if !chunk.isEmpty {
+                    if let chunk = accumulator.finish() {
                         continuation.yield(chunk)
                     }
                     continuation.finish()
                 } catch {
                     continuation.finish(throwing: error)
                 }
+            }
+            let flushTask = Task {
+                while !Task.isCancelled {
+                    try? await Task.sleep(nanoseconds: 10_000_000)
+                    if Task.isCancelled {
+                        break
+                    }
+                    if let chunk = accumulator.flush() {
+                        continuation.yield(chunk)
+                    }
+                }
+            }
+            continuation.onTermination = { _ in
+                accumulator.cancel()
+                readerTask.cancel()
+                flushTask.cancel()
             }
         }
     }
@@ -557,23 +610,6 @@ public final class URLSessionAPITransport: APITransport {
     private func singleDataStream(_ data: Data) -> AsyncThrowingStream<Data, Error> {
         AsyncThrowingStream<Data, Error>(bufferingPolicy: .bufferingNewest(1)) { continuation in
             continuation.yield(data)
-            continuation.finish()
-        }
-    }
-
-    private func chunkedDataStream(_ data: Data) -> AsyncThrowingStream<Data, Error> {
-        AsyncThrowingStream<Data, Error>(bufferingPolicy: .bufferingNewest(max(1, config.streamBufferLimit))) { continuation in
-            if data.isEmpty {
-                continuation.finish()
-                return
-            }
-            var offset = 0
-            let chunkSize = max(1, config.byteStreamChunkSize)
-            while offset < data.count {
-                let end = min(offset + chunkSize, data.count)
-                continuation.yield(data.subdata(in: offset..<end))
-                offset = end
-            }
             continuation.finish()
         }
     }
@@ -602,7 +638,347 @@ private struct APIMultipartBody {
     }
 }
 
+{% if writer.modern_runtime %}
+private final class APIHTTPByteStreamAccumulator {
+    private let lock = NSLock()
+    private let chunkSize: Int
+    private var chunk = Data()
+    private var closed = false
+
+    init(chunkSize: Int) {
+        self.chunkSize = chunkSize
+        chunk.reserveCapacity(chunkSize)
+    }
+
+    func append(_ byte: UInt8) -> Data? {
+        lock.lock()
+        defer { lock.unlock() }
+        if closed {
+            return nil
+        }
+        chunk.append(byte)
+        if chunk.count >= chunkSize {
+            let data = chunk
+            chunk.removeAll(keepingCapacity: true)
+            return data
+        }
+        return nil
+    }
+
+    func flush() -> Data? {
+        lock.lock()
+        defer { lock.unlock() }
+        if closed || chunk.isEmpty {
+            return nil
+        }
+        let data = chunk
+        chunk.removeAll(keepingCapacity: true)
+        return data
+    }
+
+    func finish() -> Data? {
+        lock.lock()
+        defer { lock.unlock() }
+        if closed {
+            return nil
+        }
+        closed = true
+        if chunk.isEmpty {
+            return nil
+        }
+        let data = chunk
+        chunk.removeAll(keepingCapacity: true)
+        return data
+    }
+
+    func cancel() {
+        lock.lock()
+        closed = true
+        chunk.removeAll(keepingCapacity: false)
+        lock.unlock()
+    }
+}
+
+{% endif %}
 {% if not writer.modern_runtime %}
+private final class APIHTTPCompatByteStreamTask: NSObject, URLSessionDataDelegate {
+    private let lock = NSLock()
+    private let chunkSize: Int
+    private let maxErrorBodyBytes: Int
+    private let streamBufferLimit: Int
+    private let shouldBufferResponse: (HTTPURLResponse) -> Bool
+    private let bufferedResponse: (HTTPURLResponse, Data) throws -> APIStreamResponse
+    private let streamingResponse: (
+        AsyncThrowingStream<Data, Error>,
+        HTTPURLResponse,
+        @escaping @Sendable () -> Void
+    ) throws -> APIStreamResponse
+    private var session: URLSession?
+    private var task: URLSessionDataTask?
+    private var queue: OperationQueue?
+    private var response: HTTPURLResponse?
+    private var initialContinuation: CheckedContinuation<APIStreamResponse, Error>?
+    private var streamContinuation: AsyncThrowingStream<Data, Error>.Continuation?
+    private var didComplete = false
+    private var didReturnResponse = false
+    private var bufferingResponse = false
+    private var completionError: Error?
+    private var bufferedData = Data()
+    private var pendingChunk = Data()
+
+    init(
+        request: URLRequest,
+        configuration: URLSessionConfiguration,
+        chunkSize: Int,
+        maxErrorBodyBytes: Int,
+        streamBufferLimit: Int,
+        shouldBufferResponse: @escaping (HTTPURLResponse) -> Bool,
+        bufferedResponse: @escaping (HTTPURLResponse, Data) throws -> APIStreamResponse,
+        streamingResponse: @escaping (
+            AsyncThrowingStream<Data, Error>,
+            HTTPURLResponse,
+            @escaping @Sendable () -> Void
+        ) throws -> APIStreamResponse
+    ) {
+        self.chunkSize = chunkSize
+        self.maxErrorBodyBytes = maxErrorBodyBytes
+        self.streamBufferLimit = streamBufferLimit
+        self.shouldBufferResponse = shouldBufferResponse
+        self.bufferedResponse = bufferedResponse
+        self.streamingResponse = streamingResponse
+        super.init()
+        let queue = OperationQueue()
+        queue.maxConcurrentOperationCount = 1
+        self.queue = queue
+        let session = URLSession(configuration: configuration, delegate: self, delegateQueue: queue)
+        self.session = session
+        self.task = session.dataTask(with: request)
+    }
+
+    func start() async throws -> APIStreamResponse {
+        try await withCheckedThrowingContinuation { continuation in
+            lock.lock()
+            initialContinuation = continuation
+            lock.unlock()
+            task?.resume()
+        }
+    }
+
+    func cancel() {
+        complete(CancellationError(), cancelTask: true)
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        dataTask: URLSessionDataTask,
+        didReceive response: URLResponse,
+        completionHandler: @escaping (URLSession.ResponseDisposition) -> Void
+    ) {
+        guard let httpResponse = response as? HTTPURLResponse else {
+            completionHandler(.cancel)
+            complete(APIDecodeError.invalidResponse("expected HTTP response"), cancelTask: true)
+            return
+        }
+        lock.lock()
+        if didComplete {
+            lock.unlock()
+            completionHandler(.cancel)
+            return
+        }
+        if didReturnResponse {
+            lock.unlock()
+            completionHandler(.allow)
+            return
+        }
+        self.response = httpResponse
+        bufferingResponse = shouldBufferResponse(httpResponse)
+        let shouldBuffer = bufferingResponse
+        lock.unlock()
+
+        if shouldBuffer {
+            completionHandler(.allow)
+            return
+        }
+        let stream = makeStream()
+        do {
+            let value = try streamingResponse(stream, httpResponse, { self.cancel() })
+            lock.lock()
+            let continuation = initialContinuation
+            initialContinuation = nil
+            didReturnResponse = true
+            lock.unlock()
+            completionHandler(.allow)
+            continuation?.resume(returning: value)
+        } catch {
+            completionHandler(.cancel)
+            complete(error, cancelTask: true)
+        }
+    }
+
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        if isBufferingResponse() {
+            appendBufferedData(data)
+        } else {
+            appendStreamingData(data)
+        }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        complete(error)
+    }
+
+    func urlSession(_ session: URLSession, didBecomeInvalidWithError error: Error?) {
+        if let error {
+            complete(error)
+        }
+    }
+
+    private func makeStream() -> AsyncThrowingStream<Data, Error> {
+        AsyncThrowingStream<Data, Error>(bufferingPolicy: .bufferingNewest(max(1, streamBufferLimit))) { continuation in
+            var chunks: [Data] = []
+            var completion: (Bool, Error?) = (false, nil)
+            lock.lock()
+            streamContinuation = continuation
+            chunks = drainPendingChunksLocked()
+            if didComplete {
+                completion = (true, completionError)
+            }
+            lock.unlock()
+            continuation.onTermination = { [weak self] _ in
+                self?.cancel()
+            }
+            for chunk in chunks {
+                continuation.yield(chunk)
+            }
+            if completion.0 {
+                if let error = completion.1 {
+                    continuation.finish(throwing: error)
+                } else {
+                    continuation.finish()
+                }
+            }
+        }
+    }
+
+    private func isBufferingResponse() -> Bool {
+        lock.lock()
+        let value = bufferingResponse
+        lock.unlock()
+        return value
+    }
+
+    private func appendBufferedData(_ data: Data) {
+        var overflow = false
+        lock.lock()
+        if !didComplete {
+            if bufferedData.count + data.count > maxErrorBodyBytes {
+                overflow = true
+            } else {
+                bufferedData.append(data)
+            }
+        }
+        lock.unlock()
+        if overflow {
+            complete(APITransportError.payloadTooLarge(kind: "error", limit: maxErrorBodyBytes), cancelTask: true)
+        }
+    }
+
+    private func appendStreamingData(_ data: Data) {
+        var chunks: [Data] = []
+        var continuation: AsyncThrowingStream<Data, Error>.Continuation?
+        lock.lock()
+        if !didComplete {
+            pendingChunk.append(data)
+            continuation = streamContinuation
+            if continuation != nil {
+                chunks = drainPendingChunksLocked()
+            }
+        }
+        lock.unlock()
+        guard let continuation else {
+            return
+        }
+        for chunk in chunks {
+            continuation.yield(chunk)
+        }
+    }
+
+    private func drainPendingChunksLocked() -> [Data] {
+        var chunks: [Data] = []
+        while pendingChunk.count >= chunkSize {
+            chunks.append(Data(pendingChunk.prefix(chunkSize)))
+            pendingChunk.removeFirst(chunkSize)
+        }
+        if !pendingChunk.isEmpty {
+            chunks.append(pendingChunk)
+            pendingChunk.removeAll(keepingCapacity: true)
+        }
+        return chunks
+    }
+
+    private func complete(_ error: Error?, cancelTask: Bool = false) {
+        lock.lock()
+        if didComplete {
+            lock.unlock()
+            return
+        }
+        didComplete = true
+        completionError = error
+        let session = self.session
+        let task = self.task
+        let response = self.response
+        let initialContinuation = self.initialContinuation
+        let streamContinuation = self.streamContinuation
+        let didReturnResponse = self.didReturnResponse
+        let bufferingResponse = self.bufferingResponse
+        let bufferedData = self.bufferedData
+        let finalChunk = self.pendingChunk
+        let hasStreamContinuation = self.streamContinuation != nil
+        self.session = nil
+        self.task = nil
+        self.queue = nil
+        self.initialContinuation = nil
+        self.streamContinuation = nil
+        if hasStreamContinuation {
+            self.pendingChunk = Data()
+        }
+        lock.unlock()
+
+        if cancelTask || error != nil {
+            task?.cancel()
+        }
+        session?.invalidateAndCancel()
+
+        if let error {
+            if didReturnResponse {
+                streamContinuation?.finish(throwing: error)
+            } else {
+                initialContinuation?.resume(throwing: error)
+            }
+            return
+        }
+        if bufferingResponse {
+            guard let response else {
+                initialContinuation?.resume(throwing: APIDecodeError.invalidResponse("missing HTTP response"))
+                return
+            }
+            do {
+                initialContinuation?.resume(returning: try bufferedResponse(response, bufferedData))
+            } catch {
+                initialContinuation?.resume(throwing: error)
+            }
+            return
+        }
+        if !finalChunk.isEmpty {
+            streamContinuation?.yield(finalChunk)
+        }
+        streamContinuation?.finish()
+        if !didReturnResponse {
+            initialContinuation?.resume(throwing: APIDecodeError.invalidResponse("missing HTTP response"))
+        }
+    }
+}
+
 private final class APIHTTPCompatEventStreamTask: NSObject, URLSessionDataDelegate {
     private let lock = NSLock()
     private let onResponse: (HTTPURLResponse) throws -> Void

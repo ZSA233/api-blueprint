@@ -45,6 +45,14 @@ from .snapshot import (
     validate_grpc_snapshots,
     validate_wails_hello_snapshots,
 )
+from .swift_smoke import (
+    SWIFT_IOS_SMOKE_ENV,
+    SWIFT_RUNTIME_PROFILES,
+    validate_swift_compat_package,
+    validate_swift_ios_simulator_smoke,
+    validate_swift_runtime_profile,
+    write_swift_client_config_override,
+)
 from .tools import (
     collect_missing_validation_requirements,
     ensure_validation_requirements,

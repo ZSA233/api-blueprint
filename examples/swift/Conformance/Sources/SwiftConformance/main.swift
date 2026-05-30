@@ -252,6 +252,7 @@ private func checkMedia(_ client: ABClient) async throws {
     try expectPrefix(dynamic.body, [0x50, 0x4b], "media.dynamic")
 
     let stream = try await client.api.media.mediaMjpeg()
+    defer { stream.cancel() }
     var chunk = Data()
     for try await part in stream.body {
         chunk.append(part)

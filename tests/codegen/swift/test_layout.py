@@ -93,6 +93,7 @@ def test_swift_writer_generates_spm_runtime_routes_transport_and_preserved_files
     assert "public var decodeData: (Data, APIResponseEnvelope, APICodingConfig) throws -> Response" in runtime_transport
     assert "public struct APIRawResponse" in runtime_transport
     assert "public struct APIStreamResponse" in runtime_transport
+    assert "public func cancel()" in runtime_transport
     assert "public struct APIFilePart: Codable, Sendable" in runtime_transport
     assert "public struct APIBinaryPayload: Sendable" in runtime_transport
     assert "public enum APIJSONValue" in runtime_transport
@@ -189,6 +190,7 @@ def test_swift_writer_generates_spm_runtime_routes_transport_and_preserved_files
     assert "validateHeaderValue(file.filename)" in http_transport
     assert "APITransportError.invalidHeaderValue" in http_transport
     assert "APITransportError.payloadTooLarge" in http_transport
+    assert "cancel: @escaping @Sendable () -> Void = {}" in http_transport
     assert "httpResponse.statusCode >= 400 || isJSONResponse(httpResponse)" in http_transport
     assert "validateStatus(httpResponse, body: Data()" not in http_transport
     assert "apiHTTPEventStreamBridge(" in http_transport
@@ -344,14 +346,26 @@ def test_swift_transport_runtime_profiles_are_isolated_to_transport_templates(tm
     assert "try await config.session.data(for: built.request)" in modern_transport
     assert "try await config.session.bytes(for: built.request)" in modern_transport
     assert "performCompatDataTask" not in modern_transport
+    assert "APIHTTPByteStreamAccumulator" in modern_transport
+    assert "Task.sleep(nanoseconds: 10_000_000)" in modern_transport
     assert "apiHTTPEventStreamBridge" in modern_transport
     assert "apiHTTPWebSocketBridge" in modern_transport
     assert "APIHTTPSSEParser" in modern_connection
     assert 'type == "message"' in modern_connection
     assert 'type == "close"' in modern_connection
     assert "performCompatDataTask" in compat_transport
+    assert "performCompatByteStreamRequest" in compat_transport
+    assert "APIHTTPCompatByteStreamTask" in compat_transport
+    assert "streamingResponse(stream, httpResponse, { self.cancel() })" in compat_transport
+    assert 'request.responseKind == "byte_stream"' in compat_transport
+    assert "return try await performCompatByteStreamRequest(built: built, request: request)" in compat_transport
     assert "performCompatEventStreamTask" in compat_transport
     assert "URLSessionDataDelegate" in compat_transport
     assert "didReceive data: Data" in compat_transport
+    assert "if didReturnResponse {\n            lock.unlock()\n            completionHandler(.allow)\n            return\n        }" in compat_transport
+    assert "let stream = chunkedDataStream(data)" not in compat_transport
+    assert "pendingChunk.removeFirst(chunkSize)" in compat_transport
+    assert "pendingChunk.removeAll(keepingCapacity: true)" in compat_transport
+    assert "drainPendingChunksLocked" in compat_transport
     assert ".data(for:" not in compat_transport
     assert ".bytes(for:" not in compat_transport

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .helpers import *
+from scripts.example_conformance import workspace as conformance_workspace
 
 
 def test_parse_csv_filter_accepts_all_keyword() -> None:
@@ -23,7 +24,7 @@ def test_cli_list_reports_servers_clients_and_scenarios(capsys: pytest.CaptureFi
     assert "- binary" in output
 
 def test_cli_run_invokes_runner_with_filters(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    calls: list[tuple[Path, tuple[str, ...], tuple[str, ...], tuple[str, ...], bool]] = []
+    calls: list[tuple[Path, tuple[str, ...], tuple[str, ...], tuple[str, ...], bool, str]] = []
 
     def fake_run(
         repo_root: Path,
@@ -32,8 +33,9 @@ def test_cli_run_invokes_runner_with_filters(monkeypatch: pytest.MonkeyPatch, tm
         clients: tuple[str, ...],
         scenario_names: tuple[str, ...],
         keep_workspace: bool,
+        swift_runtime_profile: str,
     ) -> None:
-        calls.append((repo_root, servers, clients, scenario_names, keep_workspace))
+        calls.append((repo_root, servers, clients, scenario_names, keep_workspace, swift_runtime_profile))
 
     monkeypatch.setattr(cli.runner, "run_conformance", fake_run)
 
@@ -48,12 +50,16 @@ def test_cli_run_invokes_runner_with_filters(monkeypatch: pytest.MonkeyPatch, tm
             "go,flutter",
             "--scenario",
             "rpc,binary",
+            "--swift-runtime-profile",
+            "ios14-compat",
             "--keep-workspace",
         ]
     )
 
     assert result == 0
-    assert calls == [(tmp_path.resolve(), ("go", "java"), ("go", "flutter"), ("rpc", "binary"), True)]
+    assert calls == [
+        (tmp_path.resolve(), ("go", "java"), ("go", "flutter"), ("rpc", "binary"), True, "ios14-compat")
+    ]
 
 def test_cli_generate_invokes_runner(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     calls: list[tuple[Path, bool]] = []
@@ -68,9 +74,49 @@ def test_cli_generate_invokes_runner(monkeypatch: pytest.MonkeyPatch, tmp_path: 
     assert result == 0
     assert calls == [(tmp_path.resolve(), True)]
 
+
+def test_prepare_generated_workspace_overrides_swift_runtime_profile(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    config = tmp_path / "api-blueprint.toml"
+    config.write_text(
+        """
+[[swift.client]]
+id = "swift.client"
+out_dir = "swift"
+package = "ExampleClient"
+module = "Example"
+runtime_profile = "modern"
+""".lstrip(),
+        encoding="utf-8",
+    )
+    fake_workspace = SimpleNamespace(root=tmp_path, config_path=config)
+    generated_configs: list[str] = []
+
+    monkeypatch.setattr(
+        conformance_workspace.example_validation,
+        "prepare_blueprint_workspace",
+        lambda repo_root: fake_workspace,
+    )
+    monkeypatch.setattr(
+        conformance_workspace.example_validation,
+        "regenerate_blueprint_examples",
+        lambda workspace: generated_configs.append(workspace.config_path.read_text(encoding="utf-8")),
+    )
+
+    result = conformance_workspace.prepare_generated_workspace(
+        tmp_path,
+        swift_runtime_profile="ios14-compat",
+    )
+
+    assert result.temporary is True
+    assert result.root == tmp_path
+    assert 'runtime_profile = "ios14-compat"' in generated_configs[0]
+
 def test_cli_check_and_refresh_invoke_runner(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    check_calls: list[tuple[Path, tuple[str, ...], tuple[str, ...], tuple[str, ...], bool]] = []
-    refresh_calls: list[tuple[Path, tuple[str, ...], tuple[str, ...], tuple[str, ...]]] = []
+    check_calls: list[tuple[Path, tuple[str, ...], tuple[str, ...], tuple[str, ...], bool, str]] = []
+    refresh_calls: list[tuple[Path, tuple[str, ...], tuple[str, ...], tuple[str, ...], str]] = []
 
     def fake_check(
         repo_root: Path,
@@ -79,8 +125,9 @@ def test_cli_check_and_refresh_invoke_runner(monkeypatch: pytest.MonkeyPatch, tm
         clients: tuple[str, ...],
         scenario_names: tuple[str, ...],
         keep_workspace: bool,
+        swift_runtime_profile: str,
     ) -> None:
-        check_calls.append((repo_root, servers, clients, scenario_names, keep_workspace))
+        check_calls.append((repo_root, servers, clients, scenario_names, keep_workspace, swift_runtime_profile))
 
     def fake_refresh(
         repo_root: Path,
@@ -88,8 +135,9 @@ def test_cli_check_and_refresh_invoke_runner(monkeypatch: pytest.MonkeyPatch, tm
         servers: tuple[str, ...],
         clients: tuple[str, ...],
         scenario_names: tuple[str, ...],
+        swift_runtime_profile: str,
     ) -> None:
-        refresh_calls.append((repo_root, servers, clients, scenario_names))
+        refresh_calls.append((repo_root, servers, clients, scenario_names, swift_runtime_profile))
 
     monkeypatch.setattr(cli.runner, "check_conformance", fake_check)
     monkeypatch.setattr(cli.runner, "refresh_and_check", fake_refresh)
@@ -119,13 +167,15 @@ def test_cli_check_and_refresh_invoke_runner(monkeypatch: pytest.MonkeyPatch, tm
             "flutter",
             "--scenario",
             "sse",
+            "--swift-runtime-profile",
+            "ios14-compat",
         ]
     )
 
     assert check_result == 0
     assert refresh_result == 0
-    assert check_calls == [(tmp_path.resolve(), ("go",), ("typescript", "kotlin"), ("form", "error"), True)]
-    assert refresh_calls == [(tmp_path.resolve(), ("go", "kotlin"), ("flutter",), ("sse",))]
+    assert check_calls == [(tmp_path.resolve(), ("go",), ("typescript", "kotlin"), ("form", "error"), True, "modern")]
+    assert refresh_calls == [(tmp_path.resolve(), ("go", "kotlin"), ("flutter",), ("sse",), "ios14-compat")]
 
 def test_cli_rejects_conflicting_server_flags(capsys: pytest.CaptureFixture[str]) -> None:
     result = cli.main(["run", "--server", "go", "--servers", "java"])

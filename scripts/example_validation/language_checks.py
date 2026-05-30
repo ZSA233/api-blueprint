@@ -17,7 +17,9 @@ from .constants import (
     SPRING_BOOT_VERSION,
 )
 from .models import ExampleValidationError
+from .swift_smoke import validate_swift_compat_package, validate_swift_ios_simulator_smoke
 from .tools import resolve_gradle_bin, resolve_swift_bin
+
 
 def _validate_kotlin_sources(kotlin_dir: Path) -> None:
     client_dir = kotlin_dir / "client"
@@ -326,6 +328,8 @@ def _validate_swift_sources(swift_dir: Path) -> None:
     if swift_bin is not None:
         subprocess.run([swift_bin, "build"], cwd=swift_dir, check=True)
         subprocess.run([swift_bin, "build"], cwd=swift_dir / "Narrow", check=True)
+        validate_swift_compat_package(swift_dir.parent, swift_bin)
+        validate_swift_ios_simulator_smoke(swift_dir)
 
 
 def _compile_kotlin_sources(kotlin_dir: Path, *, include_okhttp: bool, include_ktor: bool) -> None:
