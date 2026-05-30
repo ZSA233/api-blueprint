@@ -113,6 +113,14 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
         transport="injected",
         responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
     ),
+    "swift-client": TargetCapability(
+        implemented=True,
+        routes=("rpc", "stream", "channel"),
+        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
+        envelopes=("none", "code_message_data", "ok_data_error"),
+        transport="injected",
+        responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
+    ),
     "python-server": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),

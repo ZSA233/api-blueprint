@@ -17,8 +17,8 @@ Blueprint DSL -> ContractGraph -> api-gen check / inspect / generate -> generate
 
 ## 适合什么场景
 
-- 后端、Web、Flutter、Kotlin、脚本客户端需要共享同一份 API 契约。
-- 希望先从协议生成 Go server，再生成 TypeScript、Flutter、Kotlin、Java、Go、Python client，或生成 Kotlin/Java/Python server scaffold。
+- 后端、Web、Flutter、iOS Swift、Kotlin、脚本客户端需要共享同一份 API 契约。
+- 希望先从协议生成 Go server，再生成 TypeScript、Flutter、Swift、Kotlin、Java、Go、Python client，或生成 Kotlin/Java/Python server scaffold。
 - 需要文档服务、契约检查、生成快照和端到端示例一起维护。
 - 需要把 Markdown Binary Schema、typed binary 响应、multipart 上传、raw bytes/file/stream 响应、Wails 或 gRPC 纳入同一套生成流程。
 
@@ -97,6 +97,7 @@ api-gen generate -c api-blueprint.toml
 | Go server | 可用 | 生成 Go 路由、provider、长连接 message helper、HTTP/Wails adapter、multipart/raw media、binary schema 请求/响应和 runtime |
 | TypeScript client | 预览 | 生成 transport-neutral client、长连接 message helper、HTTP multipart/raw adapter、binary schema 响应解码和 Wails facade |
 | Flutter client | 预览 | 生成纯 Dart package、DTO、typed error、binary codec、HTTP multipart/raw/binary response client 和 SSE/WebSocket client |
+| Swift client | 预览 | 生成 iOS Swift Package、DTO、typed error、HTTP transport、multipart/raw/binary response client 和 STREAM/CHANNEL 协议桥接，不生成 UI、鉴权、缓存或 session engine |
 | Kotlin client/server | 预览 | 生成 OkHttp HTTP/SSE/WebSocket client、Ktor HTTP/SSE/WebSocket server scaffold、multipart/raw/binary request/response adapter、模型和长连接 message helper |
 | Java client/server | 预览 | 生成 Java 17 HttpClient client、Spring MVC/SSE/WebSocket server scaffold、record DTO、HTTP multipart/raw/binary request/response adapter 和长连接 message helper |
 | Go client / Python client | 预览 | 生成服务端之外的脚本或工具侧客户端；Python client 使用递归 dataclass DTO、共享 runtime codec，并提供 multipart/raw、长连接 message helper 与 binary writer/response codec |

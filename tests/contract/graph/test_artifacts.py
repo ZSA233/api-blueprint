@@ -63,6 +63,12 @@ def test_agent_manifest_and_shards_are_compact_navigation_layers():
             "python_package_root": "server_app",
         },
         {
+            "id": "swift.client",
+            "kind": "swift-client",
+            "out_dir": "swift",
+            "package": "ApiBlueprintExampleClient",
+        },
+        {
             "id": "grpc.python",
             "kind": "grpc-python",
             "out_dir": "grpc/python",
@@ -83,7 +89,7 @@ def test_agent_manifest_and_shards_are_compact_navigation_layers():
         "schemas": 5,
         "errors": 0,
         "connections": 1,
-        "targets": 9,
+        "targets": 10,
     }
     assert agent["read_order"][0]["path"] == "api-gen inspect"
     assert agent["shards"]["index"] == "api-blueprint.contract.d/index.json"
@@ -149,6 +155,14 @@ def test_agent_manifest_and_shards_are_compact_navigation_layers():
         "python/server/server_app/api/transports/http/gen_server.py",
         "python/server/server_app/api/transports/http/server.py",
     ]
+    assert stream_summary["artifacts"]["swift.client"]["files"] == [
+        "swift/Sources/ApiBlueprintExampleClient/API/Routes/API/Runs/GenRunsTypes.swift",
+        "swift/Sources/ApiBlueprintExampleClient/API/Routes/API/Runs/GenRunsAPI.swift",
+        "swift/Sources/ApiBlueprintExampleClient/API/Routes/API/Runs/RunsAPI.swift",
+        "swift/Sources/ApiBlueprintExampleClient/API/Transports/HTTP/GenURLSessionAPITransport.swift",
+        "swift/Sources/ApiBlueprintExampleClient/API/Transports/HTTP/HTTPAPIClient.swift",
+    ]
+    assert stream_summary["artifacts"]["swift.client"]["imports"] == ["ApiBlueprintExampleClient"]
     route_shard = shards["routes/api.runs.stream.events.json"]
     assert sorted(route_shard["schemas"]) == ["CloseInfo", "OpenRequest", "StreamDone", "StreamState"]
     assert route_shard["connection"]["kind"] == "stream"
@@ -196,6 +210,12 @@ def test_contract_artifacts_use_shared_selection_and_python_root_group_paths():
             "out_dir": "python/server",
             "python_package_root": "server_app",
         },
+        {
+            "id": "swift.client",
+            "kind": "swift-client",
+            "out_dir": "swift",
+            "package": "ApiBlueprintExampleClient",
+        },
     ]
 
     agent = build_agent_manifest(manifest)
@@ -242,3 +262,11 @@ def test_contract_artifacts_use_shared_selection_and_python_root_group_paths():
         "python/server/server_app/api/transports/http/gen_server.py",
         "python/server/server_app/api/transports/http/server.py",
     ]
+    assert route_summary["artifacts"]["swift.client"]["files"] == [
+        "swift/Sources/ApiBlueprintExampleClient/API/Routes/API/GenAPITypes.swift",
+        "swift/Sources/ApiBlueprintExampleClient/API/Routes/API/GenAPIAPI.swift",
+        "swift/Sources/ApiBlueprintExampleClient/API/Routes/API/APIAPI.swift",
+        "swift/Sources/ApiBlueprintExampleClient/API/Transports/HTTP/GenURLSessionAPITransport.swift",
+        "swift/Sources/ApiBlueprintExampleClient/API/Transports/HTTP/HTTPAPIClient.swift",
+    ]
+    assert route_summary["artifacts"]["swift.client"]["imports"] == ["ApiBlueprintExampleClient"]

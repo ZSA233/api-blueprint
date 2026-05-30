@@ -71,6 +71,13 @@ out_dir = "flutter"
 package = "api_blueprint_example"
 base_url = "http://localhost:2333"
 
+[[swift.client]]
+id = "swift.client"
+out_dir = "swift"
+module = "ApiBlueprintExampleClient"
+base_url = "http://localhost:2333"
+runtime_profile = "ios14-compat"
+
 [[python.server]]
 id = "python.server"
 out_dir = "python/server"
@@ -138,6 +145,7 @@ module = "pb"
         "java.server",
         "java.client",
         "flutter.client",
+        "swift.client",
         "python.server",
         "python.client",
         "http",
@@ -157,6 +165,7 @@ module = "pb"
         "java-server",
         "java-client",
         "flutter-client",
+        "swift-client",
         "python-server",
         "python-client",
         "http-transport",
@@ -177,12 +186,15 @@ module = "pb"
     assert config.targets[7].package == "com.example.generated"
     assert config.targets[8].module is None
     assert config.targets[8].package == "api_blueprint_example"
-    assert config.targets[9].python_package_root == "server_app"
-    assert config.targets[10].python_package_root == "client_app"
-    assert len(config.targets[14].proto_files) == 1
-    assert config.targets[14].proto_files[0].file == "api/demo.proto"
-    assert config.targets[14].proto_files[0].service == "DemoService"
-    assert config.targets[16].python_package_root == "pb"
+    assert config.targets[9].module is None
+    assert config.targets[9].package == "ApiBlueprintExampleClient"
+    assert config.targets[9].runtime_profile == "ios14-compat"
+    assert config.targets[10].python_package_root == "server_app"
+    assert config.targets[11].python_package_root == "client_app"
+    assert len(config.targets[15].proto_files) == 1
+    assert config.targets[15].proto_files[0].file == "api/demo.proto"
+    assert config.targets[15].proto_files[0].service == "DemoService"
+    assert config.targets[17].python_package_root == "pb"
 
 def test_contract_alias_table_normalizes_to_contract_target(tmp_path) -> None:
     config_path = tmp_path / "api-blueprint.toml"
@@ -271,6 +283,23 @@ package = "com.example.other"
     )
 
     with pytest.raises(ValueError, match=rf"\[\[{alias}\]\].*module and package must match"):
+        Config.load(config_path)
+
+def test_swift_alias_rejects_conflicting_module_and_package(tmp_path) -> None:
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[swift.client]]
+id = "swift.client"
+out_dir = "swift"
+module = "ApiBlueprintExampleClient"
+package = "OtherClient"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match=r"\[\[swift.client\]\].*module and package must match"):
         Config.load(config_path)
 
 def test_alias_target_tables_reject_unknown_alias_table(tmp_path) -> None:

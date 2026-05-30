@@ -1,0 +1,48 @@
+{% autoescape false %}
+{% for proto in protos %}
+{% if proto.kind == "enum" %}
+public enum {{ proto.name }}: {{ proto.raw_value_type }}, Codable, Sendable, APIWireValue {
+{% for name, value in proto.enum_members or [] %}
+    case {{ name }} = {{ proto.enum_wire_literal(value) }}
+{% endfor %}
+
+    public var apiWireString: String {
+        String(describing: rawValue)
+    }
+}
+{% elif proto.kind == "alias" and proto.alias_type %}
+public typealias {{ proto.name }} = {{ proto.alias_type.text }}
+{% elif proto.kind == "data" %}
+public struct {{ proto.name }}: Codable, Sendable {
+{% for field in proto.fields %}
+{% if field.description %}    /// {{ field.description }}
+{% endif %}    public var {{ field.name }}: {{ field.swift_type }}
+{% endfor %}
+
+    public init(
+{% for field in proto.fields %}        {{ field.name }}: {{ field.swift_type }}{% if field.optional %} = nil{% endif %}{{ "," if not loop.last else "" }}
+{% endfor %}    ) {
+{% for field in proto.fields %}        self.{{ field.name }} = {{ field.name }}
+{% endfor %}    }
+
+    private enum CodingKeys: String, CodingKey {
+{% for field in proto.fields %}        case {{ field.name }} = {{ field.wire_name | code_literal }}
+{% endfor %}    }
+
+    public func toQueryItems() -> [URLQueryItem] {
+        [
+{% for field in proto.fields %}            URLQueryItem(name: {{ field.wire_name | code_literal }}, value: apiBlueprintQueryValue({{ field.name }})),
+{% endfor %}        ].filter { $0.value != nil }
+    }
+
+    public func toFormFields() throws -> [String: String?] {
+        try apiBlueprintFormFields(self)
+    }
+
+    public func toMultipartFields() throws -> [String: Any?] {
+        try apiBlueprintMultipartFields(self)
+    }
+}
+{% endif %}
+{% endfor %}
+{% endautoescape %}

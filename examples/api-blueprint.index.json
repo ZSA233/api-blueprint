@@ -10,7 +10,7 @@
     "routes": 34,
     "schemas": 56,
     "services": 8,
-    "targets": 20
+    "targets": 21
   },
   "generator": {
     "name": "api-blueprint",
@@ -518,6 +518,13 @@
       "out_dir": "flutter",
       "role": "client",
       "route_count": 32
+    },
+    {
+      "id": "swift.client",
+      "kind": "swift-client",
+      "out_dir": "swift",
+      "role": "client",
+      "route_count": 30
     },
     {
       "id": "python.server",

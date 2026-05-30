@@ -1,0 +1,24 @@
+import Foundation
+
+public enum APIErrorCodes {
+{% for item in writer.api_error_constants() %}
+    public static let {{ item.name }} = {{ item.code }}
+{% endfor %}
+}
+
+public func lookupAPIError(code: Int) -> APIErrorPayload? {
+    switch code {
+{% for item in writer.api_error_constants() %}
+    case APIErrorCodes.{{ item.name }}:
+        return APIErrorPayload(
+            id: {{ (item.entry.id or "") | code_literal }},
+            group: {{ (item.entry.group or "") | code_literal }},
+            key: {{ (item.entry.key or "") | code_literal }},
+            code: {{ item.code }},
+            message: {{ (item.entry.message or "") | code_literal }}
+        )
+{% endfor %}
+    default:
+        return nil
+    }
+}

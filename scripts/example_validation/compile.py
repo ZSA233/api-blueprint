@@ -12,6 +12,7 @@ from .language_checks import (
     _validate_java_sources,
     _validate_kotlin_sources,
     _validate_python_sources,
+    _validate_swift_sources,
 )
 from .models import BlueprintExampleWorkspace, ExampleValidationError, GrpcExampleWorkspace, WailsHelloExampleWorkspace
 from .connection_contract import _validate_blueprint_connection_examples
@@ -26,6 +27,7 @@ def compile_generated_examples(workspace: BlueprintExampleWorkspace) -> None:
     _validate_java_sources(workspace.java_dir)
     _validate_python_sources(workspace.python_dir)
     _validate_flutter_sources(workspace.flutter_dir)
+    _validate_swift_sources(workspace.swift_dir)
     _compile_wails_harness(workspace.wails_v2_dir, version="v2")
     _compile_wails_harness(workspace.wails_v3_dir, version="v3")
 
@@ -84,6 +86,7 @@ def compile_repo_examples(repo_root: Path) -> None:
     _validate_java_sources(workspace.java_dir)
     _validate_python_sources(workspace.python_dir)
     _validate_flutter_sources(workspace.flutter_dir)
+    _validate_swift_sources(workspace.swift_dir)
 
 
 def compile_repo_grpc_examples(repo_root: Path) -> None:

@@ -152,6 +152,41 @@ base_url = "http://localhost:2333"
     assert (tmp_path / "flutter" / "lib" / "src" / "api" / "routes" / "api" / "demo" / "gen_demo_api.dart").is_file()
 
 
+def test_vnext_generate_swift_uses_contract_graph_adapter(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _write_package(tmp_path)
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[blueprint]
+entrypoints = ["blueprints.app:bp"]
+
+[[targets]]
+id = "swift.client"
+kind = "swift-client"
+out_dir = "swift"
+package = "ApiBlueprintExampleClient"
+base_url = "http://localhost:2333"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr("api_blueprint.writer.swift.blueprint.route_protocol_from_router", _reject_router_fallback)
+
+    generator.generate(config_path, target_ids=("swift.client",))
+
+    assert (
+        tmp_path
+        / "swift"
+        / "Sources"
+        / "ApiBlueprintExampleClient"
+        / "API"
+        / "Routes"
+        / "API"
+        / "Demo"
+        / "GenDemoAPI.swift"
+    ).is_file()
+
+
 def test_vnext_generate_python_client_target(tmp_path: Path) -> None:
     _write_package(tmp_path)
     config_path = tmp_path / "api-blueprint.toml"

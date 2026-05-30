@@ -1,0 +1,27 @@
+import Foundation
+
+{% for schema in binary_schemas %}
+public struct {{ schema.name }}: Codable, Sendable {
+    public var data: Data
+
+    public init(data: Data = Data()) {
+        self.data = data
+    }
+
+    public func encode() throws -> Data {
+        try {{ schema.encode_func }}(self)
+    }
+
+    public static func decode(from data: Data) throws -> {{ schema.name }} {
+        try {{ schema.decode_func }}(data)
+    }
+}
+
+public func {{ schema.encode_func }}(_ value: {{ schema.name }}) throws -> Data {
+    value.data
+}
+
+public func {{ schema.decode_func }}(_ data: Data) throws -> {{ schema.name }} {
+    {{ schema.name }}(data: data)
+}
+{% endfor %}

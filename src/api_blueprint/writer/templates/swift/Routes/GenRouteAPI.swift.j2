@@ -1,0 +1,102 @@
+import Foundation
+
+open class Gen{{ group.class_name }} {
+    public let transport: APITransport
+
+    public init(transport: APITransport) {
+        self.transport = transport
+    }
+{% for route in group.routes %}
+{% if route.is_rpc %}
+
+    public func {{ route.method_name }}(
+{% if route.query_type %}        query: {{ route.query_type }}? = nil,
+{% endif %}{% if route.json_type %}        json: {{ route.json_type }}? = nil,
+{% endif %}{% if route.form_type %}        form: {{ route.form_type }}? = nil,
+{% endif %}{% if route.multipart_type %}        multipart: {{ route.multipart_type }}? = nil,
+{% endif %}{% if route.has_binary_schema %}        binary: {{ route.binary_type }}? = nil,
+{% elif route.binary_type %}        binary: Data? = nil,
+{% endif %}        options: APIRequestOptions = APIRequestOptions()
+    ) async throws -> {{ route.response_type.text }} {
+{% if route.json_type %}        let jsonBody: Any?
+        if let json {
+            jsonBody = try apiEncodeJSONObject(json)
+        } else {
+            jsonBody = nil
+        }
+{% else %}        let jsonBody: Any? = nil
+{% endif %}{% if route.form_type %}        let formBody = try form?.toFormFields()
+{% else %}        let formBody: [String: String?]? = nil
+{% endif %}{% if route.multipart_type %}        let multipartBody = try multipart?.toMultipartFields()
+{% else %}        let multipartBody: [String: Any?]? = nil
+{% endif %}{% if route.has_binary_schema %}        let binaryBody = try binary?.encode()
+{% elif route.binary_type %}        let binaryBody = binary
+{% else %}        let binaryBody: Data? = nil
+{% endif %}        return try await transport.request(
+            APIRequest<{{ route.response_type.text }}>(
+                routeID: {{ route.protocol.route.route_id | code_literal }},
+                method: {{ route.http_method | code_literal }},
+                path: {{ route.url | code_literal }},
+                query: {{ route.query_to_items_expr }},
+                options: options,
+                json: jsonBody,
+                form: formBody,
+                multipart: multipartBody,
+                binary: binaryBody,
+                binaryContentType: {% if route.has_binary_schema %}"application/octet-stream"{% else %}nil{% endif %},
+                responseMediaType: {{ route.response_media_type | code_literal }},
+                responseKind: {{ route.response_kind | code_literal }},
+                responseEnvelope: {{ route.response_envelope_literal | safe }},
+                decode: {{ route.decoder_expr }}
+            )
+        )
+    }
+{% elif route.supports_stream %}
+
+    public func {{ route.subscribe_method_name }}(
+{% if route.query_type %}        query: {{ route.query_type }}? = nil,
+{% endif %}
+{% if route.open_type %}        openPayload: {{ route.open_type }}? = nil,
+{% endif %}        headers: [String: String] = [:]
+    ) -> APIStreamBridge<{{ route.server_message_type }}, {{ route.close_type }}> {
+        transport.openStream(
+            APIStreamConnectOptions<{{ route.server_message_type }}, {{ route.close_type }}>(
+                routeID: {{ route.protocol.route.route_id | code_literal }},
+                connectionKind: "stream",
+                path: {{ route.url | code_literal }},
+                query: {{ route.connection_query_expr }},
+                open: {% if route.open_type %}openPayload{% else %}nil{% endif %},
+                headers: headers,
+                decodeMessage: { value in try apiDecodeValue({{ route.server_message_type }}.self, from: value) },
+                decodeClose: { value in try apiDecodeValue({{ route.close_type }}.self, from: value) }
+            )
+        )
+    }
+{% elif route.supports_channel %}
+
+    public func {{ route.open_channel_method_name }}(
+{% if route.query_type %}        query: {{ route.query_type }}? = nil,
+{% endif %}
+{% if route.open_type %}        openPayload: {{ route.open_type }}? = nil,
+{% endif %}        headers: [String: String] = [:],
+        protocols: [String] = []
+    ) -> APIChannelBridge<{{ route.server_message_type }}, {{ route.client_message_type }}, {{ route.close_type }}> {
+        transport.openChannel(
+            APIChannelConnectOptions<{{ route.server_message_type }}, {{ route.client_message_type }}, {{ route.close_type }}>(
+                routeID: {{ route.protocol.route.route_id | code_literal }},
+                connectionKind: "channel",
+                path: {{ route.url | code_literal }},
+                query: {{ route.connection_query_expr }},
+                open: {% if route.open_type %}openPayload{% else %}nil{% endif %},
+                headers: headers,
+                protocols: protocols,
+                delivery: {{ route.connection_delivery | code_literal }},
+                decodeMessage: { value in try apiDecodeValue({{ route.server_message_type }}.self, from: value) },
+                encodeMessage: { message in try apiEncodeJSONObject(message) },
+                decodeClose: { value in try apiDecodeValue({{ route.close_type }}.self, from: value) }
+            )
+        )
+    }
+{% endif %}
+{% endfor %}
+}

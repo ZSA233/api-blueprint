@@ -1,0 +1,13 @@
+import Foundation
+
+public enum HTTPAPIClient {
+    public static func create(baseURL: URL) -> {{ writer.package }} {
+        let transport = URLSessionAPITransport(config: HTTPAPIConfig(baseURL: baseURL))
+        return {{ writer.package }}(transport: transport)
+    }
+
+    public static func create(config: HTTPAPIConfig = HTTPAPIConfig()) -> {{ writer.package }} {
+        let transport = URLSessionAPITransport(config: config)
+        return {{ writer.package }}(transport: transport)
+    }
+}

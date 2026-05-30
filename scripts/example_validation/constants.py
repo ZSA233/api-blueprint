@@ -22,6 +22,7 @@ SPRING_BOOT_VERSION = "3.3.6"
 GRADLE_BIN_ENV = "API_BLUEPRINT_GRADLE_BIN"
 WAILS_V2_BIN_ENV = "API_BLUEPRINT_WAILS_V2_BIN"
 WAILS_V3_BIN_ENV = "API_BLUEPRINT_WAILS_V3_BIN"
+SWIFT_BIN_ENV = "API_BLUEPRINT_SWIFT_BIN"
 
 BLUEPRINT_GOLANG_SERVER_PRESERVED = (
     "go.mod",
@@ -115,6 +116,19 @@ BLUEPRINT_FLUTTER_PRESERVED = (
     "test/conformance_test.dart",
     "test/http_transport_test.dart",
 )
+BLUEPRINT_SWIFT_PRESERVED = (
+    "Package.swift",
+    "Sources/ApiBlueprintExampleClient/ApiBlueprintExampleClient.swift",
+    "Sources/ApiBlueprintExampleClient/API/APIRootClient.swift",
+    "Sources/ApiBlueprintExampleClient/API/Runtime/APICoding.swift",
+    "Sources/ApiBlueprintExampleClient/API/Transports/HTTP/HTTPAPIClient.swift",
+    "Sources/ApiBlueprintExampleClient/API/Routes/API/Binary/BinaryAPI.swift",
+    "Sources/ApiBlueprintExampleClient/API/Routes/API/Binary/BinaryTypes.swift",
+    "Sources/ApiBlueprintExampleClient/API/Routes/API/Demo/DemoAPI.swift",
+    "Sources/ApiBlueprintExampleClient/API/Routes/API/Demo/DemoTypes.swift",
+    "Sources/ApiBlueprintExampleClient/API/Routes/API/Hello/HelloAPI.swift",
+    "Sources/ApiBlueprintExampleClient/API/Routes/API/Hello/HelloTypes.swift",
+)
 WAILS_HELLO_GOLANG_PRESERVED = (
     "go.mod",
     "go.sum",
@@ -126,4 +140,5 @@ GRPC_PYTHON_PRESERVED = ()
 EXAMPLE_SNAPSHOT_IGNORES: Mapping[str, frozenset[str]] = {
     "blueprint/java/suite": frozenset((".gradle", "bin", "build")),
     "blueprint/flutter": frozenset((".dart_tool",)),
+    "blueprint/swift": frozenset((".build",)),
 }

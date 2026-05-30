@@ -1,0 +1,12 @@
+import Foundation
+
+open class Gen{{ writer.package }} {
+    public let transport: APITransport
+
+    public init(transport: APITransport) {
+        self.transport = transport
+    }
+{% for bp in bps %}
+    public lazy var {{ bp.root_property }} = {{ bp.root_client }}(transport: transport)
+{% endfor %}
+}

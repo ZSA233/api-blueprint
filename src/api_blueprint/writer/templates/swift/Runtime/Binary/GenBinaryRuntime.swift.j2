@@ -1,0 +1,16 @@
+import Foundation
+
+public enum APIBinaryError: Error, CustomStringConvertible {
+    case invalidPacket(String)
+
+    public var description: String {
+        switch self {
+        case .invalidPacket(let message):
+            return message
+        }
+    }
+}
+
+public func apiBinaryData(_ value: Data) -> Data {
+    value
+}

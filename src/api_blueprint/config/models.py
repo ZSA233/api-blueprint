@@ -11,6 +11,7 @@ from api_blueprint.route_selection import validate_selection_rules
 
 WailsVersion = Literal["v2", "v3"]
 WailsFrontendMode = Literal["external", "none"]
+SwiftRuntimeProfile = Literal["modern", "ios14-compat"]
 TargetKind = Literal[
     "contract",
     "go-server",
@@ -21,6 +22,7 @@ TargetKind = Literal[
     "java-server",
     "java-client",
     "flutter-client",
+    "swift-client",
     "python-server",
     "python-client",
     "http-transport",
@@ -46,6 +48,7 @@ class TargetConfig(BaseModel):
     base_url: str | None = None
     base_url_expr: str | None = None
     package: str | None = None
+    runtime_profile: SwiftRuntimeProfile = "modern"
     formats: list[Literal["index", "json", "markdown", "agent-json", "agent-markdown", "shards"]] = Field(
         default_factory=list
     )
@@ -82,6 +85,8 @@ class TargetConfig(BaseModel):
             raise ValueError(f"target[{self.id}] {self.kind} requires package")
         if self.kind == "flutter-client" and not self.package:
             raise ValueError(f"target[{self.id}] flutter-client requires package")
+        if self.kind == "swift-client" and not self.package:
+            raise ValueError(f"target[{self.id}] swift-client requires package")
         if self.kind == "grpc-proto" and not self.package:
             raise ValueError(f"target[{self.id}] grpc-proto requires package")
         if self.kind != "grpc-proto" and self.proto_files:

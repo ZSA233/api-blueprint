@@ -67,6 +67,15 @@ package = 'api_blueprint_example'
 base_url = 'http://localhost:2333'
 include = ['tag:api']
 
+[[swift.client]]
+id = 'swift.client'
+out_dir = 'swift'
+package = 'ApiBlueprintExampleClient'
+base_url = 'http://localhost:2333'
+runtime_profile = 'modern'
+include = ['tag:api']
+exclude = ['path:/alt/**', 'path:/api/ws']
+
 [[python.server]]
 id = 'python.server'
 out_dir = 'python/server'
@@ -81,7 +90,7 @@ base_url = 'http://localhost:2333'
 [[transport.http]]
 id = 'http'
 server = 'go.server'
-clients = ['go.client', 'typescript.client', 'kotlin.client', 'flutter.client']
+clients = ['go.client', 'typescript.client', 'kotlin.client', 'flutter.client', 'swift.client']
 
 [[transport.http]]
 id = 'http.kotlin'

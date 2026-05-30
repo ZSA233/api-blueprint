@@ -19,6 +19,7 @@ def validate_example_snapshots(repo_root: Path, workspace: BlueprintExampleWorks
             (examples_root / "java", workspace.java_dir, "blueprint/java"),
             (examples_root / "python", workspace.python_dir, "blueprint/python"),
             (examples_root / "flutter", workspace.flutter_dir, "blueprint/flutter"),
+            (examples_root / "swift", workspace.swift_dir, "blueprint/swift"),
         )
     )
     _validate_blueprint_connection_examples(workspace)

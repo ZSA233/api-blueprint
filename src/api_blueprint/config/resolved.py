@@ -6,6 +6,7 @@ from pathlib import Path
 from api_blueprint.config.loader import normalize_config_path
 from api_blueprint.config.models import (
     Config,
+    SwiftRuntimeProfile,
     TargetKind,
     WailsFrontendMode,
     WailsVersion,
@@ -32,6 +33,7 @@ class ResolvedApiTargetConfig:
     base_url: str | None = None
     base_url_expr: str | None = None
     package: str | None = None
+    runtime_profile: SwiftRuntimeProfile = "modern"
     formats: tuple[str, ...] = ()
     version: WailsVersion | None = None
     frontend_mode: WailsFrontendMode = "external"
@@ -165,6 +167,7 @@ def resolve_api_targets(config_path: Path, raw: Config) -> tuple[ResolvedApiTarg
                     "python-client",
                     "java-client",
                     "flutter-client",
+                    "swift-client",
                 }:
                     raise ValueError(f"target[{target.id}] http-transport clients must reference client targets")
 
@@ -191,6 +194,7 @@ def resolve_api_targets(config_path: Path, raw: Config) -> tuple[ResolvedApiTarg
                 base_url=target.base_url,
                 base_url_expr=target.base_url_expr,
                 package=target.package,
+                runtime_profile=target.runtime_profile,
                 formats=tuple(target.formats),
                 version=target.version,
                 frontend_mode=target.frontend_mode,

@@ -44,6 +44,7 @@ class BlueprintExampleWorkspace:
     java_conformance_dir: Path
     python_dir: Path
     flutter_dir: Path
+    swift_dir: Path
     wails_v2_dir: Path
     wails_v3_dir: Path
 

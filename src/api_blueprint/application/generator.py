@@ -43,6 +43,7 @@ EXPLAIN_TARGET_KIND_FIELDS: dict[str, tuple[str, ...]] = {
     "java-server": ("package", "include", "exclude"),
     "java-client": ("package", "base_url", "base_url_expr", "include", "exclude"),
     "flutter-client": ("package", "base_url", "base_url_expr", "include", "exclude"),
+    "swift-client": ("package", "base_url", "base_url_expr", "runtime_profile", "include", "exclude"),
     "python-server": ("python_package_root", "include", "exclude"),
     "python-client": ("python_package_root", "base_url", "base_url_expr", "include", "exclude"),
     "http-transport": ("server", "clients"),
@@ -129,7 +130,7 @@ def check(config_path: str | Path | None) -> None:
 
 
 def generate(config_path: str | Path | None, target_ids: Sequence[str] = ()) -> None:
-    from api_blueprint.writer import flutter, golang, java, kotlin, python as python_writer, typescript
+    from api_blueprint.writer import flutter, golang, java, kotlin, python as python_writer, swift, typescript
     from api_blueprint.writer.grpc.proto_writer import render_proto_files, write_proto_files
     from api_blueprint.writer.grpc import toolchain as grpc_toolchain
 
@@ -252,6 +253,21 @@ def generate(config_path: str | Path | None, target_ids: Sequence[str] = ()) -> 
                 package=target.package or "",
                 base_url=target.base_url or "",
                 base_url_expr=target.base_url_expr,
+                include=target.include,
+                exclude=target.exclude,
+                contract_graph=graph,
+            )
+            writer.register(*project.entrypoints)
+            writer.gen()
+        elif target.kind == "swift-client":
+            output = require_out_dir(target)
+            output.mkdir(parents=True, exist_ok=True)
+            writer = swift.SwiftWriter(
+                output,
+                package=target.package or "",
+                base_url=target.base_url or "",
+                base_url_expr=target.base_url_expr,
+                runtime_profile=target.runtime_profile,
                 include=target.include,
                 exclude=target.exclude,
                 contract_graph=graph,
@@ -492,6 +508,8 @@ def target_manifest(target: ResolvedApiTargetConfig, project_root: Path) -> dict
         manifest["base_url_expr"] = target.base_url_expr
     if target.package is not None:
         manifest["package"] = target.package
+    if target.kind == "swift-client":
+        manifest["runtime_profile"] = target.runtime_profile
     if target.formats:
         manifest["formats"] = list(target.formats)
     if target.version is not None:

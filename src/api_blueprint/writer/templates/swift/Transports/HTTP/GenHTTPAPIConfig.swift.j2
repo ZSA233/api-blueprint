@@ -1,0 +1,23 @@
+import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
+
+public struct HTTPAPIConfig {
+    public var baseURL: URL?
+    public var defaultHeaders: [String: String]
+    public var timeout: TimeInterval?
+    public var session: URLSession
+
+    public init(
+        baseURL: URL? = {{ writer.rendered_base_url | safe }},
+        defaultHeaders: [String: String] = [:],
+        timeout: TimeInterval? = nil,
+        session: URLSession = .shared
+    ) {
+        self.baseURL = baseURL
+        self.defaultHeaders = defaultHeaders
+        self.timeout = timeout
+        self.session = session
+    }
+}

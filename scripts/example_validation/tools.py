@@ -5,8 +5,9 @@ import os
 import shutil
 from pathlib import Path
 
-from .constants import GO_ENUM_VERSION, GRADLE_BIN_ENV, WAILS_V2_BIN_ENV, WAILS_V3_BIN_ENV
+from .constants import GO_ENUM_VERSION, GRADLE_BIN_ENV, SWIFT_BIN_ENV, WAILS_V2_BIN_ENV, WAILS_V3_BIN_ENV
 from .models import ExampleValidationError, ExampleValidationScope
+
 
 def resolve_gradle_bin() -> str | None:
     configured = os.environ.get(GRADLE_BIN_ENV)
@@ -30,6 +31,18 @@ def resolve_wails_bin(env_var: str, default_binary: str) -> str | None:
         if resolved is not None:
             return resolved
     return shutil.which(default_binary)
+
+
+def resolve_swift_bin() -> str | None:
+    configured = os.environ.get(SWIFT_BIN_ENV)
+    if configured:
+        configured_path = Path(configured).expanduser()
+        if configured_path.is_file():
+            return str(configured_path)
+        resolved = shutil.which(configured)
+        if resolved is not None:
+            return resolved
+    return shutil.which("swift")
 
 
 def collect_missing_validation_requirements(scope: ExampleValidationScope = ExampleValidationScope.ALL) -> tuple[str, ...]:

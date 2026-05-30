@@ -511,6 +511,23 @@ def _artifact_for_route(
         if has_binary_schema:
             files.extend([_join(base, "gen_binary.dart"), _join(base, "binary.dart")])
         imports = [f"package:{package}/{package}.dart"]
+    elif kind == "swift-client":
+        package = _string(target.get("package")) or "ApiBlueprintGenerated"
+        swift_root = _swift_path_segment(root)
+        swift_route_path = "/".join(_swift_path_segment(part) for part in route_path.split("/") if part)
+        swift_group = _swift_path_segment(group)
+        base = _join(out_dir, "Sources", package, swift_root, "Routes", swift_route_path)
+        transport_base = _join(out_dir, "Sources", package, swift_root, "Transports", "HTTP")
+        files = [
+            _join(base, f"Gen{swift_group}Types.swift"),
+            _join(base, f"Gen{swift_group}API.swift"),
+            _join(base, f"{swift_group}API.swift"),
+            _join(transport_base, "GenURLSessionAPITransport.swift"),
+            _join(transport_base, "HTTPAPIClient.swift"),
+        ]
+        if has_binary_schema:
+            files.append(_join(base, "GenBinary.swift"))
+        imports = [package]
     elif kind == "python-server":
         package_root = _string(target.get("python_package_root")) or "api_blueprint_generated"
         package_parts = _python_package_parts(package_root)
@@ -731,6 +748,21 @@ def _dart_file_stem(value: str) -> str:
     if safe in {"class", "enum", "import", "export", "void", "sealed", "base", "interface"}:
         safe = f"{safe}_"
     return safe
+
+
+def _swift_path_segment(value: str) -> str:
+    pascal = "".join(
+        "API" if part.lower() == "api" else part[:1].upper() + part[1:]
+        for part in re.split(r"[^A-Za-z0-9]+", value)
+        if part
+    )
+    if not pascal:
+        pascal = "Root"
+    if not pascal[0].isalpha():
+        pascal = f"Root{pascal}"
+    if pascal in {"Class", "Enum", "Protocol", "Struct", "Import", "Switch"}:
+        pascal = f"{pascal}_"
+    return pascal
 
 
 def _route_id(route: Mapping[str, Any]) -> str:

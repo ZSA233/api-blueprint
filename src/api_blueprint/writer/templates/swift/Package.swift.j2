@@ -1,0 +1,16 @@
+// swift-tools-version: 5.9
+import PackageDescription
+
+let package = Package(
+    name: "{{ writer.package }}",
+    platforms: [
+        .iOS({{ writer.minimum_ios_platform }}),
+        .macOS({{ writer.minimum_macos_platform }}),
+    ],
+    products: [
+        .library(name: "{{ writer.package }}", targets: ["{{ writer.package }}"]),
+    ],
+    targets: [
+        .target(name: "{{ writer.package }}"),
+    ]
+)

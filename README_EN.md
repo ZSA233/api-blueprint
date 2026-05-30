@@ -17,8 +17,8 @@ Blueprint DSL -> ContractGraph -> api-gen check / inspect / generate -> generate
 
 ## When To Use
 
-- Backend, web, Flutter, Kotlin, and script clients need to share one API contract.
-- You want to generate a Go server first, then TypeScript, Flutter, Kotlin, Java, Go, or Python clients, or generate Kotlin/Java/Python server scaffolds.
+- Backend, web, Flutter, iOS Swift, Kotlin, and script clients need to share one API contract.
+- You want to generate a Go server first, then TypeScript, Flutter, Swift, Kotlin, Java, Go, or Python clients, or generate Kotlin/Java/Python server scaffolds.
 - You need documentation, contract checks, generated snapshots, and end-to-end examples to move together.
 - You need Markdown Binary Schema, typed binary responses, multipart uploads, raw bytes/file/stream responses, Wails, or gRPC in the same generation flow.
 
@@ -97,6 +97,7 @@ For fuller project layout, config fields, DSL, generator output, typed errors, R
 | Go server | Available | Generate Go routes, providers, long-connection message helpers, HTTP/Wails adapters, multipart/raw media, binary schema requests/responses, and runtime |
 | TypeScript client | Preview | Generate transport-neutral clients, long-connection message helpers, HTTP multipart/raw adapters, binary schema response decoding, and Wails facades |
 | Flutter client | Preview | Generate a pure Dart package, DTOs, typed errors, binary codecs, HTTP multipart/raw/binary response clients, and SSE/WebSocket clients |
+| Swift client | Preview | Generate an iOS Swift Package, DTOs, typed errors, HTTP transport, multipart/raw/binary response clients, and STREAM/CHANNEL protocol bridges, without UI, auth, cache, or a session engine |
 | Kotlin client/server | Preview | Generate OkHttp HTTP/SSE/WebSocket clients, Ktor HTTP/SSE/WebSocket server scaffolds, multipart/raw/binary request/response adapters, models, and long-connection message helpers |
 | Java client/server | Preview | Generate Java 17 HttpClient clients, Spring MVC/SSE/WebSocket server scaffolds, record DTOs, HTTP multipart/raw/binary request/response adapters, and long-connection message helpers |
 | Go client / Python client | Preview | Generate non-server clients for scripts, tools, or services; the Python client uses recursive dataclass DTOs, shared runtime codecs, multipart/raw support, long-connection message helpers, and binary writers/response codecs |

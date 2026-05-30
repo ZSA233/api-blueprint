@@ -93,6 +93,7 @@ def test_kotlin_capability_accepts_connection_routes(kind: str) -> None:
         ("java-client", {"package": "com.example"}),
         ("python-client", {}),
         ("flutter-client", {"package": "api_blueprint_example"}),
+        ("swift-client", {"package": "ApiBlueprintExampleClient"}),
     ],
 )
 def test_client_capabilities_accept_binary_schema_rpc_routes(kind: str, target_kwargs: dict[str, object]) -> None:
@@ -137,6 +138,7 @@ def test_client_capabilities_accept_binary_schema_rpc_routes(kind: str, target_k
         ("kotlin-client", {"package": "com.example"}),
         ("kotlin-server", {"package": "com.example"}),
         ("flutter-client", {"package": "api_blueprint_example"}),
+        ("swift-client", {"package": "ApiBlueprintExampleClient"}),
     ],
 )
 def test_v1_targets_accept_binary_schema_response_routes(kind: str, target_kwargs: dict[str, object]) -> None:
@@ -279,6 +281,17 @@ def test_flutter_client_is_real_generation_capability() -> None:
     assert manifest["flutter-client"]["routes"] == ["rpc", "stream", "channel"]
     assert "binary-schema" in manifest["flutter-client"]["requests"]
     assert manifest["flutter-client"]["transport"] == "injected"
+
+
+def test_swift_client_is_real_generation_capability() -> None:
+    manifest = target_capability_manifest()
+
+    assert manifest["swift-client"]["implemented"] is True
+    assert manifest["swift-client"]["routes"] == ["rpc", "stream", "channel"]
+    assert manifest["swift-client"]["requests"] == manifest["flutter-client"]["requests"]
+    assert manifest["swift-client"]["responses"] == manifest["flutter-client"]["responses"]
+    assert manifest["swift-client"]["envelopes"] == manifest["flutter-client"]["envelopes"]
+    assert manifest["swift-client"]["transport"] == "injected"
 
 
 def test_media_capability_is_limited_to_v1_targets() -> None:

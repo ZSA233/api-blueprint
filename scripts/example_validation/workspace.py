@@ -19,6 +19,7 @@ from .constants import (
     BLUEPRINT_KOTLIN_CONFORMANCE_PRESERVED,
     BLUEPRINT_KOTLIN_PRESERVED,
     BLUEPRINT_PYTHON_PRESERVED,
+    BLUEPRINT_SWIFT_PRESERVED,
     BLUEPRINT_TYPESCRIPT_PRESERVED,
     GRPC_GO_PRESERVED,
     GRPC_PYTHON_PRESERVED,
@@ -48,6 +49,7 @@ def _blueprint_workspace(root: Path) -> BlueprintExampleWorkspace:
         java_conformance_dir=root / "java" / "conformance",
         python_dir=root / "python",
         flutter_dir=root / "flutter",
+        swift_dir=root / "swift",
         wails_v2_dir=root / "wails-harness" / "v2",
         wails_v3_dir=root / "wails-harness" / "v3",
     )
@@ -183,6 +185,10 @@ def _prepare_blueprint_outputs(*, source_root: Path, target_root: Path) -> None:
     _prepare_output_dir(
         target_root / "flutter",
         _capture_relative_files(source_root / "flutter", BLUEPRINT_FLUTTER_PRESERVED),
+    )
+    _prepare_output_dir(
+        target_root / "swift",
+        _capture_relative_files(source_root / "swift", BLUEPRINT_SWIFT_PRESERVED),
     )
 
 

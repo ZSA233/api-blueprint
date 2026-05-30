@@ -19,6 +19,7 @@ def test_example_config_loads_vnext_targets() -> None:
         "java.server",
         "java.client",
         "flutter.client",
+        "swift.client",
         "python.server",
         "python.client",
         "http",
@@ -41,6 +42,7 @@ def test_example_config_loads_vnext_targets() -> None:
         "java-server",
         "java-client",
         "flutter-client",
+        "swift-client",
         "python-server",
         "python-client",
         "http-transport",
@@ -97,6 +99,12 @@ def test_resolve_config_converts_vnext_target_outputs_to_absolute_paths() -> Non
     assert targets["java.client"].out_dir == (EXAMPLE_CONFIG.parent / "java" / "client").resolve()
     assert targets["java.client"].package == "com.example.apiblueprint"
     assert targets["java.client"].base_url == "http://localhost:2333"
+    assert targets["swift.client"].out_dir == (EXAMPLE_CONFIG.parent / "swift").resolve()
+    assert targets["swift.client"].package == "ApiBlueprintExampleClient"
+    assert targets["swift.client"].base_url == "http://localhost:2333"
+    assert targets["swift.client"].runtime_profile == "modern"
+    assert targets["swift.client"].include == ("tag:api",)
+    assert targets["swift.client"].exclude == ("path:/alt/**", "path:/api/ws")
     assert targets["wails.v3"].overlay_name == "wailsv3"
     assert targets["wails.v2"].overlay_name == "wailsv2"
     assert targets["grpc.proto"].out_dir == (EXAMPLE_CONFIG.parent / "grpc" / "protos").resolve()
@@ -151,6 +159,60 @@ base_url_expr = "import.meta.env.VITE_API_BASE_URL"
     with pytest.raises(ValueError, match="mutually exclusive"):
         Config.load(config_path)
 
+def test_swift_client_requires_package(tmp_path) -> None:
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[targets]]
+id = "swift.client"
+kind = "swift-client"
+out_dir = "swift"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="swift-client requires package"):
+        Config.load(config_path)
+
+def test_swift_client_runtime_profile_defaults_and_rejects_invalid_values(tmp_path) -> None:
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[targets]]
+id = "swift.client"
+kind = "swift-client"
+out_dir = "swift"
+package = "ApiBlueprintExampleClient"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    config = Config.load(config_path)
+    resolved = resolve_config(config_path)
+
+    assert config.targets[0].runtime_profile == "modern"
+    assert resolved.targets[0].runtime_profile == "modern"
+    assert target_manifest(resolved.targets[0], tmp_path)["runtime_profile"] == "modern"
+
+    bad_config_path = tmp_path / "bad-api-blueprint.toml"
+    bad_config_path.write_text(
+        """
+[[targets]]
+id = "swift.client"
+kind = "swift-client"
+out_dir = "swift"
+package = "ApiBlueprintExampleClient"
+runtime_profile = "legacy"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="runtime_profile"):
+        Config.load(bad_config_path)
+
 def test_targets_require_unique_ids(tmp_path) -> None:
     config_path = tmp_path / "api-blueprint.toml"
     config_path.write_text(
@@ -172,6 +234,35 @@ package = "com.example.generated"
 
     with pytest.raises(ValueError, match="duplicate ids"):
         Config.load(config_path)
+
+def test_http_transport_accepts_swift_client_target(tmp_path) -> None:
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[targets]]
+id = "kotlin.server"
+kind = "kotlin-server"
+out_dir = "kotlin/server"
+package = "com.example.generated"
+
+[[targets]]
+id = "swift.client"
+kind = "swift-client"
+out_dir = "swift"
+package = "ApiBlueprintExampleClient"
+
+[[transport.http]]
+id = "http"
+server = "kotlin.server"
+clients = ["swift.client"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    resolved = resolve_config(config_path)
+
+    assert resolved.targets[2].clients == ("swift.client",)
 
 def test_transport_targets_validate_dependency_kind(tmp_path) -> None:
     config_path = tmp_path / "api-blueprint.toml"

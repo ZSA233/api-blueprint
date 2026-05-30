@@ -42,7 +42,7 @@ README 应链接到以下用户文档：
 - `docs/zh/configuration.md` / `docs/en/configuration.md`：配置文件字段说明。
 - `docs/zh/blueprint-dsl.md` / `docs/en/blueprint-dsl.md`：Blueprint DSL、模型、请求、响应、错误和长连接写法。
 - `docs/zh/binary-schema.md` / `docs/en/binary-schema.md`：Markdown Binary Schema、字段表、规则、生成输出与检查命令。
-- `docs/zh/generators.md` / `docs/en/generators.md`：Go / TypeScript / Flutter / Kotlin / Java / Python 输出说明。
+- `docs/zh/generators.md` / `docs/en/generators.md`：Go / TypeScript / Flutter / Swift / Kotlin / Java / Python 输出说明。
 - `docs/zh/wails.md` / `docs/en/wails.md`：Wails target、overlay service、provider hook、transport bridge。
 - `docs/zh/grpc.md` / `docs/en/grpc.md`：`grpc-proto`、`grpc-go`、`grpc-python` targets、proto/service 输出、工具链。
 - `docs/zh/examples-validation.md` / `docs/en/examples-validation.md`：example refresh、validation 与 drift 语义。
@@ -59,7 +59,7 @@ README 应链接到以下用户文档：
 2. 在运行时构建 FastAPI/OpenAPI 文档服务。
 3. 从 Blueprint 构建唯一协议真源 `ContractGraph`。
 4. 通过 `api-gen check`、`api-gen inspect`、`api-gen manifest`、`api-gen diff` 和 `api-gen generate` 检查、查询、归档和生成代码。
-5. 基于同一份 `ContractGraph` 输出 Go server/client、TypeScript client、Flutter client、Kotlin client/server、Java client/server、Python client/server、Wails v2/v3 overlay、gRPC proto/service 定义，以及 protoc-backed Go/Python gRPC stub。
+5. 基于同一份 `ContractGraph` 输出 Go server/client、TypeScript client、Flutter client、Swift client、Kotlin client/server、Java client/server、Python client/server、Wails v2/v3 overlay、gRPC proto/service 定义，以及 protoc-backed Go/Python gRPC stub。
 6. 在支持的 HTTP target 中统一表达 JSON、urlencoded、multipart、binary schema 请求体，以及 binary schema、buffered bytes、file、byte stream 等非 JSON 成功响应。
 
 仓库事实：
@@ -73,11 +73,11 @@ README 应链接到以下用户文档：
 
 - `src/api_blueprint/engine/`：DSL、模型、Blueprint、路由与 FastAPI/OpenAPI 语义。
 - `src/api_blueprint/contract/`：Blueprint -> ContractGraph 的协议 IR、manifest 与 diff。
-- `src/api_blueprint/writer/`：Go / TypeScript / Flutter / Kotlin / Java / Python / Wails / gRPC proto 与 protoc-backed stub 代码生成。
+- `src/api_blueprint/writer/`：Go / TypeScript / Flutter / Swift / Kotlin / Java / Python / Wails / gRPC proto 与 protoc-backed stub 代码生成。
 - `src/api_blueprint/application/`：entrypoint 加载、项目装配、docs server 启动与 generator 调度。
 - `src/api_blueprint/hub/` 与 `src/api_blueprint/static/`：文档服务 UI 资源。
 - `examples/blueprints/`：示例蓝图真源。
-- `examples/golang/`、`examples/typescript/`、`examples/flutter/`、`examples/kotlin/`、`examples/java/`、`examples/python/`、`examples/grpc/`、`examples/wails-*`：生成快照、preserved conformance harness、验证工程和示例 app shell。
+- `examples/golang/`、`examples/typescript/`、`examples/flutter/`、`examples/swift/`、`examples/kotlin/`、`examples/java/`、`examples/python/`、`examples/grpc/`、`examples/wails-*`：生成快照、preserved conformance harness、验证工程和示例 app shell。
 - `scripts/example_conformance/`：examples 真实协议互通验证 CLI，按 Go / Java / Kotlin / Python server 与 Go / TypeScript / Kotlin / Flutter / Java / Python client 的能力交集执行真实互通矩阵。
 - `scripts/example_benchmark/`：可选 benchmark CLI，复用 examples 与 conformance runner 评估 binary codec 和真实 server protocol 性能趋势，不作为默认 CI 阈值。
 - `tests/`：单元测试、CLI 测试、codegen 测试、example 集成验证、打包与 release contract 测试。
@@ -87,7 +87,7 @@ README 应链接到以下用户文档：
 - Blueprint DSL 把 RPC、`STREAM`、`CHANNEL` 作为同一套 route contract 中的一等能力。
 - `STREAM` 表示服务端持续推送，`CHANNEL` 表示双向消息通道；长连接语义通过 `OPEN`、`SERVER_MESSAGE`、`CLIENT_MESSAGE`、typed `CLOSE`、`ConnectionScope` 与 `ConnectionDelivery` 描述。
 - 多消息类型必须通过单个判别联合消息契约声明，避免多个裸 event 名。
-- 具名 variant 消息联合在 Go、TypeScript、Flutter、Python、Kotlin、Java 中生成构造、解码或分发关键帧 helper，并保持 `{ type, data }` wire shape；Go server 额外为带具名 client message 的 `CHANNEL` 首次生成用户拥有的 `<leaf>_session.go` / `<leaf>_processor.go` / `<leaf>_error.go` scaffold，后续不覆盖；长连接 `Send`、`Close`、`Abort` 为 context-first API。详细使用方式放在 generators 专题文档，不写入 README 首页。
+- 具名 variant 消息联合在 Go、TypeScript、Flutter、Swift、Python、Kotlin、Java 中生成构造、解码或分发关键帧 helper，并保持 `{ type, data }` wire shape；Swift 使用带 associated value 的 enum 和自定义 `Codable` codec 表达消息 union。Go server 额外为带具名 client message 的 `CHANNEL` 首次生成用户拥有的 `<leaf>_session.go` / `<leaf>_processor.go` / `<leaf>_error.go` scaffold，后续不覆盖；长连接 `Send`、`Close`、`Abort` 为 context-first API。详细使用方式放在 generators 专题文档，不写入 README 首页。
 - HTTP RPC 请求体在 ContractGraph 中统一记录为 body kind：`none`、`json`、`urlencoded`、`multipart`、`binary_schema` 或 `raw_bytes`。DSL 推荐使用 `JSON(Model)` / `REQ_URLENCODED(Model)` / `REQ_MULTIPART(Model)` / `REQ_BINARY_SCHEMA(path)` 表达对应请求体；`.REQ_BINARY(path)` 保留为 binary schema 短别名，旧 `.REQ_FORM(Model)` 保留为 urlencoded 兼容入口，不再作为推荐写法。
 - `FileField(content_types=..., max_size=..., description=..., omitempty=False)` 是 multipart 专用字段，只允许出现在 `REQ_MULTIPART` 绑定的 model 中。`FileField` 不允许进入 JSON、urlencoded、普通响应模型或长连接消息模型。
 - 响应在 ContractGraph 中统一记录 response kind：`json`、`xml`、`text`、`binary_schema`、`bytes`、`file` 或 `byte_stream`。DSL 使用 `RSP_BINARY_SCHEMA(path)` / `RSP_BYTES(content_type=...)` / `RSP_FILE(content_type=..., default_filename=...)` / `RSP_BYTE_STREAM(content_type=...)` 表达非 JSON 成功响应；`.RSP_BINARY(path)` 是 binary schema 短别名。
@@ -104,8 +104,8 @@ README 应链接到以下用户文档：
 
 ## Contract 与 CLI 事实
 
-- 公开 target kind：`contract`、`go-server`、`go-client`、`typescript-client`、`flutter-client`、`kotlin-server`、`kotlin-client`、`java-server`、`java-client`、`python-server`、`python-client`、`http-transport`、`wails-transport`、`grpc-proto`、`grpc-go`、`grpc-python`。
-- `api-gen check` 与 writer 共享 planner / capability metadata，生成前校验 target dependency、route kind、request kind、response kind 与 response envelope。multipart/raw media 与 binary schema response 支持 Go server/client、TypeScript client、Flutter client、Kotlin client/server、Java client/server、Python server/client。Wails/gRPC 不投影 HTTP raw media route；遇到 HTTP multipart、Content-Disposition、HTTP status/header、MIME download 或 HTTP byte stream 语义时必须给出明确 unsupported contract 错误，并指向 Wails RPC descriptor/STREAM chunks 或 protobuf bytes/streaming chunks 等协议原生建模方式。
+- 公开 target kind：`contract`、`go-server`、`go-client`、`typescript-client`、`flutter-client`、`swift-client`、`kotlin-server`、`kotlin-client`、`java-server`、`java-client`、`python-server`、`python-client`、`http-transport`、`wails-transport`、`grpc-proto`、`grpc-go`、`grpc-python`。
+- `api-gen check` 与 writer 共享 planner / capability metadata，生成前校验 target dependency、route kind、request kind、response kind 与 response envelope。multipart/raw media 与 binary schema response 支持 Go server/client、TypeScript client、Flutter client、Swift client、Kotlin client/server、Java client/server、Python server/client。Wails/gRPC 不投影 HTTP raw media route；遇到 HTTP multipart、Content-Disposition、HTTP status/header、MIME download 或 HTTP byte stream 语义时必须给出明确 unsupported contract 错误，并指向 Wails RPC descriptor/STREAM chunks 或 protobuf bytes/streaming chunks 等协议原生建模方式。
 - `api-gen inspect routes/route/files/schema/binary-schema/errors` 是人类和 AI agent 查询 ContractGraph 的主入口；应优先按需查询，而不是先读生成物、完整 manifest 或 shards。
 - 默认 contract target 生成轻量 `api-blueprint.index.json`；完整 JSON manifest、agent manifest、Markdown agent guide、contract shards 和 diff 通过显式命令或 formats/profile 生成。
 - `manifest.version` 是 manifest schema 兼容版本；`manifest.generator.version` 来自包版本真源。
@@ -117,7 +117,7 @@ README 应链接到以下用户文档：
 - `id` 是公开协议错误身份，`code` 是业务码，可跨 group/route 复用；HTTP status 与业务 code 解耦。
 - `ResponseEnvelope` 决定外部响应结构；默认 `CodeMessageDataEnvelope` 是 `{ code, message, data, error? }` 形态，`LegacyCodeMessageDataEnvelope` 保留严格 `{ code, message, data }` 形态，`OkDataErrorEnvelope` 显式选择 `{ ok, data/error }` 形态。
 - 生成物公开错误 API 使用 `ApiError`、`ApiErrors`、`lookupApiError` / 语言惯用变体；Java 生成器拥有的错误类型按 ownership 规则使用 `GenApiError`、`GenApiErrors`、`GenApiErrorPayload` 等 `Gen*` 名称。catalog 字典不是用户主入口。
-- 默认 Go / TypeScript / Flutter / Python / Kotlin / Java client transport 会按 envelope spec 自动还原 typed error，lookup 顺序为 `id`、`(route_id, code)`、global code fallback、unknown typed error；Java 返回 `GenApiError`。
+- 默认 Go / TypeScript / Flutter / Swift / Python / Kotlin / Java client transport 会按 envelope spec 自动还原 typed error，lookup 顺序为 `id`、`(route_id, code)`、global code fallback、unknown typed error；Java 返回 `GenApiError`。
 
 ## 生成器事实
 
@@ -134,7 +134,8 @@ README 应链接到以下用户文档：
 - Go client 输出 runtime、routes、transports/http、根 facade；推荐从 `apiclient.NewHTTP(...)` 进入。Go HTTP client 支持 multipart file upload，`runtime.MultipartFile.Reader` 会以流式 multipart body 发送，binary_schema 成功响应返回 typed packet，bytes/file raw 响应返回 `RawResponse`，byte stream 以真流式 `StreamResponse` 返回并由调用方关闭。
 - TypeScript client 输出 runtime、routes、transports，并通过 transport facade 注入 HTTP/Wails 能力。TypeScript HTTP client 支持 `ApiFilePart` multipart 输入、binary_schema 成功响应 typed packet 解码、`ApiRawResponse<T>` raw 响应，以及 `json/text/blob/arrayBuffer/stream` response type 分支。
 - Flutter client 输出纯 Dart package：public entry `lib/<package>.dart` / `lib/<root>.dart` 和 `lib/src/<root>/<root>.dart` 是 preserved facade 且导出对应 `gen_*.dart`；实现位于 `lib/src/<root>/runtime`、`routes` 与 `transports/http`；`gen_*.dart` 由生成器覆盖，非 `gen_` facade、HTTP client facade 与 `api_json_codecs.dart` 作为 preserved scaffold 保留。默认 HTTP adapter 使用 `package:http`，支持 multipart、binary_schema 请求、binary_schema/bytes/file 成功响应，并把 byte_stream 作为 `ApiStreamResponse.body: Stream<List<int>>` 真流式返回；STREAM 使用 SSE，CHANNEL 使用 `web_socket_channel`，不生成 Flutter UI、状态管理、鉴权、重试、缓存或 session engine。
-- Flutter 采用 Dart package 输出布局；Kotlin / Java / Python 采用各自语言的 package-first 输出布局；这些 target 按 preview 口径描述，文档应要求使用方把生成结果纳入自身类型检查、lint、编译或 smoke。
+- Swift client 输出 Swift Package Manager SDK：`Package.swift`、package/root facade 与 route facade 是 preserved 用户文件，`Gen*.swift` 文件由生成器覆盖；runtime 暴露 `APITransport`、`APIRequestOptions`、`APIRequest<Response>`、typed error lookup、raw response、stream/channel bridge、`APIFilePart`、`APIBinaryPayload` 与 `APIJSONValue`。DTO 使用 `public struct ...: Codable, Sendable`，wire 字段名通过 `CodingKeys` 保留，multi-variant STREAM/CHANNEL message 使用 associated-value enum 和自定义 codec。默认 `runtime_profile = "modern"` 输出 `.iOS(.v15)` 并使用现代 `URLSession` async API；显式 `runtime_profile = "ios14-compat"` 输出 `.iOS(.v14)` 且只替换 HTTP transport 为 continuation/delegate 兼容实现，不改变 DTO、route、wire shape 或 typed error contract。Swift target 只生成协议 SDK，不生成 UI、鉴权、签名、401 处理、环境选择、缓存、重试、token storage、session owner 或 singleton app state；iOS 新架构应在 Core Networking 下包装或注入 generated `APITransport`，由应用自己的 `APIClient` 负责这些策略。当前 Swift package target 以单 root 输出为主；多 root 配置应通过 `include` / `exclude` 裁剪到单 package root，或后续扩展为多 SwiftPM target。
+- Flutter 采用 Dart package 输出布局；Swift 采用 Swift Package Manager 输出布局；Kotlin / Java / Python 采用各自语言的 package-first 输出布局；这些 target 按 preview 口径描述，文档应要求使用方把生成结果纳入自身类型检查、lint、编译或 smoke。
 - Kotlin client 使用 OkHttp + kotlinx.serialization，生成器拥有文件统一命名为 `Gen*.kt`，但 Kotlin public declaration 保持惯用名称；默认 HTTP adapter 覆盖 RPC query/json/urlencoded/multipart/binary_schema 请求、binary_schema/bytes/file 成功响应，并把 byte_stream 作为 closeable `ApiStreamResponse` / `InputStream` 真流式返回；Kotlin server 使用 Ktor + kotlinx.serialization，生成 service contract/stub、HTTP RPC adapter、raw streaming writer、SSE stream bridge、WebSocket channel bridge 和协议关键帧 helper。Kotlin server 不生成宿主 session engine、重试、鉴权、缓存或 room 管理。
 - Java client 使用 Java 17 `HttpClient` + Jackson，Java server 使用 Spring MVC + Jackson；所有生成器覆盖的 runtime、route type、service stub 和 binary body public 类型都使用 `Gen*` 名称，例如 `GenApiTypes`、`GenDemoTypes`、`GenDemoServiceStub`；HTTP adapter 支持 query/json/urlencoded/multipart/binary_schema 请求、binary_schema/bytes/file 成功响应，并把 byte_stream 作为 `GenApiStreamResponse` / `InputStream` / `AutoCloseable` 真流式返回；binary schema 会生成 typed packet writer / parser，server controller 会把 `.REQ_BINARY_SCHEMA` body 解析为 typed packet 后交给 service；Spring server adapter 生成 `SseEmitter` stream bridge 与 WebSocket channel bridge，但不生成 Gradle/Maven 工程或 JPMS `module-info.java`。
 - Python client 是 async-first，推荐从 `create_client(base_url)` 聚合 facade 进入；route DTO 使用递归强类型 `dataclass(kw_only=True)`、enum 和生成的 `from_mapping()` / `from_value()` / `to_mapping()` codec，通用 decode/encode helper 收束在 runtime `gen_codecs.py`，普通 route facade 使用 typed DTO 入参和 typed DTO/scalar/list/map 返回，raw mapping 逃生口保留在 transport 层。Python HTTP client 支持 multipart file upload，binary_schema 成功响应返回 typed packet，bytes/file raw 响应返回 `ApiRawResponse[bytes]`，byte stream 返回 async stream response context 并由调用方关闭。Python server 输出 typed service contract/stub 与 FastAPI HTTP adapter scaffold，包含 RPC/urlencoded/multipart/binary_schema、typed error、SSE 和 WebSocket 协议桥接；Python server multipart route 使用 FastAPI `UploadFile` / `Form` 组装 typed DTO，`.REQ_BINARY_SCHEMA` 请求由 adapter 解码 Content-Encoding 后解析成 typed packet，binary_schema 成功响应由 adapter 编码 typed packet，raw 响应使用 `Response`、`FileResponse` 或 `StreamingResponse`；坏 JSON 属于 transport input error 并返回 HTTP 400；运行 WebSocket server 需要安装 `websockets` 或等价 uvicorn WebSocket 后端。
@@ -144,7 +145,7 @@ README 应链接到以下用户文档：
 ## Examples 与验证事实
 
 - `examples/blueprints/` 是 Blueprint 真源。
-- 语言 examples、`examples/api-blueprint.index.json`、可选 full contract/agent/shards 快照与 `examples/grpc/{protos,go,python}/` 是生成快照；`examples/flutter/` 是纯 Dart package 快照，验证使用 `dart pub get`、`dart analyze` 和 `dart test`。
+- 语言 examples、`examples/api-blueprint.index.json`、可选 full contract/agent/shards 快照与 `examples/grpc/{protos,go,python}/` 是生成快照；`examples/flutter/` 是纯 Dart package 快照，验证使用 `dart pub get`、`dart analyze` 和 `dart test`；`examples/swift/` 是 Swift Package Manager SDK 快照，验证使用文件/snippet 检查，并在 Swift toolchain 可用时运行 `swift build`。
 - examples DSL 覆盖 query/json/urlencoded/multipart、binary_schema、bytes/file/byte_stream raw response、request options header/timeout、media filename edge、raw media typed error、XML、static/no-envelope、header、scalar、enum、map、deprecated、typed error、命名冲突、多 blueprint root、stream、channel、SSE/WebSocket 等公开协议场景；暂不支持的端侧能力必须在 conformance manifest 中显式标注，不静默漏测。
 - `scripts/example_validation.py` 负责 snapshot drift、refresh、compile/analyze/import smoke 和旧增强 suite；`python -m scripts.example_conformance` 负责真实互通验证，Makefile 通过 `make example-conformance-*` 暴露同一能力，并用 `EXAMPLE_CONFORMANCE_SERVERS`、`EXAMPLE_CONFORMANCE_CLIENTS`、`EXAMPLE_CONFORMANCE_SCENARIOS`、`EXAMPLE_CONFORMANCE_KEEP_WORKSPACE` 选择矩阵。默认服务端矩阵仍建议从 `go` 开始，完整矩阵可设置 `EXAMPLE_CONFORMANCE_SERVERS=all EXAMPLE_CONFORMANCE_CLIENTS=all`。
 - conformance 当前服务端覆盖 Go HTTP、Java Spring、Kotlin Ktor 和 Python FastAPI；客户端覆盖 Go、TypeScript、Kotlin、Flutter、Java 和 Python。runner 按 server/client/scenario 的能力交集执行；Java/Python client 对暂不支持的 SSE/WebSocket 默认 transport 走显式 unsupported-contract，不能静默漏测。

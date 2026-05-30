@@ -295,6 +295,15 @@ base_url = "http://localhost:2333"
 include = ["tag:api"]
 exclude = ["path:/api/demo/ws"]
 
+[[swift.client]]
+id = "swift.client"
+out_dir = "swift"
+package = "ApiBlueprintExampleClient"
+base_url = "http://localhost:2333"
+runtime_profile = "ios14-compat"
+include = ["tag:api"]
+exclude = ["path:/api/demo/ws"]
+
 [[transport.wails]]
 id = "gui.v3"
 version = "v3"
@@ -334,6 +343,18 @@ exclude = ["path:/api/demo/ping"]
     assert "base_url: http://localhost:2333" in java_client.output
     assert "include: [tag:api]" in java_client.output
     assert "exclude: [path:/api/demo/ws]" in java_client.output
+
+    swift_client = CliRunner().invoke(
+        api_gen,
+        ["explain-target", "-c", str(config_path), "--target", "swift.client"],
+    )
+    assert swift_client.exit_code == 0, swift_client.output
+    assert "kind: swift-client" in swift_client.output
+    assert "package: ApiBlueprintExampleClient" in swift_client.output
+    assert "base_url: http://localhost:2333" in swift_client.output
+    assert "runtime_profile: ios14-compat" in swift_client.output
+    assert "include: [tag:api]" in swift_client.output
+    assert "exclude: [path:/api/demo/ws]" in swift_client.output
 
 def test_api_gen_inspect_route_uses_operation_id_for_channel_operation(tmp_path):
     _write_connection_inspect_blueprint(tmp_path)

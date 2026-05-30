@@ -1,0 +1,12 @@
+import Foundation
+
+open class {{ bp.gen_root_client }} {
+    public let transport: APITransport
+
+    public init(transport: APITransport) {
+        self.transport = transport
+    }
+{% for group in bp.groups.values() %}
+    public lazy var {{ group.property_name }} = {{ group.class_name }}(transport: transport)
+{% endfor %}
+}

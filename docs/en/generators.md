@@ -6,11 +6,11 @@ This page covers the main non-Wails, non-gRPC generators. See [Wails](wails.md) 
 
 `api-gen check`, contract / agent artifact projection, and language writers use the same planner / capability metadata. Before generation, target dependencies, route kinds, request kinds, and response envelopes are validated consistently, avoiding cases where check passes and a writer later discovers unsupported input.
 
-Generator status and path conventions are part of the shared planning surface. Go server is available; Go client, Flutter, Kotlin, Java, and Python targets are preview surfaces. Go server / Go client / Wails Go contract and agent artifact paths use Go-safe route package segments, for example `/api-v1` -> `api_v1` and `/admin/v1` -> `admin_v1`. Flutter / Kotlin / Java / Python artifact paths follow their language-specific route output layout, for example `routes/api/demo`.
+Generator status and path conventions are part of the shared planning surface. Go server is available; Go client, Flutter, Swift, Kotlin, Java, and Python targets are preview surfaces. Go server / Go client / Wails Go contract and agent artifact paths use Go-safe route package segments, for example `/api-v1` -> `api_v1` and `/admin/v1` -> `admin_v1`. Flutter / Swift / Kotlin / Java / Python artifact paths follow their language-specific route output layout, for example `routes/api/demo`.
 
-Markdown Binary Schema generated names use the same collision policy across targets: packet entry names remain packet-based, while schema-internal struct / enum / bitflags / state / helper symbols are scoped by packet name. Packet names that normalize to the same generated symbol are rejected during generation. Public binary packet fields follow target-language conventions: Go / Kotlin / Java / Flutter use exported or camelCase field names, while TypeScript / Python keep snake_case fields close to the JSON / wire names.
+Markdown Binary Schema generated names use the same collision policy across targets: packet entry names remain packet-based, while schema-internal struct / enum / bitflags / state / helper symbols are scoped by packet name. Packet names that normalize to the same generated symbol are rejected during generation. Public binary packet fields follow target-language conventions: Go / Kotlin / Java / Flutter / Swift use exported or camelCase field names, while TypeScript / Python keep snake_case fields close to the JSON / wire names.
 
-HTTP body / response kind is also part of shared planning. Request bodies are recorded as `none`, `json`, `urlencoded`, `multipart`, `binary_schema`, or `raw_bytes`, and responses are recorded as `json`, `xml`, `text`, `binary_schema`, `bytes`, `file`, or `byte_stream`. HTTP generators support multipart, raw media responses, and binary schema request/response handling for Go server/client, TypeScript client, Flutter client, Kotlin client/server, Java client/server, and Python server/client.
+HTTP body / response kind is also part of shared planning. Request bodies are recorded as `none`, `json`, `urlencoded`, `multipart`, `binary_schema`, or `raw_bytes`, and responses are recorded as `json`, `xml`, `text`, `binary_schema`, `bytes`, `file`, or `byte_stream`. HTTP generators support multipart, raw media responses, and binary schema request/response handling for Go server/client, TypeScript client, Flutter client, Swift client, Kotlin client/server, Java client/server, and Python server/client.
 
 ### HTTP Raw Media And Non-HTTP Transports
 
@@ -22,7 +22,7 @@ For Wails, use IPC / app-runtime models: small bytes or typed binary packets can
 
 ### Client Request Options
 
-Generated client RPC methods expose per-call request options in the target language's normal style. TypeScript and Wails TypeScript use an `ApiRequestOptions` object with `headers`, `timeoutMs`, and HTTP-only `init`; Flutter and Kotlin use `ApiRequestOptions(headers, timeout)`; Java uses `GenApiRequestOptions` overloads; Python uses keyword-only `headers` and `timeout`; Go uses `context.Context` for timeout/deadline and variadic `runtime.RequestOption` helpers such as `runtime.WithHeader(...)`.
+Generated client RPC methods expose per-call request options in the target language's normal style. TypeScript and Wails TypeScript use an `ApiRequestOptions` object with `headers`, `timeoutMs`, and HTTP-only `init`; Flutter, Kotlin, and Swift use `ApiRequestOptions(headers, timeout)`; Java uses `GenApiRequestOptions` overloads; Python uses keyword-only `headers` and `timeout`; Go uses `context.Context` for timeout/deadline and variadic `runtime.RequestOption` helpers such as `runtime.WithHeader(...)`.
 
 HTTP transports merge default headers from config first, then per-call headers, then protocol-required headers such as `Content-Type` when encoding JSON, form, multipart, or binary bodies. Per-call timeout overrides transport config timeout and then falls back to the native client default. STREAM and CHANNEL lifecycle timeout stays separate and is controlled by context cancellation, close APIs, WebSocket/SSE runtime behavior, or application policy.
 
@@ -50,7 +50,7 @@ The Go generator emits:
 - Transport-neutral Go core.
 - Optional HTTP/Gin adapter with multipart binding, binary schema request decoding, binary schema response encoding, and raw bytes/file/stream response writers.
 
-Files overwritten by generators must be named `gen_*` / `Gen*`, or live under `_gen_*`, and keep a `Code generated ... DO NOT EDIT` header. `impl_*` and non-`gen_` / non-`Gen` files are user-owned extension points, created only when missing, preserved during regeneration, and written without a generated header. Flutter uses Dart-style `gen_*.dart`; Kotlin generator-owned files are named `Gen*.kt` while public declarations keep Kotlin-style names; Java generator-owned files and public types use `Gen*`.
+Files overwritten by generators must be named `gen_*` / `Gen*`, or live under `_gen_*`, and keep a `Code generated ... DO NOT EDIT` header. `impl_*` and non-`gen_` / non-`Gen` files are user-owned extension points, created only when missing, preserved during regeneration, and written without a generated header. Flutter uses Dart-style `gen_*.dart`; Swift uses `Gen*.swift`; Kotlin generator-owned files are named `Gen*.kt` while public declarations keep Kotlin-style names; Java generator-owned files and public types use `Gen*`.
 
 `go-server` owns only the Go server core. `out_dir` is the generated package root; projects that want `views` in import paths should include `views` in `out_dir`. HTTP / Wails output is attached explicitly by `http-transport` / `wails-transport` targets through `server = "go.server"`. The HTTP entrypoint is generated under `<out_dir>/transports/http/<go-root-segment>`, for example `transports/http/api.NewBlueprint(engine)`.
 
@@ -119,7 +119,7 @@ The default HTTP/Wails runtimes fully implement only `ConnectionScope.SESSION`. 
 
 Named variant-union messages generate stable helpers while keeping the same `{ type, data }` wire shape. Go server and Go client output place message unions, `NewXxxMessageVariant(...)`, and `DecodeVariant()` in `gen_messages.go`; message keyframes live in `gen_message_cases.go`: `XxxMessageProcessor[C]`, `VisitXxxMessage(ctx, message, processor)`, lazy `XxxMessageVariantCase.Decode()`, and typed helpers such as `AsXxxMessageError(...)` / `IsXxxMessageErrorKind(...)`. The visitor handles only one message and does not own the `Recv` loop, middleware, close/abort decisions, write path, or error policy; applications keep those runtime decisions in their route/app layer.
 
-TypeScript, Flutter, Python, Kotlin, and Java use language-native lightweight helpers instead of copying the Go visitor shape. TypeScript emits `XxxMessageVariants.variant(data)`, `dispatchXxxMessage(message, handlers)`, and typed unknown-message dispatch errors. Flutter emits Dart 3 `sealed class XxxMessage`, final variant classes, `XxxMessageVariants.variant(data)`, and `dispatchXxxMessage(...)`. Python emits dataclass `XxxMessage`, `XxxMessageVariants`, `XxxMessageHandlers`, `dispatch_xxx_message(...)`, and `XxxMessageDispatchError` in route `gen_types.py` for both client and server output. Kotlin emits `@Serializable data class XxxMessage(type, data)`, `object XxxMessageVariants`, `XxxMessageHandlers<R>`, `dispatchXxxMessage(...)`, and `XxxMessageDispatchException`; the runtime exposes `ApiJson` for generated encode/decode. Java emits nested `record XxxMessage(String type, JsonNode data)`, variants, handlers, dispatch, and dispatch exception helpers inside the route `Gen<Group>Types.java`, with `GenApiJson.MAPPER` as the shared Jackson holder. These helpers support constructing `CHANNEL` client messages and dispatching server pushes, but they still do not implement the host application's connection session engine.
+TypeScript, Flutter, Swift, Python, Kotlin, and Java use language-native lightweight helpers instead of copying the Go visitor shape. TypeScript emits `XxxMessageVariants.variant(data)`, `dispatchXxxMessage(message, handlers)`, and typed unknown-message dispatch errors. Flutter emits Dart 3 `sealed class XxxMessage`, final variant classes, `XxxMessageVariants.variant(data)`, and `dispatchXxxMessage(...)`. Swift emits associated-value enums, variant constructors, and custom `Codable` codecs. Python emits dataclass `XxxMessage`, `XxxMessageVariants`, `XxxMessageHandlers`, `dispatch_xxx_message(...)`, and `XxxMessageDispatchError` in route `gen_types.py` for both client and server output. Kotlin emits `@Serializable data class XxxMessage(type, data)`, `object XxxMessageVariants`, `XxxMessageHandlers<R>`, `dispatchXxxMessage(...)`, and `XxxMessageDispatchException`; the runtime exposes `ApiJson` for generated encode/decode. Java emits nested `record XxxMessage(String type, JsonNode data)`, variants, handlers, dispatch, and dispatch exception helpers inside the route `Gen<Group>Types.java`, with `GenApiJson.MAPPER` as the shared Jackson holder. These helpers support constructing `CHANNEL` client messages and dispatching server pushes, but they still do not implement the host application's connection session engine.
 
 Go server also creates three user-owned scaffold files the first time it sees a `CHANNEL` with a named client message: `<leaf>_session.go`, `<leaf>_processor.go`, and `<leaf>_error.go`. These files do not carry a `Code generated` marker, and later generations create them only when missing instead of overwriting user edits. The default shell gives humans and AI agents stable places for the route handler, `Recv` loop, `VisitXxxMessage(...)`, `OnXxx` processor methods, and message error policy; it is still an editable starting point, not a generator-owned session engine, and it does not bind the route to appkit, a hub, middleware, or a close policy.
 
@@ -129,7 +129,7 @@ Non-scaffold generated connection handlers still default to `not implemented`, s
 
 ContractGraph collects `Blueprint(errors=...)` and route `.ERR(...)` declarations into language-agnostic typed errors. Manifest `2.0` keeps a global `errors` definition table and writes compact route-local refs (`id/group/key/code/message/toast`) into `routes[].errors`, so generated clients and `api-gen inspect errors --route ...` can show the error surface from the route being called. `id` is the public protocol error identity; `code` is only a business code and may be reused across groups or routes. `ResponseEnvelope` decides the wire shape: the default `CodeMessageDataEnvelope` uses `{ code, message, data, error? }`, strict `{ code, message, data }` output can opt into `LegacyCodeMessageDataEnvelope`, and `{ ok, data/error }` is available only when selecting `OkDataErrorEnvelope`.
 
-Generated runtime APIs use user-facing, language-native names such as `ApiError`, `ApiErrors`, `ApiErrorsByID`, `lookupApiError`, and `isApiError`; Java generator-owned error types follow the ownership rule and use `GenApiError`, `GenApiErrors`, `GenApiErrorPayload`, and related `Gen*` names. Catalog dictionaries are internal indexes rather than the primary surface. Default Go, TypeScript, Flutter, Python, Kotlin, and Java client transports unwrap by the route envelope spec, resolve the payload by `id`, then by `(route_id, code)`, then by global code fallback, and throw or return a typed error; Java returns `GenApiError`. Go server grouped errors under packages such as `runtime/errors/common_err` return typed `ApiError` values; `WithToast(...)` returns an immutable override copy for request-language, tenant, or rollout-specific dynamic `toast.text`. Business i18n resolves the current language by toast key, and client helpers resolve display text in the order `toast.text`, external i18n, `toast.default`, then `message`. HTTP status remains transport state and is not derived from business error codes.
+Generated runtime APIs use user-facing, language-native names such as `ApiError`, `ApiErrors`, `ApiErrorsByID`, `lookupApiError`, and `isApiError`; Java generator-owned error types follow the ownership rule and use `GenApiError`, `GenApiErrors`, `GenApiErrorPayload`, and related `Gen*` names. Catalog dictionaries are internal indexes rather than the primary surface. Default Go, TypeScript, Flutter, Swift, Python, Kotlin, and Java client transports unwrap by the route envelope spec, resolve the payload by `id`, then by `(route_id, code)`, then by global code fallback, and throw or return a typed error; Java returns `GenApiError`. Go server grouped errors under packages such as `runtime/errors/common_err` return typed `ApiError` values; `WithToast(...)` returns an immutable override copy for request-language, tenant, or rollout-specific dynamic `toast.text`. Business i18n resolves the current language by toast key, and client helpers resolve display text in the order `toast.text`, external i18n, `toast.default`, then `message`. HTTP status remains transport state and is not derived from business error codes.
 
 A Go server handler can return generated typed errors directly, or return an undeclared business code to exercise client unknown fallback:
 
@@ -261,6 +261,75 @@ Runtime entrypoints include the aggregate `ApiClient` façade, route clients suc
 
 Markdown Binary Schema helpers live in route-local `gen_binary.dart`; the shared binary reader/writer runtime lives in `runtime/binary/gen_binary_runtime.dart`. Dart public fields use lowerCamelCase while diagnostics keep the schema's original field names.
 
+## Swift Client
+
+```sh
+api-gen generate -c api-blueprint.toml --target swift.client
+```
+
+The Swift client target emits an iOS Swift Package Manager SDK. The output is a protocol DTO/client and transport keyframe layer; it does not generate UI, app lifecycle, auth, signing, 401 handling, environment selection, retry, cache, token storage, a session owner, or singleton app state.
+
+A typical config is:
+
+```toml
+[[swift.client]]
+id = "swift.client"
+out_dir = "swift"
+package = "ApiBlueprintExampleClient"
+base_url = "http://localhost:2333"
+runtime_profile = "modern"
+```
+
+A typical output layout is:
+
+- `Package.swift`
+- `Sources/<package>/<package>.swift`
+- `Sources/<package>/Gen<package>.swift`
+- `Sources/<package>/<root>/<root>RootClient.swift`
+- `Sources/<package>/<root>/Gen<root>RootClient.swift`
+- `Sources/<package>/<root>/Runtime/GenAPITransport.swift`
+- `Sources/<package>/<root>/Runtime/GenAPIClient.swift`
+- `Sources/<package>/<root>/Runtime/GenAPITypes.swift`
+- `Sources/<package>/<root>/Runtime/GenAPIErrors.swift`
+- `Sources/<package>/<root>/Runtime/GenAPIErrorLookup.swift`
+- `Sources/<package>/<root>/Runtime/APICoding.swift`
+- `Sources/<package>/<root>/Runtime/Binary/GenBinaryRuntime.swift`
+- `Sources/<package>/<root>/Routes/<root>/<group...>/Gen<Group>API.swift`
+- `Sources/<package>/<root>/Routes/<root>/<group...>/Gen<Group>Types.swift`
+- `Sources/<package>/<root>/Routes/<root>/<group...>/GenBinary.swift`
+- `Sources/<package>/<root>/Routes/<root>/<group...>/<Group>API.swift`
+- `Sources/<package>/<root>/Routes/<root>/<group...>/<Group>Types.swift`
+- `Sources/<package>/<root>/Transports/HTTP/GenHTTPAPIConfig.swift`
+- `Sources/<package>/<root>/Transports/HTTP/GenURLSessionAPITransport.swift`
+- `Sources/<package>/<root>/Transports/HTTP/GenHTTPConnection.swift`
+- `Sources/<package>/<root>/Transports/HTTP/HTTPAPIClient.swift`
+
+`Gen*.swift` files are overwritten by the generator and carry the `// Code generated by api-blueprint (Swift client); DO NOT EDIT.` header. `Package.swift`, package/root façades, route façades, type façades, `APICoding.swift`, and `HTTPAPIClient.swift` are preserved user files: they are created only when missing, later generations do not overwrite user edits, and they do not carry the generated header.
+
+`package` is the Swift package and module name. `base_url` / `base_url_expr` are written only to `HTTPAPIConfig`, not to transport-neutral route/runtime clients. `runtime_profile` is a runtime code generation compatibility setting, not a protocol compatibility switch: the default `modern` profile emits `.iOS(.v15)` and uses modern `URLSession` async APIs; explicit `ios14-compat` emits `.iOS(.v14)` and uses continuation/delegate-compatible HTTP transport code. Both profiles keep the same DTOs, route names, wire shape, typed errors, binary schema surface, and public async API.
+
+Runtime entrypoints include the package aggregate façade, root client such as `client.api`, route clients such as `HelloAPI`, DTOs, `APITransport`, `APIRequestOptions`, `APIRequest<Response>`, `APIError`, `lookupAPIError`, `APIRawResponse`, `APIStreamResponse`, `APIFilePart`, `APIBinaryPayload`, `APIJSONValue`, `APIStreamBridge`, and `APIChannelBridge`. DTOs are `public struct ...: Codable, Sendable`; required fields are non-optional, optional / omitempty fields are optional, and `CodingKeys` preserve wire field names. String and integer enums use raw-value `Codable`, and multi-variant STREAM/CHANNEL messages use associated-value enums with custom codecs. Markdown Binary Schema helpers are route-local `GenBinary.swift` files; the current Swift client uses `Data` as the binary packet payload boundary.
+
+The default URLSession transport implements RPC query/json/urlencoded/multipart/binary_schema requests, binary_schema/bytes/file/byte_stream success responses, response envelope unwrapping, and typed error restoration. RPC route methods accept `APIRequestOptions(headers:timeout:)` for per-call customization. Raw response filenames are parsed only from the actual `Content-Disposition` header. STREAM/CHANNEL route surfaces are exposed through `APIStreamBridge` / `APIChannelBridge`; connection lifecycle, backpressure, reconnect, auth refresh, and session policy remain host-application responsibilities through a custom `APITransport` or wrapper.
+
+Typical usage looks like this:
+
+```swift
+import ApiBlueprintExampleClient
+import Foundation
+
+let client = HTTPAPIClient.create(
+    baseURL: URL(string: "http://localhost:2333")!
+)
+
+let response = try await client.api.hello.abc(
+    query: HelloAbcQuery(arg1: true, type_: .ping),
+    options: APIRequestOptions(headers: ["X-Trace-Id": traceID])
+)
+```
+
+For iOS app architectures, put the generated SDK under Core Networking as the protocol DTO/client layer. The app-owned `APIClient` should wrap or inject the generated `APITransport` and own auth/signing, 401 handling, environment switching, retry, cache, session ownership, token storage, logging, and monitoring. The current Swift package target is primarily single-root; multi-root projects should use `include` / `exclude` to scope one root, or split generation into multiple Swift targets/packages.
+
 ## Kotlin Client / Server
 
 Kotlin targets are preview surfaces and use kotlinx.serialization for DTOs, typed errors, and message keyframe helpers. `kotlin-client` focuses on the OkHttp client path; `kotlin-server` focuses on a Ktor HTTP RPC adapter and service scaffold.
@@ -366,7 +435,7 @@ Python server also uses `python_package_root` as its package root and emits rout
 
 ## Example Snapshots
 
-`examples/golang/server/`, `examples/golang/client/`, `examples/typescript/`, `examples/flutter/`, `examples/kotlin/client`, `examples/kotlin/server`, `examples/java/client` / `examples/java/server`, and `examples/python/` are generated snapshots, not business sources; `examples/java/suite` is a handwritten runtime validation project. `examples/golang/conformance/`, `examples/typescript/conformance.ts`, `examples/kotlin/conformance/`, `examples/java/conformance/`, `examples/python/conformance/`, and `examples/flutter/test/conformance_test.dart` are preserved conformance files whose job is to call each language's generated artifacts against real Go / Java / Kotlin / Python servers, covering RPC, urlencoded, multipart media, binary_schema, request options headers/timeouts, typed errors, naming conflicts, bytes/file/byte_stream raw responses, media filename edge cases, raw media typed errors, XML/static/header/scalar/enum/map/deprecated/audit-binary routes, single-model channels, and supported SSE/WebSocket interoperability; regeneration must not overwrite them. Go server / Go client / Wails Go contract / agent artifact indexes use Go-safe route package segments, while Flutter / Kotlin / Java / Python artifact indexes keep their language-specific route output paths. To accept intentional generation changes, use:
+`examples/golang/server/`, `examples/golang/client/`, `examples/typescript/`, `examples/flutter/`, `examples/swift/`, `examples/kotlin/client`, `examples/kotlin/server`, `examples/java/client` / `examples/java/server`, and `examples/python/` are generated snapshots, not business sources; `examples/java/suite` is a handwritten runtime validation project. `examples/golang/conformance/`, `examples/typescript/conformance.ts`, `examples/kotlin/conformance/`, `examples/java/conformance/`, `examples/python/conformance/`, and `examples/flutter/test/conformance_test.dart` are preserved conformance files whose job is to call each language's generated artifacts against real Go / Java / Kotlin / Python servers, covering RPC, urlencoded, multipart media, binary_schema, request options headers/timeouts, typed errors, naming conflicts, bytes/file/byte_stream raw responses, media filename edge cases, raw media typed errors, XML/static/header/scalar/enum/map/deprecated/audit-binary routes, single-model channels, and supported SSE/WebSocket interoperability; regeneration must not overwrite them. Go server / Go client / Wails Go contract / agent artifact indexes use Go-safe route package segments, while Flutter / Swift / Kotlin / Java / Python artifact indexes keep their language-specific route output paths. To accept intentional generation changes, use:
 
 ```sh
 make example-refresh
