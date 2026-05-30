@@ -52,6 +52,9 @@ def test_makefile_exposes_example_validation_and_release_preflight_uses_it():
     assert 'EXAMPLE_BENCH_REQUESTS ?= 1000' in text
     assert 'EXAMPLE_BENCH_CONCURRENCY ?= 16' in text
     assert 'EXAMPLE_BENCH_WARMUP ?= 100' in text
+    assert 'SWIFT_RUNTIME_BENCH_SCENARIOS ?= all' in text
+    assert 'SWIFT_RUNTIME_BENCH_COUNT ?= 100' in text
+    assert 'SWIFT_RUNTIME_BENCH_PAYLOAD_BYTES ?= 262144' in text
     assert "uv run python scripts/example_validation.py" in example_block
     assert "uv run python scripts/example_validation.py --mode compile" in compile_block
     assert "uv run python scripts/example_validation.py --mode refresh" in refresh_block
@@ -66,10 +69,15 @@ def test_makefile_exposes_example_validation_and_release_preflight_uses_it():
     assert "uv run python scripts/example_validation.py --scope blueprint --mode golang-suite" in golang_suite_block
     assert "uv run python scripts/example_validation.py --scope blueprint --mode java-suite" in java_suite_block
     benchmark_list_block = _target_block(text, "benchmark-list")
+    benchmark_swift_runtime_block = _target_block(text, "benchmark-swift-runtime")
     benchmark_protocol_block = _target_block(text, "example-benchmark-protocol")
     benchmark_suite_block = _target_block(text, "example-benchmark")
     assert "uv run python -m scripts.example_benchmark list" in benchmark_list_block
     assert 'uv run python scripts/benchmark_binary.py --target "$(BINARY_BENCH_TARGET)" --count "$(BINARY_BENCH_COUNT)"' in benchmark_binary_block
+    assert "uv run python -m scripts.example_benchmark swift-runtime" in benchmark_swift_runtime_block
+    assert '--scenario "$(SWIFT_RUNTIME_BENCH_SCENARIOS)"' in benchmark_swift_runtime_block
+    assert '--count "$(SWIFT_RUNTIME_BENCH_COUNT)"' in benchmark_swift_runtime_block
+    assert '--payload-bytes "$(SWIFT_RUNTIME_BENCH_PAYLOAD_BYTES)"' in benchmark_swift_runtime_block
     assert "uv run python -m scripts.example_benchmark protocol" in benchmark_protocol_block
     assert '--servers "$(EXAMPLE_BENCH_SERVERS)"' in benchmark_protocol_block
     assert '--scenario "$(EXAMPLE_BENCH_SCENARIOS)"' in benchmark_protocol_block

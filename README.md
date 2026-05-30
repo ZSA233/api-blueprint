@@ -137,4 +137,4 @@ make example-golang-suite
 make example-java-suite
 ```
 
-`make example-conformance` 默认从真实 Go HTTP server 开始跑协议互通；可用 `EXAMPLE_CONFORMANCE_SERVERS`、`EXAMPLE_CONFORMANCE_CLIENTS` 和 `EXAMPLE_CONFORMANCE_SCENARIOS` 选择矩阵，完整矩阵可设为 `EXAMPLE_CONFORMANCE_SERVERS=all EXAMPLE_CONFORMANCE_CLIENTS=all`（Swift 场景需要可用 Swift toolchain）。benchmark 是可选趋势工具，不作为默认 CI 阈值；除 binary / protocol 外，也提供 generated client SDK smoke 入口，见 [Benchmark](docs/zh/benchmarks.md)。`example-golang-suite` 和 `example-java-suite` 是保留的手动端到端增强验证。正式发布前的版本、构建、安装和 GitHub Release 流程见 [发布流程](docs/release-process.md)。
+`make example-conformance` 默认从真实 Go HTTP server 开始跑协议互通；可用 `EXAMPLE_CONFORMANCE_SERVERS`、`EXAMPLE_CONFORMANCE_CLIENTS` 和 `EXAMPLE_CONFORMANCE_SCENARIOS` 选择矩阵，完整矩阵可设为 `EXAMPLE_CONFORMANCE_SERVERS=all EXAMPLE_CONFORMANCE_CLIENTS=all`（Swift 场景需要可用 Swift toolchain）。benchmark 是可选趋势工具，不作为默认 CI 阈值；除 binary / protocol 外，也提供 generated client SDK smoke 与 Swift runtime microbench 入口，见 [Benchmark](docs/zh/benchmarks.md)。`example-golang-suite` 和 `example-java-suite` 是保留的手动端到端增强验证。正式发布前的版本、构建、安装和 GitHub Release 流程见 [发布流程](docs/release-process.md)。

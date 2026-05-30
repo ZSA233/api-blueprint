@@ -9,6 +9,7 @@ uv run python -m scripts.example_benchmark list
 uv run python -m scripts.example_benchmark binary --target go --count 10000
 uv run python -m scripts.example_benchmark protocol --servers go --scenario rpc-json,binary --requests 1000 --concurrency 16 --warmup 100
 uv run python -m scripts.example_benchmark sdk-smoke --servers go --clients python --scenario request-options,binary-response,media
+uv run python -m scripts.example_benchmark swift-runtime --scenario all --count 100
 ```
 
 The Makefile provides thin wrappers:
@@ -16,6 +17,7 @@ The Makefile provides thin wrappers:
 ```sh
 make benchmark-list
 make benchmark-binary BINARY_BENCH_TARGET=go BINARY_BENCH_COUNT=10000
+make benchmark-swift-runtime SWIFT_RUNTIME_BENCH_SCENARIOS=json-envelope,byte-stream
 make example-benchmark-protocol EXAMPLE_BENCH_SERVERS=go,python EXAMPLE_BENCH_SCENARIOS=rpc-json,binary
 make example-benchmark
 ```
@@ -33,6 +35,23 @@ uv run python -m scripts.example_benchmark binary --target go,typescript,python,
 - `--compare-head` keeps the older Go target HEAD comparison.
 - The Swift benchmark creates a temporary SwiftPM executable, depends on the current `examples/swift` `ABClientAPIRoutes` product, and requires a local `swift` toolchain.
 - The old scripts remain compatibility wrappers; new calls should prefer `python -m scripts.example_benchmark binary`.
+
+## Swift Runtime
+
+The `swift-runtime` subcommand creates a temporary SwiftPM executable, depends on the current `examples/swift` `ABClientRuntime` and `ABClientAPIRoutes` products, and measures local microbenchmark paths in the generated Swift runtime.
+
+```sh
+uv run python -m scripts.example_benchmark swift-runtime \
+  --scenario json-envelope,byte-stream,multipart-file,sse-limit,websocket-limit \
+  --count 100 \
+  --payload-bytes 262144
+```
+
+- `--scenario` supports `json-envelope`, `byte-stream`, `multipart-file`, `sse-limit`, `websocket-limit`, and `all`.
+- `--count` is the operation count per scenario.
+- `--payload-bytes` controls the payload size for byte stream, multipart file, and SSE/WebSocket payload-limit scenarios.
+- This benchmark measures local runtime hot paths only. It does not start a real server and does not cover login, retry, cache, or session lifecycle behavior.
+- Output fields include `scenario`, `iterations`, `elapsed_ns`, `ns_per_op`, and `bytes`, intended for same-machine same-target trend comparisons.
 
 ## Protocol
 
@@ -79,6 +98,9 @@ Makefile defaults:
 BINARY_BENCH_TARGET ?= go
 BINARY_BENCH_COUNT ?= 10000
 BINARY_BENCH_COMPARE_HEAD ?= 0
+SWIFT_RUNTIME_BENCH_SCENARIOS ?= all
+SWIFT_RUNTIME_BENCH_COUNT ?= 100
+SWIFT_RUNTIME_BENCH_PAYLOAD_BYTES ?= 262144
 EXAMPLE_BENCH_SERVERS ?= go
 EXAMPLE_BENCH_SCENARIOS ?= rpc-json,binary
 EXAMPLE_BENCH_REQUESTS ?= 1000

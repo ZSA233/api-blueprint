@@ -9,7 +9,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from scripts.example_benchmark import binary, cli, protocol
+from scripts.example_benchmark import binary, cli, protocol, swift_runtime
 
 
 def test_example_benchmark_help_and_list() -> None:
@@ -42,6 +42,8 @@ def test_example_benchmark_help_and_list() -> None:
     assert "protocol servers:" in list_result.stdout
     assert "protocol scenarios:" in list_result.stdout
     assert "sdk smoke scenarios:" in list_result.stdout
+    assert "swift runtime scenarios:" in list_result.stdout
+    assert "- json-envelope" in list_result.stdout
 
 
 def test_example_benchmark_protocol_rejects_unknown_filter() -> None:
@@ -249,6 +251,66 @@ def test_swift_binary_benchmark_uses_swift_package_product_with_fake_subprocess(
     assert "DemoPacket(data:" not in benchmark_source
     assert "encodeDemoPacket(packet)" in benchmark_source
     assert "decodeDemoPacket(data)" in benchmark_source
+
+
+def test_swift_runtime_benchmark_uses_runtime_and_routes_products_with_fake_subprocess(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[2]
+    commands: list[list[str]] = []
+    package_source = ""
+    benchmark_source = ""
+
+    monkeypatch.setattr(swift_runtime, "_require_tool", lambda tool: True)
+
+    def fake_run(command: list[str], cwd: Path, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
+        nonlocal package_source, benchmark_source
+        commands.append(command)
+        package_source = (cwd / "Package.swift").read_text(encoding="utf-8")
+        benchmark_source = (cwd / "Sources" / "SwiftRuntimeBenchmark" / "main.swift").read_text(encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0, stdout="scenario=json-envelope iterations=1\n", stderr="")
+
+    monkeypatch.setattr(swift_runtime, "_run", fake_run)
+
+    result = cli.main(
+        [
+            "--repo-root",
+            str(repo_root),
+            "swift-runtime",
+            "--scenario",
+            "json-envelope,byte-stream",
+            "--count",
+            "1",
+            "--payload-bytes",
+            "128",
+        ]
+    )
+
+    assert result == 0
+    assert commands == [
+        [
+            "swift",
+            "run",
+            "-c",
+            "release",
+            "SwiftRuntimeBenchmark",
+            "1",
+            "json-envelope,byte-stream",
+            "128",
+        ]
+    ]
+    assert '.product(name: "ABClientRuntime", package: "swift")' in package_source
+    assert '.product(name: "ABClientAPIRoutes", package: "swift")' in package_source
+    assert "apiDecodeResponse(" in benchmark_source
+    assert "APIRequest<APIStreamResponse>" in benchmark_source
+    assert "APIFilePart(fileURL:" in benchmark_source
+    assert "apiHTTPEventStreamBridge(" in benchmark_source
+    assert "apiHTTPWebSocketBridge(" in benchmark_source
+
+
+def test_swift_runtime_benchmark_rejects_unknown_scenario() -> None:
+    with pytest.raises(ValueError, match="unknown Swift runtime benchmark scenario"):
+        swift_runtime.parse_scenarios("missing")
 
 
 def test_protocol_benchmark_suppresses_setup_noise(

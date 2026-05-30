@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import os
 import subprocess
 import sys
 from pathlib import Path
 
-from scripts.example_benchmark import binary, protocol
+from scripts.example_benchmark import binary, protocol, swift_runtime
 from scripts.example_conformance import runner
 from scripts.example_conformance import manifest, scenarios
 
@@ -53,6 +54,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="Comma-separated conformance scenarios for generated client SDK smoke paths.",
     )
     sdk_parser.add_argument("--keep-workspace", action="store_true", help="Keep temporary workspace after the run.")
+
+    swift_runtime_parser = subparsers.add_parser("swift-runtime", help="Run Swift runtime microbenchmarks.")
+    swift_runtime_parser.add_argument(
+        "--scenario",
+        default="all",
+        help="Comma-separated scenarios, or all. Supported: "
+        + ",".join(swift_runtime.SCENARIOS),
+    )
+    swift_runtime_parser.add_argument("--count", type=int, default=100, help="operation count per selected scenario")
+    swift_runtime_parser.add_argument(
+        "--payload-bytes",
+        type=int,
+        default=256 * 1024,
+        help="payload size for stream, multipart, and payload-limit scenarios",
+    )
     return parser
 
 
@@ -115,6 +131,19 @@ def main(argv: list[str] | None = None) -> int:
                 keep_workspace=args.keep_workspace,
             )
             return 0
+        if args.command == "swift-runtime":
+            _validate_positive(args.count, "--count")
+            _validate_positive(args.payload_bytes, "--payload-bytes")
+            result = swift_runtime.run(
+                swift_runtime.SwiftRuntimeBenchmarkContext(
+                    repo_root=repo_root,
+                    scenarios=swift_runtime.parse_scenarios(args.scenario),
+                    count=args.count,
+                    payload_bytes=args.payload_bytes,
+                    env=os.environ.copy(),
+                )
+            )
+            return result.returncode
     except (RuntimeError, ValueError, FileNotFoundError, ModuleNotFoundError, subprocess.CalledProcessError) as exc:
         print(str(exc), file=sys.stderr)
         return 1
@@ -139,6 +168,9 @@ def _print_list() -> None:
     for scenario_name in ("request-options", "binary-response", "media"):
         scenario = scenarios.scenario_registry()[scenario_name]
         print(f"- {scenario_name} routes={','.join(scenario.route_ids)}")
+    print("swift runtime scenarios:")
+    for scenario_name in swift_runtime.SCENARIOS:
+        print(f"- {scenario_name}")
 
 
 def _validate_positive(value: int, flag: str) -> None:

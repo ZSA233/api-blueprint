@@ -9,6 +9,7 @@ uv run python -m scripts.example_benchmark list
 uv run python -m scripts.example_benchmark binary --target go --count 10000
 uv run python -m scripts.example_benchmark protocol --servers go --scenario rpc-json,binary --requests 1000 --concurrency 16 --warmup 100
 uv run python -m scripts.example_benchmark sdk-smoke --servers go --clients python --scenario request-options,binary-response,media
+uv run python -m scripts.example_benchmark swift-runtime --scenario all --count 100
 ```
 
 Makefile 提供薄封装：
@@ -16,6 +17,7 @@ Makefile 提供薄封装：
 ```sh
 make benchmark-list
 make benchmark-binary BINARY_BENCH_TARGET=go BINARY_BENCH_COUNT=10000
+make benchmark-swift-runtime SWIFT_RUNTIME_BENCH_SCENARIOS=json-envelope,byte-stream
 make example-benchmark-protocol EXAMPLE_BENCH_SERVERS=go,python EXAMPLE_BENCH_SCENARIOS=rpc-json,binary
 make example-benchmark
 ```
@@ -33,6 +35,23 @@ uv run python -m scripts.example_benchmark binary --target go,typescript,python,
 - `--compare-head` 保留 Go target 的旧 HEAD 对比能力。
 - Swift benchmark 会创建临时 SwiftPM executable，依赖当前 `examples/swift` 的 `ABClientAPIRoutes` product，并要求本机可用 `swift` toolchain。
 - 旧脚本仍作为兼容 wrapper 保留，推荐新调用使用 `python -m scripts.example_benchmark binary`。
+
+## Swift Runtime
+
+`swift-runtime` 子命令创建临时 SwiftPM executable，依赖当前 `examples/swift` 的 `ABClientRuntime` 与 `ABClientAPIRoutes` product，测 Swift generated runtime 的本地微基准路径。
+
+```sh
+uv run python -m scripts.example_benchmark swift-runtime \
+  --scenario json-envelope,byte-stream,multipart-file,sse-limit,websocket-limit \
+  --count 100 \
+  --payload-bytes 262144
+```
+
+- `--scenario` 支持 `json-envelope`、`byte-stream`、`multipart-file`、`sse-limit`、`websocket-limit` 和 `all`。
+- `--count` 是每个场景的操作次数。
+- `--payload-bytes` 控制 byte stream、multipart file、SSE/WebSocket payload limit 的 payload 大小。
+- 该 benchmark 只测本地 runtime 热路径，不启动真实 server，不覆盖登录、重试、缓存或 session lifecycle。
+- 输出字段包括 `scenario`、`iterations`、`elapsed_ns`、`ns_per_op` 和 `bytes`，用于同机同 target 趋势对比。
 
 ## Protocol
 
@@ -79,6 +98,9 @@ Makefile 默认值：
 BINARY_BENCH_TARGET ?= go
 BINARY_BENCH_COUNT ?= 10000
 BINARY_BENCH_COMPARE_HEAD ?= 0
+SWIFT_RUNTIME_BENCH_SCENARIOS ?= all
+SWIFT_RUNTIME_BENCH_COUNT ?= 100
+SWIFT_RUNTIME_BENCH_PAYLOAD_BYTES ?= 262144
 EXAMPLE_BENCH_SERVERS ?= go
 EXAMPLE_BENCH_SCENARIOS ?= rpc-json,binary
 EXAMPLE_BENCH_REQUESTS ?= 1000
