@@ -345,6 +345,9 @@ def test_swift_transport_runtime_profiles_are_isolated_to_transport_templates(tm
     assert ".iOS(.v14)" in compat_package
     assert "try await config.session.data(for: built.request)" in modern_transport
     assert "try await config.session.bytes(for: built.request)" in modern_transport
+    assert "#if canImport(Darwin)" in modern_transport
+    assert "return try await performCompatByteStreamRequest(built: built, request: request)" in modern_transport
+    assert "return self.performCompatEventStreamTask(request, onResponse: onResponse, onData: onData, onComplete: onComplete)" in modern_transport
     assert "performCompatDataTask" not in modern_transport
     assert "APIHTTPByteStreamAccumulator" in modern_transport
     assert "Task.sleep(nanoseconds: 10_000_000)" in modern_transport

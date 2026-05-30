@@ -15,6 +15,7 @@ public final class URLSessionAPITransport: APITransport {
         defer { built.cleanup() }
 {% if writer.modern_runtime %}
         if request.responseKind == "byte_stream" {
+#if canImport(Darwin)
             let (bytes, response) = try await config.session.bytes(for: built.request)
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw APIDecodeError.invalidResponse("expected HTTP response")
@@ -30,6 +31,9 @@ public final class URLSessionAPITransport: APITransport {
             }
             let stream = chunkedByteStream(bytes)
             return try request.decode(streamResponse(stream, response: httpResponse, defaultContentType: request.responseMediaType))
+#else
+            return try await performCompatByteStreamRequest(built: built, request: request)
+#endif
         }
         let (data, response) = try await config.session.data(for: built.request)
 {% else %}
@@ -68,9 +72,13 @@ public final class URLSessionAPITransport: APITransport {
             maxSSEEventBytes: config.maxSSEEventBytes,
             start: { onResponse, onData, onComplete in
 {% if writer.modern_runtime %}
-                self.performModernEventStreamTask(request, onResponse: onResponse, onData: onData, onComplete: onComplete)
+#if canImport(Darwin)
+                return self.performModernEventStreamTask(request, onResponse: onResponse, onData: onData, onComplete: onComplete)
+#else
+                return self.performCompatEventStreamTask(request, onResponse: onResponse, onData: onData, onComplete: onComplete)
+#endif
 {% else %}
-                self.performCompatEventStreamTask(request, onResponse: onResponse, onData: onData, onComplete: onComplete)
+                return self.performCompatEventStreamTask(request, onResponse: onResponse, onData: onData, onComplete: onComplete)
 {% endif %}
             },
             decodeMessage: options.decodeMessage,
@@ -184,6 +192,7 @@ public final class URLSessionAPITransport: APITransport {
     }
 
 {% if writer.modern_runtime %}
+#if canImport(Darwin)
     private func performModernEventStreamTask(
         _ request: URLRequest,
         onResponse: @escaping (HTTPURLResponse) throws -> Void,
@@ -218,6 +227,7 @@ public final class URLSessionAPITransport: APITransport {
             task.cancel()
         }
     }
+#endif
 
 {% endif %}
 {% if not writer.modern_runtime %}
@@ -238,6 +248,7 @@ public final class URLSessionAPITransport: APITransport {
         }
     }
 
+{% endif %}
     private func performCompatByteStreamRequest<Response>(
         built: APIBuiltRequest,
         request: APIRequest<Response>
@@ -295,7 +306,6 @@ public final class URLSessionAPITransport: APITransport {
         }
     }
 
-{% endif %}
     private func decodeJSONResponse<Response>(_ request: APIRequest<Response>, data: Data) throws -> Response {
         do {
             return try request.decodeData(data, request.responseEnvelope, config.coding)
@@ -700,7 +710,6 @@ private final class APIHTTPByteStreamAccumulator {
 }
 
 {% endif %}
-{% if not writer.modern_runtime %}
 private final class APIHTTPCompatByteStreamTask: NSObject, URLSessionDataDelegate {
     private let lock = NSLock()
     private let chunkSize: Int
@@ -1084,4 +1093,3 @@ private final class APIHTTPCompatEventStreamTask: NSObject, URLSessionDataDelega
         onComplete(error)
     }
 }
-{% endif %}
