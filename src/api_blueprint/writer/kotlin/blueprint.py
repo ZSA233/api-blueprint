@@ -238,11 +238,7 @@ class KotlinRoute:
         )
 
     def _group_slug(self) -> str:
-        branch = self.router.group.branch.strip("/")
-        if branch:
-            return branch
-        root = self.router.group.root.strip("/")
-        return root or "root"
+        return self.protocol.route.group_slug
 
     def _ensure_model(self, model: Optional[Union[Type[Model], Model]], suffix: str) -> Optional[KotlinProto]:
         if model is None:
@@ -371,11 +367,11 @@ class KotlinBlueprint(BaseBlueprint["KotlinWriter"]):
 
     @property
     def root_package_path(self) -> str:
-        return to_kotlin_package_path(self.bp.root, fallback="api")
+        return to_kotlin_package_path(self.bp.root_slug, fallback="api")
 
     @property
     def root_package_suffix(self) -> str:
-        return to_kotlin_package_suffix(self.bp.root, fallback="api")
+        return to_kotlin_package_suffix(self.bp.root_slug, fallback="api")
 
     @property
     def root_package(self) -> str:
@@ -407,7 +403,7 @@ class KotlinBlueprint(BaseBlueprint["KotlinWriter"]):
             group.routes.append(route)
 
     def _route_group_package_path(self, group_slug: str) -> str:
-        root = self.bp.root.strip("/")
+        root = self.bp.root_slug
         group_path = group_slug.strip("/")
         if not root:
             return group_path

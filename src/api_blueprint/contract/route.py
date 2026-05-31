@@ -216,10 +216,7 @@ def _group_prefix(router: Router) -> str:
     branch = (router.group.branch or "").strip("/")
     if branch:
         return re.sub(r"[^0-9A-Za-z]+", "_", branch).upper()
-    root = (router.group.root or "").strip("/")
-    if root:
-        return re.sub(r"[^0-9A-Za-z]+", "_", root).upper()
-    return "ROOT"
+    return re.sub(r"[^0-9A-Za-z]+", "_", router.group.bp.root_slug).upper() or "ROOT"
 
 
 def _group_slug(router: Router) -> str:
@@ -227,8 +224,7 @@ def _group_slug(router: Router) -> str:
     if branch:
         slug = re.sub(r"[^0-9A-Za-z]+", "_", branch.lower()) or "root"
     else:
-        root = (router.group.root or "").strip("/")
-        slug = re.sub(r"[^0-9A-Za-z]+", "_", root.lower()) or "root" if root else "root"
+        slug = router.group.bp.root_slug
     return slug
 
 
@@ -237,8 +233,7 @@ def _group_alias(router: Router) -> str:
     if branch:
         alias = re.sub(r"[^0-9A-Za-z]+", "_", branch.lower()) or "root"
     else:
-        root = (router.group.root or "").strip("/")
-        alias = re.sub(r"[^0-9A-Za-z]+", "_", root.lower()) or "root" if root else "root"
+        alias = router.group.bp.root_slug
     return alias
 
 
@@ -248,7 +243,7 @@ def _slug(value: str, *, default: str) -> str:
 
 
 def _root_slug(router: Router) -> str:
-    return _slug((router.group.bp.root or "").strip("/"), default="root")
+    return router.group.bp.root_slug
 
 
 def _route_id(router: Router, *, root_slug: str, group_alias: str) -> str:

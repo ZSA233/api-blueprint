@@ -35,6 +35,78 @@ def test_contract_graph_disambiguates_same_path_http_methods_and_route_contract_
     assert route_index.protocol_for_router(get_router).route.func_name == "CurrentGet"
     assert route_index.protocol_for_router(put_router).route.func_name == "CurrentPut"
 
+def test_contract_graph_uses_blueprint_name_for_rootless_route_identity():
+    bp = Blueprint(name="legacy", root="")
+    with bp.group("/account") as account:
+        account.GET("/profile").RSP(message=String(description="message"))
+    with bp.group("/room") as room:
+        room.GET("/events").RSP(message=String(description="message"))
+
+    manifest = build_contract_graph([bp]).to_manifest()
+
+    assert [service["id"] for service in manifest["services"]] == [
+        "legacy.account",
+        "legacy.room",
+    ]
+    assert [route["id"] for route in manifest["routes"]] == [
+        "legacy.account.get.profile",
+        "legacy.room.get.events",
+    ]
+    assert [route["url"] for route in manifest["routes"]] == [
+        "/account/profile",
+        "/room/events",
+    ]
+
+def test_contract_graph_uses_api_name_for_explicit_rootless_v2_swift_identity():
+    bp = Blueprint(name="api", root="")
+    with bp.group("/api") as views:
+        views.GET("/sample-action").RSP(message=String(description="message"))
+
+    manifest = build_contract_graph([bp]).to_manifest()
+
+    assert manifest["services"][0]["id"] == "api.api"
+    assert manifest["routes"][0]["id"] == "api.api.get.sampleaction"
+    assert manifest["routes"][0]["url"] == "/api/sample-action"
+
+def test_contract_graph_preserves_non_empty_root_default_identity():
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.GET("/ping").RSP(message=String(description="message"))
+
+    manifest = build_contract_graph([bp]).to_manifest()
+
+    assert manifest["services"][0]["id"] == "api.demo"
+    assert manifest["routes"][0]["id"] == "api.demo.get.ping"
+
+def test_contract_graph_rejects_duplicate_http_method_urls():
+    first = Blueprint(name="first", root="")
+    second = Blueprint(name="second", root="")
+    with first.group("/account") as views:
+        views.GET("/profile").RSP(message=String(description="message"))
+    with second.group("/account") as views:
+        views.GET("/profile").RSP(message=String(description="message"))
+
+    with pytest.raises(ValueError, match=r"duplicate HTTP route GET /account/profile"):
+        build_contract_graph([first, second])
+
+def test_contract_graph_rejects_duplicate_logical_roots():
+    first = Blueprint(name="legacy", root="")
+    second = Blueprint(name="legacy", root="/legacy")
+    first.GET("/ping").RSP(message=String(description="message"))
+    second.GET("/pong").RSP(message=String(description="message"))
+
+    with pytest.raises(ValueError, match="duplicate blueprint logical root 'legacy'"):
+        build_contract_graph([first, second])
+
+def test_contract_graph_rejects_root_group_and_named_group_surface_collision():
+    bp = Blueprint(name="legacy", root="")
+    bp.GET("/status").RSP(message=String(description="message"))
+    with bp.group("/legacy") as views:
+        views.GET("/other").RSP(message=String(description="message"))
+
+    with pytest.raises(ValueError, match="duplicate generated service surface 'legacy.legacy'"):
+        build_contract_graph([bp])
+
 def test_contract_graph_rejects_duplicate_explicit_operation_names_in_same_group():
     bp = Blueprint(root="/api")
     with bp.group("/demo") as views:

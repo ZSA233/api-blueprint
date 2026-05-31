@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package example.api.legacy.room;
+
+option go_package = "example.com/project/grpc/go/legacy/room;room";
+
+service RoomService {
+  rpc RoomList (RoomListRequest) returns (RoomListResponse);
+}
+
+message RoomListRequest {
+}
+
+message RoomListResponse {
+  repeated RoomSummary rooms = 1;
+}
+
+message RoomSummary {
+  string room_id = 1;
+  string title = 2;
+}

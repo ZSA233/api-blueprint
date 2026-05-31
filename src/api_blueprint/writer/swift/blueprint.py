@@ -346,11 +346,11 @@ class SwiftBlueprint(BaseBlueprint["SwiftWriter"]):
 
     @property
     def root_path(self) -> str:
-        return to_swift_path(self.bp.root, fallback="API")
+        return to_swift_path(self.bp.root_slug, fallback="API")
 
     @property
     def root_type(self) -> str:
-        return to_swift_type_name(self.bp.root, fallback="API")
+        return to_swift_type_name(self.bp.root_slug, fallback="API")
 
     @property
     def root_client(self) -> str:
@@ -362,7 +362,7 @@ class SwiftBlueprint(BaseBlueprint["SwiftWriter"]):
 
     @property
     def root_property(self) -> str:
-        return to_swift_identifier(self.bp.root, fallback="api")
+        return to_swift_identifier(self.bp.root_slug, fallback="api")
 
     def collect(self) -> None:
         self.routes = []
@@ -393,7 +393,7 @@ class SwiftBlueprint(BaseBlueprint["SwiftWriter"]):
         return self.writer.route_protocol_for(router)
 
     def _route_group_path(self, group_slug: str) -> str:
-        root = self.bp.root.strip("/")
+        root = self.bp.root_slug
         group_path = group_slug.strip("/")
         if not root:
             return group_path

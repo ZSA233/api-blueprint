@@ -109,13 +109,23 @@ class ContractGraphBuilder:
         self._schema_ref_rewrites: dict[str, str] = {}
 
     def build(self, blueprints: Iterable[Blueprint]) -> ContractGraph:
+        blueprint_roots: dict[str, Blueprint] = {}
         routers: list[Router] = []
         for blueprint in blueprints:
+            existing_blueprint = blueprint_roots.setdefault(blueprint.root_slug, blueprint)
+            if existing_blueprint is not blueprint:
+                raise ValueError(
+                    "duplicate blueprint logical root "
+                    f"'{blueprint.root_slug}' for Blueprint(name={blueprint.name!r}, root={blueprint.root!r}) "
+                    f"and Blueprint(name={existing_blueprint.name!r}, root={existing_blueprint.root!r}). "
+                    "Set unique Blueprint(name=...) values or merge routes into one Blueprint."
+                )
             self.add_errors(blueprint.errors)
             for _group, router in blueprint.iter_router():
                 router.validate_connection_contract()
                 routers.append(router)
         contracts = resolve_route_contracts(routers)
+        _validate_route_identity_conflicts(routers, contracts)
         for router in routers:
             self.add_router(router, contract=contracts[router])
         return ContractGraph(
@@ -456,6 +466,59 @@ class ContractGraphBuilder:
 
 def build_contract_graph(blueprints: Iterable[Blueprint]) -> ContractGraph:
     return ContractGraphBuilder().build(blueprints)
+
+
+def _validate_route_identity_conflicts(
+    routers: Iterable[Router],
+    contracts: Mapping[Router, RouteContract],
+) -> None:
+    routes_by_id: dict[str, Router] = {}
+    routes_by_method_url: dict[tuple[str, str], Router] = {}
+    services_by_id: dict[str, tuple[str, Router]] = {}
+
+    for router in routers:
+        contract = contracts[router]
+        existing_route = routes_by_id.get(contract.route_id)
+        if existing_route is not None:
+            raise ValueError(
+                "duplicate route id "
+                f"'{contract.route_id}' for routes {existing_route.methods} {existing_route.url} "
+                f"and {router.methods} {router.url}. "
+                "Set unique Blueprint(name=...), group paths, methods, or operation_id values."
+            )
+        routes_by_id[contract.route_id] = router
+
+        for method in _effective_http_methods(router):
+            key = (method, router.url)
+            existing_route = routes_by_method_url.get(key)
+            if existing_route is not None:
+                raise ValueError(
+                    "duplicate HTTP route "
+                    f"{method} {router.url} for route ids "
+                    f"{contracts[existing_route].route_id!r} and {contract.route_id!r}."
+                )
+            routes_by_method_url[key] = router
+
+        service_id = f"{_contract_root_slug(contract)}.{contract.group_alias}"
+        group_prefix = router.group.prefix
+        existing_service = services_by_id.get(service_id)
+        if existing_service is not None and existing_service[0] != group_prefix:
+            existing_prefix, existing_router = existing_service
+            raise ValueError(
+                "duplicate generated service surface "
+                f"'{service_id}' for group prefixes {existing_prefix!r} and {group_prefix!r}. "
+                f"Routes {contracts[existing_router].route_id!r} and {contract.route_id!r} would share "
+                "one package/module; use a different Blueprint(name=...) or group path."
+            )
+        services_by_id.setdefault(service_id, (group_prefix, router))
+
+
+def _effective_http_methods(router: Router) -> tuple[str, ...]:
+    if router.connection_kind == ConnectionKind.STREAM:
+        return ("GET",)
+    if router.connection_kind == ConnectionKind.CHANNEL:
+        return ()
+    return tuple(method for method in router.methods if method in {"GET", "POST", "PUT", "DELETE", "HEAD"})
 
 
 def diff_manifests(before: Mapping[str, Any], after: Mapping[str, Any]) -> JsonObject:

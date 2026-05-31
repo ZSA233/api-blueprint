@@ -30,7 +30,7 @@ def matches_rule(router: Router, rule: str, *, route_name: str) -> bool:
 
 
 def _route_manifest(router: Router, *, route_name: str) -> dict[str, object]:
-    root = router.group.root.strip("/") or "root"
+    root = router.group.bp.root_slug
     group = router.group.branch.strip("/") or root
     kind = "rpc" if router.connection_kind == ConnectionKind.RPC else router.connection_kind.value
     return {

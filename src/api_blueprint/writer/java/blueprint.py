@@ -322,7 +322,7 @@ class JavaBlueprint(BaseBlueprint["JavaBaseWriter"]):
 
     @property
     def root_slug(self) -> str:
-        return self.bp.root.strip("/") or "root"
+        return self.bp.root_slug
 
     @property
     def root_package_path(self) -> str:

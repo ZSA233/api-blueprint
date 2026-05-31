@@ -55,6 +55,8 @@ with bp.group("/demo") as views:
     views.GET("/ping").RSP(PingResponse)
 ```
 
+`root` 是 URL 前缀；需要把多个顶级 URL namespace 归入同一个生成根时，使用 `Blueprint(name="app", root="")` 并在 `group("/account")`、`group("/room")` 中定义路径。`name` 是 route id、service/module 和生成目录使用的逻辑协议身份。
+
 创建 `api-blueprint.toml`：
 
 ```toml

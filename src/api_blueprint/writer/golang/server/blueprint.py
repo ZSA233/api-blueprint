@@ -125,7 +125,7 @@ class GolangRouterGroup:
 
     @property
     def root(self) -> str:
-        return self.group.bp.root.strip("/")
+        return self.group.bp.root_slug
 
     @property
     def branch(self) -> str:
@@ -342,7 +342,7 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
 
     @property
     def root_package(self) -> str:
-        return to_go_package_path(self.bp.root.strip("/"), fallback="root")
+        return to_go_package_path(self.bp.root_slug, fallback="root")
 
     @property
     def package_leaf(self) -> str:
@@ -515,13 +515,16 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
             if http_dir.is_dir():
                 shutil.rmtree(http_dir)
         legacy_http_runtime = views_dir / "transports" / "http" / "runtime"
-        if legacy_http_runtime.exists():
+        if legacy_http_runtime.exists() and not self._has_http_root_package("runtime"):
             shutil.rmtree(legacy_http_runtime)
         if self.writer.http_adapter_enabled:
             return
         transports_http = views_dir / "transports" / "http"
         if transports_http.exists():
             shutil.rmtree(transports_http)
+
+    def _has_http_root_package(self, root_package: str) -> bool:
+        return any(bp.root_package == root_package for bp in self.writer.bps)
 
     def cleanup_binary_codegen_dirs(self, view_dir: Path) -> None:
         for binary_dir in sorted(view_dir.rglob(self.binary_gen_path), key=lambda path: len(path.parts), reverse=True):
@@ -591,7 +594,7 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
             path.unlink()
 
     def validate_reserved_paths(self) -> None:
-        self._validate_reserved_segments(self.bp.root, label="blueprint root")
+        self._validate_reserved_segments(self.bp.root_slug, label="blueprint name")
         for group in self.get_router_groups():
             if group.branch:
                 self._validate_reserved_segments(group.branch, label="router group")

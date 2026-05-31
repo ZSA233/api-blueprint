@@ -112,10 +112,7 @@ class WailsWriter:
 
         manifest: dict[str, str] = {}
         for blueprint in entrypoints:
-            raw_root = blueprint.root.strip("/")
-            if not raw_root:
-                continue
-            root_package = to_go_package_path(raw_root, fallback="root")
+            root_package = to_go_package_path(blueprint.root_slug, fallback="root")
             for group, router in blueprint.iter_router():
                 contract = go_writer.route_protocol_for(router).route
                 if not selection.includes_route(router, route_name=contract.func_name):

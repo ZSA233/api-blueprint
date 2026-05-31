@@ -92,6 +92,7 @@ class TypeScriptWriter(BaseWriter[TypeScriptBlueprint]):
         return self.overlay_name
 
     def gen(self) -> None:
+        self._ensure_route_contract_index()
         self.cleanup_legacy_layout()
         for bp in self.bps:
             bp.build()

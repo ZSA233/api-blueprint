@@ -170,7 +170,7 @@ class WailsRouter:
 
     @property
     def root(self) -> str:
-        return self.router.group.bp.root.strip("/") or "root"
+        return self.router.group.bp.root_slug
 
     @property
     def group_name(self) -> str:
@@ -338,7 +338,7 @@ class WailsBlueprint(BaseBlueprint["WailsGoWriter"]):
 
     @property
     def root_package(self) -> str:
-        return to_go_package_path(self.bp.root.strip("/"), fallback="root")
+        return to_go_package_path(self.bp.root_slug, fallback="root")
 
     @property
     def shared_root_imports(self) -> str:
@@ -472,6 +472,7 @@ class WailsGoWriter(BaseWriter[WailsBlueprint]):
         return self._ensure_route_contract_index().protocol_for_router(router)
 
     def gen(self) -> None:
+        self._ensure_route_contract_index()
         self.validate_package_contract()
         self.cleanup_legacy_overlay_files()
         for bp in self.bps:

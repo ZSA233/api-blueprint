@@ -19,7 +19,7 @@ class BaseBlueprint(Generic[BW]):
 
     @property
     def root_name(self) -> str:
-        return self.bp.root.strip("/")
+        return self.bp.root_slug
 
     def iter_router(self):
         yield from self.bp.iter_router()

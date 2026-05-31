@@ -5,6 +5,7 @@ from typing import DefaultDict, Generator, Optional, Union
 from fastapi import FastAPI
 
 from api_blueprint.engine.blueprint.group import RouterGroup
+from api_blueprint.engine.blueprint.identity import blueprint_root_slug, normalize_blueprint_name
 from api_blueprint.engine.blueprint.router import Router
 from api_blueprint.engine.runtime import CodeMessageDataEnvelope, Provider, ResponseEnvelope, get_shared_app
 from api_blueprint.engine.schema import Error, HeaderModel, Model, unwrap_errors
@@ -12,6 +13,8 @@ from api_blueprint.engine.schema import Error, HeaderModel, Model, unwrap_errors
 
 class Blueprint:
     root: str
+    name: str
+    root_slug: str
     tags: list[str]
     pending_groups: list[RouterGroup]
 
@@ -34,8 +37,11 @@ class Blueprint:
         response_envelope: type[ResponseEnvelope] = CodeMessageDataEnvelope,
         headers: Optional[Union[HeaderModel, type[HeaderModel]]] = None,
         app: FastAPI | None = None,
+        name: str | None = None,
     ):
         self.root = root
+        self.name = normalize_blueprint_name(name=name, root=root)
+        self.root_slug = blueprint_root_slug(self.name)
         self.tags = tags or []
         self.root_group = RouterGroup(self, "")
         self.pending_groups = [self.root_group]
@@ -43,13 +49,13 @@ class Blueprint:
         self.errors = unwrap_errors(errors or [])
         self.response_envelope = response_envelope
         self.headers = headers
-        self.app = app or get_shared_app(root.strip("/"))
+        self.app = app or get_shared_app(self.name)
 
         for method in ["POST", "GET", "PUT", "DELETE", "STREAM", "CHANNEL"]:
             setattr(self, method, getattr(self.root_group, method))
 
     def __str__(self) -> str:
-        return f"<Blueprint {self.root} groups[{len(self.pending_groups)}]>"
+        return f"<Blueprint {self.name} root={self.root} groups[{len(self.pending_groups)}]>"
 
     def iter_router(self) -> Generator[tuple[RouterGroup, Router], None, None]:
         for group in self.pending_groups:

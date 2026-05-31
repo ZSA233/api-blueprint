@@ -110,6 +110,7 @@ class SwiftWriter(BaseWriter[SwiftBlueprint]):
         return ".v12" if self.modern_runtime else ".v11"
 
     def gen(self) -> None:
+        self._ensure_route_contract_index()
         self.working_dir.mkdir(parents=True, exist_ok=True)
         total_routes = 0
         generated_bps: list[SwiftBlueprint] = []

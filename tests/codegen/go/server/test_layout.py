@@ -38,6 +38,38 @@ go 1.23.8
     assert "package admin_v1" in group_interface
     assert 'sharedAdminV1 "example.com/generated/golang/routes/api_v1/admin_v1"' in http_blueprint
 
+
+def test_golang_writer_keeps_runtime_blueprint_http_transport_when_other_blueprints_follow(tmp_path):
+    output_dir = tmp_path / "golang"
+    output_dir.mkdir()
+    (tmp_path / "go.mod").write_text(
+        """
+module example.com/generated
+
+go 1.23.8
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    runtime_bp = Blueprint(root="/runtime")
+    with runtime_bp.group("/status") as views:
+        views.GET("/ping").RSP()
+
+    legacy_bp = Blueprint(name="legacy", root="")
+    with legacy_bp.group("/account") as views:
+        views.GET("/profile").RSP()
+
+    writer = GolangWriter(output_dir)
+    writer.register(runtime_bp)
+    writer.register(legacy_bp)
+    writer.gen()
+
+    assert (output_dir / "transports" / "http" / "runtime" / "gen_blueprint.go").is_file()
+    assert (output_dir / "transports" / "http" / "runtime" / "status" / "gen_interface.go").is_file()
+    assert (output_dir / "transports" / "http" / "legacy" / "account" / "gen_interface.go").is_file()
+
+
 def test_golang_writer_cleans_legacy_views_and_sibling_errors_when_out_dir_is_package_root(tmp_path):
     package_root = tmp_path / "golang" / "server" / "views"
     package_root.mkdir(parents=True)

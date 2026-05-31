@@ -476,7 +476,7 @@ class TypeScriptBlueprint(BaseBlueprint["TypeScriptWriter"]):
 
     @property
     def package(self) -> str:
-        return self.bp.root.strip("/") or "root"
+        return self.bp.root_slug
 
     def contract_for_router(self, router: Router) -> RouteContract:
         return self.writer.route_contract_for(router)

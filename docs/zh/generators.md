@@ -8,6 +8,8 @@
 
 生成器状态和路径约定属于共享规划的一部分。Go server 为可用目标；Go client、Flutter、Swift、Kotlin / Java / Python target 按 preview 口径使用。Go server / Go client / Wails Go 的 contract / agent artifact path 使用 Go-safe route package segment，例如 `/api-v1` -> `api_v1`、`/admin/v1` -> `admin_v1`。Flutter / Swift / Kotlin / Java / Python artifact path 使用各自语言的 route 输出布局，例如 `routes/api/demo`。
 
+Blueprint 的生成 root 来自逻辑身份 slug，而不是直接来自 URL `root` fallback。默认 `Blueprint(root="/api")` 仍生成 `api` root；`Blueprint(name="legacy", root="")` 会在 Go、TypeScript、Flutter、Swift、Kotlin、Java、Python、Wails 和 gRPC 中使用 `legacy` 作为 root 级 package/module/directory/proto identity，同时 route URL 保持 `/account/profile`、`/room/list` 这类真实路径。这样可以把多个顶级 URL namespace 归入一个 SDK / app root，而不需要伪造公共 URL 前缀。
+
 Markdown Binary Schema 的生成名在各 target 使用同一套碰撞策略：packet 入口名保持基于 packet 的稳定命名，schema 内部的 struct / enum / bitflags / state / helper 符号按 packet name 作用域输出。归一化后生成符号相同的 packet name 会在生成阶段被拒绝。Public binary packet 字段遵循目标语言习惯：Go / Kotlin / Java / Flutter / Swift 使用导出或 camelCase 字段名，TypeScript / Python 保持贴近 JSON / wire 名的 snake_case 字段。
 
 HTTP body / response kind 也属于共享规划语义。请求体统一记录为 `none`、`json`、`urlencoded`、`multipart`、`binary_schema` 或 `raw_bytes`，响应统一记录为 `json`、`xml`、`text`、`binary_schema`、`bytes`、`file` 或 `byte_stream`。HTTP 生成器支持 Go server/client、TypeScript client、Flutter client、Swift client、Kotlin client/server、Java client/server、Python server/client 的 multipart、raw media 响应和 binary schema 请求/响应。

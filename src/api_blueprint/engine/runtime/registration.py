@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Any
 
 import httpx
@@ -10,6 +11,7 @@ from api_blueprint.engine.connection import ConnectionKind
 from api_blueprint.engine.runtime.endpoint import make_endpoint
 from api_blueprint.engine.runtime.responses import XMLResponse
 from api_blueprint.engine.schema import model_to_pydantic
+from api_blueprint.engine.utils import snake_to_pascal_case
 
 if TYPE_CHECKING:
     from api_blueprint.engine.blueprint.router import Router
@@ -88,6 +90,7 @@ def register_router(router: "Router", app: FastAPI) -> None:
     for key in tuple(copy_extra):
         if key.startswith("proto_"):
             copy_extra.pop(key, None)
+    copy_extra["operation_id"] = _default_operation_id(router)
 
     async def handler(request: Request, **kwargs: Any):
         return await proxy_upstream_request(router, request, **kwargs)
@@ -168,3 +171,29 @@ def register_router(router: "Router", app: FastAPI) -> None:
             responses=responses,
             **copy_extra,
         )
+
+
+def _default_operation_id(router: "Router") -> str:
+    root = router.group.bp.root_slug
+    branch = router.group.branch.strip("/")
+    group = _slug(branch, default=root) if branch else root
+    return ".".join((root, group, _method_slug(router), _route_name_slug(router.leaf)))
+
+
+def _method_slug(router: "Router") -> str:
+    if router.connection_kind == ConnectionKind.STREAM:
+        return "stream"
+    if router.connection_kind == ConnectionKind.CHANNEL:
+        return "channel"
+    return _slug(",".join(sorted(method.lower() for method in router.methods)), default="route")
+
+
+def _route_name_slug(leaf: str) -> str:
+    if not leaf.strip("/"):
+        return "root"
+    return _slug(snake_to_pascal_case(leaf, "", "Z"), default="root")
+
+
+def _slug(value: str, *, default: str) -> str:
+    normalized = re.sub(r"[^0-9A-Za-z]+", "_", value.lower()).strip("_")
+    return normalized or default

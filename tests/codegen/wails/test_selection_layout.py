@@ -62,10 +62,70 @@ go 1.23.8
 
     assert (shared_go / "routes" / "api_v1" / "admin_v1" / "gen_interface.go").is_file()
     assert (shared_go / "transports" / "wailsv3" / "api_v1" / "admin_v1" / "gen_service.go").is_file()
-    bindings = (shared_ts / "api-v1" / "transports" / "wailsv3" / "gen_bindings.ts").read_text(
+    bindings = (shared_ts / "api_v1" / "transports" / "wailsv3" / "gen_bindings.ts").read_text(
         encoding="utf-8"
     )
     assert "example.com/generated/golang/transports/wailsv3/api_v1/admin_v1.AdminV1Service.Ping" in bindings
+
+def test_wails_v3_codegen_includes_rootless_routes_with_logical_name(tmp_path: Path):
+    config = tmp_path / "api-blueprint.toml"
+    shared_go = tmp_path / "golang"
+    shared_ts = tmp_path / "typescript"
+    for path in (shared_go, shared_ts):
+        path.mkdir()
+    (tmp_path / "go.mod").write_text(
+        """
+module example.com/generated
+
+go 1.23.8
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    _write_wails_vnext_config(config, go_out=shared_go.name, ts_out=shared_ts.name)
+    pkg = tmp_path / "blueprints"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text("", encoding="utf-8")
+    (pkg / "app.py").write_text(
+        """
+from api_blueprint.engine import Blueprint
+from api_blueprint.engine.model import Model, String
+
+class StreamMessage(Model):
+    message = String(description="message")
+
+class ClientMessage(Model):
+    message = String(description="message")
+
+bp = Blueprint(name="legacy", root="")
+with bp.group("/account") as views:
+    views.GET("/profile").RSP(message=String(description="message"))
+
+with bp.group("/room") as views:
+    views.STREAM("/events").SERVER_MESSAGE(StreamMessage)
+    views.CHANNEL("/chat").CLIENT_MESSAGE(ClientMessage).SERVER_MESSAGE(StreamMessage)
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = _invoke_wails_generate(config)
+    assert result.exit_code == 0, result.output
+
+    account_service = (shared_go / "transports" / "wailsv3" / "legacy" / "account" / "gen_service.go")
+    room_service_text = (shared_go / "transports" / "wailsv3" / "legacy" / "room" / "gen_service.go").read_text(
+        encoding="utf-8"
+    )
+    bindings = (shared_ts / "legacy" / "transports" / "wailsv3" / "gen_bindings.ts").read_text(
+        encoding="utf-8"
+    )
+
+    assert account_service.is_file()
+    assert 'Path:      "/room/events"' in room_service_text
+    assert "account.AccountService.Profile" in bindings
+    assert "room.RoomService.SubscribeEvents" in bindings
+    assert "room.RoomService.OpenChat" in bindings
+    assert "example.com/generated/golang/transports/wailsv3/legacy/account.AccountService.Profile" in bindings
 
 def test_wails_codegen_rejects_go_reserved_namespace_segments(tmp_path: Path):
     config = tmp_path / "api-blueprint.toml"

@@ -200,6 +200,7 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
                 yield GolangResponseEnvelope(prefix=prefix, response_envelope=envelope)
 
     def gen(self) -> None:
+        self._ensure_route_contract_index()
         self.validate_package_contract()
         self.cleanup_legacy_output_roots()
         self.cleanup_binary_runtime()

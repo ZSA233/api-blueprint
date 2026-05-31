@@ -20,6 +20,44 @@ with bp.group("/demo") as views:
 
 `Blueprint(root="/api")` 定义路由根。`group("/demo")` 定义分组，最终路径为 `/api/demo/hello`。
 
+## Root 与逻辑名称
+
+`root` 只表示 URL 前缀。`name` 表示协议和生成身份，ContractGraph route id、service id、各语言 root package/module/directory、gRPC proto 默认路径和 Wails binding manifest 都使用它派生出的稳定 slug。
+
+未传 `name` 时，非空 `root` 继续按原有规则作为逻辑身份来源：
+
+```python
+bp = Blueprint(root="/api")
+```
+
+上面的 route id 和生成 root 仍使用 `api`，URL 仍以 `/api` 开头。
+
+当一个历史协议把同一个 app 的能力分散在多个顶级 URL namespace 中时，推荐显式写：
+
+```python
+bp = Blueprint(name="legacy", root="")
+
+with bp.group("/account") as account:
+    account.GET("/profile").RSP(...)
+
+with bp.group("/room") as room:
+    room.GET("/list").RSP(...)
+```
+
+这些 route 的 URL 是 `/account/profile` 和 `/room/list`，但逻辑身份同属 `legacy`，典型 route id 类似 `legacy.account.get.profile`。裸 `Blueprint(root="")` 会直接报错；rootless blueprint 必须显式提供 `name`，避免生成物身份和其他 root 发生碰撞。旧 Swift 项目如需保留 `APIRoutes` / `APIRootClient` / `api` 入口形态，可迁移为 `Blueprint(name="api", root="")`。
+
+生成前会拒绝重复 route id、重复 HTTP method + URL、重复 Blueprint 逻辑身份，以及 root group 和 `/root` 风格 group 会落到同一 service/module surface 的碰撞。
+
+### 兼容性说明
+
+`Blueprint(name=...)` 是破坏性版本能力。使用 `root=""` 时，生成器不再隐式分配 `rootless` 或其他 fallback 身份；必须写出明确 `name`。如果旧项目原本依赖发布版中 `/api` root 对应的 Swift 入口，例如 `APIRoutes`、`APIRootClient` 和 aggregate `api` 属性，但实际 URL 已经改为由 group 提供顶级前缀，可以使用：
+
+```python
+bp = Blueprint(name="api", root="")
+```
+
+此时 URL 仍由 group 和 leaf 决定，例如 `/account/profile` 或 `/api/sample-action`；ContractGraph route id 和生成 root 使用 `api`，Swift 会继续生成 `APIRoutes` / `APIRootClient` / `api` 这一类布局。不要通过 Swift 专用 layout 开关修正身份漂移；各端应共享同一个 Blueprint 逻辑身份。
+
 ## Model
 
 ```python

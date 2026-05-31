@@ -759,3 +759,73 @@ public struct RuntimeStatus: Codable, Sendable {
         try apiBlueprintMultipartFields(self)
     }
 }
+
+public struct AccountProfile: Codable, Sendable {
+    /// user id
+    public var userId: String
+    /// display name
+    public var nickname: String
+
+    public init(
+        userId: String,
+        nickname: String
+    ) {
+        self.userId = userId
+        self.nickname = nickname
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case nickname = "nickname"
+    }
+
+    public func toQueryItems() -> [URLQueryItem] {
+        [
+            URLQueryItem(name: "user_id", value: apiBlueprintQueryValue(userId)),
+            URLQueryItem(name: "nickname", value: apiBlueprintQueryValue(nickname)),
+        ].filter { $0.value != nil }
+    }
+
+    public func toFormFields() throws -> [String: String?] {
+        try apiBlueprintFormFields(self)
+    }
+
+    public func toMultipartFields() throws -> [String: Any?] {
+        try apiBlueprintMultipartFields(self)
+    }
+}
+
+public struct RoomSummary: Codable, Sendable {
+    /// room id
+    public var roomId: String
+    /// room title
+    public var title: String
+
+    public init(
+        roomId: String,
+        title: String
+    ) {
+        self.roomId = roomId
+        self.title = title
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case roomId = "room_id"
+        case title = "title"
+    }
+
+    public func toQueryItems() -> [URLQueryItem] {
+        [
+            URLQueryItem(name: "room_id", value: apiBlueprintQueryValue(roomId)),
+            URLQueryItem(name: "title", value: apiBlueprintQueryValue(title)),
+        ].filter { $0.value != nil }
+    }
+
+    public func toFormFields() throws -> [String: String?] {
+        try apiBlueprintFormFields(self)
+    }
+
+    public func toMultipartFields() throws -> [String: Any?] {
+        try apiBlueprintMultipartFields(self)
+    }
+}

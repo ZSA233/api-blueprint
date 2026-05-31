@@ -80,6 +80,7 @@ class FlutterWriter(BaseWriter[FlutterBlueprint]):
         return self.lib_dir / "src"
 
     def gen(self) -> None:
+        self._ensure_route_contract_index()
         self.working_dir.mkdir(parents=True, exist_ok=True)
         self._write_package_scaffold()
         total_routes = 0

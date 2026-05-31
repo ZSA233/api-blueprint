@@ -24,7 +24,7 @@ def reset_shared_app() -> None:
 
 def build_default_app(title: str) -> FastAPI:
     app = FastAPI(
-        title=title,
+        title=title or "api-blueprint",
         docs_url=None,
         redoc_url=None,
     )

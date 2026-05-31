@@ -66,7 +66,7 @@ transports/
         impl_service.go
 ```
 
-`routes/<go-root-segment>/<go-group-segment>` 是 transport-neutral core；`providers` 是共享 provider runtime；`runtime/errors` 是生成的 typed error runtime；`transports/<overlay_name>/<go-root-segment>/<go-group-segment>` 是 Wails Go target。Go-safe segment 会把 `/api-v1` 写成 `api_v1`，把 `/admin/v1` 写成单段 `admin_v1`，不保证逐级镜像 URL slash 层级。route 目录中的 `impl_service.go` 是用户拥有的 bootstrap 构造入口，重生成时保留。如果希望包路径包含 `views/...`，应在被引用的 Go server target 上显式设置 `out_dir = ".../views"`；Wails 沿用该 server target 的 `out_dir`。
+`routes/<go-root-segment>/<go-group-segment>` 是 transport-neutral core；`providers` 是共享 provider runtime；`runtime/errors` 是生成的 typed error runtime；`transports/<overlay_name>/<go-root-segment>/<go-group-segment>` 是 Wails Go target。`<go-root-segment>` 来自 Blueprint 逻辑身份 slug，因此 `Blueprint(name="legacy", root="")` 会生成 `legacy` root，同时 route URL 保持 `/account/...`、`/room/...`。Go-safe segment 会把 `/api-v1` 写成 `api_v1`，把 `/admin/v1` 写成单段 `admin_v1`，不保证逐级镜像 URL slash 层级。route 目录中的 `impl_service.go` 是用户拥有的 bootstrap 构造入口，重生成时保留。如果希望包路径包含 `views/...`，应在被引用的 Go server target 上显式设置 `out_dir = ".../views"`；Wails 沿用该 server target 的 `out_dir`。
 
 ## TypeScript 输出布局
 
@@ -155,7 +155,7 @@ const transport = new WailsV3Transport();
 const clients: CommonGeneratedClients = createClientsForTransport({ transport });
 ```
 
-Wails v3 transport 使用官方 runtime 的 `Call.ByName(...)` 并由生成器内置 binding manifest；binding manifest 中的 Go import path 使用同一套 Go-safe segment，业务项目不需要手写 Go service 包路径。Wails v2 transport 继续使用官方 `window.go.<package>.<service>.<method>` 运行时形态。
+Wails v3 transport 使用官方 runtime 的 `Call.ByName(...)` 并由生成器内置 binding manifest；binding manifest 中的 Go import path 使用同一套逻辑 root / Go-safe segment，包含显式命名的 rootless Blueprint route，业务项目不需要手写 Go service 包路径。Wails v2 transport 继续使用官方 `window.go.<package>.<service>.<method>` 运行时形态。
 
 ## Wails-only app
 

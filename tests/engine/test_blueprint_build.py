@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from fastapi import FastAPI
 
 from api_blueprint.engine import Blueprint, reset_shared_app
@@ -30,10 +31,12 @@ def test_example_blueprints_build_into_shared_fastapi_app(example_entrypoints):
     assert "/api/media/mjpeg" in paths
     assert "/api/media/download-filename-edge" in paths
     assert "/api/media/error-frame" in paths
+    assert "/account/profile" in paths
+    assert "/room/list" in paths
     assert "/api/hello/hello-way" in paths
     assert "/runtime/status/current" in paths
     assert "/static/doc.json" in paths
-    assert len(paths) == 40
+    assert len(paths) == 42
 
     openapi = app.openapi()
     assert "text/event-stream" in openapi["paths"]["/api/demo/sweep-events"]["get"]["responses"]["200"]["content"]
@@ -56,6 +59,52 @@ def test_explicit_fastapi_app_breaks_default_shared_app_behavior():
     assert bp_a.app is app_a
     assert bp_b.app is app_b
     assert bp_a.app is not bp_b.app
+
+
+def test_rootless_blueprint_uses_name_for_shared_app_and_keeps_group_urls():
+    reset_shared_app()
+    bp = Blueprint(name="legacy", root="")
+
+    with bp.group("/account") as account:
+        account.GET("/profile").RSP(message=String(description="message"))
+    with bp.group("/room") as room:
+        room.GET("/events").RSP(message=String(description="message"))
+
+    bp.build()
+
+    paths = {route.path for route in bp.app.routes if getattr(route, "path", None)}
+    assert bp.app.title == "legacy"
+    assert "/account/profile" in paths
+    assert "/room/events" in paths
+    assert "/legacy/account/profile" not in paths
+
+    openapi = bp.app.openapi()
+    assert "/account/profile" in openapi["paths"]
+    assert "/room/events" in openapi["paths"]
+
+
+def test_rootless_blueprint_without_name_requires_explicit_name():
+    reset_shared_app()
+
+    with pytest.raises(ValueError, match="rootless Blueprint requires explicit name"):
+        Blueprint(root="")
+
+
+def test_rootless_blueprint_can_use_api_name_for_legacy_swift_identity():
+    reset_shared_app()
+    bp = Blueprint(name="api", root="")
+
+    with bp.group("/account") as account:
+        account.GET("/profile").RSP(message=String(description="message"))
+
+    bp.build()
+
+    paths = {route.path for route in bp.app.routes if getattr(route, "path", None)}
+    assert bp.name == "api"
+    assert bp.root_slug == "api"
+    assert bp.app.title == "api"
+    assert "/account/profile" in paths
+    assert "/api/account/profile" not in paths
 
 
 def test_response_envelope_omitempty_fields_are_optional_in_openapi():

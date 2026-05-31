@@ -36,7 +36,7 @@ class GoRouteProtocolView:
 
     @property
     def root(self) -> str:
-        return self.router.group.bp.root.strip("/") or "root"
+        return self.router.group.bp.root_slug
 
     @property
     def group(self) -> str:

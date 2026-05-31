@@ -340,7 +340,7 @@ class FlutterBlueprint(BaseBlueprint["FlutterWriter"]):
 
     @property
     def root_path(self) -> str:
-        return to_dart_path(self.bp.root, fallback="api")
+        return to_dart_path(self.bp.root_slug, fallback="api")
 
     def collect(self) -> None:
         self.routes = []
@@ -370,7 +370,7 @@ class FlutterBlueprint(BaseBlueprint["FlutterWriter"]):
         return self.writer.route_protocol_for(router)
 
     def _route_group_path(self, group_slug: str) -> str:
-        root = self.bp.root.strip("/")
+        root = self.bp.root_slug
         group_path = group_slug.strip("/")
         if not root:
             return group_path

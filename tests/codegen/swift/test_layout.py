@@ -266,10 +266,10 @@ def test_swift_writer_generates_one_target_per_root_and_shared_runtime_once(tmp_
 
 def test_swift_writer_dedupes_root_module_and_aggregate_property_names(tmp_path: Path) -> None:
     out_dir = tmp_path / "swift"
-    first = Blueprint(root="/api")
+    first = Blueprint(name="foo_1", root="/foo-1")
     with first.group("/demo") as views:
         views.GET("/ping").RSP(message=String(description="message"))
-    second = Blueprint(root="/API")
+    second = Blueprint(name="foo1", root="/foo1")
     with second.group("/demo") as views:
         views.GET("/pong").RSP(message=String(description="message"))
 
@@ -282,10 +282,39 @@ def test_swift_writer_dedupes_root_module_and_aggregate_property_names(tmp_path:
         out_dir / "Sources" / "ABClient" / "GenABClient.swift"
     ).read_text(encoding="utf-8")
 
-    assert '.library(name: "ABClientAPIRoutes", targets: ["ABClientAPIRoutes"])' in package_manifest
-    assert '.library(name: "ABClientAPIRoutes2", targets: ["ABClientAPIRoutes2"])' in package_manifest
-    assert "public lazy var api = ABClientAPIRoutes.APIRootClient(transport: transport)" in aggregate_facade
-    assert "public lazy var api2 = ABClientAPIRoutes2.APIRootClient(transport: transport)" in aggregate_facade
+    assert '.library(name: "ABClientFoo1Routes", targets: ["ABClientFoo1Routes"])' in package_manifest
+    assert '.library(name: "ABClientFoo1Routes2", targets: ["ABClientFoo1Routes2"])' in package_manifest
+    assert "public lazy var foo1 = ABClientFoo1Routes.Foo1RootClient(transport: transport)" in aggregate_facade
+    assert "public lazy var foo12 = ABClientFoo1Routes2.Foo1RootClient(transport: transport)" in aggregate_facade
+
+
+def test_swift_writer_uses_api_name_rootless_layout_for_explicit_v2_fallback(tmp_path: Path) -> None:
+    out_dir = tmp_path / "swift"
+    bp = Blueprint(name="api", root="")
+    with bp.group("/api") as views:
+        views.GET("/sample-action").RSP(message=String(description="message"))
+
+    writer = SwiftWriter(out_dir, package="ApiBlueprintExampleClient", module="SampleAPI")
+    writer.register(bp)
+    writer.gen()
+
+    package_manifest = (out_dir / "Package.swift").read_text(encoding="utf-8")
+    aggregate_facade = (out_dir / "Sources" / "SampleAPI" / "GenSampleAPI.swift").read_text(encoding="utf-8")
+    root_client = (out_dir / "Sources" / "SampleAPIAPIRoutes" / "API" / "GenAPIRootClient.swift").read_text(
+        encoding="utf-8"
+    )
+    api_route = (
+        out_dir / "Sources" / "SampleAPIAPIRoutes" / "API" / "Routes" / "API" / "GenAPIAPI.swift"
+    ).read_text(encoding="utf-8")
+
+    assert '.library(name: "SampleAPIAPIRoutes", targets: ["SampleAPIAPIRoutes"])' in package_manifest
+    assert (
+        "public lazy var api = SampleAPIAPIRoutes.APIRootClient(transport: transport)"
+        in aggregate_facade
+    )
+    assert "open class GenAPIRootClient" in root_client
+    assert "public lazy var api = APIAPI(transport: transport)" in root_client
+    assert "public func sampleAction(" in api_route
 
 
 def test_swift_writer_routes_suffix_avoids_runtime_root_module_collision(tmp_path: Path) -> None:

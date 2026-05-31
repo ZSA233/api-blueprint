@@ -55,6 +55,8 @@ with bp.group("/demo") as views:
     views.GET("/ping").RSP(PingResponse)
 ```
 
+`root` is the URL prefix. When several top-level URL namespaces belong to one generated root, use `Blueprint(name="app", root="")` and define paths in groups such as `group("/account")` and `group("/room")`. `name` is the logical protocol identity used by route IDs, services/modules, and generated directories.
+
 Create `api-blueprint.toml`:
 
 ```toml

@@ -104,6 +104,8 @@ class RouteContractIndex:
                 continue
             route_id = route.get("id")
             if isinstance(route_id, str):
+                if route_id in routes:
+                    raise ValueError(f"duplicate route id in ContractGraph manifest: {route_id}")
                 routes[route_id] = route
         services = {
             str(service["id"]): service

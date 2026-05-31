@@ -4,6 +4,7 @@ import ABClientRuntime
 import ABClientAPIRoutes
 import ABClientAltRoutes
 import ABClientRuntimeRoutes
+import ABClientLegacyRoutes
 
 public typealias APITransport = ABClientRuntime.APITransport
 public typealias APIRequestOptions = ABClientRuntime.APIRequestOptions
@@ -22,5 +23,7 @@ open class GenABClient {
     public lazy var alt = ABClientAltRoutes.AltRootClient(transport: transport)
 
     public lazy var runtime = ABClientRuntimeRoutes.RuntimeRootClient(transport: transport)
+
+    public lazy var legacy = ABClientLegacyRoutes.LegacyRootClient(transport: transport)
 
 }

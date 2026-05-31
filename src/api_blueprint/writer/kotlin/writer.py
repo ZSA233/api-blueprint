@@ -78,6 +78,7 @@ class KotlinBaseWriter(BaseWriter[KotlinBlueprint]):
         return self.package_dir / bp.root_package_path
 
     def gen(self) -> None:
+        self._ensure_route_contract_index()
         self.cleanup_legacy_layout()
         total_routes = 0
         for bp in self.bps:

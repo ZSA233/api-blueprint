@@ -79,6 +79,7 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
         return path
 
     def gen(self) -> None:
+        self._ensure_route_contract_index()
         for bp in self.bps:
             bp.build()
             bp.collect()
@@ -376,8 +377,8 @@ class PythonServerWriter(PythonBaseWriter):
 
 
 def _route_manifest(router: Router, protocol: RouteProtocolContract) -> dict[str, object]:
-    root = router.group.root.strip("/") or "root"
-    group = router.group.branch.strip("/") or root
+    root = protocol.route.route_id.split(".", 1)[0]
+    group = protocol.route.group_alias
     kind = "rpc" if router.connection_kind == ConnectionKind.RPC else router.connection_kind.value
     return {
         "id": protocol.route.route_id,

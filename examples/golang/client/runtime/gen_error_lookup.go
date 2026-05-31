@@ -223,6 +223,8 @@ var routeApiErrorsByCode = map[string]map[ApiErrorCode]ApiErrorEntry{
 	"static.static.get.dochaha":  {},
 	"alt.conflict.get.default":   {},
 	"runtime.status.get.current": {},
+	"legacy.account.get.profile": {},
+	"legacy.room.get.list":       {},
 }
 
 func LookupApiErrorByID(id string) (ApiErrorEntry, bool) {

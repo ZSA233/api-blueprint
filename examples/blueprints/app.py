@@ -55,3 +55,16 @@ runtimebp = Blueprint(
     ],
     response_envelope=CodeMessageDataEnvelope,
 )
+
+
+legacybp = Blueprint(
+    name='legacy',
+    root='',
+    tags=['api', 'legacy'],
+    providers=[
+        provider.Req(),
+        provider.Handle(),
+        provider.Rsp(),
+    ],
+    response_envelope=CodeMessageDataEnvelope,
+)

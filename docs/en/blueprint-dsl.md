@@ -20,6 +20,44 @@ with bp.group("/demo") as views:
 
 `Blueprint(root="/api")` defines the route root. `group("/demo")` defines a group, producing `/api/demo/hello`.
 
+## Root And Logical Name
+
+`root` is only the URL prefix. `name` is the protocol and generation identity; ContractGraph route IDs, service IDs, language root packages/modules/directories, default gRPC proto paths, and the Wails binding manifest all derive from its stable slug.
+
+When `name` is omitted, a non-empty `root` keeps the existing identity behavior:
+
+```python
+bp = Blueprint(root="/api")
+```
+
+The route IDs and generated root still use `api`, and URLs still start with `/api`.
+
+When a legacy protocol splits one app across several top-level URL namespaces, prefer an explicit name:
+
+```python
+bp = Blueprint(name="legacy", root="")
+
+with bp.group("/account") as account:
+    account.GET("/profile").RSP(...)
+
+with bp.group("/room") as room:
+    room.GET("/list").RSP(...)
+```
+
+These routes have URLs `/account/profile` and `/room/list`, but they share the `legacy` logical identity; a typical route ID is `legacy.account.get.profile`. Bare `Blueprint(root="")` fails fast; rootless Blueprints must provide `name` explicitly to avoid generated identity collisions with other roots. Existing Swift projects that need to keep the `APIRoutes` / `APIRootClient` / `api` entry shape can migrate to `Blueprint(name="api", root="")`.
+
+Before generation, api-blueprint rejects duplicate route IDs, duplicate HTTP method + URL pairs, duplicate Blueprint logical identities, and root-group versus `/root`-style group collisions that would produce the same service/module surface.
+
+### Compatibility
+
+`Blueprint(name=...)` is a breaking-version capability. With `root=""`, the generator no longer assigns an implicit `rootless` or other fallback identity; callers must provide an explicit `name`. If an existing project relied on the released Swift entry shape from an `/api` root, such as `APIRoutes`, `APIRootClient`, and the aggregate `api` property, but the real URLs are now supplied by top-level groups, use:
+
+```python
+bp = Blueprint(name="api", root="")
+```
+
+URLs still come from the group and leaf, for example `/account/profile` or `/api/sample-action`; ContractGraph route IDs and generated roots use `api`, so Swift keeps the `APIRoutes` / `APIRootClient` / `api` style layout. Do not correct identity drift with a Swift-specific layout switch; all targets should share the same Blueprint logical identity.
+
 ## Model
 
 ```python

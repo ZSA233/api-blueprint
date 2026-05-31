@@ -322,4 +322,18 @@ public final class GenApiTypes {
     ) {
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record AccountProfile(
+        @JsonProperty("user_id") String userId,
+        @JsonProperty("nickname") String nickname
+    ) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record RoomSummary(
+        @JsonProperty("room_id") String roomId,
+        @JsonProperty("title") String title
+    ) {
+    }
+
 }

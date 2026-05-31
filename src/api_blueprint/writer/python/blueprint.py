@@ -435,7 +435,7 @@ class PythonBlueprint(BaseBlueprint["PythonBaseWriter"]):
 
     @property
     def root_segments(self) -> tuple[str, ...]:
-        return to_path_segments(self.bp.root, default="root")
+        return to_path_segments(self.bp.root_slug, default="root")
 
     def collect(self) -> None:
         self.routes = []

@@ -349,6 +349,16 @@ public final class GenApiErrors {
             "runtime.status.get.current",
             Map.ofEntries(
             )
+        ),
+        Map.entry(
+            "legacy.account.get.profile",
+            Map.ofEntries(
+            )
+        ),
+        Map.entry(
+            "legacy.room.get.list",
+            Map.ofEntries(
+            )
         )
     );
 

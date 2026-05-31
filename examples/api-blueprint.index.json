@@ -7,9 +7,9 @@
   "counts": {
     "connections": 3,
     "errors": 4,
-    "routes": 36,
-    "schemas": 59,
-    "services": 9,
+    "routes": 38,
+    "schemas": 62,
+    "services": 11,
     "targets": 21
   },
   "generator": {
@@ -407,6 +407,26 @@
       "operation": "RuntimeCurrentStatus",
       "service_id": "runtime.status",
       "url": "/runtime/status/current"
+    },
+    {
+      "id": "legacy.account.get.profile",
+      "kind": "rpc",
+      "methods": [
+        "GET"
+      ],
+      "operation": "AccountProfile",
+      "service_id": "legacy.account",
+      "url": "/account/profile"
+    },
+    {
+      "id": "legacy.room.get.list",
+      "kind": "rpc",
+      "methods": [
+        "GET"
+      ],
+      "operation": "RoomList",
+      "service_id": "legacy.room",
+      "url": "/room/list"
     }
   ],
   "services": [
@@ -481,6 +501,22 @@
       "path": "/runtime/status",
       "root": "runtime",
       "route_count": 1
+    },
+    {
+      "group": "account",
+      "id": "legacy.account",
+      "name": "AccountService",
+      "path": "/account",
+      "root": "legacy",
+      "route_count": 1
+    },
+    {
+      "group": "room",
+      "id": "legacy.room",
+      "name": "RoomService",
+      "path": "/room",
+      "root": "legacy",
+      "route_count": 1
     }
   ],
   "targets": [
@@ -489,147 +525,147 @@
       "kind": "contract",
       "out_dir": ".",
       "role": "contract",
-      "route_count": 36
+      "route_count": 38
     },
     {
       "id": "go.server",
       "kind": "go-server",
       "out_dir": "golang/server/views",
       "role": "server",
-      "route_count": 36
+      "route_count": 38
     },
     {
       "id": "go.client",
       "kind": "go-client",
       "out_dir": "golang/client",
       "role": "client",
-      "route_count": 36
+      "route_count": 38
     },
     {
       "id": "typescript.client",
       "kind": "typescript-client",
       "out_dir": "typescript",
       "role": "client",
-      "route_count": 36
+      "route_count": 38
     },
     {
       "id": "kotlin.client",
       "kind": "kotlin-client",
       "out_dir": "kotlin/client",
       "role": "client",
-      "route_count": 32
+      "route_count": 34
     },
     {
       "id": "kotlin.server",
       "kind": "kotlin-server",
       "out_dir": "kotlin/server",
       "role": "server",
-      "route_count": 34
+      "route_count": 36
     },
     {
       "id": "java.server",
       "kind": "java-server",
       "out_dir": "java/server",
       "role": "server",
-      "route_count": 36
+      "route_count": 38
     },
     {
       "id": "java.client",
       "kind": "java-client",
       "out_dir": "java/client",
       "role": "client",
-      "route_count": 36
+      "route_count": 38
     },
     {
       "id": "flutter.client",
       "kind": "flutter-client",
       "out_dir": "flutter",
       "role": "client",
-      "route_count": 34
+      "route_count": 36
     },
     {
       "id": "swift.client",
       "kind": "swift-client",
       "out_dir": "swift",
       "role": "client",
-      "route_count": 34
+      "route_count": 36
     },
     {
       "id": "python.server",
       "kind": "python-server",
       "out_dir": "python/server",
       "role": "server",
-      "route_count": 36
+      "route_count": 38
     },
     {
       "id": "python.client",
       "kind": "python-client",
       "out_dir": "python/client",
       "role": "client",
-      "route_count": 36
+      "route_count": 38
     },
     {
       "id": "http",
       "kind": "http-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 36
+      "route_count": 38
     },
     {
       "id": "http.kotlin",
       "kind": "http-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 36
+      "route_count": 38
     },
     {
       "id": "http.python",
       "kind": "http-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 36
+      "route_count": 38
     },
     {
       "id": "http.java",
       "kind": "http-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 36
+      "route_count": 38
     },
     {
       "id": "wails.v3",
       "kind": "wails-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 25
+      "route_count": 27
     },
     {
       "id": "wails.v2",
       "kind": "wails-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 25
+      "route_count": 27
     },
     {
       "id": "grpc.proto",
       "kind": "grpc-proto",
       "out_dir": "grpc/protos",
       "role": "grpc",
-      "route_count": 25
+      "route_count": 27
     },
     {
       "id": "grpc.go",
       "kind": "grpc-go",
       "out_dir": "grpc/go",
       "role": "grpc",
-      "route_count": 25
+      "route_count": 27
     },
     {
       "id": "grpc.python",
       "kind": "grpc-python",
       "out_dir": "grpc/python",
       "role": "grpc",
-      "route_count": 25
+      "route_count": 27
     }
   ],
   "version": "2.0"

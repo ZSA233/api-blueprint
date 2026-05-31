@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package example.api.legacy.account;
+
+option go_package = "example.com/project/grpc/go/legacy/account;account";
+
+service AccountService {
+  rpc AccountProfile (AccountProfileRequest) returns (AccountProfileResponse);
+}
+
+message AccountProfileRequest {
+}
+
+message AccountProfileResponse {
+  string user_id = 1;
+  string nickname = 2;
+}

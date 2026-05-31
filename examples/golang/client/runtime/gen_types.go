@@ -323,3 +323,17 @@ type BlueprintsAltConflictConflictModel struct {
 type RuntimeStatus struct {
 	Status string `json:"status" form:"status"`
 }
+
+type AccountProfile struct {
+	UserID   string `json:"user_id" form:"user_id"`
+	Nickname string `json:"nickname" form:"nickname"`
+}
+
+type RSPList struct {
+	Rooms []*RoomSummary `json:"rooms" form:"rooms"`
+}
+
+type RoomSummary struct {
+	RoomID string `json:"room_id" form:"room_id"`
+	Title  string `json:"title" form:"title"`
+}

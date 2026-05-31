@@ -13,7 +13,8 @@ let package = Package(
         .library(name: "ABClientRuntime", targets: ["ABClientRuntime"]),
         .library(name: "ABClientAPIRoutes", targets: ["ABClientAPIRoutes"]),
         .library(name: "ABClientAltRoutes", targets: ["ABClientAltRoutes"]),
-        .library(name: "ABClientRuntimeRoutes", targets: ["ABClientRuntimeRoutes"])
+        .library(name: "ABClientRuntimeRoutes", targets: ["ABClientRuntimeRoutes"]),
+        .library(name: "ABClientLegacyRoutes", targets: ["ABClientLegacyRoutes"])
     ],
     targets: [
         .target(name: "ABClientRuntime"),
@@ -37,12 +38,19 @@ let package = Package(
         ),
 
         .target(
+            name: "ABClientLegacyRoutes",
+            dependencies: ["ABClientRuntime"],
+            path: "Sources/ABClientLegacyRoutes"
+        ),
+
+        .target(
             name: "ABClient",
             dependencies: [
                 "ABClientRuntime",
                 "ABClientAPIRoutes",
                 "ABClientAltRoutes",
-                "ABClientRuntimeRoutes"
+                "ABClientRuntimeRoutes",
+                "ABClientLegacyRoutes"
             ],
             path: "Sources/ABClient"
         ),
