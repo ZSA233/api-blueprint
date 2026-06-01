@@ -14,7 +14,7 @@ export class RoomClient extends BaseClient {
   /**
    * Rootless room list example
    * Covers a second top-level group under the same logical blueprint.
-   * Tags: legacy, api
+   * Tags: api, legacy
    */
 
   async roomList(

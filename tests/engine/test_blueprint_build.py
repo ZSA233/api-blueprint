@@ -107,6 +107,16 @@ def test_rootless_blueprint_can_use_api_name_for_legacy_swift_identity():
     assert "/api/account/profile" not in paths
 
 
+def test_route_tags_preserve_declared_order_and_dedupe():
+    reset_shared_app()
+    bp = Blueprint(root="/api", tags=["api", "legacy"])
+
+    group = bp.group("/demo")
+    route = group.GET("/ping", tags=["demo", "api"])
+
+    assert route.tags == ["demo", "api", "legacy"]
+
+
 def test_response_envelope_omitempty_fields_are_optional_in_openapi():
     app = FastAPI()
     bp = Blueprint(root="/api", app=app)

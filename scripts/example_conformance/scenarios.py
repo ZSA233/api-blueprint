@@ -251,7 +251,11 @@ def coverage_by_category() -> dict[str, set[str]]:
 
 
 def unsupported_route_ids() -> tuple[str, ...]:
-    return ("runtime.status.get.current",)
+    return (
+        "legacy.account.get.profile",
+        "legacy.room.get.list",
+        "runtime.status.get.current",
+    )
 
 
 def scenario_names_from_cli(raw: str | None) -> tuple[str, ...]:

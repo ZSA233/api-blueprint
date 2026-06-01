@@ -114,10 +114,10 @@ def test_resolve_config_converts_vnext_target_outputs_to_absolute_paths() -> Non
     assert targets["grpc.go"].proto == "grpc.proto"
     assert targets["grpc.go"].out_dir == (EXAMPLE_CONFIG.parent / "grpc" / "go").resolve()
     assert targets["grpc.go"].module == "example.com/project/grpc/go"
-    assert targets["grpc.go"].files == ("api/*.proto", "static/*.proto")
+    assert targets["grpc.go"].files == ("api/*.proto", "legacy/*.proto", "static/*.proto")
     assert targets["grpc.python"].proto == "grpc.proto"
     assert targets["grpc.python"].out_dir == (EXAMPLE_CONFIG.parent / "grpc" / "python").resolve()
-    assert targets["grpc.python"].files == ("api/*.proto", "static/*.proto")
+    assert targets["grpc.python"].files == ("api/*.proto", "legacy/*.proto", "static/*.proto")
     assert targets["grpc.python"].python_package_root == "pb"
 
 def test_target_base_url_expr_loads_and_resolves(tmp_path) -> None:

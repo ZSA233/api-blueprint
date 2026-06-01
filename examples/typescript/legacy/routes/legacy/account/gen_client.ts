@@ -14,7 +14,7 @@ export class AccountClient extends BaseClient {
   /**
    * Rootless account profile example
    * Covers a rootless Blueprint group under /account.
-   * Tags: legacy, api
+   * Tags: api, legacy
    */
 
   async accountProfile(

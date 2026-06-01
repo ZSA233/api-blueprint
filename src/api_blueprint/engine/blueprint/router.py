@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import replace
+from enum import Enum
 from typing import TYPE_CHECKING, Any, DefaultDict, Literal, Optional, Self, Union
 
 from fastapi import FastAPI
@@ -194,11 +195,15 @@ class Router:
 
     @property
     def tags(self) -> list[str]:
-        tags = set()
-        if self._tags is not None:
-            tags.update(self._tags)
-        if self.bp.tags:
-            tags.update(self.bp.tags)
+        tags: list[str] = []
+        seen: set[str] = set()
+        route_tags = self._tags or []
+        for tag in (*route_tags, *self.bp.tags):
+            value = str(tag.value if isinstance(tag, Enum) else tag)
+            if value in seen:
+                continue
+            tags.append(value)
+            seen.add(value)
         return list(tags)
 
     def ARGS(self, __model: Optional[Model] = None, **kwargs: dict[str, ModelOrField]) -> Self:
