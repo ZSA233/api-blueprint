@@ -1,0 +1,29 @@
+{% autoescape false %}package {{ writer.group_adapters_package(bp, group) }};
+
+{% if group.runtime_types_ref == "GenApiTypes" %}
+import {{ bp.root_package }}.runtime.GenApiTypes;
+{% endif %}
+import {{ bp.root_package }}.runtime.GenApiRawResponse;
+import {{ bp.root_package }}.runtime.GenApiStreamResponse;
+import {{ writer.group_types_package(bp, group) }}.{{ group.types_class }};
+
+public final class {{ writer.group_adapters_class(group) }} {
+    private {{ writer.group_adapters_class(group) }}() {
+    }
+{% for route in group.routes %}
+{% for request_type in writer.route_request_types(route, group) %}
+
+    public static {{ request_type }} {{ route.method_name }}Request({{ request_type }} value) {
+        return value;
+    }
+{% endfor %}
+{% set response_type = writer.route_response_type(route, group) %}
+{% if response_type not in ["void", "Object"] %}
+
+    public static {{ response_type }} {{ route.method_name }}Response({{ response_type }} value) {
+        return value;
+    }
+{% endif %}
+{% endfor %}
+}
+{% endautoescape %}

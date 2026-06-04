@@ -77,11 +77,7 @@ BLUEPRINT_JAVA_CLIENT_PRESERVED = (
     "com/example/apiblueprint/static_/routes/static_/StaticApi.java",
 )
 BLUEPRINT_JAVA_SERVER_PRESERVED = (
-    "com/example/apiblueprint/api/routes/api/ApiService.java",
-    "com/example/apiblueprint/api/routes/api/binary/BinaryService.java",
-    "com/example/apiblueprint/api/routes/api/demo/DemoService.java",
-    "com/example/apiblueprint/api/routes/api/hello/HelloService.java",
-    "com/example/apiblueprint/static_/routes/static_/StaticService.java",
+    "com/example/apiblueprint/security/SignatureRequired.java",
 )
 BLUEPRINT_JAVA_SUITE_PRESERVED = (
     ".gitignore",
@@ -91,7 +87,6 @@ BLUEPRINT_JAVA_SUITE_PRESERVED = (
 )
 BLUEPRINT_JAVA_CONFORMANCE_PRESERVED = (
     "Conformance.java",
-    "ServerApp.java",
 )
 BLUEPRINT_PYTHON_PRESERVED = (
     "client/suite.py",

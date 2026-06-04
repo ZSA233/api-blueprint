@@ -218,60 +218,6 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
             "client/transports/http",
         )
 
-    def _write_server_runtime(self, plan: JavaBlueprintPlan, context: dict[str, object]) -> None:
-        for stale_name in (
-            "ApiServerChannel.java",
-            "ApiServerContext.java",
-            "ApiServerResponse.java",
-            "ApiServerStream.java",
-        ):
-            self._unlink_generated_file(plan.runtime.directory / stale_name)
-        self._write_generated(
-            plan.runtime.directory / "GenApiServerContext.java",
-            "GenApiServerContext.java",
-            context,
-            "server/runtime",
-        )
-        self._write_generated(
-            plan.runtime.directory / "GenApiServerResponse.java",
-            "GenApiServerResponse.java",
-            context,
-            "server/runtime",
-        )
-        self._write_generated(
-            plan.runtime.directory / "GenApiServerStream.java",
-            "GenApiServerStream.java",
-            context,
-            "server/runtime",
-        )
-        self._write_generated(
-            plan.runtime.directory / "GenApiServerChannel.java",
-            "GenApiServerChannel.java",
-            context,
-            "server/runtime",
-        )
-
-    def _write_server_transport(self, plan: JavaBlueprintPlan, context: dict[str, object]) -> None:
-        self._write_generated(
-            plan.http_transport.directory / "GenSpringApiConfiguration.java",
-            "GenSpringApiConfiguration.java",
-            context,
-            "server/transports/http",
-        )
-        self._write_generated(
-            plan.http_transport.directory / "GenSpringServerConfig.java",
-            "GenSpringServerConfig.java",
-            context,
-            "server/transports/http",
-        )
-        for group in context["bp"].groups.values():  # type: ignore[union-attr]
-            self._write_generated(
-                plan.http_transport.directory / group.package_path / f"{group.controller_class}.java",
-                "GenSpringController.java",
-                {**context, "group": group},
-                "server/transports/http",
-            )
-
     def _write_group_models(self, group_plan: JavaRouteGroupPlan, context: dict[str, object]) -> None:
         group = group_plan.group
         for stale_file in (*group_plan.directory.glob("Gen*ApiModels.java"), *group_plan.directory.glob("Gen*ServiceModels.java")):
@@ -301,19 +247,6 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
             {**context, "group": group},
             "client/routes",
         )
-
-    def _write_server_group(self, group_plan: JavaRouteGroupPlan, context: dict[str, object]) -> None:
-        group = group_plan.group
-        self._unlink_generated_file(group_plan.directory / f"{group.service_class}Stub.java")
-        for output_name, template_name, overwrite in (
-            (f"{group.generated_service_class}.java", "GenApiService.java", True),
-            (f"{group.stub_class}.java", "GenApiServiceStub.java", True),
-            (f"{group.service_class}.java", "ApiService.java", False),
-        ):
-            if overwrite:
-                self._write_generated(group_plan.directory / output_name, template_name, {**context, "group": group}, "server/routes")
-            else:
-                self._write_user_file(group_plan.directory / output_name, template_name, {**context, "group": group}, "server/routes")
 
     def _write_group_binary(self, group_plan: JavaRouteGroupPlan, context: dict[str, object]) -> None:
         self._unlink_generated_file(group_plan.stale_binary_file)

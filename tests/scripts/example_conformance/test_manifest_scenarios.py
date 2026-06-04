@@ -28,7 +28,8 @@ def test_manifest_marks_matrix_capabilities() -> None:
     assert clients["python"].connection_policy == "unsupported-contract"
 
     assert servers["go"].enabled is True
-    assert servers["java"].enabled is True
+    assert servers["java"].enabled is False
+    assert servers["java"].supports_rpc is False
     assert servers["kotlin"].supports_sse is True
     assert servers["python"].supports_binary is True
     assert servers["python"].supports_websocket is True

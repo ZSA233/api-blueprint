@@ -27,7 +27,7 @@ register_target(
         name="java-server",
         implemented=True,
         writer_factory=JavaServerWriter,
-        description="Generate Java Spring MVC service contracts and HTTP controller scaffolding.",
+        description="Generate Java Spring MVC contract-boundary annotations, types, adapters, and runtime assertions.",
     )
 )
 

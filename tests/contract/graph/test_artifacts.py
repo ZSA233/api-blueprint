@@ -133,15 +133,17 @@ def test_agent_manifest_and_shards_are_compact_navigation_layers():
         "com.example.generated.api.routes.api.runs.RunsApi",
     ]
     assert stream_summary["artifacts"]["java.server"]["files"] == [
-        "java/server/com/example/generated/api/routes/api/runs/GenRunsService.java",
-        "java/server/com/example/generated/api/routes/api/runs/GenRunsTypes.java",
-        "java/server/com/example/generated/api/routes/api/runs/GenRunsServiceStub.java",
-        "java/server/com/example/generated/api/routes/api/runs/RunsService.java",
-        "java/server/com/example/generated/api/transports/http/api/runs/GenRunsController.java",
+        "java/server/com/example/generated/api/annotations/ApiBlueprintOperation.java",
+        "java/server/com/example/generated/api/annotations/api/runs/GenEvents.java",
+        "java/server/com/example/generated/api/types/api/runs/GenRunsTypes.java",
+        "java/server/com/example/generated/api/adapters/api/runs/GenRunsAdapters.java",
+        "java/server/com/example/generated/api/spring/GenSpringMvcContractAssertions.java",
     ]
     assert stream_summary["artifacts"]["java.server"]["imports"] == [
-        "com.example.generated.api.routes.api.runs.RunsService",
-        "com.example.generated.api.transports.http.api.runs.GenRunsController",
+        "com.example.generated.api.annotations.api.runs.GenEvents",
+        "com.example.generated.api.types.api.runs.GenRunsTypes",
+        "com.example.generated.api.adapters.api.runs.GenRunsAdapters",
+        "com.example.generated.api.spring.GenSpringMvcContractAssertions",
     ]
     assert stream_summary["artifacts"]["python.client"]["files"] == [
         "python/client/client_app/api/routes/api/runs/gen_client.py",
@@ -242,15 +244,17 @@ def test_contract_artifacts_use_shared_selection_and_python_root_group_paths():
         "com.example.generated.api.routes.api.ApiApi",
     ]
     assert route_summary["artifacts"]["java.server"]["files"] == [
-        "java/server/com/example/generated/api/routes/api/GenApiService.java",
-        "java/server/com/example/generated/api/routes/api/GenApiTypes.java",
-        "java/server/com/example/generated/api/routes/api/GenApiServiceStub.java",
-        "java/server/com/example/generated/api/routes/api/ApiService.java",
-        "java/server/com/example/generated/api/transports/http/api/GenApiController.java",
+        "java/server/com/example/generated/api/annotations/ApiBlueprintOperation.java",
+        "java/server/com/example/generated/api/annotations/api/GenPing.java",
+        "java/server/com/example/generated/api/types/api/GenApiTypes.java",
+        "java/server/com/example/generated/api/adapters/api/GenApiAdapters.java",
+        "java/server/com/example/generated/api/spring/GenSpringMvcContractAssertions.java",
     ]
     assert route_summary["artifacts"]["java.server"]["imports"] == [
-        "com.example.generated.api.routes.api.ApiService",
-        "com.example.generated.api.transports.http.api.GenApiController",
+        "com.example.generated.api.annotations.api.GenPing",
+        "com.example.generated.api.types.api.GenApiTypes",
+        "com.example.generated.api.adapters.api.GenApiAdapters",
+        "com.example.generated.api.spring.GenSpringMvcContractAssertions",
     ]
     assert route_summary["artifacts"]["python.client"]["files"] == [
         "python/client/client_app/api/routes/api/gen_client.py",

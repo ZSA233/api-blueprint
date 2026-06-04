@@ -94,11 +94,6 @@ id = "http"
 server = "python.server"
 clients = ["python.client"]
 
-[[transport.http]]
-id = "http.java"
-server = "java.server"
-clients = ["java.client"]
-
 [[transport.wails]]
 id = "wails.v3"
 version = "v3"
@@ -150,7 +145,6 @@ module = "pb"
         "python.server",
         "python.client",
         "http",
-        "http.java",
         "wails.v3",
         "grpc.proto",
         "grpc.go",
@@ -169,7 +163,6 @@ module = "pb"
         "swift-client",
         "python-server",
         "python-client",
-        "http-transport",
         "http-transport",
         "wails-transport",
         "grpc-proto",
@@ -192,10 +185,10 @@ module = "pb"
     assert config.targets[9].runtime_profile == "ios14-compat"
     assert config.targets[10].python_package_root == "server_app"
     assert config.targets[11].python_package_root == "client_app"
-    assert len(config.targets[15].proto_files) == 1
-    assert config.targets[15].proto_files[0].file == "api/demo.proto"
-    assert config.targets[15].proto_files[0].service == "DemoService"
-    assert config.targets[17].python_package_root == "pb"
+    assert len(config.targets[14].proto_files) == 1
+    assert config.targets[14].proto_files[0].file == "api/demo.proto"
+    assert config.targets[14].proto_files[0].service == "DemoService"
+    assert config.targets[16].python_package_root == "pb"
 
 def test_contract_alias_table_normalizes_to_contract_target(tmp_path) -> None:
     config_path = tmp_path / "api-blueprint.toml"

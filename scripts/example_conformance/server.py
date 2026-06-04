@@ -76,70 +76,12 @@ def start_server(
     if server_name == "go":
         return start_go_server(blueprint.golang_server_dir, extra_env=extra_env)
     if server_name == "java":
-        return start_java_server(blueprint, extra_env=extra_env)
+        raise RuntimeError("Java conformance server is not available for the contract-boundary java-server target")
     if server_name == "kotlin":
         return start_kotlin_server(blueprint, extra_env=extra_env)
     if server_name == "python":
         return start_python_server(blueprint, extra_env=extra_env)
     raise ValueError(f"unknown conformance server: {server_name}")
-
-
-def start_java_server(
-    blueprint: example_validation.BlueprintExampleWorkspace,
-    *,
-    extra_env: dict[str, str] | None = None,
-) -> ServerProcess:
-    gradle_bin = example_validation.resolve_gradle_bin()
-    if gradle_bin is None:
-        raise RuntimeError("Gradle is required for Java conformance server")
-    addr = reserve_local_addr()
-    project_dir = Path(tempfile.mkdtemp(prefix="api-blueprint-java-server-"))
-    output_path = project_dir / ".conformance-server.log"
-    try:
-        source_dir = project_dir / "src/main/java"
-        source_dir.mkdir(parents=True)
-        server_package = blueprint.java_server_dir / "com"
-        if not server_package.is_dir():
-            raise RuntimeError(f"Java generated server package is missing: {server_package}")
-        shutil.copytree(server_package, source_dir / "com", dirs_exist_ok=True)
-        server_app = blueprint.java_conformance_dir / "ServerApp.java"
-        if not server_app.is_file():
-            raise RuntimeError(f"Java conformance server app is missing: {server_app}")
-        server_target = source_dir / "com/example/apiblueprint/conformance/ServerApp.java"
-        server_target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(server_app, server_target)
-        _write_java_server_gradle(project_dir)
-        subprocess.run([gradle_bin, "--no-daemon", "installDist"], cwd=project_dir, check=True)
-        executable_name = "api-blueprint-java-server.bat" if os.name == "nt" else "api-blueprint-java-server"
-        executable = project_dir / "build" / "install" / "api-blueprint-java-server" / "bin" / executable_name
-        if not executable.is_file():
-            raise RuntimeError(f"Java conformance server executable is missing: {executable}")
-        output = output_path.open("w", encoding="utf-8")
-        env = os.environ.copy()
-        env["API_BLUEPRINT_EXAMPLE_ADDR"] = addr
-        if extra_env:
-            env.update(extra_env)
-        process = subprocess.Popen(
-            [str(executable)],
-            cwd=project_dir,
-            env=env,
-            stdout=output,
-            stderr=subprocess.STDOUT,
-            text=True,
-            start_new_session=True,
-        )
-        server = ServerProcess(base_url=f"http://{addr}", process=process, output_path=output_path, cleanup_dir=project_dir)
-        try:
-            wait_for_http_server(server, label="java")
-        except Exception:
-            server.stop()
-            raise
-        finally:
-            output.close()
-        return server
-    except Exception:
-        shutil.rmtree(project_dir, ignore_errors=True)
-        raise
 
 
 def start_kotlin_server(
@@ -265,43 +207,6 @@ def cleanup_server_log(path: Path) -> None:
         path.unlink(missing_ok=True)
         if cleanup_dir is not None:
             shutil.rmtree(cleanup_dir, ignore_errors=True)
-
-
-def _write_java_server_gradle(project_dir: Path) -> None:
-    (project_dir / "settings.gradle.kts").write_text(
-        'pluginManagement { repositories { gradlePluginPortal(); mavenCentral() } }\n'
-        "dependencyResolutionManagement { "
-        "repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); "
-        "repositories { mavenCentral() } "
-        "}\n"
-        'rootProject.name = "api-blueprint-java-server"\n',
-        encoding="utf-8",
-    )
-    (project_dir / "build.gradle.kts").write_text(
-        f"""
-plugins {{
-    java
-    application
-}}
-
-dependencies {{
-    implementation("com.fasterxml.jackson.core:jackson-databind:{example_validation.JACKSON_DATABIND_VERSION}")
-    implementation("org.springframework.boot:spring-boot-starter-web:{example_validation.SPRING_BOOT_VERSION}")
-    implementation("org.springframework.boot:spring-boot-starter-websocket:{example_validation.SPRING_BOOT_VERSION}")
-}}
-
-application {{
-    mainClass.set("com.example.apiblueprint.conformance.ServerApp")
-}}
-
-java {{
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
-}}
-        """.strip()
-        + "\n",
-        encoding="utf-8",
-    )
 
 
 def _write_kotlin_server_gradle(project_dir: Path) -> None:

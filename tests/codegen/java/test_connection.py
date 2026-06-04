@@ -72,21 +72,18 @@ def test_java_client_and_server_generate_named_message_keyframe_helpers(tmp_path
     server_writer = JavaServerWriter(server_dir, package="com.example.generated", contract_graph=graph)
     server_writer.register(bp)
     server_writer.gen()
-    server_route_dir = server_dir / package_root / "routes/api/demo"
-    server_types = (server_route_dir / "GenDemoTypes.java").read_text(encoding="utf-8")
-    service_text = (server_route_dir / "GenDemoService.java").read_text(encoding="utf-8")
-    controller_text = (
-        server_dir / package_root / "transports/http/api/demo/GenDemoController.java"
-    ).read_text(encoding="utf-8")
+    server_types = (server_dir / package_root / "types/api/demo/GenDemoTypes.java").read_text(encoding="utf-8")
+    assistant_annotation = (server_dir / package_root / "annotations/api/demo/GenAssistant.java").read_text(
+        encoding="utf-8"
+    )
+    spring_assertions = (server_dir / package_root / "spring/GenSpringMvcContractAssertions.java").read_text(
+        encoding="utf-8"
+    )
 
     assert "public static final class AssistantClientMessageVariants" in server_types
     assert "public static <R> R dispatchAssistantClientMessage(" in server_types
-    assert "void assistant(" in service_text
-    assert "GenApiServerChannel<GenDemoTypes.AssistantClientMessage, GenDemoTypes.AssistantServerMessage, Object> channel" in service_text
-    assert "SseEmitter" in controller_text
-    assert "implements WebSocketConfigurer" in controller_text
-    assert "SpringWebSocketChannel" in controller_text
-    assert "private static final Object CLOSED = new Object();" in controller_text
-    assert "void markClosed(Exception error)" in controller_text
-    assert "channel.abortUnchecked(1003, \"invalid WebSocket message\")" in controller_text
-    assert "ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)" not in controller_text
+    assert "@RequestMapping(path = \"/api/demo/assistant\"" in assistant_annotation
+    assert '@ApiBlueprintOperation("api.demo.channel.assistant")' in assistant_annotation
+    assert '"api.demo.channel.assistant"' in spring_assertions
+    assert '"com.example.generated.api.runtime.GenApiTypes.OpenPayload"' in spring_assertions
+    assert "operation_marker_missing" in spring_assertions

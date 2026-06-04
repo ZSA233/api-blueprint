@@ -155,10 +155,13 @@ def test_rootless_codegen_uses_logical_name_without_changing_urls(tmp_path: Path
         / "example"
         / "generated"
         / "legacy"
-        / "routes"
+        / "annotations"
         / "legacy"
         / "account"
-        / "GenAccountService.java"
+        / "GenProfile.java"
+    ).is_file()
+    assert (
+        java_server_dir / "com" / "example" / "generated" / "legacy" / "spring" / "GenSpringMvcContractAssertions.java"
     ).is_file()
 
     flutter_dir = tmp_path / "flutter"

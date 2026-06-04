@@ -10,7 +10,7 @@ def test_java_generated_template_files_use_gen_names() -> None:
         Path("client/routes/ApiGroup.java.j2"),
         Path("client/runtime/ApiClient.java.j2"),
         Path("client/transports/http/HttpApiClient.java.j2"),
-        Path("server/routes/ApiService.java.j2"),
+        Path("server/annotations/ApiBlueprintOperation.java.j2"),
     }
 
     non_gen_templates = {
@@ -62,7 +62,7 @@ def test_java_generates_legacy_json_compat_field_types(tmp_path: Path) -> None:
     assert "List<String> normalized" in runtime_types
     assert "String roomId" in runtime_types
 
-def test_java_client_and_server_generate_layout_and_preserve_user_files(tmp_path: Path) -> None:
+def test_java_client_and_server_generate_layout_and_spring_contract_boundary(tmp_path: Path) -> None:
     class CommonErr(Model):
         UNKNOWN = Error(-1, "unknown")
         TOKEN_EXPIRE = Error(
@@ -123,13 +123,11 @@ content-encoding: identity,gzip,br
     client_route_dir = client_dir / package_root / "routes/api/demo"
     client_runtime_dir = client_dir / package_root / "runtime"
     client_http_dir = client_dir / package_root / "transports/http"
-    server_route_dir = server_dir / package_root / "routes/api/demo"
-    for directory in (client_route_dir, client_runtime_dir, client_http_dir, server_route_dir):
+    for directory in (client_route_dir, client_runtime_dir, client_http_dir):
         directory.mkdir(parents=True)
     (client_route_dir / "DemoApi.java").write_text("// USER ROUTE FACADE\n", encoding="utf-8")
     (client_runtime_dir / "ApiClient.java").write_text("// USER CLIENT FACADE\n", encoding="utf-8")
     (client_http_dir / "HttpApiClient.java").write_text("// USER HTTP FACADE\n", encoding="utf-8")
-    (server_route_dir / "DemoService.java").write_text("// USER SERVICE\n", encoding="utf-8")
 
     client_writer = JavaClientWriter(
         client_dir,
@@ -141,7 +139,26 @@ content-encoding: identity,gzip,br
     client_writer.gen()
     client_writer.gen()
 
-    server_writer = JavaServerWriter(server_dir, package="com.example.generated", contract_graph=graph)
+    server_writer = JavaServerWriter(
+        server_dir,
+        package="com.example.generated",
+        contract_graph=graph,
+        spring_policies=[
+            {
+                "id": "signed",
+                "annotation": "com.example.generated.security.SignatureRequired",
+            }
+        ],
+        spring_route_bindings=[
+            {
+                "operation_id": "api.demo.get.ping",
+                "annotation": "GenDemoPing",
+                "policies": ["signed"],
+            }
+        ],
+        spring_public_paths=["/api/**"],
+        spring_exclude_server_paths=["/api/internal/**"],
+    )
     server_writer.register(bp)
     server_writer.gen()
     server_writer.gen()
@@ -157,19 +174,20 @@ content-encoding: identity,gzip,br
     transport_text = (client_http_dir / "GenJdkHttpApiTransport.java").read_text(encoding="utf-8")
     config_text = (client_http_dir / "GenHttpApiConfig.java").read_text(encoding="utf-8")
     binary_text = (client_dir / package_root / "routes/api/binary/GenBinaryTypes.java").read_text(encoding="utf-8")
-    binary_service_text = (server_dir / package_root / "routes/api/binary/GenBinaryService.java").read_text(
+    server_types_text = (server_dir / package_root / "types/api/demo/GenDemoTypes.java").read_text(
         encoding="utf-8"
     )
-    binary_controller_text = (
-        server_dir / package_root / "transports/http/api/binary/GenBinaryController.java"
+    server_binary_types_text = (server_dir / package_root / "types/api/binary/GenBinaryTypes.java").read_text(
+        encoding="utf-8"
+    )
+    server_annotation_text = (
+        server_dir / package_root / "annotations/api/demo/GenDemoPing.java"
     ).read_text(encoding="utf-8")
-    server_config_text = (server_dir / package_root / "transports/http/GenSpringServerConfig.java").read_text(
+    server_adapters_text = (server_dir / package_root / "adapters/api/demo/GenDemoAdapters.java").read_text(
         encoding="utf-8"
     )
-    service_text = (server_route_dir / "GenDemoService.java").read_text(encoding="utf-8")
-    service_stub_text = (server_route_dir / "GenDemoServiceStub.java").read_text(encoding="utf-8")
-    controller_text = (
-        server_dir / package_root / "transports/http/api/demo/GenDemoController.java"
+    spring_assertions_text = (
+        server_dir / package_root / "spring/GenSpringMvcContractAssertions.java"
     ).read_text(encoding="utf-8")
 
     for generated_text in (
@@ -188,20 +206,17 @@ content-encoding: identity,gzip,br
         assert generated_text.startswith(JAVA_CLIENT_GENERATED_HEADER)
         assert _max_consecutive_blank_lines(generated_text) <= 1
     for generated_text in (
-        service_text,
-        controller_text,
-        binary_controller_text,
-        server_config_text,
+        server_types_text,
+        server_binary_types_text,
+        server_annotation_text,
+        server_adapters_text,
+        spring_assertions_text,
     ):
         assert generated_text.startswith(JAVA_SERVER_GENERATED_HEADER)
         assert _max_consecutive_blank_lines(generated_text) <= 1
-    assert "GenApiBinaryBody;\n\nimport java.io.IOException;" not in controller_text
-    assert "GenApiBinaryBody;\n\nimport java.io.ByteArrayInputStream;" not in binary_controller_text
-    assert "RequestBody;\n\nimport org.springframework.web.bind.annotation.RequestHeader;" not in binary_controller_text
     assert (client_runtime_dir / "ApiClient.java").read_text(encoding="utf-8") == "// USER CLIENT FACADE\n"
     assert (client_route_dir / "DemoApi.java").read_text(encoding="utf-8") == "// USER ROUTE FACADE\n"
     assert (client_http_dir / "HttpApiClient.java").read_text(encoding="utf-8") == "// USER HTTP FACADE\n"
-    assert (server_route_dir / "DemoService.java").read_text(encoding="utf-8") == "// USER SERVICE\n"
 
     assert "public record Result(" in types_text
     assert '@JsonProperty("status") String status' in types_text
@@ -271,56 +286,34 @@ content-encoding: identity,gzip,br
     assert "byte[] payload" in binary_text
     assert "public static GenApiBinaryBody toBinaryBody(DemoPacket value)" in binary_text
     assert "public static DemoPacket parse(byte[] bytes)" in binary_text
-    assert "GenBinaryTypes.DemoPacket binary" in binary_service_text
-    assert "GenBinaryTypes.DemoPacket binary;" in binary_controller_text
-    assert "long decompressedBinaryBodyBytes" in server_config_text
-    assert "Map<String, BinaryContentDecoder> binaryContentDecoders" in server_config_text
-    assert "public interface BinaryContentDecoder" in server_config_text
-    assert "private record HttpRouteInfo(HttpRequestInfo request, HttpResponseInfo response)" in binary_controller_text
-    assert 'new HttpRequestInfo(Set.of("identity", "gzip", "br"))' in binary_controller_text
-    assert (
-        "decodeBinarySchemaBody(binaryBody == null ? new byte[0] : binaryBody, "
-        "contentEncoding, HTTP_ROUTE_API_BINARY_POST_PACKET.request())"
-    ) in binary_controller_text
-    assert "@RequestHeader(name = HttpHeaders.CONTENT_ENCODING, required = false) String contentEncoding" in binary_controller_text
-    assert "GZIPInputStream" in binary_controller_text
-    assert "serverConfig.binaryContentDecoders().get(encoding)" in binary_controller_text
-    assert "HttpStatus.UNSUPPORTED_MEDIA_TYPE" in binary_controller_text
-    assert "return badRequestResponse(error);" in binary_controller_text
+    assert "public final class GenDemoTypes" in server_types_text
+    assert "public static final class PingQuery" in server_types_text
+    assert "public PingQuery()" in server_types_text
+    assert "public String getQ()" in server_types_text
+    assert "public void setQ(String q)" in server_types_text
+    assert "public static Builder builder()" in server_types_text
+    assert "public record PingQuery(" not in server_types_text
+    assert "public record DemoPacket(" in server_binary_types_text
+    assert "public static GenApiBinaryBody toBinaryBody(DemoPacket value)" in server_binary_types_text
     assert "public static final String CONTENT_TYPE = \"application/octet-stream\"" in binary_text
 
-    assert "public interface GenDemoService" in service_text
-    assert "GenApiTypes.Result ping(" in service_text
-    assert "Object ws(" not in service_text
-    assert "void events(" in service_text
-    assert "GenApiServerStream<GenApiTypes.Event, Object> stream" in service_text
-    assert "void chat(" in service_text
-    assert "GenApiServerChannel<GenApiTypes.Event, GenApiTypes.Event, Object> channel" in service_text
-    assert "public void events(\n        GenApiTypes.OpenPayload openData,\n        GenApiServerStream<GenApiTypes.Event, Object> stream\n    ) throws Exception" in service_stub_text
-    assert "public void chat(\n        GenApiTypes.OpenPayload openData,\n        GenApiServerChannel<GenApiTypes.Event, GenApiTypes.Event, Object> channel\n    ) throws Exception" in service_stub_text
-    assert "@RestController" in controller_text
-    assert "@RequestMapping(path = \"/api/demo/ping\", method = RequestMethod.GET)" in controller_text
-    assert "SseEmitter" in controller_text
-    assert "implements WebSocketConfigurer" in controller_text
-    assert "registry.addHandler(new ChatWebSocketHandler(), \"/api/demo/chat\")" in controller_text
-    assert "setAllowedOrigins(\"*\")" not in controller_text
-    assert "serverConfig.websocketAllowedOrigins()" in controller_text
-    assert "SpringSseStream" in controller_text
-    assert "SpringWebSocketChannel" in controller_text
-    assert "SseEmitter emitter = new SseEmitter(serverConfig.sseTimeout().toMillis())" in controller_text
-    assert "private static final Object CLOSED = new Object();" in controller_text
-    assert "private final BlockingQueue<Object> incoming;" in controller_text
-    assert "new LinkedBlockingQueue<>(Math.max(1, inboundQueueCapacity))" in controller_text
-    assert "void markClosed(Exception error)" in controller_text
-    assert "channel.markClosed" in controller_text
-    assert "channel.abortUnchecked(1003, \"invalid WebSocket message\")" in controller_text
-    assert "abortUnchecked(1013, \"WebSocket inbound queue is full\")" in controller_text
-    assert "CompletableFuture.runAsync(() -> {" in controller_text
-    assert "}, connectionExecutor);" in controller_text
-    assert "incoming.take()" in controller_text
-    assert "return badRequestResponse(error);" in controller_text
-    assert "private ResponseEntity<Map<String, Object>> badRequestResponse(Exception error)" in controller_text
-    assert "ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)" not in controller_text
+    assert "@RequestMapping(path = \"/api/demo/ping\", method = {RequestMethod.GET})" in server_annotation_text
+    assert "import com.example.generated.security.SignatureRequired;" in server_annotation_text
+    assert "@SignatureRequired" in server_annotation_text
+    assert '@ApiBlueprintOperation("api.demo.get.ping")' in server_annotation_text
+    assert "public @interface GenDemoPing" in server_annotation_text
+    assert "public static GenDemoTypes.PingQuery pingRequest(GenDemoTypes.PingQuery value)" in server_adapters_text
+    assert "public static GenApiTypes.Result pingResponse(GenApiTypes.Result value)" in server_adapters_text
+    assert "RequestMappingHandlerMapping" in spring_assertions_text
+    assert "operation_marker_missing" in spring_assertions_text
+    assert "request_type_missing" in spring_assertions_text
+    assert "response_type_missing" in spring_assertions_text
+    assert '"/api/**"' in spring_assertions_text
+    assert '"/api/internal/**"' in spring_assertions_text
+    assert '"com.example.generated.api.types.api.demo.GenDemoTypes.PingQuery"' in spring_assertions_text
+    assert '"com.example.generated.api.runtime.GenApiTypes.Result"' in spring_assertions_text
+    assert not (server_dir / package_root / "routes/api/demo/GenDemoService.java").exists()
+    assert not (server_dir / package_root / "transports/http/api/demo/GenDemoController.java").exists()
 
 def test_java_writer_name_filter_uses_resolved_operation_name(tmp_path: Path) -> None:
     bp = Blueprint(root="/api")

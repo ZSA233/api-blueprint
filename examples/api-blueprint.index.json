@@ -10,7 +10,7 @@
     "routes": 39,
     "schemas": 63,
     "services": 12,
-    "targets": 21
+    "targets": 20
   },
   "generator": {
     "name": "api-blueprint",
@@ -638,13 +638,6 @@
     },
     {
       "id": "http.python",
-      "kind": "http-transport",
-      "out_dir": null,
-      "role": "transport",
-      "route_count": 39
-    },
-    {
-      "id": "http.java",
       "kind": "http-transport",
       "out_dir": null,
       "role": "transport",

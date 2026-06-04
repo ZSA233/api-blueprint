@@ -49,7 +49,7 @@ Default HTTP/Wails adapters are protocol bridges and development validation entr
 
 Production projects should prefer narrow imports: a concrete route client, a concrete HTTP/Wails factory, or a concrete server group router instead of a root barrel or aggregate facade. Aggregate entrypoints are useful for examples, discovery, and quick starts; narrow entrypoints improve tree-shaking, dependency audit scope, and the minimum exposed surface. `include` / `exclude` is the stable cross-target generation-time trim boundary; unused imports, dead-code elimination, and Swift narrow products are language toolchain optimizations and are not a cross-language struct-level dead-strip contract.
 
-Server adapters now use finite resource defaults that the host can explicitly relax: Go `httptransport.ServerConfig` defaults request bodies to `16 MiB`, multipart memory to `8 MiB`, single files to `32 MiB`, decompressed binary bodies to `16 MiB`, WebSocket origin checks on, and compression off; Java Spring `GenSpringServerConfig` defaults SSE timeout to `30s`, WebSocket allowed origins to an empty list, inbound queue capacity to `256`, multipart single files to `32 MiB`, and decompressed binary bodies to `16 MiB`; Kotlin `ApiServerConfig` defaults multipart files to `32 MiB`, binary bodies and decompressed binary bodies to `16 MiB`, and WebSocket messages to `1 MiB`; Python `ApiServerConfig` defaults bodies and decompressed binary bodies to `16 MiB`, multipart file/part to `32 MiB`, SSE queue capacity to `256`, and WebSocket messages to `1 MiB`.
+Server adapters now use finite resource defaults that the host can explicitly relax: Go `httptransport.ServerConfig` defaults request bodies to `16 MiB`, multipart memory to `8 MiB`, single files to `32 MiB`, decompressed binary bodies to `16 MiB`, WebSocket origin checks on, and compression off; Kotlin `ApiServerConfig` defaults multipart files to `32 MiB`, binary bodies and decompressed binary bodies to `16 MiB`, and WebSocket messages to `1 MiB`; Python `ApiServerConfig` defaults bodies and decompressed binary bodies to `16 MiB`, multipart file/part to `32 MiB`, SSE queue capacity to `256`, and WebSocket messages to `1 MiB`. Java `java-server` no longer emits a production HTTP server adapter; resource limits remain the responsibility of the host Spring application and deployment layer.
 
 Multipart file part runtime types prefer streams or file descriptors. Bytes helpers are still available for small files and tests, but large file paths should use Java `InputStream`/`Path`, Kotlin `fromPath`, Flutter `fromStream`, Python path-like/file-like inputs, or the host framework's spool/temp-file policy instead of relying on `readAllBytes()` as a production default.
 
@@ -405,12 +405,12 @@ Projects using the earlier `<package>/ApiClient.kt`, `endpoints/`, `models/`, an
 ## Java Client / Server
 
 ```sh
-api-gen generate -c api-blueprint.toml --target http.java
+api-gen generate -c api-blueprint.toml --target java.client --target java.server
 ```
 
-Java targets are preview. `java-client` uses Java 17 `java.net.http.HttpClient` plus Jackson; `java-server` uses Spring MVC plus Jackson. Generated sources do not include Gradle/Maven project files, and `out_dir` is the package root without an appended `src/main/java`. The repository example provides `make example-java-suite` to run a real Spring Boot server and generated Java client core round-trip.
+Java targets are preview. `java-client` uses Java 17 `java.net.http.HttpClient` plus Jackson; `java-server` uses Spring MVC plus Jackson to generate contract-boundary artifacts. Generated sources do not include Gradle/Maven project files, and `out_dir` is the package root without an appended `src/main/java`. The repository example provides `make example-java-suite` to compile and smoke the Java Spring contract-boundary output.
 
-Java client/server use a package-first layout whose route directory mirrors the full route path:
+The Java client uses a package-first layout whose route directory mirrors the full route path:
 
 - `<package>/<root>/runtime/*`
 - `<package>/<root>/routes/<root>/<group...>/*`
@@ -420,9 +420,46 @@ Route DTOs are emitted as `Gen<Group>Types.java`. Markdown Binary Schema typed p
 
 The Java client emits transport-neutral route surfaces, `GenApiTransport`, the default JDK HTTP adapter, and `GenApiClient`. Preserved user files are `runtime/ApiClient.java`, `routes/<root>/<group...>/<Group>Api.java`, and `transports/http/HttpApiClient.java`; other `Gen*.java` files are overwritten. The recommended entrypoint is `HttpApiClient.create(baseUrl)`, with public DTOs such as `GenDemoTypes.ErrorDemoQuery` / `GenDemoTypes.ErrorDemoResponse`. RPC route methods provide `GenApiRequestOptions` overloads for per-call headers and timeout. Generated route clients build `GenApiRequest` with nested body/response specs, so custom transports read request kind, response kind, media type, binary decoder, and envelope behavior from the request object instead of a widening transport method signature. The default HTTP adapter implements RPC query/json/urlencoded/multipart/binary_schema requests, decodes binary_schema success responses into typed packets, returns `GenApiRawResponse` for bytes/file raw responses, returns true streaming `GenApiStreamResponse` / `InputStream` / `AutoCloseable` values for byte streams, and keeps `readAllBytes()` as a convenience method; raw response filenames come only from the actual `Content-Disposition` header. STREAM and CHANNEL default to explicit unsupported errors.
 
-The Java server emits route service interfaces, public stubs, runtime, route types, `GenSpringServerConfig`, and Spring controllers. Each generated controller carries route-local `HttpRouteInfo` metadata for binary request encodings, raw/manual response behavior, response media type, and file default download name. For `.REQ_BINARY_SCHEMA(...)`, the generated Spring controller validates the route schema `Content-Encoding` whitelist, decodes built-in `identity` / `gzip` or registered `binaryContentDecoders`, then parses request bytes into the generated typed packet before calling the service; multipart routes decode file parts into `GenApiFilePart`; binary_schema, bytes, file, and byte_stream success responses bypass the JSON envelope and the controller writes raw bytes, `Content-Type`, and download headers; byte_stream is written through a Spring streaming response instead of being forced into a byte array. `STREAM` routes use a Spring `SseEmitter` bridge, and `CHANNEL` routes generate a WebSocket handler/config compatible with the `{type:"message",data}` / `{type:"close",data}` wire shape. `GenSpringServerConfig` defaults to a bounded WebSocket inbound queue, empty allowed origins, replaceable executor, multipart file limit, decompressed binary limit, and an empty binary decoder registry; projects can provide a custom bean/constructor argument to override it. The preserved user file is `routes/<root>/<group...>/<Group>Service.java`; `Gen<Group>Types.java`, `Gen<Group>ServiceStub.java`, `Gen<Group>Service.java`, and `transports/http/<root>/<group...>/Gen<Group>Controller.java` are generator-owned. Connection output provides only protocol bridging; it does not generate a host session engine, auth, retry, cache, or room management.
+The Java server does not generate production Controllers, Services, Stubs, `GenSpringServerConfig`, SSE/WebSocket bridges, or an HTTP server adapter. It emits:
 
-DTOs use Java 17 `record`; fields use Jackson `@JsonProperty`; enums use `@JsonCreator` / `@JsonValue` to preserve wire values. `module` is only a shortcut-table alias normalized to `package`; no JPMS `module-info.java` is generated.
+- `<package>/<root>/annotations/ApiBlueprintOperation.java`
+- `<package>/<root>/annotations/<root>/<group...>/Gen<Route>.java`
+- `<package>/<root>/types/<root>/<group...>/Gen<Group>Types.java`
+- `<package>/<root>/adapters/<root>/<group...>/Gen<Group>Adapters.java`
+- `<package>/<root>/spring/GenSpringMvcContractAssertions.java`
+
+Route annotations compose Spring `@RequestMapping(method = {...})`, `@ApiBlueprintOperation("<operation.id>")`, and project annotations configured through target-local `spring_policies`. Spring/AOP/security policy does not enter the DSL; it is expressed through Java target provider config:
+
+```toml
+[[java.server.spring_policies]]
+id = "signed"
+annotation = "com.example.shop.security.SignatureRequired"
+
+[[java.server.spring_route_bindings]]
+operation_id = "api.orders.post.create"
+annotation = "GenCreateOrder"
+policies = ["signed"]
+request_binding = "generated"
+response_binding = "generated"
+```
+
+The recommended strict path is to keep business Controllers handwritten while using generated route annotations and generated request/response types on handler methods. `HttpServletRequest`, login context objects, AOP-injected values, and other non-wire protocol parameters stay as host method parameters and do not enter the DSL request. Low-risk transition can mark route bindings as `legacy-bindable`, `legacy-raw`, or set `spring_contract_mode = "annotations-only"`; contract assertions keep route/policy checks and report request/response boundaries without pretending legacy POJOs are fully typed contracts.
+
+Runtime contract tests inject Spring `RequestMappingHandlerMapping` in host tests:
+
+```java
+@SpringBootTest
+class PublicApiContractTest {
+    @Autowired RequestMappingHandlerMapping mappings;
+
+    @Test
+    void public_api_matches_blueprint() {
+        GenSpringMvcContractAssertions.assertMatches(mappings);
+    }
+}
+```
+
+Java client DTOs use Java 17 `record`; Java server request/response types are Spring-bindable JavaBeans with no-arg constructors, getters/setters, builders, and Jackson `@JsonProperty`. `module` is only a shortcut-table alias normalized to `package`; no JPMS `module-info.java` is generated.
 
 ## Python Client
 

@@ -192,10 +192,26 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         / "example"
         / "apiblueprint"
         / "api"
-        / "routes"
+        / "types"
         / "api"
         / "demo"
         / "GenDemoTypes.java",
+        "java_server_demo_annotation": workspace.java_server_dir
+        / "com"
+        / "example"
+        / "apiblueprint"
+        / "api"
+        / "annotations"
+        / "api"
+        / "demo"
+        / "GenDemoAbc.java",
+        "java_server_contract_assertions": workspace.java_server_dir
+        / "com"
+        / "example"
+        / "apiblueprint"
+        / "api"
+        / "spring"
+        / "GenSpringMvcContractAssertions.java",
         "flutter_runtime_client": workspace.flutter_dir / "lib" / "src" / "api" / "runtime" / "gen_api_client.dart",
         "flutter_runtime_errors": workspace.flutter_dir
         / "lib"
@@ -462,6 +478,14 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         "java server client dispatcher": (
             files["java_server_demo_types"],
             "public static <R> R dispatchAssistantClientMessage(",
+        ),
+        "java server operation marker": (
+            files["java_server_demo_annotation"],
+            '@ApiBlueprintOperation("api.demo.get.abc")',
+        ),
+        "java server contract assertions": (
+            files["java_server_contract_assertions"],
+            "operation_marker_missing",
         ),
         "flutter runtime client route": (files["flutter_runtime_client"], "final demo = DemoApi(transport);"),
         "flutter error demo constant": (files["flutter_runtime_errors"], "const rateLimited = 42901;"),

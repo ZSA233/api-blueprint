@@ -185,9 +185,9 @@ Go / TypeScript / Flutter / Kotlin / Python / Java clients generate, from the sa
 - streaming/raw binary bodies for large hot paths.
 - writer helpers and block helpers for plugging in cached or pre-encoded field fragments.
 
-For binary schema responses, Go / Python / Kotlin / Java server adapters encode typed packet return values as HTTP bytes, and Go / TypeScript / Flutter / Kotlin / Java / Python clients decode successful HTTP bytes into typed packets. Wails/gRPC do not inherit HTTP raw response semantics; those routes fail `api-gen check` with an explicit unsupported contract error that points to transport-native bytes / chunk modeling.
+For binary schema responses, Go / Python / Kotlin server adapters encode typed packet return values as HTTP bytes, and Go / TypeScript / Flutter / Kotlin / Java / Python clients decode successful HTTP bytes into typed packets. The Java server target only emits Spring contract-boundary types and helpers; it no longer emits an HTTP adapter. Wails/gRPC do not inherit HTTP raw response semantics; those routes fail `api-gen check` with an explicit unsupported contract error that points to transport-native bytes / chunk modeling.
 
-Go / Python / Kotlin / Java server adapters parse `.REQ_BINARY_SCHEMA(...)` request bytes into the generated typed packet before calling the generated service interface.
+Go / Python / Kotlin server adapters parse `.REQ_BINARY_SCHEMA(...)` request bytes into the generated typed packet before calling the generated service interface. Java Spring projects should wire generated packet types/helpers into handwritten Controllers or host adapters.
 
 HTTP adapters use the route binary schema content type, falling back to `application/octet-stream`. For request bodies, `content-encoding` is a route whitelist for `.REQ_BINARY_SCHEMA(...)`: an empty header is `identity`, `gzip` is decoded by built-in server helpers, and extensions such as `br` require an app-registered server decoder. Generated clients still send identity bodies unless caller code explicitly provides compressed bytes and the matching `Content-Encoding` header.
 

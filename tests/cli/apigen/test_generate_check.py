@@ -91,11 +91,6 @@ module = "com.example.generated"
 id = "java.client"
 out_dir = "java/client"
 module = "com.example.generated"
-
-[[transport.http]]
-id = "http.java"
-server = "java.server"
-clients = ["java.client"]
 """.strip()
         + "\n",
         encoding="utf-8",

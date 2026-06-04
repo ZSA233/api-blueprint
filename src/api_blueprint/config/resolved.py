@@ -6,6 +6,7 @@ from pathlib import Path
 from api_blueprint.config.loader import normalize_config_path
 from api_blueprint.config.models import (
     Config,
+    JavaSpringContractMode,
     SwiftRuntimeProfile,
     TargetKind,
     WailsFrontendMode,
@@ -49,6 +50,28 @@ class ResolvedApiTargetConfig:
     include: tuple[str, ...] = ()
     exclude: tuple[str, ...] = ()
     proto_files: tuple["ResolvedGrpcProtoFileConfig", ...] = ()
+    spring_contract_mode: JavaSpringContractMode = "strict-boundary"
+    spring_policies: tuple["ResolvedJavaSpringPolicyConfig", ...] = ()
+    spring_route_bindings: tuple["ResolvedJavaSpringRouteBindingConfig", ...] = ()
+    spring_public_paths: tuple[str, ...] = ()
+    spring_exclude_server_paths: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class ResolvedJavaSpringPolicyConfig:
+    id: str
+    annotation: str
+    args: str | None = None
+    imports: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class ResolvedJavaSpringRouteBindingConfig:
+    operation_id: str
+    annotation: str | None = None
+    policies: tuple[str, ...] = ()
+    request_binding: str = "generated"
+    response_binding: str = "generated"
 
 
 @dataclass(frozen=True)
@@ -147,10 +170,9 @@ def resolve_api_targets(config_path: Path, raw: Config) -> tuple[ResolvedApiTarg
             if target.kind == "http-transport" and server.kind not in {
                 "go-server",
                 "python-server",
-                "java-server",
                 "kotlin-server",
             }:
-                raise ValueError(f"target[{target.id}] http-transport server must reference a server target")
+                raise ValueError(f"target[{target.id}] http-transport server must reference an HTTP server adapter target")
 
             for client_id in target.clients:
                 client = target_map.get(client_id)
@@ -223,6 +245,28 @@ def resolve_api_targets(config_path: Path, raw: Config) -> tuple[ResolvedApiTarg
                     )
                     for proto_file in target.proto_files
                 ),
+                spring_contract_mode=target.spring_contract_mode,
+                spring_policies=tuple(
+                    ResolvedJavaSpringPolicyConfig(
+                        id=policy.id,
+                        annotation=policy.annotation,
+                        args=policy.args,
+                        imports=tuple(policy.imports),
+                    )
+                    for policy in target.spring_policies
+                ),
+                spring_route_bindings=tuple(
+                    ResolvedJavaSpringRouteBindingConfig(
+                        operation_id=binding.operation_id,
+                        annotation=binding.annotation,
+                        policies=tuple(binding.policies),
+                        request_binding=binding.request_binding,
+                        response_binding=binding.response_binding,
+                    )
+                    for binding in target.spring_route_bindings
+                ),
+                spring_public_paths=tuple(target.spring_public_paths),
+                spring_exclude_server_paths=tuple(target.spring_exclude_server_paths),
             )
         )
     return tuple(resolved)

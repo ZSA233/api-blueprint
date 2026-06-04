@@ -33,7 +33,7 @@ def build_parser() -> argparse.ArgumentParser:
             "`compile` skips snapshot diff and only checks regenerated outputs compile, "
             "`refresh` regenerates examples in-place and compiles them, "
             "`golang-suite` runs the manual generated Go client/server round-trip suite, "
-            "and `java-suite` runs the manual generated Java client/server round-trip suite."
+            "and `java-suite` runs the manual generated Java Spring contract-boundary smoke suite."
         ),
     )
     parser.add_argument(

@@ -1,0 +1,27 @@
+{% autoescape false %}package {{ writer.route_annotation_package(bp, group) }};
+
+import {{ bp.root_package }}.annotations.ApiBlueprintOperation;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+{% for import_name in writer.spring_mapping_imports(route) %}
+import {{ import_name }};
+{% endfor %}
+{% for policy in writer.policies_for_route(route) %}
+import {{ policy.annotation }};
+{% for import_name in policy.imports %}
+import {{ import_name }};
+{% endfor %}
+{% endfor %}
+
+@Target(ElementType.METHOD)
+@Retention(RetentionPolicy.RUNTIME)
+{{ writer.spring_mapping_annotation(route) }}
+{% for policy in writer.policies_for_route(route) %}
+{{ writer.policy_annotation_expr(policy) }}
+{% endfor %}
+@ApiBlueprintOperation({{ route.route_id | code_literal }})
+public @interface {{ writer.route_annotation_name(route) }} {
+}
+{% endautoescape %}

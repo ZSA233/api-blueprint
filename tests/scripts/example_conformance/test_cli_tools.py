@@ -15,7 +15,7 @@ def test_cli_list_reports_servers_clients_and_scenarios(capsys: pytest.CaptureFi
     output = capsys.readouterr().out
     assert "servers:" in output
     assert "- go enabled label=Go HTTP rpc=yes" in output
-    assert "- java enabled label=Java Spring rpc=yes" in output
+    assert "- java planned label=Java Spring contract boundary rpc=no" in output
     assert "clients:" in output
     assert "- kotlin rpc=yes sse=yes websocket=yes" in output
     assert "- swift rpc=yes sse=yes websocket=yes binary=yes form=yes connection=native" in output
@@ -45,7 +45,7 @@ def test_cli_run_invokes_runner_with_filters(monkeypatch: pytest.MonkeyPatch, tm
             str(tmp_path),
             "run",
             "--servers",
-            "go,java",
+            "go,kotlin",
             "--clients",
             "go,flutter",
             "--scenario",
@@ -58,7 +58,7 @@ def test_cli_run_invokes_runner_with_filters(monkeypatch: pytest.MonkeyPatch, tm
 
     assert result == 0
     assert calls == [
-        (tmp_path.resolve(), ("go", "java"), ("go", "flutter"), ("rpc", "binary"), True, "ios14-compat")
+        (tmp_path.resolve(), ("go", "kotlin"), ("go", "flutter"), ("rpc", "binary"), True, "ios14-compat")
     ]
 
 def test_cli_generate_invokes_runner(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

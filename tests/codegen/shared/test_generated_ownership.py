@@ -36,7 +36,6 @@ PRESERVED_TEMPLATE_PATHS = {
     "java/client/routes/ApiGroup.java.j2",
     "java/client/runtime/ApiClient.java.j2",
     "java/client/transports/http/HttpApiClient.java.j2",
-    "java/server/routes/ApiService.java.j2",
     "kotlin/routes/ApiGroupFacade.kt.j2",
     "kotlin/runtime/ApiClient.kt.j2",
     "kotlin/server/routes/ApiService.kt.j2",
@@ -101,6 +100,7 @@ def _is_protoc_output(path: Path) -> bool:
 def _is_owned_generated_path(path: Path) -> bool:
     return (
         path.name in {"Package.swift", "Package.swift.j2"}
+        or path.name in {"ApiBlueprintOperation.java", "ApiBlueprintOperation.java.j2"}
         or path.name.startswith("gen_")
         or path.name.startswith("Gen")
         or any(part.startswith("_gen_") for part in path.parts)

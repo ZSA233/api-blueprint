@@ -97,8 +97,10 @@ module = "com.example.generated"
     )
     assert server_files.exit_code == 0, server_files.output
     assert "[java.server]" in server_files.output
-    assert "java/server/com/example/generated/api/routes/api/demo/GenDemoService.java" in server_files.output
-    assert "java/server/com/example/generated/api/transports/http/api/demo/GenDemoController.java" in server_files.output
+    assert "java/server/com/example/generated/api/annotations/api/demo/GenSubmit.java" in server_files.output
+    assert "java/server/com/example/generated/api/types/api/demo/GenDemoTypes.java" in server_files.output
+    assert "java/server/com/example/generated/api/adapters/api/demo/GenDemoAdapters.java" in server_files.output
+    assert "java/server/com/example/generated/api/spring/GenSpringMvcContractAssertions.java" in server_files.output
 
 def test_api_gen_inspect_schema_errors_and_json(tmp_path):
     _write_inspect_blueprint(tmp_path)

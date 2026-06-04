@@ -25,7 +25,6 @@ def test_example_config_loads_vnext_targets() -> None:
         "http",
         "http.kotlin",
         "http.python",
-        "http.java",
         "wails.v3",
         "wails.v2",
         "grpc.proto",
@@ -45,7 +44,6 @@ def test_example_config_loads_vnext_targets() -> None:
         "swift-client",
         "python-server",
         "python-client",
-        "http-transport",
         "http-transport",
         "http-transport",
         "http-transport",
@@ -141,6 +139,56 @@ base_url_expr = "import.meta.env.VITE_API_BASE_URL"
     resolved = resolve_config(config_path)
     assert resolved.targets[0].base_url is None
     assert resolved.targets[0].base_url_expr == "import.meta.env.VITE_API_BASE_URL"
+
+def test_java_server_spring_contract_config_loads_resolves_and_manifests(tmp_path) -> None:
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[targets]]
+id = "java.server"
+kind = "java-server"
+out_dir = "generated/java-server"
+package = "com.example.shop.contract"
+spring_contract_mode = "strict-boundary"
+spring_public_paths = ["/api/**"]
+spring_exclude_server_paths = ["/api/internal/**"]
+include = ["tag:public"]
+
+[[targets.spring_policies]]
+id = "signed"
+annotation = "com.example.shop.security.SignatureRequired"
+
+[[targets.spring_policies]]
+id = "authenticated-user"
+annotation = "com.example.shop.security.AuthenticatedUser"
+
+[[targets.spring_route_bindings]]
+operation_id = "api.account.post.login"
+annotation = "GenAccountLogin"
+policies = ["signed", "authenticated-user"]
+request_binding = "generated"
+response_binding = "generated"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    config = Config.load(config_path)
+    target = config.targets[0]
+    assert target.spring_contract_mode == "strict-boundary"
+    assert [policy.id for policy in target.spring_policies] == ["signed", "authenticated-user"]
+    assert target.spring_route_bindings[0].annotation == "GenAccountLogin"
+
+    resolved = resolve_config(config_path).targets[0]
+    manifest = target_manifest(resolved, tmp_path)
+
+    assert resolved.spring_public_paths == ("/api/**",)
+    assert resolved.spring_exclude_server_paths == ("/api/internal/**",)
+    assert resolved.spring_policies[0].annotation == "com.example.shop.security.SignatureRequired"
+    assert resolved.spring_route_bindings[0].policies == ("signed", "authenticated-user")
+    assert manifest["spring_contract_mode"] == "strict-boundary"
+    assert manifest["spring_policies"][0]["id"] == "signed"
+    assert manifest["spring_route_bindings"][0]["annotation"] == "GenAccountLogin"
 
 def test_target_base_url_and_expr_are_mutually_exclusive(tmp_path) -> None:
     config_path = tmp_path / "api-blueprint.toml"

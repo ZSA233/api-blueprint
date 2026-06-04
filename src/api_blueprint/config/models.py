@@ -12,6 +12,7 @@ from api_blueprint.route_selection import validate_selection_rules
 WailsVersion = Literal["v2", "v3"]
 WailsFrontendMode = Literal["external", "none"]
 SwiftRuntimeProfile = Literal["modern", "ios14-compat"]
+JavaSpringContractMode = Literal["strict-boundary", "annotations-only", "audit", "public", "strict"]
 TargetKind = Literal[
     "contract",
     "go-server",
@@ -66,6 +67,11 @@ class TargetConfig(BaseModel):
     include: list[str] = Field(default_factory=list)
     exclude: list[str] = Field(default_factory=list)
     proto_files: list["GrpcProtoFileConfig"] = Field(default_factory=list)
+    spring_contract_mode: JavaSpringContractMode = "strict-boundary"
+    spring_policies: list["JavaSpringPolicyConfig"] = Field(default_factory=list)
+    spring_route_bindings: list["JavaSpringRouteBindingConfig"] = Field(default_factory=list)
+    spring_public_paths: list[str] = Field(default_factory=list)
+    spring_exclude_server_paths: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_target_fields(self) -> "TargetConfig":
@@ -93,6 +99,17 @@ class TargetConfig(BaseModel):
             raise ValueError(f"target[{self.id}] grpc-proto requires package")
         if self.kind != "grpc-proto" and self.proto_files:
             raise ValueError(f"target[{self.id}] proto_files is only supported by grpc-proto targets")
+        if self.kind != "java-server":
+            if self.spring_contract_mode != "strict-boundary":
+                raise ValueError(f"target[{self.id}] spring_contract_mode is only supported by java-server targets")
+            if self.spring_policies:
+                raise ValueError(f"target[{self.id}] spring_policies is only supported by java-server targets")
+            if self.spring_route_bindings:
+                raise ValueError(f"target[{self.id}] spring_route_bindings is only supported by java-server targets")
+            if self.spring_public_paths:
+                raise ValueError(f"target[{self.id}] spring_public_paths is only supported by java-server targets")
+            if self.spring_exclude_server_paths:
+                raise ValueError(f"target[{self.id}] spring_exclude_server_paths is only supported by java-server targets")
         if self.kind in {"grpc-go", "grpc-python"}:
             if not self.proto and not self.source_root:
                 raise ValueError(f"target[{self.id}] {self.kind} requires proto or source_root")
@@ -103,6 +120,25 @@ class TargetConfig(BaseModel):
         validate_selection_rules(self.include, label=f"target[{self.id}]")
         validate_selection_rules(self.exclude, label=f"target[{self.id}]")
         return self
+
+
+class JavaSpringPolicyConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    annotation: str
+    args: str | None = None
+    imports: list[str] = Field(default_factory=list)
+
+
+class JavaSpringRouteBindingConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    operation_id: str
+    annotation: str | None = None
+    policies: list[str] = Field(default_factory=list)
+    request_binding: Literal["generated", "legacy-bindable", "annotations-only"] = "generated"
+    response_binding: Literal["generated", "legacy-raw", "annotations-only"] = "generated"
 
 
 class GrpcProtoFileConfig(BaseModel):

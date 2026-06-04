@@ -40,7 +40,16 @@ EXPLAIN_TARGET_KIND_FIELDS: dict[str, tuple[str, ...]] = {
     "go-client": ("module", "base_url", "base_url_expr", "include", "exclude"),
     "typescript-client": ("base_url", "base_url_expr", "include", "exclude"),
     "kotlin-client": ("package", "base_url", "base_url_expr", "include", "exclude"),
-    "java-server": ("package", "include", "exclude"),
+    "java-server": (
+        "package",
+        "spring_contract_mode",
+        "spring_policies",
+        "spring_route_bindings",
+        "spring_public_paths",
+        "spring_exclude_server_paths",
+        "include",
+        "exclude",
+    ),
     "java-client": ("package", "base_url", "base_url_expr", "include", "exclude"),
     "flutter-client": ("package", "base_url", "base_url_expr", "include", "exclude"),
     "swift-client": ("package", "module", "base_url", "base_url_expr", "runtime_profile", "include", "exclude"),
@@ -53,7 +62,19 @@ EXPLAIN_TARGET_KIND_FIELDS: dict[str, tuple[str, ...]] = {
     "grpc-python": ("proto", "source_root", "files", "import_roots", "python_package_root"),
 }
 
-EXPLAIN_TARGET_LIST_FIELDS = {"formats", "clients", "files", "import_roots", "include", "exclude", "proto_files"}
+EXPLAIN_TARGET_LIST_FIELDS = {
+    "formats",
+    "clients",
+    "files",
+    "import_roots",
+    "include",
+    "exclude",
+    "proto_files",
+    "spring_policies",
+    "spring_route_bindings",
+    "spring_public_paths",
+    "spring_exclude_server_paths",
+}
 
 
 def list_targets(config_path: str | Path | None) -> tuple[ResolvedApiTargetConfig, ...]:
@@ -242,6 +263,11 @@ def generate(config_path: str | Path | None, target_ids: Sequence[str] = ()) -> 
                 include=target.include,
                 exclude=target.exclude,
                 contract_graph=graph,
+                spring_contract_mode=target.spring_contract_mode,
+                spring_policies=target.spring_policies,
+                spring_route_bindings=target.spring_route_bindings,
+                spring_public_paths=target.spring_public_paths,
+                spring_exclude_server_paths=target.spring_exclude_server_paths,
             )
             writer.register(*project.entrypoints)
             writer.gen()
@@ -511,6 +537,41 @@ def target_manifest(target: ResolvedApiTargetConfig, project_root: Path) -> dict
         manifest["package"] = target.package
     if target.kind == "swift-client":
         manifest["runtime_profile"] = target.runtime_profile
+    if target.kind == "java-server":
+        manifest["spring_contract_mode"] = target.spring_contract_mode
+        if target.spring_policies:
+            manifest["spring_policies"] = [
+                {
+                    key: value
+                    for key, value in {
+                        "id": policy.id,
+                        "annotation": policy.annotation,
+                        "args": policy.args,
+                        "imports": list(policy.imports),
+                    }.items()
+                    if value is not None and value != []
+                }
+                for policy in target.spring_policies
+            ]
+        if target.spring_route_bindings:
+            manifest["spring_route_bindings"] = [
+                {
+                    key: value
+                    for key, value in {
+                        "operation_id": binding.operation_id,
+                        "annotation": binding.annotation,
+                        "policies": list(binding.policies),
+                        "request_binding": binding.request_binding,
+                        "response_binding": binding.response_binding,
+                    }.items()
+                    if value is not None and value != []
+                }
+                for binding in target.spring_route_bindings
+            ]
+        if target.spring_public_paths:
+            manifest["spring_public_paths"] = list(target.spring_public_paths)
+        if target.spring_exclude_server_paths:
+            manifest["spring_exclude_server_paths"] = list(target.spring_exclude_server_paths)
     if target.formats:
         manifest["formats"] = list(target.formats)
     if target.version is not None:

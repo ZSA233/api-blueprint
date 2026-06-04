@@ -136,11 +136,12 @@ def _validate_java_sources(java_dir: Path) -> None:
         "client/com/example/apiblueprint/api/routes/api/demo/GenDemoTypes.java",
         "client/com/example/apiblueprint/api/transports/http/GenJdkHttpApiTransport.java",
         "client/com/example/apiblueprint/api/transports/http/HttpApiClient.java",
-        "server/com/example/apiblueprint/api/routes/api/demo/DemoService.java",
-        "server/com/example/apiblueprint/api/routes/api/demo/GenDemoService.java",
-        "server/com/example/apiblueprint/api/routes/api/demo/GenDemoTypes.java",
-        "server/com/example/apiblueprint/api/routes/api/demo/GenDemoServiceStub.java",
-        "server/com/example/apiblueprint/api/transports/http/api/demo/GenDemoController.java",
+        "server/com/example/apiblueprint/api/annotations/ApiBlueprintOperation.java",
+        "server/com/example/apiblueprint/api/annotations/api/demo/GenDemoAbc.java",
+        "server/com/example/apiblueprint/api/types/api/demo/GenDemoTypes.java",
+        "server/com/example/apiblueprint/api/adapters/api/demo/GenDemoAdapters.java",
+        "server/com/example/apiblueprint/api/spring/GenSpringMvcContractAssertions.java",
+        "server/com/example/apiblueprint/security/SignatureRequired.java",
     )
     missing = [path for path in expected if not (java_dir / path).is_file()]
     if missing:
@@ -155,13 +156,25 @@ def _validate_java_sources(java_dir: Path) -> None:
             java_dir / "client/com/example/apiblueprint/api/transports/http/GenJdkHttpApiTransport.java",
             "public class GenJdkHttpApiTransport implements GenApiTransport",
         ),
-        "server service": (
-            java_dir / "server/com/example/apiblueprint/api/routes/api/demo/GenDemoService.java",
-            "public interface GenDemoService",
+        "server route annotation": (
+            java_dir / "server/com/example/apiblueprint/api/annotations/api/demo/GenDemoAbc.java",
+            '@ApiBlueprintOperation("api.demo.get.abc")',
         ),
-        "server controller": (
-            java_dir / "server/com/example/apiblueprint/api/transports/http/api/demo/GenDemoController.java",
-            "@RestController",
+        "server policy annotation": (
+            java_dir / "server/com/example/apiblueprint/api/annotations/api/demo/GenDemoAbc.java",
+            "@SignatureRequired",
+        ),
+        "server request type": (
+            java_dir / "server/com/example/apiblueprint/api/types/api/demo/GenDemoTypes.java",
+            "public static final class AbcQuery",
+        ),
+        "server adapter": (
+            java_dir / "server/com/example/apiblueprint/api/adapters/api/demo/GenDemoAdapters.java",
+            "public static GenDemoTypes.AbcQuery abcRequest(",
+        ),
+        "spring contract assertions": (
+            java_dir / "server/com/example/apiblueprint/api/spring/GenSpringMvcContractAssertions.java",
+            "public static ContractReport assertMatches(",
         ),
         "api error lookup": (
             java_dir / "client/com/example/apiblueprint/api/runtime/GenApiErrors.java",

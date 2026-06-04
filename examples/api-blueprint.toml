@@ -53,6 +53,18 @@ exclude = [
 id = 'java.server'
 out_dir = 'java/server'
 module = 'com.example.apiblueprint'
+spring_contract_mode = 'strict-boundary'
+spring_public_paths = ['/api/**', '/legacy/**', '/runtime/**', '/static/**']
+spring_exclude_server_paths = ['/internal/**']
+
+[[java.server.spring_policies]]
+id = 'signed'
+annotation = 'com.example.apiblueprint.security.SignatureRequired'
+
+[[java.server.spring_route_bindings]]
+operation_id = 'api.demo.get.abc'
+annotation = 'GenDemoAbc'
+policies = ['signed']
 
 [[java.client]]
 id = 'java.client'
@@ -101,11 +113,6 @@ clients = ['kotlin.client']
 id = 'http.python'
 server = 'python.server'
 clients = ['python.client']
-
-[[transport.http]]
-id = 'http.java'
-server = 'java.server'
-clients = ['java.client']
 
 [[transport.wails]]
 id = 'wails.v3'

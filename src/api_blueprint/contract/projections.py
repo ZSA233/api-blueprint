@@ -662,19 +662,21 @@ def _artifact_for_route(
     elif kind == "java-server":
         package = _string(target.get("package"))
         package_path = package.replace(".", "/")
-        route_base = _join(out_dir, package_path, root, "routes", route_path)
-        transport_base = _join(out_dir, package_path, root, "transports", "http")
+        root_base = _join(out_dir, package_path, root)
+        annotation = _java_server_route_annotation(target, route)
         files = [
-            _join(route_base, f"Gen{pascal_group}Service.java"),
-            _join(route_base, f"Gen{pascal_group}Types.java"),
-            _join(route_base, f"Gen{pascal_group}ServiceStub.java"),
-            _join(route_base, f"{pascal_group}Service.java"),
-            _join(transport_base, route_path, f"Gen{pascal_group}Controller.java"),
+            _join(root_base, "annotations", "ApiBlueprintOperation.java"),
+            _join(root_base, "annotations", route_path, f"{annotation}.java"),
+            _join(root_base, "types", route_path, f"Gen{pascal_group}Types.java"),
+            _join(root_base, "adapters", route_path, f"Gen{pascal_group}Adapters.java"),
+            _join(root_base, "spring", "GenSpringMvcContractAssertions.java"),
         ]
         if package:
             imports = [
-                f"{package}.{root}.routes.{kotlin_route_package}.{pascal_group}Service",
-                f"{package}.{root}.transports.http.{kotlin_route_package}.Gen{pascal_group}Controller",
+                f"{package}.{root}.annotations.{kotlin_route_package}.{annotation}",
+                f"{package}.{root}.types.{kotlin_route_package}.Gen{pascal_group}Types",
+                f"{package}.{root}.adapters.{kotlin_route_package}.Gen{pascal_group}Adapters",
+                f"{package}.{root}.spring.GenSpringMvcContractAssertions",
             ]
     elif kind == "wails-transport":
         overlay = _string(target.get("overlay_name")) or "wails"
@@ -724,6 +726,23 @@ def _target_selects_route(target: Mapping[str, Any], route: Mapping[str, Any]) -
     if include and not any(route_matches_rule(route, rule) for rule in include):
         return False
     return not any(route_matches_rule(route, rule) for rule in exclude)
+
+
+def _java_server_route_annotation(target: Mapping[str, Any], route: Mapping[str, Any]) -> str:
+    route_id = _route_id(route)
+    operation = _string(route.get("operation"))
+    method_name = _string(route.get("method_name"))
+    bindings = target.get("spring_route_bindings")
+    if isinstance(bindings, list):
+        for binding in bindings:
+            if not isinstance(binding, Mapping):
+                continue
+            if str(binding.get("operation_id") or "") not in {route_id, operation, method_name}:
+                continue
+            annotation = binding.get("annotation")
+            if isinstance(annotation, str) and annotation:
+                return annotation
+    return f"Gen{_pascal(operation or method_name or route_id)}"
 
 
 def _route_schema_names(route: Mapping[str, Any], schemas: Mapping[str, JsonObject]) -> list[str]:

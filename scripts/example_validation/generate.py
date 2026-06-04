@@ -18,7 +18,16 @@ from api_blueprint.application import generator
 def regenerate_blueprint_examples(workspace: BlueprintExampleWorkspace) -> None:
     generator.generate(
         workspace.config_path,
-        target_ids=("contract", "http", "http.kotlin", "http.python", "http.java", "wails.v2", "wails.v3"),
+        target_ids=(
+            "contract",
+            "http",
+            "http.kotlin",
+            "http.python",
+            "java.server",
+            "java.client",
+            "wails.v2",
+            "wails.v3",
+        ),
     )
     _tidy_go_module(workspace.golang_server_dir)
     _tidy_go_module(workspace.golang_client_dir)
@@ -31,7 +40,7 @@ def regenerate_blueprint_golang_suite_examples(workspace: BlueprintExampleWorksp
 
 
 def regenerate_blueprint_java_suite_examples(workspace: BlueprintExampleWorkspace) -> None:
-    generator.generate(workspace.config_path, target_ids=("http.java",))
+    generator.generate(workspace.config_path, target_ids=("java.server", "java.client"))
 
 
 def regenerate_grpc_examples(workspace: GrpcExampleWorkspace) -> None:

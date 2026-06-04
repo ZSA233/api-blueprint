@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from click.testing import CliRunner
 
 from api_blueprint.cli.apigen import api_gen
@@ -189,7 +190,7 @@ clients = ["python.client"]
     assert [target.id for target in planned] == ["python.server", "python.client", "http"]
 
 
-def test_generation_plan_includes_java_http_transport_dependencies(tmp_path):
+def test_http_transport_rejects_java_contract_boundary_server(tmp_path):
     config_path = tmp_path / "api-blueprint.toml"
     config_path.write_text(
         """
@@ -211,11 +212,9 @@ clients = ["java.client"]
         + "\n",
         encoding="utf-8",
     )
-    resolved = resolve_config(config_path)
 
-    planned = generator.generation_plan(resolved.targets, ("http.java",))
-
-    assert [target.id for target in planned] == ["java.server", "java.client", "http.java"]
+    with pytest.raises(ValueError, match="HTTP server adapter target"):
+        resolve_config(config_path)
 
 
 def test_generation_plan_includes_flutter_http_transport_dependencies(tmp_path):
