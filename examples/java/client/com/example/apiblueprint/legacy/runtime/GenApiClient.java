@@ -3,6 +3,7 @@ package com.example.apiblueprint.legacy.runtime;
 
 import com.example.apiblueprint.legacy.routes.legacy.account.AccountApi;
 import com.example.apiblueprint.legacy.routes.legacy.room.RoomApi;
+import com.example.apiblueprint.legacy.routes.legacy.legacyjson.LegacyJsonApi;
 
 public class GenApiClient {
     protected final GenApiTransport transport;
@@ -11,12 +12,16 @@ public class GenApiClient {
 
     public final RoomApi room;
 
+    public final LegacyJsonApi legacyJson;
+
     public GenApiClient(GenApiTransport transport) {
         this.transport = transport;
 
         this.account = new AccountApi(transport);
 
         this.room = new RoomApi(transport);
+
+        this.legacyJson = new LegacyJsonApi(transport);
 
     }
 }

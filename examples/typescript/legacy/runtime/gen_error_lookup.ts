@@ -14,6 +14,8 @@ const RouteApiErrorsByCode = {
   },
   "legacy.room.get.list": {
   },
+  "legacy.legacy_json.get.compat": {
+  },
 } as const;
 
 export function lookupApiErrorByID(id: string): ApiErrorEntry | undefined {

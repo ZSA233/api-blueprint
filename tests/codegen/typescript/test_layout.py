@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .helpers import *
+from api_blueprint.engine.model import Array, Int, OneOf, LegacyStringID
 
 
 def _typescript_format_violations(output_dir: Path) -> list[str]:
@@ -124,6 +125,30 @@ def test_typescript_generated_output_format_invariants(tmp_path: Path) -> None:
     assert "request: {\n      query?: Types.SearchQuery;\n    } = {}" in client_text
     assert _typescript_format_violations(output_dir) == []
     assert _typescript_request_block_holes(client_text) == []
+
+
+def test_typescript_generates_legacy_json_compat_union_types(tmp_path: Path) -> None:
+    class LegacyPayload(Model):
+        target = OneOf(String(), Array[String](), description="target")
+        ids = Array[OneOf(String(), Int())](description="ids")
+        normalized = Array[LegacyStringID](description="normalized")
+        room_id = LegacyStringID(alias="roomId", description="room id")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/legacy") as views:
+        views.GET("/payload").RSP(LegacyPayload)
+
+    output_dir = tmp_path / "typescript"
+    output_dir.mkdir()
+    writer = TypeScriptWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    runtime_types = (output_dir / "api" / "runtime" / "gen_types.ts").read_text(encoding="utf-8")
+    assert "target: string | Array<string>;" in runtime_types
+    assert "ids: Array<string | number>;" in runtime_types
+    assert "normalized: Array<string>;" in runtime_types
+    assert "roomId: string;" in runtime_types
 
 
 def test_typescript_http_narrow_transport_entrypoint_does_not_import_wails_factories(tmp_path: Path) -> None:

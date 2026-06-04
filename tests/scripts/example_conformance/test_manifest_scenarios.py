@@ -53,6 +53,7 @@ def test_scenario_registry_covers_required_dsl_categories() -> None:
         "sse",
         "websocket",
         "single-channel",
+        "legacy-json",
         "naming-conflict",
         "multi-blueprint",
         "envelope",
@@ -76,6 +77,7 @@ def test_scenario_registry_covers_required_dsl_categories() -> None:
     assert "kotlin" in coverage["sse"]
     assert "kotlin" in coverage["websocket"]
     assert "kotlin" in coverage["form"]
+    assert coverage["legacy-json"] == {"typescript", "kotlin", "flutter", "swift", "python"}
     assert coverage["server-safety"] == {"server"}
     assert coverage["malformed-input"] == {"server"}
 
@@ -95,6 +97,7 @@ def test_scenario_registry_exposes_expanded_examples() -> None:
         "audit-binary",
         "wide-binary",
         "single-channel",
+        "legacy-json",
     }
     assert expected <= set(registry)
     assert registry["raw"].route_ids == ("api.demo.post.raw",)
@@ -114,6 +117,12 @@ def test_scenario_registry_exposes_expanded_examples() -> None:
     assert registry["wide-binary"].route_ids == ("api.binary.post.widepacket",)
     assert registry["wide-binary"].clients == ("swift",)
     assert registry["single-channel"].route_ids == ("api.api.channel.ws",)
+    assert registry["legacy-json"].route_ids == (
+        "legacy.account.get.profile",
+        "legacy.room.get.list",
+        "legacy.legacy_json.get.compat",
+    )
+    assert registry["legacy-json"].clients == ("typescript", "kotlin", "flutter", "swift", "python")
 
 def test_user_visible_example_routes_have_conformance_status() -> None:
     contract = json.loads((REPO_ROOT / "examples/api-blueprint.index.json").read_text(encoding="utf-8"))
@@ -135,6 +144,7 @@ def test_expanded_scenarios_are_gated_by_server_capabilities() -> None:
         "map",
         "deprecated",
         "single-channel",
+        "legacy-json",
     }
     binary_names = {"binary-br", "audit-binary", "wide-binary"}
 

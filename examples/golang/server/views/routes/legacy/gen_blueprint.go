@@ -4,17 +4,20 @@ package legacy
 
 import (
 	"example.com/project/golang/server/views/routes/legacy/account"
+	"example.com/project/golang/server/views/routes/legacy/legacy_json"
 	"example.com/project/golang/server/views/routes/legacy/room"
 )
 
 type Blueprint struct {
-	AccountRouter *account.Router
-	RoomRouter    *room.Router
+	AccountRouter    *account.Router
+	RoomRouter       *room.Router
+	LegacyJsonRouter *legacy_json.Router
 }
 
 func NewBlueprint() *Blueprint {
 	return &Blueprint{
-		AccountRouter: account.NewRouter(),
-		RoomRouter:    room.NewRouter(),
+		AccountRouter:    account.NewRouter(),
+		RoomRouter:       room.NewRouter(),
+		LegacyJsonRouter: legacy_json.NewRouter(),
 	}
 }

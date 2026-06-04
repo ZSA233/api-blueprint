@@ -12,6 +12,8 @@ ROUTE_API_ERRORS_BY_CODE: dict[str, dict[int, ApiErrorEntry]] = {
     },
     "legacy.room.get.list": {
     },
+    "legacy.legacy_json.get.compat": {
+    },
 }
 
 

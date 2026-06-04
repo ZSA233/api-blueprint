@@ -366,6 +366,13 @@ class ProtoPlanner:
             return proto_type
 
         field_type = field.get("type")
+        if field_type == "one_of":
+            raise ValueError(
+                f"gRPC target does not support legacy JSON OneOf at {context}; "
+                "model it with protobuf oneof explicitly or use JSONValue"
+            )
+        if field_type == "coerce_string":
+            return "string"
         if field_type == "array":
             items = field.get("items", {})
             if isinstance(items, Mapping):
@@ -700,6 +707,7 @@ def _field_allows_proto_optional(field: JsonObject) -> bool:
         "array",
         "map",
         "object",
+        "one_of",
         "timestamp",
         "date_time",
         "struct",

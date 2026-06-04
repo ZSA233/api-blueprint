@@ -5,6 +5,8 @@
 import type { ApiClientConfig, ApiTransport } from "../runtime/client";
 import type { AccountClient } from "../routes/legacy/account/client";
 import { AccountClient as AccountClientImpl } from "../routes/legacy/account/client";
+import type { LegacyJsonClient } from "../routes/legacy/legacy_json/client";
+import { LegacyJsonClient as LegacyJsonClientImpl } from "../routes/legacy/legacy_json/client";
 import type { RoomClient } from "../routes/legacy/room/client";
 import { RoomClient as RoomClientImpl } from "../routes/legacy/room/client";
 import type { GeneratedClients as HttpGeneratedClients } from "./http/legacy/factory";
@@ -27,6 +29,7 @@ export interface GeneratedClientsByTransport {
 
 export interface CommonGeneratedClients {
   accountClient: AccountClient;
+  legacyJsonClient: LegacyJsonClient;
   roomClient: RoomClient;
 }
 
@@ -37,6 +40,7 @@ export interface ApiTransportClientConfig extends ApiClientConfig {
 export function createClientsForTransport(config: ApiTransportClientConfig): CommonGeneratedClients {
   return {
     accountClient: new AccountClientImpl(config),
+    legacyJsonClient: new LegacyJsonClientImpl(config),
     roomClient: new RoomClientImpl(config),
   };
 }

@@ -760,6 +760,62 @@ public struct RuntimeStatus: Codable, Sendable {
     }
 }
 
+public enum APIStringOrArrayOfStringOneOf: Codable, Sendable {
+    case string(String)
+    case arrayOfString([String])
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let value = try? container.decode(String.self) {
+            self = .string(value)
+            return
+        }
+        if let value = try? container.decode([String].self) {
+            self = .arrayOfString(value)
+            return
+        }
+        throw DecodingError.typeMismatch(APIStringOrArrayOfStringOneOf.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "expected one of declared JSON shapes"))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .string(let value):
+            try container.encode(value)
+        case .arrayOfString(let value):
+            try container.encode(value)
+        }
+    }
+}
+
+public enum APIStringOrIntOneOf: Codable, Sendable {
+    case string(String)
+    case int(Int)
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let value = try? container.decode(String.self) {
+            self = .string(value)
+            return
+        }
+        if let value = try? container.decode(Int.self) {
+            self = .int(value)
+            return
+        }
+        throw DecodingError.typeMismatch(APIStringOrIntOneOf.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "expected one of declared JSON shapes"))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .string(let value):
+            try container.encode(value)
+        case .int(let value):
+            try container.encode(value)
+        }
+    }
+}
+
 public struct AccountProfile: Codable, Sendable {
     /// user id
     public var userId: String
@@ -779,10 +835,64 @@ public struct AccountProfile: Codable, Sendable {
         case nickname = "nickname"
     }
 
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.userId = try apiDecodeCoerceString(from: container, forKey: .userId)
+        self.nickname = try container.decode(String.self, forKey: .nickname)
+    }
+
     public func toQueryItems() -> [URLQueryItem] {
         [
             URLQueryItem(name: "user_id", value: apiBlueprintQueryValue(userId)),
             URLQueryItem(name: "nickname", value: apiBlueprintQueryValue(nickname)),
+        ].filter { $0.value != nil }
+    }
+
+    public func toFormFields() throws -> [String: String?] {
+        try apiBlueprintFormFields(self)
+    }
+
+    public func toMultipartFields() throws -> [String: Any?] {
+        try apiBlueprintMultipartFields(self)
+    }
+}
+
+public struct LegacyJsonCompatPayload: Codable, Sendable {
+    /// legacy target
+    public var target: APIStringOrArrayOfStringOneOf
+    /// legacy ids
+    public var ids: [APIStringOrIntOneOf]
+    /// legacy ids normalized to string
+    public var normalizedIds: [String]
+
+    public init(
+        target: APIStringOrArrayOfStringOneOf,
+        ids: [APIStringOrIntOneOf],
+        normalizedIds: [String]
+    ) {
+        self.target = target
+        self.ids = ids
+        self.normalizedIds = normalizedIds
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case target = "target"
+        case ids = "ids"
+        case normalizedIds = "normalized_ids"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.target = try container.decode(APIStringOrArrayOfStringOneOf.self, forKey: .target)
+        self.ids = try container.decode([APIStringOrIntOneOf].self, forKey: .ids)
+        self.normalizedIds = try apiDecodeCoerceStringArray(from: container, forKey: .normalizedIds)
+    }
+
+    public func toQueryItems() -> [URLQueryItem] {
+        [
+            URLQueryItem(name: "target", value: apiBlueprintQueryValue(target)),
+            URLQueryItem(name: "ids", value: apiBlueprintQueryValue(ids)),
+            URLQueryItem(name: "normalized_ids", value: apiBlueprintQueryValue(normalizedIds)),
         ].filter { $0.value != nil }
     }
 
@@ -812,6 +922,12 @@ public struct RoomSummary: Codable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case roomId = "room_id"
         case title = "title"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.roomId = try apiDecodeCoerceString(from: container, forKey: .roomId)
+        self.title = try container.decode(String.self, forKey: .title)
     }
 
     public func toQueryItems() -> [URLQueryItem] {

@@ -12,6 +12,7 @@ from api_blueprint.engine.model import (
     Array,
     Bool,
     Byte,
+    CoerceString,
     Enum as ModelEnum,
     Field,
     FieldWrappedModel,
@@ -27,6 +28,7 @@ from api_blueprint.engine.model import (
     Map,
     Model,
     Null,
+    OneOf,
     String,
     Uint,
     Uint8,
@@ -48,11 +50,17 @@ class KotlinResolvedType:
     deps: set["KotlinProto"] = field(default_factory=set)
     serializer: str | None = None
     query_value: str = "to_string"
+    type_use_annotation: str | None = None
 
     def serializer_expr(self) -> str:
         if self.serializer is not None:
             return self.serializer
         return f"{self.text}.serializer()"
+
+    def type_argument_text(self) -> str:
+        if self.type_use_annotation:
+            return f"{self.type_use_annotation} {self.text}"
+        return self.text
 
     def query_expr(self, receiver: str, *, optional: bool) -> str:
         accessor = "?." if optional else "."
@@ -68,6 +76,7 @@ class KotlinResolvedType:
             set(self.deps),
             serializer=f"{self.serializer_expr()}.nullable",
             query_value=self.query_value,
+            type_use_annotation=self.type_use_annotation,
         )
 
 
@@ -78,6 +87,7 @@ class KotlinProtoField:
     type: KotlinResolvedType
     optional: bool
     description: str | None = None
+    coerce_string: bool = False
 
 
 @dataclass(eq=False)
@@ -129,6 +139,12 @@ class KotlinTypeResolver:
         if isinstance(field, type) and issubclass(field, Field):
             field = field()
 
+        if isinstance(field, CoerceString):
+            return KotlinResolvedType(
+                "String",
+                serializer="ApiCoerceStringSerializer",
+                type_use_annotation="@Serializable(with = ApiCoerceStringSerializer::class)",
+            )
         if isinstance(field, String):
             return KotlinResolvedType("String", serializer="String.serializer()")
         if isinstance(field, FileField):
@@ -176,7 +192,7 @@ class KotlinTypeResolver:
             elem = field.elem_type()
             elem_type = self.resolve(elem, module=module)
             return KotlinResolvedType(
-                f"List<{elem_type.text}>",
+                f"List<{elem_type.type_argument_text()}>",
                 set(elem_type.deps),
                 serializer=f"ListSerializer({elem_type.serializer_expr()})",
             )
@@ -191,7 +207,7 @@ class KotlinTypeResolver:
                 key_serializer = "String.serializer()"
             deps = set(key_type.deps) | set(value_type.deps)
             return KotlinResolvedType(
-                f"Map<{key_text}, {value_type.text}>",
+                f"Map<{key_text}, {value_type.type_argument_text()}>",
                 deps,
                 serializer=f"MapSerializer({key_serializer}, {value_type.serializer_expr()})",
             )
@@ -202,6 +218,11 @@ class KotlinTypeResolver:
             return self.resolve(obj, module=module)
         if isinstance(field, FieldWrappedModel):
             return self.resolve(field.__field_type__, module=module)
+        if isinstance(field, OneOf):
+            return KotlinResolvedType(
+                "kotlinx.serialization.json.JsonElement",
+                serializer="kotlinx.serialization.json.JsonElement.serializer()",
+            )
         if isinstance(field, Model) or (isinstance(field, type) and issubclass(field, Model)):
             cls = unwrap_model_type(field)
             is_auto = bool(getattr(cls, "__auto__", False))
@@ -360,6 +381,7 @@ class KotlinProtoRegistry:
                     type=field_type,
                     optional=optional,
                     description=field_info.description or "",
+                    coerce_string=isinstance(model_field, CoerceString),
                 )
             )
 

@@ -14,6 +14,21 @@ Markdown Binary Schema generated names use the same collision policy across targ
 
 HTTP body / response kind is also part of shared planning. Request bodies are recorded as `none`, `json`, `urlencoded`, `multipart`, `binary_schema`, or `raw_bytes`, and responses are recorded as `json`, `xml`, `text`, `binary_schema`, `bytes`, `file`, or `byte_stream`. HTTP generators support multipart, raw media responses, and binary schema request/response handling for Go server/client, TypeScript client, Flutter client, Swift client, Kotlin client/server, Java client/server, and Python server/client.
 
+### Legacy JSON Compatibility
+
+`OneOf(...)` and `CoerceString(...)` are legacy compatibility features. They do not change the existing behavior of ordinary `String`, `Int`, `Array`, or `Map` fields. In ContractGraph, `OneOf` emits `{"type": "one_of", "variants": [...]}` with recursive field manifests for variants; `CoerceString` emits `{"type": "coerce_string", "canonical": {"type": "string"}, "accepts": [...]}`.
+
+Targets project them as follows:
+
+- TypeScript emits native unions such as `string | Array<string>`; nested arrays become shapes such as `Array<string | number>`.
+- Python emits annotations such as `str | list[str]`; the generated codec decodes `OneOf` in declaration order and normalizes integer wire values from `LegacyStringID` to `str`.
+- Swift emits named enum wrappers for `OneOf` and custom `Codable` where needed; `CoerceString` fields remain public `String` values, decode string or integer JSON numbers, and encode as string.
+- Go / Flutter / Kotlin / Java preview targets initially place `OneOf` in the language's JSON/any/JsonNode carrier type; `CoerceString` remains ordinary string and uses a restricted decode helper.
+- gRPC proto maps `CoerceString` to protobuf `string`; `OneOf` is not automatically projected as a proto union, so `api-gen check` reports unsupported and points to protobuf-native `oneof` or `JSONValue`.
+
+`CoerceString` accepts only string and integer wire types. Bool, object, array, fractional numbers, and values beyond a target language's integer capability should not be treated as a long-term protocol shape. In particular, TypeScript cannot losslessly recover JSON numbers beyond JavaScript's safe integer range, so legacy ID fields should converge to string over time.
+`LegacyStringID` is the recommended shortcut for `CoerceString(accepts=(String, Int))`; `StringOrIntAsString` remains only as a deprecated compatibility alias.
+
 ### HTTP Raw Media And Non-HTTP Transports
 
 `multipart`, `Content-Disposition`, HTTP status/header, MIME download, and HTTP byte stream semantics belong to HTTP transports. Wails and gRPC do not project these routes into pseudo HTTP responses; `api-gen check` reports an explicit unsupported contract error for HTTP raw media / binary schema body/response and points to the transport-native modeling path.

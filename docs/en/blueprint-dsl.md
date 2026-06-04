@@ -74,6 +74,24 @@ Semantic value types include `DateTime`, `JSONValue`, and `AnyValue`; individual
 
 `FileField(content_types=..., max_size=..., description=..., omitempty=False)` describes a multipart upload field. It is not a normal JSON field and is valid only inside a model bound with `REQ_MULTIPART(Model)`; using it in JSON, urlencoded, response, or long-connection message models fails contract construction.
 
+### Legacy JSON Compatibility Types
+
+Older services may already return multiple JSON shapes for the same field, such as string sometimes and array other times, or ID fields that drift between string and integer JSON numbers across Java / legacy implementations. Use the restricted compatibility types when those fields need to enter the contract:
+
+```python
+class LegacyRoom(Model):
+    target = OneOf(String(), Array[String](), description="legacy target")
+    ids = Array[OneOf(String(), Int())](description="legacy ids")
+    normalized_ids = Array[LegacyStringID](description="ids normalized to string")
+    room_id = LegacyStringID(alias="roomId", description="room id")
+```
+
+- `OneOf(...)` describes a non-discriminated JSON union. Variants are tried in declaration order with strict JSON-shape matching. It is for legacy compatibility, not a recommended shape for new APIs.
+- `CoerceString(accepts=(String, Int))` and the shortcut `LegacyStringID` accept string or integer JSON numbers, but the business type remains string and encoding always writes string. Bool, object, array, and fractional numbers are rejected.
+- `StringOrIntAsString` is a deprecated compatibility alias for `LegacyStringID`; new blueprints should use `LegacyStringID`.
+- `OneOf` can be nested inside `Array[...]` / `Map[...]`, and `Array[...]` can also be a variant. Empty `OneOf()` declarations fail.
+- `FileField` is not a JSON field and cannot be placed inside `OneOf`. If a legacy field cannot be narrowed to finite shapes, use `JSONValue` as the final fallback.
+
 ## Requests And Responses
 
 ```python

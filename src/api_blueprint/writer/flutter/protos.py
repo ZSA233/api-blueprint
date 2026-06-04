@@ -11,6 +11,7 @@ from api_blueprint.engine.model import (
     Array,
     Bool,
     Byte,
+    CoerceString,
     Enum as ModelEnum,
     Field,
     FieldWrappedModel,
@@ -26,6 +27,7 @@ from api_blueprint.engine.model import (
     Map,
     Model,
     Null,
+    OneOf,
     String,
     Uint,
     Uint8,
@@ -109,6 +111,8 @@ class DartTypeResolver:
         if isinstance(field, type) and issubclass(field, Field):
             field = field()
 
+        if isinstance(field, CoerceString):
+            return DartResolvedType("String", decoder="apiBlueprintReadCoerceString")
         if isinstance(field, String):
             return DartResolvedType("String", decoder="apiBlueprintReadString")
         if isinstance(field, FileField):
@@ -151,6 +155,8 @@ class DartTypeResolver:
             return self.resolve(obj, module=module)
         if isinstance(field, FieldWrappedModel):
             return self.resolve(field.__field_type__, module=module)
+        if isinstance(field, OneOf):
+            return DartResolvedType("Object?", decoder="apiBlueprintReadAny")
         if isinstance(field, Model) or (isinstance(field, type) and issubclass(field, Model)):
             cls = unwrap_model_type(field)
             is_auto = bool(getattr(cls, "__auto__", False))

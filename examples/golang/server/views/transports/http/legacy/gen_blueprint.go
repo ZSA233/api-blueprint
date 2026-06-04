@@ -4,21 +4,25 @@ package legacy
 
 import (
 	sharedAccount "example.com/project/golang/server/views/routes/legacy/account"
+	sharedLegacyJson "example.com/project/golang/server/views/routes/legacy/legacy_json"
 	sharedRoom "example.com/project/golang/server/views/routes/legacy/room"
 	account "example.com/project/golang/server/views/transports/http/legacy/account"
+	legacy_json "example.com/project/golang/server/views/transports/http/legacy/legacy_json"
 	room "example.com/project/golang/server/views/transports/http/legacy/room"
 
 	"github.com/gin-gonic/gin"
 )
 
 type Blueprint struct {
-	AccountRouter *sharedAccount.Router
-	RoomRouter    *sharedRoom.Router
+	AccountRouter    *sharedAccount.Router
+	RoomRouter       *sharedRoom.Router
+	LegacyJsonRouter *sharedLegacyJson.Router
 }
 
 func NewBlueprint(eng *gin.Engine) *Blueprint {
 	return &Blueprint{
-		AccountRouter: account.NewRouter(eng),
-		RoomRouter:    room.NewRouter(eng),
+		AccountRouter:    account.NewRouter(eng),
+		RoomRouter:       room.NewRouter(eng),
+		LegacyJsonRouter: legacy_json.NewRouter(eng),
 	}
 }

@@ -16,3 +16,6 @@ export 'routes/legacy/account/account_types.dart';
 
 export 'routes/legacy/room/room_api.dart';
 export 'routes/legacy/room/room_types.dart';
+
+export 'routes/legacy/legacy_json/legacy_json_api.dart';
+export 'routes/legacy/legacy_json/legacy_json_types.dart';

@@ -14,6 +14,21 @@ Markdown Binary Schema 的生成名在各 target 使用同一套碰撞策略：p
 
 HTTP body / response kind 也属于共享规划语义。请求体统一记录为 `none`、`json`、`urlencoded`、`multipart`、`binary_schema` 或 `raw_bytes`，响应统一记录为 `json`、`xml`、`text`、`binary_schema`、`bytes`、`file` 或 `byte_stream`。HTTP 生成器支持 Go server/client、TypeScript client、Flutter client、Swift client、Kotlin client/server、Java client/server、Python server/client 的 multipart、raw media 响应和 binary schema 请求/响应。
 
+### legacy JSON compatibility
+
+`OneOf(...)` 和 `CoerceString(...)` 是旧接口兼容能力，不改变普通 `String`、`Int`、`Array`、`Map` 的既有生成行为。ContractGraph 中 `OneOf` 输出 `{"type": "one_of", "variants": [...]}`，variant 使用 field manifest 递归表示；`CoerceString` 输出 `{"type": "coerce_string", "canonical": {"type": "string"}, "accepts": [...]}`。
+
+生成器按 target 落地：
+
+- TypeScript 输出原生 union，例如 `string | Array<string>`；嵌套 array 会生成 `Array<string | number>`。
+- Python 输出 `str | list[str]` 这类 annotation，generated codec 按声明顺序 decode `OneOf`，并把 `LegacyStringID` 的整数 wire 值收敛为 `str`。
+- Swift 为 `OneOf` 生成命名 enum wrapper，并在需要时生成自定义 `Codable`；`CoerceString` 字段公开为 `String`，decode 接受 string 或 integer JSON number，encode 写 string。
+- Go / Flutter / Kotlin / Java preview target 首版把 `OneOf` 放到语言的 JSON/any/JsonNode 承载类型，`CoerceString` 公开为普通 string 并使用受限 decode helper。
+- gRPC proto 把 `CoerceString` 映射为 protobuf `string`；`OneOf` 不自动投影为 proto union，`api-gen check` 会报 unsupported，提示使用 protobuf 原生 `oneof` 或 `JSONValue`。
+
+`CoerceString` 只接受 string 和 integer wire 类型；bool、object、array、小数 number 和超过目标语言整数能力的数字都不应作为长期协议形态。尤其 TypeScript 无法无损恢复超出 JavaScript safe integer 的 JSON number，历史 ID 字段长期应统一为 string。
+`LegacyStringID` 是 `CoerceString(accepts=(String, Int))` 的推荐快捷类型；`StringOrIntAsString` 仅作为废弃兼容 alias 保留。
+
 ### HTTP raw media 与非 HTTP transport
 
 `multipart`、`Content-Disposition`、HTTP status/header、MIME download 和 HTTP byte stream 属于 HTTP transport 语义。Wails 和 gRPC 不会把这些 route 自动投影为伪 HTTP response；`api-gen check` 会对 HTTP raw media / binary schema body/response 给出明确 unsupported contract 错误，并在错误中指向协议原生建模方式。

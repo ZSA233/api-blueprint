@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .helpers import *
+from api_blueprint.engine.model import Int, OneOf, LegacyStringID
 
 
 def test_java_generated_template_files_use_gen_names() -> None:
@@ -33,6 +34,33 @@ def test_java_selection_matches_path_tag_group_method_and_name(example_entrypoin
     assert JavaRouteSelection(include=("method:GET",)).includes(route)
     assert JavaRouteSelection(include=("name:Abc",)).includes(route)
     assert not JavaRouteSelection(include=("tag:api",), exclude=("path:/api/demo/*",)).includes(route)
+
+
+def test_java_generates_legacy_json_compat_field_types(tmp_path: Path) -> None:
+    class LegacyPayload(Model):
+        target = OneOf(String(), Array[String](), description="target")
+        ids = Array[OneOf(String(), Int())](description="ids")
+        normalized = Array[LegacyStringID](description="normalized")
+        room_id = LegacyStringID(alias="roomId", description="room id")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/legacy") as views:
+        views.GET("/payload").RSP(LegacyPayload)
+
+    graph = build_contract_graph([bp])
+    client_dir = tmp_path / "java"
+    writer = JavaClientWriter(client_dir, package="com.example.generated", contract_graph=graph)
+    writer.register(bp)
+    writer.gen()
+
+    runtime_types = (
+        client_dir / "com" / "example" / "generated" / "api" / "runtime" / "GenApiTypes.java"
+    ).read_text(encoding="utf-8")
+    assert "import com.fasterxml.jackson.databind.JsonNode;" in runtime_types
+    assert "JsonNode target" in runtime_types
+    assert "List<JsonNode> ids" in runtime_types
+    assert "List<String> normalized" in runtime_types
+    assert "String roomId" in runtime_types
 
 def test_java_client_and_server_generate_layout_and_preserve_user_files(tmp_path: Path) -> None:
     class CommonErr(Model):

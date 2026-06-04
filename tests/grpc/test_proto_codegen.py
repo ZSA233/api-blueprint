@@ -18,7 +18,9 @@ from api_blueprint.engine.model import (
     JSONValue,
     Map,
     Object,
+    OneOf,
     String,
+    LegacyStringID,
     Struct,
     Timestamp,
     Uint32,
@@ -231,6 +233,36 @@ def test_grpc_proto_writer_renders_unary_stream_and_bidi_service():
     assert "rpc Ping (PingRequest) returns (PingResponse);" in text
     assert "rpc Events (EventsRequest) returns (stream ServerMessage);" in text
     assert "rpc Chat (stream ClientMessage) returns (stream ServerMessage);" in text
+
+
+def test_grpc_proto_writer_maps_coerce_string_and_rejects_one_of():
+    class CoercePayload(Model):
+        room_id = LegacyStringID(alias="roomId", description="room id")
+
+    class OneOfPayload(Model):
+        target = OneOf(String(), Array[String](), description="target")
+
+    coerce_bp = Blueprint(root="/api")
+    with coerce_bp.group("/legacy") as views:
+        views.GET("/coerce").RSP(CoercePayload)
+
+    files = render_proto_files(
+        build_contract_graph([coerce_bp]),
+        package="example.api",
+        go_package_prefix="example.com/project/grpc/go",
+    )
+    assert "string roomId = 1;" in files["api/legacy.proto"]
+
+    one_of_bp = Blueprint(root="/api")
+    with one_of_bp.group("/legacy") as views:
+        views.GET("/one-of").RSP(OneOfPayload)
+
+    with pytest.raises(ValueError, match="does not support legacy JSON OneOf"):
+        render_proto_files(
+            build_contract_graph([one_of_bp]),
+            package="example.api",
+            go_package_prefix="example.com/project/grpc/go",
+        )
 
 
 def test_grpc_proto_writer_uses_config_layout_without_proto_metadata():

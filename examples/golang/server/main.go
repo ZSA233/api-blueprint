@@ -5,6 +5,7 @@ import (
 	httptransport "example.com/project/golang/server/views/transports/http"
 	"example.com/project/golang/server/views/transports/http/alt"
 	"example.com/project/golang/server/views/transports/http/api"
+	"example.com/project/golang/server/views/transports/http/legacy"
 	"example.com/project/golang/server/views/transports/http/static"
 	"fmt"
 	"io"
@@ -35,10 +36,12 @@ func main() {
 	})
 	altBP := alt.NewBlueprint(engine)
 	apiBP := api.NewBlueprint(engine)
+	legacyBP := legacy.NewBlueprint(engine)
 	staticBP := static.NewBlueprint(engine)
 	_ = engine.Run(addr)
 	fmt.Println(altBP)
 	fmt.Println(apiBP)
+	fmt.Println(legacyBP)
 	fmt.Println(staticBP)
 }
 

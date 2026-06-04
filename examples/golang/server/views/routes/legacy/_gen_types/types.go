@@ -11,3 +11,9 @@ type RoomSummary struct {
 	RoomId string `json:"room_id" xml:"room_id" form:"room_id" binding:"required"`
 	Title  string `json:"title" xml:"title" form:"title" binding:"required"`
 }
+
+type LegacyJsonCompatPayload struct {
+	Target        any      `json:"target" xml:"target" form:"target" binding:"required"`
+	Ids           []any    `json:"ids" xml:"ids" form:"ids" binding:"required"`
+	NormalizedIds []string `json:"normalized_ids" xml:"normalized_ids" form:"normalized_ids" binding:"required"`
+}

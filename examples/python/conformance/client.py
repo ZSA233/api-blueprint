@@ -53,6 +53,14 @@ from api_blueprint_example_client.api.runtime.errors import (
     resolve_api_toast,
 )
 from api_blueprint_example_client.api.transports.http.client import HttpClientTransport
+from api_blueprint_example_client.legacy.client import create_client as create_legacy_client
+from api_blueprint_example_client.legacy.routes.legacy.account.gen_types import (
+    AccountProfileResponse as LegacyAccountProfileResponse,
+)
+from api_blueprint_example_client.legacy.routes.legacy.legacy_json.gen_types import LegacyJsonCompatResponse
+from api_blueprint_example_client.legacy.routes.legacy.room.gen_types import (
+    RoomListResponse as LegacyRoomListResponse,
+)
 from api_blueprint_example_client.static.client import create_client as create_static_client
 
 
@@ -381,6 +389,52 @@ async def check_naming(api, alt_api) -> None:
     assert alt_response.enum.value == "class", alt_response
 
 
+async def check_legacy_json(api) -> None:
+    profile = await api.account.account_profile()
+    assert profile.user_id == "1000010", profile
+    assert profile.nickname == "legacy-user", profile
+
+    rooms = await api.room.room_list()
+    assert rooms.rooms[0].room_id == "100", rooms
+    assert rooms.rooms[0].title == "legacy-room", rooms
+
+    compat = await api.legacy_json.legacy_json_compat()
+    assert compat.target == ["legacy-room", "backup-room"], compat
+    assert compat.ids == ["1", 2, "3"], compat
+    assert compat.normalized_ids == ["1", "2", "3"], compat
+
+    numeric_profile = LegacyAccountProfileResponse.from_value(
+        {"user_id": 1000010, "nickname": "legacy-user"}
+    )
+    assert numeric_profile.user_id == "1000010", numeric_profile
+
+    numeric_rooms = LegacyRoomListResponse.from_value(
+        {"rooms": [{"room_id": 100, "title": "legacy-room"}]}
+    )
+    assert numeric_rooms.rooms[0].room_id == "100", numeric_rooms
+
+    string_target = LegacyJsonCompatResponse.from_value(
+        {
+            "target": "legacy-room",
+            "ids": ["1", 2, "3"],
+            "normalized_ids": ["1", 2, "3"],
+        }
+    )
+    assert string_target.target == "legacy-room", string_target
+    assert string_target.normalized_ids == ["1", "2", "3"], string_target
+
+    array_target = LegacyJsonCompatResponse.from_value(
+        {
+            "target": ["legacy-room", "backup-room"],
+            "ids": ["1", 2, "3"],
+            "normalized_ids": ["1", 2, "3"],
+        }
+    )
+    assert array_target.target == ["legacy-room", "backup-room"], array_target
+    assert array_target.ids == ["1", 2, "3"], array_target
+    assert array_target.normalized_ids == ["1", "2", "3"], array_target
+
+
 async def expect_api_error(action, route_id: str = "api.demo.get.errordemo") -> ApiError:
     try:
         await action()
@@ -408,9 +462,13 @@ async def main() -> None:
     selected = scenario_set(
         sys.argv[2]
         if len(sys.argv) > 2
-        else "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel"
+        else "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel,legacy-json"
     )
-    async with create_client(sys.argv[1]) as api, create_alt_client(sys.argv[1]) as alt_api:
+    async with (
+        create_client(sys.argv[1]) as api,
+        create_alt_client(sys.argv[1]) as alt_api,
+        create_legacy_client(sys.argv[1]) as legacy_api,
+    ):
         if "rpc" in selected:
             await check_rpc(api)
         if "raw" in selected:
@@ -451,6 +509,8 @@ async def main() -> None:
             await check_typed_errors(api)
         if "naming" in selected:
             await check_naming(api, alt_api)
+        if "legacy-json" in selected:
+            await check_legacy_json(legacy_api)
         if "sse" in selected:
             check_unsupported(lambda: api.demo.subscribe_sweep_events(open_data=SweepEventsOpen(run_id="python-sse")), "stream")
         if "websocket" in selected:

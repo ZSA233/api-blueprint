@@ -16,4 +16,6 @@ open class GenLegacyRootClient {
 
     public lazy var room = RoomAPI(transport: transport)
 
+    public lazy var legacyJson = LegacyJsonAPI(transport: transport)
+
 }

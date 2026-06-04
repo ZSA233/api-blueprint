@@ -16,7 +16,7 @@ class AccountProfile {
 
   factory AccountProfile.fromJson(Map<String, Object?> json) {
     return AccountProfile(
-      userId: apiBlueprintReadString(json["user_id"]),
+      userId: apiBlueprintReadCoerceString(json["user_id"]),
       nickname: apiBlueprintReadString(json["nickname"]),
     );
   }
@@ -48,6 +48,54 @@ class AccountProfile {
   }
 }
 
+class LegacyJsonCompatPayload {
+  final Object? target;
+  final List<Object?>? ids;
+  final List<String>? normalizedIds;
+
+  const LegacyJsonCompatPayload({
+    this.target,
+    this.ids,
+    this.normalizedIds,
+  });
+
+  factory LegacyJsonCompatPayload.fromJson(Map<String, Object?> json) {
+    return LegacyJsonCompatPayload(
+      target: apiBlueprintReadAny(json["target"]),
+      ids: ((value) => apiBlueprintReadList<Object?>(value, apiBlueprintReadAny))(json["ids"]),
+      normalizedIds: ((value) => apiBlueprintReadList<String>(value, apiBlueprintReadCoerceString))(json["normalized_ids"]),
+    );
+  }
+
+  factory LegacyJsonCompatPayload.fromJsonValue(Object? value) {
+    final codec = apiJsonCodecs.find<LegacyJsonCompatPayload>();
+    if (codec != null) {
+      return codec.fromJson(value);
+    }
+    return LegacyJsonCompatPayload.fromJson(apiBlueprintReadObject(value));
+  }
+
+  Map<String, Object?> toJson() {
+    final codec = apiJsonCodecs.find<LegacyJsonCompatPayload>();
+    if (codec != null) {
+      return apiBlueprintReadObject(codec.toJson(this));
+    }
+    return {
+      "target": apiBlueprintToJson(target),
+      "ids": apiBlueprintToJson(ids),
+      "normalized_ids": apiBlueprintToJson(normalizedIds),
+    };
+  }
+
+  Map<String, String?> toQueryMap() {
+    return {
+      "target": apiBlueprintToQueryValue(target),
+      "ids": apiBlueprintToQueryValue(ids),
+      "normalized_ids": apiBlueprintToQueryValue(normalizedIds),
+    };
+  }
+}
+
 class RoomSummary {
   final String? roomId;
   final String? title;
@@ -59,7 +107,7 @@ class RoomSummary {
 
   factory RoomSummary.fromJson(Map<String, Object?> json) {
     return RoomSummary(
-      roomId: apiBlueprintReadString(json["room_id"]),
+      roomId: apiBlueprintReadCoerceString(json["room_id"]),
       title: apiBlueprintReadString(json["title"]),
     );
   }

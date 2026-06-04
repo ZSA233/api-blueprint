@@ -3,7 +3,9 @@ import { ApiErrors, isApiError, resolveApiToast } from "./api/runtime/client";
 import type { ApiError } from "./api/runtime/client";
 import { createClients as createApiClients } from "./api/transports/http/api/factory";
 import { createClients as createAltClients } from "./alt/transports/http/alt/factory";
+import { createClients as createLegacyClients } from "./legacy/transports/http/legacy/factory";
 import { createClients as createStaticClients } from "./static/transports/http/static/factory";
+import type { LegacyJsonCompatPayload } from "./legacy/runtime/types";
 import {
   AuditPacket,
   AuditPacketFlagsValues,
@@ -415,6 +417,33 @@ async function checkNaming(baseUrl: string): Promise<void> {
   }
 }
 
+async function checkLegacyJson(baseUrl: string): Promise<void> {
+  const { accountClient, roomClient, legacyJsonClient } = createLegacyClients({ baseUrl });
+  const profile = await accountClient.accountProfile();
+  if (profile.user_id !== "1000010" || profile.nickname !== "legacy-user") {
+    throw new Error(`legacy profile=${JSON.stringify(profile)}`);
+  }
+
+  const rooms = await roomClient.roomList();
+  if (rooms.rooms[0]?.room_id !== "100" || rooms.rooms[0]?.title !== "legacy-room") {
+    throw new Error(`legacy rooms=${JSON.stringify(rooms)}`);
+  }
+
+  const compat = await legacyJsonClient.legacyJsonCompat();
+  assertArrayEquals(asStringArray(compat.target, "legacy.compat.target"), ["legacy-room", "backup-room"], "legacy.compat.target");
+  assertArrayEquals(compat.ids, ["1", 2, "3"], "legacy.compat.ids");
+  assertArrayEquals(compat.normalized_ids, ["1", "2", "3"], "legacy.compat.normalized_ids");
+
+  const fixture: LegacyJsonCompatPayload = {
+    target: "legacy-room",
+    ids: ["1", 2, "3"],
+    normalized_ids: ["1", "2", "3"],
+  };
+  if (fixture.target !== "legacy-room") {
+    throw new Error(`legacy fixture=${JSON.stringify(fixture)}`);
+  }
+}
+
 async function expectApiError(action: () => Promise<unknown>, routeId = "api.demo.get.errordemo"): Promise<ApiError> {
   try {
     await action();
@@ -476,6 +505,13 @@ function assertArrayEquals(actual: readonly unknown[], expected: readonly unknow
   }
 }
 
+function asStringArray(value: string | readonly string[], label: string): readonly string[] {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  throw new Error(`${label}=${JSON.stringify(value)} expected array`);
+}
+
 async function assertBlobStartsWith(blob: Blob, expected: readonly number[], label: string): Promise<void> {
   const actual = Array.from(new Uint8Array(await blob.arrayBuffer()).slice(0, expected.length));
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
@@ -488,7 +524,7 @@ async function main(): Promise<void> {
   if (!baseUrl) {
     throw new Error("base URL argument is required");
   }
-  const selected = scenarioSet(process.argv[3] || "rpc,binary,form,error,sse,websocket,naming,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel");
+  const selected = scenarioSet(process.argv[3] || "rpc,binary,form,error,sse,websocket,naming,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel,legacy-json");
   if (selected.has("rpc")) {
     await checkRPC(baseUrl);
   }
@@ -554,6 +590,9 @@ async function main(): Promise<void> {
   }
   if (selected.has("naming")) {
     await checkNaming(baseUrl);
+  }
+  if (selected.has("legacy-json")) {
+    await checkLegacyJson(baseUrl);
   }
   console.log("typescript conformance passed");
 }

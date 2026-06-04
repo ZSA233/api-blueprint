@@ -159,6 +159,10 @@ class JavaModelCatalog:
             if key_type not in {"String", "Integer", "Long"}:
                 key_type = "String"
             return f"Map<{key_type}, {value_java_type}>"
+        if value_type == "one_of":
+            return "JsonNode"
+        if value_type == "coerce_string":
+            return "String"
         return {
             "string": "String",
             "str": "String",

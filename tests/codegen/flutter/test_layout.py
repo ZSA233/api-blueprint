@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .helpers import *
+from api_blueprint.engine.model import OneOf, LegacyStringID
 
 
 def _flutter_format_violations(output_dir: Path) -> list[str]:
@@ -118,6 +119,8 @@ def test_flutter_writer_generates_dart_package_runtime_routes_transport_and_pres
     assert "export 'src/api/gen_api.dart';" in generated_root_entry
     assert "export 'gen_api.dart';" in root_facade
     assert (runtime_dir / "api_client.dart").read_text(encoding="utf-8") == "// USER CLIENT FACADE\n"
+
+
     assert (runtime_dir / "api_json_codecs.dart").read_text(encoding="utf-8") == "// USER CODECS\n"
     assert (route_dir / "demo_api.dart").read_text(encoding="utf-8") == "// USER ROUTE FACADE\n"
     assert (http_dir / "http_api_client.dart").read_text(encoding="utf-8") == "// USER HTTP FACADE\n"
@@ -178,6 +181,35 @@ def test_flutter_writer_generates_dart_package_runtime_routes_transport_and_pres
     assert "throw ApiException(response.statusCode, body);" in http_connection
     assert "RegExp(r'\\r?\\n\\r?\\n')" in http_connection
     assert "late final Future<void> ready = socket.ready;" in http_connection
+
+
+def test_flutter_generates_legacy_json_compat_field_types(tmp_path: Path) -> None:
+    class LegacyPayload(Model):
+        target = OneOf(String(), Array[String](), description="target")
+        normalized = Array[LegacyStringID](description="normalized")
+        room_id = LegacyStringID(alias="roomId", description="room id")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/legacy") as views:
+        views.GET("/payload").RSP(LegacyPayload)
+
+    out_dir = tmp_path / "flutter"
+    writer = FlutterWriter(out_dir, package="api_blueprint_example")
+    writer.register(bp)
+    writer.gen()
+
+    runtime_types = (out_dir / "lib" / "src" / "api" / "runtime" / "gen_api_types.dart").read_text(
+        encoding="utf-8"
+    )
+    runtime_errors = (out_dir / "lib" / "src" / "api" / "runtime" / "gen_api_errors.dart").read_text(
+        encoding="utf-8"
+    )
+    assert "final Object? target;" in runtime_types
+    assert "final List<String>? normalized;" in runtime_types
+    assert "final String? roomId;" in runtime_types
+    assert "apiBlueprintReadCoerceString" in runtime_types
+    assert "String? apiBlueprintReadCoerceString(Object? value)" in runtime_errors
+
 
 def test_flutter_generated_entry_templates_use_generated_names() -> None:
     template_dir = Path(__file__).resolve().parents[3] / "src" / "api_blueprint" / "writer" / "templates" / "flutter"

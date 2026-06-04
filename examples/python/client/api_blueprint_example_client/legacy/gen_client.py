@@ -4,6 +4,7 @@ from __future__ import annotations
 from .transports.http.client import HttpClientTransport
 from .routes.legacy.account.gen_client import AccountClient as _Route1Client
 from .routes.legacy.room.gen_client import RoomClient as _Route2Client
+from .routes.legacy.legacy_json.gen_client import LegacyJsonClient as _Route3Client
 
 
 class ApiClient:
@@ -11,6 +12,7 @@ class ApiClient:
         self._transport = transport
         self.account = _Route1Client(transport)
         self.room = _Route2Client(transport)
+        self.legacy_json = _Route3Client(transport)
 
     async def aclose(self) -> None:
         close = getattr(self._transport, "aclose", None)

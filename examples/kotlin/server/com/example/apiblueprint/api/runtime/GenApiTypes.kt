@@ -11,6 +11,27 @@ import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonPrimitive
+
+public object ApiCoerceStringSerializer : KSerializer<String> {
+    public override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("ApiCoerceString", PrimitiveKind.STRING)
+
+    public override fun serialize(encoder: Encoder, value: String): Unit {
+        encoder.encodeString(value)
+    }
+
+    public override fun deserialize(decoder: Decoder): String {
+        val jsonDecoder = decoder as? JsonDecoder ?: return decoder.decodeString()
+        val primitive = jsonDecoder.decodeJsonElement().jsonPrimitive
+        if (primitive.isString) {
+            return primitive.content
+        }
+        primitive.intOrNull?.let { return it.toString() }
+        throw SerializationException("expected string or integer")
+    }
+}
 
 @Serializable
 public data class ApiDemoA(

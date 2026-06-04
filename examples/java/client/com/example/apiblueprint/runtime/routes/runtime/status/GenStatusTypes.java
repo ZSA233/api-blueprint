@@ -3,6 +3,7 @@ package com.example.apiblueprint.runtime.routes.runtime.status;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import com.example.apiblueprint.runtime.runtime.GenApiTypes;
 

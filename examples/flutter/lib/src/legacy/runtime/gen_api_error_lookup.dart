@@ -69,6 +69,8 @@ final routeApiErrorsByCode = <String, Map<int, ApiErrorPayload>>{
   },
   "legacy.room.get.list": {
   },
+  "legacy.legacy_json.get.compat": {
+  },
 };
 
 final apiErrorsByCode = <int, ApiErrorPayload>{

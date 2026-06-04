@@ -28,11 +28,14 @@ from api_blueprint.engine.runtime import (
     register_router,
 )
 from api_blueprint.engine.schema import (
+    Array,
     Error,
     Field,
     FileField,
     HeaderModel,
+    Map,
     Model,
+    OneOf,
     create_field_wrapped_model,
     create_model,
     iter_model_vars,
@@ -622,8 +625,22 @@ def _iter_file_field_paths(model: Model | type[Model], prefix: str = "", seen: s
     seen.add(model_id)
     for field_name, field_value in iter_model_vars(model):
         path = f"{prefix}.{field_name}" if prefix else field_name
-        if isinstance(field_value, FileField):
-            yield path
-            continue
-        if isinstance(field_value, Model) or (isinstance(field_value, type) and issubclass(field_value, Model)):
-            yield from _iter_file_field_paths(field_value, path, seen)
+        yield from _iter_file_field_value_paths(field_value, path, seen)
+
+
+def _iter_file_field_value_paths(field_value: Any, path: str, seen: set[int]):
+    if isinstance(field_value, FileField):
+        yield path
+        return
+    if isinstance(field_value, OneOf):
+        for index, variant in enumerate(field_value.variants):
+            yield from _iter_file_field_value_paths(variant, f"{path}<variant{index}>", seen)
+        return
+    if isinstance(field_value, Array):
+        yield from _iter_file_field_value_paths(field_value.elem_type(), f"{path}[]", seen)
+        return
+    if isinstance(field_value, Map):
+        yield from _iter_file_field_value_paths(field_value.value_type(), f"{path}{{}}", seen)
+        return
+    if isinstance(field_value, Model) or (isinstance(field_value, type) and issubclass(field_value, Model)):
+        yield from _iter_file_field_paths(field_value, path, seen)

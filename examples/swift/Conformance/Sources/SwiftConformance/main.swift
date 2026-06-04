@@ -7,6 +7,7 @@ import ABClient
 import ABClientRuntime
 import ABClientAPIRoutes
 import ABClientAltRoutes
+import ABClientLegacyRoutes
 
 private let sampleJPEG = Data([
     0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
@@ -33,7 +34,7 @@ struct SwiftConformance {
         let selected = scenarioSet(
             CommandLine.arguments.count > 2
                 ? CommandLine.arguments[2]
-                : "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,wide-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel"
+                : "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,wide-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel,legacy-json"
         )
         let client = HTTPAPIClient.create(baseURL: baseURL)
 
@@ -105,6 +106,9 @@ struct SwiftConformance {
         }
         if selected.contains("naming") {
             try await checkNaming(client)
+        }
+        if selected.contains("legacy-json") {
+            try await checkLegacyJson(client)
         }
     }
 }
@@ -406,6 +410,80 @@ private func checkNaming(_ client: ABClient) async throws {
     try expectEqual(altResponse.default_, "alt-default", "alt.conflict.default")
     try expectEqual(altResponse.class_, "swift-alt", "alt.conflict.class")
     try expectEqual(altResponse.enum_, KeywordEnum.class_, "alt.conflict.enum")
+}
+
+private func checkLegacyJson(_ client: ABClient) async throws {
+    let profile = try await client.legacy.account.accountProfile()
+    try expectEqual(profile.userId, "1000010", "legacy.profile.userId")
+    try expectEqual(profile.nickname, "legacy-user", "legacy.profile.nickname")
+
+    let rooms = try await client.legacy.room.roomList()
+    try expectEqual(rooms.rooms.first?.roomId, "100", "legacy.room.roomId")
+    try expectEqual(rooms.rooms.first?.title, "legacy-room", "legacy.room.title")
+
+    let compat = try await client.legacy.legacyJson.legacyJsonCompat()
+    try expectLegacyTargetArray(compat.target, ["legacy-room", "backup-room"], "legacy.compat.target")
+    try expectLegacyIDs(compat.ids, ["1", "2", "3"], "legacy.compat.ids")
+    try expectEqual(compat.normalizedIds, ["1", "2", "3"], "legacy.compat.normalizedIds")
+
+    let decoder = JSONDecoder()
+    let numericProfile = try decoder.decode(
+        AccountProfile.self,
+        from: Data(#"{"user_id":1000010,"nickname":"legacy-user"}"#.utf8)
+    )
+    try expectEqual(numericProfile.userId, "1000010", "legacy.fixture.profile.userId")
+
+    let numericRooms = try decoder.decode(
+        RoomRoomListResponse.self,
+        from: Data(#"{"rooms":[{"room_id":100,"title":"legacy-room"}]}"#.utf8)
+    )
+    try expectEqual(numericRooms.rooms.first?.roomId, "100", "legacy.fixture.room.roomId")
+
+    let stringTarget = try decoder.decode(
+        LegacyJsonCompatPayload.self,
+        from: Data(#"{"target":"legacy-room","ids":["1",2,"3"],"normalized_ids":["1",2,"3"]}"#.utf8)
+    )
+    switch stringTarget.target {
+    case .string(let value):
+        try expectEqual(value, "legacy-room", "legacy.fixture.target.string")
+    default:
+        throw ConformanceFailure(message: "legacy.fixture.target.string=\(stringTarget.target) expected string")
+    }
+    try expectLegacyIDs(stringTarget.ids, ["1", "2", "3"], "legacy.fixture.ids.string")
+    try expectEqual(stringTarget.normalizedIds, ["1", "2", "3"], "legacy.fixture.normalizedIds.string")
+
+    let arrayTarget = try decoder.decode(
+        LegacyJsonCompatPayload.self,
+        from: Data(#"{"target":["legacy-room","backup-room"],"ids":["1",2,"3"],"normalized_ids":["1",2,"3"]}"#.utf8)
+    )
+    try expectLegacyTargetArray(arrayTarget.target, ["legacy-room", "backup-room"], "legacy.fixture.target.array")
+    try expectLegacyIDs(arrayTarget.ids, ["1", "2", "3"], "legacy.fixture.ids.array")
+    try expectEqual(arrayTarget.normalizedIds, ["1", "2", "3"], "legacy.fixture.normalizedIds.array")
+}
+
+private func expectLegacyTargetArray(
+    _ target: APIStringOrArrayOfStringOneOf,
+    _ expected: [String],
+    _ label: String
+) throws {
+    switch target {
+    case .arrayOfString(let values):
+        try expectEqual(values, expected, label)
+    default:
+        throw ConformanceFailure(message: "\(label)=\(target) expected array")
+    }
+}
+
+private func expectLegacyIDs(_ ids: [APIStringOrIntOneOf], _ expected: [String], _ label: String) throws {
+    let actual = ids.map { item -> String in
+        switch item {
+        case .string(let value):
+            return value
+        case .int(let value):
+            return String(value)
+        }
+    }
+    try expectEqual(actual, expected, label)
 }
 
 private func expectBinaryResponse(_ response: BinaryPacketResponse, trace: String) throws {

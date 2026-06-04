@@ -337,3 +337,9 @@ type RoomSummary struct {
 	RoomID string `json:"room_id" form:"room_id"`
 	Title  string `json:"title" form:"title"`
 }
+
+type LegacyJsonCompatPayload struct {
+	Target        any      `json:"target" form:"target"`
+	IDs           []any    `json:"ids" form:"ids"`
+	NormalizedIDs []string `json:"normalized_ids" form:"normalized_ids"`
+}

@@ -74,6 +74,24 @@ class Item(Model):
 
 `FileField(content_types=..., max_size=..., description=..., omitempty=False)` 用于 multipart 上传字段。它不是普通 JSON 字段，只能出现在 `REQ_MULTIPART(Model)` 绑定的请求 model 中；放入 JSON、urlencoded、响应模型或长连接消息模型都会在构建契约时失败。
 
+### legacy JSON 兼容类型
+
+旧接口可能已经在线上返回多个 JSON shape，例如同一个字段有时是 string、有时是 array，或者 ID 字段在 Java / 旧服务实现中有时返回 string、有时返回整数。为了让这些字段进入契约，DSL 提供受限兼容类型：
+
+```python
+class LegacyRoom(Model):
+    target = OneOf(String(), Array[String](), description="legacy target")
+    ids = Array[OneOf(String(), Int())](description="legacy ids")
+    normalized_ids = Array[LegacyStringID](description="ids normalized to string")
+    room_id = LegacyStringID(alias="roomId", description="room id")
+```
+
+- `OneOf(...)` 表达非判别 JSON union，variant 按声明顺序用严格 JSON shape 匹配；它适合兼容旧字段，不推荐新接口把字段设计成多 shape。
+- `CoerceString(accepts=(String, Int))` 与快捷 `LegacyStringID` 接受 string 或整数 JSON number，但业务类型仍是 string，编码时永远写 string；bool、object、array 和小数 number 会被拒绝。
+- `StringOrIntAsString` 是 `LegacyStringID` 的废弃兼容 alias；新蓝图应使用 `LegacyStringID`。
+- `OneOf` 可以嵌套在 `Array[...]` / `Map[...]` 中，也可以把 `Array[...]` 作为 variant。`OneOf()` 空 variant 会报错。
+- `FileField` 不是 JSON 字段，不能放入 `OneOf`。如果无法把旧字段收窄到有限 shape，再退回 `JSONValue` 作为最后兜底。
+
 ## 请求与响应
 
 ```python

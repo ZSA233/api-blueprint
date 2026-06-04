@@ -130,7 +130,7 @@ id = 'grpc.proto'
 out_dir = 'grpc/protos'
 package = 'example.api'
 go_package_prefix = 'example.com/project/grpc/go'
-exclude = ['path:/api/binary/**', 'path:/api/media/**']
+exclude = ['path:/api/binary/**', 'path:/api/media/**', 'path:/legacy-json/**']
 
 [[grpc.proto.proto_files]]
 file = 'api/api.proto'
@@ -165,7 +165,7 @@ id = 'grpc.go'
 proto = 'grpc.proto'
 out_dir = 'grpc/go'
 module = 'example.com/project/grpc/go'
-exclude = ['path:/api/binary/**', 'path:/api/media/**']
+exclude = ['path:/api/binary/**', 'path:/api/media/**', 'path:/legacy-json/**']
 files = [
     'api/*.proto',
     'legacy/*.proto',
@@ -176,7 +176,7 @@ files = [
 id = 'grpc.python'
 proto = 'grpc.proto'
 out_dir = 'grpc/python'
-exclude = ['path:/api/binary/**', 'path:/api/media/**']
+exclude = ['path:/api/binary/**', 'path:/api/media/**', 'path:/legacy-json/**']
 files = [
     'api/*.proto',
     'legacy/*.proto',

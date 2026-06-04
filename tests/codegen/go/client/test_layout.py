@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .helpers import *
+from api_blueprint.engine.model import Array, Int, OneOf, LegacyStringID
 
 
 def test_golang_client_writer_uses_go_safe_route_package_segments(tmp_path):
@@ -45,6 +46,30 @@ def test_golang_client_root_facade_disambiguates_same_group_names_across_roots(t
     assert "AltConflict *alt_conflict.Client" in root_client
     assert "APIConflict: api_conflict.NewClient(transport)" in root_client
     assert "AltConflict: alt_conflict.NewClient(transport)" in root_client
+
+
+def test_golang_client_generates_legacy_json_compat_field_types(tmp_path):
+    class LegacyPayload(Model):
+        target = OneOf(String(), Array[String](), description="target")
+        ids = Array[OneOf(String(), Int())](description="ids")
+        normalized = Array[LegacyStringID](description="normalized")
+        room_id = LegacyStringID(alias="roomId", description="room id")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/legacy") as views:
+        views.GET("/payload").RSP(LegacyPayload)
+
+    graph = build_contract_graph([bp])
+    output_dir = tmp_path / "client"
+    writer = GolangClientWriter(output_dir, module="example.com/generated/client", contract_graph=graph)
+    writer.register(bp)
+    writer.gen()
+
+    runtime_types = (output_dir / "runtime" / "gen_types.go").read_text(encoding="utf-8")
+    assert "Target     any" in runtime_types
+    assert "IDs" in runtime_types and "[]any" in runtime_types
+    assert "Normalized []string" in runtime_types
+    assert "RoomID     string" in runtime_types
 
 def test_golang_client_writer_generates_layout_preserves_user_files_and_compiles(tmp_path):
     class CommonErr(Model):

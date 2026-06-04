@@ -5,17 +5,21 @@
 import type { ApiClientConfig } from "../../../runtime/client";
 import type { AccountClient } from "./account/client";
 import { createClient as createAccountClient } from "./account/client";
+import type { LegacyJsonClient } from "./legacy_json/client";
+import { createClient as createLegacyJsonClient } from "./legacy_json/client";
 import type { RoomClient } from "./room/client";
 import { createClient as createRoomClient } from "./room/client";
 
 export interface GeneratedClients {
   accountClient: AccountClient;
+  legacyJsonClient: LegacyJsonClient;
   roomClient: RoomClient;
 }
 
 export function createClients(config: ApiClientConfig = {}): GeneratedClients {
   return {
     accountClient: createAccountClient(config),
+    legacyJsonClient: createLegacyJsonClient(config),
     roomClient: createRoomClient(config),
   };
 }

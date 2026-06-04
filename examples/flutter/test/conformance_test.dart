@@ -5,12 +5,13 @@ import 'dart:typed_data';
 
 import 'package:api_blueprint_example/api.dart' as api;
 import 'package:api_blueprint_example/alt.dart' as alt;
+import 'package:api_blueprint_example/legacy.dart' as legacy;
 import 'package:test/test.dart';
 
 void main() {
   final baseUrl = Platform.environment['API_BLUEPRINT_BASE_URL'];
   final selected = _scenarioSet(Platform.environment['API_BLUEPRINT_SCENARIOS'] ??
-      'rpc,binary,form,error,sse,websocket,naming,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel');
+      'rpc,binary,form,error,sse,websocket,naming,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel,legacy-json');
 
   if (baseUrl == null || baseUrl.isEmpty) {
     test('conformance requires API_BLUEPRINT_BASE_URL', () {
@@ -21,10 +22,12 @@ void main() {
 
   late api.ApiClient client;
   late alt.ApiClient altClient;
+  late legacy.ApiClient legacyClient;
 
   setUpAll(() {
     client = api.createHttpApiClient(config: api.HttpApiConfig(baseUrl: baseUrl));
     altClient = alt.createHttpApiClient(config: alt.HttpApiConfig(baseUrl: baseUrl));
+    legacyClient = legacy.createHttpApiClient(config: legacy.HttpApiConfig(baseUrl: baseUrl));
   });
 
   if (selected.contains('rpc')) {
@@ -334,6 +337,52 @@ void main() {
       expect(altRsp.default_, 'alt-default');
       expect(altRsp.class_, 'flutter-alt');
       expect(altRsp.enum_, alt.KeywordEnum.class_);
+    });
+  }
+
+  if (selected.contains('legacy-json')) {
+    test('legacy JSON compatibility routes and codecs handle shape drift', () async {
+      final profile = await legacyClient.account.accountProfile();
+      expect(profile.userId, '1000010');
+      expect(profile.nickname, 'legacy-user');
+
+      final rooms = await legacyClient.room.roomList();
+      expect(rooms.rooms?.single.roomId, '100');
+      expect(rooms.rooms?.single.title, 'legacy-room');
+
+      final compat = await legacyClient.legacyJson.legacyJsonCompat();
+      expect(compat.target, ['legacy-room', 'backup-room']);
+      expect(compat.ids, ['1', 2, '3']);
+      expect(compat.normalizedIds, ['1', '2', '3']);
+
+      final numericProfile = legacy.AccountProfile.fromJsonValue({
+        'user_id': 1000010,
+        'nickname': 'legacy-user',
+      });
+      expect(numericProfile.userId, '1000010');
+
+      final numericRooms = legacy.RoomRoomListResponse.fromJsonValue({
+        'rooms': [
+          {'room_id': 100, 'title': 'legacy-room'}
+        ],
+      });
+      expect(numericRooms.rooms?.single.roomId, '100');
+
+      final stringTarget = legacy.LegacyJsonCompatPayload.fromJsonValue({
+        'target': 'legacy-room',
+        'ids': ['1', 2, '3'],
+        'normalized_ids': ['1', 2, '3'],
+      });
+      expect(stringTarget.target, 'legacy-room');
+      expect(stringTarget.normalizedIds, ['1', '2', '3']);
+
+      final arrayTarget = legacy.LegacyJsonCompatPayload.fromJsonValue({
+        'target': ['legacy-room', 'backup-room'],
+        'ids': ['1', 2, '3'],
+        'normalized_ids': ['1', 2, '3'],
+      });
+      expect(arrayTarget.target, ['legacy-room', 'backup-room']);
+      expect(arrayTarget.normalizedIds, ['1', '2', '3']);
     });
   }
 }

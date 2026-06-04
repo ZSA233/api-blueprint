@@ -1,7 +1,7 @@
 package room
 
 import (
-	"fmt"
+	types "example.com/project/golang/server/views/routes/legacy/_gen_types"
 )
 
 type Router struct {
@@ -13,5 +13,9 @@ func NewRouter() *Router {
 }
 
 func (impl *Router) RoomList(ctx *CTX_RoomList, req *REQ_RoomList) (rsp *RSP_RoomList, err error) {
-	return nil, fmt.Errorf("not implemented")
+	return &RSP_RoomList_BODY{
+		Rooms: []*types.RoomSummary{
+			{RoomId: "100", Title: "legacy-room"},
+		},
+	}, nil
 }

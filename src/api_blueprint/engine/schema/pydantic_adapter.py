@@ -18,6 +18,7 @@ from .fields import (
     Array,
     Bool,
     Byte,
+    CoerceString,
     Enum,
     Error,
     FieldWrappedModel,
@@ -33,6 +34,7 @@ from .fields import (
     Int64,
     Map,
     Null,
+    OneOf,
     String,
     Uint,
     Uint8,
@@ -131,7 +133,9 @@ def resolve_field(
     ismatch: Callable[[Field | type[Field], type], bool] = isinstance if not is_type else issubclass
     description: str = getattr(field, "__extra__", {}).get("description", "")
 
-    if ismatch(field, String):
+    if ismatch(field, CoerceString):
+        py_type = Any
+    elif ismatch(field, String):
         py_type = str
     elif ismatch(field, (Int, Int64, Int32, Int16, Int8, Uint, Uint8, Uint16, Uint32, Uint64)):
         py_type = int
@@ -149,25 +153,33 @@ def resolve_field(
         if isinstance(elem, type) and issubclass(elem, Model):
             elem = model_to_pydantic(elem, name=name, router=router)
             description = f"[{elem.__name__}] {description}"
-        if isinstance(elem, type) and issubclass(elem, Field):
+        if isinstance(elem, Field):
+            elem, _ = resolve_field(elem, name=name, router=router)
+        elif isinstance(elem, type) and issubclass(elem, Field):
             elem, _ = resolve_field(elem, name=name, router=router)
         elif get_origin(elem):
             origin = get_origin(elem)
             if isinstance(origin, type) and issubclass(origin, Field):
                 elem, _ = resolve_field(elem(), name=name, router=router)
         py_type = list[elem]
+    elif ismatch(field, OneOf):
+        py_type = Any
     elif ismatch(field, Map):
         key = field.key_type()
         value = field.value_type()
         if isinstance(key, type) and issubclass(key, Model):
             key = model_to_pydantic(key, name=name, router=router)
-        if (isinstance(key, type) and issubclass(key, Field)) or is_parametrized(key):
+        if isinstance(key, Field):
+            key, _ = resolve_field(key, name=name, router=router)
+        elif (isinstance(key, type) and issubclass(key, Field)) or is_parametrized(key):
             key, _ = resolve_field(key, name=name, router=router)
 
         if isinstance(value, type) and issubclass(value, Model):
             value = model_to_pydantic(value, name=name, router=router)
             description = f"[{key.__name__}: {value.__name__}] {description}"
-        if (isinstance(value, type) and issubclass(value, Field)) or is_parametrized(value):
+        if isinstance(value, Field):
+            value, _ = resolve_field(value, name=name, router=router)
+        elif (isinstance(value, type) and issubclass(value, Field)) or is_parametrized(value):
             value, _ = resolve_field(value, name=name, router=router)
         elif get_origin(value):
             origin = get_origin(value)

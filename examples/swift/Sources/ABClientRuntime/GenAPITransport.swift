@@ -441,6 +441,85 @@ public enum APIDecodeError: Error, CustomStringConvertible {
     }
 }
 
+public func apiDecodeCoerceString<K: CodingKey>(
+    from container: KeyedDecodingContainer<K>,
+    forKey key: K
+) throws -> String {
+    if let value = try? container.decode(String.self, forKey: key) {
+        return value
+    }
+    if let value = try? container.decode(Int.self, forKey: key) {
+        return String(value)
+    }
+    throw DecodingError.typeMismatch(
+        String.self,
+        DecodingError.Context(
+            codingPath: container.codingPath + [key],
+            debugDescription: "expected string or integer"
+        )
+    )
+}
+
+public func apiDecodeCoerceStringIfPresent<K: CodingKey>(
+    from container: KeyedDecodingContainer<K>,
+    forKey key: K
+) throws -> String? {
+    if !container.contains(key) {
+        return nil
+    }
+    if try container.decodeNil(forKey: key) {
+        return nil
+    }
+    return try apiDecodeCoerceString(from: container, forKey: key)
+}
+
+public func apiDecodeCoerceString(from decoder: Decoder) throws -> String {
+    let container = try decoder.singleValueContainer()
+    if let value = try? container.decode(String.self) {
+        return value
+    }
+    if let value = try? container.decode(Int.self) {
+        return String(value)
+    }
+    throw DecodingError.typeMismatch(
+        String.self,
+        DecodingError.Context(
+            codingPath: decoder.codingPath,
+            debugDescription: "expected string or integer"
+        )
+    )
+}
+
+public func apiDecodeCoerceStringArray<K: CodingKey>(
+    from container: KeyedDecodingContainer<K>,
+    forKey key: K
+) throws -> [String] {
+    let decoder = try container.superDecoder(forKey: key)
+    return try apiDecodeCoerceStringArray(from: decoder)
+}
+
+public func apiDecodeCoerceStringArrayIfPresent<K: CodingKey>(
+    from container: KeyedDecodingContainer<K>,
+    forKey key: K
+) throws -> [String]? {
+    if !container.contains(key) {
+        return nil
+    }
+    if try container.decodeNil(forKey: key) {
+        return nil
+    }
+    return try apiDecodeCoerceStringArray(from: container, forKey: key)
+}
+
+public func apiDecodeCoerceStringArray(from decoder: Decoder) throws -> [String] {
+    var container = try decoder.unkeyedContainer()
+    var values: [String] = []
+    while !container.isAtEnd {
+        values.append(try apiDecodeCoerceString(from: container.superDecoder()))
+    }
+    return values
+}
+
 public func apiEncodeJSONData<T: Encodable>(_ value: T, coding: APICodingConfig) throws -> Data {
     try coding.makeJSONEncoder().encode(value)
 }

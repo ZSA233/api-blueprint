@@ -11,6 +11,28 @@ public enum {{ proto.name }}: {{ proto.raw_value_type }}, Codable, Sendable, API
 }
 {% elif proto.kind == "alias" and proto.alias_type %}
 public typealias {{ proto.name }} = {{ proto.alias_type.text }}
+{% elif proto.kind == "one_of" %}
+public enum {{ proto.name }}: Codable, Sendable {
+{% for variant in proto.one_of_variants or [] %}    case {{ variant.case_name }}({{ variant.swift_type }})
+{% endfor %}
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+{% for variant in proto.one_of_variants or [] %}        if let value = try? container.decode({{ variant.swift_type }}.self) {
+            self = .{{ variant.case_name }}(value)
+            return
+        }
+{% endfor %}        throw DecodingError.typeMismatch({{ proto.name }}.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "expected one of declared JSON shapes"))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+{% for variant in proto.one_of_variants or [] %}        case .{{ variant.case_name }}(let value):
+            try container.encode(value)
+{% endfor %}        }
+    }
+}
 {% elif proto.kind == "data" %}
 public struct {{ proto.name }}: Codable, Sendable {
 {% for field in proto.fields %}{% if field.description %}    /// {{ field.description }}
@@ -26,6 +48,16 @@ public struct {{ proto.name }}: Codable, Sendable {
     private enum CodingKeys: String, CodingKey {
 {% for field in proto.fields %}        case {{ field.name }} = {{ field.wire_name | code_literal }}
 {% endfor %}    }
+{% if proto.requires_custom_decode %}
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+{% for field in proto.fields %}{% if field.coerce_string %}        self.{{ field.name }} = {% if field.optional %}try apiDecodeCoerceStringIfPresent(from: container, forKey: .{{ field.name }}){% else %}try apiDecodeCoerceString(from: container, forKey: .{{ field.name }}){% endif %}
+{% elif field.coerce_string_array %}        self.{{ field.name }} = {% if field.optional %}try apiDecodeCoerceStringArrayIfPresent(from: container, forKey: .{{ field.name }}){% else %}try apiDecodeCoerceStringArray(from: container, forKey: .{{ field.name }}){% endif %}
+{% elif field.optional %}        self.{{ field.name }} = try container.decodeIfPresent({{ field.type.text }}.self, forKey: .{{ field.name }})
+{% else %}        self.{{ field.name }} = try container.decode({{ field.type.text }}.self, forKey: .{{ field.name }})
+{% endif %}{% endfor %}    }
+{% endif %}
 
     public func toQueryItems() -> [URLQueryItem] {
         [

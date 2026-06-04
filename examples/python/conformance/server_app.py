@@ -91,6 +91,15 @@ from api_blueprint_example_server.api.routes.api.media.gen_types import MediaErr
 from api_blueprint_example_server.api.runtime.errors import ApiError, ApiErrorPayload, ApiToastPayload
 from api_blueprint_example_server.api.runtime.server import ApiRawResponse, ApiServerConfig
 from api_blueprint_example_server.api.transports.http.server import create_router as create_api_router
+from api_blueprint_example_server.legacy.routes.legacy.account.gen_types import (
+    AccountProfileResponse as LegacyAccountProfileResponse,
+)
+from api_blueprint_example_server.legacy.routes.legacy.legacy_json.gen_types import LegacyJsonCompatResponse
+from api_blueprint_example_server.legacy.routes.legacy.room.gen_types import (
+    RoomListResponse as LegacyRoomListResponse,
+)
+from api_blueprint_example_server.legacy.routes.legacy.room.gen_types import RoomSummary as LegacyRoomSummary
+from api_blueprint_example_server.legacy.transports.http.server import create_router as create_legacy_router
 from api_blueprint_example_server.static.routes.static.gen_types import DocJsonResponse, DochahaResponse
 from api_blueprint_example_server.static.transports.http.server import create_router as create_static_router
 
@@ -404,6 +413,27 @@ class AltConflictService:
         )
 
 
+class LegacyAccountService:
+    async def account_profile(self) -> LegacyAccountProfileResponse:
+        return LegacyAccountProfileResponse(user_id="1000010", nickname="legacy-user")
+
+
+class LegacyRoomService:
+    async def room_list(self) -> LegacyRoomListResponse:
+        return LegacyRoomListResponse(
+            rooms=[LegacyRoomSummary(room_id="100", title="legacy-room")]
+        )
+
+
+class LegacyJsonService:
+    async def legacy_json_compat(self) -> LegacyJsonCompatResponse:
+        return LegacyJsonCompatResponse(
+            target=["legacy-room", "backup-room"],
+            ids=["1", 2, "3"],
+            normalized_ids=["1", "2", "3"],
+        )
+
+
 app.include_router(
     create_api_router(
         api_service=ApiService(),
@@ -416,6 +446,13 @@ app.include_router(
     )
 )
 app.include_router(create_alt_router(conflict_service=AltConflictService()))
+app.include_router(
+    create_legacy_router(
+        account_service=LegacyAccountService(),
+        room_service=LegacyRoomService(),
+        legacy_json_service=LegacyJsonService(),
+    )
+)
 app.include_router(create_static_router(static_service=StaticService()))
 
 

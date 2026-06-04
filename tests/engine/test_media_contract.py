@@ -4,7 +4,7 @@ import pytest
 from fastapi import FastAPI
 
 from api_blueprint.engine import Blueprint
-from api_blueprint.engine.model import FileField, Model, String
+from api_blueprint.engine.model import FileField, Model, OneOf, String
 
 
 class UploadForm(Model):
@@ -23,6 +23,15 @@ def test_file_field_is_only_allowed_in_multipart_request_models() -> None:
             views.GET("/query").ARGS(UploadForm)
         with pytest.raises(ValueError, match="RSP_JSON.*FileField"):
             views.GET("/response").RSP_JSON(UploadForm)
+
+
+def test_file_field_is_rejected_inside_legacy_one_of() -> None:
+    class BadPayload(Model):
+        value = OneOf(String(), FileField(description="file"))
+
+    bp = Blueprint(root="/api", app=FastAPI())
+    with pytest.raises(ValueError, match="REQ_JSON.*FileField.*value<variant1>"):
+        bp.POST("/bad").REQ_JSON(BadPayload)
 
 
 def test_multipart_and_raw_response_openapi_contract() -> None:

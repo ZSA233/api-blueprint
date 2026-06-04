@@ -13,12 +13,14 @@ from api_blueprint.engine.connection import ConnectionDelivery, ConnectionKind, 
 from api_blueprint.engine.model import (
     AnonKV,
     Array,
+    CoerceString,
     Enum as ModelEnum,
     Error,
     Field,
     FieldWrappedModel,
     Map,
     Model,
+    OneOf,
     iter_model_vars,
     model_to_pydantic,
     unwrap_model_type,
@@ -405,6 +407,19 @@ class ContractGraphBuilder:
         if isinstance(field_value, FieldWrappedModel):
             return self._field_manifest(field_value.__field_type__)
 
+        if isinstance(field_value, OneOf):
+            return {
+                "type": "one_of",
+                "variants": [self._field_manifest(variant) for variant in field_value.variants],
+            }
+
+        if isinstance(field_value, CoerceString):
+            return {
+                "type": "coerce_string",
+                "canonical": {"type": "string"},
+                "accepts": [self._field_manifest(variant) for variant in field_value.accepts],
+            }
+
         if isinstance(field_value, Array):
             return {
                 "type": "array",
@@ -686,6 +701,10 @@ def _field_signature(field_value: object) -> object:
         return {"type": "anon", "value": _field_signature(obj) if obj is not None else None}
     if isinstance(field_value, FieldWrappedModel):
         return {"type": "wrapped", "value": _field_signature(field_value.__field_type__)}
+    if isinstance(field_value, OneOf):
+        return {"type": "one_of", "variants": [_field_signature(variant) for variant in field_value.variants]}
+    if isinstance(field_value, CoerceString):
+        return {"type": "coerce_string", "accepts": [_field_signature(variant) for variant in field_value.accepts]}
     if isinstance(field_value, Array):
         return {"type": "array", "items": _field_signature(field_value.elem_type())}
     if isinstance(field_value, Map):

@@ -21,6 +21,9 @@ from ...routes.legacy.account import gen_types as legacy_account_types
 from ...routes.legacy.room.service import RoomService, RoomServiceStub
 from ...routes.legacy.room import gen_types as legacy_room_types
 
+from ...routes.legacy.legacy_json.service import LegacyJsonService, LegacyJsonServiceStub
+from ...routes.legacy.legacy_json import gen_types as legacy_legacy_json_types
+
 
 @dataclass(frozen=True)
 class HttpRequestInfo:
@@ -62,16 +65,29 @@ _HTTP_ROUTE_LEGACY_ROOM_GET_LIST = HttpRouteInfo(
     ),
 )
 
+_HTTP_ROUTE_LEGACY_LEGACY_JSON_GET_COMPAT = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
+
 
 def create_router(
     account_service: AccountService | None = None,
     room_service: RoomService | None = None,
+    legacy_json_service: LegacyJsonService | None = None,
     config: ApiServerConfig | None = None,
 ) -> APIRouter:
     router = APIRouter()
     api_config = config or ApiServerConfig()
     router.include_router(create_account_router(account_service, config=api_config))
     router.include_router(create_room_router(room_service, config=api_config))
+    router.include_router(create_legacy_json_router(legacy_json_service, config=api_config))
     return router
 
 
@@ -121,6 +137,32 @@ def create_room_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "legacy.room.get.list")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
+
+    return router
+
+
+def create_legacy_json_router(
+    service: LegacyJsonService | None = None,
+    *,
+    config: ApiServerConfig | None = None,
+) -> APIRouter:
+    router = APIRouter()
+    api_config = config or ApiServerConfig()
+    service_impl = service or LegacyJsonServiceStub()
+
+    @router.api_route("/legacy-json/compat", methods=["GET"])
+    async def legacy_json_legacy_json_compat(request: Request) -> Any:
+        service = service_impl
+        route_info = _HTTP_ROUTE_LEGACY_LEGACY_JSON_GET_COMPAT
+        try:
+            result = await service.legacy_json_compat(
+            )
+            return _wrap_response({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, result)
+
+        except ApiError as error:
+            return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "legacy.legacy_json.get.compat")
         except PayloadTooLargeError as error:
             return _payload_too_large_response(error)
 

@@ -11,6 +11,8 @@ private val routeApiErrorsByCode: Map<String, Map<ApiErrorCode, ApiErrorEntry>> 
     ),
     "legacy.room.get.list" to mapOf(
     ),
+    "legacy.legacy_json.get.compat" to mapOf(
+    ),
 )
 
 fun lookupApiErrorById(id: String): ApiErrorEntry? = ApiErrorsByID[id]

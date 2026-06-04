@@ -146,6 +146,16 @@ Map<String, Object?> apiBlueprintReadObject(Object? value) {
 
 String? apiBlueprintReadString(Object? value) => value?.toString();
 
+String? apiBlueprintReadCoerceString(Object? value) {
+  if (value is String) {
+    return value;
+  }
+  if (value is int) {
+    return value.toString();
+  }
+  return null;
+}
+
 int? apiBlueprintReadInt(Object? value) {
   if (value is int) {
     return value;

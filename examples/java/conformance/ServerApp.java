@@ -37,6 +37,7 @@ import com.example.apiblueprint.static_.routes.static_.StaticService;
 import com.example.apiblueprint.static_.routes.static_.GenStaticServiceStub;
 import com.example.apiblueprint.static_.routes.static_.GenStaticTypes;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -62,6 +63,9 @@ import org.springframework.context.annotation.Import;
     GenDemoController.class,
     GenHelloController.class,
     GenMediaController.class,
+    com.example.apiblueprint.legacy.transports.http.legacy.account.GenAccountController.class,
+    com.example.apiblueprint.legacy.transports.http.legacy.legacyjson.GenLegacyJsonController.class,
+    com.example.apiblueprint.legacy.transports.http.legacy.room.GenRoomController.class,
     com.example.apiblueprint.static_.transports.http.static_.GenStaticController.class,
     com.example.apiblueprint.alt.transports.http.alt.conflict.GenConflictController.class
 })
@@ -149,6 +153,21 @@ public class ServerApp {
     @Bean
     public com.example.apiblueprint.alt.routes.alt.conflict.ConflictService altConflictService() {
         return new AltConflictServiceImpl();
+    }
+
+    @Bean
+    public com.example.apiblueprint.legacy.routes.legacy.account.AccountService legacyAccountService() {
+        return new LegacyAccountServiceImpl();
+    }
+
+    @Bean
+    public com.example.apiblueprint.legacy.routes.legacy.room.RoomService legacyRoomService() {
+        return new LegacyRoomServiceImpl();
+    }
+
+    @Bean
+    public com.example.apiblueprint.legacy.routes.legacy.legacyjson.LegacyJsonService legacyJsonService() {
+        return new LegacyJsonServiceImpl();
     }
 
     @Bean
@@ -559,6 +578,40 @@ public class ServerApp {
                 "alt-default",
                 query.classValue(),
                 com.example.apiblueprint.alt.runtime.GenApiTypes.KeywordEnum.CLASS_VALUE
+            );
+        }
+    }
+
+    private static final class LegacyAccountServiceImpl
+        extends com.example.apiblueprint.legacy.routes.legacy.account.GenAccountServiceStub {
+        @Override
+        public com.example.apiblueprint.legacy.runtime.GenApiTypes.AccountProfile accountProfile() {
+            return new com.example.apiblueprint.legacy.runtime.GenApiTypes.AccountProfile(
+                "1000010",
+                "legacy-user"
+            );
+        }
+    }
+
+    private static final class LegacyRoomServiceImpl
+        extends com.example.apiblueprint.legacy.routes.legacy.room.GenRoomServiceStub {
+        @Override
+        public com.example.apiblueprint.legacy.routes.legacy.room.GenRoomTypes.RoomListResponse roomList() {
+            return new com.example.apiblueprint.legacy.routes.legacy.room.GenRoomTypes.RoomListResponse(
+                List.of(new com.example.apiblueprint.legacy.runtime.GenApiTypes.RoomSummary("100", "legacy-room"))
+            );
+        }
+    }
+
+    private static final class LegacyJsonServiceImpl
+        extends com.example.apiblueprint.legacy.routes.legacy.legacyjson.GenLegacyJsonServiceStub {
+        @Override
+        public com.example.apiblueprint.legacy.runtime.GenApiTypes.LegacyJsonCompatPayload legacyJsonCompat() {
+            JsonNodeFactory factory = JsonNodeFactory.instance;
+            return new com.example.apiblueprint.legacy.runtime.GenApiTypes.LegacyJsonCompatPayload(
+                factory.arrayNode().add("legacy-room").add("backup-room"),
+                List.of(factory.textNode("1"), factory.numberNode(2), factory.textNode("3")),
+                List.of("1", "2", "3")
             );
         }
     }

@@ -6,11 +6,14 @@ import type { ApiClientConfig } from "../../../runtime/client";
 import { DefaultTransport, type ApiHttpTransportConfig } from "../transport";
 import type { AccountClient } from "../../../routes/legacy/account/client";
 import { AccountClient as AccountClientImpl } from "../../../routes/legacy/account/client";
+import type { LegacyJsonClient } from "../../../routes/legacy/legacy_json/client";
+import { LegacyJsonClient as LegacyJsonClientImpl } from "../../../routes/legacy/legacy_json/client";
 import type { RoomClient } from "../../../routes/legacy/room/client";
 import { RoomClient as RoomClientImpl } from "../../../routes/legacy/room/client";
 
 export interface GeneratedClients {
   accountClient: AccountClient;
+  legacyJsonClient: LegacyJsonClient;
   roomClient: RoomClient;
 }
 
@@ -19,6 +22,7 @@ export function createClients(config: ApiHttpTransportConfig = {}): GeneratedCli
   const sharedConfig: ApiClientConfig = { transport };
   return {
     accountClient: new AccountClientImpl(sharedConfig),
+    legacyJsonClient: new LegacyJsonClientImpl(sharedConfig),
     roomClient: new RoomClientImpl(sharedConfig),
   };
 }

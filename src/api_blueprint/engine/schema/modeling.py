@@ -229,7 +229,7 @@ P = TypeVar("P", bound=Proto)
 
 
 def iter_field_model_type(field: AnyField) -> Generator[type[Model], None, None]:
-    from .fields import AnonKV, Array, FieldWrappedModel, Map
+    from .fields import AnonKV, Array, CoerceString, FieldWrappedModel, Map, OneOf
 
     if isinstance(field, AnonKV):
         field = field.get_obj()
@@ -246,6 +246,16 @@ def iter_field_model_type(field: AnyField) -> Generator[type[Model], None, None]
 
     if isinstance(field, Map):
         yield from iter_field_model_type(field.value_type())
+        return
+
+    if isinstance(field, OneOf):
+        for variant in field.variants:
+            yield from iter_field_model_type(variant)
+        return
+
+    if isinstance(field, CoerceString):
+        for variant in field.accepts:
+            yield from iter_field_model_type(variant)
         return
 
     if isinstance(field, Model):

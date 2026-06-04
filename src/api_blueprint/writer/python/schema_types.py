@@ -130,7 +130,7 @@ class PythonSchemaRegistry:
         self._models[key] = model
         return model
 
-    def resolve_value(self, value: Mapping[str, Any] | None) -> PythonResolvedType:
+    def resolve_value(self, value: Mapping[str, Any] | None, *, strict_wire: bool = False) -> PythonResolvedType:
         if not isinstance(value, Mapping):
             return PythonResolvedType("Any")
         if value.get("ref"):
@@ -139,21 +139,31 @@ class PythonSchemaRegistry:
             return PythonResolvedType(model.class_name, f"{model.class_name}.from_value")
         value_type = str(value.get("type") or "any")
         if value_type == "array":
-            item_type = self.resolve_value(_mapping(value.get("items")))
+            item_type = self.resolve_value(_mapping(value.get("items")), strict_wire=strict_wire)
             return PythonResolvedType(
                 f"list[{item_type.annotation}]",
                 f"lambda item, path: _decode_list(item, path, {item_type.decoder})",
             )
         if value_type == "map":
-            key_type = self.resolve_value(_mapping(value.get("keys")) or {"type": "string"})
-            item_type = self.resolve_value(_mapping(value.get("values")))
+            key_type = self.resolve_value(_mapping(value.get("keys")) or {"type": "string"}, strict_wire=strict_wire)
+            item_type = self.resolve_value(_mapping(value.get("values")), strict_wire=strict_wire)
             return PythonResolvedType(
                 f"dict[{key_type.annotation}, {item_type.annotation}]",
                 f"lambda item, path: _decode_map(item, path, {key_type.decoder}, {item_type.decoder})",
             )
+        if value_type == "one_of":
+            variants = [_mapping(item) for item in value.get("variants", []) if isinstance(item, Mapping)]
+            variant_types = [self.resolve_value(variant, strict_wire=True) for variant in variants if variant is not None]
+            annotation = " | ".join(dict.fromkeys(item.annotation for item in variant_types)) or "Any"
+            decoders = ", ".join(item.decoder for item in variant_types) or "_decode_any"
+            return PythonResolvedType(annotation, f"lambda item, path: _decode_one_of(item, path, ({decoders},))")
+        if value_type == "coerce_string":
+            return PythonResolvedType("str", "_decode_coerce_string")
         if value_type == "enum" or value.get("enum_values") or value.get("enum"):
             enum_model = self.ensure_enum(value)
             return PythonResolvedType(enum_model.class_name, f"{enum_model.class_name}.from_value")
+        if strict_wire:
+            return _STRICT_PRIMITIVE_TYPES.get(value_type, _PRIMITIVE_TYPES.get(value_type, PythonResolvedType("Any")))
         return _PRIMITIVE_TYPES.get(value_type, PythonResolvedType("Any"))
 
     def ensure_enum(self, value: Mapping[str, Any]) -> PythonEnumModel:
@@ -251,4 +261,25 @@ _PRIMITIVE_TYPES: dict[str, PythonResolvedType] = {
     "bool": PythonResolvedType("bool", "_decode_bool"),
     "binary": PythonResolvedType("bytes", "_decode_bytes"),
     "file": PythonResolvedType("ApiUploadFile", "_decode_file"),
+}
+
+_STRICT_PRIMITIVE_TYPES: dict[str, PythonResolvedType] = {
+    **_PRIMITIVE_TYPES,
+    "int": PythonResolvedType("int", "_decode_strict_int"),
+    "integer": PythonResolvedType("int", "_decode_strict_int"),
+    "int8": PythonResolvedType("int", "_decode_strict_int"),
+    "int16": PythonResolvedType("int", "_decode_strict_int"),
+    "int32": PythonResolvedType("int", "_decode_strict_int"),
+    "int64": PythonResolvedType("int", "_decode_strict_int"),
+    "uint": PythonResolvedType("int", "_decode_strict_int"),
+    "uint8": PythonResolvedType("int", "_decode_strict_int"),
+    "uint16": PythonResolvedType("int", "_decode_strict_int"),
+    "uint32": PythonResolvedType("int", "_decode_strict_int"),
+    "uint64": PythonResolvedType("int", "_decode_strict_int"),
+    "float": PythonResolvedType("float", "_decode_strict_float"),
+    "float32": PythonResolvedType("float", "_decode_strict_float"),
+    "float64": PythonResolvedType("float", "_decode_strict_float"),
+    "number": PythonResolvedType("float", "_decode_strict_float"),
+    "boolean": PythonResolvedType("bool", "_decode_strict_bool"),
+    "bool": PythonResolvedType("bool", "_decode_strict_bool"),
 }

@@ -3,17 +3,24 @@ from __future__ import annotations
 import enum
 import warnings
 
+import pytest
+
 from api_blueprint.engine import Blueprint
 from api_blueprint.engine.model import (
     Array,
+    CoerceString,
     Enum,
     Field,
+    Float,
     Float64,
     Int,
     KV,
+    LegacyStringID,
     Map,
     Model,
+    OneOf,
     String,
+    StringOrIntAsString,
     Uint,
     create_model,
     iter_enum_classes,
@@ -119,3 +126,35 @@ def test_model_to_pydantic_keeps_route_named_anon_models_after_build():
     # Route registration should keep the already materialized anonymous model stable.
     model_to_pydantic(router.rsp_model)
     assert getattr(field.get_obj(), "__name__", None) == "ANON_Func1put_anon_kv"
+
+
+def test_legacy_json_compat_fields_support_nested_shapes():
+    class LegacyPayload(Model):
+        target = OneOf(String(), Array[String](), description="target")
+        ids = Array[OneOf(String(), Int())](description="ids")
+        normalized = Array[LegacyStringID](description="normalized ids")
+
+    pydantic_model = model_to_pydantic(LegacyPayload)
+
+    assert LegacyPayload.target.__type__ == "one_of"
+    assert [getattr(variant, "__type__", "") for variant in LegacyPayload.target.variants] == ["string", "array"]
+    assert LegacyPayload.ids.elem_type().__type__ == "one_of"
+    assert LegacyPayload.normalized.elem_type().__type__ == "coerce_string"
+    assert set(pydantic_model.model_fields) == {"target", "ids", "normalized"}
+
+
+def test_string_or_int_as_string_is_deprecated_alias_for_legacy_string_id():
+    with pytest.warns(DeprecationWarning, match="StringOrIntAsString is deprecated"):
+        field = StringOrIntAsString(description="legacy id")
+
+    assert isinstance(field, LegacyStringID)
+    assert field.__type__ == "coerce_string"
+    assert [getattr(variant, "__type__", "") for variant in field.accepts] == ["string", "int"]
+
+
+def test_legacy_json_compat_fields_reject_unsupported_variants():
+    with pytest.raises(ValueError, match="OneOf requires"):
+        OneOf()
+
+    with pytest.raises(ValueError, match="CoerceString only accepts"):
+        CoerceString(accepts=(String, Float))

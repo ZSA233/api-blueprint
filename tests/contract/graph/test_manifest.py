@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .helpers import *
+from api_blueprint.engine.model import Array, OneOf, LegacyStringID
 
 
 def test_contract_graph_manifest_captures_rpc_and_connection_routes():
@@ -148,3 +149,30 @@ def test_contract_graph_uses_generic_field_contract_metadata():
     assert fields["error"]["contract"] == {"field_id": 3, "choice": "result"}
     assert "wire" not in fields["name"]
     assert "proto" not in fields["success"]
+
+
+def test_contract_graph_manifest_captures_legacy_json_compat_fields():
+    class LegacyPayload(Model):
+        target = OneOf(String(), Array[String](), description="target")
+        ids = Array[OneOf(String(), Int())](description="ids")
+        normalized = Array[LegacyStringID](description="normalized")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/legacy") as views:
+        views.GET("/payload").RSP(LegacyPayload)
+
+    manifest = build_contract_graph([bp]).to_manifest()
+    fields = manifest["schemas"]["LegacyPayload"]["fields"]
+
+    assert fields["target"]["type"] == "one_of"
+    assert fields["target"]["variants"] == [
+        {"type": "string"},
+        {"type": "array", "items": {"type": "string"}},
+    ]
+    assert fields["ids"]["items"]["type"] == "one_of"
+    assert fields["ids"]["items"]["variants"] == [{"type": "string"}, {"type": "int"}]
+    assert fields["normalized"]["items"] == {
+        "type": "coerce_string",
+        "canonical": {"type": "string"},
+        "accepts": [{"type": "string"}, {"type": "int"}],
+    }

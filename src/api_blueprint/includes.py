@@ -3,6 +3,7 @@ from typing import (
 )
 from api_blueprint.engine.model import (
     String, Array, Bool, Byte, Map, Error, Toast, Model, Field, FileField,
+    OneOf, CoerceString, LegacyStringID, StringOrIntAsString,
     Int, Int8, Int16, Int32, Int64, Enum,
     Uint, Uint8, Uint16, Uint32, Uint64,
     Float, Float32, Float64, Null, Object, DateTime, JSONValue, AnyValue, Timestamp, Struct, AnyPayload,

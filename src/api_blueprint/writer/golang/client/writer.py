@@ -633,9 +633,11 @@ def _go_type_for_schema_value(value: Mapping[str, Any], type_names: _TypeNames) 
         "boolean": "bool",
         "bool": "bool",
         "binary": "[]byte",
+        "coerce_string": "string",
         "file": "MultipartFile",
         "any": "any",
         "null": "any",
+        "one_of": "any",
     }.get(value_type, "any")
 
 

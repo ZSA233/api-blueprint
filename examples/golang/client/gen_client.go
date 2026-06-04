@@ -11,6 +11,7 @@ import (
 	hello "example.com/project/golang/client/routes/api/hello"
 	media "example.com/project/golang/client/routes/api/media"
 	account "example.com/project/golang/client/routes/legacy/account"
+	legacy_json "example.com/project/golang/client/routes/legacy/legacy_json"
 	room "example.com/project/golang/client/routes/legacy/room"
 	status "example.com/project/golang/client/routes/runtime/status"
 	static "example.com/project/golang/client/routes/static"
@@ -32,6 +33,7 @@ type Client struct {
 	Status      *status.Client
 	Account     *account.Client
 	Room        *room.Client
+	LegacyJson  *legacy_json.Client
 }
 
 func NewHTTP(config HTTPConfig) *Client {
@@ -52,5 +54,6 @@ func NewClient(transport runtime.Transport) *Client {
 		Status:      status.NewClient(transport),
 		Account:     account.NewClient(transport),
 		Room:        room.NewClient(transport),
+		LegacyJson:  legacy_json.NewClient(transport),
 	}
 }

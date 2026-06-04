@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.fasterxml.jackson.databind.JsonNode;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -333,6 +334,14 @@ public final class GenApiTypes {
     public record RoomSummary(
         @JsonProperty("room_id") String roomId,
         @JsonProperty("title") String title
+    ) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record LegacyJsonCompatPayload(
+        @JsonProperty("target") JsonNode target,
+        @JsonProperty("ids") List<JsonNode> ids,
+        @JsonProperty("normalized_ids") List<String> normalizedIds
     ) {
     }
 

@@ -12,6 +12,15 @@ export interface AccountProfile {
   nickname: string;
 }
 
+export interface LegacyJsonCompatPayload {
+  /** legacy target */
+  target: string | Array<string>;
+  /** legacy ids */
+  ids: Array<string | number>;
+  /** legacy ids normalized to string */
+  normalized_ids: Array<string>;
+}
+
 export interface RoomSummary {
   /** room id */
   room_id: string;

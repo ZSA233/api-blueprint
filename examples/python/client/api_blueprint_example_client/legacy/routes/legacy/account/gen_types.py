@@ -12,15 +12,20 @@ from ....runtime.gen_codecs import (
     _decode_any,
     _decode_bool,
     _decode_bytes,
+    _decode_coerce_string,
     _decode_file,
     _decode_float,
     _decode_int,
     _decode_list,
     _decode_map,
     _decode_object,
+    _decode_one_of,
     _decode_optional,
     _decode_required,
     _decode_str,
+    _decode_strict_bool,
+    _decode_strict_float,
+    _decode_strict_int,
     _field_path,
 )
 
@@ -50,7 +55,7 @@ class AccountProfileResponse:
     @classmethod
     def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
-            user_id=_decode_required(_decode_str, value.get("user_id", _MISSING), _field_path(path, "user_id")),
+            user_id=_decode_required(_decode_coerce_string, value.get("user_id", _MISSING), _field_path(path, "user_id")),
             nickname=_decode_required(_decode_str, value.get("nickname", _MISSING), _field_path(path, "nickname")),
         )
 

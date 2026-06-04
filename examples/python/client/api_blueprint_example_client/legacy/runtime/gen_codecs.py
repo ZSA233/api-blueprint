@@ -42,6 +42,16 @@ def _decode_str(value: object, path: str) -> str:
     raise TypeError(f"{path}: expected string")
 
 
+def _decode_coerce_string(value: object, path: str) -> str:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, bool):
+        raise TypeError(f"{path}: expected string or integer")
+    if isinstance(value, int):
+        return str(value)
+    raise TypeError(f"{path}: expected string or integer")
+
+
 def _decode_int(value: object, path: str) -> int:
     if isinstance(value, bool):
         raise TypeError(f"{path}: expected int")
@@ -52,6 +62,14 @@ def _decode_int(value: object, path: str) -> int:
             return int(value)
         except ValueError as err:
             raise ValueError(f"{path}: expected int") from err
+    raise TypeError(f"{path}: expected int")
+
+
+def _decode_strict_int(value: object, path: str) -> int:
+    if isinstance(value, bool):
+        raise TypeError(f"{path}: expected int")
+    if isinstance(value, int):
+        return value
     raise TypeError(f"{path}: expected int")
 
 
@@ -68,6 +86,14 @@ def _decode_float(value: object, path: str) -> float:
     raise TypeError(f"{path}: expected float")
 
 
+def _decode_strict_float(value: object, path: str) -> float:
+    if isinstance(value, bool):
+        raise TypeError(f"{path}: expected float")
+    if isinstance(value, (int, float)):
+        return float(value)
+    raise TypeError(f"{path}: expected float")
+
+
 def _decode_bool(value: object, path: str) -> bool:
     if isinstance(value, bool):
         return value
@@ -77,6 +103,12 @@ def _decode_bool(value: object, path: str) -> bool:
             return True
         if lowered in {"0", "false", "no", "off"}:
             return False
+    raise TypeError(f"{path}: expected bool")
+
+
+def _decode_strict_bool(value: object, path: str) -> bool:
+    if isinstance(value, bool):
+        return value
     raise TypeError(f"{path}: expected bool")
 
 
@@ -107,6 +139,17 @@ def _decode_map(value: object, path: str, key_decoder, item_decoder) -> dict[Any
         key_decoder(key, f"{path}.<key>"): item_decoder(item, _field_path(path, str(key)))
         for key, item in value.items()
     }
+
+
+def _decode_one_of(value: object, path: str, decoders) -> object:
+    errors: list[str] = []
+    for decoder in decoders:
+        try:
+            return decoder(value, path)
+        except (TypeError, ValueError) as err:
+            errors.append(str(err))
+    detail = "; ".join(errors) if errors else "no variants"
+    raise TypeError(f"{path}: expected one of declared JSON shapes ({detail})")
 
 
 def _api_key_to_json(value: object) -> str:

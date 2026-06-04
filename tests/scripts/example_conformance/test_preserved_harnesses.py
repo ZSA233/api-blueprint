@@ -18,14 +18,16 @@ def test_preserved_harnesses_dispatch_expanded_scenarios() -> None:
         "single-channel",
     )
     swift_expected = expected + ("wide-binary",)
+    legacy_json_expected = expected + ("legacy-json",)
+    swift_legacy_json_expected = swift_expected + ("legacy-json",)
     harnesses = [
         (root / "examples/golang/conformance/main.go", expected),
-        (root / "examples/typescript/conformance.ts", expected),
-        (root / "examples/kotlin/conformance/Conformance.kt", expected),
-        (root / "examples/flutter/test/conformance_test.dart", expected),
-        (root / "examples/swift/Conformance/Sources/SwiftConformance/main.swift", swift_expected),
+        (root / "examples/typescript/conformance.ts", legacy_json_expected),
+        (root / "examples/kotlin/conformance/Conformance.kt", legacy_json_expected),
+        (root / "examples/flutter/test/conformance_test.dart", legacy_json_expected),
+        (root / "examples/swift/Conformance/Sources/SwiftConformance/main.swift", swift_legacy_json_expected),
         (root / "examples/java/conformance/Conformance.java", expected),
-        (root / "examples/python/conformance/client.py", expected),
+        (root / "examples/python/conformance/client.py", legacy_json_expected),
     ]
     for harness, names in harnesses:
         text = harness.read_text(encoding="utf-8")

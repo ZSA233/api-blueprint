@@ -71,9 +71,11 @@ class GolangTypeResolver:
         "boolean": "bool",
         "bool": "bool",
         "byte": "byte",
+        "coerce_string": "string",
         "file": "{provider_package$}MultipartFile",
         "error": "error",
         "null": "nil",
+        "one_of": "any",
     }
 
     def resolve(self, field: Union[Field, Model, Type[Any], Any], *, pointer_allowed: bool = True) -> str:

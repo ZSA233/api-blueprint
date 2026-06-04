@@ -40,6 +40,9 @@ public data class {{ proto.name }}(
 {%- if field.serial_name != field.name %}
     @SerialName("{{ field.serial_name }}")
 {%- endif %}
+{%- if field.coerce_string %}
+    @Serializable(with = ApiCoerceStringSerializer::class)
+{%- endif %}
     public val {{ field.name }}: {{ field.type.text }}{% if field.optional %} = null{% endif %}{% if not loop.last %},{% endif %}
 {%- endfor %}
 )

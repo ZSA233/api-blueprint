@@ -30,6 +30,7 @@ export const WAILS_V3_BINDINGS: Record<string, string> = {
   "hello.HelloService.String": "example.com/project/golang/server/views/transports/wailsv3/api/hello.HelloService.String",
   "hello.HelloService.StringEmun": "example.com/project/golang/server/views/transports/wailsv3/api/hello.HelloService.StringEmun",
   "hello.HelloService.Uint64": "example.com/project/golang/server/views/transports/wailsv3/api/hello.HelloService.Uint64",
+  "legacy_json.LegacyJsonService.LegacyJsonCompat": "example.com/project/golang/server/views/transports/wailsv3/legacy/legacy_json.LegacyJsonService.LegacyJsonCompat",
   "room.RoomService.RoomList": "example.com/project/golang/server/views/transports/wailsv3/legacy/room.RoomService.RoomList",
   "static.StaticService.Dochaha": "example.com/project/golang/server/views/transports/wailsv3/static.StaticService.Dochaha",
   "static.StaticService.DocJson": "example.com/project/golang/server/views/transports/wailsv3/static.StaticService.DocJson",

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .helpers import *
+from api_blueprint.engine.model import Int, OneOf, LegacyStringID
 
 
 def test_python_client_generates_recursive_nested_dto_codecs(tmp_path: Path):
@@ -130,6 +131,68 @@ def test_python_client_generates_enum_and_wire_name_codecs(tmp_path: Path):
         "statuses": [1, 2],
         "status_map": {"1": "second"},
     }
+
+
+def test_python_client_decodes_legacy_json_compat_fields(tmp_path: Path):
+    class LegacyPayload(Model):
+        target = OneOf(String(), Array[String](), description="target")
+        ids = Array[OneOf(String(), Int())](description="ids")
+        normalized = Array[LegacyStringID](description="normalized")
+        room_id = LegacyStringID(alias="roomId", description="room id")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/legacy") as views:
+        views.GET("/payload").RSP(LegacyPayload)
+
+    output_dir = tmp_path / "python"
+    writer = PythonClientWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+    _compile_generated_files(output_dir)
+
+    types_text = (
+        output_dir
+        / "api_blueprint_generated"
+        / "api"
+        / "routes"
+        / "api"
+        / "legacy"
+        / "gen_types.py"
+    ).read_text(encoding="utf-8")
+    assert "target: str | list[str]" in types_text
+    assert "ids: list[str | int]" in types_text
+    assert "normalized: list[str]" in types_text
+    assert "_decode_coerce_string" in types_text
+    assert "_decode_one_of" in types_text
+
+    types_module = _import_generated_module(
+        output_dir,
+        "api_blueprint_generated.api.routes.api.legacy.gen_types",
+    )
+    response = types_module.PayloadResponse.from_value(
+        {
+            "target": ["a"],
+            "ids": ["1", 2],
+            "normalized": ["1", 2, "3"],
+            "roomId": 100,
+        }
+    )
+
+    assert response.target == ["a"]
+    assert response.ids == ["1", 2]
+    assert response.normalized == ["1", "2", "3"]
+    assert response.room_id == "100"
+    assert response.to_mapping()["roomId"] == "100"
+
+    with pytest.raises(TypeError, match=r"PayloadResponse\.target: expected one of declared JSON shapes"):
+        types_module.PayloadResponse.from_value(
+            {"target": 1, "ids": [], "normalized": [], "roomId": "room"}
+        )
+
+    with pytest.raises(TypeError, match=r"PayloadResponse\.roomId: expected string or integer"):
+        types_module.PayloadResponse.from_value(
+            {"target": "ok", "ids": [], "normalized": [], "roomId": True}
+        )
 
 def test_python_http_transport_performs_async_rpc_requests(tmp_path: Path):
     bp = Blueprint(root="/api")

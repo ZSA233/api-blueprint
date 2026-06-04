@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import enum
+import warnings
 import zlib
 from typing import Any, ForwardRef, Generic, Mapping, Optional, TypeVar, get_args, get_origin, overload
 
@@ -54,6 +55,43 @@ class Struct(Object):
 
 class AnyPayload(Object):
     __type__ = "any_payload"
+
+
+def _normalize_compat_variant(value: Any) -> Any:
+    if is_parametrized := get_origin(value):
+        if isinstance(is_parametrized, type):
+            return value()
+    if isinstance(value, type) and issubclass(value, Field):
+        return value()
+    return value
+
+
+class OneOf(Field):
+    __type__ = "one_of"
+    variants: tuple[Any, ...]
+
+    @overload
+    def __init__(
+        self,
+        *variants: Any,
+        default: Any = ...,
+        description: str | None = ...,
+        alias: str | None = ...,
+        example: Any = ...,
+        omitempty: bool = False,
+        **kwargs: Any,
+    ) -> None: ...
+
+    def __init__(self, *variants: Any, **kwargs: Any) -> None:
+        if not variants:
+            raise ValueError("OneOf requires at least one variant")
+        self.variants = tuple(_normalize_compat_variant(variant) for variant in variants)
+        super().__init__(**kwargs)
+
+    def __class_getitem__(cls, variants: Any) -> "OneOf":
+        if not isinstance(variants, tuple):
+            variants = (variants,)
+        return cls(*variants)
 
 
 class Null(Field):
@@ -157,6 +195,23 @@ class Uint8(Int):
     __type__ = "uint8"
 
 
+_COERCE_STRING_ACCEPT_TYPES = frozenset(
+    {
+        "string",
+        "int",
+        "int64",
+        "int32",
+        "int16",
+        "int8",
+        "uint",
+        "uint64",
+        "uint32",
+        "uint16",
+        "uint8",
+    }
+)
+
+
 class Float(Field):
     __type__ = "float"
 
@@ -224,6 +279,53 @@ class Byte(Field):
     ) -> None: ...
 
     def __init__(self, **kwargs: Any):
+        super().__init__(**kwargs)
+
+
+class CoerceString(String):
+    __type__ = "coerce_string"
+    accepts: tuple[Any, ...]
+
+    @overload
+    def __init__(
+        self,
+        *,
+        accepts: tuple[Any, ...] | list[Any] = ...,
+        default: str = ...,
+        description: str | None = ...,
+        alias: str | None = ...,
+        example: str = ...,
+        omitempty: bool = False,
+        **kwargs: Any,
+    ) -> None: ...
+
+    def __init__(self, *, accepts: tuple[Any, ...] | list[Any] | None = None, **kwargs: Any) -> None:
+        raw_accepts = accepts if accepts is not None else (String, Int)
+        if not raw_accepts:
+            raise ValueError("CoerceString requires at least one accepted wire type")
+        self.accepts = tuple(_normalize_compat_variant(variant) for variant in raw_accepts)
+        unsupported = [
+            getattr(variant, "__type__", type(variant).__name__)
+            for variant in self.accepts
+            if getattr(variant, "__type__", None) not in _COERCE_STRING_ACCEPT_TYPES
+        ]
+        if unsupported:
+            raise ValueError(f"CoerceString only accepts string or integer wire types, got: {', '.join(unsupported)}")
+        super().__init__(**kwargs)
+
+
+class LegacyStringID(CoerceString):
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(accepts=(String, Int), **kwargs)
+
+
+class StringOrIntAsString(LegacyStringID):
+    def __init__(self, **kwargs: Any) -> None:
+        warnings.warn(
+            "StringOrIntAsString is deprecated; use LegacyStringID instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         super().__init__(**kwargs)
 
 
@@ -341,6 +443,16 @@ def _iter_enum_classes(value: Any, visited_models: set[type[Model]]):
 
     if isinstance(value, FieldWrappedModel):
         yield from _iter_enum_classes(value.__field_type__, visited_models)
+        return
+
+    if isinstance(value, OneOf):
+        for variant in value.variants:
+            yield from _iter_enum_classes(variant, visited_models)
+        return
+
+    if isinstance(value, CoerceString):
+        for variant in value.accepts:
+            yield from _iter_enum_classes(variant, visited_models)
         return
 
     if isinstance(value, Model):

@@ -9,12 +9,14 @@ from api_blueprint.engine.model import (
     AnyModel,
     AnonKV,
     Array,
+    CoerceString,
     Enum as ModelEnum,
     Field,
     FieldWrappedModel,
     Map,
     Model,
     Null,
+    OneOf,
     iter_model_vars,
     model_to_pydantic,
     unwrap_model_type,
@@ -53,6 +55,7 @@ class TypeScriptTypeResolver:
         "boolean": "boolean",
         "bool": "boolean",
         "byte": "number",
+        "coerce_string": "string",
         "null": "null",
         "any": "any",
         "file": "ApiFilePart",
@@ -72,6 +75,7 @@ class TypeScriptTypeResolver:
             "map": self._resolve_map,
             "anonkv": self._resolve_anon_kv,
             "object": self._resolve_object,
+            "one_of": self._resolve_one_of,
         }.get(kind)
         if resolver is not None:
             return resolver(field)
@@ -133,6 +137,19 @@ class TypeScriptTypeResolver:
         key_text = self._normalize_record_key(key_type.text)
         deps = set(key_type.deps) | set(value_type.deps)
         return TypeScriptResolvedType(f"Record<{key_text}, {value_type.text}>", deps)
+
+    def _resolve_one_of(self, field: Union[OneOf, Type[OneOf]]) -> TypeScriptResolvedType:
+        one_of = self._ensure_instance(field, OneOf)
+        if not isinstance(one_of, OneOf):
+            return TypeScriptResolvedType("unknown")
+        parts: list[str] = []
+        deps: set[TypeScriptProto] = set()
+        for variant in one_of.variants:
+            variant_type = self.resolve(variant)
+            parts.append(variant_type.text)
+            deps |= variant_type.deps
+        text = " | ".join(dict.fromkeys(parts)) or "unknown"
+        return TypeScriptResolvedType(text, deps)
 
     def _resolve_anon_kv(self, field: AnonKV) -> TypeScriptResolvedType:
         return self.resolve(field.get_obj())

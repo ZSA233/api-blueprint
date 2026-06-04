@@ -11,6 +11,7 @@ from api_blueprint.engine.model import (
     Array,
     Bool,
     Byte,
+    CoerceString,
     Enum as ModelEnum,
     Field,
     FieldWrappedModel,
@@ -26,6 +27,7 @@ from api_blueprint.engine.model import (
     Map,
     Model,
     Null,
+    OneOf,
     String,
     Uint,
     Uint8,
@@ -45,6 +47,7 @@ from .naming import to_swift_identifier, to_swift_type_name
 class SwiftResolvedType:
     text: str
     deps: set["SwiftProto"] = field(default_factory=set)
+    contains_one_of: bool = False
 
     def optional_text(self) -> str:
         return self.text if self.text.endswith("?") else f"{self.text}?"
@@ -57,6 +60,9 @@ class SwiftProtoField:
     type: SwiftResolvedType
     optional: bool
     description: str | None = None
+    coerce_string: bool = False
+    coerce_string_array: bool = False
+    contains_one_of: bool = False
 
     @property
     def swift_type(self) -> str:
@@ -72,6 +78,7 @@ class SwiftProto:
     alias_type: Optional[SwiftResolvedType] = None
     enum_members: Optional[list[tuple[str, Any]]] = None
     enum_wire_type: str | None = None
+    one_of_variants: Optional[list["SwiftOneOfVariant"]] = None
     fields: list[SwiftProtoField] = field(default_factory=list)
     tags: set[str] = field(default_factory=set)
 
@@ -95,6 +102,20 @@ class SwiftProto:
     def enum_wire_literal(self, value: Any) -> str:
         return json.dumps(value, ensure_ascii=False)
 
+    @property
+    def requires_custom_decode(self) -> bool:
+        return any(field.coerce_string or field.coerce_string_array or field.contains_one_of for field in self.fields)
+
+
+@dataclass
+class SwiftOneOfVariant:
+    case_name: str
+    type: SwiftResolvedType
+
+    @property
+    def swift_type(self) -> str:
+        return self.type.text
+
 
 class SwiftTypeResolver:
     def __init__(self, registry: "SwiftProtoRegistry"):
@@ -107,6 +128,8 @@ class SwiftTypeResolver:
         if isinstance(field, type) and issubclass(field, Field):
             field = field()
 
+        if isinstance(field, CoerceString):
+            return SwiftResolvedType("String")
         if isinstance(field, String):
             return SwiftResolvedType("String")
         if isinstance(field, FileField):
@@ -130,10 +153,10 @@ class SwiftTypeResolver:
             return SwiftResolvedType(proto.name, {proto})
         if isinstance(field, Array):
             elem_type = self.resolve(field.elem_type(), module=module)
-            return SwiftResolvedType(f"[{elem_type.text}]", set(elem_type.deps))
+            return SwiftResolvedType(f"[{elem_type.text}]", set(elem_type.deps), elem_type.contains_one_of)
         if isinstance(field, Map):
             value_type = self.resolve(field.value_type(), module=module)
-            return SwiftResolvedType(f"[String: {value_type.text}]", set(value_type.deps))
+            return SwiftResolvedType(f"[String: {value_type.text}]", set(value_type.deps), value_type.contains_one_of)
         if isinstance(field, AnonKV):
             obj = field.get_obj()
             if obj is None:
@@ -141,6 +164,9 @@ class SwiftTypeResolver:
             return self.resolve(obj, module=module)
         if isinstance(field, FieldWrappedModel):
             return self.resolve(field.__field_type__, module=module)
+        if isinstance(field, OneOf):
+            proto = self.registry.ensure_one_of(field, module=module or "shared")
+            return SwiftResolvedType(proto.name, {proto}, True)
         if isinstance(field, Model) or (isinstance(field, type) and issubclass(field, Model)):
             cls = unwrap_model_type(field)
             is_auto = bool(getattr(cls, "__auto__", False))
@@ -163,6 +189,7 @@ class SwiftProtoRegistry:
         self._protos: "OrderedDict[tuple[Any, str | None], SwiftProto]" = OrderedDict()
         self._aliases: "OrderedDict[str, SwiftProto]" = OrderedDict()
         self._enums: "OrderedDict[type[enum.Enum], SwiftProto]" = OrderedDict()
+        self._one_ofs: "OrderedDict[tuple[str, ...], SwiftProto]" = OrderedDict()
 
     def resolver(self) -> SwiftTypeResolver:
         return self._resolver
@@ -171,6 +198,7 @@ class SwiftProtoRegistry:
         yield from self._protos.values()
         yield from self._aliases.values()
         yield from self._enums.values()
+        yield from self._one_ofs.values()
 
     def filter(self, *, tag: str | None = None, module: str | None = None) -> list[SwiftProto]:
         result = []
@@ -264,6 +292,29 @@ class SwiftProtoRegistry:
         self._enums[enum_cls] = proto
         return proto
 
+    def ensure_one_of(self, field: OneOf, *, module: str = "shared") -> SwiftProto:
+        resolved_variants = [self._resolver.resolve(variant, module=module) for variant in field.variants]
+        key = tuple(variant.text for variant in resolved_variants)
+        existing = self._one_ofs.get(key)
+        if existing is not None:
+            existing.add_tag("shared" if module == "shared" else "route")
+            return existing
+        name = _swift_one_of_type_name(key)
+        variants = [
+            SwiftOneOfVariant(case_name=_swift_one_of_case_name(variant.text, index), type=variant)
+            for index, variant in enumerate(resolved_variants)
+        ]
+        proto = SwiftProto(
+            name=name,
+            model=None,
+            kind="one_of",
+            module=module,
+            one_of_variants=variants,
+        )
+        proto.add_tag("shared" if module == "shared" else "route")
+        self._one_ofs[key] = proto
+        return proto
+
     def _build_proto(self, proto: SwiftProto) -> None:
         if proto.model is None:
             return
@@ -284,6 +335,9 @@ class SwiftProtoRegistry:
                     type=resolved,
                     optional=optional,
                     description=field_info.description or "",
+                    coerce_string=isinstance(model_field, CoerceString),
+                    coerce_string_array=_is_coerce_string_array(model_field),
+                    contains_one_of=resolved.contains_one_of,
                 )
             )
 
@@ -308,3 +362,33 @@ def build_enum_members(enum_cls: type[enum.Enum]) -> list[tuple[str, Any]]:
         used.add(name)
         members.append((name, member.value))
     return members
+
+
+def _swift_one_of_type_name(parts: tuple[str, ...]) -> str:
+    raw = "Or".join(_swift_one_of_type_part(part) for part in parts) or "Value"
+    return to_swift_type_name(f"API{raw}OneOf", fallback="APIOneOf")
+
+
+def _swift_one_of_type_part(value: str) -> str:
+    if value.startswith("[") and value.endswith("]"):
+        return "ArrayOf" + _swift_one_of_type_part(value[1:-1].strip())
+    if value.startswith("[String: ") and value.endswith("]"):
+        return "MapOf" + _swift_one_of_type_part(value[len("[String: ") : -1].strip())
+    cleaned = value.replace("?", " Optional")
+    return to_swift_type_name(cleaned, fallback="Value")
+
+
+def _swift_one_of_case_name(value: str, index: int) -> str:
+    name = to_swift_identifier(_swift_one_of_type_part(value), fallback=f"value{index + 1}")
+    return name[0].lower() + name[1:] if name else f"value{index + 1}"
+
+
+def _is_coerce_string_array(field: object) -> bool:
+    if not isinstance(field, Array):
+        return False
+    item = field.elem_type()
+    if is_parametrized(item):
+        item = item()
+    if isinstance(item, type) and issubclass(item, Field):
+        item = item()
+    return isinstance(item, CoerceString)

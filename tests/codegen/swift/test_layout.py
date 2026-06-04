@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .helpers import *
+from api_blueprint.engine.model import Int, OneOf, LegacyStringID
 
 
 def test_swift_writer_generates_spm_runtime_routes_transport_and_preserved_files(tmp_path: Path) -> None:
@@ -237,6 +238,44 @@ def test_swift_writer_preserves_package_identity_when_module_is_shorter(tmp_path
     assert '.library(name: "ABClientRuntime", targets: ["ABClientRuntime"])' in package_manifest
     assert '.library(name: "ABClientAPIRoutes", targets: ["ABClientAPIRoutes"])' in package_manifest
     assert "apiBlueprintClient" not in package_manifest
+
+
+def test_swift_generates_legacy_json_compat_types_and_decoders(tmp_path: Path) -> None:
+    class LegacyPayload(Model):
+        target = OneOf(String(), Array[String](), description="target")
+        ids = Array[OneOf(String(), Int())](description="ids")
+        normalized = Array[LegacyStringID](description="normalized")
+        room_id = LegacyStringID(alias="roomId", description="room id")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/legacy") as views:
+        views.GET("/payload").RSP(LegacyPayload)
+
+    out_dir = tmp_path / "swift"
+    writer = SwiftWriter(out_dir, package="LegacyClient", module="LegacyClient")
+    writer.register(bp)
+    writer.gen()
+
+    runtime_transport = (out_dir / "Sources" / "LegacyClientRuntime" / "GenAPITransport.swift").read_text(
+        encoding="utf-8"
+    )
+    runtime_types = (out_dir / "Sources" / "LegacyClientRuntime" / "GenAPITypes.swift").read_text(
+        encoding="utf-8"
+    )
+
+    assert "public func apiDecodeCoerceString" in runtime_transport
+    assert "public func apiDecodeCoerceStringIfPresent" in runtime_transport
+    assert "public func apiDecodeCoerceStringArray" in runtime_transport
+    assert "public enum APIStringOrArrayOfStringOneOf: Codable, Sendable" in runtime_types
+    assert "case string(String)" in runtime_types
+    assert "case arrayOfString([String])" in runtime_types
+    assert "public var target: APIStringOrArrayOfStringOneOf" in runtime_types
+    assert "public var ids: [APIStringOrIntOneOf]" in runtime_types
+    assert "public var normalized: [String]" in runtime_types
+    assert "public var roomId: String" in runtime_types
+    assert "self.target = try container.decode(APIStringOrArrayOfStringOneOf.self, forKey: .target)" in runtime_types
+    assert "self.normalized = try apiDecodeCoerceStringArray(from: container, forKey: .normalized)" in runtime_types
+    assert "self.roomId = try apiDecodeCoerceString(from: container, forKey: .roomId)" in runtime_types
 
 
 def test_swift_writer_generates_one_target_per_root_and_shared_runtime_once(tmp_path: Path) -> None:

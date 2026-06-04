@@ -191,6 +191,17 @@ def scenario_registry() -> dict[str, Scenario]:
             route_ids=("api.conflict.get.default", "alt.conflict.get.default"),
             description="reserved names, same model names, and multi-blueprint roots",
         ),
+        "legacy-json": Scenario(
+            name="legacy-json",
+            categories=("legacy-json", "json", "envelope"),
+            clients=("typescript", "kotlin", "flutter", "swift", "python"),
+            route_ids=(
+                "legacy.account.get.profile",
+                "legacy.room.get.list",
+                "legacy.legacy_json.get.compat",
+            ),
+            description="legacy JSON compatibility fields and shape drift",
+        ),
         "bad-json": Scenario(
             name="bad-json",
             categories=("server-safety", "malformed-input", "json"),
@@ -252,8 +263,6 @@ def coverage_by_category() -> dict[str, set[str]]:
 
 def unsupported_route_ids() -> tuple[str, ...]:
     return (
-        "legacy.account.get.profile",
-        "legacy.room.get.list",
         "runtime.status.get.current",
     )
 
@@ -307,6 +316,8 @@ def server_supports_scenario(server: str, scenario: Scenario) -> bool:
         return capability.supports_websocket
     if scenario.name == "naming":
         return capability.supports_naming
+    if scenario.name == "legacy-json":
+        return capability.supports_rpc
     if scenario.name in {"bad-json", "bad-query"}:
         return capability.supports_rpc
     if scenario.name == "bad-binary":

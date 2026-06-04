@@ -21,6 +21,7 @@ Blueprint DSL -> ContractGraph -> api-gen check / inspect / generate -> generate
 - 希望先从协议生成 Go server，再生成 TypeScript、Flutter、Swift、Kotlin、Java、Go、Python client，或生成 Kotlin/Java/Python server scaffold。
 - 需要文档服务、契约检查、生成快照和端到端示例一起维护。
 - 需要把 Markdown Binary Schema、typed binary 响应、multipart 上传、raw bytes/file/stream 响应、Wails 或 gRPC 纳入同一套生成流程。
+- 需要用 `OneOf` / `LegacyStringID` 让历史接口中真实存在的多 JSON shape 或 string/int ID 漂移字段进入契约，而不是长期退化为 `JSONValue`。
 
 ## 安装
 

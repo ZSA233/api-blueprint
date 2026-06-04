@@ -56,9 +56,18 @@ import com.example.apiblueprint.alt.runtime.ApiClient as AltApiClient
 import com.example.apiblueprint.alt.runtime.KeywordEnum as AltKeywordEnum
 import com.example.apiblueprint.alt.transports.http.HttpApiConfig as AltHttpApiConfig
 import com.example.apiblueprint.alt.transports.http.createHttpApiClient as createAltHttpApiClient
+import com.example.apiblueprint.legacy.routes.legacy.room.RoomRoomListResponse as LegacyRoomListResponse
+import com.example.apiblueprint.legacy.runtime.AccountProfile as LegacyAccountProfile
+import com.example.apiblueprint.legacy.runtime.ApiClient as LegacyApiClient
+import com.example.apiblueprint.legacy.runtime.ApiJson as LegacyApiJson
+import com.example.apiblueprint.legacy.runtime.LegacyJsonCompatPayload
+import com.example.apiblueprint.legacy.transports.http.HttpApiConfig as LegacyHttpApiConfig
+import com.example.apiblueprint.legacy.transports.http.createHttpApiClient as createLegacyHttpApiClient
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -67,12 +76,14 @@ import kotlin.time.Duration.Companion.seconds
 
 fun main(args: Array<String>) = runBlocking {
     val baseUrl = args.firstOrNull()?.trimEnd('/') ?: error("base URL argument is required")
-    val selected = scenarioSet(args.getOrNull(1) ?: "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel")
+    val selected = scenarioSet(args.getOrNull(1) ?: "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel,legacy-json")
     val httpClient = OkHttpClient()
     val altHttpClient = OkHttpClient()
+    val legacyHttpClient = OkHttpClient()
     try {
         val client = createHttpApiClient(HttpApiConfig(baseUrl = baseUrl), httpClient)
         val altClient = createAltHttpApiClient(AltHttpApiConfig(baseUrl = baseUrl), altHttpClient)
+        val legacyClient = createLegacyHttpApiClient(LegacyHttpApiConfig(baseUrl = baseUrl), legacyHttpClient)
 
         if ("rpc" in selected) {
             checkRpc(client)
@@ -132,6 +143,9 @@ fun main(args: Array<String>) = runBlocking {
         if ("naming" in selected) {
             checkNaming(client, altClient)
         }
+        if ("legacy-json" in selected) {
+            checkLegacyJson(legacyClient)
+        }
         if ("sse" in selected) {
             checkSse(client)
         }
@@ -145,6 +159,7 @@ fun main(args: Array<String>) = runBlocking {
     } finally {
         shutdownOkHttp(httpClient)
         shutdownOkHttp(altHttpClient)
+        shutdownOkHttp(legacyHttpClient)
     }
 }
 
@@ -341,6 +356,59 @@ private suspend fun checkNaming(client: ApiClient, altClient: AltApiClient) {
     assertEquals("alt-default", alt.default, "altConflict.default")
     assertEquals("kotlin-alt", alt.`class`, "altConflict.class")
     assertEquals(AltKeywordEnum.CLASS, alt.enum, "altConflict.enum")
+}
+
+private suspend fun checkLegacyJson(client: LegacyApiClient) {
+    val profile = client.account.accountProfile()
+    assertEquals("1000010", profile.userId, "legacy.profile.userId")
+    assertEquals("legacy-user", profile.nickname, "legacy.profile.nickname")
+
+    val rooms = client.room.roomList()
+    assertEquals("100", rooms.rooms.single().roomId, "legacy.room.roomId")
+    assertEquals("legacy-room", rooms.rooms.single().title, "legacy.room.title")
+
+    val compat = client.legacyJson.legacyJsonCompat()
+    assertEquals(
+        listOf("legacy-room", "backup-room"),
+        compat.target.jsonArray.map { it.jsonPrimitive.content },
+        "legacy.compat.target",
+    )
+    assertEquals(
+        listOf("1", "2", "3"),
+        compat.ids.map { it.jsonPrimitive.content },
+        "legacy.compat.ids",
+    )
+    assertEquals(listOf("1", "2", "3"), compat.normalizedIds, "legacy.compat.normalizedIds")
+
+    val numericProfile = LegacyApiJson.decodeFromString(
+        LegacyAccountProfile.serializer(),
+        """{"user_id":1000010,"nickname":"legacy-user"}""",
+    )
+    assertEquals("1000010", numericProfile.userId, "legacy.fixture.profile.userId")
+
+    val numericRooms = LegacyApiJson.decodeFromString(
+        LegacyRoomListResponse.serializer(),
+        """{"rooms":[{"room_id":100,"title":"legacy-room"}]}""",
+    )
+    assertEquals("100", numericRooms.rooms.single().roomId, "legacy.fixture.room.roomId")
+
+    val stringTarget = LegacyApiJson.decodeFromString(
+        LegacyJsonCompatPayload.serializer(),
+        """{"target":"legacy-room","ids":["1",2,"3"],"normalized_ids":["1",2,"3"]}""",
+    )
+    assertEquals("legacy-room", stringTarget.target.jsonPrimitive.content, "legacy.fixture.target.string")
+    assertEquals(listOf("1", "2", "3"), stringTarget.normalizedIds, "legacy.fixture.normalizedIds.string")
+
+    val arrayTarget = LegacyApiJson.decodeFromString(
+        LegacyJsonCompatPayload.serializer(),
+        """{"target":["legacy-room","backup-room"],"ids":["1",2,"3"],"normalized_ids":["1",2,"3"]}""",
+    )
+    assertEquals(
+        listOf("legacy-room", "backup-room"),
+        arrayTarget.target.jsonArray.map { it.jsonPrimitive.content },
+        "legacy.fixture.target.array",
+    )
+    assertEquals(listOf("1", "2", "3"), arrayTarget.normalizedIds, "legacy.fixture.normalizedIds.array")
 }
 
 private suspend fun checkSse(client: ApiClient) {

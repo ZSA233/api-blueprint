@@ -17,6 +17,7 @@ let package = Package(
                 .product(name: "ABClientRuntime", package: "swift"),
                 .product(name: "ABClientAPIRoutes", package: "swift"),
                 .product(name: "ABClientAltRoutes", package: "swift"),
+                .product(name: "ABClientLegacyRoutes", package: "swift"),
             ]
         )
     ]

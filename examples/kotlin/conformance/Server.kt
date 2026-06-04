@@ -30,6 +30,16 @@ import com.example.apiblueprint.api.transports.ktor.api.hello.registerHelloRoute
 import com.example.apiblueprint.api.transports.ktor.api.media.registerMediaRoutes
 import com.example.apiblueprint.alt.routes.alt.conflict.ConflictServiceStub as AltConflictServiceStub
 import com.example.apiblueprint.alt.transports.ktor.alt.conflict.registerConflictRoutes as registerAltConflictRoutes
+import com.example.apiblueprint.legacy.routes.legacy.account.AccountServiceStub as LegacyAccountServiceStub
+import com.example.apiblueprint.legacy.routes.legacy.legacyjson.LegacyJsonServiceStub
+import com.example.apiblueprint.legacy.routes.legacy.room.RoomRoomListResponse as LegacyRoomListResponse
+import com.example.apiblueprint.legacy.routes.legacy.room.RoomServiceStub as LegacyRoomServiceStub
+import com.example.apiblueprint.legacy.runtime.AccountProfile as LegacyAccountProfile
+import com.example.apiblueprint.legacy.runtime.LegacyJsonCompatPayload
+import com.example.apiblueprint.legacy.runtime.RoomSummary as LegacyRoomSummary
+import com.example.apiblueprint.legacy.transports.ktor.legacy.account.registerAccountRoutes as registerLegacyAccountRoutes
+import com.example.apiblueprint.legacy.transports.ktor.legacy.legacyjson.registerLegacyJsonRoutes
+import com.example.apiblueprint.legacy.transports.ktor.legacy.room.registerRoomRoutes as registerLegacyRoomRoutes
 import io.ktor.server.application.install
 import io.ktor.server.application.call
 import io.ktor.server.engine.embeddedServer
@@ -39,7 +49,9 @@ import io.ktor.server.response.respondText
 import io.ktor.server.request.path
 import io.ktor.server.routing.get
 import io.ktor.server.websocket.WebSockets
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 
@@ -81,6 +93,9 @@ fun main() {
             registerHelloRoutes(HelloServiceImpl())
             registerApiConflictRoutes(ConflictServiceImpl())
             registerAltConflictRoutes(AltConflictServiceImpl())
+            registerLegacyAccountRoutes(LegacyAccountServiceImpl())
+            registerLegacyRoomRoutes(LegacyRoomServiceImpl())
+            registerLegacyJsonRoutes(LegacyJsonServiceImpl())
             get("/static/doc.json") {
                 call.respondText("{}", contentType = io.ktor.http.ContentType.Application.Json)
             }
@@ -329,6 +344,27 @@ private class AltConflictServiceImpl : AltConflictServiceStub() {
             default = "alt-default",
             `class` = query.`class`.orEmpty(),
             enum = com.example.apiblueprint.alt.runtime.KeywordEnum.CLASS,
+        )
+}
+
+private class LegacyAccountServiceImpl : LegacyAccountServiceStub() {
+    override suspend fun accountProfile(): LegacyAccountProfile =
+        LegacyAccountProfile(userId = "1000010", nickname = "legacy-user")
+}
+
+private class LegacyRoomServiceImpl : LegacyRoomServiceStub() {
+    override suspend fun roomList(): LegacyRoomListResponse =
+        LegacyRoomListResponse(
+            rooms = listOf(LegacyRoomSummary(roomId = "100", title = "legacy-room"))
+        )
+}
+
+private class LegacyJsonServiceImpl : LegacyJsonServiceStub() {
+    override suspend fun legacyJsonCompat(): LegacyJsonCompatPayload =
+        LegacyJsonCompatPayload(
+            target = JsonArray(listOf(JsonPrimitive("legacy-room"), JsonPrimitive("backup-room"))),
+            ids = listOf(JsonPrimitive("1"), JsonPrimitive(2), JsonPrimitive("3")),
+            normalizedIds = listOf("1", "2", "3"),
         )
 }
 

@@ -2,9 +2,7 @@
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-{% if group.message_helpers(writer) %}
 import com.fasterxml.jackson.databind.JsonNode;
-{% endif %}
 {% if group.runtime_types_ref == "GenApiTypes" %}
 import {{ bp.root_package }}.runtime.GenApiTypes;
 {% endif %}

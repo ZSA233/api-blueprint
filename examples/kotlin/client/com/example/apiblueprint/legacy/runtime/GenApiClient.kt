@@ -3,10 +3,12 @@ package com.example.apiblueprint.legacy.runtime
 
 import com.example.apiblueprint.legacy.routes.legacy.account.AccountApi
 import com.example.apiblueprint.legacy.routes.legacy.room.RoomApi
+import com.example.apiblueprint.legacy.routes.legacy.legacyjson.LegacyJsonApi
 
 public open class GenApiClient(
     private val transport: ApiTransport,
 ) {
     public val account: AccountApi = AccountApi(transport)
     public val room: RoomApi = RoomApi(transport)
+    public val legacyJson: LegacyJsonApi = LegacyJsonApi(transport)
 }

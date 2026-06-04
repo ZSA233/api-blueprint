@@ -359,6 +359,11 @@ public final class GenApiErrors {
             "legacy.room.get.list",
             Map.ofEntries(
             )
+        ),
+        Map.entry(
+            "legacy.legacy_json.get.compat",
+            Map.ofEntries(
+            )
         )
     );
 

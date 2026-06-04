@@ -21,6 +21,7 @@ Blueprint DSL -> ContractGraph -> api-gen check / inspect / generate -> generate
 - You want to generate a Go server first, then TypeScript, Flutter, Swift, Kotlin, Java, Go, or Python clients, or generate Kotlin/Java/Python server scaffolds.
 - You need documentation, contract checks, generated snapshots, and end-to-end examples to move together.
 - You need Markdown Binary Schema, typed binary responses, multipart uploads, raw bytes/file/stream responses, Wails, or gRPC in the same generation flow.
+- You need `OneOf` / `LegacyStringID` to bring legacy fields with multiple JSON shapes or string/int ID drift into the contract instead of leaving them as broad `JSONValue`.
 
 ## Installation
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from .helpers import *
+from api_blueprint.engine.model import OneOf, LegacyStringID
 
 
 def test_kotlin_generated_template_files_use_gen_names() -> None:
@@ -217,6 +218,32 @@ def test_kotlin_writer_generates_root_runtime_routes_and_http_transport_for_full
     assert "public data class HttpApiConfig" in http_config_text
     assert 'public val baseUrl: String = "http://localhost:2333"' in http_config_text
     assert "public val timeout: Duration? = null" in http_config_text
+
+
+def test_kotlin_generates_legacy_json_compat_field_types(tmp_path):
+    class LegacyPayload(Model):
+        target = OneOf(String(), Array[String](), description="target")
+        normalized = Array[LegacyStringID](description="normalized")
+        room_id = LegacyStringID(alias="roomId", description="room id")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/legacy") as views:
+        views.GET("/payload").RSP(LegacyPayload)
+
+    writer = KotlinWriter(tmp_path / "kotlin", package="com.example.generated")
+    writer.register(bp)
+    writer.gen()
+
+    runtime_types = (
+        tmp_path / "kotlin" / "com" / "example" / "generated" / "api" / "runtime" / "GenApiTypes.kt"
+    ).read_text(encoding="utf-8")
+    assert "public object ApiCoerceStringSerializer" in runtime_types
+    assert "public val target: kotlinx.serialization.json.JsonElement" in runtime_types
+    assert "@Serializable(with = ApiCoerceStringSerializer::class)" in runtime_types
+    assert "public val roomId: String" in runtime_types
+    assert "public val normalized: List<@Serializable(with = ApiCoerceStringSerializer::class) String>" in runtime_types
+    assert not (tmp_path / "kotlin" / "com" / "example" / "generated" / "internal").exists()
+
 
 def test_kotlin_writer_generates_custom_response_envelope_spec(tmp_path):
     class SubmitResponse(Model):
