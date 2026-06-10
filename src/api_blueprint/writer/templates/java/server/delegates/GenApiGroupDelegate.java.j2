@@ -1,0 +1,15 @@
+{% autoescape false %}package {{ writer.group_delegates_package(bp, group) }};
+
+{{ writer.java_import_block(writer.server_delegate_imports(bp, group)) }}
+
+public interface {{ group.delegate_class }} {
+{% for route in group.routes %}
+
+    {{ writer.route_response_type(route, group) }} {{ route.method_name }}(
+{%- for parameter in writer.delegate_method_parameters(route, group) %}
+        {{ parameter }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ) throws Exception;
+{% endfor %}
+}
+{% endautoescape %}

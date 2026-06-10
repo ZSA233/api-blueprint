@@ -50,28 +50,18 @@ class ResolvedApiTargetConfig:
     include: tuple[str, ...] = ()
     exclude: tuple[str, ...] = ()
     proto_files: tuple["ResolvedGrpcProtoFileConfig", ...] = ()
-    spring_contract_mode: JavaSpringContractMode = "strict-boundary"
-    spring_policies: tuple["ResolvedJavaSpringPolicyConfig", ...] = ()
-    spring_route_bindings: tuple["ResolvedJavaSpringRouteBindingConfig", ...] = ()
+    spring_contract_mode: JavaSpringContractMode = "strict"
+    spring_policy_mappings: tuple["ResolvedJavaSpringPolicyMappingConfig", ...] = ()
     spring_public_paths: tuple[str, ...] = ()
     spring_exclude_server_paths: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
-class ResolvedJavaSpringPolicyConfig:
-    id: str
+class ResolvedJavaSpringPolicyMappingConfig:
+    provider: str
     annotation: str
     args: str | None = None
     imports: tuple[str, ...] = ()
-
-
-@dataclass(frozen=True)
-class ResolvedJavaSpringRouteBindingConfig:
-    operation_id: str
-    annotation: str | None = None
-    policies: tuple[str, ...] = ()
-    request_binding: str = "generated"
-    response_binding: str = "generated"
 
 
 @dataclass(frozen=True)
@@ -246,24 +236,14 @@ def resolve_api_targets(config_path: Path, raw: Config) -> tuple[ResolvedApiTarg
                     for proto_file in target.proto_files
                 ),
                 spring_contract_mode=target.spring_contract_mode,
-                spring_policies=tuple(
-                    ResolvedJavaSpringPolicyConfig(
-                        id=policy.id,
-                        annotation=policy.annotation,
-                        args=policy.args,
-                        imports=tuple(policy.imports),
+                spring_policy_mappings=tuple(
+                    ResolvedJavaSpringPolicyMappingConfig(
+                        provider=mapping.provider,
+                        annotation=mapping.annotation,
+                        args=mapping.args,
+                        imports=tuple(mapping.imports),
                     )
-                    for policy in target.spring_policies
-                ),
-                spring_route_bindings=tuple(
-                    ResolvedJavaSpringRouteBindingConfig(
-                        operation_id=binding.operation_id,
-                        annotation=binding.annotation,
-                        policies=tuple(binding.policies),
-                        request_binding=binding.request_binding,
-                        response_binding=binding.response_binding,
-                    )
-                    for binding in target.spring_route_bindings
+                    for mapping in target.spring_policy_mappings
                 ),
                 spring_public_paths=tuple(target.spring_public_paths),
                 spring_exclude_server_paths=tuple(target.spring_exclude_server_paths),

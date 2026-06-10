@@ -72,6 +72,7 @@ entrypoints = ["blueprints.app:bp"]
 id = "java.server"
 out_dir = "java/server"
 module = "com.example.generated"
+spring_public_paths = ["/api/**"]
 
 [[java.client]]
 id = "java.client"
@@ -97,9 +98,11 @@ module = "com.example.generated"
     )
     assert server_files.exit_code == 0, server_files.output
     assert "[java.server]" in server_files.output
-    assert "java/server/com/example/generated/api/annotations/api/demo/GenSubmit.java" in server_files.output
-    assert "java/server/com/example/generated/api/types/api/demo/GenDemoTypes.java" in server_files.output
-    assert "java/server/com/example/generated/api/adapters/api/demo/GenDemoAdapters.java" in server_files.output
+    assert "java/server/com/example/generated/api/routes/api/demo/controllers/GenDemoController.java" in server_files.output
+    assert "java/server/com/example/generated/api/routes/api/demo/delegates/GenDemoDelegate.java" in server_files.output
+    assert "java/server/com/example/generated/api/routes/api/demo/types/GenDemoTypes.java" in server_files.output
+    assert "java/server/com/example/generated/api/routes/api/demo/adapters/GenDemoAdapters.java" in server_files.output
+    assert "java/server/com/example/generated/api/spring/GenSpringRequestContext.java" in server_files.output
     assert "java/server/com/example/generated/api/spring/GenSpringMvcContractAssertions.java" in server_files.output
 
 def test_api_gen_inspect_schema_errors_and_json(tmp_path):

@@ -39,7 +39,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 					},
 				},
 			},
-			"req|handle|rsp=json@CodeMessageDataEnvelope",
+			"req|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.RoomList,
 		),
 		eng,

@@ -30,7 +30,7 @@ func newGeneratedConflictService(impl RouterInterface, dispatcher wailstransport
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req=Q|auth|handle|rsp=json@CodeMessageDataEnvelope",
+			"req=Q|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.Default,
 		),
 	}

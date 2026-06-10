@@ -244,6 +244,10 @@ class JavaApiGroup:
         return f"Gen{self.class_name.removesuffix('Api')}Controller"
 
     @property
+    def delegate_class(self) -> str:
+        return f"Gen{self.class_name.removesuffix('Api')}Delegate"
+
+    @property
     def generated_client_class(self) -> str:
         return f"Gen{self.class_name}"
 

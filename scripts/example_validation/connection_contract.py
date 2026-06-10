@@ -192,19 +192,31 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         / "example"
         / "apiblueprint"
         / "api"
-        / "types"
+        / "routes"
         / "api"
         / "demo"
+        / "types"
         / "GenDemoTypes.java",
-        "java_server_demo_annotation": workspace.java_server_dir
+        "java_server_demo_controller": workspace.java_server_dir
         / "com"
         / "example"
         / "apiblueprint"
         / "api"
-        / "annotations"
+        / "routes"
         / "api"
         / "demo"
-        / "GenDemoAbc.java",
+        / "controllers"
+        / "GenDemoController.java",
+        "java_server_demo_delegate": workspace.java_server_dir
+        / "com"
+        / "example"
+        / "apiblueprint"
+        / "api"
+        / "routes"
+        / "api"
+        / "demo"
+        / "delegates"
+        / "GenDemoDelegate.java",
         "java_server_contract_assertions": workspace.java_server_dir
         / "com"
         / "example"
@@ -475,13 +487,13 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
             files["java_client_route"],
             "GenApiChannelBridge<GenDemoTypes.AssistantServerMessage, GenDemoTypes.AssistantClientMessage, Object>",
         ),
-        "java server client dispatcher": (
-            files["java_server_demo_types"],
-            "public static <R> R dispatchAssistantClientMessage(",
-        ),
         "java server operation marker": (
-            files["java_server_demo_annotation"],
+            files["java_server_demo_controller"],
             '@ApiBlueprintOperation("api.demo.get.abc")',
+        ),
+        "java server delegate": (
+            files["java_server_demo_delegate"],
+            "GenApiTypes.ApiDemoA abc(",
         ),
         "java server contract assertions": (
             files["java_server_contract_assertions"],

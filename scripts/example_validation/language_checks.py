@@ -137,11 +137,11 @@ def _validate_java_sources(java_dir: Path) -> None:
         "client/com/example/apiblueprint/api/transports/http/GenJdkHttpApiTransport.java",
         "client/com/example/apiblueprint/api/transports/http/HttpApiClient.java",
         "server/com/example/apiblueprint/api/annotations/ApiBlueprintOperation.java",
-        "server/com/example/apiblueprint/api/annotations/api/demo/GenDemoAbc.java",
-        "server/com/example/apiblueprint/api/types/api/demo/GenDemoTypes.java",
-        "server/com/example/apiblueprint/api/adapters/api/demo/GenDemoAdapters.java",
+        "server/com/example/apiblueprint/api/routes/api/demo/controllers/GenDemoController.java",
+        "server/com/example/apiblueprint/api/routes/api/demo/delegates/GenDemoDelegate.java",
+        "server/com/example/apiblueprint/api/routes/api/demo/types/GenDemoTypes.java",
+        "server/com/example/apiblueprint/api/routes/api/demo/adapters/GenDemoAdapters.java",
         "server/com/example/apiblueprint/api/spring/GenSpringMvcContractAssertions.java",
-        "server/com/example/apiblueprint/security/SignatureRequired.java",
     )
     missing = [path for path in expected if not (java_dir / path).is_file()]
     if missing:
@@ -156,20 +156,24 @@ def _validate_java_sources(java_dir: Path) -> None:
             java_dir / "client/com/example/apiblueprint/api/transports/http/GenJdkHttpApiTransport.java",
             "public class GenJdkHttpApiTransport implements GenApiTransport",
         ),
-        "server route annotation": (
-            java_dir / "server/com/example/apiblueprint/api/annotations/api/demo/GenDemoAbc.java",
+        "server controller operation marker": (
+            java_dir / "server/com/example/apiblueprint/api/routes/api/demo/controllers/GenDemoController.java",
             '@ApiBlueprintOperation("api.demo.get.abc")',
         ),
-        "server policy annotation": (
-            java_dir / "server/com/example/apiblueprint/api/annotations/api/demo/GenDemoAbc.java",
+        "server controller policy annotation": (
+            java_dir / "server/com/example/apiblueprint/api/routes/api/demo/controllers/GenDemoController.java",
             "@SignatureRequired",
         ),
+        "server delegate": (
+            java_dir / "server/com/example/apiblueprint/api/routes/api/demo/delegates/GenDemoDelegate.java",
+            "GenApiTypes.ApiDemoA abc(",
+        ),
         "server request type": (
-            java_dir / "server/com/example/apiblueprint/api/types/api/demo/GenDemoTypes.java",
+            java_dir / "server/com/example/apiblueprint/api/routes/api/demo/types/GenDemoTypes.java",
             "public static final class AbcQuery",
         ),
         "server adapter": (
-            java_dir / "server/com/example/apiblueprint/api/adapters/api/demo/GenDemoAdapters.java",
+            java_dir / "server/com/example/apiblueprint/api/routes/api/demo/adapters/GenDemoAdapters.java",
             "public static GenDemoTypes.AbcQuery abcRequest(",
         ),
         "spring contract assertions": (
@@ -416,8 +420,8 @@ def _compile_java_sources(java_dir: Path) -> None:
         project_dir = Path(temp_dir)
         source_dir = project_dir / "src/main/java"
         source_dir.mkdir(parents=True)
-        for source_root in (java_dir / "client", java_dir / "server"):
-            if source_root.is_dir():
+        for source_root in (java_dir / "client", java_dir / "server", java_dir / "suite" / "src" / "main" / "java"):
+            if (source_root / "com").is_dir():
                 shutil.copytree(source_root / "com", source_dir / "com", dirs_exist_ok=True)
         (project_dir / "settings.gradle.kts").write_text(
             'pluginManagement { repositories { gradlePluginPortal(); mavenCentral() } }\n'

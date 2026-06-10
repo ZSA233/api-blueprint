@@ -43,7 +43,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req=Q|auth|handle|rsp=json@CodeMessageDataEnvelope",
+			"req=Q|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.Abc,
 		),
 		testPostExecutor: sharedprovider.NewRouteExecutor(
@@ -59,7 +59,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req=J|auth|handle|rsp=json@CodeMessageDataEnvelope",
+			"req=J|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.TestPost,
 		),
 		formSubmitExecutor: sharedprovider.NewRouteExecutor(
@@ -75,7 +75,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req=F|auth|handle|rsp=json@CodeMessageDataEnvelope",
+			"req=F|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.FormSubmit,
 		),
 		requestOptionsExecutor: sharedprovider.NewRouteExecutor(
@@ -91,7 +91,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req=Q|auth|handle|rsp=json@CodeMessageDataEnvelope",
+			"req=Q|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.RequestOptions,
 		),
 		putDemoExecutor: sharedprovider.NewRouteExecutor(
@@ -107,7 +107,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req=QJ|auth|handle|rsp=json@CodeMessageDataEnvelope",
+			"req=QJ|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.PutDemo,
 		),
 		deleteExecutor: sharedprovider.NewRouteExecutor(
@@ -123,7 +123,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req=Q|auth|handle|rsp=xml@CodeMessageDataEnvelope",
+			"req=Q|auth|request-signature|handle|rsp=xml@CodeMessageDataEnvelope",
 			impl.Delete,
 		),
 		sweepEventsExecutor: sharedprovider.NewRouteExecutor[
@@ -143,7 +143,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope("session"),
 			},
-			"req=Q|auth",
+			"req=Q|auth|request-signature",
 			nil,
 		),
 		assistantSessionExecutor: sharedprovider.NewRouteExecutor[
@@ -163,7 +163,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope("session"),
 			},
-			"req=Q|auth",
+			"req=Q|auth|request-signature",
 			nil,
 		),
 		postDeprecatedExecutor: sharedprovider.NewRouteExecutor(
@@ -179,7 +179,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req=J|auth|handle|rsp=json@CodeMessageDataEnvelope",
+			"req=J|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.PostDeprecated,
 		),
 		rawExecutor: sharedprovider.NewRouteExecutor(
@@ -195,7 +195,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req|auth|handle|rsp=json@CodeMessageDataEnvelope",
+			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.Raw,
 		),
 		mapModelExecutor: sharedprovider.NewRouteExecutor(
@@ -211,7 +211,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req|auth|handle|rsp=json@CodeMessageDataEnvelope",
+			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.MapModel,
 		),
 		errorDemoExecutor: sharedprovider.NewRouteExecutor(
@@ -227,7 +227,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req=Q|auth|handle|rsp=json@CodeMessageDataEnvelope",
+			"req=Q|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.ErrorDemo,
 		),
 	}

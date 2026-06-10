@@ -30,7 +30,7 @@ func newGeneratedAccountService(impl RouterInterface, dispatcher wailstransport.
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req|handle|rsp=json@CodeMessageDataEnvelope",
+			"req|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.AccountProfile,
 		),
 	}

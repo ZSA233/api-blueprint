@@ -585,7 +585,7 @@
       "kind": "java-server",
       "out_dir": "java/server",
       "role": "server",
-      "route_count": 39
+      "route_count": 36
     },
     {
       "id": "java.client",

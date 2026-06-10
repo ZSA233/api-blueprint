@@ -157,7 +157,16 @@ def test_generated_templates_use_owned_names() -> None:
         ("python-client", lambda output, bp, graph: PythonClientWriter(output, contract_graph=graph)),
         ("python-server", lambda output, bp, graph: PythonServerWriter(output, contract_graph=graph)),
         ("java-client", lambda output, bp, graph: JavaClientWriter(output, package="com.example.generated", contract_graph=graph)),
-        ("java-server", lambda output, bp, graph: JavaServerWriter(output, package="com.example.generated", contract_graph=graph)),
+        (
+            "java-server",
+            lambda output, bp, graph: JavaServerWriter(
+                output,
+                package="com.example.generated",
+                contract_graph=graph,
+                spring_public_paths=["/api/**"],
+                exclude=("kind:stream", "kind:channel"),
+            ),
+        ),
         ("kotlin-client", lambda output, bp, graph: KotlinWriter(output, package="com.example.generated", contract_graph=graph)),
         ("kotlin-server", lambda output, bp, graph: KotlinServerWriter(output, package="com.example.generated", contract_graph=graph)),
         ("flutter", lambda output, bp, graph: FlutterWriter(output, package="api_blueprint_example", contract_graph=graph)),

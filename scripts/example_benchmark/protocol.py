@@ -73,7 +73,11 @@ async def run_protocol_benchmark(options: ProtocolBenchmarkOptions) -> list[Prot
                 lambda: server.start_server(server_name, conf_workspace.blueprint),
             )
             try:
-                async with httpx.AsyncClient(base_url=active_server.base_url, timeout=30.0) as client:
+                async with httpx.AsyncClient(
+                    base_url=active_server.base_url,
+                    timeout=30.0,
+                    trust_env=False,
+                ) as client:
                     for scenario in selected_scenarios:
                         if not scenarios.server_supports_scenario(server_name, scenario):
                             continue

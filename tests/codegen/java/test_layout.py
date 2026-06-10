@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import pytest
+
 from .helpers import *
+from api_blueprint.engine import provider
 from api_blueprint.engine.model import Int, OneOf, LegacyStringID
 
 
@@ -87,6 +90,9 @@ def test_java_client_and_server_generate_layout_and_spring_contract_boundary(tmp
     class Event(Model):
         status = String(description="status")
 
+    class RequestSignature(provider.Provider):
+        name = "request-signature"
+
     schema = parse_binary_schema(
         """
 # packet DemoPacket
@@ -104,7 +110,16 @@ content-encoding: identity,gzip,br
         source_path="demo_packet.md",
     )
 
-    bp = Blueprint(root="/api", errors=[CommonErr])
+    bp = Blueprint(
+        root="/api",
+        errors=[CommonErr],
+        providers=[
+            provider.Req(),
+            RequestSignature(),
+            provider.Handle(),
+            provider.Rsp(),
+        ],
+    )
     views = bp.group("/demo")
     views.GET("/ping").ARGS(q=String(description="q")).RSP(Result)
     views.POST("/submit").REQ(SubmitJson).RSP(Result)
@@ -143,17 +158,11 @@ content-encoding: identity,gzip,br
         server_dir,
         package="com.example.generated",
         contract_graph=graph,
-        spring_policies=[
+        exclude=("kind:stream", "kind:channel"),
+        spring_policy_mappings=[
             {
-                "id": "signed",
+                "provider": "request-signature",
                 "annotation": "com.example.generated.security.SignatureRequired",
-            }
-        ],
-        spring_route_bindings=[
-            {
-                "operation_id": "api.demo.get.ping",
-                "annotation": "GenDemoPing",
-                "policies": ["signed"],
             }
         ],
         spring_public_paths=["/api/**"],
@@ -174,16 +183,19 @@ content-encoding: identity,gzip,br
     transport_text = (client_http_dir / "GenJdkHttpApiTransport.java").read_text(encoding="utf-8")
     config_text = (client_http_dir / "GenHttpApiConfig.java").read_text(encoding="utf-8")
     binary_text = (client_dir / package_root / "routes/api/binary/GenBinaryTypes.java").read_text(encoding="utf-8")
-    server_types_text = (server_dir / package_root / "types/api/demo/GenDemoTypes.java").read_text(
+    server_types_text = (server_dir / package_root / "routes/api/demo/types/GenDemoTypes.java").read_text(
         encoding="utf-8"
     )
-    server_binary_types_text = (server_dir / package_root / "types/api/binary/GenBinaryTypes.java").read_text(
+    server_binary_types_text = (server_dir / package_root / "routes/api/binary/types/GenBinaryTypes.java").read_text(
         encoding="utf-8"
     )
-    server_annotation_text = (
-        server_dir / package_root / "annotations/api/demo/GenDemoPing.java"
-    ).read_text(encoding="utf-8")
-    server_adapters_text = (server_dir / package_root / "adapters/api/demo/GenDemoAdapters.java").read_text(
+    server_controller_text = (server_dir / package_root / "routes/api/demo/controllers/GenDemoController.java").read_text(
+        encoding="utf-8"
+    )
+    server_delegate_text = (server_dir / package_root / "routes/api/demo/delegates/GenDemoDelegate.java").read_text(
+        encoding="utf-8"
+    )
+    server_adapters_text = (server_dir / package_root / "routes/api/demo/adapters/GenDemoAdapters.java").read_text(
         encoding="utf-8"
     )
     spring_assertions_text = (
@@ -208,7 +220,8 @@ content-encoding: identity,gzip,br
     for generated_text in (
         server_types_text,
         server_binary_types_text,
-        server_annotation_text,
+        server_controller_text,
+        server_delegate_text,
         server_adapters_text,
         spring_assertions_text,
     ):
@@ -297,23 +310,132 @@ content-encoding: identity,gzip,br
     assert "public static GenApiBinaryBody toBinaryBody(DemoPacket value)" in server_binary_types_text
     assert "public static final String CONTENT_TYPE = \"application/octet-stream\"" in binary_text
 
-    assert "@RequestMapping(path = \"/api/demo/ping\", method = {RequestMethod.GET})" in server_annotation_text
-    assert "import com.example.generated.security.SignatureRequired;" in server_annotation_text
-    assert "@SignatureRequired" in server_annotation_text
-    assert '@ApiBlueprintOperation("api.demo.get.ping")' in server_annotation_text
-    assert "public @interface GenDemoPing" in server_annotation_text
+    assert "@RestController" in server_controller_text
+    assert "private final GenDemoDelegate delegate;" in server_controller_text
+    assert "@RequestMapping(path = \"/api/demo/ping\", method = {RequestMethod.GET})" in server_controller_text
+    assert "import com.example.generated.security.SignatureRequired;" in server_controller_text
+    assert "\n\nimport org.springframework.web.bind.annotation.RequestMethod;" not in server_controller_text
+    assert "\n\nimport com.example.generated.security.SignatureRequired;" not in server_controller_text
+    assert "@SignatureRequired" in server_controller_text
+    assert '@ApiBlueprintOperation("api.demo.get.ping")' in server_controller_text
+    assert "public ResponseEntity<?> ping(" in server_controller_text
+    assert "GenApiTypes.Result result = delegate.ping(" in server_controller_text
+    assert "public interface GenDemoDelegate" in server_delegate_text
+    assert "GenApiTypes.Result ping(" in server_delegate_text
     assert "public static GenDemoTypes.PingQuery pingRequest(GenDemoTypes.PingQuery value)" in server_adapters_text
     assert "public static GenApiTypes.Result pingResponse(GenApiTypes.Result value)" in server_adapters_text
     assert "RequestMappingHandlerMapping" in spring_assertions_text
     assert "operation_marker_missing" in spring_assertions_text
     assert "request_type_missing" in spring_assertions_text
     assert "response_type_missing" in spring_assertions_text
+    assert "manual_public_mapping" in spring_assertions_text
+    assert "duplicate_public_route" in spring_assertions_text
     assert '"/api/**"' in spring_assertions_text
     assert '"/api/internal/**"' in spring_assertions_text
-    assert '"com.example.generated.api.types.api.demo.GenDemoTypes.PingQuery"' in spring_assertions_text
+    assert '"com.example.generated.api.routes.api.demo.controllers.GenDemoController"' in spring_assertions_text
+    assert '"com.example.generated.api.routes.api.demo.delegates.GenDemoDelegate"' in spring_assertions_text
+    assert '"com.example.generated.api.routes.api.demo.types.GenDemoTypes.PingQuery"' in spring_assertions_text
     assert '"com.example.generated.api.runtime.GenApiTypes.Result"' in spring_assertions_text
     assert not (server_dir / package_root / "routes/api/demo/GenDemoService.java").exists()
     assert not (server_dir / package_root / "transports/http/api/demo/GenDemoController.java").exists()
+    assert not (server_dir / package_root / "routes/api/demo/annotations/GenPing.java").exists()
+
+def test_java_server_maps_dsl_providers_to_spring_policy_annotations(tmp_path: Path) -> None:
+    class RequestSignature(provider.Provider):
+        name = "request-signature"
+
+    class AdminReview(provider.Provider):
+        name = "admin-review"
+
+    class OrderPayload(Model):
+        sku = String(description="sku")
+
+    bp = Blueprint(
+        root="/api",
+        providers=[
+            provider.Req(),
+            RequestSignature(),
+            provider.Handle(),
+            provider.Rsp(),
+        ],
+    )
+    orders = bp.group("/orders")
+    orders.POST("/create", operation_id="create_order", tags=["public"]).REQ(OrderPayload).RSP(Result)
+    orders.POST(
+        "/cancel",
+        tags=["public"],
+        providers=[
+            provider.Req(),
+            RequestSignature(),
+            AdminReview(),
+            provider.Handle(),
+            provider.Rsp(),
+        ],
+    ).REQ(OrderPayload).RSP(Result)
+    orders.POST(
+        "/draft",
+        providers=[
+            provider.Req(),
+            provider.Handle(),
+            provider.Rsp(),
+        ],
+    ).REQ(OrderPayload).RSP(Result)
+
+    graph = build_contract_graph([bp])
+    server_dir = tmp_path / "server"
+    writer = JavaServerWriter(
+        server_dir,
+        package="com.example.shop.contract",
+        contract_graph=graph,
+        spring_public_paths=["/api/**"],
+        spring_policy_mappings=[
+            {
+                "provider": "request-signature",
+                "annotation": "com.example.shop.security.SignatureRequired",
+            },
+            {
+                "provider": "admin-review",
+                "annotation": "com.example.shop.security.AdminOnly",
+            },
+        ],
+    )
+    writer.register(bp)
+    writer.gen()
+
+    root = server_dir / "com/example/shop/contract/api"
+    controller = (root / "routes/api/orders/controllers/GenOrdersController.java").read_text(encoding="utf-8")
+    delegate = (root / "routes/api/orders/delegates/GenOrdersDelegate.java").read_text(encoding="utf-8")
+    spring_assertions = (root / "spring/GenSpringMvcContractAssertions.java").read_text(encoding="utf-8")
+
+    assert "import com.example.shop.security.SignatureRequired;" in controller
+    assert "import com.example.shop.security.AdminOnly;" in controller
+    assert "@SignatureRequired" in controller
+    assert "@AdminOnly" in controller
+    assert '@ApiBlueprintOperation("api.orders.post.create")' in controller
+    assert "public ResponseEntity<?> createOrder(" in controller
+    assert "public interface GenOrdersDelegate" in delegate
+    assert "GenApiTypes.Result createOrder(" in delegate
+    assert not (root / "routes/api/orders/annotations/GenCreateOrder.java").exists()
+    assert '"com.example.shop.security.SignatureRequired"' in spring_assertions
+    assert '"com.example.shop.security.AdminOnly"' in spring_assertions
+
+def test_java_server_duplicate_spring_policy_mapping_fails(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="duplicate spring policy mapping provider"):
+        JavaServerWriter(
+            tmp_path / "server",
+            package="com.example.shop.contract",
+            spring_public_paths=["/api/**"],
+            spring_policy_mappings=[
+                {
+                    "provider": "request-signature",
+                    "annotation": "com.example.shop.security.SignatureRequired",
+                },
+                {
+                    "provider": "request-signature",
+                    "annotation": "com.example.shop.security.OtherSignatureRequired",
+                },
+            ],
+        )
 
 def test_java_writer_name_filter_uses_resolved_operation_name(tmp_path: Path) -> None:
     bp = Blueprint(root="/api")

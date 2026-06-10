@@ -18,7 +18,7 @@ Blueprint DSL -> ContractGraph -> api-gen check / inspect / generate -> generate
 ## 适合什么场景
 
 - 后端、Web、Flutter、iOS Swift、Kotlin、脚本客户端需要共享同一份 API 契约。
-- 希望先从协议生成 Go server，再生成 TypeScript、Flutter、Swift、Kotlin、Java、Go、Python client，或生成 Kotlin/Python server scaffold 与 Java Spring 契约边界。
+- 希望先从协议生成 Go server，再生成 TypeScript、Flutter、Swift、Kotlin、Java、Go、Python client，或生成 Kotlin/Python server scaffold 与 Java Spring controller/delegate 入口。
 - 需要文档服务、契约检查、生成快照和端到端示例一起维护。
 - 需要把 Markdown Binary Schema、typed binary 响应、multipart 上传、raw bytes/file/stream 响应、Wails 或 gRPC 纳入同一套生成流程。
 - 需要用 `OneOf` / `LegacyStringID` 让历史接口中真实存在的多 JSON shape 或 string/int ID 漂移字段进入契约，而不是长期退化为 `JSONValue`。
@@ -102,7 +102,7 @@ api-gen generate -c api-blueprint.toml
 | Flutter client | 预览 | 生成纯 Dart package、DTO、typed error、binary codec、HTTP multipart/raw/binary response client 和 SSE/WebSocket client |
 | Swift client | 预览 | 生成 iOS Swift Package 多 target SDK、短 module stem、root routes module、DTO、typed error、字段级 binary codec、带限流/校验 knobs 的共享 URLSession HTTP/SSE/WebSocket transport 和 multipart/raw/binary response client，不生成 UI、鉴权、缓存或 session engine |
 | Kotlin client/server | 预览 | 生成 OkHttp HTTP/SSE/WebSocket client、Ktor HTTP/SSE/WebSocket server scaffold、multipart/raw/binary request/response adapter、模型和长连接 message helper |
-| Java client/server | 预览 | 生成 Java 17 HttpClient client，以及 Spring MVC 组合 route 注解、JavaBean request/response 类型、adapter helper 和运行时 contract assertions；不生成生产 Controller/Service/Stub |
+| Java client/server | 预览 | 生成 Java 17 HttpClient client，以及强约束 Spring MVC `Gen...Controller`、`Gen...Delegate`、JavaBean request/response 类型、adapter helper 和运行时 contract assertions；Spring policy 由 DSL provider + Java mapping 落地 |
 | Go client / Python client | 预览 | 生成服务端之外的脚本或工具侧客户端；Python client 使用递归 dataclass DTO、共享 runtime codec，并提供 multipart/raw、长连接 message helper 与 binary writer/response codec |
 | Python server | 预览 | 生成 FastAPI HTTP/SSE/WebSocket server scaffold、multipart/raw/binary request/response adapter、typed service contract 和长连接 message helper |
 | Wails v2/v3 | 预览 / 实验性 | 生成 Go + TypeScript overlay；文件/stream 等能力使用 Wails RPC descriptor 或 STREAM/CHANNEL chunk 建模 |
@@ -138,6 +138,8 @@ make example-conformance
 make benchmark-list
 make example-golang-suite
 make example-java-suite
+make example-java-spring-server
+make example-java-spring-server-benchmark
 ```
 
-`make example-conformance` 默认从真实 Go HTTP server 开始跑协议互通；可用 `EXAMPLE_CONFORMANCE_SERVERS`、`EXAMPLE_CONFORMANCE_CLIENTS`、`EXAMPLE_CONFORMANCE_SCENARIOS` 和 `EXAMPLE_CONFORMANCE_SWIFT_RUNTIME_PROFILE` 选择矩阵，完整矩阵可设为 `EXAMPLE_CONFORMANCE_SERVERS=all EXAMPLE_CONFORMANCE_CLIENTS=all`（Swift 场景需要可用 Swift toolchain）。benchmark 是可选趋势工具，不作为默认 CI 阈值；除 binary / protocol 外，也提供 generated client SDK smoke 与 Swift runtime microbench 入口，见 [Benchmark](docs/zh/benchmarks.md)。`example-golang-suite` 是保留的手动端到端增强验证；`example-java-suite` 是 Java Spring 契约边界 compile/smoke。正式发布前的版本、构建、安装和 GitHub Release 流程见 [发布流程](docs/release-process.md)。
+`make example-conformance` 默认从真实 Go HTTP server 开始跑协议互通；可用 `EXAMPLE_CONFORMANCE_SERVERS`、`EXAMPLE_CONFORMANCE_CLIENTS`、`EXAMPLE_CONFORMANCE_SCENARIOS` 和 `EXAMPLE_CONFORMANCE_SWIFT_RUNTIME_PROFILE` 选择矩阵，完整矩阵可设为 `EXAMPLE_CONFORMANCE_SERVERS=all EXAMPLE_CONFORMANCE_CLIENTS=all`（Swift 场景需要可用 Swift toolchain）。benchmark 是可选趋势工具，不作为默认 CI 阈值；除 binary / protocol 外，也提供 generated client SDK smoke、Swift runtime microbench 与 Java Spring controller/delegate microbench 入口，见 [Benchmark](docs/zh/benchmarks.md)。`example-golang-suite` 是保留的手动端到端增强验证；`example-java-suite` 是 Java Spring 生成物 compile/smoke；`example-java-spring-server` 是真实 Spring Boot 宿主接入示例验证。正式发布前的版本、构建、安装和 GitHub Release 流程见 [发布流程](docs/release-process.md)。

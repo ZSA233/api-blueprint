@@ -63,6 +63,9 @@ module = "com.example.apiblueprint"
 id = "java.server"
 out_dir = "java/server"
 module = "com.example.apiblueprint"
+exclude = ["kind:stream", "kind:channel"]
+spring_contract_mode = "strict"
+spring_public_paths = ["/api/**", "/legacy/**", "/runtime/**", "/static/**"]
 
 [[java.client]]
 id = "java.client"
@@ -141,7 +144,7 @@ module = "pb"
 - `kotlin-client`：生成 OkHttp + kotlinx.serialization client；通过共享 transport abstraction 生成 RPC、STREAM、CHANNEL route surface，支持 query/json/urlencoded/multipart/binary_schema/open request kind，以及 `none` / `code_message_data` / `ok_data_error` response envelope。route DTO 写入 `Gen<Group>Types.kt`，Kotlin public declaration 名称保持不变；binary schema helper 是 `GenBinaryTypes.kt` 中的 route-local packet / wire helper 类型；`base_url` / `base_url_expr` 由生成的 OkHttp HTTP adapter config 使用，route/runtime client 保持 transport-neutral。内置 OkHttp adapter 覆盖 RPC query/json/urlencoded/multipart/binary_schema 请求，支持 per-call `ApiRequestOptions`，binary_schema 成功响应返回 typed packet，bytes/file raw 响应返回 `ApiRawResponse`，byte stream 以 closeable `ApiStreamResponse` / `InputStream` 真流式返回，STREAM 使用 SSE，CHANNEL 使用 OkHttp WebSocket。
 - `kotlin-server`：生成 preview Ktor server scaffold，包含 route service interface、stub、runtime 和 Ktor route registration。route DTO 与 binary schema helper 复用 Kotlin serialization 模型。RPC HTTP adapter 覆盖 query/json/urlencoded/multipart/binary_schema 输入；binary_schema、bytes、file、byte_stream 成功响应不套 JSON envelope，byte_stream 通过 Ktor streaming writer 输出；STREAM 生成 SSE bridge，CHANNEL 生成 Ktor WebSocket bridge，但不生成宿主 session engine、鉴权、重试、缓存、room 管理或连接编排。
 - `java-client`：生成 preview Java 17 client；使用 `java.net.http.HttpClient` + Jackson，输出 transport-neutral route surface 与默认 JDK HTTP adapter。RPC query/json/urlencoded/multipart/binary_schema 可用，route 方法暴露 `GenApiRequestOptions` overload 以传入 per-call header 和 timeout，binary_schema 成功响应返回 typed packet，bytes/file raw 响应返回 `GenApiRawResponse`，byte stream 以 `GenApiStreamResponse` / `InputStream` / `AutoCloseable` 真流式返回，route DTO 和 binary schema helper record 都位于 `Gen<Group>Types.java`，STREAM 和 CHANNEL 默认抛明确 unsupported，便于替换自定义 transport。
-- `java-server`：生成 preview Spring MVC contract-boundary artifacts；输出 `annotations/` 下的 `ApiBlueprintOperation` 与 route-local `@Gen...` 组合注解、`types/` 下的 JavaBean request/response 类型、`adapters/` 下的转换 helper，以及 `spring/GenSpringMvcContractAssertions`。它不生成生产 Controller、Service、Stub、`GenSpringServerConfig`、SSE/WebSocket bridge 或 HTTP server adapter；业务 Controller 继续手写，使用 generated 注解和类型，并在测试中通过 Spring `RequestMappingHandlerMapping` 做运行时契约断言。
+- `java-server`：生成 preview Spring MVC controller/delegate artifacts；输出 root 级 `annotations/ApiBlueprintOperation.java`，route-local `routes/<root>/<group...>/controllers/` 下的 generated Spring Controller、`delegates/` 下的业务 delegate interface、`types/` 下的 JavaBean request/response 类型、`adapters/` 下的转换 helper，以及 `spring/GenSpringMvcContractAssertions`。它不生成 Service、Stub、`GenSpringServerConfig`、SSE/WebSocket bridge 或独立 HTTP server adapter；业务代码实现 generated delegate，public Spring mapping 由 generated Controller 拥有，并在测试中通过 Spring `RequestMappingHandlerMapping` 做运行时契约断言。
 - `python-server`：生成 Python route service contracts/stubs 与 FastAPI HTTP adapter scaffold；使用 `python_package_root` 控制生成包根。FastAPI adapter 覆盖 query/json/urlencoded/multipart/binary_schema、raw response、response envelope、typed error、SSE 和 WebSocket 协议桥接。
 - `python-client`：生成 async-first Python HTTP client；使用 `python_package_root` 控制生成包根，推荐聚合入口是 `create_client(base_url)`，route DTO 使用 `gen_types.py`，route RPC 方法接收 keyword-only `headers` 和 `timeout`，binary schema codec 使用 route-local `gen_binary.py` 并通过 `gen_types.py` re-export，`base_url` / `base_url_expr` 由 HTTP transport adapter 使用。默认 httpx adapter 实现 RPC query/json/urlencoded/multipart/binary_schema 请求、binary_schema 成功响应、bytes/file raw 响应和 byte stream 响应，STREAM/CHANNEL 连接 transport 是 preview/custom 扩展点。
 - `grpc-proto`：从 ContractGraph 输出 `.proto` 和 service 定义；可通过 `[[targets.proto_files]]` 或快捷表 `[[grpc.proto.proto_files]]` 把 DSL schema module/name 与 route path/id/service 映射到指定 proto file/package/go_package/service。HTTP raw media route 不会自动投影为 gRPC；同类能力应建模为 protobuf `bytes` 字段或 streaming chunk message。
@@ -160,7 +163,7 @@ HTTP server adapter 会生成安全默认上限，避免默认公开时无限读
 - Kotlin：`ApiServerConfig`，`register*Routes(..., config = ApiServerConfig())` 默认限制 multipart file `32 MiB`、binary body `16 MiB`、WebSocket message `1 MiB`。
 - Python：`ApiServerConfig`，`create_router(..., config=None)` 与 `create_<group>_router(..., config=None)` 默认限制 body `16 MiB`、multipart file/part `32 MiB`、SSE queue `256`、WebSocket message `1 MiB`。
 
-Java `java-server` target 不再生成 HTTP server adapter，因此没有 generated server resource-limit config；宿主 Spring 应用继续使用自身的 MVC、Filter、Interceptor、AOP、request size 和部署层资源限制。generated `GenSpringMvcContractAssertions` 只验证公开 route、operation marker、policy 注解与可见 request/response 边界。
+Java `java-server` target 生成 Spring MVC Controller，但不生成独立 HTTP server adapter，因此没有 generated server resource-limit config；宿主 Spring 应用继续使用自身的 MVC 设置、Filter、Interceptor、AOP、request size 和部署层资源限制。generated `GenSpringMvcContractAssertions` 会验证公开 route、重复/手写 public mapping、operation marker、policy 注解与 delegate/request/response 边界。
 
 这些配置是生成 adapter 的底线，不替代反向代理、框架级 request size、应用鉴权或部署层资源限制。生产项目推荐导入具体 route client、具体 transport factory 或具体 group router，保留 aggregate facade 作为开发和示例入口。
 
@@ -178,7 +181,7 @@ Swift client 输出目录是 `Package.swift`、`Sources/<module>/<module>.swift`
 
 Java client 输出目录是 `<package>/<root>/runtime/*`、`<package>/<root>/routes/<root>/<group...>/*`、`<package>/<root>/transports/http/*`。`out_dir` 是 package root，不包含 `src/main/java`。client 的用户保留文件是 `ApiClient.java`、`<Group>Api.java`、`HttpApiClient.java`；其他 generated Java 文件和 public 类型都使用 `Gen*`。DTO 使用 Java 17 `record`，字段使用 Jackson `@JsonProperty`，enum 使用 `@JsonCreator` / `@JsonValue` 保留 wire value。
 
-Java server 输出目录是 `<package>/<root>/runtime/*`、`<package>/<root>/annotations/*`、`<package>/<root>/types/<root>/<group...>/*`、`<package>/<root>/adapters/<root>/<group...>/*`、`<package>/<root>/spring/*`。`Gen*.java` 文件由生成器覆盖；项目 policy 注解、业务 Controller、旧 DTO/VO 和 service 都由宿主拥有。
+Java server 输出目录是 `<package>/<root>/runtime/*`、`<package>/<root>/annotations/ApiBlueprintOperation.java`、`<package>/<root>/routes/<root>/<group...>/{controllers,delegates,types,adapters}/*`、`<package>/<root>/spring/*`。`Gen*.java` 文件由生成器覆盖；项目 policy 注解、delegate 实现、旧 DTO/VO 和 service 都由宿主拥有。签名、鉴权这类协议策略语义进入 DSL provider；Java target 的 `spring_policy_mappings` 只负责把 provider name 映射为宿主 Spring 注解类。
 
 Python client/server 输出目录是 `<python_package_root>/<root>/runtime/*`、`<python_package_root>/<root>/routes/<root>/<group...>/*`、`<python_package_root>/<root>/transports/http/*`。root-level route 生成在 `routes/<root>`。如果省略 `python_package_root`，生成器使用默认包根。
 
@@ -194,7 +197,7 @@ gRPC stub target 字段：
 
 transport target：
 
-- `http-transport`：声明 HTTP server/client 组合；`server` 可引用 `go-server`、`kotlin-server` 或 `python-server`，`clients` 可引用 Go、TypeScript、Flutter、Swift、Kotlin、Java 或 Python client。Java `java-server` 是 Spring contract-boundary target，不是 HTTP server adapter target。
+- `http-transport`：声明 HTTP server/client 组合；`server` 可引用 `go-server`、`kotlin-server` 或 `python-server`，`clients` 可引用 Go、TypeScript、Flutter、Swift、Kotlin、Java 或 Python client。Java `java-server` 是 Spring controller/delegate target，不是 HTTP server adapter target。
 - `wails-transport`：声明 Wails overlay，必须设置 `version`、`server` 和 `clients`；Wails 保持 Go + TypeScript only，不接入 Flutter / Kotlin / Java / Python client。HTTP raw media route 不会自动投影为 Wails；同类能力应建模为普通 RPC payload、app-local file descriptor、STREAM/CHANNEL chunk 或 app-managed temp file/cache。
 - `frontend_mode = "external"` 生成外部前端使用的 Wails TypeScript facade；`none` 只生成 Go overlay。
 - `include` / `exclude` 可裁剪 Wails target overlay / facade。

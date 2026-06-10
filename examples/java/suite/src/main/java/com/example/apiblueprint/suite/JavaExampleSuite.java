@@ -1,22 +1,37 @@
 package com.example.apiblueprint.suite;
 
-import com.example.apiblueprint.api.adapters.api.demo.GenDemoAdapters;
 import com.example.apiblueprint.api.annotations.ApiBlueprintOperation;
-import com.example.apiblueprint.api.annotations.api.demo.GenDemoAbc;
+import com.example.apiblueprint.api.routes.api.demo.adapters.GenDemoAdapters;
+import com.example.apiblueprint.api.routes.api.demo.controllers.GenDemoController;
+import com.example.apiblueprint.api.routes.api.demo.delegates.GenDemoDelegate;
+import com.example.apiblueprint.api.routes.api.demo.types.GenDemoTypes;
 import com.example.apiblueprint.api.runtime.GenApiTypes;
-import com.example.apiblueprint.api.types.api.demo.GenDemoTypes;
+import com.example.apiblueprint.api.spring.GenSpringRequestContext;
 import com.example.apiblueprint.security.SignatureRequired;
+import jakarta.servlet.http.HttpServletRequest;
+import java.lang.reflect.Method;
 import java.util.List;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 public final class JavaExampleSuite {
     private JavaExampleSuite() {
     }
 
-    public static void main(String[] args) {
-        ApiBlueprintOperation operation = GenDemoAbc.class.getAnnotation(ApiBlueprintOperation.class);
-        require(operation != null, "GenDemoAbc must carry ApiBlueprintOperation");
+    public static void main(String[] args) throws Exception {
+        Method controllerMethod = GenDemoController.class.getMethod(
+            "abc",
+            GenDemoTypes.AbcQuery.class,
+            HttpServletRequest.class
+        );
+        ApiBlueprintOperation operation = controllerMethod.getAnnotation(ApiBlueprintOperation.class);
+        require(operation != null, "GenDemoController#abc must carry ApiBlueprintOperation");
         require("api.demo.get.abc".equals(operation.value()), "operation id mismatch: " + operation.value());
-        require(GenDemoAbc.class.isAnnotationPresent(SignatureRequired.class), "policy annotation missing");
+        require(controllerMethod.isAnnotationPresent(SignatureRequired.class), "policy annotation missing");
+        require(controllerMethod.isAnnotationPresent(RequestMapping.class), "Spring mapping missing");
+        require(
+            GenDemoDelegate.class.getMethod("abc", GenDemoTypes.AbcQuery.class, GenSpringRequestContext.class) != null,
+            "typed delegate method missing"
+        );
 
         GenDemoTypes.AbcQuery query = GenDemoTypes.AbcQuery.builder()
             .arg1(Boolean.TRUE)

@@ -1,0 +1,44 @@
+{% autoescape false %}package {{ writer.group_controllers_package(bp, group) }};
+
+{{ writer.java_import_block(writer.server_controller_imports(bp, group)) }}
+
+@RestController
+public class {{ group.controller_class }} {
+    private final {{ group.delegate_class }} delegate;
+
+    public {{ group.controller_class }}({{ group.delegate_class }} delegate) {
+        this.delegate = delegate;
+    }
+{% for route in group.routes %}
+
+    {{ writer.spring_mapping_annotation(route) }}
+{% for annotation_expr in writer.policy_annotation_exprs_for_route(route, group) %}    {{ annotation_expr }}
+{% endfor %}    @ApiBlueprintOperation({{ route.route_id | code_literal }})
+    public ResponseEntity<?> {{ route.method_name }}(
+{%- for parameter in writer.controller_method_parameters(route, group) %}
+        {{ parameter }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ) throws Exception {
+{%- for line in writer.controller_pre_delegate_lines(route, group) %}
+        {{ line }}
+{%- endfor %}
+{%- set response_type = writer.route_response_type(route, group) %}
+{%- if response_type == "void" %}
+        delegate.{{ route.method_name }}(
+{%- for argument in writer.delegate_call_arguments(route, group) %}
+            {{ argument }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+        );
+        {{ writer.controller_void_return_statement(route, group) }}
+{%- else %}
+        {{ response_type }} result = delegate.{{ route.method_name }}(
+{%- for argument in writer.delegate_call_arguments(route, group) %}
+            {{ argument }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+        );
+        {{ writer.controller_return_statement(route, group, "result") }}
+{%- endif %}
+    }
+{% endfor %}
+}
+{% endautoescape %}

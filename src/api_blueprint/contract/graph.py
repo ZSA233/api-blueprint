@@ -210,6 +210,7 @@ class ContractGraphBuilder:
             "path": router.leaf,
             "url": router.url,
             "tags": list(router.tags),
+            "providers": [_provider_manifest(provider) for provider in router.providers],
             "deprecated": router.is_deprecated,
             "errors": self._route_error_refs(router),
             "request": request,
@@ -481,6 +482,20 @@ class ContractGraphBuilder:
 
 def build_contract_graph(blueprints: Iterable[Blueprint]) -> ContractGraph:
     return ContractGraphBuilder().build(blueprints)
+
+
+def _provider_manifest(provider: Any) -> JsonObject:
+    name = str(getattr(provider, "name", "") or "").strip()
+    if not name:
+        raise ValueError("route provider name is required")
+    manifest: JsonObject = {"name": name}
+    data = getattr(provider, "data", None)
+    if data is not None:
+        try:
+            manifest["data"] = json.loads(json.dumps(data, ensure_ascii=False, sort_keys=True))
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"route provider[{name}] data must be JSON-serializable") from exc
+    return manifest
 
 
 def _validate_route_identity_conflicts(

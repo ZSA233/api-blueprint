@@ -30,7 +30,7 @@ func newGeneratedRoomService(impl RouterInterface, dispatcher wailstransport.Eve
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req|handle|rsp=json@CodeMessageDataEnvelope",
+			"req|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.RoomList,
 		),
 	}

@@ -76,13 +76,12 @@ BLUEPRINT_JAVA_CLIENT_PRESERVED = (
     "com/example/apiblueprint/static_/transports/http/HttpApiClient.java",
     "com/example/apiblueprint/static_/routes/static_/StaticApi.java",
 )
-BLUEPRINT_JAVA_SERVER_PRESERVED = (
-    "com/example/apiblueprint/security/SignatureRequired.java",
-)
+BLUEPRINT_JAVA_SERVER_PRESERVED = ()
 BLUEPRINT_JAVA_SUITE_PRESERVED = (
     ".gitignore",
     "build.gradle.kts",
     "settings.gradle.kts",
+    "src/main/java/com/example/apiblueprint/security/SignatureRequired.java",
     "src/main/java/com/example/apiblueprint/suite/JavaExampleSuite.java",
 )
 BLUEPRINT_JAVA_CONFORMANCE_PRESERVED = (
@@ -151,6 +150,7 @@ WAILS_HELLO_TYPESCRIPT_PRESERVED = ("tsconfig.json",)
 GRPC_GO_PRESERVED = ("go.mod", "go.sum")
 GRPC_PYTHON_PRESERVED = ()
 EXAMPLE_SNAPSHOT_IGNORES: Mapping[str, frozenset[str]] = {
+    "blueprint/java": frozenset(("spring-server",)),
     "blueprint/java/suite": frozenset((".gradle", "bin", "build")),
     "blueprint/flutter": frozenset((".dart_tool",)),
     "blueprint/swift": frozenset((".build",)),

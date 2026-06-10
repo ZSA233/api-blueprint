@@ -1,0 +1,17 @@
+[blueprint]
+entrypoints = [
+    'blueprints.app:*',
+]
+
+[[java.server]]
+id = 'java.server'
+out_dir = 'generated'
+module = 'com.example.shop.contract'
+include = ['tag:public']
+spring_contract_mode = 'strict'
+spring_public_paths = ['/api/**']
+spring_exclude_server_paths = ['/internal/**']
+
+[[java.server.spring_policy_mappings]]
+provider = 'request-signature'
+annotation = 'com.example.shop.security.SignatureRequired'

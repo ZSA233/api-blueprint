@@ -39,7 +39,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 					},
 				},
 			},
-			"req=Q|handle|rsp=json@OkDataErrorEnvelope",
+			"req=Q|request-signature|handle|rsp=json@OkDataErrorEnvelope",
 			impl.Default,
 		),
 		eng,

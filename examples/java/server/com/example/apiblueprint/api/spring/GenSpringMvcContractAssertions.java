@@ -20,7 +20,7 @@ import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 public final class GenSpringMvcContractAssertions {
-    private static final ContractMode DEFAULT_MODE = ContractMode.PUBLIC;
+    private static final ContractMode DEFAULT_MODE = ContractMode.STRICT;
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
     private static final List<String> PUBLIC_PATHS = List.of(
         "/api/**",
@@ -33,25 +33,15 @@ public final class GenSpringMvcContractAssertions {
     );
     private static final List<RouteSpec> ROUTES = List.of(
         new RouteSpec(
-            "api.api.channel.ws",
-            Set.of(),
-            "/api/ws",
-            "com.example.apiblueprint.api.annotations.api.GenHelloChannel",
-            List.of(),
-            List.of(),
-            "",
-            List.of(),
-            "generated",
-            "generated"
-        ),
-        new RouteSpec(
             "api.binary.post.packet",
             Set.of("POST"),
             "/api/binary/packet",
-            "com.example.apiblueprint.api.annotations.api.binary.GenPacket",
-            List.of(),
-            List.of("com.example.apiblueprint.api.types.api.binary.GenBinaryTypes.PacketQuery", "com.example.apiblueprint.api.types.api.binary.GenBinaryTypes.DemoPacket"),
-            "com.example.apiblueprint.api.types.api.binary.GenBinaryTypes.PacketResponse",
+            "com.example.apiblueprint.api.routes.api.binary.controllers.GenBinaryController",
+            "com.example.apiblueprint.api.routes.api.binary.delegates.GenBinaryDelegate",
+            "packet",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
+            List.of("com.example.apiblueprint.api.routes.api.binary.types.GenBinaryTypes.PacketQuery", "com.example.apiblueprint.api.routes.api.binary.types.GenBinaryTypes.DemoPacket"),
+            "com.example.apiblueprint.api.routes.api.binary.types.GenBinaryTypes.PacketResponse",
             List.of(),
             "generated",
             "generated"
@@ -60,10 +50,12 @@ public final class GenSpringMvcContractAssertions {
             "api.binary.post.auditpacket",
             Set.of("POST"),
             "/api/binary/audit-packet",
-            "com.example.apiblueprint.api.annotations.api.binary.GenAuditPacket",
-            List.of(),
-            List.of("com.example.apiblueprint.api.types.api.binary.GenBinaryTypes.AuditPacketQuery", "com.example.apiblueprint.api.types.api.binary.GenBinaryTypes.AuditPacket"),
-            "com.example.apiblueprint.api.types.api.binary.GenBinaryTypes.AuditPacketResponse",
+            "com.example.apiblueprint.api.routes.api.binary.controllers.GenBinaryController",
+            "com.example.apiblueprint.api.routes.api.binary.delegates.GenBinaryDelegate",
+            "auditPacket",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
+            List.of("com.example.apiblueprint.api.routes.api.binary.types.GenBinaryTypes.AuditPacketQuery", "com.example.apiblueprint.api.routes.api.binary.types.GenBinaryTypes.AuditPacket"),
+            "com.example.apiblueprint.api.routes.api.binary.types.GenBinaryTypes.AuditPacketResponse",
             List.of(),
             "generated",
             "generated"
@@ -72,10 +64,12 @@ public final class GenSpringMvcContractAssertions {
             "api.binary.post.widepacket",
             Set.of("POST"),
             "/api/binary/wide-packet",
-            "com.example.apiblueprint.api.annotations.api.binary.GenWidePacket",
-            List.of(),
-            List.of("com.example.apiblueprint.api.types.api.binary.GenBinaryTypes.WidePacketQuery", "com.example.apiblueprint.api.types.api.binary.GenBinaryTypes.WidePacket"),
-            "com.example.apiblueprint.api.types.api.binary.GenBinaryTypes.WidePacketResponse",
+            "com.example.apiblueprint.api.routes.api.binary.controllers.GenBinaryController",
+            "com.example.apiblueprint.api.routes.api.binary.delegates.GenBinaryDelegate",
+            "widePacket",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
+            List.of("com.example.apiblueprint.api.routes.api.binary.types.GenBinaryTypes.WidePacketQuery", "com.example.apiblueprint.api.routes.api.binary.types.GenBinaryTypes.WidePacket"),
+            "com.example.apiblueprint.api.routes.api.binary.types.GenBinaryTypes.WidePacketResponse",
             List.of(),
             "generated",
             "generated"
@@ -84,10 +78,12 @@ public final class GenSpringMvcContractAssertions {
             "api.binary.get.auditpacketresponse",
             Set.of("GET"),
             "/api/binary/audit-packet-response",
-            "com.example.apiblueprint.api.annotations.api.binary.GenAuditPacketResponse",
+            "com.example.apiblueprint.api.routes.api.binary.controllers.GenBinaryController",
+            "com.example.apiblueprint.api.routes.api.binary.delegates.GenBinaryDelegate",
+            "auditPacketResponse",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
             List.of(),
-            List.of(),
-            "com.example.apiblueprint.api.types.api.binary.GenBinaryTypes.AuditPacket",
+            "com.example.apiblueprint.api.routes.api.binary.types.GenBinaryTypes.AuditPacket",
             List.of(),
             "generated",
             "generated"
@@ -96,9 +92,11 @@ public final class GenSpringMvcContractAssertions {
             "api.conflict.get.default",
             Set.of("GET"),
             "/api/conflict/default",
-            "com.example.apiblueprint.api.annotations.api.conflict.GenDefault",
-            List.of(),
-            List.of("com.example.apiblueprint.api.types.api.conflict.GenConflictTypes.DefaultQuery"),
+            "com.example.apiblueprint.api.routes.api.conflict.controllers.GenConflictController",
+            "com.example.apiblueprint.api.routes.api.conflict.delegates.GenConflictDelegate",
+            "defaultValue",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
+            List.of("com.example.apiblueprint.api.routes.api.conflict.types.GenConflictTypes.DefaultQuery"),
             "com.example.apiblueprint.api.runtime.GenApiTypes.BlueprintsApiConflictConflictModel",
             List.of(),
             "generated",
@@ -108,9 +106,11 @@ public final class GenSpringMvcContractAssertions {
             "api.demo.get.abc",
             Set.of("GET"),
             "/api/demo/abc",
-            "com.example.apiblueprint.api.annotations.api.demo.GenDemoAbc",
+            "com.example.apiblueprint.api.routes.api.demo.controllers.GenDemoController",
+            "com.example.apiblueprint.api.routes.api.demo.delegates.GenDemoDelegate",
+            "abc",
             List.of("com.example.apiblueprint.security.SignatureRequired"),
-            List.of("com.example.apiblueprint.api.types.api.demo.GenDemoTypes.AbcQuery"),
+            List.of("com.example.apiblueprint.api.routes.api.demo.types.GenDemoTypes.AbcQuery"),
             "com.example.apiblueprint.api.runtime.GenApiTypes.ApiDemoA",
             List.of(),
             "generated",
@@ -120,10 +120,12 @@ public final class GenSpringMvcContractAssertions {
             "api.demo.post.testpost",
             Set.of("POST"),
             "/api/demo/test_post",
-            "com.example.apiblueprint.api.annotations.api.demo.GenTestPost",
-            List.of(),
-            List.of("com.example.apiblueprint.api.types.api.demo.GenDemoTypes.TestPostJSON"),
-            "com.example.apiblueprint.api.types.api.demo.GenDemoTypes.TestPostResponse",
+            "com.example.apiblueprint.api.routes.api.demo.controllers.GenDemoController",
+            "com.example.apiblueprint.api.routes.api.demo.delegates.GenDemoDelegate",
+            "testPost",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
+            List.of("com.example.apiblueprint.api.routes.api.demo.types.GenDemoTypes.TestPostJSON"),
+            "com.example.apiblueprint.api.routes.api.demo.types.GenDemoTypes.TestPostResponse",
             List.of("req1"),
             "generated",
             "generated"
@@ -132,10 +134,12 @@ public final class GenSpringMvcContractAssertions {
             "api.demo.post.formsubmit",
             Set.of("POST"),
             "/api/demo/form-submit",
-            "com.example.apiblueprint.api.annotations.api.demo.GenFormSubmit",
-            List.of(),
-            List.of("com.example.apiblueprint.api.types.api.demo.GenDemoTypes.FormSubmitForm"),
-            "com.example.apiblueprint.api.types.api.demo.GenDemoTypes.FormSubmitResponse",
+            "com.example.apiblueprint.api.routes.api.demo.controllers.GenDemoController",
+            "com.example.apiblueprint.api.routes.api.demo.delegates.GenDemoDelegate",
+            "formSubmit",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
+            List.of("com.example.apiblueprint.api.routes.api.demo.types.GenDemoTypes.FormSubmitForm"),
+            "com.example.apiblueprint.api.routes.api.demo.types.GenDemoTypes.FormSubmitResponse",
             List.of("title"),
             "generated",
             "generated"
@@ -144,9 +148,11 @@ public final class GenSpringMvcContractAssertions {
             "api.demo.get.requestoptions",
             Set.of("GET"),
             "/api/demo/request-options",
-            "com.example.apiblueprint.api.annotations.api.demo.GenRequestOptions",
-            List.of(),
-            List.of("com.example.apiblueprint.api.types.api.demo.GenDemoTypes.RequestOptionsQuery"),
+            "com.example.apiblueprint.api.routes.api.demo.controllers.GenDemoController",
+            "com.example.apiblueprint.api.routes.api.demo.delegates.GenDemoDelegate",
+            "requestOptions",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
+            List.of("com.example.apiblueprint.api.routes.api.demo.types.GenDemoTypes.RequestOptionsQuery"),
             "com.example.apiblueprint.api.runtime.GenApiTypes.RequestOptionsResponse",
             List.of(),
             "generated",
@@ -156,10 +162,12 @@ public final class GenSpringMvcContractAssertions {
             "api.demo.put.z1put",
             Set.of("PUT"),
             "/api/demo/1put",
-            "com.example.apiblueprint.api.annotations.api.demo.GenPutDemo",
-            List.of(),
-            List.of("com.example.apiblueprint.api.types.api.demo.GenDemoTypes.PutDemoQuery", "com.example.apiblueprint.api.types.api.demo.GenDemoTypes.PutDemoJSON"),
-            "com.example.apiblueprint.api.types.api.demo.GenDemoTypes.PutDemoResponse",
+            "com.example.apiblueprint.api.routes.api.demo.controllers.GenDemoController",
+            "com.example.apiblueprint.api.routes.api.demo.delegates.GenDemoDelegate",
+            "putDemo",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
+            List.of("com.example.apiblueprint.api.routes.api.demo.types.GenDemoTypes.PutDemoQuery", "com.example.apiblueprint.api.routes.api.demo.types.GenDemoTypes.PutDemoJSON"),
+            "com.example.apiblueprint.api.routes.api.demo.types.GenDemoTypes.PutDemoResponse",
             List.of("req1"),
             "generated",
             "generated"
@@ -168,34 +176,12 @@ public final class GenSpringMvcContractAssertions {
             "api.demo.delete.delete",
             Set.of("DELETE"),
             "/api/demo/delete$",
-            "com.example.apiblueprint.api.annotations.api.demo.GenDelete",
-            List.of(),
-            List.of("com.example.apiblueprint.api.types.api.demo.GenDemoTypes.DeleteQuery"),
-            "com.example.apiblueprint.api.types.api.demo.GenDemoTypes.DeleteResponse",
-            List.of(),
-            "generated",
-            "generated"
-        ),
-        new RouteSpec(
-            "api.demo.stream.sweepevents",
-            Set.of(),
-            "/api/demo/sweep-events",
-            "com.example.apiblueprint.api.annotations.api.demo.GenSweepEvents",
-            List.of(),
-            List.of("com.example.apiblueprint.api.runtime.GenApiTypes.SweepOpen"),
-            "",
-            List.of(),
-            "generated",
-            "generated"
-        ),
-        new RouteSpec(
-            "api.demo.channel.assistantsession",
-            Set.of(),
-            "/api/demo/assistant-session",
-            "com.example.apiblueprint.api.annotations.api.demo.GenAssistantSession",
-            List.of(),
-            List.of("com.example.apiblueprint.api.runtime.GenApiTypes.AssistantOpen"),
-            "",
+            "com.example.apiblueprint.api.routes.api.demo.controllers.GenDemoController",
+            "com.example.apiblueprint.api.routes.api.demo.delegates.GenDemoDelegate",
+            "delete",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
+            List.of("com.example.apiblueprint.api.routes.api.demo.types.GenDemoTypes.DeleteQuery"),
+            "com.example.apiblueprint.api.routes.api.demo.types.GenDemoTypes.DeleteResponse",
             List.of(),
             "generated",
             "generated"
@@ -204,10 +190,12 @@ public final class GenSpringMvcContractAssertions {
             "api.demo.post.postdeprecated",
             Set.of("POST"),
             "/api/demo/post_deprecated",
-            "com.example.apiblueprint.api.annotations.api.demo.GenPostDeprecated",
-            List.of(),
-            List.of("com.example.apiblueprint.api.types.api.demo.GenDemoTypes.PostDeprecatedJSON"),
-            "com.example.apiblueprint.api.types.api.demo.GenDemoTypes.PostDeprecatedResponse",
+            "com.example.apiblueprint.api.routes.api.demo.controllers.GenDemoController",
+            "com.example.apiblueprint.api.routes.api.demo.delegates.GenDemoDelegate",
+            "postDeprecated",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
+            List.of("com.example.apiblueprint.api.routes.api.demo.types.GenDemoTypes.PostDeprecatedJSON"),
+            "com.example.apiblueprint.api.routes.api.demo.types.GenDemoTypes.PostDeprecatedResponse",
             List.of("req1"),
             "generated",
             "generated"
@@ -216,10 +204,12 @@ public final class GenSpringMvcContractAssertions {
             "api.demo.post.raw",
             Set.of("POST"),
             "/api/demo/raw",
-            "com.example.apiblueprint.api.annotations.api.demo.GenRaw",
+            "com.example.apiblueprint.api.routes.api.demo.controllers.GenDemoController",
+            "com.example.apiblueprint.api.routes.api.demo.delegates.GenDemoDelegate",
+            "raw",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
             List.of(),
-            List.of(),
-            "com.example.apiblueprint.api.types.api.demo.GenDemoTypes.RawResponse",
+            "com.example.apiblueprint.api.routes.api.demo.types.GenDemoTypes.RawResponse",
             List.of(),
             "generated",
             "generated"
@@ -228,10 +218,12 @@ public final class GenSpringMvcContractAssertions {
             "api.demo.post.mapmodel",
             Set.of("POST"),
             "/api/demo/map_model",
-            "com.example.apiblueprint.api.annotations.api.demo.GenMapModel",
+            "com.example.apiblueprint.api.routes.api.demo.controllers.GenDemoController",
+            "com.example.apiblueprint.api.routes.api.demo.delegates.GenDemoDelegate",
+            "mapModel",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
             List.of(),
-            List.of(),
-            "com.example.apiblueprint.api.types.api.demo.GenDemoTypes.MapModelResponse",
+            "com.example.apiblueprint.api.routes.api.demo.types.GenDemoTypes.MapModelResponse",
             List.of(),
             "generated",
             "generated"
@@ -240,10 +232,12 @@ public final class GenSpringMvcContractAssertions {
             "api.demo.get.errordemo",
             Set.of("GET"),
             "/api/demo/error-demo",
-            "com.example.apiblueprint.api.annotations.api.demo.GenErrorDemo",
-            List.of(),
-            List.of("com.example.apiblueprint.api.types.api.demo.GenDemoTypes.ErrorDemoQuery"),
-            "com.example.apiblueprint.api.types.api.demo.GenDemoTypes.ErrorDemoResponse",
+            "com.example.apiblueprint.api.routes.api.demo.controllers.GenDemoController",
+            "com.example.apiblueprint.api.routes.api.demo.delegates.GenDemoDelegate",
+            "errorDemo",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
+            List.of("com.example.apiblueprint.api.routes.api.demo.types.GenDemoTypes.ErrorDemoQuery"),
+            "com.example.apiblueprint.api.routes.api.demo.types.GenDemoTypes.ErrorDemoResponse",
             List.of(),
             "generated",
             "generated"
@@ -252,8 +246,10 @@ public final class GenSpringMvcContractAssertions {
             "api.media.post.preview",
             Set.of("POST"),
             "/api/media/preview",
-            "com.example.apiblueprint.api.annotations.api.media.GenMediaPreview",
-            List.of(),
+            "com.example.apiblueprint.api.routes.api.media.controllers.GenMediaController",
+            "com.example.apiblueprint.api.routes.api.media.delegates.GenMediaDelegate",
+            "mediaPreview",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
             List.of("com.example.apiblueprint.api.runtime.GenApiTypes.MediaPreviewRequest"),
             "com.example.apiblueprint.api.runtime.GenApiRawResponse",
             List.of("image"),
@@ -264,8 +260,10 @@ public final class GenSpringMvcContractAssertions {
             "api.media.get.frame",
             Set.of("GET"),
             "/api/media/frame",
-            "com.example.apiblueprint.api.annotations.api.media.GenMediaFrame",
-            List.of(),
+            "com.example.apiblueprint.api.routes.api.media.controllers.GenMediaController",
+            "com.example.apiblueprint.api.routes.api.media.delegates.GenMediaDelegate",
+            "mediaFrame",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
             List.of(),
             "com.example.apiblueprint.api.runtime.GenApiRawResponse",
             List.of(),
@@ -276,8 +274,10 @@ public final class GenSpringMvcContractAssertions {
             "api.media.get.download",
             Set.of("GET"),
             "/api/media/download",
-            "com.example.apiblueprint.api.annotations.api.media.GenMediaDownload",
-            List.of(),
+            "com.example.apiblueprint.api.routes.api.media.controllers.GenMediaController",
+            "com.example.apiblueprint.api.routes.api.media.delegates.GenMediaDelegate",
+            "mediaDownload",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
             List.of(),
             "com.example.apiblueprint.api.runtime.GenApiRawResponse",
             List.of(),
@@ -288,8 +288,10 @@ public final class GenSpringMvcContractAssertions {
             "api.media.get.downloaddynamic",
             Set.of("GET"),
             "/api/media/download-dynamic",
-            "com.example.apiblueprint.api.annotations.api.media.GenMediaDownloadDynamic",
-            List.of(),
+            "com.example.apiblueprint.api.routes.api.media.controllers.GenMediaController",
+            "com.example.apiblueprint.api.routes.api.media.delegates.GenMediaDelegate",
+            "mediaDownloadDynamic",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
             List.of(),
             "com.example.apiblueprint.api.runtime.GenApiRawResponse",
             List.of(),
@@ -300,8 +302,10 @@ public final class GenSpringMvcContractAssertions {
             "api.media.get.downloadfilenameedge",
             Set.of("GET"),
             "/api/media/download-filename-edge",
-            "com.example.apiblueprint.api.annotations.api.media.GenMediaDownloadFilenameEdge",
-            List.of(),
+            "com.example.apiblueprint.api.routes.api.media.controllers.GenMediaController",
+            "com.example.apiblueprint.api.routes.api.media.delegates.GenMediaDelegate",
+            "mediaDownloadFilenameEdge",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
             List.of(),
             "com.example.apiblueprint.api.runtime.GenApiRawResponse",
             List.of(),
@@ -312,9 +316,11 @@ public final class GenSpringMvcContractAssertions {
             "api.media.get.errorframe",
             Set.of("GET"),
             "/api/media/error-frame",
-            "com.example.apiblueprint.api.annotations.api.media.GenMediaErrorFrame",
-            List.of(),
-            List.of("com.example.apiblueprint.api.types.api.media.GenMediaTypes.MediaErrorFrameQuery"),
+            "com.example.apiblueprint.api.routes.api.media.controllers.GenMediaController",
+            "com.example.apiblueprint.api.routes.api.media.delegates.GenMediaDelegate",
+            "mediaErrorFrame",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
+            List.of("com.example.apiblueprint.api.routes.api.media.types.GenMediaTypes.MediaErrorFrameQuery"),
             "com.example.apiblueprint.api.runtime.GenApiRawResponse",
             List.of(),
             "generated",
@@ -324,8 +330,10 @@ public final class GenSpringMvcContractAssertions {
             "api.media.get.mjpeg",
             Set.of("GET"),
             "/api/media/mjpeg",
-            "com.example.apiblueprint.api.annotations.api.media.GenMediaMjpeg",
-            List.of(),
+            "com.example.apiblueprint.api.routes.api.media.controllers.GenMediaController",
+            "com.example.apiblueprint.api.routes.api.media.delegates.GenMediaDelegate",
+            "mediaMjpeg",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
             List.of(),
             "com.example.apiblueprint.api.runtime.GenApiStreamResponse",
             List.of(),
@@ -336,10 +344,12 @@ public final class GenSpringMvcContractAssertions {
             "api.hello.get.abc",
             Set.of("GET"),
             "/api/hello/abc",
-            "com.example.apiblueprint.api.annotations.api.hello.GenAbc",
-            List.of(),
-            List.of("com.example.apiblueprint.api.types.api.hello.GenHelloTypes.AbcQuery"),
-            "com.example.apiblueprint.api.types.api.hello.GenHelloTypes.AbcResponse",
+            "com.example.apiblueprint.api.routes.api.hello.controllers.GenHelloController",
+            "com.example.apiblueprint.api.routes.api.hello.delegates.GenHelloDelegate",
+            "abc",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
+            List.of("com.example.apiblueprint.api.routes.api.hello.types.GenHelloTypes.AbcQuery"),
+            "com.example.apiblueprint.api.routes.api.hello.types.GenHelloTypes.AbcResponse",
             List.of("type"),
             "generated",
             "generated"
@@ -348,10 +358,12 @@ public final class GenSpringMvcContractAssertions {
             "api.hello.get.mapenum",
             Set.of("GET"),
             "/api/hello/map-enum",
-            "com.example.apiblueprint.api.annotations.api.hello.GenMapEnum",
+            "com.example.apiblueprint.api.routes.api.hello.controllers.GenHelloController",
+            "com.example.apiblueprint.api.routes.api.hello.delegates.GenHelloDelegate",
+            "mapEnum",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
             List.of(),
-            List.of(),
-            "com.example.apiblueprint.api.types.api.hello.GenHelloTypes.MapEnumResponse",
+            "com.example.apiblueprint.api.routes.api.hello.types.GenHelloTypes.MapEnumResponse",
             List.of(),
             "generated",
             "generated"
@@ -360,10 +372,12 @@ public final class GenSpringMvcContractAssertions {
             "api.hello.get.listenum",
             Set.of("GET"),
             "/api/hello/list-enum",
-            "com.example.apiblueprint.api.annotations.api.hello.GenListEnum",
+            "com.example.apiblueprint.api.routes.api.hello.controllers.GenHelloController",
+            "com.example.apiblueprint.api.routes.api.hello.delegates.GenHelloDelegate",
+            "listEnum",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
             List.of(),
-            List.of(),
-            "com.example.apiblueprint.api.types.api.hello.GenHelloTypes.ListEnumResponse",
+            "com.example.apiblueprint.api.routes.api.hello.types.GenHelloTypes.ListEnumResponse",
             List.of(),
             "generated",
             "generated"
@@ -372,10 +386,12 @@ public final class GenSpringMvcContractAssertions {
             "api.hello.get.string",
             Set.of("GET"),
             "/api/hello/string",
-            "com.example.apiblueprint.api.annotations.api.hello.GenString",
+            "com.example.apiblueprint.api.routes.api.hello.controllers.GenHelloController",
+            "com.example.apiblueprint.api.routes.api.hello.delegates.GenHelloDelegate",
+            "string",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
             List.of(),
-            List.of(),
-            "com.example.apiblueprint.api.types.api.hello.GenHelloTypes.StringResponse",
+            "com.example.apiblueprint.api.routes.api.hello.types.GenHelloTypes.StringResponse",
             List.of(),
             "generated",
             "generated"
@@ -384,10 +400,12 @@ public final class GenSpringMvcContractAssertions {
             "api.hello.get.uint64",
             Set.of("GET"),
             "/api/hello/uint64",
-            "com.example.apiblueprint.api.annotations.api.hello.GenUint64",
+            "com.example.apiblueprint.api.routes.api.hello.controllers.GenHelloController",
+            "com.example.apiblueprint.api.routes.api.hello.delegates.GenHelloDelegate",
+            "uint64",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
             List.of(),
-            List.of(),
-            "com.example.apiblueprint.api.types.api.hello.GenHelloTypes.Uint64Response",
+            "com.example.apiblueprint.api.routes.api.hello.types.GenHelloTypes.Uint64Response",
             List.of(),
             "generated",
             "generated"
@@ -396,10 +414,12 @@ public final class GenSpringMvcContractAssertions {
             "api.hello.get.stringemun",
             Set.of("GET"),
             "/api/hello/string-emun",
-            "com.example.apiblueprint.api.annotations.api.hello.GenStringEmun",
+            "com.example.apiblueprint.api.routes.api.hello.controllers.GenHelloController",
+            "com.example.apiblueprint.api.routes.api.hello.delegates.GenHelloDelegate",
+            "stringEmun",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
             List.of(),
-            List.of(),
-            "com.example.apiblueprint.api.types.api.hello.GenHelloTypes.StringEmunResponse",
+            "com.example.apiblueprint.api.routes.api.hello.types.GenHelloTypes.StringEmunResponse",
             List.of(),
             "generated",
             "generated"
@@ -408,9 +428,11 @@ public final class GenSpringMvcContractAssertions {
             "api.hello.get.helloway",
             Set.of("GET"),
             "/api/hello/hello-way",
-            "com.example.apiblueprint.api.annotations.api.hello.GenHelloWay",
-            List.of(),
-            List.of("com.example.apiblueprint.api.types.api.hello.GenHelloTypes.HelloWayQuery"),
+            "com.example.apiblueprint.api.routes.api.hello.controllers.GenHelloController",
+            "com.example.apiblueprint.api.routes.api.hello.delegates.GenHelloDelegate",
+            "helloWay",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
+            List.of("com.example.apiblueprint.api.routes.api.hello.types.GenHelloTypes.HelloWayQuery"),
             "",
             List.of(),
             "generated",
@@ -444,16 +466,32 @@ public final class GenSpringMvcContractAssertions {
         List<RuntimeRoute> runtimeRoutes = runtimeRoutes(mappings);
         Set<RuntimeRoute> matched = new LinkedHashSet<>();
         for (RouteSpec route : ROUTES) {
-            RuntimeRoute runtime = findRuntimeRoute(route, runtimeRoutes);
-            if (runtime == null) {
+            List<RuntimeRoute> matches = findRuntimeRoutes(route, runtimeRoutes);
+            if (matches.isEmpty()) {
                 report.add(Severity.ERROR, "missing_server_route", route.id(), route.methodText() + " " + route.path());
                 continue;
             }
-            matched.add(runtime);
-            validateOperationMarker(report, route, runtime);
-            validatePolicies(report, route, runtime);
-            validateRequestBoundary(report, route, runtime);
-            validateResponseBoundary(report, route, runtime);
+            matched.addAll(matches);
+            if (matches.size() > 1) {
+                report.add(
+                    Severity.ERROR,
+                    "duplicate_public_route",
+                    route.id(),
+                    handlerSummary(matches)
+                );
+            }
+            RuntimeRoute generated = null;
+            for (RuntimeRoute runtime : matches) {
+                if (validateGeneratedController(report, route, runtime)) {
+                    generated = runtime;
+                }
+            }
+            if (generated == null) {
+                continue;
+            }
+            validateOperationMarker(report, route, generated);
+            validatePolicies(report, route, generated);
+            validateDelegateBoundary(report, route);
         }
         if (effectiveMode == ContractMode.STRICT) {
             for (RuntimeRoute runtime : runtimeRoutes) {
@@ -469,6 +507,25 @@ public final class GenSpringMvcContractAssertions {
             }
         }
         return report;
+    }
+
+    private static boolean validateGeneratedController(ContractReport report, RouteSpec route, RuntimeRoute runtime) {
+        Class<?> expected = classOrNull(route.controllerClass());
+        if (expected == null) {
+            report.add(Severity.ERROR, "generated_controller_class_missing", route.id(), route.controllerClass());
+            return false;
+        }
+        Class<?> actual = runtime.handler().getBeanType();
+        if (!expected.isAssignableFrom(actual)) {
+            report.add(
+                Severity.ERROR,
+                "manual_public_mapping",
+                route.id(),
+                runtime.methodText() + " " + runtime.path() + " handled by " + actual.getName()
+            );
+            return false;
+        }
+        return true;
     }
 
     private static void validateOperationMarker(ContractReport report, RouteSpec route, RuntimeRoute runtime) {
@@ -503,16 +560,23 @@ public final class GenSpringMvcContractAssertions {
         }
     }
 
-    private static void validateRequestBoundary(ContractReport report, RouteSpec route, RuntimeRoute runtime) {
-        if ("annotations-only".equals(route.requestBinding())) {
-            report.add(Severity.INFO, "request_boundary_skipped", route.id(), "annotations-only");
+    private static void validateDelegateBoundary(ContractReport report, RouteSpec route) {
+        Method delegateMethod = findDelegateMethod(route);
+        if (delegateMethod == null) {
+            report.add(
+                Severity.ERROR,
+                "delegate_method_missing",
+                route.id(),
+                route.delegateClass() + "#" + route.delegateMethod()
+            );
             return;
         }
-        if ("legacy-bindable".equals(route.requestBinding())) {
-            report.add(Severity.WARNING, "request_boundary_partial", route.id(), "legacy-bindable");
-            return;
-        }
-        Set<String> parameterTypes = parameterTypes(runtime.handler().getMethod());
+        validateRequestBoundary(report, route, delegateMethod);
+        validateResponseBoundary(report, route, delegateMethod);
+    }
+
+    private static void validateRequestBoundary(ContractReport report, RouteSpec route, Method delegateMethod) {
+        Set<String> parameterTypes = parameterTypes(delegateMethod);
         for (String requestType : route.requestTypes()) {
             if (!parameterTypes.contains(requestType)) {
                 report.add(Severity.ERROR, "request_type_missing", route.id(), requestType);
@@ -520,30 +584,48 @@ public final class GenSpringMvcContractAssertions {
         }
     }
 
-    private static void validateResponseBoundary(ContractReport report, RouteSpec route, RuntimeRoute runtime) {
-        if (route.responseType().isEmpty() || "annotations-only".equals(route.responseBinding())) {
+    private static void validateResponseBoundary(ContractReport report, RouteSpec route, Method delegateMethod) {
+        if (route.responseType().isEmpty()) {
             return;
         }
-        if ("legacy-raw".equals(route.responseBinding())) {
-            report.add(Severity.WARNING, "response_boundary_partial", route.id(), "legacy-raw");
-            return;
-        }
-        String responseType = runtime.handler().getMethod().getGenericReturnType().getTypeName().replace('$', '.');
+        String responseType = delegateMethod.getGenericReturnType().getTypeName().replace('$', '.');
         if (!responseType.contains(route.responseType())) {
             report.add(Severity.ERROR, "response_type_missing", route.id(), route.responseType());
         }
     }
 
-    private static RuntimeRoute findRuntimeRoute(RouteSpec route, List<RuntimeRoute> runtimeRoutes) {
+    private static List<RuntimeRoute> findRuntimeRoutes(RouteSpec route, List<RuntimeRoute> runtimeRoutes) {
+        List<RuntimeRoute> matches = new ArrayList<>();
         for (RuntimeRoute runtime : runtimeRoutes) {
             if (!Objects.equals(route.path(), runtime.path())) {
                 continue;
             }
             if (runtime.methods().isEmpty() || intersects(route.methods(), runtime.methods())) {
-                return runtime;
+                matches.add(runtime);
+            }
+        }
+        return matches;
+    }
+
+    private static Method findDelegateMethod(RouteSpec route) {
+        Class<?> delegate = classOrNull(route.delegateClass());
+        if (delegate == null) {
+            return null;
+        }
+        for (Method method : delegate.getMethods()) {
+            if (method.getName().equals(route.delegateMethod())) {
+                return method;
             }
         }
         return null;
+    }
+
+    private static String handlerSummary(List<RuntimeRoute> routes) {
+        List<String> handlers = new ArrayList<>();
+        for (RuntimeRoute route : routes) {
+            handlers.add(route.handler().getBeanType().getName() + "#" + route.handler().getMethod().getName());
+        }
+        return String.join(", ", handlers);
     }
 
     private static List<RuntimeRoute> runtimeRoutes(RequestMappingHandlerMapping mappings) {
@@ -626,6 +708,14 @@ public final class GenSpringMvcContractAssertions {
         }
     }
 
+    private static Class<?> classOrNull(String name) {
+        try {
+            return Class.forName(name);
+        } catch (ClassNotFoundException error) {
+            return null;
+        }
+    }
+
     private static boolean isPublicServerRoute(String path) {
         if (PUBLIC_PATHS.isEmpty()) {
             return false;
@@ -696,7 +786,9 @@ public final class GenSpringMvcContractAssertions {
         String id,
         Set<String> methods,
         String path,
-        String annotation,
+        String controllerClass,
+        String delegateClass,
+        String delegateMethod,
         List<String> policies,
         List<String> requestTypes,
         String responseType,

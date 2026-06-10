@@ -39,8 +39,10 @@ public final class GenSpringMvcContractAssertions {
             {{ route.route_id | code_literal }},
             Set.of({% for method in route.methods %}{{ method | code_literal }}{% if not loop.last %}, {% endif %}{% endfor %}),
             {{ route.url | code_literal }},
-            {{ writer.route_annotation_class(bp, group, route) | code_literal }},
-            List.of({% for policy in writer.policies_for_route(route) %}{{ policy.annotation | code_literal }}{% if not loop.last %}, {% endif %}{% endfor %}),
+            {{ writer.group_controller_class(bp, group) | code_literal }},
+            {{ writer.group_delegate_class(bp, group) | code_literal }},
+            {{ route.method_name | code_literal }},
+            List.of({% for policy in writer.policies_for_route(route, group) %}{{ policy.annotation | code_literal }}{% if not loop.last %}, {% endif %}{% endfor %}),
             List.of({% for type_name in writer.route_contract_request_type_names(bp, route, group) %}{{ type_name | code_literal }}{% if not loop.last %}, {% endif %}{% endfor %}),
             {{ writer.route_contract_response_type_name(bp, route, group) | code_literal }},
             List.of({% for field in writer.route_required_request_fields(route, group) %}{{ field | code_literal }}{% if not loop.last %}, {% endif %}{% endfor %}),
@@ -77,16 +79,32 @@ public final class GenSpringMvcContractAssertions {
         List<RuntimeRoute> runtimeRoutes = runtimeRoutes(mappings);
         Set<RuntimeRoute> matched = new LinkedHashSet<>();
         for (RouteSpec route : ROUTES) {
-            RuntimeRoute runtime = findRuntimeRoute(route, runtimeRoutes);
-            if (runtime == null) {
+            List<RuntimeRoute> matches = findRuntimeRoutes(route, runtimeRoutes);
+            if (matches.isEmpty()) {
                 report.add(Severity.ERROR, "missing_server_route", route.id(), route.methodText() + " " + route.path());
                 continue;
             }
-            matched.add(runtime);
-            validateOperationMarker(report, route, runtime);
-            validatePolicies(report, route, runtime);
-            validateRequestBoundary(report, route, runtime);
-            validateResponseBoundary(report, route, runtime);
+            matched.addAll(matches);
+            if (matches.size() > 1) {
+                report.add(
+                    Severity.ERROR,
+                    "duplicate_public_route",
+                    route.id(),
+                    handlerSummary(matches)
+                );
+            }
+            RuntimeRoute generated = null;
+            for (RuntimeRoute runtime : matches) {
+                if (validateGeneratedController(report, route, runtime)) {
+                    generated = runtime;
+                }
+            }
+            if (generated == null) {
+                continue;
+            }
+            validateOperationMarker(report, route, generated);
+            validatePolicies(report, route, generated);
+            validateDelegateBoundary(report, route);
         }
         if (effectiveMode == ContractMode.STRICT) {
             for (RuntimeRoute runtime : runtimeRoutes) {
@@ -102,6 +120,25 @@ public final class GenSpringMvcContractAssertions {
             }
         }
         return report;
+    }
+
+    private static boolean validateGeneratedController(ContractReport report, RouteSpec route, RuntimeRoute runtime) {
+        Class<?> expected = classOrNull(route.controllerClass());
+        if (expected == null) {
+            report.add(Severity.ERROR, "generated_controller_class_missing", route.id(), route.controllerClass());
+            return false;
+        }
+        Class<?> actual = runtime.handler().getBeanType();
+        if (!expected.isAssignableFrom(actual)) {
+            report.add(
+                Severity.ERROR,
+                "manual_public_mapping",
+                route.id(),
+                runtime.methodText() + " " + runtime.path() + " handled by " + actual.getName()
+            );
+            return false;
+        }
+        return true;
     }
 
     private static void validateOperationMarker(ContractReport report, RouteSpec route, RuntimeRoute runtime) {
@@ -136,16 +173,23 @@ public final class GenSpringMvcContractAssertions {
         }
     }
 
-    private static void validateRequestBoundary(ContractReport report, RouteSpec route, RuntimeRoute runtime) {
-        if ("annotations-only".equals(route.requestBinding())) {
-            report.add(Severity.INFO, "request_boundary_skipped", route.id(), "annotations-only");
+    private static void validateDelegateBoundary(ContractReport report, RouteSpec route) {
+        Method delegateMethod = findDelegateMethod(route);
+        if (delegateMethod == null) {
+            report.add(
+                Severity.ERROR,
+                "delegate_method_missing",
+                route.id(),
+                route.delegateClass() + "#" + route.delegateMethod()
+            );
             return;
         }
-        if ("legacy-bindable".equals(route.requestBinding())) {
-            report.add(Severity.WARNING, "request_boundary_partial", route.id(), "legacy-bindable");
-            return;
-        }
-        Set<String> parameterTypes = parameterTypes(runtime.handler().getMethod());
+        validateRequestBoundary(report, route, delegateMethod);
+        validateResponseBoundary(report, route, delegateMethod);
+    }
+
+    private static void validateRequestBoundary(ContractReport report, RouteSpec route, Method delegateMethod) {
+        Set<String> parameterTypes = parameterTypes(delegateMethod);
         for (String requestType : route.requestTypes()) {
             if (!parameterTypes.contains(requestType)) {
                 report.add(Severity.ERROR, "request_type_missing", route.id(), requestType);
@@ -153,30 +197,48 @@ public final class GenSpringMvcContractAssertions {
         }
     }
 
-    private static void validateResponseBoundary(ContractReport report, RouteSpec route, RuntimeRoute runtime) {
-        if (route.responseType().isEmpty() || "annotations-only".equals(route.responseBinding())) {
+    private static void validateResponseBoundary(ContractReport report, RouteSpec route, Method delegateMethod) {
+        if (route.responseType().isEmpty()) {
             return;
         }
-        if ("legacy-raw".equals(route.responseBinding())) {
-            report.add(Severity.WARNING, "response_boundary_partial", route.id(), "legacy-raw");
-            return;
-        }
-        String responseType = runtime.handler().getMethod().getGenericReturnType().getTypeName().replace('$', '.');
+        String responseType = delegateMethod.getGenericReturnType().getTypeName().replace('$', '.');
         if (!responseType.contains(route.responseType())) {
             report.add(Severity.ERROR, "response_type_missing", route.id(), route.responseType());
         }
     }
 
-    private static RuntimeRoute findRuntimeRoute(RouteSpec route, List<RuntimeRoute> runtimeRoutes) {
+    private static List<RuntimeRoute> findRuntimeRoutes(RouteSpec route, List<RuntimeRoute> runtimeRoutes) {
+        List<RuntimeRoute> matches = new ArrayList<>();
         for (RuntimeRoute runtime : runtimeRoutes) {
             if (!Objects.equals(route.path(), runtime.path())) {
                 continue;
             }
             if (runtime.methods().isEmpty() || intersects(route.methods(), runtime.methods())) {
-                return runtime;
+                matches.add(runtime);
+            }
+        }
+        return matches;
+    }
+
+    private static Method findDelegateMethod(RouteSpec route) {
+        Class<?> delegate = classOrNull(route.delegateClass());
+        if (delegate == null) {
+            return null;
+        }
+        for (Method method : delegate.getMethods()) {
+            if (method.getName().equals(route.delegateMethod())) {
+                return method;
             }
         }
         return null;
+    }
+
+    private static String handlerSummary(List<RuntimeRoute> routes) {
+        List<String> handlers = new ArrayList<>();
+        for (RuntimeRoute route : routes) {
+            handlers.add(route.handler().getBeanType().getName() + "#" + route.handler().getMethod().getName());
+        }
+        return String.join(", ", handlers);
     }
 
     private static List<RuntimeRoute> runtimeRoutes(RequestMappingHandlerMapping mappings) {
@@ -259,6 +321,14 @@ public final class GenSpringMvcContractAssertions {
         }
     }
 
+    private static Class<?> classOrNull(String name) {
+        try {
+            return Class.forName(name);
+        } catch (ClassNotFoundException error) {
+            return null;
+        }
+    }
+
     private static boolean isPublicServerRoute(String path) {
         if (PUBLIC_PATHS.isEmpty()) {
             return false;
@@ -329,7 +399,9 @@ public final class GenSpringMvcContractAssertions {
         String id,
         Set<String> methods,
         String path,
-        String annotation,
+        String controllerClass,
+        String delegateClass,
+        String delegateMethod,
         List<String> policies,
         List<String> requestTypes,
         String responseType,

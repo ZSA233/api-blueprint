@@ -18,7 +18,7 @@ Blueprint DSL -> ContractGraph -> api-gen check / inspect / generate -> generate
 ## When To Use
 
 - Backend, web, Flutter, iOS Swift, Kotlin, and script clients need to share one API contract.
-- You want to generate a Go server first, then TypeScript, Flutter, Swift, Kotlin, Java, Go, or Python clients, or generate Kotlin/Python server scaffolds and Java Spring contract boundaries.
+- You want to generate a Go server first, then TypeScript, Flutter, Swift, Kotlin, Java, Go, or Python clients, or generate Kotlin/Python server scaffolds and Java Spring controller/delegate entrypoints.
 - You need documentation, contract checks, generated snapshots, and end-to-end examples to move together.
 - You need Markdown Binary Schema, typed binary responses, multipart uploads, raw bytes/file/stream responses, Wails, or gRPC in the same generation flow.
 - You need `OneOf` / `LegacyStringID` to bring legacy fields with multiple JSON shapes or string/int ID drift into the contract instead of leaving them as broad `JSONValue`.
@@ -102,7 +102,7 @@ For fuller project layout, config fields, DSL, generator output, typed errors, R
 | Flutter client | Preview | Generate a pure Dart package, DTOs, typed errors, binary codecs, HTTP multipart/raw/binary response clients, and SSE/WebSocket clients |
 | Swift client | Preview | Generate an iOS Swift Package multi-target SDK, short module stem, root routes modules, DTOs, typed errors, field-level binary codecs, shared URLSession HTTP/SSE/WebSocket transport with validation/limit knobs, and multipart/raw/binary response clients, without UI, auth, cache, or a session engine |
 | Kotlin client/server | Preview | Generate OkHttp HTTP/SSE/WebSocket clients, Ktor HTTP/SSE/WebSocket server scaffolds, multipart/raw/binary request/response adapters, models, and long-connection message helpers |
-| Java client/server | Preview | Generate Java 17 HttpClient clients plus Spring MVC composite route annotations, JavaBean request/response types, adapter helpers, and runtime contract assertions; no production Controller/Service/Stub is generated |
+| Java client/server | Preview | Generate Java 17 HttpClient clients plus strongly constrained Spring MVC `Gen...Controller`, `Gen...Delegate`, JavaBean request/response types, adapter helpers, and runtime contract assertions; Spring policy is driven by DSL providers plus Java mappings |
 | Go client / Python client | Preview | Generate non-server clients for scripts, tools, or services; the Python client uses recursive dataclass DTOs, shared runtime codecs, multipart/raw support, long-connection message helpers, and binary writers/response codecs |
 | Python server | Preview | Generate FastAPI HTTP/SSE/WebSocket server scaffolds, multipart/raw/binary request/response adapters, typed service contracts, and long-connection message helpers |
 | Wails v2/v3 | Preview / Experimental | Generate Go + TypeScript overlays; file/stream-style capabilities are modeled with Wails RPC descriptors or STREAM/CHANNEL chunks |
@@ -138,6 +138,8 @@ make example-conformance
 make benchmark-list
 make example-golang-suite
 make example-java-suite
+make example-java-spring-server
+make example-java-spring-server-benchmark
 ```
 
-`make example-conformance` starts with a real Go HTTP server by default; use `EXAMPLE_CONFORMANCE_SERVERS`, `EXAMPLE_CONFORMANCE_CLIENTS`, `EXAMPLE_CONFORMANCE_SCENARIOS`, and `EXAMPLE_CONFORMANCE_SWIFT_RUNTIME_PROFILE` to select the matrix, or set `EXAMPLE_CONFORMANCE_SERVERS=all EXAMPLE_CONFORMANCE_CLIENTS=all` for the full matrix (Swift scenarios require an available Swift toolchain). Benchmarks are opt-in trend tools, not default CI gates; generated client SDK smoke and Swift runtime microbenchmarks are available alongside binary / protocol benchmarks in [Benchmarks](docs/en/benchmarks.md). `example-golang-suite` remains a manual end-to-end validation aid; `example-java-suite` is a Java Spring contract-boundary compile/smoke check. See [Release Process](docs/release-process.md) for versioning, build, install, and GitHub Release flow.
+`make example-conformance` starts with a real Go HTTP server by default; use `EXAMPLE_CONFORMANCE_SERVERS`, `EXAMPLE_CONFORMANCE_CLIENTS`, `EXAMPLE_CONFORMANCE_SCENARIOS`, and `EXAMPLE_CONFORMANCE_SWIFT_RUNTIME_PROFILE` to select the matrix, or set `EXAMPLE_CONFORMANCE_SERVERS=all EXAMPLE_CONFORMANCE_CLIENTS=all` for the full matrix (Swift scenarios require an available Swift toolchain). Benchmarks are opt-in trend tools, not default CI gates; generated client SDK smoke, Swift runtime microbenchmarks, and Java Spring controller/delegate microbenchmarks are available alongside binary / protocol benchmarks in [Benchmarks](docs/en/benchmarks.md). `example-golang-suite` remains a manual end-to-end validation aid; `example-java-suite` is a Java Spring generated-artifact compile/smoke check; `example-java-spring-server` validates a real Spring Boot host example. See [Release Process](docs/release-process.md) for versioning, build, install, and GitHub Release flow.

@@ -198,6 +198,7 @@ def test_http_transport_rejects_java_contract_boundary_server(tmp_path):
 id = "java.server"
 out_dir = "java/server"
 module = "com.example.generated"
+spring_public_paths = ["/api/**"]
 
 [[java.client]]
 id = "java.client"

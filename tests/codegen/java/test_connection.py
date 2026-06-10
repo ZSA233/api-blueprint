@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from .helpers import *
 
 
@@ -69,21 +71,12 @@ def test_java_client_and_server_generate_named_message_keyframe_helpers(tmp_path
     assert "public static final ObjectMapper MAPPER" in api_json
 
     server_dir = tmp_path / "server"
-    server_writer = JavaServerWriter(server_dir, package="com.example.generated", contract_graph=graph)
+    server_writer = JavaServerWriter(
+        server_dir,
+        package="com.example.generated",
+        contract_graph=graph,
+        spring_public_paths=["/api/**"],
+    )
     server_writer.register(bp)
-    server_writer.gen()
-    server_types = (server_dir / package_root / "types/api/demo/GenDemoTypes.java").read_text(encoding="utf-8")
-    assistant_annotation = (server_dir / package_root / "annotations/api/demo/GenAssistant.java").read_text(
-        encoding="utf-8"
-    )
-    spring_assertions = (server_dir / package_root / "spring/GenSpringMvcContractAssertions.java").read_text(
-        encoding="utf-8"
-    )
-
-    assert "public static final class AssistantClientMessageVariants" in server_types
-    assert "public static <R> R dispatchAssistantClientMessage(" in server_types
-    assert "@RequestMapping(path = \"/api/demo/assistant\"" in assistant_annotation
-    assert '@ApiBlueprintOperation("api.demo.channel.assistant")' in assistant_annotation
-    assert '"api.demo.channel.assistant"' in spring_assertions
-    assert '"com.example.generated.api.runtime.GenApiTypes.OpenPayload"' in spring_assertions
-    assert "operation_marker_missing" in spring_assertions
+    with pytest.raises(ValueError, match="controller-delegate generation only supports RPC routes"):
+        server_writer.gen()

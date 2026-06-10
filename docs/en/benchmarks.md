@@ -20,6 +20,7 @@ make benchmark-binary BINARY_BENCH_TARGET=go BINARY_BENCH_COUNT=10000
 make benchmark-swift-runtime SWIFT_RUNTIME_BENCH_SCENARIOS=json-envelope,byte-stream
 make example-benchmark-protocol EXAMPLE_BENCH_SERVERS=go,python EXAMPLE_BENCH_SCENARIOS=rpc-json,binary
 make example-benchmark
+make example-java-spring-server-benchmark
 ```
 
 ## Binary Codec
@@ -52,6 +53,25 @@ uv run python -m scripts.example_benchmark swift-runtime \
 - `--payload-bytes` controls the payload size for byte stream, multipart file, and SSE/WebSocket payload-limit scenarios.
 - This benchmark measures local runtime hot paths only. It does not start a real server and does not cover login, retry, cache, or session lifecycle behavior.
 - Output fields include `scenario`, `iterations`, `elapsed_ns`, `ns_per_op`, and `bytes`, intended for same-machine same-target trend comparisons.
+
+## Java Spring Contract Boundary
+
+The Java Spring benchmark lives in `examples/java/spring-server` and compares the generated Controller -> delegate call with a plain Spring-style controller method. It does not start an HTTP server; it exercises local handler calls, Spring merged-annotation lookup, and generated contract assertion inspection against a lightweight `RequestMappingHandlerMapping`.
+
+```sh
+make example-java-spring-server-benchmark
+make example-java-spring-server-benchmark \
+  JAVA_SPRING_BENCH_ITERATIONS=20000 \
+  JAVA_SPRING_BENCH_WARMUP=2000 \
+  JAVA_SPRING_BENCH_CONTRACT_ITERATIONS=100 \
+  JAVA_SPRING_BENCH_CONTRACT_WARMUP=5
+```
+
+- `handler.generated-controller-delegate` calls the generated Controller and delegate implementation.
+- `handler.plain-spring-annotation` calls the same shape of method using direct Spring annotations.
+- `annotation-lookup.generated-meta` and `annotation-lookup.plain-direct` measure Spring `AnnotatedElementUtils` lookup on the generated Controller method versus a direct annotation method.
+- `contract-assertion.inspect` measures the generated test/CI assertion scan. This is not on the production request path.
+- The output is a same-machine trend signal. Small nanosecond-level differences in direct handler calls should not be treated as product latency.
 
 ## Protocol
 
@@ -107,6 +127,10 @@ EXAMPLE_BENCH_REQUESTS ?= 1000
 EXAMPLE_BENCH_CONCURRENCY ?= 16
 EXAMPLE_BENCH_WARMUP ?= 100
 EXAMPLE_BENCH_KEEP_WORKSPACE ?= 0
+JAVA_SPRING_BENCH_ITERATIONS ?= 200000
+JAVA_SPRING_BENCH_WARMUP ?= 20000
+JAVA_SPRING_BENCH_CONTRACT_ITERATIONS ?= 1000
+JAVA_SPRING_BENCH_CONTRACT_WARMUP ?= 20
 ```
 
 `EXAMPLE_BENCH_KEEP_WORKSPACE=1` passes `--keep-workspace` and keeps the generated temporary directory.

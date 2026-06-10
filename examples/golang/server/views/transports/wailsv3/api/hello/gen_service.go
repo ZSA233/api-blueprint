@@ -36,7 +36,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req=Q|auth|handle|rsp=json@CodeMessageDataEnvelope",
+			"req=Q|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.Abc,
 		),
 		mapEnumExecutor: sharedprovider.NewRouteExecutor(
@@ -52,7 +52,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req|auth|handle|rsp=json@CodeMessageDataEnvelope",
+			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.MapEnum,
 		),
 		listEnumExecutor: sharedprovider.NewRouteExecutor(
@@ -68,7 +68,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req|auth|handle|rsp=json@CodeMessageDataEnvelope",
+			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.ListEnum,
 		),
 		stringExecutor: sharedprovider.NewRouteExecutor(
@@ -84,7 +84,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req|auth|handle|rsp=json@CodeMessageDataEnvelope",
+			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.String,
 		),
 		uint64Executor: sharedprovider.NewRouteExecutor(
@@ -100,7 +100,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req|auth|handle|rsp=json@CodeMessageDataEnvelope",
+			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.Uint64,
 		),
 		stringEmunExecutor: sharedprovider.NewRouteExecutor(
@@ -116,7 +116,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req|auth|handle|rsp=json@CodeMessageDataEnvelope",
+			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.StringEmun,
 		),
 		helloWayExecutor: sharedprovider.NewRouteExecutor(
@@ -132,7 +132,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req=Q|auth|handle|rsp=json@CodeMessageDataEnvelope",
+			"req=Q|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.HelloWay,
 		),
 	}

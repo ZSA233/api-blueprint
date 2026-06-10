@@ -219,7 +219,7 @@ def test_kotlin_scopes_binary_schema_internal_symbols(tmp_path: Path) -> None:
         ("python", lambda output: PythonClientWriter(output)),
         ("kotlin", lambda output: KotlinWriter(output, package="com.example.generated")),
         ("java client", lambda output: JavaClientWriter(output, package="com.example.generated")),
-        ("java server", lambda output: JavaServerWriter(output, package="com.example.generated")),
+        ("java server", lambda output: JavaServerWriter(output, package="com.example.generated", spring_public_paths=["/api/**"])),
     ],
 )
 def test_binary_schema_normalized_packet_name_collisions_fail(

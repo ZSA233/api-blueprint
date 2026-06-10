@@ -92,11 +92,11 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
     ),
     "java-server": TargetCapability(
         implemented=True,
-        routes=("rpc", "stream", "channel"),
+        routes=("rpc",),
         requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
-        outputs=("spring-annotations", "java-types", "adapters", "spring-contract-assertions"),
+        outputs=("spring-controllers", "java-types", "adapters", "spring-contract-assertions"),
     ),
     "java-client": TargetCapability(
         implemented=True,

@@ -43,8 +43,7 @@ EXPLAIN_TARGET_KIND_FIELDS: dict[str, tuple[str, ...]] = {
     "java-server": (
         "package",
         "spring_contract_mode",
-        "spring_policies",
-        "spring_route_bindings",
+        "spring_policy_mappings",
         "spring_public_paths",
         "spring_exclude_server_paths",
         "include",
@@ -70,8 +69,7 @@ EXPLAIN_TARGET_LIST_FIELDS = {
     "include",
     "exclude",
     "proto_files",
-    "spring_policies",
-    "spring_route_bindings",
+    "spring_policy_mappings",
     "spring_public_paths",
     "spring_exclude_server_paths",
 }
@@ -264,8 +262,7 @@ def generate(config_path: str | Path | None, target_ids: Sequence[str] = ()) -> 
                 exclude=target.exclude,
                 contract_graph=graph,
                 spring_contract_mode=target.spring_contract_mode,
-                spring_policies=target.spring_policies,
-                spring_route_bindings=target.spring_route_bindings,
+                spring_policy_mappings=target.spring_policy_mappings,
                 spring_public_paths=target.spring_public_paths,
                 spring_exclude_server_paths=target.spring_exclude_server_paths,
             )
@@ -539,34 +536,19 @@ def target_manifest(target: ResolvedApiTargetConfig, project_root: Path) -> dict
         manifest["runtime_profile"] = target.runtime_profile
     if target.kind == "java-server":
         manifest["spring_contract_mode"] = target.spring_contract_mode
-        if target.spring_policies:
-            manifest["spring_policies"] = [
+        if target.spring_policy_mappings:
+            manifest["spring_policy_mappings"] = [
                 {
                     key: value
                     for key, value in {
-                        "id": policy.id,
-                        "annotation": policy.annotation,
-                        "args": policy.args,
-                        "imports": list(policy.imports),
+                        "provider": mapping.provider,
+                        "annotation": mapping.annotation,
+                        "args": mapping.args,
+                        "imports": list(mapping.imports),
                     }.items()
                     if value is not None and value != []
                 }
-                for policy in target.spring_policies
-            ]
-        if target.spring_route_bindings:
-            manifest["spring_route_bindings"] = [
-                {
-                    key: value
-                    for key, value in {
-                        "operation_id": binding.operation_id,
-                        "annotation": binding.annotation,
-                        "policies": list(binding.policies),
-                        "request_binding": binding.request_binding,
-                        "response_binding": binding.response_binding,
-                    }.items()
-                    if value is not None and value != []
-                }
-                for binding in target.spring_route_bindings
+                for mapping in target.spring_policy_mappings
             ]
         if target.spring_public_paths:
             manifest["spring_public_paths"] = list(target.spring_public_paths)

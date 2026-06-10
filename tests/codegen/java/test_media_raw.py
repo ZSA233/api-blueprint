@@ -41,7 +41,7 @@ def test_java_http_codegen_emits_multipart_raw_and_binary_response_contracts(tmp
     client_writer = JavaClientWriter(client_dir, package="com.example.generated")
     client_writer.register(bp)
     client_writer.gen()
-    server_writer = JavaServerWriter(server_dir, package="com.example.generated")
+    server_writer = JavaServerWriter(server_dir, package="com.example.generated", spring_public_paths=["/api/**"])
     server_writer.register(bp)
     server_writer.gen()
 
@@ -56,8 +56,8 @@ def test_java_http_codegen_emits_multipart_raw_and_binary_response_contracts(tmp
     route_types = (client_dir / package_root / "routes/api/media/GenMediaTypes.java").read_text(encoding="utf-8")
     route_client = (client_dir / package_root / "routes/api/media/GenMediaApi.java").read_text(encoding="utf-8")
     transport = (client_dir / package_root / "transports/http/GenJdkHttpApiTransport.java").read_text(encoding="utf-8")
-    server_types = (server_dir / package_root / "types/api/media/GenMediaTypes.java").read_text(encoding="utf-8")
-    preview_annotation = (server_dir / package_root / "annotations/api/media/GenPreview.java").read_text(
+    server_types = (server_dir / package_root / "routes/api/media/types/GenMediaTypes.java").read_text(encoding="utf-8")
+    preview_controller = (server_dir / package_root / "routes/api/media/controllers/GenMediaController.java").read_text(
         encoding="utf-8"
     )
     spring_assertions = (server_dir / package_root / "spring/GenSpringMvcContractAssertions.java").read_text(
@@ -100,10 +100,12 @@ def test_java_http_codegen_emits_multipart_raw_and_binary_response_contracts(tmp
     assert "public static final class PreviewForm" not in server_types
     assert "public record DemoPacket(" in server_types
     assert "public static DemoPacket parse(byte[] bytes)" in server_types
-    assert "@RequestMapping(path = \"/api/media/preview\", method = {RequestMethod.POST})" in preview_annotation
-    assert '@ApiBlueprintOperation("api.media.post.preview")' in preview_annotation
+    assert "@RequestMapping(path = \"/api/media/preview\", method = {RequestMethod.POST})" in preview_controller
+    assert '@ApiBlueprintOperation("api.media.post.preview")' in preview_controller
+    assert "GenApiRawResponse result = delegate.preview(" in preview_controller
+    assert "GenSpringResponseWriter.response(result" in preview_controller
     assert '"api.media.get.download"' in spring_assertions
     assert '"com.example.generated.api.runtime.GenApiTypes.MediaUpload"' in spring_assertions
     assert '"com.example.generated.api.runtime.GenApiRawResponse"' in spring_assertions
     assert '"com.example.generated.api.runtime.GenApiStreamResponse"' in spring_assertions
-    assert '"com.example.generated.api.types.api.media.GenMediaTypes.DemoPacket"' in spring_assertions
+    assert '"com.example.generated.api.routes.api.media.types.GenMediaTypes.DemoPacket"' in spring_assertions

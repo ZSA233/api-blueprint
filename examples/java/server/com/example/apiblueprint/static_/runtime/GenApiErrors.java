@@ -103,13 +103,6 @@ public final class GenApiErrors {
 
     private static final Map<String, Map<Integer, GenApiErrorEntry>> ROUTE_API_ERRORS_BY_CODE = Map.ofEntries(
         Map.entry(
-            "api.api.channel.ws",
-            Map.ofEntries(
-                Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
-                Map.entry(55555, API_ERRORS_BY_ID.get("CommonErr.TOKEN_EXPIRE"))
-            )
-        ),
-        Map.entry(
             "api.binary.post.packet",
             Map.ofEntries(
                 Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
@@ -181,20 +174,6 @@ public final class GenApiErrors {
         ),
         Map.entry(
             "api.demo.delete.delete",
-            Map.ofEntries(
-                Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
-                Map.entry(55555, API_ERRORS_BY_ID.get("CommonErr.TOKEN_EXPIRE"))
-            )
-        ),
-        Map.entry(
-            "api.demo.stream.sweepevents",
-            Map.ofEntries(
-                Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
-                Map.entry(55555, API_ERRORS_BY_ID.get("CommonErr.TOKEN_EXPIRE"))
-            )
-        ),
-        Map.entry(
-            "api.demo.channel.assistantsession",
             Map.ofEntries(
                 Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
                 Map.entry(55555, API_ERRORS_BY_ID.get("CommonErr.TOKEN_EXPIRE"))

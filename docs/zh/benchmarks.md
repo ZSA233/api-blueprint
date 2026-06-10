@@ -20,6 +20,7 @@ make benchmark-binary BINARY_BENCH_TARGET=go BINARY_BENCH_COUNT=10000
 make benchmark-swift-runtime SWIFT_RUNTIME_BENCH_SCENARIOS=json-envelope,byte-stream
 make example-benchmark-protocol EXAMPLE_BENCH_SERVERS=go,python EXAMPLE_BENCH_SCENARIOS=rpc-json,binary
 make example-benchmark
+make example-java-spring-server-benchmark
 ```
 
 ## Binary Codec
@@ -52,6 +53,25 @@ uv run python -m scripts.example_benchmark swift-runtime \
 - `--payload-bytes` 控制 byte stream、multipart file、SSE/WebSocket payload limit 的 payload 大小。
 - 该 benchmark 只测本地 runtime 热路径，不启动真实 server，不覆盖登录、重试、缓存或 session lifecycle。
 - 输出字段包括 `scenario`、`iterations`、`elapsed_ns`、`ns_per_op` 和 `bytes`，用于同机同 target 趋势对比。
+
+## Java Spring Contract Boundary
+
+Java Spring benchmark 位于 `examples/java/spring-server`，用于比较 generated Controller -> delegate 调用和普通 Spring 风格 Controller 方法。它不启动 HTTP server；它只跑本地 handler 调用、Spring merged annotation 查询，以及针对轻量 `RequestMappingHandlerMapping` 的 generated contract assertion 扫描。
+
+```sh
+make example-java-spring-server-benchmark
+make example-java-spring-server-benchmark \
+  JAVA_SPRING_BENCH_ITERATIONS=20000 \
+  JAVA_SPRING_BENCH_WARMUP=2000 \
+  JAVA_SPRING_BENCH_CONTRACT_ITERATIONS=100 \
+  JAVA_SPRING_BENCH_CONTRACT_WARMUP=5
+```
+
+- `handler.generated-controller-delegate` 调用 generated Controller 和 delegate 实现。
+- `handler.plain-spring-annotation` 调用同形态方法，但直接使用 Spring 注解。
+- `annotation-lookup.generated-meta` 和 `annotation-lookup.plain-direct` 对比 Spring `AnnotatedElementUtils` 查询 generated Controller 方法与直接注解方法的成本。
+- `contract-assertion.inspect` 测 generated 测试/CI 断言扫描成本，不在生产请求热路径上。
+- 输出只作为同机趋势信号；直接 handler 调用里 ns 级的小波动不应被解释为业务请求延迟差异。
 
 ## Protocol
 
@@ -107,6 +127,10 @@ EXAMPLE_BENCH_REQUESTS ?= 1000
 EXAMPLE_BENCH_CONCURRENCY ?= 16
 EXAMPLE_BENCH_WARMUP ?= 100
 EXAMPLE_BENCH_KEEP_WORKSPACE ?= 0
+JAVA_SPRING_BENCH_ITERATIONS ?= 200000
+JAVA_SPRING_BENCH_WARMUP ?= 20000
+JAVA_SPRING_BENCH_CONTRACT_ITERATIONS ?= 1000
+JAVA_SPRING_BENCH_CONTRACT_WARMUP ?= 20
 ```
 
 `EXAMPLE_BENCH_KEEP_WORKSPACE=1` 会传递 `--keep-workspace`，用于保留生成后的临时目录。

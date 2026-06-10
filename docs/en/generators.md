@@ -408,7 +408,7 @@ Projects using the earlier `<package>/ApiClient.kt`, `endpoints/`, `models/`, an
 api-gen generate -c api-blueprint.toml --target java.client --target java.server
 ```
 
-Java targets are preview. `java-client` uses Java 17 `java.net.http.HttpClient` plus Jackson; `java-server` uses Spring MVC plus Jackson to generate contract-boundary artifacts. Generated sources do not include Gradle/Maven project files, and `out_dir` is the package root without an appended `src/main/java`. The repository example provides `make example-java-suite` to compile and smoke the Java Spring contract-boundary output.
+Java targets are preview. `java-client` uses Java 17 `java.net.http.HttpClient` plus Jackson; `java-server` uses Spring MVC plus Jackson to generate controller/delegate artifacts. Generated sources do not include Gradle/Maven project files, and `out_dir` is the package root without an appended `src/main/java`. The repository examples provide `make example-java-suite` for compile/smoke coverage and `make example-java-spring-server` for a real Spring Boot host usage sample.
 
 The Java client uses a package-first layout whose route directory mirrors the full route path:
 
@@ -420,30 +420,29 @@ Route DTOs are emitted as `Gen<Group>Types.java`. Markdown Binary Schema typed p
 
 The Java client emits transport-neutral route surfaces, `GenApiTransport`, the default JDK HTTP adapter, and `GenApiClient`. Preserved user files are `runtime/ApiClient.java`, `routes/<root>/<group...>/<Group>Api.java`, and `transports/http/HttpApiClient.java`; other `Gen*.java` files are overwritten. The recommended entrypoint is `HttpApiClient.create(baseUrl)`, with public DTOs such as `GenDemoTypes.ErrorDemoQuery` / `GenDemoTypes.ErrorDemoResponse`. RPC route methods provide `GenApiRequestOptions` overloads for per-call headers and timeout. Generated route clients build `GenApiRequest` with nested body/response specs, so custom transports read request kind, response kind, media type, binary decoder, and envelope behavior from the request object instead of a widening transport method signature. The default HTTP adapter implements RPC query/json/urlencoded/multipart/binary_schema requests, decodes binary_schema success responses into typed packets, returns `GenApiRawResponse` for bytes/file raw responses, returns true streaming `GenApiStreamResponse` / `InputStream` / `AutoCloseable` values for byte streams, and keeps `readAllBytes()` as a convenience method; raw response filenames come only from the actual `Content-Disposition` header. STREAM and CHANNEL default to explicit unsupported errors.
 
-The Java server does not generate production Controllers, Services, Stubs, `GenSpringServerConfig`, SSE/WebSocket bridges, or an HTTP server adapter. It emits:
+The Java server emits Spring MVC production entrypoints plus delegate interfaces. It does not generate Services, Stubs, `GenSpringServerConfig`, SSE/WebSocket bridges, or a standalone HTTP server adapter. It emits:
 
 - `<package>/<root>/annotations/ApiBlueprintOperation.java`
-- `<package>/<root>/annotations/<root>/<group...>/Gen<Route>.java`
-- `<package>/<root>/types/<root>/<group...>/Gen<Group>Types.java`
-- `<package>/<root>/adapters/<root>/<group...>/Gen<Group>Adapters.java`
+- `<package>/<root>/routes/<root>/<group...>/controllers/Gen<Group>Controller.java`
+- `<package>/<root>/routes/<root>/<group...>/delegates/Gen<Group>Delegate.java`
+- `<package>/<root>/routes/<root>/<group...>/types/Gen<Group>Types.java`
+- `<package>/<root>/routes/<root>/<group...>/adapters/Gen<Group>Adapters.java`
+- `<package>/<root>/spring/GenSpringRequestContext.java`
+- `<package>/<root>/spring/GenSpringRequestBinder.java`
+- `<package>/<root>/spring/GenSpringResponseWriter.java`
 - `<package>/<root>/spring/GenSpringMvcContractAssertions.java`
 
-Route annotations compose Spring `@RequestMapping(method = {...})`, `@ApiBlueprintOperation("<operation.id>")`, and project annotations configured through target-local `spring_policies`. Spring/AOP/security policy does not enter the DSL; it is expressed through Java target provider config:
+Generated Controllers carry Spring `@RequestMapping(method = {...})`, `@ApiBlueprintOperation("<operation.id>")`, and project annotations mapped from DSL providers. Protocol policy semantics such as signing, authentication, or tenant context should be represented by provider names in the DSL. The Java target only maps those provider names to host Spring annotation classes:
 
 ```toml
-[[java.server.spring_policies]]
-id = "signed"
+[[java.server.spring_policy_mappings]]
+provider = "request-signature"
 annotation = "com.example.shop.security.SignatureRequired"
-
-[[java.server.spring_route_bindings]]
-operation_id = "api.orders.post.create"
-annotation = "GenCreateOrder"
-policies = ["signed"]
-request_binding = "generated"
-response_binding = "generated"
 ```
 
-The recommended strict path is to keep business Controllers handwritten while using generated route annotations and generated request/response types on handler methods. `HttpServletRequest`, login context objects, AOP-injected values, and other non-wire protocol parameters stay as host method parameters and do not enter the DSL request. Low-risk transition can mark route bindings as `legacy-bindable`, `legacy-raw`, or set `spring_contract_mode = "annotations-only"`; contract assertions keep route/policy checks and report request/response boundaries without pretending legacy POJOs are fully typed contracts.
+`spring_public_paths` is required for `java-server`; it defines the public Spring surface that contract assertions police. `spring_contract_mode` accepts only `audit`, `public`, or `strict`, and defaults to `strict`. `audit` records a report without failing, `public` fails when selected Blueprint routes are missing or mismatched, and `strict` also fails for public-path server routes not owned by generated Controllers. `spring_providers` and `spring_route_bindings` were removed; Java config no longer decides which routes require a policy and no longer overrides route names.
+
+The strict path is to implement the generated delegate and remove public Spring mappings from legacy business Controllers. The generated Controller owns path, method, operation marker, provider policy annotations, request binding, and response writing. `HttpServletRequest`, login context objects, AOP-injected values, and other non-wire protocol data stay in generated `GenSpringRequestContext` or host services and do not enter the DSL request. Selected `STREAM` / `CHANNEL` routes are rejected by `java-server`; exclude them from the target until Spring long-connection support exists.
 
 Runtime contract tests inject Spring `RequestMappingHandlerMapping` in host tests:
 
@@ -495,7 +494,7 @@ Python server also uses `python_package_root` as its package root and emits rout
 
 ## Example Snapshots
 
-`examples/golang/server/`, `examples/golang/client/`, `examples/typescript/`, `examples/flutter/`, `examples/swift/`, `examples/kotlin/client`, `examples/kotlin/server`, `examples/java/client` / `examples/java/server`, and `examples/python/` are generated snapshots, not business sources; `examples/java/suite` is a handwritten runtime validation project. `examples/golang/conformance/`, `examples/typescript/conformance.ts`, `examples/kotlin/conformance/`, `examples/java/conformance/`, `examples/python/conformance/`, `examples/flutter/test/conformance_test.dart`, and `examples/swift/Conformance/` are preserved conformance files whose job is to call each language's generated artifacts against real Go / Java / Kotlin / Python servers, covering RPC, urlencoded, multipart media, binary_schema, request options headers/timeouts, typed errors, naming conflicts, bytes/file/byte_stream raw responses, media filename edge cases, raw media typed errors, XML/static/header/scalar/enum/map/deprecated/audit-binary routes, single-model channels, and supported SSE/WebSocket interoperability. `examples/swift/Narrow/` is a preserved SwiftPM smoke package that depends only on `ABClientRuntime` and one root routes product, proving the intended narrow-entrypoint shape without importing the aggregate module. Regeneration must not overwrite these files. Go server / Go client / Wails Go contract / agent artifact indexes use Go-safe route package segments, while Flutter / Swift / Kotlin / Java / Python artifact indexes keep their language-specific route output paths. To accept intentional generation changes, use:
+`examples/golang/server/`, `examples/golang/client/`, `examples/typescript/`, `examples/flutter/`, `examples/swift/`, `examples/kotlin/client`, `examples/kotlin/server`, `examples/java/client` / `examples/java/server`, and `examples/python/` are generated snapshots, not business sources; `examples/java/suite` is a handwritten runtime validation project, and `examples/java/spring-server` is a handwritten Spring Boot host example using generated Java server artifacts. `examples/golang/conformance/`, `examples/typescript/conformance.ts`, `examples/kotlin/conformance/`, `examples/java/conformance/`, `examples/python/conformance/`, `examples/flutter/test/conformance_test.dart`, and `examples/swift/Conformance/` are preserved conformance files whose job is to call each language's generated artifacts against real Go / Java / Kotlin / Python servers, covering RPC, urlencoded, multipart media, binary_schema, request options headers/timeouts, typed errors, naming conflicts, bytes/file/byte_stream raw responses, media filename edge cases, raw media typed errors, XML/static/header/scalar/enum/map/deprecated/audit-binary routes, single-model channels, and supported SSE/WebSocket interoperability. `examples/swift/Narrow/` is a preserved SwiftPM smoke package that depends only on `ABClientRuntime` and one root routes product, proving the intended narrow-entrypoint shape without importing the aggregate module. Regeneration must not overwrite these files. Go server / Go client / Wails Go contract / agent artifact indexes use Go-safe route package segments, while Flutter / Swift / Kotlin / Java / Python artifact indexes keep their language-specific route output paths. To accept intentional generation changes, use:
 
 ```sh
 make example-refresh

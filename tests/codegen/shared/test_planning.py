@@ -262,7 +262,8 @@ def test_java_targets_are_real_generation_capabilities(kind: str) -> None:
     manifest = target_capability_manifest()
 
     assert manifest[kind]["implemented"] is True
-    assert manifest[kind]["routes"] == ["rpc", "stream", "channel"]
+    expected_routes = ["rpc", "stream", "channel"] if kind == "java-client" else ["rpc"]
+    assert manifest[kind]["routes"] == expected_routes
     assert "binary-schema" in manifest[kind]["requests"]
 
 

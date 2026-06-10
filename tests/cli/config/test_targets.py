@@ -149,25 +149,18 @@ id = "java.server"
 kind = "java-server"
 out_dir = "generated/java-server"
 package = "com.example.shop.contract"
-spring_contract_mode = "strict-boundary"
+spring_contract_mode = "strict"
 spring_public_paths = ["/api/**"]
 spring_exclude_server_paths = ["/api/internal/**"]
 include = ["tag:public"]
 
-[[targets.spring_policies]]
-id = "signed"
+[[targets.spring_policy_mappings]]
+provider = "request-signature"
 annotation = "com.example.shop.security.SignatureRequired"
 
-[[targets.spring_policies]]
-id = "authenticated-user"
+[[targets.spring_policy_mappings]]
+provider = "authenticated-user"
 annotation = "com.example.shop.security.AuthenticatedUser"
-
-[[targets.spring_route_bindings]]
-operation_id = "api.account.post.login"
-annotation = "GenAccountLogin"
-policies = ["signed", "authenticated-user"]
-request_binding = "generated"
-response_binding = "generated"
 """.strip()
         + "\n",
         encoding="utf-8",
@@ -175,20 +168,111 @@ response_binding = "generated"
 
     config = Config.load(config_path)
     target = config.targets[0]
-    assert target.spring_contract_mode == "strict-boundary"
-    assert [policy.id for policy in target.spring_policies] == ["signed", "authenticated-user"]
-    assert target.spring_route_bindings[0].annotation == "GenAccountLogin"
+    assert target.spring_contract_mode == "strict"
+    assert [mapping.provider for mapping in target.spring_policy_mappings] == [
+        "request-signature",
+        "authenticated-user",
+    ]
 
     resolved = resolve_config(config_path).targets[0]
     manifest = target_manifest(resolved, tmp_path)
 
     assert resolved.spring_public_paths == ("/api/**",)
     assert resolved.spring_exclude_server_paths == ("/api/internal/**",)
-    assert resolved.spring_policies[0].annotation == "com.example.shop.security.SignatureRequired"
-    assert resolved.spring_route_bindings[0].policies == ("signed", "authenticated-user")
-    assert manifest["spring_contract_mode"] == "strict-boundary"
-    assert manifest["spring_policies"][0]["id"] == "signed"
-    assert manifest["spring_route_bindings"][0]["annotation"] == "GenAccountLogin"
+    assert resolved.spring_policy_mappings[0].annotation == "com.example.shop.security.SignatureRequired"
+    assert manifest["spring_contract_mode"] == "strict"
+    assert manifest["spring_policy_mappings"][0]["provider"] == "request-signature"
+
+def test_spring_policy_mappings_are_only_supported_by_java_server_targets(tmp_path) -> None:
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[targets]]
+id = "java.client"
+kind = "java-client"
+out_dir = "generated/java-client"
+package = "com.example.shop.client"
+
+[[targets.spring_policy_mappings]]
+provider = "request-signature"
+annotation = "com.example.shop.security.SignatureRequired"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="spring_policy_mappings is only supported by java-server targets"):
+        Config.load(config_path)
+
+
+@pytest.mark.parametrize(
+    ("field", "table_body"),
+    [
+        (
+            "spring_policies",
+            """
+[[targets.spring_policies]]
+id = "signed"
+annotation = "com.example.shop.security.SignatureRequired"
+""",
+        ),
+        (
+            "spring_providers",
+            """
+[[targets.spring_providers]]
+id = "public-default"
+match = ["tag:public"]
+""",
+        ),
+        (
+            "spring_route_bindings",
+            """
+[[targets.spring_route_bindings]]
+operation_id = "api.orders.post.create"
+""",
+        ),
+    ],
+)
+def test_removed_java_server_spring_policy_config_fields_are_rejected(tmp_path, field: str, table_body: str) -> None:
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        f"""
+[[targets]]
+id = "java.server"
+kind = "java-server"
+out_dir = "generated/java-server"
+package = "com.example.shop.contract"
+
+{table_body}
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match=field):
+        Config.load(config_path)
+
+
+@pytest.mark.parametrize("mode", ["annotations-only", "strict-boundary"])
+def test_removed_java_server_spring_contract_modes_are_rejected(tmp_path, mode: str) -> None:
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        f"""
+[[targets]]
+id = "java.server"
+kind = "java-server"
+out_dir = "generated/java-server"
+package = "com.example.shop.contract"
+spring_contract_mode = "{mode}"
+spring_public_paths = ["/api/**"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="spring_contract_mode"):
+        Config.load(config_path)
+
 
 def test_target_base_url_and_expr_are_mutually_exclusive(tmp_path) -> None:
     config_path = tmp_path / "api-blueprint.toml"

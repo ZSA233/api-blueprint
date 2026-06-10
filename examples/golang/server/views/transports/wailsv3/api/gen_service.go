@@ -36,7 +36,7 @@ func newGeneratedApiService(impl RouterInterface, dispatcher wailstransport.Even
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope("session"),
 			},
-			"req|auth",
+			"req|auth|request-signature",
 			nil,
 		),
 	}

@@ -58,6 +58,7 @@ module = "com.example.generated"
 id = "java.server"
 out_dir = "java/server"
 module = "com.example.generated"
+spring_public_paths = ["/api/**"]
 
 [[java.client]]
 id = "java.client"

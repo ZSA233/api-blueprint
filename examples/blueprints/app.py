@@ -4,12 +4,17 @@ from blueprints.errors import CommonErr
 from blueprints.headers import GeneralHeader
 
 
+class RequestSignature(provider.Provider):
+    name = 'request-signature'
+
+
 apibp = Blueprint(
     root='/api',
     tags=['api'],
     providers=[
         provider.Req(),
         provider.Auth(),
+        RequestSignature(),
         provider.Handle(),
         provider.Rsp(),
     ],
@@ -38,6 +43,7 @@ altbp = Blueprint(
     tags=['api'],
     providers=[
         provider.Req(),
+        RequestSignature(),
         provider.Handle(),
         provider.Rsp(),
     ],
@@ -50,6 +56,7 @@ runtimebp = Blueprint(
     tags=['api'],
     providers=[
         provider.Req(),
+        RequestSignature(),
         provider.Handle(),
         provider.Rsp(),
     ],
@@ -63,6 +70,7 @@ legacybp = Blueprint(
     tags=['api', 'legacy'],
     providers=[
         provider.Req(),
+        RequestSignature(),
         provider.Handle(),
         provider.Rsp(),
     ],

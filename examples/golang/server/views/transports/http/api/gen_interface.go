@@ -35,7 +35,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 					},
 				},
 			},
-			"req|auth",
+			"req|auth|request-signature",
 			nil,
 		),
 		impl.HelloChannel,

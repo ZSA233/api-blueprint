@@ -6,7 +6,7 @@ from typing import Sequence
 from api_blueprint.engine.router import Router
 
 
-ALLOWED_ROUTE_SELECTION_SCOPES = frozenset({"path", "tag", "group", "method", "name"})
+ALLOWED_ROUTE_SELECTION_SCOPES = frozenset({"path", "tag", "group", "method", "name", "kind"})
 
 
 def normalize_selection_rules(rules: Sequence[str]) -> tuple[str, ...]:
@@ -54,4 +54,6 @@ def matches_selection_rule(
         return any(fnmatch.fnmatchcase(method, pattern.upper()) for method in methods)
     if scope == "name":
         return fnmatch.fnmatchcase(route_name, pattern)
+    if scope == "kind":
+        return fnmatch.fnmatchcase(getattr(router, "kind", "rpc"), pattern)
     raise ValueError(f"{label} 不支持的 include/exclude 规则: {rule}")

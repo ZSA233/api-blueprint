@@ -29,6 +29,14 @@ def _rootless_blueprint() -> Blueprint:
     return bp
 
 
+def _rootless_rpc_blueprint() -> Blueprint:
+    bp = Blueprint(name="legacy", root="")
+    with bp.group("/account") as views:
+        views.GET("/profile").RSP(message=String(description="message"))
+    bp.is_built = True
+    return bp
+
+
 def test_rootless_codegen_uses_logical_name_without_changing_urls(tmp_path: Path) -> None:
     bp = _rootless_blueprint()
     graph = build_contract_graph([bp])
@@ -145,9 +153,16 @@ def test_rootless_codegen_uses_logical_name_without_changing_urls(tmp_path: Path
         / "GenAccountApi.java"
     ).is_file()
 
+    java_server_bp = _rootless_rpc_blueprint()
+    java_server_graph = build_contract_graph([java_server_bp])
     java_server_dir = tmp_path / "java_server"
-    java_server = JavaServerWriter(java_server_dir, package="com.example.generated", contract_graph=graph)
-    java_server.register(bp)
+    java_server = JavaServerWriter(
+        java_server_dir,
+        package="com.example.generated",
+        contract_graph=java_server_graph,
+        spring_public_paths=["/legacy/**"],
+    )
+    java_server.register(java_server_bp)
     java_server.gen()
     assert (
         java_server_dir
@@ -155,10 +170,23 @@ def test_rootless_codegen_uses_logical_name_without_changing_urls(tmp_path: Path
         / "example"
         / "generated"
         / "legacy"
-        / "annotations"
+        / "routes"
         / "legacy"
         / "account"
-        / "GenProfile.java"
+        / "controllers"
+        / "GenAccountController.java"
+    ).is_file()
+    assert (
+        java_server_dir
+        / "com"
+        / "example"
+        / "generated"
+        / "legacy"
+        / "routes"
+        / "legacy"
+        / "account"
+        / "delegates"
+        / "GenAccountDelegate.java"
     ).is_file()
     assert (
         java_server_dir / "com" / "example" / "generated" / "legacy" / "spring" / "GenSpringMvcContractAssertions.java"

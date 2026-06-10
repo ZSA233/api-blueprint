@@ -1,7 +1,65 @@
 from __future__ import annotations
 
 from .helpers import *
+from api_blueprint.engine import provider
 from api_blueprint.engine.model import Array, OneOf, LegacyStringID
+
+
+def test_contract_graph_manifest_captures_effective_route_providers():
+    class RequestSignature(provider.Provider):
+        name = "request-signature"
+
+    class PublicTier(provider.Provider):
+        name = "public-tier"
+
+    bp = Blueprint(
+        root="/api",
+        providers=[
+            provider.Req(),
+            RequestSignature({"version": 1}),
+            provider.Handle(),
+            provider.Rsp(),
+        ],
+    )
+    with bp.group("/orders") as views:
+        views.POST("/create").RSP(message=String(description="message"))
+        views.POST(
+            "/draft",
+            providers=[
+                provider.Req(),
+                PublicTier("beta"),
+                provider.Handle(),
+                provider.Rsp(),
+            ],
+        ).RSP(message=String(description="message"))
+
+    manifest = build_contract_graph([bp]).to_manifest()
+    routes = {route["id"]: route for route in manifest["routes"]}
+
+    assert routes["api.orders.post.create"]["providers"] == [
+        {"name": "req"},
+        {"name": "request-signature", "data": {"version": 1}},
+        {"name": "handle"},
+        {"name": "rsp"},
+    ]
+    assert routes["api.orders.post.draft"]["providers"] == [
+        {"name": "req"},
+        {"name": "public-tier", "data": "beta"},
+        {"name": "handle"},
+        {"name": "rsp"},
+    ]
+
+
+def test_contract_graph_rejects_non_json_safe_provider_data():
+    class RuntimePolicy(provider.Provider):
+        name = "runtime-policy"
+
+    bp = Blueprint(root="/api", providers=[provider.Req(), RuntimePolicy(object()), provider.Handle(), provider.Rsp()])
+    with bp.group("/orders") as views:
+        views.POST("/create").RSP(message=String(description="message"))
+
+    with pytest.raises(ValueError, match=r"provider\[runtime-policy\] data must be JSON-serializable"):
+        build_contract_graph([bp])
 
 
 def test_contract_graph_manifest_captures_rpc_and_connection_routes():
