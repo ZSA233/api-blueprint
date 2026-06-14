@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum, IntEnum, StrEnum
-from typing import Any, Callable, Generic, Mapping, Self, TypeVar
+from typing import Any, Callable, Generic, Mapping, Protocol, Self, TypeVar
 from ....runtime.client import ApiUploadFile
 from ....runtime.gen_codecs import (
     _MISSING,
@@ -31,6 +31,7 @@ from ....runtime.gen_codecs import (
 
 
 R = TypeVar("R")
+C = TypeVar("C")
 
 
 class HelloChannelMsgTypeEnum(StrEnum):

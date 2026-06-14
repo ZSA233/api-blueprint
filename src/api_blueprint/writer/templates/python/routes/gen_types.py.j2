@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum, IntEnum, StrEnum
-from typing import Any, Callable, Generic, Mapping, Self, TypeVar
+from typing import Any, Callable, Generic, Mapping, Protocol, Self, TypeVar
 {% if writer.runtime_template == "gen_server.py" -%}
 from {{ group.runtime_import_prefix }}runtime.server import ApiUploadFile
 {% else -%}
@@ -37,6 +37,7 @@ from .gen_binary import *
 
 
 R = TypeVar("R")
+C = TypeVar("C")
 
 
 {% for enum in group.enums() %}
@@ -134,17 +135,100 @@ class {{ helper.handlers_class }}(Generic[R]):
 {% endfor %}
 
 
+class {{ helper.processor_class }}(Protocol[C]):
+{% for variant in helper.variants %}    def {{ variant.handler_name }}(self, ctx: C, msg: "{{ variant.case_class }}") -> None:
+        ...
+
+{% endfor %}
+
+
+class {{ helper.case_interface }}(Protocol):
+    def type(self) -> str:
+        ...
+
+    def message(self) -> {{ helper.name }}:
+        ...
+
+    def raw_data(self) -> Any:
+        ...
+
+
+{% for variant in helper.variants %}
+@dataclass
+class {{ variant.case_class }}:
+    _message: {{ helper.name }}
+    _data: {{ variant.data_type }} | None = None
+    _decoded: bool = False
+
+    def type(self) -> str:
+        return {{ variant.key | tojson }}
+
+    def message(self) -> {{ helper.name }}:
+        return self._message
+
+    def raw_data(self) -> Any:
+        return self._message.data
+
+    def decode(self) -> {{ variant.data_type }}:
+        if self._decoded:
+            return self._data  # type: ignore[return-value]
+        try:
+            data = {{ variant.case_data_decode_expr | safe }}
+        except Exception as err:
+            raise {{ helper.error_class }}("decode_failed", self._message, err) from err
+        self._data = data
+        self._decoded = True
+        return data
+
+
+{% endfor %}
 class {{ helper.error_class }}(Exception):
-    def __init__(self, kind: str = "unknown_type", raw_message: {{ helper.name }} | None = None):
+    def __init__(
+        self,
+        kind: str = "unknown_type",
+        raw_message: {{ helper.name }} | None = None,
+        cause: BaseException | None = None,
+    ):
         message_type = "" if raw_message is None else raw_message.type
-        super().__init__(f"unsupported {{ helper.name }} type {message_type}")
+        detail = f"{kind}: {{ helper.name }}"
+        if message_type:
+            detail = f"{detail} type {message_type}"
+        if cause is not None:
+            detail = f"{detail}: {cause}"
+        super().__init__(detail)
         self.kind = kind
         self.type = message_type
         self.raw_message = raw_message
+        self.cause = cause
+
+    def is_kind(self, *kinds: str) -> bool:
+        return not kinds or self.kind in kinds
 
 
 def {{ helper.is_error_func }}(error: BaseException) -> bool:
     return isinstance(error, {{ helper.error_class }})
+
+
+def {{ helper.visit_func }}(
+    ctx: C,
+    message: {{ helper.name }} | Mapping[str, Any] | None,
+    processor: {{ helper.processor_class }}[C] | None,
+) -> None:
+    if message is None:
+        raise {{ helper.error_class }}("nil_message")
+    typed_message = {{ helper.name }}.from_value(message)
+    if processor is None:
+        raise {{ helper.error_class }}("nil_processor", typed_message)
+    match typed_message.type:
+{% for variant in helper.variants %}        case {{ variant.key | tojson }}:
+            try:
+                return processor.{{ variant.handler_name }}(ctx, {{ variant.case_class }}(typed_message))
+            except {{ helper.error_class }}:
+                raise
+            except Exception as err:
+                raise {{ helper.error_class }}("handler_failed", typed_message, err) from err
+{% endfor %}        case _:
+            raise {{ helper.error_class }}("unknown_type", typed_message)
 
 
 def {{ helper.dispatch_func }}(

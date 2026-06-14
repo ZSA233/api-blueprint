@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 import re
 import shutil
@@ -17,9 +16,17 @@ from api_blueprint.writer.core.errors import ApiErrorEntry, api_errors_from_mani
 from api_blueprint.writer.core.files import ensure_filepath_open
 from api_blueprint.writer.core.go_naming import to_go_package_name
 from api_blueprint.writer.core.planning import route_matches_rule
-from api_blueprint.writer.core.sdk_names import go_exported_field_name
 from api_blueprint.writer.core.templates import render
 
+from .model_decls import (
+    GoClientTypeNames,
+    go_code_literal,
+    go_exported,
+    go_type_name,
+    group_model_declarations,
+    runtime_model_declarations,
+    variant_alias_name,
+)
 from .planner import GoClientGroup, GoClientRoute, build_go_client_groups
 
 
@@ -70,7 +77,7 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
         schemas = _mapping_of_maps(manifest.get("schemas"))
         errors = api_errors_from_manifest(manifest, route_ids=[str(route.get("id") or "") for route in routes])
         services = _mapping_of_maps_by_id(manifest.get("services"))
-        type_names = _TypeNames(schemas)
+        type_names = GoClientTypeNames(schemas)
         groups = build_go_client_groups(routes, services)
 
         route_errors = route_api_errors_from_manifest(manifest, route_ids=[str(route.get("id") or "") for route in routes])
@@ -89,7 +96,7 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
     def _write_runtime_files(
         self,
         schemas: Mapping[str, JsonObject],
-        type_names: "_TypeNames",
+        type_names: GoClientTypeNames,
         errors: tuple[ApiErrorEntry, ...],
         route_errors: dict[str, tuple[ApiErrorEntry, ...]],
         groups: tuple[GoClientGroup, ...],
@@ -109,7 +116,7 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
             render(
                 "golang",
                 "gen_types.go",
-                {"lines": _runtime_model_lines(schemas, type_names)},
+                {"declarations": runtime_model_declarations(schemas, type_names)},
                 "client/runtime",
             ),
         )
@@ -123,10 +130,10 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
         self,
         group: GoClientGroup,
         schemas: Mapping[str, JsonObject],
-        type_names: "_TypeNames",
+        type_names: GoClientTypeNames,
     ) -> None:
         route_dir = Path("routes").joinpath(*group.segments)
-        model_lines = _group_model_lines(group, schemas, type_names)
+        model_declarations = group_model_declarations(group, schemas, type_names)
         self._write_generated(
             route_dir / "gen_types.go",
             render(
@@ -134,8 +141,8 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
                 "gen_types.go",
                 {
                     "group": group,
-                    "has_runtime_import": any("runtime." in line for line in model_lines),
-                    "lines": model_lines,
+                    "declarations": model_declarations,
+                    "has_runtime_import": any(decl.uses_runtime_import for decl in model_declarations),
                     "runtime_import": self.runtime_import,
                 },
                 "client/routes",
@@ -249,7 +256,7 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
             return
 
     def _write_http_files(self) -> None:
-        base_url_code = self.base_url_expr if self.base_url_expr is not None else _code_literal(self.base_url)
+        base_url_code = self.base_url_expr if self.base_url_expr is not None else go_code_literal(self.base_url)
         self._write_generated(
             "transports/http/gen_config.go",
             render("golang", "gen_config.go", {"base_url_code": base_url_code}, "client/transports/http"),
@@ -314,144 +321,7 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
         subprocess.run(["gofmt", "-w", *[str(path) for path in sorted(self._written_files)]], check=True)
 
 
-class _TypeNames:
-    def __init__(self, schemas: Mapping[str, JsonObject]) -> None:
-        base_names: dict[str, list[str]] = {}
-        for name in schemas:
-            base_names.setdefault(_go_type_name(name), []).append(name)
-        self._names = {
-            name: (_go_type_name(name) if len(base_names[_go_type_name(name)]) == 1 else _go_type_name(name.replace(".", "_")))
-            for name in schemas
-        }
-
-    def schema(self, name: object) -> str:
-        key = str(name or "")
-        return self._names.get(key, _go_type_name(key))
-
-    def ref(self, value: Mapping[str, Any], *, pointer: bool = False) -> str:
-        ref = value.get("ref")
-        if isinstance(ref, str) and ref:
-            target = self.schema(ref)
-            return f"*{target}" if pointer else target
-        return "any"
-
-
-def _runtime_model_lines(schemas: Mapping[str, JsonObject], type_names: _TypeNames) -> list[str]:
-    enums = _collect_enums(schemas)
-    lines: list[str] = []
-    for enum in enums.values():
-        lines.extend(_render_enum(enum))
-        lines.append("")
-    for schema_name, schema in schemas.items():
-        lines.extend(_render_schema(schema_name, schema, type_names))
-        lines.append("")
-    while lines and lines[-1] == "":
-        lines.pop()
-    return lines
-
-
-def _render_schema(schema_name: str, schema: Mapping[str, Any], type_names: _TypeNames) -> list[str]:
-    name = type_names.schema(schema_name)
-    if schema.get("kind") == "alias" or schema.get("type") == "alias":
-        target = schema.get("target")
-        target_type = _go_type_for_schema_value(target if isinstance(target, Mapping) else {}, type_names)
-        return [f"type {name} = {target_type}"]
-    if schema.get("type") != "object":
-        return [f"type {name} = {_go_type_for_schema_value(schema, type_names)}"]
-    fields = schema.get("fields")
-    if not isinstance(fields, Mapping) or not fields:
-        return [f"type {name} struct {{}}"]
-    lines = [f"type {name} struct {{"]
-    for field_name, field_schema in fields.items():
-        if not isinstance(field_schema, Mapping):
-            continue
-        go_field = _go_exported(str(field_schema.get("name") or field_name))
-        go_type = _go_type_for_schema_value(field_schema, type_names)
-        wire_name = str(field_schema.get("wire_name") or field_schema.get("name") or field_name)
-        omitempty = ",omitempty" if field_schema.get("optional") else ""
-        tags = f'`json:"{wire_name}{omitempty}" form:"{wire_name}{omitempty}"`'
-        lines.append(f"\t{go_field} {go_type} {tags}")
-    lines.append("}")
-    return lines
-
-
-def _render_enum(enum: Mapping[str, Any]) -> list[str]:
-    name = _go_type_name(str(enum.get("enum") or enum.get("name") or "EnumValue"))
-    base_type = _enum_base_type(enum)
-    lines = [f"type {name} {base_type}", "", "const ("]
-    for member in enum.get("enum_values", []):
-        if not isinstance(member, Mapping):
-            continue
-        member_name = _go_exported(str(member.get("name") or member.get("value") or "Value"))
-        lines.append(f"\t{name}{member_name} {name} = {_code_literal(member.get('value'))}")
-    lines.append(")")
-    return lines
-
-
-def _group_model_lines(
-    group: GoClientGroup,
-    schemas: Mapping[str, JsonObject],
-    type_names: _TypeNames,
-) -> list[str]:
-    body: list[str] = []
-    emitted_messages: set[str] = set()
-    for route in group.routes:
-        body.extend(_route_aliases(route, schemas, type_names, emitted_messages))
-    while body and body[-1] == "":
-        body.pop()
-    return body
-
-
-def _route_aliases(
-    route: GoClientRoute,
-    schemas: Mapping[str, JsonObject],
-    type_names: _TypeNames,
-    emitted_messages: set[str],
-) -> list[str]:
-    lines: list[str] = []
-    operation = route.operation
-    aliases = (
-        (route.query_type, route.request.get("query_model")),
-        (route.json_type, route.request.get("json_model")),
-        (route.form_type, route.request.get("form_model")),
-        (route.multipart_type, route.request.get("multipart_model")),
-        (route.binary_type, None if route.has_binary_schema else route.request.get("binary_model")),
-        (route.open_type, route.connection.get("open_model")),
-        (route.close_type, route.connection.get("close_model")),
-        (
-            route.response_type,
-            None if route.response_kind in {"bytes", "file", "byte_stream", "binary_schema"} else route.response.get("model"),
-        ),
-    )
-    for alias, schema_name in aliases:
-        if isinstance(schema_name, str) and schema_name:
-            schema = schemas.get(schema_name)
-            if isinstance(schema, Mapping) and schema.get("auto") is True and schema.get("type") == "object":
-                lines.extend(_render_route_schema(alias, schema, type_names))
-            else:
-                lines.append(f"type {alias} = runtime.{type_names.schema(schema_name)}")
-    for message_key in ("server_message", "client_message"):
-        message = route.connection.get(message_key)
-        if isinstance(message, Mapping) and isinstance(message.get("name"), str):
-            message_name = str(message["name"])
-            if message_name in emitted_messages:
-                continue
-            emitted_messages.add(message_name)
-            variants = message.get("variants")
-            if isinstance(variants, list):
-                for variant in variants:
-                    if not isinstance(variant, Mapping):
-                        continue
-                    key = variant.get("key")
-                    model = variant.get("model")
-                    if isinstance(key, str) and key and isinstance(model, str) and model:
-                        lines.append(f"type {_variant_alias_name(message_name, key)} = runtime.{type_names.schema(model)}")
-    if lines:
-        lines.append("")
-    return lines
-
-
-def _message_unions(group: GoClientGroup, type_names: _TypeNames) -> list[dict[str, Any]]:
+def _message_unions(group: GoClientGroup, type_names: GoClientTypeNames) -> list[dict[str, Any]]:
     return [
         {
             "name": helper.name,
@@ -461,7 +331,7 @@ def _message_unions(group: GoClientGroup, type_names: _TypeNames) -> list[dict[s
     ]
 
 
-def _message_cases(group: GoClientGroup, type_names: _TypeNames) -> list[dict[str, Any]]:
+def _message_cases(group: GoClientGroup, type_names: GoClientTypeNames) -> list[dict[str, Any]]:
     cases = []
     for helper in group.message_helpers():
         variants = [_message_variant(helper.name, variant.key, variant.model, type_names) for variant in helper.variants]
@@ -488,38 +358,16 @@ def _message_cases(group: GoClientGroup, type_names: _TypeNames) -> list[dict[st
     return cases
 
 
-def _message_variant(message_name: str, key: str, model: str, type_names: _TypeNames) -> dict[str, str]:
-    variant_name = _go_exported(key)
+def _message_variant(message_name: str, key: str, model: str, type_names: GoClientTypeNames) -> dict[str, str]:
+    variant_name = go_exported(key)
     return {
         "key": key,
         "name": variant_name,
         "const": f"{message_name}Type{variant_name}",
         "ctor": f"New{message_name}{variant_name}",
         "decode": f"Decode{variant_name}",
-        "data_type": _variant_alias_name(message_name, key),
+        "data_type": variant_alias_name(message_name, key),
     }
-
-
-def _variant_alias_name(message_name: str, key: str) -> str:
-    return f"{message_name}_{_go_exported(key)}_DATA"
-
-
-def _render_route_schema(alias: str, schema: Mapping[str, Any], type_names: _TypeNames) -> list[str]:
-    fields = schema.get("fields")
-    if not isinstance(fields, Mapping) or not fields:
-        return [f"type {alias} struct {{}}"]
-    lines = [f"type {alias} struct {{"]
-    for field_name, field_schema in fields.items():
-        if not isinstance(field_schema, Mapping):
-            continue
-        go_field = _go_exported(str(field_schema.get("name") or field_name))
-        go_type = _go_type_for_route_schema_value(field_schema, type_names)
-        wire_name = str(field_schema.get("wire_name") or field_schema.get("name") or field_name)
-        omitempty = ",omitempty" if field_schema.get("optional") else ""
-        tags = f'`json:"{wire_name}{omitempty}" form:"{wire_name}{omitempty}"`'
-        lines.append(f"\t{go_field} {go_type} {tags}")
-    lines.append("}")
-    return lines
 
 
 def _connection_method_name(route: GoClientRoute) -> str:
@@ -544,7 +392,7 @@ def _route_response_type(route: GoClientRoute) -> str:
     if route.response_kind in {"bytes", "file"}:
         return "*runtime.RawResponse"
     if route.response_kind == "binary_schema" and route.response_binary_schema is not None:
-        return f"*{_go_type_name(str(route.response_binary_schema.get('name') or 'Packet'))}"
+        return f"*{go_type_name(str(route.response_binary_schema.get('name') or 'Packet'))}"
     response_model = route.response.get("model")
     if isinstance(response_model, str) and response_model:
         return f"*{route.response_type}"
@@ -589,107 +437,9 @@ def _runtime_request_fields(route: GoClientRoute) -> list[tuple[str, str]]:
         fields.append(("Multipart", "multipartBody"))
     if route.has_binary_schema or isinstance(route.request.get("binary_model"), str):
         fields.append(("Binary", "binaryBody"))
-    fields.append(("BodyKind", f"runtime.RequestBodyKind({_code_literal(route.body_kind)})"))
-    fields.append(("ResponseKind", f"runtime.ResponseKind({_code_literal(route.response_kind)})"))
+    fields.append(("BodyKind", f"runtime.RequestBodyKind({go_code_literal(route.body_kind)})"))
+    fields.append(("ResponseKind", f"runtime.ResponseKind({go_code_literal(route.response_kind)})"))
     return fields
-
-
-def _go_type_for_schema_value(value: Mapping[str, Any], type_names: _TypeNames) -> str:
-    value_type = str(value.get("type") or "any")
-    if value_type == "object" and value.get("ref"):
-        return type_names.ref(value, pointer=True)
-    if value_type == "array":
-        items = value.get("items")
-        if isinstance(items, Mapping):
-            item_type = _go_type_for_schema_value(items, type_names)
-            return f"[]{item_type}"
-        return "[]any"
-    if value_type == "map":
-        keys = value.get("keys")
-        values = value.get("values")
-        key_type = _go_type_for_schema_value(keys if isinstance(keys, Mapping) else {"type": "string"}, type_names)
-        value_go_type = _go_type_for_schema_value(values if isinstance(values, Mapping) else {"type": "any"}, type_names)
-        return f"map[{key_type}]{value_go_type}"
-    if value_type == "enum":
-        return _go_type_name(str(value.get("enum") or "EnumValue"))
-    return {
-        "string": "string",
-        "str": "string",
-        "int": "int",
-        "integer": "int",
-        "int64": "int64",
-        "int32": "int32",
-        "int16": "int16",
-        "int8": "int8",
-        "uint": "uint",
-        "uint64": "uint64",
-        "uint32": "uint32",
-        "uint16": "uint16",
-        "uint8": "uint8",
-        "float": "float64",
-        "float64": "float64",
-        "float32": "float32",
-        "number": "float64",
-        "boolean": "bool",
-        "bool": "bool",
-        "binary": "[]byte",
-        "coerce_string": "string",
-        "file": "MultipartFile",
-        "any": "any",
-        "null": "any",
-        "one_of": "any",
-    }.get(value_type, "any")
-
-
-def _go_type_for_route_schema_value(value: Mapping[str, Any], type_names: _TypeNames) -> str:
-    value_type = str(value.get("type") or "any")
-    if value_type == "object" and value.get("ref"):
-        return f"*runtime.{type_names.ref(value, pointer=False)}"
-    if value_type == "array":
-        items = value.get("items")
-        if isinstance(items, Mapping):
-            return f"[]{_go_type_for_route_schema_value(items, type_names)}"
-        return "[]any"
-    if value_type == "map":
-        keys = value.get("keys")
-        values = value.get("values")
-        key_type = _go_type_for_route_schema_value(keys if isinstance(keys, Mapping) else {"type": "string"}, type_names)
-        value_go_type = _go_type_for_route_schema_value(values if isinstance(values, Mapping) else {"type": "any"}, type_names)
-        return f"map[{key_type}]{value_go_type}"
-    if value_type == "enum":
-        return f"runtime.{_go_type_name(str(value.get('enum') or 'EnumValue'))}"
-    if value_type == "file":
-        return "runtime.MultipartFile"
-    return _go_type_for_schema_value(value, type_names)
-
-
-def _collect_enums(schemas: Mapping[str, JsonObject]) -> dict[str, Mapping[str, Any]]:
-    enums: dict[str, Mapping[str, Any]] = {}
-
-    def visit(value: object) -> None:
-        if isinstance(value, Mapping):
-            if value.get("type") == "enum" and isinstance(value.get("enum"), str):
-                enums[str(value["enum"])] = value
-            for child in value.values():
-                visit(child)
-        elif isinstance(value, list):
-            for child in value:
-                visit(child)
-
-    visit(schemas)
-    return enums
-
-
-def _enum_base_type(enum: Mapping[str, Any]) -> str:
-    values = enum.get("values")
-    first = values[0] if isinstance(values, list) and values else None
-    if isinstance(first, bool):
-        return "bool"
-    if isinstance(first, int):
-        return "int"
-    if isinstance(first, float):
-        return "float64"
-    return "string"
 
 
 def _list_of_maps(value: object) -> list[JsonObject]:
@@ -711,16 +461,6 @@ def _mapping_of_maps_by_id(value: object) -> dict[str, JsonObject]:
         if isinstance(item_id, str):
             result[item_id] = item
     return result
-
-
-def _go_type_name(value: str) -> str:
-    if "." in value:
-        value = value.rsplit(".", 1)[-1]
-    return _go_exported(value)
-
-
-def _go_exported(value: str) -> str:
-    return go_exported_field_name(value, fallback="Value")
 
 
 def _join_import(*parts: str) -> str:
@@ -746,7 +486,7 @@ def _root_facade_groups(groups: tuple[GoClientGroup, ...]) -> tuple[RootFacadeGr
             import_alias = to_go_package_name("_".join(group.segments), fallback=group.package)
         field_name = group.client_class.removesuffix("Client")
         if field_counts[field_name] > 1:
-            field_name = _go_exported("_".join(group.segments))
+            field_name = go_exported("_".join(group.segments))
         facade_groups.append(RootFacadeGroup(group=group, import_alias=import_alias, field_name=field_name))
     return tuple(facade_groups)
 
@@ -755,7 +495,3 @@ def _root_package_name(module: str) -> str:
     if not module:
         return "client"
     return re.sub(r"[^0-9A-Za-z_]+", "_", module.rstrip("/").rsplit("/", 1)[-1]) or "client"
-
-
-def _code_literal(value: object) -> str:
-    return json.dumps(value, ensure_ascii=False)

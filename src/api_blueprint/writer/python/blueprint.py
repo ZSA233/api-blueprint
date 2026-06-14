@@ -54,6 +54,9 @@ class PythonMessageVariant:
     method_name: str
     data_type: str
     data_decode_expr: str
+    case_data_decode_expr: str
+    case_class: str
+    handler_name: str
 
 
 @dataclass(frozen=True)
@@ -61,8 +64,11 @@ class PythonMessageHelper:
     name: str
     variants_class: str
     handlers_class: str
+    processor_class: str
+    case_interface: str
     error_class: str
     dispatch_func: str
+    visit_func: str
     is_error_func: str
     variants: tuple[PythonMessageVariant, ...]
 
@@ -146,6 +152,23 @@ class PythonRoute:
     @property
     def websocket_endpoint_name(self) -> str:
         return f"{self.open_channel_method_name}_socket"
+
+    @property
+    def channel_scaffold(self) -> dict[str, str] | None:
+        if not self.supports_channel:
+            return None
+        descriptor = _descriptor_from_contract(self.protocol.server_message)
+        if descriptor is None:
+            return None
+        message_name = descriptor.name
+        return {
+            "session_class": f"{self.operation_class}ChannelSession",
+            "message_type": message_name,
+            "send_type": self.client_message_type.annotation if self.client_message_type is not None else "Any",
+            "processor_type": f"{message_name}Processor",
+            "visit_func": f"visit_{to_py_identifier(message_name, default='message')}",
+            "close_type": self.close_type.annotation if self.close_type is not None else "Any",
+        }
 
     @property
     def response_type_literal(self) -> str:
@@ -330,6 +353,12 @@ class PythonRoute:
                             "typed_message.data",
                             f"_field_path({json.dumps(descriptor.name)}, \"data\")",
                         ),
+                        case_data_decode_expr=resolved.decode_expr(
+                            "self._message.data",
+                            f"_field_path({json.dumps(descriptor.name)}, \"data\")",
+                        ),
+                        case_class=f"{descriptor.name}{to_py_class_name(variant.key, default='Variant')}Case",
+                        handler_name=f"on_{to_py_identifier(variant.key, default='variant')}",
                     )
                 )
             helpers.append(
@@ -337,8 +366,11 @@ class PythonRoute:
                     name=descriptor.name,
                     variants_class=f"{descriptor.name}Variants",
                     handlers_class=f"{descriptor.name}Handlers",
+                    processor_class=f"{descriptor.name}Processor",
+                    case_interface=f"{descriptor.name}Case",
                     error_class=f"{descriptor.name}DispatchError",
                     dispatch_func=f"dispatch_{to_py_identifier(descriptor.name, default='message')}",
+                    visit_func=f"visit_{to_py_identifier(descriptor.name, default='message')}",
                     is_error_func=f"is_{to_py_identifier(descriptor.name, default='message')}_dispatch_error",
                     variants=tuple(variants),
                 )

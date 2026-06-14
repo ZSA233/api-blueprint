@@ -103,7 +103,7 @@ api-gen generate -c api-blueprint.toml
 | Swift client | 预览 | 生成 iOS Swift Package 多 target SDK、短 module stem、root routes module、DTO、typed error、字段级 binary codec、带限流/校验 knobs 的共享 URLSession HTTP/SSE/WebSocket transport 和 multipart/raw/binary response client，不生成 UI、鉴权、缓存或 session engine |
 | Kotlin client/server | 预览 | 生成 OkHttp HTTP/SSE/WebSocket client、Ktor HTTP/SSE/WebSocket server scaffold、multipart/raw/binary request/response adapter、模型和长连接 message helper |
 | Java client/server | 预览 | 生成 Java 17 HttpClient client，以及强约束 Spring MVC `Gen...Controller`、`Gen...Delegate`、JavaBean request/response 类型、adapter helper 和运行时 contract assertions；Spring policy 由 DSL provider + Java mapping 落地 |
-| Go client / Python client | 预览 | 生成服务端之外的脚本或工具侧客户端；Python client 使用递归 dataclass DTO、共享 runtime codec，并提供 multipart/raw、长连接 message helper 与 binary writer/response codec |
+| Go client / Python client | 预览 | 生成服务端之外的脚本或工具侧客户端；Python client 使用递归 dataclass DTO、共享 runtime codec，并提供 multipart/raw、transport-neutral 长连接 message helper、processor/channel scaffold 与 binary writer/response codec |
 | Python server | 预览 | 生成 FastAPI HTTP/SSE/WebSocket server scaffold、multipart/raw/binary request/response adapter、typed service contract 和长连接 message helper |
 | Wails v2/v3 | 预览 / 实验性 | 生成 Go + TypeScript overlay；文件/stream 等能力使用 Wails RPC descriptor 或 STREAM/CHANNEL chunk 建模 |
 | gRPC proto / stubs | 可用 | 从 ContractGraph 输出 proto，并生成 Go/Python stub；bytes/file/stream 使用 protobuf bytes 或 streaming chunk 建模 |

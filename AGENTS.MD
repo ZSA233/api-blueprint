@@ -210,7 +210,7 @@ api-blueprint 的生成器负责输出协议契约和结构化落点，不负责
   - `writer/templates/**/*`
   - `hub/templates/**/*`
   - `static/**/*`
-- 变更 CLI 或配置行为时，至少跑一轮 `api-doc-server --help`、`api-gen-golang --help`、`api-gen-typescript --help` smoke。
+- 变更 CLI 或配置行为时，至少跑一轮 `api-doc-server --help`、`api-gen --help` 以及相关 `api-gen <command> --help` smoke。
 - 变更 release 逻辑时，必须覆盖：
   - `release-version.toml` 解析
   - `_version.py` 同步

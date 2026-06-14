@@ -2,6 +2,23 @@
 
 package runtime
 
-{% for line in lines -%}
-{{ line | safe }}
+{% for decl in declarations -%}
+{%- if decl.kind == "enum" %}
+type {{ decl.name }} {{ decl.base_type }}
+
+const (
+{% for member in decl.members %}	{{ decl.name }}{{ member.name }} {{ decl.name }} = {{ member.value_literal | safe }}
+{% endfor %})
+{%- elif decl.kind == "alias" %}
+type {{ decl.name }} = {{ decl.target | safe }}
+{%- elif decl.kind == "struct" %}{%- if decl.fields %}
+type {{ decl.name }} struct {
+{%- for field in decl.fields %}
+	{{ field.name }} {{ field.type | safe }} {{ field.tags | safe }}
+{%- endfor %}
+}
+{%- else %}
+type {{ decl.name }} struct{}
+{%- endif %}{%- endif %}{%- if decl.blank_after and not loop.last %}
+{% endif -%}
 {% endfor -%}

@@ -1,14 +1,16 @@
 from .gen_client import *
 from .gen_types import *
+{% if channel_scaffolds %}
 
 # Preserved channel processor scaffolds. Customize these classes to plug a
 # project-owned channel bridge into the generated typed message visitors.
 
-class AssistantSessionChannelSession:
+{% for scaffold in channel_scaffolds %}
+class {{ scaffold.session_class }}:
     def __init__(
         self,
-        bridge: ApiChannelBridge[AssistantServerMessage, AssistantClientMessage, AssistantSessionClose],
-        processor: AssistantServerMessageProcessor[object],
+        bridge: ApiChannelBridge[{{ scaffold.message_type }}, {{ scaffold.send_type }}, {{ scaffold.close_type }}],
+        processor: {{ scaffold.processor_type }}[object],
         context: object | None = None,
     ):
         self.bridge = bridge
@@ -17,4 +19,6 @@ class AssistantSessionChannelSession:
 
     async def serve(self) -> None:
         async for message in self.bridge:
-            visit_assistant_server_message(self.context, message, self.processor)
+            {{ scaffold.visit_func }}(self.context, message, self.processor)
+{% endfor %}
+{% endif %}

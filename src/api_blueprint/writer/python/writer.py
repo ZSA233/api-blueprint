@@ -29,6 +29,7 @@ from .planner import build_python_blueprint_plan
 
 if TYPE_CHECKING:
     from api_blueprint.contract import ContractGraph
+    from .blueprint import PythonRouteGroup
     from .planner import PythonRouteGroupPlan
 
 
@@ -149,7 +150,7 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
 
         with self.write_file(plan.runtime.public_file, overwrite=False) as handle:
             if handle:
-                handle.write(f"from .{self.runtime_template.removesuffix('.py')} import *\n")
+                handle.write(self._render_public_facade((self.runtime_template.removesuffix(".py"),)))
         with self.write_file(plan.runtime.generated_file, overwrite=True) as handle:
             if handle:
                 handle.write(self.generated_header)
@@ -166,7 +167,7 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
                 handle.write(_render_python("gen_runtime.py", context, "runtime/binary"))
         with self.write_file(binary_runtime_dir / "__init__.py", overwrite=True) as handle:
             if handle:
-                handle.write("from .gen_runtime import *\n")
+                handle.write(self._render_public_facade(("gen_runtime",)))
         self._write_runtime_errors_facade(plan.runtime.directory)
         with self.write_file(plan.runtime.directory / "gen_errors.py", overwrite=True) as handle:
             if handle:
@@ -183,7 +184,7 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
 
         with self.write_file(plan.http_transport.public_file, overwrite=False) as handle:
             if handle:
-                handle.write(f"from .{self.transport_template.removesuffix('.py')} import *\n")
+                handle.write(self._render_public_facade((self.transport_template.removesuffix(".py"),)))
         with self.write_file(plan.http_transport.generated_file, overwrite=True) as handle:
             if handle:
                 handle.write(self.generated_header)
@@ -199,12 +200,13 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
     def _gen_group(self, group_plan: "PythonRouteGroupPlan") -> None:
         self._ensure_package_tree(group_plan.directory)
         self._migrate_legacy_public_file(group_plan)
+        public_source = self._route_public_source(group_plan.group)
         with self.write_file(
             group_plan.public_file,
-            overwrite=self._should_refresh_public_import(group_plan.public_file),
+            overwrite=self._should_refresh_public_import(group_plan.public_file, public_source),
         ) as handle:
             if handle:
-                handle.write(self._default_public_import())
+                handle.write(public_source)
         with self.write_file(group_plan.generated_file, overwrite=True) as handle:
             if handle:
                 handle.write(self.generated_header)
@@ -254,7 +256,7 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
                 handle.write(_render_python("gen_root_client.py", {"writer": self, "bp": bp, "plan": plan}, ""))
         with self.write_file(plan.root_directory / "client.py", overwrite=False) as handle:
             if handle:
-                handle.write("from .gen_client import *\n")
+                handle.write(self._render_public_facade(("gen_client",)))
 
     def _migrate_legacy_public_file(self, group_plan: "PythonRouteGroupPlan") -> None:
         legacy_file = group_plan.legacy_public_file
@@ -301,25 +303,45 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
                 return False
         return True
 
-    def _default_public_import(self) -> str:
-        return (
-            f"from .{self.route_template.removesuffix('.py')} import *\n"
-            f"from .{ROUTE_TYPES_MODULE.removesuffix('.py')} import *\n"
-        )
+    def _default_public_import(self, group: "PythonRouteGroup | None" = None) -> str:
+        return self._route_public_source(group)
 
     def _legacy_default_public_import(self) -> str:
-        return f"from .{self.route_template.removesuffix('.py')} import *\n"
+        return self._render_public_facade((self.route_template.removesuffix(".py"),))
 
-    def _should_refresh_public_import(self, public_file: Path) -> bool:
-        return (
-            public_file.is_file()
-            and public_file.read_text(encoding="utf-8") == self._legacy_default_public_import()
-        )
+    def _should_refresh_public_import(self, public_file: Path, new_source: str | None = None) -> bool:
+        if not public_file.is_file():
+            return False
+        current = public_file.read_text(encoding="utf-8")
+        candidates = {self._legacy_default_public_import(), self._default_public_import()}
+        if new_source is not None:
+            candidates.add(new_source)
+        return current in candidates
+
+    def _route_public_source(self, group: "PythonRouteGroup | None" = None) -> str:
+        if self.route_template == "gen_client.py":
+            return _render_python(
+                "client.py",
+                {"channel_scaffolds": self._channel_scaffolds(group)},
+                "routes",
+            )
+        return _render_python("service.py", {}, "routes")
+
+    def _channel_scaffolds(self, group: "PythonRouteGroup | None") -> tuple[dict[str, str], ...]:
+        if group is None:
+            return ()
+        return tuple(scaffold for route in group.routes if (scaffold := route.channel_scaffold) is not None)
+
+    def _render_public_facade(self, modules: Sequence[str]) -> str:
+        return _render_python("public_facade.py", {"modules": tuple(modules)}, "")
+
+    def _render_package_marker(self) -> str:
+        return _render_python("package_marker.py", {"target_label": self.target_label}, "")
 
     def _write_runtime_errors_facade(self, runtime_dir: Path) -> None:
         path = runtime_dir / "errors.py"
         legacy_source = "from .gen_errors import *\n"
-        source = legacy_source + "from .gen_error_lookup import *\n"
+        source = self._render_public_facade(("gen_errors", "gen_error_lookup"))
         old_source = legacy_source + "from .gen_error_catalog import *\n"
         overwrite = path.is_file() and path.read_text(encoding="utf-8") in {legacy_source, old_source}
         with self.write_file(path, overwrite=overwrite) as handle:
@@ -344,7 +366,7 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
     def _ensure_package_markers(self, package_dir: Path) -> None:
         with self.write_file(package_dir / "__init__.py", overwrite=False) as handle:
             if handle:
-                handle.write(f'"""Generated package for api-blueprint {self.target_label} artifacts."""\n')
+                handle.write(self._render_package_marker())
 
     @contextmanager
     def write_file(self, filepath: str | Path, overwrite: bool = False) -> Generator[IO[str] | None, None, None]:

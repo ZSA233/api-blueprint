@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum, IntEnum, StrEnum
-from typing import Any, Callable, Generic, Mapping, Self, TypeVar
+from typing import Any, Callable, Generic, Mapping, Protocol, Self, TypeVar
 from ....runtime.client import ApiUploadFile
 from ....runtime.gen_codecs import (
     _MISSING,
@@ -31,6 +31,7 @@ from ....runtime.gen_codecs import (
 
 
 R = TypeVar("R")
+C = TypeVar("C")
 
 
 class ColorEnum(StrEnum):
@@ -1561,17 +1562,170 @@ class SweepStreamMessageHandlers(Generic[R]):
     log: Callable[[SweepLog, SweepStreamMessage], R]
 
 
+class SweepStreamMessageProcessor(Protocol[C]):
+    def on_state(self, ctx: C, msg: "SweepStreamMessageStateCase") -> None:
+        ...
+
+    def on_progress(self, ctx: C, msg: "SweepStreamMessageProgressCase") -> None:
+        ...
+
+    def on_log(self, ctx: C, msg: "SweepStreamMessageLogCase") -> None:
+        ...
+
+
+class SweepStreamMessageCase(Protocol):
+    def type(self) -> str:
+        ...
+
+    def message(self) -> SweepStreamMessage:
+        ...
+
+    def raw_data(self) -> Any:
+        ...
+
+
+@dataclass
+class SweepStreamMessageStateCase:
+    _message: SweepStreamMessage
+    _data: SweepState | None = None
+    _decoded: bool = False
+
+    def type(self) -> str:
+        return "state"
+
+    def message(self) -> SweepStreamMessage:
+        return self._message
+
+    def raw_data(self) -> Any:
+        return self._message.data
+
+    def decode(self) -> SweepState:
+        if self._decoded:
+            return self._data  # type: ignore[return-value]
+        try:
+            data = SweepState.from_value(self._message.data, _field_path("SweepStreamMessage", "data"))
+        except Exception as err:
+            raise SweepStreamMessageDispatchError("decode_failed", self._message, err) from err
+        self._data = data
+        self._decoded = True
+        return data
+
+
+@dataclass
+class SweepStreamMessageProgressCase:
+    _message: SweepStreamMessage
+    _data: SweepProgress | None = None
+    _decoded: bool = False
+
+    def type(self) -> str:
+        return "progress"
+
+    def message(self) -> SweepStreamMessage:
+        return self._message
+
+    def raw_data(self) -> Any:
+        return self._message.data
+
+    def decode(self) -> SweepProgress:
+        if self._decoded:
+            return self._data  # type: ignore[return-value]
+        try:
+            data = SweepProgress.from_value(self._message.data, _field_path("SweepStreamMessage", "data"))
+        except Exception as err:
+            raise SweepStreamMessageDispatchError("decode_failed", self._message, err) from err
+        self._data = data
+        self._decoded = True
+        return data
+
+
+@dataclass
+class SweepStreamMessageLogCase:
+    _message: SweepStreamMessage
+    _data: SweepLog | None = None
+    _decoded: bool = False
+
+    def type(self) -> str:
+        return "log"
+
+    def message(self) -> SweepStreamMessage:
+        return self._message
+
+    def raw_data(self) -> Any:
+        return self._message.data
+
+    def decode(self) -> SweepLog:
+        if self._decoded:
+            return self._data  # type: ignore[return-value]
+        try:
+            data = SweepLog.from_value(self._message.data, _field_path("SweepStreamMessage", "data"))
+        except Exception as err:
+            raise SweepStreamMessageDispatchError("decode_failed", self._message, err) from err
+        self._data = data
+        self._decoded = True
+        return data
+
+
 class SweepStreamMessageDispatchError(Exception):
-    def __init__(self, kind: str = "unknown_type", raw_message: SweepStreamMessage | None = None):
+    def __init__(
+        self,
+        kind: str = "unknown_type",
+        raw_message: SweepStreamMessage | None = None,
+        cause: BaseException | None = None,
+    ):
         message_type = "" if raw_message is None else raw_message.type
-        super().__init__(f"unsupported SweepStreamMessage type {message_type}")
+        detail = f"{kind}: SweepStreamMessage"
+        if message_type:
+            detail = f"{detail} type {message_type}"
+        if cause is not None:
+            detail = f"{detail}: {cause}"
+        super().__init__(detail)
         self.kind = kind
         self.type = message_type
         self.raw_message = raw_message
+        self.cause = cause
+
+    def is_kind(self, *kinds: str) -> bool:
+        return not kinds or self.kind in kinds
 
 
 def is_sweep_stream_message_dispatch_error(error: BaseException) -> bool:
     return isinstance(error, SweepStreamMessageDispatchError)
+
+
+def visit_sweep_stream_message(
+    ctx: C,
+    message: SweepStreamMessage | Mapping[str, Any] | None,
+    processor: SweepStreamMessageProcessor[C] | None,
+) -> None:
+    if message is None:
+        raise SweepStreamMessageDispatchError("nil_message")
+    typed_message = SweepStreamMessage.from_value(message)
+    if processor is None:
+        raise SweepStreamMessageDispatchError("nil_processor", typed_message)
+    match typed_message.type:
+        case "state":
+            try:
+                return processor.on_state(ctx, SweepStreamMessageStateCase(typed_message))
+            except SweepStreamMessageDispatchError:
+                raise
+            except Exception as err:
+                raise SweepStreamMessageDispatchError("handler_failed", typed_message, err) from err
+        case "progress":
+            try:
+                return processor.on_progress(ctx, SweepStreamMessageProgressCase(typed_message))
+            except SweepStreamMessageDispatchError:
+                raise
+            except Exception as err:
+                raise SweepStreamMessageDispatchError("handler_failed", typed_message, err) from err
+        case "log":
+            try:
+                return processor.on_log(ctx, SweepStreamMessageLogCase(typed_message))
+            except SweepStreamMessageDispatchError:
+                raise
+            except Exception as err:
+                raise SweepStreamMessageDispatchError("handler_failed", typed_message, err) from err
+        case _:
+            raise SweepStreamMessageDispatchError("unknown_type", typed_message)
 
 
 def dispatch_sweep_stream_message(
@@ -1637,17 +1791,170 @@ class AssistantServerMessageHandlers(Generic[R]):
     log: Callable[[SweepLog, AssistantServerMessage], R]
 
 
+class AssistantServerMessageProcessor(Protocol[C]):
+    def on_delta(self, ctx: C, msg: "AssistantServerMessageDeltaCase") -> None:
+        ...
+
+    def on_done(self, ctx: C, msg: "AssistantServerMessageDoneCase") -> None:
+        ...
+
+    def on_log(self, ctx: C, msg: "AssistantServerMessageLogCase") -> None:
+        ...
+
+
+class AssistantServerMessageCase(Protocol):
+    def type(self) -> str:
+        ...
+
+    def message(self) -> AssistantServerMessage:
+        ...
+
+    def raw_data(self) -> Any:
+        ...
+
+
+@dataclass
+class AssistantServerMessageDeltaCase:
+    _message: AssistantServerMessage
+    _data: AssistantDelta | None = None
+    _decoded: bool = False
+
+    def type(self) -> str:
+        return "delta"
+
+    def message(self) -> AssistantServerMessage:
+        return self._message
+
+    def raw_data(self) -> Any:
+        return self._message.data
+
+    def decode(self) -> AssistantDelta:
+        if self._decoded:
+            return self._data  # type: ignore[return-value]
+        try:
+            data = AssistantDelta.from_value(self._message.data, _field_path("AssistantServerMessage", "data"))
+        except Exception as err:
+            raise AssistantServerMessageDispatchError("decode_failed", self._message, err) from err
+        self._data = data
+        self._decoded = True
+        return data
+
+
+@dataclass
+class AssistantServerMessageDoneCase:
+    _message: AssistantServerMessage
+    _data: AssistantDone | None = None
+    _decoded: bool = False
+
+    def type(self) -> str:
+        return "done"
+
+    def message(self) -> AssistantServerMessage:
+        return self._message
+
+    def raw_data(self) -> Any:
+        return self._message.data
+
+    def decode(self) -> AssistantDone:
+        if self._decoded:
+            return self._data  # type: ignore[return-value]
+        try:
+            data = AssistantDone.from_value(self._message.data, _field_path("AssistantServerMessage", "data"))
+        except Exception as err:
+            raise AssistantServerMessageDispatchError("decode_failed", self._message, err) from err
+        self._data = data
+        self._decoded = True
+        return data
+
+
+@dataclass
+class AssistantServerMessageLogCase:
+    _message: AssistantServerMessage
+    _data: SweepLog | None = None
+    _decoded: bool = False
+
+    def type(self) -> str:
+        return "log"
+
+    def message(self) -> AssistantServerMessage:
+        return self._message
+
+    def raw_data(self) -> Any:
+        return self._message.data
+
+    def decode(self) -> SweepLog:
+        if self._decoded:
+            return self._data  # type: ignore[return-value]
+        try:
+            data = SweepLog.from_value(self._message.data, _field_path("AssistantServerMessage", "data"))
+        except Exception as err:
+            raise AssistantServerMessageDispatchError("decode_failed", self._message, err) from err
+        self._data = data
+        self._decoded = True
+        return data
+
+
 class AssistantServerMessageDispatchError(Exception):
-    def __init__(self, kind: str = "unknown_type", raw_message: AssistantServerMessage | None = None):
+    def __init__(
+        self,
+        kind: str = "unknown_type",
+        raw_message: AssistantServerMessage | None = None,
+        cause: BaseException | None = None,
+    ):
         message_type = "" if raw_message is None else raw_message.type
-        super().__init__(f"unsupported AssistantServerMessage type {message_type}")
+        detail = f"{kind}: AssistantServerMessage"
+        if message_type:
+            detail = f"{detail} type {message_type}"
+        if cause is not None:
+            detail = f"{detail}: {cause}"
+        super().__init__(detail)
         self.kind = kind
         self.type = message_type
         self.raw_message = raw_message
+        self.cause = cause
+
+    def is_kind(self, *kinds: str) -> bool:
+        return not kinds or self.kind in kinds
 
 
 def is_assistant_server_message_dispatch_error(error: BaseException) -> bool:
     return isinstance(error, AssistantServerMessageDispatchError)
+
+
+def visit_assistant_server_message(
+    ctx: C,
+    message: AssistantServerMessage | Mapping[str, Any] | None,
+    processor: AssistantServerMessageProcessor[C] | None,
+) -> None:
+    if message is None:
+        raise AssistantServerMessageDispatchError("nil_message")
+    typed_message = AssistantServerMessage.from_value(message)
+    if processor is None:
+        raise AssistantServerMessageDispatchError("nil_processor", typed_message)
+    match typed_message.type:
+        case "delta":
+            try:
+                return processor.on_delta(ctx, AssistantServerMessageDeltaCase(typed_message))
+            except AssistantServerMessageDispatchError:
+                raise
+            except Exception as err:
+                raise AssistantServerMessageDispatchError("handler_failed", typed_message, err) from err
+        case "done":
+            try:
+                return processor.on_done(ctx, AssistantServerMessageDoneCase(typed_message))
+            except AssistantServerMessageDispatchError:
+                raise
+            except Exception as err:
+                raise AssistantServerMessageDispatchError("handler_failed", typed_message, err) from err
+        case "log":
+            try:
+                return processor.on_log(ctx, AssistantServerMessageLogCase(typed_message))
+            except AssistantServerMessageDispatchError:
+                raise
+            except Exception as err:
+                raise AssistantServerMessageDispatchError("handler_failed", typed_message, err) from err
+        case _:
+            raise AssistantServerMessageDispatchError("unknown_type", typed_message)
 
 
 def dispatch_assistant_server_message(
@@ -1708,17 +2015,133 @@ class AssistantClientMessageHandlers(Generic[R]):
     cancel: Callable[[AssistantCancel, AssistantClientMessage], R]
 
 
+class AssistantClientMessageProcessor(Protocol[C]):
+    def on_input(self, ctx: C, msg: "AssistantClientMessageInputCase") -> None:
+        ...
+
+    def on_cancel(self, ctx: C, msg: "AssistantClientMessageCancelCase") -> None:
+        ...
+
+
+class AssistantClientMessageCase(Protocol):
+    def type(self) -> str:
+        ...
+
+    def message(self) -> AssistantClientMessage:
+        ...
+
+    def raw_data(self) -> Any:
+        ...
+
+
+@dataclass
+class AssistantClientMessageInputCase:
+    _message: AssistantClientMessage
+    _data: AssistantInput | None = None
+    _decoded: bool = False
+
+    def type(self) -> str:
+        return "input"
+
+    def message(self) -> AssistantClientMessage:
+        return self._message
+
+    def raw_data(self) -> Any:
+        return self._message.data
+
+    def decode(self) -> AssistantInput:
+        if self._decoded:
+            return self._data  # type: ignore[return-value]
+        try:
+            data = AssistantInput.from_value(self._message.data, _field_path("AssistantClientMessage", "data"))
+        except Exception as err:
+            raise AssistantClientMessageDispatchError("decode_failed", self._message, err) from err
+        self._data = data
+        self._decoded = True
+        return data
+
+
+@dataclass
+class AssistantClientMessageCancelCase:
+    _message: AssistantClientMessage
+    _data: AssistantCancel | None = None
+    _decoded: bool = False
+
+    def type(self) -> str:
+        return "cancel"
+
+    def message(self) -> AssistantClientMessage:
+        return self._message
+
+    def raw_data(self) -> Any:
+        return self._message.data
+
+    def decode(self) -> AssistantCancel:
+        if self._decoded:
+            return self._data  # type: ignore[return-value]
+        try:
+            data = AssistantCancel.from_value(self._message.data, _field_path("AssistantClientMessage", "data"))
+        except Exception as err:
+            raise AssistantClientMessageDispatchError("decode_failed", self._message, err) from err
+        self._data = data
+        self._decoded = True
+        return data
+
+
 class AssistantClientMessageDispatchError(Exception):
-    def __init__(self, kind: str = "unknown_type", raw_message: AssistantClientMessage | None = None):
+    def __init__(
+        self,
+        kind: str = "unknown_type",
+        raw_message: AssistantClientMessage | None = None,
+        cause: BaseException | None = None,
+    ):
         message_type = "" if raw_message is None else raw_message.type
-        super().__init__(f"unsupported AssistantClientMessage type {message_type}")
+        detail = f"{kind}: AssistantClientMessage"
+        if message_type:
+            detail = f"{detail} type {message_type}"
+        if cause is not None:
+            detail = f"{detail}: {cause}"
+        super().__init__(detail)
         self.kind = kind
         self.type = message_type
         self.raw_message = raw_message
+        self.cause = cause
+
+    def is_kind(self, *kinds: str) -> bool:
+        return not kinds or self.kind in kinds
 
 
 def is_assistant_client_message_dispatch_error(error: BaseException) -> bool:
     return isinstance(error, AssistantClientMessageDispatchError)
+
+
+def visit_assistant_client_message(
+    ctx: C,
+    message: AssistantClientMessage | Mapping[str, Any] | None,
+    processor: AssistantClientMessageProcessor[C] | None,
+) -> None:
+    if message is None:
+        raise AssistantClientMessageDispatchError("nil_message")
+    typed_message = AssistantClientMessage.from_value(message)
+    if processor is None:
+        raise AssistantClientMessageDispatchError("nil_processor", typed_message)
+    match typed_message.type:
+        case "input":
+            try:
+                return processor.on_input(ctx, AssistantClientMessageInputCase(typed_message))
+            except AssistantClientMessageDispatchError:
+                raise
+            except Exception as err:
+                raise AssistantClientMessageDispatchError("handler_failed", typed_message, err) from err
+        case "cancel":
+            try:
+                return processor.on_cancel(ctx, AssistantClientMessageCancelCase(typed_message))
+            except AssistantClientMessageDispatchError:
+                raise
+            except Exception as err:
+                raise AssistantClientMessageDispatchError("handler_failed", typed_message, err) from err
+        case _:
+            raise AssistantClientMessageDispatchError("unknown_type", typed_message)
 
 
 def dispatch_assistant_client_message(
