@@ -14,7 +14,7 @@
   },
   "generator": {
     "name": "api-blueprint",
-    "version": "2.0.4"
+    "version": "2.0.5"
   },
   "kind": "api-blueprint.index",
   "purpose": "Lightweight route catalog. Use inspect commands for route schemas, errors, generated files, and full details.",

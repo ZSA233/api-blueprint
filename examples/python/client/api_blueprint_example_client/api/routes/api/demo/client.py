@@ -1,8 +1,10 @@
 from .gen_client import *
 from .gen_types import *
 
+
 # Preserved channel processor scaffolds. Customize these classes to plug a
 # project-owned channel bridge into the generated typed message visitors.
+
 
 class AssistantSessionChannelSession:
     def __init__(

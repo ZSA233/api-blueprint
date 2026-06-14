@@ -25,7 +25,7 @@ def test_python_client_generates_recursive_nested_dto_codecs(tmp_path: Path):
 
     package_root = output_dir / "api_blueprint_generated" / "api"
     types_text = (package_root / "routes" / "api" / "demo" / "gen_types.py").read_text(encoding="utf-8")
-    assert "from typing import Any, Callable, Generic, Mapping, Self, TypeVar" in types_text
+    assert "from typing import Any, Callable, Generic, Mapping, Protocol, Self, TypeVar" in types_text
     assert "@dataclass(kw_only=True)\nclass NestedItem:" in types_text
     assert "class NestedResponse:" in types_text
     assert "item: NestedItem" in types_text

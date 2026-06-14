@@ -7,18 +7,36 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         "go_route_interface": workspace.golang_server_dir / "views" / "routes" / "api" / "demo" / "gen_interface.go",
         "go_route_gen_impl": workspace.golang_server_dir / "views" / "routes" / "api" / "demo" / "gen_impl.go",
         "go_route_types": workspace.golang_server_dir / "views" / "routes" / "api" / "demo" / "gen_types.go",
-        "go_route_messages": workspace.golang_server_dir
+        "go_route_client_message": workspace.golang_server_dir
         / "views"
         / "routes"
         / "api"
         / "demo"
-        / "gen_messages.go",
-        "go_route_message_cases": workspace.golang_server_dir
+        / "gen_assistant_client_message_message.go",
+        "go_route_client_constructors": workspace.golang_server_dir
         / "views"
         / "routes"
         / "api"
         / "demo"
-        / "gen_message_cases.go",
+        / "gen_assistant_client_message_constructors.go",
+        "go_route_client_processor": workspace.golang_server_dir
+        / "views"
+        / "routes"
+        / "api"
+        / "demo"
+        / "gen_assistant_client_message_processor.go",
+        "go_route_client_visitor": workspace.golang_server_dir
+        / "views"
+        / "routes"
+        / "api"
+        / "demo"
+        / "gen_assistant_client_message_visitor.go",
+        "go_route_client_cases": workspace.golang_server_dir
+        / "views"
+        / "routes"
+        / "api"
+        / "demo"
+        / "gen_assistant_client_message_cases.go",
         "go_route_impl": workspace.golang_server_dir / "views" / "routes" / "api" / "demo" / "impl.go",
         "go_route_assistant_session": workspace.golang_server_dir
         / "views"
@@ -40,8 +58,21 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         / "assistant_session_error.go",
         "go_http_adapter": workspace.golang_server_dir / "views" / "transports" / "http" / "api" / "demo" / "gen_interface.go",
         "go_client_route": workspace.golang_client_dir / "routes" / "api" / "demo" / "gen_client.go",
-        "go_client_messages": workspace.golang_client_dir / "routes" / "api" / "demo" / "gen_messages.go",
-        "go_client_message_cases": workspace.golang_client_dir / "routes" / "api" / "demo" / "gen_message_cases.go",
+        "go_client_message_constructors": workspace.golang_client_dir
+        / "routes"
+        / "api"
+        / "demo"
+        / "gen_assistant_client_message_constructors.go",
+        "go_client_sweep_visitor": workspace.golang_client_dir
+        / "routes"
+        / "api"
+        / "demo"
+        / "gen_sweep_stream_message_visitor.go",
+        "go_client_server_visitor": workspace.golang_client_dir
+        / "routes"
+        / "api"
+        / "demo"
+        / "gen_assistant_server_message_visitor.go",
         "go_client_http": workspace.golang_client_dir / "transports" / "http" / "gen_transport.go",
         "go_error_lookup": workspace.golang_client_dir / "runtime" / "gen_error_lookup.go",
         "go_wails_v3_service": workspace.golang_server_dir
@@ -348,19 +379,37 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
             "messageErr.MessageType()",
         ),
         "go generated channel processor": (
-            files["go_route_message_cases"],
+            files["go_route_client_processor"],
             "type AssistantClientMessageProcessor[C any] interface {",
         ),
-        "go generated channel visitor": (files["go_route_message_cases"], "func VisitAssistantClientMessage[C any]("),
-        "go generated channel case": (files["go_route_message_cases"], "type AssistantClientMessageInputCase struct {"),
-        "go generated channel decode error": (files["go_route_message_cases"], "AssistantClientMessageErrorDecodeFailed"),
-        "go generated channel handler error": (files["go_route_message_cases"], "AssistantClientMessageErrorHandlerFailed"),
+        "go generated channel visitor": (
+            files["go_route_client_visitor"],
+            "func VisitAssistantClientMessage[C any](",
+        ),
+        "go generated channel case": (
+            files["go_route_client_cases"],
+            "type AssistantClientMessageInputCase struct {",
+        ),
+        "go generated channel decode error": (
+            files["go_route_client_cases"],
+            "AssistantClientMessageErrorDecodeFailed",
+        ),
+        "go generated channel handler error": (
+            files["go_route_client_visitor"],
+            "AssistantClientMessageErrorHandlerFailed",
+        ),
         "go generated channel error helper": (
-            files["go_route_message_cases"],
+            files["go_route_client_visitor"],
             "func IsAssistantClientMessageErrorKind(err error, kinds ...AssistantClientMessageErrorKind) bool",
         ),
-        "go generated connection messages": (files["go_route_messages"], "type AssistantClientMessage struct {"),
-        "go generated message constructor": (files["go_route_messages"], "func NewAssistantClientMessageCancel("),
+        "go generated connection messages": (
+            files["go_route_client_message"],
+            "type AssistantClientMessage struct {",
+        ),
+        "go generated message constructor": (
+            files["go_route_client_constructors"],
+            "func NewAssistantClientMessageCancel(",
+        ),
         "go typed error return example": (files["go_route_impl"], "return nil, demo_err.RATE_LIMITED.WithToast("),
         "go typed error dynamic toast": (files["go_route_impl"], 'Text:    "请等待 30 秒后重试",'),
         "go unknown typed error example": (
@@ -375,15 +424,15 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         "go error demo constant": (files["go_error_lookup"], "DemoErrRateLimited   ApiErrorCode = 42901"),
         "go client unsupported connection": (files["go_client_http"], "UnsupportedConnectionError"),
         "go client generated connection messages": (
-            files["go_client_messages"],
+            files["go_client_message_constructors"],
             "func NewAssistantClientMessageCancel(data *AssistantClientMessage_Cancel_DATA)",
         ),
         "go client generated stream visitor": (
-            files["go_client_message_cases"],
+            files["go_client_sweep_visitor"],
             "func VisitSweepStreamMessage[C any](",
         ),
         "go client generated channel visitor": (
-            files["go_client_message_cases"],
+            files["go_client_server_visitor"],
             "func VisitAssistantServerMessage[C any](",
         ),
         "http stream adapter": (files["go_http_adapter"], "httptransport.STREAM("),
@@ -538,8 +587,14 @@ def _validate_blueprint_connection_examples(workspace: BlueprintExampleWorkspace
         "generated stream sender": (files["go_route_impl"], "NewSweepEventsSender("),
         "manual assistant route in impl": (files["go_route_impl"], "func (impl *Router) AssistantSession("),
         "old channel dispatcher example": (files["go_route_impl"], "DispatchAssistantClientMessage("),
-        "old generated channel dispatcher": (files["go_route_messages"], "func DispatchAssistantClientMessage("),
-        "old generated channel handlers": (files["go_route_messages"], "type AssistantClientMessageHandlers struct {"),
+        "old generated channel dispatcher": (
+            files["go_route_client_message"],
+            "func DispatchAssistantClientMessage(",
+        ),
+        "old generated channel handlers": (
+            files["go_route_client_message"],
+            "type AssistantClientMessageHandlers struct {",
+        ),
         "message union in gen_types": (files["go_route_types"], "type AssistantClientMessage struct {"),
         "user router flow field": (files["go_route_impl"], "assistantSessionFlow *AssistantSessionFlow"),
         "user router flow delegate": (files["go_route_impl"], "return flow.Serve(ctx, channel)"),
