@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -31,6 +31,7 @@ TargetKind = Literal[
     "grpc-proto",
     "grpc-go",
     "grpc-python",
+    "ir-plugin",
 ]
 GO_PACKAGE_NAME_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 
@@ -64,6 +65,8 @@ class TargetConfig(BaseModel):
     import_roots: list[str] = Field(default_factory=list)
     go_package_prefix: str | None = None
     python_package_root: str | None = None
+    plugin: str | None = None
+    options: dict[str, Any] = Field(default_factory=dict)
     include: list[str] = Field(default_factory=list)
     exclude: list[str] = Field(default_factory=list)
     proto_files: list["GrpcProtoFileConfig"] = Field(default_factory=list)
@@ -118,6 +121,11 @@ class TargetConfig(BaseModel):
                 raise ValueError(f"target[{self.id}] {self.kind} requires out_dir")
             if not self.files:
                 raise ValueError(f"target[{self.id}] {self.kind} requires files")
+        if self.kind == "ir-plugin":
+            if not self.plugin:
+                raise ValueError(f"target[{self.id}] ir-plugin requires plugin")
+            if not self.out_dir:
+                raise ValueError(f"target[{self.id}] ir-plugin requires out_dir")
         validate_selection_rules(self.include, label=f"target[{self.id}]")
         validate_selection_rules(self.exclude, label=f"target[{self.id}]")
         return self

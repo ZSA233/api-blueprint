@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from api_blueprint.config.loader import normalize_config_path
 from api_blueprint.config.models import (
@@ -47,6 +48,8 @@ class ResolvedApiTargetConfig:
     import_roots: tuple[Path, ...] = ()
     go_package_prefix: str | None = None
     python_package_root: str | None = None
+    plugin: str | None = None
+    options: dict[str, Any] = field(default_factory=dict)
     include: tuple[str, ...] = ()
     exclude: tuple[str, ...] = ()
     proto_files: tuple["ResolvedGrpcProtoFileConfig", ...] = ()
@@ -219,6 +222,8 @@ def resolve_api_targets(config_path: Path, raw: Config) -> tuple[ResolvedApiTarg
                 import_roots=resolve_unique_path_list(config_path, target.import_roots),
                 go_package_prefix=target.go_package_prefix,
                 python_package_root=target.python_package_root,
+                plugin=target.plugin,
+                options=dict(target.options),
                 include=normalize_selection_rules(target.include),
                 exclude=normalize_selection_rules(target.exclude),
                 proto_files=tuple(

@@ -59,6 +59,7 @@ EXPLAIN_TARGET_KIND_FIELDS: dict[str, tuple[str, ...]] = {
     "grpc-proto": ("package", "go_package_prefix", "proto_files"),
     "grpc-go": ("proto", "source_root", "files", "import_roots", "module"),
     "grpc-python": ("proto", "source_root", "files", "import_roots", "python_package_root"),
+    "ir-plugin": ("plugin", "include", "exclude"),
 }
 
 EXPLAIN_TARGET_LIST_FIELDS = {
@@ -146,6 +147,11 @@ def check(config_path: str | Path | None) -> None:
     errors = capability_errors(graph, resolved.targets)
     if errors:
         raise ValueError(errors[0])
+    for target in resolved.targets:
+        if target.kind == "ir-plugin":
+            from api_blueprint.writer.ir_plugin import validate_ir_plugin_target
+
+            validate_ir_plugin_target(target, resolved.project_root)
 
 
 def generate(config_path: str | Path | None, target_ids: Sequence[str] = ()) -> None:
@@ -347,6 +353,10 @@ def generate(config_path: str | Path | None, target_ids: Sequence[str] = ()) -> 
                 grpc_toolchain.generate_go_stubs(proto_root, target)
             else:
                 grpc_toolchain.generate_python_stubs(proto_root, target)
+        elif target.kind == "ir-plugin":
+            from api_blueprint.writer.ir_plugin import run_ir_plugin
+
+            run_ir_plugin(graph, target, project.resolved.project_root)
         elif target.kind == "wails-transport":
             if target.server is not None:
                 generate_target(target_map[target.server])
@@ -597,6 +607,10 @@ def target_manifest(target: ResolvedApiTargetConfig, project_root: Path) -> dict
         ]
     if target.python_package_root is not None:
         manifest["python_package_root"] = target.python_package_root
+    if target.plugin is not None:
+        manifest["plugin"] = target.plugin
+    if target.options:
+        manifest["options"] = dict(target.options)
     if target.include:
         manifest["include"] = list(target.include)
     if target.exclude:

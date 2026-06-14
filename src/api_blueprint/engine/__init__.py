@@ -6,6 +6,8 @@ from api_blueprint.engine.connection import (
     DefaultConnectionClose,
     MessageContract,
     MessageVariant,
+    MessageVariantSpec,
+    message_variant,
 )
 from api_blueprint.engine.runtime import (
     Auth,
@@ -43,6 +45,7 @@ __all__ = (
     "Model",
     "MessageContract",
     "MessageVariant",
+    "MessageVariantSpec",
     "NoEnvelope",
     "OkDataErrorEnvelope",
     "Provider",
@@ -55,6 +58,7 @@ __all__ = (
     "Toast",
     "build_default_app",
     "get_shared_app",
+    "message_variant",
     "reset_shared_app",
     "unwrap_errors",
 )

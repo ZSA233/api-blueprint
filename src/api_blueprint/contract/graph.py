@@ -274,12 +274,13 @@ class ContractGraphBuilder:
             return None
         variants: list[JsonObject] = []
         for variant in message.variants:
-            variants.append(
-                {
-                    "key": variant.key,
-                    "model": self._schema_ref(variant.model),
-                }
-            )
+            item = {
+                "key": variant.key,
+                "model": self._schema_ref(variant.model),
+            }
+            if variant.metadata:
+                item["metadata"] = dict(variant.metadata)
+            variants.append(item)
         name = message.name or (variants[0]["model"] if variants else None)
         return {
             "name": name,

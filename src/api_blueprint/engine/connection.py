@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Union
+from typing import Any, Mapping, Union
 
 from api_blueprint.engine.schema import Int, Model, String
 
@@ -37,6 +37,13 @@ class DefaultConnectionClose(Model):
 class MessageVariant:
     key: str
     model: ModelRef
+    metadata: Mapping[str, Any] | None = None
+
+
+@dataclass(frozen=True)
+class MessageVariantSpec:
+    model: ModelRef
+    metadata: Mapping[str, Any]
 
 
 @dataclass(frozen=True)
@@ -59,13 +66,19 @@ def normalize_message_contract(args: tuple[object, ...], variants: dict[str, Mod
     if variants:
         if len(args) != 1 or not isinstance(args[0], str):
             raise ValueError("multi-variant messages require exactly one positional union name string")
+        normalized_variants: list[MessageVariant] = []
         for key, model in variants.items():
             if not key:
                 raise ValueError("message variant keys must not be empty")
-            ensure_model_ref(model, label=f"message variant[{key}]")
+            if isinstance(model, MessageVariantSpec):
+                ensure_model_ref(model.model, label=f"message variant[{key}]")
+                normalized_variants.append(MessageVariant(key=key, model=model.model, metadata=dict(model.metadata)))
+            else:
+                ensure_model_ref(model, label=f"message variant[{key}]")
+                normalized_variants.append(MessageVariant(key=key, model=model))
         return MessageContract(
             name=args[0],
-            variants=tuple(MessageVariant(key=key, model=model) for key, model in variants.items()),
+            variants=tuple(normalized_variants),
         )
 
     if len(args) != 1:
@@ -76,6 +89,11 @@ def normalize_message_contract(args: tuple[object, ...], variants: dict[str, Mod
     if not _is_model_ref(model):
         raise TypeError("message contract argument must be a Model class or Model instance")
     return MessageContract(name=None, variants=(MessageVariant(key="", model=model),))
+
+
+def message_variant(model: ModelRef, **metadata: Any) -> MessageVariantSpec:
+    ensure_model_ref(model, label="message variant")
+    return MessageVariantSpec(model=model, metadata=dict(metadata))
 
 
 def ensure_model_ref(model: object, *, label: str) -> ModelRef:

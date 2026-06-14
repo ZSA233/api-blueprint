@@ -154,6 +154,15 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
     ),
     "grpc-go": TargetCapability(implemented=True, inputs=("proto",), outputs=("go", "grpc-go")),
     "grpc-python": TargetCapability(implemented=True, inputs=("proto",), outputs=("python", "grpc-python")),
+    "ir-plugin": TargetCapability(
+        implemented=True,
+        routes=("rpc", "stream", "channel"),
+        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
+        envelopes=("none", "code_message_data", "ok_data_error"),
+        transport="plugin",
+        responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
+        outputs=("plugin",),
+    ),
 }
 
 

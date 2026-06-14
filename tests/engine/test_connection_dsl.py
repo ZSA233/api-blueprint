@@ -1,6 +1,7 @@
 import pytest
 
-from api_blueprint.engine import Blueprint, ConnectionDelivery, ConnectionScope, DefaultConnectionClose
+from api_blueprint.contract import build_contract_graph
+from api_blueprint.engine import Blueprint, ConnectionDelivery, ConnectionScope, DefaultConnectionClose, message_variant
 from api_blueprint.engine.model import Model, String
 from api_blueprint.writer.core.contracts import route_contract
 
@@ -82,6 +83,20 @@ def test_multi_variant_message_requires_named_keyword_variants():
     assert route.server_message is not None
     assert route.server_message.name == "ServerUnion"
     assert route.server_message.variants[0].key == "state"
+
+
+def test_multi_variant_message_metadata_is_exposed_in_contract_manifest():
+    bp = Blueprint(root="/api")
+    bp.CHANNEL("/chat").SERVER_MESSAGE(ServerMessage).CLIENT_MESSAGE(
+        "ClientUnion",
+        input=message_variant(ClientMessage, op=3001, domain="message"),
+    )
+    bp.build()
+
+    manifest = build_contract_graph([bp]).to_manifest()
+    client_message = manifest["routes"][0]["connection"]["client_message"]
+
+    assert client_message["variants"][0]["metadata"] == {"domain": "message", "op": 3001}
 
 
 def test_connection_scope_accepts_declared_scope_values():
