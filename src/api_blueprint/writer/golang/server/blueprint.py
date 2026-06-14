@@ -15,6 +15,7 @@ from api_blueprint.writer.core.contract_adapters import RouteProtocolContract
 from api_blueprint.writer.core.contracts import RouteContract
 from api_blueprint.writer.core.templates import iter_render, render
 
+from api_blueprint.writer.golang.message_files import cleanup_stale_go_message_files, plan_go_message_files
 from api_blueprint.writer.golang.naming import to_go_exported_name, to_go_package_path
 from api_blueprint.writer.golang.route_view import GoRouteProtocolView
 
@@ -622,11 +623,24 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
             "connection_scaffolds": connection_scaffolds,
         }
         self.gen_binary_router(group, plan.route_dir)
+        message_files = plan_go_message_files(message_unions, client_message_cases)
+        cleanup_stale_go_message_files(plan.route_dir, keep={message_file.filename for message_file in message_files})
+        for message_file in message_files:
+            with self.writer.write_file(plan.route_dir / message_file.filename, overwrite=True) as handle:
+                if handle:
+                    handle.write(
+                        render(
+                            LANG,
+                            message_file.template_name,
+                            {
+                                **message_file.context,
+                                "generated_label": "Go server",
+                                "package_name": group.package,
+                            },
+                            "message",
+                        )
+                    )
         for name, text in iter_render(LANG, ctx, "server/views/route"):
-            if name == "gen_messages.go" and not message_unions:
-                continue
-            if name == "gen_message_cases.go" and not client_message_cases:
-                continue
             overwrite = name.startswith("gen_")
             with self.writer.write_file(plan.route_dir / name, overwrite=overwrite) as handle:
                 if handle:

@@ -328,7 +328,12 @@ go 1.23.8
 
     core_interface = (output_dir / "routes" / "api" / "runs" / "gen_interface.go").read_text(encoding="utf-8")
     core_models = (output_dir / "routes" / "api" / "runs" / "gen_types.go").read_text(encoding="utf-8")
-    core_messages = (output_dir / "routes" / "api" / "runs" / "gen_messages.go").read_text(encoding="utf-8")
+    core_messages = (output_dir / "routes" / "api" / "runs" / "gen_task_stream_message_message.go").read_text(
+        encoding="utf-8"
+    )
+    core_message_constructors = (
+        output_dir / "routes" / "api" / "runs" / "gen_task_stream_message_constructors.go"
+    ).read_text(encoding="utf-8")
     provider_connection = (output_dir / "providers" / "gen_connection.go").read_text(encoding="utf-8")
     http_adapter = (output_dir / "transports" / "http" / "api" / "runs" / "gen_interface.go").read_text(encoding="utf-8")
     impl = (output_dir / "routes" / "api" / "runs" / "impl.go").read_text(encoding="utf-8")
@@ -369,7 +374,7 @@ go 1.23.8
     )
     assert "type CLOSE_Events = types.DefaultConnectionClose" in core_models
     assert "type CLOSE_Chat = types.DefaultConnectionClose" in core_models
-    assert 'const TaskStreamMessageTypeState = "state"' in core_messages
+    assert 'const TaskStreamMessageTypeState = "state"' in core_message_constructors
     assert not (output_dir / "routes" / "api" / "runs" / "gen_events_stream.go").exists()
     assert "type Stream[O, S, CL any] interface" in provider_connection
     assert "Send(ctx context.Context, payload *S) error" in provider_connection

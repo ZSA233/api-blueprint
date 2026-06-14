@@ -17,6 +17,7 @@ from api_blueprint.writer.core.files import ensure_filepath_open
 from api_blueprint.writer.core.go_naming import to_go_package_name
 from api_blueprint.writer.core.planning import route_matches_rule
 from api_blueprint.writer.core.templates import render
+from api_blueprint.writer.golang.message_files import cleanup_stale_go_message_files, plan_go_message_files
 
 from .model_decls import (
     GoClientTypeNames,
@@ -80,7 +81,10 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
         type_names = GoClientTypeNames(schemas)
         groups = build_go_client_groups(routes, services)
 
-        route_errors = route_api_errors_from_manifest(manifest, route_ids=[str(route.get("id") or "") for route in routes])
+        route_errors = route_api_errors_from_manifest(
+            manifest,
+            route_ids=[str(route.get("id") or "") for route in routes],
+        )
         self._write_runtime_files(schemas, type_names, errors, route_errors, groups)
         for group in groups:
             self._write_group_files(group, schemas, type_names)
@@ -149,29 +153,25 @@ class GolangClientWriter(BaseWriter[GolangClientBlueprint]):
             ),
         )
         self._cleanup_stale_generated(self.working_dir / route_dir / "gen_models.go")
-        message_unions = _message_unions(group, type_names)
-        if message_unions:
+        message_files = plan_go_message_files(_message_unions(group, type_names), _message_cases(group, type_names))
+        cleanup_stale_go_message_files(
+            self.working_dir / route_dir,
+            keep={message_file.filename for message_file in message_files},
+        )
+        for message_file in message_files:
             self._write_generated(
-                route_dir / "gen_messages.go",
+                route_dir / message_file.filename,
                 render(
                     "golang",
-                    "gen_messages.go",
-                    {"group": group, "message_unions": message_unions},
-                    "client/routes",
+                    message_file.template_name,
+                    {
+                        **message_file.context,
+                        "generated_label": "Go client",
+                        "package_name": group.package,
+                    },
+                    "message",
                 ),
             )
-            self._write_generated(
-                route_dir / "gen_message_cases.go",
-                render(
-                    "golang",
-                    "gen_message_cases.go",
-                    {"group": group, "message_cases": _message_cases(group, type_names)},
-                    "client/routes",
-                ),
-            )
-        else:
-            self._cleanup_stale_generated(self.working_dir / route_dir / "gen_messages.go")
-            self._cleanup_stale_generated(self.working_dir / route_dir / "gen_message_cases.go")
         self._write_generated(
             route_dir / "gen_client.go",
             render(
@@ -325,7 +325,10 @@ def _message_unions(group: GoClientGroup, type_names: GoClientTypeNames) -> list
     return [
         {
             "name": helper.name,
-            "variants": [_message_variant(helper.name, variant.key, variant.model, type_names) for variant in helper.variants],
+            "variants": [
+                _message_variant(helper.name, variant.key, variant.model, type_names)
+                for variant in helper.variants
+            ],
         }
         for helper in group.message_helpers()
     ]
@@ -334,7 +337,10 @@ def _message_unions(group: GoClientGroup, type_names: GoClientTypeNames) -> list
 def _message_cases(group: GoClientGroup, type_names: GoClientTypeNames) -> list[dict[str, Any]]:
     cases = []
     for helper in group.message_helpers():
-        variants = [_message_variant(helper.name, variant.key, variant.model, type_names) for variant in helper.variants]
+        variants = [
+            _message_variant(helper.name, variant.key, variant.model, type_names)
+            for variant in helper.variants
+        ]
         cases.append(
             {
                 "name": helper.name,
