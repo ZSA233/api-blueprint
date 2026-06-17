@@ -103,6 +103,7 @@ README 应链接到以下用户文档：
 - Binary schema parser / writer 诊断路径使用 schema 原始 packet、section、object 和 field 名，并在错误发生后按嵌套上下文包装路径，避免成功路径为了诊断信息提前拼接完整 path。
 - Binary schema 生成的公开字段名遵循目标语言习惯：Go / Kotlin / Java / Flutter 使用导出或 camelCase 字段，TypeScript / Python 保持贴近 wire/JSON 的 snake_case 字段；诊断路径仍使用 schema 原始字段名。
 - 稳定字段身份使用 `field(number, Field(...), optional=True)`，互斥选择使用 `choice="..."`，通用语义类型使用 `DateTime`、`JSONValue`、`AnyValue`。
+- `Blueprint.EXPORT_MODELS(Model, metadata=...)` 用于把不直接挂在 route request/response 或 STREAM/CHANNEL message 上的共享 DTO 纳入 ContractGraph，例如项目自定义 transport、push payload、缓存快照或 ir-plugin 专属生成物；它只导出 schema 与 `exported_models` manifest，不会创建 route，也不要求官方 target 必须消费这些模型。
 - legacy JSON compatibility 类型只用于旧接口兼容：`OneOf(String(), Array[String]())` 表达字段可按声明顺序匹配多个严格 JSON shape，`Array[OneOf(String(), Int())]` 支持嵌套 union；`CoerceString(accepts=(String, Int))` 与快捷 `LegacyStringID` 接受 string 或整数 JSON number，业务类型保持 string，编码永远写 string。`StringOrIntAsString` 是 `LegacyStringID` 的废弃兼容 alias。`OneOf` 不能为空，`CoerceString` 只允许 string / integer wire 类型，`FileField` 不允许进入 `OneOf` 或普通 JSON union。新接口应优先固定字段类型；无法收窄时才使用 `JSONValue`。
 - `operation_id` 是 RPC / `STREAM` / `CHANNEL` 的稳定 operation 命名能力；它改变 generated operation surface，不改变 route id、path 或 ContractGraph 连接语义。
 

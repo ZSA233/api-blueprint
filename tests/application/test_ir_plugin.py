@@ -22,7 +22,11 @@ class ServerMessage(Model):
 class ClientMessage(Model):
     value = String(description="value")
 
+class ExportedPayload(Model):
+    value = String(description="value")
+
 bp = Blueprint(root="/api")
+bp.EXPORT_MODELS(ExportedPayload, domain="support")
 with bp.group("/demo") as views:
     views.GET("/ping").RSP(message=String(description="message"))
     views.CHANNEL("/chat").SERVER_MESSAGE(ServerMessage).CLIENT_MESSAGE(
@@ -55,6 +59,8 @@ def generate(context):
                 }
                 for route in context.selected_routes
             ],
+            "exported_models": context.contract_graph.to_manifest().get("exported_models", []),
+            "has_exported_schema": "ExportedPayload" in context.contract_graph.to_manifest().get("schemas", {}),
         },
     )
 """.strip()
@@ -102,6 +108,8 @@ def test_ir_plugin_target_loads_resolves_and_generates(tmp_path: Path) -> None:
     summary = json.loads((tmp_path / "generated" / "plugin" / "summary.json").read_text(encoding="utf-8"))
     assert summary == {
         "options": {"package": "demo"},
+        "exported_models": [{"metadata": {"domain": "support"}, "model": "ExportedPayload"}],
+        "has_exported_schema": True,
         "routes": [
             {
                 "client_metadata": [{"domain": "message", "op": 3001}],

@@ -74,6 +74,18 @@ Semantic value types include `DateTime`, `JSONValue`, and `AnyValue`; individual
 
 `FileField(content_types=..., max_size=..., description=..., omitempty=False)` describes a multipart upload field. It is not a normal JSON field and is valid only inside a model bound with `REQ_MULTIPART(Model)`; using it in JSON, urlencoded, response, or long-connection message models fails contract construction.
 
+When a DTO does not appear directly on a route request/response or STREAM/CHANNEL message, but a project plugin still needs to read it from ContractGraph, export it explicitly:
+
+```python
+class PushPayload(Model):
+    id = Int64(description="id")
+
+
+bp.EXPORT_MODELS(PushPayload, domain="push")
+```
+
+`EXPORT_MODELS` only writes the schema into `schemas` and records metadata in manifest `exported_models`; it does not create a route, and official targets are not required to generate or consume that model.
+
 ### Legacy JSON Compatibility Types
 
 Older services may already return multiple JSON shapes for the same field, such as string sometimes and array other times, or ID fields that drift between string and integer JSON numbers across Java / legacy implementations. Use the restricted compatibility types when those fields need to enter the contract:

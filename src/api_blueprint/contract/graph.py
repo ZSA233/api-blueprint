@@ -56,6 +56,7 @@ class ContractGraph:
     services: list[JsonObject]
     routes: list[JsonObject]
     schemas: "OrderedDict[str, JsonObject]"
+    exported_models: list[JsonObject] = field(default_factory=list)
     errors: list[JsonObject] = field(default_factory=list)
     targets: list[JsonObject] = field(default_factory=list)
     capabilities: dict[str, JsonObject] = field(default_factory=dict)
@@ -82,6 +83,7 @@ class ContractGraph:
             "services": list(self.services),
             "routes": routes,
             "schemas": dict(self.schemas),
+            "exported_models": list(self.exported_models),
             "errors": list(self.errors),
             "connections": [
                 {
@@ -105,15 +107,17 @@ class ContractGraphBuilder:
         self.services: "OrderedDict[str, JsonObject]" = OrderedDict()
         self.routes: list[JsonObject] = []
         self.schemas: "OrderedDict[str, JsonObject]" = OrderedDict()
+        self.exported_models: list[JsonObject] = []
         self.errors: "OrderedDict[str, JsonObject]" = OrderedDict()
         self.route_runtime: dict[str, ContractRouteRuntime] = {}
         self._qualified_schema_names: set[str] = set()
         self._schema_ref_rewrites: dict[str, str] = {}
 
     def build(self, blueprints: Iterable[Blueprint]) -> ContractGraph:
+        blueprint_list = list(blueprints)
         blueprint_roots: dict[str, Blueprint] = {}
         routers: list[Router] = []
-        for blueprint in blueprints:
+        for blueprint in blueprint_list:
             existing_blueprint = blueprint_roots.setdefault(blueprint.root_slug, blueprint)
             if existing_blueprint is not blueprint:
                 raise ValueError(
@@ -130,10 +134,13 @@ class ContractGraphBuilder:
         _validate_route_identity_conflicts(routers, contracts)
         for router in routers:
             self.add_router(router, contract=contracts[router])
+        for blueprint in blueprint_list:
+            self.add_exported_models(blueprint)
         return ContractGraph(
             services=list(self.services.values()),
             routes=self.routes,
             schemas=self.schemas,
+            exported_models=list(self.exported_models),
             errors=list(self.errors.values()),
             route_runtime=dict(self.route_runtime),
         )
@@ -152,6 +159,18 @@ class ContractGraphBuilder:
         for err in _iter_declared_errors(errors_by_code):
             manifest = _error_manifest(err)
             self.errors.setdefault(manifest["id"], manifest)
+
+    def add_exported_models(self, blueprint: Blueprint) -> None:
+        for exported in blueprint.exported_models:
+            schema_ref = self._schema_ref(exported.model)
+            if schema_ref is None:
+                continue
+            item: JsonObject = {
+                "model": schema_ref,
+                "metadata": _json_safe_mapping(exported.metadata),
+            }
+            if item not in self.exported_models:
+                self.exported_models.append(item)
 
     def _service_manifest(self, router: Router, contract: RouteContract) -> JsonObject:
         root_slug = _contract_root_slug(contract)
@@ -497,6 +516,13 @@ def _provider_manifest(provider: Any) -> JsonObject:
         except (TypeError, ValueError) as exc:
             raise ValueError(f"route provider[{name}] data must be JSON-serializable") from exc
     return manifest
+
+
+def _json_safe_mapping(value: Mapping[str, Any]) -> JsonObject:
+    try:
+        return json.loads(json.dumps(dict(value), ensure_ascii=False, sort_keys=True))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("exported model metadata must be JSON-serializable") from exc
 
 
 def _validate_route_identity_conflicts(

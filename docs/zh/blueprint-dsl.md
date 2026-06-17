@@ -74,6 +74,18 @@ class Item(Model):
 
 `FileField(content_types=..., max_size=..., description=..., omitempty=False)` 用于 multipart 上传字段。它不是普通 JSON 字段，只能出现在 `REQ_MULTIPART(Model)` 绑定的请求 model 中；放入 JSON、urlencoded、响应模型或长连接消息模型都会在构建契约时失败。
 
+如果某个 DTO 不直接出现在 route request/response 或 STREAM/CHANNEL message 上，但项目插件仍需要从 ContractGraph 读取它，可以显式导出：
+
+```python
+class PushPayload(Model):
+    id = Int64(description="id")
+
+
+bp.EXPORT_MODELS(PushPayload, domain="push")
+```
+
+`EXPORT_MODELS` 只会把 schema 写入 `schemas`，并在 manifest 的 `exported_models` 中记录 metadata；它不会创建 route，也不要求官方 target 必须生成或消费这个模型。
+
 ### legacy JSON 兼容类型
 
 旧接口可能已经在线上返回多个 JSON shape，例如同一个字段有时是 string、有时是 array，或者 ID 字段在 Java / 旧服务实现中有时返回 string、有时返回整数。为了让这些字段进入契约，DSL 提供受限兼容类型：

@@ -1,14 +1,22 @@
 from __future__ import annotations
 
-from typing import DefaultDict, Generator, Optional, Union
+from dataclasses import dataclass
+from typing import Any, DefaultDict, Generator, Mapping, Optional, Union
 
 from fastapi import FastAPI
 
 from api_blueprint.engine.blueprint.group import RouterGroup
 from api_blueprint.engine.blueprint.identity import blueprint_root_slug, normalize_blueprint_name
 from api_blueprint.engine.blueprint.router import Router
+from api_blueprint.engine.connection import ModelRef
 from api_blueprint.engine.runtime import CodeMessageDataEnvelope, Provider, ResponseEnvelope, get_shared_app
 from api_blueprint.engine.schema import Error, HeaderModel, Model, unwrap_errors
+
+
+@dataclass(frozen=True)
+class ExportedModel:
+    model: ModelRef
+    metadata: Mapping[str, Any]
 
 
 class Blueprint:
@@ -27,6 +35,7 @@ class Blueprint:
 
     is_built: bool = False
     upstream: Optional[str] = None
+    exported_models: list[ExportedModel]
 
     def __init__(
         self,
@@ -50,6 +59,7 @@ class Blueprint:
         self.response_envelope = response_envelope
         self.headers = headers
         self.app = app or get_shared_app(self.name)
+        self.exported_models = []
 
         for method in ["POST", "GET", "PUT", "DELETE", "STREAM", "CHANNEL"]:
             setattr(self, method, getattr(self.root_group, method))
@@ -66,6 +76,13 @@ class Blueprint:
         group = RouterGroup(self, prefix, **kwargs)
         self.pending_groups.append(group)
         return group
+
+    def EXPORT_MODELS(self, *models: ModelRef, **metadata: Any) -> "Blueprint":
+        if not models:
+            raise ValueError("EXPORT_MODELS requires at least one model")
+        for model in models:
+            self.exported_models.append(ExportedModel(model=model, metadata=dict(metadata)))
+        return self
 
     def POST(self, path: str = "", *, summary: str = None, desc: str = None) -> Router: ...
     def GET(self, path: str = "", *, summary: str = None, desc: str = None) -> Router: ...

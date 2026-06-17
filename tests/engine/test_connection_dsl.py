@@ -22,6 +22,14 @@ class CloseMessage(Model):
     value = String(description="value")
 
 
+class ExportOnlyNested(Model):
+    value = String(description="value")
+
+
+class ExportOnlyMessage(Model):
+    nested = ExportOnlyNested(description="nested")
+
+
 def test_stream_rejects_client_message():
     bp = Blueprint(root="/api")
     route = bp.STREAM("/events").OPEN(Open).SERVER_MESSAGE(ServerMessage)
@@ -97,6 +105,25 @@ def test_multi_variant_message_metadata_is_exposed_in_contract_manifest():
     client_message = manifest["routes"][0]["connection"]["client_message"]
 
     assert client_message["variants"][0]["metadata"] == {"domain": "message", "op": 3001}
+
+
+def test_export_models_are_exposed_in_contract_manifest_without_route_reference():
+    bp = Blueprint(root="/api")
+    bp.EXPORT_MODELS(ExportOnlyMessage, domain="support")
+    bp.GET("/ping").RSP(value=String(description="value"))
+    bp.build()
+
+    manifest = build_contract_graph([bp]).to_manifest()
+
+    assert manifest["exported_models"] == [
+        {
+            "metadata": {"domain": "support"},
+            "model": "ExportOnlyMessage",
+        }
+    ]
+    assert "ExportOnlyMessage" in manifest["schemas"]
+    assert "ExportOnlyNested" in manifest["schemas"]
+    assert manifest["schemas"]["ExportOnlyMessage"]["fields"]["nested"]["ref"] == "ExportOnlyNested"
 
 
 def test_connection_scope_accepts_declared_scope_values():

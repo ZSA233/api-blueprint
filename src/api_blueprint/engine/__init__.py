@@ -1,4 +1,4 @@
-from api_blueprint.engine.blueprint import Blueprint, ConflictFieldError, Router, RouterGroup
+from api_blueprint.engine.blueprint import Blueprint, ConflictFieldError, ExportedModel, Router, RouterGroup
 from api_blueprint.engine.connection import (
     ConnectionDelivery,
     ConnectionKind,
@@ -39,6 +39,7 @@ __all__ = (
     "ConnectionScope",
     "DefaultConnectionClose",
     "Error",
+    "ExportedModel",
     "Handle",
     "HeaderModel",
     "LegacyCodeMessageDataEnvelope",
