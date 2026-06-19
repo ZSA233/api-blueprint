@@ -85,6 +85,18 @@ public class GenDemoController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/json", "json");
     }
 
+    @RequestMapping(path = "/api/demo/empty-response", method = {RequestMethod.POST})
+    @SignatureRequired
+    @ApiBlueprintOperation("api.demo.post.emptyresponse")
+    public ResponseEntity<?> emptyResponse(
+        HttpServletRequest servletRequest
+    ) throws Exception {
+        GenDemoTypes.EmptyResponseResponse result = delegate.emptyResponse(
+            GenSpringRequestContext.of(servletRequest)
+        );
+        return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/json", "json");
+    }
+
     @RequestMapping(path = "/api/demo/1put", method = {RequestMethod.PUT})
     @SignatureRequired
     @ApiBlueprintOperation("api.demo.put.z1put")

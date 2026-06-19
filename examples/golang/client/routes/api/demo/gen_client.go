@@ -95,6 +95,23 @@ func (client *GenDemoClient) RequestOptions(ctx context.Context, query RequestOp
 	return &response, nil
 }
 
+func (client *GenDemoClient) EmptyResponse(ctx context.Context, opts ...runtime.RequestOption) (*EmptyResponseResponse, error) {
+	request := runtime.Request{
+		RouteID:          "api.demo.post.emptyresponse",
+		Method:           "POST",
+		Path:             "/api/demo/empty-response",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("json"),
+	}
+	request.ApplyOptions(opts...)
+	var response EmptyResponseResponse
+	if err := client.transport.Do(ctx, request, &response); err != nil {
+		return nil, err
+	}
+	return &response, nil
+}
+
 func (client *GenDemoClient) PutDemo(ctx context.Context, query PutDemoQuery, jsonBody PutDemoJSON, opts ...runtime.RequestOption) (*PutDemoResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.demo.put.z1put",

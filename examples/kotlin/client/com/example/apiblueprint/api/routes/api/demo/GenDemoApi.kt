@@ -91,6 +91,24 @@ public open class GenDemoApi internal constructor(
         )
     }
 
+    public open suspend fun emptyResponse(
+        options: ApiRequestOptions = ApiRequestOptions(),
+    ): DemoEmptyResponseResponse {
+        return transport.request(
+            ApiRequest(
+                routeId = "api.demo.post.emptyresponse",
+                method = "POST",
+                path = "/api/demo/empty-response",
+                options = options,
+                responseSerializer = DemoEmptyResponseResponse.serializer(),
+                responseKind = "json",
+                responseMediaType = "application/json",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
+            )
+        )
+    }
+
     public open suspend fun putDemo(
         query: DemoPutDemoQuery,
         json: DemoPutDemoJson,

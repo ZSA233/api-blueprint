@@ -56,7 +56,7 @@ with bp.group("/demo") as views:
     views.GET("/ping").RSP(PingResponse)
 ```
 
-`root` is the URL prefix. When several top-level URL namespaces belong to one generated root, use `Blueprint(name="app", root="")` and define paths in groups such as `group("/account")` and `group("/room")`. `name` is the logical protocol identity used by route IDs, services/modules, and generated directories.
+`root` is the URL prefix. When several top-level URL namespaces belong to one generated root, use `Blueprint(name="app", root="")` and define paths in groups such as `group("/account")` and `group("/room")`. `name` is the logical protocol identity used by route IDs, services/modules, and generated directories. `RSP(Model)` defines a business response model; JSON envelope routes with no business data on success should use `RSP_EMPTY()`, which is not HTTP 204 / no body.
 
 Create `api-blueprint.toml`:
 

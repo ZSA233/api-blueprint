@@ -45,9 +45,10 @@ public struct {{ proto.name }}: Codable, Sendable {
 {% for field in proto.fields %}        self.{{ field.name }} = {{ field.name }}
 {% endfor %}    }
 
-    private enum CodingKeys: String, CodingKey {
+{% if proto.fields %}    private enum CodingKeys: String, CodingKey {
 {% for field in proto.fields %}        case {{ field.name }} = {{ field.wire_name | code_literal }}
 {% endfor %}    }
+{% endif %}
 {% if proto.requires_custom_decode %}
 
     public init(from decoder: Decoder) throws {

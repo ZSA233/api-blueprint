@@ -76,7 +76,7 @@ import kotlin.time.Duration.Companion.seconds
 
 fun main(args: Array<String>) = runBlocking {
     val baseUrl = args.firstOrNull()?.trimEnd('/') ?: error("base URL argument is required")
-    val selected = scenarioSet(args.getOrNull(1) ?: "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel,legacy-json")
+    val selected = scenarioSet(args.getOrNull(1) ?: "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,empty-response,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel,legacy-json")
     val httpClient = OkHttpClient()
     val altHttpClient = OkHttpClient()
     val legacyHttpClient = OkHttpClient()
@@ -112,6 +112,9 @@ fun main(args: Array<String>) = runBlocking {
         }
         if ("deprecated" in selected) {
             checkDeprecated(client)
+        }
+        if ("empty-response" in selected) {
+            checkEmptyResponse(client)
         }
         if ("form" in selected) {
             checkForm(client)
@@ -214,6 +217,10 @@ private suspend fun checkMap(client: ApiClient) {
 private suspend fun checkDeprecated(client: ApiClient) {
     val response = client.demo.postDeprecated(DemoPostDeprecatedJson(req1 = "kotlin-deprecated", req2 = 3))
     assertEquals(listOf("kotlin-deprecated"), response.list, "deprecated.list")
+}
+
+private suspend fun checkEmptyResponse(client: ApiClient) {
+    client.demo.emptyResponse()
 }
 
 private suspend fun checkBinary(client: ApiClient) {

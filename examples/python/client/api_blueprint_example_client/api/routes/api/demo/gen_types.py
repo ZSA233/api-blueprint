@@ -525,6 +525,48 @@ class RequestOptionsResponse:
 
 
 @dataclass(kw_only=True)
+class EmptyResponseResponse:
+    pass
+
+    @classmethod
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
+        if not isinstance(value, Mapping):
+            raise TypeError("EmptyResponseResponse: expected object")
+        return cls._from_mapping(value, "EmptyResponseResponse")
+
+    @classmethod
+    def from_value(cls, value: object, path: str = "EmptyResponseResponse") -> Self:
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, Mapping):
+            raise TypeError(f"{path}: expected object")
+        return cls._from_mapping(value, path)
+
+    @classmethod
+    def from_empty_response_value(cls, value: object, path: str = "EmptyResponseResponse") -> Self:
+        if isinstance(value, cls):
+            return value
+        if value is None:
+            return cls()
+        if isinstance(value, Mapping) and not value:
+            return cls()
+        raise TypeError(f"{path}: expected empty response")
+
+    @classmethod
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
+        return cls(
+        )
+
+    def to_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        return result
+
+
+@dataclass(kw_only=True)
 class PutDemoQuery:
     arg1: str | None = None
     arg2: float | None = None

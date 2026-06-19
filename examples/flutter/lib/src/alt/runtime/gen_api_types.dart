@@ -17,11 +17,13 @@ class ConflictModel {
   });
 
   factory ConflictModel.fromJson(Map<String, Object?> json) {
+
     return ConflictModel(
       default_: apiBlueprintReadString(json["default"]),
       class_: apiBlueprintReadString(json["class_"]),
       enum_: KeywordEnumFromJson(json["enum"]),
     );
+
   }
 
   factory ConflictModel.fromJsonValue(Object? value) {
@@ -37,19 +39,23 @@ class ConflictModel {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "default": apiBlueprintToJson(default_),
       "class_": apiBlueprintToJson(class_),
       "enum": apiBlueprintToJson(enum_),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "default": apiBlueprintToQueryValue(default_),
       "class_": apiBlueprintToQueryValue(class_),
       "enum": apiBlueprintToQueryValue(enum_),
     };
+
   }
 }
 

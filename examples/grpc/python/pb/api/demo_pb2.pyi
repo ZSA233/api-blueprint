@@ -137,6 +137,14 @@ class RequestOptionsResponse(_message.Message):
     delay_ms: int
     def __init__(self, status: _Optional[str] = ..., delay_ms: _Optional[int] = ...) -> None: ...
 
+class EmptyResponseRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class EmptyResponseResponse(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
 class PutDemoRequest(_message.Message):
     __slots__ = ("query", "json")
     QUERY_FIELD_NUMBER: _ClassVar[int]

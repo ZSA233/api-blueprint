@@ -15,10 +15,12 @@ class AccountProfile {
   });
 
   factory AccountProfile.fromJson(Map<String, Object?> json) {
+
     return AccountProfile(
       userId: apiBlueprintReadCoerceString(json["user_id"]),
       nickname: apiBlueprintReadString(json["nickname"]),
     );
+
   }
 
   factory AccountProfile.fromJsonValue(Object? value) {
@@ -34,17 +36,21 @@ class AccountProfile {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "user_id": apiBlueprintToJson(userId),
       "nickname": apiBlueprintToJson(nickname),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "user_id": apiBlueprintToQueryValue(userId),
       "nickname": apiBlueprintToQueryValue(nickname),
     };
+
   }
 }
 
@@ -60,11 +66,13 @@ class LegacyJsonCompatPayload {
   });
 
   factory LegacyJsonCompatPayload.fromJson(Map<String, Object?> json) {
+
     return LegacyJsonCompatPayload(
       target: apiBlueprintReadAny(json["target"]),
       ids: ((value) => apiBlueprintReadList<Object?>(value, apiBlueprintReadAny))(json["ids"]),
       normalizedIds: ((value) => apiBlueprintReadList<String>(value, apiBlueprintReadCoerceString))(json["normalized_ids"]),
     );
+
   }
 
   factory LegacyJsonCompatPayload.fromJsonValue(Object? value) {
@@ -80,19 +88,23 @@ class LegacyJsonCompatPayload {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "target": apiBlueprintToJson(target),
       "ids": apiBlueprintToJson(ids),
       "normalized_ids": apiBlueprintToJson(normalizedIds),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "target": apiBlueprintToQueryValue(target),
       "ids": apiBlueprintToQueryValue(ids),
       "normalized_ids": apiBlueprintToQueryValue(normalizedIds),
     };
+
   }
 }
 
@@ -106,10 +118,12 @@ class RoomSummary {
   });
 
   factory RoomSummary.fromJson(Map<String, Object?> json) {
+
     return RoomSummary(
       roomId: apiBlueprintReadCoerceString(json["room_id"]),
       title: apiBlueprintReadString(json["title"]),
     );
+
   }
 
   factory RoomSummary.fromJsonValue(Object? value) {
@@ -125,16 +139,20 @@ class RoomSummary {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "room_id": apiBlueprintToJson(roomId),
       "title": apiBlueprintToJson(title),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "room_id": apiBlueprintToQueryValue(roomId),
       "title": apiBlueprintToQueryValue(title),
     };
+
   }
 }

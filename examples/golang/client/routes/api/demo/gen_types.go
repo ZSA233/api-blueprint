@@ -36,6 +36,8 @@ type RequestOptionsQuery struct {
 }
 type RequestOptionsResponse = runtime.RequestOptionsResponse
 
+type EmptyResponseResponse struct{}
+
 type PutDemoQuery struct {
 	Arg1 string  `json:"arg1,omitempty" form:"arg1,omitempty"`
 	Arg2 float64 `json:"arg2,omitempty" form:"arg2,omitempty"`

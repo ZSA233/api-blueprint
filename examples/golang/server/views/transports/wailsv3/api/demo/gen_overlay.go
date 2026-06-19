@@ -39,6 +39,12 @@ type REQ_RequestOptions_QUERY = sharedroutes.REQ_RequestOptions_QUERY
 
 type INVOKE_RequestOptions = wailstransport.InvokeEnvelope[REQ_RequestOptions_QUERY, any]
 
+type REQ_EmptyResponse = sharedroutes.REQ_EmptyResponse
+type RSP_EmptyResponse = sharedroutes.RSP_EmptyResponse
+type CTX_EmptyResponse = sharedroutes.CTX_EmptyResponse
+
+type INVOKE_EmptyResponse = wailstransport.InvokeEnvelope[any, any]
+
 type REQ_PutDemo = sharedroutes.REQ_PutDemo
 type RSP_PutDemo = sharedroutes.RSP_PutDemo
 type CTX_PutDemo = sharedroutes.CTX_PutDemo

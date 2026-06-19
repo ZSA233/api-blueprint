@@ -43,6 +43,10 @@ public final class GenDemoAdapters {
         return value;
     }
 
+    public static GenDemoTypes.EmptyResponseResponse emptyResponseResponse(GenDemoTypes.EmptyResponseResponse value) {
+        return value;
+    }
+
     public static GenDemoTypes.PutDemoQuery putDemoRequest(GenDemoTypes.PutDemoQuery value) {
         return value;
     }

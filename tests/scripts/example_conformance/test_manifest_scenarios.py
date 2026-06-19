@@ -50,6 +50,7 @@ def test_scenario_registry_covers_required_dsl_categories() -> None:
         "enum",
         "map",
         "deprecated",
+        "empty-response",
         "typed-error",
         "sse",
         "websocket",
@@ -94,6 +95,7 @@ def test_scenario_registry_exposes_expanded_examples() -> None:
         "enum",
         "map",
         "deprecated",
+        "empty-response",
         "binary-br",
         "audit-binary",
         "wide-binary",
@@ -113,6 +115,7 @@ def test_scenario_registry_exposes_expanded_examples() -> None:
         "api.hello.get.mapenum",
     )
     assert registry["deprecated"].route_ids == ("api.demo.post.postdeprecated",)
+    assert registry["empty-response"].route_ids == ("api.demo.post.emptyresponse",)
     assert registry["binary-br"].route_ids == ("api.binary.post.packet",)
     assert registry["audit-binary"].route_ids == ("api.binary.post.auditpacket",)
     assert registry["wide-binary"].route_ids == ("api.binary.post.widepacket",)
@@ -144,6 +147,7 @@ def test_expanded_scenarios_are_gated_by_server_capabilities() -> None:
         "enum",
         "map",
         "deprecated",
+        "empty-response",
         "single-channel",
         "legacy-json",
     }

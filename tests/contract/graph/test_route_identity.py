@@ -79,6 +79,20 @@ def test_contract_graph_preserves_non_empty_root_default_identity():
     assert manifest["services"][0]["id"] == "api.demo"
     assert manifest["routes"][0]["id"] == "api.demo.get.ping"
 
+def test_contract_graph_records_rsp_empty_as_empty_object_response():
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.POST("/update").RSP_EMPTY()
+
+    manifest = build_contract_graph([bp]).to_manifest()
+
+    route = manifest["routes"][0]
+    schema_ref = route["response"]["model"]
+    assert schema_ref in manifest["schemas"]
+    assert route["response"]["envelope"]["kind"] == "code_message_data"
+    assert manifest["schemas"][schema_ref]["type"] == "object"
+    assert manifest["schemas"][schema_ref]["fields"] == {}
+
 def test_contract_graph_rejects_duplicate_http_method_urls():
     first = Blueprint(name="first", root="")
     second = Blueprint(name="second", root="")

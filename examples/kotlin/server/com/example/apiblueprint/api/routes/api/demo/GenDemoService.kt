@@ -21,6 +21,9 @@ public interface GenDemoService {
         query: DemoRequestOptionsQuery
     ): RequestOptionsResponse
 
+    public suspend fun emptyResponse(
+    ): DemoEmptyResponseResponse
+
     public suspend fun putDemo(
         query: DemoPutDemoQuery,
         json: DemoPutDemoJson

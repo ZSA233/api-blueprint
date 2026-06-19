@@ -265,7 +265,7 @@ def _route_protocol_from_contract(
             kind=str(response_manifest.get("kind") or getattr(runtime, "response_kind", "") or _response_kind_from_media(runtime)),
             media_type=str(response_manifest.get("media_type") or runtime.response_media_type or "application/json"),
             model=RouteModelSlot(_optional_str(response_manifest.get("model")), runtime.response_model),
-            envelope=runtime.response_envelope or NoEnvelope,
+            envelope=runtime.response_envelope if runtime.response_envelope is not None else NoEnvelope,
             binary_schema=getattr(runtime, "response_binary_schema", None),
             filename=_optional_str(response_manifest.get("default_filename"))
             or _optional_str(response_manifest.get("filename"))

@@ -95,6 +95,22 @@ type CTX_RequestOptions = providers.Context[
 	RSP_RequestOptions_BODY,
 ]
 
+type REQ_EmptyResponse = providers.REQ[
+	any,
+	any,
+]
+
+type RSP_EmptyResponse_BODY struct {
+}
+
+type RSP_EmptyResponse = RSP_EmptyResponse_BODY
+
+type CTX_EmptyResponse = providers.Context[
+	any,
+	any,
+	RSP_EmptyResponse_BODY,
+]
+
 type REQ_PutDemo_QUERY struct {
 	Arg1 string  `json:"arg1" xml:"arg1" form:"arg1"`
 	Arg2 float64 `json:"arg2" xml:"arg2" form:"arg2"`

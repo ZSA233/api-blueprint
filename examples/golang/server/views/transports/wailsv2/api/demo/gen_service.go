@@ -16,6 +16,7 @@ type DemoService struct {
 	testPostExecutor         *sharedprovider.RouteExecutor[any, REQ_TestPost_JSON, RSP_TestPost]
 	formSubmitExecutor       *sharedprovider.RouteExecutor[any, REQ_FormSubmit_FORM, RSP_FormSubmit]
 	requestOptionsExecutor   *sharedprovider.RouteExecutor[REQ_RequestOptions_QUERY, any, RSP_RequestOptions]
+	emptyResponseExecutor    *sharedprovider.RouteExecutor[any, any, RSP_EmptyResponse]
 	putDemoExecutor          *sharedprovider.RouteExecutor[REQ_PutDemo_QUERY, REQ_PutDemo_JSON, RSP_PutDemo]
 	deleteExecutor           *sharedprovider.RouteExecutor[REQ_Delete_QUERY, any, RSP_Delete]
 	sweepEventsExecutor      *sharedprovider.RouteExecutor[OPEN_SweepEvents, any, RSP_SweepEvents]
@@ -93,6 +94,22 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 			},
 			"req=Q|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.RequestOptions,
+		),
+		emptyResponseExecutor: sharedprovider.NewRouteExecutor(
+			sharedprovider.RouteInfo{
+				Root:      "api",
+				Group:     "demo",
+				Namespace: "demo",
+				Service:   "DemoService",
+				Operation: "EmptyResponse",
+				RouteID:   "api.demo.post.emptyresponse",
+				Path:      "/api/demo/empty-response",
+				Methods:   []string{"POST"},
+				Transport: sharedprovider.TransportWails,
+				Scope:     sharedprovider.ConnectionScope(""),
+			},
+			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+			impl.EmptyResponse,
 		),
 		putDemoExecutor: sharedprovider.NewRouteExecutor(
 			sharedprovider.RouteInfo{
@@ -340,6 +357,33 @@ func (svc *DemoService) RequestOptions(
 	)
 	ctx.Req = &sharedprovider.ReqContext[REQ_RequestOptions_QUERY, any, RSP_RequestOptions]{Request: req}
 	execErr := svc.requestOptionsExecutor.Run(ctx)
+	response, invokeErr := ctx.HandleResult()
+	if invokeErr == nil {
+		invokeErr = execErr
+	}
+
+	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
+}
+
+func (svc *DemoService) EmptyResponse(
+	envelope *INVOKE_EmptyResponse,
+) (rsp *sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_EmptyResponse], err error) {
+	req, reqErr := wailstransport.EnvelopeToReq(envelope, wailstransport.ReqEnvelopeOptions{
+		BindQuery: false,
+		BindJSON:  false,
+		BindForm:  false,
+	})
+	if reqErr != nil {
+		err = reqErr
+		return
+	}
+	ctx := sharedprovider.NewWailsContext[any, any, RSP_EmptyResponse](
+		"DemoService",
+		"EmptyResponse",
+		wailstransport.EnvelopeHeaders(envelope),
+	)
+	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_EmptyResponse]{Request: req}
+	execErr := svc.emptyResponseExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
 		invokeErr = execErr

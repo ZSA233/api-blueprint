@@ -30,6 +30,9 @@ public data class DemoAbcQuery(
 )
 
 @Serializable
+public class DemoEmptyResponseResponse
+
+@Serializable
 public data class DemoErrorDemoQuery(
     public val mode: String? = null
 )

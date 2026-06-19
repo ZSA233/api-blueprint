@@ -205,8 +205,16 @@ def test_rsp_binary_schema_openapi_content_type_and_mutual_exclusion() -> None:
     with pytest.raises(ValueError, match="cannot be combined with RSP_BINARY_SCHEMA"):
         route.RSP_BYTES()
 
-    with pytest.raises(ValueError, match="cannot be combined with RSP/RSP_JSON/RSP_XML"):
+    with pytest.raises(ValueError, match="cannot be combined with RSP/RSP_JSON/RSP_EMPTY/RSP_XML"):
         bp.GET("/json").RSP(ok=String(description="ok")).RSP_BINARY_SCHEMA(schema)
+
+    empty_route = bp.GET("/empty").RSP_EMPTY()
+    with pytest.raises(ValueError, match="cannot be combined with RSP/RSP_JSON/RSP_EMPTY/RSP_XML"):
+        empty_route.RSP_BINARY_SCHEMA(schema)
+
+    binary_first = bp.GET("/binary-first").RSP_BINARY_SCHEMA(schema)
+    with pytest.raises(ValueError, match="RSP_EMPTY.*binary_schema response"):
+        binary_first.RSP_EMPTY()
 
     bp.build()
     response = bp.app.openapi()["paths"]["/api/packet"]["get"]["responses"]["200"]

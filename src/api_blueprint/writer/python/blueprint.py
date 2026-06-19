@@ -4,7 +4,7 @@ import json
 import re
 from collections import OrderedDict
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Mapping
 
 from api_blueprint.engine.model import Model
 from api_blueprint.engine.router import Router
@@ -84,6 +84,7 @@ class PythonRoute:
         self.url = self.contract.url
         self.http_methods = tuple(self.contract.http_methods or ("GET",))
         self.response_type = _model_name(protocol.response.model.model)
+        self.response_schema = protocol.response.model.schema
         self.response_envelope = protocol.response.envelope.envelope_spec()
         self.binary_schema = protocol.request.binary_schema
         self.response_binary_schema = protocol.response.binary_schema
@@ -247,6 +248,11 @@ class PythonRoute:
             return value_expr
         if self.response_type_info is None:
             return value_expr
+        if self.is_enveloped_empty_object_response:
+            return (
+                f"{self.response_type_info.annotation}.from_empty_response_value("
+                f"{value_expr}, {json.dumps(f'{self.method_name}.response')})"
+            )
         return self.response_type_info.decode_expr(value_expr, json.dumps(f"{self.method_name}.response"))
 
     @property
@@ -256,6 +262,12 @@ class PythonRoute:
     @property
     def has_response_binary_schema(self) -> bool:
         return self.response_binary_schema is not None
+
+    @property
+    def is_enveloped_empty_object_response(self) -> bool:
+        if self.response_envelope.get("kind") == "none":
+            return False
+        return _is_empty_object_schema(self.response_schema, self.registry.schemas)
 
     @property
     def binary_type_name(self) -> str | None:
@@ -523,6 +535,18 @@ def _model_name(model: type[Model] | Model | None) -> str | None:
 
 def _message_payload_type(schema_name: str) -> str:
     return to_py_class_name(schema_name.rsplit(".", 1)[-1], default="MessageData")
+
+
+def _is_empty_object_schema(schema_name: str | None, schemas: Mapping[str, object]) -> bool:
+    if not schema_name:
+        return False
+    schema = schemas.get(schema_name)
+    if not isinstance(schema, Mapping):
+        return False
+    if schema.get("type") != "object":
+        return False
+    fields = schema.get("fields")
+    return isinstance(fields, Mapping) and not fields
 
 
 def _request_param(

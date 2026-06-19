@@ -182,6 +182,26 @@ public struct DemoDeleteResponse: Codable, Sendable {
     }
 }
 
+public struct DemoEmptyResponseResponse: Codable, Sendable {
+
+    public init(
+    ) {
+    }
+
+    public func toQueryItems() -> [URLQueryItem] {
+        [
+        ].filter { $0.value != nil }
+    }
+
+    public func toFormFields() throws -> [String: String?] {
+        try apiBlueprintFormFields(self)
+    }
+
+    public func toMultipartFields() throws -> [String: Any?] {
+        try apiBlueprintMultipartFields(self)
+    }
+}
+
 public struct DemoErrorDemoQuery: Codable, Sendable {
     /// ok/token/rate_limit/unknown
     public var mode: String?

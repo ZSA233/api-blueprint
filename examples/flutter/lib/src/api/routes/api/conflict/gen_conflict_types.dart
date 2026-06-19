@@ -14,9 +14,11 @@ class ConflictDefaultQuery {
   });
 
   factory ConflictDefaultQuery.fromJson(Map<String, Object?> json) {
+
     return ConflictDefaultQuery(
       class_: apiBlueprintReadString(json["class_"]),
     );
+
   }
 
   factory ConflictDefaultQuery.fromJsonValue(Object? value) {
@@ -32,14 +34,18 @@ class ConflictDefaultQuery {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "class_": apiBlueprintToJson(class_),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "class_": apiBlueprintToQueryValue(class_),
     };
+
   }
 }

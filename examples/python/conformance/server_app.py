@@ -57,6 +57,7 @@ from api_blueprint_example_server.api.routes.api.demo.gen_types import (
     ColorEnum,
     DeleteQuery,
     DeleteResponse,
+    EmptyResponseResponse,
     ErrorDemoQuery,
     ErrorDemoResponse,
     FormSubmitForm,
@@ -171,6 +172,9 @@ class DemoService:
         if delay_ms > 0:
             await asyncio.sleep(delay_ms / 1000)
         return RequestOptionsResponse(status="ok", delay_ms=delay_ms)
+
+    async def empty_response(self) -> EmptyResponseResponse:
+        return EmptyResponseResponse()
 
     async def put_demo(
         self,

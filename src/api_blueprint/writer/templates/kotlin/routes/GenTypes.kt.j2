@@ -35,6 +35,7 @@ import okio.ByteString
 {% for proto in protos %}
 {%- if proto.kind == 'data' %}
 {{ '\n' if not loop.first }}@Serializable
+{% if proto.fields -%}
 public data class {{ proto.name }}(
 {%- for field in proto.fields %}
 {%- if field.serial_name != field.name %}
@@ -46,6 +47,9 @@ public data class {{ proto.name }}(
     public val {{ field.name }}: {{ field.type.text }}{% if field.optional %} = null{% endif %}{% if not loop.last %},{% endif %}
 {%- endfor %}
 )
+{% else -%}
+public class {{ proto.name }}
+{% endif -%}
 {%- elif proto.kind == 'alias' %}
 {{ '\n' if not loop.first }}public typealias {{ proto.name }} = {{ proto.alias_type.text if proto.alias_type else 'kotlinx.serialization.json.JsonElement' }}
 {%- elif proto.kind == 'enum' %}

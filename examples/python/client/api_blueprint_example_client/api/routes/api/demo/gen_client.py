@@ -30,6 +30,7 @@ from .gen_types import (
     FormSubmitResponse,
     RequestOptionsQuery,
     RequestOptionsResponse,
+    EmptyResponseResponse,
     PutDemoQuery,
     PutDemoJSON,
     PutDemoResponse,
@@ -153,6 +154,26 @@ class DemoClient:
             )
         )
         return RequestOptionsResponse.from_value(payload, "request_options.response")
+
+    async def empty_response(
+        self,
+        *,
+        headers: Mapping[str, str] | None = None,
+        timeout: float | None = None,
+    ) -> EmptyResponseResponse:
+        response_type: str | None = 'EmptyResponseResponse'
+        payload = await self._transport.request(
+            ApiRequest(
+                method="POST",
+                path="/api/demo/empty-response",
+                route_id="api.demo.post.emptyresponse",
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
+        )
+        return EmptyResponseResponse.from_empty_response_value(payload, "empty_response.response")
 
     async def put_demo(
         self,

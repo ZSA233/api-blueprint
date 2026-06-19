@@ -9,14 +9,22 @@ import 'package:{{ writer.package }}/src/{{ bp.root_path }}/runtime/api_json_cod
 class {{ proto.name }} {
 {% for field in proto.fields %}  final {{ field.type.nullable_text() }} {{ field.name }};
 {% endfor %}
+{% if proto.fields %}
   const {{ proto.name }}({
 {% for field in proto.fields %}    this.{{ field.name }},
 {% endfor %}  });
+{% else %}
+  const {{ proto.name }}();
+{% endif %}
 
   factory {{ proto.name }}.fromJson(Map<String, Object?> json) {
+{% if proto.fields %}
     return {{ proto.name }}(
 {% for field in proto.fields %}      {{ field.name }}: {{ field.type.decode_expr("json[" ~ (field.wire_name | tojson) ~ "]") }},
 {% endfor %}    );
+{% else %}
+    return const {{ proto.name }}();
+{% endif %}
   }
 
   factory {{ proto.name }}.fromJsonValue(Object? value) {
@@ -32,15 +40,23 @@ class {{ proto.name }} {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+{% if proto.fields %}
     return {
 {% for field in proto.fields %}      {{ field.wire_name | tojson }}: apiBlueprintToJson({{ field.name }}),
 {% endfor %}    };
+{% else %}
+    return const <String, Object?>{};
+{% endif %}
   }
 
   Map<String, String?> toQueryMap() {
+{% if proto.fields %}
     return {
 {% for field in proto.fields %}      {{ field.wire_name | tojson }}: apiBlueprintToQueryValue({{ field.name }}),
 {% endfor %}    };
+{% else %}
+    return const <String, String?>{};
+{% endif %}
   }
 }
 {% elif proto.kind == 'alias' %}

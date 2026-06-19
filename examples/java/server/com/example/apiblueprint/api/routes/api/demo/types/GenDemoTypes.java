@@ -427,6 +427,30 @@ public final class GenDemoTypes {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
+    public static final class EmptyResponseResponse {
+
+        public EmptyResponseResponse() {
+        }
+
+        public static Builder builder() {
+            return new Builder();
+        }
+
+        public Builder toBuilder() {
+            return builder();
+        }
+
+        public static final class Builder {
+
+            public EmptyResponseResponse build() {
+
+                return new EmptyResponseResponse();
+
+            }
+        }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static final class PutDemoQuery {
 
         @JsonProperty("arg1")

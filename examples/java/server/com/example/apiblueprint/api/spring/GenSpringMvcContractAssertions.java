@@ -159,6 +159,20 @@ public final class GenSpringMvcContractAssertions {
             "generated"
         ),
         new RouteSpec(
+            "api.demo.post.emptyresponse",
+            Set.of("POST"),
+            "/api/demo/empty-response",
+            "com.example.apiblueprint.api.routes.api.demo.controllers.GenDemoController",
+            "com.example.apiblueprint.api.routes.api.demo.delegates.GenDemoDelegate",
+            "emptyResponse",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
+            List.of(),
+            "com.example.apiblueprint.api.routes.api.demo.types.GenDemoTypes.EmptyResponseResponse",
+            List.of(),
+            "generated",
+            "generated"
+        ),
+        new RouteSpec(
             "api.demo.put.z1put",
             Set.of("PUT"),
             "/api/demo/1put",

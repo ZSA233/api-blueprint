@@ -164,6 +164,14 @@ async function checkDeprecated(baseUrl: string): Promise<void> {
   assertArrayEquals(rsp.list, ["ts-deprecated"], "deprecated.list");
 }
 
+async function checkEmptyResponse(baseUrl: string): Promise<void> {
+  const { demoClient } = createApiClients({ baseUrl });
+  const rsp = await demoClient.emptyResponse();
+  if (rsp == null) {
+    throw new Error("emptyResponse returned null");
+  }
+}
+
 async function checkForm(baseUrl: string): Promise<void> {
   const { demoClient } = createApiClients({ baseUrl });
   const rsp = await demoClient.formSubmit({ form: { title: "ts-form", count: 4, enabled: true } });
@@ -524,7 +532,7 @@ async function main(): Promise<void> {
   if (!baseUrl) {
     throw new Error("base URL argument is required");
   }
-  const selected = scenarioSet(process.argv[3] || "rpc,binary,form,error,sse,websocket,naming,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel,legacy-json");
+  const selected = scenarioSet(process.argv[3] || "rpc,binary,form,error,sse,websocket,naming,raw,xml,static,header,scalar,enum,map,deprecated,empty-response,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel,legacy-json");
   if (selected.has("rpc")) {
     await checkRPC(baseUrl);
   }
@@ -551,6 +559,9 @@ async function main(): Promise<void> {
   }
   if (selected.has("deprecated")) {
     await checkDeprecated(baseUrl);
+  }
+  if (selected.has("empty-response")) {
+    await checkEmptyResponse(baseUrl);
   }
   if (selected.has("form")) {
     await checkForm(baseUrl);

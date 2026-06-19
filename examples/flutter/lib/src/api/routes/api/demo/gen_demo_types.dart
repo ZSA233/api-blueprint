@@ -16,10 +16,12 @@ class AnonDeleteAnonList {
   });
 
   factory AnonDeleteAnonList.fromJson(Map<String, Object?> json) {
+
     return AnonDeleteAnonList(
       kv1: apiBlueprintReadInt(json["kv1"]),
       kv2: ((value) => apiBlueprintReadList<String>(value, apiBlueprintReadString))(json["kv2"]),
     );
+
   }
 
   factory AnonDeleteAnonList.fromJsonValue(Object? value) {
@@ -35,17 +37,21 @@ class AnonDeleteAnonList {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "kv1": apiBlueprintToJson(kv1),
       "kv2": apiBlueprintToJson(kv2),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "kv1": apiBlueprintToQueryValue(kv1),
       "kv2": apiBlueprintToQueryValue(kv2),
     };
+
   }
 }
 
@@ -59,10 +65,12 @@ class AnonFunc1putAnonKv {
   });
 
   factory AnonFunc1putAnonKv.fromJson(Map<String, Object?> json) {
+
     return AnonFunc1putAnonKv(
       kv1: apiBlueprintReadInt(json["kv1"]),
       kv2: ((value) => apiBlueprintReadList<double>(value, apiBlueprintReadDouble))(json["kv2"]),
     );
+
   }
 
   factory AnonFunc1putAnonKv.fromJsonValue(Object? value) {
@@ -78,17 +86,21 @@ class AnonFunc1putAnonKv {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "kv1": apiBlueprintToJson(kv1),
       "kv2": apiBlueprintToJson(kv2),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "kv1": apiBlueprintToQueryValue(kv1),
       "kv2": apiBlueprintToQueryValue(kv2),
     };
+
   }
 }
 
@@ -104,11 +116,13 @@ class DemoAbcQuery {
   });
 
   factory DemoAbcQuery.fromJson(Map<String, Object?> json) {
+
     return DemoAbcQuery(
       arg1: apiBlueprintReadBool(json["arg1"]),
       arg3: apiBlueprintReadString(json["arg3"]),
       arg2: apiBlueprintReadDouble(json["arg2"]),
     );
+
   }
 
   factory DemoAbcQuery.fromJsonValue(Object? value) {
@@ -124,19 +138,23 @@ class DemoAbcQuery {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "arg1": apiBlueprintToJson(arg1),
       "arg3": apiBlueprintToJson(arg3),
       "arg2": apiBlueprintToJson(arg2),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "arg1": apiBlueprintToQueryValue(arg1),
       "arg3": apiBlueprintToQueryValue(arg3),
       "arg2": apiBlueprintToQueryValue(arg2),
     };
+
   }
 }
 
@@ -150,10 +168,12 @@ class DemoDeleteQuery {
   });
 
   factory DemoDeleteQuery.fromJson(Map<String, Object?> json) {
+
     return DemoDeleteQuery(
       arg1: apiBlueprintReadString(json["arg1"]),
       arg2: apiBlueprintReadDouble(json["arg2"]),
     );
+
   }
 
   factory DemoDeleteQuery.fromJsonValue(Object? value) {
@@ -169,17 +189,21 @@ class DemoDeleteQuery {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "arg1": apiBlueprintToJson(arg1),
       "arg2": apiBlueprintToJson(arg2),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "arg1": apiBlueprintToQueryValue(arg1),
       "arg2": apiBlueprintToQueryValue(arg2),
     };
+
   }
 }
 
@@ -193,10 +217,12 @@ class DemoDeleteResponse {
   });
 
   factory DemoDeleteResponse.fromJson(Map<String, Object?> json) {
+
     return DemoDeleteResponse(
       list: ((value) => apiBlueprintReadList<String>(value, apiBlueprintReadString))(json["list"]),
       anonList: ((value) => apiBlueprintReadList<AnonDeleteAnonList>(value, AnonDeleteAnonList.fromJsonValue))(json["anon_list"]),
     );
+
   }
 
   factory DemoDeleteResponse.fromJsonValue(Object? value) {
@@ -212,17 +238,56 @@ class DemoDeleteResponse {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "list": apiBlueprintToJson(list),
       "anon_list": apiBlueprintToJson(anonList),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "list": apiBlueprintToQueryValue(list),
       "anon_list": apiBlueprintToQueryValue(anonList),
     };
+
+  }
+}
+
+class DemoEmptyResponseResponse {
+
+  const DemoEmptyResponseResponse();
+
+  factory DemoEmptyResponseResponse.fromJson(Map<String, Object?> json) {
+
+    return const DemoEmptyResponseResponse();
+
+  }
+
+  factory DemoEmptyResponseResponse.fromJsonValue(Object? value) {
+    final codec = apiJsonCodecs.find<DemoEmptyResponseResponse>();
+    if (codec != null) {
+      return codec.fromJson(value);
+    }
+    return DemoEmptyResponseResponse.fromJson(apiBlueprintReadObject(value));
+  }
+
+  Map<String, Object?> toJson() {
+    final codec = apiJsonCodecs.find<DemoEmptyResponseResponse>();
+    if (codec != null) {
+      return apiBlueprintReadObject(codec.toJson(this));
+    }
+
+    return const <String, Object?>{};
+
+  }
+
+  Map<String, String?> toQueryMap() {
+
+    return const <String, String?>{};
+
   }
 }
 
@@ -234,9 +299,11 @@ class DemoErrorDemoQuery {
   });
 
   factory DemoErrorDemoQuery.fromJson(Map<String, Object?> json) {
+
     return DemoErrorDemoQuery(
       mode: apiBlueprintReadString(json["mode"]),
     );
+
   }
 
   factory DemoErrorDemoQuery.fromJsonValue(Object? value) {
@@ -252,15 +319,19 @@ class DemoErrorDemoQuery {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "mode": apiBlueprintToJson(mode),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "mode": apiBlueprintToQueryValue(mode),
     };
+
   }
 }
 
@@ -272,9 +343,11 @@ class DemoErrorDemoResponse {
   });
 
   factory DemoErrorDemoResponse.fromJson(Map<String, Object?> json) {
+
     return DemoErrorDemoResponse(
       status: apiBlueprintReadString(json["status"]),
     );
+
   }
 
   factory DemoErrorDemoResponse.fromJsonValue(Object? value) {
@@ -290,15 +363,19 @@ class DemoErrorDemoResponse {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "status": apiBlueprintToJson(status),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "status": apiBlueprintToQueryValue(status),
     };
+
   }
 }
 
@@ -314,11 +391,13 @@ class DemoFormSubmitForm {
   });
 
   factory DemoFormSubmitForm.fromJson(Map<String, Object?> json) {
+
     return DemoFormSubmitForm(
       title: apiBlueprintReadString(json["title"]),
       count: apiBlueprintReadInt(json["count"]),
       enabled: apiBlueprintReadBool(json["enabled"]),
     );
+
   }
 
   factory DemoFormSubmitForm.fromJsonValue(Object? value) {
@@ -334,19 +413,23 @@ class DemoFormSubmitForm {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "title": apiBlueprintToJson(title),
       "count": apiBlueprintToJson(count),
       "enabled": apiBlueprintToJson(enabled),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "title": apiBlueprintToQueryValue(title),
       "count": apiBlueprintToQueryValue(count),
       "enabled": apiBlueprintToQueryValue(enabled),
     };
+
   }
 }
 
@@ -362,11 +445,13 @@ class DemoFormSubmitResponse {
   });
 
   factory DemoFormSubmitResponse.fromJson(Map<String, Object?> json) {
+
     return DemoFormSubmitResponse(
       summary: apiBlueprintReadString(json["summary"]),
       count: apiBlueprintReadInt(json["count"]),
       enabled: apiBlueprintReadBool(json["enabled"]),
     );
+
   }
 
   factory DemoFormSubmitResponse.fromJsonValue(Object? value) {
@@ -382,19 +467,23 @@ class DemoFormSubmitResponse {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "summary": apiBlueprintToJson(summary),
       "count": apiBlueprintToJson(count),
       "enabled": apiBlueprintToJson(enabled),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "summary": apiBlueprintToQueryValue(summary),
       "count": apiBlueprintToQueryValue(count),
       "enabled": apiBlueprintToQueryValue(enabled),
     };
+
   }
 }
 
@@ -414,10 +503,12 @@ class DemoPostDeprecatedJson {
   });
 
   factory DemoPostDeprecatedJson.fromJson(Map<String, Object?> json) {
+
     return DemoPostDeprecatedJson(
       req1: apiBlueprintReadString(json["req1"]),
       req2: apiBlueprintReadInt(json["req2"]),
     );
+
   }
 
   factory DemoPostDeprecatedJson.fromJsonValue(Object? value) {
@@ -433,17 +524,21 @@ class DemoPostDeprecatedJson {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "req1": apiBlueprintToJson(req1),
       "req2": apiBlueprintToJson(req2),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "req1": apiBlueprintToQueryValue(req1),
       "req2": apiBlueprintToQueryValue(req2),
     };
+
   }
 }
 
@@ -455,9 +550,11 @@ class DemoPostDeprecatedResponse {
   });
 
   factory DemoPostDeprecatedResponse.fromJson(Map<String, Object?> json) {
+
     return DemoPostDeprecatedResponse(
       list: ((value) => apiBlueprintReadList<String>(value, apiBlueprintReadString))(json["list"]),
     );
+
   }
 
   factory DemoPostDeprecatedResponse.fromJsonValue(Object? value) {
@@ -473,15 +570,19 @@ class DemoPostDeprecatedResponse {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "list": apiBlueprintToJson(list),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "list": apiBlueprintToQueryValue(list),
     };
+
   }
 }
 
@@ -495,10 +596,12 @@ class DemoPutDemoJson {
   });
 
   factory DemoPutDemoJson.fromJson(Map<String, Object?> json) {
+
     return DemoPutDemoJson(
       req1: apiBlueprintReadString(json["req1"]),
       req2: apiBlueprintReadInt(json["req2"]),
     );
+
   }
 
   factory DemoPutDemoJson.fromJsonValue(Object? value) {
@@ -514,17 +617,21 @@ class DemoPutDemoJson {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "req1": apiBlueprintToJson(req1),
       "req2": apiBlueprintToJson(req2),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "req1": apiBlueprintToQueryValue(req1),
       "req2": apiBlueprintToQueryValue(req2),
     };
+
   }
 }
 
@@ -540,11 +647,13 @@ class DemoPutDemoQuery {
   });
 
   factory DemoPutDemoQuery.fromJson(Map<String, Object?> json) {
+
     return DemoPutDemoQuery(
       arg1: apiBlueprintReadString(json["arg1"]),
       arg2: apiBlueprintReadDouble(json["arg2"]),
       arg3: apiBlueprintReadString(json["arg3"]),
     );
+
   }
 
   factory DemoPutDemoQuery.fromJsonValue(Object? value) {
@@ -560,19 +669,23 @@ class DemoPutDemoQuery {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "arg1": apiBlueprintToJson(arg1),
       "arg2": apiBlueprintToJson(arg2),
       "arg3": apiBlueprintToJson(arg3),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "arg1": apiBlueprintToQueryValue(arg1),
       "arg2": apiBlueprintToQueryValue(arg2),
       "arg3": apiBlueprintToQueryValue(arg3),
     };
+
   }
 }
 
@@ -586,10 +699,12 @@ class DemoPutDemoResponse {
   });
 
   factory DemoPutDemoResponse.fromJson(Map<String, Object?> json) {
+
     return DemoPutDemoResponse(
       list: ((value) => apiBlueprintReadList<String>(value, apiBlueprintReadString))(json["list"]),
       anonKv: AnonFunc1putAnonKv.fromJsonValue(json["anon_kv"]),
     );
+
   }
 
   factory DemoPutDemoResponse.fromJsonValue(Object? value) {
@@ -605,17 +720,21 @@ class DemoPutDemoResponse {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "list": apiBlueprintToJson(list),
       "anon_kv": apiBlueprintToJson(anonKv),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "list": apiBlueprintToQueryValue(list),
       "anon_kv": apiBlueprintToQueryValue(anonKv),
     };
+
   }
 }
 
@@ -629,10 +748,12 @@ class DemoRawResponse {
   });
 
   factory DemoRawResponse.fromJson(Map<String, Object?> json) {
+
     return DemoRawResponse(
       list: ((value) => apiBlueprintReadList<String>(value, apiBlueprintReadString))(json["list"]),
       list2: ((value) => apiBlueprintReadStringMap<List<ApiDemoA>>(value, (value) => apiBlueprintReadList<ApiDemoA>(value, ApiDemoA.fromJsonValue)))(json["list2"]),
     );
+
   }
 
   factory DemoRawResponse.fromJsonValue(Object? value) {
@@ -648,17 +769,21 @@ class DemoRawResponse {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "list": apiBlueprintToJson(list),
       "list2": apiBlueprintToJson(list2),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "list": apiBlueprintToQueryValue(list),
       "list2": apiBlueprintToQueryValue(list2),
     };
+
   }
 }
 
@@ -670,9 +795,11 @@ class DemoRequestOptionsQuery {
   });
 
   factory DemoRequestOptionsQuery.fromJson(Map<String, Object?> json) {
+
     return DemoRequestOptionsQuery(
       delayMs: apiBlueprintReadInt(json["delay_ms"]),
     );
+
   }
 
   factory DemoRequestOptionsQuery.fromJsonValue(Object? value) {
@@ -688,15 +815,19 @@ class DemoRequestOptionsQuery {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "delay_ms": apiBlueprintToJson(delayMs),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "delay_ms": apiBlueprintToQueryValue(delayMs),
     };
+
   }
 }
 
@@ -710,10 +841,12 @@ class DemoTestPostJson {
   });
 
   factory DemoTestPostJson.fromJson(Map<String, Object?> json) {
+
     return DemoTestPostJson(
       req1: apiBlueprintReadString(json["req1"]),
       req2: apiBlueprintReadInt(json["req2"]),
     );
+
   }
 
   factory DemoTestPostJson.fromJsonValue(Object? value) {
@@ -729,17 +862,21 @@ class DemoTestPostJson {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "req1": apiBlueprintToJson(req1),
       "req2": apiBlueprintToJson(req2),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "req1": apiBlueprintToQueryValue(req1),
       "req2": apiBlueprintToQueryValue(req2),
     };
+
   }
 }
 
@@ -753,10 +890,12 @@ class DemoTestPostResponse {
   });
 
   factory DemoTestPostResponse.fromJson(Map<String, Object?> json) {
+
     return DemoTestPostResponse(
       list: ((value) => apiBlueprintReadList<String>(value, apiBlueprintReadString))(json["list"]),
       map: ((value) => apiBlueprintReadStringMap<ApiDemoMap>(value, ApiDemoMap.fromJsonValue))(json["map"]),
     );
+
   }
 
   factory DemoTestPostResponse.fromJsonValue(Object? value) {
@@ -772,17 +911,21 @@ class DemoTestPostResponse {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "list": apiBlueprintToJson(list),
       "map": apiBlueprintToJson(map),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "list": apiBlueprintToQueryValue(list),
       "map": apiBlueprintToQueryValue(map),
     };
+
   }
 }
 

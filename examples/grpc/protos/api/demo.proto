@@ -9,6 +9,7 @@ service DemoService {
   rpc TestPost (TestPostRequest) returns (TestPostResponse);
   rpc FormSubmit (FormSubmitRequest) returns (FormSubmitResponse);
   rpc RequestOptions (RequestOptionsRequest) returns (RequestOptionsResponse);
+  rpc EmptyResponse (EmptyResponseRequest) returns (EmptyResponseResponse);
   rpc PutDemo (PutDemoRequest) returns (PutDemoResponse);
   rpc Delete (DeleteRequest) returns (DeleteResponse);
   rpc SweepEvents (SweepEventsRequest) returns (stream SweepStreamMessage);
@@ -74,6 +75,12 @@ message RequestOptionsRequest {
 message RequestOptionsResponse {
   string status = 1;
   int64 delay_ms = 2;
+}
+
+message EmptyResponseRequest {
+}
+
+message EmptyResponseResponse {
 }
 
 message PutDemoRequest {

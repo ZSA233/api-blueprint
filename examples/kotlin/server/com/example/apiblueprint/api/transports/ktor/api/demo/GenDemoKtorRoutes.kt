@@ -106,6 +106,17 @@ private val HTTP_ROUTE_API_DEMO_GET_REQUESTOPTIONS = HttpRouteInfo(
     ),
 )
 
+private val HTTP_ROUTE_API_DEMO_POST_EMPTYRESPONSE = HttpRouteInfo(
+    request = HttpRequestInfo(
+        binaryContentEncodings = emptySet(),
+    ),
+    response = HttpResponseInfo(
+        kind = "json",
+        mediaType = "application/json",
+        defaultFilename = "",
+    ),
+)
+
 private val HTTP_ROUTE_API_DEMO_PUT_Z1PUT = HttpRouteInfo(
     request = HttpRequestInfo(
         binaryContentEncodings = emptySet(),
@@ -276,6 +287,16 @@ public fun Route.registerDemoRoutes(
             respondSuccess(call, result, RequestOptionsResponse.serializer(), ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "application/json")
         } catch (error: ApiError) {
             respondApiError(call, error, ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "api.demo.get.requestoptions")
+        }
+    }
+
+    post("/api/demo/empty-response") {
+        try {
+            val result = service.emptyResponse(
+            )
+            respondSuccess(call, result, DemoEmptyResponseResponse.serializer(), ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "application/json")
+        } catch (error: ApiError) {
+            respondApiError(call, error, ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "api.demo.post.emptyresponse")
         }
     }
 

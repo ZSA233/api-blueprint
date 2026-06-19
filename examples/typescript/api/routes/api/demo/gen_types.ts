@@ -49,6 +49,11 @@ export interface DeleteQuery {
 
 export type DeleteResponse = string;
 
+export interface EmptyResponseResponse {
+
+  [key: string]: never;
+}
+
 export interface ErrorDemoQuery {
   /** ok/token/rate_limit/unknown */
   mode?: string;

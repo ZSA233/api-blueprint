@@ -151,6 +151,8 @@ private class DemoServiceImpl : DemoServiceStub() {
         return RequestOptionsResponse(status = "ok", delayMs = delayMs)
     }
 
+    override suspend fun emptyResponse(): DemoEmptyResponseResponse = DemoEmptyResponseResponse()
+
     override suspend fun putDemo(query: DemoPutDemoQuery, json: DemoPutDemoJson): DemoPutDemoResponse =
         DemoPutDemoResponse(
             list = listOf(query.arg1.orEmpty(), json.req1),

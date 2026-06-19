@@ -29,6 +29,11 @@ public open class DemoServiceStub : GenDemoService {
         throw NotImplementedError("api.demo.get.requestoptions is not implemented")
     }
 
+    public override suspend fun emptyResponse(
+    ): DemoEmptyResponseResponse {
+        throw NotImplementedError("api.demo.post.emptyresponse is not implemented")
+    }
+
     public override suspend fun putDemo(
         query: DemoPutDemoQuery,
         json: DemoPutDemoJson

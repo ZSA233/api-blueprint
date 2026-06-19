@@ -12,6 +12,7 @@ export const WAILS_V3_BINDINGS: Record<string, string> = {
   "demo.DemoService.CloseAssistantSession": "example.com/project/golang/server/views/transports/wailsv3/api/demo.DemoService.CloseAssistantSession",
   "demo.DemoService.CloseSweepEvents": "example.com/project/golang/server/views/transports/wailsv3/api/demo.DemoService.CloseSweepEvents",
   "demo.DemoService.Delete": "example.com/project/golang/server/views/transports/wailsv3/api/demo.DemoService.Delete",
+  "demo.DemoService.EmptyResponse": "example.com/project/golang/server/views/transports/wailsv3/api/demo.DemoService.EmptyResponse",
   "demo.DemoService.ErrorDemo": "example.com/project/golang/server/views/transports/wailsv3/api/demo.DemoService.ErrorDemo",
   "demo.DemoService.FormSubmit": "example.com/project/golang/server/views/transports/wailsv3/api/demo.DemoService.FormSubmit",
   "demo.DemoService.MapModel": "example.com/project/golang/server/views/transports/wailsv3/api/demo.DemoService.MapModel",

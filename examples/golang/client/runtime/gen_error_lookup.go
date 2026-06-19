@@ -127,6 +127,10 @@ var routeApiErrorsByCode = map[string]map[ApiErrorCode]ApiErrorEntry{
 		CommonErrUnknown:     ApiErrorsByID["CommonErr.UNKNOWN"],
 		CommonErrTokenExpire: ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
 	},
+	"api.demo.post.emptyresponse": {
+		CommonErrUnknown:     ApiErrorsByID["CommonErr.UNKNOWN"],
+		CommonErrTokenExpire: ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
+	},
 	"api.demo.put.z1put": {
 		CommonErrUnknown:     ApiErrorsByID["CommonErr.UNKNOWN"],
 		CommonErrTokenExpire: ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],

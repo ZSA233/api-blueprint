@@ -29,6 +29,10 @@ public interface GenDemoDelegate {
         GenSpringRequestContext context
     ) throws Exception;
 
+    GenDemoTypes.EmptyResponseResponse emptyResponse(
+        GenSpringRequestContext context
+    ) throws Exception;
+
     GenDemoTypes.PutDemoResponse putDemo(
         GenDemoTypes.PutDemoQuery query,
         GenDemoTypes.PutDemoJSON json,

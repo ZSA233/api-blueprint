@@ -14,9 +14,11 @@ class RoomRoomListResponse {
   });
 
   factory RoomRoomListResponse.fromJson(Map<String, Object?> json) {
+
     return RoomRoomListResponse(
       rooms: ((value) => apiBlueprintReadList<RoomSummary>(value, RoomSummary.fromJsonValue))(json["rooms"]),
     );
+
   }
 
   factory RoomRoomListResponse.fromJsonValue(Object? value) {
@@ -32,14 +34,18 @@ class RoomRoomListResponse {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "rooms": apiBlueprintToJson(rooms),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "rooms": apiBlueprintToQueryValue(rooms),
     };
+
   }
 }

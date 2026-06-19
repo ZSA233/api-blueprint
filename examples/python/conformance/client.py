@@ -183,6 +183,11 @@ async def check_deprecated(api) -> None:
     assert response.list == ["python-deprecated"], response
 
 
+async def check_empty_response(api) -> None:
+    response = await api.demo.empty_response()
+    assert response is not None, response
+
+
 async def check_form(api) -> None:
     response = await api.demo.form_submit(form=FormSubmitForm(title="python-form", count=4, enabled=True))
     assert response.summary == "python-form", response
@@ -462,7 +467,7 @@ async def main() -> None:
     selected = scenario_set(
         sys.argv[2]
         if len(sys.argv) > 2
-        else "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel,legacy-json"
+        else "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,empty-response,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel,legacy-json"
     )
     async with (
         create_client(sys.argv[1]) as api,
@@ -487,6 +492,8 @@ async def main() -> None:
             await check_map(api)
         if "deprecated" in selected:
             await check_deprecated(api)
+        if "empty-response" in selected:
+            await check_empty_response(api)
         if "form" in selected:
             await check_form(api)
         if "binary" in selected:

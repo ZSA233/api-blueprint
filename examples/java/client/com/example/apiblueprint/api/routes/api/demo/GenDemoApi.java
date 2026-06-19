@@ -179,6 +179,42 @@ public class GenDemoApi {
         return transport.execute(request);
     }
 
+    public GenDemoTypes.EmptyResponseResponse emptyResponse(
+    ) throws Exception {
+        return emptyResponse(
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenDemoTypes.EmptyResponseResponse emptyResponse(
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
+        GenApiRequest<GenDemoTypes.EmptyResponseResponse> request = new GenApiRequest<>(
+            "api.demo.post.emptyresponse",
+            "POST",
+            "/api/demo/empty-response",
+            null,
+            new GenApiRequestBodySpec(
+                null,
+                null,
+                null,
+                null,
+                "none"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenDemoTypes.EmptyResponseResponse.class,
+                "application/json",
+                "json",
+                null
+            ),
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
+        );
+        return transport.execute(request);
+    }
+
     public GenDemoTypes.PutDemoResponse putDemo(
         GenDemoTypes.PutDemoQuery query,
         GenDemoTypes.PutDemoJSON json

@@ -72,3 +72,16 @@ def test_rsp_file_default_filename_alias_and_conflict() -> None:
             default_filename="new.bin",
             filename="legacy.bin",
         )
+
+
+@pytest.mark.parametrize("method_name", ("RSP_BYTES", "RSP_FILE", "RSP_BYTE_STREAM"))
+def test_rsp_empty_cannot_be_combined_with_raw_response_contracts(method_name: str) -> None:
+    bp = Blueprint(root="/api", app=FastAPI())
+
+    empty_first = bp.GET(f"/empty-first-{method_name.lower()}").RSP_EMPTY()
+    with pytest.raises(ValueError, match=rf"{method_name}.*RSP/RSP_JSON/RSP_EMPTY/RSP_XML"):
+        getattr(empty_first, method_name)()
+
+    raw_first = getattr(bp.GET(f"/raw-first-{method_name.lower()}"), method_name)()
+    with pytest.raises(ValueError, match=r"RSP_EMPTY.*response"):
+        raw_first.RSP_EMPTY()

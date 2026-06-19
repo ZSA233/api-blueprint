@@ -20,12 +20,14 @@ class HelloAbcQuery {
   });
 
   factory HelloAbcQuery.fromJson(Map<String, Object?> json) {
+
     return HelloAbcQuery(
       arg1: apiBlueprintReadBool(json["arg1"]),
       arg3: apiBlueprintReadString(json["arg3"]),
       arg2: apiBlueprintReadDouble(json["arg2"]),
       type_: HelloChannelMsgTypeEnumFromJson(json["type"]),
     );
+
   }
 
   factory HelloAbcQuery.fromJsonValue(Object? value) {
@@ -41,21 +43,25 @@ class HelloAbcQuery {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "arg1": apiBlueprintToJson(arg1),
       "arg3": apiBlueprintToJson(arg3),
       "arg2": apiBlueprintToJson(arg2),
       "type": apiBlueprintToJson(type_),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "arg1": apiBlueprintToQueryValue(arg1),
       "arg3": apiBlueprintToQueryValue(arg3),
       "arg2": apiBlueprintToQueryValue(arg2),
       "type": apiBlueprintToQueryValue(type_),
     };
+
   }
 }
 
@@ -73,9 +79,11 @@ class HelloHelloWayQuery {
   });
 
   factory HelloHelloWayQuery.fromJson(Map<String, Object?> json) {
+
     return HelloHelloWayQuery(
       arg1: HelloWayEnumFromJson(json["arg1"]),
     );
+
   }
 
   factory HelloHelloWayQuery.fromJsonValue(Object? value) {
@@ -91,15 +99,19 @@ class HelloHelloWayQuery {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "arg1": apiBlueprintToJson(arg1),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "arg1": apiBlueprintToQueryValue(arg1),
     };
+
   }
 }
 

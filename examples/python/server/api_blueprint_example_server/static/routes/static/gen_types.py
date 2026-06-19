@@ -53,6 +53,16 @@ class DocJsonResponse:
         return cls._from_mapping(value, path)
 
     @classmethod
+    def from_empty_response_value(cls, value: object, path: str = "DocJsonResponse") -> Self:
+        if isinstance(value, cls):
+            return value
+        if value is None:
+            return cls()
+        if isinstance(value, Mapping) and not value:
+            return cls()
+        raise TypeError(f"{path}: expected empty response")
+
+    @classmethod
     def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
         return cls(
         )

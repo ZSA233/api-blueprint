@@ -14,9 +14,11 @@ class MediaMediaErrorFrameQuery {
   });
 
   factory MediaMediaErrorFrameQuery.fromJson(Map<String, Object?> json) {
+
     return MediaMediaErrorFrameQuery(
       mode: apiBlueprintReadString(json["mode"]),
     );
+
   }
 
   factory MediaMediaErrorFrameQuery.fromJsonValue(Object? value) {
@@ -32,14 +34,18 @@ class MediaMediaErrorFrameQuery {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "mode": apiBlueprintToJson(mode),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "mode": apiBlueprintToQueryValue(mode),
     };
+
   }
 }

@@ -142,6 +142,13 @@ def scenario_registry() -> dict[str, Scenario]:
             route_ids=("api.demo.get.requestoptions",),
             description="generated client per-call headers and timeout options",
         ),
+        "empty-response": Scenario(
+            name="empty-response",
+            categories=("empty-response", "envelope"),
+            clients=("go", "typescript", "kotlin", "flutter", "swift", "java", "python"),
+            route_ids=("api.demo.post.emptyresponse",),
+            description="empty business response bodies inside JSON envelopes",
+        ),
         "media-filename-edge": Scenario(
             name="media-filename-edge",
             categories=("raw-response", "filename"),
@@ -307,6 +314,8 @@ def server_supports_scenario(server: str, scenario: Scenario) -> bool:
     if scenario.name in {"media", "media-filename-edge", "media-error"}:
         return capability.supports_media
     if scenario.name == "request-options":
+        return capability.supports_rpc
+    if scenario.name == "empty-response":
         return capability.supports_rpc
     if scenario.name == "error":
         return capability.supports_typed_error

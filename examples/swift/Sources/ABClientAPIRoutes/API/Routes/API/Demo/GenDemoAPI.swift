@@ -130,6 +130,34 @@ open class GenDemoAPI {
         )
     }
 
+    public func emptyResponse(
+        options: APIRequestOptions = APIRequestOptions()
+    ) async throws -> DemoEmptyResponseResponse {
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
+        let formBody: [String: String?]? = nil
+        let multipartBody: [String: Any?]? = nil
+        let binaryBody: Data? = nil
+        return try await transport.request(
+            APIRequest<DemoEmptyResponseResponse>(
+                routeID: "api.demo.post.emptyresponse",
+                method: "POST",
+                path: "/api/demo/empty-response",
+                query: [],
+                options: options,
+                json: jsonBody,
+                form: formBody,
+                multipart: multipartBody,
+                binary: binaryBody,
+                binaryContentType: nil,
+                responseMediaType: "application/json",
+                responseKind: "json",
+                responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { data, envelope, coding in try apiDecodeResponse(DemoEmptyResponseResponse.self, from: data, envelope: envelope, routeID: "api.demo.post.emptyresponse", coding: coding) },
+                decode: { value in try apiDecodeValue(DemoEmptyResponseResponse.self, from: value) }
+            )
+        )
+    }
+
     public func putDemo(
         query: DemoPutDemoQuery? = nil,
         json: DemoPutDemoJSON? = nil,

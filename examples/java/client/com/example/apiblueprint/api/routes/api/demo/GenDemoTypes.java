@@ -56,6 +56,11 @@ public final class GenDemoTypes {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
+    public record EmptyResponseResponse(
+    ) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record PutDemoQuery(
         @JsonProperty("arg1") String arg1,
         @JsonProperty("arg2") Float arg2,

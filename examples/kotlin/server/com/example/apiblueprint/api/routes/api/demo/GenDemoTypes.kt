@@ -49,6 +49,9 @@ public data class DemoDeleteResponse(
 )
 
 @Serializable
+public class DemoEmptyResponseResponse
+
+@Serializable
 public data class DemoErrorDemoQuery(
     public val mode: String? = null
 )

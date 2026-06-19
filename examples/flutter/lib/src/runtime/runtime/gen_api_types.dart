@@ -13,9 +13,11 @@ class RuntimeStatus {
   });
 
   factory RuntimeStatus.fromJson(Map<String, Object?> json) {
+
     return RuntimeStatus(
       status: apiBlueprintReadString(json["status"]),
     );
+
   }
 
   factory RuntimeStatus.fromJsonValue(Object? value) {
@@ -31,14 +33,18 @@ class RuntimeStatus {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "status": apiBlueprintToJson(status),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "status": apiBlueprintToQueryValue(status),
     };
+
   }
 }

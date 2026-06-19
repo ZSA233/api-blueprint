@@ -54,6 +54,11 @@ class DemoServiceStub(object):
                 request_serializer=api_dot_demo__pb2.RequestOptionsRequest.SerializeToString,
                 response_deserializer=api_dot_demo__pb2.RequestOptionsResponse.FromString,
                 _registered_method=True)
+        self.EmptyResponse = channel.unary_unary(
+                '/example.api.demo.DemoService/EmptyResponse',
+                request_serializer=api_dot_demo__pb2.EmptyResponseRequest.SerializeToString,
+                response_deserializer=api_dot_demo__pb2.EmptyResponseResponse.FromString,
+                _registered_method=True)
         self.PutDemo = channel.unary_unary(
                 '/example.api.demo.DemoService/PutDemo',
                 request_serializer=api_dot_demo__pb2.PutDemoRequest.SerializeToString,
@@ -118,6 +123,12 @@ class DemoServiceServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def RequestOptions(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def EmptyResponse(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -193,6 +204,11 @@ def add_DemoServiceServicer_to_server(servicer, server):
                     servicer.RequestOptions,
                     request_deserializer=api_dot_demo__pb2.RequestOptionsRequest.FromString,
                     response_serializer=api_dot_demo__pb2.RequestOptionsResponse.SerializeToString,
+            ),
+            'EmptyResponse': grpc.unary_unary_rpc_method_handler(
+                    servicer.EmptyResponse,
+                    request_deserializer=api_dot_demo__pb2.EmptyResponseRequest.FromString,
+                    response_serializer=api_dot_demo__pb2.EmptyResponseResponse.SerializeToString,
             ),
             'PutDemo': grpc.unary_unary_rpc_method_handler(
                     servicer.PutDemo,
@@ -343,6 +359,33 @@ class DemoService(object):
             '/example.api.demo.DemoService/RequestOptions',
             api_dot_demo__pb2.RequestOptionsRequest.SerializeToString,
             api_dot_demo__pb2.RequestOptionsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def EmptyResponse(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/example.api.demo.DemoService/EmptyResponse',
+            api_dot_demo__pb2.EmptyResponseRequest.SerializeToString,
+            api_dot_demo__pb2.EmptyResponseResponse.FromString,
             options,
             channel_credentials,
             insecure,

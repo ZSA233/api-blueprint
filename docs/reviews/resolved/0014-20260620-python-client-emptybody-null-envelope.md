@@ -2,7 +2,7 @@
 
 ## 状态
 
-待修复，继续跟踪。
+已修复，已移动到 resolved。
 
 ## 发现日期
 
@@ -117,7 +117,7 @@ runtime.response_envelope or NoEnvelope
 可行方向：
 
 - 给 `PythonRoute` 增加“enveloped empty object response”判断：response envelope kind 不是 `none`，response schema 是 `type=object` 且 fields 为空。
-- 对这类 route 生成 `UpdateResponse.from_value({} if payload is None else payload, "update.response")` 或等价 helper。
+- 对这类 route 使用空响应专用 decoder，例如 `UpdateResponse.from_empty_response_value(payload, "update.response")`。
 - 保持 `data: {}` 成功。
 - 对非空 object、array、primitive 继续严格解码。
 - 对 no-envelope route 继续让裸 `null` 走原来的 strict object decoder。
@@ -136,3 +136,41 @@ runtime.response_envelope or NoEnvelope
 - 增加 no-envelope + `EmptyBody` + 裸 `null` 仍抛 `expected object` 的测试。
 - 增加非空 response model + envelope `data:null` 仍抛错的测试。
 - 增加自定义 envelope class 不被 `or NoEnvelope` 误判的测试。
+
+## 修复记录 / Resolution
+
+修复日期：2026-06-20
+
+修复摘要：
+
+- 新增 canonical DSL：`RSP_EMPTY()`，用于显式表达成功时没有业务 data 的 JSON 响应；它不是 HTTP 204 / no body。
+- Python client 为零字段 DTO 生成 `from_empty_response_value()` 专用 decoder；envelope + 空 object response route 调用该 decoder，因此 `data:null` 与 `data:{}` 都会解码为空 DTO。
+- 专用 decoder 接受 `None`、空 mapping、同类实例；非空 mapping 或其他类型会抛 `expected empty response`，避免放宽普通 `from_value()` 的 object 校验。
+- no-envelope 裸 `null`、非空 object 的 `data:null`、array / primitive 响应仍保持严格解码。
+- `RouteContractIndex` 改用显式 `is not None` 判定 response envelope，避免 falsy custom envelope class 被误回退成 `NoEnvelope`。
+- 更新了 `PRE_README.MD`、`README.md` / `README_EN.md` 与中英文 Blueprint DSL 文档，推荐新代码使用 `RSP_EMPTY()`。
+- `examples/blueprints/api_demo.py` 新增 `POST /api/demo/empty-response`，通过 `make example-refresh` 刷新生成快照。
+- 新增 `empty-response` conformance scenario，并补齐 Go / TypeScript / Kotlin / Flutter / Swift / Java / Python harness 覆盖。
+- 示例刷新过程中同步修复 Kotlin / Flutter / Swift 零字段 DTO 生成，使空响应 DTO 在各端都能正常编译。
+
+验证命令：
+
+```bash
+.venv/bin/python -m pytest tests/engine tests/contract/graph/test_route_identity.py tests/codegen/python -q
+.venv/bin/python -m pytest tests/application/test_ir_plugin.py tests/cli/config/test_targets.py tests/cli/apigen/test_inspect.py -q
+.venv/bin/python -m pytest tests/scripts/example_conformance tests/integration/examples/test_regeneration.py -q
+make example-refresh
+make example-validation
+.venv/bin/python -m pytest -q
+```
+
+验证结果：
+
+- `101 passed in 1.29s`
+- `31 passed in 0.45s`
+- `40 passed in 73.86s (0:01:13)`
+- `make example-refresh` 通过；刷新过程中验证了 Kotlin / Flutter / Swift 零字段 DTO 生成修复。
+- `make example-validation` 通过；过程中有 Wails / npm audit / macOS linker warning，但命令成功退出。
+- `505 passed in 101.36s (0:01:41)`
+
+相关 commit / PR：当前工作区修复，尚未提交。

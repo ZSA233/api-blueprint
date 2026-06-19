@@ -126,6 +126,7 @@ with bp.group("/items") as views:
 - `REQ_MULTIPART(Model)`: `multipart/form-data` request bodies mixing ordinary fields and `FileField(...)`.
 - `REQ_BINARY_SCHEMA(path)`: Markdown Binary Schema request bodies; `REQ_BINARY(path)` remains as a short alias.
 - `RSP(...)`: response model.
+- `RSP_EMPTY()`: JSON responses with no business data on success; this is not HTTP 204 / no body. With a JSON response envelope, both `data: null` and `data: {}` decode as an empty business response.
 
 A route can declare only one body kind. ContractGraph records request bodies as `none`, `json`, `urlencoded`, `multipart`, `binary_schema`, or `raw_bytes`, and both generators and `api-gen check` use that unified semantics for capability checks.
 

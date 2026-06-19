@@ -134,6 +134,12 @@ with apibp.group('/demo') as views:
         RequestOptionsResponse,
     )
 
+    views.POST(
+        '/empty-response',
+        summary='Empty response example',
+        description='Successful envelope response with no business data.',
+    ).RSP_EMPTY()
+
     views.PUT(
         '/1put', operation_id='putDemo', summary='这是put的summary', description='这是put的description'
     ).ARGS(

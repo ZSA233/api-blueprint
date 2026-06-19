@@ -39,7 +39,7 @@ func run() error {
 		return fmt.Errorf("base URL argument is required")
 	}
 	baseURL := strings.TrimRight(os.Args[1], "/")
-	selected := scenarioSet("rpc,binary,form,error,naming,raw,xml,static,header,scalar,enum,map,deprecated,audit-binary,binary-response,media,single-channel")
+	selected := scenarioSet("rpc,binary,form,error,naming,raw,xml,static,header,scalar,enum,map,deprecated,empty-response,audit-binary,binary-response,media,single-channel")
 	if len(os.Args) >= 3 && os.Args[2] != "" {
 		selected = scenarioSet(os.Args[2])
 	}
@@ -90,6 +90,11 @@ func run() error {
 	}
 	if selected["deprecated"] {
 		if err := checkDeprecated(ctx, client.Demo); err != nil {
+			return err
+		}
+	}
+	if selected["empty-response"] {
+		if err := checkEmptyResponse(ctx, client.Demo); err != nil {
 			return err
 		}
 	}
@@ -362,6 +367,17 @@ func checkDeprecated(ctx context.Context, demoClient *demo.DemoClient) error {
 	}
 	if !reflect.DeepEqual(rsp.List, []string{"go-deprecated"}) {
 		return fmt.Errorf("deprecated response = %#v", rsp)
+	}
+	return nil
+}
+
+func checkEmptyResponse(ctx context.Context, demoClient *demo.DemoClient) error {
+	rsp, err := demoClient.EmptyResponse(ctx)
+	if err != nil {
+		return fmt.Errorf("empty response: %w", err)
+	}
+	if rsp == nil {
+		return fmt.Errorf("empty response returned nil")
 	}
 	return nil
 }

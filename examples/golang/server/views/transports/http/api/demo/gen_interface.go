@@ -135,6 +135,36 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 		eng,
 	)
 
+	httptransport.POST(
+		"/api/demo/empty-response",
+		sharedprovider.NewRouteExecutor(
+			sharedprovider.RouteInfo{
+				Root:      "api",
+				Group:     "demo",
+				Namespace: "demo",
+				Service:   "DemoService",
+				Operation: "EmptyResponse",
+				RouteID:   "api.demo.post.emptyresponse",
+				Path:      "/api/demo/empty-response",
+				Methods:   []string{"POST"},
+				Transport: sharedprovider.TransportHTTP,
+				Scope:     sharedprovider.ConnectionScope(""),
+				HTTP: sharedprovider.HTTPRouteInfo{
+					Request: sharedprovider.HTTPRequestInfo{
+						BinaryContentEncodings: []string{},
+					},
+					Response: sharedprovider.HTTPResponseInfo{
+						ManualResponse:  false,
+						DefaultFilename: "",
+					},
+				},
+			},
+			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+			impl.EmptyResponse,
+		),
+		eng,
+	)
+
 	httptransport.PUT(
 		"/api/demo/1put",
 		sharedprovider.NewRouteExecutor(

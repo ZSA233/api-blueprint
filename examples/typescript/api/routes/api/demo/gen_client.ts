@@ -128,6 +128,31 @@ export class DemoClient extends BaseClient {
   }
 
   /**
+   * Empty response example
+   * Successful envelope response with no business data.
+   * Tags: api
+   */
+
+  async emptyResponse(
+    request: {} = {},
+    options?: ApiRequestOptions,
+  ): Promise<Types.EmptyResponseResponse> {
+    return this.request<Types.EmptyResponseResponse>({
+      routeId: "api.demo.post.emptyresponse",
+      method: "POST",
+      path: "/api/demo/empty-response",
+      service: "DemoService",
+      operation: "EmptyResponse",
+      namespace: "demo",
+      headers: options?.headers,
+      init: options?.init,
+      responseType: "json",
+      responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+      timeoutMs: options?.timeoutMs,
+    });
+  }
+
+  /**
    * 这是put的summary
    * 这是put的description
    * Tags: api

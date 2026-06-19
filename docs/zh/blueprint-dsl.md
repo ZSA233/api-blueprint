@@ -126,6 +126,7 @@ with bp.group("/items") as views:
 - `REQ_MULTIPART(Model)`：`multipart/form-data` 请求体，可混合普通字段和 `FileField(...)`。
 - `REQ_BINARY_SCHEMA(path)`：Markdown Binary Schema 请求体；`REQ_BINARY(path)` 作为短别名保留。
 - `RSP(...)`：响应模型。
+- `RSP_EMPTY()`：成功时没有业务 data 的 JSON 响应；这不是 HTTP 204 / no body。使用 JSON response envelope 时，`data: null` 和 `data: {}` 都按空业务响应解码。
 
 同一个 route 只能声明一种 body kind。ContractGraph 会把请求体记录为 `none`、`json`、`urlencoded`、`multipart`、`binary_schema` 或 `raw_bytes`，生成器和 `api-gen check` 都按这个统一语义判断 target 能力。
 

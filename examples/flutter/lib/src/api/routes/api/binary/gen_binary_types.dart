@@ -14,9 +14,11 @@ class BinaryAuditPacketQuery {
   });
 
   factory BinaryAuditPacketQuery.fromJson(Map<String, Object?> json) {
+
     return BinaryAuditPacketQuery(
       trace: apiBlueprintReadString(json["trace"]),
     );
+
   }
 
   factory BinaryAuditPacketQuery.fromJsonValue(Object? value) {
@@ -32,15 +34,19 @@ class BinaryAuditPacketQuery {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "trace": apiBlueprintToJson(trace),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "trace": apiBlueprintToQueryValue(trace),
     };
+
   }
 }
 
@@ -56,11 +62,13 @@ class BinaryAuditPacketResponse {
   });
 
   factory BinaryAuditPacketResponse.fromJson(Map<String, Object?> json) {
+
     return BinaryAuditPacketResponse(
       trace: apiBlueprintReadString(json["trace"]),
       itemCount: apiBlueprintReadInt(json["item_count"]),
       checksum: apiBlueprintReadInt(json["checksum"]),
     );
+
   }
 
   factory BinaryAuditPacketResponse.fromJsonValue(Object? value) {
@@ -76,19 +84,23 @@ class BinaryAuditPacketResponse {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "trace": apiBlueprintToJson(trace),
       "item_count": apiBlueprintToJson(itemCount),
       "checksum": apiBlueprintToJson(checksum),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "trace": apiBlueprintToQueryValue(trace),
       "item_count": apiBlueprintToQueryValue(itemCount),
       "checksum": apiBlueprintToQueryValue(checksum),
     };
+
   }
 }
 
@@ -100,9 +112,11 @@ class BinaryPacketQuery {
   });
 
   factory BinaryPacketQuery.fromJson(Map<String, Object?> json) {
+
     return BinaryPacketQuery(
       trace: apiBlueprintReadString(json["trace"]),
     );
+
   }
 
   factory BinaryPacketQuery.fromJsonValue(Object? value) {
@@ -118,15 +132,19 @@ class BinaryPacketQuery {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "trace": apiBlueprintToJson(trace),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "trace": apiBlueprintToQueryValue(trace),
     };
+
   }
 }
 
@@ -152,6 +170,7 @@ class BinaryPacketResponse {
   });
 
   factory BinaryPacketResponse.fromJson(Map<String, Object?> json) {
+
     return BinaryPacketResponse(
       trace: apiBlueprintReadString(json["trace"]),
       version: apiBlueprintReadInt(json["version"]),
@@ -162,6 +181,7 @@ class BinaryPacketResponse {
       itemIds: ((value) => apiBlueprintReadList<int>(value, apiBlueprintReadInt))(json["item_ids"]),
       checksum: apiBlueprintReadInt(json["checksum"]),
     );
+
   }
 
   factory BinaryPacketResponse.fromJsonValue(Object? value) {
@@ -177,6 +197,7 @@ class BinaryPacketResponse {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "trace": apiBlueprintToJson(trace),
       "version": apiBlueprintToJson(version),
@@ -187,9 +208,11 @@ class BinaryPacketResponse {
       "item_ids": apiBlueprintToJson(itemIds),
       "checksum": apiBlueprintToJson(checksum),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "trace": apiBlueprintToQueryValue(trace),
       "version": apiBlueprintToQueryValue(version),
@@ -200,6 +223,7 @@ class BinaryPacketResponse {
       "item_ids": apiBlueprintToQueryValue(itemIds),
       "checksum": apiBlueprintToQueryValue(checksum),
     };
+
   }
 }
 
@@ -211,9 +235,11 @@ class BinaryWidePacketQuery {
   });
 
   factory BinaryWidePacketQuery.fromJson(Map<String, Object?> json) {
+
     return BinaryWidePacketQuery(
       trace: apiBlueprintReadString(json["trace"]),
     );
+
   }
 
   factory BinaryWidePacketQuery.fromJsonValue(Object? value) {
@@ -229,15 +255,19 @@ class BinaryWidePacketQuery {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "trace": apiBlueprintToJson(trace),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "trace": apiBlueprintToQueryValue(trace),
     };
+
   }
 }
 
@@ -255,12 +285,14 @@ class BinaryWidePacketResponse {
   });
 
   factory BinaryWidePacketResponse.fromJson(Map<String, Object?> json) {
+
     return BinaryWidePacketResponse(
       trace: apiBlueprintReadString(json["trace"]),
       payloadSize: apiBlueprintReadInt(json["payload_size"]),
       signedWide: apiBlueprintReadInt(json["signed_wide"]),
       checksum: apiBlueprintReadInt(json["checksum"]),
     );
+
   }
 
   factory BinaryWidePacketResponse.fromJsonValue(Object? value) {
@@ -276,20 +308,24 @@ class BinaryWidePacketResponse {
     if (codec != null) {
       return apiBlueprintReadObject(codec.toJson(this));
     }
+
     return {
       "trace": apiBlueprintToJson(trace),
       "payload_size": apiBlueprintToJson(payloadSize),
       "signed_wide": apiBlueprintToJson(signedWide),
       "checksum": apiBlueprintToJson(checksum),
     };
+
   }
 
   Map<String, String?> toQueryMap() {
+
     return {
       "trace": apiBlueprintToQueryValue(trace),
       "payload_size": apiBlueprintToQueryValue(payloadSize),
       "signed_wide": apiBlueprintToQueryValue(signedWide),
       "checksum": apiBlueprintToQueryValue(checksum),
     };
+
   }
 }

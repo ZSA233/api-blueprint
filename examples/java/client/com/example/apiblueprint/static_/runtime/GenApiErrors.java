@@ -173,6 +173,13 @@ public final class GenApiErrors {
             )
         ),
         Map.entry(
+            "api.demo.post.emptyresponse",
+            Map.ofEntries(
+                Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),
+                Map.entry(55555, API_ERRORS_BY_ID.get("CommonErr.TOKEN_EXPIRE"))
+            )
+        ),
+        Map.entry(
             "api.demo.put.z1put",
             Map.ofEntries(
                 Map.entry(-1, API_ERRORS_BY_ID.get("CommonErr.UNKNOWN")),

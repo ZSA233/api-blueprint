@@ -284,6 +284,14 @@ class Router:
     def RSP(self, __model: Optional[Model] = None, **kwargs: dict[str, ModelOrField]) -> Self:
         return self.RSP_JSON(__model, **kwargs)
 
+    def RSP_EMPTY(self) -> Self:
+        self._reject_if_raw_response_contract("RSP_EMPTY")
+        self._reject_if_http_raw_response("RSP_EMPTY")
+        self.rsp_model = self._RSP_AS_MODEL()
+        self.rsp_kind = "json"
+        self.rsp_media_type = "application/json"
+        return self
+
     def RSP_XML(self, __model: Optional[Model] = None, **kwargs: dict[str, ModelOrField]) -> Self:
         self._reject_if_raw_response_contract("RSP_XML")
         self._reject_if_http_raw_response("RSP_XML")
@@ -315,7 +323,7 @@ class Router:
         self._reject_if_raw_response_contract("RSP_BINARY_SCHEMA")
         self._reject_if_http_raw_response("RSP_BINARY_SCHEMA")
         if self.rsp_model is not None:
-            raise ValueError("RSP_BINARY_SCHEMA() cannot be combined with RSP/RSP_JSON/RSP_XML")
+            raise ValueError("RSP_BINARY_SCHEMA() cannot be combined with RSP/RSP_JSON/RSP_EMPTY/RSP_XML")
         self.rsp_binary_schema = self._normalize_binary_schema(schema, content_type=content_type)
         self.rsp_model = None
         self.rsp_kind = "binary_schema"
@@ -507,7 +515,7 @@ class Router:
     def _raw_response(self, kind: str, *, content_type: str) -> Self:
         self._reject_if_http_raw_response(f"RSP_{kind.upper()}")
         if self.rsp_model is not None:
-            raise ValueError(f"RSP_{kind.upper()}() cannot be combined with RSP/RSP_JSON/RSP_XML")
+            raise ValueError(f"RSP_{kind.upper()}() cannot be combined with RSP/RSP_JSON/RSP_EMPTY/RSP_XML")
         if self.rsp_binary_schema is not None:
             raise ValueError(f"RSP_{kind.upper()}() cannot be combined with RSP_BINARY_SCHEMA")
         media_type = content_type.strip() or "application/octet-stream"

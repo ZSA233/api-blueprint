@@ -50,6 +50,10 @@ func (impl *Router) RequestOptions(ctx *CTX_RequestOptions, req *REQ_RequestOpti
 	}, nil
 }
 
+func (impl *Router) EmptyResponse(ctx *CTX_EmptyResponse, req *REQ_EmptyResponse) (rsp *RSP_EmptyResponse, err error) {
+	return &RSP_EmptyResponse{}, nil
+}
+
 func (impl *Router) PutDemo(ctx *CTX_PutDemo, req *REQ_PutDemo) (rsp *RSP_PutDemo, err error) {
 	query := req.Q
 	body := req.B

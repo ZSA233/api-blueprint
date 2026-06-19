@@ -89,6 +89,24 @@ class GenDemoApi {
     );
   }
 
+  Future<DemoEmptyResponseResponse> emptyResponse({
+    ApiRequestOptions options = const ApiRequestOptions(),
+  }) {
+    return transport.request(
+      ApiRequest<DemoEmptyResponseResponse>(
+        routeId: "api.demo.post.emptyresponse",
+        method: "POST",
+        path: "/api/demo/empty-response",
+        query: const <String, String?>{},
+        options: options,
+        responseMediaType: "application/json",
+        responseKind: "json",
+        responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+        decode: DemoEmptyResponseResponse.fromJsonValue,
+      ),
+    );
+  }
+
   Future<DemoPutDemoResponse> putDemo({
     DemoPutDemoQuery? query,
     DemoPutDemoJson? json,

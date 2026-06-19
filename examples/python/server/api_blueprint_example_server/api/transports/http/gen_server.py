@@ -162,6 +162,17 @@ _HTTP_ROUTE_API_DEMO_GET_REQUESTOPTIONS = HttpRouteInfo(
     ),
 )
 
+_HTTP_ROUTE_API_DEMO_POST_EMPTYRESPONSE = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
+
 _HTTP_ROUTE_API_DEMO_PUT_Z1PUT = HttpRouteInfo(
     request=HttpRequestInfo(
         binary_content_encodings=(),
@@ -697,6 +708,20 @@ def create_demo_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.demo.get.requestoptions")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
+
+    @router.api_route("/api/demo/empty-response", methods=["POST"])
+    async def demo_empty_response(request: Request) -> Any:
+        service = service_impl
+        route_info = _HTTP_ROUTE_API_DEMO_POST_EMPTYRESPONSE
+        try:
+            result = await service.empty_response(
+            )
+            return _wrap_response({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, result)
+
+        except ApiError as error:
+            return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.demo.post.emptyresponse")
         except PayloadTooLargeError as error:
             return _payload_too_large_response(error)
 

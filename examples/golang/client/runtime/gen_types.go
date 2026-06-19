@@ -147,6 +147,8 @@ type RequestOptionsResponse struct {
 	DelayMs int    `json:"delay_ms" form:"delay_ms"`
 }
 
+type RSPEmptyResponse struct{}
+
 type REQFunc1putQUERY struct {
 	Arg1 string  `json:"arg1,omitempty" form:"arg1,omitempty"`
 	Arg2 float64 `json:"arg2,omitempty" form:"arg2,omitempty"`
