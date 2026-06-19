@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .helpers import *
+from api_blueprint.engine.model import Array, Int64
 
 
 def test_route_contract_preserves_explicit_operation_id_casing_variants():
@@ -213,6 +214,61 @@ def test_contract_graph_disambiguates_auto_models_with_same_operation_name():
     assert demo_query != hello_query
     assert "arg1" in manifest["schemas"][demo_query]["fields"]
     assert "kind" in manifest["schemas"][hello_query]["fields"]
+
+def test_contract_graph_disambiguates_object_then_array_response_alias_collision():
+    class Permission(Model):
+        id = Int64(description="id")
+        name = String(description="name")
+        code = String(description="code")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/base/role") as role:
+        role.GET("/list").RSP(total=Int64(description="total"))
+    with bp.group("/base/perm") as perm:
+        perm.GET("/list").RSP(Array[Permission](description="permissions"))
+
+    manifest = build_contract_graph([bp]).to_manifest()
+
+    role_route, perm_route = manifest["routes"]
+    role_schema = role_route["response"]["model"]
+    perm_schema = perm_route["response"]["model"]
+    assert role_schema != perm_schema
+    assert role_schema in manifest["schemas"]
+    assert perm_schema in manifest["schemas"]
+    assert manifest["schemas"][role_schema]["type"] == "object"
+    assert manifest["schemas"][perm_schema]["type"] == "alias"
+    assert manifest["schemas"][perm_schema]["target"]["type"] == "array"
+    assert manifest["schemas"][perm_schema]["target"]["items"] == {
+        "type": "object",
+        "ref": "Permission",
+    }
+    assert all(route["response"]["model"] in manifest["schemas"] for route in manifest["routes"])
+
+def test_contract_graph_disambiguates_array_then_object_response_alias_collision():
+    class Permission(Model):
+        id = Int64(description="id")
+        name = String(description="name")
+        code = String(description="code")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/base/perm") as perm:
+        perm.GET("/list").RSP(Array[Permission](description="permissions"))
+    with bp.group("/base/role") as role:
+        role.GET("/list").RSP(total=Int64(description="total"))
+
+    manifest = build_contract_graph([bp]).to_manifest()
+
+    perm_route, role_route = manifest["routes"]
+    perm_schema = perm_route["response"]["model"]
+    role_schema = role_route["response"]["model"]
+    assert perm_schema != role_schema
+    assert perm_schema in manifest["schemas"]
+    assert role_schema in manifest["schemas"]
+    assert perm_schema.startswith("RSP_List#")
+    assert manifest["schemas"][perm_schema]["type"] == "alias"
+    assert manifest["schemas"][perm_schema]["target"]["type"] == "array"
+    assert manifest["schemas"][role_schema]["type"] == "object"
+    assert all(route["response"]["model"] in manifest["schemas"] for route in manifest["routes"])
 
 def test_contract_route_contract_is_the_writer_core_compat_source():
     bp = Blueprint(root="/api")

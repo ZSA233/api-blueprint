@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from .helpers import *
-from api_blueprint.engine.model import Int, OneOf, LegacyStringID
+from api_blueprint.engine.model import Int, Int64, OneOf, LegacyStringID
 
 
 def test_python_client_generates_recursive_nested_dto_codecs(tmp_path: Path):
@@ -131,6 +131,42 @@ def test_python_client_generates_enum_and_wire_name_codecs(tmp_path: Path):
         "statuses": [1, 2],
         "status_map": {"1": "second"},
     }
+
+def test_python_client_decodes_top_level_array_response_when_list_alias_collides(tmp_path: Path):
+    class Permission(Model):
+        id = Int64(description="id")
+        name = String(description="name")
+        code = String(description="code")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/base/role") as role:
+        role.GET("/list").RSP(total=Int64(description="total"))
+    with bp.group("/base/perm") as perm:
+        perm.GET("/list").RSP(Array[Permission](description="permissions"))
+
+    output_dir = tmp_path / "python"
+    writer = PythonClientWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+    _compile_generated_files(output_dir)
+
+    route_root = output_dir / "api_blueprint_generated" / "api" / "routes" / "api" / "base"
+    role_client = (route_root / "role" / "gen_client.py").read_text(encoding="utf-8")
+    role_types = (route_root / "role" / "gen_types.py").read_text(encoding="utf-8")
+    perm_client = (route_root / "perm" / "gen_client.py").read_text(encoding="utf-8")
+    perm_types = (route_root / "perm" / "gen_types.py").read_text(encoding="utf-8")
+
+    assert ") -> list[Permission]:" in perm_client
+    assert "response_type: str | None = 'list[Permission]'" in perm_client
+    assert "_decode_list(" in perm_client
+    assert "Permission.from_value" in perm_client
+    assert 'return ListResponse.from_value(payload, "list.response")' not in perm_client
+    assert "@dataclass(kw_only=True)\nclass Permission:" in perm_types
+
+    assert ") -> ListResponse:" in role_client
+    assert "response_type: str | None = 'ListResponse'" in role_client
+    assert 'return ListResponse.from_value(payload, "list.response")' in role_client
+    assert "@dataclass(kw_only=True)\nclass ListResponse:" in role_types
 
 
 def test_python_client_decodes_legacy_json_compat_fields(tmp_path: Path):

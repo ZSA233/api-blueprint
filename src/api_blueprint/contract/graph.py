@@ -313,27 +313,17 @@ class ContractGraphBuilder:
         if model is None:
             return None
         if isinstance(model, FieldWrappedModel):
-            name = _model_name(model)
-            if name not in self.schemas:
-                self.schemas[name] = {
-                    "name": name,
-                    "kind": "alias",
-                    "type": "alias",
-                    "target": self._field_manifest(model.__field_type__),
-                    "auto": bool(getattr(model, "__auto__", False)),
-                }
-            return name
+            return self._alias_schema_ref(
+                _model_name(model),
+                self._field_manifest(model.__field_type__),
+                auto=bool(getattr(model, "__auto__", False)),
+            )
         if isinstance(model, Field):
-            name = _model_name(model)
-            if name not in self.schemas:
-                self.schemas[name] = {
-                    "name": name,
-                    "kind": "alias",
-                    "type": "alias",
-                    "target": self._field_manifest(model),
-                    "auto": bool(getattr(model, "__auto__", False)),
-                }
-            return name
+            return self._alias_schema_ref(
+                _model_name(model),
+                self._field_manifest(model),
+                auto=bool(getattr(model, "__auto__", False)),
+            )
 
         model_cls = unwrap_model_type(model)
         name = _model_name(model_cls)
@@ -385,9 +375,25 @@ class ContractGraphBuilder:
         self.schemas[schema_id]["fields"] = fields
         return schema_id
 
+    def _alias_schema_ref(self, name: str, target: JsonObject, *, auto: bool) -> str:
+        identity = _alias_identity(name, target)
+        schema_id = self._schema_id_for_identity(name, identity)
+        if schema_id in self.schemas:
+            return schema_id
+        self.schemas[schema_id] = {
+            "name": name,
+            "identity": identity,
+            "kind": "alias",
+            "type": "alias",
+            "target": target,
+            "auto": auto,
+        }
+        return schema_id
+
     def _schema_id(self, model_cls: type[Model]) -> str:
-        name = _model_name(model_cls)
-        identity = _model_identity(model_cls)
+        return self._schema_id_for_identity(_model_name(model_cls), _model_identity(model_cls))
+
+    def _schema_id_for_identity(self, name: str, identity: str) -> str:
         if name in self._qualified_schema_names:
             return identity
         existing = self.schemas.get(name)
@@ -718,6 +724,19 @@ def _model_identity(model: object) -> str:
         ).hexdigest()[:12]
         return f"{identity}#{digest}"
     return identity
+
+
+def _alias_identity(name: str, target: Mapping[str, Any]) -> str:
+    digest = hashlib.sha256(
+        json.dumps(
+            {"name": name, "target": target},
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+            default=repr,
+        ).encode("utf-8")
+    ).hexdigest()[:12]
+    return f"{name}#{digest}"
 
 
 def _auto_model_signature(model: object) -> JsonObject:
