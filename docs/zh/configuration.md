@@ -1,6 +1,6 @@
 # 配置说明
 
-`api-blueprint.toml` 是文档服务和统一生成器的主配置文件。生成链路是 `Blueprint -> ContractGraph -> targets`；`[[targets]]` 是 canonical 入口，`[[contract]]`、`[[go.server]]`、`[[go.client]]`、`[[typescript.client]]`、`[[flutter.client]]`、`[[swift.client]]`、`[[kotlin.client]]`、`[[java.server]]`、`[[java.client]]`、`[[python.server]]`、`[[transport.http]]`、`[[grpc.proto]]`、`[[grpc.go]]` 等快捷表会在加载时 normalize 成同一个 target 列表。
+`api-blueprint.toml` 是文档服务和统一生成器的主配置文件。生成链路是 `Blueprint -> ContractGraph -> targets`；`[[targets]]` 是 canonical 入口，`[[contract]]`、`[[go.server]]`、`[[go.client]]`、`[[typescript.client]]`、`[[flutter.client]]`、`[[swift.client]]`、`[[kotlin.client]]`、`[[java.server]]`、`[[java.client]]`、`[[python.server]]`、`[[transport.http]]`、`[[grpc.proto]]`、`[[grpc.go]]` 等快捷表会在加载时 normalize 成同一个 target 列表。没有快捷表的扩展 target，例如 `ir-plugin`，使用 canonical `[[targets]]` 写法。
 
 ## blueprint
 
@@ -123,6 +123,16 @@ proto = "grpc.proto"
 out_dir = "grpc/python"
 files = ["api/**/*.proto"]
 module = "pb"
+
+[[targets]]
+id = "demo.plugin"
+kind = "ir-plugin"
+plugin = "plugins.summary"
+out_dir = "generated/plugin"
+include = ["kind:channel"]
+
+[targets.options]
+package = "demo"
 ```
 
 公共字段：
@@ -150,8 +160,11 @@ module = "pb"
 - `grpc-proto`：从 ContractGraph 输出 `.proto` 和 service 定义；可通过 `[[targets.proto_files]]` 或快捷表 `[[grpc.proto.proto_files]]` 把 DSL schema module/name 与 route path/id/service 映射到指定 proto file/package/go_package/service。HTTP raw media route 不会自动投影为 gRPC；同类能力应建模为 protobuf `bytes` 字段或 streaming chunk message。
 - `grpc-go`：消费同配置内的 `grpc-proto` target，或直接消费手写 proto，调用 `protoc` / `protoc-gen-go` / `protoc-gen-go-grpc` 生成 Go protobuf/gRPC stub。
 - `grpc-python`：消费同配置内的 `grpc-proto` target，或直接消费手写 proto，调用 `grpcio-tools` 生成 Python protobuf/gRPC stub；`python_package_root` 会把生成物放入指定包根并重写生成 import。
+- `ir-plugin`：调用宿主项目维护的 Python 插件读取 ContractGraph、route selection 和 target options，生成项目专属产物；必须使用 canonical `[[targets]]`，并设置 `kind = "ir-plugin"`、`plugin` 和 `out_dir`。`plugin` 是可 import 的 Python module，必须暴露 `generate(context)`；`include` / `exclude` 用于裁剪传给插件的 route，`[targets.options]` 是插件自定义配置。
 
 Flutter / Swift / Kotlin / Java / Python client/server、`api-gen check` 和 contract / agent artifact projection 使用同一份 planner / capability metadata。若 target capability 不支持某个 route、request kind 或 response envelope，应在生成前失败，而不是生成半套产物。Wails/gRPC 对 HTTP multipart、Content-Disposition、HTTP status/header、MIME download 和 HTTP byte stream 语义保持明确 unsupported，并在错误中提示 Wails RPC descriptor/STREAM chunks 或 protobuf bytes/streaming chunks 等 native equivalent。
+
+`ir-plugin` options、`Blueprint.EXPORT_MODELS(..., **metadata)` 和 `message_variant(..., **metadata)` 都会进入 ContractGraph manifest，必须使用 JSON-safe 的 string、number、boolean、array、object 或 null；不要传 Python path、date/time、类实例、函数等对象。
 
 ## 运行时生产配置
 

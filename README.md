@@ -109,7 +109,7 @@ api-gen generate -c api-blueprint.toml
 | gRPC proto / stubs | 可用 | 从 ContractGraph 输出 proto，并生成 Go/Python stub；bytes/file/stream 使用 protobuf bytes 或 streaming chunk 建模 |
 | IR plugin | 预览 | 让项目插件读取 ContractGraph、route selection 和 target options，生成项目专属产物；不提供宿主运行时引擎 |
 
-生成物 ownership、单次请求选项、stream/file 路径、server adapter 安全默认和生产逃生通道详见 [生成器与目录布局](docs/zh/generators.md)。默认 adapter 是协议桥接层，不是完整生产运行时；生产项目应优先使用具体 route/client/router 的窄入口，并通过原生 client、custom transport、service implementation、middleware 或 app shell 承载鉴权、限流、cookie、TLS/proxy、重试和文件权限策略。`include` / `exclude` 是稳定的生成期裁剪边界；不 import、不引用或只链接窄 product 属于语言工具链优化，不是跨语言结构体级 dead-strip 契约。
+生成物 ownership、单次请求选项、stream/file 路径、server adapter 安全默认和生产逃生通道详见 [生成器与目录布局](docs/zh/generators.md)。IR plugin 配置、options 和 metadata 约束见 [配置说明](docs/zh/configuration.md)。默认 adapter 是协议桥接层，不是完整生产运行时；生产项目应优先使用具体 route/client/router 的窄入口，并通过原生 client、custom transport、service implementation、middleware 或 app shell 承载鉴权、限流、cookie、TLS/proxy、重试和文件权限策略。`include` / `exclude` 是稳定的生成期裁剪边界；不 import、不引用或只链接窄 product 属于语言工具链优化，不是跨语言结构体级 dead-strip 契约。
 
 ## 下一步
 

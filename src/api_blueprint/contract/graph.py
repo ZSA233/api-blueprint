@@ -167,7 +167,7 @@ class ContractGraphBuilder:
                 continue
             item: JsonObject = {
                 "model": schema_ref,
-                "metadata": _json_safe_mapping(exported.metadata),
+                "metadata": _json_safe_mapping(exported.metadata, label="exported model metadata"),
             }
             if item not in self.exported_models:
                 self.exported_models.append(item)
@@ -298,7 +298,10 @@ class ContractGraphBuilder:
                 "model": self._schema_ref(variant.model),
             }
             if variant.metadata:
-                item["metadata"] = dict(variant.metadata)
+                item["metadata"] = _json_safe_mapping(
+                    variant.metadata,
+                    label=f"message variant[{variant.key}] metadata",
+                )
             variants.append(item)
         name = message.name or (variants[0]["model"] if variants else None)
         return {
@@ -409,6 +412,8 @@ class ContractGraphBuilder:
             _replace_schema_ref_value(route, old, new)
         for schema in self.schemas.values():
             _replace_schema_ref_value(schema, old, new)
+        for exported in self.exported_models:
+            _replace_schema_ref_value(exported, old, new)
 
     def _apply_schema_ref_rewrites(self, value: JsonObject) -> None:
         for old, new in self._schema_ref_rewrites.items():
@@ -518,11 +523,11 @@ def _provider_manifest(provider: Any) -> JsonObject:
     return manifest
 
 
-def _json_safe_mapping(value: Mapping[str, Any]) -> JsonObject:
+def _json_safe_mapping(value: Mapping[str, Any], *, label: str) -> JsonObject:
     try:
         return json.loads(json.dumps(dict(value), ensure_ascii=False, sort_keys=True))
     except (TypeError, ValueError) as exc:
-        raise ValueError("exported model metadata must be JSON-serializable") from exc
+        raise ValueError(f"{label} must be JSON-serializable") from exc
 
 
 def _validate_route_identity_conflicts(

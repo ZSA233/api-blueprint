@@ -363,6 +363,40 @@ exclude = ["path:/api/demo/ping"]
     assert "include: [tag:api]" in swift_client.output
     assert "exclude: [path:/api/demo/ws]" in swift_client.output
 
+
+def test_api_gen_explain_target_shows_ir_plugin_options(tmp_path):
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[targets]]
+id = "demo.plugin"
+kind = "ir-plugin"
+plugin = "plugins.summary"
+out_dir = "generated/plugin"
+include = ["kind:channel"]
+
+[targets.options]
+package = "demo"
+
+[[targets]]
+id = "empty.plugin"
+kind = "ir-plugin"
+plugin = "plugins.empty"
+out_dir = "generated/empty"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    configured = CliRunner().invoke(api_gen, ["explain-target", "-c", str(config_path), "--target", "demo.plugin"])
+    assert configured.exit_code == 0, configured.output
+    assert 'options: {"package": "demo"}' in configured.output
+
+    empty = CliRunner().invoke(api_gen, ["explain-target", "-c", str(config_path), "--target", "empty.plugin"])
+    assert empty.exit_code == 0, empty.output
+    assert "options: {}" in empty.output
+
+
 def test_api_gen_inspect_route_uses_operation_id_for_channel_operation(tmp_path):
     _write_connection_inspect_blueprint(tmp_path)
     config_path = _write_inspect_config(tmp_path)

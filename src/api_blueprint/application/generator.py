@@ -59,7 +59,7 @@ EXPLAIN_TARGET_KIND_FIELDS: dict[str, tuple[str, ...]] = {
     "grpc-proto": ("package", "go_package_prefix", "proto_files"),
     "grpc-go": ("proto", "source_root", "files", "import_roots", "module"),
     "grpc-python": ("proto", "source_root", "files", "import_roots", "python_package_root"),
-    "ir-plugin": ("plugin", "include", "exclude"),
+    "ir-plugin": ("plugin", "options", "include", "exclude"),
 }
 
 EXPLAIN_TARGET_LIST_FIELDS = {
@@ -627,6 +627,8 @@ def _effective_target_summary_value(
         return manifest[field]
     if field == "formats" and target.kind == "contract":
         return ["index"]
+    if field == "options":
+        return {}
     if field in EXPLAIN_TARGET_LIST_FIELDS:
         return []
     if field == "frontend_mode" and target.kind == "wails-transport":

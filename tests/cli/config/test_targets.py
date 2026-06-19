@@ -140,6 +140,28 @@ base_url_expr = "import.meta.env.VITE_API_BASE_URL"
     assert resolved.targets[0].base_url is None
     assert resolved.targets[0].base_url_expr == "import.meta.env.VITE_API_BASE_URL"
 
+
+def test_target_options_must_be_json_serializable(tmp_path) -> None:
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[targets]]
+id = "demo.plugin"
+kind = "ir-plugin"
+plugin = "plugins.summary"
+out_dir = "generated/plugin"
+
+[targets.options]
+created_on = 2026-06-19
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match=r"target\[demo.plugin\] options must be JSON-serializable"):
+        Config.load(config_path)
+
+
 def test_java_server_spring_contract_config_loads_resolves_and_manifests(tmp_path) -> None:
     config_path = tmp_path / "api-blueprint.toml"
     config_path.write_text(

@@ -1,6 +1,6 @@
 # Configuration
 
-`api-blueprint.toml` is the main config file for the documentation service and the unified generator. The generation flow is `Blueprint -> ContractGraph -> targets`; `[[targets]]` is the canonical entrypoint, and shortcut tables such as `[[contract]]`, `[[go.server]]`, `[[go.client]]`, `[[typescript.client]]`, `[[flutter.client]]`, `[[swift.client]]`, `[[kotlin.client]]`, `[[java.server]]`, `[[java.client]]`, `[[python.server]]`, `[[transport.http]]`, `[[grpc.proto]]`, and `[[grpc.go]]` are normalized into the same target list when config is loaded.
+`api-blueprint.toml` is the main config file for the documentation service and the unified generator. The generation flow is `Blueprint -> ContractGraph -> targets`; `[[targets]]` is the canonical entrypoint, and shortcut tables such as `[[contract]]`, `[[go.server]]`, `[[go.client]]`, `[[typescript.client]]`, `[[flutter.client]]`, `[[swift.client]]`, `[[kotlin.client]]`, `[[java.server]]`, `[[java.client]]`, `[[python.server]]`, `[[transport.http]]`, `[[grpc.proto]]`, and `[[grpc.go]]` are normalized into the same target list when config is loaded. Extension targets without shortcut tables, such as `ir-plugin`, use the canonical `[[targets]]` form.
 
 ## blueprint
 
@@ -123,6 +123,16 @@ proto = "grpc.proto"
 out_dir = "grpc/python"
 files = ["api/**/*.proto"]
 module = "pb"
+
+[[targets]]
+id = "demo.plugin"
+kind = "ir-plugin"
+plugin = "plugins.summary"
+out_dir = "generated/plugin"
+include = ["kind:channel"]
+
+[targets.options]
+package = "demo"
 ```
 
 Common fields:
@@ -150,8 +160,11 @@ Core targets:
 - `grpc-proto`: emits `.proto` files and service definitions from ContractGraph. `[[targets.proto_files]]` or the `[[grpc.proto.proto_files]]` shortcut can map DSL schema module/name plus route path/id/service to a specific proto file/package/go_package/service. HTTP raw media routes are not projected into gRPC automatically; model equivalent capabilities as protobuf `bytes` fields or streaming chunk messages.
 - `grpc-go`: consumes a `grpc-proto` target in the same config, or handwritten proto files directly, and calls `protoc` / `protoc-gen-go` / `protoc-gen-go-grpc` to generate Go protobuf/gRPC stubs.
 - `grpc-python`: consumes a `grpc-proto` target in the same config, or handwritten proto files directly, and calls `grpcio-tools` to generate Python protobuf/gRPC stubs. `python_package_root` places generated files under a package root and rewrites generated imports.
+- `ir-plugin`: calls a host-maintained Python plugin to read ContractGraph, route selection, and target options, then generate project-owned artifacts. It must use canonical `[[targets]]` with `kind = "ir-plugin"`, `plugin`, and `out_dir`. `plugin` is an importable Python module that exposes `generate(context)`; `include` / `exclude` trim the selected routes passed to the plugin, and `[targets.options]` is plugin-defined configuration.
 
 Flutter / Swift / Kotlin / Java / Python client/server, `api-gen check`, and contract / agent artifact projection use the same planner / capability metadata. If a target capability does not support a route, request kind, or response envelope, generation should fail before writing a partial output tree. Wails/gRPC keep HTTP multipart, `Content-Disposition`, HTTP status/header, MIME download, and HTTP byte stream semantics explicitly unsupported, and errors point to native equivalents such as Wails RPC descriptors/STREAM chunks or protobuf bytes/streaming chunks.
+
+`ir-plugin` options, `Blueprint.EXPORT_MODELS(..., **metadata)`, and `message_variant(..., **metadata)` enter the ContractGraph manifest, so they must use JSON-safe string, number, boolean, array, object, or null values; do not pass Python paths, date/time values, class instances, functions, or similar objects.
 
 ## Runtime Production Configuration
 

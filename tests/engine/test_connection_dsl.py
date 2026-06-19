@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from api_blueprint.contract import build_contract_graph
@@ -107,6 +109,17 @@ def test_multi_variant_message_metadata_is_exposed_in_contract_manifest():
     assert client_message["variants"][0]["metadata"] == {"domain": "message", "op": 3001}
 
 
+def test_multi_variant_message_metadata_must_be_json_serializable():
+    bp = Blueprint(root="/api")
+    bp.CHANNEL("/chat").SERVER_MESSAGE(ServerMessage).CLIENT_MESSAGE(
+        "ClientUnion",
+        input=message_variant(ClientMessage, path=Path("payload.json")),
+    )
+
+    with pytest.raises(ValueError, match=r"message variant\[input\] metadata must be JSON-serializable"):
+        build_contract_graph([bp])
+
+
 def test_export_models_are_exposed_in_contract_manifest_without_route_reference():
     bp = Blueprint(root="/api")
     bp.EXPORT_MODELS(ExportOnlyMessage, domain="support")
@@ -124,6 +137,31 @@ def test_export_models_are_exposed_in_contract_manifest_without_route_reference(
     assert "ExportOnlyMessage" in manifest["schemas"]
     assert "ExportOnlyNested" in manifest["schemas"]
     assert manifest["schemas"]["ExportOnlyMessage"]["fields"]["nested"]["ref"] == "ExportOnlyNested"
+
+
+def test_export_model_refs_follow_schema_identity_rewrites():
+    payload_a = type(
+        "StandalonePayload",
+        (Model,),
+        {"__module__": "tests.support_a", "value": String(description="a")},
+    )
+    payload_b = type(
+        "StandalonePayload",
+        (Model,),
+        {"__module__": "tests.support_b", "value": String(description="b")},
+    )
+    bp = Blueprint(root="/api")
+    bp.EXPORT_MODELS(payload_a, slot="a")
+    bp.EXPORT_MODELS(payload_b, slot="b")
+
+    manifest = build_contract_graph([bp]).to_manifest()
+    exported_refs = {item["metadata"]["slot"]: item["model"] for item in manifest["exported_models"]}
+
+    assert exported_refs == {
+        "a": "tests.support_a.StandalonePayload",
+        "b": "tests.support_b.StandalonePayload",
+    }
+    assert all(model in manifest["schemas"] for model in exported_refs.values())
 
 
 def test_connection_scope_accepts_declared_scope_values():

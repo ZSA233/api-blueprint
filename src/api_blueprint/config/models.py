@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 from typing import Any, Literal
@@ -38,6 +39,13 @@ GO_PACKAGE_NAME_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 
 def default_wails_overlay_name(version: WailsVersion) -> str:
     return f"wails{version}"
+
+
+def _validate_json_safe_mapping(value: dict[str, Any], *, label: str) -> None:
+    try:
+        json.dumps(value, ensure_ascii=False, sort_keys=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{label} must be JSON-serializable") from exc
 
 
 class TargetConfig(BaseModel):
@@ -79,6 +87,7 @@ class TargetConfig(BaseModel):
     def validate_target_fields(self) -> "TargetConfig":
         if self.base_url is not None and self.base_url_expr is not None:
             raise ValueError(f"target[{self.id}] base_url and base_url_expr are mutually exclusive")
+        _validate_json_safe_mapping(self.options, label=f"target[{self.id}] options")
         if self.kind == "wails-transport":
             if self.version not in {"v2", "v3"}:
                 raise ValueError(f"target[{self.id}] wails-transport requires version = 'v2' or 'v3'")
