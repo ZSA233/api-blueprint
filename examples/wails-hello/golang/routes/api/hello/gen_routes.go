@@ -3,6 +3,9 @@
 package hello
 
 const (
-	RouteIDGreet   = "api.hello.get.greet"
+	RouteIDGreet = "api.hello.get.greet"
+)
+
+const (
 	RoutePathGreet = "/api/hello/greet"
 )

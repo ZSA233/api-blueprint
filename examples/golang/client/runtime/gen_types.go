@@ -147,6 +147,17 @@ type RequestOptionsResponse struct {
 	DelayMs int    `json:"delay_ms" form:"delay_ms" uri:"delay_ms"`
 }
 
+type PathEchoPath struct {
+	Item  string `json:"item" form:"item" uri:"item"`
+	Badge string `json:"badge" form:"badge" uri:"badge"`
+}
+
+type PathEchoResponse struct {
+	Item     string `json:"item" form:"item" uri:"item"`
+	Badge    string `json:"badge" form:"badge" uri:"badge"`
+	Combined string `json:"combined" form:"combined" uri:"combined"`
+}
+
 type RSPEmptyResponse struct{}
 
 type REQFunc1putQUERY struct {

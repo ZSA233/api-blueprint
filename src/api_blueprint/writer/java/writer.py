@@ -295,6 +295,8 @@ class JavaBaseWriter(BaseWriter[JavaBlueprint]):
                 )
             )
             return params
+        if route.path_model:
+            params.append((self.schema_type(route.path_model, group), "path"))
         if route.query_model:
             params.append((self.schema_type(route.query_model, group), "query"))
         if route.json_model:

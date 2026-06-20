@@ -11,7 +11,7 @@ import 'package:test/test.dart';
 void main() {
   final baseUrl = Platform.environment['API_BLUEPRINT_BASE_URL'];
   final selected = _scenarioSet(Platform.environment['API_BLUEPRINT_SCENARIOS'] ??
-      'rpc,binary,form,error,sse,websocket,naming,raw,xml,static,header,scalar,enum,map,deprecated,empty-response,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel,legacy-json');
+      'rpc,binary,form,error,sse,websocket,naming,raw,xml,static,header,scalar,enum,map,deprecated,empty-response,path-params,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel,legacy-json');
 
   if (baseUrl == null || baseUrl.isEmpty) {
     test('conformance requires API_BLUEPRINT_BASE_URL', () {
@@ -116,6 +116,15 @@ void main() {
     test('empty response route remains callable', () async {
       final rsp = await client.demo.emptyResponse();
       expect(rsp, isNotNull);
+    });
+  }
+
+  if (selected.contains('path-params')) {
+    test('path params route preserves decoded path values', () async {
+      final rsp = await client.demo.pathEcho(path: const api.PathEchoPath(item: 'alpha', badge: 'gold badge'));
+      expect(rsp.item, 'alpha');
+      expect(rsp.badge, 'gold badge');
+      expect(rsp.combined, 'alpha:gold badge');
     });
   }
 

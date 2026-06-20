@@ -29,6 +29,11 @@ public interface GenDemoDelegate {
         GenSpringRequestContext context
     ) throws Exception;
 
+    GenApiTypes.PathEchoResponse pathEcho(
+        GenApiTypes.PathEchoPath path,
+        GenSpringRequestContext context
+    ) throws Exception;
+
     GenDemoTypes.EmptyResponseResponse emptyResponse(
         GenSpringRequestContext context
     ) throws Exception;

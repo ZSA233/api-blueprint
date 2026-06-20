@@ -48,6 +48,17 @@ type RequestOptionsResponse struct {
 	DelayMs int    `json:"delay_ms" xml:"delay_ms" form:"delay_ms" uri:"delay_ms"`
 }
 
+type PathEchoPath struct {
+	Item  string `json:"item" xml:"item" form:"item" uri:"item"`
+	Badge string `json:"badge" xml:"badge" form:"badge" uri:"badge"`
+}
+
+type PathEchoResponse struct {
+	Item     string `json:"item" xml:"item" form:"item" uri:"item"`
+	Badge    string `json:"badge" xml:"badge" form:"badge" uri:"badge"`
+	Combined string `json:"combined" xml:"combined" form:"combined" uri:"combined"`
+}
+
 type ANON_Func1put_anon_kv struct {
 	Kv1 uint      `json:"kv1" xml:"kv1" form:"kv1" uri:"kv1"`
 	Kv2 []float64 `json:"kv2" xml:"kv2" form:"kv2" uri:"kv2"`

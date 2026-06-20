@@ -81,6 +81,7 @@ public class {{ group.generated_client_class }} {
             {{ route.route_id | code_literal }},
             {{ route.http_method | code_literal }},
             {{ route.url | code_literal }},
+            {% if route.path_model %}path{% else %}null{% endif %},
             {% if route.query_model %}query{% else %}null{% endif %},
             new GenApiRequestBodySpec(
                 {% if route.json_model %}json{% else %}null{% endif %},
@@ -127,6 +128,7 @@ public class {{ group.generated_client_class }} {
             {{ route.route_id | code_literal }},
             "STREAM",
             {{ route.url | code_literal }},
+            null,
             {% if route.query_model %}query{% else %}null{% endif %},
             new GenApiRequestBodySpec(
                 {% if route.open_model %}openData{% else %}null{% endif %},
@@ -173,6 +175,7 @@ public class {{ group.generated_client_class }} {
             {{ route.route_id | code_literal }},
             "CHANNEL",
             {{ route.url | code_literal }},
+            null,
             {% if route.query_model %}query{% else %}null{% endif %},
             new GenApiRequestBodySpec(
                 {% if route.open_model %}openData{% else %}null{% endif %},

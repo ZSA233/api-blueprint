@@ -191,6 +191,34 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			},
 		},
 		{
+			Method:       "GET",
+			Path:         "/api/demo/path-echo/{item}/{badge}",
+			RequestKind:  "path",
+			ResponseKind: "json",
+			Envelope:     "CodeMessageDataEnvelope",
+			RouteID:      "api.demo.get.pathecho_item_badge",
+			Native:       false,
+			Request: providers.ContractSchemaInfo{
+				Status: "ok",
+				Kind:   "object",
+				Type:   "PathEchoPath",
+				Fields: []providers.ContractFieldInfo{
+					{Key: "badge", Kind: "string", Type: "string", TagSource: "path"},
+					{Key: "item", Kind: "string", Type: "string", TagSource: "path"},
+				},
+			},
+			Response: providers.ContractSchemaInfo{
+				Status: "ok",
+				Kind:   "object",
+				Type:   "PathEchoResponse",
+				Fields: []providers.ContractFieldInfo{
+					{Key: "badge", Kind: "string", Type: "string", TagSource: "response"},
+					{Key: "combined", Kind: "string", Type: "string", TagSource: "response"},
+					{Key: "item", Kind: "string", Type: "string", TagSource: "response"},
+				},
+			},
+		},
+		{
 			Method:       "POST",
 			Path:         "/api/demo/post_deprecated",
 			RequestKind:  "json",

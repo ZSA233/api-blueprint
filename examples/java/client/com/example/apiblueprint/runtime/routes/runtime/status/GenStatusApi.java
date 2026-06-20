@@ -39,6 +39,7 @@ public class GenStatusApi {
             "GET",
             "/runtime/status/current",
             null,
+            null,
             new GenApiRequestBodySpec(
                 null,
                 null,

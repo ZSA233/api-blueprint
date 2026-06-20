@@ -41,6 +41,7 @@ public class GenConflictApi {
             "alt.conflict.get.default",
             "GET",
             "/alt/conflict/default",
+            null,
             query,
             new GenApiRequestBodySpec(
                 null,

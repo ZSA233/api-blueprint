@@ -41,6 +41,7 @@ export interface RequestOptions<R> {
   routeId: string;
   method: string;
   path: string;
+  pathParams?: Record<string, unknown>;
   service: string;
   operation: string;
   namespace: string;

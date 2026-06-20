@@ -40,7 +40,7 @@ def test_route_public_names_use_operation_id_and_route_local_suffixes() -> None:
     assert names.response == "PutDemoResponse"
 
 
-def test_path_request_capability_supports_go_python_and_fails_fast_elsewhere() -> None:
+def test_path_request_capability_supports_http_targets_and_fails_fast_for_native_transports() -> None:
     class PathModel(Model):
         item = String(description="item")
 
@@ -52,16 +52,26 @@ def test_path_request_capability_supports_go_python_and_fails_fast_elsewhere() -
     supported = [
         ResolvedApiTargetConfig(id="go.client", kind="go-client", out_dir=None, module="example.com/client"),
         ResolvedApiTargetConfig(id="go.server", kind="go-server", out_dir=None, module="example.com/server"),
+        ResolvedApiTargetConfig(id="typescript.client", kind="typescript-client", out_dir=None),
+        ResolvedApiTargetConfig(id="kotlin.client", kind="kotlin-client", out_dir=None),
+        ResolvedApiTargetConfig(id="kotlin.server", kind="kotlin-server", out_dir=None),
+        ResolvedApiTargetConfig(id="java.client", kind="java-client", out_dir=None),
+        ResolvedApiTargetConfig(id="java.server", kind="java-server", out_dir=None),
+        ResolvedApiTargetConfig(id="flutter.client", kind="flutter-client", out_dir=None),
+        ResolvedApiTargetConfig(id="swift.client", kind="swift-client", out_dir=None),
         ResolvedApiTargetConfig(id="python.client", kind="python-client", out_dir=None),
+        ResolvedApiTargetConfig(id="python.server", kind="python-server", out_dir=None),
         ResolvedApiTargetConfig(id="ir.plugin", kind="ir-plugin", out_dir=None, plugin="demo:Plugin"),
     ]
     unsupported = [
-        ResolvedApiTargetConfig(id="typescript.client", kind="typescript-client", out_dir=None),
+        ResolvedApiTargetConfig(id="wails.v3", kind="wails-transport", out_dir=None),
+        ResolvedApiTargetConfig(id="grpc.proto", kind="grpc-proto", out_dir=None),
     ]
 
     assert capability_errors(graph, supported) == []
     errors = capability_errors(graph, unsupported)
-    assert any("typescript-client does not support path request route: api.demo.get.items_item" in error for error in errors)
+    assert any("wails-transport does not support path request route: api.demo.get.items_item" in error for error in errors)
+    assert any("grpc-proto does not support path request route: api.demo.get.items_item" in error for error in errors)
 
 
 def test_go_public_field_names_preserve_common_initialisms() -> None:

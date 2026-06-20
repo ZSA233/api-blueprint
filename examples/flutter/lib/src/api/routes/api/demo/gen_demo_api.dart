@@ -89,6 +89,26 @@ class GenDemoApi {
     );
   }
 
+  Future<PathEchoResponse> pathEcho({
+    required PathEchoPath path,
+    ApiRequestOptions options = const ApiRequestOptions(),
+  }) {
+    return transport.request(
+      ApiRequest<PathEchoResponse>(
+        routeId: "api.demo.get.pathecho_item_badge",
+        method: "GET",
+        path: "/api/demo/path-echo/{item}/{badge}",
+        pathParams: path.toQueryMap(),
+        query: const <String, String?>{},
+        options: options,
+        responseMediaType: "application/json",
+        responseKind: "json",
+        responseEnvelope: ApiResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: ApiResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+        decode: PathEchoResponse.fromJsonValue,
+      ),
+    );
+  }
+
   Future<DemoEmptyResponseResponse> emptyResponse({
     ApiRequestOptions options = const ApiRequestOptions(),
   }) {

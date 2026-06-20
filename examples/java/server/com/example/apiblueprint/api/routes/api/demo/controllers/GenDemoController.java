@@ -13,8 +13,10 @@ import com.example.apiblueprint.api.spring.GenSpringRequestContext;
 import com.example.apiblueprint.api.spring.GenSpringResponseWriter;
 import com.example.apiblueprint.security.SignatureRequired;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -80,6 +82,26 @@ public class GenDemoController {
     ) throws Exception {
         GenApiTypes.RequestOptionsResponse result = delegate.requestOptions(
             query,
+            GenSpringRequestContext.of(servletRequest)
+        );
+        return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/json", "json");
+    }
+
+    @RequestMapping(path = "/api/demo/path-echo/{item}/{badge}", method = {RequestMethod.GET})
+    @SignatureRequired
+    @ApiBlueprintOperation("api.demo.get.pathecho_item_badge")
+    public ResponseEntity<?> pathEcho(
+        @PathVariable Map<String, String> pathVariables,
+        HttpServletRequest servletRequest
+    ) throws Exception {
+        GenApiTypes.PathEchoPath path;
+        try {
+            path = GenSpringRequestBinder.bindPath(pathVariables, GenApiTypes.PathEchoPath.class);
+        } catch (IllegalArgumentException error) {
+            return ResponseEntity.badRequest().build();
+        }
+        GenApiTypes.PathEchoResponse result = delegate.pathEcho(
+            path,
             GenSpringRequestContext.of(servletRequest)
         );
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/json", "json");

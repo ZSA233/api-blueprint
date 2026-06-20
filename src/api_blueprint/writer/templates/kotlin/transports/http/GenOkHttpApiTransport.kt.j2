@@ -51,7 +51,7 @@ public class OkHttpApiTransport(
 
     public override suspend fun execute(request: ApiRequest<*>): ApiResponse = withContext(Dispatchers.IO) {
         val mergedHeaders = config.defaultHeaders() + request.options.headers
-        val requestBuilder = Request.Builder().url(buildUrl(config.baseUrl, request.path, request.query))
+        val requestBuilder = Request.Builder().url(buildUrl(config.baseUrl, request.path, request.query, request.pathParams))
         mergedHeaders.forEach { (key, value) -> requestBuilder.header(key, value) }
 
         val requestBody = request.requestBody()
@@ -530,9 +530,15 @@ private fun closePayload(code: Int? = null, reason: String? = null, error: Strin
     }
 }
 
-private fun buildUrl(baseUrl: String, path: String, query: Map<String, String?> = emptyMap()): String {
+private fun buildUrl(
+    baseUrl: String,
+    path: String,
+    query: Map<String, String?> = emptyMap(),
+    pathParams: Map<String, String?> = emptyMap(),
+): String {
     val normalizedBase = baseUrl.trimEnd('/')
-    val normalizedPath = if (path.startsWith('/')) path else "/$path"
+    val expandedPath = expandPath(path, pathParams)
+    val normalizedPath = if (expandedPath.startsWith('/')) expandedPath else "/$expandedPath"
     val base = if (normalizedBase.isEmpty()) normalizedPath else normalizedBase + normalizedPath
     val queryString = query.entries
         .filter { it.value != null }
@@ -553,5 +559,19 @@ private fun buildWsUrl(baseUrl: String, path: String, query: Map<String, String?
     return url
 }
 
+private fun expandPath(path: String, params: Map<String, String?>): String {
+    val expanded = Regex("\\{([^{}]+)\\}").replace(path) { match ->
+        val name = match.groupValues[1]
+        val value = params[name] ?: throw IllegalArgumentException("missing path parameter: $name")
+        encodePathSegment(value)
+    }
+    require(!Regex("\\{[^{}]+\\}").containsMatchIn(expanded)) {
+        "unresolved path parameter in path: $expanded"
+    }
+    return expanded
+}
+
 private fun encode(value: String): String = URLEncoder.encode(value, Charsets.UTF_8.name())
+
+private fun encodePathSegment(value: String): String = encode(value).replace("+", "%20")
 {% endautoescape %}

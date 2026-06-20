@@ -39,6 +39,7 @@ public class GenStaticApi {
             "GET",
             "/static/doc.json",
             null,
+            null,
             new GenApiRequestBodySpec(
                 null,
                 null,
@@ -74,6 +75,7 @@ public class GenStaticApi {
             "static.static.get.dochaha",
             "GET",
             "/static/dochaha",
+            null,
             null,
             new GenApiRequestBodySpec(
                 null,

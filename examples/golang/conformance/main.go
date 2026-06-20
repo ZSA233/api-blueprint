@@ -39,7 +39,7 @@ func run() error {
 		return fmt.Errorf("base URL argument is required")
 	}
 	baseURL := strings.TrimRight(os.Args[1], "/")
-	selected := scenarioSet("rpc,binary,form,error,naming,raw,xml,static,header,scalar,enum,map,deprecated,empty-response,audit-binary,binary-response,media,single-channel")
+	selected := scenarioSet("rpc,binary,form,error,naming,raw,xml,static,header,scalar,enum,map,deprecated,empty-response,path-params,audit-binary,binary-response,media,single-channel")
 	if len(os.Args) >= 3 && os.Args[2] != "" {
 		selected = scenarioSet(os.Args[2])
 	}
@@ -95,6 +95,11 @@ func run() error {
 	}
 	if selected["empty-response"] {
 		if err := checkEmptyResponse(ctx, client.Demo); err != nil {
+			return err
+		}
+	}
+	if selected["path-params"] {
+		if err := checkPathParams(ctx, client.Demo); err != nil {
 			return err
 		}
 	}
@@ -378,6 +383,17 @@ func checkEmptyResponse(ctx context.Context, demoClient *demo.DemoClient) error 
 	}
 	if rsp == nil {
 		return fmt.Errorf("empty response returned nil")
+	}
+	return nil
+}
+
+func checkPathParams(ctx context.Context, demoClient *demo.DemoClient) error {
+	rsp, err := demoClient.PathEcho(ctx, demo.PathEchoPath{Item: "alpha", Badge: "gold badge"})
+	if err != nil {
+		return fmt.Errorf("path echo: %w", err)
+	}
+	if rsp.Item != "alpha" || rsp.Badge != "gold badge" || rsp.Combined != "alpha:gold badge" {
+		return fmt.Errorf("path echo response = %#v", rsp)
 	}
 	return nil
 }

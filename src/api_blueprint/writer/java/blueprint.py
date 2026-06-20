@@ -110,6 +110,10 @@ class JavaRoute:
         return _model_name(self.request.get("query_model"))
 
     @property
+    def path_model(self) -> str | None:
+        return _model_name(self.request.get("path_model"))
+
+    @property
     def json_model(self) -> str | None:
         return _model_name(self.request.get("json_model"))
 
@@ -198,6 +202,7 @@ class JavaRoute:
             name
             for name in (
                 self.query_model,
+                self.path_model,
                 self.json_model,
                 self.form_model,
                 self.multipart_model,
@@ -265,6 +270,7 @@ class JavaApiGroup:
     def register_route_model_names(self, route: JavaRoute, *, is_auto_schema) -> None:
         slots = (
             (route.query_model, route.public_names.query),
+            (route.path_model, route.public_names.path),
             (route.json_model, route.public_names.json),
             (route.form_model, route.public_names.form),
             (route.multipart_model, route.public_names.form),

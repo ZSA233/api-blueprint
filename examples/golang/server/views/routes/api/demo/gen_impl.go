@@ -24,6 +24,10 @@ func (impl *_GenRouter) RequestOptions(ctx *CTX_RequestOptions, req *REQ_Request
 	return nil, fmt.Errorf("not implemented")
 }
 
+func (impl *_GenRouter) PathEcho(ctx *CTX_PathEcho, req *REQ_PathEcho) (rsp *RSP_PathEcho, err error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
 func (impl *_GenRouter) EmptyResponse(ctx *CTX_EmptyResponse, req *REQ_EmptyResponse) (rsp *RSP_EmptyResponse, err error) {
 	return nil, fmt.Errorf("not implemented")
 }

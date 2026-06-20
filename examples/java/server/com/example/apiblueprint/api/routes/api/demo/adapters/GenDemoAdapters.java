@@ -43,6 +43,10 @@ public final class GenDemoAdapters {
         return value;
     }
 
+    public static GenApiTypes.PathEchoResponse pathEchoResponse(GenApiTypes.PathEchoResponse value) {
+        return value;
+    }
+
     public static GenDemoTypes.EmptyResponseResponse emptyResponseResponse(GenDemoTypes.EmptyResponseResponse value) {
         return value;
     }

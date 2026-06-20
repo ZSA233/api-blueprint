@@ -19,6 +19,7 @@ class ApiRequest<T> {
   final String routeId;
   final String method;
   final String path;
+  final Map<String, String?> pathParams;
   final Map<String, String?> query;
   final ApiRequestOptions options;
   final Object? json;
@@ -36,6 +37,7 @@ class ApiRequest<T> {
     required this.method,
     required this.path,
     required this.decode,
+    this.pathParams = const {},
     this.query = const {},
     this.options = const ApiRequestOptions(),
     this.json,

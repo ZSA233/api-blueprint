@@ -8,6 +8,7 @@ public record GenApiRequest<T>(
     String routeId,
     String method,
     String path,
+    Object pathParams,
     Object query,
     GenApiRequestBodySpec body,
     GenApiResponseSpec<T> response,
@@ -18,6 +19,7 @@ public record GenApiRequest<T>(
         String routeId,
         String method,
         String path,
+        Object pathParams,
         Object query,
         GenApiRequestBodySpec body,
         GenApiResponseSpec<T> response,
@@ -27,6 +29,7 @@ public record GenApiRequest<T>(
             routeId,
             method,
             path,
+            pathParams,
             query,
             body,
             response,
@@ -39,6 +42,7 @@ public record GenApiRequest<T>(
         routeId = routeId == null ? "" : routeId;
         method = method == null ? "GET" : method;
         path = path == null ? "" : path;
+        pathParams = pathParams == null ? Map.of() : pathParams;
         body = body == null ? GenApiRequestBodySpec.none() : body;
         response = response == null ? GenApiResponseSpec.json(null) : response;
         headers = headers == null ? Map.of() : Map.copyOf(headers);

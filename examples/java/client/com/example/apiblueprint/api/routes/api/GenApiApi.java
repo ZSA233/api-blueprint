@@ -37,6 +37,7 @@ public class GenApiApi {
             "CHANNEL",
             "/api/ws",
             null,
+            null,
             new GenApiRequestBodySpec(
                 null,
                 null,

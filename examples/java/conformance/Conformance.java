@@ -34,7 +34,7 @@ public final class Conformance {
             throw new IllegalArgumentException("base URL argument is required");
         }
         String baseUrl = args[0];
-        Set<String> selected = scenarioSet(args.length > 1 ? args[1] : "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,empty-response,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel");
+        Set<String> selected = scenarioSet(args.length > 1 ? args[1] : "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,empty-response,path-params,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel");
         HttpApiClient client = HttpApiClient.create(baseUrl);
         com.example.apiblueprint.alt.transports.http.HttpApiClient altClient =
             com.example.apiblueprint.alt.transports.http.HttpApiClient.create(baseUrl);
@@ -73,6 +73,9 @@ public final class Conformance {
         }
         if (selected.contains("empty-response")) {
             checkEmptyResponse(client);
+        }
+        if (selected.contains("path-params")) {
+            checkPathParams(client);
         }
         if (selected.contains("form")) {
             checkForm(client);
@@ -152,6 +155,15 @@ public final class Conformance {
     private static void checkEmptyResponse(HttpApiClient client) throws Exception {
         Object response = client.demo.emptyResponse();
         require(response != null, "empty response returned null");
+    }
+
+    private static void checkPathParams(HttpApiClient client) throws Exception {
+        GenApiTypes.PathEchoResponse response = client.demo.pathEcho(
+            new GenApiTypes.PathEchoPath("alpha", "gold badge")
+        );
+        require(Objects.equals("alpha", response.item()), "pathEcho.item mismatch: " + response);
+        require(Objects.equals("gold badge", response.badge()), "pathEcho.badge mismatch: " + response);
+        require(Objects.equals("alpha:gold badge", response.combined()), "pathEcho.combined mismatch: " + response);
     }
 
     private static void checkBinary(HttpApiClient client) throws Exception {

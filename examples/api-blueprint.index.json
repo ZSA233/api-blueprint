@@ -7,8 +7,8 @@
   "counts": {
     "connections": 3,
     "errors": 4,
-    "routes": 40,
-    "schemas": 64,
+    "routes": 41,
+    "schemas": 66,
     "services": 12,
     "targets": 20
   },
@@ -151,6 +151,16 @@
       "operation": "RequestOptions",
       "service_id": "api.demo",
       "url": "/api/demo/request-options"
+    },
+    {
+      "id": "api.demo.get.pathecho_item_badge",
+      "kind": "rpc",
+      "methods": [
+        "GET"
+      ],
+      "operation": "PathEcho",
+      "service_id": "api.demo",
+      "url": "/api/demo/path-echo/{item}/{badge}"
     },
     {
       "id": "api.demo.post.emptyresponse",
@@ -480,7 +490,7 @@
       "name": "DemoService",
       "path": "/api/demo",
       "root": "api",
-      "route_count": 13
+      "route_count": 14
     },
     {
       "group": "media",
@@ -553,105 +563,105 @@
       "kind": "contract",
       "out_dir": ".",
       "role": "contract",
-      "route_count": 40
+      "route_count": 41
     },
     {
       "id": "go.server",
       "kind": "go-server",
       "out_dir": "golang/server/views",
       "role": "server",
-      "route_count": 40
+      "route_count": 41
     },
     {
       "id": "go.client",
       "kind": "go-client",
       "out_dir": "golang/client",
       "role": "client",
-      "route_count": 40
+      "route_count": 41
     },
     {
       "id": "typescript.client",
       "kind": "typescript-client",
       "out_dir": "typescript",
       "role": "client",
-      "route_count": 40
+      "route_count": 41
     },
     {
       "id": "kotlin.client",
       "kind": "kotlin-client",
       "out_dir": "kotlin/client",
       "role": "client",
-      "route_count": 36
+      "route_count": 37
     },
     {
       "id": "kotlin.server",
       "kind": "kotlin-server",
       "out_dir": "kotlin/server",
       "role": "server",
-      "route_count": 38
+      "route_count": 39
     },
     {
       "id": "java.server",
       "kind": "java-server",
       "out_dir": "java/server",
       "role": "server",
-      "route_count": 37
+      "route_count": 38
     },
     {
       "id": "java.client",
       "kind": "java-client",
       "out_dir": "java/client",
       "role": "client",
-      "route_count": 40
+      "route_count": 41
     },
     {
       "id": "flutter.client",
       "kind": "flutter-client",
       "out_dir": "flutter",
       "role": "client",
-      "route_count": 38
+      "route_count": 39
     },
     {
       "id": "swift.client",
       "kind": "swift-client",
       "out_dir": "swift",
       "role": "client",
-      "route_count": 38
+      "route_count": 39
     },
     {
       "id": "python.server",
       "kind": "python-server",
       "out_dir": "python/server",
       "role": "server",
-      "route_count": 40
+      "route_count": 41
     },
     {
       "id": "python.client",
       "kind": "python-client",
       "out_dir": "python/client",
       "role": "client",
-      "route_count": 40
+      "route_count": 41
     },
     {
       "id": "http",
       "kind": "http-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 40
+      "route_count": 41
     },
     {
       "id": "http.kotlin",
       "kind": "http-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 40
+      "route_count": 41
     },
     {
       "id": "http.python",
       "kind": "http-transport",
       "out_dir": null,
       "role": "transport",
-      "route_count": 40
+      "route_count": 41
     },
     {
       "id": "wails.v3",

@@ -106,6 +106,10 @@ const RouteApiErrorsByCode = {
     "-1": ApiErrorsByID["CommonErr.UNKNOWN"],
     "55555": ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
   },
+  "api.demo.get.pathecho_item_badge": {
+    "-1": ApiErrorsByID["CommonErr.UNKNOWN"],
+    "55555": ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],
+  },
   "api.demo.post.emptyresponse": {
     "-1": ApiErrorsByID["CommonErr.UNKNOWN"],
     "55555": ApiErrorsByID["CommonErr.TOKEN_EXPIRE"],

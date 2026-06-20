@@ -12,7 +12,7 @@ Blueprint 的生成 root 来自逻辑身份 slug，而不是直接来自 URL `ro
 
 Markdown Binary Schema 的生成名在各 target 使用同一套碰撞策略：packet 入口名保持基于 packet 的稳定命名，schema 内部的 struct / enum / bitflags / state / helper 符号按 packet name 作用域输出。归一化后生成符号相同的 packet name 会在生成阶段被拒绝。Public binary packet 字段遵循目标语言习惯：Go / Kotlin / Java / Flutter / Swift 使用导出或 camelCase 字段名，TypeScript / Python 保持贴近 JSON / wire 名的 snake_case 字段。
 
-HTTP body / response kind 也属于共享规划语义。请求体统一记录为 `none`、`json`、`urlencoded`、`multipart`、`binary_schema` 或 `raw_bytes`，响应统一记录为 `json`、`xml`、`text`、`binary_schema`、`bytes`、`file` 或 `byte_stream`。HTTP 生成器支持 Go server/client、TypeScript client、Flutter client、Swift client、Kotlin client/server、Java client/server、Python server/client 的 multipart、raw media 响应和 binary schema 请求/响应。
+HTTP path / body / response kind 也属于共享规划语义。path request 统一记录为 `path_model` / `path_params`；请求体统一记录为 `none`、`json`、`urlencoded`、`multipart`、`binary_schema` 或 `raw_bytes`，响应统一记录为 `json`、`xml`、`text`、`binary_schema`、`bytes`、`file` 或 `byte_stream`。HTTP 生成器支持 Go server/client、TypeScript client、Flutter client、Swift client、Kotlin client/server、Java client/server、Python server/client 的 path request、multipart、raw media 响应和 binary schema 请求/响应；Wails/gRPC 对 path request 继续 fail fast。
 
 ### 旧接口 JSON 兼容
 
@@ -234,7 +234,7 @@ Go client target 输出 preview HTTP client：
 - `transports/http/gen_transport.go`
 - `transports/http/client.go`
 
-带 `REQ_PATH` 的 route 会在 generated method 的 query/body 参数前增加 `path <PathType>` 参数。Go HTTP transport 会在发送前展开 canonical `{name}` path placeholder，并使用 URL path escaping；缺失 path 参数、不能编码的字段或未替换的 placeholder 会返回 transport error。Go client request object 使用 `PathParams`、`Query`、`JSON`、`Form`、`Multipart`、`Binary` 等语义字段，不使用 `Q/B` 短名。
+带 `REQ_PATH` 的 route 会在 generated method 的 query/body 参数前增加 typed path 参数。HTTP client transport 会在发送前展开 canonical `{name}` path placeholder，并使用 URL path segment escaping；缺失 path 参数、不能编码的字段或未替换的 placeholder 会返回 transport error。Go client request object 使用 `PathParams`、`Query`、`JSON`、`Form`、`Multipart`、`Binary` 等语义字段，不使用 `Q/B` 短名。
 
 `gen_*.go` 文件由生成器拥有并覆盖；`client.go` façade 由用户拥有并保留。推荐入口是 `apiclient.NewHTTP(apiclient.HTTPConfig{BaseURL: baseURL})`，然后调用 `api.Demo.ErrorDemo(ctx, demo.ErrorDemoQuery{Mode: "token"}, runtime.WithHeader("X-Trace-Id", traceID))` 这类 route 方法。route/runtime client 只依赖 transport abstraction，`base_url` / `base_url_expr` 只写入 HTTP transport config。默认 HTTP adapter 实现 RPC 的 query/json/urlencoded/multipart/binary_schema 请求，multipart file 使用 `runtime.MultipartFile`；`Reader` 输入会以 streaming multipart body 发送，`Bytes` 适合小文件和测试。binary_schema 成功响应会解码成 typed packet，bytes/file raw 响应返回 `runtime.RawResponse`，byte stream 以真流式 `runtime.StreamResponse` 返回并由调用方关闭；请求 deadline 与 cancel 使用 `context.Context`，per-call request options 承载 header 和后续请求级开关；STREAM 和 CHANNEL 方法也会生成，默认 HTTP adapter 返回明确 unsupported error，项目可以替换自定义 transport。
 

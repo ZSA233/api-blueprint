@@ -161,6 +161,19 @@ public data class MediaPreviewRequest(
 )
 
 @Serializable
+public data class PathEchoPath(
+    public val item: String,
+    public val badge: String
+)
+
+@Serializable
+public data class PathEchoResponse(
+    public val item: String,
+    public val badge: String,
+    public val combined: String
+)
+
+@Serializable
 public data class RequestOptionsResponse(
     public val status: String,
     @SerialName("delay_ms")

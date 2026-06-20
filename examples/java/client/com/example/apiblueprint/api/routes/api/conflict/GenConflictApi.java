@@ -41,6 +41,7 @@ public class GenConflictApi {
             "api.conflict.get.default",
             "GET",
             "/api/conflict/default",
+            null,
             query,
             new GenApiRequestBodySpec(
                 null,

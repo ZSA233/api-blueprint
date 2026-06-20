@@ -105,6 +105,10 @@ final routeApiErrorsByCode = <String, Map<int, ApiErrorPayload>>{
     -1: apiErrorsById["CommonErr.UNKNOWN"]!,
     55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,
   },
+  "api.demo.get.pathecho_item_badge": {
+    -1: apiErrorsById["CommonErr.UNKNOWN"]!,
+    55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,
+  },
   "api.demo.post.emptyresponse": {
     -1: apiErrorsById["CommonErr.UNKNOWN"]!,
     55555: apiErrorsById["CommonErr.TOKEN_EXPIRE"]!,

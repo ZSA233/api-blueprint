@@ -30,6 +30,8 @@ from .gen_types import (
     FormSubmitResponse,
     RequestOptionsQuery,
     RequestOptionsResponse,
+    PathEchoPath,
+    PathEchoResponse,
     EmptyResponseResponse,
     PutDemoQuery,
     PutDemoJSON,
@@ -154,6 +156,28 @@ class DemoClient:
             )
         )
         return RequestOptionsResponse.from_value(payload, "request_options.response")
+
+    async def path_echo(
+        self,
+        path: PathEchoPath,
+        *,
+        headers: Mapping[str, str] | None = None,
+        timeout: float | None = None,
+    ) -> PathEchoResponse:
+        response_type: str | None = 'PathEchoResponse'
+        payload = await self._transport.request(
+            ApiRequest(
+                method="GET",
+                path="/api/demo/path-echo/{item}/{badge}",
+                route_id="api.demo.get.pathecho_item_badge",
+                path_params=_api_to_json(path),
+                response_type=response_type,
+                response_envelope={"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+                headers=headers,
+                timeout=timeout,
+            )
+        )
+        return PathEchoResponse.from_value(payload, "path_echo.response")
 
     async def empty_response(
         self,

@@ -56,7 +56,7 @@ with bp.group("/demo") as views:
     views.GET("/ping").RSP(PingResponse)
 ```
 
-`root` 是 URL 前缀；需要把多个顶级 URL namespace 归入同一个生成根时，使用 `Blueprint(name="app", root="")` 并在 `group("/account")`、`group("/room")` 中定义路径。`name` 是 route id、service/module 和生成目录使用的逻辑协议身份。路径参数使用 `{name}` 与 `REQ_PATH(Model)`；当前由 Go server/client、contract 与 ir-plugin 支持，其他 target 会 fail fast。`RSP(Model)` 定义业务响应模型；成功时没有业务 data 的 JSON envelope route 使用 `RSP_EMPTY()`，它不是 HTTP 204 / no body。
+`root` 是 URL 前缀；需要把多个顶级 URL namespace 归入同一个生成根时，使用 `Blueprint(name="app", root="")` 并在 `group("/account")`、`group("/room")` 中定义路径。`name` 是 route id、service/module 和生成目录使用的逻辑协议身份。路径参数使用 `{name}` 与 `REQ_PATH(Model)`；ContractGraph / ir-plugin 与官方 HTTP target 支持 path request，Wails/gRPC 会 fail fast。`RSP(Model)` 定义业务响应模型；成功时没有业务 data 的 JSON envelope route 使用 `RSP_EMPTY()`，它不是 HTTP 204 / no body。
 
 创建 `api-blueprint.toml`：
 

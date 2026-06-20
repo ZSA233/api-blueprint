@@ -71,6 +71,34 @@ def test_python_server_generates_service_core_and_fastapi_adapter(tmp_path: Path
     assert "parse_qs" not in adapter_text
     _compile_generated_files(output_dir)
 
+
+def test_python_server_decodes_path_params_into_service_argument(tmp_path: Path):
+    class ItemPath(Model):
+        item = String(description="item")
+        badge = String(description="badge")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.GET("/path-echo/{item}/{badge}", operation_id="PathEcho").REQ_PATH(ItemPath).RSP(Result)
+
+    output_dir = tmp_path / "python"
+    writer = PythonServerWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    service_text = (
+        output_dir / "api_blueprint_generated" / "api" / "routes" / "api" / "demo" / "gen_service.py"
+    ).read_text(encoding="utf-8")
+    adapter_text = (
+        output_dir / "api_blueprint_generated" / "api" / "transports" / "http" / "gen_server.py"
+    ).read_text(encoding="utf-8")
+
+    assert "path: PathEchoPath" in service_text
+    assert 'path_raw = dict(request.path_params)' in adapter_text
+    assert 'path = api_demo_types.PathEchoPath.from_value(path_raw, "path")' in adapter_text
+    assert "path=path," in adapter_text
+    _compile_generated_files(output_dir)
+
 def test_python_server_query_decoder_treats_empty_query_as_empty_object(tmp_path: Path):
     bp = Blueprint(root="/api")
     with bp.group("/demo") as views:

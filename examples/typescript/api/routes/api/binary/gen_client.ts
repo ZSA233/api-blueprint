@@ -26,6 +26,7 @@ export class BinaryClient extends BaseClient {
 
   async packet(
     request: {
+
       query?: Types.PacketQuery;
       binary: Types.DemoPacket;
     },
@@ -34,6 +35,7 @@ export class BinaryClient extends BaseClient {
 
   async packet(
     request: {
+
       query?: Types.PacketQuery;
       binary: ApiBinaryBody;
     },
@@ -72,6 +74,7 @@ export class BinaryClient extends BaseClient {
 
   async auditPacket(
     request: {
+
       query?: Types.AuditPacketQuery;
       binary: Types.AuditPacket;
     },
@@ -80,6 +83,7 @@ export class BinaryClient extends BaseClient {
 
   async auditPacket(
     request: {
+
       query?: Types.AuditPacketQuery;
       binary: ApiBinaryBody;
     },
@@ -118,6 +122,7 @@ export class BinaryClient extends BaseClient {
 
   async widePacket(
     request: {
+
       query?: Types.WidePacketQuery;
       binary: Types.WidePacket;
     },
@@ -126,6 +131,7 @@ export class BinaryClient extends BaseClient {
 
   async widePacket(
     request: {
+
       query?: Types.WidePacketQuery;
       binary: ApiBinaryBody;
     },

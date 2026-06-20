@@ -67,6 +67,7 @@ class KotlinRoute:
         if self.is_rpc and len(self.http_methods) != 1:
             raise ValueError(f"[kotlin-client] Kotlin 客户端要求每个 route 只有一个 HTTP method: {self.url}")
 
+        self.path_proto = self._ensure_model(self.protocol.request.path.model, "Path")
         self.query_proto = self._ensure_model(self.protocol.request.query.model, "Query")
         self.open_proto = self._ensure_model(self.protocol.request.open.model, "Open")
         self.form_proto = self._ensure_model(self.protocol.request.form.model, "Form")
@@ -105,6 +106,10 @@ class KotlinRoute:
     @property
     def query_type(self) -> str | None:
         return self.query_proto.name if self.query_proto else None
+
+    @property
+    def path_type(self) -> str | None:
+        return self.path_proto.name if self.path_proto else None
 
     @property
     def open_type(self) -> str | None:
@@ -224,6 +229,10 @@ class KotlinRoute:
         if self.query_type:
             return "query.toQueryMap()"
         return "emptyMap()"
+
+    @property
+    def path_to_map_expr(self) -> str:
+        return "path.toQueryMap()" if self.path_type else "emptyMap()"
 
     @property
     def subscribe_method_name(self) -> str:
@@ -352,7 +361,7 @@ class KotlinApiGroup:
     def query_map_protos(self) -> tuple[KotlinProto, ...]:
         protos: "OrderedDict[str, KotlinProto]" = OrderedDict()
         for route in self.routes:
-            for proto in (route.query_proto, route.open_proto):
+            for proto in (route.path_proto, route.query_proto, route.open_proto):
                 if proto is not None and proto.fields:
                     protos.setdefault(proto.name, proto)
         return tuple(protos.values())

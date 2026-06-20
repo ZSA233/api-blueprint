@@ -525,6 +525,88 @@ class RequestOptionsResponse:
 
 
 @dataclass(kw_only=True)
+class PathEchoPath:
+    item: str
+    badge: str
+
+    @classmethod
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
+        if not isinstance(value, Mapping):
+            raise TypeError("PathEchoPath: expected object")
+        return cls._from_mapping(value, "PathEchoPath")
+
+    @classmethod
+    def from_value(cls, value: object, path: str = "PathEchoPath") -> Self:
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, Mapping):
+            raise TypeError(f"{path}: expected object")
+        return cls._from_mapping(value, path)
+
+    @classmethod
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
+        return cls(
+            item=_decode_required(_decode_str, value.get("item", _MISSING), _field_path(path, "item")),
+            badge=_decode_required(_decode_str, value.get("badge", _MISSING), _field_path(path, "badge")),
+        )
+
+    def to_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["item"] = _api_to_json(self.item)
+        result["badge"] = _api_to_json(self.badge)
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["item"] = _api_to_transport(self.item)
+        result["badge"] = _api_to_transport(self.badge)
+        return result
+
+
+@dataclass(kw_only=True)
+class PathEchoResponse:
+    item: str
+    badge: str
+    combined: str
+
+    @classmethod
+    def from_mapping(cls, value: Mapping[str, Any]) -> Self:
+        if not isinstance(value, Mapping):
+            raise TypeError("PathEchoResponse: expected object")
+        return cls._from_mapping(value, "PathEchoResponse")
+
+    @classmethod
+    def from_value(cls, value: object, path: str = "PathEchoResponse") -> Self:
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, Mapping):
+            raise TypeError(f"{path}: expected object")
+        return cls._from_mapping(value, path)
+
+    @classmethod
+    def _from_mapping(cls, value: Mapping[str, Any], path: str) -> Self:
+        return cls(
+            item=_decode_required(_decode_str, value.get("item", _MISSING), _field_path(path, "item")),
+            badge=_decode_required(_decode_str, value.get("badge", _MISSING), _field_path(path, "badge")),
+            combined=_decode_required(_decode_str, value.get("combined", _MISSING), _field_path(path, "combined")),
+        )
+
+    def to_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["item"] = _api_to_json(self.item)
+        result["badge"] = _api_to_json(self.badge)
+        result["combined"] = _api_to_json(self.combined)
+        return result
+
+    def to_transport_mapping(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        result["item"] = _api_to_transport(self.item)
+        result["badge"] = _api_to_transport(self.badge)
+        result["combined"] = _api_to_transport(self.combined)
+        return result
+
+
+@dataclass(kw_only=True)
 class EmptyResponseResponse:
     pass
 

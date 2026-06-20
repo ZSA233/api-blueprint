@@ -36,6 +36,9 @@ type RequestOptionsQuery struct {
 }
 type RequestOptionsResponse = runtime.RequestOptionsResponse
 
+type PathEchoPath = runtime.PathEchoPath
+type PathEchoResponse = runtime.PathEchoResponse
+
 type EmptyResponseResponse struct{}
 
 type PutDemoQuery struct {

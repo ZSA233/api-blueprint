@@ -795,6 +795,109 @@ class MediaPreviewRequest {
   }
 }
 
+class PathEchoPath {
+  final String? item;
+  final String? badge;
+
+  const PathEchoPath({
+    this.item,
+    this.badge,
+  });
+
+  factory PathEchoPath.fromJson(Map<String, Object?> json) {
+
+    return PathEchoPath(
+      item: apiBlueprintReadString(json["item"]),
+      badge: apiBlueprintReadString(json["badge"]),
+    );
+
+  }
+
+  factory PathEchoPath.fromJsonValue(Object? value) {
+    final codec = apiJsonCodecs.find<PathEchoPath>();
+    if (codec != null) {
+      return codec.fromJson(value);
+    }
+    return PathEchoPath.fromJson(apiBlueprintReadObject(value));
+  }
+
+  Map<String, Object?> toJson() {
+    final codec = apiJsonCodecs.find<PathEchoPath>();
+    if (codec != null) {
+      return apiBlueprintReadObject(codec.toJson(this));
+    }
+
+    return {
+      "item": apiBlueprintToJson(item),
+      "badge": apiBlueprintToJson(badge),
+    };
+
+  }
+
+  Map<String, String?> toQueryMap() {
+
+    return {
+      "item": apiBlueprintToQueryValue(item),
+      "badge": apiBlueprintToQueryValue(badge),
+    };
+
+  }
+}
+
+class PathEchoResponse {
+  final String? item;
+  final String? badge;
+  final String? combined;
+
+  const PathEchoResponse({
+    this.item,
+    this.badge,
+    this.combined,
+  });
+
+  factory PathEchoResponse.fromJson(Map<String, Object?> json) {
+
+    return PathEchoResponse(
+      item: apiBlueprintReadString(json["item"]),
+      badge: apiBlueprintReadString(json["badge"]),
+      combined: apiBlueprintReadString(json["combined"]),
+    );
+
+  }
+
+  factory PathEchoResponse.fromJsonValue(Object? value) {
+    final codec = apiJsonCodecs.find<PathEchoResponse>();
+    if (codec != null) {
+      return codec.fromJson(value);
+    }
+    return PathEchoResponse.fromJson(apiBlueprintReadObject(value));
+  }
+
+  Map<String, Object?> toJson() {
+    final codec = apiJsonCodecs.find<PathEchoResponse>();
+    if (codec != null) {
+      return apiBlueprintReadObject(codec.toJson(this));
+    }
+
+    return {
+      "item": apiBlueprintToJson(item),
+      "badge": apiBlueprintToJson(badge),
+      "combined": apiBlueprintToJson(combined),
+    };
+
+  }
+
+  Map<String, String?> toQueryMap() {
+
+    return {
+      "item": apiBlueprintToQueryValue(item),
+      "badge": apiBlueprintToQueryValue(badge),
+      "combined": apiBlueprintToQueryValue(combined),
+    };
+
+  }
+}
+
 class RequestOptionsResponse {
   final String? status;
   final int? delayMs;

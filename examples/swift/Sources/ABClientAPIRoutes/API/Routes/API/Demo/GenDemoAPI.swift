@@ -130,6 +130,36 @@ open class GenDemoAPI {
         )
     }
 
+    public func pathEcho(
+        path: PathEchoPath,
+        options: APIRequestOptions = APIRequestOptions()
+    ) async throws -> PathEchoResponse {
+        let jsonBody: ((APICodingConfig) throws -> Data)? = nil
+        let formBody: [String: String?]? = nil
+        let multipartBody: [String: Any?]? = nil
+        let binaryBody: Data? = nil
+        return try await transport.request(
+            APIRequest<PathEchoResponse>(
+                routeID: "api.demo.get.pathecho_item_badge",
+                method: "GET",
+                path: "/api/demo/path-echo/{item}/{badge}",
+                pathParams: path.toQueryItems(),
+                query: [],
+                options: options,
+                json: jsonBody,
+                form: formBody,
+                multipart: multipartBody,
+                binary: binaryBody,
+                binaryContentType: nil,
+                responseMediaType: "application/json",
+                responseKind: "json",
+                responseEnvelope: APIResponseEnvelope(name: "CodeMessageDataEnvelope", kind: "code_message_data", errorIdentity: "nested", successCode: 0, successMessage: "ok", fields: APIResponseEnvelopeFields(code: "code", message: "message", data: "data", error: "error", ok: "ok")),
+                decodeData: { data, envelope, coding in try apiDecodeResponse(PathEchoResponse.self, from: data, envelope: envelope, routeID: "api.demo.get.pathecho_item_badge", coding: coding) },
+                decode: { value in try apiDecodeValue(PathEchoResponse.self, from: value) }
+            )
+        )
+    }
+
     public func emptyResponse(
         options: APIRequestOptions = APIRequestOptions()
     ) async throws -> DemoEmptyResponseResponse {

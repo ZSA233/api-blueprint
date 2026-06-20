@@ -95,6 +95,24 @@ func (client *GenDemoClient) RequestOptions(ctx context.Context, query RequestOp
 	return &response, nil
 }
 
+func (client *GenDemoClient) PathEcho(ctx context.Context, path PathEchoPath, opts ...runtime.RequestOption) (*PathEchoResponse, error) {
+	request := runtime.Request{
+		RouteID:          "api.demo.get.pathecho_item_badge",
+		Method:           "GET",
+		Path:             "/api/demo/path-echo/{item}/{badge}",
+		ResponseEnvelope: runtime.ApiResponseEnvelope{Name: "CodeMessageDataEnvelope", Kind: "code_message_data", ErrorIdentity: "nested", SuccessCode: runtime.ApiErrorCode(0), SuccessMessage: "ok", Fields: runtime.ApiResponseEnvelopeFields{Code: "code", Message: "message", Data: "data", Error: "error", Ok: "ok"}},
+		PathParams:       path,
+		BodyKind:         runtime.RequestBodyKind("none"),
+		ResponseKind:     runtime.ResponseKind("json"),
+	}
+	request.ApplyOptions(opts...)
+	var response PathEchoResponse
+	if err := client.transport.Do(ctx, request, &response); err != nil {
+		return nil, err
+	}
+	return &response, nil
+}
+
 func (client *GenDemoClient) EmptyResponse(ctx context.Context, opts ...runtime.RequestOption) (*EmptyResponseResponse, error) {
 	request := runtime.Request{
 		RouteID:          "api.demo.post.emptyresponse",

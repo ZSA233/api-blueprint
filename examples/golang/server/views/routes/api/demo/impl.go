@@ -50,6 +50,15 @@ func (impl *Router) RequestOptions(ctx *CTX_RequestOptions, req *REQ_RequestOpti
 	}, nil
 }
 
+func (impl *Router) PathEcho(ctx *CTX_PathEcho, req *REQ_PathEcho) (rsp *RSP_PathEcho, err error) {
+	path := req.Path
+	return &RSP_PathEcho{
+		Item:     path.Item,
+		Badge:    path.Badge,
+		Combined: path.Item + ":" + path.Badge,
+	}, nil
+}
+
 func (impl *Router) EmptyResponse(ctx *CTX_EmptyResponse, req *REQ_EmptyResponse) (rsp *RSP_EmptyResponse, err error) {
 	return &RSP_EmptyResponse{}, nil
 }

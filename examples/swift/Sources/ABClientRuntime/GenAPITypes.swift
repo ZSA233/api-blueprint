@@ -552,6 +552,82 @@ public struct MediaPreviewRequest: Codable, Sendable {
     }
 }
 
+public struct PathEchoPath: Codable, Sendable {
+    /// item path segment
+    public var item: String
+    /// badge path segment
+    public var badge: String
+
+    public init(
+        item: String,
+        badge: String
+    ) {
+        self.item = item
+        self.badge = badge
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case item = "item"
+        case badge = "badge"
+    }
+
+    public func toQueryItems() -> [URLQueryItem] {
+        [
+            URLQueryItem(name: "item", value: apiBlueprintQueryValue(item)),
+            URLQueryItem(name: "badge", value: apiBlueprintQueryValue(badge)),
+        ].filter { $0.value != nil }
+    }
+
+    public func toFormFields() throws -> [String: String?] {
+        try apiBlueprintFormFields(self)
+    }
+
+    public func toMultipartFields() throws -> [String: Any?] {
+        try apiBlueprintMultipartFields(self)
+    }
+}
+
+public struct PathEchoResponse: Codable, Sendable {
+    /// decoded item path segment
+    public var item: String
+    /// decoded badge path segment
+    public var badge: String
+    /// combined path segments
+    public var combined: String
+
+    public init(
+        item: String,
+        badge: String,
+        combined: String
+    ) {
+        self.item = item
+        self.badge = badge
+        self.combined = combined
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case item = "item"
+        case badge = "badge"
+        case combined = "combined"
+    }
+
+    public func toQueryItems() -> [URLQueryItem] {
+        [
+            URLQueryItem(name: "item", value: apiBlueprintQueryValue(item)),
+            URLQueryItem(name: "badge", value: apiBlueprintQueryValue(badge)),
+            URLQueryItem(name: "combined", value: apiBlueprintQueryValue(combined)),
+        ].filter { $0.value != nil }
+    }
+
+    public func toFormFields() throws -> [String: String?] {
+        try apiBlueprintFormFields(self)
+    }
+
+    public func toMultipartFields() throws -> [String: Any?] {
+        try apiBlueprintMultipartFields(self)
+    }
+}
+
 public struct RequestOptionsResponse: Codable, Sendable {
     /// request options status
     public var status: String

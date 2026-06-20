@@ -159,6 +159,20 @@ public final class GenSpringMvcContractAssertions {
             "generated"
         ),
         new RouteSpec(
+            "api.demo.get.pathecho_item_badge",
+            Set.of("GET"),
+            "/api/demo/path-echo/{item}/{badge}",
+            "com.example.apiblueprint.api.routes.api.demo.controllers.GenDemoController",
+            "com.example.apiblueprint.api.routes.api.demo.delegates.GenDemoDelegate",
+            "pathEcho",
+            List.of("com.example.apiblueprint.security.SignatureRequired"),
+            List.of(),
+            "com.example.apiblueprint.api.runtime.GenApiTypes.PathEchoResponse",
+            List.of(),
+            "generated",
+            "generated"
+        ),
+        new RouteSpec(
             "api.demo.post.emptyresponse",
             Set.of("POST"),
             "/api/demo/empty-response",

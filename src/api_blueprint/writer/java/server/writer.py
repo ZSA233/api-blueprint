@@ -249,6 +249,7 @@ class JavaServerWriter(JavaBaseWriter):
         return "\n".join(f"import {import_name};" for import_name in imports)
 
     def server_controller_imports(self, bp: Any, group: JavaApiGroup) -> tuple[str, ...]:
+        has_path_routes = any(route.path_model is not None for route in group.routes)
         imports = [
             f"{bp.root_package}.annotations.ApiBlueprintOperation",
             f"{bp.root_package}.runtime.GenApiRawResponse",
@@ -266,6 +267,13 @@ class JavaServerWriter(JavaBaseWriter):
             "org.springframework.web.bind.annotation.RestController",
             "org.springframework.web.multipart.MultipartHttpServletRequest",
         ]
+        if has_path_routes:
+            imports.extend(
+                [
+                    "java.util.Map",
+                    "org.springframework.web.bind.annotation.PathVariable",
+                ]
+            )
         if group.runtime_types_ref == "GenApiTypes":
             imports.append(f"{bp.root_package}.runtime.GenApiTypes")
         for route in group.routes:
@@ -403,6 +411,8 @@ class JavaServerWriter(JavaBaseWriter):
 
     def controller_method_parameters(self, route: JavaRoute, group: JavaApiGroup) -> tuple[str, ...]:
         params: list[str] = []
+        if route.path_model:
+            params.append("@PathVariable Map<String, String> pathVariables")
         if route.query_model:
             params.append(f"@ModelAttribute {self.schema_type(route.query_model, group)} query")
         if route.json_model:
@@ -418,6 +428,18 @@ class JavaServerWriter(JavaBaseWriter):
 
     def controller_pre_delegate_lines(self, route: JavaRoute, group: JavaApiGroup) -> tuple[str, ...]:
         lines: list[str] = []
+        if route.path_model:
+            path_type = self.schema_type(route.path_model, group)
+            lines.append(
+                f"{path_type} path;"
+            )
+            lines.append("try {")
+            lines.append(
+                f"    path = GenSpringRequestBinder.bindPath(pathVariables, {path_type}.class);"
+            )
+            lines.append("} catch (IllegalArgumentException error) {")
+            lines.append("    return ResponseEntity.badRequest().build();")
+            lines.append("}")
         if route.multipart_model:
             lines.append(
                 f"{self.schema_type(route.multipart_model, group)} multipart = "

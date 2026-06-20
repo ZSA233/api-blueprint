@@ -60,6 +60,7 @@ class FlutterRoute:
         if self.is_rpc and len(self.http_methods) != 1:
             raise ValueError(f"[flutter-client] Flutter 客户端要求每个 route 只有一个 HTTP method: {self.url}")
 
+        self.path_proto = self._ensure_model(self.protocol.request.path.model, "Path")
         self.query_proto = self._ensure_model(self.protocol.request.query.model, "Query")
         self.open_proto = self._ensure_model(self.protocol.request.open.model, "Open")
         self.form_proto = self._ensure_model(self.protocol.request.form.model, "Form")
@@ -90,6 +91,10 @@ class FlutterRoute:
     @property
     def query_type(self) -> str | None:
         return self.query_proto.name if self.query_proto else None
+
+    @property
+    def path_type(self) -> str | None:
+        return self.path_proto.name if self.path_proto else None
 
     @property
     def open_type(self) -> str | None:
@@ -209,6 +214,10 @@ class FlutterRoute:
     @property
     def query_to_map_expr(self) -> str:
         return "query?.toQueryMap() ?? const <String, String?>{}" if self.query_type else "const <String, String?>{}"
+
+    @property
+    def path_to_map_expr(self) -> str:
+        return "path.toQueryMap()" if self.path_type else "const <String, String?>{}"
 
     @property
     def open_to_query_expr(self) -> str:

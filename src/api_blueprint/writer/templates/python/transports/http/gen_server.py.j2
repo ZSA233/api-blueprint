@@ -87,7 +87,9 @@ def create_{{ group.alias }}_router(
         service = service_impl
         route_info = {{ route.http_route_info_name }}
 {% for param in route.params %}
-{% if param.name == "query" %}
+{% if param.name == "path" %}
+        path_raw = dict(request.path_params)
+{% elif param.name == "query" %}
         query_raw = _query_params(request)
 {% elif param.name == "json" %}
         json_body_raw = await _json_body(request, api_config)
@@ -114,7 +116,9 @@ def create_{{ group.alias }}_router(
 {% if route.has_decoded_params %}
         try:
 {% for param in route.params %}
-{% if param.name == "query" %}
+{% if param.name == "path" %}
+            path = {{ group.server_type_expr(param.decode_expr("path_raw", '"path"')) | safe }}
+{% elif param.name == "query" %}
             query = {{ group.server_type_expr(param.decode_expr("query_raw", '"query"')) | safe }}
 {% elif param.name == "json" %}
             json_body = {{ group.server_type_expr(param.decode_expr("json_body_raw", '"json"')) | safe }}

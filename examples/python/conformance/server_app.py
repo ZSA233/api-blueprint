@@ -62,6 +62,8 @@ from api_blueprint_example_server.api.routes.api.demo.gen_types import (
     ErrorDemoResponse,
     FormSubmitForm,
     FormSubmitResponse,
+    PathEchoPath,
+    PathEchoResponse,
     PostDeprecatedJSON,
     PostDeprecatedResponse,
     PutDemoJSON,
@@ -172,6 +174,13 @@ class DemoService:
         if delay_ms > 0:
             await asyncio.sleep(delay_ms / 1000)
         return RequestOptionsResponse(status="ok", delay_ms=delay_ms)
+
+    async def path_echo(self, path: PathEchoPath) -> PathEchoResponse:
+        return PathEchoResponse(
+            item=path.item,
+            badge=path.badge,
+            combined=f"{path.item}:{path.badge}",
+        )
 
     async def empty_response(self) -> EmptyResponseResponse:
         return EmptyResponseResponse()

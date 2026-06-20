@@ -128,6 +128,34 @@ export class DemoClient extends BaseClient {
   }
 
   /**
+   * Path parameter example
+   * Covers typed path request generation.
+   * Tags: api
+   */
+
+  async pathEcho(
+    request: {
+      path: Shared.PathEchoPath;
+    },
+    options?: ApiRequestOptions,
+  ): Promise<Shared.PathEchoResponse> {
+    return this.request<Shared.PathEchoResponse>({
+      routeId: "api.demo.get.pathecho_item_badge",
+      method: "GET",
+      path: "/api/demo/path-echo/{item}/{badge}",
+      pathParams: request.path as unknown as Record<string, unknown>,
+      service: "DemoService",
+      operation: "PathEcho",
+      namespace: "demo",
+      headers: options?.headers,
+      init: options?.init,
+      responseType: "json",
+      responseEnvelope: {"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}},
+      timeoutMs: options?.timeoutMs,
+    });
+  }
+
+  /**
    * Empty response example
    * Successful envelope response with no business data.
    * Tags: api

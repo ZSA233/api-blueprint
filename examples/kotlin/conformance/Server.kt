@@ -151,6 +151,9 @@ private class DemoServiceImpl : DemoServiceStub() {
         return RequestOptionsResponse(status = "ok", delayMs = delayMs)
     }
 
+    override suspend fun pathEcho(path: PathEchoPath): PathEchoResponse =
+        PathEchoResponse(item = path.item, badge = path.badge, combined = "${path.item}:${path.badge}")
+
     override suspend fun emptyResponse(): DemoEmptyResponseResponse = DemoEmptyResponseResponse()
 
     override suspend fun putDemo(query: DemoPutDemoQuery, json: DemoPutDemoJson): DemoPutDemoResponse =

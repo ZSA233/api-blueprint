@@ -88,6 +88,7 @@ class TypeScriptRoute:
         self.supports_stream = self.contract.supports_stream
         self.supports_channel = self.contract.supports_channel
 
+        self.path_proto = self._ensure_model(self.protocol.request.path.model, "REQ", "PATH")
         self.query_proto = self._ensure_model(self.protocol.request.query.model, "REQ", "QUERY")
         self.open_proto = self._ensure_model(self.protocol.request.open.model, "OPEN", "")
         self.form_proto = self._ensure_model(self.protocol.request.form.model, "REQ", "FORM")
@@ -139,6 +140,10 @@ class TypeScriptRoute:
     @property
     def query_type_expr(self) -> str | None:
         return self._type_expr(self.query_proto)
+
+    @property
+    def path_type_expr(self) -> str | None:
+        return self._type_expr(self.path_proto)
 
     @property
     def open_type_expr(self) -> str | None:
@@ -199,6 +204,7 @@ class TypeScriptRoute:
 
     def _route_model_name(self, prefix: str, suffix: str) -> str:
         suffix_map = {
+            ("REQ", "PATH"): "Path",
             ("REQ", "QUERY"): "Query",
             ("REQ", "JSON"): "JSON",
             ("REQ", "FORM"): "Form",

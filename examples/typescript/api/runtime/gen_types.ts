@@ -157,6 +157,22 @@ export interface MediaPreviewRequest {
   image: ApiFilePart;
 }
 
+export interface PathEchoPath {
+  /** item path segment */
+  item: string;
+  /** badge path segment */
+  badge: string;
+}
+
+export interface PathEchoResponse {
+  /** decoded item path segment */
+  item: string;
+  /** decoded badge path segment */
+  badge: string;
+  /** combined path segments */
+  combined: string;
+}
+
 export interface RequestOptionsResponse {
   /** request options status */
   status: string;

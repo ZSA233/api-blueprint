@@ -103,6 +103,25 @@ type CTX_RequestOptions = providers.Context[
 	RSP_RequestOptions_BODY,
 ]
 
+type REQ_PathEcho_PATH = types.PathEchoPath
+
+type REQ_PathEcho = providers.REQ[
+	REQ_PathEcho_PATH,
+	any,
+	any,
+]
+
+type RSP_PathEcho_BODY = types.PathEchoResponse
+
+type RSP_PathEcho = RSP_PathEcho_BODY
+
+type CTX_PathEcho = providers.Context[
+	REQ_PathEcho_PATH,
+	any,
+	any,
+	RSP_PathEcho_BODY,
+]
+
 type REQ_EmptyResponse = providers.REQ[
 	any,
 	any,

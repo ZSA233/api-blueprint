@@ -21,6 +21,7 @@ const (
 	RouteIDTestPost         = shared.RouteIDTestPost
 	RouteIDFormSubmit       = shared.RouteIDFormSubmit
 	RouteIDRequestOptions   = shared.RouteIDRequestOptions
+	RouteIDPathEcho         = shared.RouteIDPathEcho
 	RouteIDEmptyResponse    = shared.RouteIDEmptyResponse
 	RouteIDPutDemo          = shared.RouteIDPutDemo
 	RouteIDDelete           = shared.RouteIDDelete
@@ -37,6 +38,7 @@ const (
 	RoutePathTestPost         = shared.RoutePathTestPost
 	RoutePathFormSubmit       = shared.RoutePathFormSubmit
 	RoutePathRequestOptions   = shared.RoutePathRequestOptions
+	RoutePathPathEcho         = shared.RoutePathPathEcho
 	RoutePathEmptyResponse    = shared.RoutePathEmptyResponse
 	RoutePathPutDemo          = shared.RoutePathPutDemo
 	RoutePathDelete           = shared.RoutePathDelete
@@ -53,6 +55,7 @@ const (
 	HTTPRoutePathTestPost         = "/api/demo/test_post"
 	HTTPRoutePathFormSubmit       = "/api/demo/form-submit"
 	HTTPRoutePathRequestOptions   = "/api/demo/request-options"
+	HTTPRoutePathPathEcho         = "/api/demo/path-echo/:item/:badge"
 	HTTPRoutePathEmptyResponse    = "/api/demo/empty-response"
 	HTTPRoutePathPutDemo          = "/api/demo/1put"
 	HTTPRoutePathDelete           = "/api/demo/delete$"
@@ -197,6 +200,39 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req=query|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 				impl.RequestOptions,
+			),
+			router,
+		)
+	}
+
+	if mountOptions.ShouldMountRoute(RouteIDPathEcho) {
+		httptransport.GET(
+			HTTPRoutePathPathEcho,
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "demo",
+					Namespace: "demo",
+					Service:   "DemoService",
+					Operation: "PathEcho",
+					RouteID:   RouteIDPathEcho,
+					Path:      RoutePathPathEcho,
+					Methods:   []string{"GET"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{"item", "badge"},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
+					},
+				},
+				"req=path|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+				impl.PathEcho,
 			),
 			router,
 		)

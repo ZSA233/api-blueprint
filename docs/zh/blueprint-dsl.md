@@ -135,7 +135,7 @@ with bp.group("/items") as views:
 - `RSP(...)`：响应模型。
 - `RSP_EMPTY()`：成功时没有业务 data 的 JSON 响应；这不是 HTTP 204 / no body。使用 JSON response envelope 时，`data: null` 和 `data: {}` 都按空业务响应解码。
 
-`REQ_PATH` 的占位符名称必须与 path model 字段 wire name 完全一致；字段只能是必填标量、enum 或 string-coerce 类型，不支持 optional、array、map、object、file、binary 或 oneof。Gin 风格 `:id` 不是 DSL 语法，请写成 `{id}`。REQ_PATH v1 仅支持 HTTP RPC route；ContractGraph、ir-plugin、Go server 和 Go client 会输出或生成 path 参数，其他官方 target 会 fail fast，避免生成不可用代码。
+`REQ_PATH` 的占位符名称必须与 path model 字段 wire name 完全一致；字段只能是必填标量、enum 或 string-coerce 类型，不支持 optional、array、map、object、file、binary 或 oneof。Gin 风格 `:id` 不是 DSL 语法，请写成 `{id}`。REQ_PATH 仅支持 HTTP RPC route；ContractGraph、ir-plugin 和官方 HTTP target 会输出或生成 path 参数，Wails/gRPC 会 fail fast，避免生成不可用代码。
 
 同一个 route 只能声明一种 body kind。ContractGraph 会把 path request 记录为 `path_model` / `path_params`，并把请求体记录为 `none`、`json`、`urlencoded`、`multipart`、`binary_schema` 或 `raw_bytes`，生成器和 `api-gen check` 都按这个统一语义判断 target 能力。
 

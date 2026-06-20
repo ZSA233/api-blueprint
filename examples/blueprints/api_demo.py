@@ -88,6 +88,17 @@ class RequestOptionsResponse(Model):
     delay_ms = Int(description='applied delay in milliseconds')
 
 
+class PathEchoPath(Model):
+    item = String(description='item path segment')
+    badge = String(description='badge path segment')
+
+
+class PathEchoResponse(Model):
+    item = String(description='decoded item path segment')
+    badge = String(description='decoded badge path segment')
+    combined = String(description='combined path segments')
+
+
 with apibp.group('/demo') as views:
     views.GET(
         '/abc', summary='这是abc的summary', description='这是abc的description'
@@ -132,6 +143,17 @@ with apibp.group('/demo') as views:
         delay_ms = Int(description='optional server delay in milliseconds', default=0),
     ).RSP(
         RequestOptionsResponse,
+    )
+
+    views.GET(
+        '/path-echo/{item}/{badge}',
+        operation_id='PathEcho',
+        summary='Path parameter example',
+        description='Covers typed path request generation.',
+    ).REQ_PATH(
+        PathEchoPath,
+    ).RSP(
+        PathEchoResponse,
     )
 
     views.POST(

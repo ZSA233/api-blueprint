@@ -42,6 +42,7 @@ public class GenMediaApi {
             "POST",
             "/api/media/preview",
             null,
+            null,
             new GenApiRequestBodySpec(
                 null,
                 null,
@@ -77,6 +78,7 @@ public class GenMediaApi {
             "api.media.get.frame",
             "GET",
             "/api/media/frame",
+            null,
             null,
             new GenApiRequestBodySpec(
                 null,
@@ -114,6 +116,7 @@ public class GenMediaApi {
             "GET",
             "/api/media/download",
             null,
+            null,
             new GenApiRequestBodySpec(
                 null,
                 null,
@@ -150,6 +153,7 @@ public class GenMediaApi {
             "GET",
             "/api/media/download-dynamic",
             null,
+            null,
             new GenApiRequestBodySpec(
                 null,
                 null,
@@ -185,6 +189,7 @@ public class GenMediaApi {
             "api.media.get.downloadfilenameedge",
             "GET",
             "/api/media/download-filename-edge",
+            null,
             null,
             new GenApiRequestBodySpec(
                 null,
@@ -224,6 +229,7 @@ public class GenMediaApi {
             "api.media.get.errorframe",
             "GET",
             "/api/media/error-frame",
+            null,
             query,
             new GenApiRequestBodySpec(
                 null,
@@ -260,6 +266,7 @@ public class GenMediaApi {
             "api.media.get.mjpeg",
             "GET",
             "/api/media/mjpeg",
+            null,
             null,
             new GenApiRequestBodySpec(
                 null,

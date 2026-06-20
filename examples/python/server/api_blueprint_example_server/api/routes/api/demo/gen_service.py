@@ -17,6 +17,8 @@ from .gen_types import (
     FormSubmitResponse,
     RequestOptionsQuery,
     RequestOptionsResponse,
+    PathEchoPath,
+    PathEchoResponse,
     EmptyResponseResponse,
     PutDemoQuery,
     PutDemoJSON,
@@ -73,6 +75,12 @@ class DemoService(Protocol):
         self,
         query: RequestOptionsQuery,
     ) -> RequestOptionsResponse:
+        ...
+
+    async def path_echo(
+        self,
+        path: PathEchoPath,
+    ) -> PathEchoResponse:
         ...
 
     async def empty_response(self) -> EmptyResponseResponse:
@@ -148,6 +156,12 @@ class DemoServiceStub:
         query: RequestOptionsQuery,
     ) -> RequestOptionsResponse:
         raise NotImplementedError("request_options")
+
+    async def path_echo(
+        self,
+        path: PathEchoPath,
+    ) -> PathEchoResponse:
+        raise NotImplementedError("path_echo")
 
     async def empty_response(self) -> EmptyResponseResponse:
         raise NotImplementedError("empty_response")

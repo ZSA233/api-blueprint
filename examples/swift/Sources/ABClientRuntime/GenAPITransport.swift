@@ -28,6 +28,7 @@ public struct APIRequest<Response> {
     public var routeID: String
     public var method: String
     public var path: String
+    public var pathParams: [URLQueryItem]
     public var query: [URLQueryItem]
     public var options: APIRequestOptions
     public var json: ((APICodingConfig) throws -> Data)?
@@ -45,6 +46,7 @@ public struct APIRequest<Response> {
         routeID: String,
         method: String,
         path: String,
+        pathParams: [URLQueryItem] = [],
         query: [URLQueryItem] = [],
         options: APIRequestOptions = APIRequestOptions(),
         json: ((APICodingConfig) throws -> Data)? = nil,
@@ -63,6 +65,7 @@ public struct APIRequest<Response> {
         self.routeID = routeID
         self.method = method
         self.path = path
+        self.pathParams = pathParams
         self.query = query
         self.options = options
         self.json = json

@@ -172,6 +172,14 @@ async function checkEmptyResponse(baseUrl: string): Promise<void> {
   }
 }
 
+async function checkPathParams(baseUrl: string): Promise<void> {
+  const { demoClient } = createApiClients({ baseUrl });
+  const rsp = await demoClient.pathEcho({ path: { item: "alpha", badge: "gold badge" } });
+  if (rsp.item !== "alpha" || rsp.badge !== "gold badge" || rsp.combined !== "alpha:gold badge") {
+    throw new Error(`pathEcho=${JSON.stringify(rsp)}`);
+  }
+}
+
 async function checkForm(baseUrl: string): Promise<void> {
   const { demoClient } = createApiClients({ baseUrl });
   const rsp = await demoClient.formSubmit({ form: { title: "ts-form", count: 4, enabled: true } });
@@ -532,7 +540,7 @@ async function main(): Promise<void> {
   if (!baseUrl) {
     throw new Error("base URL argument is required");
   }
-  const selected = scenarioSet(process.argv[3] || "rpc,binary,form,error,sse,websocket,naming,raw,xml,static,header,scalar,enum,map,deprecated,empty-response,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel,legacy-json");
+  const selected = scenarioSet(process.argv[3] || "rpc,binary,form,error,sse,websocket,naming,raw,xml,static,header,scalar,enum,map,deprecated,empty-response,path-params,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel,legacy-json");
   if (selected.has("rpc")) {
     await checkRPC(baseUrl);
   }
@@ -562,6 +570,9 @@ async function main(): Promise<void> {
   }
   if (selected.has("empty-response")) {
     await checkEmptyResponse(baseUrl);
+  }
+  if (selected.has("path-params")) {
+    await checkPathParams(baseUrl);
   }
   if (selected.has("form")) {
     await checkForm(baseUrl);

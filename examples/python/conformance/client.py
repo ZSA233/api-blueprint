@@ -35,6 +35,8 @@ from api_blueprint_example_client.api.routes.api.demo.gen_types import (
     AssistantSessionOpen,
     ErrorDemoQuery,
     FormSubmitForm,
+    PathEchoPath,
+    PathEchoResponse,
     PostDeprecatedJSON,
     PutDemoJSON,
     PutDemoQuery,
@@ -186,6 +188,14 @@ async def check_deprecated(api) -> None:
 async def check_empty_response(api) -> None:
     response = await api.demo.empty_response()
     assert response is not None, response
+
+
+async def check_path_params(api) -> None:
+    response = await api.demo.path_echo(path=PathEchoPath(item="alpha", badge="gold badge"))
+    assert isinstance(response, PathEchoResponse), response
+    assert response.item == "alpha", response
+    assert response.badge == "gold badge", response
+    assert response.combined == "alpha:gold badge", response
 
 
 async def check_form(api) -> None:
@@ -467,7 +477,7 @@ async def main() -> None:
     selected = scenario_set(
         sys.argv[2]
         if len(sys.argv) > 2
-        else "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,empty-response,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel,legacy-json"
+        else "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,empty-response,path-params,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel,legacy-json"
     )
     async with (
         create_client(sys.argv[1]) as api,
@@ -494,6 +504,8 @@ async def main() -> None:
             await check_deprecated(api)
         if "empty-response" in selected:
             await check_empty_response(api)
+        if "path-params" in selected:
+            await check_path_params(api)
         if "form" in selected:
             await check_form(api)
         if "binary" in selected:

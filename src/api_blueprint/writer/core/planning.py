@@ -70,7 +70,7 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
     "typescript-client": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
+        requests=("path", "query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
         responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
@@ -78,7 +78,7 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
     "kotlin-client": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
+        requests=("path", "query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
         responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
@@ -86,14 +86,14 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
     "kotlin-server": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
+        requests=("path", "query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
     ),
     "java-server": TargetCapability(
         implemented=True,
         routes=("rpc",),
-        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
+        requests=("path", "query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
         outputs=("spring-controllers", "java-types", "adapters", "spring-contract-assertions"),
@@ -101,7 +101,7 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
     "java-client": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
+        requests=("path", "query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
         responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
@@ -109,7 +109,7 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
     "flutter-client": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
+        requests=("path", "query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
         responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
@@ -117,7 +117,7 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
     "swift-client": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
+        requests=("path", "query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
         responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
@@ -125,7 +125,7 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
     "python-server": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
+        requests=("path", "query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
     ),

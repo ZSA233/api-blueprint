@@ -41,6 +41,7 @@ public class GenHelloApi {
             "api.hello.get.abc",
             "GET",
             "/api/hello/abc",
+            null,
             query,
             new GenApiRequestBodySpec(
                 null,
@@ -78,6 +79,7 @@ public class GenHelloApi {
             "GET",
             "/api/hello/map-enum",
             null,
+            null,
             new GenApiRequestBodySpec(
                 null,
                 null,
@@ -113,6 +115,7 @@ public class GenHelloApi {
             "api.hello.get.listenum",
             "GET",
             "/api/hello/list-enum",
+            null,
             null,
             new GenApiRequestBodySpec(
                 null,
@@ -150,6 +153,7 @@ public class GenHelloApi {
             "GET",
             "/api/hello/string",
             null,
+            null,
             new GenApiRequestBodySpec(
                 null,
                 null,
@@ -186,6 +190,7 @@ public class GenHelloApi {
             "GET",
             "/api/hello/uint64",
             null,
+            null,
             new GenApiRequestBodySpec(
                 null,
                 null,
@@ -221,6 +226,7 @@ public class GenHelloApi {
             "api.hello.get.stringemun",
             "GET",
             "/api/hello/string-emun",
+            null,
             null,
             new GenApiRequestBodySpec(
                 null,
@@ -260,6 +266,7 @@ public class GenHelloApi {
             "api.hello.get.helloway",
             "GET",
             "/api/hello/hello-way",
+            null,
             query,
             new GenApiRequestBodySpec(
                 null,

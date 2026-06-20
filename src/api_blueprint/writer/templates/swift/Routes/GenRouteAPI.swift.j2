@@ -11,7 +11,8 @@ open class Gen{{ group.class_name }} {
 {% if route.is_rpc %}
 
     public func {{ route.method_name }}(
-{% if route.query_type %}        query: {{ route.query_type }}? = nil,
+{% if route.path_type %}        path: {{ route.path_type }},
+{% endif %}{% if route.query_type %}        query: {{ route.query_type }}? = nil,
 {% endif %}{% if route.json_type %}        json: {{ route.json_type }}? = nil,
 {% endif %}{% if route.form_type %}        form: {{ route.form_type }}? = nil,
 {% endif %}{% if route.multipart_type %}        multipart: {{ route.multipart_type }}? = nil,
@@ -38,7 +39,8 @@ open class Gen{{ group.class_name }} {
                 routeID: {{ route.protocol.route.route_id | code_literal }},
                 method: {{ route.http_method | code_literal }},
                 path: {{ route.url | code_literal }},
-                query: {{ route.query_to_items_expr }},
+{% if route.path_type %}                pathParams: {{ route.path_to_items_expr }},
+{% endif %}                query: {{ route.query_to_items_expr }},
                 options: options,
                 json: jsonBody,
                 form: formBody,

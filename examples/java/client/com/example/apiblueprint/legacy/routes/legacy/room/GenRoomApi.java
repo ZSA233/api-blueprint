@@ -39,6 +39,7 @@ public class GenRoomApi {
             "GET",
             "/room/list",
             null,
+            null,
             new GenApiRequestBodySpec(
                 null,
                 null,

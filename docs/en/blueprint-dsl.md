@@ -135,7 +135,7 @@ with bp.group("/items") as views:
 - `RSP(...)`: response model.
 - `RSP_EMPTY()`: JSON responses with no business data on success; this is not HTTP 204 / no body. With a JSON response envelope, both `data: null` and `data: {}` decode as an empty business response.
 
-`REQ_PATH` placeholder names must exactly match path-model field wire names. Fields must be required scalar, enum, or string-coerce values; optional, array, map, object, file, binary, and oneof fields are rejected. Gin-style `:id` is not DSL syntax; write `{id}` instead. REQ_PATH v1 is limited to HTTP RPC routes. ContractGraph, ir-plugin, Go server, and Go client emit or generate path parameters; other official targets fail fast to avoid unusable generated code.
+`REQ_PATH` placeholder names must exactly match path-model field wire names. Fields must be required scalar, enum, or string-coerce values; optional, array, map, object, file, binary, and oneof fields are rejected. Gin-style `:id` is not DSL syntax; write `{id}` instead. REQ_PATH is limited to HTTP RPC routes. ContractGraph, ir-plugin, and official HTTP targets emit or generate path parameters; Wails/gRPC fail fast to avoid unusable generated code.
 
 A route can declare only one body kind. ContractGraph records path requests as `path_model` / `path_params`, records request bodies as `none`, `json`, `urlencoded`, `multipart`, `binary_schema`, or `raw_bytes`, and both generators and `api-gen check` use that unified semantics for capability checks.
 

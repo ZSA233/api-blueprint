@@ -67,6 +67,7 @@ public class GenBinaryApi {
             "api.binary.post.packet",
             "POST",
             "/api/binary/packet",
+            null,
             query,
             new GenApiRequestBodySpec(
                 null,
@@ -132,6 +133,7 @@ public class GenBinaryApi {
             "api.binary.post.auditpacket",
             "POST",
             "/api/binary/audit-packet",
+            null,
             query,
             new GenApiRequestBodySpec(
                 null,
@@ -197,6 +199,7 @@ public class GenBinaryApi {
             "api.binary.post.widepacket",
             "POST",
             "/api/binary/wide-packet",
+            null,
             query,
             new GenApiRequestBodySpec(
                 null,
@@ -233,6 +236,7 @@ public class GenBinaryApi {
             "api.binary.get.auditpacketresponse",
             "GET",
             "/api/binary/audit-packet-response",
+            null,
             null,
             new GenApiRequestBodySpec(
                 null,

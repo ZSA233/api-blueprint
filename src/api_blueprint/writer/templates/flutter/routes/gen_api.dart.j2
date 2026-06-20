@@ -15,7 +15,8 @@ class Gen{{ group.class_name }} {
 {% if route.is_rpc %}
 
   Future<{{ route.response_type.text }}> {{ route.method_name }}({
-{% if route.query_type %}    {{ route.query_type }}? query,
+{% if route.path_type %}    required {{ route.path_type }} path,
+{% endif %}{% if route.query_type %}    {{ route.query_type }}? query,
 {% endif %}{% if route.json_type %}    {{ route.json_type }}? json,
 {% endif %}{% if route.form_type %}    {{ route.form_type }}? form,
 {% endif %}{% if route.multipart_type %}    {{ route.multipart_type }}? multipart,
@@ -27,7 +28,8 @@ class Gen{{ group.class_name }} {
         routeId: {{ route.protocol.route.route_id | tojson }},
         method: {{ route.http_method | tojson }},
         path: {{ writer.dart_string_literal(route.url) }},
-        query: {{ route.query_to_map_expr }},
+{% if route.path_type %}        pathParams: {{ route.path_to_map_expr }},
+{% endif %}        query: {{ route.query_to_map_expr }},
         options: options,
 {% if route.json_type %}        json: json?.toJson(),
 {% endif %}{% if route.form_type %}        form: form?.toJson(),

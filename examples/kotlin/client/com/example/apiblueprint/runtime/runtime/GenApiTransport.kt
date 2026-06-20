@@ -29,6 +29,7 @@ public data class ApiRequest<T>(
     public val routeId: String,
     public val method: String,
     public val path: String,
+    public val pathParams: Map<String, String?> = emptyMap(),
     public val query: Map<String, String?> = emptyMap(),
     public val options: ApiRequestOptions = ApiRequestOptions(),
     public val json: Any? = null,

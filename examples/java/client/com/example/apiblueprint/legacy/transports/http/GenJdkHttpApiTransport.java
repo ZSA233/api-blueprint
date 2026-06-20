@@ -170,7 +170,7 @@ public class GenJdkHttpApiTransport implements GenApiTransport {
     }
 
     private HttpRequest buildRequest(GenApiRequest<?> request) throws IOException {
-        String url = url(request.path(), request.query());
+        String url = url(request.path(), request.query(), request.pathParams());
         HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url));
         mergedHeaders(request.headers()).forEach(builder::header);
         Duration timeout = request.timeout() == null ? config.timeout() : request.timeout();
@@ -209,8 +209,9 @@ public class GenJdkHttpApiTransport implements GenApiTransport {
         return merged;
     }
 
-    private String url(String path, Object query) {
-        String normalizedPath = path.startsWith("/") ? path : "/" + path;
+    private String url(String path, Object query, Object pathParams) {
+        String expandedPath = expandPath(path, pathParams);
+        String normalizedPath = expandedPath.startsWith("/") ? expandedPath : "/" + expandedPath;
         String base = config.baseUrl().isBlank() ? "" : config.baseUrl().replaceAll("/+$", "");
         String result = base + normalizedPath;
         String queryString = queryString(query);
@@ -218,6 +219,26 @@ public class GenJdkHttpApiTransport implements GenApiTransport {
             result += (result.contains("?") ? "&" : "?") + queryString;
         }
         return result;
+    }
+
+    private String expandPath(String path, Object pathParams) {
+        Map<String, Object> params = pathParams == null ? Map.of() : objectMapper.convertValue(pathParams, MAP_TYPE);
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("\\{([^{}]+)}").matcher(path);
+        StringBuffer output = new StringBuffer();
+        while (matcher.find()) {
+            String name = matcher.group(1);
+            Object value = params.get(name);
+            if (value == null) {
+                throw new IllegalArgumentException("missing path parameter: " + name);
+            }
+            matcher.appendReplacement(output, java.util.regex.Matcher.quoteReplacement(encodePathSegment(String.valueOf(value))));
+        }
+        matcher.appendTail(output);
+        String expanded = output.toString();
+        if (java.util.regex.Pattern.compile("\\{[^{}]+}").matcher(expanded).find()) {
+            throw new IllegalArgumentException("unresolved path parameter in path: " + expanded);
+        }
+        return expanded;
     }
 
     private String queryString(Object value) {
@@ -394,6 +415,10 @@ public class GenJdkHttpApiTransport implements GenApiTransport {
 
     private String encode(String value) {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
+    }
+
+    private String encodePathSegment(String value) {
+        return encode(value).replace("+", "%20");
     }
 
     private boolean isJson(String mediaType) {

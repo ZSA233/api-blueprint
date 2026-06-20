@@ -224,6 +224,21 @@ public final class GenApiTypes {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
+    public record PathEchoPath(
+        @JsonProperty("item") String item,
+        @JsonProperty("badge") String badge
+    ) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record PathEchoResponse(
+        @JsonProperty("item") String item,
+        @JsonProperty("badge") String badge,
+        @JsonProperty("combined") String combined
+    ) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record SweepOpen(
         @JsonProperty("run_id") String runId,
         @JsonProperty("replay_from") String replayFrom

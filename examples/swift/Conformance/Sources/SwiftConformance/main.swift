@@ -34,7 +34,7 @@ struct SwiftConformance {
         let selected = scenarioSet(
             CommandLine.arguments.count > 2
                 ? CommandLine.arguments[2]
-                : "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,empty-response,audit-binary,wide-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel,legacy-json"
+                : "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,empty-response,path-params,audit-binary,wide-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel,legacy-json"
         )
         let client = HTTPAPIClient.create(baseURL: baseURL)
 
@@ -67,6 +67,9 @@ struct SwiftConformance {
         }
         if selected.contains("empty-response") {
             try await checkEmptyResponse(client)
+        }
+        if selected.contains("path-params") {
+            try await checkPathParams(client)
         }
         if selected.contains("form") {
             try await checkForm(client)
@@ -186,6 +189,13 @@ private func checkDeprecated(_ client: ABClient) async throws {
 
 private func checkEmptyResponse(_ client: ABClient) async throws {
     _ = try await client.api.demo.emptyResponse()
+}
+
+private func checkPathParams(_ client: ABClient) async throws {
+    let response = try await client.api.demo.pathEcho(path: PathEchoPath(item: "alpha", badge: "gold badge"))
+    try expectEqual(response.item, "alpha", "pathEcho.item")
+    try expectEqual(response.badge, "gold badge", "pathEcho.badge")
+    try expectEqual(response.combined, "alpha:gold badge", "pathEcho.combined")
 }
 
 private func checkForm(_ client: ABClient) async throws {

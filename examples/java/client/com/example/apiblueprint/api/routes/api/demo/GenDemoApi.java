@@ -41,6 +41,7 @@ public class GenDemoApi {
             "api.demo.get.abc",
             "GET",
             "/api/demo/abc",
+            null,
             query,
             new GenApiRequestBodySpec(
                 null,
@@ -81,6 +82,7 @@ public class GenDemoApi {
             "POST",
             "/api/demo/test_post",
             null,
+            null,
             new GenApiRequestBodySpec(
                 json,
                 null,
@@ -120,6 +122,7 @@ public class GenDemoApi {
             "POST",
             "/api/demo/form-submit",
             null,
+            null,
             new GenApiRequestBodySpec(
                 null,
                 form,
@@ -158,6 +161,7 @@ public class GenDemoApi {
             "api.demo.get.requestoptions",
             "GET",
             "/api/demo/request-options",
+            null,
             query,
             new GenApiRequestBodySpec(
                 null,
@@ -169,6 +173,46 @@ public class GenDemoApi {
             new GenApiResponseSpec<>(
                 GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
                 GenApiTypes.RequestOptionsResponse.class,
+                "application/json",
+                "json",
+                null
+            ),
+            effectiveOptions.headers(),
+            effectiveOptions.timeout()
+        );
+        return transport.execute(request);
+    }
+
+    public GenApiTypes.PathEchoResponse pathEcho(
+        GenApiTypes.PathEchoPath path
+    ) throws Exception {
+        return pathEcho(
+            path,
+            GenApiRequestOptions.none()
+        );
+    }
+
+    public GenApiTypes.PathEchoResponse pathEcho(
+        GenApiTypes.PathEchoPath path,
+        GenApiRequestOptions options
+    ) throws Exception {
+        GenApiRequestOptions effectiveOptions = options == null ? GenApiRequestOptions.none() : options;
+        GenApiRequest<GenApiTypes.PathEchoResponse> request = new GenApiRequest<>(
+            "api.demo.get.pathecho_item_badge",
+            "GET",
+            "/api/demo/path-echo/{item}/{badge}",
+            path,
+            null,
+            new GenApiRequestBodySpec(
+                null,
+                null,
+                null,
+                null,
+                "none"
+            ),
+            new GenApiResponseSpec<>(
+                GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")),
+                GenApiTypes.PathEchoResponse.class,
                 "application/json",
                 "json",
                 null
@@ -194,6 +238,7 @@ public class GenDemoApi {
             "api.demo.post.emptyresponse",
             "POST",
             "/api/demo/empty-response",
+            null,
             null,
             new GenApiRequestBodySpec(
                 null,
@@ -236,6 +281,7 @@ public class GenDemoApi {
             "api.demo.put.z1put",
             "PUT",
             "/api/demo/1put",
+            null,
             query,
             new GenApiRequestBodySpec(
                 json,
@@ -275,6 +321,7 @@ public class GenDemoApi {
             "api.demo.delete.delete",
             "DELETE",
             "/api/demo/delete$",
+            null,
             query,
             new GenApiRequestBodySpec(
                 null,
@@ -315,6 +362,7 @@ public class GenDemoApi {
             "STREAM",
             "/api/demo/sweep-events",
             null,
+            null,
             new GenApiRequestBodySpec(
                 openData,
                 null,
@@ -353,6 +401,7 @@ public class GenDemoApi {
             "api.demo.channel.assistantsession",
             "CHANNEL",
             "/api/demo/assistant-session",
+            null,
             null,
             new GenApiRequestBodySpec(
                 openData,
@@ -393,6 +442,7 @@ public class GenDemoApi {
             "POST",
             "/api/demo/post_deprecated",
             null,
+            null,
             new GenApiRequestBodySpec(
                 json,
                 null,
@@ -429,6 +479,7 @@ public class GenDemoApi {
             "POST",
             "/api/demo/raw",
             null,
+            null,
             new GenApiRequestBodySpec(
                 null,
                 null,
@@ -464,6 +515,7 @@ public class GenDemoApi {
             "api.demo.post.mapmodel",
             "POST",
             "/api/demo/map_model",
+            null,
             null,
             new GenApiRequestBodySpec(
                 null,
@@ -503,6 +555,7 @@ public class GenDemoApi {
             "api.demo.get.errordemo",
             "GET",
             "/api/demo/error-demo",
+            null,
             query,
             new GenApiRequestBodySpec(
                 null,

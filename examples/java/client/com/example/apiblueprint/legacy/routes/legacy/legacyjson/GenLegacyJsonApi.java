@@ -39,6 +39,7 @@ public class GenLegacyJsonApi {
             "GET",
             "/legacy-json/compat",
             null,
+            null,
             new GenApiRequestBodySpec(
                 null,
                 null,

@@ -39,6 +39,7 @@ public class GenAccountApi {
             "GET",
             "/account/profile",
             null,
+            null,
             new GenApiRequestBodySpec(
                 null,
                 null,

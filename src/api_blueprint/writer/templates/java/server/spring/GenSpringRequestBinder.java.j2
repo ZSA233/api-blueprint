@@ -35,6 +35,14 @@ public final class GenSpringRequestBinder {
         return output;
     }
 
+    public static <T> T bindPath(Map<String, String> values, Class<T> type) {
+        Map<String, Object> pathValues = new LinkedHashMap<>();
+        if (values != null) {
+            pathValues.putAll(values);
+        }
+        return GenApiJson.MAPPER.convertValue(pathValues, type);
+    }
+
     private static <T> void setFilePart(T target, Class<T> type, String wireName, MultipartFile file) {
         Method setter = findSetter(type, wireName);
         if (setter == null || file == null) {

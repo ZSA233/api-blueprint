@@ -52,6 +52,20 @@ function serializeQuery(params?: Record<string, unknown>): string {
   return parts.join("&");
 }
 
+function expandPath(path: string, params?: Record<string, unknown>): string {
+  const expanded = path.replace(/\{([^{}]+)\}/g, (match, key) => {
+    const value = params?.[key];
+    if (value === undefined || value === null) {
+      throw new Error(`missing path parameter: ${key}`);
+    }
+    return encodeURIComponent(String(value));
+  });
+  if (/\{[^{}]+\}/.test(expanded)) {
+    throw new Error(`unresolved path parameter in path: ${expanded}`);
+  }
+  return expanded;
+}
+
 function buildFormData(data: Record<string, unknown>): FormData {
   const form = new FormData();
   const append = (key: string, value: unknown) => {
@@ -182,9 +196,10 @@ export class DefaultTransport implements ApiTransport {
     };
   }
 
-  protected buildUrl(path: string, query?: Record<string, unknown>): string {
+  protected buildUrl(path: string, query?: Record<string, unknown>, pathParams?: Record<string, unknown>): string {
     const base = (this.baseUrl || "").replace(/\/$/, "");
-    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+    const expandedPath = expandPath(path, pathParams);
+    const normalizedPath = expandedPath.startsWith("/") ? expandedPath : `/${expandedPath}`;
     const url = base ? `${base}${normalizedPath}` : normalizedPath;
     const queryString = serializeQuery(query);
     return queryString ? `${url}?${queryString}` : url;
@@ -206,6 +221,7 @@ export class DefaultTransport implements ApiTransport {
     routeId,
     method,
     path,
+    pathParams,
     query,
     json,
     form,
@@ -218,7 +234,7 @@ export class DefaultTransport implements ApiTransport {
     responseEnvelope,
     timeoutMs,
   }: RequestOptions<R>): Promise<R> {
-    const url = this.buildUrl(path, query);
+    const url = this.buildUrl(path, query, pathParams);
     const headers = this.mergeHeaders(extraHeaders);
     const mergedInit: RequestInit = {
       ...(this.config.init ?? {}),

@@ -76,7 +76,7 @@ import kotlin.time.Duration.Companion.seconds
 
 fun main(args: Array<String>) = runBlocking {
     val baseUrl = args.firstOrNull()?.trimEnd('/') ?: error("base URL argument is required")
-    val selected = scenarioSet(args.getOrNull(1) ?: "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,empty-response,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel,legacy-json")
+    val selected = scenarioSet(args.getOrNull(1) ?: "rpc,binary,form,error,naming,sse,websocket,raw,xml,static,header,scalar,enum,map,deprecated,empty-response,path-params,audit-binary,binary-response,media,request-options,media-filename-edge,media-error,single-channel,legacy-json")
     val httpClient = OkHttpClient()
     val altHttpClient = OkHttpClient()
     val legacyHttpClient = OkHttpClient()
@@ -115,6 +115,9 @@ fun main(args: Array<String>) = runBlocking {
         }
         if ("empty-response" in selected) {
             checkEmptyResponse(client)
+        }
+        if ("path-params" in selected) {
+            checkPathParams(client)
         }
         if ("form" in selected) {
             checkForm(client)
@@ -221,6 +224,13 @@ private suspend fun checkDeprecated(client: ApiClient) {
 
 private suspend fun checkEmptyResponse(client: ApiClient) {
     client.demo.emptyResponse()
+}
+
+private suspend fun checkPathParams(client: ApiClient) {
+    val response = client.demo.pathEcho(PathEchoPath(item = "alpha", badge = "gold badge"))
+    assertEquals("alpha", response.item, "pathEcho.item")
+    assertEquals("gold badge", response.badge, "pathEcho.badge")
+    assertEquals("alpha:gold badge", response.combined, "pathEcho.combined")
 }
 
 private suspend fun checkBinary(client: ApiClient) {

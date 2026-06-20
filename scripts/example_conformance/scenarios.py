@@ -149,6 +149,13 @@ def scenario_registry() -> dict[str, Scenario]:
             route_ids=("api.demo.post.emptyresponse",),
             description="empty business response bodies inside JSON envelopes",
         ),
+        "path-params": Scenario(
+            name="path-params",
+            categories=("path-params", "envelope"),
+            clients=("go", "typescript", "kotlin", "flutter", "swift", "java", "python"),
+            route_ids=("api.demo.get.pathecho_item_badge",),
+            description="typed path parameter request DTOs",
+        ),
         "media-filename-edge": Scenario(
             name="media-filename-edge",
             categories=("raw-response", "filename"),
@@ -316,6 +323,8 @@ def server_supports_scenario(server: str, scenario: Scenario) -> bool:
     if scenario.name == "request-options":
         return capability.supports_rpc
     if scenario.name == "empty-response":
+        return capability.supports_rpc
+    if scenario.name == "path-params":
         return capability.supports_rpc
     if scenario.name == "error":
         return capability.supports_typed_error

@@ -96,7 +96,7 @@ public final class URLSessionAPITransport: APITransport {
     }
 
     private func buildRequest<Response>(_ request: APIRequest<Response>) throws -> APIBuiltRequest {
-        let url = try buildURL(path: request.path, query: request.query)
+        let url = try buildURL(path: request.path, query: request.query, pathParams: request.pathParams)
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = request.method
         try applyHeaders(config.defaultHeaders, to: &urlRequest)
@@ -131,8 +131,9 @@ public final class URLSessionAPITransport: APITransport {
         return APIBuiltRequest(request: urlRequest, cleanup: cleanup)
     }
 
-    private func buildURL(path: String, query: [URLQueryItem]) throws -> URL {
-        let normalizedPath = path.hasPrefix("/") ? path : "/\(path)"
+    private func buildURL(path: String, query: [URLQueryItem], pathParams: [URLQueryItem] = []) throws -> URL {
+        let expandedPath = try expandPath(path, pathParams: pathParams)
+        let normalizedPath = expandedPath.hasPrefix("/") ? expandedPath : "/\(expandedPath)"
         guard let base = config.baseURL ?? URL(string: "http://localhost") else {
             throw APITransportError.invalidURL("http://localhost")
         }
@@ -146,6 +147,41 @@ public final class URLSessionAPITransport: APITransport {
             throw APITransportError.invalidURL(raw)
         }
         return url
+    }
+
+    private func expandPath(_ path: String, pathParams: [URLQueryItem]) throws -> String {
+        var values: [String: String] = [:]
+        for item in pathParams {
+            if let value = item.value {
+                values[item.name] = value
+            }
+        }
+        var output = ""
+        var index = path.startIndex
+        while index < path.endIndex {
+            if path[index] == "{", let end = path[index...].firstIndex(of: "}") {
+                let nameStart = path.index(after: index)
+                let name = String(path[nameStart..<end])
+                guard !name.isEmpty, let value = values[name] else {
+                    throw APITransportError.invalidURL("missing path parameter: \(name)")
+                }
+                output += pathSegmentEncode(value)
+                index = path.index(after: end)
+            } else {
+                output.append(path[index])
+                index = path.index(after: index)
+            }
+        }
+        if output.range(of: #"\{[^{}]+\}"#, options: .regularExpression) != nil {
+            throw APITransportError.invalidURL("unresolved path parameter in path: \(output)")
+        }
+        return output
+    }
+
+    private func pathSegmentEncode(_ value: String) -> String {
+        var allowed = CharacterSet.urlPathAllowed
+        allowed.remove(charactersIn: "/")
+        return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
     }
 
     private func buildConnectionRequest(path: String, query: [URLQueryItem], headers: [String: String]) throws -> URLRequest {

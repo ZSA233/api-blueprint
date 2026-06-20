@@ -106,6 +106,17 @@ private val HTTP_ROUTE_API_DEMO_GET_REQUESTOPTIONS = HttpRouteInfo(
     ),
 )
 
+private val HTTP_ROUTE_API_DEMO_GET_PATHECHO_ITEM_BADGE = HttpRouteInfo(
+    request = HttpRequestInfo(
+        binaryContentEncodings = emptySet(),
+    ),
+    response = HttpResponseInfo(
+        kind = "json",
+        mediaType = "application/json",
+        defaultFilename = "",
+    ),
+)
+
 private val HTTP_ROUTE_API_DEMO_POST_EMPTYRESPONSE = HttpRouteInfo(
     request = HttpRequestInfo(
         binaryContentEncodings = emptySet(),
@@ -287,6 +298,26 @@ public fun Route.registerDemoRoutes(
             respondSuccess(call, result, RequestOptionsResponse.serializer(), ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "application/json")
         } catch (error: ApiError) {
             respondApiError(call, error, ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "api.demo.get.requestoptions")
+        }
+    }
+
+    get("/api/demo/path-echo/{item}/{badge}") {
+        val path = try {
+            decodeParameters(call.parameters, PathEchoPath.serializer())
+        } catch (_: SerializationException) {
+            respondBadRequest(call)
+            return@get
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@get
+        }
+        try {
+            val result = service.pathEcho(
+                path = path
+            )
+            respondSuccess(call, result, PathEchoResponse.serializer(), ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "application/json")
+        } catch (error: ApiError) {
+            respondApiError(call, error, ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")), "api.demo.get.pathecho_item_badge")
         }
     }
 

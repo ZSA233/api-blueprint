@@ -162,6 +162,17 @@ _HTTP_ROUTE_API_DEMO_GET_REQUESTOPTIONS = HttpRouteInfo(
     ),
 )
 
+_HTTP_ROUTE_API_DEMO_GET_PATHECHO_ITEM_BADGE = HttpRouteInfo(
+    request=HttpRequestInfo(
+        binary_content_encodings=(),
+    ),
+    response=HttpResponseInfo(
+        kind="json",
+        content_type="application/json",
+        default_filename=None,
+    ),
+)
+
 _HTTP_ROUTE_API_DEMO_POST_EMPTYRESPONSE = HttpRouteInfo(
     request=HttpRequestInfo(
         binary_content_encodings=(),
@@ -708,6 +719,28 @@ def create_demo_router(
 
         except ApiError as error:
             return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.demo.get.requestoptions")
+        except PayloadTooLargeError as error:
+            return _payload_too_large_response(error)
+
+    @router.api_route("/api/demo/path-echo/{item}/{badge}", methods=["GET"])
+    async def demo_path_echo(request: Request) -> Any:
+        service = service_impl
+        route_info = _HTTP_ROUTE_API_DEMO_GET_PATHECHO_ITEM_BADGE
+        path_raw = dict(request.path_params)
+        try:
+            path = api_demo_types.PathEchoPath.from_value(path_raw, "path")
+
+        except (TypeError, ValueError) as error:
+            return _bad_request_response(error)
+
+        try:
+            result = await service.path_echo(
+                path=path,
+            )
+            return _wrap_response({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, result)
+
+        except ApiError as error:
+            return _wrap_api_error({"name": "CodeMessageDataEnvelope", "kind": "code_message_data", "error_identity": "nested", "success_code": 0, "success_message": "ok", "fields": {"code": "code", "message": "message", "data": "data", "error": "error"}}, error, "api.demo.get.pathecho_item_badge")
         except PayloadTooLargeError as error:
             return _payload_too_large_response(error)
 

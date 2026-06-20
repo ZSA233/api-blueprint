@@ -339,6 +339,8 @@ class KotlinBaseWriter(BaseWriter[KotlinBlueprint]):
                 )
             )
             return params
+        if route.path_type:
+            params.append((route.path_type, "path"))
         if route.query_type:
             params.append((route.query_type, "query"))
         if route.json_type:

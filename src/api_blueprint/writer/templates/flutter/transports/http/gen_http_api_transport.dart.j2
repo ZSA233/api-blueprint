@@ -19,7 +19,7 @@ class HttpApiTransport implements ApiTransport {
 
   @override
   Future<T> request<T>(ApiRequest<T> request) async {
-    final url = _buildUrl(request.path, request.query);
+    final url = _buildUrl(request.path, request.query, request.pathParams);
     final headers = {
       ...config.defaultHeaders,
       ...request.options.headers,
@@ -134,9 +134,10 @@ class HttpApiTransport implements ApiTransport {
     );
   }
 
-  Uri _buildUrl(String path, Map<String, String?> query) {
+  Uri _buildUrl(String path, Map<String, String?> query, [Map<String, String?> pathParams = const {}]) {
     final normalizedBase = config.baseUrl.replaceFirst(RegExp(r'/$'), '');
-    final normalizedPath = path.startsWith('/') ? path : '/$path';
+    final expandedPath = _expandPath(path, pathParams);
+    final normalizedPath = expandedPath.startsWith('/') ? expandedPath : '/$expandedPath';
     final raw = normalizedBase.isEmpty ? normalizedPath : '$normalizedBase$normalizedPath';
     final url = Uri.parse(raw);
     final queryParams = {
@@ -145,6 +146,21 @@ class HttpApiTransport implements ApiTransport {
         if (entry.value != null) entry.key: entry.value!,
     };
     return url.replace(queryParameters: queryParams.isEmpty ? null : queryParams);
+  }
+
+  String _expandPath(String path, Map<String, String?> params) {
+    final expanded = path.replaceAllMapped(RegExp(r'\{([^{}]+)\}'), (match) {
+      final name = match.group(1)!;
+      final value = params[name];
+      if (value == null) {
+        throw ArgumentError('missing path parameter: $name');
+      }
+      return Uri.encodeComponent(value);
+    });
+    if (RegExp(r'\{[^{}]+\}').hasMatch(expanded)) {
+      throw ArgumentError('unresolved path parameter in path: $expanded');
+    }
+    return expanded;
   }
 
   Uri _buildWsUrl(String path, Map<String, String?> query) {

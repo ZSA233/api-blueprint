@@ -90,6 +90,17 @@ public fun Route.register{{ writer.service_base_name(group) }}Routes(
 {% for route in group.routes %}
 {%- if route.is_rpc %}
     {{ route.http_method | lower }}({{ route.url | code_literal }}) {
+{%- if route.path_type %}
+        val path = try {
+            decodeParameters(call.parameters, {{ route.path_type }}.serializer())
+        } catch (_: SerializationException) {
+            respondBadRequest(call)
+            return@{{ route.http_method | lower }}
+        } catch (_: IllegalArgumentException) {
+            respondBadRequest(call)
+            return@{{ route.http_method | lower }}
+        }
+{%- endif %}
 {%- if route.query_type %}
         val query = try {
             decodeParameters(call.request.queryParameters, {{ route.query_type }}.serializer())

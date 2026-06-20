@@ -51,6 +51,7 @@ def test_scenario_registry_covers_required_dsl_categories() -> None:
         "map",
         "deprecated",
         "empty-response",
+        "path-params",
         "typed-error",
         "sse",
         "websocket",
@@ -96,6 +97,7 @@ def test_scenario_registry_exposes_expanded_examples() -> None:
         "map",
         "deprecated",
         "empty-response",
+        "path-params",
         "binary-br",
         "audit-binary",
         "wide-binary",
@@ -116,6 +118,7 @@ def test_scenario_registry_exposes_expanded_examples() -> None:
     )
     assert registry["deprecated"].route_ids == ("api.demo.post.postdeprecated",)
     assert registry["empty-response"].route_ids == ("api.demo.post.emptyresponse",)
+    assert registry["path-params"].route_ids == ("api.demo.get.pathecho_item_badge",)
     assert registry["binary-br"].route_ids == ("api.binary.post.packet",)
     assert registry["audit-binary"].route_ids == ("api.binary.post.auditpacket",)
     assert registry["wide-binary"].route_ids == ("api.binary.post.widepacket",)
@@ -148,6 +151,7 @@ def test_expanded_scenarios_are_gated_by_server_capabilities() -> None:
         "map",
         "deprecated",
         "empty-response",
+        "path-params",
         "single-channel",
         "legacy-json",
     }

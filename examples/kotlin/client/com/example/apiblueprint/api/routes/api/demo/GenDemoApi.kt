@@ -91,6 +91,26 @@ public open class GenDemoApi internal constructor(
         )
     }
 
+    public open suspend fun pathEcho(
+        path: PathEchoPath,
+        options: ApiRequestOptions = ApiRequestOptions(),
+    ): PathEchoResponse {
+        return transport.request(
+            ApiRequest(
+                routeId = "api.demo.get.pathecho_item_badge",
+                method = "GET",
+                path = "/api/demo/path-echo/{item}/{badge}",
+                pathParams = path.toQueryMap(),
+                options = options,
+                responseSerializer = PathEchoResponse.serializer(),
+                responseKind = "json",
+                responseMediaType = "application/json",
+                responseEnvelope = ApiResponseEnvelope(name = "CodeMessageDataEnvelope", kind = "code_message_data", errorIdentity = "nested", successCode = 0, successMessage = "ok", fields = ApiResponseEnvelopeFields(code = "code", message = "message", data = "data", error = "error", ok = "ok")),
+                responseDecoder = null,
+            )
+        )
+    }
+
     public open suspend fun emptyResponse(
         options: ApiRequestOptions = ApiRequestOptions(),
     ): DemoEmptyResponseResponse {
@@ -258,6 +278,11 @@ public open class GenDemoApi internal constructor(
 
     private fun DemoRequestOptionsQuery.toQueryMap(): Map<String, String?> = mapOf(
         "delay_ms" to delayMs?.toString()
+    )
+
+    private fun PathEchoPath.toQueryMap(): Map<String, String?> = mapOf(
+        "item" to item.toString(),
+        "badge" to badge.toString()
     )
 
     private fun DemoPutDemoQuery.toQueryMap(): Map<String, String?> = mapOf(
