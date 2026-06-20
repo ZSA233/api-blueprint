@@ -3,8 +3,6 @@
 package demo
 
 import (
-	"reflect"
-
 	sharedprovider "example.com/project/golang/server/views/providers"
 	shared "example.com/project/golang/server/views/routes/api/demo"
 	httptransport "example.com/project/golang/server/views/transports/http"
@@ -12,19 +10,69 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Mount(router gin.IRouter, impl shared.RouterInterface) shared.RouterInterface {
-	return MountSelected(router, impl, nil)
+type MountOption = httptransport.MountOption
+
+func WithRouteIDs(routeIDs ...string) MountOption {
+	return httptransport.WithRouteIDs(routeIDs...)
 }
 
-func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map[string]struct{}) shared.RouterInterface {
-	if isNilRouterInterface(impl) {
+const (
+	RouteIDAbc              = shared.RouteIDAbc
+	RouteIDTestPost         = shared.RouteIDTestPost
+	RouteIDFormSubmit       = shared.RouteIDFormSubmit
+	RouteIDRequestOptions   = shared.RouteIDRequestOptions
+	RouteIDEmptyResponse    = shared.RouteIDEmptyResponse
+	RouteIDPutDemo          = shared.RouteIDPutDemo
+	RouteIDDelete           = shared.RouteIDDelete
+	RouteIDSweepEvents      = shared.RouteIDSweepEvents
+	RouteIDAssistantSession = shared.RouteIDAssistantSession
+	RouteIDPostDeprecated   = shared.RouteIDPostDeprecated
+	RouteIDRaw              = shared.RouteIDRaw
+	RouteIDMapModel         = shared.RouteIDMapModel
+	RouteIDErrorDemo        = shared.RouteIDErrorDemo
+)
+
+const (
+	RoutePathAbc              = shared.RoutePathAbc
+	RoutePathTestPost         = shared.RoutePathTestPost
+	RoutePathFormSubmit       = shared.RoutePathFormSubmit
+	RoutePathRequestOptions   = shared.RoutePathRequestOptions
+	RoutePathEmptyResponse    = shared.RoutePathEmptyResponse
+	RoutePathPutDemo          = shared.RoutePathPutDemo
+	RoutePathDelete           = shared.RoutePathDelete
+	RoutePathSweepEvents      = shared.RoutePathSweepEvents
+	RoutePathAssistantSession = shared.RoutePathAssistantSession
+	RoutePathPostDeprecated   = shared.RoutePathPostDeprecated
+	RoutePathRaw              = shared.RoutePathRaw
+	RoutePathMapModel         = shared.RoutePathMapModel
+	RoutePathErrorDemo        = shared.RoutePathErrorDemo
+)
+
+const (
+	HTTPRoutePathAbc              = "/api/demo/abc"
+	HTTPRoutePathTestPost         = "/api/demo/test_post"
+	HTTPRoutePathFormSubmit       = "/api/demo/form-submit"
+	HTTPRoutePathRequestOptions   = "/api/demo/request-options"
+	HTTPRoutePathEmptyResponse    = "/api/demo/empty-response"
+	HTTPRoutePathPutDemo          = "/api/demo/1put"
+	HTTPRoutePathDelete           = "/api/demo/delete$"
+	HTTPRoutePathSweepEvents      = "/api/demo/sweep-events"
+	HTTPRoutePathAssistantSession = "/api/demo/assistant-session"
+	HTTPRoutePathPostDeprecated   = "/api/demo/post_deprecated"
+	HTTPRoutePathRaw              = "/api/demo/raw"
+	HTTPRoutePathMapModel         = "/api/demo/map_model"
+	HTTPRoutePathErrorDemo        = "/api/demo/error-demo"
+)
+
+func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOption) shared.RouterInterface {
+	if httptransport.IsNilRouterImpl(impl) {
 		impl = shared.NewRouter()
 	}
+	mountOptions := httptransport.NewMountOptions(options...)
 
-	if shouldMountRoute(routeIDs, "api.demo.get.abc") {
-
+	if mountOptions.ShouldMountRoute(RouteIDAbc) {
 		httptransport.GET(
-			"/api/demo/abc",
+			HTTPRoutePathAbc,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -32,8 +80,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "demo",
 					Service:   "DemoService",
 					Operation: "Abc",
-					RouteID:   "api.demo.get.abc",
-					Path:      "/api/demo/abc",
+					RouteID:   RouteIDAbc,
+					Path:      RoutePathAbc,
 					Methods:   []string{"GET"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -53,13 +101,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.demo.post.testpost") {
-
+	if mountOptions.ShouldMountRoute(RouteIDTestPost) {
 		httptransport.POST(
-			"/api/demo/test_post",
+			HTTPRoutePathTestPost,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -67,8 +113,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "demo",
 					Service:   "DemoService",
 					Operation: "TestPost",
-					RouteID:   "api.demo.post.testpost",
-					Path:      "/api/demo/test_post",
+					RouteID:   RouteIDTestPost,
+					Path:      RoutePathTestPost,
 					Methods:   []string{"POST"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -88,13 +134,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.demo.post.formsubmit") {
-
+	if mountOptions.ShouldMountRoute(RouteIDFormSubmit) {
 		httptransport.POST(
-			"/api/demo/form-submit",
+			HTTPRoutePathFormSubmit,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -102,8 +146,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "demo",
 					Service:   "DemoService",
 					Operation: "FormSubmit",
-					RouteID:   "api.demo.post.formsubmit",
-					Path:      "/api/demo/form-submit",
+					RouteID:   RouteIDFormSubmit,
+					Path:      RoutePathFormSubmit,
 					Methods:   []string{"POST"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -123,13 +167,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.demo.get.requestoptions") {
-
+	if mountOptions.ShouldMountRoute(RouteIDRequestOptions) {
 		httptransport.GET(
-			"/api/demo/request-options",
+			HTTPRoutePathRequestOptions,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -137,8 +179,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "demo",
 					Service:   "DemoService",
 					Operation: "RequestOptions",
-					RouteID:   "api.demo.get.requestoptions",
-					Path:      "/api/demo/request-options",
+					RouteID:   RouteIDRequestOptions,
+					Path:      RoutePathRequestOptions,
 					Methods:   []string{"GET"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -158,13 +200,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.demo.post.emptyresponse") {
-
+	if mountOptions.ShouldMountRoute(RouteIDEmptyResponse) {
 		httptransport.POST(
-			"/api/demo/empty-response",
+			HTTPRoutePathEmptyResponse,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -172,8 +212,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "demo",
 					Service:   "DemoService",
 					Operation: "EmptyResponse",
-					RouteID:   "api.demo.post.emptyresponse",
-					Path:      "/api/demo/empty-response",
+					RouteID:   RouteIDEmptyResponse,
+					Path:      RoutePathEmptyResponse,
 					Methods:   []string{"POST"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -193,13 +233,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.demo.put.z1put") {
-
+	if mountOptions.ShouldMountRoute(RouteIDPutDemo) {
 		httptransport.PUT(
-			"/api/demo/1put",
+			HTTPRoutePathPutDemo,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -207,8 +245,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "demo",
 					Service:   "DemoService",
 					Operation: "PutDemo",
-					RouteID:   "api.demo.put.z1put",
-					Path:      "/api/demo/1put",
+					RouteID:   RouteIDPutDemo,
+					Path:      RoutePathPutDemo,
 					Methods:   []string{"PUT"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -228,13 +266,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.demo.delete.delete") {
-
+	if mountOptions.ShouldMountRoute(RouteIDDelete) {
 		httptransport.DELETE(
-			"/api/demo/delete$",
+			HTTPRoutePathDelete,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -242,8 +278,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "demo",
 					Service:   "DemoService",
 					Operation: "Delete",
-					RouteID:   "api.demo.delete.delete",
-					Path:      "/api/demo/delete$",
+					RouteID:   RouteIDDelete,
+					Path:      RoutePathDelete,
 					Methods:   []string{"DELETE"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -263,13 +299,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.demo.stream.sweepevents") {
-
+	if mountOptions.ShouldMountRoute(RouteIDSweepEvents) {
 		httptransport.STREAM(
-			"/api/demo/sweep-events",
+			HTTPRoutePathSweepEvents,
 			sharedprovider.NewRouteExecutor[any, shared.OPEN_SweepEvents, any, shared.RSP_SweepEvents](
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -277,8 +311,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "demo",
 					Service:   "DemoService",
 					Operation: "SweepEvents",
-					RouteID:   "api.demo.stream.sweepevents",
-					Path:      "/api/demo/sweep-events",
+					RouteID:   RouteIDSweepEvents,
+					Path:      RoutePathSweepEvents,
 					Methods:   []string{"STREAM"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope("session"),
@@ -294,13 +328,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			impl.SweepEvents,
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.demo.channel.assistantsession") {
-
+	if mountOptions.ShouldMountRoute(RouteIDAssistantSession) {
 		httptransport.CHANNEL(
-			"/api/demo/assistant-session",
+			HTTPRoutePathAssistantSession,
 			sharedprovider.NewRouteExecutor[any, shared.OPEN_AssistantSession, any, shared.RSP_AssistantSession](
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -308,8 +340,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "demo",
 					Service:   "DemoService",
 					Operation: "AssistantSession",
-					RouteID:   "api.demo.channel.assistantsession",
-					Path:      "/api/demo/assistant-session",
+					RouteID:   RouteIDAssistantSession,
+					Path:      RoutePathAssistantSession,
 					Methods:   []string{"CHANNEL"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope("session"),
@@ -325,13 +357,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			impl.AssistantSession,
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.demo.post.postdeprecated") {
-
+	if mountOptions.ShouldMountRoute(RouteIDPostDeprecated) {
 		httptransport.POST(
-			"/api/demo/post_deprecated",
+			HTTPRoutePathPostDeprecated,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -339,8 +369,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "demo",
 					Service:   "DemoService",
 					Operation: "PostDeprecated",
-					RouteID:   "api.demo.post.postdeprecated",
-					Path:      "/api/demo/post_deprecated",
+					RouteID:   RouteIDPostDeprecated,
+					Path:      RoutePathPostDeprecated,
 					Methods:   []string{"POST"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -360,13 +390,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.demo.post.raw") {
-
+	if mountOptions.ShouldMountRoute(RouteIDRaw) {
 		httptransport.POST(
-			"/api/demo/raw",
+			HTTPRoutePathRaw,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -374,8 +402,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "demo",
 					Service:   "DemoService",
 					Operation: "Raw",
-					RouteID:   "api.demo.post.raw",
-					Path:      "/api/demo/raw",
+					RouteID:   RouteIDRaw,
+					Path:      RoutePathRaw,
 					Methods:   []string{"POST"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -395,13 +423,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.demo.post.mapmodel") {
-
+	if mountOptions.ShouldMountRoute(RouteIDMapModel) {
 		httptransport.POST(
-			"/api/demo/map_model",
+			HTTPRoutePathMapModel,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -409,8 +435,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "demo",
 					Service:   "DemoService",
 					Operation: "MapModel",
-					RouteID:   "api.demo.post.mapmodel",
-					Path:      "/api/demo/map_model",
+					RouteID:   RouteIDMapModel,
+					Path:      RoutePathMapModel,
 					Methods:   []string{"POST"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -430,13 +456,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.demo.get.errordemo") {
-
+	if mountOptions.ShouldMountRoute(RouteIDErrorDemo) {
 		httptransport.GET(
-			"/api/demo/error-demo",
+			HTTPRoutePathErrorDemo,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -444,8 +468,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "demo",
 					Service:   "DemoService",
 					Operation: "ErrorDemo",
-					RouteID:   "api.demo.get.errordemo",
-					Path:      "/api/demo/error-demo",
+					RouteID:   RouteIDErrorDemo,
+					Path:      RoutePathErrorDemo,
 					Methods:   []string{"GET"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -465,39 +489,17 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
 	return impl
 }
 
-func NewRouter(router gin.IRouter) *shared.Router {
+func NewRouter(router gin.IRouter, options ...MountOption) *shared.Router {
 	impl := shared.NewRouter()
-	Mount(router, impl)
+	Mount(router, impl, options...)
 	return impl
 }
 
-func NewImpl(router gin.IRouter) *shared.Router {
-	return NewRouter(router)
-}
-
-func isNilRouterInterface(impl shared.RouterInterface) bool {
-	if impl == nil {
-		return true
-	}
-	value := reflect.ValueOf(impl)
-	switch value.Kind() {
-	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
-		return value.IsNil()
-	default:
-		return false
-	}
-}
-
-func shouldMountRoute(routeIDs map[string]struct{}, routeID string) bool {
-	if len(routeIDs) == 0 {
-		return true
-	}
-	_, ok := routeIDs[routeID]
-	return ok
+func NewImpl(router gin.IRouter, options ...MountOption) *shared.Router {
+	return NewRouter(router, options...)
 }

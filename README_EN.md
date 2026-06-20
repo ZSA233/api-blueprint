@@ -97,7 +97,7 @@ For fuller project layout, config fields, DSL, generator output, typed errors, R
 | Target | Status | Purpose |
 |:---|:---:|:---|
 | Contract / inspect | Available | Emit a contract index and query route, schema, error, or file ownership details |
-| Go server | Available | Generate Go routes, providers, long-connection message helpers, HTTP/Wails adapters mountable on Gin engines/groups, multipart/raw media, binary schema requests/responses, runtime, and optional sharded contract metadata |
+| Go server | Available | Generate Go routes, providers, long-connection message helpers, HTTP adapters mountable on Gin engines/groups with per-route selection, Wails adapters, multipart/raw media, binary schema requests/responses, runtime, and optional sharded contract metadata |
 | TypeScript client | Preview | Generate transport-neutral clients, long-connection message helpers, HTTP multipart/raw adapters, binary schema response decoding, and Wails facades |
 | Flutter client | Preview | Generate a pure Dart package, DTOs, typed errors, binary codecs, HTTP multipart/raw/binary response clients, and SSE/WebSocket clients |
 | Swift client | Preview | Generate an iOS Swift Package multi-target SDK, short module stem, root routes modules, DTOs, typed errors, field-level binary codecs, shared URLSession HTTP/SSE/WebSocket transport with validation/limit knobs, and multipart/raw/binary response clients, without UI, auth, cache, or a session engine |
@@ -135,6 +135,7 @@ make
 make test
 make example-compile-check
 make example-validation
+make example-validation-go-server
 make example-conformance
 make benchmark-list
 make example-golang-suite
@@ -143,4 +144,4 @@ make example-java-spring-server
 make example-java-spring-server-benchmark
 ```
 
-`make example-conformance` starts with a real Go HTTP server by default; use `EXAMPLE_CONFORMANCE_SERVERS`, `EXAMPLE_CONFORMANCE_CLIENTS`, `EXAMPLE_CONFORMANCE_SCENARIOS`, and `EXAMPLE_CONFORMANCE_SWIFT_RUNTIME_PROFILE` to select the matrix, or set `EXAMPLE_CONFORMANCE_SERVERS=all EXAMPLE_CONFORMANCE_CLIENTS=all` for the full matrix (Swift scenarios require an available Swift toolchain). Benchmarks are opt-in trend tools, not default CI gates; generated client SDK smoke, Swift runtime microbenchmarks, and Java Spring controller/delegate microbenchmarks are available alongside binary / protocol benchmarks in [Benchmarks](docs/en/benchmarks.md). `example-golang-suite` remains a manual end-to-end validation aid; `example-java-suite` is a Java Spring generated-artifact compile/smoke check; `example-java-spring-server` validates a real Spring Boot host example. See [Release Process](docs/release-process.md) for versioning, build, install, and GitHub Release flow.
+`make example-validation-go-server` is a focused development check for Go server generator work; full closure still uses `make example-validation`. `make example-conformance` starts with a real Go HTTP server by default; use `EXAMPLE_CONFORMANCE_SERVERS`, `EXAMPLE_CONFORMANCE_CLIENTS`, `EXAMPLE_CONFORMANCE_SCENARIOS`, and `EXAMPLE_CONFORMANCE_SWIFT_RUNTIME_PROFILE` to select the matrix, or set `EXAMPLE_CONFORMANCE_SERVERS=all EXAMPLE_CONFORMANCE_CLIENTS=all` for the full matrix (Swift scenarios require an available Swift toolchain). Benchmarks are opt-in trend tools, not default CI gates; generated client SDK smoke, Swift runtime microbenchmarks, and Java Spring controller/delegate microbenchmarks are available alongside binary / protocol benchmarks in [Benchmarks](docs/en/benchmarks.md). `example-golang-suite` remains a manual end-to-end validation aid; `example-java-suite` is a Java Spring generated-artifact compile/smoke check; `example-java-spring-server` validates a real Spring Boot host example. See [Release Process](docs/release-process.md) for versioning, build, install, and GitHub Release flow.

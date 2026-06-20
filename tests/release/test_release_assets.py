@@ -24,6 +24,8 @@ def test_makefile_exposes_example_validation_and_release_preflight_uses_it():
     example_block = _target_block(text, "example-validation")
     compile_block = _target_block(text, "example-compile-check")
     refresh_block = _target_block(text, "example-refresh")
+    refresh_go_server_block = _target_block(text, "example-refresh-go-server")
+    validation_go_server_block = _target_block(text, "example-validation-go-server")
     conformance_block = _target_block(text, "example-conformance")
     conformance_list_block = _target_block(text, "example-conformance-list")
     conformance_generate_block = _target_block(text, "example-conformance-generate")
@@ -60,6 +62,8 @@ def test_makefile_exposes_example_validation_and_release_preflight_uses_it():
     assert "uv run python scripts/example_validation.py" in example_block
     assert "uv run python scripts/example_validation.py --mode compile" in compile_block
     assert "uv run python scripts/example_validation.py --mode refresh" in refresh_block
+    assert "uv run python scripts/example_validation.py --mode refresh --target go.server" in refresh_go_server_block
+    assert "uv run python scripts/example_validation.py --target go.server" in validation_go_server_block
     assert "$(MAKE) example-conformance-check" in conformance_block
     assert "uv run python -m scripts.example_conformance list" in conformance_list_block
     assert "uv run python -m scripts.example_conformance generate" in conformance_generate_block

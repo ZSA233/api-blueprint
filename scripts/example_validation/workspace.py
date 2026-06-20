@@ -192,6 +192,10 @@ def _prepare_blueprint_outputs(*, source_root: Path, target_root: Path) -> None:
     )
 
 
+def _prepare_blueprint_go_server_output(*, source_root: Path, target_root: Path) -> None:
+    (target_root / "golang" / "server").mkdir(parents=True, exist_ok=True)
+
+
 def _prepare_contract_outputs(target_root: Path) -> None:
     for name in (
         "api-blueprint.index.json",

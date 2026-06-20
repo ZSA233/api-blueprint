@@ -3,8 +3,6 @@
 package hello
 
 import (
-	"reflect"
-
 	sharedprovider "example.com/project/golang/server/views/providers"
 	shared "example.com/project/golang/server/views/routes/api/hello"
 	httptransport "example.com/project/golang/server/views/transports/http"
@@ -12,19 +10,51 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Mount(router gin.IRouter, impl shared.RouterInterface) shared.RouterInterface {
-	return MountSelected(router, impl, nil)
+type MountOption = httptransport.MountOption
+
+func WithRouteIDs(routeIDs ...string) MountOption {
+	return httptransport.WithRouteIDs(routeIDs...)
 }
 
-func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map[string]struct{}) shared.RouterInterface {
-	if isNilRouterInterface(impl) {
+const (
+	RouteIDAbc        = shared.RouteIDAbc
+	RouteIDMapEnum    = shared.RouteIDMapEnum
+	RouteIDListEnum   = shared.RouteIDListEnum
+	RouteIDString     = shared.RouteIDString
+	RouteIDUint64     = shared.RouteIDUint64
+	RouteIDStringEmun = shared.RouteIDStringEmun
+	RouteIDHelloWay   = shared.RouteIDHelloWay
+)
+
+const (
+	RoutePathAbc        = shared.RoutePathAbc
+	RoutePathMapEnum    = shared.RoutePathMapEnum
+	RoutePathListEnum   = shared.RoutePathListEnum
+	RoutePathString     = shared.RoutePathString
+	RoutePathUint64     = shared.RoutePathUint64
+	RoutePathStringEmun = shared.RoutePathStringEmun
+	RoutePathHelloWay   = shared.RoutePathHelloWay
+)
+
+const (
+	HTTPRoutePathAbc        = "/api/hello/abc"
+	HTTPRoutePathMapEnum    = "/api/hello/map-enum"
+	HTTPRoutePathListEnum   = "/api/hello/list-enum"
+	HTTPRoutePathString     = "/api/hello/string"
+	HTTPRoutePathUint64     = "/api/hello/uint64"
+	HTTPRoutePathStringEmun = "/api/hello/string-emun"
+	HTTPRoutePathHelloWay   = "/api/hello/hello-way"
+)
+
+func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOption) shared.RouterInterface {
+	if httptransport.IsNilRouterImpl(impl) {
 		impl = shared.NewRouter()
 	}
+	mountOptions := httptransport.NewMountOptions(options...)
 
-	if shouldMountRoute(routeIDs, "api.hello.get.abc") {
-
+	if mountOptions.ShouldMountRoute(RouteIDAbc) {
 		httptransport.GET(
-			"/api/hello/abc",
+			HTTPRoutePathAbc,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -32,8 +62,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "hello",
 					Service:   "HelloService",
 					Operation: "Abc",
-					RouteID:   "api.hello.get.abc",
-					Path:      "/api/hello/abc",
+					RouteID:   RouteIDAbc,
+					Path:      RoutePathAbc,
 					Methods:   []string{"GET"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -53,13 +83,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.hello.get.mapenum") {
-
+	if mountOptions.ShouldMountRoute(RouteIDMapEnum) {
 		httptransport.GET(
-			"/api/hello/map-enum",
+			HTTPRoutePathMapEnum,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -67,8 +95,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "hello",
 					Service:   "HelloService",
 					Operation: "MapEnum",
-					RouteID:   "api.hello.get.mapenum",
-					Path:      "/api/hello/map-enum",
+					RouteID:   RouteIDMapEnum,
+					Path:      RoutePathMapEnum,
 					Methods:   []string{"GET"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -88,13 +116,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.hello.get.listenum") {
-
+	if mountOptions.ShouldMountRoute(RouteIDListEnum) {
 		httptransport.GET(
-			"/api/hello/list-enum",
+			HTTPRoutePathListEnum,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -102,8 +128,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "hello",
 					Service:   "HelloService",
 					Operation: "ListEnum",
-					RouteID:   "api.hello.get.listenum",
-					Path:      "/api/hello/list-enum",
+					RouteID:   RouteIDListEnum,
+					Path:      RoutePathListEnum,
 					Methods:   []string{"GET"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -123,13 +149,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.hello.get.string") {
-
+	if mountOptions.ShouldMountRoute(RouteIDString) {
 		httptransport.GET(
-			"/api/hello/string",
+			HTTPRoutePathString,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -137,8 +161,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "hello",
 					Service:   "HelloService",
 					Operation: "String",
-					RouteID:   "api.hello.get.string",
-					Path:      "/api/hello/string",
+					RouteID:   RouteIDString,
+					Path:      RoutePathString,
 					Methods:   []string{"GET"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -158,13 +182,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.hello.get.uint64") {
-
+	if mountOptions.ShouldMountRoute(RouteIDUint64) {
 		httptransport.GET(
-			"/api/hello/uint64",
+			HTTPRoutePathUint64,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -172,8 +194,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "hello",
 					Service:   "HelloService",
 					Operation: "Uint64",
-					RouteID:   "api.hello.get.uint64",
-					Path:      "/api/hello/uint64",
+					RouteID:   RouteIDUint64,
+					Path:      RoutePathUint64,
 					Methods:   []string{"GET"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -193,13 +215,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.hello.get.stringemun") {
-
+	if mountOptions.ShouldMountRoute(RouteIDStringEmun) {
 		httptransport.GET(
-			"/api/hello/string-emun",
+			HTTPRoutePathStringEmun,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -207,8 +227,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "hello",
 					Service:   "HelloService",
 					Operation: "StringEmun",
-					RouteID:   "api.hello.get.stringemun",
-					Path:      "/api/hello/string-emun",
+					RouteID:   RouteIDStringEmun,
+					Path:      RoutePathStringEmun,
 					Methods:   []string{"GET"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -228,13 +248,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.hello.get.helloway") {
-
+	if mountOptions.ShouldMountRoute(RouteIDHelloWay) {
 		httptransport.GET(
-			"/api/hello/hello-way",
+			HTTPRoutePathHelloWay,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -242,8 +260,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "hello",
 					Service:   "HelloService",
 					Operation: "HelloWay",
-					RouteID:   "api.hello.get.helloway",
-					Path:      "/api/hello/hello-way",
+					RouteID:   RouteIDHelloWay,
+					Path:      RoutePathHelloWay,
 					Methods:   []string{"GET"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -263,39 +281,17 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
 	return impl
 }
 
-func NewRouter(router gin.IRouter) *shared.Router {
+func NewRouter(router gin.IRouter, options ...MountOption) *shared.Router {
 	impl := shared.NewRouter()
-	Mount(router, impl)
+	Mount(router, impl, options...)
 	return impl
 }
 
-func NewImpl(router gin.IRouter) *shared.Router {
-	return NewRouter(router)
-}
-
-func isNilRouterInterface(impl shared.RouterInterface) bool {
-	if impl == nil {
-		return true
-	}
-	value := reflect.ValueOf(impl)
-	switch value.Kind() {
-	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
-		return value.IsNil()
-	default:
-		return false
-	}
-}
-
-func shouldMountRoute(routeIDs map[string]struct{}, routeID string) bool {
-	if len(routeIDs) == 0 {
-		return true
-	}
-	_, ok := routeIDs[routeID]
-	return ok
+func NewImpl(router gin.IRouter, options ...MountOption) *shared.Router {
+	return NewRouter(router, options...)
 }

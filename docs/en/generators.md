@@ -69,7 +69,15 @@ The Go generator emits:
 
 Source files overwritten by generators must be named `gen_*` / `Gen*`, or live under `_gen_*`, and keep a `Code generated ... DO NOT EDIT` header; manifests whose contents are determined by target/module lists, such as Swift `Package.swift`, may be managed as generated manifests. `impl_*` and non-`gen_` / non-`Gen` files are user-owned extension points, created only when missing, preserved during regeneration, and written without a generated header. Flutter uses Dart-style `gen_*.dart`; Swift uses `Gen*.swift`; Kotlin generator-owned files are named `Gen*.kt` while public declarations keep Kotlin-style names; Java generator-owned files and public types use `Gen*`.
 
-`go-server` owns only the Go server core. `out_dir` is the generated package root; projects that want `views` in import paths should include `views` in `out_dir`. HTTP / Wails output is attached explicitly by `http-transport` / `wails-transport` targets through `server = "go.server"`. The HTTP entrypoint is generated under `<out_dir>/transports/http/<go-root-segment>`, for example `transports/http/api.NewBlueprint(router)`; `router` may be a `*gin.Engine` or a `gin.RouterGroup` carrying application prefixes and middleware.
+`go-server` owns only the Go server core. `out_dir` is the generated package root; projects that want `views` in import paths should include `views` in `out_dir`. HTTP / Wails output is attached explicitly by `http-transport` / `wails-transport` targets through `server = "go.server"`. The HTTP entrypoint is generated under `<out_dir>/transports/http/<go-root-segment>`, for example `transports/http/api.NewBlueprint(router)`; `router` may be a `*gin.Engine` or a `gin.RouterGroup` carrying application prefixes and middleware. For migrations, rollouts, or tests that should mount only selected endpoints, use the generated route id constants on the concrete route package:
+
+```go
+demohttp.Mount(engine, adapter,
+	demohttp.WithRouteIDs(demohttp.RouteIDPing),
+)
+```
+
+Route id constants are owned by the core route package, and the HTTP adapter package re-exports the same constants so migration code can import only the HTTP package. Omitting `WithRouteIDs` mounts every route; explicitly passing an empty `WithRouteIDs()` mounts no routes.
 
 Go route core is generated under `<out_dir>/routes/<go-root-segment>/**`, provider runtime under `<out_dir>/providers`, transport adapters under `<out_dir>/transports/**`, and typed error runtime under `<out_dir>/runtime/errors/**`. Go-safe segments replace non-`[0-9A-Za-z_]` characters with `_`, trim leading/trailing `_`, prefix digit-leading names with `p_`, and suffix Go keywords with `_pkg`; URLs, route paths, and selection/filter semantics stay unchanged, so Go directories do not guarantee one directory per URL slash segment. If you want the import path to include `/views`, set `out_dir = ".../views"` explicitly.
 

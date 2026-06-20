@@ -69,7 +69,15 @@ Go 生成器输出：
 
 生成器会覆盖的源码文件必须命名为 `gen_*` / `Gen*`，或位于 `_gen_*` 目录，并保留 `Code generated ... DO NOT EDIT` header；Swift `Package.swift` 这类由 target/module 列表决定的 manifest 可作为 generated manifest 管理。`impl_*` 与非 `gen_` / 非 `Gen` 文件是用户拥有扩展点，只在缺失时创建，重生成时保留且不带 generated header。Flutter 使用 Dart 风格的 `gen_*.dart`；Swift 使用 `Gen*.swift`；Kotlin 生成器拥有文件命名为 `Gen*.kt`，但 public declaration 名称保持 Kotlin 惯用形态；Java 生成器拥有文件与 public 类型都使用 `Gen*`。
 
-`go-server` 只负责 Go 服务端 core。`out_dir` 就是生成包根；如果项目希望 import path 包含 `views`，应把 `views` 写进 `out_dir`。HTTP / Wails 输出由 `http-transport` / `wails-transport` target 通过 `server = "go.server"` 显式挂接。HTTP 入口生成在 `<out_dir>/transports/http/<go-root-segment>` 中，例如 `transports/http/api.NewBlueprint(router)`；这里的 `router` 可以是 `*gin.Engine`，也可以是带业务前缀或中间件的 `gin.RouterGroup`。
+`go-server` 只负责 Go 服务端 core。`out_dir` 就是生成包根；如果项目希望 import path 包含 `views`，应把 `views` 写进 `out_dir`。HTTP / Wails 输出由 `http-transport` / `wails-transport` target 通过 `server = "go.server"` 显式挂接。HTTP 入口生成在 `<out_dir>/transports/http/<go-root-segment>` 中，例如 `transports/http/api.NewBlueprint(router)`；这里的 `router` 可以是 `*gin.Engine`，也可以是带业务前缀或中间件的 `gin.RouterGroup`。需要在迁移、灰度或测试中只挂载某些接口时，可以在具体 route package 上使用 generated route id 常量筛选：
+
+```go
+demohttp.Mount(engine, adapter,
+	demohttp.WithRouteIDs(demohttp.RouteIDPing),
+)
+```
+
+Route id 常量的真源生成在 core route package，HTTP adapter package 会 re-export 同名常量，方便迁移接入时只 import HTTP package。不传 `WithRouteIDs` 时挂载全部 route；显式传 `WithRouteIDs()` 空列表时不挂载任何 route。
 
 Go route core 生成在 `<out_dir>/routes/<go-root-segment>/**`，provider runtime 生成在 `<out_dir>/providers`，transport adapter 生成在 `<out_dir>/transports/**`，typed error runtime 生成在 `<out_dir>/runtime/errors/**`。Go-safe segment 会把非 `[0-9A-Za-z_]` 转成 `_`、去首尾 `_`，数字开头补 `p_`，Go keyword 补 `_pkg`；URL、route path 和 selection/filter 语义不变，因此 Go 目录不保证逐级镜像 URL slash 层级。如果希望 import path 包含 `/views`，应显式设置 `out_dir = ".../views"`。
 

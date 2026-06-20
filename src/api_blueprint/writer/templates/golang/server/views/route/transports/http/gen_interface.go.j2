@@ -3,8 +3,6 @@
 package {{ router_group.http_package }}
 
 import (
-	"reflect"
-
 	shared "{{ router_group.imports | safe }}"
 	httptransport "{{ writer.http_transport_imports | safe }}"
 	sharedprovider "{{ writer.provider_imports | safe }}"
@@ -12,19 +10,40 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Mount(router gin.IRouter, impl shared.RouterInterface) shared.RouterInterface {
-	return MountSelected(router, impl, nil)
+type MountOption = httptransport.MountOption
+
+func WithRouteIDs(routeIDs ...string) MountOption {
+	return httptransport.WithRouteIDs(routeIDs...)
 }
 
-func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map[string]struct{}) shared.RouterInterface {
-	if isNilRouterInterface(impl) {
+const (
+{% for route in router_group.route_constants() -%}
+	{{ route.route_id_name }} = shared.{{ route.route_id_name }}
+{% endfor -%}
+)
+
+const (
+{% for route in router_group.route_constants() -%}
+	{{ route.route_path_name }} = shared.{{ route.route_path_name }}
+{% endfor -%}
+)
+
+const (
+{% for route in router_group.route_constants() -%}
+	{{ route.http_route_path_name }} = {{ route.http_route_path | tojson }}
+{% endfor -%}
+)
+
+func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOption) shared.RouterInterface {
+	if httptransport.IsNilRouterImpl(impl) {
 		impl = shared.NewRouter()
 	}
+	mountOptions := httptransport.NewMountOptions(options...)
 {% for register in router_group.registers() %}
-	if shouldMountRoute(routeIDs, {{ register.route_id | tojson }}) {
-	{% if register.is_stream %}
+	if mountOptions.ShouldMountRoute({{ register.route_id_const }}) {
+{% if register.is_stream -%}
 	httptransport.STREAM(
-		{{ register.http_api | tojson }},
+		{{ register.http_route_path_const }},
 		sharedprovider.NewRouteExecutor[{{ register.http_path_type | safe }}, {{ register.http_query_type | safe }}, {{ register.http_body_type | safe }}, {{ register.http_rsp_type | safe }}](
 			sharedprovider.RouteInfo{
 				Root:      {{ register.root | tojson }},
@@ -32,8 +51,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 				Namespace: {{ register.namespace | tojson }},
 				Service:   {{ register.service | tojson }},
 				Operation: {{ register.operation | tojson }},
-				RouteID:   {{ register.route_id | tojson }},
-				Path:      {{ register.api | tojson }},
+				RouteID:   {{ register.route_id_const }},
+				Path:      {{ register.route_path_const }},
 				Methods:   []string{{ "{" }}{% for method in register.methods %}{{ method | tojson }}{% if not loop.last %}, {% endif %}{% endfor %}{{ "}" }},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope({{ register.connection_scope | tojson }}),
@@ -49,9 +68,9 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 		impl.{{ register.func }},
 		router,
 	)
-	{% elif register.is_channel %}
+{% elif register.is_channel -%}
 	httptransport.CHANNEL(
-		{{ register.http_api | tojson }},
+		{{ register.http_route_path_const }},
 		sharedprovider.NewRouteExecutor[{{ register.http_path_type | safe }}, {{ register.http_query_type | safe }}, {{ register.http_body_type | safe }}, {{ register.http_rsp_type | safe }}](
 			sharedprovider.RouteInfo{
 				Root:      {{ register.root | tojson }},
@@ -59,8 +78,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 				Namespace: {{ register.namespace | tojson }},
 				Service:   {{ register.service | tojson }},
 				Operation: {{ register.operation | tojson }},
-				RouteID:   {{ register.route_id | tojson }},
-				Path:      {{ register.api | tojson }},
+				RouteID:   {{ register.route_id_const }},
+				Path:      {{ register.route_path_const }},
 				Methods:   []string{{ "{" }}{% for method in register.methods %}{{ method | tojson }}{% if not loop.last %}, {% endif %}{% endfor %}{{ "}" }},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope({{ register.connection_scope | tojson }}),
@@ -76,9 +95,9 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 		impl.{{ register.func }},
 		router,
 	)
-	{% else %}
+{% else -%}
 	httptransport.{{ register.method }}(
-		{{ register.http_api | tojson }},
+		{{ register.http_route_path_const }},
 		sharedprovider.NewRouteExecutor(
 			sharedprovider.RouteInfo{
 				Root:      {{ register.root | tojson }},
@@ -86,8 +105,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 				Namespace: {{ register.namespace | tojson }},
 				Service:   {{ register.service | tojson }},
 				Operation: {{ register.operation | tojson }},
-				RouteID:   {{ register.route_id | tojson }},
-				Path:      {{ register.api | tojson }},
+				RouteID:   {{ register.route_id_const }},
+				Path:      {{ register.route_path_const }},
 				Methods:   []string{{ "{" }}{% for method in register.methods %}{{ method | tojson }}{% if not loop.last %}, {% endif %}{% endfor %}{{ "}" }},
 				Transport: sharedprovider.TransportHTTP,
 				Scope:     sharedprovider.ConnectionScope({{ register.connection_scope | tojson }}),
@@ -107,39 +126,18 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 		),
 		router,
 	)
-	{% endif %}
+{% endif -%}
 	}
 {% endfor %}
 	return impl
 }
 
-func NewRouter(router gin.IRouter) *shared.Router {
+func NewRouter(router gin.IRouter, options ...MountOption) *shared.Router {
 	impl := shared.NewRouter()
-	Mount(router, impl)
+	Mount(router, impl, options...)
 	return impl
 }
 
-func NewImpl(router gin.IRouter) *shared.Router {
-	return NewRouter(router)
-}
-
-func isNilRouterInterface(impl shared.RouterInterface) bool {
-	if impl == nil {
-		return true
-	}
-	value := reflect.ValueOf(impl)
-	switch value.Kind() {
-	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
-		return value.IsNil()
-	default:
-		return false
-	}
-}
-
-func shouldMountRoute(routeIDs map[string]struct{}, routeID string) bool {
-	if len(routeIDs) == 0 {
-		return true
-	}
-	_, ok := routeIDs[routeID]
-	return ok
+func NewImpl(router gin.IRouter, options ...MountOption) *shared.Router {
+	return NewRouter(router, options...)
 }

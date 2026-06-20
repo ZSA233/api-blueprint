@@ -19,7 +19,9 @@
 ```sh
 make example-compile-check
 make example-refresh
+make example-refresh-go-server
 make example-validation
+make example-validation-go-server
 make example-conformance
 make example-golang-suite
 make example-java-suite
@@ -30,7 +32,9 @@ make wails-hello-check
 
 - `example-compile-check`: for feature development; allows snapshot drift and only verifies regenerated artifacts still compile or import.
 - `example-refresh`: accepts intentional generation changes and refreshes committed snapshots.
+- `example-refresh-go-server`: refreshes only `examples/golang/server` and compiles only the Go server, useful for fast Go server template/runtime iteration.
 - `example-validation`: strict mode; requires generator output and committed snapshots to converge.
+- `example-validation-go-server`: strictly validates only the `examples/golang/server` snapshot and Go server compilation.
 - `example-conformance`: real protocol interoperability validation; it regenerates examples in a temporary workspace, checks snapshot drift and language compilation, then starts real servers and runs clients by the server/client/scenario capability intersection.
 - `example-golang-suite`: manual end-to-end validation aid; it regenerates the Go server/client in a temporary workspace, starts a real Go server process, then verifies the loop with the generated Go client and raw HTTP binary requests. It is not part of default `test`, `example-validation`, `release-preflight`, or CI.
 - `example-java-suite`: manual Java validation aid; it regenerates `java.client` and `java.server` in a temporary workspace, runs `examples/java/suite`, and verifies generated Spring Controllers, delegates, provider policy annotations, JavaBean request/response types, adapter helpers, and the generated Java client minimum hot path. It does not start a real Spring Boot server and is not part of default `test`, `example-validation`, `release-preflight`, or CI.
@@ -44,6 +48,8 @@ You can also use the script scope directly:
 uv run python scripts/example_validation.py --scope wails-hello --mode check
 uv run python scripts/example_validation.py --scope wails-hello --mode compile
 uv run python scripts/example_validation.py --scope wails-hello --mode refresh
+uv run python scripts/example_validation.py --mode refresh --target go.server
+uv run python scripts/example_validation.py --target go.server
 uv run python scripts/example_validation.py --scope blueprint --mode golang-suite
 uv run python scripts/example_validation.py --scope blueprint --mode java-suite
 make example-java-spring-server
@@ -101,6 +107,15 @@ If the drift is intentional:
 make example-refresh
 make example-validation
 ```
+
+When only Go server generator/templates changed, use the faster focused commands first:
+
+```sh
+make example-refresh-go-server
+make example-validation-go-server
+```
+
+Focused commands do not replace full `example-validation` before release.
 
 If the drift is not intentional, fix the writer, template, DSL, or config layer instead of directly editing generated snapshots.
 

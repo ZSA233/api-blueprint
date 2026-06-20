@@ -3,8 +3,6 @@
 package binary
 
 import (
-	"reflect"
-
 	sharedprovider "example.com/project/golang/server/views/providers"
 	shared "example.com/project/golang/server/views/routes/api/binary"
 	httptransport "example.com/project/golang/server/views/transports/http"
@@ -12,19 +10,42 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Mount(router gin.IRouter, impl shared.RouterInterface) shared.RouterInterface {
-	return MountSelected(router, impl, nil)
+type MountOption = httptransport.MountOption
+
+func WithRouteIDs(routeIDs ...string) MountOption {
+	return httptransport.WithRouteIDs(routeIDs...)
 }
 
-func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map[string]struct{}) shared.RouterInterface {
-	if isNilRouterInterface(impl) {
+const (
+	RouteIDPacket              = shared.RouteIDPacket
+	RouteIDAuditPacket         = shared.RouteIDAuditPacket
+	RouteIDWidePacket          = shared.RouteIDWidePacket
+	RouteIDAuditPacketResponse = shared.RouteIDAuditPacketResponse
+)
+
+const (
+	RoutePathPacket              = shared.RoutePathPacket
+	RoutePathAuditPacket         = shared.RoutePathAuditPacket
+	RoutePathWidePacket          = shared.RoutePathWidePacket
+	RoutePathAuditPacketResponse = shared.RoutePathAuditPacketResponse
+)
+
+const (
+	HTTPRoutePathPacket              = "/api/binary/packet"
+	HTTPRoutePathAuditPacket         = "/api/binary/audit-packet"
+	HTTPRoutePathWidePacket          = "/api/binary/wide-packet"
+	HTTPRoutePathAuditPacketResponse = "/api/binary/audit-packet-response"
+)
+
+func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOption) shared.RouterInterface {
+	if httptransport.IsNilRouterImpl(impl) {
 		impl = shared.NewRouter()
 	}
+	mountOptions := httptransport.NewMountOptions(options...)
 
-	if shouldMountRoute(routeIDs, "api.binary.post.packet") {
-
+	if mountOptions.ShouldMountRoute(RouteIDPacket) {
 		httptransport.POST(
-			"/api/binary/packet",
+			HTTPRoutePathPacket,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -32,8 +53,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "binary",
 					Service:   "BinaryService",
 					Operation: "Packet",
-					RouteID:   "api.binary.post.packet",
-					Path:      "/api/binary/packet",
+					RouteID:   RouteIDPacket,
+					Path:      RoutePathPacket,
 					Methods:   []string{"POST"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -53,13 +74,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.binary.post.auditpacket") {
-
+	if mountOptions.ShouldMountRoute(RouteIDAuditPacket) {
 		httptransport.POST(
-			"/api/binary/audit-packet",
+			HTTPRoutePathAuditPacket,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -67,8 +86,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "binary",
 					Service:   "BinaryService",
 					Operation: "AuditPacket",
-					RouteID:   "api.binary.post.auditpacket",
-					Path:      "/api/binary/audit-packet",
+					RouteID:   RouteIDAuditPacket,
+					Path:      RoutePathAuditPacket,
 					Methods:   []string{"POST"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -88,13 +107,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.binary.post.widepacket") {
-
+	if mountOptions.ShouldMountRoute(RouteIDWidePacket) {
 		httptransport.POST(
-			"/api/binary/wide-packet",
+			HTTPRoutePathWidePacket,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -102,8 +119,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "binary",
 					Service:   "BinaryService",
 					Operation: "WidePacket",
-					RouteID:   "api.binary.post.widepacket",
-					Path:      "/api/binary/wide-packet",
+					RouteID:   RouteIDWidePacket,
+					Path:      RoutePathWidePacket,
 					Methods:   []string{"POST"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -123,13 +140,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.binary.get.auditpacketresponse") {
-
+	if mountOptions.ShouldMountRoute(RouteIDAuditPacketResponse) {
 		httptransport.GET(
-			"/api/binary/audit-packet-response",
+			HTTPRoutePathAuditPacketResponse,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -137,8 +152,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "binary",
 					Service:   "BinaryService",
 					Operation: "AuditPacketResponse",
-					RouteID:   "api.binary.get.auditpacketresponse",
-					Path:      "/api/binary/audit-packet-response",
+					RouteID:   RouteIDAuditPacketResponse,
+					Path:      RoutePathAuditPacketResponse,
 					Methods:   []string{"GET"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -158,39 +173,17 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
 	return impl
 }
 
-func NewRouter(router gin.IRouter) *shared.Router {
+func NewRouter(router gin.IRouter, options ...MountOption) *shared.Router {
 	impl := shared.NewRouter()
-	Mount(router, impl)
+	Mount(router, impl, options...)
 	return impl
 }
 
-func NewImpl(router gin.IRouter) *shared.Router {
-	return NewRouter(router)
-}
-
-func isNilRouterInterface(impl shared.RouterInterface) bool {
-	if impl == nil {
-		return true
-	}
-	value := reflect.ValueOf(impl)
-	switch value.Kind() {
-	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
-		return value.IsNil()
-	default:
-		return false
-	}
-}
-
-func shouldMountRoute(routeIDs map[string]struct{}, routeID string) bool {
-	if len(routeIDs) == 0 {
-		return true
-	}
-	_, ok := routeIDs[routeID]
-	return ok
+func NewImpl(router gin.IRouter, options ...MountOption) *shared.Router {
+	return NewRouter(router, options...)
 }

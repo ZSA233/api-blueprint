@@ -17,7 +17,9 @@ help:
 		"Examples:" \
 		"  make example-compile-check   Compile regenerated examples without drift enforcement" \
 		"  make example-refresh         Refresh committed example snapshots" \
+		"  make example-refresh-go-server Refresh Go server example snapshots only" \
 		"  make example-validation      Run strict example validation" \
+		"  make example-validation-go-server Validate Go server example snapshots only" \
 		"  make example-conformance     Run generated example interoperability checks" \
 		"  make example-conformance-list" \
 		"  make example-conformance-run EXAMPLE_CONFORMANCE_SERVERS=go EXAMPLE_CONFORMANCE_CLIENTS=flutter EXAMPLE_CONFORMANCE_SCENARIOS=sse,websocket" \

@@ -3,8 +3,6 @@
 package static
 
 import (
-	"reflect"
-
 	sharedprovider "example.com/project/golang/server/views/providers"
 	shared "example.com/project/golang/server/views/routes/static"
 	httptransport "example.com/project/golang/server/views/transports/http"
@@ -12,19 +10,36 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Mount(router gin.IRouter, impl shared.RouterInterface) shared.RouterInterface {
-	return MountSelected(router, impl, nil)
+type MountOption = httptransport.MountOption
+
+func WithRouteIDs(routeIDs ...string) MountOption {
+	return httptransport.WithRouteIDs(routeIDs...)
 }
 
-func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map[string]struct{}) shared.RouterInterface {
-	if isNilRouterInterface(impl) {
+const (
+	RouteIDDocJson = shared.RouteIDDocJson
+	RouteIDDochaha = shared.RouteIDDochaha
+)
+
+const (
+	RoutePathDocJson = shared.RoutePathDocJson
+	RoutePathDochaha = shared.RoutePathDochaha
+)
+
+const (
+	HTTPRoutePathDocJson = "/static/doc.json"
+	HTTPRoutePathDochaha = "/static/dochaha"
+)
+
+func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOption) shared.RouterInterface {
+	if httptransport.IsNilRouterImpl(impl) {
 		impl = shared.NewRouter()
 	}
+	mountOptions := httptransport.NewMountOptions(options...)
 
-	if shouldMountRoute(routeIDs, "static.static.get.docjson") {
-
+	if mountOptions.ShouldMountRoute(RouteIDDocJson) {
 		httptransport.GET(
-			"/static/doc.json",
+			HTTPRoutePathDocJson,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "static",
@@ -32,8 +47,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "static",
 					Service:   "StaticService",
 					Operation: "DocJson",
-					RouteID:   "static.static.get.docjson",
-					Path:      "/static/doc.json",
+					RouteID:   RouteIDDocJson,
+					Path:      RoutePathDocJson,
 					Methods:   []string{"GET"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -53,13 +68,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "static.static.get.dochaha") {
-
+	if mountOptions.ShouldMountRoute(RouteIDDochaha) {
 		httptransport.GET(
-			"/static/dochaha",
+			HTTPRoutePathDochaha,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "static",
@@ -67,8 +80,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "static",
 					Service:   "StaticService",
 					Operation: "Dochaha",
-					RouteID:   "static.static.get.dochaha",
-					Path:      "/static/dochaha",
+					RouteID:   RouteIDDochaha,
+					Path:      RoutePathDochaha,
 					Methods:   []string{"GET"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -88,39 +101,17 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
 	return impl
 }
 
-func NewRouter(router gin.IRouter) *shared.Router {
+func NewRouter(router gin.IRouter, options ...MountOption) *shared.Router {
 	impl := shared.NewRouter()
-	Mount(router, impl)
+	Mount(router, impl, options...)
 	return impl
 }
 
-func NewImpl(router gin.IRouter) *shared.Router {
-	return NewRouter(router)
-}
-
-func isNilRouterInterface(impl shared.RouterInterface) bool {
-	if impl == nil {
-		return true
-	}
-	value := reflect.ValueOf(impl)
-	switch value.Kind() {
-	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
-		return value.IsNil()
-	default:
-		return false
-	}
-}
-
-func shouldMountRoute(routeIDs map[string]struct{}, routeID string) bool {
-	if len(routeIDs) == 0 {
-		return true
-	}
-	_, ok := routeIDs[routeID]
-	return ok
+func NewImpl(router gin.IRouter, options ...MountOption) *shared.Router {
+	return NewRouter(router, options...)
 }

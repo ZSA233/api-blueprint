@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import secrets
 from typing import Any, AsyncIterator, Mapping
-from urllib.parse import unquote
+from urllib.parse import quote, unquote
 
 import httpx
 
@@ -54,7 +54,11 @@ class HttpClientTransport(ApiClientTransport):
             request_kwargs["json"] = request.open_data
 
         if request.response_type == "stream":
-            http_request = self._client.build_request(request.method, self._url(request.path), **request_kwargs)
+            http_request = self._client.build_request(
+                request.method,
+                self._url(request.path, request.path_params),
+                **request_kwargs,
+            )
             response = await self._client.send(http_request, stream=True)
             if response.is_error:
                 await response.aread()
@@ -72,7 +76,11 @@ class HttpClientTransport(ApiClientTransport):
                 return _BufferedStreamResponse(response)
             return _HttpxStreamResponse(response)
 
-        response = await self._client.request(request.method, self._url(request.path), **request_kwargs)
+        response = await self._client.request(
+            request.method,
+            self._url(request.path, request.path_params),
+            **request_kwargs,
+        )
         if response.is_error:
             payload = self._extract_error_payload(response, request.response_envelope)
             if payload is not None:
@@ -119,8 +127,9 @@ class HttpClientTransport(ApiClientTransport):
     ) -> ApiChannelBridge[Any, Any, Any]:
         raise NotImplementedError("HTTP channel client transport is not implemented by the default httpx adapter")
 
-    def _url(self, path: str) -> str:
-        normalized_path = path if path.startswith("/") else f"/{path}"
+    def _url(self, path: str, path_params: Mapping[str, Any] | None = None) -> str:
+        expanded_path = _expand_path_params(path, path_params)
+        normalized_path = expanded_path if expanded_path.startswith("/") else f"/{expanded_path}"
         if not self.base_url:
             return normalized_path
         return f"{self.base_url}{normalized_path}"
@@ -287,6 +296,19 @@ def _content_type(response: httpx.Response) -> str:
 def _is_json_response(response: httpx.Response) -> bool:
     content_type = _content_type(response)
     return content_type == "application/json" or content_type.endswith("+json")
+
+
+def _expand_path_params(path: str, params: Mapping[str, Any] | None) -> str:
+    if not params:
+        return path
+    expanded = path
+    for key, value in params.items():
+        if value is None:
+            raise ValueError(f"path parameter {key!r} cannot be None")
+        expanded = expanded.replace("{" + str(key) + "}", quote(str(value), safe=""))
+    if "{" in expanded or "}" in expanded:
+        raise ValueError(f"path has unresolved parameter placeholder(s): {expanded}")
+    return expanded
 
 
 def _set_header(request_kwargs: dict[str, Any], name: str, value: str) -> None:

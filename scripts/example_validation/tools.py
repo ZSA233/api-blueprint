@@ -170,11 +170,37 @@ def collect_missing_validation_requirements(scope: ExampleValidationScope = Exam
     return tuple(missing)
 
 
+def collect_missing_go_server_validation_requirements() -> tuple[str, ...]:
+    missing: list[str] = []
+    for name, guidance in (
+        ("go", "install Go and ensure `go` is available on PATH."),
+        (
+            "go-enum",
+            "install it with `go install github.com/abice/go-enum@"
+            + GO_ENUM_VERSION
+            + "`.",
+        ),
+    ):
+        if shutil.which(name) is None:
+            missing.append(f"{name}: {guidance}")
+    return tuple(missing)
+
+
 def ensure_validation_requirements(scope: ExampleValidationScope = ExampleValidationScope.ALL) -> None:
     missing = collect_missing_validation_requirements(scope)
     if not missing:
         return
     raise ExampleValidationError(
         "example validation requires additional tooling:\n"
+        + "\n".join(f"- {item}" for item in missing)
+    )
+
+
+def ensure_go_server_validation_requirements() -> None:
+    missing = collect_missing_go_server_validation_requirements()
+    if not missing:
+        return
+    raise ExampleValidationError(
+        "go.server example validation requires additional tooling:\n"
         + "\n".join(f"- {item}" for item in missing)
     )

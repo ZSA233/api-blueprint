@@ -23,6 +23,11 @@ class ExampleValidationScope(StrEnum):
     WAILS_HELLO = "wails-hello"
 
 
+class ExampleValidationTarget(StrEnum):
+    ALL = "all"
+    GO_SERVER = "go.server"
+
+
 @dataclass(frozen=True)
 class BlueprintExampleWorkspace:
     root: Path

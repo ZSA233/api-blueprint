@@ -187,6 +187,22 @@ class GolangRouterGroup:
                 "is_connection": view.is_connection,
             }
 
+    def route_constants(self) -> Generator[dict[str, str], None, None]:
+        seen: set[str] = set()
+        for router in self.group:
+            view = self._router_view(router)
+            if view.route_id in seen:
+                continue
+            seen.add(view.route_id)
+            yield {
+                "route_id_name": f"RouteID{view.func_name}",
+                "route_path_name": f"RoutePath{view.func_name}",
+                "http_route_path_name": f"HTTPRoutePath{view.func_name}",
+                "route_id": view.route_id,
+                "route_path": view.url,
+                "http_route_path": view.http_url,
+            }
+
     def registers(self) -> Generator[dict[str, Any], None, None]:
         for router in self.group:
             view = self._router_view(router)
@@ -203,6 +219,9 @@ class GolangRouterGroup:
                     "service": view.service_name,
                     "operation": view.func_name,
                     "route_id": view.route_id,
+                    "route_id_const": f"RouteID{view.func_name}",
+                    "route_path_const": f"RoutePath{view.func_name}",
+                    "http_route_path_const": f"HTTPRoutePath{view.func_name}",
                     "methods": view.methods,
                     "path_type": view.local_path_type_expr,
                     "query_type": view.local_query_type_expr,
@@ -561,6 +580,9 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
         with self.writer.write_file(self.writer.http_transport_dir / "gen_engine.go", overwrite=True) as handle:
             if handle:
                 handle.write(render(LANG, "gen_engine.go", ctx, "server/views/transports/http"))
+        with self.writer.write_file(self.writer.http_transport_dir / "gen_mount.go", overwrite=True) as handle:
+            if handle:
+                handle.write(render(LANG, "gen_mount.go", ctx, "server/views/transports/http"))
         with self.writer.write_file(
             self.writer.http_transport_dir / "gen_connection_hooks.go",
             overwrite=True,

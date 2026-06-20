@@ -49,6 +49,7 @@ require github.com/gin-gonic/gin v1.10.1
     http_route = (output_dir / "transports" / "http" / "api" / "medal" / "gen_interface.go").read_text(
         encoding="utf-8"
     )
+    route_constants = (output_dir / "routes" / "api" / "medal" / "gen_routes.go").read_text(encoding="utf-8")
 
     assert "type REQ_DeleteUserMedal_PATH = types.DeleteUserMedalPath" in route_types
     assert "type REQ_DeleteUserMedal = providers.REQ[\n\tREQ_DeleteUserMedal_PATH," in route_types
@@ -58,8 +59,13 @@ require github.com/gin-gonic/gin v1.10.1
     assert "Body  *Body" in provider_req
     assert "type Context[Path, Query, Body, Response any] struct" in provider_context
     assert 'User  string `json:"user" xml:"user" form:"user" uri:"user"`' in shared_types
-    assert '"/api/medal/user/:user/:medal"' in http_route
-    assert 'Path:      "/api/medal/user/{user}/{medal}"' in http_route
+    assert "RoutePathDeleteUserMedal" in route_constants
+    assert '"/api/medal/user/{user}/{medal}"' in route_constants
+    assert "RoutePathDeleteUserMedal" in http_route
+    assert "shared.RoutePathDeleteUserMedal" in http_route
+    assert 'HTTPRoutePathDeleteUserMedal = "/api/medal/user/:user/:medal"' in http_route
+    assert "httptransport.DELETE(\n\t\t\tHTTPRoutePathDeleteUserMedal," in http_route
+    assert "Path:      RoutePathDeleteUserMedal" in http_route
     assert 'PathParams:             []string{"user", "medal"}' in http_route
     assert '"req=path,query,json|handle|rsp=json@CodeMessageDataEnvelope"' in http_route
     assert "BindPath" in http_runtime

@@ -8,26 +8,42 @@ from pathlib import Path
 
 from .constants import GRADLE_BIN_ENV
 from .compile import (
+    compile_generated_go_server_example,
     compile_generated_examples,
     compile_generated_grpc_examples,
     compile_wails_hello_example,
 )
 from .generate import (
+    regenerate_blueprint_go_server_example,
     regenerate_blueprint_examples,
     regenerate_blueprint_golang_suite_examples,
     regenerate_blueprint_java_suite_examples,
     regenerate_grpc_examples,
+    regenerate_repo_blueprint_go_server_example,
     regenerate_repo_blueprint_examples,
     regenerate_repo_grpc_examples,
     regenerate_repo_wails_hello_example,
     regenerate_wails_hello_example,
 )
-from .models import ExampleValidationError, ExampleValidationScope
-from .snapshot import validate_example_snapshots, validate_grpc_snapshots, validate_wails_hello_snapshots
-from .tools import ensure_validation_requirements, resolve_gradle_bin
-from .workspace import prepare_blueprint_workspace, prepare_grpc_workspace, prepare_wails_hello_workspace
+from .models import ExampleValidationError, ExampleValidationScope, ExampleValidationTarget
+from .snapshot import (
+    validate_blueprint_go_server_snapshots,
+    validate_example_snapshots,
+    validate_grpc_snapshots,
+    validate_wails_hello_snapshots,
+)
+from .tools import ensure_go_server_validation_requirements, ensure_validation_requirements, resolve_gradle_bin
+from .workspace import _blueprint_workspace, prepare_blueprint_workspace, prepare_grpc_workspace, prepare_wails_hello_workspace
 
-def validate_examples(repo_root: Path, scope: ExampleValidationScope = ExampleValidationScope.ALL) -> None:
+def validate_examples(
+    repo_root: Path,
+    scope: ExampleValidationScope = ExampleValidationScope.ALL,
+    target: ExampleValidationTarget = ExampleValidationTarget.ALL,
+) -> None:
+    if target is ExampleValidationTarget.GO_SERVER:
+        _ensure_blueprint_target_scope(scope=scope, target=target)
+        validate_blueprint_go_server_examples(repo_root)
+        return
     if scope is ExampleValidationScope.BLUEPRINT:
         validate_blueprint_examples(repo_root)
         return
@@ -69,6 +85,17 @@ def validate_blueprint_examples(repo_root: Path) -> None:
         shutil.rmtree(blueprint_workspace.root, ignore_errors=True)
 
 
+def validate_blueprint_go_server_examples(repo_root: Path) -> None:
+    ensure_go_server_validation_requirements()
+    blueprint_workspace = prepare_blueprint_workspace(repo_root)
+    try:
+        regenerate_blueprint_go_server_example(blueprint_workspace)
+        validate_blueprint_go_server_snapshots(repo_root, blueprint_workspace)
+        compile_generated_go_server_example(blueprint_workspace)
+    finally:
+        shutil.rmtree(blueprint_workspace.root, ignore_errors=True)
+
+
 def validate_grpc_examples(repo_root: Path) -> None:
     ensure_validation_requirements(ExampleValidationScope.GRPC)
     grpc_workspace = prepare_grpc_workspace(repo_root)
@@ -91,7 +118,15 @@ def validate_wails_hello_examples(repo_root: Path) -> None:
         shutil.rmtree(wails_hello_workspace.root, ignore_errors=True)
 
 
-def compile_examples(repo_root: Path, scope: ExampleValidationScope = ExampleValidationScope.ALL) -> None:
+def compile_examples(
+    repo_root: Path,
+    scope: ExampleValidationScope = ExampleValidationScope.ALL,
+    target: ExampleValidationTarget = ExampleValidationTarget.ALL,
+) -> None:
+    if target is ExampleValidationTarget.GO_SERVER:
+        _ensure_blueprint_target_scope(scope=scope, target=target)
+        compile_blueprint_go_server_examples(repo_root)
+        return
     if scope is ExampleValidationScope.BLUEPRINT:
         compile_blueprint_examples(repo_root)
         return
@@ -125,6 +160,16 @@ def compile_blueprint_examples(repo_root: Path) -> None:
     try:
         regenerate_blueprint_examples(blueprint_workspace)
         compile_generated_examples(blueprint_workspace)
+    finally:
+        shutil.rmtree(blueprint_workspace.root, ignore_errors=True)
+
+
+def compile_blueprint_go_server_examples(repo_root: Path) -> None:
+    ensure_go_server_validation_requirements()
+    blueprint_workspace = prepare_blueprint_workspace(repo_root)
+    try:
+        regenerate_blueprint_go_server_example(blueprint_workspace)
+        compile_generated_go_server_example(blueprint_workspace)
     finally:
         shutil.rmtree(blueprint_workspace.root, ignore_errors=True)
 
@@ -185,7 +230,15 @@ def run_java_suite_examples(repo_root: Path, scope: ExampleValidationScope = Exa
         shutil.rmtree(blueprint_workspace.root, ignore_errors=True)
 
 
-def refresh_examples(repo_root: Path, scope: ExampleValidationScope = ExampleValidationScope.ALL) -> None:
+def refresh_examples(
+    repo_root: Path,
+    scope: ExampleValidationScope = ExampleValidationScope.ALL,
+    target: ExampleValidationTarget = ExampleValidationTarget.ALL,
+) -> None:
+    if target is ExampleValidationTarget.GO_SERVER:
+        _ensure_blueprint_target_scope(scope=scope, target=target)
+        refresh_blueprint_go_server_examples(repo_root)
+        return
     ensure_validation_requirements(scope)
     if scope in (ExampleValidationScope.ALL, ExampleValidationScope.BLUEPRINT):
         regenerate_repo_blueprint_examples(repo_root)
@@ -194,3 +247,15 @@ def refresh_examples(repo_root: Path, scope: ExampleValidationScope = ExampleVal
     if scope in (ExampleValidationScope.ALL, ExampleValidationScope.WAILS_HELLO):
         regenerate_repo_wails_hello_example(repo_root)
     compile_examples(repo_root, scope=scope)
+
+
+def refresh_blueprint_go_server_examples(repo_root: Path) -> None:
+    ensure_go_server_validation_requirements()
+    regenerate_repo_blueprint_go_server_example(repo_root)
+    compile_generated_go_server_example(_blueprint_workspace(repo_root / "examples"))
+
+
+def _ensure_blueprint_target_scope(*, scope: ExampleValidationScope, target: ExampleValidationTarget) -> None:
+    if scope in (ExampleValidationScope.ALL, ExampleValidationScope.BLUEPRINT):
+        return
+    raise ExampleValidationError(f"{target.value} target validation only supports --scope blueprint")

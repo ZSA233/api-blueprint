@@ -3,8 +3,6 @@
 package media
 
 import (
-	"reflect"
-
 	sharedprovider "example.com/project/golang/server/views/providers"
 	shared "example.com/project/golang/server/views/routes/api/media"
 	httptransport "example.com/project/golang/server/views/transports/http"
@@ -12,19 +10,51 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Mount(router gin.IRouter, impl shared.RouterInterface) shared.RouterInterface {
-	return MountSelected(router, impl, nil)
+type MountOption = httptransport.MountOption
+
+func WithRouteIDs(routeIDs ...string) MountOption {
+	return httptransport.WithRouteIDs(routeIDs...)
 }
 
-func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map[string]struct{}) shared.RouterInterface {
-	if isNilRouterInterface(impl) {
+const (
+	RouteIDMediaPreview              = shared.RouteIDMediaPreview
+	RouteIDMediaFrame                = shared.RouteIDMediaFrame
+	RouteIDMediaDownload             = shared.RouteIDMediaDownload
+	RouteIDMediaDownloadDynamic      = shared.RouteIDMediaDownloadDynamic
+	RouteIDMediaDownloadFilenameEdge = shared.RouteIDMediaDownloadFilenameEdge
+	RouteIDMediaErrorFrame           = shared.RouteIDMediaErrorFrame
+	RouteIDMediaMjpeg                = shared.RouteIDMediaMjpeg
+)
+
+const (
+	RoutePathMediaPreview              = shared.RoutePathMediaPreview
+	RoutePathMediaFrame                = shared.RoutePathMediaFrame
+	RoutePathMediaDownload             = shared.RoutePathMediaDownload
+	RoutePathMediaDownloadDynamic      = shared.RoutePathMediaDownloadDynamic
+	RoutePathMediaDownloadFilenameEdge = shared.RoutePathMediaDownloadFilenameEdge
+	RoutePathMediaErrorFrame           = shared.RoutePathMediaErrorFrame
+	RoutePathMediaMjpeg                = shared.RoutePathMediaMjpeg
+)
+
+const (
+	HTTPRoutePathMediaPreview              = "/api/media/preview"
+	HTTPRoutePathMediaFrame                = "/api/media/frame"
+	HTTPRoutePathMediaDownload             = "/api/media/download"
+	HTTPRoutePathMediaDownloadDynamic      = "/api/media/download-dynamic"
+	HTTPRoutePathMediaDownloadFilenameEdge = "/api/media/download-filename-edge"
+	HTTPRoutePathMediaErrorFrame           = "/api/media/error-frame"
+	HTTPRoutePathMediaMjpeg                = "/api/media/mjpeg"
+)
+
+func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOption) shared.RouterInterface {
+	if httptransport.IsNilRouterImpl(impl) {
 		impl = shared.NewRouter()
 	}
+	mountOptions := httptransport.NewMountOptions(options...)
 
-	if shouldMountRoute(routeIDs, "api.media.post.preview") {
-
+	if mountOptions.ShouldMountRoute(RouteIDMediaPreview) {
 		httptransport.POST(
-			"/api/media/preview",
+			HTTPRoutePathMediaPreview,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -32,8 +62,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "media",
 					Service:   "MediaService",
 					Operation: "MediaPreview",
-					RouteID:   "api.media.post.preview",
-					Path:      "/api/media/preview",
+					RouteID:   RouteIDMediaPreview,
+					Path:      RoutePathMediaPreview,
 					Methods:   []string{"POST"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -53,13 +83,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.media.get.frame") {
-
+	if mountOptions.ShouldMountRoute(RouteIDMediaFrame) {
 		httptransport.GET(
-			"/api/media/frame",
+			HTTPRoutePathMediaFrame,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -67,8 +95,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "media",
 					Service:   "MediaService",
 					Operation: "MediaFrame",
-					RouteID:   "api.media.get.frame",
-					Path:      "/api/media/frame",
+					RouteID:   RouteIDMediaFrame,
+					Path:      RoutePathMediaFrame,
 					Methods:   []string{"GET"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -88,13 +116,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.media.get.download") {
-
+	if mountOptions.ShouldMountRoute(RouteIDMediaDownload) {
 		httptransport.GET(
-			"/api/media/download",
+			HTTPRoutePathMediaDownload,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -102,8 +128,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "media",
 					Service:   "MediaService",
 					Operation: "MediaDownload",
-					RouteID:   "api.media.get.download",
-					Path:      "/api/media/download",
+					RouteID:   RouteIDMediaDownload,
+					Path:      RoutePathMediaDownload,
 					Methods:   []string{"GET"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -123,13 +149,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.media.get.downloaddynamic") {
-
+	if mountOptions.ShouldMountRoute(RouteIDMediaDownloadDynamic) {
 		httptransport.GET(
-			"/api/media/download-dynamic",
+			HTTPRoutePathMediaDownloadDynamic,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -137,8 +161,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "media",
 					Service:   "MediaService",
 					Operation: "MediaDownloadDynamic",
-					RouteID:   "api.media.get.downloaddynamic",
-					Path:      "/api/media/download-dynamic",
+					RouteID:   RouteIDMediaDownloadDynamic,
+					Path:      RoutePathMediaDownloadDynamic,
 					Methods:   []string{"GET"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -158,13 +182,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.media.get.downloadfilenameedge") {
-
+	if mountOptions.ShouldMountRoute(RouteIDMediaDownloadFilenameEdge) {
 		httptransport.GET(
-			"/api/media/download-filename-edge",
+			HTTPRoutePathMediaDownloadFilenameEdge,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -172,8 +194,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "media",
 					Service:   "MediaService",
 					Operation: "MediaDownloadFilenameEdge",
-					RouteID:   "api.media.get.downloadfilenameedge",
-					Path:      "/api/media/download-filename-edge",
+					RouteID:   RouteIDMediaDownloadFilenameEdge,
+					Path:      RoutePathMediaDownloadFilenameEdge,
 					Methods:   []string{"GET"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -193,13 +215,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.media.get.errorframe") {
-
+	if mountOptions.ShouldMountRoute(RouteIDMediaErrorFrame) {
 		httptransport.GET(
-			"/api/media/error-frame",
+			HTTPRoutePathMediaErrorFrame,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -207,8 +227,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "media",
 					Service:   "MediaService",
 					Operation: "MediaErrorFrame",
-					RouteID:   "api.media.get.errorframe",
-					Path:      "/api/media/error-frame",
+					RouteID:   RouteIDMediaErrorFrame,
+					Path:      RoutePathMediaErrorFrame,
 					Methods:   []string{"GET"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -228,13 +248,11 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
-	if shouldMountRoute(routeIDs, "api.media.get.mjpeg") {
-
+	if mountOptions.ShouldMountRoute(RouteIDMediaMjpeg) {
 		httptransport.GET(
-			"/api/media/mjpeg",
+			HTTPRoutePathMediaMjpeg,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -242,8 +260,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "media",
 					Service:   "MediaService",
 					Operation: "MediaMjpeg",
-					RouteID:   "api.media.get.mjpeg",
-					Path:      "/api/media/mjpeg",
+					RouteID:   RouteIDMediaMjpeg,
+					Path:      RoutePathMediaMjpeg,
 					Methods:   []string{"GET"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope(""),
@@ -263,39 +281,17 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			),
 			router,
 		)
-
 	}
 
 	return impl
 }
 
-func NewRouter(router gin.IRouter) *shared.Router {
+func NewRouter(router gin.IRouter, options ...MountOption) *shared.Router {
 	impl := shared.NewRouter()
-	Mount(router, impl)
+	Mount(router, impl, options...)
 	return impl
 }
 
-func NewImpl(router gin.IRouter) *shared.Router {
-	return NewRouter(router)
-}
-
-func isNilRouterInterface(impl shared.RouterInterface) bool {
-	if impl == nil {
-		return true
-	}
-	value := reflect.ValueOf(impl)
-	switch value.Kind() {
-	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
-		return value.IsNil()
-	default:
-		return false
-	}
-}
-
-func shouldMountRoute(routeIDs map[string]struct{}, routeID string) bool {
-	if len(routeIDs) == 0 {
-		return true
-	}
-	_, ok := routeIDs[routeID]
-	return ok
+func NewImpl(router gin.IRouter, options ...MountOption) *shared.Router {
+	return NewRouter(router, options...)
 }

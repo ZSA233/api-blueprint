@@ -167,12 +167,16 @@ go 1.23.8
 
     root_adapter = output_dir / "transports" / "http" / "api" / "gen_blueprint.go"
     route_adapter = output_dir / "transports" / "http" / "api" / "demo" / "gen_interface.go"
+    mount_runtime = output_dir / "transports" / "http" / "gen_mount.go"
     core_route = output_dir / "routes" / "api" / "demo" / "gen_interface.go"
+    core_routes = output_dir / "routes" / "api" / "demo" / "gen_routes.go"
 
     assert root_adapter.is_file()
     assert route_adapter.is_file()
+    assert mount_runtime.is_file()
     root_adapter_text = root_adapter.read_text(encoding="utf-8")
     route_adapter_text = route_adapter.read_text(encoding="utf-8")
+    mount_runtime_text = mount_runtime.read_text(encoding="utf-8")
     assert "package api" in root_adapter_text
     assert "func NewBlueprint(router gin.IRouter) *Blueprint" in root_adapter_text
     assert "NewRouter(router)" in root_adapter_text
@@ -180,26 +184,57 @@ go 1.23.8
     assert "Router *sharedroot.Router" not in root_adapter_text
     assert "package demo" in route_adapter_text
     assert 'github.com/gin-gonic/gin' in route_adapter_text
-    assert '"reflect"' in route_adapter_text
-    assert "func Mount(router gin.IRouter, impl shared.RouterInterface) shared.RouterInterface" in route_adapter_text
-    assert "return MountSelected(router, impl, nil)" in route_adapter_text
-    assert "func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map[string]struct{}) shared.RouterInterface" in route_adapter_text
-    assert "func NewRouter(router gin.IRouter) *shared.Router" in route_adapter_text
-    assert "func NewImpl(router gin.IRouter) *shared.Router" in route_adapter_text
-    assert "return NewRouter(router)" in route_adapter_text
-    assert "Mount(router, impl)" in route_adapter_text
-    assert "func isNilRouterInterface(impl shared.RouterInterface) bool" in route_adapter_text
-    assert "func shouldMountRoute(routeIDs map[string]struct{}, routeID string) bool" in route_adapter_text
-    assert 'if shouldMountRoute(routeIDs, "api.demo.get.ping") {' in route_adapter_text
-    assert 'httptransport.GET(' in route_adapter_text
+    assert '"reflect"' not in route_adapter_text
+    assert "func IsNilRouterImpl(impl any) bool" in mount_runtime_text
+    assert '"reflect"' in mount_runtime_text
+    assert "type MountOption func(*MountOptions)" in mount_runtime_text
+    assert "func WithRouteIDs(routeIDs ...string) MountOption" in mount_runtime_text
+    assert "func (options MountOptions) ShouldMountRoute(routeID string) bool" in mount_runtime_text
+    assert "type MountOption = httptransport.MountOption" in route_adapter_text
+    assert "func WithRouteIDs(routeIDs ...string) MountOption" in route_adapter_text
+    core_routes_text = core_routes.read_text(encoding="utf-8")
+    assert (
+        'const (\n\tRouteIDPing = "api.demo.get.ping"\n)\n\nconst (\n\tRoutePathPing = "/api/demo/ping"\n)'
+        in core_routes_text
+    )
+    assert "RouteIDPing" in core_routes_text and '"api.demo.get.ping"' in core_routes_text
+    assert 'RoutePathPing = "/api/demo/ping"' in core_routes_text
+    assert "RouteGroupPing" not in core_routes_text
+    assert "RouteNamespacePing" not in core_routes_text
+    assert "RouteServicePing" not in core_routes_text
+    assert "RouteOperationPing" not in core_routes_text
+    assert "RouteMethodsPing" not in core_routes_text
+    assert "RouteIDPing" not in core_route.read_text(encoding="utf-8")
+    assert (
+        "const (\n\tRouteIDPing = shared.RouteIDPing\n)\n\n"
+        "const (\n\tRoutePathPing = shared.RoutePathPing\n)\n\n"
+        'const (\n\tHTTPRoutePathPing = "/api/demo/ping"\n)'
+    ) in route_adapter_text
+    assert "RouteIDPing" in route_adapter_text and "shared.RouteIDPing" in route_adapter_text
+    assert "RoutePathPing" in route_adapter_text and "shared.RoutePathPing" in route_adapter_text
+    assert 'HTTPRoutePathPing = "/api/demo/ping"' in route_adapter_text
+    assert "func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOption) shared.RouterInterface" in route_adapter_text
+    assert "func MountSelected(" not in route_adapter_text
+    assert "func NewRouter(router gin.IRouter, options ...MountOption) *shared.Router" in route_adapter_text
+    assert "func NewImpl(router gin.IRouter, options ...MountOption) *shared.Router" in route_adapter_text
+    assert "return NewRouter(router, options...)" in route_adapter_text
+    assert "Mount(router, impl, options...)" in route_adapter_text
+    assert "httptransport.IsNilRouterImpl(impl)" in route_adapter_text
+    assert "func isNilRouterInterface(impl shared.RouterInterface) bool" not in route_adapter_text
+    assert "func shouldMountRoute(" not in route_adapter_text
+    assert "map[string]struct{}" not in route_adapter_text
+    assert "mountOptions := httptransport.NewMountOptions(options...)" in route_adapter_text
+    assert "if mountOptions.ShouldMountRoute(RouteIDPing) {" in route_adapter_text
+    assert "if mountOptions.ShouldMountRoute(RouteIDPing) {\n\n\t\thttptransport" not in route_adapter_text
+    assert "httptransport.GET(\n\t\t\tHTTPRoutePathPing," in route_adapter_text
     assert "sharedprovider.NewRouteExecutor(" in route_adapter_text
     assert 'Root:      "api"' in route_adapter_text
     assert 'Group:     "demo"' in route_adapter_text
     assert 'Namespace: "demo"' in route_adapter_text
     assert 'Service:   "DemoService"' in route_adapter_text
     assert 'Operation: "Ping"' in route_adapter_text
-    assert 'RouteID:   "api.demo.get.ping"' in route_adapter_text
-    assert 'Path:      "/api/demo/ping"' in route_adapter_text
+    assert "RouteID:   RouteIDPing" in route_adapter_text
+    assert "Path:      RoutePathPing" in route_adapter_text
     assert 'Methods:   []string{"GET"}' in route_adapter_text
     assert "Transport: sharedprovider.TransportHTTP" in route_adapter_text
     assert "HTTP: sharedprovider.HTTPRouteInfo{" in route_adapter_text
@@ -215,6 +250,7 @@ go 1.23.8
     assert "binaryContentEncodings" not in (output_dir / "transports" / "http" / "gen_engine.go").read_text(encoding="utf-8")
     assert "NewRouteExecutorWithPlan" not in route_adapter_text
     assert 'github.com/gin-gonic/gin' not in core_route.read_text(encoding="utf-8")
+    assert 'github.com/gin-gonic/gin' not in core_routes_text
     assert "func NewImpl(eng *gin.Engine)" not in core_route.read_text(encoding="utf-8")
 
 def test_golang_http_adapter_respects_already_written_gin_response(tmp_path):
@@ -243,7 +279,7 @@ go 1.23.8
     )
     http_runtime = (output_dir / "transports" / "http" / "gen_engine.go").read_text(encoding="utf-8")
     assert "sharedprovider.NewRouteExecutor(" in route_adapter
-    assert 'RouteID:   "api.demo.post.callback"' in route_adapter
+    assert "RouteID:   RouteIDCallback" in route_adapter
     assert any(
         spec in route_adapter
         for spec in (
@@ -326,6 +362,18 @@ func TestHTTPAdapterAcceptsEngineGroupAndExternalInterface(t *testing.T) {
 	adapter := &externalDemoAdapter{Router: shared.NewRouter()}
 	if returned := demohttp.Mount(group, adapter); returned != adapter {
 		t.Fatalf("Mount(group, adapter) returned %T, want external adapter", returned)
+	}
+
+	selectedEngine := newEngine()
+	demohttp.Mount(selectedEngine, adapter, demohttp.WithRouteIDs(demohttp.RouteIDPing))
+	if got := len(selectedEngine.Routes()); got != 1 {
+		t.Fatalf("Mount WithRouteIDs(RouteIDPing) registered %d routes, want 1", got)
+	}
+
+	emptySelectionEngine := newEngine()
+	demohttp.Mount(emptySelectionEngine, adapter, demohttp.WithRouteIDs())
+	if got := len(emptySelectionEngine.Routes()); got != 0 {
+		t.Fatalf("Mount WithRouteIDs() registered %d routes, want 0", got)
 	}
 
 	blueprintEngine := newEngine()

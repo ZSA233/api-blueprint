@@ -3,8 +3,6 @@
 package api
 
 import (
-	"reflect"
-
 	sharedprovider "example.com/project/golang/server/views/providers"
 	shared "example.com/project/golang/server/views/routes/api"
 	httptransport "example.com/project/golang/server/views/transports/http"
@@ -12,19 +10,33 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Mount(router gin.IRouter, impl shared.RouterInterface) shared.RouterInterface {
-	return MountSelected(router, impl, nil)
+type MountOption = httptransport.MountOption
+
+func WithRouteIDs(routeIDs ...string) MountOption {
+	return httptransport.WithRouteIDs(routeIDs...)
 }
 
-func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map[string]struct{}) shared.RouterInterface {
-	if isNilRouterInterface(impl) {
+const (
+	RouteIDHelloChannel = shared.RouteIDHelloChannel
+)
+
+const (
+	RoutePathHelloChannel = shared.RoutePathHelloChannel
+)
+
+const (
+	HTTPRoutePathHelloChannel = "/api/ws"
+)
+
+func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOption) shared.RouterInterface {
+	if httptransport.IsNilRouterImpl(impl) {
 		impl = shared.NewRouter()
 	}
+	mountOptions := httptransport.NewMountOptions(options...)
 
-	if shouldMountRoute(routeIDs, "api.api.channel.ws") {
-
+	if mountOptions.ShouldMountRoute(RouteIDHelloChannel) {
 		httptransport.CHANNEL(
-			"/api/ws",
+			HTTPRoutePathHelloChannel,
 			sharedprovider.NewRouteExecutor[any, any, any, shared.RSP_HelloChannel](
 				sharedprovider.RouteInfo{
 					Root:      "api",
@@ -32,8 +44,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 					Namespace: "api",
 					Service:   "ApiService",
 					Operation: "HelloChannel",
-					RouteID:   "api.api.channel.ws",
-					Path:      "/api/ws",
+					RouteID:   RouteIDHelloChannel,
+					Path:      RoutePathHelloChannel,
 					Methods:   []string{"CHANNEL"},
 					Transport: sharedprovider.TransportHTTP,
 					Scope:     sharedprovider.ConnectionScope("session"),
@@ -49,39 +61,17 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 			impl.HelloChannel,
 			router,
 		)
-
 	}
 
 	return impl
 }
 
-func NewRouter(router gin.IRouter) *shared.Router {
+func NewRouter(router gin.IRouter, options ...MountOption) *shared.Router {
 	impl := shared.NewRouter()
-	Mount(router, impl)
+	Mount(router, impl, options...)
 	return impl
 }
 
-func NewImpl(router gin.IRouter) *shared.Router {
-	return NewRouter(router)
-}
-
-func isNilRouterInterface(impl shared.RouterInterface) bool {
-	if impl == nil {
-		return true
-	}
-	value := reflect.ValueOf(impl)
-	switch value.Kind() {
-	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
-		return value.IsNil()
-	default:
-		return false
-	}
-}
-
-func shouldMountRoute(routeIDs map[string]struct{}, routeID string) bool {
-	if len(routeIDs) == 0 {
-		return true
-	}
-	_, ok := routeIDs[routeID]
-	return ok
+func NewImpl(router gin.IRouter, options ...MountOption) *shared.Router {
+	return NewRouter(router, options...)
 }

@@ -32,6 +32,10 @@ def compile_generated_examples(workspace: BlueprintExampleWorkspace) -> None:
     _compile_wails_harness(workspace.wails_v3_dir, version="v3")
 
 
+def compile_generated_go_server_example(workspace: BlueprintExampleWorkspace) -> None:
+    subprocess.run(["go", "test", "./..."], cwd=workspace.golang_server_dir, check=True)
+
+
 def compile_generated_grpc_examples(workspace: GrpcExampleWorkspace) -> None:
     proto_files = sorted(path.relative_to(workspace.protos_dir).as_posix() for path in workspace.protos_dir.rglob("*.proto"))
     if not proto_files:

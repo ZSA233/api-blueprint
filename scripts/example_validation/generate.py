@@ -8,6 +8,7 @@ from .models import BlueprintExampleWorkspace, GrpcExampleWorkspace, WailsHelloE
 from .workspace import (
     _blueprint_workspace,
     _grpc_workspace,
+    _prepare_blueprint_go_server_output,
     _prepare_blueprint_outputs,
     _prepare_grpc_outputs,
     _prepare_wails_hello_outputs,
@@ -31,6 +32,11 @@ def regenerate_blueprint_examples(workspace: BlueprintExampleWorkspace) -> None:
     )
     _tidy_go_module(workspace.golang_server_dir)
     _tidy_go_module(workspace.golang_client_dir)
+
+
+def regenerate_blueprint_go_server_example(workspace: BlueprintExampleWorkspace) -> None:
+    generator.generate(workspace.config_path, target_ids=("go.server",))
+    _tidy_go_module(workspace.golang_server_dir)
 
 
 def regenerate_blueprint_golang_suite_examples(workspace: BlueprintExampleWorkspace) -> None:
@@ -58,6 +64,12 @@ def regenerate_repo_blueprint_examples(repo_root: Path) -> None:
     examples_root = repo_root / "examples"
     _prepare_blueprint_outputs(source_root=examples_root, target_root=examples_root)
     regenerate_blueprint_examples(_blueprint_workspace(examples_root))
+
+
+def regenerate_repo_blueprint_go_server_example(repo_root: Path) -> None:
+    examples_root = repo_root / "examples"
+    _prepare_blueprint_go_server_output(source_root=examples_root, target_root=examples_root)
+    regenerate_blueprint_go_server_example(_blueprint_workspace(examples_root))
 
 
 def regenerate_repo_grpc_examples(repo_root: Path) -> None:

@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 import filecmp
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 
 from .connection_contract import _validate_blueprint_connection_examples
 from .constants import EXAMPLE_SNAPSHOT_IGNORES
 from .models import BlueprintExampleWorkspace, ExampleValidationError, GrpcExampleWorkspace, WailsHelloExampleWorkspace
+
+SnapshotIgnoreMap = Mapping[str, frozenset[str]]
+
+GO_SERVER_TARGET_SNAPSHOT_IGNORES: SnapshotIgnoreMap = {
+    "blueprint/golang/server/views/transports": frozenset(("wailsv2", "wailsv3")),
+}
 
 def validate_example_snapshots(repo_root: Path, workspace: BlueprintExampleWorkspace) -> None:
     examples_root = repo_root / "examples"
@@ -23,6 +29,17 @@ def validate_example_snapshots(repo_root: Path, workspace: BlueprintExampleWorks
         )
     )
     _validate_blueprint_connection_examples(workspace)
+
+
+def validate_blueprint_go_server_snapshots(repo_root: Path, workspace: BlueprintExampleWorkspace) -> None:
+    examples_root = repo_root / "examples"
+    _raise_on_snapshot_drift(
+        (
+            (examples_root / "golang" / "server", workspace.golang_server_dir, "blueprint/golang/server"),
+        ),
+        ignores=GO_SERVER_TARGET_SNAPSHOT_IGNORES,
+    )
+
 
 def validate_grpc_snapshots(repo_root: Path, workspace: GrpcExampleWorkspace) -> None:
     example_root = repo_root / "examples" / "grpc"
@@ -45,10 +62,14 @@ def validate_wails_hello_snapshots(repo_root: Path, workspace: WailsHelloExample
     )
 
 
-def _raise_on_snapshot_drift(pairs: Iterable[tuple[Path, Path, str]]) -> None:
+def _raise_on_snapshot_drift(
+    pairs: Iterable[tuple[Path, Path, str]],
+    *,
+    ignores: SnapshotIgnoreMap = EXAMPLE_SNAPSHOT_IGNORES,
+) -> None:
     problems: list[str] = []
     for expected, actual, label in pairs:
-        problems.extend(_collect_path_diff(expected, actual, prefix=label))
+        problems.extend(_collect_path_diff(expected, actual, prefix=label, ignores=ignores))
     if not problems:
         return
 
@@ -62,12 +83,18 @@ def _raise_on_snapshot_drift(pairs: Iterable[tuple[Path, Path, str]]) -> None:
     )
 
 
-def _collect_path_diff(expected: Path, actual: Path, prefix: str = "") -> list[str]:
+def _collect_path_diff(
+    expected: Path,
+    actual: Path,
+    prefix: str = "",
+    *,
+    ignores: SnapshotIgnoreMap = EXAMPLE_SNAPSHOT_IGNORES,
+) -> list[str]:
     label = prefix or expected.name
     if expected.is_dir():
         if not actual.is_dir():
             return [f"{label}: missing directory"]
-        return _collect_dir_diff(expected, actual, prefix=label)
+        return _collect_dir_diff(expected, actual, prefix=label, ignores=ignores)
     if expected.is_file():
         if not actual.is_file():
             return [f"{label}: missing file"]
@@ -78,10 +105,16 @@ def _collect_path_diff(expected: Path, actual: Path, prefix: str = "") -> list[s
         return [f"{label}: unexpected {actual.name}"]
     return []
 
-def _collect_dir_diff(expected: Path, actual: Path, prefix: str = "") -> list[str]:
+def _collect_dir_diff(
+    expected: Path,
+    actual: Path,
+    prefix: str = "",
+    *,
+    ignores: SnapshotIgnoreMap = EXAMPLE_SNAPSHOT_IGNORES,
+) -> list[str]:
     comparison = filecmp.dircmp(expected, actual)
     label = prefix or expected.name
-    ignored = EXAMPLE_SNAPSHOT_IGNORES.get(label, frozenset())
+    ignored = ignores.get(label, frozenset())
     left_only = [name for name in comparison.left_only if name not in ignored]
     right_only = [name for name in comparison.right_only if name not in ignored]
     problems = [f"{label}: missing {name}" for name in left_only]
@@ -92,5 +125,5 @@ def _collect_dir_diff(expected: Path, actual: Path, prefix: str = "") -> list[st
         if child in ignored:
             continue
         child_prefix = f"{label}/{child}" if label else child
-        problems.extend(_collect_dir_diff(expected / child, actual / child, child_prefix))
+        problems.extend(_collect_dir_diff(expected / child, actual / child, child_prefix, ignores=ignores))
     return problems

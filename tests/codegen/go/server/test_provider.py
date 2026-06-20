@@ -101,7 +101,7 @@ go 1.23.8
         encoding="utf-8"
     )
     assert 'Root:      "static"' in route_adapter
-    assert 'RouteID:   "static.static.get.doc"' in route_adapter
+    assert "RouteID:   RouteIDDoc" in route_adapter
     assert '"req|cache=ttl=60s|handle|rsp=json@CodeMessageDataEnvelope"' in route_adapter
 
 def test_golang_route_aware_provider_factory_runs_at_executor_creation(tmp_path):

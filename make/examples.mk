@@ -1,4 +1,4 @@
-.PHONY: example-validation example-compile-check example-refresh example-conformance example-conformance-list example-conformance-generate example-conformance-run example-conformance-check example-conformance-refresh example-golang-suite example-java-suite example-java-spring-server example-java-spring-server-benchmark
+.PHONY: example-validation example-compile-check example-refresh example-refresh-go-server example-validation-go-server example-conformance example-conformance-list example-conformance-generate example-conformance-run example-conformance-check example-conformance-refresh example-golang-suite example-java-suite example-java-spring-server example-java-spring-server-benchmark
 
 JAVA_SPRING_BENCH_ITERATIONS ?= 200000
 JAVA_SPRING_BENCH_WARMUP ?= 20000
@@ -13,6 +13,12 @@ example-compile-check:
 
 example-refresh:
 	uv run python scripts/example_validation.py --mode refresh
+
+example-refresh-go-server:
+	uv run python scripts/example_validation.py --mode refresh --target go.server
+
+example-validation-go-server:
+	uv run python scripts/example_validation.py --target go.server
 
 example-conformance:
 	@$(MAKE) example-conformance-check
