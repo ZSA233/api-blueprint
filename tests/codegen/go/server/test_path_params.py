@@ -3,6 +3,7 @@ from __future__ import annotations
 from .helpers import *
 
 
+@pytest.mark.toolchain_smoke
 def test_golang_server_binds_path_query_and_body_request_slots(tmp_path):
     output_dir = tmp_path / "golang"
     output_dir.mkdir()

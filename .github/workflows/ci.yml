@@ -109,17 +109,54 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - uses: actions/setup-go@v6
+      - uses: astral-sh/setup-uv@v8.1.0
+
+      - name: Sync Python environment
+        run: uv sync --dev
+
+      - name: Run fast test suite
+        run: uv run pytest -q -n auto -m "not example_validation and not toolchain_smoke and not packaging_smoke"
+
+  python-toolchain-smoke:
+    needs:
+      - release-contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
         with:
-          go-version: "1.25"
+          python-version: "3.11"
+
+      - uses: astral-sh/setup-uv@v8.1.0
+
+      - uses: ./.github/actions/setup-example-toolchains
+        with:
+          go: true
+          node: true
+          typescript: true
+
+      - name: Sync Python environment
+        run: uv sync --dev
+
+      - name: Run generated toolchain smoke tests
+        run: uv run pytest -q -m "toolchain_smoke"
+
+  python-packaging-smoke:
+    needs:
+      - release-contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
 
       - uses: astral-sh/setup-uv@v8.1.0
 
       - name: Sync Python environment
         run: uv sync --dev
 
-      - name: Run test suite
-        run: uv run pytest -q -m "not example_validation"
-
-      - name: Build package
-        run: uv build --sdist --wheel
+      - name: Run package build/install smoke tests
+        run: uv run pytest -q -m "packaging_smoke"

@@ -1,4 +1,4 @@
-.PHONY: help sync test benchmark-list benchmark-binary benchmark-swift-runtime example-benchmark-protocol example-benchmark build
+.PHONY: help sync test test-fast test-toolchain-smoke test-packaging-smoke test-ci test-durations benchmark-list benchmark-binary benchmark-swift-runtime example-benchmark-protocol example-benchmark build
 
 help:
 	@printf "%s\n" \
@@ -7,6 +7,11 @@ help:
 		"Core:" \
 		"  make sync                    Install development dependencies" \
 		"  make test                    Run Python tests" \
+		"  make test-fast               Run fast Python tests in parallel" \
+		"  make test-toolchain-smoke    Run generated toolchain smoke tests" \
+		"  make test-packaging-smoke    Run package build/install smoke tests" \
+		"  make test-ci                 Run local CI-style Python test slices" \
+		"  make test-durations          Show slowest non-example pytest durations" \
 		"  make build                   Build sdist and wheel" \
 		"  make benchmark-list          List generated example benchmark targets" \
 		"  make benchmark-binary        Run binary codec benchmark" \
@@ -41,6 +46,23 @@ sync:
 
 test:
 	uv run pytest -q
+
+test-fast:
+	uv run pytest -q -n auto -m "not example_validation and not toolchain_smoke and not packaging_smoke"
+
+test-toolchain-smoke:
+	uv run pytest -q -m "toolchain_smoke"
+
+test-packaging-smoke:
+	uv run pytest -q -m "packaging_smoke"
+
+test-ci:
+	$(MAKE) test-fast
+	$(MAKE) test-toolchain-smoke
+	$(MAKE) test-packaging-smoke
+
+test-durations:
+	uv run pytest -q -m "not example_validation" --durations=40
 
 benchmark-list:
 	uv run python -m scripts.example_benchmark list

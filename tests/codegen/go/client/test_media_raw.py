@@ -51,6 +51,7 @@ def test_golang_client_codegen_emits_multipart_and_raw_response_contracts(tmp_pa
     assert "decodeEnvelopeAPIError(data, request.RouteID, request.ResponseEnvelope)" in transport
 
 
+@pytest.mark.toolchain_smoke
 def test_golang_client_multipart_reader_is_streamed_when_body_is_consumed(tmp_path):
     bp = Blueprint(root="/api")
     with bp.group("/media") as views:

@@ -3,11 +3,14 @@ from __future__ import annotations
 import shutil
 import subprocess
 
+import pytest
+
 from scripts import release_assets
 from scripts import release_version
 from tests.support import REPO_ROOT
 
 
+@pytest.mark.packaging_smoke
 def test_built_artifacts_include_runtime_assets_and_install_cleanly(tmp_path):
     uv = shutil.which("uv")
     assert uv is not None

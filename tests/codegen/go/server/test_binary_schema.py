@@ -3,6 +3,7 @@ from __future__ import annotations
 from .helpers import *
 
 
+@pytest.mark.toolchain_smoke
 def test_golang_writer_generates_binary_schema_parser_and_http_binding(tmp_path):
     output_dir = tmp_path / "golang"
     output_dir.mkdir()
@@ -195,6 +196,7 @@ func TestParseDemoPacketGeneratedErrors(t *testing.T) {
     )
     subprocess.run(["go", "test", "./golang/routes/api/demo/_gen_binary"], cwd=tmp_path, check=True)
 
+@pytest.mark.toolchain_smoke
 def test_golang_server_generates_binary_schema_response_writer_and_file_default_filename(tmp_path):
     output_dir = tmp_path / "golang"
     output_dir.mkdir()

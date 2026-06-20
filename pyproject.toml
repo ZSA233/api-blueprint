@@ -50,6 +50,7 @@ api-gen = "api_blueprint.cli.apigen:api_gen"
 dev = [
     "grpcio-tools>=1.76,<2",
     "pytest>=8.3,<9",
+    "pytest-xdist>=3.6,<4",
 ]
 
 [tool.hatch.version]
@@ -95,4 +96,6 @@ addopts = "-ra"
 testpaths = ["tests"]
 markers = [
     "example_validation: integration validation that requires external Go/Node toolchains and is covered by the dedicated CI job",
+    "toolchain_smoke: generated artifact smoke tests that invoke external language toolchains",
+    "packaging_smoke: package build and install smoke tests",
 ]

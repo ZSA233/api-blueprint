@@ -84,6 +84,7 @@ def _colliding_packet_name_blueprint() -> Blueprint:
     return bp
 
 
+@pytest.mark.toolchain_smoke
 def test_go_client_scopes_binary_schema_internal_symbols(tmp_path: Path) -> None:
     output_dir = tmp_path / "client"
     output_dir.mkdir()
@@ -109,6 +110,7 @@ def test_go_client_scopes_binary_schema_internal_symbols(tmp_path: Path) -> None
     subprocess.run(["go", "test", "./..."], cwd=output_dir, check=True)
 
 
+@pytest.mark.toolchain_smoke
 def test_go_server_scopes_binary_schema_internal_symbols(tmp_path: Path) -> None:
     output_dir = tmp_path / "server"
     output_dir.mkdir()
@@ -134,6 +136,7 @@ def test_go_server_scopes_binary_schema_internal_symbols(tmp_path: Path) -> None
     subprocess.run(["go", "test", "./routes/api/binary/_gen_binary"], cwd=output_dir, check=True)
 
 
+@pytest.mark.toolchain_smoke
 def test_typescript_scopes_binary_schema_internal_symbols(tmp_path: Path) -> None:
     output_dir = tmp_path / "typescript"
     writer = TypeScriptWriter(output_dir)

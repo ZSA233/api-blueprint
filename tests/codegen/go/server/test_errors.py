@@ -8,6 +8,7 @@ def test_golang_response_envelope_preserves_generic_type_parameters():
     assert envelope.proto_def_name == "RSP_JSON_CodeMessageDataEnvelope[T any]"
     assert envelope.generic_types(True) == "[T any]"
 
+@pytest.mark.toolchain_smoke
 def test_golang_writer_generates_only_declared_error_models(tmp_path):
     output_dir = tmp_path / "golang"
     output_dir.mkdir()

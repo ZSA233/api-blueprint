@@ -3,6 +3,7 @@ from __future__ import annotations
 from .helpers import *
 
 
+@pytest.mark.toolchain_smoke
 def test_golang_client_generates_path_params_and_expands_url(tmp_path):
     class DeleteUserMedalPath(Model):
         user = String(description="user")

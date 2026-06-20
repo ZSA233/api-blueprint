@@ -4,6 +4,8 @@ import shutil
 
 import subprocess
 
+import pytest
+
 from api_blueprint.contract import build_contract_graph
 
 from api_blueprint.engine import Blueprint, Error, CodeMessageDataEnvelope, Model, Toast

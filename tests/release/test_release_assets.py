@@ -55,6 +55,11 @@ def test_makefile_exposes_example_validation_and_release_preflight_uses_it():
     golang_suite_block = _target_block(text, "example-golang-suite")
     java_suite_block = _target_block(text, "example-java-suite")
     benchmark_binary_block = _target_block(text, "benchmark-binary")
+    test_fast_block = _target_block(text, "test-fast")
+    test_toolchain_smoke_block = _target_block(text, "test-toolchain-smoke")
+    test_packaging_smoke_block = _target_block(text, "test-packaging-smoke")
+    test_ci_block = _target_block(text, "test-ci")
+    test_durations_block = _target_block(text, "test-durations")
     preflight_block = _target_block(text, "release-preflight")
     tag_check_block = _target_block(text, "release-tag-check")
 
@@ -132,6 +137,16 @@ def test_makefile_exposes_example_validation_and_release_preflight_uses_it():
     assert '--warmup "$(EXAMPLE_BENCH_WARMUP)"' in benchmark_protocol_block
     assert "$(MAKE) benchmark-binary" in benchmark_suite_block
     assert "$(MAKE) example-benchmark-protocol" in benchmark_suite_block
+    assert (
+        'uv run pytest -q -n auto -m "not example_validation and not toolchain_smoke and not packaging_smoke"'
+        in test_fast_block
+    )
+    assert 'uv run pytest -q -m "toolchain_smoke"' in test_toolchain_smoke_block
+    assert 'uv run pytest -q -m "packaging_smoke"' in test_packaging_smoke_block
+    assert "$(MAKE) test-fast" in test_ci_block
+    assert "$(MAKE) test-toolchain-smoke" in test_ci_block
+    assert "$(MAKE) test-packaging-smoke" in test_ci_block
+    assert 'uv run pytest -q -m "not example_validation" --durations=40' in test_durations_block
     assert "$(MAKE) example-validation" in preflight_block
     assert 'uv run python scripts/release_version.py check-sync --tag "$(RELEASE_TAG)"' in tag_check_block
     assert "uv run python scripts/release_assets.py validate-config" in tag_check_block
@@ -151,6 +166,8 @@ def test_ci_and_release_bundle_share_example_toolchain_setup():
     ).read_text(encoding="utf-8")
     example_validation_job = _job_block(ci_text, "example-validation")
     python_tests_job = _job_block(ci_text, "python-tests")
+    python_toolchain_smoke_job = _job_block(ci_text, "python-toolchain-smoke")
+    python_packaging_smoke_job = _job_block(ci_text, "python-packaging-smoke")
 
     assert "example-validation:" in ci_text
     assert "./.github/actions/setup-example-toolchains" in ci_text
@@ -163,6 +180,21 @@ def test_ci_and_release_bundle_share_example_toolchain_setup():
     assert 'uv run python scripts/example_validation.py --target "${{ matrix.target }}"' in example_validation_job
     assert "example-validation" not in python_tests_job
     assert "release-contract" in python_tests_job
+    assert "actions/setup-go@v6" not in python_tests_job
+    assert "Build package" not in python_tests_job
+    assert (
+        'uv run pytest -q -n auto -m "not example_validation and not toolchain_smoke and not packaging_smoke"'
+        in python_tests_job
+    )
+    assert "python-toolchain-smoke:" in ci_text
+    assert "python-packaging-smoke:" in ci_text
+    assert "./.github/actions/setup-example-toolchains" in python_toolchain_smoke_job
+    assert "go: true" in python_toolchain_smoke_job
+    assert "node: true" in python_toolchain_smoke_job
+    assert "typescript: true" in python_toolchain_smoke_job
+    assert 'uv run pytest -q -m "toolchain_smoke"' in python_toolchain_smoke_job
+    assert "./.github/actions/setup-example-toolchains" not in python_packaging_smoke_job
+    assert 'uv run pytest -q -m "packaging_smoke"' in python_packaging_smoke_job
     assert "./.github/actions/setup-example-toolchains" in release_bundle_text
     assert 'run: make release-tag-check RELEASE_TAG="${{ inputs.release_tag }}"' in release_bundle_text
     assert "make release-preflight" not in release_bundle_text
@@ -182,10 +214,7 @@ def test_ci_and_release_bundle_share_example_toolchain_setup():
     assert "google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.10" in toolchain_text
     assert "google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.0" in toolchain_text
     assert "GITHUB_PATH" in toolchain_text
-    assert 'uv run pytest -q -m "not example_validation"' in ci_text
     assert "python-tests:" in ci_text
-    assert "actions/setup-go@v6" in ci_text
-    assert 'go-version: "1.25"' in ci_text
     assert "build:\n    runs-on: ubuntu-22.04" in release_text
     assert "build:\n    runs-on: ubuntu-22.04" in release_rc_text
 

@@ -10,6 +10,7 @@ from api_blueprint.engine.schema import Field, Int
 TM = TypeVar("TM", bound=Model)
 
 
+@pytest.mark.toolchain_smoke
 def test_golang_server_can_emit_contract_metadata_without_user_impl_stubs(tmp_path):
     output_dir = tmp_path / "golang"
     output_dir.mkdir()

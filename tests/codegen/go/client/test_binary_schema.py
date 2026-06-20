@@ -86,6 +86,7 @@ endian: little
     assert "body.WriteBinary" in transport_text
     assert "json.Marshal(request.Binary)" not in transport_text
 
+@pytest.mark.toolchain_smoke
 def test_golang_client_generates_binary_schema_response_decoder(tmp_path):
     schema = parse_binary_schema(
         """
@@ -211,6 +212,7 @@ endian: little
     assert "func WrapField(path string, err error) error" in runtime_text
     assert "func IndexPath(path string, index int) string" in runtime_text
 
+@pytest.mark.toolchain_smoke
 def test_golang_client_binary_writer_reports_nested_schema_paths_without_success_path_allocations(tmp_path):
     class SubmitResponse(Model):
         status = String(description="status")

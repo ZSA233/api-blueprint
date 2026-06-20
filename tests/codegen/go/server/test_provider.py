@@ -104,6 +104,7 @@ go 1.23.8
     assert "RouteID:   RouteIDDoc" in route_adapter
     assert '"req|cache=ttl=60s|handle|rsp=json@CodeMessageDataEnvelope"' in route_adapter
 
+@pytest.mark.toolchain_smoke
 def test_golang_route_aware_provider_factory_runs_at_executor_creation(tmp_path):
     output_dir = tmp_path / "golang"
     output_dir.mkdir()

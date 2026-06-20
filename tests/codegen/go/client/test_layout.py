@@ -71,6 +71,7 @@ def test_golang_client_generates_legacy_json_compat_field_types(tmp_path):
     assert "Normalized []string" in runtime_types
     assert "RoomID     string" in runtime_types
 
+@pytest.mark.toolchain_smoke
 def test_golang_client_writer_generates_layout_preserves_user_files_and_compiles(tmp_path):
     class CommonErr(Model):
         UNKNOWN = Error(-1, "unknown")

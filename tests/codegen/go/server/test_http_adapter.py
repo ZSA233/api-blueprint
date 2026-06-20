@@ -294,6 +294,7 @@ go 1.23.8
     assert "route.HTTP.Response.ManualResponse" in http_runtime
     assert "ginCtx.JSON(http.StatusOK, response)" in http_runtime
 
+@pytest.mark.toolchain_smoke
 def test_golang_http_adapter_accepts_irouter_and_external_adapter(tmp_path):
     output_dir = tmp_path / "golang"
     output_dir.mkdir()
