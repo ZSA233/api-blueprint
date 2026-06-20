@@ -26,6 +26,16 @@ class ExampleValidationScope(StrEnum):
 class ExampleValidationTarget(StrEnum):
     ALL = "all"
     GO_SERVER = "go.server"
+    GO_CLIENT = "go.client"
+    TYPESCRIPT_CLIENT = "typescript.client"
+    PYTHON_HTTP = "python.http"
+    KOTLIN_HTTP = "kotlin.http"
+    JAVA_HTTP = "java.http"
+    FLUTTER_CLIENT = "flutter.client"
+    SWIFT_CLIENT = "swift.client"
+    WAILS_BLUEPRINT = "wails.blueprint"
+    GRPC = "grpc"
+    WAILS_HELLO = "wails.hello"
 
 
 @dataclass(frozen=True)

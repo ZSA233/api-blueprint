@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 
 from .constants import GO_ENUM_VERSION, GRADLE_BIN_ENV, SWIFT_BIN_ENV, WAILS_V2_BIN_ENV, WAILS_V3_BIN_ENV
-from .models import ExampleValidationError, ExampleValidationScope
+from .models import ExampleValidationError, ExampleValidationScope, ExampleValidationTarget
 
 
 def resolve_gradle_bin() -> str | None:
@@ -186,6 +186,67 @@ def collect_missing_go_server_validation_requirements() -> tuple[str, ...]:
     return tuple(missing)
 
 
+def collect_missing_target_validation_requirements(target: ExampleValidationTarget) -> tuple[str, ...]:
+    if target is ExampleValidationTarget.ALL:
+        return collect_missing_validation_requirements(ExampleValidationScope.ALL)
+    if target is ExampleValidationTarget.GO_SERVER:
+        return collect_missing_go_server_validation_requirements()
+    if target is ExampleValidationTarget.GO_CLIENT:
+        return _missing_binaries((("go", "install Go and ensure `go` is available on PATH."),))
+    if target is ExampleValidationTarget.TYPESCRIPT_CLIENT:
+        return _missing_binaries(
+            (
+                ("tsc", "install the TypeScript CLI, for example `npm install --global typescript`."),
+                ("npm", "install Node.js/npm and ensure `npm` is available on PATH."),
+            )
+        )
+    if target is ExampleValidationTarget.PYTHON_HTTP:
+        return ()
+    if target in (ExampleValidationTarget.KOTLIN_HTTP, ExampleValidationTarget.JAVA_HTTP):
+        missing: list[str] = []
+        if resolve_gradle_bin() is None:
+            missing.append(
+                "gradle: install Gradle and ensure `gradle` is available on PATH, "
+                f"or set `{GRADLE_BIN_ENV}` to an executable Gradle binary."
+            )
+        return tuple(missing)
+    if target is ExampleValidationTarget.FLUTTER_CLIENT:
+        return _missing_binaries((("dart", "install the Dart SDK and ensure `dart` is available on PATH."),))
+    if target is ExampleValidationTarget.SWIFT_CLIENT:
+        return ()
+    if target is ExampleValidationTarget.WAILS_BLUEPRINT:
+        return _missing_wails_requirements(include_typescript=True, include_v2=True)
+    if target is ExampleValidationTarget.GRPC:
+        missing = list(
+            _missing_binaries(
+                (
+                    (
+                        "protoc",
+                        "install the Protocol Buffers compiler, for example `brew install protobuf` or `apt-get install protobuf-compiler`.",
+                    ),
+                    (
+                        "protoc-gen-go",
+                        "install it with `go install google.golang.org/protobuf/cmd/protoc-gen-go@latest`.",
+                    ),
+                    (
+                        "protoc-gen-go-grpc",
+                        "install it with `go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest`.",
+                    ),
+                    ("go", "install Go and ensure `go` is available on PATH."),
+                )
+            )
+        )
+        if importlib.util.find_spec("grpc_tools") is None:
+            missing.append(
+                "grpcio-tools: install Python gRPC tooling with `uv add --dev grpcio-tools` "
+                "or `pip install grpcio-tools`."
+            )
+        return tuple(missing)
+    if target is ExampleValidationTarget.WAILS_HELLO:
+        return _missing_wails_requirements(include_typescript=True, include_v2=False)
+    return ()
+
+
 def ensure_validation_requirements(scope: ExampleValidationScope = ExampleValidationScope.ALL) -> None:
     missing = collect_missing_validation_requirements(scope)
     if not missing:
@@ -204,3 +265,57 @@ def ensure_go_server_validation_requirements() -> None:
         "go.server example validation requires additional tooling:\n"
         + "\n".join(f"- {item}" for item in missing)
     )
+
+
+def ensure_target_validation_requirements(target: ExampleValidationTarget) -> None:
+    missing = collect_missing_target_validation_requirements(target)
+    if not missing:
+        return
+    raise ExampleValidationError(
+        f"{target.value} example validation requires additional tooling:\n"
+        + "\n".join(f"- {item}" for item in missing)
+    )
+
+
+def _missing_binaries(requirements: tuple[tuple[str, str], ...]) -> tuple[str, ...]:
+    missing: list[str] = []
+    for name, guidance in requirements:
+        if shutil.which(name) is None:
+            missing.append(f"{name}: {guidance}")
+    return tuple(missing)
+
+
+def _missing_wails_requirements(*, include_typescript: bool, include_v2: bool) -> tuple[str, ...]:
+    missing = list(
+        _missing_binaries(
+            (
+                ("go", "install Go and ensure `go` is available on PATH."),
+                (
+                    "go-enum",
+                    "install it with `go install github.com/abice/go-enum@"
+                    + GO_ENUM_VERSION
+                    + "`.",
+                ),
+            )
+        )
+    )
+    if include_typescript:
+        missing.extend(
+            _missing_binaries(
+                (
+                    ("tsc", "install the TypeScript CLI, for example `npm install --global typescript`."),
+                    ("npm", "install Node.js/npm and ensure `npm` is available on PATH."),
+                )
+            )
+        )
+    if include_v2 and resolve_wails_bin(WAILS_V2_BIN_ENV, "wails") is None:
+        missing.append(
+            "wails: install the Wails v2 CLI and ensure `wails` is available on PATH, "
+            f"or set `{WAILS_V2_BIN_ENV}` to the executable."
+        )
+    if resolve_wails_bin(WAILS_V3_BIN_ENV, "wails3") is None:
+        missing.append(
+            "wails3: install the Wails v3 CLI and ensure `wails3` is available on PATH, "
+            f"or set `{WAILS_V3_BIN_ENV}` to the executable."
+        )
+    return tuple(missing)

@@ -15,6 +15,7 @@ from .language_checks import (
     _validate_swift_sources,
 )
 from .models import BlueprintExampleWorkspace, ExampleValidationError, GrpcExampleWorkspace, WailsHelloExampleWorkspace
+from .models import ExampleValidationTarget
 from .connection_contract import _validate_blueprint_connection_examples
 from .tools import resolve_wails_bin
 
@@ -34,6 +35,42 @@ def compile_generated_examples(workspace: BlueprintExampleWorkspace) -> None:
 
 def compile_generated_go_server_example(workspace: BlueprintExampleWorkspace) -> None:
     subprocess.run(["go", "test", "./..."], cwd=workspace.golang_server_dir, check=True)
+
+
+def compile_generated_blueprint_target_example(
+    workspace: BlueprintExampleWorkspace,
+    target: ExampleValidationTarget,
+) -> None:
+    if target is ExampleValidationTarget.GO_SERVER:
+        compile_generated_go_server_example(workspace)
+        return
+    if target is ExampleValidationTarget.GO_CLIENT:
+        subprocess.run(["go", "test", "./..."], cwd=workspace.golang_client_dir, check=True)
+        return
+    if target is ExampleValidationTarget.TYPESCRIPT_CLIENT:
+        subprocess.run(["tsc", "-p", str(workspace.typescript_dir / "tsconfig.json"), "--noEmit"], check=True)
+        return
+    if target is ExampleValidationTarget.PYTHON_HTTP:
+        _validate_python_sources(workspace.python_dir)
+        return
+    if target is ExampleValidationTarget.KOTLIN_HTTP:
+        _validate_kotlin_sources(workspace.kotlin_dir)
+        return
+    if target is ExampleValidationTarget.JAVA_HTTP:
+        _validate_java_sources(workspace.java_dir)
+        return
+    if target is ExampleValidationTarget.FLUTTER_CLIENT:
+        _validate_flutter_sources(workspace.flutter_dir)
+        return
+    if target is ExampleValidationTarget.SWIFT_CLIENT:
+        _validate_swift_sources(workspace.swift_dir)
+        return
+    if target is ExampleValidationTarget.WAILS_BLUEPRINT:
+        subprocess.run(["tsc", "-p", str(workspace.typescript_dir / "tsconfig.json"), "--noEmit"], check=True)
+        _compile_wails_harness(workspace.wails_v2_dir, version="v2")
+        _compile_wails_harness(workspace.wails_v3_dir, version="v3")
+        return
+    raise ValueError(f"target {target.value} is not a Blueprint example target")
 
 
 def compile_generated_grpc_examples(workspace: GrpcExampleWorkspace) -> None:

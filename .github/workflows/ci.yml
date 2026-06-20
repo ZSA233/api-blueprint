@@ -32,6 +32,41 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/')) }}
     needs: release-contract
     runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: go.server
+            go: true
+            go_enum: true
+          - target: go.client
+            go: true
+          - target: typescript.client
+            node: true
+            typescript: true
+          - target: python.http
+          - target: kotlin.http
+            java: true
+          - target: java.http
+            java: true
+          - target: flutter.client
+            dart: true
+          - target: swift.client
+          - target: wails.blueprint
+            go: true
+            node: true
+            typescript: true
+            wails: true
+            go_enum: true
+          - target: grpc
+            go: true
+            grpc: true
+          - target: wails.hello
+            go: true
+            node: true
+            typescript: true
+            wails: true
+            go_enum: true
     steps:
       - uses: actions/checkout@v6
 
@@ -42,12 +77,21 @@ jobs:
       - uses: astral-sh/setup-uv@v8.1.0
 
       - uses: ./.github/actions/setup-example-toolchains
+        with:
+          java: ${{ matrix.java || false }}
+          go: ${{ matrix.go || false }}
+          node: ${{ matrix.node || false }}
+          dart: ${{ matrix.dart || false }}
+          typescript: ${{ matrix.typescript || false }}
+          wails: ${{ matrix.wails || false }}
+          go_enum: ${{ matrix.go_enum || false }}
+          grpc: ${{ matrix.grpc || false }}
 
       - name: Sync Python environment
         run: uv sync --dev
 
       - name: Validate regenerated examples
-        run: uv run python scripts/example_validation.py
+        run: uv run python scripts/example_validation.py --target "${{ matrix.target }}"
 
   python-tests:
     needs:

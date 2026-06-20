@@ -26,7 +26,7 @@ from .constants import (
     WAILS_HELLO_GOLANG_PRESERVED,
     WAILS_HELLO_TYPESCRIPT_PRESERVED,
 )
-from .models import BlueprintExampleWorkspace, GrpcExampleWorkspace, WailsHelloExampleWorkspace
+from .models import BlueprintExampleWorkspace, ExampleValidationTarget, GrpcExampleWorkspace, WailsHelloExampleWorkspace
 
 def _blueprint_workspace(root: Path) -> BlueprintExampleWorkspace:
     return BlueprintExampleWorkspace(
@@ -194,6 +194,78 @@ def _prepare_blueprint_outputs(*, source_root: Path, target_root: Path) -> None:
 
 def _prepare_blueprint_go_server_output(*, source_root: Path, target_root: Path) -> None:
     (target_root / "golang" / "server").mkdir(parents=True, exist_ok=True)
+
+
+def _prepare_blueprint_target_output(
+    *,
+    source_root: Path,
+    target_root: Path,
+    target: ExampleValidationTarget,
+) -> None:
+    if target is ExampleValidationTarget.GO_SERVER:
+        _prepare_blueprint_go_server_output(source_root=source_root, target_root=target_root)
+        return
+    if target is ExampleValidationTarget.GO_CLIENT:
+        _prepare_output_dir(
+            target_root / "golang" / "client",
+            _capture_relative_files(source_root / "golang" / "client", BLUEPRINT_GOLANG_CLIENT_PRESERVED),
+        )
+        return
+    if target is ExampleValidationTarget.TYPESCRIPT_CLIENT:
+        _prepare_output_dir(
+            target_root / "typescript",
+            _capture_relative_files(source_root / "typescript", BLUEPRINT_TYPESCRIPT_PRESERVED),
+        )
+        return
+    if target is ExampleValidationTarget.PYTHON_HTTP:
+        _prepare_output_dir(
+            target_root / "python",
+            _capture_relative_files(source_root / "python", BLUEPRINT_PYTHON_PRESERVED),
+        )
+        return
+    if target is ExampleValidationTarget.KOTLIN_HTTP:
+        _prepare_output_dir(
+            target_root / "kotlin" / "client",
+            _capture_relative_files(
+                source_root / "kotlin" / "client",
+                (*BLUEPRINT_KOTLIN_PRESERVED, *BLUEPRINT_KOTLIN_CLIENT_PRESERVED),
+            ),
+        )
+        _prepare_output_dir(
+            target_root / "kotlin" / "server",
+            _capture_relative_files(source_root / "kotlin" / "server", BLUEPRINT_KOTLIN_PRESERVED),
+        )
+        return
+    if target is ExampleValidationTarget.JAVA_HTTP:
+        _prepare_output_dir(
+            target_root / "java" / "client",
+            _capture_relative_files(source_root / "java" / "client", BLUEPRINT_JAVA_CLIENT_PRESERVED),
+        )
+        _prepare_output_dir(
+            target_root / "java" / "server",
+            _capture_relative_files(source_root / "java" / "server", BLUEPRINT_JAVA_SERVER_PRESERVED),
+        )
+        return
+    if target is ExampleValidationTarget.FLUTTER_CLIENT:
+        _prepare_output_dir(
+            target_root / "flutter",
+            _capture_relative_files(source_root / "flutter", BLUEPRINT_FLUTTER_PRESERVED),
+        )
+        return
+    if target is ExampleValidationTarget.SWIFT_CLIENT:
+        _prepare_output_dir(
+            target_root / "swift",
+            _capture_relative_files(source_root / "swift", BLUEPRINT_SWIFT_PRESERVED),
+        )
+        return
+    if target is ExampleValidationTarget.WAILS_BLUEPRINT:
+        _prepare_blueprint_go_server_output(source_root=source_root, target_root=target_root)
+        _prepare_output_dir(
+            target_root / "typescript",
+            _capture_relative_files(source_root / "typescript", BLUEPRINT_TYPESCRIPT_PRESERVED),
+        )
+        return
+    raise ValueError(f"target {target.value} is not a Blueprint example target")
 
 
 def _prepare_contract_outputs(target_root: Path) -> None:

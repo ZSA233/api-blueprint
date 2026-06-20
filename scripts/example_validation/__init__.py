@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from .cli import build_parser, main
 from .compile import (
+    compile_generated_blueprint_target_example,
     compile_generated_go_server_example,
     compile_generated_examples,
     compile_generated_grpc_examples,
@@ -11,11 +12,13 @@ from .compile import (
 )
 from .constants import *
 from .generate import (
+    regenerate_blueprint_target_example,
     regenerate_blueprint_go_server_example,
     regenerate_blueprint_examples,
     regenerate_blueprint_golang_suite_examples,
     regenerate_blueprint_java_suite_examples,
     regenerate_grpc_examples,
+    regenerate_repo_blueprint_target_example,
     regenerate_repo_blueprint_go_server_example,
     regenerate_repo_blueprint_examples,
     regenerate_repo_grpc_examples,
@@ -32,22 +35,29 @@ from .models import (
     WailsHelloExampleWorkspace,
 )
 from .runner import (
+    compile_blueprint_target_examples,
     compile_blueprint_go_server_examples,
     compile_blueprint_examples,
+    compile_target_examples,
     compile_examples,
     compile_grpc_examples,
     compile_wails_hello_examples,
+    refresh_blueprint_target_examples,
     refresh_blueprint_go_server_examples,
     refresh_examples,
+    refresh_target_examples,
     run_golang_suite_examples,
     run_java_suite_examples,
+    validate_blueprint_target_examples,
     validate_blueprint_go_server_examples,
     validate_blueprint_examples,
+    validate_target_examples,
     validate_examples,
     validate_grpc_examples,
     validate_wails_hello_examples,
 )
 from .snapshot import (
+    validate_blueprint_target_snapshots,
     validate_blueprint_go_server_snapshots,
     validate_example_snapshots,
     validate_grpc_snapshots,
@@ -63,8 +73,10 @@ from .swift_smoke import (
 )
 from .tools import (
     collect_missing_go_server_validation_requirements,
+    collect_missing_target_validation_requirements,
     collect_missing_validation_requirements,
     ensure_go_server_validation_requirements,
+    ensure_target_validation_requirements,
     ensure_validation_requirements,
     resolve_gradle_bin,
     resolve_swift_bin,
@@ -74,6 +86,7 @@ from .workspace import (
     _blueprint_workspace,
     _grpc_workspace,
     _prepare_blueprint_go_server_output,
+    _prepare_blueprint_target_output,
     _prepare_blueprint_outputs,
     _prepare_contract_outputs,
     _prepare_grpc_outputs,

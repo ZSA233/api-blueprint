@@ -51,7 +51,8 @@ def build_parser() -> argparse.ArgumentParser:
         default=ExampleValidationTarget.ALL.value,
         help=(
             "Optional generated target filter. `all` preserves the existing full-scope behavior; "
-            "`go.server` refreshes or validates only the Blueprint Go server snapshot."
+            "target values such as `go.server`, `typescript.client`, `grpc`, or `wails.hello` "
+            "refresh or validate only that example slice."
         ),
     )
     return parser

@@ -1,4 +1,4 @@
-.PHONY: example-validation example-compile-check example-refresh example-refresh-go-server example-validation-go-server example-conformance example-conformance-list example-conformance-generate example-conformance-run example-conformance-check example-conformance-refresh example-golang-suite example-java-suite example-java-spring-server example-java-spring-server-benchmark
+.PHONY: example-validation example-compile-check example-refresh example-refresh-go-server example-refresh-go-client example-refresh-typescript example-refresh-python example-refresh-kotlin example-refresh-java example-refresh-flutter example-refresh-swift example-refresh-grpc example-refresh-wails example-refresh-wails-hello example-validation-go-server example-validation-go-client example-validation-typescript example-validation-python example-validation-kotlin example-validation-java example-validation-flutter example-validation-swift example-validation-grpc example-validation-wails example-validation-wails-hello example-conformance example-conformance-list example-conformance-generate example-conformance-run example-conformance-check example-conformance-refresh example-golang-suite example-java-suite example-java-spring-server example-java-spring-server-benchmark
 
 JAVA_SPRING_BENCH_ITERATIONS ?= 200000
 JAVA_SPRING_BENCH_WARMUP ?= 20000
@@ -17,8 +17,68 @@ example-refresh:
 example-refresh-go-server:
 	uv run python scripts/example_validation.py --mode refresh --target go.server
 
+example-refresh-go-client:
+	uv run python scripts/example_validation.py --mode refresh --target go.client
+
+example-refresh-typescript:
+	uv run python scripts/example_validation.py --mode refresh --target typescript.client
+
+example-refresh-python:
+	uv run python scripts/example_validation.py --mode refresh --target python.http
+
+example-refresh-kotlin:
+	uv run python scripts/example_validation.py --mode refresh --target kotlin.http
+
+example-refresh-java:
+	uv run python scripts/example_validation.py --mode refresh --target java.http
+
+example-refresh-flutter:
+	uv run python scripts/example_validation.py --mode refresh --target flutter.client
+
+example-refresh-swift:
+	uv run python scripts/example_validation.py --mode refresh --target swift.client
+
+example-refresh-grpc:
+	uv run python scripts/example_validation.py --mode refresh --target grpc
+
+example-refresh-wails:
+	uv run python scripts/example_validation.py --mode refresh --target wails.blueprint
+
+example-refresh-wails-hello:
+	uv run python scripts/example_validation.py --mode refresh --target wails.hello
+
 example-validation-go-server:
 	uv run python scripts/example_validation.py --target go.server
+
+example-validation-go-client:
+	uv run python scripts/example_validation.py --target go.client
+
+example-validation-typescript:
+	uv run python scripts/example_validation.py --target typescript.client
+
+example-validation-python:
+	uv run python scripts/example_validation.py --target python.http
+
+example-validation-kotlin:
+	uv run python scripts/example_validation.py --target kotlin.http
+
+example-validation-java:
+	uv run python scripts/example_validation.py --target java.http
+
+example-validation-flutter:
+	uv run python scripts/example_validation.py --target flutter.client
+
+example-validation-swift:
+	uv run python scripts/example_validation.py --target swift.client
+
+example-validation-grpc:
+	uv run python scripts/example_validation.py --target grpc
+
+example-validation-wails:
+	uv run python scripts/example_validation.py --target wails.blueprint
+
+example-validation-wails-hello:
+	uv run python scripts/example_validation.py --target wails.hello
 
 example-conformance:
 	@$(MAKE) example-conformance-check

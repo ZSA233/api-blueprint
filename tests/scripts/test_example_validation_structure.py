@@ -13,9 +13,12 @@ def test_example_validation_is_package_with_compatibility_exports() -> None:
     assert module.__path__
     assert module.ExampleValidationScope.BLUEPRINT.value == "blueprint"
     assert module.ExampleValidationTarget.GO_SERVER.value == "go.server"
+    assert module.ExampleValidationTarget.PYTHON_HTTP.value == "python.http"
+    assert module.ExampleValidationTarget.WAILS_HELLO.value == "wails.hello"
     assert callable(module.validate_examples)
     assert callable(module._prepare_blueprint_outputs)
     assert callable(module._prepare_blueprint_go_server_output)
+    assert callable(module._prepare_blueprint_target_output)
 
 
 def test_prepare_blueprint_go_server_output_keeps_colocated_wails_outputs(tmp_path) -> None:
@@ -78,3 +81,5 @@ def test_example_validation_legacy_script_entrypoint_still_works() -> None:
     assert "Validate or refresh generated example snapshots" in result.stdout
     assert "--scope" in result.stdout
     assert "--target" in result.stdout
+    assert "typescript.client" in result.stdout
+    assert "wails.hello" in result.stdout

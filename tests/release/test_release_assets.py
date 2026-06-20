@@ -25,7 +25,27 @@ def test_makefile_exposes_example_validation_and_release_preflight_uses_it():
     compile_block = _target_block(text, "example-compile-check")
     refresh_block = _target_block(text, "example-refresh")
     refresh_go_server_block = _target_block(text, "example-refresh-go-server")
+    refresh_go_client_block = _target_block(text, "example-refresh-go-client")
+    refresh_typescript_block = _target_block(text, "example-refresh-typescript")
+    refresh_python_block = _target_block(text, "example-refresh-python")
+    refresh_kotlin_block = _target_block(text, "example-refresh-kotlin")
+    refresh_java_block = _target_block(text, "example-refresh-java")
+    refresh_flutter_block = _target_block(text, "example-refresh-flutter")
+    refresh_swift_block = _target_block(text, "example-refresh-swift")
+    refresh_grpc_block = _target_block(text, "example-refresh-grpc")
+    refresh_wails_block = _target_block(text, "example-refresh-wails")
+    refresh_wails_hello_block = _target_block(text, "example-refresh-wails-hello")
     validation_go_server_block = _target_block(text, "example-validation-go-server")
+    validation_go_client_block = _target_block(text, "example-validation-go-client")
+    validation_typescript_block = _target_block(text, "example-validation-typescript")
+    validation_python_block = _target_block(text, "example-validation-python")
+    validation_kotlin_block = _target_block(text, "example-validation-kotlin")
+    validation_java_block = _target_block(text, "example-validation-java")
+    validation_flutter_block = _target_block(text, "example-validation-flutter")
+    validation_swift_block = _target_block(text, "example-validation-swift")
+    validation_grpc_block = _target_block(text, "example-validation-grpc")
+    validation_wails_block = _target_block(text, "example-validation-wails")
+    validation_wails_hello_block = _target_block(text, "example-validation-wails-hello")
     conformance_block = _target_block(text, "example-conformance")
     conformance_list_block = _target_block(text, "example-conformance-list")
     conformance_generate_block = _target_block(text, "example-conformance-generate")
@@ -63,7 +83,27 @@ def test_makefile_exposes_example_validation_and_release_preflight_uses_it():
     assert "uv run python scripts/example_validation.py --mode compile" in compile_block
     assert "uv run python scripts/example_validation.py --mode refresh" in refresh_block
     assert "uv run python scripts/example_validation.py --mode refresh --target go.server" in refresh_go_server_block
+    assert "uv run python scripts/example_validation.py --mode refresh --target go.client" in refresh_go_client_block
+    assert "uv run python scripts/example_validation.py --mode refresh --target typescript.client" in refresh_typescript_block
+    assert "uv run python scripts/example_validation.py --mode refresh --target python.http" in refresh_python_block
+    assert "uv run python scripts/example_validation.py --mode refresh --target kotlin.http" in refresh_kotlin_block
+    assert "uv run python scripts/example_validation.py --mode refresh --target java.http" in refresh_java_block
+    assert "uv run python scripts/example_validation.py --mode refresh --target flutter.client" in refresh_flutter_block
+    assert "uv run python scripts/example_validation.py --mode refresh --target swift.client" in refresh_swift_block
+    assert "uv run python scripts/example_validation.py --mode refresh --target grpc" in refresh_grpc_block
+    assert "uv run python scripts/example_validation.py --mode refresh --target wails.blueprint" in refresh_wails_block
+    assert "uv run python scripts/example_validation.py --mode refresh --target wails.hello" in refresh_wails_hello_block
     assert "uv run python scripts/example_validation.py --target go.server" in validation_go_server_block
+    assert "uv run python scripts/example_validation.py --target go.client" in validation_go_client_block
+    assert "uv run python scripts/example_validation.py --target typescript.client" in validation_typescript_block
+    assert "uv run python scripts/example_validation.py --target python.http" in validation_python_block
+    assert "uv run python scripts/example_validation.py --target kotlin.http" in validation_kotlin_block
+    assert "uv run python scripts/example_validation.py --target java.http" in validation_java_block
+    assert "uv run python scripts/example_validation.py --target flutter.client" in validation_flutter_block
+    assert "uv run python scripts/example_validation.py --target swift.client" in validation_swift_block
+    assert "uv run python scripts/example_validation.py --target grpc" in validation_grpc_block
+    assert "uv run python scripts/example_validation.py --target wails.blueprint" in validation_wails_block
+    assert "uv run python scripts/example_validation.py --target wails.hello" in validation_wails_hello_block
     assert "$(MAKE) example-conformance-check" in conformance_block
     assert "uv run python -m scripts.example_conformance list" in conformance_list_block
     assert "uv run python -m scripts.example_conformance generate" in conformance_generate_block
@@ -116,17 +156,26 @@ def test_ci_and_release_bundle_share_example_toolchain_setup():
     assert "./.github/actions/setup-example-toolchains" in ci_text
     assert "workflow_dispatch" in example_validation_job
     assert "refs/heads/release/" in example_validation_job
+    assert "matrix:" in example_validation_job
+    assert "target: go.server" in example_validation_job
+    assert "target: python.http" in example_validation_job
+    assert "target: wails.hello" in example_validation_job
+    assert 'uv run python scripts/example_validation.py --target "${{ matrix.target }}"' in example_validation_job
     assert "example-validation" not in python_tests_job
     assert "release-contract" in python_tests_job
     assert "./.github/actions/setup-example-toolchains" in release_bundle_text
     assert 'run: make release-tag-check RELEASE_TAG="${{ inputs.release_tag }}"' in release_bundle_text
     assert "make release-preflight" not in release_bundle_text
     assert "actions/setup-java@v5" in toolchain_text
+    assert "inputs:" in toolchain_text
+    assert "inputs.java == 'true'" in toolchain_text
     assert 'java-version: "17"' in toolchain_text
     assert "actions/setup-go@v6" in toolchain_text
     assert "actions/setup-node@v6" in toolchain_text
     assert 'node-version: "24"' in toolchain_text
     assert "examples/golang/server/go.sum" in toolchain_text
+    assert "examples/golang/client/go.sum" in toolchain_text
+    assert "examples/grpc/go/go.sum" in toolchain_text
     assert "protobuf-compiler" not in toolchain_text
     assert toolchain_text.count("apt-get update") == 1
     assert "github.com/abice/go-enum@v0.9.2" in toolchain_text

@@ -8,17 +8,20 @@ from pathlib import Path
 
 from .constants import GRADLE_BIN_ENV
 from .compile import (
+    compile_generated_blueprint_target_example,
     compile_generated_go_server_example,
     compile_generated_examples,
     compile_generated_grpc_examples,
     compile_wails_hello_example,
 )
 from .generate import (
+    regenerate_blueprint_target_example,
     regenerate_blueprint_go_server_example,
     regenerate_blueprint_examples,
     regenerate_blueprint_golang_suite_examples,
     regenerate_blueprint_java_suite_examples,
     regenerate_grpc_examples,
+    regenerate_repo_blueprint_target_example,
     regenerate_repo_blueprint_go_server_example,
     regenerate_repo_blueprint_examples,
     regenerate_repo_grpc_examples,
@@ -27,12 +30,13 @@ from .generate import (
 )
 from .models import ExampleValidationError, ExampleValidationScope, ExampleValidationTarget
 from .snapshot import (
+    validate_blueprint_target_snapshots,
     validate_blueprint_go_server_snapshots,
     validate_example_snapshots,
     validate_grpc_snapshots,
     validate_wails_hello_snapshots,
 )
-from .tools import ensure_go_server_validation_requirements, ensure_validation_requirements, resolve_gradle_bin
+from .tools import ensure_go_server_validation_requirements, ensure_target_validation_requirements, ensure_validation_requirements, resolve_gradle_bin
 from .workspace import _blueprint_workspace, prepare_blueprint_workspace, prepare_grpc_workspace, prepare_wails_hello_workspace
 
 def validate_examples(
@@ -40,9 +44,8 @@ def validate_examples(
     scope: ExampleValidationScope = ExampleValidationScope.ALL,
     target: ExampleValidationTarget = ExampleValidationTarget.ALL,
 ) -> None:
-    if target is ExampleValidationTarget.GO_SERVER:
-        _ensure_blueprint_target_scope(scope=scope, target=target)
-        validate_blueprint_go_server_examples(repo_root)
+    if target is not ExampleValidationTarget.ALL:
+        validate_target_examples(repo_root, scope=scope, target=target)
         return
     if scope is ExampleValidationScope.BLUEPRINT:
         validate_blueprint_examples(repo_root)
@@ -96,6 +99,39 @@ def validate_blueprint_go_server_examples(repo_root: Path) -> None:
         shutil.rmtree(blueprint_workspace.root, ignore_errors=True)
 
 
+def validate_blueprint_target_examples(repo_root: Path, target: ExampleValidationTarget) -> None:
+    ensure_target_validation_requirements(target)
+    blueprint_workspace = prepare_blueprint_workspace(repo_root)
+    try:
+        regenerate_blueprint_target_example(blueprint_workspace, target)
+        validate_blueprint_target_snapshots(repo_root, blueprint_workspace, target)
+        compile_generated_blueprint_target_example(blueprint_workspace, target)
+    finally:
+        shutil.rmtree(blueprint_workspace.root, ignore_errors=True)
+
+
+def validate_target_examples(
+    repo_root: Path,
+    *,
+    scope: ExampleValidationScope,
+    target: ExampleValidationTarget,
+) -> None:
+    if target is ExampleValidationTarget.GRPC:
+        _ensure_scope(scope=scope, target=target, allowed=(ExampleValidationScope.ALL, ExampleValidationScope.GRPC))
+        validate_grpc_examples(repo_root)
+        return
+    if target is ExampleValidationTarget.WAILS_HELLO:
+        _ensure_scope(
+            scope=scope,
+            target=target,
+            allowed=(ExampleValidationScope.ALL, ExampleValidationScope.WAILS_HELLO),
+        )
+        validate_wails_hello_examples(repo_root)
+        return
+    _ensure_blueprint_target_scope(scope=scope, target=target)
+    validate_blueprint_target_examples(repo_root, target)
+
+
 def validate_grpc_examples(repo_root: Path) -> None:
     ensure_validation_requirements(ExampleValidationScope.GRPC)
     grpc_workspace = prepare_grpc_workspace(repo_root)
@@ -123,9 +159,8 @@ def compile_examples(
     scope: ExampleValidationScope = ExampleValidationScope.ALL,
     target: ExampleValidationTarget = ExampleValidationTarget.ALL,
 ) -> None:
-    if target is ExampleValidationTarget.GO_SERVER:
-        _ensure_blueprint_target_scope(scope=scope, target=target)
-        compile_blueprint_go_server_examples(repo_root)
+    if target is not ExampleValidationTarget.ALL:
+        compile_target_examples(repo_root, scope=scope, target=target)
         return
     if scope is ExampleValidationScope.BLUEPRINT:
         compile_blueprint_examples(repo_root)
@@ -172,6 +207,38 @@ def compile_blueprint_go_server_examples(repo_root: Path) -> None:
         compile_generated_go_server_example(blueprint_workspace)
     finally:
         shutil.rmtree(blueprint_workspace.root, ignore_errors=True)
+
+
+def compile_blueprint_target_examples(repo_root: Path, target: ExampleValidationTarget) -> None:
+    ensure_target_validation_requirements(target)
+    blueprint_workspace = prepare_blueprint_workspace(repo_root)
+    try:
+        regenerate_blueprint_target_example(blueprint_workspace, target)
+        compile_generated_blueprint_target_example(blueprint_workspace, target)
+    finally:
+        shutil.rmtree(blueprint_workspace.root, ignore_errors=True)
+
+
+def compile_target_examples(
+    repo_root: Path,
+    *,
+    scope: ExampleValidationScope,
+    target: ExampleValidationTarget,
+) -> None:
+    if target is ExampleValidationTarget.GRPC:
+        _ensure_scope(scope=scope, target=target, allowed=(ExampleValidationScope.ALL, ExampleValidationScope.GRPC))
+        compile_grpc_examples(repo_root)
+        return
+    if target is ExampleValidationTarget.WAILS_HELLO:
+        _ensure_scope(
+            scope=scope,
+            target=target,
+            allowed=(ExampleValidationScope.ALL, ExampleValidationScope.WAILS_HELLO),
+        )
+        compile_wails_hello_examples(repo_root)
+        return
+    _ensure_blueprint_target_scope(scope=scope, target=target)
+    compile_blueprint_target_examples(repo_root, target)
 
 
 def compile_grpc_examples(repo_root: Path) -> None:
@@ -235,9 +302,8 @@ def refresh_examples(
     scope: ExampleValidationScope = ExampleValidationScope.ALL,
     target: ExampleValidationTarget = ExampleValidationTarget.ALL,
 ) -> None:
-    if target is ExampleValidationTarget.GO_SERVER:
-        _ensure_blueprint_target_scope(scope=scope, target=target)
-        refresh_blueprint_go_server_examples(repo_root)
+    if target is not ExampleValidationTarget.ALL:
+        refresh_target_examples(repo_root, scope=scope, target=target)
         return
     ensure_validation_requirements(scope)
     if scope in (ExampleValidationScope.ALL, ExampleValidationScope.BLUEPRINT):
@@ -255,7 +321,50 @@ def refresh_blueprint_go_server_examples(repo_root: Path) -> None:
     compile_generated_go_server_example(_blueprint_workspace(repo_root / "examples"))
 
 
+def refresh_blueprint_target_examples(repo_root: Path, target: ExampleValidationTarget) -> None:
+    ensure_target_validation_requirements(target)
+    regenerate_repo_blueprint_target_example(repo_root, target)
+    compile_generated_blueprint_target_example(_blueprint_workspace(repo_root / "examples"), target)
+
+
+def refresh_target_examples(
+    repo_root: Path,
+    *,
+    scope: ExampleValidationScope,
+    target: ExampleValidationTarget,
+) -> None:
+    ensure_target_validation_requirements(target)
+    if target is ExampleValidationTarget.GRPC:
+        _ensure_scope(scope=scope, target=target, allowed=(ExampleValidationScope.ALL, ExampleValidationScope.GRPC))
+        regenerate_repo_grpc_examples(repo_root)
+        compile_generated_grpc_examples(_grpc_workspace(repo_root / "examples"))
+        return
+    if target is ExampleValidationTarget.WAILS_HELLO:
+        _ensure_scope(
+            scope=scope,
+            target=target,
+            allowed=(ExampleValidationScope.ALL, ExampleValidationScope.WAILS_HELLO),
+        )
+        regenerate_repo_wails_hello_example(repo_root)
+        compile_wails_hello_example(_wails_hello_workspace(repo_root / "examples" / "wails-hello"))
+        return
+    _ensure_blueprint_target_scope(scope=scope, target=target)
+    refresh_blueprint_target_examples(repo_root, target)
+
+
 def _ensure_blueprint_target_scope(*, scope: ExampleValidationScope, target: ExampleValidationTarget) -> None:
     if scope in (ExampleValidationScope.ALL, ExampleValidationScope.BLUEPRINT):
         return
     raise ExampleValidationError(f"{target.value} target validation only supports --scope blueprint")
+
+
+def _ensure_scope(
+    *,
+    scope: ExampleValidationScope,
+    target: ExampleValidationTarget,
+    allowed: tuple[ExampleValidationScope, ...],
+) -> None:
+    if scope in allowed:
+        return
+    allowed_values = ", ".join(item.value for item in allowed)
+    raise ExampleValidationError(f"{target.value} target validation only supports --scope {allowed_values}")
