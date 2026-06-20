@@ -55,6 +55,7 @@ class ApiRequest:
     method: str
     path: str
     route_id: str = ""
+    path_params: Mapping[str, Any] | None = None
     query: Mapping[str, Any] | None = None
     json: Any = None
     form: Mapping[str, Any] | None = None

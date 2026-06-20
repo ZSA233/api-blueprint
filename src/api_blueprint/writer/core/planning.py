@@ -132,7 +132,7 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
     "python-client": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
+        requests=("path", "query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
         responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),

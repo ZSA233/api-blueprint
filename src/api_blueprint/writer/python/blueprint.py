@@ -89,6 +89,7 @@ class PythonRoute:
         self.binary_schema = protocol.request.binary_schema
         self.response_binary_schema = protocol.response.binary_schema
         self.registry = registry
+        self.path_type = registry.resolve_schema(protocol.request.path.schema, class_name=self.public_names.path)
         self.query_type = registry.resolve_schema(protocol.request.query.schema, class_name=self.public_names.query)
         self.json_type = registry.resolve_schema(protocol.request.json.schema, class_name=self.public_names.json)
         self.form_type = registry.resolve_schema(protocol.request.form.schema, class_name=self.public_names.form)
@@ -321,6 +322,8 @@ class PythonRoute:
 
     def _request_params(self) -> list[PythonRequestParam]:
         params: list[PythonRequestParam] = []
+        if self.protocol.request.path.model is not None:
+            params.append(_request_param("path", "path_params", self.path_type))
         if self.protocol.request.query.model is not None:
             params.append(_request_param("query", "query", self.query_type))
         if self.protocol.request.json.model is not None:

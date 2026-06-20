@@ -40,7 +40,7 @@ def test_route_public_names_use_operation_id_and_route_local_suffixes() -> None:
     assert names.response == "PutDemoResponse"
 
 
-def test_path_request_capability_is_go_first_and_fails_fast_elsewhere() -> None:
+def test_path_request_capability_supports_go_python_and_fails_fast_elsewhere() -> None:
     class PathModel(Model):
         item = String(description="item")
 
@@ -52,16 +52,15 @@ def test_path_request_capability_is_go_first_and_fails_fast_elsewhere() -> None:
     supported = [
         ResolvedApiTargetConfig(id="go.client", kind="go-client", out_dir=None, module="example.com/client"),
         ResolvedApiTargetConfig(id="go.server", kind="go-server", out_dir=None, module="example.com/server"),
+        ResolvedApiTargetConfig(id="python.client", kind="python-client", out_dir=None),
         ResolvedApiTargetConfig(id="ir.plugin", kind="ir-plugin", out_dir=None, plugin="demo:Plugin"),
     ]
     unsupported = [
-        ResolvedApiTargetConfig(id="python.client", kind="python-client", out_dir=None),
         ResolvedApiTargetConfig(id="typescript.client", kind="typescript-client", out_dir=None),
     ]
 
     assert capability_errors(graph, supported) == []
     errors = capability_errors(graph, unsupported)
-    assert any("python-client does not support path request route: api.demo.get.items_item" in error for error in errors)
     assert any("typescript-client does not support path request route: api.demo.get.items_item" in error for error in errors)
 
 
