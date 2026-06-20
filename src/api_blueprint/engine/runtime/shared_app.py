@@ -3,8 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.staticfiles import StaticFiles
+
+from api_blueprint.engine.runtime.docs import ensure_docs_gzip, install_api_blueprint_docs
 
 
 _SHARED_APP: FastAPI | None = None
@@ -28,24 +29,9 @@ def build_default_app(title: str) -> FastAPI:
         docs_url=None,
         redoc_url=None,
     )
+    ensure_docs_gzip(app)
     here = Path(__file__).resolve().parents[1]
     app.mount("/static", StaticFiles(directory=here.parent / "static"), name="static")
-
-    @app.get("/redoc", include_in_schema=False)
-    def redoc():
-        return get_redoc_html(
-            openapi_url=app.openapi_url,
-            title="API Docs",
-            redoc_js_url="/static/redoc.standalone.js",
-        )
-
-    @app.get("/docs", include_in_schema=False)
-    def docs():
-        return get_swagger_ui_html(
-            openapi_url=app.openapi_url,
-            title="API Docs",
-            swagger_js_url="/static/swagger-ui-bundle.js",
-            swagger_css_url="/static/swagger-ui.css",
-        )
+    install_api_blueprint_docs(app)
 
     return app

@@ -313,10 +313,12 @@ For complete generated examples, see `/api/demo/sweep-events` and `/api/demo/ass
 
 ## Documentation Output
 
-`api-doc-server` loads `[blueprint].entrypoints` and builds FastAPI/OpenAPI documentation from Blueprint objects.
+`api-doc-server` loads `[blueprint].entrypoints` and builds FastAPI/OpenAPI documentation from Blueprint objects. By default, `/` and `/docs` both serve the api-blueprint docs center: it loads a lightweight route index first, then opens sliced Swagger views by group, tag, kind, or route selection so large APIs do not render one full Swagger page at once.
 
 ```sh
 api-doc-server -c api-blueprint.toml
 ```
+
+The full `/openapi.json` remains available for external OpenAPI tools. `STREAM` routes appear in the route index and in HTTP docs as SSE routes; `CHANNEL` routes appear in protocol details in the route index but are not forced into standard OpenAPI.
 
 When `[blueprint].docs_server` uses `host:0`, startup output prints the actual docs or hub URL with the bound port.

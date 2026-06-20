@@ -90,6 +90,8 @@ api-gen check -c api-blueprint.toml
 api-gen generate -c api-blueprint.toml
 ```
 
+默认 `/` 与 `/docs` 都是 api-blueprint 文档中心，会按 group、tag、kind 和搜索结果打开更小的 Swagger 切片；完整 `/openapi.json` 仍保留给外部工具。
+
 更完整的项目目录、配置字段、DSL、生成器输出、typed error、Response Envelope、Markdown Binary Schema、Wails 和 gRPC 说明见 [快速开始](docs/zh/getting-started.md)、[配置说明](docs/zh/configuration.md) 与下面的专题文档。
 
 ## 常用目标

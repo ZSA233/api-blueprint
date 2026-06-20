@@ -313,10 +313,12 @@ API 规则：
 
 ## 文档输出
 
-`api-doc-server` 会加载 `[blueprint].entrypoints`，基于 Blueprint 构建 FastAPI/OpenAPI 文档。
+`api-doc-server` 会加载 `[blueprint].entrypoints`，基于 Blueprint 构建 FastAPI/OpenAPI 文档。默认 `/` 与 `/docs` 都是 api-blueprint 文档中心，会先加载轻量 route index，再按 group、tag、kind 或 route 选择打开 sliced Swagger，避免大接口集合一次性渲染完整 Swagger。
 
 ```sh
 api-doc-server -c api-blueprint.toml
 ```
+
+完整 `/openapi.json` 继续保留给外部 OpenAPI 工具。`STREAM` 会进入 route index，并在 HTTP 文档中按 SSE route 展示；`CHANNEL` 会进入 route index 的协议详情，但不会强行塞进标准 OpenAPI。
 
 当 `[blueprint].docs_server` 使用 `host:0` 时，启动输出会打印带真实绑定端口的 docs 或 hub URL。

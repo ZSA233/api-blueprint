@@ -18,7 +18,12 @@ def test_example_blueprints_build_into_shared_fastapi_app(example_entrypoints):
 
     app = entrypoints[0].app
     paths = {route.path for route in app.routes if getattr(route, "path", None)}
+    assert "/" in paths
     assert "/docs" in paths
+    assert "/docs/index.json" in paths
+    assert "/docs/openapi.json" in paths
+    assert "/docs/swagger" in paths
+    assert "/docs/redoc" not in paths
     assert "/redoc" in paths
     assert "/openapi.json" in paths
     assert "/api/demo/abc" in paths
@@ -38,7 +43,7 @@ def test_example_blueprints_build_into_shared_fastapi_app(example_entrypoints):
     assert "/api/hello/hello-way" in paths
     assert "/runtime/status/current" in paths
     assert "/static/doc.json" in paths
-    assert len(paths) == 45
+    assert len(paths) == 49
 
     openapi = app.openapi()
     assert "text/event-stream" in openapi["paths"]["/api/demo/sweep-events"]["get"]["responses"]["200"]["content"]

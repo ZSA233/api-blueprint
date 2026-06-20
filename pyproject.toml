@@ -59,6 +59,7 @@ path = "src/api_blueprint/_version.py"
 [tool.hatch.build]
 include = [
     "src/api_blueprint/**/*.py",
+    "src/api_blueprint/engine/runtime/templates/**/*",
     "src/api_blueprint/hub/templates/**/*",
     "src/api_blueprint/static/**/*",
     "src/api_blueprint/writer/templates/**/*",

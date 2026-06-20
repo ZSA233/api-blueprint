@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ title }} Docs</title>
+    <link href="/static/bootstrap.min.css" rel="stylesheet" />
+    <script>
+        const DOCS_THEME_KEY = "api-blueprint-docs-theme";
+        const DOCS_SIDEBAR_WIDTH_KEY = "api-blueprint-docs-sidebar-width";
+        const storedTheme = localStorage.getItem(DOCS_THEME_KEY);
+        const preferredTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.dataset.theme = storedTheme || preferredTheme;
+    </script>
+    <style>
+        :root {
+            --bg: #f5f7fb;
+            --panel: #ffffff;
+            --panel-subtle: #f8fafc;
+            --line: #d8dee8;
+            --ink: #1f2937;
+            --muted: #667085;
+            --accent: #2563eb;
+            --accent-soft: #e8f0ff;
+            --accent-line: #bfd2ff;
+            --resizer: #c5cfdd;
+            --scroll-thumb: #bcc7d6;
+            --shadow: rgba(15, 23, 42, 0.08);
+            --sidebar-width: 340px;
+        }
+
+        :root[data-theme="dark"] {
+            --bg: #10151f;
+            --panel: #171f2c;
+            --panel-subtle: #1d2736;
+            --line: #2d3a4f;
+            --ink: #e5e7eb;
+            --muted: #9ca3af;
+            --accent: #7aa2ff;
+            --accent-soft: #182747;
+            --accent-line: #35558f;
+            --resizer: #40516e;
+            --scroll-thumb: #44546d;
+            --shadow: rgba(0, 0, 0, 0.32);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--ink);
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            margin: 0;
+        }
+
+        button,
+        input {
+            font: inherit;
+        }
+
+        .shell {
+            display: grid;
+            grid-template-columns: var(--sidebar-width) 8px minmax(0, 1fr);
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            background: var(--panel);
+            height: 100vh;
+            min-width: 0;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            padding: 20px;
+            position: sticky;
+            scrollbar-color: var(--scroll-thumb) transparent;
+            scrollbar-gutter: stable;
+            scrollbar-width: thin;
+            top: 0;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--scroll-thumb);
+            border: 3px solid var(--panel);
+            border-radius: 999px;
+        }
+
+        .sidebar-resizer {
+            background: var(--panel);
+            border-left: 1px solid var(--line);
+            border-right: 1px solid var(--line);
+            cursor: col-resize;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            touch-action: none;
+        }
+
+        .sidebar-resizer::before {
+            background: transparent;
+            border-radius: 999px;
+            content: "";
+            display: block;
+            height: 44px;
+            margin: calc(50vh - 22px) auto 0;
+            width: 2px;
+        }
+
+        .sidebar-resizer:hover::before,
+        .sidebar-resizer:focus-visible::before,
+        body.resizing-sidebar .sidebar-resizer::before {
+            background: var(--resizer);
+        }
+
+        body.resizing-sidebar {
+            cursor: col-resize;
+            user-select: none;
+        }
+
+        .brand-row {
+            align-items: flex-start;
+            display: flex;
+            gap: 12px;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+
+        .brand {
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 1.2;
+            overflow-wrap: anywhere;
+        }
+
+        .meta {
+            color: var(--muted);
+            font-size: 13px;
+            margin-top: 5px;
+        }
+
+        .theme-toggle {
+            align-items: center;
+            background: var(--panel-subtle);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            color: var(--ink);
+            display: inline-flex;
+            height: 36px;
+            justify-content: center;
+            padding: 0;
+            width: 36px;
+        }
+
+        .icon-slot {
+            align-items: center;
+            display: inline-flex;
+            flex: 0 0 auto;
+            justify-content: center;
+        }
+
+        .icon {
+            display: block;
+            fill: none;
+            height: 14px;
+            stroke: currentColor;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-width: 1.9;
+            width: 14px;
+        }
+
+        .theme-toggle .icon {
+            height: 16px;
+            width: 16px;
+        }
+
+        .search {
+            background: var(--panel-subtle);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            color: var(--ink);
+            margin-bottom: 16px;
+            padding: 10px 12px;
+            width: 100%;
+        }
+
+        .search::placeholder {
+            color: var(--muted);
+        }
+
+        .filter-section {
+            border-top: 1px solid var(--line);
+            margin-top: 14px;
+            padding-top: 10px;
+        }
+
+        .filter-heading {
+            align-items: center;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            color: var(--muted);
+            display: flex;
+            font-size: 12px;
+            font-weight: 700;
+            justify-content: space-between;
+            letter-spacing: .08em;
+            margin: 0 0 8px;
+            padding: 7px 9px;
+            text-transform: uppercase;
+            width: 100%;
+        }
+
+        .filter-heading:hover {
+            background: var(--panel-subtle);
+            border-color: var(--line);
+            color: var(--ink);
+        }
+
+        .filter-body[hidden] {
+            display: none;
+        }
+
+        .filter-list {
+            display: grid;
+            gap: 6px;
+        }
+
+        .filter-button,
+        .tree-filter {
+            align-items: center;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            color: var(--ink);
+            display: flex;
+            font-size: 14px;
+            gap: 8px;
+            justify-content: space-between;
+            min-width: 0;
+            padding: 7px 9px;
+            text-align: left;
+            width: 100%;
+        }
+
+        .filter-button:hover,
+        .filter-button.active,
+        .tree-filter:hover,
+        .tree-filter.active {
+            background: var(--accent-soft);
+            border-color: var(--accent-line);
+            color: var(--accent);
+        }
+
+        .filter-label,
+        .tree-label {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .filter-count,
+        .tree-count {
+            color: var(--muted);
+            flex: 0 0 auto;
+            font-size: 12px;
+        }
+
+        .tree {
+            display: grid;
+            gap: 3px;
+        }
+
+        .tree-node {
+            display: grid;
+            gap: 3px;
+        }
+
+        .tree-row {
+            align-items: center;
+            display: grid;
+            gap: 4px;
+            grid-template-columns: 24px minmax(0, 1fr);
+            min-width: 0;
+        }
+
+        .tree-row.depth-1 {
+            padding-left: 14px;
+        }
+
+        .tree-row.depth-2 {
+            padding-left: 28px;
+        }
+
+        .tree-row.depth-3 {
+            padding-left: 42px;
+        }
+
+        .tree-row.depth-4,
+        .tree-row.depth-5,
+        .tree-row.depth-6 {
+            padding-left: 56px;
+        }
+
+        .tree-toggle {
+            align-items: center;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 5px;
+            color: var(--muted);
+            display: inline-flex;
+            height: 24px;
+            justify-content: center;
+            padding: 0;
+            width: 24px;
+        }
+
+        .tree-toggle:hover {
+            background: var(--panel-subtle);
+            border-color: var(--line);
+            color: var(--ink);
+        }
+
+        .main {
+            padding: 24px;
+        }
+
+        .toolbar {
+            align-items: center;
+            display: flex;
+            gap: 12px;
+            justify-content: space-between;
+            margin-bottom: 18px;
+        }
+
+        .toolbar h1 {
+            font-size: 24px;
+            line-height: 1.2;
+            margin: 0;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .action {
+            border-radius: 6px;
+            font-size: 14px;
+            padding: 8px 10px;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .action.primary {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .action.secondary {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            color: var(--ink);
+        }
+
+        .content {
+            display: grid;
+            gap: 16px;
+            grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+        }
+
+        .route-list,
+        .detail {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            box-shadow: 0 12px 32px var(--shadow);
+            overflow: hidden;
+        }
+
+        .route-item {
+            border-bottom: 1px solid var(--line);
+            cursor: pointer;
+            padding: 12px 14px;
+        }
+
+        .route-item:last-child {
+            border-bottom: 0;
+        }
+
+        .route-item:hover,
+        .route-item.active {
+            background: var(--panel-subtle);
+        }
+
+        .route-top {
+            align-items: center;
+            display: flex;
+            gap: 8px;
+            justify-content: space-between;
+        }
+
+        .method {
+            border-radius: 4px;
+            color: #fff;
+            display: inline-block;
+            flex: 0 0 auto;
+            font-size: 12px;
+            font-weight: 700;
+            min-width: 58px;
+            padding: 3px 6px;
+            text-align: center;
+        }
+
+        .method.rpc {
+            background: #2563eb;
+        }
+
+        .method.stream {
+            background: #0f766e;
+        }
+
+        .method.channel {
+            background: #7c3aed;
+        }
+
+        .path {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 13px;
+            overflow-wrap: anywhere;
+            text-align: right;
+        }
+
+        .route-id {
+            color: var(--muted);
+            font-size: 12px;
+            margin-top: 6px;
+            overflow-wrap: anywhere;
+        }
+
+        .detail {
+            height: fit-content;
+            padding: 16px;
+            position: sticky;
+            top: 24px;
+        }
+
+        .detail h2 {
+            font-size: 18px;
+            margin: 0 0 8px;
+            overflow-wrap: anywhere;
+        }
+
+        .detail-section {
+            border-top: 1px solid var(--line);
+            margin-top: 12px;
+            padding-top: 12px;
+        }
+
+        .kv {
+            display: grid;
+            gap: 6px;
+            font-size: 13px;
+        }
+
+        .kv div {
+            display: grid;
+            gap: 8px;
+            grid-template-columns: 92px minmax(0, 1fr);
+        }
+
+        .kv span:first-child {
+            color: var(--muted);
+        }
+
+        .mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            overflow-wrap: anywhere;
+        }
+
+        .empty {
+            color: var(--muted);
+            padding: 24px;
+            text-align: center;
+        }
+
+        @media (max-width: 980px) {
+            .shell,
+            .content {
+                display: block;
+            }
+
+            .sidebar,
+            .sidebar-resizer,
+            .detail {
+                height: auto;
+                position: static;
+            }
+
+            .sidebar-resizer {
+                display: none;
+            }
+
+            .detail {
+                margin-top: 16px;
+            }
+
+            .toolbar {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="shell">
+        <aside class="sidebar">
+            <div class="brand-row">
+                <div>
+                    <div class="brand">{{ title }}</div>
+                    <div class="meta"><span id="route-count">0</span> routes</div>
+                </div>
+                <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme">
+                    <span class="icon-slot" data-icon-slot aria-hidden="true"></span>
+                </button>
+            </div>
+            <input id="search" class="search" type="search" placeholder="Search routes, groups, tags, kinds" autocomplete="off" />
+
+            <section class="filter-section">
+                <button class="filter-heading" type="button" data-section-toggle="groups" aria-expanded="true">
+                    <span>Groups</span>
+                    <span class="icon-slot" data-icon-slot aria-hidden="true"></span>
+                </button>
+                <div id="groups" class="tree filter-body" data-section-body="groups"></div>
+            </section>
+
+            <section class="filter-section">
+                <button class="filter-heading" type="button" data-section-toggle="kinds" aria-expanded="true">
+                    <span>Kinds</span>
+                    <span class="icon-slot" data-icon-slot aria-hidden="true"></span>
+                </button>
+                <div id="kinds" class="filter-list filter-body" data-section-body="kinds"></div>
+            </section>
+
+            <section class="filter-section">
+                <button class="filter-heading" type="button" data-section-toggle="tags" aria-expanded="true">
+                    <span>Tags</span>
+                    <span class="icon-slot" data-icon-slot aria-hidden="true"></span>
+                </button>
+                <div id="tags" class="filter-list filter-body" data-section-body="tags"></div>
+            </section>
+        </aside>
+
+        <div id="sidebar-resizer" class="sidebar-resizer" role="separator" aria-label="Resize sidebar" aria-orientation="vertical" aria-valuemin="260" aria-valuemax="560" tabindex="0"></div>
+
+        <main class="main">
+            <div class="toolbar">
+                <h1 id="heading">All routes</h1>
+                <div class="actions">
+                    <a id="swagger-link" class="action primary" href="/docs/swagger">Swagger</a>
+                    <a class="action secondary" href="/openapi.json">Full JSON</a>
+                </div>
+            </div>
+            <div class="content">
+                <section id="route-list" class="route-list"></section>
+                <aside id="detail" class="detail"></aside>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const state = {
+            index: null,
+            filters: { group: null, kind: null, tag: null },
+            search: "",
+            selectedId: null,
+            expandedGroups: new Set(),
+            collapsedSections: new Set(),
+        };
+
+        function iconSvg(name) {
+            const icons = {
+                "chevron-right": '<path d="M6 3.5 10.5 8 6 12.5"></path>',
+                "chevron-down": '<path d="M3.5 6 8 10.5 12.5 6"></path>',
+                moon: '<path d="M11.2 2.2A6.2 6.2 0 1 0 13.8 11 4.8 4.8 0 0 1 11.2 2.2Z"></path>',
+                sun: '<circle cx="8" cy="8" r="2.6"></circle><path d="M8 1.5v1.4M8 13.1v1.4M3.4 3.4l1 1M11.6 11.6l1 1M1.5 8h1.4M13.1 8h1.4M3.4 12.6l1-1M11.6 4.4l1-1"></path>',
+            };
+            return `<svg class="icon" viewBox="0 0 16 16" aria-hidden="true">${icons[name] || ""}</svg>`;
+        }
+
+        function setButtonIcon(button, iconName) {
+            const slot = button.querySelector("[data-icon-slot]") || document.createElement("span");
+            slot.className = "icon-slot";
+            slot.dataset.iconSlot = "";
+            slot.setAttribute("aria-hidden", "true");
+            slot.innerHTML = iconSvg(iconName);
+            if (!slot.parentElement) button.appendChild(slot);
+        }
+
+        function clamp(value, min, max) {
+            return Math.min(max, Math.max(min, value));
+        }
+
+        function setSidebarWidth(value) {
+            const width = clamp(Math.round(value), 260, 560);
+            document.documentElement.style.setProperty("--sidebar-width", `${width}px`);
+            localStorage.setItem(DOCS_SIDEBAR_WIDTH_KEY, String(width));
+            const resizer = document.getElementById("sidebar-resizer");
+            resizer.setAttribute("aria-valuenow", String(width));
+        }
+
+        function restoreSidebarWidth() {
+            const saved = Number(localStorage.getItem(DOCS_SIDEBAR_WIDTH_KEY));
+            setSidebarWidth(Number.isFinite(saved) && saved > 0 ? saved : 340);
+        }
+
+        function setTheme(theme) {
+            document.documentElement.dataset.theme = theme;
+            localStorage.setItem(DOCS_THEME_KEY, theme);
+            const button = document.getElementById("theme-toggle");
+            const nextLabel = theme === "dark" ? "Switch to light theme" : "Switch to dark theme";
+            button.setAttribute("aria-label", nextLabel);
+            button.setAttribute("title", nextLabel);
+            setButtonIcon(button, theme === "dark" ? "sun" : "moon");
+        }
+
+        function routeText(route) {
+            return [
+                route.id,
+                route.path,
+                route.operation,
+                route.group,
+                route.group_path,
+                route.kind,
+                ...(route.tags || []),
+                route.summary || "",
+                route.description || "",
+            ].join(" ").toLowerCase();
+        }
+
+        function groupMatches(route, group) {
+            if (!group) return true;
+            if (route.group === group || route.group_path === group) return true;
+            if (!group.startsWith("/")) return false;
+            const prefix = group.replace(/\/+$/, "");
+            return Boolean(prefix) && route.group_path.startsWith(prefix + "/");
+        }
+
+        function matchingRoutes(options) {
+            const flags = Object.assign({ ignoreGroup: false, ignoreKind: false, ignoreTag: false }, options || {});
+            const term = state.search.trim().toLowerCase();
+            return state.index.routes.filter((route) => {
+                if (!flags.ignoreGroup && state.filters.group && !groupMatches(route, state.filters.group)) return false;
+                if (!flags.ignoreKind && state.filters.kind && route.kind !== state.filters.kind) return false;
+                if (!flags.ignoreTag && state.filters.tag && !(route.tags || []).includes(state.filters.tag)) return false;
+                if (term && !routeText(route).includes(term)) return false;
+                return true;
+            });
+        }
+
+        function queryForFilters(extra) {
+            const params = new URLSearchParams();
+            const filters = Object.assign({}, state.filters, extra || {});
+            if (filters.group) params.append("group", filters.group);
+            if (filters.kind) params.append("kind", filters.kind);
+            if (filters.tag) params.append("tag", filters.tag);
+            return params.toString();
+        }
+
+        function updateLinks() {
+            const query = queryForFilters();
+            document.getElementById("swagger-link").href = "/docs/swagger" + (query ? "?" + query : "");
+        }
+
+        function filterButton(label, count, active, onClick) {
+            const item = document.createElement("button");
+            item.type = "button";
+            item.className = "filter-button" + (active ? " active" : "");
+            const labelEl = document.createElement("span");
+            labelEl.className = "filter-label";
+            labelEl.textContent = label;
+            const countEl = document.createElement("span");
+            countEl.className = "filter-count";
+            countEl.textContent = count;
+            item.append(labelEl, countEl);
+            item.addEventListener("click", onClick);
+            return item;
+        }
+
+        function buildGroupTree(countRoutes) {
+            const root = { path: null, label: "", depth: -1, children: [], childMap: new Map(), count: countRoutes.length };
+            state.index.groups.forEach((group) => {
+                const parts = String(group.path || "/").split("/").filter(Boolean);
+                let current = root;
+                let path = "";
+                parts.forEach((part, index) => {
+                    path += "/" + part;
+                    if (!current.childMap.has(part)) {
+                        const node = { path, label: part, depth: index, children: [], childMap: new Map(), count: 0 };
+                        current.childMap.set(part, node);
+                        current.children.push(node);
+                    }
+                    current = current.childMap.get(part);
+                });
+            });
+
+            function finalize(node) {
+                node.children.sort((left, right) => left.label.localeCompare(right.label));
+                node.children.forEach(finalize);
+                if (node.path) {
+                    node.count = countRoutes.filter((route) => groupMatches(route, node.path)).length;
+                }
+            }
+            finalize(root);
+            return root;
+        }
+
+        function selectedPathAncestors() {
+            if (!state.filters.group || !state.filters.group.startsWith("/")) return [];
+            const parts = state.filters.group.split("/").filter(Boolean);
+            const result = [];
+            let path = "";
+            parts.forEach((part) => {
+                path += "/" + part;
+                result.push(path);
+            });
+            return result;
+        }
+
+        function syncExpandedGroups(root) {
+            selectedPathAncestors().slice(0, -1).forEach((path) => state.expandedGroups.add(path));
+            if (!state.search.trim()) return;
+            function visit(node, ancestors) {
+                const nextAncestors = node.path ? ancestors.concat(node.path) : ancestors;
+                if (node.count > 0) {
+                    ancestors.forEach((path) => state.expandedGroups.add(path));
+                }
+                node.children.forEach((child) => visit(child, nextAncestors));
+            }
+            visit(root, []);
+        }
+
+        function renderGroupNode(node, container) {
+            if (node.path && node.count === 0 && state.filters.group !== node.path) return;
+
+            const item = document.createElement("div");
+            item.className = "tree-node";
+            const row = document.createElement("div");
+            row.className = "tree-row depth-" + Math.min(node.depth, 6);
+
+            const toggle = document.createElement("button");
+            toggle.type = "button";
+            toggle.className = "tree-toggle";
+            const hasChildren = node.children.some((child) => child.count > 0 || state.filters.group === child.path);
+            const expanded = state.expandedGroups.has(node.path);
+            toggle.setAttribute("aria-label", expanded ? "Collapse group" : "Expand group");
+            toggle.setAttribute("title", expanded ? "Collapse group" : "Expand group");
+            toggle.setAttribute("aria-expanded", String(expanded));
+            if (hasChildren) {
+                setButtonIcon(toggle, expanded ? "chevron-down" : "chevron-right");
+            }
+            toggle.disabled = !hasChildren;
+            toggle.addEventListener("click", () => {
+                if (expanded) state.expandedGroups.delete(node.path);
+                else state.expandedGroups.add(node.path);
+                render();
+            });
+
+            const filter = document.createElement("button");
+            filter.type = "button";
+            filter.className = "tree-filter" + (state.filters.group === node.path ? " active" : "");
+            const label = document.createElement("span");
+            label.className = "tree-label";
+            label.textContent = node.depth === 0 ? node.path : node.label;
+            const count = document.createElement("span");
+            count.className = "tree-count";
+            count.textContent = node.count;
+            filter.append(label, count);
+            filter.addEventListener("click", () => {
+                state.filters.group = state.filters.group === node.path ? null : node.path;
+                state.selectedId = null;
+                selectedPathAncestors().forEach((path) => state.expandedGroups.add(path));
+                render();
+            });
+
+            row.append(toggle, filter);
+            item.appendChild(row);
+            if (hasChildren && expanded) {
+                node.children.forEach((child) => renderGroupNode(child, item));
+            }
+            container.appendChild(item);
+        }
+
+        function renderGroups() {
+            const groups = document.getElementById("groups");
+            groups.textContent = "";
+            const countRoutes = matchingRoutes({ ignoreGroup: true });
+            groups.appendChild(filterButton("All groups", countRoutes.length, !state.filters.group, () => {
+                state.filters.group = null;
+                state.selectedId = null;
+                render();
+            }));
+            const tree = buildGroupTree(countRoutes);
+            syncExpandedGroups(tree);
+            tree.children.forEach((node) => renderGroupNode(node, groups));
+        }
+
+        function renderKinds() {
+            const kinds = document.getElementById("kinds");
+            kinds.textContent = "";
+            const baseRoutes = matchingRoutes({ ignoreKind: true });
+            kinds.appendChild(filterButton("All kinds", baseRoutes.length, !state.filters.kind, () => {
+                state.filters.kind = null;
+                state.selectedId = null;
+                render();
+            }));
+            state.index.kinds.forEach((kind) => {
+                const count = baseRoutes.filter((route) => route.kind === kind.id).length;
+                if (count === 0 && state.filters.kind !== kind.id) return;
+                kinds.appendChild(filterButton(kind.id, count, state.filters.kind === kind.id, () => {
+                    state.filters.kind = state.filters.kind === kind.id ? null : kind.id;
+                    state.selectedId = null;
+                    render();
+                }));
+            });
+        }
+
+        function renderTags() {
+            const tags = document.getElementById("tags");
+            tags.textContent = "";
+            const baseRoutes = matchingRoutes({ ignoreTag: true });
+            tags.appendChild(filterButton("All tags", baseRoutes.length, !state.filters.tag, () => {
+                state.filters.tag = null;
+                state.selectedId = null;
+                render();
+            }));
+            state.index.tags.forEach((tag) => {
+                const count = baseRoutes.filter((route) => (route.tags || []).includes(tag.id)).length;
+                if (count === 0 && state.filters.tag !== tag.id) return;
+                tags.appendChild(filterButton(tag.id, count, state.filters.tag === tag.id, () => {
+                    state.filters.tag = state.filters.tag === tag.id ? null : tag.id;
+                    state.selectedId = null;
+                    render();
+                }));
+            });
+        }
+
+        function renderFilters() {
+            renderGroups();
+            renderKinds();
+            renderTags();
+            syncFilterSections();
+        }
+
+        function syncFilterSections() {
+            ["groups", "kinds", "tags"].forEach((section) => {
+                const button = document.querySelector(`[data-section-toggle="${section}"]`);
+                const body = document.querySelector(`[data-section-body="${section}"]`);
+                const collapsed = state.collapsedSections.has(section);
+                button.setAttribute("aria-expanded", String(!collapsed));
+                body.hidden = collapsed;
+                setButtonIcon(button, collapsed ? "chevron-right" : "chevron-down");
+            });
+        }
+
+        function renderRoutes(routes) {
+            const list = document.getElementById("route-list");
+            list.textContent = "";
+            if (!routes.length) {
+                const empty = document.createElement("div");
+                empty.className = "empty";
+                empty.textContent = "No routes match the current filters.";
+                list.appendChild(empty);
+                return;
+            }
+            routes.forEach((route) => {
+                const item = document.createElement("article");
+                item.className = "route-item" + (state.selectedId === route.id ? " active" : "");
+                const top = document.createElement("div");
+                top.className = "route-top";
+                const method = document.createElement("span");
+                method.className = "method " + route.kind;
+                method.textContent = route.methods.length ? route.methods.join(",") : route.kind.toUpperCase();
+                const path = document.createElement("span");
+                path.className = "path";
+                path.textContent = route.path;
+                const routeId = document.createElement("div");
+                routeId.className = "route-id";
+                routeId.textContent = route.id;
+                top.append(method, path);
+                item.append(top, routeId);
+                item.addEventListener("click", () => {
+                    state.selectedId = route.id;
+                    render();
+                });
+                list.appendChild(item);
+            });
+        }
+
+        function renderDetail(route) {
+            const detail = document.getElementById("detail");
+            if (!route) {
+                detail.innerHTML = '<div class="empty">Select a route.</div>';
+                return;
+            }
+            const swaggerQuery = new URLSearchParams();
+            swaggerQuery.append("route_id", route.id);
+            const canOpenSwagger = route.kind !== "channel";
+            detail.innerHTML = `
+                <h2></h2>
+                <div class="kv">
+                    <div><span>Kind</span><span></span></div>
+                    <div><span>Path</span><span class="mono"></span></div>
+                    <div><span>Group</span><span></span></div>
+                    <div><span>Tags</span><span></span></div>
+                </div>
+                <div class="detail-section">
+                    <div class="kv request"></div>
+                </div>
+                <div class="detail-section connection"></div>
+                <div class="detail-section actions"></div>
+            `;
+            detail.querySelector("h2").textContent = route.operation;
+            const values = detail.querySelectorAll(".kv > div span:last-child");
+            values[0].textContent = route.kind;
+            values[1].textContent = route.path;
+            values[2].textContent = route.group_path;
+            values[3].textContent = (route.tags || []).join(", ") || "-";
+
+            const request = detail.querySelector(".request");
+            request.innerHTML = `
+                <div><span>Path DTO</span><span class="mono"></span></div>
+                <div><span>Query DTO</span><span class="mono"></span></div>
+                <div><span>Body</span><span class="mono"></span></div>
+                <div><span>Response</span><span class="mono"></span></div>
+            `;
+            const requestValues = request.querySelectorAll("span:last-child");
+            requestValues[0].textContent = route.request.path_model || "-";
+            requestValues[1].textContent = route.request.query_model || "-";
+            requestValues[2].textContent = route.request.body_kind || "-";
+            requestValues[3].textContent = route.response.model || route.response.kind || "-";
+
+            const connection = detail.querySelector(".connection");
+            if (route.connection) {
+                connection.innerHTML = `
+                    <div class="kv">
+                        <div><span>Scope</span><span></span></div>
+                        <div><span>Delivery</span><span></span></div>
+                        <div><span>Server msg</span><span class="mono"></span></div>
+                        <div><span>Client msg</span><span class="mono"></span></div>
+                    </div>
+                `;
+                const connectionValues = connection.querySelectorAll("span:last-child");
+                connectionValues[0].textContent = route.connection.scope;
+                connectionValues[1].textContent = route.connection.delivery;
+                connectionValues[2].textContent = messageLabel(route.connection.server_message);
+                connectionValues[3].textContent = messageLabel(route.connection.client_message);
+            } else {
+                connection.remove();
+            }
+
+            const actions = detail.querySelector(".actions");
+            if (canOpenSwagger) {
+                const swagger = document.createElement("a");
+                swagger.className = "action primary";
+                swagger.href = "/docs/swagger?" + swaggerQuery.toString();
+                swagger.textContent = "Open route in Swagger";
+                actions.appendChild(swagger);
+            } else {
+                actions.textContent = "Channel routes are shown in the protocol index and are not part of standard OpenAPI.";
+            }
+        }
+
+        function messageLabel(message) {
+            if (!message) return "-";
+            const variants = (message.variants || []).map((variant) => variant.key ? `${variant.key}:${variant.model}` : variant.model);
+            return message.name ? `${message.name} (${variants.join(", ")})` : variants.join(", ");
+        }
+
+        function render() {
+            const routes = matchingRoutes();
+            if (state.selectedId && !routes.some((route) => route.id === state.selectedId)) {
+                state.selectedId = null;
+            }
+            if (!state.selectedId && routes.length) state.selectedId = routes[0].id;
+            const selected = routes.find((route) => route.id === state.selectedId) || null;
+            document.getElementById("heading").textContent = `${routes.length} routes`;
+            document.getElementById("route-count").textContent = state.index.route_count;
+            updateLinks();
+            renderFilters();
+            renderRoutes(routes);
+            renderDetail(selected);
+        }
+
+        document.getElementById("theme-toggle").addEventListener("click", () => {
+            const current = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+            setTheme(current === "dark" ? "light" : "dark");
+        });
+        restoreSidebarWidth();
+        setTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light");
+
+        const sidebarResizer = document.getElementById("sidebar-resizer");
+        sidebarResizer.addEventListener("pointerdown", (event) => {
+            event.preventDefault();
+            sidebarResizer.setPointerCapture(event.pointerId);
+            document.body.classList.add("resizing-sidebar");
+        });
+        sidebarResizer.addEventListener("pointermove", (event) => {
+            if (!sidebarResizer.hasPointerCapture(event.pointerId)) return;
+            setSidebarWidth(event.clientX);
+        });
+        sidebarResizer.addEventListener("pointerup", (event) => {
+            if (sidebarResizer.hasPointerCapture(event.pointerId)) {
+                sidebarResizer.releasePointerCapture(event.pointerId);
+            }
+            document.body.classList.remove("resizing-sidebar");
+        });
+        sidebarResizer.addEventListener("keydown", (event) => {
+            if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+            event.preventDefault();
+            const current = Number(localStorage.getItem(DOCS_SIDEBAR_WIDTH_KEY)) || 340;
+            setSidebarWidth(current + (event.key === "ArrowRight" ? 16 : -16));
+        });
+
+        document.querySelectorAll("[data-section-toggle]").forEach((button) => {
+            button.addEventListener("click", () => {
+                const section = button.dataset.sectionToggle;
+                if (state.collapsedSections.has(section)) state.collapsedSections.delete(section);
+                else state.collapsedSections.add(section);
+                syncFilterSections();
+            });
+        });
+
+        document.getElementById("search").addEventListener("input", (event) => {
+            state.search = event.target.value;
+            state.selectedId = null;
+            render();
+        });
+
+        fetch("/docs/index.json")
+            .then((response) => response.json())
+            .then((payload) => {
+                state.index = payload;
+                render();
+            })
+            .catch((error) => {
+                document.getElementById("route-list").innerHTML = `<div class="empty">${error}</div>`;
+            });
+    </script>
+</body>
+
+</html>

@@ -214,6 +214,12 @@ def _assert_wheel_contains_file(wheel_path: Path, path: str) -> None:
             raise ReleaseAssetsError(f"{wheel_path.name} is missing packaged file {path}")
 
 
+def _assert_wheel_omits_file(wheel_path: Path, path: str) -> None:
+    with zipfile.ZipFile(wheel_path) as zf:
+        if path in zf.namelist():
+            raise ReleaseAssetsError(f"{wheel_path.name} unexpectedly contains packaged file {path}")
+
+
 def validate_dist_artifacts(dist_dir: Path) -> DistArtifacts:
     artifacts = collect_dist_artifacts(dist_dir)
     if len(artifacts.wheels) != 1:
@@ -229,8 +235,11 @@ def validate_dist_artifacts(dist_dir: Path) -> DistArtifacts:
     _assert_wheel_contains_file(wheel_path, "api_blueprint/writer/templates/kotlin/transports/http/GenOkHttpApiTransport.kt.j2")
     _assert_wheel_contains_file(wheel_path, "api_blueprint/writer/templates/python/runtime/gen_client.py.j2")
     _assert_wheel_contains_file(wheel_path, "api_blueprint/writer/templates/python/transports/http/gen_server.py.j2")
+    _assert_wheel_contains(wheel_path, "api_blueprint/engine/runtime/templates/")
     _assert_wheel_contains(wheel_path, "api_blueprint/hub/templates/")
     _assert_wheel_contains(wheel_path, "api_blueprint/static/")
+    _assert_wheel_omits_file(wheel_path, "api_blueprint/static/all.min.css")
+    _assert_wheel_omits_file(wheel_path, "api_blueprint/static/redoc.standalone.js")
     return artifacts
 
 
@@ -271,10 +280,14 @@ def install_check(repo_root: Path, dist_dir: Path, tag: str) -> None:
                 assert result.exit_code == 0, result.output
 
             static_dir = resources.files("api_blueprint") / "static"
+            runtime_templates_dir = resources.files("api_blueprint") / "engine" / "runtime" / "templates"
             hub_templates_dir = resources.files("api_blueprint") / "hub" / "templates"
             writer_templates_dir = resources.files("api_blueprint") / "writer" / "templates"
 
             assert static_dir.joinpath("swagger-ui.css").is_file()
+            assert not static_dir.joinpath("all.min.css").exists()
+            assert not static_dir.joinpath("redoc.standalone.js").exists()
+            assert runtime_templates_dir.joinpath("docs_index.html").is_file()
             assert hub_templates_dir.joinpath("index.html").is_file()
             assert writer_templates_dir.joinpath("typescript").is_dir()
             """

@@ -90,6 +90,8 @@ api-gen check -c api-blueprint.toml
 api-gen generate -c api-blueprint.toml
 ```
 
+By default, `/` and `/docs` both serve the api-blueprint docs center. It opens smaller Swagger slices by group, tag, kind, and search results, while the full `/openapi.json` remains available for external tools.
+
 For fuller project layout, config fields, DSL, generator output, typed errors, Response Envelopes, Markdown Binary Schema, Wails, and gRPC, see [Getting Started](docs/en/getting-started.md), [Configuration](docs/en/configuration.md), and the topic documents below.
 
 ## Common Targets

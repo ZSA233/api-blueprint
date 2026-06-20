@@ -83,7 +83,7 @@ clients = ["go.client", "typescript.client"]
 api-doc-server -c api-blueprint.toml
 ```
 
-默认文档服务会加载 `[blueprint].entrypoints`，构建 FastAPI/OpenAPI 输出。
+默认文档服务会加载 `[blueprint].entrypoints`，构建 api-blueprint 文档中心和 FastAPI/OpenAPI 输出；`/` 与 `/docs` 都会打开文档中心，完整 Swagger 可从文档中心按 group、tag、kind 或 route 选择打开。
 如果 `docs_server` 使用 `host:0`，启动输出会打印实际分配到的端口。
 
 ## 生成代码

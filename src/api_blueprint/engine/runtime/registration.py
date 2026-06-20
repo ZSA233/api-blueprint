@@ -8,6 +8,7 @@ from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import JSONResponse
 
 from api_blueprint.engine.connection import ConnectionKind
+from api_blueprint.engine.runtime.docs import register_docs_route
 from api_blueprint.engine.runtime.endpoint import make_endpoint
 from api_blueprint.engine.runtime.responses import XMLResponse
 from api_blueprint.engine.schema import model_to_pydantic
@@ -85,6 +86,9 @@ async def proxy_upstream_request(router: "Router", request: Request, **kwargs: A
 
 
 def register_router(router: "Router", app: FastAPI) -> None:
+    from api_blueprint.contract.route import route_contract
+
+    contract = route_contract(router)
     copy_extra = router.extra.copy()
     copy_extra.pop("http_raw_response", None)
     for key in tuple(copy_extra):
@@ -172,6 +176,8 @@ def register_router(router: "Router", app: FastAPI) -> None:
             responses=responses,
             **copy_extra,
         )
+
+    register_docs_route(app, router, contract)
 
 
 def _default_operation_id(router: "Router") -> str:

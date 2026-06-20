@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from api_blueprint import hub
 from api_blueprint.config import Config
 from api_blueprint.engine import Blueprint
+from api_blueprint.engine.runtime.docs import docs_home_path, docs_route_count, ensure_docs_gzip
 
 
 def _docs_upstream(conf: Config) -> str | None:
@@ -32,7 +33,7 @@ def _docs_display_host(conf: Config, host: str) -> str:
 
 
 def _app_docs_path(app: FastAPI) -> str:
-    return app.docs_url or "/docs"
+    return docs_home_path(app)
 
 
 def _join_http_url(host: str, port: int | str, path: str) -> str:
@@ -66,6 +67,8 @@ def run_docs_server(conf: Config, entrypoints: list[Blueprint]) -> None:
     host, hub_port = docs_server.split(":", 1)
     hub_port_int = int(hub_port)
     display_host = _docs_display_host(conf, host)
+    for app in apps:
+        ensure_docs_gzip(app)
 
     if len(apps) > 1:
         servers: list[uvicorn.Server] = []
@@ -86,8 +89,17 @@ def run_docs_server(conf: Config, entrypoints: list[Blueprint]) -> None:
                     break
                 time.sleep(0.01)
 
-        for app, port in app_port.items():
-            hub.add_nav_items(app, _join_http_url(display_host, port, _app_docs_path(app)))
+        hub.set_nav_items(
+            [
+                {
+                    "name": app.title,
+                    "url": _join_http_url(display_host, port, _app_docs_path(app)),
+                    "route_count": docs_route_count(app),
+                }
+                for app, port in app_port.items()
+            ]
+        )
+        ensure_docs_gzip(hub.app)
 
         _serve_uvicorn(
             "api_blueprint.hub:app",

@@ -4,18 +4,39 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>应用导航</title>
+    <title>api-blueprint Docs Hub</title>
 
     <link href="static/bootstrap.min.css" rel="stylesheet"
         crossorigin="anonymous" />
 
-    <link href="static/all.min.css" rel="stylesheet"
-        crossorigin="anonymous" referrerpolicy="no-referrer" />
-
+    <script>
+        const HUB_THEME_KEY = "api-blueprint-docs-theme";
+        const storedTheme = localStorage.getItem(HUB_THEME_KEY);
+        const preferredTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.dataset.theme = storedTheme || preferredTheme;
+    </script>
     <style>
+        :root {
+            --bg: #f0f2f5;
+            --panel: #ffffff;
+            --line: #d8dee8;
+            --ink: #343a40;
+            --muted: #6c757d;
+            --title: #495057;
+        }
+
+        :root[data-theme="dark"] {
+            --bg: #10151f;
+            --panel: #171f2c;
+            --line: #2d3a4f;
+            --ink: #e5e7eb;
+            --muted: #9ca3af;
+            --title: #f3f4f6;
+        }
+
         body {
-            background-color: #f0f2f5;
-            color: #343a40;
+            background-color: var(--bg);
+            color: var(--ink);
         }
 
         .container {
@@ -24,18 +45,50 @@
         }
 
         .page-title {
-            font-size: 2.5rem;
+            font-size: 2rem;
             font-weight: 500;
             margin-bottom: 2rem;
             text-align: center;
-            color: #495057;
+            color: var(--title);
+        }
+
+        .hub-top {
+            align-items: center;
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .theme-toggle {
+            align-items: center;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 0.4rem;
+            color: var(--ink);
+            display: inline-flex;
+            height: 2.25rem;
+            justify-content: center;
+            padding: 0;
+            width: 2.25rem;
+        }
+
+        .icon {
+            display: block;
+            fill: none;
+            height: 1rem;
+            stroke: currentColor;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-width: 1.9;
+            width: 1rem;
         }
 
         .nav-card {
             border: none;
             border-radius: 0.75rem;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
-            background-color: #ffffff;
+            background-color: var(--panel);
             overflow: hidden;
         }
 
@@ -51,23 +104,28 @@
             padding: 2rem 1.5rem;
         }
 
-        .nav-icon {
-            font-size: 3rem;
-            color: #007bff;
-            margin-bottom: 1rem;
-        }
-
         .nav-name {
             font-size: 1.25rem;
             font-weight: 500;
             margin-bottom: 0.5rem;
             text-align: center;
-            color: #343a40;
+            color: var(--ink);
+        }
+
+        .nav-meta {
+            color: var(--muted);
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
         }
 
         .nav-button {
             margin-top: auto;
             width: 100%;
+        }
+
+        .hub-search {
+            margin: 0 auto 1.5rem;
+            max-width: 36rem;
         }
 
         .nav-button .btn {
@@ -87,17 +145,26 @@
 
 <body>
     <div class="container">
-        <h1 class="page-title">应用导航中心</h1>
-        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        <div class="hub-top">
+            <h1 class="page-title mb-0">api-blueprint Docs Hub</h1>
+            <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme">
+                <span data-icon-slot aria-hidden="true"></span>
+            </button>
+        </div>
+        <div class="hub-search">
+            <input id="hub-search" class="form-control form-control-lg" type="search" placeholder="Search docs app" autocomplete="off" />
+        </div>
+        <div id="hub-empty" class="alert alert-light text-center d-none">No docs app matches the current search.</div>
+        <div id="hub-grid" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
             {% for item in nav_items %}
-            <div class="col">
+            <div class="col" data-name="{{ item.name | lower }}">
                 <div class="card nav-card h-100">
                     <div class="card-body">
-                        <i class="fa-solid {{ item.icon }} nav-icon"></i>
                         <div class="nav-name">{{ item.name }}</div>
+                        <div class="nav-meta">{{ item.route_count }} routes</div>
                         <div class="nav-button">
                             <a href="{{ item.url }}" class="btn btn-primary btn-lg" target="_blank" rel="noopener">
-                                访问
+                                Open docs
                             </a>
                         </div>
                     </div>
@@ -109,6 +176,40 @@
 
     <script src="static/bootstrap.bundle.min.js"
         crossorigin="anonymous"></script>
+    <script>
+        function setTheme(theme) {
+            document.documentElement.dataset.theme = theme;
+            localStorage.setItem(HUB_THEME_KEY, theme);
+            const button = document.getElementById("theme-toggle");
+            const nextLabel = theme === "dark" ? "Switch to light theme" : "Switch to dark theme";
+            button.setAttribute("aria-label", nextLabel);
+            button.setAttribute("title", nextLabel);
+            const slot = button.querySelector("[data-icon-slot]");
+            slot.innerHTML = theme === "dark"
+                ? '<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.6"></circle><path d="M8 1.5v1.4M8 13.1v1.4M3.4 3.4l1 1M11.6 11.6l1 1M1.5 8h1.4M13.1 8h1.4M3.4 12.6l1-1M11.6 4.4l1-1"></path></svg>'
+                : '<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.2 2.2A6.2 6.2 0 1 0 13.8 11 4.8 4.8 0 0 1 11.2 2.2Z"></path></svg>';
+        }
+
+        document.getElementById("theme-toggle").addEventListener("click", () => {
+            const current = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+            setTheme(current === "dark" ? "light" : "dark");
+        });
+        setTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light");
+
+        const input = document.getElementById("hub-search");
+        const items = Array.from(document.querySelectorAll("[data-name]"));
+        const empty = document.getElementById("hub-empty");
+        input.addEventListener("input", () => {
+            const term = input.value.trim().toLowerCase();
+            let visible = 0;
+            items.forEach((item) => {
+                const match = !term || item.dataset.name.includes(term);
+                item.classList.toggle("d-none", !match);
+                if (match) visible += 1;
+            });
+            empty.classList.toggle("d-none", visible !== 0);
+        });
+    </script>
 </body>
 
 </html>

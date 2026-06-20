@@ -83,7 +83,7 @@ clients = ["go.client", "typescript.client"]
 api-doc-server -c api-blueprint.toml
 ```
 
-The docs server loads `[blueprint].entrypoints` and builds FastAPI/OpenAPI output.
+The docs server loads `[blueprint].entrypoints` and builds the api-blueprint docs center plus FastAPI/OpenAPI output; `/` and `/docs` both open the docs center, and full Swagger views can be opened from there by group, tag, kind, or route.
 If `docs_server` uses `host:0`, startup output prints the actual assigned port.
 
 ## Generate Code

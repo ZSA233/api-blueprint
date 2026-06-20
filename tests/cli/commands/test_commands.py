@@ -3,6 +3,7 @@ from __future__ import annotations
 from click.testing import CliRunner
 
 from api_blueprint import __version__
+from api_blueprint import hub
 from api_blueprint.application.entrypoints import load_entrypoints
 from api_blueprint.application.project import build_entrypoints
 from api_blueprint.cli.apidoc import apidoc_server
@@ -140,7 +141,7 @@ with bp.group("/demo") as views:
     result = runner.invoke(apidoc_server, ["-c", str(config_path)])
 
     assert result.exit_code == 0, result.output
-    assert "[api-doc-server] Docs: http://localhost:2332/docs" in result.output
+    assert "[api-doc-server] Docs: http://localhost:2332/" in result.output
     assert len(calls) == 1
     assert calls[0][:2] == ("0.0.0.0", 2332)
     assert len(calls[0][2] or []) == 1
@@ -190,4 +191,13 @@ with bp.group("/demo") as views:
     result = runner.invoke(apidoc_server, ["-c", str(config_path)])
 
     assert result.exit_code == 0, result.output
-    assert "[api-doc-server] Docs: http://localhost:49123/docs" in result.output
+    assert "[api-doc-server] Docs: http://localhost:49123/" in result.output
+
+
+def test_hub_nav_items_are_replaced_instead_of_accumulated() -> None:
+    hub.set_nav_items([{"name": "first", "url": "http://localhost:1/", "route_count": 1}])
+    hub.set_nav_items([{"name": "second", "url": "http://localhost:2/", "route_count": 2}])
+
+    assert hub.app.state.nav_items == [
+        {"name": "second", "url": "http://localhost:2/", "route_count": 2}
+    ]
