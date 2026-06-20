@@ -150,20 +150,22 @@ make example-refresh
 发版继续之前，至少要确认 release ref 上这些作业全部通过：
 
 - `release-contract`
-- `example-validation`
+- `example-validation` matrix 中的所有 target
 - `python-tests (ubuntu-latest, 3.11)`
 - `python-tests (macos-latest, 3.11)`
 - `python-tests (windows-latest, 3.11)`
+- `python-toolchain-smoke`
+- `python-packaging-smoke`
 
 其中 `python-tests (windows-latest, 3.11)` 最容易暴露路径、shell 和平台差异回归；如果它失败，不要继续发版。
 
 CI 职责边界：
 
-- 常规 `pull_request` 与 `main` push 主要跑 `release-contract` + `python-tests`；严格 `example-validation` 由 release branch 与手动 workflow 承担。
-- `example-validation` 只在 `release/*` push 与手动 `workflow_dispatch` 时运行；它会通过共享的 `.github/actions/setup-example-toolchains` 准备 Java 17、Go、Node 24、TypeScript、`go-enum` 与 pinned `protoc` 工具链；Java / Kotlin 编译还要求环境里有 Gradle。
-- `python-tests` 会通过 `pytest -m "not example_validation"` 排除 `tests/integration/examples/` 里的专用外部工具链校验，避免在通用 Python matrix 中重复跑这类重型检查。
+- 常规 `pull_request` 与 `main` push 主要跑 `release-contract`、三系统 fast `python-tests`、`python-toolchain-smoke` 和 `python-packaging-smoke`；严格 `example-validation` matrix 由 release branch 与手动 workflow 承担。
+- `example-validation` 只在 `release/*` push 与手动 `workflow_dispatch` 时运行；它按 `go.server`、`go.client`、`typescript.client`、`python.http`、`kotlin.http`、`java.http`、`flutter.client`、`swift.client`、`wails.blueprint`、`grpc`、`wails.hello` 切片并行，并通过共享的 `.github/actions/setup-example-toolchains` 按需准备 Java 17、Go、Node 24、TypeScript、`go-enum`、Wails 与 pinned `protoc` 工具链。
+- `python-tests` 使用 `pytest -n auto -m "not example_validation and not toolchain_smoke and not packaging_smoke"` 跑三系统快速测试；真实 Go/TypeScript 生成物编译 smoke 放在 `python-toolchain-smoke`，wheel/sdist build 与 install check 放在 `python-packaging-smoke`，避免在通用 Python matrix 中重复跑重型检查。
 - `release.yml` / `release-rc.yml` 的 `release-bundle` 复用同一套 examples toolchain setup，但 tag workflow 只跑 release metadata check、构建与 install check；完整 `make release-preflight` 属于本地发布准备步骤。
-- 因此判断 release ref 是否“CI 全绿”时，必须看 release branch 上的 `example-validation` 与三个 `python-tests` matrix，不能只看 pytest matrix。
+- 因此判断 release ref 是否“CI 全绿”时，必须看 release branch 上的 `example-validation` matrix、三个 fast `python-tests` matrix、`python-toolchain-smoke` 与 `python-packaging-smoke`，不能只看 pytest matrix。
 
 CI 未通过时的固定处理原则：
 

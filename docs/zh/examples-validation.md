@@ -20,8 +20,10 @@
 make example-compile-check
 make example-refresh
 make example-refresh-go-server
+make example-refresh-typescript
 make example-validation
 make example-validation-go-server
+make example-validation-typescript
 make example-conformance
 make example-golang-suite
 make example-java-suite
@@ -32,9 +34,9 @@ make wails-hello-check
 
 - `example-compile-check`：功能开发期使用，允许 snapshot drift，只验证重生成产物仍可编译或导入。
 - `example-refresh`：接受预期生成变化，刷新仓库里的 snapshots。
-- `example-refresh-go-server`：只刷新 `examples/golang/server`，并只编译 Go server，适合 Go server 模板或 runtime 的快速迭代。
+- `example-refresh-*`：只刷新某个语言或协议 target 的 snapshots，适合模板或 runtime 的快速迭代。
 - `example-validation`：严格模式，要求本地生成器输出与已提交 snapshots 收敛。
-- `example-validation-go-server`：只严格验证 `examples/golang/server` 的 snapshot 和 Go server 编译。
+- `example-validation-*`：只严格验证某个语言或协议 target 的 snapshot 和编译/导入检查；不替代发布前全量 `example-validation`。
 - `example-conformance`：真实协议互通验证；它在临时 workspace 重生成 examples，检查 snapshot drift 和语言编译，再按 server/client/scenario 能力交集启动真实服务端并运行客户端。
 - `example-golang-suite`：手动端到端增强验证；它在临时 workspace 重生成 Go server/client，启动真实 Go server 进程，再通过 generated Go client 和原生 HTTP binary 请求验证回路。它不接入默认 `test`、`example-validation`、`release-preflight` 或 CI。
 - `example-java-suite`：手动 Java 增强验证；它在临时 workspace 重生成 `java.client` 与 `java.server`，运行 `examples/java/suite`，验证 generated Spring Controller、delegate、provider policy 注解、JavaBean request/response 类型、adapter helper 和 generated Java client 最小热路径。它不启动真实 Spring Boot server，也不接入默认 `test`、`example-validation`、`release-preflight` 或 CI。
@@ -49,11 +51,15 @@ uv run python scripts/example_validation.py --scope wails-hello --mode check
 uv run python scripts/example_validation.py --scope wails-hello --mode compile
 uv run python scripts/example_validation.py --scope wails-hello --mode refresh
 uv run python scripts/example_validation.py --mode refresh --target go.server
+uv run python scripts/example_validation.py --mode refresh --target typescript.client
 uv run python scripts/example_validation.py --target go.server
+uv run python scripts/example_validation.py --target typescript.client
 uv run python scripts/example_validation.py --scope blueprint --mode golang-suite
 uv run python scripts/example_validation.py --scope blueprint --mode java-suite
 make example-java-spring-server
 ```
+
+`--target` 是 validation 切片概念，支持 `go.server`、`go.client`、`typescript.client`、`python.http`、`kotlin.http`、`java.http`、`flutter.client`、`swift.client`、`wails.blueprint`、`grpc` 和 `wails.hello`。Makefile 对应提供 `example-refresh-go-server`、`example-refresh-go-client`、`example-refresh-typescript`、`example-refresh-python`、`example-refresh-kotlin`、`example-refresh-java`、`example-refresh-flutter`、`example-refresh-swift`、`example-refresh-grpc`、`example-refresh-wails`、`example-refresh-wails-hello`，以及同名的 `example-validation-*` 入口。
 
 ## Conformance 互通验证
 
@@ -108,11 +114,13 @@ make example-refresh
 make example-validation
 ```
 
-如果只修改 Go server 生成器或模板，可先用较快的专项命令收敛：
+如果只修改某个生成器或模板，可先用较快的专项命令收敛：
 
 ```sh
 make example-refresh-go-server
 make example-validation-go-server
+make example-refresh-typescript
+make example-validation-typescript
 ```
 
 专项命令不替代发布前的全量 `example-validation`。
