@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 
 from .helpers import *
 
@@ -32,9 +33,9 @@ def test_golang_client_codegen_emits_multipart_and_raw_response_contracts(tmp_pa
         "func (client *GenMediaClient) Preview(ctx context.Context, multipartBody PreviewForm, "
         "opts ...runtime.RequestOption) (*runtime.RawResponse, error)"
     ) in route_client
-    assert "Multipart:        multipartBody" in route_client
-    assert 'BodyKind:         runtime.RequestBodyKind("multipart")' in route_client
-    assert 'ResponseKind:     runtime.ResponseKind("bytes")' in route_client
+    assert re.search(r"Multipart:\s+multipartBody", route_client)
+    assert re.search(r'BodyKind:\s+runtime\.RequestBodyKind\("multipart"\)', route_client)
+    assert re.search(r'ResponseKind:\s+runtime\.ResponseKind\("bytes"\)', route_client)
     assert (
         "func (client *GenMediaClient) Mjpeg(ctx context.Context, opts ...runtime.RequestOption) "
         "(*runtime.StreamResponse, error)"

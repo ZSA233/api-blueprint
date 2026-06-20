@@ -40,6 +40,11 @@ class GolangToolchain:
                 check=True,
                 text=True,
             )
+        except FileNotFoundError:
+            module = GolangToolchain.read_gomod_file(path)
+            if module is not None:
+                return [module]
+            raise
         except subprocess.CalledProcessError as exc:
             output = exc.stderr.strip() or exc.stdout.strip() or "unknown go list -m failure"
             raise ModuleNotFoundError(
@@ -58,6 +63,24 @@ class GolangToolchain:
                 mod_dir = mod_dir.lstrip()
             modules.append((mod, mod_dir))
         return modules
+
+    @staticmethod
+    def read_gomod_file(path: str | Path) -> tuple[str, str] | None:
+        current = Path(path).resolve()
+        search_from = current if current.is_dir() else current.parent
+        for directory in (search_from, *search_from.parents):
+            gomod = directory / "go.mod"
+            if not gomod.exists():
+                continue
+            for raw_line in gomod.read_text(encoding="utf-8").splitlines():
+                line = raw_line.strip()
+                if not line.startswith("module "):
+                    continue
+                module = line.removeprefix("module ").strip()
+                if module:
+                    return module, str(directory)
+                break
+        return None
 
     def resolve_module_import(
         self,
@@ -98,6 +121,9 @@ class GolangToolchain:
 
     def run_format(self, filepath: str | Path):
         file_or_dir = str(Path(filepath).absolute())
+        if shutil.which("gofmt") is None:
+            self.logger.warning("[!] gofmt command not found, skip formatting for %s", file_or_dir)
+            return ""
         try:
             process = subprocess.run(
                 ["gofmt", "-s", "-w", file_or_dir],

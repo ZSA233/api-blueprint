@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from .helpers import *
 
 
@@ -339,20 +341,8 @@ go 1.23.8
     impl = (output_dir / "routes" / "api" / "runs" / "impl.go").read_text(encoding="utf-8")
     gen_impl = (output_dir / "routes" / "api" / "runs" / "gen_impl.go").read_text(encoding="utf-8")
 
-    assert (
-        "Events(\n"
-        "\t\tctx *CTX_Events,\n"
-        "\t\tstream STREAM_Events,\n"
-        "\t) error"
-        in core_interface
-    )
-    assert (
-        "Chat(\n"
-        "\t\tctx *CTX_Chat,\n"
-        "\t\tchannel CHANNEL_Chat,\n"
-        "\t) error"
-        in core_interface
-    )
+    assert re.search(r"Events\(\s*ctx \*CTX_Events,\s*stream STREAM_Events,\s*\) error", core_interface)
+    assert re.search(r"Chat\(\s*ctx \*CTX_Chat,\s*channel CHANNEL_Chat,\s*\) error", core_interface)
     assert "type TaskStreamMessage struct" not in core_models
     assert "type TaskStreamMessage struct" in core_messages
     assert (

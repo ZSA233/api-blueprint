@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from .helpers import *
 from api_blueprint.engine.model import Array, Int, OneOf, LegacyStringID
 
@@ -66,10 +68,10 @@ def test_golang_client_generates_legacy_json_compat_field_types(tmp_path):
     writer.gen()
 
     runtime_types = (output_dir / "runtime" / "gen_types.go").read_text(encoding="utf-8")
-    assert "Target     any" in runtime_types
+    assert re.search(r"\bTarget\s+any\b", runtime_types)
     assert "IDs" in runtime_types and "[]any" in runtime_types
     assert "Normalized []string" in runtime_types
-    assert "RoomID     string" in runtime_types
+    assert re.search(r"\bRoomID\s+string\b", runtime_types)
 
 @pytest.mark.toolchain_smoke
 def test_golang_client_writer_generates_layout_preserves_user_files_and_compiles(tmp_path):

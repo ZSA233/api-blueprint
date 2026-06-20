@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from .helpers import *
 
 
@@ -62,7 +64,7 @@ endian: little
     transport_text = (output_dir / "transports" / "http" / "gen_transport.go").read_text(encoding="utf-8")
 
     assert "binaryBody runtimebinary.Body" in route_text
-    assert "Binary:           binaryBody" in route_text
+    assert re.search(r"Binary:\s+binaryBody", route_text)
     assert "package binary" in schema_text
     assert not (output_dir / "routes" / "api" / "binary" / "wire").exists()
     assert "type DemoPacketKind uint16" in schema_text

@@ -23,6 +23,20 @@ def test_read_gomodule_preserves_empty_dir_column(monkeypatch, tmp_path):
     assert GolangToolchain.read_gomodule(tmp_path) == [("command-line-arguments", "")]
 
 
+def test_read_gomodule_falls_back_to_go_mod_when_go_is_missing(monkeypatch, tmp_path):
+    module_dir = tmp_path / "module"
+    output_dir = module_dir / "generated"
+    output_dir.mkdir(parents=True)
+    (module_dir / "go.mod").write_text("module example.com/generated\n\ngo 1.23\n", encoding="utf-8")
+
+    def fake_run(*args, **kwargs):
+        raise FileNotFoundError("go")
+
+    monkeypatch.setattr("api_blueprint.writer.golang.toolchain.subprocess.run", fake_run)
+
+    assert GolangToolchain.read_gomodule(output_dir) == [("example.com/generated", str(module_dir.resolve()))]
+
+
 def test_resolve_module_import_turns_command_line_arguments_into_module_not_found(monkeypatch, tmp_path):
     monkeypatch.setattr(
         GolangToolchain,

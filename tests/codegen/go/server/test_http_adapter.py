@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from .helpers import *
 from api_blueprint.engine.schema import Int
 
@@ -193,9 +195,10 @@ go 1.23.8
     assert "type MountOption = httptransport.MountOption" in route_adapter_text
     assert "func WithRouteIDs(routeIDs ...string) MountOption" in route_adapter_text
     core_routes_text = core_routes.read_text(encoding="utf-8")
-    assert (
-        'const (\n\tRouteIDPing = "api.demo.get.ping"\n)\n\nconst (\n\tRoutePathPing = "/api/demo/ping"\n)'
-        in core_routes_text
+    assert re.search(
+        r'const \(\s*RouteIDPing\s*=\s*"api\.demo\.get\.ping"\s*\)\s*'
+        r'const \(\s*RoutePathPing\s*=\s*"/api/demo/ping"\s*\)',
+        core_routes_text,
     )
     assert "RouteIDPing" in core_routes_text and '"api.demo.get.ping"' in core_routes_text
     assert 'RoutePathPing = "/api/demo/ping"' in core_routes_text
@@ -205,11 +208,12 @@ go 1.23.8
     assert "RouteOperationPing" not in core_routes_text
     assert "RouteMethodsPing" not in core_routes_text
     assert "RouteIDPing" not in core_route.read_text(encoding="utf-8")
-    assert (
-        "const (\n\tRouteIDPing = shared.RouteIDPing\n)\n\n"
-        "const (\n\tRoutePathPing = shared.RoutePathPing\n)\n\n"
-        'const (\n\tHTTPRoutePathPing = "/api/demo/ping"\n)'
-    ) in route_adapter_text
+    assert re.search(
+        r"const \(\s*RouteIDPing\s*=\s*shared\.RouteIDPing\s*\)\s*"
+        r"const \(\s*RoutePathPing\s*=\s*shared\.RoutePathPing\s*\)\s*"
+        r'const \(\s*HTTPRoutePathPing\s*=\s*"/api/demo/ping"\s*\)',
+        route_adapter_text,
+    )
     assert "RouteIDPing" in route_adapter_text and "shared.RouteIDPing" in route_adapter_text
     assert "RoutePathPing" in route_adapter_text and "shared.RoutePathPing" in route_adapter_text
     assert 'HTTPRoutePathPing = "/api/demo/ping"' in route_adapter_text
@@ -226,7 +230,7 @@ go 1.23.8
     assert "mountOptions := httptransport.NewMountOptions(options...)" in route_adapter_text
     assert "if mountOptions.ShouldMountRoute(RouteIDPing) {" in route_adapter_text
     assert "if mountOptions.ShouldMountRoute(RouteIDPing) {\n\n\t\thttptransport" not in route_adapter_text
-    assert "httptransport.GET(\n\t\t\tHTTPRoutePathPing," in route_adapter_text
+    assert re.search(r"httptransport\.GET\(\s*HTTPRoutePathPing,", route_adapter_text)
     assert "sharedprovider.NewRouteExecutor(" in route_adapter_text
     assert 'Root:      "api"' in route_adapter_text
     assert 'Group:     "demo"' in route_adapter_text
