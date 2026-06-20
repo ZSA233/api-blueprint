@@ -12,8 +12,8 @@ func NewRouter() *Router {
 
 func (impl *Router) Default(ctx *CTX_Default, req *REQ_Default) (rsp *RSP_Default, err error) {
 	classValue := ""
-	if req != nil && req.Q != nil {
-		classValue = req.Q.Class
+	if req != nil && req.Query != nil {
+		classValue = req.Query.Class
 	}
 	return &types.ConflictModel{
 		Default: "api-default",

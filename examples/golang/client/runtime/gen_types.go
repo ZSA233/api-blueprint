@@ -50,234 +50,234 @@ const (
 )
 
 type DefaultConnectionClose struct {
-	Code   int    `json:"code,omitempty" form:"code,omitempty"`
-	Reason string `json:"reason,omitempty" form:"reason,omitempty"`
-	Error  string `json:"error,omitempty" form:"error,omitempty"`
+	Code   int    `json:"code,omitempty" form:"code,omitempty" uri:"code,omitempty"`
+	Reason string `json:"reason,omitempty" form:"reason,omitempty" uri:"reason,omitempty"`
+	Error  string `json:"error,omitempty" form:"error,omitempty" uri:"error,omitempty"`
 }
 
 type HelloChannelMessage struct {
-	Type HelloChannelMsgTypeEnum `json:"type" form:"type"`
-	Data any                     `json:"data" form:"data"`
+	Type HelloChannelMsgTypeEnum `json:"type" form:"type" uri:"type"`
+	Data any                     `json:"data" form:"data" uri:"data"`
 }
 
 type REQPacketQUERY struct {
-	Trace string `json:"trace,omitempty" form:"trace,omitempty"`
+	Trace string `json:"trace,omitempty" form:"trace,omitempty" uri:"trace,omitempty"`
 }
 
 type RSPPacket struct {
-	Trace      string  `json:"trace" form:"trace"`
-	Version    uint    `json:"version" form:"version"`
-	ItemCount  uint    `json:"item_count" form:"item_count"`
-	Payload    string  `json:"payload" form:"payload"`
-	ScoreSum   float64 `json:"score_sum" form:"score_sum"`
-	FirstLabel string  `json:"first_label" form:"first_label"`
-	ItemIDs    []uint  `json:"item_ids" form:"item_ids"`
-	Checksum   uint    `json:"checksum" form:"checksum"`
+	Trace      string  `json:"trace" form:"trace" uri:"trace"`
+	Version    uint    `json:"version" form:"version" uri:"version"`
+	ItemCount  uint    `json:"item_count" form:"item_count" uri:"item_count"`
+	Payload    string  `json:"payload" form:"payload" uri:"payload"`
+	ScoreSum   float64 `json:"score_sum" form:"score_sum" uri:"score_sum"`
+	FirstLabel string  `json:"first_label" form:"first_label" uri:"first_label"`
+	ItemIDs    []uint  `json:"item_ids" form:"item_ids" uri:"item_ids"`
+	Checksum   uint    `json:"checksum" form:"checksum" uri:"checksum"`
 }
 
 type REQAuditPacketQUERY struct {
-	Trace string `json:"trace,omitempty" form:"trace,omitempty"`
+	Trace string `json:"trace,omitempty" form:"trace,omitempty" uri:"trace,omitempty"`
 }
 
 type RSPAuditPacket struct {
-	Trace     string `json:"trace" form:"trace"`
-	ItemCount uint   `json:"item_count" form:"item_count"`
-	Checksum  uint   `json:"checksum" form:"checksum"`
+	Trace     string `json:"trace" form:"trace" uri:"trace"`
+	ItemCount uint   `json:"item_count" form:"item_count" uri:"item_count"`
+	Checksum  uint   `json:"checksum" form:"checksum" uri:"checksum"`
 }
 
 type REQWidePacketQUERY struct {
-	Trace string `json:"trace,omitempty" form:"trace,omitempty"`
+	Trace string `json:"trace,omitempty" form:"trace,omitempty" uri:"trace,omitempty"`
 }
 
 type RSPWidePacket struct {
-	Trace       string `json:"trace" form:"trace"`
-	PayloadSize uint64 `json:"payload_size" form:"payload_size"`
-	SignedWide  int64  `json:"signed_wide" form:"signed_wide"`
-	Checksum    uint64 `json:"checksum" form:"checksum"`
+	Trace       string `json:"trace" form:"trace" uri:"trace"`
+	PayloadSize uint64 `json:"payload_size" form:"payload_size" uri:"payload_size"`
+	SignedWide  int64  `json:"signed_wide" form:"signed_wide" uri:"signed_wide"`
+	Checksum    uint64 `json:"checksum" form:"checksum" uri:"checksum"`
 }
 
 type ApiDemoA struct {
-	Bc         string         `json:"bc" form:"bc"`
-	A          int            `json:"a" form:"a"`
-	Efg        float32        `json:"efg" form:"efg"`
-	Hijk       []uint         `json:"hijk" form:"hijk"`
-	Lmnop      []*ApiDemoSubA `json:"lmnop,omitempty" form:"lmnop,omitempty"`
-	EnumColor  ColorEnum      `json:"enum_color,omitempty" form:"enum_color,omitempty"`
-	EnumStatus StatusEnum     `json:"enum_status" form:"enum_status"`
-	EnumList   []StatusEnum   `json:"enum_list" form:"enum_list"`
+	Bc         string         `json:"bc" form:"bc" uri:"bc"`
+	A          int            `json:"a" form:"a" uri:"a"`
+	Efg        float32        `json:"efg" form:"efg" uri:"efg"`
+	Hijk       []uint         `json:"hijk" form:"hijk" uri:"hijk"`
+	Lmnop      []*ApiDemoSubA `json:"lmnop,omitempty" form:"lmnop,omitempty" uri:"lmnop,omitempty"`
+	EnumColor  ColorEnum      `json:"enum_color,omitempty" form:"enum_color,omitempty" uri:"enum_color,omitempty"`
+	EnumStatus StatusEnum     `json:"enum_status" form:"enum_status" uri:"enum_status"`
+	EnumList   []StatusEnum   `json:"enum_list" form:"enum_list" uri:"enum_list"`
 }
 
 type ApiDemoSubA struct {
-	Hello map[string]int `json:"hello" form:"hello"`
-	Amap  []*ApiDemoMap  `json:"amap" form:"amap"`
+	Hello map[string]int `json:"hello" form:"hello" uri:"hello"`
+	Amap  []*ApiDemoMap  `json:"amap" form:"amap" uri:"amap"`
 }
 
 type ApiDemoMap struct {
-	Haha int64 `json:"haha" form:"haha"`
+	Haha int64 `json:"haha" form:"haha" uri:"haha"`
 }
 
 type REQTestPostJSON struct {
-	Req1 string `json:"req1" form:"req1"`
-	Req2 int    `json:"req2,omitempty" form:"req2,omitempty"`
+	Req1 string `json:"req1" form:"req1" uri:"req1"`
+	Req2 int    `json:"req2,omitempty" form:"req2,omitempty" uri:"req2,omitempty"`
 }
 
 type RSPTestPost struct {
-	List []string               `json:"list" form:"list"`
-	Map  map[string]*ApiDemoMap `json:"map" form:"map"`
+	List []string               `json:"list" form:"list" uri:"list"`
+	Map  map[string]*ApiDemoMap `json:"map" form:"map" uri:"map"`
 }
 
 type REQFormSubmitFORM struct {
-	Title   string `json:"title" form:"title"`
-	Count   int    `json:"count,omitempty" form:"count,omitempty"`
-	Enabled bool   `json:"enabled,omitempty" form:"enabled,omitempty"`
+	Title   string `json:"title" form:"title" uri:"title"`
+	Count   int    `json:"count,omitempty" form:"count,omitempty" uri:"count,omitempty"`
+	Enabled bool   `json:"enabled,omitempty" form:"enabled,omitempty" uri:"enabled,omitempty"`
 }
 
 type RSPFormSubmit struct {
-	Summary string `json:"summary" form:"summary"`
-	Count   int    `json:"count" form:"count"`
-	Enabled bool   `json:"enabled" form:"enabled"`
+	Summary string `json:"summary" form:"summary" uri:"summary"`
+	Count   int    `json:"count" form:"count" uri:"count"`
+	Enabled bool   `json:"enabled" form:"enabled" uri:"enabled"`
 }
 
 type REQRequestOptionsQUERY struct {
-	DelayMs int `json:"delay_ms,omitempty" form:"delay_ms,omitempty"`
+	DelayMs int `json:"delay_ms,omitempty" form:"delay_ms,omitempty" uri:"delay_ms,omitempty"`
 }
 
 type RequestOptionsResponse struct {
-	Status  string `json:"status" form:"status"`
-	DelayMs int    `json:"delay_ms" form:"delay_ms"`
+	Status  string `json:"status" form:"status" uri:"status"`
+	DelayMs int    `json:"delay_ms" form:"delay_ms" uri:"delay_ms"`
 }
 
 type RSPEmptyResponse struct{}
 
 type REQFunc1putQUERY struct {
-	Arg1 string  `json:"arg1,omitempty" form:"arg1,omitempty"`
-	Arg2 float64 `json:"arg2,omitempty" form:"arg2,omitempty"`
-	Arg3 string  `json:"arg3,omitempty" form:"arg3,omitempty"`
+	Arg1 string  `json:"arg1,omitempty" form:"arg1,omitempty" uri:"arg1,omitempty"`
+	Arg2 float64 `json:"arg2,omitempty" form:"arg2,omitempty" uri:"arg2,omitempty"`
+	Arg3 string  `json:"arg3,omitempty" form:"arg3,omitempty" uri:"arg3,omitempty"`
 }
 
 type REQFunc1putJSON struct {
-	Req1 string `json:"req1" form:"req1"`
-	Req2 int    `json:"req2,omitempty" form:"req2,omitempty"`
+	Req1 string `json:"req1" form:"req1" uri:"req1"`
+	Req2 int    `json:"req2,omitempty" form:"req2,omitempty" uri:"req2,omitempty"`
 }
 
 type RSPFunc1put struct {
-	List   []string            `json:"list" form:"list"`
-	AnonKV *ANONFunc1putAnonKV `json:"anon_kv" form:"anon_kv"`
+	List   []string            `json:"list" form:"list" uri:"list"`
+	AnonKV *ANONFunc1putAnonKV `json:"anon_kv" form:"anon_kv" uri:"anon_kv"`
 }
 
 type ANONFunc1putAnonKV struct {
-	Kv1 uint      `json:"kv1" form:"kv1"`
-	Kv2 []float64 `json:"kv2" form:"kv2"`
+	Kv1 uint      `json:"kv1" form:"kv1" uri:"kv1"`
+	Kv2 []float64 `json:"kv2" form:"kv2" uri:"kv2"`
 }
 
 type REQDeleteQUERY struct {
-	Arg1 string  `json:"arg1,omitempty" form:"arg1,omitempty"`
-	Arg2 float64 `json:"arg2,omitempty" form:"arg2,omitempty"`
+	Arg1 string  `json:"arg1,omitempty" form:"arg1,omitempty" uri:"arg1,omitempty"`
+	Arg2 float64 `json:"arg2,omitempty" form:"arg2,omitempty" uri:"arg2,omitempty"`
 }
 
 type RSPDelete struct {
-	List     []string              `json:"list" form:"list"`
-	AnonList []*ANONDeleteAnonList `json:"anon_list" form:"anon_list"`
+	List     []string              `json:"list" form:"list" uri:"list"`
+	AnonList []*ANONDeleteAnonList `json:"anon_list" form:"anon_list" uri:"anon_list"`
 }
 
 type ANONDeleteAnonList struct {
-	Kv1 int64    `json:"kv1" form:"kv1"`
-	Kv2 []string `json:"kv2" form:"kv2"`
+	Kv1 int64    `json:"kv1" form:"kv1" uri:"kv1"`
+	Kv2 []string `json:"kv2" form:"kv2" uri:"kv2"`
 }
 
 type SweepOpen struct {
-	RunID      string `json:"run_id" form:"run_id"`
-	ReplayFrom string `json:"replay_from,omitempty" form:"replay_from,omitempty"`
+	RunID      string `json:"run_id" form:"run_id" uri:"run_id"`
+	ReplayFrom string `json:"replay_from,omitempty" form:"replay_from,omitempty" uri:"replay_from,omitempty"`
 }
 
 type ConnectionClose struct {
-	Code   int    `json:"code" form:"code"`
-	Reason string `json:"reason,omitempty" form:"reason,omitempty"`
-	Error  string `json:"error,omitempty" form:"error,omitempty"`
+	Code   int    `json:"code" form:"code" uri:"code"`
+	Reason string `json:"reason,omitempty" form:"reason,omitempty" uri:"reason,omitempty"`
+	Error  string `json:"error,omitempty" form:"error,omitempty" uri:"error,omitempty"`
 }
 
 type SweepState struct {
-	Status string `json:"status" form:"status"`
+	Status string `json:"status" form:"status" uri:"status"`
 }
 
 type SweepProgress struct {
-	Current uint64 `json:"current" form:"current"`
-	Total   uint64 `json:"total" form:"total"`
+	Current uint64 `json:"current" form:"current" uri:"current"`
+	Total   uint64 `json:"total" form:"total" uri:"total"`
 }
 
 type SweepLog struct {
-	Level   string `json:"level" form:"level"`
-	Message string `json:"message" form:"message"`
+	Level   string `json:"level" form:"level" uri:"level"`
+	Message string `json:"message" form:"message" uri:"message"`
 }
 
 type AssistantOpen struct {
-	SessionID string `json:"session_id" form:"session_id"`
+	SessionID string `json:"session_id" form:"session_id" uri:"session_id"`
 }
 
 type AssistantDelta struct {
-	Text string `json:"text" form:"text"`
+	Text string `json:"text" form:"text" uri:"text"`
 }
 
 type AssistantDone struct {
-	MessageID string `json:"message_id" form:"message_id"`
+	MessageID string `json:"message_id" form:"message_id" uri:"message_id"`
 }
 
 type AssistantInput struct {
-	Text string `json:"text" form:"text"`
+	Text string `json:"text" form:"text" uri:"text"`
 }
 
 type AssistantCancel struct {
-	Reason string `json:"reason,omitempty" form:"reason,omitempty"`
+	Reason string `json:"reason,omitempty" form:"reason,omitempty" uri:"reason,omitempty"`
 }
 
 type REQPostDeprecatedJSON struct {
-	Req1 string `json:"req1" form:"req1"`
-	Req2 int    `json:"req2,omitempty" form:"req2,omitempty"`
+	Req1 string `json:"req1" form:"req1" uri:"req1"`
+	Req2 int    `json:"req2,omitempty" form:"req2,omitempty" uri:"req2,omitempty"`
 }
 
 type RSPPostDeprecated struct {
-	List []string `json:"list" form:"list"`
+	List []string `json:"list" form:"list" uri:"list"`
 }
 
 type RSPRaw struct {
-	List  []string              `json:"list" form:"list"`
-	List2 map[int64][]*ApiDemoA `json:"list2" form:"list2"`
+	List  []string              `json:"list" form:"list" uri:"list"`
+	List2 map[int64][]*ApiDemoA `json:"list2" form:"list2" uri:"list2"`
 }
 
 type RSPMapModel = map[int]*ApiDemoMap
 
 type REQErrorDemoQUERY struct {
-	Mode string `json:"mode,omitempty" form:"mode,omitempty"`
+	Mode string `json:"mode,omitempty" form:"mode,omitempty" uri:"mode,omitempty"`
 }
 
 type RSPErrorDemo struct {
-	Status string `json:"status" form:"status"`
+	Status string `json:"status" form:"status" uri:"status"`
 }
 
 type MediaPreviewRequest struct {
-	Title string        `json:"title,omitempty" form:"title,omitempty"`
-	Image MultipartFile `json:"image" form:"image"`
+	Title string        `json:"title,omitempty" form:"title,omitempty" uri:"title,omitempty"`
+	Image MultipartFile `json:"image" form:"image" uri:"image"`
 }
 
 type REQErrorFrameQUERY struct {
-	Mode string `json:"mode,omitempty" form:"mode,omitempty"`
+	Mode string `json:"mode,omitempty" form:"mode,omitempty" uri:"mode,omitempty"`
 }
 
 type REQAbcQUERY50077bffe423 struct {
-	Arg1 bool    `json:"arg1,omitempty" form:"arg1,omitempty"`
-	Arg3 string  `json:"arg3,omitempty" form:"arg3,omitempty"`
-	Arg2 float64 `json:"arg2,omitempty" form:"arg2,omitempty"`
+	Arg1 bool    `json:"arg1,omitempty" form:"arg1,omitempty" uri:"arg1,omitempty"`
+	Arg3 string  `json:"arg3,omitempty" form:"arg3,omitempty" uri:"arg3,omitempty"`
+	Arg2 float64 `json:"arg2,omitempty" form:"arg2,omitempty" uri:"arg2,omitempty"`
 }
 
 type REQAbcQUERY11707fb825bf struct {
-	Arg1 bool                    `json:"arg1,omitempty" form:"arg1,omitempty"`
-	Arg3 string                  `json:"arg3,omitempty" form:"arg3,omitempty"`
-	Arg2 float64                 `json:"arg2,omitempty" form:"arg2,omitempty"`
-	Type HelloChannelMsgTypeEnum `json:"type" form:"type"`
+	Arg1 bool                    `json:"arg1,omitempty" form:"arg1,omitempty" uri:"arg1,omitempty"`
+	Arg3 string                  `json:"arg3,omitempty" form:"arg3,omitempty" uri:"arg3,omitempty"`
+	Arg2 float64                 `json:"arg2,omitempty" form:"arg2,omitempty" uri:"arg2,omitempty"`
+	Type HelloChannelMsgTypeEnum `json:"type" form:"type" uri:"type"`
 }
 
 type ApiHelloMap struct {
-	Haha int64 `json:"haha" form:"haha"`
+	Haha int64 `json:"haha" form:"haha" uri:"haha"`
 }
 
 type RSPAbc = map[string]*ApiHelloMap
@@ -293,55 +293,55 @@ type RSPUint64 = uint64
 type RSPStringEmun = MapEnum
 
 type REQHelloWayQUERY struct {
-	Arg1 HelloWayEnum `json:"arg1,omitempty" form:"arg1,omitempty"`
+	Arg1 HelloWayEnum `json:"arg1,omitempty" form:"arg1,omitempty" uri:"arg1,omitempty"`
 }
 
 type RSPDocJson struct{}
 
 type RSPDochaha struct {
-	A string `json:"a,omitempty" form:"a,omitempty"`
+	A string `json:"a,omitempty" form:"a,omitempty" uri:"a,omitempty"`
 }
 
 type REQDefaultQUERYB3dee69d2d1e struct {
-	Class string `json:"class_,omitempty" form:"class_,omitempty"`
+	Class string `json:"class_,omitempty" form:"class_,omitempty" uri:"class_,omitempty"`
 }
 
 type REQDefaultQUERYE7ed94a60410 struct {
-	Class string `json:"class_,omitempty" form:"class_,omitempty"`
+	Class string `json:"class_,omitempty" form:"class_,omitempty" uri:"class_,omitempty"`
 }
 
 type BlueprintsAPIConflictConflictModel struct {
-	Default string      `json:"default" form:"default"`
-	Class   string      `json:"class_" form:"class_"`
-	Enum    KeywordEnum `json:"enum" form:"enum"`
+	Default string      `json:"default" form:"default" uri:"default"`
+	Class   string      `json:"class_" form:"class_" uri:"class_"`
+	Enum    KeywordEnum `json:"enum" form:"enum" uri:"enum"`
 }
 
 type BlueprintsAltConflictConflictModel struct {
-	Default string      `json:"default" form:"default"`
-	Class   string      `json:"class_" form:"class_"`
-	Enum    KeywordEnum `json:"enum" form:"enum"`
+	Default string      `json:"default" form:"default" uri:"default"`
+	Class   string      `json:"class_" form:"class_" uri:"class_"`
+	Enum    KeywordEnum `json:"enum" form:"enum" uri:"enum"`
 }
 
 type RuntimeStatus struct {
-	Status string `json:"status" form:"status"`
+	Status string `json:"status" form:"status" uri:"status"`
 }
 
 type AccountProfile struct {
-	UserID   string `json:"user_id" form:"user_id"`
-	Nickname string `json:"nickname" form:"nickname"`
+	UserID   string `json:"user_id" form:"user_id" uri:"user_id"`
+	Nickname string `json:"nickname" form:"nickname" uri:"nickname"`
 }
 
 type RSPList struct {
-	Rooms []*RoomSummary `json:"rooms" form:"rooms"`
+	Rooms []*RoomSummary `json:"rooms" form:"rooms" uri:"rooms"`
 }
 
 type RoomSummary struct {
-	RoomID string `json:"room_id" form:"room_id"`
-	Title  string `json:"title" form:"title"`
+	RoomID string `json:"room_id" form:"room_id" uri:"room_id"`
+	Title  string `json:"title" form:"title" uri:"title"`
 }
 
 type LegacyJsonCompatPayload struct {
-	Target        any      `json:"target" form:"target"`
-	IDs           []any    `json:"ids" form:"ids"`
-	NormalizedIDs []string `json:"normalized_ids" form:"normalized_ids"`
+	Target        any      `json:"target" form:"target" uri:"target"`
+	IDs           []any    `json:"ids" form:"ids" uri:"ids"`
+	NormalizedIDs []string `json:"normalized_ids" form:"normalized_ids" uri:"normalized_ids"`
 }

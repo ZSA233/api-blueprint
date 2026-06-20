@@ -10,7 +10,7 @@ import (
 type ConflictService struct {
 	impl            RouterInterface
 	sessions        wailstransport.ConnectionHub
-	defaultExecutor *sharedprovider.RouteExecutor[REQ_Default_QUERY, any, RSP_Default]
+	defaultExecutor *sharedprovider.RouteExecutor[any, REQ_Default_QUERY, any, RSP_Default]
 }
 
 func newGeneratedConflictService(impl RouterInterface, dispatcher wailstransport.EventDispatcher) *ConflictService {
@@ -30,7 +30,7 @@ func newGeneratedConflictService(impl RouterInterface, dispatcher wailstransport
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req=Q|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+			"req=query|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.Default,
 		),
 	}
@@ -55,12 +55,12 @@ func (svc *ConflictService) Default(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[REQ_Default_QUERY, any, RSP_Default](
+	ctx := sharedprovider.NewWailsContext[any, REQ_Default_QUERY, any, RSP_Default](
 		"ConflictService",
 		"Default",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[REQ_Default_QUERY, any, RSP_Default]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, REQ_Default_QUERY, any, RSP_Default]{Request: req}
 	execErr := svc.defaultExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {

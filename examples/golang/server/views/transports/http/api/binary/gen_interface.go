@@ -13,129 +13,153 @@ import (
 )
 
 func Mount(router gin.IRouter, impl shared.RouterInterface) shared.RouterInterface {
+	return MountSelected(router, impl, nil)
+}
+
+func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map[string]struct{}) shared.RouterInterface {
 	if isNilRouterInterface(impl) {
 		impl = shared.NewRouter()
 	}
 
-	httptransport.POST(
-		"/api/binary/packet",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "binary",
-				Namespace: "binary",
-				Service:   "BinaryService",
-				Operation: "Packet",
-				RouteID:   "api.binary.post.packet",
-				Path:      "/api/binary/packet",
-				Methods:   []string{"POST"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{"identity", "gzip", "br"},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
-					},
-				},
-			},
-			"req=QB|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
-			impl.Packet,
-		),
-		router,
-	)
+	if shouldMountRoute(routeIDs, "api.binary.post.packet") {
 
-	httptransport.POST(
-		"/api/binary/audit-packet",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "binary",
-				Namespace: "binary",
-				Service:   "BinaryService",
-				Operation: "AuditPacket",
-				RouteID:   "api.binary.post.auditpacket",
-				Path:      "/api/binary/audit-packet",
-				Methods:   []string{"POST"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{"identity"},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
+		httptransport.POST(
+			"/api/binary/packet",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "binary",
+					Namespace: "binary",
+					Service:   "BinaryService",
+					Operation: "Packet",
+					RouteID:   "api.binary.post.packet",
+					Path:      "/api/binary/packet",
+					Methods:   []string{"POST"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{"identity", "gzip", "br"},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
 					},
 				},
-			},
-			"req=QB|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
-			impl.AuditPacket,
-		),
-		router,
-	)
+				"req=query,binary|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+				impl.Packet,
+			),
+			router,
+		)
 
-	httptransport.POST(
-		"/api/binary/wide-packet",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "binary",
-				Namespace: "binary",
-				Service:   "BinaryService",
-				Operation: "WidePacket",
-				RouteID:   "api.binary.post.widepacket",
-				Path:      "/api/binary/wide-packet",
-				Methods:   []string{"POST"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{"identity"},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
-					},
-				},
-			},
-			"req=QB|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
-			impl.WidePacket,
-		),
-		router,
-	)
+	}
 
-	httptransport.GET(
-		"/api/binary/audit-packet-response",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "binary",
-				Namespace: "binary",
-				Service:   "BinaryService",
-				Operation: "AuditPacketResponse",
-				RouteID:   "api.binary.get.auditpacketresponse",
-				Path:      "/api/binary/audit-packet-response",
-				Methods:   []string{"GET"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
+	if shouldMountRoute(routeIDs, "api.binary.post.auditpacket") {
+
+		httptransport.POST(
+			"/api/binary/audit-packet",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "binary",
+					Namespace: "binary",
+					Service:   "BinaryService",
+					Operation: "AuditPacket",
+					RouteID:   "api.binary.post.auditpacket",
+					Path:      "/api/binary/audit-packet",
+					Methods:   []string{"POST"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{"identity"},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
 					},
 				},
-			},
-			"req|auth|request-signature|handle|rsp=binary_schema@CodeMessageDataEnvelope",
-			impl.AuditPacketResponse,
-		),
-		router,
-	)
+				"req=query,binary|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+				impl.AuditPacket,
+			),
+			router,
+		)
+
+	}
+
+	if shouldMountRoute(routeIDs, "api.binary.post.widepacket") {
+
+		httptransport.POST(
+			"/api/binary/wide-packet",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "binary",
+					Namespace: "binary",
+					Service:   "BinaryService",
+					Operation: "WidePacket",
+					RouteID:   "api.binary.post.widepacket",
+					Path:      "/api/binary/wide-packet",
+					Methods:   []string{"POST"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{"identity"},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
+					},
+				},
+				"req=query,binary|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+				impl.WidePacket,
+			),
+			router,
+		)
+
+	}
+
+	if shouldMountRoute(routeIDs, "api.binary.get.auditpacketresponse") {
+
+		httptransport.GET(
+			"/api/binary/audit-packet-response",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "binary",
+					Namespace: "binary",
+					Service:   "BinaryService",
+					Operation: "AuditPacketResponse",
+					RouteID:   "api.binary.get.auditpacketresponse",
+					Path:      "/api/binary/audit-packet-response",
+					Methods:   []string{"GET"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
+					},
+				},
+				"req|auth|request-signature|handle|rsp=binary_schema@CodeMessageDataEnvelope",
+				impl.AuditPacketResponse,
+			),
+			router,
+		)
+
+	}
 
 	return impl
 }
@@ -161,4 +185,12 @@ func isNilRouterInterface(impl shared.RouterInterface) bool {
 	default:
 		return false
 	}
+}
+
+func shouldMountRoute(routeIDs map[string]struct{}, routeID string) bool {
+	if len(routeIDs) == 0 {
+		return true
+	}
+	_, ok := routeIDs[routeID]
+	return ok
 }

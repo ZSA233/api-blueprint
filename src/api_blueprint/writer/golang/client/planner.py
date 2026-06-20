@@ -31,6 +31,10 @@ class GoClientRoute:
         return self.public_names.query
 
     @property
+    def path_type(self) -> str:
+        return self.public_names.path
+
+    @property
     def json_type(self) -> str:
         return self.public_names.json
 

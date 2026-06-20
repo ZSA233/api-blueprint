@@ -34,56 +34,57 @@ func newEnvelopeErrorIdentity(payload *errors.ApiErrorPayload) *EnvelopeErrorIde
 	}
 }
 
-type REQ[Q, B any] struct {
-	Q *Q
-	B *B
+type REQ[Path, Query, Body any] struct {
+	Path  *Path
+	Query *Query
+	Body  *Body
 }
 
 // ============================= JSON ================================
 
 type RSP_JSON_CodeMessageDataEnvelope[T any] struct {
-	Code    int                           `json:"code" xml:"code" form:"code"`
-	Message string                        `json:"message" xml:"message" form:"message"`
-	Error   *EnvelopeErrorIdentityPayload `json:"error,omitempty" xml:"error,omitempty" form:"error,omitempty" binding:"omitempty"`
-	Data    *T                            `json:"data,omitempty" xml:"data,omitempty" form:"data,omitempty" binding:"omitempty"`
+	Code    int                           `json:"code" xml:"code" form:"code" uri:"code"`
+	Message string                        `json:"message" xml:"message" form:"message" uri:"message"`
+	Error   *EnvelopeErrorIdentityPayload `json:"error,omitempty" xml:"error,omitempty" form:"error,omitempty" uri:"error,omitempty" binding:"omitempty"`
+	Data    *T                            `json:"data,omitempty" xml:"data,omitempty" form:"data,omitempty" uri:"data,omitempty" binding:"omitempty"`
 }
 
 type RSP_JSON_NoEnvelope = any
 
 type RSP_JSON_OkDataErrorEnvelope[T any] struct {
-	Ok    bool                     `json:"ok" xml:"ok" form:"ok"`
-	Error *EnvelopeApiErrorPayload `json:"error,omitempty" xml:"error,omitempty" form:"error,omitempty" binding:"omitempty"`
-	Data  *T                       `json:"data,omitempty" xml:"data,omitempty" form:"data,omitempty" binding:"omitempty"`
+	Ok    bool                     `json:"ok" xml:"ok" form:"ok" uri:"ok"`
+	Error *EnvelopeApiErrorPayload `json:"error,omitempty" xml:"error,omitempty" form:"error,omitempty" uri:"error,omitempty" binding:"omitempty"`
+	Data  *T                       `json:"data,omitempty" xml:"data,omitempty" form:"data,omitempty" uri:"data,omitempty" binding:"omitempty"`
 }
 
-func NewRSP_JSON_CodeMessageDataEnvelope[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (codeInt int, rsp any) {
+func NewRSP_JSON_CodeMessageDataEnvelope[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (codeInt int, rsp any) {
 	code, message, toast, apiErrorPayload := unwrapError(err)
 	_, _, _, _ = code, message, toast, apiErrorPayload
 
 	if apiErrorPayload != nil {
-		return 0, &RSP_JSON_CodeMessageDataEnvelope[P]{
+		return 0, &RSP_JSON_CodeMessageDataEnvelope[Response]{
 			Code:    apiErrorPayload.Code,
 			Message: apiErrorPayload.Message,
 			Error:   newEnvelopeErrorIdentity(apiErrorPayload),
 		}
 	}
-	return 0, &RSP_JSON_CodeMessageDataEnvelope[P]{
+	return 0, &RSP_JSON_CodeMessageDataEnvelope[Response]{
 		Code:    0,
 		Message: "ok",
 		Data:    data,
 	}
 }
 
-func WrapRSP_JSON_CodeMessageDataEnvelope[P any](data *P, err error) *RSP_JSON_CodeMessageDataEnvelope[P] {
-	_, rsp := NewRSP_JSON_CodeMessageDataEnvelope[any, any, P](nil, data, err)
+func WrapRSP_JSON_CodeMessageDataEnvelope[Response any](data *Response, err error) *RSP_JSON_CodeMessageDataEnvelope[Response] {
+	_, rsp := NewRSP_JSON_CodeMessageDataEnvelope[any, any, any, Response](nil, data, err)
 	if rsp == nil {
 		return nil
 	}
-	typed, _ := rsp.(*RSP_JSON_CodeMessageDataEnvelope[P])
+	typed, _ := rsp.(*RSP_JSON_CodeMessageDataEnvelope[Response])
 	return typed
 }
 
-func NewRSP_JSON_NoEnvelope[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (codeInt int, rsp any) {
+func NewRSP_JSON_NoEnvelope[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (codeInt int, rsp any) {
 	code, message, toast, apiErrorPayload := unwrapError(err)
 	_, _, _, _ = code, message, toast, apiErrorPayload
 
@@ -93,41 +94,41 @@ func NewRSP_JSON_NoEnvelope[Q, B, P any](prov *RspProvider[Q, B, P], data *P, er
 	return 0, data
 }
 
-func WrapRSP_JSON_NoEnvelope[P any](data *P, err error) *P {
-	_, rsp := NewRSP_JSON_NoEnvelope[any, any, P](nil, data, err)
+func WrapRSP_JSON_NoEnvelope[Response any](data *Response, err error) *Response {
+	_, rsp := NewRSP_JSON_NoEnvelope[any, any, any, Response](nil, data, err)
 	if rsp == nil {
 		return nil
 	}
-	typed, _ := rsp.(*P)
+	typed, _ := rsp.(*Response)
 	return typed
 }
 
-func NewRSP_JSON_OkDataErrorEnvelope[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (codeInt int, rsp any) {
+func NewRSP_JSON_OkDataErrorEnvelope[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (codeInt int, rsp any) {
 	code, message, toast, apiErrorPayload := unwrapError(err)
 	_, _, _, _ = code, message, toast, apiErrorPayload
 
 	if apiErrorPayload != nil {
-		return 0, &RSP_JSON_OkDataErrorEnvelope[P]{
+		return 0, &RSP_JSON_OkDataErrorEnvelope[Response]{
 			Ok:    false,
 			Error: apiErrorPayload,
 		}
 	}
-	return 0, &RSP_JSON_OkDataErrorEnvelope[P]{
+	return 0, &RSP_JSON_OkDataErrorEnvelope[Response]{
 		Ok:   true,
 		Data: data,
 	}
 }
 
-func WrapRSP_JSON_OkDataErrorEnvelope[P any](data *P, err error) *RSP_JSON_OkDataErrorEnvelope[P] {
-	_, rsp := NewRSP_JSON_OkDataErrorEnvelope[any, any, P](nil, data, err)
+func WrapRSP_JSON_OkDataErrorEnvelope[Response any](data *Response, err error) *RSP_JSON_OkDataErrorEnvelope[Response] {
+	_, rsp := NewRSP_JSON_OkDataErrorEnvelope[any, any, any, Response](nil, data, err)
 	if rsp == nil {
 		return nil
 	}
-	typed, _ := rsp.(*RSP_JSON_OkDataErrorEnvelope[P])
+	typed, _ := rsp.(*RSP_JSON_OkDataErrorEnvelope[Response])
 	return typed
 }
 
-func NewRSP_JSON_Entry[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (code int, rsp any) {
+func NewRSP_JSON_Entry[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (code int, rsp any) {
 	switch prov.Options {
 
 	case "CodeMessageDataEnvelope":
@@ -143,16 +144,16 @@ func NewRSP_JSON_Entry[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err err
 }
 
 // ============================= XML ================================
-type RSP_XML[P any] struct {
+type RSP_XML[Response any] struct {
 	XMLName xml.Name
-	Inner   *P
+	Inner   *Response
 }
 
 type RSP_XML_CodeMessageDataEnvelope_INNER[T any] struct {
-	Code    int                           `json:"code" xml:"code" form:"code"`
-	Message string                        `json:"message" xml:"message" form:"message"`
-	Error   *EnvelopeErrorIdentityPayload `json:"error,omitempty" xml:"error,omitempty" form:"error,omitempty" binding:"omitempty"`
-	Data    *T                            `json:"data,omitempty" xml:"data,omitempty" form:"data,omitempty" binding:"omitempty"`
+	Code    int                           `json:"code" xml:"code" form:"code" uri:"code"`
+	Message string                        `json:"message" xml:"message" form:"message" uri:"message"`
+	Error   *EnvelopeErrorIdentityPayload `json:"error,omitempty" xml:"error,omitempty" form:"error,omitempty" uri:"error,omitempty" binding:"omitempty"`
+	Data    *T                            `json:"data,omitempty" xml:"data,omitempty" form:"data,omitempty" uri:"data,omitempty" binding:"omitempty"`
 }
 
 type RSP_XML_CodeMessageDataEnvelope[T any] RSP_XML[RSP_XML_CodeMessageDataEnvelope_INNER[T]]
@@ -170,9 +171,9 @@ func (r RSP_XML_NoEnvelope) MarshalXML(enc *xml.Encoder, start xml.StartElement)
 }
 
 type RSP_XML_OkDataErrorEnvelope_INNER[T any] struct {
-	Ok    bool                     `json:"ok" xml:"ok" form:"ok"`
-	Error *EnvelopeApiErrorPayload `json:"error,omitempty" xml:"error,omitempty" form:"error,omitempty" binding:"omitempty"`
-	Data  *T                       `json:"data,omitempty" xml:"data,omitempty" form:"data,omitempty" binding:"omitempty"`
+	Ok    bool                     `json:"ok" xml:"ok" form:"ok" uri:"ok"`
+	Error *EnvelopeApiErrorPayload `json:"error,omitempty" xml:"error,omitempty" form:"error,omitempty" uri:"error,omitempty" binding:"omitempty"`
+	Data  *T                       `json:"data,omitempty" xml:"data,omitempty" form:"data,omitempty" uri:"data,omitempty" binding:"omitempty"`
 }
 
 type RSP_XML_OkDataErrorEnvelope[T any] RSP_XML[RSP_XML_OkDataErrorEnvelope_INNER[T]]
@@ -181,23 +182,23 @@ func (r RSP_XML_OkDataErrorEnvelope[T]) MarshalXML(enc *xml.Encoder, start xml.S
 	return marshalXML(enc, start, r.XMLName, r.Inner)
 }
 
-func NewRSP_XML_CodeMessageDataEnvelope[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (codeInt int, rsp any) {
+func NewRSP_XML_CodeMessageDataEnvelope[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (codeInt int, rsp any) {
 	code, message, toast, apiErrorPayload := unwrapError(err)
 	_, _, _, _ = code, message, toast, apiErrorPayload
 
 	if apiErrorPayload != nil {
-		return 0, &RSP_XML_CodeMessageDataEnvelope[P]{
+		return 0, &RSP_XML_CodeMessageDataEnvelope[Response]{
 			XMLName: xml.Name{Local: "response"},
-			Inner: &RSP_XML_CodeMessageDataEnvelope_INNER[P]{
+			Inner: &RSP_XML_CodeMessageDataEnvelope_INNER[Response]{
 				Code:    apiErrorPayload.Code,
 				Message: apiErrorPayload.Message,
 				Error:   newEnvelopeErrorIdentity(apiErrorPayload),
 			},
 		}
 	}
-	return 0, &RSP_XML_CodeMessageDataEnvelope[P]{
+	return 0, &RSP_XML_CodeMessageDataEnvelope[Response]{
 		XMLName: xml.Name{Local: "response"},
-		Inner: &RSP_XML_CodeMessageDataEnvelope_INNER[P]{
+		Inner: &RSP_XML_CodeMessageDataEnvelope_INNER[Response]{
 			Code:    0,
 			Message: "ok",
 			Data:    data,
@@ -205,7 +206,7 @@ func NewRSP_XML_CodeMessageDataEnvelope[Q, B, P any](prov *RspProvider[Q, B, P],
 	}
 }
 
-func NewRSP_XML_NoEnvelope[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (codeInt int, rsp any) {
+func NewRSP_XML_NoEnvelope[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (codeInt int, rsp any) {
 	code, message, toast, apiErrorPayload := unwrapError(err)
 	_, _, _, _ = code, message, toast, apiErrorPayload
 
@@ -219,29 +220,29 @@ func NewRSP_XML_NoEnvelope[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err
 	}
 }
 
-func NewRSP_XML_OkDataErrorEnvelope[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (codeInt int, rsp any) {
+func NewRSP_XML_OkDataErrorEnvelope[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (codeInt int, rsp any) {
 	code, message, toast, apiErrorPayload := unwrapError(err)
 	_, _, _, _ = code, message, toast, apiErrorPayload
 
 	if apiErrorPayload != nil {
-		return 0, &RSP_XML_OkDataErrorEnvelope[P]{
+		return 0, &RSP_XML_OkDataErrorEnvelope[Response]{
 			XMLName: xml.Name{Local: "response"},
-			Inner: &RSP_XML_OkDataErrorEnvelope_INNER[P]{
+			Inner: &RSP_XML_OkDataErrorEnvelope_INNER[Response]{
 				Ok:    false,
 				Error: apiErrorPayload,
 			},
 		}
 	}
-	return 0, &RSP_XML_OkDataErrorEnvelope[P]{
+	return 0, &RSP_XML_OkDataErrorEnvelope[Response]{
 		XMLName: xml.Name{Local: "response"},
-		Inner: &RSP_XML_OkDataErrorEnvelope_INNER[P]{
+		Inner: &RSP_XML_OkDataErrorEnvelope_INNER[Response]{
 			Ok:   true,
 			Data: data,
 		},
 	}
 }
 
-func NewRSP_XML_Entry[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (code int, rsp any) {
+func NewRSP_XML_Entry[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (code int, rsp any) {
 	switch prov.Options {
 
 	case "CodeMessageDataEnvelope":

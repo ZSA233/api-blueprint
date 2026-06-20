@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import re
 from typing import Any, Generator
 
 from api_blueprint.engine.connection import ConnectionKind, DefaultConnectionClose, MessageContract, ModelRef
 from api_blueprint.engine.model import Null, create_model
 from api_blueprint.engine.provider import ProviderName
-from api_blueprint.engine.router import Router
+from api_blueprint.engine.router import Router, path_param_names
 from api_blueprint.engine.utils import pascal_to_snake_case, snake_to_pascal_case
 from api_blueprint.engine.envelope import NoEnvelope
 from api_blueprint.writer.core.contract_adapters import RouteProtocolContract, route_protocol_from_router
@@ -79,6 +80,12 @@ class GoRouteProtocolView:
         return f"{self.req_type}_QUERY"
 
     @property
+    def path_alias_name(self) -> str | None:
+        if self.path_model is None:
+            return None
+        return f"{self.req_type}_PATH"
+
+    @property
     def body_alias_name(self) -> str | None:
         if self.protocol.request.json.model is not None:
             return f"{self.req_type}_JSON"
@@ -107,6 +114,10 @@ class GoRouteProtocolView:
         return self.query_alias_name or "any"
 
     @property
+    def local_path_type_expr(self) -> str:
+        return self.path_alias_name or "any"
+
+    @property
     def local_body_type_expr(self) -> str:
         return self.body_alias_name or "any"
 
@@ -119,6 +130,10 @@ class GoRouteProtocolView:
     @property
     def bind_query(self) -> bool:
         return self.query_model is not None
+
+    @property
+    def bind_path(self) -> bool:
+        return self.path_model is not None
 
     @property
     def bind_json(self) -> bool:
@@ -159,13 +174,14 @@ class GoRouteProtocolView:
     @property
     def req_provider(self) -> str:
         options = [
-            ("Q", self.query_model),
-            ("F", self.protocol.request.form.model),
-            ("M", self.protocol.request.multipart.model),
-            ("J", self.protocol.request.json.model),
-            ("B", self.protocol.request.binary_schema),
+            ("path", self.path_model),
+            ("query", self.query_model),
+            ("form", self.protocol.request.form.model),
+            ("multipart", self.protocol.request.multipart.model),
+            ("json", self.protocol.request.json.model),
+            ("binary", self.protocol.request.binary_schema),
         ]
-        return "".join(value for value, ok in options if ok)
+        return ",".join(value for value, ok in options if ok)
 
     @property
     def rsp_provider(self) -> str:
@@ -225,11 +241,15 @@ class GoRouteProtocolView:
         return bool(self.router.extra.get("http_raw_response"))
 
     def protos(self) -> Generator[GolangProto, None, None]:
+        req_path_proto = None
         req_query_proto = None
         req_form_proto = None
         req_json_proto = None
         req_body_proto: GolangProto | GolangType | None = None
 
+        if self.path_model is not None:
+            req_path_proto = GolangProto.from_model_ref(ensure_model(self.path_model), self.path_alias_name)
+            yield req_path_proto
         if self.query_model is not None:
             req_query_proto = GolangProto.from_model_ref(ensure_model(self.query_model), self.query_alias_name)
             yield req_query_proto
@@ -262,14 +282,22 @@ class GoRouteProtocolView:
             create_model(
                 self.req_type,
                 {
-                    "Q": self.query_model,
-                    "B": self.protocol.request.json.model or self.protocol.request.multipart.model or self.protocol.request.form.model or Null(),
+                    "Path": self.path_model or Null(),
+                    "Query": self.query_model or Null(),
+                    "Body": self.protocol.request.json.model
+                    or self.protocol.request.multipart.model
+                    or self.protocol.request.form.model
+                    or Null(),
                 },
             ),
             "generic",
             generic=GolangProtoGeneric(
                 name=GolangType("{provider_package$}REQ"),
-                types=[req_query_proto or GolangType("any"), req_body_proto or GolangType("any")],
+                types=[
+                    req_path_proto or GolangType("any"),
+                    req_query_proto or GolangType("any"),
+                    req_body_proto or GolangType("any"),
+                ],
             ),
         )
 
@@ -302,15 +330,20 @@ class GoRouteProtocolView:
             create_model(
                 self.req_type,
                 {
-                    "Q": self.query_model or Null(),
-                    "B": self.protocol.request.json.model or self.protocol.request.multipart.model or self.protocol.request.form.model or Null(),
-                    "P": self.protocol.response.model.model or Null(),
+                    "Path": self.path_model or Null(),
+                    "Query": self.query_model or Null(),
+                    "Body": self.protocol.request.json.model
+                    or self.protocol.request.multipart.model
+                    or self.protocol.request.form.model
+                    or Null(),
+                    "Response": self.protocol.response.model.model or Null(),
                 },
             ),
             "generic",
             generic=GolangProtoGeneric(
                 name=GolangType("{provider_package$}Context"),
                 types=[
+                    req_path_proto or GolangType("any"),
                     req_query_proto or GolangType("any"),
                     req_body_proto or GolangType("any"),
                     rsp_body_ref or GolangType("any"),
@@ -321,6 +354,8 @@ class GoRouteProtocolView:
         yield from self.message_protos()
 
     def com_protos(self) -> Generator[GolangProto, None, None]:
+        if self.path_model is not None:
+            yield from GolangProto.from_model(self.path_model).com_protos()
         if self.query_model is not None:
             yield from GolangProto.from_model(self.query_model).com_protos()
         if self.protocol.request.form.model is not None:
@@ -361,6 +396,20 @@ class GoRouteProtocolView:
         if self.is_connection:
             return self.protocol.request.open.model
         return self.protocol.request.query.model
+
+    @property
+    def path_model(self) -> ModelRef | None:
+        return self.protocol.request.path.model
+
+    @property
+    def path_params(self) -> tuple[str, ...]:
+        if self.protocol.request.path_params:
+            return self.protocol.request.path_params
+        return path_param_names(self.url)
+
+    @property
+    def http_url(self) -> str:
+        return re.sub(r"\{([A-Za-z_][A-Za-z0-9_]*)\}", r":\1", self.url)
 
     @property
     def server_message_type(self) -> str:

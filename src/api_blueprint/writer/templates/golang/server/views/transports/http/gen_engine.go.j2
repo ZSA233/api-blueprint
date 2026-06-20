@@ -53,50 +53,65 @@ func requireSessionScope(route provider.RouteInfo) error {
 	return fmt.Errorf("[httptransport] connection scope[%s] is not supported by the default HTTP runtime", route.Scope)
 }
 
-func bindRequest[Q, B, P any](
+func bindRequest[Path, Query, Body, Response any](
 	ginCtx *gin.Context,
-	reqProvider *provider.ReqProvider[Q, B, P],
+	reqProvider *provider.ReqProvider[Path, Query, Body, Response],
 	route provider.RouteInfo,
-) (*provider.REQ[Q, B], error) {
+) (*provider.REQ[Path, Query, Body], error) {
 	applyRequestBodyLimit(ginCtx)
-	var reqQ *Q
-	var reqB *B
+	var reqPath *Path
+	var reqQuery *Query
+	var reqBody *Body
 	if reqProvider == nil {
-		return &provider.REQ[Q, B]{}, nil
+		return &provider.REQ[Path, Query, Body]{}, nil
 	}
 
+	if reqProvider.BindPath {
+		reqPath = new(Path)
+		if err := bindPath(ginCtx, reqPath, route.HTTP.Request.PathParams); err != nil {
+			return nil, err
+		}
+	}
 	if reqProvider.BindQuery {
-		reqQ = new(Q)
-		if err := ginCtx.ShouldBindQuery(reqQ); err != nil {
+		reqQuery = new(Query)
+		if err := ginCtx.ShouldBindQuery(reqQuery); err != nil {
 			return nil, err
 		}
 	}
 	if reqProvider.BindJSON {
-		reqB = new(B)
-		if err := ginCtx.ShouldBindJSON(reqB); err != nil {
+		reqBody = new(Body)
+		if err := ginCtx.ShouldBindJSON(reqBody); err != nil {
 			return nil, err
 		}
 	} else if reqProvider.BindForm {
-		reqB = new(B)
-		if err := ginCtx.ShouldBind(reqB); err != nil {
+		reqBody = new(Body)
+		if err := ginCtx.ShouldBind(reqBody); err != nil {
 			return nil, err
 		}
 	} else if reqProvider.BindMultipart {
-		reqB = new(B)
-		if err := bindMultipart(ginCtx, reqB); err != nil {
+		reqBody = new(Body)
+		if err := bindMultipart(ginCtx, reqBody); err != nil {
 			return nil, err
 		}
 	} else if reqProvider.BindBinary {
-		reqB = new(B)
-		if err := bindBinaryBody(ginCtx, reqB, route.HTTP.Request.BinaryContentEncodings); err != nil {
+		reqBody = new(Body)
+		if err := bindBinaryBody(ginCtx, reqBody, route.HTTP.Request.BinaryContentEncodings); err != nil {
 			return nil, err
 		}
 	}
 
-	return &provider.REQ[Q, B]{
-		Q: reqQ,
-		B: reqB,
+	return &provider.REQ[Path, Query, Body]{
+		Path:  reqPath,
+		Query: reqQuery,
+		Body:  reqBody,
 	}, nil
+}
+
+func bindPath(ginCtx *gin.Context, target any, names []string) error {
+	if len(names) == 0 {
+		return nil
+	}
+	return ginCtx.ShouldBindUri(target)
 }
 
 func bindMultipart(ginCtx *gin.Context, target any) error {
@@ -362,28 +377,28 @@ func asHTTPStatusError(err error) *httpStatusError {
 	return nil
 }
 
-func newContext[Q, B, P any](
+func newContext[Path, Query, Body, Response any](
 	ginCtx *gin.Context,
-	executor *provider.RouteExecutor[Q, B, P],
-) *provider.Context[Q, B, P] {
-	ctx := provider.NewHTTPContext[Q, B, P](
+	executor *provider.RouteExecutor[Path, Query, Body, Response],
+) *provider.Context[Path, Query, Body, Response] {
+	ctx := provider.NewHTTPContext[Path, Query, Body, Response](
 		ginCtx.Request.Context(),
 		nil,
 		map[string]any{GinContextMetadataKey: ginCtx},
 	)
 	ctx.HeaderFn = ginCtx.GetHeader
 	req, err := bindRequest(ginCtx, executor.Indexer.Req, executor.Route)
-	ctx.Req = &provider.ReqContext[Q, B, P]{
+	ctx.Req = &provider.ReqContext[Path, Query, Body, Response]{
 		Request: req,
 		Error:   err,
 	}
 	return ctx
 }
 
-func writeResponse[Q, B, P any](
+func writeResponse[Path, Query, Body, Response any](
 	ginCtx *gin.Context,
-	rspProvider *provider.RspProvider[Q, B, P],
-	response *P,
+	rspProvider *provider.RspProvider[Path, Query, Body, Response],
+	response *Response,
 	err error,
 	route provider.RouteInfo,
 ) {
@@ -455,7 +470,7 @@ func writeResponse[Q, B, P any](
 	}
 }
 
-func writeRawResponse[P any](ginCtx *gin.Context, kind string, defaultFilename string, response *P) {
+func writeRawResponse[Response any](ginCtx *gin.Context, kind string, defaultFilename string, response *Response) {
 	if response == nil {
 		ginCtx.Data(http.StatusOK, "application/octet-stream", nil)
 		return
@@ -510,7 +525,7 @@ func writeRawResponse[P any](ginCtx *gin.Context, kind string, defaultFilename s
 	}
 }
 
-func writeBinarySchemaResponse[P any](ginCtx *gin.Context, response *P) {
+func writeBinarySchemaResponse[Response any](ginCtx *gin.Context, response *Response) {
 	if response == nil {
 		ginCtx.Data(http.StatusOK, "application/octet-stream", nil)
 		return
@@ -541,8 +556,8 @@ func hasHeader(headers map[string]string, key string) bool {
 	return false
 }
 
-func makeHandler[Q, B, P any](
-	executor *provider.RouteExecutor[Q, B, P],
+func makeHandler[Path, Query, Body, Response any](
+	executor *provider.RouteExecutor[Path, Query, Body, Response],
 ) gin.HandlerFunc {
 	return func(ginCtx *gin.Context) {
 		ctx := newContext(ginCtx, executor)
@@ -555,33 +570,33 @@ func makeHandler[Q, B, P any](
 	}
 }
 
-func GET[Q, B, P any](
+func GET[Path, Query, Body, Response any](
 	relativePath string,
-	executor *provider.RouteExecutor[Q, B, P],
+	executor *provider.RouteExecutor[Path, Query, Body, Response],
 	router gin.IRouter,
 ) {
 	router.GET(relativePath, makeHandler(executor))
 }
 
-func POST[Q, B, P any](
+func POST[Path, Query, Body, Response any](
 	relativePath string,
-	executor *provider.RouteExecutor[Q, B, P],
+	executor *provider.RouteExecutor[Path, Query, Body, Response],
 	router gin.IRouter,
 ) {
 	router.POST(relativePath, makeHandler(executor))
 }
 
-func PUT[Q, B, P any](
+func PUT[Path, Query, Body, Response any](
 	relativePath string,
-	executor *provider.RouteExecutor[Q, B, P],
+	executor *provider.RouteExecutor[Path, Query, Body, Response],
 	router gin.IRouter,
 ) {
 	router.PUT(relativePath, makeHandler(executor))
 }
 
-func DELETE[Q, B, P any](
+func DELETE[Path, Query, Body, Response any](
 	relativePath string,
-	executor *provider.RouteExecutor[Q, B, P],
+	executor *provider.RouteExecutor[Path, Query, Body, Response],
 	router gin.IRouter,
 ) {
 	router.DELETE(relativePath, makeHandler(executor))

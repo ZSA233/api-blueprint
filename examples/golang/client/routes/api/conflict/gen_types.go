@@ -5,6 +5,6 @@ package conflict
 import runtime "example.com/project/golang/client/runtime"
 
 type DefaultQuery struct {
-	Class string `json:"class_,omitempty" form:"class_,omitempty"`
+	Class string `json:"class_,omitempty" form:"class_,omitempty" uri:"class_,omitempty"`
 }
 type DefaultResponse = runtime.BlueprintsAPIConflictConflictModel

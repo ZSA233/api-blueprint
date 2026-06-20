@@ -18,9 +18,9 @@ type ProviderSpec struct {
 
 type ProviderFactory func(spec ProviderSpec) Provider
 
-type Indexer[Q, B, P any] struct {
-	Req *ReqProvider[Q, B, P]
-	Rsp *RspProvider[Q, B, P]
+type Indexer[Path, Query, Body, Response any] struct {
+	Req *ReqProvider[Path, Query, Body, Response]
+	Rsp *RspProvider[Path, Query, Body, Response]
 }
 
 func RegisterProviderFactory(name string, factory ProviderFactory) {
@@ -34,9 +34,9 @@ func RegisterProviderFactory(name string, factory ProviderFactory) {
 	providerFactories[name] = factory
 }
 
-func resolveProvider[Q, B, P any](
+func resolveProvider[Path, Query, Body, Response any](
 	spec ProviderSpec,
-	handler RouteHandler[Q, B, P],
+	handler RouteHandler[Path, Query, Body, Response],
 ) Provider {
 	if spec.Handler == nil {
 		spec.Handler = handler
@@ -52,9 +52,9 @@ func resolveProvider[Q, B, P any](
 	return selectBuiltinProvider(spec, handler)
 }
 
-func selectBuiltinProvider[Q, B, P any](
+func selectBuiltinProvider[Path, Query, Body, Response any](
 	spec ProviderSpec,
-	handler RouteHandler[Q, B, P],
+	handler RouteHandler[Path, Query, Body, Response],
 ) Provider {
 	var prov Provider = nil
 	switch spec.Name {

@@ -11,6 +11,7 @@ type REQ_MediaPreview_FORM = types.MediaPreviewRequest
 
 type REQ_MediaPreview = providers.REQ[
 	any,
+	any,
 	REQ_MediaPreview_FORM,
 ]
 
@@ -18,11 +19,13 @@ type RSP_MediaPreview = providers.RawResponse
 
 type CTX_MediaPreview = providers.Context[
 	any,
+	any,
 	REQ_MediaPreview_FORM,
 	providers.RawResponse,
 ]
 
 type REQ_MediaFrame = providers.REQ[
+	any,
 	any,
 	any,
 ]
@@ -32,10 +35,12 @@ type RSP_MediaFrame = providers.RawResponse
 type CTX_MediaFrame = providers.Context[
 	any,
 	any,
+	any,
 	providers.RawResponse,
 ]
 
 type REQ_MediaDownload = providers.REQ[
+	any,
 	any,
 	any,
 ]
@@ -45,10 +50,12 @@ type RSP_MediaDownload = providers.RawResponse
 type CTX_MediaDownload = providers.Context[
 	any,
 	any,
+	any,
 	providers.RawResponse,
 ]
 
 type REQ_MediaDownloadDynamic = providers.REQ[
+	any,
 	any,
 	any,
 ]
@@ -58,10 +65,12 @@ type RSP_MediaDownloadDynamic = providers.RawResponse
 type CTX_MediaDownloadDynamic = providers.Context[
 	any,
 	any,
+	any,
 	providers.RawResponse,
 ]
 
 type REQ_MediaDownloadFilenameEdge = providers.REQ[
+	any,
 	any,
 	any,
 ]
@@ -71,14 +80,16 @@ type RSP_MediaDownloadFilenameEdge = providers.RawResponse
 type CTX_MediaDownloadFilenameEdge = providers.Context[
 	any,
 	any,
+	any,
 	providers.RawResponse,
 ]
 
 type REQ_MediaErrorFrame_QUERY struct {
-	Mode string `json:"mode" xml:"mode" form:"mode"`
+	Mode string `json:"mode" xml:"mode" form:"mode" uri:"mode"`
 }
 
 type REQ_MediaErrorFrame = providers.REQ[
+	any,
 	REQ_MediaErrorFrame_QUERY,
 	any,
 ]
@@ -86,6 +97,7 @@ type REQ_MediaErrorFrame = providers.REQ[
 type RSP_MediaErrorFrame = providers.RawResponse
 
 type CTX_MediaErrorFrame = providers.Context[
+	any,
 	REQ_MediaErrorFrame_QUERY,
 	any,
 	providers.RawResponse,
@@ -94,11 +106,13 @@ type CTX_MediaErrorFrame = providers.Context[
 type REQ_MediaMjpeg = providers.REQ[
 	any,
 	any,
+	any,
 ]
 
 type RSP_MediaMjpeg = providers.RawResponse
 
 type CTX_MediaMjpeg = providers.Context[
+	any,
 	any,
 	any,
 	providers.RawResponse,

@@ -3,5 +3,5 @@
 package types
 
 type GreetResponse struct {
-	Message string `json:"message" xml:"message" form:"message"`
+	Message string `json:"message" xml:"message" form:"message" uri:"message"`
 }

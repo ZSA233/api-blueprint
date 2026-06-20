@@ -41,7 +41,7 @@ go 1.23.8
     overlay_text = (
         output_dir / "transports" / "wailsv3" / "api" / "demo" / "gen_overlay.go"
     ).read_text(encoding="utf-8")
-    assert "submitExecutor *sharedprovider.RouteExecutor[REQ_Submit_QUERY, REQ_Submit_JSON, RSP_Submit]" in service_text
+    assert "submitExecutor *sharedprovider.RouteExecutor[any, REQ_Submit_QUERY, REQ_Submit_JSON, RSP_Submit]" in service_text
     assert "BindJSON:  true" in service_text
     assert "type REQ_Submit_QUERY = sharedroutes.REQ_Submit_QUERY" in overlay_text
     assert "type REQ_Submit_JSON = sharedroutes.REQ_Submit_JSON" in overlay_text

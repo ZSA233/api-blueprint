@@ -195,6 +195,7 @@ class GolangRouterGroup:
                     "func": view.func_name,
                     "method": method,
                     "api": view.url,
+                    "http_api": view.http_url,
                     "provider": view.providers,
                     "root": view.root,
                     "group": view.group,
@@ -203,12 +204,14 @@ class GolangRouterGroup:
                     "operation": view.func_name,
                     "route_id": view.route_id,
                     "methods": view.methods,
+                    "path_type": view.local_path_type_expr,
                     "query_type": view.local_query_type_expr,
                     "body_type": view.executor_body_type_expr,
                     "rsp_type": view.rsp_type,
                     "server_message_type": view.server_message_type,
                     "client_message_type": view.client_message_type,
                     "close_message_type": view.close_message_type,
+                    "http_path_type": view.shared_type_expr(view.local_path_type_expr),
                     "http_query_type": view.shared_type_expr(view.local_query_type_expr),
                     "http_body_type": view.shared_type_expr(view.executor_body_type_expr),
                     "http_rsp_type": view.shared_type_expr(view.rsp_type),
@@ -221,6 +224,7 @@ class GolangRouterGroup:
                     "is_channel": view.is_channel,
                     "is_connection": view.is_connection,
                     "raw_response": view.http_raw_response,
+                    "bind_path": view.bind_path,
                     "bind_query": view.bind_query,
                     "bind_json": view.bind_json,
                     "bind_form": view.bind_form,
@@ -231,6 +235,7 @@ class GolangRouterGroup:
                         if view.protocol.request.binary_schema is not None
                         else []
                     ),
+                    "path_params": list(view.path_params),
                 }
 
     def protos(self) -> Generator[GolangProto, None, None]:

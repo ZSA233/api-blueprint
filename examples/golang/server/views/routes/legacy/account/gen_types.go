@@ -10,6 +10,7 @@ import (
 type REQ_AccountProfile = providers.REQ[
 	any,
 	any,
+	any,
 ]
 
 type RSP_AccountProfile_BODY = types.AccountProfile
@@ -17,6 +18,7 @@ type RSP_AccountProfile_BODY = types.AccountProfile
 type RSP_AccountProfile = RSP_AccountProfile_BODY
 
 type CTX_AccountProfile = providers.Context[
+	any,
 	any,
 	any,
 	RSP_AccountProfile_BODY,

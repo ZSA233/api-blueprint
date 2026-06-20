@@ -7,6 +7,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class RoutePublicNames:
     operation: str
+    path: str
     query: str
     json: str
     form: str
@@ -21,6 +22,7 @@ class RoutePublicNames:
         name = public_type_name(str(operation or ""), fallback=fallback)
         return cls(
             operation=name,
+            path=f"{name}Path",
             query=f"{name}Query",
             json=f"{name}JSON",
             form=f"{name}Form",

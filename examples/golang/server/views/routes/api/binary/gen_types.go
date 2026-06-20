@@ -8,75 +8,81 @@ import (
 )
 
 type REQ_Packet_QUERY struct {
-	Trace string `json:"trace,omitempty" xml:"trace,omitempty" form:"trace,omitempty" binding:"omitempty"`
+	Trace string `json:"trace,omitempty" xml:"trace,omitempty" form:"trace,omitempty" uri:"trace,omitempty" binding:"omitempty"`
 }
 
 type REQ_Packet = providers.REQ[
+	any,
 	REQ_Packet_QUERY,
 	binary.DemoPacket,
 ]
 
 type RSP_Packet_BODY struct {
-	Trace      string  `json:"trace" xml:"trace" form:"trace"`
-	Version    uint    `json:"version" xml:"version" form:"version"`
-	ItemCount  uint    `json:"item_count" xml:"item_count" form:"item_count"`
-	Payload    string  `json:"payload" xml:"payload" form:"payload"`
-	ScoreSum   float64 `json:"score_sum" xml:"score_sum" form:"score_sum"`
-	FirstLabel string  `json:"first_label" xml:"first_label" form:"first_label"`
-	ItemIds    []uint  `json:"item_ids" xml:"item_ids" form:"item_ids"`
-	Checksum   uint    `json:"checksum" xml:"checksum" form:"checksum"`
+	Trace      string  `json:"trace" xml:"trace" form:"trace" uri:"trace"`
+	Version    uint    `json:"version" xml:"version" form:"version" uri:"version"`
+	ItemCount  uint    `json:"item_count" xml:"item_count" form:"item_count" uri:"item_count"`
+	Payload    string  `json:"payload" xml:"payload" form:"payload" uri:"payload"`
+	ScoreSum   float64 `json:"score_sum" xml:"score_sum" form:"score_sum" uri:"score_sum"`
+	FirstLabel string  `json:"first_label" xml:"first_label" form:"first_label" uri:"first_label"`
+	ItemIds    []uint  `json:"item_ids" xml:"item_ids" form:"item_ids" uri:"item_ids"`
+	Checksum   uint    `json:"checksum" xml:"checksum" form:"checksum" uri:"checksum"`
 }
 
 type RSP_Packet = RSP_Packet_BODY
 
 type CTX_Packet = providers.Context[
+	any,
 	REQ_Packet_QUERY,
 	binary.DemoPacket,
 	RSP_Packet_BODY,
 ]
 
 type REQ_AuditPacket_QUERY struct {
-	Trace string `json:"trace,omitempty" xml:"trace,omitempty" form:"trace,omitempty" binding:"omitempty"`
+	Trace string `json:"trace,omitempty" xml:"trace,omitempty" form:"trace,omitempty" uri:"trace,omitempty" binding:"omitempty"`
 }
 
 type REQ_AuditPacket = providers.REQ[
+	any,
 	REQ_AuditPacket_QUERY,
 	binary.AuditPacket,
 ]
 
 type RSP_AuditPacket_BODY struct {
-	Trace     string `json:"trace" xml:"trace" form:"trace"`
-	ItemCount uint   `json:"item_count" xml:"item_count" form:"item_count"`
-	Checksum  uint   `json:"checksum" xml:"checksum" form:"checksum"`
+	Trace     string `json:"trace" xml:"trace" form:"trace" uri:"trace"`
+	ItemCount uint   `json:"item_count" xml:"item_count" form:"item_count" uri:"item_count"`
+	Checksum  uint   `json:"checksum" xml:"checksum" form:"checksum" uri:"checksum"`
 }
 
 type RSP_AuditPacket = RSP_AuditPacket_BODY
 
 type CTX_AuditPacket = providers.Context[
+	any,
 	REQ_AuditPacket_QUERY,
 	binary.AuditPacket,
 	RSP_AuditPacket_BODY,
 ]
 
 type REQ_WidePacket_QUERY struct {
-	Trace string `json:"trace,omitempty" xml:"trace,omitempty" form:"trace,omitempty" binding:"omitempty"`
+	Trace string `json:"trace,omitempty" xml:"trace,omitempty" form:"trace,omitempty" uri:"trace,omitempty" binding:"omitempty"`
 }
 
 type REQ_WidePacket = providers.REQ[
+	any,
 	REQ_WidePacket_QUERY,
 	binary.WidePacket,
 ]
 
 type RSP_WidePacket_BODY struct {
-	Trace       string `json:"trace" xml:"trace" form:"trace"`
-	PayloadSize uint64 `json:"payload_size" xml:"payload_size" form:"payload_size"`
-	SignedWide  int64  `json:"signed_wide" xml:"signed_wide" form:"signed_wide"`
-	Checksum    uint64 `json:"checksum" xml:"checksum" form:"checksum"`
+	Trace       string `json:"trace" xml:"trace" form:"trace" uri:"trace"`
+	PayloadSize uint64 `json:"payload_size" xml:"payload_size" form:"payload_size" uri:"payload_size"`
+	SignedWide  int64  `json:"signed_wide" xml:"signed_wide" form:"signed_wide" uri:"signed_wide"`
+	Checksum    uint64 `json:"checksum" xml:"checksum" form:"checksum" uri:"checksum"`
 }
 
 type RSP_WidePacket = RSP_WidePacket_BODY
 
 type CTX_WidePacket = providers.Context[
+	any,
 	REQ_WidePacket_QUERY,
 	binary.WidePacket,
 	RSP_WidePacket_BODY,
@@ -85,11 +91,13 @@ type CTX_WidePacket = providers.Context[
 type REQ_AuditPacketResponse = providers.REQ[
 	any,
 	any,
+	any,
 ]
 
 type RSP_AuditPacketResponse = binary.AuditPacket
 
 type CTX_AuditPacketResponse = providers.Context[
+	any,
 	any,
 	any,
 	binary.AuditPacket,

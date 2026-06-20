@@ -1,8 +1,8 @@
 package providers
 
-func SelectProvider[Q, B, P any](
+func SelectProvider[Path, Query, Body, Response any](
 	spec ProviderSpec,
-	handler RouteHandler[Q, B, P],
+	handler RouteHandler[Path, Query, Body, Response],
 ) Provider {
 	return nil
 }

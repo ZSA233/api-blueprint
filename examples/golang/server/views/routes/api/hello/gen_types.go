@@ -8,13 +8,14 @@ import (
 )
 
 type REQ_Abc_QUERY struct {
-	Arg1 bool    `json:"arg1" xml:"arg1" form:"arg1"`
-	Arg3 string  `json:"arg3,omitempty" xml:"arg3,omitempty" form:"arg3,omitempty" binding:"omitempty"`
-	Arg2 float64 `json:"arg2" xml:"arg2" form:"arg2"`
-	Type string  `json:"type" xml:"type" form:"type"`
+	Arg1 bool    `json:"arg1" xml:"arg1" form:"arg1" uri:"arg1"`
+	Arg3 string  `json:"arg3,omitempty" xml:"arg3,omitempty" form:"arg3,omitempty" uri:"arg3,omitempty" binding:"omitempty"`
+	Arg2 float64 `json:"arg2" xml:"arg2" form:"arg2" uri:"arg2"`
+	Type string  `json:"type" xml:"type" form:"type" uri:"type"`
 }
 
 type REQ_Abc = providers.REQ[
+	any,
 	REQ_Abc_QUERY,
 	any,
 ]
@@ -24,12 +25,14 @@ type RSP_Abc_BODY = map[string]*types.ApiHelloMap
 type RSP_Abc = RSP_Abc_BODY
 
 type CTX_Abc = providers.Context[
+	any,
 	REQ_Abc_QUERY,
 	any,
 	RSP_Abc_BODY,
 ]
 
 type REQ_MapEnum = providers.REQ[
+	any,
 	any,
 	any,
 ]
@@ -41,10 +44,12 @@ type RSP_MapEnum = RSP_MapEnum_BODY
 type CTX_MapEnum = providers.Context[
 	any,
 	any,
+	any,
 	RSP_MapEnum_BODY,
 ]
 
 type REQ_ListEnum = providers.REQ[
+	any,
 	any,
 	any,
 ]
@@ -56,10 +61,12 @@ type RSP_ListEnum = RSP_ListEnum_BODY
 type CTX_ListEnum = providers.Context[
 	any,
 	any,
+	any,
 	RSP_ListEnum_BODY,
 ]
 
 type REQ_String = providers.REQ[
+	any,
 	any,
 	any,
 ]
@@ -71,10 +78,12 @@ type RSP_String = RSP_String_BODY
 type CTX_String = providers.Context[
 	any,
 	any,
+	any,
 	RSP_String_BODY,
 ]
 
 type REQ_Uint64 = providers.REQ[
+	any,
 	any,
 	any,
 ]
@@ -86,10 +95,12 @@ type RSP_Uint64 = RSP_Uint64_BODY
 type CTX_Uint64 = providers.Context[
 	any,
 	any,
+	any,
 	RSP_Uint64_BODY,
 ]
 
 type REQ_StringEmun = providers.REQ[
+	any,
 	any,
 	any,
 ]
@@ -101,14 +112,16 @@ type RSP_StringEmun = RSP_StringEmun_BODY
 type CTX_StringEmun = providers.Context[
 	any,
 	any,
+	any,
 	RSP_StringEmun_BODY,
 ]
 
 type REQ_HelloWay_QUERY struct {
-	Arg1 string `json:"arg1" xml:"arg1" form:"arg1"`
+	Arg1 string `json:"arg1" xml:"arg1" form:"arg1" uri:"arg1"`
 }
 
 type REQ_HelloWay = providers.REQ[
+	any,
 	REQ_HelloWay_QUERY,
 	any,
 ]
@@ -116,6 +129,7 @@ type REQ_HelloWay = providers.REQ[
 type RSP_HelloWay = any
 
 type CTX_HelloWay = providers.Context[
+	any,
 	REQ_HelloWay_QUERY,
 	any,
 	any,

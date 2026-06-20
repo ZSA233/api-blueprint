@@ -126,10 +126,10 @@ func (conn *HTTPWebSocketConnection) Done() <-chan struct{} {
 	return conn.ctx.Done()
 }
 
-func CHANNEL[Q, B, P, S, C, CL any](
+func CHANNEL[Path, Query, Body, Response, Server, Client, Close any](
 	relativePath string,
-	executor *provider.RouteExecutor[Q, B, P],
-	handler func(*provider.Context[Q, B, P], provider.Channel[Q, S, C, CL]) error,
+	executor *provider.RouteExecutor[Path, Query, Body, Response],
+	handler func(*provider.Context[Path, Query, Body, Response], provider.Channel[Query, Server, Client, Close]) error,
 	router gin.IRouter,
 ) {
 	router.GET(relativePath, func(ginCtx *gin.Context) {
@@ -158,7 +158,7 @@ func CHANNEL[Q, B, P, S, C, CL any](
 		if cleanup != nil {
 			defer cleanup()
 		}
-		channel := provider.NewChannelSession[Q, S, C, CL](ctx.Req.Request.Q, conn)
+		channel := provider.NewChannelSession[Query, Server, Client, Close](ctx.Req.Request.Query, conn)
 		if err := handler(ctx, channel); err != nil {
 			_ = channel.Abort(ginCtx.Request.Context(), int(websocket.StatusInternalError), err.Error())
 		}

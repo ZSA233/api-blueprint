@@ -37,6 +37,7 @@ type Request struct {
 	Headers          map[string]string
 	BodyKind         RequestBodyKind
 	ResponseKind     ResponseKind
+	PathParams       any
 	Query            any
 	JSON             any
 	Form             any

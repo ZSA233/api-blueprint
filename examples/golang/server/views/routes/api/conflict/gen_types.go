@@ -8,10 +8,11 @@ import (
 )
 
 type REQ_Default_QUERY struct {
-	Class string `json:"class_" xml:"class_" form:"class_"`
+	Class string `json:"class_" xml:"class_" form:"class_" uri:"class_"`
 }
 
 type REQ_Default = providers.REQ[
+	any,
 	REQ_Default_QUERY,
 	any,
 ]
@@ -21,6 +22,7 @@ type RSP_Default_BODY = types.ConflictModel
 type RSP_Default = RSP_Default_BODY
 
 type CTX_Default = providers.Context[
+	any,
 	REQ_Default_QUERY,
 	any,
 	RSP_Default_BODY,

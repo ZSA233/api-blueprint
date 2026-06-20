@@ -414,6 +414,8 @@ def _route_response_value_type(route: GoClientRoute) -> str:
 
 def _route_params(route: GoClientRoute, *, include_open: bool) -> list[str]:
     params: list[str] = []
+    if isinstance(route.request.get("path_model"), str):
+        params.append(f"path {route.path_type}")
     if isinstance(route.request.get("query_model"), str):
         params.append(f"query {route.query_type}")
     if isinstance(route.request.get("json_model"), str):
@@ -433,6 +435,8 @@ def _route_params(route: GoClientRoute, *, include_open: bool) -> list[str]:
 
 def _runtime_request_fields(route: GoClientRoute) -> list[tuple[str, str]]:
     fields: list[tuple[str, str]] = []
+    if isinstance(route.request.get("path_model"), str):
+        fields.append(("PathParams", "path"))
     if isinstance(route.request.get("query_model"), str):
         fields.append(("Query", "query"))
     if isinstance(route.request.get("json_model"), str):

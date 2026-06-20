@@ -9,6 +9,7 @@ import (
 type REQ_DocJson = providers.REQ[
 	any,
 	any,
+	any,
 ]
 
 type RSP_DocJson_BODY struct {
@@ -19,21 +20,24 @@ type RSP_DocJson = RSP_DocJson_BODY
 type CTX_DocJson = providers.Context[
 	any,
 	any,
+	any,
 	RSP_DocJson_BODY,
 ]
 
 type REQ_Dochaha = providers.REQ[
 	any,
 	any,
+	any,
 ]
 
 type RSP_Dochaha_BODY struct {
-	A string `json:"a" xml:"a" form:"a"`
+	A string `json:"a" xml:"a" form:"a" uri:"a"`
 }
 
 type RSP_Dochaha = RSP_Dochaha_BODY
 
 type CTX_Dochaha = providers.Context[
+	any,
 	any,
 	any,
 	RSP_Dochaha_BODY,

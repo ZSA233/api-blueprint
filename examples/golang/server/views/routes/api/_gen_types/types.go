@@ -7,107 +7,107 @@ import (
 )
 
 type HelloChannelMessage struct {
-	Type string `json:"type" xml:"type" form:"type"`
-	Data any    `json:"data" xml:"data" form:"data"`
+	Type string `json:"type" xml:"type" form:"type" uri:"type"`
+	Data any    `json:"data" xml:"data" form:"data" uri:"data"`
 }
 
 type DefaultConnectionClose struct {
-	Code   int    `json:"code,omitempty" xml:"code,omitempty" form:"code,omitempty" binding:"omitempty"`
-	Reason string `json:"reason,omitempty" xml:"reason,omitempty" form:"reason,omitempty" binding:"omitempty"`
-	Error  string `json:"error,omitempty" xml:"error,omitempty" form:"error,omitempty" binding:"omitempty"`
+	Code   int    `json:"code,omitempty" xml:"code,omitempty" form:"code,omitempty" uri:"code,omitempty" binding:"omitempty"`
+	Reason string `json:"reason,omitempty" xml:"reason,omitempty" form:"reason,omitempty" uri:"reason,omitempty" binding:"omitempty"`
+	Error  string `json:"error,omitempty" xml:"error,omitempty" form:"error,omitempty" uri:"error,omitempty" binding:"omitempty"`
 }
 
 type ConflictModel struct {
-	Default string `json:"default" xml:"default" form:"default"`
-	Class   string `json:"class_" xml:"class_" form:"class_"`
-	Enum    string `json:"enum" xml:"enum" form:"enum"`
+	Default string `json:"default" xml:"default" form:"default" uri:"default"`
+	Class   string `json:"class_" xml:"class_" form:"class_" uri:"class_"`
+	Enum    string `json:"enum" xml:"enum" form:"enum" uri:"enum"`
 }
 
 type ApiDemoMap struct {
-	Haha int64 `json:"haha" xml:"haha" form:"haha"`
+	Haha int64 `json:"haha" xml:"haha" form:"haha" uri:"haha"`
 }
 
 type ApiDemoSubA struct {
-	Hello map[string]int `json:"hello" xml:"hello" form:"hello"`
-	Amap  []*ApiDemoMap  `json:"amap" xml:"amap" form:"amap"`
+	Hello map[string]int `json:"hello" xml:"hello" form:"hello" uri:"hello"`
+	Amap  []*ApiDemoMap  `json:"amap" xml:"amap" form:"amap" uri:"amap"`
 }
 
 type ApiDemoA struct {
-	Bc         string         `json:"bc" xml:"bc" form:"bc"`
-	A          int            `json:"a" xml:"a" form:"a"`
-	Efg        float32        `json:"efg" xml:"efg" form:"efg"`
-	Hijk       []uint         `json:"hijk" xml:"hijk" form:"hijk"`
-	Lmnop      []*ApiDemoSubA `json:"lmnop,omitempty" xml:"lmnop,omitempty" form:"lmnop,omitempty" binding:"omitempty"`
-	EnumColor  string         `json:"enum_color,omitempty" xml:"enum_color,omitempty" form:"enum_color,omitempty" binding:"omitempty"`
-	EnumStatus int            `json:"enum_status" xml:"enum_status" form:"enum_status"`
-	EnumList   []int          `json:"enum_list" xml:"enum_list" form:"enum_list"`
+	Bc         string         `json:"bc" xml:"bc" form:"bc" uri:"bc"`
+	A          int            `json:"a" xml:"a" form:"a" uri:"a"`
+	Efg        float32        `json:"efg" xml:"efg" form:"efg" uri:"efg"`
+	Hijk       []uint         `json:"hijk" xml:"hijk" form:"hijk" uri:"hijk"`
+	Lmnop      []*ApiDemoSubA `json:"lmnop,omitempty" xml:"lmnop,omitempty" form:"lmnop,omitempty" uri:"lmnop,omitempty" binding:"omitempty"`
+	EnumColor  string         `json:"enum_color,omitempty" xml:"enum_color,omitempty" form:"enum_color,omitempty" uri:"enum_color,omitempty" binding:"omitempty"`
+	EnumStatus int            `json:"enum_status" xml:"enum_status" form:"enum_status" uri:"enum_status"`
+	EnumList   []int          `json:"enum_list" xml:"enum_list" form:"enum_list" uri:"enum_list"`
 }
 
 type RequestOptionsResponse struct {
-	Status  string `json:"status" xml:"status" form:"status"`
-	DelayMs int    `json:"delay_ms" xml:"delay_ms" form:"delay_ms"`
+	Status  string `json:"status" xml:"status" form:"status" uri:"status"`
+	DelayMs int    `json:"delay_ms" xml:"delay_ms" form:"delay_ms" uri:"delay_ms"`
 }
 
 type ANON_Func1put_anon_kv struct {
-	Kv1 uint      `json:"kv1" xml:"kv1" form:"kv1"`
-	Kv2 []float64 `json:"kv2" xml:"kv2" form:"kv2"`
+	Kv1 uint      `json:"kv1" xml:"kv1" form:"kv1" uri:"kv1"`
+	Kv2 []float64 `json:"kv2" xml:"kv2" form:"kv2" uri:"kv2"`
 }
 
 type ANON_Delete_anon_list struct {
-	Kv1 int64    `json:"kv1" xml:"kv1" form:"kv1"`
-	Kv2 []string `json:"kv2" xml:"kv2" form:"kv2"`
+	Kv1 int64    `json:"kv1" xml:"kv1" form:"kv1" uri:"kv1"`
+	Kv2 []string `json:"kv2" xml:"kv2" form:"kv2" uri:"kv2"`
 }
 
 type SweepOpen struct {
-	RunId      string `json:"run_id" xml:"run_id" form:"run_id"`
-	ReplayFrom string `json:"replay_from,omitempty" xml:"replay_from,omitempty" form:"replay_from,omitempty" binding:"omitempty"`
+	RunId      string `json:"run_id" xml:"run_id" form:"run_id" uri:"run_id"`
+	ReplayFrom string `json:"replay_from,omitempty" xml:"replay_from,omitempty" form:"replay_from,omitempty" uri:"replay_from,omitempty" binding:"omitempty"`
 }
 
 type SweepState struct {
-	Status string `json:"status" xml:"status" form:"status"`
+	Status string `json:"status" xml:"status" form:"status" uri:"status"`
 }
 
 type SweepProgress struct {
-	Current uint64 `json:"current" xml:"current" form:"current"`
-	Total   uint64 `json:"total" xml:"total" form:"total"`
+	Current uint64 `json:"current" xml:"current" form:"current" uri:"current"`
+	Total   uint64 `json:"total" xml:"total" form:"total" uri:"total"`
 }
 
 type SweepLog struct {
-	Level   string `json:"level" xml:"level" form:"level"`
-	Message string `json:"message" xml:"message" form:"message"`
+	Level   string `json:"level" xml:"level" form:"level" uri:"level"`
+	Message string `json:"message" xml:"message" form:"message" uri:"message"`
 }
 
 type ConnectionClose struct {
-	Code   int    `json:"code" xml:"code" form:"code"`
-	Reason string `json:"reason,omitempty" xml:"reason,omitempty" form:"reason,omitempty" binding:"omitempty"`
-	Error  string `json:"error,omitempty" xml:"error,omitempty" form:"error,omitempty" binding:"omitempty"`
+	Code   int    `json:"code" xml:"code" form:"code" uri:"code"`
+	Reason string `json:"reason,omitempty" xml:"reason,omitempty" form:"reason,omitempty" uri:"reason,omitempty" binding:"omitempty"`
+	Error  string `json:"error,omitempty" xml:"error,omitempty" form:"error,omitempty" uri:"error,omitempty" binding:"omitempty"`
 }
 
 type AssistantOpen struct {
-	SessionId string `json:"session_id" xml:"session_id" form:"session_id"`
+	SessionId string `json:"session_id" xml:"session_id" form:"session_id" uri:"session_id"`
 }
 
 type AssistantDelta struct {
-	Text string `json:"text" xml:"text" form:"text"`
+	Text string `json:"text" xml:"text" form:"text" uri:"text"`
 }
 
 type AssistantDone struct {
-	MessageId string `json:"message_id" xml:"message_id" form:"message_id"`
+	MessageId string `json:"message_id" xml:"message_id" form:"message_id" uri:"message_id"`
 }
 
 type AssistantInput struct {
-	Text string `json:"text" xml:"text" form:"text"`
+	Text string `json:"text" xml:"text" form:"text" uri:"text"`
 }
 
 type AssistantCancel struct {
-	Reason string `json:"reason,omitempty" xml:"reason,omitempty" form:"reason,omitempty" binding:"omitempty"`
+	Reason string `json:"reason,omitempty" xml:"reason,omitempty" form:"reason,omitempty" uri:"reason,omitempty" binding:"omitempty"`
 }
 
 type MediaPreviewRequest struct {
-	Title string                  `json:"title,omitempty" xml:"title,omitempty" form:"title,omitempty" binding:"omitempty"`
-	Image providers.MultipartFile `json:"image" xml:"image" form:"image"`
+	Title string                  `json:"title,omitempty" xml:"title,omitempty" form:"title,omitempty" uri:"title,omitempty" binding:"omitempty"`
+	Image providers.MultipartFile `json:"image" xml:"image" form:"image" uri:"image"`
 }
 
 type ApiHelloMap struct {
-	Haha int64 `json:"haha" xml:"haha" form:"haha"`
+	Haha int64 `json:"haha" xml:"haha" form:"haha" uri:"haha"`
 }

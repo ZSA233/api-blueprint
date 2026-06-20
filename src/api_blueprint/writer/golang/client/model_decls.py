@@ -147,6 +147,7 @@ def _route_declarations(
 ) -> tuple[GoClientTypeDecl, ...]:
     declarations: list[GoClientTypeDecl] = []
     aliases = (
+        (route.path_type, route.request.get("path_model")),
         (route.query_type, route.request.get("query_model")),
         (route.json_type, route.request.get("json_model")),
         (route.form_type, route.request.get("form_model")),
@@ -246,7 +247,7 @@ def _schema_fields(
             GoClientFieldDecl(
                 name=go_field,
                 type=go_type,
-                tags=f'`json:"{wire_name}{omitempty}" form:"{wire_name}{omitempty}"`',
+                tags=f'`json:"{wire_name}{omitempty}" form:"{wire_name}{omitempty}" uri:"{wire_name}{omitempty}"`',
             )
         )
     return tuple(declarations)

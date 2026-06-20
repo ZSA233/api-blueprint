@@ -13,36 +13,44 @@ import (
 )
 
 func Mount(router gin.IRouter, impl shared.RouterInterface) shared.RouterInterface {
+	return MountSelected(router, impl, nil)
+}
+
+func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map[string]struct{}) shared.RouterInterface {
 	if isNilRouterInterface(impl) {
 		impl = shared.NewRouter()
 	}
 
-	httptransport.CHANNEL(
-		"/api/ws",
-		sharedprovider.NewRouteExecutor[any, any, shared.RSP_HelloChannel](
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "",
-				Namespace: "api",
-				Service:   "ApiService",
-				Operation: "HelloChannel",
-				RouteID:   "api.api.channel.ws",
-				Path:      "/api/ws",
-				Methods:   []string{"CHANNEL"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope("session"),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Response: sharedprovider.HTTPResponseInfo{
-						DefaultFilename: "",
+	if shouldMountRoute(routeIDs, "api.api.channel.ws") {
+
+		httptransport.CHANNEL(
+			"/api/ws",
+			sharedprovider.NewRouteExecutor[any, any, any, shared.RSP_HelloChannel](
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "",
+					Namespace: "api",
+					Service:   "ApiService",
+					Operation: "HelloChannel",
+					RouteID:   "api.api.channel.ws",
+					Path:      "/api/ws",
+					Methods:   []string{"CHANNEL"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope("session"),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Response: sharedprovider.HTTPResponseInfo{
+							DefaultFilename: "",
+						},
 					},
 				},
-			},
-			"req|auth|request-signature",
-			nil,
-		),
-		impl.HelloChannel,
-		router,
-	)
+				"req|auth|request-signature",
+				nil,
+			),
+			impl.HelloChannel,
+			router,
+		)
+
+	}
 
 	return impl
 }
@@ -68,4 +76,12 @@ func isNilRouterInterface(impl shared.RouterInterface) bool {
 	default:
 		return false
 	}
+}
+
+func shouldMountRoute(routeIDs map[string]struct{}, routeID string) bool {
+	if len(routeIDs) == 0 {
+		return true
+	}
+	_, ok := routeIDs[routeID]
+	return ok
 }

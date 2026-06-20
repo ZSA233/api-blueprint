@@ -13,219 +13,258 @@ import (
 )
 
 func Mount(router gin.IRouter, impl shared.RouterInterface) shared.RouterInterface {
+	return MountSelected(router, impl, nil)
+}
+
+func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map[string]struct{}) shared.RouterInterface {
 	if isNilRouterInterface(impl) {
 		impl = shared.NewRouter()
 	}
 
-	httptransport.GET(
-		"/api/hello/abc",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "hello",
-				Namespace: "hello",
-				Service:   "HelloService",
-				Operation: "Abc",
-				RouteID:   "api.hello.get.abc",
-				Path:      "/api/hello/abc",
-				Methods:   []string{"GET"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
-					},
-				},
-			},
-			"req=Q|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
-			impl.Abc,
-		),
-		router,
-	)
+	if shouldMountRoute(routeIDs, "api.hello.get.abc") {
 
-	httptransport.GET(
-		"/api/hello/map-enum",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "hello",
-				Namespace: "hello",
-				Service:   "HelloService",
-				Operation: "MapEnum",
-				RouteID:   "api.hello.get.mapenum",
-				Path:      "/api/hello/map-enum",
-				Methods:   []string{"GET"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
+		httptransport.GET(
+			"/api/hello/abc",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "hello",
+					Namespace: "hello",
+					Service:   "HelloService",
+					Operation: "Abc",
+					RouteID:   "api.hello.get.abc",
+					Path:      "/api/hello/abc",
+					Methods:   []string{"GET"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
 					},
 				},
-			},
-			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
-			impl.MapEnum,
-		),
-		router,
-	)
+				"req=query|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+				impl.Abc,
+			),
+			router,
+		)
 
-	httptransport.GET(
-		"/api/hello/list-enum",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "hello",
-				Namespace: "hello",
-				Service:   "HelloService",
-				Operation: "ListEnum",
-				RouteID:   "api.hello.get.listenum",
-				Path:      "/api/hello/list-enum",
-				Methods:   []string{"GET"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
-					},
-				},
-			},
-			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
-			impl.ListEnum,
-		),
-		router,
-	)
+	}
 
-	httptransport.GET(
-		"/api/hello/string",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "hello",
-				Namespace: "hello",
-				Service:   "HelloService",
-				Operation: "String",
-				RouteID:   "api.hello.get.string",
-				Path:      "/api/hello/string",
-				Methods:   []string{"GET"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
-					},
-				},
-			},
-			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
-			impl.String,
-		),
-		router,
-	)
+	if shouldMountRoute(routeIDs, "api.hello.get.mapenum") {
 
-	httptransport.GET(
-		"/api/hello/uint64",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "hello",
-				Namespace: "hello",
-				Service:   "HelloService",
-				Operation: "Uint64",
-				RouteID:   "api.hello.get.uint64",
-				Path:      "/api/hello/uint64",
-				Methods:   []string{"GET"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
+		httptransport.GET(
+			"/api/hello/map-enum",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "hello",
+					Namespace: "hello",
+					Service:   "HelloService",
+					Operation: "MapEnum",
+					RouteID:   "api.hello.get.mapenum",
+					Path:      "/api/hello/map-enum",
+					Methods:   []string{"GET"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
 					},
 				},
-			},
-			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
-			impl.Uint64,
-		),
-		router,
-	)
+				"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+				impl.MapEnum,
+			),
+			router,
+		)
 
-	httptransport.GET(
-		"/api/hello/string-emun",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "hello",
-				Namespace: "hello",
-				Service:   "HelloService",
-				Operation: "StringEmun",
-				RouteID:   "api.hello.get.stringemun",
-				Path:      "/api/hello/string-emun",
-				Methods:   []string{"GET"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
-					},
-				},
-			},
-			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
-			impl.StringEmun,
-		),
-		router,
-	)
+	}
 
-	httptransport.GET(
-		"/api/hello/hello-way",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "hello",
-				Namespace: "hello",
-				Service:   "HelloService",
-				Operation: "HelloWay",
-				RouteID:   "api.hello.get.helloway",
-				Path:      "/api/hello/hello-way",
-				Methods:   []string{"GET"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
+	if shouldMountRoute(routeIDs, "api.hello.get.listenum") {
+
+		httptransport.GET(
+			"/api/hello/list-enum",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "hello",
+					Namespace: "hello",
+					Service:   "HelloService",
+					Operation: "ListEnum",
+					RouteID:   "api.hello.get.listenum",
+					Path:      "/api/hello/list-enum",
+					Methods:   []string{"GET"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
 					},
 				},
-			},
-			"req=Q|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
-			impl.HelloWay,
-		),
-		router,
-	)
+				"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+				impl.ListEnum,
+			),
+			router,
+		)
+
+	}
+
+	if shouldMountRoute(routeIDs, "api.hello.get.string") {
+
+		httptransport.GET(
+			"/api/hello/string",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "hello",
+					Namespace: "hello",
+					Service:   "HelloService",
+					Operation: "String",
+					RouteID:   "api.hello.get.string",
+					Path:      "/api/hello/string",
+					Methods:   []string{"GET"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
+					},
+				},
+				"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+				impl.String,
+			),
+			router,
+		)
+
+	}
+
+	if shouldMountRoute(routeIDs, "api.hello.get.uint64") {
+
+		httptransport.GET(
+			"/api/hello/uint64",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "hello",
+					Namespace: "hello",
+					Service:   "HelloService",
+					Operation: "Uint64",
+					RouteID:   "api.hello.get.uint64",
+					Path:      "/api/hello/uint64",
+					Methods:   []string{"GET"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
+					},
+				},
+				"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+				impl.Uint64,
+			),
+			router,
+		)
+
+	}
+
+	if shouldMountRoute(routeIDs, "api.hello.get.stringemun") {
+
+		httptransport.GET(
+			"/api/hello/string-emun",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "hello",
+					Namespace: "hello",
+					Service:   "HelloService",
+					Operation: "StringEmun",
+					RouteID:   "api.hello.get.stringemun",
+					Path:      "/api/hello/string-emun",
+					Methods:   []string{"GET"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
+					},
+				},
+				"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+				impl.StringEmun,
+			),
+			router,
+		)
+
+	}
+
+	if shouldMountRoute(routeIDs, "api.hello.get.helloway") {
+
+		httptransport.GET(
+			"/api/hello/hello-way",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "hello",
+					Namespace: "hello",
+					Service:   "HelloService",
+					Operation: "HelloWay",
+					RouteID:   "api.hello.get.helloway",
+					Path:      "/api/hello/hello-way",
+					Methods:   []string{"GET"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
+					},
+				},
+				"req=query|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+				impl.HelloWay,
+			),
+			router,
+		)
+
+	}
 
 	return impl
 }
@@ -251,4 +290,12 @@ func isNilRouterInterface(impl shared.RouterInterface) bool {
 	default:
 		return false
 	}
+}
+
+func shouldMountRoute(routeIDs map[string]struct{}, routeID string) bool {
+	if len(routeIDs) == 0 {
+		return true
+	}
+	_, ok := routeIDs[routeID]
+	return ok
 }

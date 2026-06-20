@@ -10,15 +10,17 @@ import (
 type REQ_RoomList = providers.REQ[
 	any,
 	any,
+	any,
 ]
 
 type RSP_RoomList_BODY struct {
-	Rooms []*types.RoomSummary `json:"rooms" xml:"rooms" form:"rooms"`
+	Rooms []*types.RoomSummary `json:"rooms" xml:"rooms" form:"rooms" uri:"rooms"`
 }
 
 type RSP_RoomList = RSP_RoomList_BODY
 
 type CTX_RoomList = providers.Context[
+	any,
 	any,
 	any,
 	RSP_RoomList_BODY,

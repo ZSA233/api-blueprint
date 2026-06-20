@@ -5,5 +5,5 @@ package room
 import runtime "example.com/project/golang/client/runtime"
 
 type RoomListResponse struct {
-	Rooms []*runtime.RoomSummary `json:"rooms" form:"rooms"`
+	Rooms []*runtime.RoomSummary `json:"rooms" form:"rooms" uri:"rooms"`
 }

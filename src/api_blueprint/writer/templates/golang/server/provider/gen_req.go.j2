@@ -13,14 +13,15 @@ const (
 	PROV_REQ = "req"
 )
 
-type ReqContext[Q, B, P any] struct {
-	Request *REQ[Q, B]
+type ReqContext[Path, Query, Body, Response any] struct {
+	Request *REQ[Path, Query, Body]
 	Error   error
 }
 
-type ReqProvider[Q, B, P any] struct {
+type ReqProvider[Path, Query, Body, Response any] struct {
 	Data      string
 	Route     RouteInfo
+	BindPath  bool
 	BindQuery bool
 	BindJSON  bool
 	BindForm  bool
@@ -37,28 +38,32 @@ type MultipartFile struct {
 	File        multipart.File
 }
 
-func NewReqProvider[Q, B, P any](
+func NewReqProvider[Path, Query, Body, Response any](
 	data string,
-	handler func(c *Context[Q, B, P], req *REQ[Q, B]) (rsp *P, err error),
-) *ReqProvider[Q, B, P] {
-	var bindQuery, bindJSON, bindForm, bindMultipart, bindBinary bool
-	if strings.Contains(data, "Q") {
+	handler func(c *Context[Path, Query, Body, Response], req *REQ[Path, Query, Body]) (rsp *Response, err error),
+) *ReqProvider[Path, Query, Body, Response] {
+	var bindPath, bindQuery, bindJSON, bindForm, bindMultipart, bindBinary bool
+	if hasReqToken(data, "path") {
+		bindPath = true
+	}
+	if hasReqToken(data, "query") {
 		bindQuery = true
 	}
-	if strings.Contains(data, "J") {
+	if hasReqToken(data, "json") {
 		bindJSON = true
 	}
-	if strings.Contains(data, "F") {
+	if hasReqToken(data, "form") {
 		bindForm = true
 	}
-	if strings.Contains(data, "M") {
+	if hasReqToken(data, "multipart") {
 		bindMultipart = true
 	}
-	if strings.Contains(data, "B") {
+	if hasReqToken(data, "binary") {
 		bindBinary = true
 	}
-	return &ReqProvider[Q, B, P]{
+	return &ReqProvider[Path, Query, Body, Response]{
 		Data:      data,
+		BindPath:  bindPath,
 		BindQuery: bindQuery,
 		BindJSON:  bindJSON,
 		BindForm:  bindForm,
@@ -67,12 +72,12 @@ func NewReqProvider[Q, B, P any](
 	}
 }
 
-func (prov *ReqProvider[Q, B, P]) GetName() string {
+func (prov *ReqProvider[Path, Query, Body, Response]) GetName() string {
 	return PROV_REQ
 }
 
-func (prov *ReqProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
-	ctx := AdaptContext[Q, B, P](anyCtx)
+func (prov *ReqProvider[Path, Query, Body, Response]) Handle(anyCtx ContextInterface) {
+	ctx := AdaptContext[Path, Query, Body, Response](anyCtx)
 	if ctx.Req != nil {
 		if ctx.Req.Error != nil {
 			ctx.Abort(ctx.Req.Error)
@@ -87,4 +92,13 @@ func (prov *ReqProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
 	}
 
 	ctx.Abort(fmt.Errorf("[ReqProvider] request must be pre-bound by transport adapter"))
+}
+
+func hasReqToken(data string, name string) bool {
+	for _, token := range strings.Split(data, ",") {
+		if strings.TrimSpace(token) == name {
+			return true
+		}
+	}
+	return false
 }

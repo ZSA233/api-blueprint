@@ -5,5 +5,5 @@ package static
 type DocJsonResponse struct{}
 
 type DochahaResponse struct {
-	A string `json:"a,omitempty" form:"a,omitempty"`
+	A string `json:"a,omitempty" form:"a,omitempty" uri:"a,omitempty"`
 }

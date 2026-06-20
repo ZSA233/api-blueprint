@@ -24,8 +24,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 	if shouldMountRoute(routeIDs, {{ register.route_id | tojson }}) {
 	{% if register.is_stream %}
 	httptransport.STREAM(
-		{{ register.api | tojson }},
-		sharedprovider.NewRouteExecutor[{{ register.http_query_type | safe }}, {{ register.http_body_type | safe }}, {{ register.http_rsp_type | safe }}](
+		{{ register.http_api | tojson }},
+		sharedprovider.NewRouteExecutor[{{ register.http_path_type | safe }}, {{ register.http_query_type | safe }}, {{ register.http_body_type | safe }}, {{ register.http_rsp_type | safe }}](
 			sharedprovider.RouteInfo{
 				Root:      {{ register.root | tojson }},
 				Group:     {{ register.group | tojson }},
@@ -51,8 +51,8 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 	)
 	{% elif register.is_channel %}
 	httptransport.CHANNEL(
-		{{ register.api | tojson }},
-		sharedprovider.NewRouteExecutor[{{ register.http_query_type | safe }}, {{ register.http_body_type | safe }}, {{ register.http_rsp_type | safe }}](
+		{{ register.http_api | tojson }},
+		sharedprovider.NewRouteExecutor[{{ register.http_path_type | safe }}, {{ register.http_query_type | safe }}, {{ register.http_body_type | safe }}, {{ register.http_rsp_type | safe }}](
 			sharedprovider.RouteInfo{
 				Root:      {{ register.root | tojson }},
 				Group:     {{ register.group | tojson }},
@@ -78,7 +78,7 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 	)
 	{% else %}
 	httptransport.{{ register.method }}(
-		{{ register.api | tojson }},
+		{{ register.http_api | tojson }},
 		sharedprovider.NewRouteExecutor(
 			sharedprovider.RouteInfo{
 				Root:      {{ register.root | tojson }},
@@ -93,6 +93,7 @@ func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map
 				Scope:     sharedprovider.ConnectionScope({{ register.connection_scope | tojson }}),
 				HTTP: sharedprovider.HTTPRouteInfo{
 					Request: sharedprovider.HTTPRequestInfo{
+						PathParams:             []string{{ "{" }}{% for name in register.path_params %}{{ name | tojson }}{% if not loop.last %}, {% endif %}{% endfor %}{{ "}" }},
 						BinaryContentEncodings: []string{{ "{" }}{% for encoding in register.binary_content_encodings %}{{ encoding | tojson }}{% if not loop.last %}, {% endif %}{% endfor %}{{ "}" }},
 					},
 					Response: sharedprovider.HTTPResponseInfo{

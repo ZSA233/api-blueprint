@@ -180,7 +180,7 @@ class GolangTypeResolver:
 
 
 class GolangTagBuilder:
-    DEFAULT_TAG_FIELDS = ("json", "xml", "form")
+    DEFAULT_TAG_FIELDS = ("json", "xml", "form", "uri")
 
     @staticmethod
     def binding(field_info: FieldInfo, omitempty: bool = False) -> str:

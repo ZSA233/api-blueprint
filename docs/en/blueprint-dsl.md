@@ -115,12 +115,19 @@ class CreateResponse(Model):
     id = Uint64(description="id")
 
 
+class DeleteUserMedalPath(Model):
+    user = String(description="user id")
+    medal = String(description="medal id")
+
+
 with bp.group("/items") as views:
     views.POST("/create").JSON(CreateBody).RSP(CreateResponse)
     views.GET("/detail").ARGS(id=Uint64(description="id")).RSP(CreateResponse)
+    views.DELETE("/user/{user}/{medal}").REQ_PATH(DeleteUserMedalPath).RSP_EMPTY()
 ```
 
 - `ARGS(...)`: query parameters.
+- `REQ_PATH(Model)`: path parameters; route paths use only OpenAPI-style `{name}` placeholders.
 - `JSON(Model)`: JSON request body.
 - `REQ_URLENCODED(Model)`: `application/x-www-form-urlencoded` request bodies; the older `REQ_FORM(Model)` remains as a compatibility alias.
 - `REQ_MULTIPART(Model)`: `multipart/form-data` request bodies mixing ordinary fields and `FileField(...)`.
@@ -128,7 +135,9 @@ with bp.group("/items") as views:
 - `RSP(...)`: response model.
 - `RSP_EMPTY()`: JSON responses with no business data on success; this is not HTTP 204 / no body. With a JSON response envelope, both `data: null` and `data: {}` decode as an empty business response.
 
-A route can declare only one body kind. ContractGraph records request bodies as `none`, `json`, `urlencoded`, `multipart`, `binary_schema`, or `raw_bytes`, and both generators and `api-gen check` use that unified semantics for capability checks.
+`REQ_PATH` placeholder names must exactly match path-model field wire names. Fields must be required scalar, enum, or string-coerce values; optional, array, map, object, file, binary, and oneof fields are rejected. Gin-style `:id` is not DSL syntax; write `{id}` instead. REQ_PATH v1 is limited to HTTP RPC routes. ContractGraph, ir-plugin, Go server, and Go client emit or generate path parameters; other official targets fail fast to avoid unusable generated code.
+
+A route can declare only one body kind. ContractGraph records path requests as `path_model` / `path_params`, records request bodies as `none`, `json`, `urlencoded`, `multipart`, `binary_schema`, or `raw_bytes`, and both generators and `api-gen check` use that unified semantics for capability checks.
 
 Binary HTTP request or response bodies use `.REQ_BINARY_SCHEMA("./binary/packet.md")` or `.RSP_BINARY_SCHEMA("./binary/packet.md")` to reference Markdown Binary Schema. In ContractGraph this is `binary_schema` and is separate from raw bytes/file/stream media responses. See [Markdown Binary Schema](binary-schema.md) for table format, field types, rules, and generated output.
 

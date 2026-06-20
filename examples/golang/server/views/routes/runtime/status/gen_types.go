@@ -10,6 +10,7 @@ import (
 type REQ_RuntimeCurrentStatus = providers.REQ[
 	any,
 	any,
+	any,
 ]
 
 type RSP_RuntimeCurrentStatus_BODY = types.RuntimeStatus
@@ -17,6 +18,7 @@ type RSP_RuntimeCurrentStatus_BODY = types.RuntimeStatus
 type RSP_RuntimeCurrentStatus = RSP_RuntimeCurrentStatus_BODY
 
 type CTX_RuntimeCurrentStatus = providers.Context[
+	any,
 	any,
 	any,
 	RSP_RuntimeCurrentStatus_BODY,

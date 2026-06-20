@@ -10,7 +10,7 @@ import (
 type AccountService struct {
 	impl                   RouterInterface
 	sessions               wailstransport.ConnectionHub
-	accountProfileExecutor *sharedprovider.RouteExecutor[any, any, RSP_AccountProfile]
+	accountProfileExecutor *sharedprovider.RouteExecutor[any, any, any, RSP_AccountProfile]
 }
 
 func newGeneratedAccountService(impl RouterInterface, dispatcher wailstransport.EventDispatcher) *AccountService {
@@ -55,12 +55,12 @@ func (svc *AccountService) AccountProfile(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[any, any, RSP_AccountProfile](
+	ctx := sharedprovider.NewWailsContext[any, any, any, RSP_AccountProfile](
 		"AccountService",
 		"AccountProfile",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_AccountProfile]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, any, any, RSP_AccountProfile]{Request: req}
 	execErr := svc.accountProfileExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {

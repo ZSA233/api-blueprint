@@ -435,6 +435,7 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
     @staticmethod
     def _contract_request_schema_ref(request: Mapping[str, Any]) -> tuple[str, str]:
         for kind, key in (
+            ("path", "path_model"),
             ("query", "query_model"),
             ("json", "json_model"),
             ("form", "form_model"),

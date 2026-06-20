@@ -48,7 +48,7 @@ def test_golang_server_codegen_emits_multipart_and_raw_response_contracts(tmp_pa
     assert "limitReader(gzipReader, config.DecompressedBinaryBytes" in http_runtime
     assert "binaryContentDecoder(config, encoding)" in http_runtime
     assert "writeRawResponse" in http_runtime
-    assert '"req=M|handle|rsp=bytes@CodeMessageDataEnvelope"' in http_route
+    assert '"req=multipart|handle|rsp=bytes@CodeMessageDataEnvelope"' in http_route
     assert "HTTP: sharedprovider.HTTPRouteInfo{" in http_route
     assert 'DefaultFilename: "report.xls"' in http_route
     assert "writeRawResponse(ginCtx, rspProvider.Type, rspProvider.Route.HTTP.Response.DefaultFilename, response)" in http_runtime
@@ -142,7 +142,7 @@ def test_golang_server_struct_tags_keep_alias_with_omitempty(tmp_path):
     writer.gen()
 
     shared_types = (output_dir / "routes" / "api" / "_gen_types" / "types.go").read_text(encoding="utf-8")
-    assert 'Self int `json:"self,omitempty" xml:"self,omitempty" form:"self,omitempty" binding:"omitempty"`' in shared_types
+    assert 'Self int `json:"self,omitempty" xml:"self,omitempty" form:"self,omitempty" uri:"self,omitempty" binding:"omitempty"`' in shared_types
 
 def test_golang_writer_generates_http_adapter_separately_from_core(tmp_path):
     output_dir = tmp_path / "golang"

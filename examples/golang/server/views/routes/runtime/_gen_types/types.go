@@ -3,5 +3,5 @@
 package types
 
 type RuntimeStatus struct {
-	Status string `json:"status" xml:"status" form:"status"`
+	Status string `json:"status" xml:"status" form:"status" uri:"status"`
 }

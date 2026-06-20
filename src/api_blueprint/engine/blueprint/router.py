@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from dataclasses import replace
 from enum import Enum
-from typing import TYPE_CHECKING, Any, DefaultDict, Literal, Optional, Self, Union
+from typing import TYPE_CHECKING, Any, DefaultDict, Literal, Optional, Self, Union, get_origin
 
 from fastapi import FastAPI
 
@@ -29,15 +30,32 @@ from api_blueprint.engine.runtime import (
 )
 from api_blueprint.engine.schema import (
     Array,
+    Bool,
+    CoerceString,
     Error,
     Field,
     FileField,
+    Float,
+    Float32,
+    Float64,
     HeaderModel,
+    Int,
+    Int8,
+    Int16,
+    Int32,
+    Int64,
     Map,
     Model,
     OneOf,
+    String,
+    Uint,
+    Uint8,
+    Uint16,
+    Uint32,
+    Uint64,
     create_field_wrapped_model,
     create_model,
+    Enum as SchemaEnum,
     iter_model_vars,
     unwrap_errors,
 )
@@ -51,6 +69,28 @@ if TYPE_CHECKING:
 
 METHOD_ENUM = Literal["GET", "POST", "PUT", "DELETE", "HEAD", "STREAM", "CHANNEL"]
 ModelOrField = Union[Model, Field]
+_OPENAPI_PATH_PARAM_RE = re.compile(r"\{([^{}]*)\}")
+_PATH_PARAM_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_GIN_PATH_PARAM_RE = re.compile(r"(^|/):[A-Za-z_][A-Za-z0-9_]*(?=/|$)")
+_PATH_SCALAR_TYPES: tuple[type[Field], ...] = (
+    String,
+    CoerceString,
+    Bool,
+    Int,
+    Int64,
+    Int32,
+    Int16,
+    Int8,
+    Uint,
+    Uint64,
+    Uint32,
+    Uint16,
+    Uint8,
+    Float,
+    Float64,
+    Float32,
+    SchemaEnum,
+)
 
 
 class ConflictFieldError(Exception):
@@ -65,6 +105,7 @@ class Router:
     medio_type: str
 
     req_query: Optional[Model]
+    req_path: Optional[Model]
     req_form: Optional[Model]
     req_urlencoded: Optional[Model]
     req_multipart: Optional[Model]
@@ -114,6 +155,7 @@ class Router:
         self.extra = kwargs
 
         self.req_query = None
+        self.req_path = None
         self.req_form = None
         self.req_urlencoded = None
         self.req_multipart = None
@@ -150,6 +192,7 @@ class Router:
         if self.connection_kind in {ConnectionKind.STREAM, ConnectionKind.CHANNEL}:
             self.connection_scope = self.connection_scope or ConnectionScope.SESSION
             self.connection_delivery = self.connection_delivery or ConnectionDelivery.ORDERED
+        _reject_gin_style_path_params(self.leaf)
 
     def __str__(self) -> str:
         return f"<Router {self.methods} - {self.url} >"
@@ -219,6 +262,16 @@ class Router:
             __model = create_field_wrapped_model(f"REQ_{self.name}_QUERY", __model)
         self._reject_file_fields(__model, "ARGS")
         self.req_query = __model
+        return self
+
+    def REQ_PATH(self, __model: Optional[Model] = None, **kwargs: dict[str, ModelOrField]) -> Self:
+        if self.connection_kind in {ConnectionKind.STREAM, ConnectionKind.CHANNEL}:
+            raise ValueError("REQ_PATH() is only supported by RPC HTTP routes")
+        if self.req_path is not None:
+            raise ValueError("REQ_PATH() can only be called once")
+        model = self._normalize_request_model(f"REQ_{self.name}_PATH", __model, kwargs)
+        self._validate_path_model(model)
+        self.req_path = model
         return self
 
     def REQ_JSON(self, __model: Optional[Model] = None, **kwargs: dict[str, ModelOrField]) -> Self:
@@ -397,6 +450,7 @@ class Router:
         return self
 
     def validate_connection_contract(self) -> None:
+        self.validate_request_path_contract()
         if self.connection_kind == ConnectionKind.STREAM:
             if self.server_message is None:
                 raise ValueError(f"STREAM route[{self.url}] requires SERVER_MESSAGE()")
@@ -410,9 +464,17 @@ class Router:
                 raise ValueError(f"CHANNEL route[{self.url}] requires CLIENT_MESSAGE()")
             self._reject_http_body_contracts()
 
+    def validate_request_path_contract(self) -> None:
+        placeholders = path_param_names(self.url)
+        if placeholders and self.req_path is None:
+            raise ValueError(f"route[{self.url}] declares path placeholder(s) but is missing REQ_PATH()")
+        if self.req_path is not None:
+            self._validate_path_model(self.req_path)
+
     def _reject_http_body_contracts(self) -> None:
         if (
             self.req_json is not None
+            or self.req_path is not None
             or self.req_urlencoded is not None
             or self.req_multipart is not None
             or self.req_bin is not None
@@ -422,7 +484,7 @@ class Router:
         ):
             raise ValueError(
                 f"{self.connection_kind.value.upper()} route[{self.url}] uses OPEN/SERVER_MESSAGE/CLIENT_MESSAGE/CLOSE "
-                "instead of REQ_JSON/REQ_URLENCODED/REQ_MULTIPART/REQ_BINARY/RSP"
+                "instead of REQ_PATH/REQ_JSON/REQ_URLENCODED/REQ_MULTIPART/REQ_BINARY/RSP"
             )
 
     @property
@@ -532,6 +594,28 @@ class Router:
             return
         for field_path in _iter_file_field_paths(model):
             raise ValueError(f"{method}() cannot use FileField field {field_path!r}; use REQ_MULTIPART()")
+
+    def _validate_path_model(self, model: Model) -> None:
+        placeholders = path_param_names(self.url)
+        if not placeholders:
+            raise ValueError(f"REQ_PATH() route[{self.url}] requires path placeholders like {{id}}")
+
+        placeholder_set = set(placeholders)
+        field_names: set[str] = set()
+        for field_name, raw_field in iter_model_vars(model):
+            field_value = _normalize_path_field(raw_field)
+            wire_name = _path_field_wire_name(field_name, field_value)
+            field_names.add(wire_name)
+            if wire_name not in placeholder_set:
+                raise ValueError(
+                    f"REQ_PATH() field {wire_name!r} is not declared in route path[{self.url}] placeholders"
+                )
+            _validate_path_field_type(wire_name, field_value)
+
+        missing = [name for name in placeholders if name not in field_names]
+        if missing:
+            rendered = ", ".join(repr(name) for name in missing)
+            raise ValueError(f"REQ_PATH() route[{self.url}] missing path field(s): {rendered}")
 
     def _attach_binary_openapi(self) -> None:
         schema = self.req_binary_schema
@@ -652,3 +736,77 @@ def _iter_file_field_value_paths(field_value: Any, path: str, seen: set[int]):
         return
     if isinstance(field_value, Model) or (isinstance(field_value, type) and issubclass(field_value, Model)):
         yield from _iter_file_field_paths(field_value, path, seen)
+
+
+def path_param_names(path: str) -> tuple[str, ...]:
+    _reject_gin_style_path_params(path)
+    names: list[str] = []
+    position = 0
+    for match in _OPENAPI_PATH_PARAM_RE.finditer(path):
+        skipped = path[position : match.start()]
+        if "{" in skipped or "}" in skipped:
+            raise ValueError(f"invalid path placeholder syntax in {path!r}; use {{name}}")
+        name = match.group(1)
+        if not name:
+            raise ValueError(f"empty path placeholder in {path!r}; use {{name}}")
+        if not _PATH_PARAM_NAME_RE.fullmatch(name):
+            raise ValueError(f"invalid path placeholder {name!r} in {path!r}; use identifier names")
+        names.append(name)
+        position = match.end()
+    if "{" in path[position:] or "}" in path[position:]:
+        raise ValueError(f"invalid path placeholder syntax in {path!r}; use {{name}}")
+
+    seen: set[str] = set()
+    duplicates: list[str] = []
+    for name in names:
+        if name in seen and name not in duplicates:
+            duplicates.append(name)
+        seen.add(name)
+    if duplicates:
+        rendered = ", ".join(repr(name) for name in duplicates)
+        raise ValueError(f"duplicate path placeholder(s) in {path!r}: {rendered}")
+    return tuple(names)
+
+
+def _reject_gin_style_path_params(path: str) -> None:
+    if _GIN_PATH_PARAM_RE.search(path):
+        raise ValueError(f"Gin-style path parameters are not supported in DSL path {path!r}; use {{name}}")
+
+
+def _normalize_path_field(value: object) -> object:
+    if isinstance(value, Field):
+        return value
+    if isinstance(value, type):
+        try:
+            if issubclass(value, Field):
+                return value()
+        except TypeError:
+            pass
+    origin = get_origin(value)
+    if isinstance(origin, type):
+        try:
+            if issubclass(origin, Field):
+                return value()
+        except TypeError:
+            pass
+    return value
+
+
+def _path_field_wire_name(field_name: str, field_value: object) -> str:
+    extra = getattr(field_value, "__extra__", {}) or {}
+    return str(extra.get("alias") or field_name)
+
+
+def _validate_path_field_type(wire_name: str, field_value: object) -> None:
+    extra = getattr(field_value, "__extra__", {}) or {}
+    if extra.get("optional") or extra.get("omitempty"):
+        raise ValueError(f"REQ_PATH() field {wire_name!r} cannot be optional")
+    if isinstance(field_value, Model) or (isinstance(field_value, type) and issubclass(field_value, Model)):
+        raise ValueError(f"REQ_PATH() field {wire_name!r} cannot be an object model")
+    if not isinstance(field_value, Field):
+        raise ValueError(f"REQ_PATH() field {wire_name!r} must be a scalar Field")
+    if isinstance(field_value, (Array, Map, OneOf, FileField)):
+        raise ValueError(f"REQ_PATH() field {wire_name!r} must be a scalar path value")
+    if not isinstance(field_value, _PATH_SCALAR_TYPES):
+        kind = getattr(field_value, "__type__", type(field_value).__name__)
+        raise ValueError(f"REQ_PATH() field {wire_name!r} uses unsupported path field type {kind!r}")

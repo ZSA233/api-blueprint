@@ -10,7 +10,7 @@ import (
 type HelloService struct {
 	impl          RouterInterface
 	sessions      wailstransport.ConnectionHub
-	greetExecutor *sharedprovider.RouteExecutor[REQ_Greet_QUERY, any, RSP_Greet]
+	greetExecutor *sharedprovider.RouteExecutor[any, REQ_Greet_QUERY, any, RSP_Greet]
 }
 
 func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.EventDispatcher) *HelloService {
@@ -30,7 +30,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req=Q|handle|rsp=json@CodeMessageDataEnvelope",
+			"req=query|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.Greet,
 		),
 	}
@@ -55,12 +55,12 @@ func (svc *HelloService) Greet(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[REQ_Greet_QUERY, any, RSP_Greet](
+	ctx := sharedprovider.NewWailsContext[any, REQ_Greet_QUERY, any, RSP_Greet](
 		"HelloService",
 		"Greet",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[REQ_Greet_QUERY, any, RSP_Greet]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, REQ_Greet_QUERY, any, RSP_Greet]{Request: req}
 	execErr := svc.greetExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {

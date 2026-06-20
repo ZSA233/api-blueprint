@@ -10,7 +10,7 @@ import (
 type RoomService struct {
 	impl             RouterInterface
 	sessions         wailstransport.ConnectionHub
-	roomListExecutor *sharedprovider.RouteExecutor[any, any, RSP_RoomList]
+	roomListExecutor *sharedprovider.RouteExecutor[any, any, any, RSP_RoomList]
 }
 
 func newGeneratedRoomService(impl RouterInterface, dispatcher wailstransport.EventDispatcher) *RoomService {
@@ -55,12 +55,12 @@ func (svc *RoomService) RoomList(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[any, any, RSP_RoomList](
+	ctx := sharedprovider.NewWailsContext[any, any, any, RSP_RoomList](
 		"RoomService",
 		"RoomList",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_RoomList]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, any, any, RSP_RoomList]{Request: req}
 	execErr := svc.roomListExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {

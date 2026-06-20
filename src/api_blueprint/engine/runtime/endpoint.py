@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 from typing import Any, Callable, Optional
 
-from fastapi import Body, Depends, Form, Query, Request
+from fastapi import Body, Depends, Form, Path, Query, Request
 from pydantic import BaseModel
 
 from api_blueprint.engine.schema import Field, HeaderModel, iter_model_vars, resolve_field
@@ -11,12 +11,40 @@ from api_blueprint.engine.schema import Field, HeaderModel, iter_model_vars, res
 
 def make_endpoint(
     handler: Callable[..., Any],
+    path_model: Optional[type[BaseModel]] = None,
     query_model: Optional[type[BaseModel]] = None,
     form_model: Optional[type[BaseModel]] = None,
     json_model: Optional[type[BaseModel]] = None,
     header_model: Optional[type[HeaderModel]] = None,
 ):
     args: list[inspect.Parameter] = []
+
+    if path_model:
+        path_args: list[inspect.Parameter] = []
+        for model_field_name, model_field in path_model.model_fields.items():
+            path_name = str(model_field.alias or model_field_name)
+            path_args.append(
+                inspect.Parameter(
+                    path_name,
+                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                    annotation=model_field.annotation or Any,
+                    default=Path(..., description=model_field.description),
+                )
+            )
+
+        if path_args:
+            async def path_builder(**kwargs: Any):
+                return kwargs
+
+            path_builder.__signature__ = inspect.Signature(path_args)
+            args.append(
+                inspect.Parameter(
+                    "path",
+                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                    annotation=dict,
+                    default=Depends(path_builder),
+                )
+            )
 
     if query_model:
         args.append(

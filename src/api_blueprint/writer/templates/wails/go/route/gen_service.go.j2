@@ -29,6 +29,7 @@ func newGenerated{{ routes[0].service_name }}(impl RouterInterface, dispatcher w
 		sessions: wailstransport.NewSocketHub(dispatcher),
 {% for route in routes -%}
 		{{ route.executor_field_name }}: sharedprovider.NewRouteExecutor{% if route.is_connection %}[
+			any,
 			{{ route.local_query_type_expr }},
 			{{ route.executor_body_type_expr }},
 			{{ route.rsp_type }},
@@ -69,12 +70,12 @@ func (svc *{{ route.service_name }}) {{ route.connection_connect_func }}(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[{{ route.local_query_type_expr }}, any, {{ route.rsp_type }}](
+	ctx := sharedprovider.NewWailsContext[any, {{ route.local_query_type_expr }}, any, {{ route.rsp_type }}](
 		{{ route.service_name | tojson }},
 		{{ route.connection_connect_func | tojson }},
 		wailstransport.ConnectionOpenHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[{{ route.local_query_type_expr }}, any, {{ route.rsp_type }}]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, {{ route.local_query_type_expr }}, any, {{ route.rsp_type }}]{Request: req}
 	if err := svc.{{ route.executor_field_name }}.Run(ctx); err != nil {
 		return nil, err
 	}
@@ -92,7 +93,7 @@ func (svc *{{ route.service_name }}) {{ route.connection_connect_func }}(
 	}
 	session = wailstransport.WrapConnectionSession(session, {{ route.ordered_connection_delivery | tojson }})
 	stream := sharedprovider.NewStreamSession[{{ route.local_query_type_expr }}, {{ route.server_message_type }}, {{ route.close_message_type }}](
-		req.Q,
+		req.Query,
 		session,
 	)
 	go func() {
@@ -127,12 +128,12 @@ func (svc *{{ route.service_name }}) {{ route.connection_connect_func }}(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[{{ route.local_query_type_expr }}, any, {{ route.rsp_type }}](
+	ctx := sharedprovider.NewWailsContext[any, {{ route.local_query_type_expr }}, any, {{ route.rsp_type }}](
 		{{ route.service_name | tojson }},
 		{{ route.connection_connect_func | tojson }},
 		wailstransport.ConnectionOpenHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[{{ route.local_query_type_expr }}, any, {{ route.rsp_type }}]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, {{ route.local_query_type_expr }}, any, {{ route.rsp_type }}]{Request: req}
 	if err := svc.{{ route.executor_field_name }}.Run(ctx); err != nil {
 		return nil, err
 	}
@@ -150,7 +151,7 @@ func (svc *{{ route.service_name }}) {{ route.connection_connect_func }}(
 	}
 	session = wailstransport.WrapConnectionSession(session, {{ route.ordered_connection_delivery | tojson }})
 	channel := sharedprovider.NewChannelSession[{{ route.local_query_type_expr }}, {{ route.server_message_type }}, {{ route.client_message_type }}, {{ route.close_message_type }}](
-		req.Q,
+		req.Query,
 		session,
 	)
 	go func() {
@@ -197,12 +198,12 @@ func (svc *{{ route.service_name }}) {{ route.func_name }}(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[{{ route.local_query_type_expr }}, {{ route.local_body_type_expr }}, {{ route.rsp_type }}](
+	ctx := sharedprovider.NewWailsContext[any, {{ route.local_query_type_expr }}, {{ route.local_body_type_expr }}, {{ route.rsp_type }}](
 		{{ route.service_name | tojson }},
 		{{ route.func_name | tojson }},
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[{{ route.local_query_type_expr }}, {{ route.local_body_type_expr }}, {{ route.rsp_type }}]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, {{ route.local_query_type_expr }}, {{ route.local_body_type_expr }}, {{ route.rsp_type }}]{Request: req}
 	execErr := svc.{{ route.executor_field_name }}.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -215,7 +216,7 @@ func (svc *{{ route.service_name }}) {{ route.func_name }}(
 	if invokeErr != nil {
 		return "", invokeErr
 	}
-	xmlProvider := &sharedprovider.RspProvider[{{ route.local_query_type_expr }}, {{ route.local_body_type_expr }}, {{ route.rsp_type }}]{
+	xmlProvider := &sharedprovider.RspProvider[any, {{ route.local_query_type_expr }}, {{ route.local_body_type_expr }}, {{ route.rsp_type }}]{
 		Type:    "xml",
 		Options: {{ route.response_envelope_name | tojson }},
 	}

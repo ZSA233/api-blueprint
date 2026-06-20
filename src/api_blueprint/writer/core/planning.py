@@ -55,14 +55,14 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
     "go-server": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
+        requests=("path", "query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
     ),
     "go-client": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
+        requests=("path", "query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         transport="injected",
         responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
@@ -157,7 +157,7 @@ TARGET_CAPABILITIES: dict[str, TargetCapability] = {
     "ir-plugin": TargetCapability(
         implemented=True,
         routes=("rpc", "stream", "channel"),
-        requests=("query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
+        requests=("path", "query", "json", "form", "urlencoded", "multipart", "binary", "binary-schema", "open"),
         envelopes=("none", "code_message_data", "ok_data_error"),
         transport="plugin",
         responses=("json", "xml", "bytes", "file", "byte_stream", "binary_schema"),
@@ -239,6 +239,7 @@ def _route_capability_errors(
     request = route.get("request") or {}
     if capability.requests and isinstance(request, Mapping):
         for request_kind, manifest_key in (
+            ("path", "path_model"),
             ("query", "query_model"),
             ("json", "json_model"),
             ("form", "form_model"),

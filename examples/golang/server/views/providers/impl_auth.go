@@ -1,10 +1,10 @@
 package providers
 
-type AuthContext[Q, B, P any] struct{}
+type AuthContext[Path, Query, Body, Response any] struct{}
 
-func (prov *AuthProvider[Q, B, P]) BuildAuthContext(
-	ctx *Context[Q, B, P],
-	req *REQ[Q, B],
-) (auth *AuthContext[Q, B, P], err error) {
-	return &AuthContext[Q, B, P]{}, nil
+func (prov *AuthProvider[Path, Query, Body, Response]) BuildAuthContext(
+	ctx *Context[Path, Query, Body, Response],
+	req *REQ[Path, Query, Body],
+) (auth *AuthContext[Path, Query, Body, Response], err error) {
+	return &AuthContext[Path, Query, Body, Response]{}, nil
 }

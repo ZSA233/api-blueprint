@@ -114,7 +114,7 @@ content-encoding: identity,gzip,br
     assert 'binary "example.com/generated/golang/routes/api/demo/_gen_binary"' in route_models
     assert "binary.DemoPacket" in route_models
     assert "BindBinary bool" in req_provider
-    assert 'strings.Contains(data, "B")' in req_provider
+    assert 'hasReqToken(data, "binary")' in req_provider
     http_config = (output_dir / "transports" / "http" / "gen_config.go").read_text(encoding="utf-8")
     assert "BinaryContentDecoders" in http_config
     assert "map[string]BinaryContentDecoder" in http_config
@@ -125,7 +125,7 @@ content-encoding: identity,gzip,br
     assert "binaryContentEncodingAllowed(encoding, allowedContentEncodings)" in http_runtime
     assert "http.StatusUnsupportedMediaType" in http_runtime
     assert "http.StatusRequestEntityTooLarge" in http_runtime
-    assert '"req=QB|handle|rsp=json@CodeMessageDataEnvelope"' in http_route
+    assert '"req=query,binary|handle|rsp=json@CodeMessageDataEnvelope"' in http_route
     assert "HTTP: sharedprovider.HTTPRouteInfo{" in http_route
     assert "Request: sharedprovider.HTTPRequestInfo{" in http_route
     assert 'BinaryContentEncodings: []string{"identity", "gzip", "br"}' in http_route

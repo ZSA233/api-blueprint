@@ -36,6 +36,7 @@ type WailsRouteContext struct {
 }
 
 type HTTPRequestInfo struct {
+	PathParams             []string
 	BinaryContentEncodings []string
 }
 
@@ -67,8 +68,8 @@ type ContextInterface interface {
 	ContextKind() TransportKind
 }
 
-type Context[Q, B, P any] struct {
-	Indexer  *Indexer[Q, B, P]
+type Context[Path, Query, Body, Response any] struct {
+	Indexer  *Indexer[Path, Query, Body, Response]
 	Kind     TransportKind
 	Route    *RouteInfo
 	Base     context.Context
@@ -76,22 +77,22 @@ type Context[Q, B, P any] struct {
 	HeaderFn func(string) string
 	Metadata map[string]any
 	Wails    *WailsRouteContext
-	Req      *ReqContext[Q, B, P]
-	Auth     *AuthContext[Q, B, P]
-	Handle   *HandleContext[Q, B, P]
+	Req      *ReqContext[Path, Query, Body, Response]
+	Auth     *AuthContext[Path, Query, Body, Response]
+	Handle   *HandleContext[Path, Query, Body, Response]
 
-	executor        *RouteExecutor[Q, B, P]
+	executor        *RouteExecutor[Path, Query, Body, Response]
 	pipelineNext    int
 	pipelineEnd     int
 	pipelineStopped bool
 	pipelineError   error
 }
 
-func (ctx *Context[Q, B, P]) ContextKind() TransportKind {
+func (ctx *Context[Path, Query, Body, Response]) ContextKind() TransportKind {
 	return ctx.Kind
 }
 
-func (ctx *Context[Q, B, P]) Next() {
+func (ctx *Context[Path, Query, Body, Response]) Next() {
 	if ctx.executor == nil || ctx.pipelineStopped {
 		return
 	}
@@ -106,46 +107,46 @@ func (ctx *Context[Q, B, P]) Next() {
 	}
 }
 
-func (ctx *Context[Q, B, P]) Abort(err error) {
+func (ctx *Context[Path, Query, Body, Response]) Abort(err error) {
 	if err != nil {
 		ctx.pipelineError = err
 	}
 	ctx.pipelineStopped = true
 }
 
-func (ctx *Context[Q, B, P]) PipelineError() error {
+func (ctx *Context[Path, Query, Body, Response]) PipelineError() error {
 	return ctx.pipelineError
 }
 
-func (ctx *Context[Q, B, P]) HandleResult() (*P, error) {
+func (ctx *Context[Path, Query, Body, Response]) HandleResult() (*Response, error) {
 	if ctx.Handle != nil {
 		return ctx.Handle.Response, ctx.Handle.Error
 	}
 	return nil, ctx.PipelineError()
 }
 
-func (ctx *Context[Q, B, P]) Deadline() (deadline time.Time, ok bool) {
+func (ctx *Context[Path, Query, Body, Response]) Deadline() (deadline time.Time, ok bool) {
 	if ctx.Base == nil {
 		return time.Time{}, false
 	}
 	return ctx.Base.Deadline()
 }
 
-func (ctx *Context[Q, B, P]) Done() <-chan struct{} {
+func (ctx *Context[Path, Query, Body, Response]) Done() <-chan struct{} {
 	if ctx.Base == nil {
 		return nil
 	}
 	return ctx.Base.Done()
 }
 
-func (ctx *Context[Q, B, P]) Err() error {
+func (ctx *Context[Path, Query, Body, Response]) Err() error {
 	if ctx.Base == nil {
 		return nil
 	}
 	return ctx.Base.Err()
 }
 
-func (ctx *Context[Q, B, P]) ensureMetadataStore() map[string]any {
+func (ctx *Context[Path, Query, Body, Response]) ensureMetadataStore() map[string]any {
 	if ctx.Metadata == nil {
 		ctx.Metadata = map[string]any{}
 		if ctx.Wails != nil {
@@ -155,11 +156,11 @@ func (ctx *Context[Q, B, P]) ensureMetadataStore() map[string]any {
 	return ctx.Metadata
 }
 
-func (ctx *Context[Q, B, P]) Set(key string, value any) {
+func (ctx *Context[Path, Query, Body, Response]) Set(key string, value any) {
 	ctx.ensureMetadataStore()[key] = value
 }
 
-func (ctx *Context[Q, B, P]) Get(key string) (value any, exists bool) {
+func (ctx *Context[Path, Query, Body, Response]) Get(key string) (value any, exists bool) {
 	if ctx.Metadata == nil {
 		return nil, false
 	}
@@ -167,7 +168,7 @@ func (ctx *Context[Q, B, P]) Get(key string) (value any, exists bool) {
 	return value, exists
 }
 
-func (ctx *Context[Q, B, P]) MustGet(key string) any {
+func (ctx *Context[Path, Query, Body, Response]) MustGet(key string) any {
 	value, exists := ctx.Get(key)
 	if !exists {
 		panic(fmt.Sprintf("[Context] key[%s] not found", key))
@@ -175,7 +176,7 @@ func (ctx *Context[Q, B, P]) MustGet(key string) any {
 	return value
 }
 
-func (ctx *Context[Q, B, P]) Value(key any) any {
+func (ctx *Context[Path, Query, Body, Response]) Value(key any) any {
 	if keyString, ok := key.(string); ok {
 		if value, exists := ctx.Get(keyString); exists {
 			return value
@@ -187,7 +188,7 @@ func (ctx *Context[Q, B, P]) Value(key any) any {
 	return ctx.Base.Value(key)
 }
 
-func (ctx *Context[Q, B, P]) Header(name string) string {
+func (ctx *Context[Path, Query, Body, Response]) Header(name string) string {
 	if ctx.HeaderFn != nil {
 		return ctx.HeaderFn(name)
 	}
@@ -199,38 +200,38 @@ func (ctx *Context[Q, B, P]) Header(name string) string {
 	return ""
 }
 
-func AdaptContext[Q, B, P any](anyCtx any) *Context[Q, B, P] {
-	ctx, ok := anyCtx.(*Context[Q, B, P])
+func AdaptContext[Path, Query, Body, Response any](anyCtx any) *Context[Path, Query, Body, Response] {
+	ctx, ok := anyCtx.(*Context[Path, Query, Body, Response])
 	if !ok {
-		panic(fmt.Sprintf("[AdaptContext] anyCtx[%T] fail to adapt [%T].", anyCtx, new(Context[Q, B, P])))
+		panic(fmt.Sprintf("[AdaptContext] anyCtx[%T] fail to adapt [%T].", anyCtx, new(Context[Path, Query, Body, Response])))
 	}
 	return ctx
 }
 
-func NewHTTPContext[Q, B, P any](
+func NewHTTPContext[Path, Query, Body, Response any](
 	base context.Context,
 	headers map[string]string,
 	metadata map[string]any,
-) *Context[Q, B, P] {
-	return NewContext[Q, B, P](TransportHTTP, base, headers, metadata)
+) *Context[Path, Query, Body, Response] {
+	return NewContext[Path, Query, Body, Response](TransportHTTP, base, headers, metadata)
 }
 
-func NewHTTPContextWithHeaderLookup[Q, B, P any](
+func NewHTTPContextWithHeaderLookup[Path, Query, Body, Response any](
 	base context.Context,
 	headerFn func(string) string,
 	metadata map[string]any,
-) *Context[Q, B, P] {
-	ctx := NewContext[Q, B, P](TransportHTTP, base, nil, metadata)
+) *Context[Path, Query, Body, Response] {
+	ctx := NewContext[Path, Query, Body, Response](TransportHTTP, base, nil, metadata)
 	ctx.HeaderFn = headerFn
 	return ctx
 }
 
-func NewContext[Q, B, P any](
+func NewContext[Path, Query, Body, Response any](
 	kind TransportKind,
 	base context.Context,
 	headers map[string]string,
 	metadata map[string]any,
-) *Context[Q, B, P] {
+) *Context[Path, Query, Body, Response] {
 	if base == nil {
 		base = context.Background()
 	}
@@ -240,7 +241,7 @@ func NewContext[Q, B, P any](
 	if metadata == nil {
 		metadata = nil
 	}
-	return &Context[Q, B, P]{
+	return &Context[Path, Query, Body, Response]{
 		Kind:     kind,
 		Base:     base,
 		Headers:  headers,
@@ -248,12 +249,12 @@ func NewContext[Q, B, P any](
 	}
 }
 
-func NewWailsContext[Q, B, P any](
+func NewWailsContext[Path, Query, Body, Response any](
 	service string,
 	operation string,
 	headers map[string]string,
-) *Context[Q, B, P] {
-	ctx := NewContext[Q, B, P](TransportWails, context.Background(), headers, nil)
+) *Context[Path, Query, Body, Response] {
+	ctx := NewContext[Path, Query, Body, Response](TransportWails, context.Background(), headers, nil)
 	ctx.Wails = &WailsRouteContext{
 		Service:   service,
 		Operation: operation,

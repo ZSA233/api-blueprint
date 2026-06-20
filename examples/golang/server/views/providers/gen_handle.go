@@ -10,52 +10,52 @@ const (
 	PROV_HANDLE = "handle"
 )
 
-type HandleContext[Q, B, P any] struct {
-	Response *P
+type HandleContext[Path, Query, Body, Response any] struct {
+	Response *Response
 	Error    error
 }
 
-type HandleProvider[Q, B, P any] struct {
+type HandleProvider[Path, Query, Body, Response any] struct {
 	Data    string
 	Route   RouteInfo
-	Handler func(c *Context[Q, B, P], req *REQ[Q, B]) (rsp *P, err error)
+	Handler func(c *Context[Path, Query, Body, Response], req *REQ[Path, Query, Body]) (rsp *Response, err error)
 }
 
-func (prov *HandleProvider[Q, B, P]) GetName() string {
+func (prov *HandleProvider[Path, Query, Body, Response]) GetName() string {
 	return PROV_HANDLE
 }
 
-func NewHandleProvider[Q, B, P any](
+func NewHandleProvider[Path, Query, Body, Response any](
 	data string,
-	handler func(c *Context[Q, B, P], req *REQ[Q, B]) (rsp *P, err error),
-) *HandleProvider[Q, B, P] {
-	return &HandleProvider[Q, B, P]{
+	handler func(c *Context[Path, Query, Body, Response], req *REQ[Path, Query, Body]) (rsp *Response, err error),
+) *HandleProvider[Path, Query, Body, Response] {
+	return &HandleProvider[Path, Query, Body, Response]{
 		Data:    data,
 		Handler: handler,
 	}
 }
 
-func (prov *HandleProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
-	ctx := AdaptContext[Q, B, P](anyCtx)
+func (prov *HandleProvider[Path, Query, Body, Response]) Handle(anyCtx ContextInterface) {
+	ctx := AdaptContext[Path, Query, Body, Response](anyCtx)
 	var err error
 
 	if ctx.Req == nil {
 		err = fmt.Errorf("[HandleProvider] fail to get req")
-		ctx.Handle = &HandleContext[Q, B, P]{Error: err}
+		ctx.Handle = &HandleContext[Path, Query, Body, Response]{Error: err}
 		ctx.Next()
 		return
 	}
 
 	req, err := ctx.Req.Request, ctx.Req.Error
 	if err != nil {
-		ctx.Handle = &HandleContext[Q, B, P]{Error: err}
+		ctx.Handle = &HandleContext[Path, Query, Body, Response]{Error: err}
 		ctx.Next()
 		return
 	}
 
-	var rsp *P
+	var rsp *Response
 	rsp, err = prov.Handler(ctx, req)
-	ctx.Handle = &HandleContext[Q, B, P]{
+	ctx.Handle = &HandleContext[Path, Query, Body, Response]{
 		Response: rsp,
 		Error:    err,
 	}

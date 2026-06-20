@@ -5,10 +5,10 @@ package hello
 import runtime "example.com/project/golang/client/runtime"
 
 type AbcQuery struct {
-	Arg1 bool                            `json:"arg1,omitempty" form:"arg1,omitempty"`
-	Arg3 string                          `json:"arg3,omitempty" form:"arg3,omitempty"`
-	Arg2 float64                         `json:"arg2,omitempty" form:"arg2,omitempty"`
-	Type runtime.HelloChannelMsgTypeEnum `json:"type" form:"type"`
+	Arg1 bool                            `json:"arg1,omitempty" form:"arg1,omitempty" uri:"arg1,omitempty"`
+	Arg3 string                          `json:"arg3,omitempty" form:"arg3,omitempty" uri:"arg3,omitempty"`
+	Arg2 float64                         `json:"arg2,omitempty" form:"arg2,omitempty" uri:"arg2,omitempty"`
+	Type runtime.HelloChannelMsgTypeEnum `json:"type" form:"type" uri:"type"`
 }
 type AbcResponse = runtime.RSPAbc
 
@@ -23,5 +23,5 @@ type Uint64Response = runtime.RSPUint64
 type StringEmunResponse = runtime.RSPStringEmun
 
 type HelloWayQuery struct {
-	Arg1 runtime.HelloWayEnum `json:"arg1,omitempty" form:"arg1,omitempty"`
+	Arg1 runtime.HelloWayEnum `json:"arg1,omitempty" form:"arg1,omitempty" uri:"arg1,omitempty"`
 }

@@ -13,39 +13,48 @@ import (
 )
 
 func Mount(router gin.IRouter, impl shared.RouterInterface) shared.RouterInterface {
+	return MountSelected(router, impl, nil)
+}
+
+func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map[string]struct{}) shared.RouterInterface {
 	if isNilRouterInterface(impl) {
 		impl = shared.NewRouter()
 	}
 
-	httptransport.GET(
-		"/account/profile",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "legacy",
-				Group:     "account",
-				Namespace: "account",
-				Service:   "AccountService",
-				Operation: "AccountProfile",
-				RouteID:   "legacy.account.get.profile",
-				Path:      "/account/profile",
-				Methods:   []string{"GET"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
+	if shouldMountRoute(routeIDs, "legacy.account.get.profile") {
+
+		httptransport.GET(
+			"/account/profile",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "legacy",
+					Group:     "account",
+					Namespace: "account",
+					Service:   "AccountService",
+					Operation: "AccountProfile",
+					RouteID:   "legacy.account.get.profile",
+					Path:      "/account/profile",
+					Methods:   []string{"GET"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
 					},
 				},
-			},
-			"req|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
-			impl.AccountProfile,
-		),
-		router,
-	)
+				"req|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+				impl.AccountProfile,
+			),
+			router,
+		)
+
+	}
 
 	return impl
 }
@@ -71,4 +80,12 @@ func isNilRouterInterface(impl shared.RouterInterface) bool {
 	default:
 		return false
 	}
+}
+
+func shouldMountRoute(routeIDs map[string]struct{}, routeID string) bool {
+	if len(routeIDs) == 0 {
+		return true
+	}
+	_, ok := routeIDs[routeID]
+	return ok
 }

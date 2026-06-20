@@ -13,393 +13,460 @@ import (
 )
 
 func Mount(router gin.IRouter, impl shared.RouterInterface) shared.RouterInterface {
+	return MountSelected(router, impl, nil)
+}
+
+func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map[string]struct{}) shared.RouterInterface {
 	if isNilRouterInterface(impl) {
 		impl = shared.NewRouter()
 	}
 
-	httptransport.GET(
-		"/api/demo/abc",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "demo",
-				Namespace: "demo",
-				Service:   "DemoService",
-				Operation: "Abc",
-				RouteID:   "api.demo.get.abc",
-				Path:      "/api/demo/abc",
-				Methods:   []string{"GET"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
-					},
-				},
-			},
-			"req=Q|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
-			impl.Abc,
-		),
-		router,
-	)
+	if shouldMountRoute(routeIDs, "api.demo.get.abc") {
 
-	httptransport.POST(
-		"/api/demo/test_post",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "demo",
-				Namespace: "demo",
-				Service:   "DemoService",
-				Operation: "TestPost",
-				RouteID:   "api.demo.post.testpost",
-				Path:      "/api/demo/test_post",
-				Methods:   []string{"POST"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
+		httptransport.GET(
+			"/api/demo/abc",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "demo",
+					Namespace: "demo",
+					Service:   "DemoService",
+					Operation: "Abc",
+					RouteID:   "api.demo.get.abc",
+					Path:      "/api/demo/abc",
+					Methods:   []string{"GET"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
 					},
 				},
-			},
-			"req=J|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
-			impl.TestPost,
-		),
-		router,
-	)
+				"req=query|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+				impl.Abc,
+			),
+			router,
+		)
 
-	httptransport.POST(
-		"/api/demo/form-submit",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "demo",
-				Namespace: "demo",
-				Service:   "DemoService",
-				Operation: "FormSubmit",
-				RouteID:   "api.demo.post.formsubmit",
-				Path:      "/api/demo/form-submit",
-				Methods:   []string{"POST"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
-					},
-				},
-			},
-			"req=F|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
-			impl.FormSubmit,
-		),
-		router,
-	)
+	}
 
-	httptransport.GET(
-		"/api/demo/request-options",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "demo",
-				Namespace: "demo",
-				Service:   "DemoService",
-				Operation: "RequestOptions",
-				RouteID:   "api.demo.get.requestoptions",
-				Path:      "/api/demo/request-options",
-				Methods:   []string{"GET"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
-					},
-				},
-			},
-			"req=Q|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
-			impl.RequestOptions,
-		),
-		router,
-	)
+	if shouldMountRoute(routeIDs, "api.demo.post.testpost") {
 
-	httptransport.POST(
-		"/api/demo/empty-response",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "demo",
-				Namespace: "demo",
-				Service:   "DemoService",
-				Operation: "EmptyResponse",
-				RouteID:   "api.demo.post.emptyresponse",
-				Path:      "/api/demo/empty-response",
-				Methods:   []string{"POST"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
+		httptransport.POST(
+			"/api/demo/test_post",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "demo",
+					Namespace: "demo",
+					Service:   "DemoService",
+					Operation: "TestPost",
+					RouteID:   "api.demo.post.testpost",
+					Path:      "/api/demo/test_post",
+					Methods:   []string{"POST"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
 					},
 				},
-			},
-			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
-			impl.EmptyResponse,
-		),
-		router,
-	)
+				"req=json|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+				impl.TestPost,
+			),
+			router,
+		)
 
-	httptransport.PUT(
-		"/api/demo/1put",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "demo",
-				Namespace: "demo",
-				Service:   "DemoService",
-				Operation: "PutDemo",
-				RouteID:   "api.demo.put.z1put",
-				Path:      "/api/demo/1put",
-				Methods:   []string{"PUT"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
-					},
-				},
-			},
-			"req=QJ|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
-			impl.PutDemo,
-		),
-		router,
-	)
+	}
 
-	httptransport.DELETE(
-		"/api/demo/delete$",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "demo",
-				Namespace: "demo",
-				Service:   "DemoService",
-				Operation: "Delete",
-				RouteID:   "api.demo.delete.delete",
-				Path:      "/api/demo/delete$",
-				Methods:   []string{"DELETE"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
-					},
-				},
-			},
-			"req=Q|auth|request-signature|handle|rsp=xml@CodeMessageDataEnvelope",
-			impl.Delete,
-		),
-		router,
-	)
+	if shouldMountRoute(routeIDs, "api.demo.post.formsubmit") {
 
-	httptransport.STREAM(
-		"/api/demo/sweep-events",
-		sharedprovider.NewRouteExecutor[shared.OPEN_SweepEvents, any, shared.RSP_SweepEvents](
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "demo",
-				Namespace: "demo",
-				Service:   "DemoService",
-				Operation: "SweepEvents",
-				RouteID:   "api.demo.stream.sweepevents",
-				Path:      "/api/demo/sweep-events",
-				Methods:   []string{"STREAM"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope("session"),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Response: sharedprovider.HTTPResponseInfo{
-						DefaultFilename: "",
+		httptransport.POST(
+			"/api/demo/form-submit",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "demo",
+					Namespace: "demo",
+					Service:   "DemoService",
+					Operation: "FormSubmit",
+					RouteID:   "api.demo.post.formsubmit",
+					Path:      "/api/demo/form-submit",
+					Methods:   []string{"POST"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
 					},
 				},
-			},
-			"req=Q|auth|request-signature",
-			nil,
-		),
-		impl.SweepEvents,
-		router,
-	)
+				"req=form|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+				impl.FormSubmit,
+			),
+			router,
+		)
 
-	httptransport.CHANNEL(
-		"/api/demo/assistant-session",
-		sharedprovider.NewRouteExecutor[shared.OPEN_AssistantSession, any, shared.RSP_AssistantSession](
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "demo",
-				Namespace: "demo",
-				Service:   "DemoService",
-				Operation: "AssistantSession",
-				RouteID:   "api.demo.channel.assistantsession",
-				Path:      "/api/demo/assistant-session",
-				Methods:   []string{"CHANNEL"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope("session"),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Response: sharedprovider.HTTPResponseInfo{
-						DefaultFilename: "",
-					},
-				},
-			},
-			"req=Q|auth|request-signature",
-			nil,
-		),
-		impl.AssistantSession,
-		router,
-	)
+	}
 
-	httptransport.POST(
-		"/api/demo/post_deprecated",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "demo",
-				Namespace: "demo",
-				Service:   "DemoService",
-				Operation: "PostDeprecated",
-				RouteID:   "api.demo.post.postdeprecated",
-				Path:      "/api/demo/post_deprecated",
-				Methods:   []string{"POST"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
-					},
-				},
-			},
-			"req=J|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
-			impl.PostDeprecated,
-		),
-		router,
-	)
+	if shouldMountRoute(routeIDs, "api.demo.get.requestoptions") {
 
-	httptransport.POST(
-		"/api/demo/raw",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "demo",
-				Namespace: "demo",
-				Service:   "DemoService",
-				Operation: "Raw",
-				RouteID:   "api.demo.post.raw",
-				Path:      "/api/demo/raw",
-				Methods:   []string{"POST"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  true,
-						DefaultFilename: "",
+		httptransport.GET(
+			"/api/demo/request-options",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "demo",
+					Namespace: "demo",
+					Service:   "DemoService",
+					Operation: "RequestOptions",
+					RouteID:   "api.demo.get.requestoptions",
+					Path:      "/api/demo/request-options",
+					Methods:   []string{"GET"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
 					},
 				},
-			},
-			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
-			impl.Raw,
-		),
-		router,
-	)
+				"req=query|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+				impl.RequestOptions,
+			),
+			router,
+		)
 
-	httptransport.POST(
-		"/api/demo/map_model",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "demo",
-				Namespace: "demo",
-				Service:   "DemoService",
-				Operation: "MapModel",
-				RouteID:   "api.demo.post.mapmodel",
-				Path:      "/api/demo/map_model",
-				Methods:   []string{"POST"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
-					},
-				},
-			},
-			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
-			impl.MapModel,
-		),
-		router,
-	)
+	}
 
-	httptransport.GET(
-		"/api/demo/error-demo",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "demo",
-				Namespace: "demo",
-				Service:   "DemoService",
-				Operation: "ErrorDemo",
-				RouteID:   "api.demo.get.errordemo",
-				Path:      "/api/demo/error-demo",
-				Methods:   []string{"GET"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
+	if shouldMountRoute(routeIDs, "api.demo.post.emptyresponse") {
+
+		httptransport.POST(
+			"/api/demo/empty-response",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "demo",
+					Namespace: "demo",
+					Service:   "DemoService",
+					Operation: "EmptyResponse",
+					RouteID:   "api.demo.post.emptyresponse",
+					Path:      "/api/demo/empty-response",
+					Methods:   []string{"POST"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
 					},
 				},
-			},
-			"req=Q|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
-			impl.ErrorDemo,
-		),
-		router,
-	)
+				"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+				impl.EmptyResponse,
+			),
+			router,
+		)
+
+	}
+
+	if shouldMountRoute(routeIDs, "api.demo.put.z1put") {
+
+		httptransport.PUT(
+			"/api/demo/1put",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "demo",
+					Namespace: "demo",
+					Service:   "DemoService",
+					Operation: "PutDemo",
+					RouteID:   "api.demo.put.z1put",
+					Path:      "/api/demo/1put",
+					Methods:   []string{"PUT"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
+					},
+				},
+				"req=query,json|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+				impl.PutDemo,
+			),
+			router,
+		)
+
+	}
+
+	if shouldMountRoute(routeIDs, "api.demo.delete.delete") {
+
+		httptransport.DELETE(
+			"/api/demo/delete$",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "demo",
+					Namespace: "demo",
+					Service:   "DemoService",
+					Operation: "Delete",
+					RouteID:   "api.demo.delete.delete",
+					Path:      "/api/demo/delete$",
+					Methods:   []string{"DELETE"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
+					},
+				},
+				"req=query|auth|request-signature|handle|rsp=xml@CodeMessageDataEnvelope",
+				impl.Delete,
+			),
+			router,
+		)
+
+	}
+
+	if shouldMountRoute(routeIDs, "api.demo.stream.sweepevents") {
+
+		httptransport.STREAM(
+			"/api/demo/sweep-events",
+			sharedprovider.NewRouteExecutor[any, shared.OPEN_SweepEvents, any, shared.RSP_SweepEvents](
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "demo",
+					Namespace: "demo",
+					Service:   "DemoService",
+					Operation: "SweepEvents",
+					RouteID:   "api.demo.stream.sweepevents",
+					Path:      "/api/demo/sweep-events",
+					Methods:   []string{"STREAM"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope("session"),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Response: sharedprovider.HTTPResponseInfo{
+							DefaultFilename: "",
+						},
+					},
+				},
+				"req=query|auth|request-signature",
+				nil,
+			),
+			impl.SweepEvents,
+			router,
+		)
+
+	}
+
+	if shouldMountRoute(routeIDs, "api.demo.channel.assistantsession") {
+
+		httptransport.CHANNEL(
+			"/api/demo/assistant-session",
+			sharedprovider.NewRouteExecutor[any, shared.OPEN_AssistantSession, any, shared.RSP_AssistantSession](
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "demo",
+					Namespace: "demo",
+					Service:   "DemoService",
+					Operation: "AssistantSession",
+					RouteID:   "api.demo.channel.assistantsession",
+					Path:      "/api/demo/assistant-session",
+					Methods:   []string{"CHANNEL"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope("session"),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Response: sharedprovider.HTTPResponseInfo{
+							DefaultFilename: "",
+						},
+					},
+				},
+				"req=query|auth|request-signature",
+				nil,
+			),
+			impl.AssistantSession,
+			router,
+		)
+
+	}
+
+	if shouldMountRoute(routeIDs, "api.demo.post.postdeprecated") {
+
+		httptransport.POST(
+			"/api/demo/post_deprecated",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "demo",
+					Namespace: "demo",
+					Service:   "DemoService",
+					Operation: "PostDeprecated",
+					RouteID:   "api.demo.post.postdeprecated",
+					Path:      "/api/demo/post_deprecated",
+					Methods:   []string{"POST"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
+					},
+				},
+				"req=json|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+				impl.PostDeprecated,
+			),
+			router,
+		)
+
+	}
+
+	if shouldMountRoute(routeIDs, "api.demo.post.raw") {
+
+		httptransport.POST(
+			"/api/demo/raw",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "demo",
+					Namespace: "demo",
+					Service:   "DemoService",
+					Operation: "Raw",
+					RouteID:   "api.demo.post.raw",
+					Path:      "/api/demo/raw",
+					Methods:   []string{"POST"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  true,
+							DefaultFilename: "",
+						},
+					},
+				},
+				"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+				impl.Raw,
+			),
+			router,
+		)
+
+	}
+
+	if shouldMountRoute(routeIDs, "api.demo.post.mapmodel") {
+
+		httptransport.POST(
+			"/api/demo/map_model",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "demo",
+					Namespace: "demo",
+					Service:   "DemoService",
+					Operation: "MapModel",
+					RouteID:   "api.demo.post.mapmodel",
+					Path:      "/api/demo/map_model",
+					Methods:   []string{"POST"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
+					},
+				},
+				"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+				impl.MapModel,
+			),
+			router,
+		)
+
+	}
+
+	if shouldMountRoute(routeIDs, "api.demo.get.errordemo") {
+
+		httptransport.GET(
+			"/api/demo/error-demo",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "demo",
+					Namespace: "demo",
+					Service:   "DemoService",
+					Operation: "ErrorDemo",
+					RouteID:   "api.demo.get.errordemo",
+					Path:      "/api/demo/error-demo",
+					Methods:   []string{"GET"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
+					},
+				},
+				"req=query|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+				impl.ErrorDemo,
+			),
+			router,
+		)
+
+	}
 
 	return impl
 }
@@ -425,4 +492,12 @@ func isNilRouterInterface(impl shared.RouterInterface) bool {
 	default:
 		return false
 	}
+}
+
+func shouldMountRoute(routeIDs map[string]struct{}, routeID string) bool {
+	if len(routeIDs) == 0 {
+		return true
+	}
+	_, ok := routeIDs[routeID]
+	return ok
 }

@@ -61,7 +61,7 @@ go 1.23.8
         in go_overlay_service
     )
     assert "SetConnectionHub(hub wailstransport.ConnectionHub)" in go_overlay_service
-    assert re.search(r"\bpingExecutor\s+\*sharedprovider.RouteExecutor\[REQ_Ping_QUERY, any, RSP_Ping\]", go_overlay_service)
+    assert re.search(r"\bpingExecutor\s+\*sharedprovider.RouteExecutor\[any, REQ_Ping_QUERY, any, RSP_Ping\]", go_overlay_service)
     assert not re.search(r"\bwsExecutor\s+\*sharedprovider.RouteExecutor", go_overlay_service)
     assert "sharedprovider.NewRouteExecutor(" in go_overlay_service
     assert "NewRouteExecutorWithInfo" not in go_overlay_service
@@ -78,7 +78,7 @@ go 1.23.8
     assert 'Methods:   []string{"CHANNEL"}' in go_overlay_service
     assert "Transport: sharedprovider.TransportWails" in go_overlay_service
     assert 'Scope:     sharedprovider.ConnectionScope("session")' in go_overlay_service
-    assert '"req=Q|auth|handle|rsp=json@CodeMessageDataEnvelope"' in go_overlay_service
+    assert '"req=query|auth|handle|rsp=json@CodeMessageDataEnvelope"' in go_overlay_service
     assert '"req|auth|ws_handle|rsp=json@CodeMessageDataEnvelope"' not in go_overlay_service
     assert "ResolveProvider[" not in go_overlay_service
     assert not re.search(r"Executor \*sharedprovider[^\n]*\n\n\s*\w+Executor", go_overlay_service)
@@ -101,8 +101,8 @@ go 1.23.8
     assert not (shared_go / "transports" / "http").exists()
     assert not (shared_ts / "api" / "transports" / "http").exists()
     assert not (shared_go / "engine.go").exists()
-    assert "type RouteExecutor[Q, B, P any] struct" in go_provider_executor
-    assert "func (executor *RouteExecutor[Q, B, P]) RunWSPreflight" not in go_provider_executor
+    assert "type RouteExecutor[Path, Query, Body, Response any] struct" in go_provider_executor
+    assert "func (executor *RouteExecutor[Path, Query, Body, Response]) RunWSPreflight" not in go_provider_executor
     assert "ctx.Route = &executor.Route" in go_provider_executor
     assert "type RouteInfo struct" in go_provider_context
     assert "Scope     ConnectionScope" in go_provider_context

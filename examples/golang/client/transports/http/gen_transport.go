@@ -14,6 +14,7 @@ import (
 	"net/textproto"
 	"net/url"
 	"reflect"
+	"regexp"
 	"strings"
 
 	runtime "example.com/project/golang/client/runtime"
@@ -44,7 +45,11 @@ func NewClient(config HttpConfig) runtime.Transport {
 var _ = runtime.UnsupportedConnectionError{}
 
 func (transport *HttpTransport) Do(ctx context.Context, request runtime.Request, response any) error {
-	endpoint, err := joinURL(transport.config.BaseURL, request.Path)
+	path, err := expandPath(request.Path, request.PathParams)
+	if err != nil {
+		return err
+	}
+	endpoint, err := joinURL(transport.config.BaseURL, path)
 	if err != nil {
 		return err
 	}
@@ -135,6 +140,102 @@ func joinURL(base string, path string) (*url.URL, error) {
 		return nil, err
 	}
 	return endpoint, nil
+}
+
+var pathPlaceholderPattern = regexp.MustCompile(`\{([A-Za-z_][A-Za-z0-9_]*)\}`)
+
+func expandPath(path string, params any) (string, error) {
+	matches := pathPlaceholderPattern.FindAllStringSubmatch(path, -1)
+	if len(matches) == 0 {
+		if strings.Contains(path, "{") || strings.Contains(path, "}") {
+			return "", fmt.Errorf("api-blueprint http transport invalid path placeholders in %q", path)
+		}
+		return path, nil
+	}
+	values, err := pathParamValues(params)
+	if err != nil {
+		return "", err
+	}
+	missing := []string{}
+	expanded := pathPlaceholderPattern.ReplaceAllStringFunc(path, func(token string) string {
+		name := token[1 : len(token)-1]
+		value, ok := values[name]
+		if !ok {
+			missing = append(missing, name)
+			return token
+		}
+		return url.PathEscape(value)
+	})
+	if len(missing) > 0 {
+		return "", fmt.Errorf("api-blueprint http transport missing path parameter(s): %s", strings.Join(missing, ", "))
+	}
+	if pathPlaceholderPattern.MatchString(expanded) {
+		return "", fmt.Errorf("api-blueprint http transport unresolved path placeholder in %q", expanded)
+	}
+	return expanded, nil
+}
+
+func pathParamValues(input any) (map[string]string, error) {
+	if input == nil {
+		return nil, fmt.Errorf("api-blueprint http transport path params are required")
+	}
+	value := reflect.ValueOf(input)
+	if value.Kind() == reflect.Pointer {
+		if value.IsNil() {
+			return nil, fmt.Errorf("api-blueprint http transport path params are required")
+		}
+		value = value.Elem()
+	}
+	if value.Kind() == reflect.Map {
+		return pathParamMapValues(value)
+	}
+	if value.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("api-blueprint http transport expected path params struct values, got %s", value.Kind())
+	}
+	result := map[string]string{}
+	valueType := value.Type()
+	for i := 0; i < value.NumField(); i++ {
+		field := value.Field(i)
+		fieldType := valueType.Field(i)
+		if field.Kind() == reflect.Pointer {
+			if field.IsNil() {
+				return nil, fmt.Errorf("api-blueprint http transport path parameter %s is nil", fieldType.Name)
+			}
+			field = field.Elem()
+		}
+		key := pathFieldName(fieldType)
+		if key == "" || key == "-" {
+			key = fieldType.Name
+		}
+		result[key] = fmt.Sprint(field.Interface())
+	}
+	return result, nil
+}
+
+func pathParamMapValues(value reflect.Value) (map[string]string, error) {
+	if value.Type().Key().Kind() != reflect.String {
+		return nil, fmt.Errorf("api-blueprint http transport expected string path parameter keys, got %s", value.Type().Key().Kind())
+	}
+	result := map[string]string{}
+	for _, key := range value.MapKeys() {
+		item := value.MapIndex(key)
+		if item.Kind() == reflect.Pointer {
+			if item.IsNil() {
+				return nil, fmt.Errorf("api-blueprint http transport path parameter %s is nil", key.String())
+			}
+			item = item.Elem()
+		}
+		result[key.String()] = fmt.Sprint(item.Interface())
+	}
+	return result, nil
+}
+
+func pathFieldName(fieldType reflect.StructField) string {
+	key := fieldType.Tag.Get("uri")
+	if key == "" {
+		key = formFieldName(fieldType)
+	}
+	return strings.Split(key, ",")[0]
 }
 
 func applyHeaders(target nethttp.Header, headers map[string]string) {

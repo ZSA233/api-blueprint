@@ -11,7 +11,7 @@ func NewRouter() *Router {
 }
 
 func (impl *Router) Packet(ctx *CTX_Packet, req *REQ_Packet) (rsp *RSP_Packet, err error) {
-	packet := req.B
+	packet := req.Body
 	itemIDs := make([]uint, 0, len(packet.Body.Items))
 	firstLabel := ""
 	for index, item := range packet.Body.Items {
@@ -27,8 +27,8 @@ func (impl *Router) Packet(ctx *CTX_Packet, req *REQ_Packet) (rsp *RSP_Packet, e
 	}
 
 	trace := ""
-	if req.Q != nil {
-		trace = req.Q.Trace
+	if req.Query != nil {
+		trace = req.Query.Trace
 	}
 
 	return &RSP_Packet{
@@ -44,10 +44,10 @@ func (impl *Router) Packet(ctx *CTX_Packet, req *REQ_Packet) (rsp *RSP_Packet, e
 }
 
 func (impl *Router) AuditPacket(ctx *CTX_AuditPacket, req *REQ_AuditPacket) (rsp *RSP_AuditPacket, err error) {
-	packet := req.B
+	packet := req.Body
 	trace := ""
-	if req.Q != nil {
-		trace = req.Q.Trace
+	if req.Query != nil {
+		trace = req.Query.Trace
 	}
 	return &RSP_AuditPacket{
 		Trace:     trace,
@@ -57,10 +57,10 @@ func (impl *Router) AuditPacket(ctx *CTX_AuditPacket, req *REQ_AuditPacket) (rsp
 }
 
 func (impl *Router) WidePacket(ctx *CTX_WidePacket, req *REQ_WidePacket) (rsp *RSP_WidePacket, err error) {
-	packet := req.B
+	packet := req.Body
 	trace := ""
-	if req.Q != nil {
-		trace = req.Q.Trace
+	if req.Query != nil {
+		trace = req.Query.Trace
 	}
 	return &RSP_WidePacket{
 		Trace:       trace,

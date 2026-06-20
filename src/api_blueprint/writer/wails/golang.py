@@ -226,6 +226,7 @@ class WailsRouter:
     def executor_type_expr(self) -> str:
         return (
             f"*sharedprovider.RouteExecutor["
+            f"any, "
             f"{self.local_query_type_expr}, "
             f"{self.executor_body_type_expr}, "
             f"{self.rsp_type}"

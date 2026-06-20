@@ -17,9 +17,9 @@ func NewRouter() *Router {
 var sampleJPEG = []byte{0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 'J', 'F', 'I', 'F', 0x00, 0x01, 0x01, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0xff, 0xd9}
 
 func (impl *Router) MediaPreview(ctx *CTX_MediaPreview, req *REQ_MediaPreview) (rsp *RSP_MediaPreview, err error) {
-	if req != nil && req.B != nil && req.B.Image.File != nil {
-		_, _ = io.Copy(io.Discard, req.B.Image.File)
-		_ = req.B.Image.File.Close()
+	if req != nil && req.Body != nil && req.Body.Image.File != nil {
+		_, _ = io.Copy(io.Discard, req.Body.Image.File)
+		_ = req.Body.Image.File.Close()
 	}
 	return &RSP_MediaPreview{
 		Body:        sampleJPEG,
@@ -58,7 +58,7 @@ func (impl *Router) MediaDownloadFilenameEdge(ctx *CTX_MediaDownloadFilenameEdge
 }
 
 func (impl *Router) MediaErrorFrame(ctx *CTX_MediaErrorFrame, req *REQ_MediaErrorFrame) (rsp *RSP_MediaErrorFrame, err error) {
-	if req.Q.Mode == "rate_limit" {
+	if req.Query.Mode == "rate_limit" {
 		return nil, demo_err.RATE_LIMITED
 	}
 	return &RSP_MediaErrorFrame{

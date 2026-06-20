@@ -117,10 +117,10 @@ func (conn *HTTPEventStreamConnection) Done() <-chan struct{} {
 	return conn.ctx.Done()
 }
 
-func STREAM[Q, B, P, S, CL any](
+func STREAM[Path, Query, Body, Response, Server, Close any](
 	relativePath string,
-	executor *provider.RouteExecutor[Q, B, P],
-	handler func(*provider.Context[Q, B, P], provider.Stream[Q, S, CL]) error,
+	executor *provider.RouteExecutor[Path, Query, Body, Response],
+	handler func(*provider.Context[Path, Query, Body, Response], provider.Stream[Query, Server, Close]) error,
 	router gin.IRouter,
 ) {
 	router.GET(relativePath, func(ginCtx *gin.Context) {
@@ -145,7 +145,7 @@ func STREAM[Q, B, P, S, CL any](
 			_ = ginCtx.AbortWithError(http.StatusInternalServerError, fmt.Errorf("[httptransport] event stream connection hook returned nil"))
 			return
 		}
-		stream := provider.NewStreamSession[Q, S, CL](ctx.Req.Request.Q, conn)
+		stream := provider.NewStreamSession[Query, Server, Close](ctx.Req.Request.Query, conn)
 		if err := handler(ctx, stream); err != nil {
 			_ = stream.Abort(ginCtx.Request.Context(), http.StatusInternalServerError, err.Error())
 		}

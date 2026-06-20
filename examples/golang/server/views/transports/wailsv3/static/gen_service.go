@@ -10,8 +10,8 @@ import (
 type StaticService struct {
 	impl            RouterInterface
 	sessions        wailstransport.ConnectionHub
-	docJsonExecutor *sharedprovider.RouteExecutor[any, any, RSP_DocJson]
-	dochahaExecutor *sharedprovider.RouteExecutor[any, any, RSP_Dochaha]
+	docJsonExecutor *sharedprovider.RouteExecutor[any, any, any, RSP_DocJson]
+	dochahaExecutor *sharedprovider.RouteExecutor[any, any, any, RSP_Dochaha]
 }
 
 func newGeneratedStaticService(impl RouterInterface, dispatcher wailstransport.EventDispatcher) *StaticService {
@@ -72,12 +72,12 @@ func (svc *StaticService) DocJson(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[any, any, RSP_DocJson](
+	ctx := sharedprovider.NewWailsContext[any, any, any, RSP_DocJson](
 		"StaticService",
 		"DocJson",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_DocJson]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, any, any, RSP_DocJson]{Request: req}
 	execErr := svc.docJsonExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -99,12 +99,12 @@ func (svc *StaticService) Dochaha(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[any, any, RSP_Dochaha](
+	ctx := sharedprovider.NewWailsContext[any, any, any, RSP_Dochaha](
 		"StaticService",
 		"Dochaha",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_Dochaha]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, any, any, RSP_Dochaha]{Request: req}
 	execErr := svc.dochahaExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {

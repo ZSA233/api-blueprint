@@ -8,12 +8,13 @@ import (
 )
 
 type REQ_Abc_QUERY struct {
-	Arg1 bool    `json:"arg1" xml:"arg1" form:"arg1"`
-	Arg3 string  `json:"arg3,omitempty" xml:"arg3,omitempty" form:"arg3,omitempty" binding:"omitempty"`
-	Arg2 float64 `json:"arg2" xml:"arg2" form:"arg2"`
+	Arg1 bool    `json:"arg1" xml:"arg1" form:"arg1" uri:"arg1"`
+	Arg3 string  `json:"arg3,omitempty" xml:"arg3,omitempty" form:"arg3,omitempty" uri:"arg3,omitempty" binding:"omitempty"`
+	Arg2 float64 `json:"arg2" xml:"arg2" form:"arg2" uri:"arg2"`
 }
 
 type REQ_Abc = providers.REQ[
+	any,
 	REQ_Abc_QUERY,
 	any,
 ]
@@ -23,64 +24,70 @@ type RSP_Abc_BODY = types.ApiDemoA
 type RSP_Abc = RSP_Abc_BODY
 
 type CTX_Abc = providers.Context[
+	any,
 	REQ_Abc_QUERY,
 	any,
 	RSP_Abc_BODY,
 ]
 
 type REQ_TestPost_JSON struct {
-	Req1 string `json:"req1" xml:"req1" form:"req1"`
-	Req2 int    `json:"req2" xml:"req2" form:"req2"`
+	Req1 string `json:"req1" xml:"req1" form:"req1" uri:"req1"`
+	Req2 int    `json:"req2" xml:"req2" form:"req2" uri:"req2"`
 }
 
 type REQ_TestPost = providers.REQ[
+	any,
 	any,
 	REQ_TestPost_JSON,
 ]
 
 type RSP_TestPost_BODY struct {
-	List []string                     `json:"list" xml:"list" form:"list"`
-	Map  map[string]*types.ApiDemoMap `json:"map" xml:"map" form:"map"`
+	List []string                     `json:"list" xml:"list" form:"list" uri:"list"`
+	Map  map[string]*types.ApiDemoMap `json:"map" xml:"map" form:"map" uri:"map"`
 }
 
 type RSP_TestPost = RSP_TestPost_BODY
 
 type CTX_TestPost = providers.Context[
 	any,
+	any,
 	REQ_TestPost_JSON,
 	RSP_TestPost_BODY,
 ]
 
 type REQ_FormSubmit_FORM struct {
-	Title   string `json:"title" xml:"title" form:"title"`
-	Count   int    `json:"count" xml:"count" form:"count"`
-	Enabled bool   `json:"enabled" xml:"enabled" form:"enabled"`
+	Title   string `json:"title" xml:"title" form:"title" uri:"title"`
+	Count   int    `json:"count" xml:"count" form:"count" uri:"count"`
+	Enabled bool   `json:"enabled" xml:"enabled" form:"enabled" uri:"enabled"`
 }
 
 type REQ_FormSubmit = providers.REQ[
+	any,
 	any,
 	REQ_FormSubmit_FORM,
 ]
 
 type RSP_FormSubmit_BODY struct {
-	Summary string `json:"summary" xml:"summary" form:"summary"`
-	Count   int    `json:"count" xml:"count" form:"count"`
-	Enabled bool   `json:"enabled" xml:"enabled" form:"enabled"`
+	Summary string `json:"summary" xml:"summary" form:"summary" uri:"summary"`
+	Count   int    `json:"count" xml:"count" form:"count" uri:"count"`
+	Enabled bool   `json:"enabled" xml:"enabled" form:"enabled" uri:"enabled"`
 }
 
 type RSP_FormSubmit = RSP_FormSubmit_BODY
 
 type CTX_FormSubmit = providers.Context[
 	any,
+	any,
 	REQ_FormSubmit_FORM,
 	RSP_FormSubmit_BODY,
 ]
 
 type REQ_RequestOptions_QUERY struct {
-	DelayMs int `json:"delay_ms" xml:"delay_ms" form:"delay_ms"`
+	DelayMs int `json:"delay_ms" xml:"delay_ms" form:"delay_ms" uri:"delay_ms"`
 }
 
 type REQ_RequestOptions = providers.REQ[
+	any,
 	REQ_RequestOptions_QUERY,
 	any,
 ]
@@ -90,12 +97,14 @@ type RSP_RequestOptions_BODY = types.RequestOptionsResponse
 type RSP_RequestOptions = RSP_RequestOptions_BODY
 
 type CTX_RequestOptions = providers.Context[
+	any,
 	REQ_RequestOptions_QUERY,
 	any,
 	RSP_RequestOptions_BODY,
 ]
 
 type REQ_EmptyResponse = providers.REQ[
+	any,
 	any,
 	any,
 ]
@@ -108,56 +117,61 @@ type RSP_EmptyResponse = RSP_EmptyResponse_BODY
 type CTX_EmptyResponse = providers.Context[
 	any,
 	any,
+	any,
 	RSP_EmptyResponse_BODY,
 ]
 
 type REQ_PutDemo_QUERY struct {
-	Arg1 string  `json:"arg1" xml:"arg1" form:"arg1"`
-	Arg2 float64 `json:"arg2" xml:"arg2" form:"arg2"`
-	Arg3 string  `json:"arg3,omitempty" xml:"arg3,omitempty" form:"arg3,omitempty" binding:"omitempty"`
+	Arg1 string  `json:"arg1" xml:"arg1" form:"arg1" uri:"arg1"`
+	Arg2 float64 `json:"arg2" xml:"arg2" form:"arg2" uri:"arg2"`
+	Arg3 string  `json:"arg3,omitempty" xml:"arg3,omitempty" form:"arg3,omitempty" uri:"arg3,omitempty" binding:"omitempty"`
 }
 
 type REQ_PutDemo_JSON struct {
-	Req1 string `json:"req1" xml:"req1" form:"req1"`
-	Req2 int    `json:"req2" xml:"req2" form:"req2"`
+	Req1 string `json:"req1" xml:"req1" form:"req1" uri:"req1"`
+	Req2 int    `json:"req2" xml:"req2" form:"req2" uri:"req2"`
 }
 
 type REQ_PutDemo = providers.REQ[
+	any,
 	REQ_PutDemo_QUERY,
 	REQ_PutDemo_JSON,
 ]
 
 type RSP_PutDemo_BODY struct {
-	List   []string                     `json:"list" xml:"list" form:"list"`
-	AnonKv *types.ANON_Func1put_anon_kv `json:"anon_kv" xml:"anon_kv" form:"anon_kv"`
+	List   []string                     `json:"list" xml:"list" form:"list" uri:"list"`
+	AnonKv *types.ANON_Func1put_anon_kv `json:"anon_kv" xml:"anon_kv" form:"anon_kv" uri:"anon_kv"`
 }
 
 type RSP_PutDemo = RSP_PutDemo_BODY
 
 type CTX_PutDemo = providers.Context[
+	any,
 	REQ_PutDemo_QUERY,
 	REQ_PutDemo_JSON,
 	RSP_PutDemo_BODY,
 ]
 
 type REQ_Delete_QUERY struct {
-	Arg1 string  `json:"arg1" xml:"arg1" form:"arg1"`
-	Arg2 float64 `json:"arg2" xml:"arg2" form:"arg2"`
+	Arg1 string  `json:"arg1" xml:"arg1" form:"arg1" uri:"arg1"`
+	Arg2 float64 `json:"arg2" xml:"arg2" form:"arg2" uri:"arg2"`
 }
 
 type REQ_Delete = providers.REQ[
+	any,
 	REQ_Delete_QUERY,
 	any,
 ]
 
 type RSP_Delete_BODY struct {
-	List     []string                       `json:"list" xml:"list" form:"list"`
-	AnonList []*types.ANON_Delete_anon_list `json:"anon_list" xml:"anon_list" form:"anon_list"`
+	List     []string                       `json:"list" xml:"list" form:"list" uri:"list"`
+	AnonList []*types.ANON_Delete_anon_list `json:"anon_list" xml:"anon_list" form:"anon_list" uri:"anon_list"`
 }
 
 type RSP_Delete = RSP_Delete_BODY
 
 type CTX_Delete = providers.Context[
+	any,
 	REQ_Delete_QUERY,
 	any,
 	RSP_Delete_BODY,
@@ -166,6 +180,7 @@ type CTX_Delete = providers.Context[
 type OPEN_SweepEvents = types.SweepOpen
 
 type REQ_SweepEvents = providers.REQ[
+	any,
 	OPEN_SweepEvents,
 	any,
 ]
@@ -173,6 +188,7 @@ type REQ_SweepEvents = providers.REQ[
 type RSP_SweepEvents = any
 
 type CTX_SweepEvents = providers.Context[
+	any,
 	OPEN_SweepEvents,
 	any,
 	any,
@@ -189,6 +205,7 @@ type CLOSE_SweepEvents = types.ConnectionClose
 type OPEN_AssistantSession = types.AssistantOpen
 
 type REQ_AssistantSession = providers.REQ[
+	any,
 	OPEN_AssistantSession,
 	any,
 ]
@@ -196,6 +213,7 @@ type REQ_AssistantSession = providers.REQ[
 type RSP_AssistantSession = any
 
 type CTX_AssistantSession = providers.Context[
+	any,
 	OPEN_AssistantSession,
 	any,
 	any,
@@ -214,22 +232,24 @@ type AssistantClientMessage_Cancel_DATA = types.AssistantCancel
 type CLOSE_AssistantSession = types.ConnectionClose
 
 type REQ_PostDeprecated_JSON struct {
-	Req1 string `json:"req1" xml:"req1" form:"req1"`
-	Req2 int    `json:"req2" xml:"req2" form:"req2"`
+	Req1 string `json:"req1" xml:"req1" form:"req1" uri:"req1"`
+	Req2 int    `json:"req2" xml:"req2" form:"req2" uri:"req2"`
 }
 
 type REQ_PostDeprecated = providers.REQ[
+	any,
 	any,
 	REQ_PostDeprecated_JSON,
 ]
 
 type RSP_PostDeprecated_BODY struct {
-	List []string `json:"list" xml:"list" form:"list"`
+	List []string `json:"list" xml:"list" form:"list" uri:"list"`
 }
 
 type RSP_PostDeprecated = RSP_PostDeprecated_BODY
 
 type CTX_PostDeprecated = providers.Context[
+	any,
 	any,
 	REQ_PostDeprecated_JSON,
 	RSP_PostDeprecated_BODY,
@@ -238,11 +258,12 @@ type CTX_PostDeprecated = providers.Context[
 type REQ_Raw = providers.REQ[
 	any,
 	any,
+	any,
 ]
 
 type RSP_Raw_BODY struct {
-	List  []string                    `json:"list" xml:"list" form:"list"`
-	List2 map[int64][]*types.ApiDemoA `json:"list2" xml:"list2" form:"list2"`
+	List  []string                    `json:"list" xml:"list" form:"list" uri:"list"`
+	List2 map[int64][]*types.ApiDemoA `json:"list2" xml:"list2" form:"list2" uri:"list2"`
 }
 
 type RSP_Raw = RSP_Raw_BODY
@@ -250,10 +271,12 @@ type RSP_Raw = RSP_Raw_BODY
 type CTX_Raw = providers.Context[
 	any,
 	any,
+	any,
 	RSP_Raw_BODY,
 ]
 
 type REQ_MapModel = providers.REQ[
+	any,
 	any,
 	any,
 ]
@@ -265,25 +288,28 @@ type RSP_MapModel = RSP_MapModel_BODY
 type CTX_MapModel = providers.Context[
 	any,
 	any,
+	any,
 	RSP_MapModel_BODY,
 ]
 
 type REQ_ErrorDemo_QUERY struct {
-	Mode string `json:"mode" xml:"mode" form:"mode"`
+	Mode string `json:"mode" xml:"mode" form:"mode" uri:"mode"`
 }
 
 type REQ_ErrorDemo = providers.REQ[
+	any,
 	REQ_ErrorDemo_QUERY,
 	any,
 ]
 
 type RSP_ErrorDemo_BODY struct {
-	Status string `json:"status" xml:"status" form:"status"`
+	Status string `json:"status" xml:"status" form:"status" uri:"status"`
 }
 
 type RSP_ErrorDemo = RSP_ErrorDemo_BODY
 
 type CTX_ErrorDemo = providers.Context[
+	any,
 	REQ_ErrorDemo_QUERY,
 	any,
 	RSP_ErrorDemo_BODY,

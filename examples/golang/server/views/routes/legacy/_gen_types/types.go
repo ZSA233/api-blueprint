@@ -3,17 +3,17 @@
 package types
 
 type AccountProfile struct {
-	UserId   string `json:"user_id" xml:"user_id" form:"user_id"`
-	Nickname string `json:"nickname" xml:"nickname" form:"nickname"`
+	UserId   string `json:"user_id" xml:"user_id" form:"user_id" uri:"user_id"`
+	Nickname string `json:"nickname" xml:"nickname" form:"nickname" uri:"nickname"`
 }
 
 type RoomSummary struct {
-	RoomId string `json:"room_id" xml:"room_id" form:"room_id"`
-	Title  string `json:"title" xml:"title" form:"title"`
+	RoomId string `json:"room_id" xml:"room_id" form:"room_id" uri:"room_id"`
+	Title  string `json:"title" xml:"title" form:"title" uri:"title"`
 }
 
 type LegacyJsonCompatPayload struct {
-	Target        any      `json:"target" xml:"target" form:"target"`
-	Ids           []any    `json:"ids" xml:"ids" form:"ids"`
-	NormalizedIds []string `json:"normalized_ids" xml:"normalized_ids" form:"normalized_ids"`
+	Target        any      `json:"target" xml:"target" form:"target" uri:"target"`
+	Ids           []any    `json:"ids" xml:"ids" form:"ids" uri:"ids"`
+	NormalizedIds []string `json:"normalized_ids" xml:"normalized_ids" form:"normalized_ids" uri:"normalized_ids"`
 }

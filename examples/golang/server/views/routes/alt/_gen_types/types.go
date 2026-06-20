@@ -3,7 +3,7 @@
 package types
 
 type ConflictModel struct {
-	Default string `json:"default" xml:"default" form:"default"`
-	Class   string `json:"class_" xml:"class_" form:"class_"`
-	Enum    string `json:"enum" xml:"enum" form:"enum"`
+	Default string `json:"default" xml:"default" form:"default" uri:"default"`
+	Class   string `json:"class_" xml:"class_" form:"class_" uri:"class_"`
+	Enum    string `json:"enum" xml:"enum" form:"enum" uri:"enum"`
 }

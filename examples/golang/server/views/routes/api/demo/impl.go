@@ -21,7 +21,7 @@ func (impl *Router) Abc(ctx *CTX_Abc, req *REQ_Abc) (rsp *RSP_Abc, err error) {
 }
 
 func (impl *Router) TestPost(ctx *CTX_TestPost, req *REQ_TestPost) (rsp *RSP_TestPost, err error) {
-	body := req.B
+	body := req.Body
 	return &RSP_TestPost{
 		List: []string{"test_post", body.Req1},
 		Map: map[string]*types.ApiDemoMap{
@@ -31,7 +31,7 @@ func (impl *Router) TestPost(ctx *CTX_TestPost, req *REQ_TestPost) (rsp *RSP_Tes
 }
 
 func (impl *Router) FormSubmit(ctx *CTX_FormSubmit, req *REQ_FormSubmit) (rsp *RSP_FormSubmit, err error) {
-	body := req.B
+	body := req.Body
 	return &RSP_FormSubmit{
 		Summary: body.Title,
 		Count:   body.Count,
@@ -40,7 +40,7 @@ func (impl *Router) FormSubmit(ctx *CTX_FormSubmit, req *REQ_FormSubmit) (rsp *R
 }
 
 func (impl *Router) RequestOptions(ctx *CTX_RequestOptions, req *REQ_RequestOptions) (rsp *RSP_RequestOptions, err error) {
-	delayMs := req.Q.DelayMs
+	delayMs := req.Query.DelayMs
 	if delayMs > 0 {
 		time.Sleep(time.Duration(delayMs) * time.Millisecond)
 	}
@@ -55,8 +55,8 @@ func (impl *Router) EmptyResponse(ctx *CTX_EmptyResponse, req *REQ_EmptyResponse
 }
 
 func (impl *Router) PutDemo(ctx *CTX_PutDemo, req *REQ_PutDemo) (rsp *RSP_PutDemo, err error) {
-	query := req.Q
-	body := req.B
+	query := req.Query
+	body := req.Body
 	return &RSP_PutDemo{
 		List: []string{query.Arg1, body.Req1},
 		AnonKv: &types.ANON_Func1put_anon_kv{
@@ -68,9 +68,9 @@ func (impl *Router) PutDemo(ctx *CTX_PutDemo, req *REQ_PutDemo) (rsp *RSP_PutDem
 
 func (impl *Router) Delete(ctx *CTX_Delete, req *REQ_Delete) (rsp *RSP_Delete, err error) {
 	return &RSP_Delete{
-		List: []string{req.Q.Arg1},
+		List: []string{req.Query.Arg1},
 		AnonList: []*types.ANON_Delete_anon_list{
-			{Kv1: int64(req.Q.Arg2), Kv2: []string{"deleted"}},
+			{Kv1: int64(req.Query.Arg2), Kv2: []string{"deleted"}},
 		},
 	}, nil
 }
@@ -93,7 +93,7 @@ func (impl *Router) SweepEvents(
 }
 
 func (impl *Router) PostDeprecated(ctx *CTX_PostDeprecated, req *REQ_PostDeprecated) (rsp *RSP_PostDeprecated, err error) {
-	return &RSP_PostDeprecated{List: []string{req.B.Req1}}, nil
+	return &RSP_PostDeprecated{List: []string{req.Body.Req1}}, nil
 }
 
 func (impl *Router) Raw(ctx *CTX_Raw, req *REQ_Raw) (rsp *RSP_Raw, err error) {
@@ -113,7 +113,7 @@ func (impl *Router) MapModel(ctx *CTX_MapModel, req *REQ_MapModel) (rsp *RSP_Map
 }
 
 func (impl *Router) ErrorDemo(ctx *CTX_ErrorDemo, req *REQ_ErrorDemo) (rsp *RSP_ErrorDemo, err error) {
-	switch req.Q.Mode {
+	switch req.Query.Mode {
 	case "token":
 		return nil, common_err.TOKEN_EXPIRE
 	case "rate_limit":

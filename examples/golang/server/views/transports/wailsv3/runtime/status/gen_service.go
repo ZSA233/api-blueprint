@@ -10,7 +10,7 @@ import (
 type StatusService struct {
 	impl                         RouterInterface
 	sessions                     wailstransport.ConnectionHub
-	runtimeCurrentStatusExecutor *sharedprovider.RouteExecutor[any, any, RSP_RuntimeCurrentStatus]
+	runtimeCurrentStatusExecutor *sharedprovider.RouteExecutor[any, any, any, RSP_RuntimeCurrentStatus]
 }
 
 func newGeneratedStatusService(impl RouterInterface, dispatcher wailstransport.EventDispatcher) *StatusService {
@@ -55,12 +55,12 @@ func (svc *StatusService) RuntimeCurrentStatus(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[any, any, RSP_RuntimeCurrentStatus](
+	ctx := sharedprovider.NewWailsContext[any, any, any, RSP_RuntimeCurrentStatus](
 		"StatusService",
 		"RuntimeCurrentStatus",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_RuntimeCurrentStatus]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, any, any, RSP_RuntimeCurrentStatus]{Request: req}
 	execErr := svc.runtimeCurrentStatusExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {

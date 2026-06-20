@@ -13,69 +13,83 @@ import (
 )
 
 func Mount(router gin.IRouter, impl shared.RouterInterface) shared.RouterInterface {
+	return MountSelected(router, impl, nil)
+}
+
+func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map[string]struct{}) shared.RouterInterface {
 	if isNilRouterInterface(impl) {
 		impl = shared.NewRouter()
 	}
 
-	httptransport.GET(
-		"/static/doc.json",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "static",
-				Group:     "",
-				Namespace: "static",
-				Service:   "StaticService",
-				Operation: "DocJson",
-				RouteID:   "static.static.get.docjson",
-				Path:      "/static/doc.json",
-				Methods:   []string{"GET"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
-					},
-				},
-			},
-			"req|handle|rsp=json@NoEnvelope",
-			impl.DocJson,
-		),
-		router,
-	)
+	if shouldMountRoute(routeIDs, "static.static.get.docjson") {
 
-	httptransport.GET(
-		"/static/dochaha",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "static",
-				Group:     "",
-				Namespace: "static",
-				Service:   "StaticService",
-				Operation: "Dochaha",
-				RouteID:   "static.static.get.dochaha",
-				Path:      "/static/dochaha",
-				Methods:   []string{"GET"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
+		httptransport.GET(
+			"/static/doc.json",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "static",
+					Group:     "",
+					Namespace: "static",
+					Service:   "StaticService",
+					Operation: "DocJson",
+					RouteID:   "static.static.get.docjson",
+					Path:      "/static/doc.json",
+					Methods:   []string{"GET"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
 					},
 				},
-			},
-			"req|handle|rsp=json@NoEnvelope",
-			impl.Dochaha,
-		),
-		router,
-	)
+				"req|handle|rsp=json@NoEnvelope",
+				impl.DocJson,
+			),
+			router,
+		)
+
+	}
+
+	if shouldMountRoute(routeIDs, "static.static.get.dochaha") {
+
+		httptransport.GET(
+			"/static/dochaha",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "static",
+					Group:     "",
+					Namespace: "static",
+					Service:   "StaticService",
+					Operation: "Dochaha",
+					RouteID:   "static.static.get.dochaha",
+					Path:      "/static/dochaha",
+					Methods:   []string{"GET"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
+					},
+				},
+				"req|handle|rsp=json@NoEnvelope",
+				impl.Dochaha,
+			),
+			router,
+		)
+
+	}
 
 	return impl
 }
@@ -101,4 +115,12 @@ func isNilRouterInterface(impl shared.RouterInterface) bool {
 	default:
 		return false
 	}
+}
+
+func shouldMountRoute(routeIDs map[string]struct{}, routeID string) bool {
+	if len(routeIDs) == 0 {
+		return true
+	}
+	_, ok := routeIDs[routeID]
+	return ok
 }

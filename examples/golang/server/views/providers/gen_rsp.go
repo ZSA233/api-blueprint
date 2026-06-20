@@ -27,17 +27,17 @@ type RawResponse struct {
 	Size        int64
 }
 
-type RspProvider[Q, B, P any] struct {
+type RspProvider[Path, Query, Body, Response any] struct {
 	Type    string
 	Options string
 	Route   RouteInfo
-	Handler func(c *Context[Q, B, P], req *REQ[Q, B]) (rsp *P, err error)
+	Handler func(c *Context[Path, Query, Body, Response], req *REQ[Path, Query, Body]) (rsp *Response, err error)
 }
 
-func NewRspProvider[Q, B, P any](
+func NewRspProvider[Path, Query, Body, Response any](
 	data string,
-	handler func(c *Context[Q, B, P], req *REQ[Q, B]) (rsp *P, err error),
-) *RspProvider[Q, B, P] {
+	handler func(c *Context[Path, Query, Body, Response], req *REQ[Path, Query, Body]) (rsp *Response, err error),
+) *RspProvider[Path, Query, Body, Response] {
 	var typ string
 	var options string
 	typOptions := strings.SplitN(data, "@", 2)
@@ -45,23 +45,23 @@ func NewRspProvider[Q, B, P any](
 	if len(typOptions) > 1 {
 		options = typOptions[1]
 	}
-	return &RspProvider[Q, B, P]{
+	return &RspProvider[Path, Query, Body, Response]{
 		Type:    typ,
 		Options: options,
 		Handler: handler,
 	}
 }
 
-func (prov *RspProvider[Q, B, P]) GetName() string {
+func (prov *RspProvider[Path, Query, Body, Response]) GetName() string {
 	return PROV_RSP
 }
 
-func (prov *RspProvider[Q, B, P]) NewContext(ctx *Context[Q, B, P]) *RspContext {
+func (prov *RspProvider[Path, Query, Body, Response]) NewContext(ctx *Context[Path, Query, Body, Response]) *RspContext {
 	return &RspContext{}
 }
 
-func (prov *RspProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
-	ctx := AdaptContext[Q, B, P](anyCtx)
+func (prov *RspProvider[Path, Query, Body, Response]) Handle(anyCtx ContextInterface) {
+	ctx := AdaptContext[Path, Query, Body, Response](anyCtx)
 
 	var err error
 	if handled := ctx.Handle; handled != nil {
@@ -117,7 +117,7 @@ func unwrapError(err error) (code int, message string, toast map[string]string, 
 	return
 }
 
-func marshalXML[P any](enc *xml.Encoder, start xml.StartElement, xmlName xml.Name, inner *P) error {
+func marshalXML[Response any](enc *xml.Encoder, start xml.StartElement, xmlName xml.Name, inner *Response) error {
 	if xmlName.Local == "" {
 		return enc.Encode(inner)
 	}
@@ -125,15 +125,15 @@ func marshalXML[P any](enc *xml.Encoder, start xml.StartElement, xmlName xml.Nam
 	return enc.EncodeElement(inner, start)
 }
 
-func NewRSP_JSON[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (code int, rsp any) {
+func NewRSP_JSON[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (code int, rsp any) {
 	return NewRSP_JSON_Entry(prov, data, err)
 }
 
-func NewRSP_XML[Q, B, P any](prov *RspProvider[Q, B, P], data *P, err error) (code int, rsp any) {
+func NewRSP_XML[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (code int, rsp any) {
 	return NewRSP_XML_Entry(prov, data, err)
 }
 
-func MarshalXMLResponse[Q, B, P any](prov *RspProvider[Q, B, P], data *P) (string, error) {
+func MarshalXMLResponse[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response) (string, error) {
 	_, rsp := NewRSP_XML(prov, data, nil)
 	if rsp == nil {
 		return "", nil

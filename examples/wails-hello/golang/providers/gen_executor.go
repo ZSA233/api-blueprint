@@ -7,35 +7,35 @@ import (
 	"strings"
 )
 
-type RouteHandler[Q, B, P any] func(c *Context[Q, B, P], req *REQ[Q, B]) (rsp *P, err error)
+type RouteHandler[Path, Query, Body, Response any] func(c *Context[Path, Query, Body, Response], req *REQ[Path, Query, Body]) (rsp *Response, err error)
 
-type RouteExecutor[Q, B, P any] struct {
+type RouteExecutor[Path, Query, Body, Response any] struct {
 	Providers []Provider
-	Indexer   *Indexer[Q, B, P]
-	Handler   RouteHandler[Q, B, P]
+	Indexer   *Indexer[Path, Query, Body, Response]
+	Handler   RouteHandler[Path, Query, Body, Response]
 	Route     RouteInfo
 }
 
-func newRouteExecutorFromProviders[Q, B, P any](
+func newRouteExecutorFromProviders[Path, Query, Body, Response any](
 	info RouteInfo,
-	handler RouteHandler[Q, B, P],
+	handler RouteHandler[Path, Query, Body, Response],
 	providers ...Provider,
-) *RouteExecutor[Q, B, P] {
+) *RouteExecutor[Path, Query, Body, Response] {
 	filtered := make([]Provider, 0, len(providers))
-	indexer := new(Indexer[Q, B, P])
+	indexer := new(Indexer[Path, Query, Body, Response])
 	for _, prov := range providers {
 		if prov == nil {
 			continue
 		}
 		filtered = append(filtered, prov)
 		switch typed := prov.(type) {
-		case *ReqProvider[Q, B, P]:
+		case *ReqProvider[Path, Query, Body, Response]:
 			indexer.Req = typed
-		case *RspProvider[Q, B, P]:
+		case *RspProvider[Path, Query, Body, Response]:
 			indexer.Rsp = typed
 		}
 	}
-	return &RouteExecutor[Q, B, P]{
+	return &RouteExecutor[Path, Query, Body, Response]{
 		Providers: filtered,
 		Indexer:   indexer,
 		Handler:   handler,
@@ -43,11 +43,11 @@ func newRouteExecutorFromProviders[Q, B, P any](
 	}
 }
 
-func NewRouteExecutor[Q, B, P any](
+func NewRouteExecutor[Path, Query, Body, Response any](
 	info RouteInfo,
 	provSeq string,
-	handler RouteHandler[Q, B, P],
-) *RouteExecutor[Q, B, P] {
+	handler RouteHandler[Path, Query, Body, Response],
+) *RouteExecutor[Path, Query, Body, Response] {
 	values := strings.Split(provSeq, "|")
 	providers := make([]Provider, 0, len(values))
 	for _, raw := range values {
@@ -77,11 +77,11 @@ func NewRouteExecutor[Q, B, P any](
 	return newRouteExecutorFromProviders(info, handler, providers...)
 }
 
-func (executor *RouteExecutor[Q, B, P]) Run(ctx *Context[Q, B, P]) error {
+func (executor *RouteExecutor[Path, Query, Body, Response]) Run(ctx *Context[Path, Query, Body, Response]) error {
 	return executor.runRange(ctx, 0, len(executor.Providers))
 }
 
-func (executor *RouteExecutor[Q, B, P]) runRange(ctx *Context[Q, B, P], start int, end int) error {
+func (executor *RouteExecutor[Path, Query, Body, Response]) runRange(ctx *Context[Path, Query, Body, Response], start int, end int) error {
 	if ctx == nil {
 		return fmt.Errorf("[RouteExecutor] nil context")
 	}

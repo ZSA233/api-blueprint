@@ -3,34 +3,34 @@
 package binary
 
 type PacketQuery struct {
-	Trace string `json:"trace,omitempty" form:"trace,omitempty"`
+	Trace string `json:"trace,omitempty" form:"trace,omitempty" uri:"trace,omitempty"`
 }
 type PacketResponse struct {
-	Trace      string  `json:"trace" form:"trace"`
-	Version    uint    `json:"version" form:"version"`
-	ItemCount  uint    `json:"item_count" form:"item_count"`
-	Payload    string  `json:"payload" form:"payload"`
-	ScoreSum   float64 `json:"score_sum" form:"score_sum"`
-	FirstLabel string  `json:"first_label" form:"first_label"`
-	ItemIDs    []uint  `json:"item_ids" form:"item_ids"`
-	Checksum   uint    `json:"checksum" form:"checksum"`
+	Trace      string  `json:"trace" form:"trace" uri:"trace"`
+	Version    uint    `json:"version" form:"version" uri:"version"`
+	ItemCount  uint    `json:"item_count" form:"item_count" uri:"item_count"`
+	Payload    string  `json:"payload" form:"payload" uri:"payload"`
+	ScoreSum   float64 `json:"score_sum" form:"score_sum" uri:"score_sum"`
+	FirstLabel string  `json:"first_label" form:"first_label" uri:"first_label"`
+	ItemIDs    []uint  `json:"item_ids" form:"item_ids" uri:"item_ids"`
+	Checksum   uint    `json:"checksum" form:"checksum" uri:"checksum"`
 }
 
 type AuditPacketQuery struct {
-	Trace string `json:"trace,omitempty" form:"trace,omitempty"`
+	Trace string `json:"trace,omitempty" form:"trace,omitempty" uri:"trace,omitempty"`
 }
 type AuditPacketResponse struct {
-	Trace     string `json:"trace" form:"trace"`
-	ItemCount uint   `json:"item_count" form:"item_count"`
-	Checksum  uint   `json:"checksum" form:"checksum"`
+	Trace     string `json:"trace" form:"trace" uri:"trace"`
+	ItemCount uint   `json:"item_count" form:"item_count" uri:"item_count"`
+	Checksum  uint   `json:"checksum" form:"checksum" uri:"checksum"`
 }
 
 type WidePacketQuery struct {
-	Trace string `json:"trace,omitempty" form:"trace,omitempty"`
+	Trace string `json:"trace,omitempty" form:"trace,omitempty" uri:"trace,omitempty"`
 }
 type WidePacketResponse struct {
-	Trace       string `json:"trace" form:"trace"`
-	PayloadSize uint64 `json:"payload_size" form:"payload_size"`
-	SignedWide  int64  `json:"signed_wide" form:"signed_wide"`
-	Checksum    uint64 `json:"checksum" form:"checksum"`
+	Trace       string `json:"trace" form:"trace" uri:"trace"`
+	PayloadSize uint64 `json:"payload_size" form:"payload_size" uri:"payload_size"`
+	SignedWide  int64  `json:"signed_wide" form:"signed_wide" uri:"signed_wide"`
+	Checksum    uint64 `json:"checksum" form:"checksum" uri:"checksum"`
 }

@@ -10,11 +10,13 @@ import (
 type REQ_HelloChannel = providers.REQ[
 	any,
 	any,
+	any,
 ]
 
 type RSP_HelloChannel = any
 
 type CTX_HelloChannel = providers.Context[
+	any,
 	any,
 	any,
 	any,

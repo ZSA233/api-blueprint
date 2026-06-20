@@ -13,7 +13,7 @@ func NewRouter() *Router {
 }
 
 func (impl *Router) Abc(ctx *CTX_Abc, req *REQ_Abc) (rsp *RSP_Abc, err error) {
-	key := req.Q.Type
+	key := req.Query.Type
 	if key == "" {
 		key = "ping"
 	}
@@ -50,7 +50,7 @@ func (impl *Router) StringEmun(ctx *CTX_StringEmun, req *REQ_StringEmun) (rsp *R
 }
 
 func (impl *Router) HelloWay(ctx *CTX_HelloWay, req *REQ_HelloWay) (rsp *RSP_HelloWay, err error) {
-	var value RSP_HelloWay = map[string]string{"arg1": req.Q.Arg1}
+	var value RSP_HelloWay = map[string]string{"arg1": req.Query.Arg1}
 	return &value, nil
 }
 

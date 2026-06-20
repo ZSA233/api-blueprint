@@ -12,7 +12,7 @@ import (
 type ApiService struct {
 	impl                 RouterInterface
 	sessions             wailstransport.ConnectionHub
-	helloChannelExecutor *sharedprovider.RouteExecutor[any, any, RSP_HelloChannel]
+	helloChannelExecutor *sharedprovider.RouteExecutor[any, any, any, RSP_HelloChannel]
 }
 
 func newGeneratedApiService(impl RouterInterface, dispatcher wailstransport.EventDispatcher) *ApiService {
@@ -20,6 +20,7 @@ func newGeneratedApiService(impl RouterInterface, dispatcher wailstransport.Even
 		impl:     impl,
 		sessions: wailstransport.NewSocketHub(dispatcher),
 		helloChannelExecutor: sharedprovider.NewRouteExecutor[
+			any,
 			any,
 			any,
 			RSP_HelloChannel,
@@ -57,12 +58,12 @@ func (svc *ApiService) OpenHelloChannel(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[any, any, RSP_HelloChannel](
+	ctx := sharedprovider.NewWailsContext[any, any, any, RSP_HelloChannel](
 		"ApiService",
 		"OpenHelloChannel",
 		wailstransport.ConnectionOpenHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_HelloChannel]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, any, any, RSP_HelloChannel]{Request: req}
 	if err := svc.helloChannelExecutor.Run(ctx); err != nil {
 		return nil, err
 	}
@@ -80,7 +81,7 @@ func (svc *ApiService) OpenHelloChannel(
 	}
 	session = wailstransport.WrapConnectionSession(session, true)
 	channel := sharedprovider.NewChannelSession[any, SERVER_HelloChannel_MESSAGE, CLIENT_HelloChannel_MESSAGE, CLOSE_HelloChannel](
-		req.Q,
+		req.Query,
 		session,
 	)
 	go func() {

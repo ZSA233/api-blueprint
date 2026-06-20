@@ -12,19 +12,19 @@ import (
 type DemoService struct {
 	impl                     RouterInterface
 	sessions                 wailstransport.ConnectionHub
-	abcExecutor              *sharedprovider.RouteExecutor[REQ_Abc_QUERY, any, RSP_Abc]
-	testPostExecutor         *sharedprovider.RouteExecutor[any, REQ_TestPost_JSON, RSP_TestPost]
-	formSubmitExecutor       *sharedprovider.RouteExecutor[any, REQ_FormSubmit_FORM, RSP_FormSubmit]
-	requestOptionsExecutor   *sharedprovider.RouteExecutor[REQ_RequestOptions_QUERY, any, RSP_RequestOptions]
-	emptyResponseExecutor    *sharedprovider.RouteExecutor[any, any, RSP_EmptyResponse]
-	putDemoExecutor          *sharedprovider.RouteExecutor[REQ_PutDemo_QUERY, REQ_PutDemo_JSON, RSP_PutDemo]
-	deleteExecutor           *sharedprovider.RouteExecutor[REQ_Delete_QUERY, any, RSP_Delete]
-	sweepEventsExecutor      *sharedprovider.RouteExecutor[OPEN_SweepEvents, any, RSP_SweepEvents]
-	assistantSessionExecutor *sharedprovider.RouteExecutor[OPEN_AssistantSession, any, RSP_AssistantSession]
-	postDeprecatedExecutor   *sharedprovider.RouteExecutor[any, REQ_PostDeprecated_JSON, RSP_PostDeprecated]
-	rawExecutor              *sharedprovider.RouteExecutor[any, any, RSP_Raw]
-	mapModelExecutor         *sharedprovider.RouteExecutor[any, any, RSP_MapModel]
-	errorDemoExecutor        *sharedprovider.RouteExecutor[REQ_ErrorDemo_QUERY, any, RSP_ErrorDemo]
+	abcExecutor              *sharedprovider.RouteExecutor[any, REQ_Abc_QUERY, any, RSP_Abc]
+	testPostExecutor         *sharedprovider.RouteExecutor[any, any, REQ_TestPost_JSON, RSP_TestPost]
+	formSubmitExecutor       *sharedprovider.RouteExecutor[any, any, REQ_FormSubmit_FORM, RSP_FormSubmit]
+	requestOptionsExecutor   *sharedprovider.RouteExecutor[any, REQ_RequestOptions_QUERY, any, RSP_RequestOptions]
+	emptyResponseExecutor    *sharedprovider.RouteExecutor[any, any, any, RSP_EmptyResponse]
+	putDemoExecutor          *sharedprovider.RouteExecutor[any, REQ_PutDemo_QUERY, REQ_PutDemo_JSON, RSP_PutDemo]
+	deleteExecutor           *sharedprovider.RouteExecutor[any, REQ_Delete_QUERY, any, RSP_Delete]
+	sweepEventsExecutor      *sharedprovider.RouteExecutor[any, OPEN_SweepEvents, any, RSP_SweepEvents]
+	assistantSessionExecutor *sharedprovider.RouteExecutor[any, OPEN_AssistantSession, any, RSP_AssistantSession]
+	postDeprecatedExecutor   *sharedprovider.RouteExecutor[any, any, REQ_PostDeprecated_JSON, RSP_PostDeprecated]
+	rawExecutor              *sharedprovider.RouteExecutor[any, any, any, RSP_Raw]
+	mapModelExecutor         *sharedprovider.RouteExecutor[any, any, any, RSP_MapModel]
+	errorDemoExecutor        *sharedprovider.RouteExecutor[any, REQ_ErrorDemo_QUERY, any, RSP_ErrorDemo]
 }
 
 func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.EventDispatcher) *DemoService {
@@ -44,7 +44,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req=Q|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+			"req=query|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.Abc,
 		),
 		testPostExecutor: sharedprovider.NewRouteExecutor(
@@ -60,7 +60,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req=J|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+			"req=json|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.TestPost,
 		),
 		formSubmitExecutor: sharedprovider.NewRouteExecutor(
@@ -76,7 +76,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req=F|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+			"req=form|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.FormSubmit,
 		),
 		requestOptionsExecutor: sharedprovider.NewRouteExecutor(
@@ -92,7 +92,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req=Q|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+			"req=query|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.RequestOptions,
 		),
 		emptyResponseExecutor: sharedprovider.NewRouteExecutor(
@@ -124,7 +124,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req=QJ|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+			"req=query,json|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.PutDemo,
 		),
 		deleteExecutor: sharedprovider.NewRouteExecutor(
@@ -140,10 +140,11 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req=Q|auth|request-signature|handle|rsp=xml@CodeMessageDataEnvelope",
+			"req=query|auth|request-signature|handle|rsp=xml@CodeMessageDataEnvelope",
 			impl.Delete,
 		),
 		sweepEventsExecutor: sharedprovider.NewRouteExecutor[
+			any,
 			OPEN_SweepEvents,
 			any,
 			RSP_SweepEvents,
@@ -160,10 +161,11 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope("session"),
 			},
-			"req=Q|auth|request-signature",
+			"req=query|auth|request-signature",
 			nil,
 		),
 		assistantSessionExecutor: sharedprovider.NewRouteExecutor[
+			any,
 			OPEN_AssistantSession,
 			any,
 			RSP_AssistantSession,
@@ -180,7 +182,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope("session"),
 			},
-			"req=Q|auth|request-signature",
+			"req=query|auth|request-signature",
 			nil,
 		),
 		postDeprecatedExecutor: sharedprovider.NewRouteExecutor(
@@ -196,7 +198,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req=J|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+			"req=json|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.PostDeprecated,
 		),
 		rawExecutor: sharedprovider.NewRouteExecutor(
@@ -244,7 +246,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req=Q|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+			"req=query|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.ErrorDemo,
 		),
 	}
@@ -269,12 +271,12 @@ func (svc *DemoService) Abc(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[REQ_Abc_QUERY, any, RSP_Abc](
+	ctx := sharedprovider.NewWailsContext[any, REQ_Abc_QUERY, any, RSP_Abc](
 		"DemoService",
 		"Abc",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[REQ_Abc_QUERY, any, RSP_Abc]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, REQ_Abc_QUERY, any, RSP_Abc]{Request: req}
 	execErr := svc.abcExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -296,12 +298,12 @@ func (svc *DemoService) TestPost(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[any, REQ_TestPost_JSON, RSP_TestPost](
+	ctx := sharedprovider.NewWailsContext[any, any, REQ_TestPost_JSON, RSP_TestPost](
 		"DemoService",
 		"TestPost",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, REQ_TestPost_JSON, RSP_TestPost]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, any, REQ_TestPost_JSON, RSP_TestPost]{Request: req}
 	execErr := svc.testPostExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -323,12 +325,12 @@ func (svc *DemoService) FormSubmit(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[any, REQ_FormSubmit_FORM, RSP_FormSubmit](
+	ctx := sharedprovider.NewWailsContext[any, any, REQ_FormSubmit_FORM, RSP_FormSubmit](
 		"DemoService",
 		"FormSubmit",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, REQ_FormSubmit_FORM, RSP_FormSubmit]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, any, REQ_FormSubmit_FORM, RSP_FormSubmit]{Request: req}
 	execErr := svc.formSubmitExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -350,12 +352,12 @@ func (svc *DemoService) RequestOptions(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[REQ_RequestOptions_QUERY, any, RSP_RequestOptions](
+	ctx := sharedprovider.NewWailsContext[any, REQ_RequestOptions_QUERY, any, RSP_RequestOptions](
 		"DemoService",
 		"RequestOptions",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[REQ_RequestOptions_QUERY, any, RSP_RequestOptions]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, REQ_RequestOptions_QUERY, any, RSP_RequestOptions]{Request: req}
 	execErr := svc.requestOptionsExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -377,12 +379,12 @@ func (svc *DemoService) EmptyResponse(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[any, any, RSP_EmptyResponse](
+	ctx := sharedprovider.NewWailsContext[any, any, any, RSP_EmptyResponse](
 		"DemoService",
 		"EmptyResponse",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_EmptyResponse]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, any, any, RSP_EmptyResponse]{Request: req}
 	execErr := svc.emptyResponseExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -404,12 +406,12 @@ func (svc *DemoService) PutDemo(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[REQ_PutDemo_QUERY, REQ_PutDemo_JSON, RSP_PutDemo](
+	ctx := sharedprovider.NewWailsContext[any, REQ_PutDemo_QUERY, REQ_PutDemo_JSON, RSP_PutDemo](
 		"DemoService",
 		"PutDemo",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[REQ_PutDemo_QUERY, REQ_PutDemo_JSON, RSP_PutDemo]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, REQ_PutDemo_QUERY, REQ_PutDemo_JSON, RSP_PutDemo]{Request: req}
 	execErr := svc.putDemoExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -431,12 +433,12 @@ func (svc *DemoService) Delete(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[REQ_Delete_QUERY, any, RSP_Delete](
+	ctx := sharedprovider.NewWailsContext[any, REQ_Delete_QUERY, any, RSP_Delete](
 		"DemoService",
 		"Delete",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[REQ_Delete_QUERY, any, RSP_Delete]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, REQ_Delete_QUERY, any, RSP_Delete]{Request: req}
 	execErr := svc.deleteExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -446,7 +448,7 @@ func (svc *DemoService) Delete(
 	if invokeErr != nil {
 		return "", invokeErr
 	}
-	xmlProvider := &sharedprovider.RspProvider[REQ_Delete_QUERY, any, RSP_Delete]{
+	xmlProvider := &sharedprovider.RspProvider[any, REQ_Delete_QUERY, any, RSP_Delete]{
 		Type:    "xml",
 		Options: "CodeMessageDataEnvelope",
 	}
@@ -461,12 +463,12 @@ func (svc *DemoService) SubscribeSweepEvents(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[OPEN_SweepEvents, any, RSP_SweepEvents](
+	ctx := sharedprovider.NewWailsContext[any, OPEN_SweepEvents, any, RSP_SweepEvents](
 		"DemoService",
 		"SubscribeSweepEvents",
 		wailstransport.ConnectionOpenHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[OPEN_SweepEvents, any, RSP_SweepEvents]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, OPEN_SweepEvents, any, RSP_SweepEvents]{Request: req}
 	if err := svc.sweepEventsExecutor.Run(ctx); err != nil {
 		return nil, err
 	}
@@ -484,7 +486,7 @@ func (svc *DemoService) SubscribeSweepEvents(
 	}
 	session = wailstransport.WrapConnectionSession(session, true)
 	stream := sharedprovider.NewStreamSession[OPEN_SweepEvents, SweepStreamMessage, CLOSE_SweepEvents](
-		req.Q,
+		req.Query,
 		session,
 	)
 	go func() {
@@ -518,12 +520,12 @@ func (svc *DemoService) OpenAssistantSession(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[OPEN_AssistantSession, any, RSP_AssistantSession](
+	ctx := sharedprovider.NewWailsContext[any, OPEN_AssistantSession, any, RSP_AssistantSession](
 		"DemoService",
 		"OpenAssistantSession",
 		wailstransport.ConnectionOpenHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[OPEN_AssistantSession, any, RSP_AssistantSession]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, OPEN_AssistantSession, any, RSP_AssistantSession]{Request: req}
 	if err := svc.assistantSessionExecutor.Run(ctx); err != nil {
 		return nil, err
 	}
@@ -541,7 +543,7 @@ func (svc *DemoService) OpenAssistantSession(
 	}
 	session = wailstransport.WrapConnectionSession(session, true)
 	channel := sharedprovider.NewChannelSession[OPEN_AssistantSession, AssistantServerMessage, AssistantClientMessage, CLOSE_AssistantSession](
-		req.Q,
+		req.Query,
 		session,
 	)
 	go func() {
@@ -587,12 +589,12 @@ func (svc *DemoService) PostDeprecated(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[any, REQ_PostDeprecated_JSON, RSP_PostDeprecated](
+	ctx := sharedprovider.NewWailsContext[any, any, REQ_PostDeprecated_JSON, RSP_PostDeprecated](
 		"DemoService",
 		"PostDeprecated",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, REQ_PostDeprecated_JSON, RSP_PostDeprecated]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, any, REQ_PostDeprecated_JSON, RSP_PostDeprecated]{Request: req}
 	execErr := svc.postDeprecatedExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -614,12 +616,12 @@ func (svc *DemoService) Raw(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[any, any, RSP_Raw](
+	ctx := sharedprovider.NewWailsContext[any, any, any, RSP_Raw](
 		"DemoService",
 		"Raw",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_Raw]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, any, any, RSP_Raw]{Request: req}
 	execErr := svc.rawExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -641,12 +643,12 @@ func (svc *DemoService) MapModel(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[any, any, RSP_MapModel](
+	ctx := sharedprovider.NewWailsContext[any, any, any, RSP_MapModel](
 		"DemoService",
 		"MapModel",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_MapModel]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, any, any, RSP_MapModel]{Request: req}
 	execErr := svc.mapModelExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -668,12 +670,12 @@ func (svc *DemoService) ErrorDemo(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[REQ_ErrorDemo_QUERY, any, RSP_ErrorDemo](
+	ctx := sharedprovider.NewWailsContext[any, REQ_ErrorDemo_QUERY, any, RSP_ErrorDemo](
 		"DemoService",
 		"ErrorDemo",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[REQ_ErrorDemo_QUERY, any, RSP_ErrorDemo]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, REQ_ErrorDemo_QUERY, any, RSP_ErrorDemo]{Request: req}
 	execErr := svc.errorDemoExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {

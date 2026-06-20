@@ -10,7 +10,7 @@ import (
 type LegacyJsonService struct {
 	impl                     RouterInterface
 	sessions                 wailstransport.ConnectionHub
-	legacyJsonCompatExecutor *sharedprovider.RouteExecutor[any, any, RSP_LegacyJsonCompat]
+	legacyJsonCompatExecutor *sharedprovider.RouteExecutor[any, any, any, RSP_LegacyJsonCompat]
 }
 
 func newGeneratedLegacyJsonService(impl RouterInterface, dispatcher wailstransport.EventDispatcher) *LegacyJsonService {
@@ -55,12 +55,12 @@ func (svc *LegacyJsonService) LegacyJsonCompat(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[any, any, RSP_LegacyJsonCompat](
+	ctx := sharedprovider.NewWailsContext[any, any, any, RSP_LegacyJsonCompat](
 		"LegacyJsonService",
 		"LegacyJsonCompat",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_LegacyJsonCompat]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, any, any, RSP_LegacyJsonCompat]{Request: req}
 	execErr := svc.legacyJsonCompatExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {

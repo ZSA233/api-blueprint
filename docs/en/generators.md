@@ -73,6 +73,18 @@ Source files overwritten by generators must be named `gen_*` / `Gen*`, or live u
 
 Go route core is generated under `<out_dir>/routes/<go-root-segment>/**`, provider runtime under `<out_dir>/providers`, transport adapters under `<out_dir>/transports/**`, and typed error runtime under `<out_dir>/runtime/errors/**`. Go-safe segments replace non-`[0-9A-Za-z_]` characters with `_`, trim leading/trailing `_`, prefix digit-leading names with `p_`, and suffix Go keywords with `_pkg`; URLs, route paths, and selection/filter semantics stay unchanged, so Go directories do not guarantee one directory per URL slash segment. If you want the import path to include `/views`, set `out_dir = ".../views"` explicitly.
 
+The Go server request runtime now uses semantic field names instead of short aliases:
+
+```go
+type REQ[Path, Query, Body any] struct {
+	Path  *Path
+	Query *Query
+	Body  *Body
+}
+```
+
+RPC handlers read input from `req.Path`, `req.Query`, and `req.Body`; missing slots are `nil`. This is a breaking cleanup, so older `req.Q` / `req.B` code should migrate to `req.Query` / `req.Body`. Response-related generics also use the semantic `Response` name instead of opaque `P`. For routes with `REQ_PATH`, ContractGraph and `RouteInfo.Path` keep the canonical `/user/{user}` path, while the Gin adapter registers `/user/:user` and binds parameters through `uri:"..."` tags.
+
 Advanced analysis tools can enable `emit_contract_metadata = true` for `go-server`. The generator emits shared metadata types under `providers`, route-local `ContractRoutes()` shards in each route package, root-level aggregators for each blueprint root, and a top-level `routes.ContractRoutes()` aggregate for whole-project analysis. This surface is only a protocol contract summary and does not generate host runtime orchestration; it is off by default to avoid extra files in ordinary projects.
 
 `providers` is a global transport-neutral runtime under the generated package root and is not split per blueprint root. TypeScript's per-root `runtime` mainly isolates model and client names; it is not the same responsibility as Go provider hooks.
@@ -153,7 +165,7 @@ Generated runtime APIs use user-facing, language-native names such as `ApiError`
 A Go server handler can return generated typed errors directly, or return an undeclared business code to exercise client unknown fallback:
 
 ```go
-switch req.Q.Mode {
+switch req.Query.Mode {
 case "token":
     return nil, common_err.TOKEN_EXPIRE
 case "rate_limit":
@@ -213,6 +225,8 @@ The Go client target emits a preview HTTP client:
 - `transports/http/gen_config.go`
 - `transports/http/gen_transport.go`
 - `transports/http/client.go`
+
+Routes with `REQ_PATH` add a `path <PathType>` argument before query/body arguments in the generated method. The Go HTTP transport expands canonical `{name}` placeholders before sending and uses URL path escaping; missing path params, unencodable fields, or leftover placeholders return transport errors. The Go client request object uses semantic fields such as `PathParams`, `Query`, `JSON`, `Form`, `Multipart`, and `Binary`; it does not use `Q/B` short names.
 
 `gen_*.go` files are generator-owned and overwritten; `client.go` façades are user-owned and preserved. The recommended entrypoint is `apiclient.NewHTTP(apiclient.HTTPConfig{BaseURL: baseURL})`, then route calls such as `api.Demo.ErrorDemo(ctx, demo.ErrorDemoQuery{Mode: "token"}, runtime.WithHeader("X-Trace-Id", traceID))`. Route/runtime clients depend only on the transport abstraction, while `base_url` / `base_url_expr` are written only to the HTTP transport config. The default HTTP adapter implements RPC query/json/urlencoded/multipart/binary_schema requests and uses `runtime.MultipartFile` for multipart file parts; `Reader` inputs are sent as streaming multipart bodies, while `Bytes` is for small files and tests. It decodes binary schema success responses into typed packets, returns `runtime.RawResponse` for bytes/file raw responses, and returns true streaming `runtime.StreamResponse` values for byte streams, which callers must close. Request deadlines and cancellation use `context.Context`; per-call request options carry headers and future request-level flags. STREAM and CHANNEL methods are generated, but the default HTTP adapter returns an explicit unsupported error so projects can swap in a custom transport.
 

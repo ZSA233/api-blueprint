@@ -113,7 +113,7 @@ type SocketSession struct {
 	onClose      func(string)
 }
 
-func EnvelopeToReq[Q, B any](envelope *InvokeEnvelope[Q, B], options ReqEnvelopeOptions) (*sharedprovider.REQ[Q, B], error) {
+func EnvelopeToReq[Q, B any](envelope *InvokeEnvelope[Q, B], options ReqEnvelopeOptions) (*sharedprovider.REQ[any, Q, B], error) {
 	if envelope == nil {
 		envelope = &InvokeEnvelope[Q, B]{}
 	}
@@ -144,9 +144,10 @@ func EnvelopeToReq[Q, B any](envelope *InvokeEnvelope[Q, B], options ReqEnvelope
 		reqB = envelope.B
 	}
 
-	return &sharedprovider.REQ[Q, B]{
-		Q: reqQ,
-		B: reqB,
+	return &sharedprovider.REQ[any, Q, B]{
+		Path:  nil,
+		Query: reqQ,
+		Body:  reqB,
 	}, nil
 }
 
@@ -157,7 +158,7 @@ func EnvelopeHeaders[Q, B any](envelope *InvokeEnvelope[Q, B]) map[string]string
 	return envelope.Headers
 }
 
-func ConnectionOpenEnvelopeToReq[Q any](envelope *ConnectionOpenEnvelope[Q], bindQuery bool) (*sharedprovider.REQ[Q, any], error) {
+func ConnectionOpenEnvelopeToReq[Q any](envelope *ConnectionOpenEnvelope[Q], bindQuery bool) (*sharedprovider.REQ[any, Q, any], error) {
 	if envelope == nil {
 		envelope = &ConnectionOpenEnvelope[Q]{}
 	}
@@ -172,9 +173,10 @@ func ConnectionOpenEnvelopeToReq[Q any](envelope *ConnectionOpenEnvelope[Q], bin
 		reqQ = envelope.Q
 	}
 
-	return &sharedprovider.REQ[Q, any]{
-		Q: reqQ,
-		B: nil,
+	return &sharedprovider.REQ[any, Q, any]{
+		Path:  nil,
+		Query: reqQ,
+		Body:  nil,
 	}, nil
 }
 

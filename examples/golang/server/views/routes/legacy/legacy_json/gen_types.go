@@ -10,6 +10,7 @@ import (
 type REQ_LegacyJsonCompat = providers.REQ[
 	any,
 	any,
+	any,
 ]
 
 type RSP_LegacyJsonCompat_BODY = types.LegacyJsonCompatPayload
@@ -17,6 +18,7 @@ type RSP_LegacyJsonCompat_BODY = types.LegacyJsonCompatPayload
 type RSP_LegacyJsonCompat = RSP_LegacyJsonCompat_BODY
 
 type CTX_LegacyJsonCompat = providers.Context[
+	any,
 	any,
 	any,
 	RSP_LegacyJsonCompat_BODY,

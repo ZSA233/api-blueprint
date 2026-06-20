@@ -5,60 +5,60 @@ package demo
 import runtime "example.com/project/golang/client/runtime"
 
 type AbcQuery struct {
-	Arg1 bool    `json:"arg1,omitempty" form:"arg1,omitempty"`
-	Arg3 string  `json:"arg3,omitempty" form:"arg3,omitempty"`
-	Arg2 float64 `json:"arg2,omitempty" form:"arg2,omitempty"`
+	Arg1 bool    `json:"arg1,omitempty" form:"arg1,omitempty" uri:"arg1,omitempty"`
+	Arg3 string  `json:"arg3,omitempty" form:"arg3,omitempty" uri:"arg3,omitempty"`
+	Arg2 float64 `json:"arg2,omitempty" form:"arg2,omitempty" uri:"arg2,omitempty"`
 }
 type AbcResponse = runtime.ApiDemoA
 
 type TestPostJSON struct {
-	Req1 string `json:"req1" form:"req1"`
-	Req2 int    `json:"req2,omitempty" form:"req2,omitempty"`
+	Req1 string `json:"req1" form:"req1" uri:"req1"`
+	Req2 int    `json:"req2,omitempty" form:"req2,omitempty" uri:"req2,omitempty"`
 }
 type TestPostResponse struct {
-	List []string                       `json:"list" form:"list"`
-	Map  map[string]*runtime.ApiDemoMap `json:"map" form:"map"`
+	List []string                       `json:"list" form:"list" uri:"list"`
+	Map  map[string]*runtime.ApiDemoMap `json:"map" form:"map" uri:"map"`
 }
 
 type FormSubmitForm struct {
-	Title   string `json:"title" form:"title"`
-	Count   int    `json:"count,omitempty" form:"count,omitempty"`
-	Enabled bool   `json:"enabled,omitempty" form:"enabled,omitempty"`
+	Title   string `json:"title" form:"title" uri:"title"`
+	Count   int    `json:"count,omitempty" form:"count,omitempty" uri:"count,omitempty"`
+	Enabled bool   `json:"enabled,omitempty" form:"enabled,omitempty" uri:"enabled,omitempty"`
 }
 type FormSubmitResponse struct {
-	Summary string `json:"summary" form:"summary"`
-	Count   int    `json:"count" form:"count"`
-	Enabled bool   `json:"enabled" form:"enabled"`
+	Summary string `json:"summary" form:"summary" uri:"summary"`
+	Count   int    `json:"count" form:"count" uri:"count"`
+	Enabled bool   `json:"enabled" form:"enabled" uri:"enabled"`
 }
 
 type RequestOptionsQuery struct {
-	DelayMs int `json:"delay_ms,omitempty" form:"delay_ms,omitempty"`
+	DelayMs int `json:"delay_ms,omitempty" form:"delay_ms,omitempty" uri:"delay_ms,omitempty"`
 }
 type RequestOptionsResponse = runtime.RequestOptionsResponse
 
 type EmptyResponseResponse struct{}
 
 type PutDemoQuery struct {
-	Arg1 string  `json:"arg1,omitempty" form:"arg1,omitempty"`
-	Arg2 float64 `json:"arg2,omitempty" form:"arg2,omitempty"`
-	Arg3 string  `json:"arg3,omitempty" form:"arg3,omitempty"`
+	Arg1 string  `json:"arg1,omitempty" form:"arg1,omitempty" uri:"arg1,omitempty"`
+	Arg2 float64 `json:"arg2,omitempty" form:"arg2,omitempty" uri:"arg2,omitempty"`
+	Arg3 string  `json:"arg3,omitempty" form:"arg3,omitempty" uri:"arg3,omitempty"`
 }
 type PutDemoJSON struct {
-	Req1 string `json:"req1" form:"req1"`
-	Req2 int    `json:"req2,omitempty" form:"req2,omitempty"`
+	Req1 string `json:"req1" form:"req1" uri:"req1"`
+	Req2 int    `json:"req2,omitempty" form:"req2,omitempty" uri:"req2,omitempty"`
 }
 type PutDemoResponse struct {
-	List   []string                    `json:"list" form:"list"`
-	AnonKV *runtime.ANONFunc1putAnonKV `json:"anon_kv" form:"anon_kv"`
+	List   []string                    `json:"list" form:"list" uri:"list"`
+	AnonKV *runtime.ANONFunc1putAnonKV `json:"anon_kv" form:"anon_kv" uri:"anon_kv"`
 }
 
 type DeleteQuery struct {
-	Arg1 string  `json:"arg1,omitempty" form:"arg1,omitempty"`
-	Arg2 float64 `json:"arg2,omitempty" form:"arg2,omitempty"`
+	Arg1 string  `json:"arg1,omitempty" form:"arg1,omitempty" uri:"arg1,omitempty"`
+	Arg2 float64 `json:"arg2,omitempty" form:"arg2,omitempty" uri:"arg2,omitempty"`
 }
 type DeleteResponse struct {
-	List     []string                      `json:"list" form:"list"`
-	AnonList []*runtime.ANONDeleteAnonList `json:"anon_list" form:"anon_list"`
+	List     []string                      `json:"list" form:"list" uri:"list"`
+	AnonList []*runtime.ANONDeleteAnonList `json:"anon_list" form:"anon_list" uri:"anon_list"`
 }
 
 type SweepEventsOpen = runtime.SweepOpen
@@ -76,23 +76,23 @@ type AssistantClientMessage_Input_DATA = runtime.AssistantInput
 type AssistantClientMessage_Cancel_DATA = runtime.AssistantCancel
 
 type PostDeprecatedJSON struct {
-	Req1 string `json:"req1" form:"req1"`
-	Req2 int    `json:"req2,omitempty" form:"req2,omitempty"`
+	Req1 string `json:"req1" form:"req1" uri:"req1"`
+	Req2 int    `json:"req2,omitempty" form:"req2,omitempty" uri:"req2,omitempty"`
 }
 type PostDeprecatedResponse struct {
-	List []string `json:"list" form:"list"`
+	List []string `json:"list" form:"list" uri:"list"`
 }
 
 type RawResponse struct {
-	List  []string                      `json:"list" form:"list"`
-	List2 map[int64][]*runtime.ApiDemoA `json:"list2" form:"list2"`
+	List  []string                      `json:"list" form:"list" uri:"list"`
+	List2 map[int64][]*runtime.ApiDemoA `json:"list2" form:"list2" uri:"list2"`
 }
 
 type MapModelResponse = runtime.RSPMapModel
 
 type ErrorDemoQuery struct {
-	Mode string `json:"mode,omitempty" form:"mode,omitempty"`
+	Mode string `json:"mode,omitempty" form:"mode,omitempty" uri:"mode,omitempty"`
 }
 type ErrorDemoResponse struct {
-	Status string `json:"status" form:"status"`
+	Status string `json:"status" form:"status" uri:"status"`
 }

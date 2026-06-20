@@ -8,10 +8,11 @@ import (
 )
 
 type REQ_Greet_QUERY struct {
-	Name string `json:"name" xml:"name" form:"name"`
+	Name string `json:"name" xml:"name" form:"name" uri:"name"`
 }
 
 type REQ_Greet = providers.REQ[
+	any,
 	REQ_Greet_QUERY,
 	any,
 ]
@@ -21,6 +22,7 @@ type RSP_Greet_BODY = types.GreetResponse
 type RSP_Greet = RSP_Greet_BODY
 
 type CTX_Greet = providers.Context[
+	any,
 	REQ_Greet_QUERY,
 	any,
 	RSP_Greet_BODY,

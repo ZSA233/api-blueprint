@@ -28,6 +28,7 @@ ManifestService = Mapping[str, Any]
 
 @dataclass(frozen=True)
 class RouteRuntimeSnapshot:
+    path_model: ModelRef | None
     query_model: ModelRef | None
     json_model: ModelRef | None
     form_model: ModelRef | None
@@ -57,6 +58,8 @@ class RouteModelSlot:
 
 @dataclass(frozen=True)
 class RouteRequestContract:
+    path: RouteModelSlot
+    path_params: tuple[str, ...]
     query: RouteModelSlot
     json: RouteModelSlot
     form: RouteModelSlot
@@ -252,6 +255,8 @@ def _route_protocol_from_contract(
     return RouteProtocolContract(
         route=contract,
         request=RouteRequestContract(
+            path=RouteModelSlot(_optional_str(request_manifest.get("path_model")), getattr(runtime, "path_model", None)),
+            path_params=tuple(str(item) for item in request_manifest.get("path_params", []) if isinstance(item, str)),
             query=RouteModelSlot(_optional_str(request_manifest.get("query_model")), runtime.query_model),
             json=RouteModelSlot(_optional_str(request_manifest.get("json_model")), runtime.json_model),
             form=RouteModelSlot(_optional_str(request_manifest.get("form_model")), runtime.form_model),
@@ -281,6 +286,7 @@ def _route_protocol_from_contract(
 
 def _runtime_from_router(router: Router) -> RouteRuntimeSnapshot:
     return RouteRuntimeSnapshot(
+        path_model=router.req_path,
         query_model=router.req_query,
         json_model=router.req_json,
         form_model=router.req_urlencoded,

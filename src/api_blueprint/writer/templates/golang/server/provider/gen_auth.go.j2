@@ -6,29 +6,29 @@ const (
 	PROV_AUTH = "auth"
 )
 
-type AuthProvider[Q, B, P any] struct {
+type AuthProvider[Path, Query, Body, Response any] struct {
 	Data    string
 	Route   RouteInfo
-	Handler func(c *Context[Q, B, P], req *REQ[Q, B]) (rsp *P, err error)
+	Handler func(c *Context[Path, Query, Body, Response], req *REQ[Path, Query, Body]) (rsp *Response, err error)
 }
 
-func NewAuthProvider[Q, B, P any](
+func NewAuthProvider[Path, Query, Body, Response any](
 	data string,
-	handler func(c *Context[Q, B, P], req *REQ[Q, B]) (rsp *P, err error),
-) *AuthProvider[Q, B, P] {
-	return &AuthProvider[Q, B, P]{
+	handler func(c *Context[Path, Query, Body, Response], req *REQ[Path, Query, Body]) (rsp *Response, err error),
+) *AuthProvider[Path, Query, Body, Response] {
+	return &AuthProvider[Path, Query, Body, Response]{
 		Data:    data,
 		Handler: handler,
 	}
 }
 
-func (prov *AuthProvider[Q, B, P]) GetName() string {
+func (prov *AuthProvider[Path, Query, Body, Response]) GetName() string {
 	return PROV_AUTH
 }
 
-func (prov *AuthProvider[Q, B, P]) Handle(anyCtx ContextInterface) {
-	ctx := AdaptContext[Q, B, P](anyCtx)
-	var req *REQ[Q, B]
+func (prov *AuthProvider[Path, Query, Body, Response]) Handle(anyCtx ContextInterface) {
+	ctx := AdaptContext[Path, Query, Body, Response](anyCtx)
+	var req *REQ[Path, Query, Body]
 	if ctx.Req != nil {
 		req = ctx.Req.Request
 	}

@@ -25,7 +25,7 @@ from api_blueprint.engine.model import (
     model_to_pydantic,
     unwrap_model_type,
 )
-from api_blueprint.engine.router import Router
+from api_blueprint.engine.router import Router, path_param_names
 
 from .route import RouteContract, resolve_route_contracts, route_contract
 from .runtime import ContractRouteRuntime
@@ -183,8 +183,11 @@ class ContractGraphBuilder:
         }
 
     def _route_manifest(self, router: Router, contract: RouteContract) -> JsonObject:
+        router.validate_request_path_contract()
         service_id = f"{_contract_root_slug(contract)}.{contract.group_alias}"
         request = {
+            "path_model": self._schema_ref(router.req_path),
+            "path_params": list(path_param_names(router.url)),
             "query_model": self._schema_ref(router.req_query),
             "json_model": self._schema_ref(router.req_json),
             "form_model": self._schema_ref(router.req_urlencoded),
@@ -267,6 +270,7 @@ class ContractGraphBuilder:
 
     def _route_runtime(self, router: Router) -> ContractRouteRuntime:
         return ContractRouteRuntime(
+            path_model=router.req_path,
             query_model=router.req_query,
             json_model=router.req_json,
             form_model=router.req_urlencoded,

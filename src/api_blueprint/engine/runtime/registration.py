@@ -101,6 +101,7 @@ def register_router(router: "Router", app: FastAPI) -> None:
 
     endpoint = make_endpoint(
         handler,
+        model_to_pydantic(router.req_path, router=router) if router.req_path else None,
         model_to_pydantic(query_model, router=router) if query_model else None,
         model_to_pydantic(router.req_form, router=router) if router.req_form else None,
         model_to_pydantic(router.req_json, router=router) if router.req_json else None,

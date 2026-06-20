@@ -9,6 +9,7 @@ from api_blueprint.engine.envelope import ResponseEnvelope
 
 @dataclass(frozen=True)
 class ContractRouteRuntime:
+    path_model: ModelRef | None
     query_model: ModelRef | None
     json_model: ModelRef | None
     form_model: ModelRef | None

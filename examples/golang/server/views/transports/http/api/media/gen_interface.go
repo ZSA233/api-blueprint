@@ -13,219 +13,258 @@ import (
 )
 
 func Mount(router gin.IRouter, impl shared.RouterInterface) shared.RouterInterface {
+	return MountSelected(router, impl, nil)
+}
+
+func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map[string]struct{}) shared.RouterInterface {
 	if isNilRouterInterface(impl) {
 		impl = shared.NewRouter()
 	}
 
-	httptransport.POST(
-		"/api/media/preview",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "media",
-				Namespace: "media",
-				Service:   "MediaService",
-				Operation: "MediaPreview",
-				RouteID:   "api.media.post.preview",
-				Path:      "/api/media/preview",
-				Methods:   []string{"POST"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
-					},
-				},
-			},
-			"req=M|auth|request-signature|handle|rsp=bytes@CodeMessageDataEnvelope",
-			impl.MediaPreview,
-		),
-		router,
-	)
+	if shouldMountRoute(routeIDs, "api.media.post.preview") {
 
-	httptransport.GET(
-		"/api/media/frame",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "media",
-				Namespace: "media",
-				Service:   "MediaService",
-				Operation: "MediaFrame",
-				RouteID:   "api.media.get.frame",
-				Path:      "/api/media/frame",
-				Methods:   []string{"GET"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
+		httptransport.POST(
+			"/api/media/preview",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "media",
+					Namespace: "media",
+					Service:   "MediaService",
+					Operation: "MediaPreview",
+					RouteID:   "api.media.post.preview",
+					Path:      "/api/media/preview",
+					Methods:   []string{"POST"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
 					},
 				},
-			},
-			"req|auth|request-signature|handle|rsp=bytes@CodeMessageDataEnvelope",
-			impl.MediaFrame,
-		),
-		router,
-	)
+				"req=multipart|auth|request-signature|handle|rsp=bytes@CodeMessageDataEnvelope",
+				impl.MediaPreview,
+			),
+			router,
+		)
 
-	httptransport.GET(
-		"/api/media/download",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "media",
-				Namespace: "media",
-				Service:   "MediaService",
-				Operation: "MediaDownload",
-				RouteID:   "api.media.get.download",
-				Path:      "/api/media/download",
-				Methods:   []string{"GET"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "media-report.xlsx",
-					},
-				},
-			},
-			"req|auth|request-signature|handle|rsp=file@CodeMessageDataEnvelope",
-			impl.MediaDownload,
-		),
-		router,
-	)
+	}
 
-	httptransport.GET(
-		"/api/media/download-dynamic",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "media",
-				Namespace: "media",
-				Service:   "MediaService",
-				Operation: "MediaDownloadDynamic",
-				RouteID:   "api.media.get.downloaddynamic",
-				Path:      "/api/media/download-dynamic",
-				Methods:   []string{"GET"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "media-report.xlsx",
-					},
-				},
-			},
-			"req|auth|request-signature|handle|rsp=file@CodeMessageDataEnvelope",
-			impl.MediaDownloadDynamic,
-		),
-		router,
-	)
+	if shouldMountRoute(routeIDs, "api.media.get.frame") {
 
-	httptransport.GET(
-		"/api/media/download-filename-edge",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "media",
-				Namespace: "media",
-				Service:   "MediaService",
-				Operation: "MediaDownloadFilenameEdge",
-				RouteID:   "api.media.get.downloadfilenameedge",
-				Path:      "/api/media/download-filename-edge",
-				Methods:   []string{"GET"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "fallback-report.xlsx",
+		httptransport.GET(
+			"/api/media/frame",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "media",
+					Namespace: "media",
+					Service:   "MediaService",
+					Operation: "MediaFrame",
+					RouteID:   "api.media.get.frame",
+					Path:      "/api/media/frame",
+					Methods:   []string{"GET"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
 					},
 				},
-			},
-			"req|auth|request-signature|handle|rsp=file@CodeMessageDataEnvelope",
-			impl.MediaDownloadFilenameEdge,
-		),
-		router,
-	)
+				"req|auth|request-signature|handle|rsp=bytes@CodeMessageDataEnvelope",
+				impl.MediaFrame,
+			),
+			router,
+		)
 
-	httptransport.GET(
-		"/api/media/error-frame",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "media",
-				Namespace: "media",
-				Service:   "MediaService",
-				Operation: "MediaErrorFrame",
-				RouteID:   "api.media.get.errorframe",
-				Path:      "/api/media/error-frame",
-				Methods:   []string{"GET"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
-					},
-				},
-			},
-			"req=Q|auth|request-signature|handle|rsp=bytes@CodeMessageDataEnvelope",
-			impl.MediaErrorFrame,
-		),
-		router,
-	)
+	}
 
-	httptransport.GET(
-		"/api/media/mjpeg",
-		sharedprovider.NewRouteExecutor(
-			sharedprovider.RouteInfo{
-				Root:      "api",
-				Group:     "media",
-				Namespace: "media",
-				Service:   "MediaService",
-				Operation: "MediaMjpeg",
-				RouteID:   "api.media.get.mjpeg",
-				Path:      "/api/media/mjpeg",
-				Methods:   []string{"GET"},
-				Transport: sharedprovider.TransportHTTP,
-				Scope:     sharedprovider.ConnectionScope(""),
-				HTTP: sharedprovider.HTTPRouteInfo{
-					Request: sharedprovider.HTTPRequestInfo{
-						BinaryContentEncodings: []string{},
-					},
-					Response: sharedprovider.HTTPResponseInfo{
-						ManualResponse:  false,
-						DefaultFilename: "",
+	if shouldMountRoute(routeIDs, "api.media.get.download") {
+
+		httptransport.GET(
+			"/api/media/download",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "media",
+					Namespace: "media",
+					Service:   "MediaService",
+					Operation: "MediaDownload",
+					RouteID:   "api.media.get.download",
+					Path:      "/api/media/download",
+					Methods:   []string{"GET"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "media-report.xlsx",
+						},
 					},
 				},
-			},
-			"req|auth|request-signature|handle|rsp=byte_stream@CodeMessageDataEnvelope",
-			impl.MediaMjpeg,
-		),
-		router,
-	)
+				"req|auth|request-signature|handle|rsp=file@CodeMessageDataEnvelope",
+				impl.MediaDownload,
+			),
+			router,
+		)
+
+	}
+
+	if shouldMountRoute(routeIDs, "api.media.get.downloaddynamic") {
+
+		httptransport.GET(
+			"/api/media/download-dynamic",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "media",
+					Namespace: "media",
+					Service:   "MediaService",
+					Operation: "MediaDownloadDynamic",
+					RouteID:   "api.media.get.downloaddynamic",
+					Path:      "/api/media/download-dynamic",
+					Methods:   []string{"GET"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "media-report.xlsx",
+						},
+					},
+				},
+				"req|auth|request-signature|handle|rsp=file@CodeMessageDataEnvelope",
+				impl.MediaDownloadDynamic,
+			),
+			router,
+		)
+
+	}
+
+	if shouldMountRoute(routeIDs, "api.media.get.downloadfilenameedge") {
+
+		httptransport.GET(
+			"/api/media/download-filename-edge",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "media",
+					Namespace: "media",
+					Service:   "MediaService",
+					Operation: "MediaDownloadFilenameEdge",
+					RouteID:   "api.media.get.downloadfilenameedge",
+					Path:      "/api/media/download-filename-edge",
+					Methods:   []string{"GET"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "fallback-report.xlsx",
+						},
+					},
+				},
+				"req|auth|request-signature|handle|rsp=file@CodeMessageDataEnvelope",
+				impl.MediaDownloadFilenameEdge,
+			),
+			router,
+		)
+
+	}
+
+	if shouldMountRoute(routeIDs, "api.media.get.errorframe") {
+
+		httptransport.GET(
+			"/api/media/error-frame",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "media",
+					Namespace: "media",
+					Service:   "MediaService",
+					Operation: "MediaErrorFrame",
+					RouteID:   "api.media.get.errorframe",
+					Path:      "/api/media/error-frame",
+					Methods:   []string{"GET"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
+					},
+				},
+				"req=query|auth|request-signature|handle|rsp=bytes@CodeMessageDataEnvelope",
+				impl.MediaErrorFrame,
+			),
+			router,
+		)
+
+	}
+
+	if shouldMountRoute(routeIDs, "api.media.get.mjpeg") {
+
+		httptransport.GET(
+			"/api/media/mjpeg",
+			sharedprovider.NewRouteExecutor(
+				sharedprovider.RouteInfo{
+					Root:      "api",
+					Group:     "media",
+					Namespace: "media",
+					Service:   "MediaService",
+					Operation: "MediaMjpeg",
+					RouteID:   "api.media.get.mjpeg",
+					Path:      "/api/media/mjpeg",
+					Methods:   []string{"GET"},
+					Transport: sharedprovider.TransportHTTP,
+					Scope:     sharedprovider.ConnectionScope(""),
+					HTTP: sharedprovider.HTTPRouteInfo{
+						Request: sharedprovider.HTTPRequestInfo{
+							PathParams:             []string{},
+							BinaryContentEncodings: []string{},
+						},
+						Response: sharedprovider.HTTPResponseInfo{
+							ManualResponse:  false,
+							DefaultFilename: "",
+						},
+					},
+				},
+				"req|auth|request-signature|handle|rsp=byte_stream@CodeMessageDataEnvelope",
+				impl.MediaMjpeg,
+			),
+			router,
+		)
+
+	}
 
 	return impl
 }
@@ -251,4 +290,12 @@ func isNilRouterInterface(impl shared.RouterInterface) bool {
 	default:
 		return false
 	}
+}
+
+func shouldMountRoute(routeIDs map[string]struct{}, routeID string) bool {
+	if len(routeIDs) == 0 {
+		return true
+	}
+	_, ok := routeIDs[routeID]
+	return ok
 }

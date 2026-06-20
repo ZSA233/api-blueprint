@@ -10,13 +10,13 @@ import (
 type HelloService struct {
 	impl               RouterInterface
 	sessions           wailstransport.ConnectionHub
-	abcExecutor        *sharedprovider.RouteExecutor[REQ_Abc_QUERY, any, RSP_Abc]
-	mapEnumExecutor    *sharedprovider.RouteExecutor[any, any, RSP_MapEnum]
-	listEnumExecutor   *sharedprovider.RouteExecutor[any, any, RSP_ListEnum]
-	stringExecutor     *sharedprovider.RouteExecutor[any, any, RSP_String]
-	uint64Executor     *sharedprovider.RouteExecutor[any, any, RSP_Uint64]
-	stringEmunExecutor *sharedprovider.RouteExecutor[any, any, RSP_StringEmun]
-	helloWayExecutor   *sharedprovider.RouteExecutor[REQ_HelloWay_QUERY, any, RSP_HelloWay]
+	abcExecutor        *sharedprovider.RouteExecutor[any, REQ_Abc_QUERY, any, RSP_Abc]
+	mapEnumExecutor    *sharedprovider.RouteExecutor[any, any, any, RSP_MapEnum]
+	listEnumExecutor   *sharedprovider.RouteExecutor[any, any, any, RSP_ListEnum]
+	stringExecutor     *sharedprovider.RouteExecutor[any, any, any, RSP_String]
+	uint64Executor     *sharedprovider.RouteExecutor[any, any, any, RSP_Uint64]
+	stringEmunExecutor *sharedprovider.RouteExecutor[any, any, any, RSP_StringEmun]
+	helloWayExecutor   *sharedprovider.RouteExecutor[any, REQ_HelloWay_QUERY, any, RSP_HelloWay]
 }
 
 func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.EventDispatcher) *HelloService {
@@ -36,7 +36,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req=Q|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+			"req=query|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.Abc,
 		),
 		mapEnumExecutor: sharedprovider.NewRouteExecutor(
@@ -132,7 +132,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 				Transport: sharedprovider.TransportWails,
 				Scope:     sharedprovider.ConnectionScope(""),
 			},
-			"req=Q|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
+			"req=query|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.HelloWay,
 		),
 	}
@@ -157,12 +157,12 @@ func (svc *HelloService) Abc(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[REQ_Abc_QUERY, any, RSP_Abc](
+	ctx := sharedprovider.NewWailsContext[any, REQ_Abc_QUERY, any, RSP_Abc](
 		"HelloService",
 		"Abc",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[REQ_Abc_QUERY, any, RSP_Abc]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, REQ_Abc_QUERY, any, RSP_Abc]{Request: req}
 	execErr := svc.abcExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -184,12 +184,12 @@ func (svc *HelloService) MapEnum(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[any, any, RSP_MapEnum](
+	ctx := sharedprovider.NewWailsContext[any, any, any, RSP_MapEnum](
 		"HelloService",
 		"MapEnum",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_MapEnum]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, any, any, RSP_MapEnum]{Request: req}
 	execErr := svc.mapEnumExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -211,12 +211,12 @@ func (svc *HelloService) ListEnum(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[any, any, RSP_ListEnum](
+	ctx := sharedprovider.NewWailsContext[any, any, any, RSP_ListEnum](
 		"HelloService",
 		"ListEnum",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_ListEnum]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, any, any, RSP_ListEnum]{Request: req}
 	execErr := svc.listEnumExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -238,12 +238,12 @@ func (svc *HelloService) String(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[any, any, RSP_String](
+	ctx := sharedprovider.NewWailsContext[any, any, any, RSP_String](
 		"HelloService",
 		"String",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_String]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, any, any, RSP_String]{Request: req}
 	execErr := svc.stringExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -265,12 +265,12 @@ func (svc *HelloService) Uint64(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[any, any, RSP_Uint64](
+	ctx := sharedprovider.NewWailsContext[any, any, any, RSP_Uint64](
 		"HelloService",
 		"Uint64",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_Uint64]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, any, any, RSP_Uint64]{Request: req}
 	execErr := svc.uint64Executor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -292,12 +292,12 @@ func (svc *HelloService) StringEmun(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[any, any, RSP_StringEmun](
+	ctx := sharedprovider.NewWailsContext[any, any, any, RSP_StringEmun](
 		"HelloService",
 		"StringEmun",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, any, RSP_StringEmun]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, any, any, RSP_StringEmun]{Request: req}
 	execErr := svc.stringEmunExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -319,12 +319,12 @@ func (svc *HelloService) HelloWay(
 		err = reqErr
 		return
 	}
-	ctx := sharedprovider.NewWailsContext[REQ_HelloWay_QUERY, any, RSP_HelloWay](
+	ctx := sharedprovider.NewWailsContext[any, REQ_HelloWay_QUERY, any, RSP_HelloWay](
 		"HelloService",
 		"HelloWay",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[REQ_HelloWay_QUERY, any, RSP_HelloWay]{Request: req}
+	ctx.Req = &sharedprovider.ReqContext[any, REQ_HelloWay_QUERY, any, RSP_HelloWay]{Request: req}
 	execErr := svc.helloWayExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {

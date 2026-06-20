@@ -115,12 +115,19 @@ class CreateResponse(Model):
     id = Uint64(description="id")
 
 
+class DeleteUserMedalPath(Model):
+    user = String(description="user id")
+    medal = String(description="medal id")
+
+
 with bp.group("/items") as views:
     views.POST("/create").JSON(CreateBody).RSP(CreateResponse)
     views.GET("/detail").ARGS(id=Uint64(description="id")).RSP(CreateResponse)
+    views.DELETE("/user/{user}/{medal}").REQ_PATH(DeleteUserMedalPath).RSP_EMPTY()
 ```
 
 - `ARGS(...)`：query 参数。
+- `REQ_PATH(Model)`：path 参数，route path 只使用 OpenAPI 风格 `{name}` 占位符。
 - `JSON(Model)`：JSON 请求体。
 - `REQ_URLENCODED(Model)`：`application/x-www-form-urlencoded` 请求体；旧 `REQ_FORM(Model)` 作为兼容别名保留。
 - `REQ_MULTIPART(Model)`：`multipart/form-data` 请求体，可混合普通字段和 `FileField(...)`。
@@ -128,7 +135,9 @@ with bp.group("/items") as views:
 - `RSP(...)`：响应模型。
 - `RSP_EMPTY()`：成功时没有业务 data 的 JSON 响应；这不是 HTTP 204 / no body。使用 JSON response envelope 时，`data: null` 和 `data: {}` 都按空业务响应解码。
 
-同一个 route 只能声明一种 body kind。ContractGraph 会把请求体记录为 `none`、`json`、`urlencoded`、`multipart`、`binary_schema` 或 `raw_bytes`，生成器和 `api-gen check` 都按这个统一语义判断 target 能力。
+`REQ_PATH` 的占位符名称必须与 path model 字段 wire name 完全一致；字段只能是必填标量、enum 或 string-coerce 类型，不支持 optional、array、map、object、file、binary 或 oneof。Gin 风格 `:id` 不是 DSL 语法，请写成 `{id}`。REQ_PATH v1 仅支持 HTTP RPC route；ContractGraph、ir-plugin、Go server 和 Go client 会输出或生成 path 参数，其他官方 target 会 fail fast，避免生成不可用代码。
+
+同一个 route 只能声明一种 body kind。ContractGraph 会把 path request 记录为 `path_model` / `path_params`，并把请求体记录为 `none`、`json`、`urlencoded`、`multipart`、`binary_schema` 或 `raw_bytes`，生成器和 `api-gen check` 都按这个统一语义判断 target 能力。
 
 二进制 HTTP 请求体或响应体使用 `.REQ_BINARY_SCHEMA("./binary/packet.md")` 或 `.RSP_BINARY_SCHEMA("./binary/packet.md")` 引用 Markdown Binary Schema。它在 ContractGraph 中归类为 `binary_schema`，不和 raw bytes/file/stream media response 概念混用。Schema 表格格式、字段类型、规则和生成输出见 [Markdown Binary Schema](binary-schema.md)。
 

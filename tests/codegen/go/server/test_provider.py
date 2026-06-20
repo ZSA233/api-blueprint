@@ -40,7 +40,7 @@ go 1.23.8
     provider_executor_text = provider_executor.read_text(encoding="utf-8")
     assert 'package providers' in provider_text
     assert expected_provider_import in route_file.read_text(encoding="utf-8")
-    assert "func (ctx *Context[Q, B, P]) Next()" in provider_context_text
+    assert "func (ctx *Context[Path, Query, Body, Response]) Next()" in provider_context_text
     assert "ctx.Gin.Next()" not in provider_context_text
     assert "type RouteInfo struct" in provider_context_text
     assert "type HTTPRouteInfo struct" in provider_context_text
@@ -50,15 +50,15 @@ go 1.23.8
     assert "Route    *RouteInfo" in provider_context_text
     assert "type ProviderSpec struct" in provider_text
     assert "Handler any" in provider_text
-    assert "type Indexer[Q, B, P any] struct" in provider_text
+    assert "type Indexer[Path, Query, Body, Response any] struct" in provider_text
     assert "func RegisterProviderFactory(name string, factory ProviderFactory)" in provider_text
-    assert "func SelectProvider[Q, B, P any]" in provider_impl_text
-    assert "func SelectWithSpec[Q, B, P any]" not in provider_text
-    assert "func SelectInternal[Q, B, P any]" not in provider_text
-    assert "func Select[Q, B, P any]" not in provider_impl_text
+    assert "func SelectProvider[Path, Query, Body, Response any]" in provider_impl_text
+    assert "func SelectWithSpec[Path, Query, Body, Response any]" not in provider_text
+    assert "func SelectInternal[Path, Query, Body, Response any]" not in provider_text
+    assert "func Select[Path, Query, Body, Response any]" not in provider_impl_text
     assert "func RegisterProvider(" not in provider_text
     assert "func GetProvider(" not in provider_text
-    assert "func NewRouteExecutor[Q, B, P any](" in provider_executor_text
+    assert "func NewRouteExecutor[Path, Query, Body, Response any](" in provider_executor_text
     assert "NewRouteExecutorWithInfo" not in provider_executor_text
     assert "NewRouteExecutorWithPlan" not in provider_executor_text
     assert "NewRouteExecutorWithProviders" not in provider_executor_text
@@ -144,7 +144,7 @@ func (prov cacheProvider) GetName() string {
 
 func (prov cacheProvider) Handle(anyCtx ContextInterface) {
 	*prov.calls++
-	ctx := AdaptContext[any, any, any](anyCtx)
+	ctx := AdaptContext[any, any, any, any](anyCtx)
 	if ctx.Route == nil || ctx.Route.Root != "static" {
 		ctx.Abort(nil)
 		return
@@ -163,7 +163,7 @@ func TestRouteAwareProviderFactory(t *testing.T) {
 		if spec.Route.Root != "static" || spec.Route.Transport != TransportHTTP {
 			t.Fatalf("unexpected route info: %#v", spec.Route)
 		}
-		if _, ok := spec.Handler.(RouteHandler[any, any, any]); !ok {
+		if _, ok := spec.Handler.(RouteHandler[any, any, any, any]); !ok {
 			t.Fatalf("handler is not route typed: %T", spec.Handler)
 		}
 		return cacheProvider{calls: &providerCalls}
@@ -172,7 +172,7 @@ func TestRouteAwareProviderFactory(t *testing.T) {
 	executor := NewRouteExecutor(
 		RouteInfo{Root: "static", RouteID: "static.static.get.doc", Transport: TransportHTTP},
 		"cache=ttl=60s",
-		func(c *Context[any, any, any], req *REQ[any, any]) (*any, error) {
+		func(c *Context[any, any, any, any], req *REQ[any, any, any]) (*any, error) {
 			return nil, nil
 		},
 	)
@@ -181,7 +181,7 @@ func TestRouteAwareProviderFactory(t *testing.T) {
 	}
 
 	for i := 0; i < 3; i++ {
-		ctx := NewHTTPContext[any, any, any](context.Background(), nil, nil)
+		ctx := NewHTTPContext[any, any, any, any](context.Background(), nil, nil)
 		if err := executor.Run(ctx); err != nil {
 			t.Fatalf("executor run failed: %v", err)
 		}
