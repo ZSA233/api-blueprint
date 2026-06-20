@@ -3,6 +3,8 @@
 package media
 
 import (
+	"reflect"
+
 	sharedprovider "example.com/project/golang/server/views/providers"
 	shared "example.com/project/golang/server/views/routes/api/media"
 	httptransport "example.com/project/golang/server/views/transports/http"
@@ -10,8 +12,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
-	if impl == nil {
+func Mount(router gin.IRouter, impl shared.RouterInterface) shared.RouterInterface {
+	if isNilRouterInterface(impl) {
 		impl = shared.NewRouter()
 	}
 
@@ -42,7 +44,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 			"req=M|auth|request-signature|handle|rsp=bytes@CodeMessageDataEnvelope",
 			impl.MediaPreview,
 		),
-		eng,
+		router,
 	)
 
 	httptransport.GET(
@@ -72,7 +74,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 			"req|auth|request-signature|handle|rsp=bytes@CodeMessageDataEnvelope",
 			impl.MediaFrame,
 		),
-		eng,
+		router,
 	)
 
 	httptransport.GET(
@@ -102,7 +104,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 			"req|auth|request-signature|handle|rsp=file@CodeMessageDataEnvelope",
 			impl.MediaDownload,
 		),
-		eng,
+		router,
 	)
 
 	httptransport.GET(
@@ -132,7 +134,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 			"req|auth|request-signature|handle|rsp=file@CodeMessageDataEnvelope",
 			impl.MediaDownloadDynamic,
 		),
-		eng,
+		router,
 	)
 
 	httptransport.GET(
@@ -162,7 +164,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 			"req|auth|request-signature|handle|rsp=file@CodeMessageDataEnvelope",
 			impl.MediaDownloadFilenameEdge,
 		),
-		eng,
+		router,
 	)
 
 	httptransport.GET(
@@ -192,7 +194,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 			"req=Q|auth|request-signature|handle|rsp=bytes@CodeMessageDataEnvelope",
 			impl.MediaErrorFrame,
 		),
-		eng,
+		router,
 	)
 
 	httptransport.GET(
@@ -222,16 +224,31 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 			"req|auth|request-signature|handle|rsp=byte_stream@CodeMessageDataEnvelope",
 			impl.MediaMjpeg,
 		),
-		eng,
+		router,
 	)
 
 	return impl
 }
 
-func NewRouter(eng *gin.Engine) *shared.Router {
-	return Mount(eng, shared.NewRouter())
+func NewRouter(router gin.IRouter) *shared.Router {
+	impl := shared.NewRouter()
+	Mount(router, impl)
+	return impl
 }
 
-func NewImpl(eng *gin.Engine) *shared.Router {
-	return NewRouter(eng)
+func NewImpl(router gin.IRouter) *shared.Router {
+	return NewRouter(router)
+}
+
+func isNilRouterInterface(impl shared.RouterInterface) bool {
+	if impl == nil {
+		return true
+	}
+	value := reflect.ValueOf(impl)
+	switch value.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return value.IsNil()
+	default:
+		return false
+	}
 }

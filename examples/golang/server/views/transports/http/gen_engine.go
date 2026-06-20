@@ -558,31 +558,31 @@ func makeHandler[Q, B, P any](
 func GET[Q, B, P any](
 	relativePath string,
 	executor *provider.RouteExecutor[Q, B, P],
-	engine *gin.Engine,
+	router gin.IRouter,
 ) {
-	engine.GET(relativePath, makeHandler(executor))
+	router.GET(relativePath, makeHandler(executor))
 }
 
 func POST[Q, B, P any](
 	relativePath string,
 	executor *provider.RouteExecutor[Q, B, P],
-	engine *gin.Engine,
+	router gin.IRouter,
 ) {
-	engine.POST(relativePath, makeHandler(executor))
+	router.POST(relativePath, makeHandler(executor))
 }
 
 func PUT[Q, B, P any](
 	relativePath string,
 	executor *provider.RouteExecutor[Q, B, P],
-	engine *gin.Engine,
+	router gin.IRouter,
 ) {
-	engine.PUT(relativePath, makeHandler(executor))
+	router.PUT(relativePath, makeHandler(executor))
 }
 
 func DELETE[Q, B, P any](
 	relativePath string,
 	executor *provider.RouteExecutor[Q, B, P],
-	engine *gin.Engine,
+	router gin.IRouter,
 ) {
-	engine.DELETE(relativePath, makeHandler(executor))
+	router.DELETE(relativePath, makeHandler(executor))
 }

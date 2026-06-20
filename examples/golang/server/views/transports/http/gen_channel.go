@@ -130,9 +130,9 @@ func CHANNEL[Q, B, P, S, C, CL any](
 	relativePath string,
 	executor *provider.RouteExecutor[Q, B, P],
 	handler func(*provider.Context[Q, B, P], provider.Channel[Q, S, C, CL]) error,
-	engine *gin.Engine,
+	router gin.IRouter,
 ) {
-	engine.GET(relativePath, func(ginCtx *gin.Context) {
+	router.GET(relativePath, func(ginCtx *gin.Context) {
 		if err := requireSessionScope(executor.Route); err != nil {
 			_ = ginCtx.AbortWithError(http.StatusNotImplemented, err)
 			return

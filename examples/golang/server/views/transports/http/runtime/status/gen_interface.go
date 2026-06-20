@@ -3,6 +3,8 @@
 package status
 
 import (
+	"reflect"
+
 	sharedprovider "example.com/project/golang/server/views/providers"
 	shared "example.com/project/golang/server/views/routes/runtime/status"
 	httptransport "example.com/project/golang/server/views/transports/http"
@@ -10,8 +12,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
-	if impl == nil {
+func Mount(router gin.IRouter, impl shared.RouterInterface) shared.RouterInterface {
+	if isNilRouterInterface(impl) {
 		impl = shared.NewRouter()
 	}
 
@@ -42,16 +44,31 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 			"req|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.RuntimeCurrentStatus,
 		),
-		eng,
+		router,
 	)
 
 	return impl
 }
 
-func NewRouter(eng *gin.Engine) *shared.Router {
-	return Mount(eng, shared.NewRouter())
+func NewRouter(router gin.IRouter) *shared.Router {
+	impl := shared.NewRouter()
+	Mount(router, impl)
+	return impl
 }
 
-func NewImpl(eng *gin.Engine) *shared.Router {
-	return NewRouter(eng)
+func NewImpl(router gin.IRouter) *shared.Router {
+	return NewRouter(router)
+}
+
+func isNilRouterInterface(impl shared.RouterInterface) bool {
+	if impl == nil {
+		return true
+	}
+	value := reflect.ValueOf(impl)
+	switch value.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return value.IsNil()
+	default:
+		return false
+	}
 }

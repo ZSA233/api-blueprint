@@ -15,9 +15,9 @@ from api_blueprint.writer.core.base import BaseWriter
 from api_blueprint.writer.core.contract_adapters import RouteContractIndex, RouteProtocolContract
 from api_blueprint.writer.core.contracts import RouteContract
 from api_blueprint.writer.core.files import ensure_filepath_open
-from api_blueprint.writer.core.templates import iter_render
+from api_blueprint.writer.core.templates import iter_render, render
 
-from .blueprint import GolangBlueprint, GolangErrorGroup
+from .blueprint import GolangBlueprint, GolangErrorGroup, GolangRouterGroup
 from ..common import LANG, PackageName
 from ..protos import GolangPackageLayout, GolangResponseEnvelope
 from ..toolchain import GolangToolchain
@@ -44,6 +44,8 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
         errors_package: str = "runtime/errors",
         enabled_transports: Sequence[GolangTransportKind] = DEFAULT_GOLANG_TRANSPORTS,
         contract_graph: ContractGraph | None = None,
+        emit_impl_stubs: bool = True,
+        emit_contract_metadata: bool = False,
         **kwargs: dict[str, Any],
     ):
         super().__init__(working_dir)
@@ -67,7 +69,11 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
         self.provider_package = self.packages.provider_package
         self.errors_package = self.packages.errors_package
         self.route_contract_index = RouteContractIndex.from_graph(contract_graph) if contract_graph is not None else None
+        self._contract_graph = contract_graph
+        self._contract_manifest: dict[str, Any] | None = contract_graph.to_manifest() if contract_graph is not None else None
         self.enabled_transports = tuple(enabled_transports)
+        self.emit_impl_stubs = bool(emit_impl_stubs)
+        self.emit_contract_metadata = bool(emit_contract_metadata)
         unknown_transports = sorted(set(self.enabled_transports) - {"http"})
         if unknown_transports:
             raise ValueError(
@@ -82,8 +88,15 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
         if self.route_contract_index is None:
             from api_blueprint.contract import build_contract_graph
 
-            self.route_contract_index = RouteContractIndex.from_graph(build_contract_graph([bp.bp for bp in self.bps]))
+            self._contract_graph = build_contract_graph([bp.bp for bp in self.bps])
+            self._contract_manifest = self._contract_graph.to_manifest()
+            self.route_contract_index = RouteContractIndex.from_graph(self._contract_graph)
         return self.route_contract_index
+
+    def _ensure_contract_manifest(self) -> dict[str, Any]:
+        if self._contract_manifest is None:
+            self._ensure_route_contract_index()
+        return self._contract_manifest or {}
 
     def route_contract_for(self, router: Router) -> RouteContract:
         return self._ensure_route_contract_index().protocol_for_router(router).route
@@ -208,6 +221,7 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
             bp.build()
             bp.gen_views()
 
+        self.gen_contract_metadata_index()
         self.gen_errors()
         self.gen_providers()
 
@@ -335,11 +349,193 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
         stale_ws_handle = provider_dir / "gen_wshandle.go"
         if stale_ws_handle.is_file():
             stale_ws_handle.unlink()
-        for name, text in iter_render(LANG, {"writer": self}, "server/provider"):
+        self.cleanup_generated_file(provider_dir / "gen_contract.go")
+        exclusives: tuple[str, ...] = ()
+        if not self.emit_contract_metadata:
+            exclusives = (*exclusives, "gen_contract_types.go")
+            self.cleanup_generated_file(provider_dir / "gen_contract_types.go")
+        for name, text in iter_render(LANG, {"writer": self}, "server/provider", exclusives=exclusives):
             overwrite = name.startswith("gen_")
             with self.write_file(provider_dir / name, overwrite=overwrite) as handle:
                 if handle:
                     handle.write(text)
+
+    def gen_contract_metadata_index(self) -> None:
+        routes_dir = self.working_dir / self.views_package / "routes"
+        contract_path = routes_dir / "gen_contract.go"
+        if not self.emit_contract_metadata:
+            self.cleanup_generated_file(contract_path)
+            return
+        with self.write_file(contract_path, overwrite=True) as handle:
+            if handle:
+                handle.write(render(LANG, "gen_contract_index.go", {"writer": self}, "server/views"))
+
+    def contract_index_imports(self) -> list[dict[str, str]]:
+        aliases: dict[str, int] = {}
+        imports: list[dict[str, str]] = []
+        for bp in self.bps:
+            base_alias = f"{bp.package_leaf}Routes"
+            aliases[base_alias] = aliases.get(base_alias, 0) + 1
+            alias = base_alias if aliases[base_alias] == 1 else f"{base_alias}{aliases[base_alias]}"
+            imports.append({"alias": alias, "imports": bp.imports})
+        return imports
+
+    def contract_routes(self) -> list[dict[str, Any]]:
+        return self._contract_routes()
+
+    def contract_routes_for_group(self, group: GolangRouterGroup) -> list[dict[str, Any]]:
+        route_ids = {self.route_protocol_for(router).route.route_id for router in group.routers}
+        return self._contract_routes(route_ids=route_ids)
+
+    def contract_routes_for_root(self, bp: GolangBlueprint) -> list[dict[str, Any]]:
+        root_group = bp.root_router_group
+        if root_group is None:
+            return []
+        return self.contract_routes_for_group(root_group)
+
+    def _contract_routes(self, *, route_ids: set[str] | None = None) -> list[dict[str, Any]]:
+        manifest = self._ensure_contract_manifest()
+        schemas = manifest.get("schemas") if isinstance(manifest.get("schemas"), Mapping) else {}
+        routes = manifest.get("routes") if isinstance(manifest.get("routes"), list) else []
+        items: list[dict[str, Any]] = []
+        for route in routes:
+            if not isinstance(route, Mapping):
+                continue
+            route_id = str(route.get("id") or "")
+            if route_ids is not None and route_id not in route_ids:
+                continue
+            request = route.get("request") if isinstance(route.get("request"), Mapping) else {}
+            response = route.get("response") if isinstance(route.get("response"), Mapping) else {}
+            req_kind, req_ref = self._contract_request_schema_ref(request)
+            rsp_kind = str(response.get("kind") or "none") if response else "none"
+            rsp_ref = str(response.get("model") or "") if response else ""
+            envelope = response.get("envelope") if isinstance(response.get("envelope"), Mapping) else {}
+            methods = route.get("methods") if isinstance(route.get("methods"), list) else []
+            native = rsp_kind not in {"json", "json_native"}
+            for method in methods:
+                items.append(
+                    {
+                        "method": str(method),
+                        "path": str(route.get("url") or ""),
+                        "request_kind": req_kind,
+                        "response_kind": rsp_kind,
+                        "envelope": str(envelope.get("name") or ""),
+                        "route_id": route_id,
+                        "native": native,
+                        "request": self._contract_schema(schemas, req_ref, req_kind),
+                        "response": (
+                            self._contract_schema(schemas, rsp_ref, "response")
+                            if not native
+                            else self._native_contract_schema(rsp_kind)
+                        ),
+                    }
+                )
+        return sorted(items, key=lambda item: (item["path"], item["method"]))
+
+    @staticmethod
+    def _contract_request_schema_ref(request: Mapping[str, Any]) -> tuple[str, str]:
+        for kind, key in (
+            ("query", "query_model"),
+            ("json", "json_model"),
+            ("form", "form_model"),
+            ("form", "urlencoded_model"),
+            ("form", "multipart_model"),
+            ("binary", "binary_model"),
+        ):
+            value = request.get(key)
+            if value:
+                return kind, str(value)
+        return "none", ""
+
+    def _contract_schema(self, schemas: Mapping[str, Any], schema_ref: str, tag_source: str) -> dict[str, Any]:
+        if not schema_ref:
+            return {"status": "empty", "kind": "object", "type": "", "fields": []}
+        schema = schemas.get(schema_ref)
+        if not isinstance(schema, Mapping):
+            return {"status": "unresolved", "kind": "any", "type": schema_ref, "fields": []}
+        kind = self._contract_schema_kind(schema)
+        fields = self._contract_schema_fields(schemas, schema, tag_source)
+        status = "empty" if kind == "object" and not fields else "ok"
+        return {
+            "status": status,
+            "kind": kind,
+            "type": str(schema.get("name") or schema_ref),
+            "fields": fields,
+        }
+
+    @staticmethod
+    def _native_contract_schema(kind: str) -> dict[str, Any]:
+        return {"status": "unresolved", "kind": kind or "native", "type": "", "fields": []}
+
+    def _contract_schema_kind(self, schema: Mapping[str, Any]) -> str:
+        schema_type = str(schema.get("type") or "")
+        if schema_type == "alias":
+            target = schema.get("target")
+            if isinstance(target, Mapping):
+                return self._contract_field_kind(target)
+        return self._contract_field_kind(schema)
+
+    def _contract_schema_fields(
+        self,
+        schemas: Mapping[str, Any],
+        schema: Mapping[str, Any],
+        tag_source: str,
+    ) -> list[dict[str, Any]]:
+        fields = schema.get("fields")
+        if isinstance(fields, Mapping):
+            return [
+                self._contract_field(field, tag_source=tag_source)
+                for _name, field in sorted(fields.items(), key=lambda item: str(item[0]))
+                if isinstance(field, Mapping)
+            ]
+        target = schema.get("target")
+        if isinstance(target, Mapping) and str(target.get("type") or "") == "array":
+            items = target.get("items")
+            if isinstance(items, Mapping):
+                ref = str(items.get("ref") or "")
+                item_schema = schemas.get(ref)
+                if isinstance(item_schema, Mapping):
+                    return self._contract_schema_fields(schemas, item_schema, tag_source)
+        return []
+
+    def _contract_field(self, field: Mapping[str, Any], *, tag_source: str) -> dict[str, Any]:
+        kind = self._contract_field_kind(field)
+        items = field.get("items") if isinstance(field.get("items"), Mapping) else {}
+        item_kind = self._contract_field_kind(items) if kind == "array" else ""
+        item_type = str(items.get("ref") or items.get("type") or "") if kind == "array" else ""
+        return {
+            "key": str(field.get("wire_name") or field.get("name") or ""),
+            "kind": kind,
+            "type": str(field.get("ref") or field.get("type") or ""),
+            "repeated": kind == "array",
+            "item_kind": item_kind,
+            "item_type": item_type,
+            "optional": bool(field.get("optional")),
+            "tag_source": tag_source,
+        }
+
+    @staticmethod
+    def _contract_field_kind(field: Mapping[str, Any]) -> str:
+        field_type = str(field.get("type") or "")
+        if field_type == "alias":
+            target = field.get("target")
+            if isinstance(target, Mapping):
+                return str(target.get("type") or "any")
+        if field_type in {"array", "map", "object", "string", "int", "float", "bool", "enum", "any"}:
+            return field_type
+        if field_type in {"boolean"}:
+            return "bool"
+        if field_type in {"integer"}:
+            return "int"
+        return field_type or "any"
+
+    @staticmethod
+    def cleanup_generated_file(path: Path) -> None:
+        if not path.is_file():
+            return
+        text = path.read_text(encoding="utf-8")
+        if text.startswith("// Code generated by api-blueprint"):
+            path.unlink()
 
     @contextmanager
     def write_file(self, filepath: str | Path, overwrite: bool = False) -> Generator[Optional[IO], None, None]:

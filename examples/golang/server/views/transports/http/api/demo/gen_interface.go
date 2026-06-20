@@ -3,6 +3,8 @@
 package demo
 
 import (
+	"reflect"
+
 	sharedprovider "example.com/project/golang/server/views/providers"
 	shared "example.com/project/golang/server/views/routes/api/demo"
 	httptransport "example.com/project/golang/server/views/transports/http"
@@ -10,8 +12,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
-	if impl == nil {
+func Mount(router gin.IRouter, impl shared.RouterInterface) shared.RouterInterface {
+	if isNilRouterInterface(impl) {
 		impl = shared.NewRouter()
 	}
 
@@ -42,7 +44,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 			"req=Q|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.Abc,
 		),
-		eng,
+		router,
 	)
 
 	httptransport.POST(
@@ -72,7 +74,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 			"req=J|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.TestPost,
 		),
-		eng,
+		router,
 	)
 
 	httptransport.POST(
@@ -102,7 +104,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 			"req=F|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.FormSubmit,
 		),
-		eng,
+		router,
 	)
 
 	httptransport.GET(
@@ -132,7 +134,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 			"req=Q|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.RequestOptions,
 		),
-		eng,
+		router,
 	)
 
 	httptransport.POST(
@@ -162,7 +164,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.EmptyResponse,
 		),
-		eng,
+		router,
 	)
 
 	httptransport.PUT(
@@ -192,7 +194,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 			"req=QJ|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.PutDemo,
 		),
-		eng,
+		router,
 	)
 
 	httptransport.DELETE(
@@ -222,7 +224,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 			"req=Q|auth|request-signature|handle|rsp=xml@CodeMessageDataEnvelope",
 			impl.Delete,
 		),
-		eng,
+		router,
 	)
 
 	httptransport.STREAM(
@@ -249,7 +251,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 			nil,
 		),
 		impl.SweepEvents,
-		eng,
+		router,
 	)
 
 	httptransport.CHANNEL(
@@ -276,7 +278,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 			nil,
 		),
 		impl.AssistantSession,
-		eng,
+		router,
 	)
 
 	httptransport.POST(
@@ -306,7 +308,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 			"req=J|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.PostDeprecated,
 		),
-		eng,
+		router,
 	)
 
 	httptransport.POST(
@@ -336,7 +338,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.Raw,
 		),
-		eng,
+		router,
 	)
 
 	httptransport.POST(
@@ -366,7 +368,7 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.MapModel,
 		),
-		eng,
+		router,
 	)
 
 	httptransport.GET(
@@ -396,16 +398,31 @@ func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router {
 			"req=Q|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.ErrorDemo,
 		),
-		eng,
+		router,
 	)
 
 	return impl
 }
 
-func NewRouter(eng *gin.Engine) *shared.Router {
-	return Mount(eng, shared.NewRouter())
+func NewRouter(router gin.IRouter) *shared.Router {
+	impl := shared.NewRouter()
+	Mount(router, impl)
+	return impl
 }
 
-func NewImpl(eng *gin.Engine) *shared.Router {
-	return NewRouter(eng)
+func NewImpl(router gin.IRouter) *shared.Router {
+	return NewRouter(router)
+}
+
+func isNilRouterInterface(impl shared.RouterInterface) bool {
+	if impl == nil {
+		return true
+	}
+	value := reflect.ValueOf(impl)
+	switch value.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return value.IsNil()
+	default:
+		return false
+	}
 }

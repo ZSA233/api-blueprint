@@ -502,6 +502,8 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
         for group in self.get_router_groups():
             self.gen_routers(group)
 
+        self.gen_contract_metadata(view_dir)
+
         if self.writer.http_adapter_enabled:
             self.gen_http_adapter()
 
@@ -640,7 +642,16 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
                             "message",
                         )
                     )
-        for name, text in iter_render(LANG, ctx, "server/views/route"):
+        exclusives: tuple[str, ...] = ()
+        if not self.writer.emit_impl_stubs:
+            exclusives = (*exclusives, "impl.go")
+            stale_impl = plan.route_dir / "impl.go"
+            if stale_impl.exists() and self._looks_like_generated_user_stub(stale_impl):
+                stale_impl.unlink()
+        if not self.writer.emit_contract_metadata or not group.branch:
+            exclusives = (*exclusives, "gen_contract.go")
+            self.writer.cleanup_generated_file(plan.route_dir / "gen_contract.go")
+        for name, text in iter_render(LANG, ctx, "server/views/route", exclusives=exclusives):
             overwrite = name.startswith("gen_")
             with self.writer.write_file(plan.route_dir / name, overwrite=overwrite) as handle:
                 if handle:
@@ -683,6 +694,23 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
                         )
                     )
                 )
+
+    def gen_contract_metadata(self, view_dir: Path) -> None:
+        contract_path = view_dir / "gen_contract.go"
+        if not self.writer.emit_contract_metadata:
+            self.writer.cleanup_generated_file(contract_path)
+            return
+        ctx = {"writer": self.writer, "bp": self}
+        with self.writer.write_file(contract_path, overwrite=True) as handle:
+            if handle:
+                handle.write(render(LANG, "gen_contract.go", ctx, "server/views"))
+
+    @staticmethod
+    def _looks_like_generated_user_stub(path: Path) -> bool:
+        if not path.is_file():
+            return False
+        text = path.read_text(encoding="utf-8")
+        return "type Router struct" in text and "_GenRouter" in text and "not implemented" in text
 
     def gen_http_router(self, group: GolangRouterGroup) -> None:
         plan = build_go_server_route_group_plan(self.writer, self, group)

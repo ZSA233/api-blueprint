@@ -42,8 +42,8 @@ type REQ[Q, B any] struct {
 // ============================= JSON ================================
 
 type RSP_JSON_CodeMessageDataEnvelope[T any] struct {
-	Code    int                           `json:"code" xml:"code" form:"code" binding:"required"`
-	Message string                        `json:"message" xml:"message" form:"message" binding:"required"`
+	Code    int                           `json:"code" xml:"code" form:"code"`
+	Message string                        `json:"message" xml:"message" form:"message"`
 	Error   *EnvelopeErrorIdentityPayload `json:"error,omitempty" xml:"error,omitempty" form:"error,omitempty" binding:"omitempty"`
 	Data    *T                            `json:"data,omitempty" xml:"data,omitempty" form:"data,omitempty" binding:"omitempty"`
 }
@@ -93,8 +93,8 @@ type RSP_XML[P any] struct {
 }
 
 type RSP_XML_CodeMessageDataEnvelope_INNER[T any] struct {
-	Code    int                           `json:"code" xml:"code" form:"code" binding:"required"`
-	Message string                        `json:"message" xml:"message" form:"message" binding:"required"`
+	Code    int                           `json:"code" xml:"code" form:"code"`
+	Message string                        `json:"message" xml:"message" form:"message"`
 	Error   *EnvelopeErrorIdentityPayload `json:"error,omitempty" xml:"error,omitempty" form:"error,omitempty" binding:"omitempty"`
 	Data    *T                            `json:"data,omitempty" xml:"data,omitempty" form:"data,omitempty" binding:"omitempty"`
 }

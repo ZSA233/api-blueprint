@@ -13,8 +13,8 @@ type Blueprint struct {
 	StatusRouter *sharedStatus.Router
 }
 
-func NewBlueprint(eng *gin.Engine) *Blueprint {
+func NewBlueprint(router gin.IRouter) *Blueprint {
 	return &Blueprint{
-		StatusRouter: status.NewRouter(eng),
+		StatusRouter: status.NewRouter(router),
 	}
 }

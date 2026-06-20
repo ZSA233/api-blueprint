@@ -17,14 +17,14 @@ type REQ_Packet = providers.REQ[
 ]
 
 type RSP_Packet_BODY struct {
-	Trace      string  `json:"trace" xml:"trace" form:"trace" binding:"required"`
-	Version    uint    `json:"version" xml:"version" form:"version" binding:"required"`
-	ItemCount  uint    `json:"item_count" xml:"item_count" form:"item_count" binding:"required"`
-	Payload    string  `json:"payload" xml:"payload" form:"payload" binding:"required"`
-	ScoreSum   float64 `json:"score_sum" xml:"score_sum" form:"score_sum" binding:"required"`
-	FirstLabel string  `json:"first_label" xml:"first_label" form:"first_label" binding:"required"`
-	ItemIds    []uint  `json:"item_ids" xml:"item_ids" form:"item_ids" binding:"required"`
-	Checksum   uint    `json:"checksum" xml:"checksum" form:"checksum" binding:"required"`
+	Trace      string  `json:"trace" xml:"trace" form:"trace"`
+	Version    uint    `json:"version" xml:"version" form:"version"`
+	ItemCount  uint    `json:"item_count" xml:"item_count" form:"item_count"`
+	Payload    string  `json:"payload" xml:"payload" form:"payload"`
+	ScoreSum   float64 `json:"score_sum" xml:"score_sum" form:"score_sum"`
+	FirstLabel string  `json:"first_label" xml:"first_label" form:"first_label"`
+	ItemIds    []uint  `json:"item_ids" xml:"item_ids" form:"item_ids"`
+	Checksum   uint    `json:"checksum" xml:"checksum" form:"checksum"`
 }
 
 type RSP_Packet = RSP_Packet_BODY
@@ -45,9 +45,9 @@ type REQ_AuditPacket = providers.REQ[
 ]
 
 type RSP_AuditPacket_BODY struct {
-	Trace     string `json:"trace" xml:"trace" form:"trace" binding:"required"`
-	ItemCount uint   `json:"item_count" xml:"item_count" form:"item_count" binding:"required"`
-	Checksum  uint   `json:"checksum" xml:"checksum" form:"checksum" binding:"required"`
+	Trace     string `json:"trace" xml:"trace" form:"trace"`
+	ItemCount uint   `json:"item_count" xml:"item_count" form:"item_count"`
+	Checksum  uint   `json:"checksum" xml:"checksum" form:"checksum"`
 }
 
 type RSP_AuditPacket = RSP_AuditPacket_BODY
@@ -68,10 +68,10 @@ type REQ_WidePacket = providers.REQ[
 ]
 
 type RSP_WidePacket_BODY struct {
-	Trace       string `json:"trace" xml:"trace" form:"trace" binding:"required"`
-	PayloadSize uint64 `json:"payload_size" xml:"payload_size" form:"payload_size" binding:"required"`
-	SignedWide  int64  `json:"signed_wide" xml:"signed_wide" form:"signed_wide" binding:"required"`
-	Checksum    uint64 `json:"checksum" xml:"checksum" form:"checksum" binding:"required"`
+	Trace       string `json:"trace" xml:"trace" form:"trace"`
+	PayloadSize uint64 `json:"payload_size" xml:"payload_size" form:"payload_size"`
+	SignedWide  int64  `json:"signed_wide" xml:"signed_wide" form:"signed_wide"`
+	Checksum    uint64 `json:"checksum" xml:"checksum" form:"checksum"`
 }
 
 type RSP_WidePacket = RSP_WidePacket_BODY

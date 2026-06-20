@@ -7,8 +7,8 @@ import (
 )
 
 type HelloChannelMessage struct {
-	Type string `json:"type" xml:"type" form:"type" binding:"required"`
-	Data any    `json:"data" xml:"data" form:"data" binding:"required"`
+	Type string `json:"type" xml:"type" form:"type"`
+	Data any    `json:"data" xml:"data" form:"data"`
 }
 
 type DefaultConnectionClose struct {
@@ -18,85 +18,85 @@ type DefaultConnectionClose struct {
 }
 
 type ConflictModel struct {
-	Default string `json:"default" xml:"default" form:"default" binding:"required"`
-	Class   string `json:"class_" xml:"class_" form:"class_" binding:"required"`
-	Enum    string `json:"enum" xml:"enum" form:"enum" binding:"required"`
+	Default string `json:"default" xml:"default" form:"default"`
+	Class   string `json:"class_" xml:"class_" form:"class_"`
+	Enum    string `json:"enum" xml:"enum" form:"enum"`
 }
 
 type ApiDemoMap struct {
-	Haha int64 `json:"haha" xml:"haha" form:"haha" binding:"required"`
+	Haha int64 `json:"haha" xml:"haha" form:"haha"`
 }
 
 type ApiDemoSubA struct {
-	Hello map[string]int `json:"hello" xml:"hello" form:"hello" binding:"required"`
-	Amap  []*ApiDemoMap  `json:"amap" xml:"amap" form:"amap" binding:"required"`
+	Hello map[string]int `json:"hello" xml:"hello" form:"hello"`
+	Amap  []*ApiDemoMap  `json:"amap" xml:"amap" form:"amap"`
 }
 
 type ApiDemoA struct {
-	Bc         string         `json:"bc" xml:"bc" form:"bc" binding:"required"`
-	A          int            `json:"a" xml:"a" form:"a" binding:"required"`
-	Efg        float32        `json:"efg" xml:"efg" form:"efg" binding:"required"`
-	Hijk       []uint         `json:"hijk" xml:"hijk" form:"hijk" binding:"required"`
+	Bc         string         `json:"bc" xml:"bc" form:"bc"`
+	A          int            `json:"a" xml:"a" form:"a"`
+	Efg        float32        `json:"efg" xml:"efg" form:"efg"`
+	Hijk       []uint         `json:"hijk" xml:"hijk" form:"hijk"`
 	Lmnop      []*ApiDemoSubA `json:"lmnop,omitempty" xml:"lmnop,omitempty" form:"lmnop,omitempty" binding:"omitempty"`
 	EnumColor  string         `json:"enum_color,omitempty" xml:"enum_color,omitempty" form:"enum_color,omitempty" binding:"omitempty"`
-	EnumStatus int            `json:"enum_status" xml:"enum_status" form:"enum_status" binding:"required"`
-	EnumList   []int          `json:"enum_list" xml:"enum_list" form:"enum_list" binding:"required"`
+	EnumStatus int            `json:"enum_status" xml:"enum_status" form:"enum_status"`
+	EnumList   []int          `json:"enum_list" xml:"enum_list" form:"enum_list"`
 }
 
 type RequestOptionsResponse struct {
-	Status  string `json:"status" xml:"status" form:"status" binding:"required"`
-	DelayMs int    `json:"delay_ms" xml:"delay_ms" form:"delay_ms" binding:"required"`
+	Status  string `json:"status" xml:"status" form:"status"`
+	DelayMs int    `json:"delay_ms" xml:"delay_ms" form:"delay_ms"`
 }
 
 type ANON_Func1put_anon_kv struct {
-	Kv1 uint      `json:"kv1" xml:"kv1" form:"kv1" binding:"required"`
-	Kv2 []float64 `json:"kv2" xml:"kv2" form:"kv2" binding:"required"`
+	Kv1 uint      `json:"kv1" xml:"kv1" form:"kv1"`
+	Kv2 []float64 `json:"kv2" xml:"kv2" form:"kv2"`
 }
 
 type ANON_Delete_anon_list struct {
-	Kv1 int64    `json:"kv1" xml:"kv1" form:"kv1" binding:"required"`
-	Kv2 []string `json:"kv2" xml:"kv2" form:"kv2" binding:"required"`
+	Kv1 int64    `json:"kv1" xml:"kv1" form:"kv1"`
+	Kv2 []string `json:"kv2" xml:"kv2" form:"kv2"`
 }
 
 type SweepOpen struct {
-	RunId      string `json:"run_id" xml:"run_id" form:"run_id" binding:"required"`
+	RunId      string `json:"run_id" xml:"run_id" form:"run_id"`
 	ReplayFrom string `json:"replay_from,omitempty" xml:"replay_from,omitempty" form:"replay_from,omitempty" binding:"omitempty"`
 }
 
 type SweepState struct {
-	Status string `json:"status" xml:"status" form:"status" binding:"required"`
+	Status string `json:"status" xml:"status" form:"status"`
 }
 
 type SweepProgress struct {
-	Current uint64 `json:"current" xml:"current" form:"current" binding:"required"`
-	Total   uint64 `json:"total" xml:"total" form:"total" binding:"required"`
+	Current uint64 `json:"current" xml:"current" form:"current"`
+	Total   uint64 `json:"total" xml:"total" form:"total"`
 }
 
 type SweepLog struct {
-	Level   string `json:"level" xml:"level" form:"level" binding:"required"`
-	Message string `json:"message" xml:"message" form:"message" binding:"required"`
+	Level   string `json:"level" xml:"level" form:"level"`
+	Message string `json:"message" xml:"message" form:"message"`
 }
 
 type ConnectionClose struct {
-	Code   int    `json:"code" xml:"code" form:"code" binding:"required"`
+	Code   int    `json:"code" xml:"code" form:"code"`
 	Reason string `json:"reason,omitempty" xml:"reason,omitempty" form:"reason,omitempty" binding:"omitempty"`
 	Error  string `json:"error,omitempty" xml:"error,omitempty" form:"error,omitempty" binding:"omitempty"`
 }
 
 type AssistantOpen struct {
-	SessionId string `json:"session_id" xml:"session_id" form:"session_id" binding:"required"`
+	SessionId string `json:"session_id" xml:"session_id" form:"session_id"`
 }
 
 type AssistantDelta struct {
-	Text string `json:"text" xml:"text" form:"text" binding:"required"`
+	Text string `json:"text" xml:"text" form:"text"`
 }
 
 type AssistantDone struct {
-	MessageId string `json:"message_id" xml:"message_id" form:"message_id" binding:"required"`
+	MessageId string `json:"message_id" xml:"message_id" form:"message_id"`
 }
 
 type AssistantInput struct {
-	Text string `json:"text" xml:"text" form:"text" binding:"required"`
+	Text string `json:"text" xml:"text" form:"text"`
 }
 
 type AssistantCancel struct {
@@ -105,9 +105,9 @@ type AssistantCancel struct {
 
 type MediaPreviewRequest struct {
 	Title string                  `json:"title,omitempty" xml:"title,omitempty" form:"title,omitempty" binding:"omitempty"`
-	Image providers.MultipartFile `json:"image" xml:"image" form:"image" binding:"required"`
+	Image providers.MultipartFile `json:"image" xml:"image" form:"image"`
 }
 
 type ApiHelloMap struct {
-	Haha int64 `json:"haha" xml:"haha" form:"haha" binding:"required"`
+	Haha int64 `json:"haha" xml:"haha" form:"haha"`
 }

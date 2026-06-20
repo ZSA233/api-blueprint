@@ -397,6 +397,28 @@ out_dir = "generated/empty"
     assert "options: {}" in empty.output
 
 
+def test_api_gen_explain_target_shows_go_server_options(tmp_path):
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[[targets]]
+id = "go.server"
+kind = "go-server"
+out_dir = "golang/server"
+module = "example.com/generated/server"
+
+[targets.options]
+emit_contract_metadata = true
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(api_gen, ["explain-target", "-c", str(config_path), "--target", "go.server"])
+    assert result.exit_code == 0, result.output
+    assert 'options: {"emit_contract_metadata": true}' in result.output
+
+
 def test_api_gen_inspect_route_uses_operation_id_for_channel_operation(tmp_path):
     _write_connection_inspect_blueprint(tmp_path)
     config_path = _write_inspect_config(tmp_path)

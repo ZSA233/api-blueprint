@@ -29,7 +29,7 @@ type CTX_Abc = providers.Context[
 ]
 
 type REQ_TestPost_JSON struct {
-	Req1 string `json:"req1" xml:"req1" form:"req1" binding:"required"`
+	Req1 string `json:"req1" xml:"req1" form:"req1"`
 	Req2 int    `json:"req2" xml:"req2" form:"req2"`
 }
 
@@ -39,8 +39,8 @@ type REQ_TestPost = providers.REQ[
 ]
 
 type RSP_TestPost_BODY struct {
-	List []string                     `json:"list" xml:"list" form:"list" binding:"required"`
-	Map  map[string]*types.ApiDemoMap `json:"map" xml:"map" form:"map" binding:"required"`
+	List []string                     `json:"list" xml:"list" form:"list"`
+	Map  map[string]*types.ApiDemoMap `json:"map" xml:"map" form:"map"`
 }
 
 type RSP_TestPost = RSP_TestPost_BODY
@@ -52,7 +52,7 @@ type CTX_TestPost = providers.Context[
 ]
 
 type REQ_FormSubmit_FORM struct {
-	Title   string `json:"title" xml:"title" form:"title" binding:"required"`
+	Title   string `json:"title" xml:"title" form:"title"`
 	Count   int    `json:"count" xml:"count" form:"count"`
 	Enabled bool   `json:"enabled" xml:"enabled" form:"enabled"`
 }
@@ -63,9 +63,9 @@ type REQ_FormSubmit = providers.REQ[
 ]
 
 type RSP_FormSubmit_BODY struct {
-	Summary string `json:"summary" xml:"summary" form:"summary" binding:"required"`
-	Count   int    `json:"count" xml:"count" form:"count" binding:"required"`
-	Enabled bool   `json:"enabled" xml:"enabled" form:"enabled" binding:"required"`
+	Summary string `json:"summary" xml:"summary" form:"summary"`
+	Count   int    `json:"count" xml:"count" form:"count"`
+	Enabled bool   `json:"enabled" xml:"enabled" form:"enabled"`
 }
 
 type RSP_FormSubmit = RSP_FormSubmit_BODY
@@ -118,7 +118,7 @@ type REQ_PutDemo_QUERY struct {
 }
 
 type REQ_PutDemo_JSON struct {
-	Req1 string `json:"req1" xml:"req1" form:"req1" binding:"required"`
+	Req1 string `json:"req1" xml:"req1" form:"req1"`
 	Req2 int    `json:"req2" xml:"req2" form:"req2"`
 }
 
@@ -128,8 +128,8 @@ type REQ_PutDemo = providers.REQ[
 ]
 
 type RSP_PutDemo_BODY struct {
-	List   []string                     `json:"list" xml:"list" form:"list" binding:"required"`
-	AnonKv *types.ANON_Func1put_anon_kv `json:"anon_kv" xml:"anon_kv" form:"anon_kv" binding:"required"`
+	List   []string                     `json:"list" xml:"list" form:"list"`
+	AnonKv *types.ANON_Func1put_anon_kv `json:"anon_kv" xml:"anon_kv" form:"anon_kv"`
 }
 
 type RSP_PutDemo = RSP_PutDemo_BODY
@@ -151,8 +151,8 @@ type REQ_Delete = providers.REQ[
 ]
 
 type RSP_Delete_BODY struct {
-	List     []string                       `json:"list" xml:"list" form:"list" binding:"required"`
-	AnonList []*types.ANON_Delete_anon_list `json:"anon_list" xml:"anon_list" form:"anon_list" binding:"required"`
+	List     []string                       `json:"list" xml:"list" form:"list"`
+	AnonList []*types.ANON_Delete_anon_list `json:"anon_list" xml:"anon_list" form:"anon_list"`
 }
 
 type RSP_Delete = RSP_Delete_BODY
@@ -214,7 +214,7 @@ type AssistantClientMessage_Cancel_DATA = types.AssistantCancel
 type CLOSE_AssistantSession = types.ConnectionClose
 
 type REQ_PostDeprecated_JSON struct {
-	Req1 string `json:"req1" xml:"req1" form:"req1" binding:"required"`
+	Req1 string `json:"req1" xml:"req1" form:"req1"`
 	Req2 int    `json:"req2" xml:"req2" form:"req2"`
 }
 
@@ -224,7 +224,7 @@ type REQ_PostDeprecated = providers.REQ[
 ]
 
 type RSP_PostDeprecated_BODY struct {
-	List []string `json:"list" xml:"list" form:"list" binding:"required"`
+	List []string `json:"list" xml:"list" form:"list"`
 }
 
 type RSP_PostDeprecated = RSP_PostDeprecated_BODY
@@ -241,8 +241,8 @@ type REQ_Raw = providers.REQ[
 ]
 
 type RSP_Raw_BODY struct {
-	List  []string                    `json:"list" xml:"list" form:"list" binding:"required"`
-	List2 map[int64][]*types.ApiDemoA `json:"list2" xml:"list2" form:"list2" binding:"required"`
+	List  []string                    `json:"list" xml:"list" form:"list"`
+	List2 map[int64][]*types.ApiDemoA `json:"list2" xml:"list2" form:"list2"`
 }
 
 type RSP_Raw = RSP_Raw_BODY
@@ -278,7 +278,7 @@ type REQ_ErrorDemo = providers.REQ[
 ]
 
 type RSP_ErrorDemo_BODY struct {
-	Status string `json:"status" xml:"status" form:"status" binding:"required"`
+	Status string `json:"status" xml:"status" form:"status"`
 }
 
 type RSP_ErrorDemo = RSP_ErrorDemo_BODY

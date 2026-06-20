@@ -15,6 +15,7 @@ out_dir = '.'
 id = 'go.server'
 out_dir = 'golang/server/views'
 module = 'example.com/project/golang/server'
+options = { emit_contract_metadata = true }
 
 [[go.client]]
 id = 'go.client'

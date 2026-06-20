@@ -19,10 +19,10 @@ type Blueprint struct {
 	LegacyJsonRouter *sharedLegacyJson.Router
 }
 
-func NewBlueprint(eng *gin.Engine) *Blueprint {
+func NewBlueprint(router gin.IRouter) *Blueprint {
 	return &Blueprint{
-		AccountRouter:    account.NewRouter(eng),
-		RoomRouter:       room.NewRouter(eng),
-		LegacyJsonRouter: legacy_json.NewRouter(eng),
+		AccountRouter:    account.NewRouter(router),
+		RoomRouter:       room.NewRouter(router),
+		LegacyJsonRouter: legacy_json.NewRouter(router),
 	}
 }

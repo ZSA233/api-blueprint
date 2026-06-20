@@ -13,8 +13,8 @@ type Blueprint struct {
 	ConflictRouter *sharedConflict.Router
 }
 
-func NewBlueprint(eng *gin.Engine) *Blueprint {
+func NewBlueprint(router gin.IRouter) *Blueprint {
 	return &Blueprint{
-		ConflictRouter: conflict.NewRouter(eng),
+		ConflictRouter: conflict.NewRouter(router),
 	}
 }

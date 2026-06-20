@@ -11,7 +11,7 @@ type REQ_Abc_QUERY struct {
 	Arg1 bool    `json:"arg1" xml:"arg1" form:"arg1"`
 	Arg3 string  `json:"arg3,omitempty" xml:"arg3,omitempty" form:"arg3,omitempty" binding:"omitempty"`
 	Arg2 float64 `json:"arg2" xml:"arg2" form:"arg2"`
-	Type string  `json:"type" xml:"type" form:"type" binding:"required"`
+	Type string  `json:"type" xml:"type" form:"type"`
 }
 
 type REQ_Abc = providers.REQ[

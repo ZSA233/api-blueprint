@@ -187,8 +187,6 @@ class GolangTagBuilder:
         parts: list[str] = []
         if omitempty:
             parts.append("omitempty")
-        elif field_info.is_required():
-            parts.append("required")
 
         annotation = field_info.annotation
         if isinstance(annotation, type) and issubclass(annotation, enum.Enum):
@@ -219,7 +217,7 @@ class GolangTagBuilder:
         alias = extra.get("alias")
         omitempty = extra.get("omitempty", False) or extra.get("optional", False)
         field_name = alias or name
-        normal_val = field_name if not omitempty else f"{name},omitempty"
+        normal_val = field_name if not omitempty else f"{field_name},omitempty"
 
         tags: list[tuple[str, str]] = [(tag, normal_val) for tag in cls.DEFAULT_TAG_FIELDS]
         binding = cls.binding(field_info, omitempty)

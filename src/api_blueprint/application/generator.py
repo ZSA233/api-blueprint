@@ -36,7 +36,7 @@ TARGET_CAPABILITY_REGISTRY: dict[str, dict[str, object]] = target_capability_man
 
 EXPLAIN_TARGET_KIND_FIELDS: dict[str, tuple[str, ...]] = {
     "contract": ("formats",),
-    "go-server": ("module",),
+    "go-server": ("module", "options"),
     "go-client": ("module", "base_url", "base_url_expr", "include", "exclude"),
     "typescript-client": ("base_url", "base_url_expr", "include", "exclude"),
     "kotlin-client": ("package", "base_url", "base_url_expr", "include", "exclude"),
@@ -187,6 +187,7 @@ def generate(config_path: str | Path | None, target_ids: Sequence[str] = ()) -> 
                 module=target.module,
                 enabled_transports=enabled_http_transports(project.resolved.targets, target.id),
                 contract_graph=graph,
+                **target.options,
             )
             writer.register(*project.entrypoints)
             writer.gen()

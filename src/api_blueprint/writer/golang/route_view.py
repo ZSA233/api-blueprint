@@ -190,18 +190,31 @@ class GoRouteProtocolView:
     @property
     def providers(self) -> str:
         provider_specs: list[str] = []
-        for provider in self.router.providers:
-            if self.is_connection and provider.name in {
+        providers = self.router.providers
+        if not providers:
+            providers = [
+                ProviderName.REQ,
+                ProviderName.HANDLE,
+                ProviderName.RSP,
+            ]
+        for provider in providers:
+            if isinstance(provider, ProviderName):
+                provider_name = provider.value
+                provider_data = None
+            else:
+                provider_name = provider.name
+                provider_data = provider.data
+            if self.is_connection and provider_name in {
                 ProviderName.HANDLE.value,
                 ProviderName.RSP.value,
             }:
                 continue
-            data = provider.data
-            if provider.name == ProviderName.REQ.value:
+            data = provider_data
+            if provider_name == ProviderName.REQ.value:
                 data = self.req_provider
-            elif provider.name == ProviderName.RSP.value:
+            elif provider_name == ProviderName.RSP.value:
                 data = self.rsp_provider
-            key = provider.name
+            key = provider_name
             if data:
                 key += f"={data}"
             provider_specs.append(key)

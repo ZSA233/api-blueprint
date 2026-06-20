@@ -259,6 +259,15 @@ class GolangResponseEnvelope:
     def proto_fields_for(self, formatters: dict[str, str]) -> list[GolangProtoFieldView]:
         return self.proto.fields_for(formatters)
 
+    def field_go_name(self, semantic_name: str, fallback: str = "") -> str:
+        spec = self.response_envelope.envelope_spec()
+        fields = spec.get("fields") or {}
+        wire_name = str(fields.get(semantic_name) or fallback or semantic_name)
+        for field in self.proto.fields():
+            if field.field == wire_name:
+                return field.name
+        return snake_to_pascal_case(wire_name)
+
     @property
     def class_name(self) -> str:
         return self.response_envelope.__name__
@@ -320,68 +329,79 @@ class GolangResponseEnvelope:
                 }}"""
 
         if kind == "code_message_data":
+            code_field = self.field_go_name("code")
+            message_field = self.field_go_name("message")
+            data_field = self.field_go_name("data")
+            error_field_name = self.field_go_name("error")
             error_value = "newEnvelopeErrorIdentity({error})" if error_identity != "none" else "nil"
-            error_field = f"\n                        Error:   {error_value.format(error=error)}," if error_identity != "none" else ""
+            error_field = (
+                f"\n                        {error_field_name}:   {error_value.format(error=error)},"
+                if error_identity != "none"
+                else ""
+            )
             if typ == "json":
                 return f"""
                 if {error} != nil {{
                     return 0, &{wrapper_name}{generic_types}{{
-                        Code:    {error}.Code,
-                        Message: {error}.Message,{error_field}
+                        {code_field}:    {error}.Code,
+                        {message_field}: {error}.Message,{error_field}
                     }}
                 }}
                 return 0, &{wrapper_name}{generic_types}{{
-                    Code:    {success_code},
-                    Message: {success_message},
-                    Data:    {data},
+                    {code_field}:    {success_code},
+                    {message_field}: {success_message},
+                    {data_field}:    {data},
                 }}"""
             return f"""
                 if {error} != nil {{
                     return 0, &{wrapper_name}{generic_types}{{
                         XMLName: xml.Name{{Local: "{self.response_envelope.get_xml_root_name()}"}},
                         Inner: &{wrapper_name}_INNER{generic_types}{{
-                            Code:    {error}.Code,
-                            Message: {error}.Message,{error_field}
+                            {code_field}:    {error}.Code,
+                            {message_field}: {error}.Message,{error_field}
                         }},
                     }}
                 }}
                 return 0, &{wrapper_name}{generic_types}{{
                     XMLName: xml.Name{{Local: "{self.response_envelope.get_xml_root_name()}"}},
                     Inner: &{wrapper_name}_INNER{generic_types}{{
-                        Code:    {success_code},
-                        Message: {success_message},
-                        Data:    {data},
+                        {code_field}:    {success_code},
+                        {message_field}: {success_message},
+                        {data_field}:    {data},
                     }},
                 }}"""
 
         if kind == "ok_data_error":
+            ok_field = self.field_go_name("ok")
+            data_field = self.field_go_name("data")
+            error_field_name = self.field_go_name("error")
             if typ == "json":
                 return f"""
                 if {error} != nil {{
                     return 0, &{wrapper_name}{generic_types}{{
-                        Ok:    false,
-                        Error: {error},
+                        {ok_field}:    false,
+                        {error_field_name}: {error},
                     }}
                 }}
                 return 0, &{wrapper_name}{generic_types}{{
-                    Ok:   true,
-                    Data: {data},
+                    {ok_field}:   true,
+                    {data_field}: {data},
                 }}"""
             return f"""
                 if {error} != nil {{
                     return 0, &{wrapper_name}{generic_types}{{
                         XMLName: xml.Name{{Local: "{self.response_envelope.get_xml_root_name()}"}},
                         Inner: &{wrapper_name}_INNER{generic_types}{{
-                            Ok:    false,
-                            Error: {error},
+                            {ok_field}:    false,
+                            {error_field_name}: {error},
                         }},
                     }}
                 }}
                 return 0, &{wrapper_name}{generic_types}{{
                     XMLName: xml.Name{{Local: "{self.response_envelope.get_xml_root_name()}"}},
                     Inner: &{wrapper_name}_INNER{generic_types}{{
-                        Ok:   true,
-                        Data: {data},
+                        {ok_field}:   true,
+                        {data_field}: {data},
                     }},
                 }}"""
 

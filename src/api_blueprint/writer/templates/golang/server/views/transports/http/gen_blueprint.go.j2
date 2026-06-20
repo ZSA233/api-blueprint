@@ -19,9 +19,9 @@ type Blueprint struct {
 	Router *sharedroot.Router{% endif %}{% endfor %}
 }
 
-func NewBlueprint(eng *gin.Engine) *Blueprint {
+func NewBlueprint(router gin.IRouter) *Blueprint {
 	return &Blueprint{ {% for group in bp.get_router_groups() %}{% if group.branch %}
-		{{ group.export_name ~ "Router" | safe }}: {{ group.http_package }}.NewRouter(eng),{% else %}
-		Router: NewRouter(eng),{% endif %}{% endfor %}
+		{{ group.export_name ~ "Router" | safe }}: {{ group.http_package }}.NewRouter(router),{% else %}
+		Router: NewRouter(router),{% endif %}{% endfor %}
 	}
 }

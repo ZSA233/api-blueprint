@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .helpers import *
+from api_blueprint.engine.schema import Int
 
 
 def test_golang_server_codegen_emits_multipart_and_raw_response_contracts(tmp_path):
@@ -123,6 +124,26 @@ go 1.23.8
     assert (output_dir / "routes" / "api" / "demo" / "gen_interface.go").is_file()
     assert not (output_dir / "transports" / "http").exists()
 
+
+def test_golang_server_struct_tags_keep_alias_with_omitempty(tmp_path):
+    output_dir = tmp_path / "golang"
+    output_dir.mkdir()
+    (tmp_path / "go.mod").write_text("module example.com/generated\n\ngo 1.23.8\n", encoding="utf-8")
+
+    class DemoBody(Model):
+        self_ = Int(alias="self", optional=True)
+
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.POST("/alias").REQ(DemoBody).RSP()
+
+    writer = GolangWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    shared_types = (output_dir / "routes" / "api" / "_gen_types" / "types.go").read_text(encoding="utf-8")
+    assert 'Self int `json:"self,omitempty" xml:"self,omitempty" form:"self,omitempty" binding:"omitempty"`' in shared_types
+
 def test_golang_writer_generates_http_adapter_separately_from_core(tmp_path):
     output_dir = tmp_path / "golang"
     output_dir.mkdir()
@@ -153,14 +174,23 @@ go 1.23.8
     root_adapter_text = root_adapter.read_text(encoding="utf-8")
     route_adapter_text = route_adapter.read_text(encoding="utf-8")
     assert "package api" in root_adapter_text
+    assert "func NewBlueprint(router gin.IRouter) *Blueprint" in root_adapter_text
+    assert "NewRouter(router)" in root_adapter_text
     assert "sharedroot" not in root_adapter_text
     assert "Router *sharedroot.Router" not in root_adapter_text
     assert "package demo" in route_adapter_text
     assert 'github.com/gin-gonic/gin' in route_adapter_text
-    assert "func Mount(eng *gin.Engine, impl *shared.Router) *shared.Router" in route_adapter_text
-    assert "func NewRouter(eng *gin.Engine) *shared.Router" in route_adapter_text
-    assert "func NewImpl(eng *gin.Engine) *shared.Router" in route_adapter_text
-    assert "return NewRouter(eng)" in route_adapter_text
+    assert '"reflect"' in route_adapter_text
+    assert "func Mount(router gin.IRouter, impl shared.RouterInterface) shared.RouterInterface" in route_adapter_text
+    assert "return MountSelected(router, impl, nil)" in route_adapter_text
+    assert "func MountSelected(router gin.IRouter, impl shared.RouterInterface, routeIDs map[string]struct{}) shared.RouterInterface" in route_adapter_text
+    assert "func NewRouter(router gin.IRouter) *shared.Router" in route_adapter_text
+    assert "func NewImpl(router gin.IRouter) *shared.Router" in route_adapter_text
+    assert "return NewRouter(router)" in route_adapter_text
+    assert "Mount(router, impl)" in route_adapter_text
+    assert "func isNilRouterInterface(impl shared.RouterInterface) bool" in route_adapter_text
+    assert "func shouldMountRoute(routeIDs map[string]struct{}, routeID string) bool" in route_adapter_text
+    assert 'if shouldMountRoute(routeIDs, "api.demo.get.ping") {' in route_adapter_text
     assert 'httptransport.GET(' in route_adapter_text
     assert "sharedprovider.NewRouteExecutor(" in route_adapter_text
     assert 'Root:      "api"' in route_adapter_text
@@ -173,7 +203,13 @@ go 1.23.8
     assert 'Methods:   []string{"GET"}' in route_adapter_text
     assert "Transport: sharedprovider.TransportHTTP" in route_adapter_text
     assert "HTTP: sharedprovider.HTTPRouteInfo{" in route_adapter_text
-    assert "\n\t\t\t\"\",\n" in route_adapter_text
+    assert any(
+        spec in route_adapter_text
+        for spec in (
+            '"",',
+            '"req|handle|rsp=json@CodeMessageDataEnvelope",',
+        )
+    )
     assert "eng,\n\n\t\tfalse," not in route_adapter_text
     assert "rawResponse bool" not in (output_dir / "transports" / "http" / "gen_engine.go").read_text(encoding="utf-8")
     assert "binaryContentEncodings" not in (output_dir / "transports" / "http" / "gen_engine.go").read_text(encoding="utf-8")
@@ -208,10 +244,121 @@ go 1.23.8
     http_runtime = (output_dir / "transports" / "http" / "gen_engine.go").read_text(encoding="utf-8")
     assert "sharedprovider.NewRouteExecutor(" in route_adapter
     assert 'RouteID:   "api.demo.post.callback"' in route_adapter
-    assert "\n\t\t\t\"\",\n" in route_adapter
+    assert any(
+        spec in route_adapter
+        for spec in (
+            '"",',
+            '"req|handle|rsp=json@CodeMessageDataEnvelope",',
+        )
+    )
     assert "ManualResponse:  true" in route_adapter
-    assert "eng,\n\t)" in route_adapter
+    assert "router,\n" in route_adapter
     assert "eng,\n\t\ttrue," not in route_adapter
     assert "if ginCtx.Writer.Written() {" in http_runtime
     assert "route.HTTP.Response.ManualResponse" in http_runtime
     assert "ginCtx.JSON(http.StatusOK, response)" in http_runtime
+
+def test_golang_http_adapter_accepts_irouter_and_external_adapter(tmp_path):
+    output_dir = tmp_path / "golang"
+    output_dir.mkdir()
+    (tmp_path / "go.mod").write_text(
+        """
+module example.com/generated
+
+go 1.23.8
+
+require (
+	github.com/coder/websocket v1.8.14
+	github.com/gin-gonic/gin v1.12.0
+)
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.GET("/ping").RSP()
+
+    writer = GolangWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    (tmp_path / "http_adapter_compile_test.go").write_text(
+        r'''
+package generated_test
+
+import (
+	"testing"
+
+	"github.com/gin-gonic/gin"
+
+	shared "example.com/generated/golang/routes/api/demo"
+	apihttp "example.com/generated/golang/transports/http/api"
+	demohttp "example.com/generated/golang/transports/http/api/demo"
+)
+
+type externalDemoAdapter struct {
+	*shared.Router
+}
+
+func newEngine() *gin.Engine {
+	gin.SetMode(gin.TestMode)
+	return gin.New()
+}
+
+func TestHTTPAdapterAcceptsEngineGroupAndExternalInterface(t *testing.T) {
+	if router := demohttp.NewRouter(newEngine()); router == nil {
+		t.Fatal("NewRouter returned nil")
+	}
+	if impl := demohttp.NewImpl(newEngine()); impl == nil {
+		t.Fatal("NewImpl returned nil")
+	}
+	if mounted := demohttp.Mount(newEngine(), nil); mounted == nil {
+		t.Fatal("Mount nil fallback returned nil")
+	}
+	if bp := apihttp.NewBlueprint(newEngine()); bp == nil || bp.DemoRouter == nil {
+		t.Fatalf("NewBlueprint(engine) returned invalid blueprint: %#v", bp)
+	}
+
+	groupEngine := newEngine()
+	group := groupEngine.Group("/v1")
+	adapter := &externalDemoAdapter{Router: shared.NewRouter()}
+	if returned := demohttp.Mount(group, adapter); returned != adapter {
+		t.Fatalf("Mount(group, adapter) returned %T, want external adapter", returned)
+	}
+
+	blueprintEngine := newEngine()
+	if bp := apihttp.NewBlueprint(blueprintEngine.Group("/v1")); bp == nil || bp.DemoRouter == nil {
+		t.Fatalf("NewBlueprint(group) returned invalid blueprint: %#v", bp)
+	}
+}
+
+func TestHTTPAdapterFallsBackForTypedNilAdapter(t *testing.T) {
+	var adapter *externalDemoAdapter
+	mounted := demohttp.Mount(newEngine(), adapter)
+	if _, ok := mounted.(*shared.Router); !ok {
+		t.Fatalf("Mount typed nil fallback returned %T, want *shared.Router", mounted)
+	}
+}
+'''.lstrip(),
+        encoding="utf-8",
+    )
+
+    tidy_result = subprocess.run(
+        ["go", "mod", "tidy"],
+        cwd=tmp_path,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert tidy_result.returncode == 0, tidy_result.stdout + tidy_result.stderr
+
+    result = subprocess.run(
+        ["go", "test", "./..."],
+        cwd=tmp_path,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr

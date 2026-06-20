@@ -8,6 +8,16 @@ import (
 
 type _GenRouter struct{}
 
+{% if not writer.emit_impl_stubs %}
+type Router struct {
+	_GenRouter
+}
+
+func NewRouter() *Router {
+	return &Router{}
+}
+{% endif %}
+
 {% for impl in router_group.implements() %}
 func (impl *_GenRouter) {{ impl.signature | safe }} {
 	{{ impl.default_body | safe }}

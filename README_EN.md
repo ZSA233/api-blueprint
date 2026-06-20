@@ -97,7 +97,7 @@ For fuller project layout, config fields, DSL, generator output, typed errors, R
 | Target | Status | Purpose |
 |:---|:---:|:---|
 | Contract / inspect | Available | Emit a contract index and query route, schema, error, or file ownership details |
-| Go server | Available | Generate Go routes, providers, long-connection message helpers, HTTP/Wails adapters, multipart/raw media, binary schema requests/responses, and runtime |
+| Go server | Available | Generate Go routes, providers, long-connection message helpers, HTTP/Wails adapters mountable on Gin engines/groups, multipart/raw media, binary schema requests/responses, runtime, and optional sharded contract metadata |
 | TypeScript client | Preview | Generate transport-neutral clients, long-connection message helpers, HTTP multipart/raw adapters, binary schema response decoding, and Wails facades |
 | Flutter client | Preview | Generate a pure Dart package, DTOs, typed errors, binary codecs, HTTP multipart/raw/binary response clients, and SSE/WebSocket clients |
 | Swift client | Preview | Generate an iOS Swift Package multi-target SDK, short module stem, root routes modules, DTOs, typed errors, field-level binary codecs, shared URLSession HTTP/SSE/WebSocket transport with validation/limit knobs, and multipart/raw/binary response clients, without UI, auth, cache, or a session engine |

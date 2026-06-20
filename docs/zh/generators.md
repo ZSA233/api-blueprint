@@ -69,9 +69,11 @@ Go 生成器输出：
 
 生成器会覆盖的源码文件必须命名为 `gen_*` / `Gen*`，或位于 `_gen_*` 目录，并保留 `Code generated ... DO NOT EDIT` header；Swift `Package.swift` 这类由 target/module 列表决定的 manifest 可作为 generated manifest 管理。`impl_*` 与非 `gen_` / 非 `Gen` 文件是用户拥有扩展点，只在缺失时创建，重生成时保留且不带 generated header。Flutter 使用 Dart 风格的 `gen_*.dart`；Swift 使用 `Gen*.swift`；Kotlin 生成器拥有文件命名为 `Gen*.kt`，但 public declaration 名称保持 Kotlin 惯用形态；Java 生成器拥有文件与 public 类型都使用 `Gen*`。
 
-`go-server` 只负责 Go 服务端 core。`out_dir` 就是生成包根；如果项目希望 import path 包含 `views`，应把 `views` 写进 `out_dir`。HTTP / Wails 输出由 `http-transport` / `wails-transport` target 通过 `server = "go.server"` 显式挂接。HTTP 入口生成在 `<out_dir>/transports/http/<go-root-segment>` 中，例如 `transports/http/api.NewBlueprint(engine)`。
+`go-server` 只负责 Go 服务端 core。`out_dir` 就是生成包根；如果项目希望 import path 包含 `views`，应把 `views` 写进 `out_dir`。HTTP / Wails 输出由 `http-transport` / `wails-transport` target 通过 `server = "go.server"` 显式挂接。HTTP 入口生成在 `<out_dir>/transports/http/<go-root-segment>` 中，例如 `transports/http/api.NewBlueprint(router)`；这里的 `router` 可以是 `*gin.Engine`，也可以是带业务前缀或中间件的 `gin.RouterGroup`。
 
 Go route core 生成在 `<out_dir>/routes/<go-root-segment>/**`，provider runtime 生成在 `<out_dir>/providers`，transport adapter 生成在 `<out_dir>/transports/**`，typed error runtime 生成在 `<out_dir>/runtime/errors/**`。Go-safe segment 会把非 `[0-9A-Za-z_]` 转成 `_`、去首尾 `_`，数字开头补 `p_`，Go keyword 补 `_pkg`；URL、route path 和 selection/filter 语义不变，因此 Go 目录不保证逐级镜像 URL slash 层级。如果希望 import path 包含 `/views`，应显式设置 `out_dir = ".../views"`。
+
+高级分析工具可以对 `go-server` 开启 `emit_contract_metadata = true`。生成物会在 `providers` 中输出共享 metadata 类型，在每个 route package 中输出局部分片 `ContractRoutes()`，在每个 root package 中聚合该 root 下的 routes，并在顶层 `routes.ContractRoutes()` 提供全量入口。该能力只描述协议契约摘要，不生成宿主运行时编排逻辑，默认关闭以避免普通项目增加额外生成文件。
 
 `providers` 是生成包根下的全局 transport-neutral runtime，不按 blueprint root 拆分。TypeScript 的 per-root `runtime` 主要服务模型和 client 命名隔离，和 Go provider hook 不是同一类职责。
 

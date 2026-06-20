@@ -13,7 +13,7 @@ type REQ_RoomList = providers.REQ[
 ]
 
 type RSP_RoomList_BODY struct {
-	Rooms []*types.RoomSummary `json:"rooms" xml:"rooms" form:"rooms" binding:"required"`
+	Rooms []*types.RoomSummary `json:"rooms" xml:"rooms" form:"rooms"`
 }
 
 type RSP_RoomList = RSP_RoomList_BODY
