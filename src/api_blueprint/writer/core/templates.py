@@ -78,7 +78,7 @@ def iter_render(
 
 
 def normalize_generated_source(lang: str, text: str) -> str:
-    if lang not in {"flutter", "java", "kotlin", "swift", "typescript"}:
+    if lang not in {"flutter", "golang", "java", "kotlin", "swift", "typescript"}:
         return text
     return _strip_trailing_blank_lines(_collapse_blank_line_runs(text, max_blank_lines=1))
 
