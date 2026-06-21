@@ -242,15 +242,15 @@ go 1.23.8
     assert re.search(r"httptransport\.GET\(\s*HTTPRoutePathPing,", route_adapter_text)
     assert "sharedprovider.NewRouteExecutor(" in route_adapter_text
     assert "mountOptions.RuntimeOptions()..." in route_adapter_text
-    assert 'Root:      "api"' in route_adapter_text
-    assert 'Group:     "demo"' in route_adapter_text
-    assert 'Namespace: "demo"' in route_adapter_text
-    assert 'Service:   "DemoService"' in route_adapter_text
-    assert 'Operation: "Ping"' in route_adapter_text
-    assert "RouteID:   RouteIDPing" in route_adapter_text
-    assert "Path:      RoutePathPing" in route_adapter_text
-    assert 'Methods:   []string{"GET"}' in route_adapter_text
-    assert "Transport: sharedprovider.TransportHTTP" in route_adapter_text
+    assert re.search(r'Root:\s+"api"', route_adapter_text)
+    assert re.search(r'Group:\s+"demo"', route_adapter_text)
+    assert re.search(r'Namespace:\s+"demo"', route_adapter_text)
+    assert re.search(r'Service:\s+"DemoService"', route_adapter_text)
+    assert re.search(r'Operation:\s+"Ping"', route_adapter_text)
+    assert re.search(r"RouteID:\s+RouteIDPing", route_adapter_text)
+    assert re.search(r"Path:\s+RoutePathPing", route_adapter_text)
+    assert re.search(r'Methods:\s+\[\]string\{"GET"\}', route_adapter_text)
+    assert re.search(r"Transport:\s+sharedprovider\.TransportHTTP", route_adapter_text)
     assert "HTTP: sharedprovider.HTTPRouteInfo{" in route_adapter_text
     assert any(
         spec in route_adapter_text
@@ -293,7 +293,7 @@ go 1.23.8
     )
     http_runtime = (output_dir / "transports" / "http" / "gen_engine.go").read_text(encoding="utf-8")
     assert "sharedprovider.NewRouteExecutor(" in route_adapter
-    assert "RouteID:   RouteIDCallback" in route_adapter
+    assert re.search(r"RouteID:\s+RouteIDCallback", route_adapter)
     assert any(
         spec in route_adapter
         for spec in (

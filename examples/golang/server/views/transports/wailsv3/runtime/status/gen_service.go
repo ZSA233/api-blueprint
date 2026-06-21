@@ -61,14 +61,14 @@ func (svc *StatusService) RuntimeCurrentStatus(
 		"RuntimeCurrentStatus",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, any, any, RSP_RuntimeCurrentStatus]{Request: req}
+	ctx.Request = &sharedprovider.RequestContext[any, any, any]{Value: req}
 	execErr := svc.runtimeCurrentStatusExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
 		invokeErr = execErr
 	}
 
-	_, wrapped := sharedprovider.NewRSP_JSON(svc.runtimeCurrentStatusExecutor.Indexer.Rsp, response, invokeErr)
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.runtimeCurrentStatusExecutor.Indexer.Rsp, response, invokeErr, ctx.Response.Meta())
 	if wrapped == nil {
 		return nil, nil
 	}

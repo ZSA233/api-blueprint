@@ -13,9 +13,9 @@ const (
 	PROV_REQ = "req"
 )
 
-type ReqContext[Path, Query, Body, Response any] struct {
-	Request *REQ[Path, Query, Body]
-	Error   error
+type RequestContext[Path, Query, Body any] struct {
+	Value *REQ[Path, Query, Body]
+	Error error
 }
 
 type ReqProvider[Path, Query, Body, Response any] struct {
@@ -78,12 +78,12 @@ func (prov *ReqProvider[Path, Query, Body, Response]) GetName() string {
 
 func (prov *ReqProvider[Path, Query, Body, Response]) Handle(anyCtx ContextInterface) {
 	ctx := AdaptContext[Path, Query, Body, Response](anyCtx)
-	if ctx.Req != nil {
-		if ctx.Req.Error != nil {
-			ctx.Abort(ctx.Req.Error)
+	if ctx.Request != nil {
+		if ctx.Request.Error != nil {
+			ctx.Abort(ctx.Request.Error)
 			return
 		}
-		if ctx.Req.Request == nil {
+		if ctx.Request.Value == nil {
 			ctx.Abort(fmt.Errorf("[ReqProvider] request must be pre-bound by transport adapter"))
 			return
 		}

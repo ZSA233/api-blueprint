@@ -15,6 +15,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "legacy.legacy_json.get.compat",
+			Summary:      "Legacy JSON compatibility example",
+			Description:  "Covers legacy fields that accept multiple JSON shapes.",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "empty",

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from .helpers import *
 
 
@@ -27,6 +29,11 @@ go 1.23.8
     provider_file = output_dir / "providers" / "gen_provider.go"
     provider_impl = output_dir / "providers" / "impl_provider.go"
     provider_context = output_dir / "providers" / "gen_context.go"
+    context_impl = output_dir / "providers" / "impl_context.go"
+    req_impl = output_dir / "providers" / "impl_req.go"
+    rsp_impl = output_dir / "providers" / "impl_rsp.go"
+    handle_impl = output_dir / "providers" / "impl_handle.go"
+    auth_impl = output_dir / "providers" / "impl_auth.go"
     provider_executor = output_dir / "providers" / "gen_executor.go"
     route_file = output_dir / "routes" / "api" / "demo" / "gen_types.go"
     expected_provider_import = f'providers "example.com/generated/{output_dir.name}/providers"'
@@ -38,16 +45,23 @@ go 1.23.8
     provider_impl_text = provider_impl.read_text(encoding="utf-8")
     provider_context_text = provider_context.read_text(encoding="utf-8")
     provider_executor_text = provider_executor.read_text(encoding="utf-8")
+    context_impl_text = context_impl.read_text(encoding="utf-8")
+    req_impl_text = req_impl.read_text(encoding="utf-8")
+    rsp_impl_text = rsp_impl.read_text(encoding="utf-8")
+    handle_impl_text = handle_impl.read_text(encoding="utf-8")
+    auth_impl_text = auth_impl.read_text(encoding="utf-8")
     assert 'package providers' in provider_text
     assert expected_provider_import in route_file.read_text(encoding="utf-8")
-    assert "func (ctx *Context[Path, Query, Body, Response]) Next()" in provider_context_text
+    assert "func (ctx *Context[Path, Query, Body, R]) Next()" in provider_context_text
     assert "ctx.Gin.Next()" not in provider_context_text
     assert "type RouteInfo struct" in provider_context_text
     assert "type HTTPRouteInfo struct" in provider_context_text
     assert "type HTTPRequestInfo struct" in provider_context_text
     assert "type HTTPResponseInfo struct" in provider_context_text
-    assert "HTTP      HTTPRouteInfo" in provider_context_text
-    assert "Route    *RouteInfo" in provider_context_text
+    assert re.search(r"HTTP\s+HTTPRouteInfo", provider_context_text)
+    assert re.search(r"Route\s+\*RouteInfo", provider_context_text)
+    assert "Request  *RequestContext[Path, Query, Body]" in provider_context_text
+    assert "Response *ResponseContext" in provider_context_text
     assert "type ProviderSpec struct" in provider_text
     assert "Handler any" in provider_text
     assert "type Indexer[Path, Query, Body, Response any] struct" in provider_text
@@ -65,7 +79,13 @@ go 1.23.8
     assert "type RoutePlan" not in provider_executor_text
     assert "routePlan" not in provider_executor_text
     assert "ctx.Route = &executor.Route" in provider_executor_text
-    assert "ctx.Abort(ctx.Req.Error)" in (output_dir / "providers" / "gen_req.go").read_text(
+    assert "do not re-declare generated context types" in context_impl_text
+    assert "do not re-declare\n// the generated request types" in req_impl_text
+    assert "do not re-declare generated response" in rsp_impl_text
+    assert "do not re-declare\n// HandleContext" in handle_impl_text
+    assert "AuthContext is intentionally user-owned" in auth_impl_text
+    assert "Keep generated provider interfaces and context frames in\n// gen_ files" in provider_impl_text
+    assert "ctx.Abort(ctx.Request.Error)" in (output_dir / "providers" / "gen_req.go").read_text(
         encoding="utf-8"
     )
 
@@ -100,8 +120,8 @@ go 1.23.8
     route_adapter = (output_dir / "transports" / "http" / "static" / "gen_interface.go").read_text(
         encoding="utf-8"
     )
-    assert 'Root:      "static"' in route_adapter
-    assert "RouteID:   RouteIDDoc" in route_adapter
+    assert re.search(r'Root:\s+"static"', route_adapter)
+    assert re.search(r"RouteID:\s+RouteIDDoc", route_adapter)
     assert '"req|cache=ttl=60s|handle|rsp=json@CodeMessageDataEnvelope"' in route_adapter
 
 @pytest.mark.toolchain_smoke

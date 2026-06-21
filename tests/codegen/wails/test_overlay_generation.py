@@ -47,7 +47,7 @@ go 1.23.8
     ts_overlay_factory = (shared_ts / "api" / "transports" / "wailsv3" / "api" / "gen_factory.ts").read_text(encoding="utf-8")
 
     assert "WrapRSP_JSON_CodeMessageDataEnvelope" not in go_overlay_service
-    assert "sharedprovider.NewRSP_JSON(svc.pingExecutor.Indexer.Rsp, response, invokeErr)" in go_overlay_service
+    assert "sharedprovider.NewRSP_JSON(svc.pingExecutor.Indexer.Rsp, response, invokeErr, ctx.Response.Meta())" in go_overlay_service
     assert "typed, _ := wrapped.(*sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_Ping])" in go_overlay_service
     assert "func (svc *DemoService) ConnectWs" not in go_overlay_service
     assert "func (svc *DemoService) SubscribeEvents" in go_overlay_service
@@ -67,19 +67,19 @@ go 1.23.8
     assert not re.search(r"\bwsExecutor\s+\*sharedprovider.RouteExecutor", go_overlay_service)
     assert "sharedprovider.NewRouteExecutor(" in go_overlay_service
     assert "NewRouteExecutorWithInfo" not in go_overlay_service
-    assert 'Root:      "api"' in go_overlay_service
-    assert 'Group:     "demo"' in go_overlay_service
-    assert 'Namespace: "demo"' in go_overlay_service
-    assert 'Service:   "DemoService"' in go_overlay_service
-    assert 'RouteID:   "api.demo.get.ping"' in go_overlay_service
-    assert 'RouteID:   "api.demo.stream.events"' in go_overlay_service
-    assert 'RouteID:   "api.demo.channel.chat"' in go_overlay_service
-    assert 'Methods:   []string{"GET"}' in go_overlay_service
+    assert re.search(r'Root:\s+"api"', go_overlay_service)
+    assert re.search(r'Group:\s+"demo"', go_overlay_service)
+    assert re.search(r'Namespace:\s+"demo"', go_overlay_service)
+    assert re.search(r'Service:\s+"DemoService"', go_overlay_service)
+    assert re.search(r'RouteID:\s+"api\.demo\.get\.ping"', go_overlay_service)
+    assert re.search(r'RouteID:\s+"api\.demo\.stream\.events"', go_overlay_service)
+    assert re.search(r'RouteID:\s+"api\.demo\.channel\.chat"', go_overlay_service)
+    assert re.search(r'Methods:\s+\[\]string\{"GET"\}', go_overlay_service)
     assert 'Methods:   []string{"WS"}' not in go_overlay_service
-    assert 'Methods:   []string{"STREAM"}' in go_overlay_service
-    assert 'Methods:   []string{"CHANNEL"}' in go_overlay_service
-    assert "Transport: sharedprovider.TransportWails" in go_overlay_service
-    assert 'Scope:     sharedprovider.ConnectionScope("session")' in go_overlay_service
+    assert re.search(r'Methods:\s+\[\]string\{"STREAM"\}', go_overlay_service)
+    assert re.search(r'Methods:\s+\[\]string\{"CHANNEL"\}', go_overlay_service)
+    assert re.search(r"Transport:\s+sharedprovider\.TransportWails", go_overlay_service)
+    assert re.search(r'Scope:\s+sharedprovider\.ConnectionScope\("session"\)', go_overlay_service)
     assert '"req=query|auth|handle|rsp=json@CodeMessageDataEnvelope"' in go_overlay_service
     assert '"req|auth|ws_handle|rsp=json@CodeMessageDataEnvelope"' not in go_overlay_service
     assert "ResolveProvider[" not in go_overlay_service
@@ -110,7 +110,7 @@ go 1.23.8
     assert "func (executor *RouteExecutor[Path, Query, Body, Response]) RunWSPreflight" not in go_provider_executor
     assert "ctx.Route = &executor.Route" in go_provider_executor
     assert "type RouteInfo struct" in go_provider_context
-    assert "Scope     ConnectionScope" in go_provider_context
+    assert re.search(r"Scope\s+ConnectionScope", go_provider_context)
     assert "Route    *RouteInfo" in go_provider_context
     assert "ctx.Gin.Next()" not in go_provider_context
     assert "type ReqEnvelopeOptions struct" in go_runtime

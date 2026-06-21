@@ -15,6 +15,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.conflict.get.default",
+			Summary:      "Naming conflict example",
+			Description:  "Covers reserved operation names and route-local model names",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "ok",

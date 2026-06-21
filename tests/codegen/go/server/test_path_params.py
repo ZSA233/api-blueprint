@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from .helpers import *
 
 
@@ -58,7 +60,9 @@ require github.com/gin-gonic/gin v1.10.1
     assert "Path  *Path" in provider_req
     assert "Query *Query" in provider_req
     assert "Body  *Body" in provider_req
-    assert "type Context[Path, Query, Body, Response any] struct" in provider_context
+    assert "type Context[Path, Query, Body, R any] struct" in provider_context
+    assert "Request  *RequestContext[Path, Query, Body]" in provider_context
+    assert "Response *ResponseContext" in provider_context
     assert 'User  string `json:"user" xml:"user" form:"user" uri:"user"`' in shared_types
     assert "RoutePathDeleteUserMedal" in route_constants
     assert '"/api/medal/user/{user}/{medal}"' in route_constants
@@ -66,7 +70,7 @@ require github.com/gin-gonic/gin v1.10.1
     assert "shared.RoutePathDeleteUserMedal" in http_route
     assert 'HTTPRoutePathDeleteUserMedal = "/api/medal/user/:user/:medal"' in http_route
     assert "httptransport.DELETE(\n\t\t\tHTTPRoutePathDeleteUserMedal," in http_route
-    assert "Path:      RoutePathDeleteUserMedal" in http_route
+    assert re.search(r"Path:\s+RoutePathDeleteUserMedal", http_route)
     assert 'PathParams:             []string{"user", "medal"}' in http_route
     assert '"req=path,query,json|handle|rsp=json@CodeMessageDataEnvelope"' in http_route
     assert "BindPath" in http_runtime

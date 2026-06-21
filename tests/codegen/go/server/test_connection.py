@@ -374,7 +374,7 @@ go 1.23.8
     assert "Close(ctx context.Context, code int, reason string) error" in provider_connection
     assert "type Channel[O, S, C, CL any] interface" in provider_connection
     assert "MessageMiddleware" not in provider_connection
-    assert 'Scope:     sharedprovider.ConnectionScope("session")' in http_adapter
+    assert re.search(r'Scope:\s+sharedprovider\.ConnectionScope\("session"\)', http_adapter)
     assert "httptransport.STREAM(" in http_adapter
     assert "httptransport.STREAM[" not in http_adapter
     assert "httptransport.CHANNEL(" in http_adapter

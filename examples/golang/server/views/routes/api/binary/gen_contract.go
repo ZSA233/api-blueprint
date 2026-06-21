@@ -15,6 +15,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.binary.post.auditpacket",
+			Summary:      "Binary audit packet example",
+			Description:  "",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "ok",
@@ -42,6 +44,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "binary_schema",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.binary.get.auditpacketresponse",
+			Summary:      "Binary audit packet response example",
+			Description:  "",
 			Native:       true,
 			Request: providers.ContractSchemaInfo{
 				Status: "empty",
@@ -63,6 +67,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.binary.post.packet",
+			Summary:      "Binary packet example",
+			Description:  "",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "ok",
@@ -95,6 +101,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.binary.post.widepacket",
+			Summary:      "Wide integer binary packet example",
+			Description:  "",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "ok",

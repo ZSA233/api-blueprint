@@ -44,16 +44,18 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 			HTTPRoutePathHelloChannel,
 			sharedprovider.NewRouteExecutor[any, any, any, shared.RSP_HelloChannel](
 				sharedprovider.RouteInfo{
-					Root:      "api",
-					Group:     "",
-					Namespace: "api",
-					Service:   "ApiService",
-					Operation: "HelloChannel",
-					RouteID:   RouteIDHelloChannel,
-					Path:      RoutePathHelloChannel,
-					Methods:   []string{"CHANNEL"},
-					Transport: sharedprovider.TransportHTTP,
-					Scope:     sharedprovider.ConnectionScope("session"),
+					Root:        "api",
+					Group:       "",
+					Namespace:   "api",
+					Service:     "ApiService",
+					Operation:   "HelloChannel",
+					RouteID:     RouteIDHelloChannel,
+					Summary:     "HelloChannel",
+					Description: "",
+					Path:        RoutePathHelloChannel,
+					Methods:     []string{"CHANNEL"},
+					Transport:   sharedprovider.TransportHTTP,
+					Scope:       sharedprovider.ConnectionScope("session"),
 					HTTP: sharedprovider.HTTPRouteInfo{
 						Response: sharedprovider.HTTPResponseInfo{
 							DefaultFilename: "",

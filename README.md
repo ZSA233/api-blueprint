@@ -99,7 +99,7 @@ api-gen generate -c api-blueprint.toml
 | 目标 | 状态 | 用途 |
 |:---|:---:|:---|
 | Contract / inspect | 可用 | 输出契约索引，并按 route、schema、error、文件归属查询协议细节 |
-| Go server | 可用 | 生成 Go 路由、provider、长连接 message helper、可挂载到 Gin engine/group 且支持逐 route 挂载与显式 error mapper option 的 HTTP adapter、Wails adapter、multipart/raw media、binary schema 请求/响应、runtime 和可选分片 contract metadata |
+| Go server | 可用 | 生成 Go 路由、provider、长连接 message helper、语义化 handler context、成功 response metadata、可挂载到 Gin engine/group 且支持逐 route 挂载与显式 error mapper option 的 HTTP adapter、Wails adapter、multipart/raw media、binary schema 请求/响应、runtime 和可选分片 contract metadata |
 | TypeScript client | 预览 | 生成 transport-neutral client、长连接 message helper、HTTP multipart/raw adapter、binary schema 响应解码和 Wails facade |
 | Flutter client | 预览 | 生成纯 Dart package、DTO、typed error、binary codec、HTTP multipart/raw/binary response client 和 SSE/WebSocket client |
 | Swift client | 预览 | 生成 iOS Swift Package 多 target SDK、短 module stem、root routes module、DTO、typed error、字段级 binary codec、带限流/校验 knobs 的共享 URLSession HTTP/SSE/WebSocket transport 和 multipart/raw/binary response client，不生成 UI、鉴权、缓存或 session engine |

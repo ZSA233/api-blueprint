@@ -44,16 +44,18 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 			HTTPRoutePathRoomList,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
-					Root:      "legacy",
-					Group:     "room",
-					Namespace: "room",
-					Service:   "RoomService",
-					Operation: "RoomList",
-					RouteID:   RouteIDRoomList,
-					Path:      RoutePathRoomList,
-					Methods:   []string{"GET"},
-					Transport: sharedprovider.TransportHTTP,
-					Scope:     sharedprovider.ConnectionScope(""),
+					Root:        "legacy",
+					Group:       "room",
+					Namespace:   "room",
+					Service:     "RoomService",
+					Operation:   "RoomList",
+					RouteID:     RouteIDRoomList,
+					Summary:     "Rootless room list example",
+					Description: "Covers a second top-level group under the same logical blueprint.",
+					Path:        RoutePathRoomList,
+					Methods:     []string{"GET"},
+					Transport:   sharedprovider.TransportHTTP,
+					Scope:       sharedprovider.ConnectionScope(""),
 					HTTP: sharedprovider.HTTPRouteInfo{
 						Request: sharedprovider.HTTPRequestInfo{
 							PathParams:             []string{},

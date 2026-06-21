@@ -15,6 +15,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "OkDataErrorEnvelope",
 			RouteID:      "alt.conflict.get.default",
+			Summary:      "Alt naming conflict example",
+			Description:  "Covers multi-blueprint output and ok/data/error envelopes",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "ok",

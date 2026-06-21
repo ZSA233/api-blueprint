@@ -15,6 +15,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "runtime.status.get.current",
+			Summary:      "Runtime root naming example",
+			Description:  "Covers Swift root module naming when the root segment is runtime.",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "empty",

@@ -272,6 +272,21 @@ class GolangResponseEnvelope:
     def class_name(self) -> str:
         return self.response_envelope.__name__
 
+    @property
+    def success_code(self) -> int:
+        spec = self.response_envelope.envelope_spec()
+        return int(spec.get("success_code") or 0)
+
+    @property
+    def success_message_literal(self) -> str:
+        spec = self.response_envelope.envelope_spec()
+        return go_literal(str(spec.get("success_message") or "ok"))
+
+    def has_envelope_field(self, semantic_name: str) -> bool:
+        spec = self.response_envelope.envelope_spec()
+        fields = spec.get("fields") or {}
+        return semantic_name in fields
+
     def generic_types(self, with_any: bool = False) -> str:
         generic_types = self.proto.generic_types()
         if generic_types:
@@ -308,8 +323,9 @@ class GolangResponseEnvelope:
         generic_types = str(kwargs.get("generic_types") or "")
         data = str(kwargs.get("data") or "nil")
         error = str(kwargs.get("error") or "nil")
-        success_code = int(spec.get("success_code") or 0)
-        success_message = go_literal(str(spec.get("success_message") or "ok"))
+        success_code = str(kwargs.get("success_code") or self.success_code)
+        success_message = str(kwargs.get("success_message") or self.success_message_literal)
+        success_toast = str(kwargs.get("success_toast") or "nil")
 
         if kind == "none":
             if typ == "json":
@@ -333,12 +349,14 @@ class GolangResponseEnvelope:
             message_field = self.field_go_name("message")
             data_field = self.field_go_name("data")
             error_field_name = self.field_go_name("error")
+            toast_field_name = self.field_go_name("toast") if self.has_envelope_field("toast") else ""
             error_value = "newEnvelopeErrorIdentity({error})" if error_identity != "none" else "nil"
             error_field = (
                 f"\n                        {error_field_name}:   {error_value.format(error=error)},"
                 if error_identity != "none"
                 else ""
             )
+            success_toast_field = f"\n                    {toast_field_name}: {success_toast}," if toast_field_name else ""
             if typ == "json":
                 return f"""
                 if {error} != nil {{
@@ -350,7 +368,7 @@ class GolangResponseEnvelope:
                 return 0, &{wrapper_name}{generic_types}{{
                     {code_field}:    {success_code},
                     {message_field}: {success_message},
-                    {data_field}:    {data},
+                    {data_field}:    {data},{success_toast_field}
                 }}"""
             return f"""
                 if {error} != nil {{
@@ -367,7 +385,7 @@ class GolangResponseEnvelope:
                     Inner: &{wrapper_name}_INNER{generic_types}{{
                         {code_field}:    {success_code},
                         {message_field}: {success_message},
-                        {data_field}:    {data},
+                        {data_field}:    {data},{success_toast_field}
                     }},
                 }}"""
 
@@ -375,6 +393,8 @@ class GolangResponseEnvelope:
             ok_field = self.field_go_name("ok")
             data_field = self.field_go_name("data")
             error_field_name = self.field_go_name("error")
+            toast_field_name = self.field_go_name("toast") if self.has_envelope_field("toast") else ""
+            success_toast_field = f"\n                    {toast_field_name}: {success_toast}," if toast_field_name else ""
             if typ == "json":
                 return f"""
                 if {error} != nil {{
@@ -385,7 +405,7 @@ class GolangResponseEnvelope:
                 }}
                 return 0, &{wrapper_name}{generic_types}{{
                     {ok_field}:   true,
-                    {data_field}: {data},
+                    {data_field}: {data},{success_toast_field}
                 }}"""
             return f"""
                 if {error} != nil {{
@@ -401,7 +421,7 @@ class GolangResponseEnvelope:
                     XMLName: xml.Name{{Local: "{self.response_envelope.get_xml_root_name()}"}},
                     Inner: &{wrapper_name}_INNER{generic_types}{{
                         {ok_field}:   true,
-                        {data_field}: {data},
+                        {data_field}: {data},{success_toast_field}
                     }},
                 }}"""
 

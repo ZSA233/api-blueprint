@@ -103,7 +103,18 @@ type REQ[Path, Query, Body any] struct {
 }
 ```
 
-RPC handler 从 `req.Path`、`req.Query`、`req.Body` 读取输入；无对应输入时该指针为 `nil`。这是破坏性清名，旧 `req.Q` / `req.B` 需要迁移为 `req.Query` / `req.Body`。响应相关泛型也使用 `Response` 语义名，不再使用不透明的 `P`。带 `REQ_PATH` 的 HTTP route 在 ContractGraph 与 `RouteInfo.Path` 中保留 canonical `/user/{user}`，Gin adapter 注册时转换为 `/user/:user` 并通过 `uri:"..."` tag 绑定 path 参数。
+RPC handler 从 `req.Path`、`req.Query`、`req.Body` 读取输入；无对应输入时该指针为 `nil`。这是破坏性清名，旧 `req.Q` / `req.B` 需要迁移为 `req.Query` / `req.Body`。handler context 也使用长名字段：`ctx.Request.Value` / `ctx.Request.Error` 表示绑定后的请求与绑定错误，`ctx.Response` 表示成功响应 metadata。响应相关泛型使用语义名 `Response`，不再使用不透明的 `P`。带 `REQ_PATH` 的 HTTP route 在 ContractGraph 与 `RouteInfo.Path` 中保留 canonical `/user/{user}`，Gin adapter 注册时转换为 `/user/:user` 并通过 `uri:"..."` tag 绑定 path 参数。
+
+成功响应需要覆盖 envelope `code`、`message` 或 `toast` 时，业务 handler 通过 `ctx.Response` 设置，不走 error 路径：
+
+```go
+func (r *Router) UpdateAgreement(ctx *CTX_UpdateAgreement, req *REQ_UpdateAgreement) (*RSP_UpdateAgreement, error) {
+	ctx.Response.SuccessToast("agreement.update.success", "协议已更新")
+	return &RSP_UpdateAgreement{}, nil
+}
+```
+
+`SuccessToast(key, defaultMessage)` 会写入 generated `ToastPayload` wire shape，并把成功 `message` 回退到 `defaultMessage`。如果 envelope 没有 `toast` 字段，toast metadata 会被忽略，但 message fallback 仍可用于 `{ code, message, data }` 这类响应；`NoEnvelope`、raw/file/binary/manual response 不消费 success metadata。`WithErrorMapper(...)` 只处理失败路径，成功提示不应通过构造 error 来表达。
 
 高级分析工具可以对 `go-server` 开启 `emit_contract_metadata = true`。生成物会在 `providers` 中输出共享 metadata 类型，在每个 route package 中输出局部分片 `ContractRoutes()`，在每个 root package 中聚合该 root 下的 routes，并在顶层 `routes.ContractRoutes()` 提供全量入口。该能力只描述协议契约摘要，不生成宿主运行时编排逻辑，默认关闭以避免普通项目增加额外生成文件。
 

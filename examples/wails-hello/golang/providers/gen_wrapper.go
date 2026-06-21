@@ -49,9 +49,13 @@ type RSP_JSON_CodeMessageDataEnvelope[T any] struct {
 	Data    *T                            `json:"data,omitempty" xml:"data,omitempty" form:"data,omitempty" uri:"data,omitempty" binding:"omitempty"`
 }
 
-func NewRSP_JSON_CodeMessageDataEnvelope[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (codeInt int, rsp any) {
+func NewRSP_JSON_CodeMessageDataEnvelope[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error, meta ResponseMeta) (codeInt int, rsp any) {
 	code, message, toast, apiErrorPayload := prov.unwrapError(err)
 	_, _, _, _ = code, message, toast, apiErrorPayload
+	successCode := meta.SuccessCode(0)
+	successMessage := meta.SuccessMessage("ok")
+	successToast := meta.SuccessToast()
+	_, _, _ = successCode, successMessage, successToast
 
 	if apiErrorPayload != nil {
 		return 0, &RSP_JSON_CodeMessageDataEnvelope[Response]{
@@ -61,14 +65,14 @@ func NewRSP_JSON_CodeMessageDataEnvelope[Path, Query, Body, Response any](prov *
 		}
 	}
 	return 0, &RSP_JSON_CodeMessageDataEnvelope[Response]{
-		Code:    0,
-		Message: "ok",
+		Code:    successCode,
+		Message: successMessage,
 		Data:    data,
 	}
 }
 
 func WrapRSP_JSON_CodeMessageDataEnvelope[Response any](data *Response, err error) *RSP_JSON_CodeMessageDataEnvelope[Response] {
-	_, rsp := NewRSP_JSON_CodeMessageDataEnvelope[any, any, any, Response](nil, data, err)
+	_, rsp := NewRSP_JSON_CodeMessageDataEnvelope[any, any, any, Response](nil, data, err, ResponseMeta{})
 	if rsp == nil {
 		return nil
 	}
@@ -76,11 +80,11 @@ func WrapRSP_JSON_CodeMessageDataEnvelope[Response any](data *Response, err erro
 	return typed
 }
 
-func NewRSP_JSON_Entry[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (code int, rsp any) {
+func NewRSP_JSON_Entry[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error, meta ResponseMeta) (code int, rsp any) {
 	switch prov.Options {
 
 	case "CodeMessageDataEnvelope":
-		code, rsp = NewRSP_JSON_CodeMessageDataEnvelope(prov, data, err)
+		code, rsp = NewRSP_JSON_CodeMessageDataEnvelope(prov, data, err, meta)
 	default:
 		panic("[NewRS_JSON] should unreachable.")
 	}
@@ -106,9 +110,13 @@ func (r RSP_XML_CodeMessageDataEnvelope[T]) MarshalXML(enc *xml.Encoder, start x
 	return marshalXML(enc, start, r.XMLName, r.Inner)
 }
 
-func NewRSP_XML_CodeMessageDataEnvelope[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (codeInt int, rsp any) {
+func NewRSP_XML_CodeMessageDataEnvelope[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error, meta ResponseMeta) (codeInt int, rsp any) {
 	code, message, toast, apiErrorPayload := prov.unwrapError(err)
 	_, _, _, _ = code, message, toast, apiErrorPayload
+	successCode := meta.SuccessCode(0)
+	successMessage := meta.SuccessMessage("ok")
+	successToast := meta.SuccessToast()
+	_, _, _ = successCode, successMessage, successToast
 
 	if apiErrorPayload != nil {
 		return 0, &RSP_XML_CodeMessageDataEnvelope[Response]{
@@ -123,18 +131,18 @@ func NewRSP_XML_CodeMessageDataEnvelope[Path, Query, Body, Response any](prov *R
 	return 0, &RSP_XML_CodeMessageDataEnvelope[Response]{
 		XMLName: xml.Name{Local: "response"},
 		Inner: &RSP_XML_CodeMessageDataEnvelope_INNER[Response]{
-			Code:    0,
-			Message: "ok",
+			Code:    successCode,
+			Message: successMessage,
 			Data:    data,
 		},
 	}
 }
 
-func NewRSP_XML_Entry[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (code int, rsp any) {
+func NewRSP_XML_Entry[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error, meta ResponseMeta) (code int, rsp any) {
 	switch prov.Options {
 
 	case "CodeMessageDataEnvelope":
-		code, rsp = NewRSP_XML_CodeMessageDataEnvelope(prov, data, err)
+		code, rsp = NewRSP_XML_CodeMessageDataEnvelope(prov, data, err, meta)
 	default:
 		panic("[NewRSP_XML] should unreachable.")
 	}

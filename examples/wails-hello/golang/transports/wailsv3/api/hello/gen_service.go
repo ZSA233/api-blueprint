@@ -61,14 +61,14 @@ func (svc *HelloService) Greet(
 		"Greet",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, REQ_Greet_QUERY, any, RSP_Greet]{Request: req}
+	ctx.Request = &sharedprovider.RequestContext[any, REQ_Greet_QUERY, any]{Value: req}
 	execErr := svc.greetExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
 		invokeErr = execErr
 	}
 
-	_, wrapped := sharedprovider.NewRSP_JSON(svc.greetExecutor.Indexer.Rsp, response, invokeErr)
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.greetExecutor.Indexer.Rsp, response, invokeErr, ctx.Response.Meta())
 	if wrapped == nil {
 		return nil, nil
 	}

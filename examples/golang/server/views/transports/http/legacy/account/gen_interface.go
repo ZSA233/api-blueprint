@@ -44,16 +44,18 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 			HTTPRoutePathAccountProfile,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
-					Root:      "legacy",
-					Group:     "account",
-					Namespace: "account",
-					Service:   "AccountService",
-					Operation: "AccountProfile",
-					RouteID:   RouteIDAccountProfile,
-					Path:      RoutePathAccountProfile,
-					Methods:   []string{"GET"},
-					Transport: sharedprovider.TransportHTTP,
-					Scope:     sharedprovider.ConnectionScope(""),
+					Root:        "legacy",
+					Group:       "account",
+					Namespace:   "account",
+					Service:     "AccountService",
+					Operation:   "AccountProfile",
+					RouteID:     RouteIDAccountProfile,
+					Summary:     "Rootless account profile example",
+					Description: "Covers a rootless Blueprint group under /account.",
+					Path:        RoutePathAccountProfile,
+					Methods:     []string{"GET"},
+					Transport:   sharedprovider.TransportHTTP,
+					Scope:       sharedprovider.ConnectionScope(""),
 					HTTP: sharedprovider.HTTPRouteInfo{
 						Request: sharedprovider.HTTPRequestInfo{
 							PathParams:             []string{},

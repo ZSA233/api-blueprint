@@ -103,7 +103,18 @@ type REQ[Path, Query, Body any] struct {
 }
 ```
 
-RPC handlers read input from `req.Path`, `req.Query`, and `req.Body`; missing slots are `nil`. This is a breaking cleanup, so older `req.Q` / `req.B` code should migrate to `req.Query` / `req.Body`. Response-related generics also use the semantic `Response` name instead of opaque `P`. For routes with `REQ_PATH`, ContractGraph and `RouteInfo.Path` keep the canonical `/user/{user}` path, while the Gin adapter registers `/user/:user` and binds parameters through `uri:"..."` tags.
+RPC handlers read input from `req.Path`, `req.Query`, and `req.Body`; missing slots are `nil`. This is a breaking cleanup, so older `req.Q` / `req.B` code should migrate to `req.Query` / `req.Body`. Handler context fields also use long names: `ctx.Request.Value` / `ctx.Request.Error` carry the bound request and binding error, and `ctx.Response` carries success response metadata. Response-related generics use the semantic `Response` name instead of opaque `P`. For routes with `REQ_PATH`, ContractGraph and `RouteInfo.Path` keep the canonical `/user/{user}` path, while the Gin adapter registers `/user/:user` and binds parameters through `uri:"..."` tags.
+
+When a successful response needs to override the envelope `code`, `message`, or `toast`, business handlers set it through `ctx.Response` instead of the error path:
+
+```go
+func (r *Router) UpdateAgreement(ctx *CTX_UpdateAgreement, req *REQ_UpdateAgreement) (*RSP_UpdateAgreement, error) {
+	ctx.Response.SuccessToast("agreement.update.success", "Agreement updated")
+	return &RSP_UpdateAgreement{}, nil
+}
+```
+
+`SuccessToast(key, defaultMessage)` writes the generated `ToastPayload` wire shape and lets the success `message` fall back to `defaultMessage`. If an envelope has no `toast` field, toast metadata is ignored, while the message fallback still works for `{ code, message, data }` style responses; `NoEnvelope`, raw/file/binary/manual responses do not consume success metadata. `WithErrorMapper(...)` handles only failure paths, so successful prompts should not be modeled as errors.
 
 Advanced analysis tools can enable `emit_contract_metadata = true` for `go-server`. The generator emits shared metadata types under `providers`, route-local `ContractRoutes()` shards in each route package, root-level aggregators for each blueprint root, and a top-level `routes.ContractRoutes()` aggregate for whole-project analysis. This surface is only a protocol contract summary and does not generate host runtime orchestration; it is off by default to avoid extra files in ordinary projects.
 

@@ -15,6 +15,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "legacy.room.get.list",
+			Summary:      "Rootless room list example",
+			Description:  "Covers a second top-level group under the same logical blueprint.",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "empty",

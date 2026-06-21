@@ -44,16 +44,18 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 			HTTPRoutePathRuntimeCurrentStatus,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
-					Root:      "runtime",
-					Group:     "status",
-					Namespace: "status",
-					Service:   "StatusService",
-					Operation: "RuntimeCurrentStatus",
-					RouteID:   RouteIDRuntimeCurrentStatus,
-					Path:      RoutePathRuntimeCurrentStatus,
-					Methods:   []string{"GET"},
-					Transport: sharedprovider.TransportHTTP,
-					Scope:     sharedprovider.ConnectionScope(""),
+					Root:        "runtime",
+					Group:       "status",
+					Namespace:   "status",
+					Service:     "StatusService",
+					Operation:   "RuntimeCurrentStatus",
+					RouteID:     RouteIDRuntimeCurrentStatus,
+					Summary:     "Runtime root naming example",
+					Description: "Covers Swift root module naming when the root segment is runtime.",
+					Path:        RoutePathRuntimeCurrentStatus,
+					Methods:     []string{"GET"},
+					Transport:   sharedprovider.TransportHTTP,
+					Scope:       sharedprovider.ConnectionScope(""),
 					HTTP: sharedprovider.HTTPRouteInfo{
 						Request: sharedprovider.HTTPRequestInfo{
 							PathParams:             []string{},

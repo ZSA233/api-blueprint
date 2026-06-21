@@ -15,6 +15,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.hello.get.abc",
+			Summary:      "\u8fd9\u662fabc\u7684summary",
+			Description:  "\u8fd9\u662fabc\u7684description",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "ok",
@@ -41,6 +43,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "none",
 			Envelope:     "",
 			RouteID:      "api.hello.get.helloway",
+			Summary:      "hello-way",
+			Description:  "hello-way",
 			Native:       true,
 			Request: providers.ContractSchemaInfo{
 				Status: "ok",
@@ -64,6 +68,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.hello.get.listenum",
+			Summary:      "list-enum",
+			Description:  "list-enum",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "empty",
@@ -85,6 +91,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.hello.get.mapenum",
+			Summary:      "map-enum",
+			Description:  "map-enum",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "empty",
@@ -106,6 +114,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.hello.get.string",
+			Summary:      "string",
+			Description:  "string",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "empty",
@@ -127,6 +137,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.hello.get.stringemun",
+			Summary:      "string-enum",
+			Description:  "string-enum",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "empty",
@@ -148,6 +160,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.hello.get.uint64",
+			Summary:      "uint64",
+			Description:  "uint64",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "empty",

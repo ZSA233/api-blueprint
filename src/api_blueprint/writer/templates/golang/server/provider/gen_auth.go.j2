@@ -29,8 +29,8 @@ func (prov *AuthProvider[Path, Query, Body, Response]) GetName() string {
 func (prov *AuthProvider[Path, Query, Body, Response]) Handle(anyCtx ContextInterface) {
 	ctx := AdaptContext[Path, Query, Body, Response](anyCtx)
 	var req *REQ[Path, Query, Body]
-	if ctx.Req != nil {
-		req = ctx.Req.Request
+	if ctx.Request != nil {
+		req = ctx.Request.Value
 	}
 
 	authCtx, err := prov.BuildAuthContext(ctx, req)

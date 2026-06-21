@@ -388,9 +388,9 @@ func newContext[Path, Query, Body, Response any](
 	)
 	ctx.HeaderFn = ginCtx.GetHeader
 	req, err := bindRequest(ginCtx, executor.Indexer.Req, executor.Route)
-	ctx.Req = &provider.ReqContext[Path, Query, Body, Response]{
-		Request: req,
-		Error:   err,
+	ctx.Request = &provider.RequestContext[Path, Query, Body]{
+		Value: req,
+		Error: err,
 	}
 	return ctx
 }
@@ -401,6 +401,7 @@ func writeResponse[Path, Query, Body, Response any](
 	response *Response,
 	err error,
 	route provider.RouteInfo,
+	meta provider.ResponseMeta,
 ) {
 	if ginCtx.Writer.Written() {
 		return
@@ -426,20 +427,20 @@ func writeResponse[Path, Query, Body, Response any](
 
 	switch rspProvider.Type {
 	case "json":
-		code, payload := provider.NewRSP_JSON(rspProvider, response, err)
+		code, payload := provider.NewRSP_JSON(rspProvider, response, err, meta)
 		if code == 0 {
 			code = http.StatusOK
 		}
 		ginCtx.JSON(code, payload)
 	case "xml":
-		code, payload := provider.NewRSP_XML(rspProvider, response, err)
+		code, payload := provider.NewRSP_XML(rspProvider, response, err, meta)
 		if code == 0 {
 			code = http.StatusOK
 		}
 		ginCtx.XML(code, payload)
 	case "bytes", "file", "byte_stream":
 		if err != nil {
-			code, payload := provider.NewRSP_JSON(rspProvider, response, err)
+			code, payload := provider.NewRSP_JSON(rspProvider, response, err, meta)
 			if code == 0 {
 				code = http.StatusInternalServerError
 			}
@@ -449,7 +450,7 @@ func writeResponse[Path, Query, Body, Response any](
 		writeRawResponse(ginCtx, rspProvider.Type, rspProvider.Route.HTTP.Response.DefaultFilename, response)
 	case "binary_schema":
 		if err != nil {
-			code, payload := provider.NewRSP_JSON(rspProvider, response, err)
+			code, payload := provider.NewRSP_JSON(rspProvider, response, err, meta)
 			if code == 0 {
 				code = http.StatusInternalServerError
 			}
@@ -566,7 +567,7 @@ func makeHandler[Path, Query, Body, Response any](
 		if invokeErr == nil {
 			invokeErr = execErr
 		}
-		writeResponse(ginCtx, executor.Indexer.Rsp, response, invokeErr, executor.Route)
+		writeResponse(ginCtx, executor.Indexer.Rsp, response, invokeErr, executor.Route, ctx.Response.Meta())
 	}
 }
 

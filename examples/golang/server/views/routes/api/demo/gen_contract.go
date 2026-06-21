@@ -15,6 +15,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.demo.put.z1put",
+			Summary:      "\u8fd9\u662fput\u7684summary",
+			Description:  "\u8fd9\u662fput\u7684description",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "ok",
@@ -43,6 +45,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.demo.get.abc",
+			Summary:      "\u8fd9\u662fabc\u7684summary",
+			Description:  "\u8fd9\u662fabc\u7684description",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "ok",
@@ -77,6 +81,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "xml",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.demo.delete.delete",
+			Summary:      "\u8fd9\u662fdelete\u7684summary",
+			Description:  "\u8fd9\u662fdelete\u7684description",
 			Native:       true,
 			Request: providers.ContractSchemaInfo{
 				Status: "ok",
@@ -101,6 +107,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.demo.post.emptyresponse",
+			Summary:      "Empty response example",
+			Description:  "Successful envelope response with no business data.",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "empty",
@@ -122,6 +130,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.demo.get.errordemo",
+			Summary:      "Typed error example",
+			Description:  "Shows declared, route-local and unknown business errors",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "ok",
@@ -147,6 +157,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.demo.post.formsubmit",
+			Summary:      "Form body example",
+			Description:  "Covers application/x-www-form-urlencoded request generation",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "ok",
@@ -176,6 +188,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.demo.post.mapmodel",
+			Summary:      "\u8fd9\u662f\u4e00\u4e2araw",
+			Description:  "\u8fd9\u662f\u4e00\u4e2araw description",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "empty",
@@ -197,6 +211,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.demo.get.pathecho_item_badge",
+			Summary:      "Path parameter example",
+			Description:  "Covers typed path request generation.",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "ok",
@@ -225,6 +241,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.demo.post.postdeprecated",
+			Summary:      "\u8fd9\u662f\u4e00\u4e2asummary",
+			Description:  "\u8fd9\u662f\u4e00\u4e2adescription",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "ok",
@@ -251,6 +269,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.demo.post.raw",
+			Summary:      "\u8fd9\u662f\u4e00\u4e2araw",
+			Description:  "\u8fd9\u662f\u4e00\u4e2araw description",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "empty",
@@ -275,6 +295,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.demo.get.requestoptions",
+			Summary:      "Request options conformance endpoint",
+			Description:  "Used by generated clients to verify per-call headers and timeout behavior.",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "ok",
@@ -301,6 +323,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.demo.post.testpost",
+			Summary:      "\u8fd9\u662fpost\u7684summary",
+			Description:  "\u8fd9\u662fpost\u7684description",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "ok",

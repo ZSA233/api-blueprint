@@ -15,6 +15,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "legacy.account.get.profile",
+			Summary:      "Rootless account profile example",
+			Description:  "Covers a rootless Blueprint group under /account.",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "empty",

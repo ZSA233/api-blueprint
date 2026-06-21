@@ -95,6 +95,9 @@ func (executor *RouteExecutor[Path, Query, Body, Response]) runRange(ctx *Contex
 	}
 	ctx.Indexer = executor.Indexer
 	ctx.Route = &executor.Route
+	if ctx.Response == nil {
+		ctx.Response = NewResponseContext()
+	}
 	ctx.executor = executor
 	ctx.pipelineNext = start
 	ctx.pipelineEnd = end

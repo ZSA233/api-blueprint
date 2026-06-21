@@ -15,6 +15,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "NoEnvelope",
 			RouteID:      "static.static.get.docjson",
+			Summary:      "docJson",
+			Description:  "",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "empty",
@@ -36,6 +38,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "json",
 			Envelope:     "NoEnvelope",
 			RouteID:      "static.static.get.dochaha",
+			Summary:      "dochaha",
+			Description:  "",
 			Native:       false,
 			Request: providers.ContractSchemaInfo{
 				Status: "empty",

@@ -44,16 +44,18 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 			HTTPRoutePathLegacyJsonCompat,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
-					Root:      "legacy",
-					Group:     "legacy-json",
-					Namespace: "legacy_json",
-					Service:   "LegacyJsonService",
-					Operation: "LegacyJsonCompat",
-					RouteID:   RouteIDLegacyJsonCompat,
-					Path:      RoutePathLegacyJsonCompat,
-					Methods:   []string{"GET"},
-					Transport: sharedprovider.TransportHTTP,
-					Scope:     sharedprovider.ConnectionScope(""),
+					Root:        "legacy",
+					Group:       "legacy-json",
+					Namespace:   "legacy_json",
+					Service:     "LegacyJsonService",
+					Operation:   "LegacyJsonCompat",
+					RouteID:     RouteIDLegacyJsonCompat,
+					Summary:     "Legacy JSON compatibility example",
+					Description: "Covers legacy fields that accept multiple JSON shapes.",
+					Path:        RoutePathLegacyJsonCompat,
+					Methods:     []string{"GET"},
+					Transport:   sharedprovider.TransportHTTP,
+					Scope:       sharedprovider.ConnectionScope(""),
 					HTTP: sharedprovider.HTTPRouteInfo{
 						Request: sharedprovider.HTTPRequestInfo{
 							PathParams:             []string{},

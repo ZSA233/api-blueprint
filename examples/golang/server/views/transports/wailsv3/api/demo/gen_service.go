@@ -289,14 +289,14 @@ func (svc *DemoService) Abc(
 		"Abc",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, REQ_Abc_QUERY, any, RSP_Abc]{Request: req}
+	ctx.Request = &sharedprovider.RequestContext[any, REQ_Abc_QUERY, any]{Value: req}
 	execErr := svc.abcExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
 		invokeErr = execErr
 	}
 
-	_, wrapped := sharedprovider.NewRSP_JSON(svc.abcExecutor.Indexer.Rsp, response, invokeErr)
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.abcExecutor.Indexer.Rsp, response, invokeErr, ctx.Response.Meta())
 	if wrapped == nil {
 		return nil, nil
 	}
@@ -321,14 +321,14 @@ func (svc *DemoService) TestPost(
 		"TestPost",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, any, REQ_TestPost_JSON, RSP_TestPost]{Request: req}
+	ctx.Request = &sharedprovider.RequestContext[any, any, REQ_TestPost_JSON]{Value: req}
 	execErr := svc.testPostExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
 		invokeErr = execErr
 	}
 
-	_, wrapped := sharedprovider.NewRSP_JSON(svc.testPostExecutor.Indexer.Rsp, response, invokeErr)
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.testPostExecutor.Indexer.Rsp, response, invokeErr, ctx.Response.Meta())
 	if wrapped == nil {
 		return nil, nil
 	}
@@ -353,14 +353,14 @@ func (svc *DemoService) FormSubmit(
 		"FormSubmit",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, any, REQ_FormSubmit_FORM, RSP_FormSubmit]{Request: req}
+	ctx.Request = &sharedprovider.RequestContext[any, any, REQ_FormSubmit_FORM]{Value: req}
 	execErr := svc.formSubmitExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
 		invokeErr = execErr
 	}
 
-	_, wrapped := sharedprovider.NewRSP_JSON(svc.formSubmitExecutor.Indexer.Rsp, response, invokeErr)
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.formSubmitExecutor.Indexer.Rsp, response, invokeErr, ctx.Response.Meta())
 	if wrapped == nil {
 		return nil, nil
 	}
@@ -385,14 +385,14 @@ func (svc *DemoService) RequestOptions(
 		"RequestOptions",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, REQ_RequestOptions_QUERY, any, RSP_RequestOptions]{Request: req}
+	ctx.Request = &sharedprovider.RequestContext[any, REQ_RequestOptions_QUERY, any]{Value: req}
 	execErr := svc.requestOptionsExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
 		invokeErr = execErr
 	}
 
-	_, wrapped := sharedprovider.NewRSP_JSON(svc.requestOptionsExecutor.Indexer.Rsp, response, invokeErr)
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.requestOptionsExecutor.Indexer.Rsp, response, invokeErr, ctx.Response.Meta())
 	if wrapped == nil {
 		return nil, nil
 	}
@@ -417,14 +417,14 @@ func (svc *DemoService) EmptyResponse(
 		"EmptyResponse",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, any, any, RSP_EmptyResponse]{Request: req}
+	ctx.Request = &sharedprovider.RequestContext[any, any, any]{Value: req}
 	execErr := svc.emptyResponseExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
 		invokeErr = execErr
 	}
 
-	_, wrapped := sharedprovider.NewRSP_JSON(svc.emptyResponseExecutor.Indexer.Rsp, response, invokeErr)
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.emptyResponseExecutor.Indexer.Rsp, response, invokeErr, ctx.Response.Meta())
 	if wrapped == nil {
 		return nil, nil
 	}
@@ -449,14 +449,14 @@ func (svc *DemoService) PutDemo(
 		"PutDemo",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, REQ_PutDemo_QUERY, REQ_PutDemo_JSON, RSP_PutDemo]{Request: req}
+	ctx.Request = &sharedprovider.RequestContext[any, REQ_PutDemo_QUERY, REQ_PutDemo_JSON]{Value: req}
 	execErr := svc.putDemoExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
 		invokeErr = execErr
 	}
 
-	_, wrapped := sharedprovider.NewRSP_JSON(svc.putDemoExecutor.Indexer.Rsp, response, invokeErr)
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.putDemoExecutor.Indexer.Rsp, response, invokeErr, ctx.Response.Meta())
 	if wrapped == nil {
 		return nil, nil
 	}
@@ -481,7 +481,7 @@ func (svc *DemoService) Delete(
 		"Delete",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, REQ_Delete_QUERY, any, RSP_Delete]{Request: req}
+	ctx.Request = &sharedprovider.RequestContext[any, REQ_Delete_QUERY, any]{Value: req}
 	execErr := svc.deleteExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -491,7 +491,7 @@ func (svc *DemoService) Delete(
 	if invokeErr != nil {
 		return "", invokeErr
 	}
-	return sharedprovider.MarshalXMLResponse(svc.deleteExecutor.Indexer.Rsp, response)
+	return sharedprovider.MarshalXMLResponse(svc.deleteExecutor.Indexer.Rsp, response, ctx.Response.Meta())
 }
 
 func (svc *DemoService) SubscribeSweepEvents(
@@ -507,7 +507,7 @@ func (svc *DemoService) SubscribeSweepEvents(
 		"SubscribeSweepEvents",
 		wailstransport.ConnectionOpenHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, OPEN_SweepEvents, any, RSP_SweepEvents]{Request: req}
+	ctx.Request = &sharedprovider.RequestContext[any, OPEN_SweepEvents, any]{Value: req}
 	if err := svc.sweepEventsExecutor.Run(ctx); err != nil {
 		return nil, err
 	}
@@ -564,7 +564,7 @@ func (svc *DemoService) OpenAssistantSession(
 		"OpenAssistantSession",
 		wailstransport.ConnectionOpenHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, OPEN_AssistantSession, any, RSP_AssistantSession]{Request: req}
+	ctx.Request = &sharedprovider.RequestContext[any, OPEN_AssistantSession, any]{Value: req}
 	if err := svc.assistantSessionExecutor.Run(ctx); err != nil {
 		return nil, err
 	}
@@ -633,14 +633,14 @@ func (svc *DemoService) PostDeprecated(
 		"PostDeprecated",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, any, REQ_PostDeprecated_JSON, RSP_PostDeprecated]{Request: req}
+	ctx.Request = &sharedprovider.RequestContext[any, any, REQ_PostDeprecated_JSON]{Value: req}
 	execErr := svc.postDeprecatedExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
 		invokeErr = execErr
 	}
 
-	_, wrapped := sharedprovider.NewRSP_JSON(svc.postDeprecatedExecutor.Indexer.Rsp, response, invokeErr)
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.postDeprecatedExecutor.Indexer.Rsp, response, invokeErr, ctx.Response.Meta())
 	if wrapped == nil {
 		return nil, nil
 	}
@@ -665,14 +665,14 @@ func (svc *DemoService) Raw(
 		"Raw",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, any, any, RSP_Raw]{Request: req}
+	ctx.Request = &sharedprovider.RequestContext[any, any, any]{Value: req}
 	execErr := svc.rawExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
 		invokeErr = execErr
 	}
 
-	_, wrapped := sharedprovider.NewRSP_JSON(svc.rawExecutor.Indexer.Rsp, response, invokeErr)
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.rawExecutor.Indexer.Rsp, response, invokeErr, ctx.Response.Meta())
 	if wrapped == nil {
 		return nil, nil
 	}
@@ -697,14 +697,14 @@ func (svc *DemoService) MapModel(
 		"MapModel",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, any, any, RSP_MapModel]{Request: req}
+	ctx.Request = &sharedprovider.RequestContext[any, any, any]{Value: req}
 	execErr := svc.mapModelExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
 		invokeErr = execErr
 	}
 
-	_, wrapped := sharedprovider.NewRSP_JSON(svc.mapModelExecutor.Indexer.Rsp, response, invokeErr)
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.mapModelExecutor.Indexer.Rsp, response, invokeErr, ctx.Response.Meta())
 	if wrapped == nil {
 		return nil, nil
 	}
@@ -729,14 +729,14 @@ func (svc *DemoService) ErrorDemo(
 		"ErrorDemo",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, REQ_ErrorDemo_QUERY, any, RSP_ErrorDemo]{Request: req}
+	ctx.Request = &sharedprovider.RequestContext[any, REQ_ErrorDemo_QUERY, any]{Value: req}
 	execErr := svc.errorDemoExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
 		invokeErr = execErr
 	}
 
-	_, wrapped := sharedprovider.NewRSP_JSON(svc.errorDemoExecutor.Indexer.Rsp, response, invokeErr)
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.errorDemoExecutor.Indexer.Rsp, response, invokeErr, ctx.Response.Meta())
 	if wrapped == nil {
 		return nil, nil
 	}

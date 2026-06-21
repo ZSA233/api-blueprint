@@ -142,8 +142,8 @@ func CHANNEL[Path, Query, Body, Response, Server, Client, Close any](
 			_ = ginCtx.AbortWithError(http.StatusBadRequest, err)
 			return
 		}
-		if ctx.Req != nil && ctx.Req.Error != nil {
-			_ = ginCtx.AbortWithError(http.StatusBadRequest, ctx.Req.Error)
+		if ctx.Request != nil && ctx.Request.Error != nil {
+			_ = ginCtx.AbortWithError(http.StatusBadRequest, ctx.Request.Error)
 			return
 		}
 		conn, cleanup, err := activeHTTPConnectionHooks().AcceptChannel(ginCtx)
@@ -158,7 +158,7 @@ func CHANNEL[Path, Query, Body, Response, Server, Client, Close any](
 		if cleanup != nil {
 			defer cleanup()
 		}
-		channel := provider.NewChannelSession[Query, Server, Client, Close](ctx.Req.Request.Query, conn)
+		channel := provider.NewChannelSession[Query, Server, Client, Close](ctx.Request.Value.Query, conn)
 		if err := handler(ctx, channel); err != nil {
 			_ = channel.Abort(ginCtx.Request.Context(), int(websocket.StatusInternalError), err.Error())
 		}

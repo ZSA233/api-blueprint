@@ -14,7 +14,99 @@ const (
 	PROV_RSP = "rsp"
 )
 
-type RspContext struct{}
+type ToastPayload = errors.ToastPayload
+
+type ResponseMeta struct {
+	Code    *int
+	Message *string
+	Toast   *ToastPayload
+}
+
+func (meta ResponseMeta) SuccessCode(fallback int) int {
+	if meta.Code != nil {
+		return *meta.Code
+	}
+	return fallback
+}
+
+func (meta ResponseMeta) SuccessMessage(fallback string) string {
+	if meta.Message != nil {
+		return *meta.Message
+	}
+	if meta.Toast != nil {
+		if meta.Toast.Text != "" {
+			return meta.Toast.Text
+		}
+		if meta.Toast.Default != "" {
+			return meta.Toast.Default
+		}
+	}
+	return fallback
+}
+
+func (meta ResponseMeta) SuccessToast() *ToastPayload {
+	if meta.Toast == nil {
+		return nil
+	}
+	toast := *meta.Toast
+	return &toast
+}
+
+type ResponseContext struct {
+	meta ResponseMeta
+}
+
+func NewResponseContext() *ResponseContext {
+	return &ResponseContext{}
+}
+
+func (rsp *ResponseContext) SetCode(code int) {
+	if rsp == nil {
+		return
+	}
+	rsp.meta.Code = &code
+}
+
+func (rsp *ResponseContext) SetMessage(message string) {
+	if rsp == nil {
+		return
+	}
+	rsp.meta.Message = &message
+}
+
+func (rsp *ResponseContext) SetToast(toast ToastPayload) {
+	if rsp == nil {
+		return
+	}
+	clone := toast
+	rsp.meta.Toast = &clone
+}
+
+func (rsp *ResponseContext) SuccessToast(key string, defaultMessage string) {
+	if rsp == nil {
+		return
+	}
+	rsp.SetToast(ToastPayload{
+		Key:     key,
+		Level:   "success",
+		Default: defaultMessage,
+	})
+	if rsp.meta.Message == nil && defaultMessage != "" {
+		rsp.SetMessage(defaultMessage)
+	}
+}
+
+func (rsp *ResponseContext) Meta() ResponseMeta {
+	if rsp == nil {
+		return ResponseMeta{}
+	}
+	meta := rsp.meta
+	if meta.Toast != nil {
+		toast := *meta.Toast
+		meta.Toast = &toast
+	}
+	return meta
+}
 
 type ErrorMappingContext struct {
 	Route     RouteInfo
@@ -86,8 +178,8 @@ func (prov *RspProvider[Path, Query, Body, Response]) GetName() string {
 	return PROV_RSP
 }
 
-func (prov *RspProvider[Path, Query, Body, Response]) NewContext(ctx *Context[Path, Query, Body, Response]) *RspContext {
-	return &RspContext{}
+func (prov *RspProvider[Path, Query, Body, Response]) NewContext(ctx *Context[Path, Query, Body, Response]) *ResponseContext {
+	return NewResponseContext()
 }
 
 func (prov *RspProvider[Path, Query, Body, Response]) Handle(anyCtx ContextInterface) {
@@ -178,16 +270,16 @@ func marshalXML[Response any](enc *xml.Encoder, start xml.StartElement, xmlName 
 	return enc.EncodeElement(inner, start)
 }
 
-func NewRSP_JSON[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (code int, rsp any) {
-	return NewRSP_JSON_Entry(prov, data, err)
+func NewRSP_JSON[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error, meta ResponseMeta) (code int, rsp any) {
+	return NewRSP_JSON_Entry(prov, data, err, meta)
 }
 
-func NewRSP_XML[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (code int, rsp any) {
-	return NewRSP_XML_Entry(prov, data, err)
+func NewRSP_XML[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error, meta ResponseMeta) (code int, rsp any) {
+	return NewRSP_XML_Entry(prov, data, err, meta)
 }
 
-func MarshalXMLResponse[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response) (string, error) {
-	_, rsp := NewRSP_XML(prov, data, nil)
+func MarshalXMLResponse[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, meta ResponseMeta) (string, error) {
+	_, rsp := NewRSP_XML(prov, data, nil, meta)
 	if rsp == nil {
 		return "", nil
 	}

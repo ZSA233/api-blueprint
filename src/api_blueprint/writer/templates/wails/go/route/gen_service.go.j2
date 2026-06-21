@@ -76,7 +76,7 @@ func (svc *{{ route.service_name }}) {{ route.connection_connect_func }}(
 		{{ route.connection_connect_func | tojson }},
 		wailstransport.ConnectionOpenHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, {{ route.local_query_type_expr }}, any, {{ route.rsp_type }}]{Request: req}
+	ctx.Request = &sharedprovider.RequestContext[any, {{ route.local_query_type_expr }}, any]{Value: req}
 	if err := svc.{{ route.executor_field_name }}.Run(ctx); err != nil {
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func (svc *{{ route.service_name }}) {{ route.connection_connect_func }}(
 		{{ route.connection_connect_func | tojson }},
 		wailstransport.ConnectionOpenHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, {{ route.local_query_type_expr }}, any, {{ route.rsp_type }}]{Request: req}
+	ctx.Request = &sharedprovider.RequestContext[any, {{ route.local_query_type_expr }}, any]{Value: req}
 	if err := svc.{{ route.executor_field_name }}.Run(ctx); err != nil {
 		return nil, err
 	}
@@ -204,7 +204,7 @@ func (svc *{{ route.service_name }}) {{ route.func_name }}(
 		{{ route.func_name | tojson }},
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Req = &sharedprovider.ReqContext[any, {{ route.local_query_type_expr }}, {{ route.local_body_type_expr }}, {{ route.rsp_type }}]{Request: req}
+	ctx.Request = &sharedprovider.RequestContext[any, {{ route.local_query_type_expr }}, {{ route.local_body_type_expr }}]{Value: req}
 	execErr := svc.{{ route.executor_field_name }}.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -212,7 +212,7 @@ func (svc *{{ route.service_name }}) {{ route.func_name }}(
 	}
 
 {% if route.has_wrapped_json_response %}
-	_, wrapped := sharedprovider.NewRSP_JSON(svc.{{ route.executor_field_name }}.Indexer.Rsp, response, invokeErr)
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.{{ route.executor_field_name }}.Indexer.Rsp, response, invokeErr, ctx.Response.Meta())
 	if wrapped == nil {
 		return nil, nil
 	}
@@ -222,7 +222,7 @@ func (svc *{{ route.service_name }}) {{ route.func_name }}(
 	if invokeErr != nil {
 		return "", invokeErr
 	}
-	return sharedprovider.MarshalXMLResponse(svc.{{ route.executor_field_name }}.Indexer.Rsp, response)
+	return sharedprovider.MarshalXMLResponse(svc.{{ route.executor_field_name }}.Indexer.Rsp, response, ctx.Response.Meta())
 {% elif route.is_text_response %}
 	if invokeErr != nil {
 		return "", invokeErr

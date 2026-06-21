@@ -44,16 +44,18 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 			HTTPRoutePathDefault,
 			sharedprovider.NewRouteExecutor(
 				sharedprovider.RouteInfo{
-					Root:      "api",
-					Group:     "conflict",
-					Namespace: "conflict",
-					Service:   "ConflictService",
-					Operation: "Default",
-					RouteID:   RouteIDDefault,
-					Path:      RoutePathDefault,
-					Methods:   []string{"GET"},
-					Transport: sharedprovider.TransportHTTP,
-					Scope:     sharedprovider.ConnectionScope(""),
+					Root:        "api",
+					Group:       "conflict",
+					Namespace:   "conflict",
+					Service:     "ConflictService",
+					Operation:   "Default",
+					RouteID:     RouteIDDefault,
+					Summary:     "Naming conflict example",
+					Description: "Covers reserved operation names and route-local model names",
+					Path:        RoutePathDefault,
+					Methods:     []string{"GET"},
+					Transport:   sharedprovider.TransportHTTP,
+					Scope:       sharedprovider.ConnectionScope(""),
 					HTTP: sharedprovider.HTTPRouteInfo{
 						Request: sharedprovider.HTTPRequestInfo{
 							PathParams:             []string{},

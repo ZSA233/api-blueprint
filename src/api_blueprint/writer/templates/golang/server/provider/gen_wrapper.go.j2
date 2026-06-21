@@ -40,9 +40,13 @@ package {{ writer.provider_package }}
 
 {% for envelope in rsp_json_envelopes %}
 	{% set proto = envelope.proto %}
-	func NewRSP_JSON_{{ envelope.class_name }}[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (codeInt int, rsp any) {
+	func NewRSP_JSON_{{ envelope.class_name }}[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error, meta ResponseMeta) (codeInt int, rsp any) {
 		code, message, toast, apiErrorPayload := prov.unwrapError(err)
 		_, _, _, _ = code, message, toast, apiErrorPayload
+		successCode := meta.SuccessCode({{ envelope.success_code }})
+		successMessage := meta.SuccessMessage({{ envelope.success_message_literal | safe }})
+		successToast := meta.SuccessToast()
+		_, _, _ = successCode, successMessage, successToast
 		{{ 
 			envelope.json_factory(
 				wrapper_name=envelope.proto_name,
@@ -52,12 +56,15 @@ package {{ writer.provider_package }}
 				message='message',
 				toast='toast',
 				error='apiErrorPayload',
+				success_code='successCode',
+				success_message='successMessage',
+				success_toast='successToast',
 			) | safe
 		}}
 	}
 
 	func WrapRSP_JSON_{{ envelope.class_name }}[Response any](data *Response, err error) {{ envelope.type_reference('Response') | safe }} {
-		_, rsp := NewRSP_JSON_{{ envelope.class_name }}[any, any, any, Response](nil, data, err)
+		_, rsp := NewRSP_JSON_{{ envelope.class_name }}[any, any, any, Response](nil, data, err, ResponseMeta{})
 		if rsp == nil {
 			return nil
 		}
@@ -67,11 +74,11 @@ package {{ writer.provider_package }}
 {% endfor %}
 
 
-func NewRSP_JSON_Entry[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (code int, rsp any) {
+func NewRSP_JSON_Entry[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error, meta ResponseMeta) (code int, rsp any) {
 	switch prov.Options {
 	{% for envelope in rsp_json_envelopes %}
 	case "{{ envelope.class_name }}":
-		code, rsp = NewRSP_JSON_{{ envelope.class_name }}(prov, data, err){% endfor %}
+		code, rsp = NewRSP_JSON_{{ envelope.class_name }}(prov, data, err, meta){% endfor %}
 	default:
 		panic("[NewRS_JSON] should unreachable.")
 	}
@@ -124,9 +131,13 @@ type RSP_XML[Response any] struct {
 
 
 {% for envelope in rsp_xml_envelopes %}
-	func NewRSP_XML_{{ envelope.class_name }}[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (codeInt int, rsp any) {
+	func NewRSP_XML_{{ envelope.class_name }}[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error, meta ResponseMeta) (codeInt int, rsp any) {
 		code, message, toast, apiErrorPayload := prov.unwrapError(err)
 		_, _, _, _ = code, message, toast, apiErrorPayload
+		successCode := meta.SuccessCode({{ envelope.success_code }})
+		successMessage := meta.SuccessMessage({{ envelope.success_message_literal | safe }})
+		successToast := meta.SuccessToast()
+		_, _, _ = successCode, successMessage, successToast
 		{{ 
 			envelope.xml_factory(
 				wrapper_name=envelope.proto_name,
@@ -136,16 +147,19 @@ type RSP_XML[Response any] struct {
 				message='message',
 				toast='toast',
 				error='apiErrorPayload',
+				success_code='successCode',
+				success_message='successMessage',
+				success_toast='successToast',
 			) | safe
 		}}
 	}
 {% endfor %}
 
-func NewRSP_XML_Entry[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (code int, rsp any) {
+func NewRSP_XML_Entry[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error, meta ResponseMeta) (code int, rsp any) {
 	switch prov.Options {
 	{% for envelope in rsp_xml_envelopes %}
 	case "{{ envelope.class_name }}":
-		code, rsp = NewRSP_XML_{{ envelope.class_name }}(prov, data, err){% endfor %}
+		code, rsp = NewRSP_XML_{{ envelope.class_name }}(prov, data, err, meta){% endfor %}
 	default:
 		panic("[NewRSP_XML] should unreachable.")
 	}

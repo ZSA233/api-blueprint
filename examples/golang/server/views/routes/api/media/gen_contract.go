@@ -15,6 +15,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "file",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.media.get.download",
+			Summary:      "Media workbook download",
+			Description:  "Returns a generated XLSX file response.",
 			Native:       true,
 			Request: providers.ContractSchemaInfo{
 				Status: "empty",
@@ -36,6 +38,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "file",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.media.get.downloaddynamic",
+			Summary:      "Media workbook download with service filename override",
+			Description:  "Returns a generated XLSX file response with a dynamic filename.",
 			Native:       true,
 			Request: providers.ContractSchemaInfo{
 				Status: "empty",
@@ -57,6 +61,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "file",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.media.get.downloadfilenameedge",
+			Summary:      "Media download with RFC 5987 filename",
+			Description:  "Returns a file response whose dynamic filename requires filename* parsing.",
 			Native:       true,
 			Request: providers.ContractSchemaInfo{
 				Status: "empty",
@@ -78,6 +84,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "bytes",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.media.get.errorframe",
+			Summary:      "Raw media typed error",
+			Description:  "Returns raw JPEG bytes on success and typed JSON envelope errors on failure.",
 			Native:       true,
 			Request: providers.ContractSchemaInfo{
 				Status: "ok",
@@ -101,6 +109,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "bytes",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.media.get.frame",
+			Summary:      "Latest media frame",
+			Description:  "Returns the latest buffered JPEG frame.",
 			Native:       true,
 			Request: providers.ContractSchemaInfo{
 				Status: "empty",
@@ -122,6 +132,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "byte_stream",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.media.get.mjpeg",
+			Summary:      "MJPEG byte stream",
+			Description:  "Returns a multipart byte stream with MJPEG boundary chunks.",
 			Native:       true,
 			Request: providers.ContractSchemaInfo{
 				Status: "empty",
@@ -143,6 +155,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: "bytes",
 			Envelope:     "CodeMessageDataEnvelope",
 			RouteID:      "api.media.post.preview",
+			Summary:      "Multipart media preview",
+			Description:  "Accepts multipart upload and returns buffered JPEG bytes.",
 			Native:       true,
 			Request: providers.ContractSchemaInfo{
 				Status: "ok",

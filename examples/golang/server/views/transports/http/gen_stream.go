@@ -133,8 +133,8 @@ func STREAM[Path, Query, Body, Response, Server, Close any](
 			_ = ginCtx.AbortWithError(http.StatusBadRequest, err)
 			return
 		}
-		if ctx.Req != nil && ctx.Req.Error != nil {
-			_ = ginCtx.AbortWithError(http.StatusBadRequest, ctx.Req.Error)
+		if ctx.Request != nil && ctx.Request.Error != nil {
+			_ = ginCtx.AbortWithError(http.StatusBadRequest, ctx.Request.Error)
 			return
 		}
 		ginCtx.Header("Content-Type", "text/event-stream")
@@ -145,7 +145,7 @@ func STREAM[Path, Query, Body, Response, Server, Close any](
 			_ = ginCtx.AbortWithError(http.StatusInternalServerError, fmt.Errorf("[httptransport] event stream connection hook returned nil"))
 			return
 		}
-		stream := provider.NewStreamSession[Query, Server, Close](ctx.Req.Request.Query, conn)
+		stream := provider.NewStreamSession[Query, Server, Close](ctx.Request.Value.Query, conn)
 		if err := handler(ctx, stream); err != nil {
 			_ = stream.Abort(ginCtx.Request.Context(), http.StatusInternalServerError, err.Error())
 		}

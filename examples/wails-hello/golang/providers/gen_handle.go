@@ -10,8 +10,8 @@ const (
 	PROV_HANDLE = "handle"
 )
 
-type HandleContext[Path, Query, Body, Response any] struct {
-	Response *Response
+type HandleContext[R any] struct {
+	Response *R
 	Error    error
 }
 
@@ -39,23 +39,23 @@ func (prov *HandleProvider[Path, Query, Body, Response]) Handle(anyCtx ContextIn
 	ctx := AdaptContext[Path, Query, Body, Response](anyCtx)
 	var err error
 
-	if ctx.Req == nil {
+	if ctx.Request == nil {
 		err = fmt.Errorf("[HandleProvider] fail to get req")
-		ctx.Handle = &HandleContext[Path, Query, Body, Response]{Error: err}
+		ctx.Handle = &HandleContext[Response]{Error: err}
 		ctx.Next()
 		return
 	}
 
-	req, err := ctx.Req.Request, ctx.Req.Error
+	req, err := ctx.Request.Value, ctx.Request.Error
 	if err != nil {
-		ctx.Handle = &HandleContext[Path, Query, Body, Response]{Error: err}
+		ctx.Handle = &HandleContext[Response]{Error: err}
 		ctx.Next()
 		return
 	}
 
 	var rsp *Response
 	rsp, err = prov.Handler(ctx, req)
-	ctx.Handle = &HandleContext[Path, Query, Body, Response]{
+	ctx.Handle = &HandleContext[Response]{
 		Response: rsp,
 		Error:    err,
 	}
