@@ -47,14 +47,37 @@ def make_endpoint(
             )
 
     if query_model:
-        args.append(
-            inspect.Parameter(
-                "q",
-                inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                annotation=query_model,
-                default=Query(...),
+        query_args: list[inspect.Parameter] = []
+        for model_field_name, model_field in query_model.model_fields.items():
+            query_name = str(model_field.alias or model_field_name)
+            default_value = ... if model_field.is_required() else model_field.default
+            query_args.append(
+                inspect.Parameter(
+                    model_field_name,
+                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                    annotation=model_field.annotation or Any,
+                    default=Query(
+                        default_value,
+                        description=model_field.description,
+                        alias=query_name if query_name != model_field_name else None,
+                        json_schema_extra=model_field.json_schema_extra,
+                    ),
+                )
             )
-        )
+
+        if query_args:
+            async def query_builder(**kwargs: Any):
+                return kwargs
+
+            query_builder.__signature__ = inspect.Signature(query_args)
+            args.append(
+                inspect.Parameter(
+                    "q",
+                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                    annotation=dict,
+                    default=Depends(query_builder),
+                )
+            )
 
     if form_model:
         args.append(

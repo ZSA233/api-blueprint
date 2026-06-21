@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from api_blueprint.engine import Blueprint, reset_shared_app
-from api_blueprint.engine.model import Array, Enum, Model, String
+from api_blueprint.engine.model import Array, Enum, Int, Model, String
 
 
 class Message(Model):
@@ -67,6 +67,45 @@ def _build_enum_docs_blueprint() -> Blueprint:
 
     bp.build()
     return bp
+
+
+def _build_repeated_model_docs_blueprint() -> Blueprint:
+    reset_shared_app()
+    bp = Blueprint(root="/api", tags=["root"])
+    leaf_names = ("config", "list", "data", "detail", "record", "search", "summary", "items")
+
+    for index in range(160):
+        with bp.group(f"/feature/{index}") as views:
+            views.GET(f"/{leaf_names[index % len(leaf_names)]}").ARGS(
+                **_repeated_query_fields(index)
+            ).RSP(message=String(description="message"))
+
+    bp.build()
+    return bp
+
+
+def _repeated_query_fields(index: int) -> dict[str, object]:
+    pattern = index % 8
+    if pattern == 0:
+        return {"id": Int(omitempty=True)}
+    if pattern == 1:
+        return {"page": Int(omitempty=True), "size": Int(omitempty=True)}
+    if pattern == 2:
+        return {"id": Int(omitempty=True), "page": Int(omitempty=True), "size": Int(omitempty=True)}
+    if pattern == 3:
+        return {
+            "id": Int(omitempty=True),
+            "status": Int(omitempty=True),
+            "page": Int(omitempty=True),
+            "size": Int(omitempty=True),
+        }
+    if pattern == 4:
+        return {"account": String(omitempty=True), "page": Int(omitempty=True), "size": Int(omitempty=True)}
+    if pattern == 5:
+        return {"name": String(omitempty=True), "status": Int(omitempty=True)}
+    if pattern == 6:
+        return {"start_time": String(omitempty=True), "end_time": String(omitempty=True)}
+    return {"id": Int(omitempty=True), "category": String(omitempty=True)}
 
 
 def test_default_docs_center_routes_and_index_are_available() -> None:
@@ -147,6 +186,25 @@ def test_sliced_openapi_cache_is_keyed_by_filter() -> None:
 
     client.get("/docs/openapi.json?group=admin")
     assert len(cache) == 2
+
+
+def test_full_openapi_handles_repeated_route_local_model_names() -> None:
+    bp = _build_repeated_model_docs_blueprint()
+    client = TestClient(bp.app)
+
+    full = client.get("/openapi.json")
+    assert full.status_code == 200
+    full_spec = full.json()
+    assert "/api/feature/0/config" in full_spec["paths"]
+
+    docs = client.get("/docs/openapi.json")
+    assert docs.status_code == 200
+    assert "/api/feature/0/config" in docs.json()["paths"]
+
+    config_parameters = full_spec["paths"]["/api/feature/0/config"]["get"]["parameters"]
+    assert [(param["name"], param["in"]) for param in config_parameters] == [("id", "query")]
+    list_parameters = full_spec["paths"]["/api/feature/1/list"]["get"]["parameters"]
+    assert [(param["name"], param["in"]) for param in list_parameters] == [("page", "query"), ("size", "query")]
 
 
 def test_openapi_enum_values_and_names_are_exposed_in_full_and_sliced_specs() -> None:

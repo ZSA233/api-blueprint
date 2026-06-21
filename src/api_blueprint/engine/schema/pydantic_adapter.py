@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import enum
+import hashlib
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, get_origin
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Iterable, Optional, get_origin
 
 import fastapi
 import pydantic as pyd
@@ -95,14 +96,20 @@ def model_to_pydantic(
         namespace[field_name] = info
 
     envelope: type["ResponseEnvelope"] | None = getattr(cls, "__envelope__", None)
+    model_config: dict[str, Any] = {"title": cls_name}
     if envelope is not None:
-        namespace["model_config"] = ConfigDict(json_schema_extra=envelope.json_schema_extra())
-        annotations["model_config"] = ClassVar[ConfigDict]
+        model_config["json_schema_extra"] = envelope.json_schema_extra()
+    namespace["model_config"] = ConfigDict(**model_config)
+    annotations["model_config"] = ClassVar[ConfigDict]
+
+    model_identity = _pydantic_model_identity(cls, router)
+    internal_name = f"{cls_name}__{model_identity}"
 
     namespace["__annotations__"] = annotations
-    namespace["__name__"] = cls_name
+    namespace["__name__"] = internal_name
     namespace["__module__"] = "api_model"
-    pyd_cls = _create_pydantic_model(cls_name, namespace)
+    namespace["__qualname__"] = internal_name
+    pyd_cls = _create_pydantic_model(internal_name, namespace)
     _PYDANTIC_MODEL_CACHE[cls] = pyd_cls
     return pyd_cls
 
@@ -117,6 +124,60 @@ def _create_pydantic_model(cls_name: str, namespace: dict[str, Any]) -> type[pyd
             category=UserWarning,
         )
         return type(cls_name, (pyd.BaseModel,), namespace)
+
+
+def _pydantic_model_identity(cls: type[Model] | Map, router: "Router" | None) -> str:
+    seed = "|".join(_pydantic_model_identity_parts(cls, router))
+    return hashlib.sha1(seed.encode("utf-8")).hexdigest()[:12]
+
+
+def _pydantic_model_identity_parts(cls: type[Model] | Map, router: "Router" | None) -> Iterable[str]:
+    yield getattr(cls, "__module__", "")
+    yield getattr(cls, "__qualname__", getattr(cls, "__name__", ""))
+    yield getattr(cls, "__name__", "")
+    if router is not None:
+        yield getattr(router.bp, "root_slug", "")
+        yield router.url
+        yield ",".join(str(method) for method in router.methods)
+    yield from _pydantic_model_field_identity(cls, set())
+
+
+def _pydantic_model_field_identity(value: object, seen: set[int]) -> Iterable[str]:
+    marker = id(value)
+    if marker in seen:
+        yield "<cycle>"
+        return
+    seen.add(marker)
+
+    if isinstance(value, FieldWrappedModel):
+        yield value.__name__
+        yield from _pydantic_model_field_identity(value.__field_type__, seen)
+        return
+    if isinstance(value, type) and issubclass(value, Model):
+        for field_name, attr in iter_model_vars(value):
+            yield field_name
+            yield from _pydantic_model_field_identity(attr, seen)
+        return
+    if isinstance(value, Model):
+        yield from _pydantic_model_field_identity(value.__class__, seen)
+        return
+    if isinstance(value, Field):
+        yield getattr(value, "__type__", value.__class__.__name__)
+        yield value.__class__.__module__
+        yield value.__class__.__qualname__
+        yield repr(sorted(getattr(value, "__extra__", {}).items()))
+        if isinstance(value, Enum):
+            enum_cls = value.enum_type()
+            yield getattr(enum_cls, "__module__", "")
+            yield getattr(enum_cls, "__qualname__", repr(enum_cls))
+        elif isinstance(value, Array):
+            yield from _pydantic_model_field_identity(value.elem_type(), seen)
+        elif isinstance(value, Map):
+            yield from _pydantic_model_field_identity(value.key_type(), seen)
+            yield from _pydantic_model_field_identity(value.value_type(), seen)
+        return
+
+    yield repr(value)
 
 
 def resolve_field(

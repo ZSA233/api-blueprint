@@ -74,7 +74,8 @@ def test_model_to_pydantic_preserves_enum_schema_and_validation():
     assert schema["properties"]["status"]["x-enum-varnames"] == ["BASIC", "PREMIUM"]
     assert schema["properties"]["array"]["items"]["$ref"] == "#/$defs/Color"
     assert schema["properties"]["status_map"]["additionalProperties"]["$ref"] == "#/$defs/BusinessType"
-    assert schema["$defs"]["Nested"]["properties"]["status"]["$ref"] == "#/$defs/BusinessType"
+    nested_schema = _schema_by_title(schema["$defs"], "Nested")
+    assert nested_schema["properties"]["status"]["$ref"] == "#/$defs/BusinessType"
 
     valid = pydantic_model.model_validate(
         {
@@ -135,6 +136,26 @@ def test_model_to_pydantic_marks_omitempty_fields_optional():
     assert "required" in schema["required"]
     assert "maybe" not in schema.get("required", [])
     assert not pydantic_model.model_fields["maybe"].is_required()
+
+
+def test_model_to_pydantic_isolates_same_named_dynamic_model_identity():
+    first_model = create_model("REQ_Config_QUERY", {"id": Int(omitempty=True)}).__class__
+    second_model = create_model(
+        "REQ_Config_QUERY",
+        {
+            "page": Int(omitempty=True),
+            "size": Int(omitempty=True),
+        },
+    ).__class__
+
+    first_pydantic = model_to_pydantic(first_model)
+    second_pydantic = model_to_pydantic(second_model)
+
+    assert first_pydantic.__name__.startswith("REQ_Config_QUERY__")
+    assert second_pydantic.__name__.startswith("REQ_Config_QUERY__")
+    assert first_pydantic.__name__ != second_pydantic.__name__
+    assert first_pydantic.model_json_schema()["title"] == "REQ_Config_QUERY"
+    assert second_pydantic.model_json_schema()["title"] == "REQ_Config_QUERY"
 
 
 def test_model_to_pydantic_allows_basemodel_shadow_field_without_warning():
@@ -226,3 +247,10 @@ def test_legacy_json_compat_fields_reject_unsupported_variants():
 
     with pytest.raises(ValueError, match="CoerceString only accepts"):
         CoerceString(accepts=(String, Float))
+
+
+def _schema_by_title(definitions: dict, title: str) -> dict:
+    for schema in definitions.values():
+        if schema.get("title") == title:
+            return schema
+    raise AssertionError(f"schema with title {title!r} not found")
