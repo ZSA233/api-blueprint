@@ -38,6 +38,7 @@ from api_blueprint.engine.model import (
     model_to_pydantic,
     unwrap_model_type,
 )
+from api_blueprint.engine.schema.enum_metadata import enum_comment_text, enum_value_metadata
 from api_blueprint.engine.utils import is_parametrized
 
 from .naming import to_swift_identifier, to_swift_type_name
@@ -51,6 +52,17 @@ class SwiftResolvedType:
 
     def optional_text(self) -> str:
         return self.text if self.text.endswith("?") else f"{self.text}?"
+
+
+@dataclass
+class SwiftEnumMember:
+    name: str
+    value: Any
+    description: str | None = None
+
+    @property
+    def comment(self) -> str:
+        return enum_comment_text(self.description)
 
 
 @dataclass
@@ -76,7 +88,7 @@ class SwiftProto:
     kind: str
     module: str = "shared"
     alias_type: Optional[SwiftResolvedType] = None
-    enum_members: Optional[list[tuple[str, Any]]] = None
+    enum_members: Optional[list[SwiftEnumMember]] = None
     enum_wire_type: str | None = None
     one_of_variants: Optional[list["SwiftOneOfVariant"]] = None
     fields: list[SwiftProtoField] = field(default_factory=list)
@@ -349,10 +361,10 @@ def detect_enum_wire_type(enum_cls: type[enum.Enum]) -> str:
     return "string"
 
 
-def build_enum_members(enum_cls: type[enum.Enum]) -> list[tuple[str, Any]]:
+def build_enum_members(enum_cls: type[enum.Enum]) -> list[SwiftEnumMember]:
     used: set[str] = set()
-    members: list[tuple[str, Any]] = []
-    for member in enum_cls:
+    members: list[SwiftEnumMember] = []
+    for member in enum_value_metadata(enum_cls):
         base_name = to_swift_identifier(member.name, fallback="value")
         name = base_name
         suffix = 2
@@ -360,7 +372,7 @@ def build_enum_members(enum_cls: type[enum.Enum]) -> list[tuple[str, Any]]:
             name = f"{base_name}{suffix}"
             suffix += 1
         used.add(name)
-        members.append((name, member.value))
+        members.append(SwiftEnumMember(name, member.value, member.description))
     return members
 
 

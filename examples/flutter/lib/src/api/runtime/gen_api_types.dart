@@ -442,8 +442,11 @@ class AssistantOpen {
 }
 
 enum ColorEnum {
+  /// Red color
   red("red"),
+  /// Green color
   green("green"),
+  /// Blue color
   blue("blue"),
   ;
 
@@ -948,8 +951,11 @@ class RequestOptionsResponse {
 }
 
 enum StatusEnum {
+  /// Pending status
   pending(1),
+  /// Running status
   running(2),
+  /// Finished status
   finished(3),
   ;
 

@@ -42,7 +42,7 @@ C = TypeVar("C")
 
 {% for enum in group.enums() %}
 class {{ enum.class_name }}({{ enum.base_class }}):
-{% if enum.members %}{% for member in enum.members %}    {{ member.name }} = {{ member.value_literal | safe }}
+{% if enum.members %}{% for member in enum.members %}    {{ member.name }} = {{ member.value_literal | safe }}{% if member.comment %}  # {{ member.comment }}{% endif %}
 {% endfor %}{% else %}    pass
 {% endif %}
     @classmethod

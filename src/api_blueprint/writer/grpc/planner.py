@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any, Mapping, Sequence
 
 from api_blueprint.contract import ContractGraph
+from api_blueprint.engine.schema.enum_metadata import enum_comment_text
 from api_blueprint.writer.core.planning import route_matches_rule
 from api_blueprint.writer.grpc.layout import GrpcProtoFileRule, GrpcProtoLayout, ProtoFileLayout
 
@@ -43,10 +44,15 @@ class ProtoMessagePlan:
 class ProtoEnumValuePlan:
     name: str
     number: int
+    description: str = ""
 
     @property
     def declaration(self) -> str:
         return f"{self.name} = {self.number};"
+
+    @property
+    def comment(self) -> str:
+        return enum_comment_text(self.description)
 
 
 @dataclass
@@ -754,9 +760,11 @@ def _proto_enum_values(
     for index, item in enumerate(enum_values, start=1):
         raw_name: object | None = None
         raw_value: object | None = None
+        description = ""
         if isinstance(item, Mapping):
             raw_name = item.get("name")
             raw_value = item.get("value")
+            description = str(item.get("description") or "")
         number = raw_value if isinstance(raw_value, int) and raw_value >= 0 else index
         if number in used_numbers:
             raise ValueError(f"duplicate proto enum number {number} in enum {enum_name}")
@@ -764,7 +772,7 @@ def _proto_enum_values(
         value_name = _unique_enum_value_name(value_name, used_names, suffix=number)
         used_numbers.add(number)
         used_names.add(value_name)
-        values.append(ProtoEnumValuePlan(value_name, int(number)))
+        values.append(ProtoEnumValuePlan(value_name, int(number), description))
 
     if not values and isinstance(fallback_values, list):
         for index, raw_value in enumerate(fallback_values, start=1):

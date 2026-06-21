@@ -2,7 +2,8 @@
 {% for proto in protos %}
 {% if proto.kind == "enum" %}
 public enum {{ proto.name }}: {{ proto.raw_value_type }}, Codable, Sendable, APIWireValue {
-{% for name, value in proto.enum_members or [] %}    case {{ name }} = {{ proto.enum_wire_literal(value) }}
+{% for member in proto.enum_members or [] %}{% if member.comment %}    /// {{ member.comment }}
+{% endif %}    case {{ member.name }} = {{ proto.enum_wire_literal(member.value) }}
 {% endfor %}
 
     public var apiWireString: String {

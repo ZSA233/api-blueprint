@@ -80,6 +80,7 @@ def test_java_client_and_server_generate_layout_and_spring_contract_boundary(tmp
 
     class SubmitJson(Model):
         value = String(description="value")
+        kind = Enum[WireEnum](description="kind")
 
     class FormPayload(Model):
         label = String(description="label")
@@ -189,6 +190,7 @@ content-encoding: identity,gzip,br
     server_binary_types_text = (server_dir / package_root / "routes/api/binary/types/GenBinaryTypes.java").read_text(
         encoding="utf-8"
     )
+    server_runtime_types_text = (server_dir / package_root / "runtime/GenApiTypes.java").read_text(encoding="utf-8")
     server_controller_text = (server_dir / package_root / "routes/api/demo/controllers/GenDemoController.java").read_text(
         encoding="utf-8"
     )
@@ -220,6 +222,7 @@ content-encoding: identity,gzip,br
     for generated_text in (
         server_types_text,
         server_binary_types_text,
+        server_runtime_types_text,
         server_controller_text,
         server_delegate_text,
         server_adapters_text,
@@ -233,6 +236,10 @@ content-encoding: identity,gzip,br
 
     assert "public record Result(" in types_text
     assert '@JsonProperty("status") String status' in types_text
+    assert "/** First option */" in types_text
+    assert 'FIRST("first")' in types_text
+    assert "/** First option */" in server_runtime_types_text
+    assert 'FIRST("first")' in server_runtime_types_text
     assert "public enum" not in route_types_text
     assert "public record PingQuery(" in route_types_text
     assert '@JsonProperty("q") String q' in route_types_text

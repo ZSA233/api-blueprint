@@ -13,6 +13,7 @@ from pydantic.fields import FieldInfo
 
 from api_blueprint.engine.utils import is_parametrized
 
+from .enum_metadata import enum_schema_extensions
 from .fields import (
     APIKeyHeader,
     AnonKV,
@@ -294,11 +295,7 @@ def resolve_field(
 
 
 def _enum_json_schema_extra(enum_cls: type[enum.Enum]) -> dict[str, list[str]]:
-    names = [member.name for member in enum_cls]
-    return {
-        "x-enumNames": names,
-        "x-enum-varnames": names,
-    }
+    return enum_schema_extensions(enum_cls)
 
 
 def _merge_json_schema_extra(copy_extra: dict[str, Any], update: dict[str, Any]) -> None:

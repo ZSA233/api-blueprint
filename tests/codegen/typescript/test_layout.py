@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import enum
+
 from .helpers import *
-from api_blueprint.engine.model import Array, Int, OneOf, LegacyStringID
+from api_blueprint.engine.model import Array, Enum, Int, OneOf, LegacyStringID
 
 
 def _typescript_format_violations(output_dir: Path) -> list[str]:
@@ -125,6 +127,31 @@ def test_typescript_generated_output_format_invariants(tmp_path: Path) -> None:
     assert "request: {\n      query?: Types.SearchQuery;\n    } = {}" in client_text
     assert _typescript_format_violations(output_dir) == []
     assert _typescript_request_block_holes(client_text) == []
+
+
+def test_typescript_generated_enums_include_member_comments(tmp_path: Path) -> None:
+    class ActionKind(enum.IntEnum):
+        CREATE = 1  # Create item
+        UPDATE = 2  # Update item
+
+    class ActionPayload(Model):
+        action = Enum[ActionKind](description="action")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.POST("/action").REQ(ActionPayload).RSP(ActionPayload)
+
+    output_dir = tmp_path / "typescript"
+    output_dir.mkdir()
+    writer = TypeScriptWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    types_text = (output_dir / "api" / "runtime" / "gen_types.ts").read_text(encoding="utf-8")
+    assert "/** Create item */" in types_text
+    assert "CREATE = 1" in types_text
+    assert "/** Update item */" in types_text
+    assert "UPDATE = 2" in types_text
 
 
 def test_typescript_generates_legacy_json_compat_union_types(tmp_path: Path) -> None:

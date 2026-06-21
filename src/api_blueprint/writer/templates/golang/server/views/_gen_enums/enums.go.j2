@@ -8,7 +8,7 @@ package {{ bp.com_enum_package }}
 
 {% for enum in enums_list %}/*
 ENUM(
-{% for member in enum.members %}    {{ member.name }} = {{ member.go_value_literal | safe }}
+{% for member in enum.members %}    {{ member.name }} = {{ member.go_value_literal | safe }}{% if member.comment %} // {{ member.comment }}{% endif %}
 {% endfor %})
 */
 type {{ enum.name }} {{ enum.base_type }}

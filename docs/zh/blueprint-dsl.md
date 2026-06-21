@@ -323,4 +323,14 @@ api-doc-server -c api-blueprint.toml
 
 DSL `Enum[...]` 会进入 OpenAPI 标准 `enum` values，并额外输出 `x-enumNames` / `x-enum-varnames` 供 UI 或代码工具显示枚举名称；docs server 的本地 FastAPI route 会按 enum value 严格校验 query、path、form 和 body 输入。
 
+如果 enum member 使用同一行注释，api-blueprint 会把它作为枚举值描述输出到 OpenAPI 的 `x-enumDescriptions` / `x-enum-descriptions`，并写入 contract manifest 的 `enum_values[].description`：
+
+```python
+class ActionKind(enum.IntEnum):
+    CREATE = 1  # Create item
+    UPDATE = 2  # Update item
+```
+
+该能力依赖源码可读性；动态创建的 enum 或只发布 `.pyc` 的环境会正常降级为仅输出名称和值。
+
 当 `[blueprint].docs_server` 使用 `host:0` 时，启动输出会打印带真实绑定端口的 docs 或 hub URL。

@@ -31,9 +31,9 @@ type KeywordEnum string
 /*
 ENUM(
 
-	RED = "red"
-	GREEN = "green"
-	BLUE = "blue"
+	RED = "red" // Red color
+	GREEN = "green" // Green color
+	BLUE = "blue" // Blue color
 
 )
 */
@@ -42,9 +42,9 @@ type ColorEnum string
 /*
 ENUM(
 
-	PENDING = 1
-	RUNNING = 2
-	FINISHED = 3
+	PENDING = 1 // Pending status
+	RUNNING = 2 // Running status
+	FINISHED = 3 // Finished status
 
 )
 */

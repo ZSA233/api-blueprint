@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import enum
 import re
 
 from .helpers import *
-from api_blueprint.engine.model import Array, Int, OneOf, LegacyStringID
+from api_blueprint.engine.model import Array, Enum, Int, OneOf, LegacyStringID
 
 
 def test_golang_client_writer_uses_go_safe_route_package_segments(tmp_path):
@@ -72,6 +73,32 @@ def test_golang_client_generates_legacy_json_compat_field_types(tmp_path):
     assert "IDs" in runtime_types and "[]any" in runtime_types
     assert "Normalized []string" in runtime_types
     assert re.search(r"\bRoomID\s+string\b", runtime_types)
+
+
+def test_golang_client_generated_enums_include_member_comments(tmp_path):
+    class ActionKind(enum.IntEnum):
+        CREATE = 1  # Create item
+        UPDATE = 2  # Update item
+
+    class ActionPayload(Model):
+        action = Enum[ActionKind](description="action")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.POST("/action").REQ(ActionPayload).RSP(ActionPayload)
+
+    graph = build_contract_graph([bp])
+    output_dir = tmp_path / "client"
+    writer = GolangClientWriter(output_dir, module="example.com/generated/client", contract_graph=graph)
+    writer.register(bp)
+    writer.gen()
+
+    runtime_types = (output_dir / "runtime" / "gen_types.go").read_text(encoding="utf-8")
+    assert "// ActionKindCREATE Create item" in runtime_types
+    assert "ActionKindCREATE ActionKind = 1" in runtime_types
+    assert "// ActionKindUPDATE Update item" in runtime_types
+    assert "ActionKindUPDATE ActionKind = 2" in runtime_types
+
 
 @pytest.mark.toolchain_smoke
 def test_golang_client_writer_generates_layout_preserves_user_files_and_compiles(tmp_path):

@@ -67,11 +67,14 @@ public data class {{ proto.name }}<T>(
 {%- elif proto.kind == 'enum' %}
 {{ '\n' if not loop.first }}@Serializable{% if proto.enum_wire_type == 'int' %}(with = {{ proto.name }}Serializer::class){% endif %}
 public enum class {{ proto.name }}(public val wireValue: {{ 'Int' if proto.enum_wire_type == 'int' else 'String' }}) {
-{%- for key, value in proto.enum_members %}
-{%- if proto.enum_wire_type != 'int' %}
-    @SerialName({{ proto.enum_wire_literal(value) }})
+{%- for member in proto.enum_members %}
+{%- if member.comment %}
+    /** {{ member.comment }} */
 {%- endif %}
-    {{ key }}({{ proto.enum_wire_literal(value) }}){% if not loop.last %},{% endif %}
+{%- if proto.enum_wire_type != 'int' %}
+    @SerialName({{ proto.enum_wire_literal(member.value) }})
+{%- endif %}
+    {{ member.name }}({{ proto.enum_wire_literal(member.value) }}){% if not loop.last %},{% endif %}
 {%- endfor %}
 }
 {%- if proto.enum_wire_type == 'int' %}

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import enum
+
 from .helpers import *
 from api_blueprint.engine import provider
-from api_blueprint.engine.model import Array, OneOf, LegacyStringID
+from api_blueprint.engine.model import Array, Enum, Map, OneOf, LegacyStringID
 
 
 def test_contract_graph_manifest_captures_effective_route_providers():
@@ -60,6 +62,35 @@ def test_contract_graph_rejects_non_json_safe_provider_data():
 
     with pytest.raises(ValueError, match=r"provider\[runtime-policy\] data must be JSON-serializable"):
         build_contract_graph([bp])
+
+
+def test_contract_graph_enum_values_include_member_descriptions():
+    class ActionKind(enum.IntEnum):
+        CREATE = 1  # Create item
+        UPDATE = 2  # Update item
+
+    class ActionPayload(Model):
+        action = Enum[ActionKind](description="action")
+        actions = Array[Enum[ActionKind]](description="actions")
+        action_map = Map[String, Enum[ActionKind]](description="action map")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/actions") as views:
+        views.POST("/create").REQ(ActionPayload).RSP(action=Enum[ActionKind]())
+
+    manifest = build_contract_graph([bp]).to_manifest()
+    action_field = manifest["schemas"]["ActionPayload"]["fields"]["action"]
+    response_model = manifest["routes"][0]["response"]["model"]
+    response_field = manifest["schemas"][response_model]["fields"]["action"]
+
+    expected_values = [
+        {"name": "CREATE", "value": 1, "description": "Create item"},
+        {"name": "UPDATE", "value": 2, "description": "Update item"},
+    ]
+    assert action_field["enum_values"] == expected_values
+    assert action_field["enum_values"] == response_field["enum_values"]
+    assert manifest["schemas"]["ActionPayload"]["fields"]["actions"]["items"]["enum_values"] == expected_values
+    assert manifest["schemas"]["ActionPayload"]["fields"]["action_map"]["values"]["enum_values"] == expected_values
 
 
 def test_contract_graph_manifest_captures_rpc_and_connection_routes():

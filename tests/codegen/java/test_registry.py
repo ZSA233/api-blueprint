@@ -26,3 +26,4 @@ def test_java_model_catalog_builds_record_fields_and_enum_metadata() -> None:
     assert enum_type.name == "WireEnum"
     assert [member.java_name for member in enum_type.values] == ["FIRST", "SECOND"]
     assert [member.literal for member in enum_type.values] == ['"first"', '"second"']
+    assert [member.comment for member in enum_type.values] == ["First option", "Second option"]

@@ -4,6 +4,8 @@ import json
 from dataclasses import dataclass
 from typing import Any, Mapping
 
+from api_blueprint.engine.schema.enum_metadata import enum_comment_text
+
 from .naming import to_java_constant_name, to_java_member_name, to_java_type_name
 
 
@@ -14,10 +16,15 @@ JsonObject = dict[str, Any]
 class JavaEnumMember:
     name: str
     value: Any
+    description: str = ""
 
     @property
     def java_name(self) -> str:
         return to_java_constant_name(self.name or str(self.value))
+
+    @property
+    def comment(self) -> str:
+        return enum_comment_text(self.description, block_end="*/")
 
     @property
     def literal(self) -> str:
@@ -241,7 +248,11 @@ class JavaModelCatalog:
                 if enum_name not in enums:
                     raw_members = value.get("enum_values")
                     members = [
-                        JavaEnumMember(str(member.get("name") or member.get("value") or "VALUE"), member.get("value"))
+                        JavaEnumMember(
+                            str(member.get("name") or member.get("value") or "VALUE"),
+                            member.get("value"),
+                            str(member.get("description") or ""),
+                        )
                         for member in raw_members
                         if isinstance(member, Mapping)
                     ] if isinstance(raw_members, list) else []

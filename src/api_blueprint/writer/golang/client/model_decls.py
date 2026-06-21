@@ -5,6 +5,7 @@ from dataclasses import dataclass, replace
 from typing import Any, Literal, Mapping
 
 from api_blueprint.writer.core.sdk_names import go_exported_field_name
+from api_blueprint.engine.schema.enum_metadata import enum_comment_text
 
 from .planner import GoClientGroup, GoClientRoute
 
@@ -28,6 +29,11 @@ class GoClientFieldDecl:
 class GoClientEnumMemberDecl:
     name: str
     value_literal: str
+    description: str = ""
+
+    @property
+    def comment(self) -> str:
+        return enum_comment_text(self.description)
 
 
 @dataclass(frozen=True)
@@ -135,7 +141,13 @@ def _enum_declaration(enum: Mapping[str, Any]) -> GoClientTypeDecl:
         if not isinstance(member, Mapping):
             continue
         member_name = go_exported(str(member.get("name") or member.get("value") or "Value"))
-        members.append(GoClientEnumMemberDecl(name=member_name, value_literal=go_code_literal(member.get("value"))))
+        members.append(
+            GoClientEnumMemberDecl(
+                name=member_name,
+                value_literal=go_code_literal(member.get("value")),
+                description=str(member.get("description") or ""),
+            )
+        )
     return GoClientTypeDecl(kind="enum", name=name, base_type=_enum_base_type(enum), members=tuple(members))
 
 

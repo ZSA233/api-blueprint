@@ -1,3 +1,8 @@
 package providers
 
 // User-owned extension point for request provider helpers.
+//
+// REQ and RequestContext are generated in gen_req.go because HTTP/Wails binding
+// and provider execution depend on their fields. Add project-specific request
+// helper methods in this file or another non-gen file, but do not re-declare
+// the generated request types.

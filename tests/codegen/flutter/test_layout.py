@@ -136,7 +136,10 @@ def test_flutter_writer_generates_dart_package_runtime_routes_transport_and_pres
     assert "const tokenExpire = 55555;" in runtime_error_lookup
     assert "final demo = DemoApi(transport);" in runtime_client
     assert "enum StatusEnum" in runtime_types
+    assert "/// Pending status" in runtime_types
+    assert "pending(1)" in runtime_types
     assert "enum KeywordEnum" in runtime_types
+    assert "/// Default keyword" in runtime_types
     assert 'default_("default")' in runtime_types
 
     assert "class GenDemoApi" in route_client

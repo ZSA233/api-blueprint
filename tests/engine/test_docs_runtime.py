@@ -14,13 +14,13 @@ class Message(Model):
 
 
 class BusinessType(enum.IntEnum):
-    BASIC = 1
-    PREMIUM = 2
+    BASIC = 1  # Basic tier
+    PREMIUM = 2  # Premium tier
 
 
 class Color(enum.StrEnum):
-    RED = "red"
-    BLUE = "blue"
+    RED = "red"  # Red color
+    BLUE = "blue"  # Blue color
 
 
 class EnumBody(Model):
@@ -219,11 +219,15 @@ def test_openapi_enum_values_and_names_are_exposed_in_full_and_sliced_specs() ->
         assert business_type["enum"] == [1, 2]
         assert business_type["x-enumNames"] == ["BASIC", "PREMIUM"]
         assert business_type["x-enum-varnames"] == ["BASIC", "PREMIUM"]
+        assert business_type["x-enumDescriptions"] == ["Basic tier", "Premium tier"]
+        assert business_type["x-enum-descriptions"] == ["Basic tier", "Premium tier"]
 
         color = _schema_by_title(spec, "Color")
         assert color["enum"] == ["red", "blue"]
         assert color["x-enumNames"] == ["RED", "BLUE"]
         assert color["x-enum-varnames"] == ["RED", "BLUE"]
+        assert color["x-enumDescriptions"] == ["Red color", "Blue color"]
+        assert color["x-enum-descriptions"] == ["Red color", "Blue color"]
 
     assert "/api/enum/query" in sliced["paths"]
     assert "/api/enum/path/{business_type}" in sliced["paths"]

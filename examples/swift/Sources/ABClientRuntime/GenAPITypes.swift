@@ -10,7 +10,7 @@ public struct ApiDemoA: Codable, Sendable {
     public var efg: Double
     /// hijk
     public var hijk: [Int]
-    /// [ApiDemoSubA] lmnop
+    /// [ApiDemoSubA__bfb62af097fc] lmnop
     public var lmnop: [ApiDemoSubA]?
     /// color
     public var enumColor: ColorEnum?
@@ -104,7 +104,7 @@ public struct ApiDemoMap: Codable, Sendable {
 public struct ApiDemoSubA: Codable, Sendable {
     /// hello
     public var hello: [String: Int]
-    /// [ApiDemoMap] amap
+    /// [ApiDemoMap__85c14e903dd4] amap
     public var amap: [ApiDemoMap]
 
     public init(
@@ -311,8 +311,11 @@ public struct AssistantOpen: Codable, Sendable {
 }
 
 public enum ColorEnum: String, Codable, Sendable, APIWireValue {
+    /// Red color
     case red = "red"
+    /// Green color
     case green = "green"
+    /// Blue color
     case blue = "blue"
 
     public var apiWireString: String {
@@ -664,8 +667,11 @@ public struct RequestOptionsResponse: Codable, Sendable {
 }
 
 public enum StatusEnum: Int, Codable, Sendable, APIWireValue {
+    /// Pending status
     case pending = 1
+    /// Running status
     case running = 2
+    /// Finished status
     case finished = 3
 
     public var apiWireString: String {

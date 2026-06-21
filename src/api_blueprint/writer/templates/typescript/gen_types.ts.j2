@@ -58,9 +58,9 @@ export type {{ proto.name }} = {{ alias_text }};
 
 {% elif proto.kind == 'enum' %}
 export enum {{ proto.name }} {
-{%- for key, value in proto.enum_members %}
-  {{ key }} = {% if value is string %}{{ value | tojson }}{% else %}{{ value }}{% endif %},{% endfor %}
-}
+{% for member in proto.enum_members %}{% if member.comment %}  /** {{ member.comment }} */
+{% endif %}  {{ member.name }} = {% if member.value is string %}{{ member.value | tojson }}{% else %}{{ member.value }}{% endif %},
+{% endfor %}}
 
 {% endif -%}
 {% endfor -%}

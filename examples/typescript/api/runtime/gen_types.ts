@@ -30,7 +30,7 @@ export interface ApiDemoA {
   efg: number;
   /** hijk */
   hijk: Array<number>;
-  /** [ApiDemoSubA] lmnop */
+  /** [ApiDemoSubA__bfb62af097fc] lmnop */
   lmnop?: Array<ApiDemoSubA>;
   /** color */
   enum_color?: ColorEnum;
@@ -48,7 +48,7 @@ export interface ApiDemoMap {
 export interface ApiDemoSubA {
   /** hello */
   hello: Record<string, number>;
-  /** [ApiDemoMap] amap */
+  /** [ApiDemoMap__85c14e903dd4] amap */
   amap: Array<ApiDemoMap>;
 }
 
@@ -83,8 +83,11 @@ export interface AssistantOpen {
 }
 
 export enum ColorEnum {
+  /** Red color */
   RED = "red",
+  /** Green color */
   GREEN = "green",
+  /** Blue color */
   BLUE = "blue",
 }
 
@@ -181,8 +184,11 @@ export interface RequestOptionsResponse {
 }
 
 export enum StatusEnum {
+  /** Pending status */
   PENDING = 1,
+  /** Running status */
   RUNNING = 2,
+  /** Finished status */
   FINISHED = 3,
 }
 

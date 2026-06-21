@@ -117,6 +117,9 @@ def test_swift_writer_generates_spm_runtime_routes_transport_and_preserved_files
     assert "private enum CodingKeys: String, CodingKey" in runtime_types
     assert 'case enabled = "enabled"' in runtime_types
     assert "public enum StatusEnum: Int, Codable, Sendable, APIWireValue" in runtime_types
+    assert "/// Pending status" in runtime_types
+    assert "case pending = 1" in runtime_types
+    assert "/// Default keyword" in runtime_types
     assert "case default_ = \"default\"" in runtime_types
     assert "case class_ = \"class\"" in runtime_types
 

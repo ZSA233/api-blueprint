@@ -25,9 +25,12 @@ type ColorEnum int32
 
 const (
 	ColorEnum_COLORENUM_UNSPECIFIED ColorEnum = 0
-	ColorEnum_COLORENUM_RED         ColorEnum = 1
-	ColorEnum_COLORENUM_GREEN       ColorEnum = 2
-	ColorEnum_COLORENUM_BLUE        ColorEnum = 3
+	// Red color
+	ColorEnum_COLORENUM_RED ColorEnum = 1
+	// Green color
+	ColorEnum_COLORENUM_GREEN ColorEnum = 2
+	// Blue color
+	ColorEnum_COLORENUM_BLUE ColorEnum = 3
 )
 
 // Enum value maps for ColorEnum.
@@ -77,9 +80,12 @@ type StatusEnum int32
 
 const (
 	StatusEnum_STATUSENUM_UNSPECIFIED StatusEnum = 0
-	StatusEnum_STATUSENUM_PENDING     StatusEnum = 1
-	StatusEnum_STATUSENUM_RUNNING     StatusEnum = 2
-	StatusEnum_STATUSENUM_FINISHED    StatusEnum = 3
+	// Pending status
+	StatusEnum_STATUSENUM_PENDING StatusEnum = 1
+	// Running status
+	StatusEnum_STATUSENUM_RUNNING StatusEnum = 2
+	// Finished status
+	StatusEnum_STATUSENUM_FINISHED StatusEnum = 3
 )
 
 // Enum value maps for StatusEnum.

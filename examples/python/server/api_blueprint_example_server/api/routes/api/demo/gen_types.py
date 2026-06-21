@@ -35,9 +35,9 @@ C = TypeVar("C")
 
 
 class ColorEnum(StrEnum):
-    RED = "red"
-    GREEN = "green"
-    BLUE = "blue"
+    RED = "red"  # Red color
+    GREEN = "green"  # Green color
+    BLUE = "blue"  # Blue color
 
     @classmethod
     def from_value(cls, value: object, path: str = "ColorEnum") -> Self:
@@ -53,9 +53,9 @@ class ColorEnum(StrEnum):
 
 
 class StatusEnum(IntEnum):
-    PENDING = 1
-    RUNNING = 2
-    FINISHED = 3
+    PENDING = 1  # Pending status
+    RUNNING = 2  # Running status
+    FINISHED = 3  # Finished status
 
     @classmethod
     def from_value(cls, value: object, path: str = "StatusEnum") -> Self:

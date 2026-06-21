@@ -93,10 +93,13 @@ public data class AssistantOpen(
 
 @Serializable
 public enum class ColorEnum(public val wireValue: String) {
+    /** Red color */
     @SerialName("red")
     RED("red"),
+    /** Green color */
     @SerialName("green")
     GREEN("green"),
+    /** Blue color */
     @SerialName("blue")
     BLUE("blue")
 }
@@ -195,8 +198,11 @@ public data class RequestOptionsResponse(
 
 @Serializable(with = StatusEnumSerializer::class)
 public enum class StatusEnum(public val wireValue: Int) {
+    /** Pending status */
     PENDING(1),
+    /** Running status */
     RUNNING(2),
+    /** Finished status */
     FINISHED(3)
 }
 

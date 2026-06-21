@@ -31,6 +31,29 @@ def test_kotlin_registry_builds_serializers_for_alias_and_enum_types():
     assert map_type.serializer_expr() == "MapSerializer(String.serializer(), ListSerializer(WireEnum.serializer()))"
     assert int_enum_proto.enum_wire_type == "int"
     assert int_enum_proto.enum_wire_literal(StatusEnum.PENDING.value) == "1"
+    assert int_enum_proto.enum_members[0].comment == "Pending status"
+
+
+def test_kotlin_generated_enums_include_member_comments(tmp_path):
+    class EnumPayload(Model):
+        status = Enum[StatusEnum](description="status")
+        wire = Enum[WireEnum](description="wire")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.POST("/enum").REQ(EnumPayload).RSP(EnumPayload)
+
+    writer = KotlinWriter(tmp_path / "kotlin", package="com.example.generated")
+    writer.register(bp)
+    writer.gen()
+
+    runtime_types = (
+        tmp_path / "kotlin" / "com" / "example" / "generated" / "api" / "runtime" / "GenApiTypes.kt"
+    ).read_text(encoding="utf-8")
+    assert "/** Pending status */" in runtime_types
+    assert "PENDING(1)" in runtime_types
+    assert "/** First option */" in runtime_types
+    assert 'FIRST("first")' in runtime_types
 
 def test_kotlin_uses_declarative_response_envelope_spec():
     spec = CodeMessageDataEnvelope.envelope_spec()

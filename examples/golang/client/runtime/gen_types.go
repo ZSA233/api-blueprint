@@ -16,16 +16,22 @@ const (
 type ColorEnum string
 
 const (
-	ColorEnumRED   ColorEnum = "red"
+	// ColorEnumRED Red color
+	ColorEnumRED ColorEnum = "red"
+	// ColorEnumGREEN Green color
 	ColorEnumGREEN ColorEnum = "green"
-	ColorEnumBLUE  ColorEnum = "blue"
+	// ColorEnumBLUE Blue color
+	ColorEnumBLUE ColorEnum = "blue"
 )
 
 type StatusEnum int
 
 const (
-	StatusEnumPENDING  StatusEnum = 1
-	StatusEnumRUNNING  StatusEnum = 2
+	// StatusEnumPENDING Pending status
+	StatusEnumPENDING StatusEnum = 1
+	// StatusEnumRUNNING Running status
+	StatusEnumRUNNING StatusEnum = 2
+	// StatusEnumFINISHED Finished status
 	StatusEnumFINISHED StatusEnum = 3
 )
 

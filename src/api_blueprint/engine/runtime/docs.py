@@ -15,6 +15,7 @@ from starlette.routing import BaseRoute
 
 from api_blueprint.engine.connection import ConnectionKind, MessageContract, ModelRef
 from api_blueprint.engine.schema import iter_enum_classes
+from api_blueprint.engine.schema.enum_metadata import enum_value_metadata
 
 if TYPE_CHECKING:
     from api_blueprint.engine.blueprint.router import Router
@@ -244,6 +245,10 @@ def enrich_openapi_enum_metadata(app: FastAPI, spec: dict[str, Any]) -> dict[str
                 if enum_meta is not None:
                     node["x-enumNames"] = list(enum_meta["names"])
                     node["x-enum-varnames"] = list(enum_meta["names"])
+                    descriptions = enum_meta.get("descriptions")
+                    if isinstance(descriptions, list) and any(descriptions):
+                        node["x-enumDescriptions"] = list(descriptions)
+                        node["x-enum-descriptions"] = list(descriptions)
             for value in node.values():
                 visit(value)
         elif isinstance(node, list):
@@ -300,6 +305,10 @@ def _register_route_enums(app: FastAPI, router: Router) -> None:
                     "name": enum_cls.__name__,
                     "names": [member.name for member in enum_cls],
                     "values": values,
+                    "descriptions": [
+                        item.description or ""
+                        for item in enum_value_metadata(enum_cls)
+                    ],
                 },
             )
 

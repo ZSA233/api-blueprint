@@ -21,6 +21,7 @@ from api_blueprint.engine.model import (
     model_to_pydantic,
     unwrap_model_type,
 )
+from api_blueprint.engine.schema.enum_metadata import enum_comment_text, enum_value_metadata
 from api_blueprint.engine.utils import inc_to_letters, is_parametrized
 
 from .naming import to_ts_identifier, to_ts_name
@@ -190,6 +191,17 @@ class TypeScriptTypeResolver:
 
 
 @dataclass
+class TypeScriptEnumMember:
+    name: str
+    value: Any
+    description: str | None = None
+
+    @property
+    def comment(self) -> str:
+        return enum_comment_text(self.description, block_end="*/")
+
+
+@dataclass
 class TypeScriptProtoField:
     identifier: str
     json_name: str
@@ -205,7 +217,7 @@ class TypeScriptProto:
     kind: str
     module: str
     alias_type: Optional[TypeScriptResolvedType] = None
-    enum_members: Optional[list[tuple[str, Any]]] = None
+    enum_members: Optional[list[TypeScriptEnumMember]] = None
     fields: list[TypeScriptProtoField] = field(default_factory=list)
     tags: set[str] = field(default_factory=set)
     routes: set[str] = field(default_factory=set)
@@ -332,7 +344,10 @@ class TypeScriptProtoRegistry:
         proto = self._enums.get(enum_cls)
         if proto:
             return proto
-        members = [(member.name, member.value) for member in enum_cls]
+        members = [
+            TypeScriptEnumMember(member.name, member.value, member.description)
+            for member in enum_value_metadata(enum_cls)
+        ]
         proto = TypeScriptProto(
             name=enum_cls.__name__,
             model=None,

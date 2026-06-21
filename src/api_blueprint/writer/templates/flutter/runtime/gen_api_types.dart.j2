@@ -67,7 +67,8 @@ typedef {{ proto.name }} = {{ proto.alias_type.text if proto.alias_type else 'Ob
 {% endif %}}
 {% elif proto.kind == 'enum' %}
 enum {{ proto.name }} {
-{% for key, value in proto.enum_members %}  {{ key }}({{ proto.enum_wire_literal(value) }}),
+{% for member in proto.enum_members %}{% if member.comment %}  /// {{ member.comment }}
+{% endif %}  {{ member.name }}({{ proto.enum_wire_literal(member.value) }}),
 {% endfor %}  ;
 
   final Object wireValue;

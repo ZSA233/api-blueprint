@@ -10,8 +10,8 @@ from api_blueprint.engine.schema import Array, Enum, Map, String
 
 
 class ResOp(py_enum.IntEnum):
-    CREATE = 1
-    UPDATE = 2
+    CREATE = 1  # Create item
+    UPDATE = 2  # Update item
 
 
 class GiftStatus(py_enum.IntEnum):
@@ -105,6 +105,8 @@ def test_golang_server_route_dtos_use_typed_enums(tmp_path):
     assert "_gen_enums" not in plain_types
 
     assert "type BusinessType int" in enums_source
+    assert "CREATE = 1 // Create item" in enums_source
+    assert "UPDATE = 2 // Update item" in enums_source
     assert "--marshal" not in enums_source
     assert "--nocase --names --values --mustparse" in enums_source
 

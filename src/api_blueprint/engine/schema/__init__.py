@@ -45,6 +45,13 @@ from api_blueprint.engine.schema.fields import (
     create_field_wrapped_model,
     iter_enum_classes,
 )
+from api_blueprint.engine.schema.enum_metadata import (
+    EnumValueMetadata,
+    enum_comment_text,
+    enum_member_descriptions,
+    enum_schema_extensions,
+    enum_value_metadata,
+)
 from api_blueprint.engine.schema.modeling import (
     AnyField,
     AnyModel,
@@ -82,6 +89,8 @@ __all__ = (
     "CoerceString",
     "DateTime",
     "Enum",
+    "EnumValueMetadata",
+    "enum_comment_text",
     "Error",
     "Field",
     "FileField",
@@ -119,6 +128,9 @@ __all__ = (
     "Uint64",
     "create_field_wrapped_model",
     "create_model",
+    "enum_member_descriptions",
+    "enum_schema_extensions",
+    "enum_value_metadata",
     "field",
     "get_forward_ref_type",
     "iter_enum_classes",

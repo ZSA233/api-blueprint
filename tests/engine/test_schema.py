@@ -26,6 +26,7 @@ from api_blueprint.engine.model import (
     iter_enum_classes,
     model_to_pydantic,
 )
+from api_blueprint.engine.schema import enum_schema_extensions
 from api_blueprint.engine.envelope import CodeMessageDataEnvelope
 
 
@@ -37,6 +38,11 @@ class Color(enum.StrEnum):
 class BusinessType(enum.IntEnum):
     BASIC = 1
     PREMIUM = 2
+
+
+class ActionKind(enum.IntEnum):
+    CREATE = 1  # Create item
+    UPDATE = 2  # Update item
 
 
 class Nested(Model):
@@ -51,6 +57,10 @@ class Payload(Model):
     mapping = Map[String, Nested](description="mapping")
     array = Array[Enum[Color]](description="array")
     status_map = Map[String, Enum[BusinessType]](description="status map")
+
+
+class ActionPayload(Model):
+    action = Enum[ActionKind](description="action")
 
 
 def test_iter_enum_classes_finds_nested_and_collection_enums():
@@ -117,6 +127,26 @@ def test_model_to_pydantic_preserves_enum_schema_and_validation():
                 "status_map": {"primary": 2},
             }
         )
+
+
+def test_model_to_pydantic_exposes_enum_member_descriptions():
+    pydantic_model = model_to_pydantic(ActionPayload)
+    schema = pydantic_model.model_json_schema()
+    action_schema = schema["properties"]["action"]
+
+    assert action_schema["x-enumNames"] == ["CREATE", "UPDATE"]
+    assert action_schema["x-enum-varnames"] == ["CREATE", "UPDATE"]
+    assert action_schema["x-enumDescriptions"] == ["Create item", "Update item"]
+    assert action_schema["x-enum-descriptions"] == ["Create item", "Update item"]
+
+
+def test_dynamic_enum_schema_extensions_do_not_require_source_comments():
+    dynamic_kind = enum.IntEnum("DynamicKind", {"CREATE": 1, "UPDATE": 2})
+
+    assert enum_schema_extensions(dynamic_kind) == {
+        "x-enumNames": ["CREATE", "UPDATE"],
+        "x-enum-varnames": ["CREATE", "UPDATE"],
+    }
 
 
 def test_model_to_pydantic_marks_default_fields_optional():

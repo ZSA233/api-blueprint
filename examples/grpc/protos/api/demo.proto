@@ -231,14 +231,20 @@ message ErrorDemoResponse {
 
 enum ColorEnum {
   COLORENUM_UNSPECIFIED = 0;
+  // Red color
   COLORENUM_RED = 1;
+  // Green color
   COLORENUM_GREEN = 2;
+  // Blue color
   COLORENUM_BLUE = 3;
 }
 
 enum StatusEnum {
   STATUSENUM_UNSPECIFIED = 0;
+  // Pending status
   STATUSENUM_PENDING = 1;
+  // Running status
   STATUSENUM_RUNNING = 2;
+  // Finished status
   STATUSENUM_FINISHED = 3;
 }

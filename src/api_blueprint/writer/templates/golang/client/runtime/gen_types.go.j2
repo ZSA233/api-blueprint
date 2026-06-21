@@ -7,7 +7,8 @@ package runtime
 type {{ decl.name }} {{ decl.base_type }}
 
 const (
-{% for member in decl.members %}	{{ decl.name }}{{ member.name }} {{ decl.name }} = {{ member.value_literal | safe }}
+{% for member in decl.members %}{% if member.comment %}	// {{ decl.name }}{{ member.name }} {{ member.comment }}
+{% endif %}	{{ decl.name }}{{ member.name }} {{ decl.name }} = {{ member.value_literal | safe }}
 {% endfor %})
 {%- elif decl.kind == "alias" %}
 type {{ decl.name }} = {{ decl.target | safe }}

@@ -1,3 +1,8 @@
 package providers
 
 // User-owned extension point for handle provider helpers.
+//
+// HandleContext is generated in gen_handle.go because the response provider
+// reads its stable Response/Error result frame. Add project-specific handle
+// helper methods in this file or another non-gen file, but do not re-declare
+// HandleContext.

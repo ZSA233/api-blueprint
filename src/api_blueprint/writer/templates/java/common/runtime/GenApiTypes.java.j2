@@ -15,9 +15,9 @@ public final class GenApiTypes {
 {% for enum in writer.enums() %}
 
     public enum {{ enum.name }} {
-{%- for member in enum.values %}
-        {{ member.java_name }}({{ member.literal }}){% if not loop.last %},{% else %};{% endif %}
-{%- endfor %}
+{% for member in enum.values %}{% if member.comment %}        /** {{ member.comment }} */
+{% endif %}        {{ member.java_name }}({{ member.literal }}){% if not loop.last %},{% else %};{% endif %}
+{% endfor -%}
 {% if not enum.values %}
         ;
 {% endif %}

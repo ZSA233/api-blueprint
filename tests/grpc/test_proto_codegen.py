@@ -50,16 +50,16 @@ class ClientMessage(Model):
 
 
 class Color(enum.StrEnum):
-    RED = "red"
-    BLUE = "blue"
+    RED = "red"  # Red color
+    BLUE = "blue"  # Blue color
 
 
 class TaskStatus(enum.IntEnum):
     __module__ = "blueprints.shared.browseragent.task"
 
-    TASK_STATUS_UNSPECIFIED = 0
-    TASK_STATUS_PENDING = 1
-    TASK_STATUS_RUNNING = 2
+    TASK_STATUS_UNSPECIFIED = 0  # Unspecified status
+    TASK_STATUS_PENDING = 1  # Pending status
+    TASK_STATUS_RUNNING = 2  # Running status
 
 
 class NestedPayload(Model):
@@ -501,7 +501,9 @@ def test_grpc_proto_writer_renders_rpc_request_schema_nested_models_and_enums():
 
     color = _block(text, "enum Color {")
     assert "  COLOR_UNSPECIFIED = 0;" in color
+    assert "  // Red color" in color
     assert "  COLOR_RED = 1;" in color
+    assert "  // Blue color" in color
     assert "  COLOR_BLUE = 2;" in color
 
 

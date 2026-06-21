@@ -15,8 +15,11 @@ public final class GenApiTypes {
     }
 
     public enum ColorEnum {
+        /** Red color */
         RED("red"),
+        /** Green color */
         GREEN("green"),
+        /** Blue color */
         BLUE("blue");
 
         private final String value;
@@ -149,8 +152,11 @@ public final class GenApiTypes {
     }
 
     public enum StatusEnum {
+        /** Pending status */
         PENDING(1),
+        /** Running status */
         RUNNING(2),
+        /** Finished status */
         FINISHED(3);
 
         private final Integer value;

@@ -12,10 +12,13 @@ import (
 
 const (
 	// ColorEnumRED is a ColorEnum of type RED.
+	// Red color
 	ColorEnumRED ColorEnum = "red"
 	// ColorEnumGREEN is a ColorEnum of type GREEN.
+	// Green color
 	ColorEnumGREEN ColorEnum = "green"
 	// ColorEnumBLUE is a ColorEnum of type BLUE.
+	// Blue color
 	ColorEnumBLUE ColorEnum = "blue"
 )
 
@@ -368,10 +371,13 @@ func MustParseMapEnum(name string) MapEnum {
 
 const (
 	// StatusEnumPENDING is a StatusEnum of type PENDING.
+	// Pending status
 	StatusEnumPENDING StatusEnum = iota + 1
 	// StatusEnumRUNNING is a StatusEnum of type RUNNING.
+	// Running status
 	StatusEnumRUNNING
 	// StatusEnumFINISHED is a StatusEnum of type FINISHED.
+	// Finished status
 	StatusEnumFINISHED
 )
 

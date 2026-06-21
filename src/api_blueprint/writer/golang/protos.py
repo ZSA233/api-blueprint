@@ -23,6 +23,7 @@ from api_blueprint.engine.model import (
     iter_model_vars,
     model_to_pydantic,
 )
+from api_blueprint.engine.schema.enum_metadata import enum_comment_text, enum_value_metadata
 from api_blueprint.engine.utils import inc_to_letters, is_parametrized, join_path_imports, snake_to_pascal_case
 from api_blueprint.engine.envelope import ResponseEnvelope
 
@@ -75,10 +76,15 @@ class GolangProtoFieldView:
 class GolangEnumMember:
     name: str
     value: Any
+    description: str | None = None
 
     @property
     def go_value_literal(self) -> str:
         return go_literal(self.value)
+
+    @property
+    def comment(self) -> str:
+        return enum_comment_text(self.description, block_end="*/")
 
 
 @dataclass(frozen=True)
@@ -89,7 +95,10 @@ class GolangEnum:
 
     @classmethod
     def from_enum(cls, enum_cls: Type[enum.Enum]) -> Optional["GolangEnum"]:
-        members = [GolangEnumMember(name=member.name, value=member.value) for member in enum_cls]
+        members = [
+            GolangEnumMember(name=member.name, value=member.value, description=member.description)
+            for member in enum_value_metadata(enum_cls)
+        ]
         if not members:
             return None
         return cls(name=enum_cls.__name__, base_type=detect_go_base_type(type(members[0].value)), members=members)

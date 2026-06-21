@@ -82,12 +82,12 @@ def test_python_client_generates_recursive_nested_dto_codecs(tmp_path: Path):
 
 def test_python_client_generates_enum_and_wire_name_codecs(tmp_path: Path):
     class WireEnum(enum.StrEnum):
-        first = "first"
-        second = "second"
+        first = "first"  # First option
+        second = "second"  # Second option
 
     class StatusEnum(enum.IntEnum):
-        ok = 1
-        fail = 2
+        ok = 1  # Successful status
+        fail = 2  # Failed status
 
     class EnumPayload(Model):
         class_ = String(alias="class", description="reserved field")
@@ -110,9 +110,9 @@ def test_python_client_generates_enum_and_wire_name_codecs(tmp_path: Path):
     types_text = (package_root / "routes" / "api" / "demo" / "gen_types.py").read_text(encoding="utf-8")
     client_text = (package_root / "routes" / "api" / "demo" / "gen_client.py").read_text(encoding="utf-8")
     assert "class WireEnum(StrEnum):" in types_text
-    assert "FIRST = \"first\"" in types_text
+    assert "FIRST = \"first\"  # First option" in types_text
     assert "class StatusEnum(IntEnum):" in types_text
-    assert "OK = 1" in types_text
+    assert "OK = 1  # Successful status" in types_text
     assert "class_: str" in types_text
     assert "kind: WireEnum" in types_text
     assert "statuses: list[StatusEnum]" in types_text

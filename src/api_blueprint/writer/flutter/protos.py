@@ -38,6 +38,7 @@ from api_blueprint.engine.model import (
     model_to_pydantic,
     unwrap_model_type,
 )
+from api_blueprint.engine.schema.enum_metadata import enum_comment_text, enum_value_metadata
 from api_blueprint.engine.utils import is_parametrized
 
 from .naming import to_dart_identifier, to_dart_type_name
@@ -63,6 +64,17 @@ class DartResolvedType:
 
 
 @dataclass
+class DartEnumMember:
+    name: str
+    value: Any
+    description: str | None = None
+
+    @property
+    def comment(self) -> str:
+        return enum_comment_text(self.description)
+
+
+@dataclass
 class DartProtoField:
     name: str
     wire_name: str
@@ -78,7 +90,7 @@ class DartProto:
     kind: str
     module: str = "shared"
     alias_type: Optional[DartResolvedType] = None
-    enum_members: Optional[list[tuple[str, Any]]] = None
+    enum_members: Optional[list[DartEnumMember]] = None
     enum_wire_type: str | None = None
     fields: list[DartProtoField] = field(default_factory=list)
     tags: set[str] = field(default_factory=set)
@@ -311,10 +323,10 @@ def detect_enum_wire_type(enum_cls: type[enum.Enum]) -> str:
     return "string"
 
 
-def build_enum_members(enum_cls: type[enum.Enum]) -> list[tuple[str, Any]]:
+def build_enum_members(enum_cls: type[enum.Enum]) -> list[DartEnumMember]:
     used: set[str] = set()
-    members: list[tuple[str, Any]] = []
-    for member in enum_cls:
+    members: list[DartEnumMember] = []
+    for member in enum_value_metadata(enum_cls):
         base_name = to_dart_identifier(member.name, fallback="value")
         name = base_name
         suffix = 2
@@ -322,5 +334,5 @@ def build_enum_members(enum_cls: type[enum.Enum]) -> list[tuple[str, Any]]:
             name = f"{base_name}{suffix}"
             suffix += 1
         used.add(name)
-        members.append((name, member.value))
+        members.append(DartEnumMember(name, member.value, member.description))
     return members

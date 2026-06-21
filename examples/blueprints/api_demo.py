@@ -7,15 +7,15 @@ import enum
 
 
 class ColorEnum(enum.StrEnum):
-    RED = "red"
-    GREEN = "green"
-    BLUE = "blue"
+    RED = "red"  # Red color
+    GREEN = "green"  # Green color
+    BLUE = "blue"  # Blue color
 
 
 class StatusEnum(enum.IntEnum):
-    PENDING = 1
-    RUNNING = 2
-    FINISHED = 3
+    PENDING = 1  # Pending status
+    RUNNING = 2  # Running status
+    FINISHED = 3  # Finished status
 
 
 class ApiDemoSubA(Model):

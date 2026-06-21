@@ -39,6 +39,7 @@ from api_blueprint.engine.model import (
     model_to_pydantic,
     unwrap_model_type,
 )
+from api_blueprint.engine.schema.enum_metadata import enum_comment_text, enum_value_metadata
 from api_blueprint.engine.utils import is_parametrized
 
 from .naming import to_kotlin_property_name, to_kotlin_type_name
@@ -81,6 +82,17 @@ class KotlinResolvedType:
 
 
 @dataclass
+class KotlinEnumMember:
+    name: str
+    value: Any
+    description: str | None = None
+
+    @property
+    def comment(self) -> str:
+        return enum_comment_text(self.description, block_end="*/")
+
+
+@dataclass
 class KotlinProtoField:
     name: str
     serial_name: str
@@ -97,7 +109,7 @@ class KotlinProto:
     kind: str
     module: str = "shared"
     alias_type: Optional[KotlinResolvedType] = None
-    enum_members: Optional[list[tuple[str, Any]]] = None
+    enum_members: Optional[list[KotlinEnumMember]] = None
     enum_wire_type: str | None = None
     fields: list[KotlinProtoField] = field(default_factory=list)
     tags: set[str] = field(default_factory=set)
@@ -350,7 +362,10 @@ class KotlinProtoRegistry:
             model=None,
             kind="enum",
             module=module,
-            enum_members=[(member.name, member.value) for member in enum_cls],
+            enum_members=[
+                KotlinEnumMember(member.name, member.value, member.description)
+                for member in enum_value_metadata(enum_cls)
+            ],
             enum_wire_type=detect_enum_wire_type(enum_cls),
         )
         proto.add_tag("shared")

@@ -6,6 +6,8 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Any, Mapping
 
+from api_blueprint.engine.schema.enum_metadata import enum_comment_text
+
 from .naming import to_py_class_name, to_py_identifier
 
 
@@ -52,10 +54,15 @@ class PythonDtoModel:
 class PythonEnumMember:
     name: str
     value: Any
+    description: str | None = None
 
     @property
     def value_literal(self) -> str:
         return json.dumps(self.value, ensure_ascii=False)
+
+    @property
+    def comment(self) -> str:
+        return enum_comment_text(self.description)
 
 
 @dataclass(frozen=True)
@@ -179,7 +186,14 @@ class PythonSchemaRegistry:
             for index, item in enumerate(raw_values):
                 if isinstance(item, Mapping):
                     member_name = _enum_member_name(str(item.get("name") or f"VALUE_{index + 1}"))
-                    members.append(PythonEnumMember(member_name, item.get("value")))
+                    description = item.get("description")
+                    members.append(
+                        PythonEnumMember(
+                            member_name,
+                            item.get("value"),
+                            str(description) if description else None,
+                        )
+                    )
         else:
             values = value.get("values")
             if isinstance(values, list):
@@ -233,7 +247,7 @@ def _dedupe_enum_members(members: list[PythonEnumMember]) -> tuple[PythonEnumMem
         count = counts.get(member.name, 0) + 1
         counts[member.name] = count
         name = member.name if count == 1 else f"{member.name}_{count}"
-        result.append(PythonEnumMember(name, member.value))
+        result.append(PythonEnumMember(name, member.value, member.description))
     return tuple(result)
 
 

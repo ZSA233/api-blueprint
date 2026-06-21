@@ -26,6 +26,7 @@ from api_blueprint.engine.model import (
     unwrap_model_type,
 )
 from api_blueprint.engine.router import Router, path_param_names
+from api_blueprint.engine.schema.enum_metadata import enum_value_metadata
 
 from .route import RouteContract, resolve_route_contracts, route_contract
 from .runtime import ContractRouteRuntime
@@ -930,13 +931,16 @@ def _replace_schema_ref_value(value: object, old: str, new: str) -> None:
 def _enum_value_manifest(enum_cls: object) -> list[JsonObject]:
     if not isinstance(enum_cls, enum.EnumMeta):
         return []
-    return [
-        {
+    values: list[JsonObject] = []
+    for member in enum_value_metadata(enum_cls):
+        item: JsonObject = {
             "name": member.name,
             "value": member.value,
         }
-        for member in enum_cls
-    ]
+        if member.description:
+            item["description"] = member.description
+        values.append(item)
+    return values
 
 
 def _stable_hash(value: object) -> str:
