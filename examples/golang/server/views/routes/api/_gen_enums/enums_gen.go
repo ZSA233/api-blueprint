@@ -82,29 +82,6 @@ func MustParseColorEnum(name string) ColorEnum {
 	return val
 }
 
-// MarshalText implements the text marshaller method.
-func (x ColorEnum) MarshalText() ([]byte, error) {
-	return []byte(string(x)), nil
-}
-
-// UnmarshalText implements the text unmarshaller method.
-func (x *ColorEnum) UnmarshalText(text []byte) error {
-	tmp, err := ParseColorEnum(string(text))
-	if err != nil {
-		return err
-	}
-	*x = tmp
-	return nil
-}
-
-// AppendText appends the textual representation of itself to the end of b
-// (allocating a larger slice if necessary) and returns the updated slice.
-//
-// Implementations must not retain b, nor mutate any bytes within b[:len(b)].
-func (x *ColorEnum) AppendText(b []byte) ([]byte, error) {
-	return append(b, x.String()...), nil
-}
-
 const (
 	// HelloChannelMsgTypeEnumPING is a HelloChannelMsgTypeEnum of type PING.
 	HelloChannelMsgTypeEnumPING HelloChannelMsgTypeEnum = "ping"
@@ -192,29 +169,6 @@ func MustParseHelloChannelMsgTypeEnum(name string) HelloChannelMsgTypeEnum {
 	return val
 }
 
-// MarshalText implements the text marshaller method.
-func (x HelloChannelMsgTypeEnum) MarshalText() ([]byte, error) {
-	return []byte(string(x)), nil
-}
-
-// UnmarshalText implements the text unmarshaller method.
-func (x *HelloChannelMsgTypeEnum) UnmarshalText(text []byte) error {
-	tmp, err := ParseHelloChannelMsgTypeEnum(string(text))
-	if err != nil {
-		return err
-	}
-	*x = tmp
-	return nil
-}
-
-// AppendText appends the textual representation of itself to the end of b
-// (allocating a larger slice if necessary) and returns the updated slice.
-//
-// Implementations must not retain b, nor mutate any bytes within b[:len(b)].
-func (x *HelloChannelMsgTypeEnum) AppendText(b []byte) ([]byte, error) {
-	return append(b, x.String()...), nil
-}
-
 const (
 	// HelloWayEnumASD is a HelloWayEnum of type ASD.
 	HelloWayEnumASD HelloWayEnum = "ASD"
@@ -276,29 +230,6 @@ func MustParseHelloWayEnum(name string) HelloWayEnum {
 		panic(err)
 	}
 	return val
-}
-
-// MarshalText implements the text marshaller method.
-func (x HelloWayEnum) MarshalText() ([]byte, error) {
-	return []byte(string(x)), nil
-}
-
-// UnmarshalText implements the text unmarshaller method.
-func (x *HelloWayEnum) UnmarshalText(text []byte) error {
-	tmp, err := ParseHelloWayEnum(string(text))
-	if err != nil {
-		return err
-	}
-	*x = tmp
-	return nil
-}
-
-// AppendText appends the textual representation of itself to the end of b
-// (allocating a larger slice if necessary) and returns the updated slice.
-//
-// Implementations must not retain b, nor mutate any bytes within b[:len(b)].
-func (x *HelloWayEnum) AppendText(b []byte) ([]byte, error) {
-	return append(b, x.String()...), nil
 }
 
 const (
@@ -368,29 +299,6 @@ func MustParseKeywordEnum(name string) KeywordEnum {
 	return val
 }
 
-// MarshalText implements the text marshaller method.
-func (x KeywordEnum) MarshalText() ([]byte, error) {
-	return []byte(string(x)), nil
-}
-
-// UnmarshalText implements the text unmarshaller method.
-func (x *KeywordEnum) UnmarshalText(text []byte) error {
-	tmp, err := ParseKeywordEnum(string(text))
-	if err != nil {
-		return err
-	}
-	*x = tmp
-	return nil
-}
-
-// AppendText appends the textual representation of itself to the end of b
-// (allocating a larger slice if necessary) and returns the updated slice.
-//
-// Implementations must not retain b, nor mutate any bytes within b[:len(b)].
-func (x *KeywordEnum) AppendText(b []byte) ([]byte, error) {
-	return append(b, x.String()...), nil
-}
-
 const (
 	// MapEnumA is a MapEnum of type A.
 	MapEnumA MapEnum = "a"
@@ -456,29 +364,6 @@ func MustParseMapEnum(name string) MapEnum {
 		panic(err)
 	}
 	return val
-}
-
-// MarshalText implements the text marshaller method.
-func (x MapEnum) MarshalText() ([]byte, error) {
-	return []byte(string(x)), nil
-}
-
-// UnmarshalText implements the text unmarshaller method.
-func (x *MapEnum) UnmarshalText(text []byte) error {
-	tmp, err := ParseMapEnum(string(text))
-	if err != nil {
-		return err
-	}
-	*x = tmp
-	return nil
-}
-
-// AppendText appends the textual representation of itself to the end of b
-// (allocating a larger slice if necessary) and returns the updated slice.
-//
-// Implementations must not retain b, nor mutate any bytes within b[:len(b)].
-func (x *MapEnum) AppendText(b []byte) ([]byte, error) {
-	return append(b, x.String()...), nil
 }
 
 const (
@@ -565,28 +450,4 @@ func MustParseStatusEnum(name string) StatusEnum {
 		panic(err)
 	}
 	return val
-}
-
-// MarshalText implements the text marshaller method.
-func (x StatusEnum) MarshalText() ([]byte, error) {
-	return []byte(x.String()), nil
-}
-
-// UnmarshalText implements the text unmarshaller method.
-func (x *StatusEnum) UnmarshalText(text []byte) error {
-	name := string(text)
-	tmp, err := ParseStatusEnum(name)
-	if err != nil {
-		return err
-	}
-	*x = tmp
-	return nil
-}
-
-// AppendText appends the textual representation of itself to the end of b
-// (allocating a larger slice if necessary) and returns the updated slice.
-//
-// Implementations must not retain b, nor mutate any bytes within b[:len(b)].
-func (x *StatusEnum) AppendText(b []byte) ([]byte, error) {
-	return append(b, x.String()...), nil
 }

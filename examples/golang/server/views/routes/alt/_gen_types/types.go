@@ -2,8 +2,12 @@
 
 package types
 
+import (
+	enums "example.com/project/golang/server/views/routes/alt/_gen_enums"
+)
+
 type ConflictModel struct {
-	Default string `json:"default" xml:"default" form:"default" uri:"default"`
-	Class   string `json:"class_" xml:"class_" form:"class_" uri:"class_"`
-	Enum    string `json:"enum" xml:"enum" form:"enum" uri:"enum"`
+	Default string            `json:"default" xml:"default" form:"default" uri:"default"`
+	Class   string            `json:"class_" xml:"class_" form:"class_" uri:"class_"`
+	Enum    enums.KeywordEnum `json:"enum" xml:"enum" form:"enum" uri:"enum" binding:"oneof=default class"`
 }

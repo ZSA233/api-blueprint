@@ -105,6 +105,8 @@ type REQ[Path, Query, Body any] struct {
 
 RPC handler 从 `req.Path`、`req.Query`、`req.Body` 读取输入；无对应输入时该指针为 `nil`。这是破坏性清名，旧 `req.Q` / `req.B` 需要迁移为 `req.Query` / `req.Body`。handler context 也使用长名字段：`ctx.Request.Value` / `ctx.Request.Error` 表示绑定后的请求与绑定错误，`ctx.Response` 表示成功响应 metadata。响应相关泛型使用语义名 `Response`，不再使用不透明的 `P`。带 `REQ_PATH` 的 HTTP route 在 ContractGraph 与 `RouteInfo.Path` 中保留 canonical `/user/{user}`，Gin adapter 注册时转换为 `/user/:user` 并通过 `uri:"..."` tag 绑定 path 参数。
 
+Go server route DTO 会使用 `_gen_enums` 中的 typed enum 字段，而不是退化成裸 `int` / `string`。例如 DSL `Enum[StatusEnum]` 会生成 `enums.StatusEnum` 字段，数组和 map 中的 enum 也会保留 typed element / value。JSON、query、form 和 path wire 仍以 enum member 的 value 为准：整数 enum 继续按数字读写，字符串 enum 继续按字符串 value 读写，不使用 enum member name 作为 wire 值。
+
 成功响应需要覆盖 envelope `code`、`message` 或 `toast` 时，业务 handler 通过 `ctx.Response` 设置，不走 error 路径：
 
 ```go
@@ -153,6 +155,8 @@ provider factory 应在应用启动或包 `init()` 阶段注册。provider seque
 #### 兼容性说明
 
 使用较早 `Select(key, value, handler)` provider hook 的项目，应把选择逻辑迁移到 `SelectProvider(spec, handler)`，让 route metadata 保持显式。
+
+Go server DTO 的 enum 字段是 typed enum，不再是裸 scalar。旧业务代码如果直接写 `Status: 1` 或把任意 `int` 赋给 enum 字段，需要迁移为 generated enum 常量或显式 cast，例如 `Status: enums.StatusEnumACTIVE` 或 `Status: enums.StatusEnum(value)`。`_gen_enums` 不实现 `encoding.TextMarshaler`，因此整数 enum 的 JSON wire 保持数字，字符串 enum 的 JSON wire 保持字符串 value；需要按名称解析时使用 generated `ParseXxx` / `MustParseXxx` helper。
 
 HTTP adapter 只在 blueprint root 存在直接 routes 时导入 root router。handler 如果已经通过 Gin 写出响应，adapter 不会追加自动响应；否则没有 `rsp` provider 的 route 由 adapter 写出 handler 返回值，作为兼容行为。
 

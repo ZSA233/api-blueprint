@@ -1,6 +1,7 @@
 package demo
 
 import (
+	enums "example.com/project/golang/server/views/routes/api/_gen_enums"
 	types "example.com/project/golang/server/views/routes/api/_gen_types"
 	apperrors "example.com/project/golang/server/views/runtime/errors"
 	"example.com/project/golang/server/views/runtime/errors/common_err"
@@ -145,9 +146,9 @@ func demoA(label string, n int) *types.ApiDemoA {
 		A:          n,
 		Efg:        1.5,
 		Hijk:       []uint{1, 2, 3},
-		EnumColor:  "red",
-		EnumStatus: 2,
-		EnumList:   []int{1, 2, 3},
+		EnumColor:  enums.ColorEnumRED,
+		EnumStatus: enums.StatusEnumRUNNING,
+		EnumList:   []enums.StatusEnum{enums.StatusEnumPENDING, enums.StatusEnumRUNNING, enums.StatusEnumFINISHED},
 		Lmnop: []*types.ApiDemoSubA{
 			{
 				Hello: map[string]int{"n": n},

@@ -94,7 +94,7 @@ class GoRouteProtocolView:
         if self.protocol.request.form.model is not None:
             return f"{self.req_type}_FORM"
         if self.protocol.request.binary_schema is not None:
-            return f"{{binary_package$}}{self.protocol.request.binary_schema.name}"
+            return str(GolangType.package_ref("binary", self.protocol.request.binary_schema.name))
         return None
 
     @property
@@ -106,7 +106,7 @@ class GoRouteProtocolView:
         if self.protocol.request.form.model is not None:
             return GolangProto.from_model_ref(ensure_model(self.protocol.request.form.model), f"{self.req_type}_FORM")
         if self.protocol.request.binary_schema is not None:
-            return GolangType(f"{{binary_package$}}{self.protocol.request.binary_schema.name}")
+            return GolangType.package_ref("binary", self.protocol.request.binary_schema.name)
         return None
 
     @property
@@ -275,7 +275,7 @@ class GoRouteProtocolView:
             yield req_json_proto
             req_body_proto = req_json_proto
         if self.protocol.request.binary_schema is not None:
-            req_body_proto = GolangType(f"{{binary_package$}}{self.protocol.request.binary_schema.name}")
+            req_body_proto = GolangType.package_ref("binary", self.protocol.request.binary_schema.name)
 
         yield GolangProto(
             self.req_type,
@@ -292,7 +292,7 @@ class GoRouteProtocolView:
             ),
             "generic",
             generic=GolangProtoGeneric(
-                name=GolangType("{provider_package$}REQ"),
+                name=GolangType.package_ref("provider", "REQ"),
                 types=[
                     req_path_proto or GolangType("any"),
                     req_query_proto or GolangType("any"),
@@ -311,9 +311,9 @@ class GoRouteProtocolView:
             yield rsp_json_proto
             rsp_body_ref = rsp_json_proto
         elif self.protocol.response.kind in {"bytes", "file", "byte_stream"}:
-            rsp_body_ref = GolangType("{provider_package$}RawResponse")
+            rsp_body_ref = GolangType.package_ref("provider", "RawResponse")
         elif self.protocol.response.binary_schema is not None:
-            rsp_body_ref = GolangType(f"{{binary_package$}}{self.protocol.response.binary_schema.name}")
+            rsp_body_ref = GolangType.package_ref("binary", self.protocol.response.binary_schema.name)
 
         yield GolangProto(
             self.rsp_type,
@@ -341,7 +341,7 @@ class GoRouteProtocolView:
             ),
             "generic",
             generic=GolangProtoGeneric(
-                name=GolangType("{provider_package$}Context"),
+                name=GolangType.package_ref("provider", "Context"),
                 types=[
                     req_path_proto or GolangType("any"),
                     req_query_proto or GolangType("any"),

@@ -193,7 +193,10 @@ def _prepare_blueprint_outputs(*, source_root: Path, target_root: Path) -> None:
 
 
 def _prepare_blueprint_go_server_output(*, source_root: Path, target_root: Path) -> None:
-    (target_root / "golang" / "server").mkdir(parents=True, exist_ok=True)
+    _write_preserved_files(
+        target_root / "golang" / "server",
+        _capture_relative_files(source_root / "golang" / "server", BLUEPRINT_GOLANG_SERVER_PRESERVED),
+    )
 
 
 def _prepare_blueprint_target_output(
@@ -339,6 +342,11 @@ def _capture_relative_files(root: Path, relative_paths: Iterable[str]) -> dict[P
 
 def _prepare_output_dir(root: Path, preserved_files: Mapping[Path, bytes]) -> None:
     shutil.rmtree(root, ignore_errors=True)
+    root.mkdir(parents=True, exist_ok=True)
+    _write_preserved_files(root, preserved_files)
+
+
+def _write_preserved_files(root: Path, preserved_files: Mapping[Path, bytes]) -> None:
     root.mkdir(parents=True, exist_ok=True)
     for relative_path, data in preserved_files.items():
         file_path = root / relative_path

@@ -2,4 +2,4 @@
 
 package enums
 
-//go:generate go-enum --nocase --names --values --marshal --mustparse --output-suffix=_gen --file=$GOFILE
+//go:generate go-enum --nocase --names --values --mustparse --output-suffix=_gen --file=$GOFILE

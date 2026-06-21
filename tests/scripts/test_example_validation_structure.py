@@ -25,12 +25,17 @@ def test_prepare_blueprint_go_server_output_keeps_colocated_wails_outputs(tmp_pa
     module = importlib.import_module("scripts.example_validation")
     source_root = tmp_path / "source"
     target_root = tmp_path / "target"
+    provider_impl = source_root / "golang" / "server" / "views" / "providers" / "impl_rsp.go"
+    provider_impl.parent.mkdir(parents=True)
+    provider_impl.write_text("package providers\n", encoding="utf-8")
     wails_file = target_root / "golang" / "server" / "views" / "transports" / "wailsv3" / "gen_runtime.go"
     wails_file.parent.mkdir(parents=True)
     wails_file.write_text("package wailsv3\n", encoding="utf-8")
 
     module._prepare_blueprint_go_server_output(source_root=source_root, target_root=target_root)
 
+    copied_provider_impl = target_root / "golang" / "server" / "views" / "providers" / "impl_rsp.go"
+    assert copied_provider_impl.read_text(encoding="utf-8") == "package providers\n"
     assert wails_file.read_text(encoding="utf-8") == "package wailsv3\n"
 
 

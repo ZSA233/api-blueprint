@@ -3,12 +3,14 @@
 package types
 
 import (
+	enums "example.com/project/golang/server/views/routes/api/_gen_enums"
+
 	providers "example.com/project/golang/server/views/providers"
 )
 
 type HelloChannelMessage struct {
-	Type string `json:"type" xml:"type" form:"type" uri:"type"`
-	Data any    `json:"data" xml:"data" form:"data" uri:"data"`
+	Type enums.HelloChannelMsgTypeEnum `json:"type" xml:"type" form:"type" uri:"type" binding:"oneof=ping pong join leave forgeround upgrade"`
+	Data any                           `json:"data" xml:"data" form:"data" uri:"data"`
 }
 
 type DefaultConnectionClose struct {
@@ -18,9 +20,9 @@ type DefaultConnectionClose struct {
 }
 
 type ConflictModel struct {
-	Default string `json:"default" xml:"default" form:"default" uri:"default"`
-	Class   string `json:"class_" xml:"class_" form:"class_" uri:"class_"`
-	Enum    string `json:"enum" xml:"enum" form:"enum" uri:"enum"`
+	Default string            `json:"default" xml:"default" form:"default" uri:"default"`
+	Class   string            `json:"class_" xml:"class_" form:"class_" uri:"class_"`
+	Enum    enums.KeywordEnum `json:"enum" xml:"enum" form:"enum" uri:"enum" binding:"oneof=default class"`
 }
 
 type ApiDemoMap struct {
@@ -33,14 +35,14 @@ type ApiDemoSubA struct {
 }
 
 type ApiDemoA struct {
-	Bc         string         `json:"bc" xml:"bc" form:"bc" uri:"bc"`
-	A          int            `json:"a" xml:"a" form:"a" uri:"a"`
-	Efg        float32        `json:"efg" xml:"efg" form:"efg" uri:"efg"`
-	Hijk       []uint         `json:"hijk" xml:"hijk" form:"hijk" uri:"hijk"`
-	Lmnop      []*ApiDemoSubA `json:"lmnop,omitempty" xml:"lmnop,omitempty" form:"lmnop,omitempty" uri:"lmnop,omitempty" binding:"omitempty"`
-	EnumColor  string         `json:"enum_color,omitempty" xml:"enum_color,omitempty" form:"enum_color,omitempty" uri:"enum_color,omitempty" binding:"omitempty"`
-	EnumStatus int            `json:"enum_status" xml:"enum_status" form:"enum_status" uri:"enum_status"`
-	EnumList   []int          `json:"enum_list" xml:"enum_list" form:"enum_list" uri:"enum_list"`
+	Bc         string             `json:"bc" xml:"bc" form:"bc" uri:"bc"`
+	A          int                `json:"a" xml:"a" form:"a" uri:"a"`
+	Efg        float32            `json:"efg" xml:"efg" form:"efg" uri:"efg"`
+	Hijk       []uint             `json:"hijk" xml:"hijk" form:"hijk" uri:"hijk"`
+	Lmnop      []*ApiDemoSubA     `json:"lmnop,omitempty" xml:"lmnop,omitempty" form:"lmnop,omitempty" uri:"lmnop,omitempty" binding:"omitempty"`
+	EnumColor  enums.ColorEnum    `json:"enum_color,omitempty" xml:"enum_color,omitempty" form:"enum_color,omitempty" uri:"enum_color,omitempty" binding:"omitempty,oneof=red green blue"`
+	EnumStatus enums.StatusEnum   `json:"enum_status" xml:"enum_status" form:"enum_status" uri:"enum_status" binding:"oneof=1 2 3"`
+	EnumList   []enums.StatusEnum `json:"enum_list" xml:"enum_list" form:"enum_list" uri:"enum_list"`
 }
 
 type RequestOptionsResponse struct {

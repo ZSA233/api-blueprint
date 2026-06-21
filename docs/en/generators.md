@@ -105,6 +105,8 @@ type REQ[Path, Query, Body any] struct {
 
 RPC handlers read input from `req.Path`, `req.Query`, and `req.Body`; missing slots are `nil`. This is a breaking cleanup, so older `req.Q` / `req.B` code should migrate to `req.Query` / `req.Body`. Handler context fields also use long names: `ctx.Request.Value` / `ctx.Request.Error` carry the bound request and binding error, and `ctx.Response` carries success response metadata. Response-related generics use the semantic `Response` name instead of opaque `P`. For routes with `REQ_PATH`, ContractGraph and `RouteInfo.Path` keep the canonical `/user/{user}` path, while the Gin adapter registers `/user/:user` and binds parameters through `uri:"..."` tags.
 
+Go server route DTOs use typed enum fields from `_gen_enums` instead of falling back to bare `int` / `string`. For example, DSL `Enum[StatusEnum]` generates an `enums.StatusEnum` field, and enum values inside arrays or maps keep typed element / value types. JSON, query, form, and path wire values still use the enum member value: integer enums continue to read/write numbers, string enums continue to read/write string values, and enum member names are not used as wire values.
+
 When a successful response needs to override the envelope `code`, `message`, or `toast`, business handlers set it through `ctx.Response` instead of the error path:
 
 ```go
@@ -153,6 +155,8 @@ Register provider factories during application startup or package `init()`. The 
 #### Compatibility
 
 Projects using the older `Select(key, value, handler)` provider hook should migrate that logic to `SelectProvider(spec, handler)` so route metadata stays explicit.
+
+Go server DTO enum fields are typed enums rather than bare scalars. Existing business code that writes `Status: 1` or assigns arbitrary `int` values to enum fields should migrate to generated enum constants or explicit casts, for example `Status: enums.StatusEnumACTIVE` or `Status: enums.StatusEnum(value)`. `_gen_enums` does not implement `encoding.TextMarshaler`, so integer enum JSON wire values remain numbers and string enum JSON wire values remain string values; use the generated `ParseXxx` / `MustParseXxx` helpers when name parsing is needed.
 
 The HTTP adapter imports the blueprint root router only when the root has direct routes. If a handler has already written a Gin response, the adapter does not append an automatic response; otherwise routes without an `rsp` provider keep the existing behavior where the adapter writes the handler return value.
 

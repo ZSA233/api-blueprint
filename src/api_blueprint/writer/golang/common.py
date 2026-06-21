@@ -41,6 +41,11 @@ class GolangType(SafeFmtter):
             parents.add(result[0])
         self.parents = list(parents)
 
+    @classmethod
+    def package_ref(cls, package: str, name: str, *, pointer: bool = False) -> "GolangType":
+        prefix = "*" if pointer else ""
+        return cls(f"{prefix}{{{package}_package$}}{name}")
+
     def render(self, formatters: Optional[Dict[str, str]] = None) -> str:
         formatters = formatters or {}
 
@@ -51,8 +56,11 @@ class GolangType(SafeFmtter):
         return type_reg.sub(repl, str(self))
 
 
+GolangTypeExpr = str | GolangType
+
+
 class GolangTypeResolver:
-    SIMPLE_TYPE_MAPPING = {
+    SIMPLE_TYPE_MAPPING: dict[str, GolangTypeExpr] = {
         "string": "string",
         "str": "string",
         "int": "int",
@@ -72,13 +80,13 @@ class GolangTypeResolver:
         "bool": "bool",
         "byte": "byte",
         "coerce_string": "string",
-        "file": "{provider_package$}MultipartFile",
+        "file": GolangType.package_ref("provider", "MultipartFile"),
         "error": "error",
         "null": "nil",
         "one_of": "any",
     }
 
-    def resolve(self, field: Union[Field, Model, Type[Any], Any], *, pointer_allowed: bool = True) -> str:
+    def resolve(self, field: Union[Field, Model, Type[Any], Any], *, pointer_allowed: bool = True) -> GolangTypeExpr:
         kind = self._infer_kind(field)
         if kind in self.SIMPLE_TYPE_MAPPING:
             return self.SIMPLE_TYPE_MAPPING[kind]
@@ -128,13 +136,16 @@ class GolangTypeResolver:
             return f"[]*{elem_type}"
         return f"[]{elem_type}"
 
-    def _resolve_enum(self, field: Enum | enum.Enum, *, pointer_allowed: bool) -> str:
+    def _resolve_enum(self, field: Enum | enum.Enum, *, pointer_allowed: bool) -> GolangTypeExpr:
         if is_parametrized(field):
             field = field()
-        base_type_getter = getattr(field, "enum_base_type", None)
-        if base_type_getter is None:
-            base_type_getter = Enum[field]().enum_base_type
-        return self.resolve(base_type_getter(), pointer_allowed=pointer_allowed)
+        enum_cls = _enum_class_from(field)
+        if enum_cls is None:
+            base_type_getter = getattr(field, "enum_base_type", None)
+            if base_type_getter is None:
+                base_type_getter = Enum[field]().enum_base_type
+            return self.resolve(base_type_getter(), pointer_allowed=pointer_allowed)
+        return GolangType.package_ref("enums", enum_cls.__name__)
 
     def _resolve_map(self, field: Union[Map, Type[Map]], *, pointer_allowed: bool) -> str:
         map_field = self._ensure_instance(field, Map)
@@ -148,13 +159,12 @@ class GolangTypeResolver:
             resolved_value = f"*{resolved_value}"
         return f"map[{resolved_key}]{resolved_value}"
 
-    def _resolve_anon_kv(self, field: AnonKV, *, pointer_allowed: bool) -> str:
+    def _resolve_anon_kv(self, field: AnonKV, *, pointer_allowed: bool) -> GolangTypeExpr:
         return self.resolve(field.get_obj(), pointer_allowed=pointer_allowed)
 
-    def _resolve_object(self, field: Union[Model, Type[Model]], *, pointer_allowed: bool) -> str:
+    def _resolve_object(self, field: Union[Model, Type[Model]], *, pointer_allowed: bool) -> GolangType:
         model_cls = field if isinstance(field, type) else field.__class__
-        pointer = "*" if pointer_allowed else ""
-        return GolangType(f"{pointer}{{protos_package$}}{model_cls.__name__}")
+        return GolangType.package_ref("protos", model_cls.__name__, pointer=pointer_allowed)
 
     def _ensure_instance(self, field: Any, expected: Type[Any]) -> Any:
         if isinstance(field, expected):
@@ -183,14 +193,14 @@ class GolangTagBuilder:
     DEFAULT_TAG_FIELDS = ("json", "xml", "form", "uri")
 
     @staticmethod
-    def binding(field_info: FieldInfo, omitempty: bool = False) -> str:
+    def binding(field_info: FieldInfo, omitempty: bool = False, field: Union[Field, Model, None] = None) -> str:
         parts: list[str] = []
         if omitempty:
             parts.append("omitempty")
 
-        annotation = field_info.annotation
-        if isinstance(annotation, type) and issubclass(annotation, enum.Enum):
-            enum_values = " ".join(str(member.value) for member in list(annotation))
+        enum_cls = _enum_class_from(field) or _enum_class_from(field_info.annotation)
+        if enum_cls is not None:
+            enum_values = " ".join(str(member.value) for member in list(enum_cls))
             parts.append(f"oneof={enum_values}")
 
         for meta in field_info.metadata:
@@ -220,7 +230,7 @@ class GolangTagBuilder:
         normal_val = field_name if not omitempty else f"{field_name},omitempty"
 
         tags: list[tuple[str, str]] = [(tag, normal_val) for tag in cls.DEFAULT_TAG_FIELDS]
-        binding = cls.binding(field_info, omitempty)
+        binding = cls.binding(field_info, omitempty, field)
         if binding:
             tags.append(("binding", binding))
         return " ".join(f'{tag}:"{value}"' for tag, value in tags)
@@ -250,3 +260,21 @@ def go_literal(value: Any) -> str:
     if isinstance(value, (int, float)):
         return str(value)
     return json.dumps(value, default=str)
+
+
+def _enum_class_from(value: Any) -> Type[enum.Enum] | None:
+    if isinstance(value, Enum):
+        enum_cls = value.enum_type()
+        return enum_cls if isinstance(enum_cls, type) and issubclass(enum_cls, enum.Enum) else None
+    if isinstance(value, type) and issubclass(value, enum.Enum):
+        return value
+    if isinstance(value, enum.Enum):
+        return value.__class__
+    if is_parametrized(value):
+        try:
+            instance = value()
+        except TypeError:
+            return None
+        if isinstance(instance, Enum):
+            return _enum_class_from(instance)
+    return None

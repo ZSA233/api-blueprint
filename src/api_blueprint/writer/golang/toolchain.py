@@ -19,7 +19,6 @@ class GolangToolchain:
     GO_ENUM_ARGS: Tuple[str, ...] = (
         "--names",
         "--values",
-        "--marshal",
         "--mustparse",
         "--nocase",
         "--output-suffix",

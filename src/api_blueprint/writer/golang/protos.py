@@ -30,6 +30,7 @@ from .common import (
     PROTO_STRUCT_TYPE,
     GolangTagBuilder,
     GolangType,
+    GolangTypeExpr,
     GolangTypeResolver,
     detect_go_base_type,
     go_literal,
@@ -138,7 +139,7 @@ class GolangProtoStruct:
     _resolver = GolangTypeResolver()
 
     @staticmethod
-    def get_field_type(field: Union[Field, Model, Type[Any], Any], is_sub: bool = False) -> str:
+    def get_field_type(field: Union[Field, Model, Type[Any], Any], is_sub: bool = False) -> GolangTypeExpr:
         return GolangProtoStruct._resolver.resolve(field, pointer_allowed=not is_sub)
 
     @staticmethod
@@ -470,14 +471,14 @@ class GolangProto(Proto):
 
         alias_is_com = not is_field_ref
         alias_proto = GolangProto.from_model(ref_model, **kwargs)
-        alias_name = alias_proto.name
+        alias_name: str | GolangType = alias_proto.name
         if alias_is_com:
-            alias_name = f"{{protos_package}}.{alias_proto.name}"
+            alias_name = GolangType.package_ref("protos", alias_proto.name)
         return GolangProto(
             name,
             ref_model,
             "alias",
-            alias=GolangProtoAlias(name=GolangType(alias_name), proto=alias_proto),
+            alias=GolangProtoAlias(name=alias_name if isinstance(alias_name, GolangType) else GolangType(alias_name), proto=alias_proto),
             **kwargs,
         )
 
@@ -532,7 +533,7 @@ class GolangProto(Proto):
         field: Union[Field, Model],
         generic_types: dict[TypeVar, str],
         annotations: dict[str, Any],
-    ) -> str:
+    ) -> GolangTypeExpr:
         if type(field) is Field:
             annotation = annotations.get(name)
             if isinstance(annotation, TypeVar):

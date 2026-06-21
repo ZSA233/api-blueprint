@@ -4,14 +4,15 @@ package hello
 
 import (
 	providers "example.com/project/golang/server/views/providers"
+	enums "example.com/project/golang/server/views/routes/api/_gen_enums"
 	types "example.com/project/golang/server/views/routes/api/_gen_types"
 )
 
 type REQ_Abc_QUERY struct {
-	Arg1 bool    `json:"arg1" xml:"arg1" form:"arg1" uri:"arg1"`
-	Arg3 string  `json:"arg3,omitempty" xml:"arg3,omitempty" form:"arg3,omitempty" uri:"arg3,omitempty" binding:"omitempty"`
-	Arg2 float64 `json:"arg2" xml:"arg2" form:"arg2" uri:"arg2"`
-	Type string  `json:"type" xml:"type" form:"type" uri:"type"`
+	Arg1 bool                          `json:"arg1" xml:"arg1" form:"arg1" uri:"arg1"`
+	Arg3 string                        `json:"arg3,omitempty" xml:"arg3,omitempty" form:"arg3,omitempty" uri:"arg3,omitempty" binding:"omitempty"`
+	Arg2 float64                       `json:"arg2" xml:"arg2" form:"arg2" uri:"arg2"`
+	Type enums.HelloChannelMsgTypeEnum `json:"type" xml:"type" form:"type" uri:"type" binding:"oneof=ping pong join leave forgeround upgrade"`
 }
 
 type REQ_Abc = providers.REQ[
@@ -37,7 +38,7 @@ type REQ_MapEnum = providers.REQ[
 	any,
 ]
 
-type RSP_MapEnum_BODY = map[string]*types.ApiHelloMap
+type RSP_MapEnum_BODY = map[enums.MapEnum]*types.ApiHelloMap
 
 type RSP_MapEnum = RSP_MapEnum_BODY
 
@@ -54,7 +55,7 @@ type REQ_ListEnum = providers.REQ[
 	any,
 ]
 
-type RSP_ListEnum_BODY = []string
+type RSP_ListEnum_BODY = []enums.MapEnum
 
 type RSP_ListEnum = RSP_ListEnum_BODY
 
@@ -105,7 +106,7 @@ type REQ_StringEmun = providers.REQ[
 	any,
 ]
 
-type RSP_StringEmun_BODY = string
+type RSP_StringEmun_BODY = enums.MapEnum
 
 type RSP_StringEmun = RSP_StringEmun_BODY
 
@@ -117,7 +118,7 @@ type CTX_StringEmun = providers.Context[
 ]
 
 type REQ_HelloWay_QUERY struct {
-	Arg1 string `json:"arg1" xml:"arg1" form:"arg1" uri:"arg1"`
+	Arg1 enums.HelloWayEnum `json:"arg1" xml:"arg1" form:"arg1" uri:"arg1" binding:"oneof=ASD"`
 }
 
 type REQ_HelloWay = providers.REQ[

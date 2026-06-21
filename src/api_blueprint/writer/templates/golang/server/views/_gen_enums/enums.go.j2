@@ -4,7 +4,7 @@ package {{ bp.com_enum_package }}
 
 {% set enums_list = bp.com_enums() %}
 {% if enums_list %}
-//go:generate go-enum --nocase --names --values --marshal --mustparse --output-suffix=_gen --file=$GOFILE
+//go:generate go-enum --nocase --names --values --mustparse --output-suffix=_gen --file=$GOFILE
 
 {% for enum in enums_list %}/*
 ENUM(

@@ -76,26 +76,3 @@ func MustParseKeywordEnum(name string) KeywordEnum {
 	}
 	return val
 }
-
-// MarshalText implements the text marshaller method.
-func (x KeywordEnum) MarshalText() ([]byte, error) {
-	return []byte(string(x)), nil
-}
-
-// UnmarshalText implements the text unmarshaller method.
-func (x *KeywordEnum) UnmarshalText(text []byte) error {
-	tmp, err := ParseKeywordEnum(string(text))
-	if err != nil {
-		return err
-	}
-	*x = tmp
-	return nil
-}
-
-// AppendText appends the textual representation of itself to the end of b
-// (allocating a larger slice if necessary) and returns the updated slice.
-//
-// Implementations must not retain b, nor mutate any bytes within b[:len(b)].
-func (x *KeywordEnum) AppendText(b []byte) ([]byte, error) {
-	return append(b, x.String()...), nil
-}

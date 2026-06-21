@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import enum
 import shutil
-from itertools import chain
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Generator, Optional, Set, Type
 
@@ -486,7 +485,7 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
 
     def com_enums(self) -> Generator[GolangEnum, None, None]:
         seen: Set[Type[enum.Enum]] = set()
-        for proto in chain(self.protos(), self.com_protos()):
+        for proto in self._enum_source_protos():
             for enum_cls in iter_enum_classes(proto.model_type):
                 if enum_cls in seen:
                     continue
@@ -495,6 +494,11 @@ class GolangBlueprint(BaseBlueprint["GolangWriter"]):
                     continue
                 seen.add(enum_cls)
                 yield golang_enum
+
+    def _enum_source_protos(self) -> Generator[GolangProto, None, None]:
+        for group in self.get_router_groups():
+            yield from group.protos()
+            yield from group.com_protos()
 
     def gen_views(self) -> None:
         self.validate_reserved_paths()

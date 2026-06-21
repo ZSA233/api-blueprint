@@ -1,6 +1,7 @@
 package hello
 
 import (
+	enums "example.com/project/golang/server/views/routes/api/_gen_enums"
 	types "example.com/project/golang/server/views/routes/api/_gen_types"
 )
 
@@ -18,8 +19,8 @@ func (impl *Router) Abc(ctx *CTX_Abc, req *REQ_Abc) (rsp *RSP_Abc, err error) {
 		key = "ping"
 	}
 	return &RSP_Abc{
-		"hello": {Haha: 1001},
-		key:     {Haha: 1},
+		"hello":     {Haha: 1001},
+		string(key): {Haha: 1},
 	}, nil
 }
 
@@ -45,12 +46,12 @@ func (impl *Router) Uint64(ctx *CTX_Uint64, req *REQ_Uint64) (rsp *RSP_Uint64, e
 }
 
 func (impl *Router) StringEmun(ctx *CTX_StringEmun, req *REQ_StringEmun) (rsp *RSP_StringEmun, err error) {
-	value := RSP_StringEmun("a")
+	value := RSP_StringEmun(enums.MapEnumA)
 	return &value, nil
 }
 
 func (impl *Router) HelloWay(ctx *CTX_HelloWay, req *REQ_HelloWay) (rsp *RSP_HelloWay, err error) {
-	var value RSP_HelloWay = map[string]string{"arg1": req.Query.Arg1}
+	var value RSP_HelloWay = map[string]string{"arg1": string(req.Query.Arg1)}
 	return &value, nil
 }
 
