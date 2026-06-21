@@ -101,6 +101,14 @@ api/
 
 Go HTTP 与 Wails 共用生成的 `RouteExecutor` provider pipeline。Wails service 默认会执行 `req/auth/handle/rsp` 与连接 preflight provider，不需要项目为每个 route 手写 adapter 来补 auth/provider。
 
+Wails service 构造入口支持和 Go HTTP 相同的 runtime options。需要把业务 error 映射成 generated `ApiErrorPayload` 时，在 preserved `NewService` 入口传入 `WithErrorMapper(mapper)` 即可对该 service 的所有 route 生效；这个 mapper 通过 `ErrorMappingContext` 读取稳定的 `RouteInfo` 与 transport kind，不依赖 Wails 私有运行时对象：
+
+```go
+svc := demo.NewService(dispatcher,
+	demo.WithErrorMapper(mapper),
+)
+```
+
 长期 ownership 边界：
 
 - `gen_*`：生成器拥有，重生成覆盖。

@@ -41,8 +41,11 @@ go 1.23.8
     assert expected_shared_provider_import in runtime_file.read_text(encoding="utf-8")
     assert "func newGeneratedDemoService" in overlay_service.read_text(encoding="utf-8")
     assert "func NewService(" not in overlay_service.read_text(encoding="utf-8")
-    assert "func NewService(dispatcher wailstransport.EventDispatcher)" in binding_impl.read_text(encoding="utf-8")
-    assert "return newGeneratedDemoService(shared.NewRouter(), dispatcher)" in binding_impl.read_text(encoding="utf-8")
+    binding_impl_text = binding_impl.read_text(encoding="utf-8")
+    assert "type ServiceOption = sharedprovider.RuntimeOption" in binding_impl_text
+    assert "func WithErrorMapper(mapper ErrorMapperFunc) ServiceOption" in binding_impl_text
+    assert "func NewService(dispatcher wailstransport.EventDispatcher, options ...ServiceOption)" in binding_impl_text
+    assert "return newGeneratedDemoService(shared.NewRouter(), dispatcher, options...)" in binding_impl_text
 
 def test_wails_binding_impl_service_is_preserved_on_regeneration(tmp_path: Path):
     config = tmp_path / "api-blueprint.toml"

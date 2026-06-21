@@ -6,15 +6,25 @@ import (
 	sharedConflict "example.com/project/golang/server/views/routes/alt/conflict"
 	conflict "example.com/project/golang/server/views/transports/http/alt/conflict"
 
+	sharedprovider "example.com/project/golang/server/views/providers"
+	httptransport "example.com/project/golang/server/views/transports/http"
+
 	"github.com/gin-gonic/gin"
 )
+
+type MountOption = httptransport.MountOption
+type ErrorMapperFunc = sharedprovider.ErrorMapperFunc
+
+func WithErrorMapper(mapper ErrorMapperFunc) MountOption {
+	return httptransport.WithErrorMapper(mapper)
+}
 
 type Blueprint struct {
 	ConflictRouter *sharedConflict.Router
 }
 
-func NewBlueprint(router gin.IRouter) *Blueprint {
+func NewBlueprint(router gin.IRouter, options ...MountOption) *Blueprint {
 	return &Blueprint{
-		ConflictRouter: conflict.NewRouter(router),
+		ConflictRouter: conflict.NewRouter(router, options...),
 	}
 }

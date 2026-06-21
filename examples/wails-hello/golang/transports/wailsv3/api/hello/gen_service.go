@@ -13,7 +13,7 @@ type HelloService struct {
 	greetExecutor *sharedprovider.RouteExecutor[any, REQ_Greet_QUERY, any, RSP_Greet]
 }
 
-func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.EventDispatcher) *HelloService {
+func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.EventDispatcher, options ...sharedprovider.RuntimeOption) *HelloService {
 	return &HelloService{
 		impl:     impl,
 		sessions: wailstransport.NewSocketHub(dispatcher),
@@ -32,6 +32,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 			},
 			"req=query|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.Greet,
+			options...,
 		),
 	}
 }
@@ -67,5 +68,10 @@ func (svc *HelloService) Greet(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.greetExecutor.Indexer.Rsp, response, invokeErr)
+	if wrapped == nil {
+		return nil, nil
+	}
+	typed, _ := wrapped.(*sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_Greet])
+	return typed, nil
 }

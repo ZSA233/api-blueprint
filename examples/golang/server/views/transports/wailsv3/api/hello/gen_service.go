@@ -19,7 +19,7 @@ type HelloService struct {
 	helloWayExecutor   *sharedprovider.RouteExecutor[any, REQ_HelloWay_QUERY, any, RSP_HelloWay]
 }
 
-func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.EventDispatcher) *HelloService {
+func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.EventDispatcher, options ...sharedprovider.RuntimeOption) *HelloService {
 	return &HelloService{
 		impl:     impl,
 		sessions: wailstransport.NewSocketHub(dispatcher),
@@ -38,6 +38,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 			},
 			"req=query|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.Abc,
+			options...,
 		),
 		mapEnumExecutor: sharedprovider.NewRouteExecutor(
 			sharedprovider.RouteInfo{
@@ -54,6 +55,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 			},
 			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.MapEnum,
+			options...,
 		),
 		listEnumExecutor: sharedprovider.NewRouteExecutor(
 			sharedprovider.RouteInfo{
@@ -70,6 +72,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 			},
 			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.ListEnum,
+			options...,
 		),
 		stringExecutor: sharedprovider.NewRouteExecutor(
 			sharedprovider.RouteInfo{
@@ -86,6 +89,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 			},
 			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.String,
+			options...,
 		),
 		uint64Executor: sharedprovider.NewRouteExecutor(
 			sharedprovider.RouteInfo{
@@ -102,6 +106,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 			},
 			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.Uint64,
+			options...,
 		),
 		stringEmunExecutor: sharedprovider.NewRouteExecutor(
 			sharedprovider.RouteInfo{
@@ -118,6 +123,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 			},
 			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.StringEmun,
+			options...,
 		),
 		helloWayExecutor: sharedprovider.NewRouteExecutor(
 			sharedprovider.RouteInfo{
@@ -134,6 +140,7 @@ func newGeneratedHelloService(impl RouterInterface, dispatcher wailstransport.Ev
 			},
 			"req=query|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.HelloWay,
+			options...,
 		),
 	}
 }
@@ -169,7 +176,12 @@ func (svc *HelloService) Abc(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.abcExecutor.Indexer.Rsp, response, invokeErr)
+	if wrapped == nil {
+		return nil, nil
+	}
+	typed, _ := wrapped.(*sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_Abc])
+	return typed, nil
 }
 
 func (svc *HelloService) MapEnum(
@@ -196,7 +208,12 @@ func (svc *HelloService) MapEnum(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.mapEnumExecutor.Indexer.Rsp, response, invokeErr)
+	if wrapped == nil {
+		return nil, nil
+	}
+	typed, _ := wrapped.(*sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_MapEnum])
+	return typed, nil
 }
 
 func (svc *HelloService) ListEnum(
@@ -223,7 +240,12 @@ func (svc *HelloService) ListEnum(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.listEnumExecutor.Indexer.Rsp, response, invokeErr)
+	if wrapped == nil {
+		return nil, nil
+	}
+	typed, _ := wrapped.(*sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_ListEnum])
+	return typed, nil
 }
 
 func (svc *HelloService) String(
@@ -250,7 +272,12 @@ func (svc *HelloService) String(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.stringExecutor.Indexer.Rsp, response, invokeErr)
+	if wrapped == nil {
+		return nil, nil
+	}
+	typed, _ := wrapped.(*sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_String])
+	return typed, nil
 }
 
 func (svc *HelloService) Uint64(
@@ -277,7 +304,12 @@ func (svc *HelloService) Uint64(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.uint64Executor.Indexer.Rsp, response, invokeErr)
+	if wrapped == nil {
+		return nil, nil
+	}
+	typed, _ := wrapped.(*sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_Uint64])
+	return typed, nil
 }
 
 func (svc *HelloService) StringEmun(
@@ -304,7 +336,12 @@ func (svc *HelloService) StringEmun(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.stringEmunExecutor.Indexer.Rsp, response, invokeErr)
+	if wrapped == nil {
+		return nil, nil
+	}
+	typed, _ := wrapped.(*sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_StringEmun])
+	return typed, nil
 }
 
 func (svc *HelloService) HelloWay(
@@ -331,5 +368,10 @@ func (svc *HelloService) HelloWay(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.helloWayExecutor.Indexer.Rsp, response, invokeErr)
+	if wrapped == nil {
+		return nil, nil
+	}
+	typed, _ := wrapped.(*sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_HelloWay])
+	return typed, nil
 }

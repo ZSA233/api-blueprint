@@ -13,7 +13,7 @@ type StatusService struct {
 	runtimeCurrentStatusExecutor *sharedprovider.RouteExecutor[any, any, any, RSP_RuntimeCurrentStatus]
 }
 
-func newGeneratedStatusService(impl RouterInterface, dispatcher wailstransport.EventDispatcher) *StatusService {
+func newGeneratedStatusService(impl RouterInterface, dispatcher wailstransport.EventDispatcher, options ...sharedprovider.RuntimeOption) *StatusService {
 	return &StatusService{
 		impl:     impl,
 		sessions: wailstransport.NewSocketHub(dispatcher),
@@ -32,6 +32,7 @@ func newGeneratedStatusService(impl RouterInterface, dispatcher wailstransport.E
 			},
 			"req|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.RuntimeCurrentStatus,
+			options...,
 		),
 	}
 }
@@ -67,5 +68,10 @@ func (svc *StatusService) RuntimeCurrentStatus(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.runtimeCurrentStatusExecutor.Indexer.Rsp, response, invokeErr)
+	if wrapped == nil {
+		return nil, nil
+	}
+	typed, _ := wrapped.(*sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_RuntimeCurrentStatus])
+	return typed, nil
 }

@@ -23,7 +23,7 @@ type {{ routes[0].service_name }} struct {
 {% endfor -%}
 }
 
-func newGenerated{{ routes[0].service_name }}(impl RouterInterface, dispatcher wailstransport.EventDispatcher) *{{ routes[0].service_name }} {
+func newGenerated{{ routes[0].service_name }}(impl RouterInterface, dispatcher wailstransport.EventDispatcher, options ...sharedprovider.RuntimeOption) *{{ routes[0].service_name }} {
 	return &{{ routes[0].service_name }}{
 		impl:     impl,
 		sessions: wailstransport.NewSocketHub(dispatcher),
@@ -48,6 +48,7 @@ func newGenerated{{ routes[0].service_name }}(impl RouterInterface, dispatcher w
 			},
 			{{ route.provider_sequence | tojson }},
 			{% if route.is_connection %}nil{% else %}impl.{{ route.func_name }}{% endif %},
+			options...,
 		),
 {% endfor -%}
 	}
@@ -211,16 +212,17 @@ func (svc *{{ route.service_name }}) {{ route.func_name }}(
 	}
 
 {% if route.has_wrapped_json_response %}
-	return {{ route.shared_json_wrap_call | safe }}, nil
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.{{ route.executor_field_name }}.Indexer.Rsp, response, invokeErr)
+	if wrapped == nil {
+		return nil, nil
+	}
+	typed, _ := wrapped.({{ route.service_response_type_expr | safe }})
+	return typed, nil
 {% elif route.is_xml_response %}
 	if invokeErr != nil {
 		return "", invokeErr
 	}
-	xmlProvider := &sharedprovider.RspProvider[any, {{ route.local_query_type_expr }}, {{ route.local_body_type_expr }}, {{ route.rsp_type }}]{
-		Type:    "xml",
-		Options: {{ route.response_envelope_name | tojson }},
-	}
-	return sharedprovider.MarshalXMLResponse(xmlProvider, response)
+	return sharedprovider.MarshalXMLResponse(svc.{{ route.executor_field_name }}.Indexer.Rsp, response)
 {% elif route.is_text_response %}
 	if invokeErr != nil {
 		return "", invokeErr

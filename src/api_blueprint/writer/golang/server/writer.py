@@ -421,6 +421,8 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
                         "response_kind": rsp_kind,
                         "envelope": str(envelope.get("name") or ""),
                         "route_id": route_id,
+                        "summary": self._route_summary(route, route_id),
+                        "description": str(route.get("description") or ""),
                         "native": native,
                         "request": self._contract_schema(schemas, req_ref, req_kind),
                         "response": (
@@ -431,6 +433,19 @@ class GolangWriter(BaseWriter[GolangBlueprint]):
                     }
                 )
         return sorted(items, key=lambda item: (item["path"], item["method"]))
+
+    @staticmethod
+    def _route_summary(route: Mapping[str, Any], route_id: str) -> str:
+        summary = str(route.get("summary") or "").strip()
+        if summary:
+            return summary
+        method_name = str(route.get("method_name") or "").strip()
+        if method_name:
+            return method_name
+        operation = str(route.get("operation") or "").strip()
+        if operation:
+            return operation
+        return route_id
 
     @staticmethod
     def _contract_request_schema_ref(request: Mapping[str, Any]) -> tuple[str, str]:

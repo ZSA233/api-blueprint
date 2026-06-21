@@ -14,7 +14,7 @@ type StaticService struct {
 	dochahaExecutor *sharedprovider.RouteExecutor[any, any, any, RSP_Dochaha]
 }
 
-func newGeneratedStaticService(impl RouterInterface, dispatcher wailstransport.EventDispatcher) *StaticService {
+func newGeneratedStaticService(impl RouterInterface, dispatcher wailstransport.EventDispatcher, options ...sharedprovider.RuntimeOption) *StaticService {
 	return &StaticService{
 		impl:     impl,
 		sessions: wailstransport.NewSocketHub(dispatcher),
@@ -33,6 +33,7 @@ func newGeneratedStaticService(impl RouterInterface, dispatcher wailstransport.E
 			},
 			"req|handle|rsp=json@NoEnvelope",
 			impl.DocJson,
+			options...,
 		),
 		dochahaExecutor: sharedprovider.NewRouteExecutor(
 			sharedprovider.RouteInfo{
@@ -49,6 +50,7 @@ func newGeneratedStaticService(impl RouterInterface, dispatcher wailstransport.E
 			},
 			"req|handle|rsp=json@NoEnvelope",
 			impl.Dochaha,
+			options...,
 		),
 	}
 }

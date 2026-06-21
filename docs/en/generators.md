@@ -79,6 +79,18 @@ demohttp.Mount(engine, adapter,
 
 Route id constants are owned by the core route package, and the HTTP adapter package re-exports the same constants so migration code can import only the HTTP package. Omitting `WithRouteIDs` mounts every route; explicitly passing an empty `WithRouteIDs()` mounts no routes.
 
+The HTTP adapter exposes error customization through explicit options instead of global variables. To map project-owned business errors into the generated `ApiErrorPayload`, configure the mapper once on the root entrypoint for every group, or only on a concrete route package `Mount`:
+
+```go
+apihttp.NewBlueprint(engine,
+	apihttp.WithErrorMapper(mapper),
+)
+
+demohttp.Mount(engine, adapter,
+	demohttp.WithErrorMapper(mapper),
+)
+```
+
 Go route core is generated under `<out_dir>/routes/<go-root-segment>/**`, provider runtime under `<out_dir>/providers`, transport adapters under `<out_dir>/transports/**`, and typed error runtime under `<out_dir>/runtime/errors/**`. Go-safe segments replace non-`[0-9A-Za-z_]` characters with `_`, trim leading/trailing `_`, prefix digit-leading names with `p_`, and suffix Go keywords with `_pkg`; URLs, route paths, and selection/filter semantics stay unchanged, so Go directories do not guarantee one directory per URL slash segment. If you want the import path to include `/views`, set `out_dir = ".../views"` explicitly.
 
 The Go server request runtime now uses semantic field names instead of short aliases:

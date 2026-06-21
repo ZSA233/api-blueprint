@@ -83,6 +83,31 @@ def test_validate_examples_dispatches_non_blueprint_target(
     assert calls == [expected_call]
 
 
+def test_refresh_examples_dispatches_wails_hello_target(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    calls: list[tuple[str, str]] = []
+    workspace = SimpleNamespace(root=tmp_path / "examples" / "wails-hello")
+
+    monkeypatch.setattr(runner, "ensure_target_validation_requirements", lambda item: calls.append(("ensure", item.value)))
+    monkeypatch.setattr(runner, "regenerate_repo_wails_hello_example", lambda repo_root: calls.append(("generate", str(repo_root))))
+    monkeypatch.setattr(runner, "_wails_hello_workspace", lambda root: workspace)
+    monkeypatch.setattr(runner, "compile_wails_hello_example", lambda ws: calls.append(("compile", str(ws.root))))
+
+    runner.refresh_examples(
+        tmp_path,
+        scope=ExampleValidationScope.ALL,
+        target=ExampleValidationTarget.WAILS_HELLO,
+    )
+
+    assert calls == [
+        ("ensure", "wails.hello"),
+        ("generate", str(tmp_path)),
+        ("compile", str(workspace.root)),
+    ]
+
+
 def test_go_client_target_requirements_do_not_require_unrelated_toolchains(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(tools.shutil, "which", lambda binary: None if binary == "go" else f"/usr/bin/{binary}")
     monkeypatch.setattr(tools, "resolve_gradle_bin", lambda: None)

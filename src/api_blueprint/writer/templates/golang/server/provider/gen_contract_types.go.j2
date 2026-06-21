@@ -27,6 +27,8 @@ type ContractRouteInfo struct {
 	ResponseKind string
 	Envelope     string
 	RouteID      string
+	Summary      string
+	Description  string
 	Native       bool
 	Request      ContractSchemaInfo
 	Response     ContractSchemaInfo

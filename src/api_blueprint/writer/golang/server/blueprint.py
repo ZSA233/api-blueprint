@@ -219,6 +219,8 @@ class GolangRouterGroup:
                     "service": view.service_name,
                     "operation": view.func_name,
                     "route_id": view.route_id,
+                    "summary": self._route_summary(router, view.route_id, view.func_name),
+                    "description": self._route_description(router),
                     "route_id_const": f"RouteID{view.func_name}",
                     "route_path_const": f"RoutePath{view.func_name}",
                     "http_route_path_const": f"HTTPRoutePath{view.func_name}",
@@ -256,6 +258,22 @@ class GolangRouterGroup:
                     ),
                     "path_params": list(view.path_params),
                 }
+
+    @staticmethod
+    def _route_summary(router: Router, route_id: str, fallback: str) -> str:
+        extra = dict(getattr(router, "extra", {}) or {})
+        summary = str(extra.get("summary") or "").strip()
+        if summary:
+            return summary
+        description = GolangRouterGroup._route_description(router)
+        if description:
+            return description
+        return fallback or route_id
+
+    @staticmethod
+    def _route_description(router: Router) -> str:
+        extra = dict(getattr(router, "extra", {}) or {})
+        return str(extra.get("description") or extra.get("desc") or "").strip()
 
     def protos(self) -> Generator[GolangProto, None, None]:
         for router in self.group:

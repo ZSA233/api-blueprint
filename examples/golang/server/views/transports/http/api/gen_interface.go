@@ -11,9 +11,14 @@ import (
 )
 
 type MountOption = httptransport.MountOption
+type ErrorMapperFunc = sharedprovider.ErrorMapperFunc
 
 func WithRouteIDs(routeIDs ...string) MountOption {
 	return httptransport.WithRouteIDs(routeIDs...)
+}
+
+func WithErrorMapper(mapper ErrorMapperFunc) MountOption {
+	return httptransport.WithErrorMapper(mapper)
 }
 
 const (
@@ -57,6 +62,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req|auth|request-signature",
 				nil,
+				mountOptions.RuntimeOptions()...,
 			),
 			impl.HelloChannel,
 			router,

@@ -50,7 +50,7 @@ type RSP_JSON_CodeMessageDataEnvelope[T any] struct {
 }
 
 func NewRSP_JSON_CodeMessageDataEnvelope[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (codeInt int, rsp any) {
-	code, message, toast, apiErrorPayload := unwrapError(err)
+	code, message, toast, apiErrorPayload := prov.unwrapError(err)
 	_, _, _, _ = code, message, toast, apiErrorPayload
 
 	if apiErrorPayload != nil {
@@ -107,7 +107,7 @@ func (r RSP_XML_CodeMessageDataEnvelope[T]) MarshalXML(enc *xml.Encoder, start x
 }
 
 func NewRSP_XML_CodeMessageDataEnvelope[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (codeInt int, rsp any) {
-	code, message, toast, apiErrorPayload := unwrapError(err)
+	code, message, toast, apiErrorPayload := prov.unwrapError(err)
 	_, _, _, _ = code, message, toast, apiErrorPayload
 
 	if apiErrorPayload != nil {

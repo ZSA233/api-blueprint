@@ -37,7 +37,13 @@ from .snapshot import (
     validate_wails_hello_snapshots,
 )
 from .tools import ensure_go_server_validation_requirements, ensure_target_validation_requirements, ensure_validation_requirements, resolve_gradle_bin
-from .workspace import _blueprint_workspace, prepare_blueprint_workspace, prepare_grpc_workspace, prepare_wails_hello_workspace
+from .workspace import (
+    _blueprint_workspace,
+    _wails_hello_workspace,
+    prepare_blueprint_workspace,
+    prepare_grpc_workspace,
+    prepare_wails_hello_workspace,
+)
 
 def validate_examples(
     repo_root: Path,

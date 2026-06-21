@@ -13,7 +13,7 @@ type LegacyJsonService struct {
 	legacyJsonCompatExecutor *sharedprovider.RouteExecutor[any, any, any, RSP_LegacyJsonCompat]
 }
 
-func newGeneratedLegacyJsonService(impl RouterInterface, dispatcher wailstransport.EventDispatcher) *LegacyJsonService {
+func newGeneratedLegacyJsonService(impl RouterInterface, dispatcher wailstransport.EventDispatcher, options ...sharedprovider.RuntimeOption) *LegacyJsonService {
 	return &LegacyJsonService{
 		impl:     impl,
 		sessions: wailstransport.NewSocketHub(dispatcher),
@@ -32,6 +32,7 @@ func newGeneratedLegacyJsonService(impl RouterInterface, dispatcher wailstranspo
 			},
 			"req|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.LegacyJsonCompat,
+			options...,
 		),
 	}
 }
@@ -67,5 +68,10 @@ func (svc *LegacyJsonService) LegacyJsonCompat(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.legacyJsonCompatExecutor.Indexer.Rsp, response, invokeErr)
+	if wrapped == nil {
+		return nil, nil
+	}
+	typed, _ := wrapped.(*sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_LegacyJsonCompat])
+	return typed, nil
 }

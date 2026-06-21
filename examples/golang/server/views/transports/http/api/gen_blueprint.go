@@ -28,13 +28,13 @@ type Blueprint struct {
 	HelloRouter    *sharedHello.Router
 }
 
-func NewBlueprint(router gin.IRouter) *Blueprint {
+func NewBlueprint(router gin.IRouter, options ...MountOption) *Blueprint {
 	return &Blueprint{
-		Router:         NewRouter(router),
-		BinaryRouter:   binary.NewRouter(router),
-		ConflictRouter: conflict.NewRouter(router),
-		DemoRouter:     demo.NewRouter(router),
-		MediaRouter:    media.NewRouter(router),
-		HelloRouter:    hello.NewRouter(router),
+		Router:         NewRouter(router, options...),
+		BinaryRouter:   binary.NewRouter(router, options...),
+		ConflictRouter: conflict.NewRouter(router, options...),
+		DemoRouter:     demo.NewRouter(router, options...),
+		MediaRouter:    media.NewRouter(router, options...),
+		HelloRouter:    hello.NewRouter(router, options...),
 	}
 }

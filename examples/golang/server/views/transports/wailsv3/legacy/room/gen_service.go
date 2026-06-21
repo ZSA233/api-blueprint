@@ -13,7 +13,7 @@ type RoomService struct {
 	roomListExecutor *sharedprovider.RouteExecutor[any, any, any, RSP_RoomList]
 }
 
-func newGeneratedRoomService(impl RouterInterface, dispatcher wailstransport.EventDispatcher) *RoomService {
+func newGeneratedRoomService(impl RouterInterface, dispatcher wailstransport.EventDispatcher, options ...sharedprovider.RuntimeOption) *RoomService {
 	return &RoomService{
 		impl:     impl,
 		sessions: wailstransport.NewSocketHub(dispatcher),
@@ -32,6 +32,7 @@ func newGeneratedRoomService(impl RouterInterface, dispatcher wailstransport.Eve
 			},
 			"req|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.RoomList,
+			options...,
 		),
 	}
 }
@@ -67,5 +68,10 @@ func (svc *RoomService) RoomList(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.roomListExecutor.Indexer.Rsp, response, invokeErr)
+	if wrapped == nil {
+		return nil, nil
+	}
+	typed, _ := wrapped.(*sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_RoomList])
+	return typed, nil
 }

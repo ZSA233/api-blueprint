@@ -12,8 +12,8 @@ type Blueprint struct {
 	Router *sharedroot.Router
 }
 
-func NewBlueprint(router gin.IRouter) *Blueprint {
+func NewBlueprint(router gin.IRouter, options ...MountOption) *Blueprint {
 	return &Blueprint{
-		Router: NewRouter(router),
+		Router: NewRouter(router, options...),
 	}
 }

@@ -11,9 +11,14 @@ import (
 )
 
 type MountOption = httptransport.MountOption
+type ErrorMapperFunc = sharedprovider.ErrorMapperFunc
 
 func WithRouteIDs(routeIDs ...string) MountOption {
 	return httptransport.WithRouteIDs(routeIDs...)
+}
+
+func WithErrorMapper(mapper ErrorMapperFunc) MountOption {
+	return httptransport.WithErrorMapper(mapper)
 }
 
 const (
@@ -52,6 +57,8 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				Service:   {{ register.service | tojson }},
 				Operation: {{ register.operation | tojson }},
 				RouteID:   {{ register.route_id_const }},
+				Summary:   {{ register.summary | tojson }},
+				Description: {{ register.description | tojson }},
 				Path:      {{ register.route_path_const }},
 				Methods:   []string{{ "{" }}{% for method in register.methods %}{{ method | tojson }}{% if not loop.last %}, {% endif %}{% endfor %}{{ "}" }},
 				Transport: sharedprovider.TransportHTTP,
@@ -64,6 +71,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 			},
 			{{ register.provider | tojson }},
 			nil,
+			mountOptions.RuntimeOptions()...,
 		),
 		impl.{{ register.func }},
 		router,
@@ -79,6 +87,8 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				Service:   {{ register.service | tojson }},
 				Operation: {{ register.operation | tojson }},
 				RouteID:   {{ register.route_id_const }},
+				Summary:   {{ register.summary | tojson }},
+				Description: {{ register.description | tojson }},
 				Path:      {{ register.route_path_const }},
 				Methods:   []string{{ "{" }}{% for method in register.methods %}{{ method | tojson }}{% if not loop.last %}, {% endif %}{% endfor %}{{ "}" }},
 				Transport: sharedprovider.TransportHTTP,
@@ -91,6 +101,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 			},
 			{{ register.provider | tojson }},
 			nil,
+			mountOptions.RuntimeOptions()...,
 		),
 		impl.{{ register.func }},
 		router,
@@ -106,6 +117,8 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				Service:   {{ register.service | tojson }},
 				Operation: {{ register.operation | tojson }},
 				RouteID:   {{ register.route_id_const }},
+				Summary:   {{ register.summary | tojson }},
+				Description: {{ register.description | tojson }},
 				Path:      {{ register.route_path_const }},
 				Methods:   []string{{ "{" }}{% for method in register.methods %}{{ method | tojson }}{% if not loop.last %}, {% endif %}{% endfor %}{{ "}" }},
 				Transport: sharedprovider.TransportHTTP,
@@ -123,6 +136,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 			},
 			{{ register.provider | tojson }},
 			impl.{{ register.func }},
+			mountOptions.RuntimeOptions()...,
 		),
 		router,
 	)

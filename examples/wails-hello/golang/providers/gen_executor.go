@@ -14,11 +14,13 @@ type RouteExecutor[Path, Query, Body, Response any] struct {
 	Indexer   *Indexer[Path, Query, Body, Response]
 	Handler   RouteHandler[Path, Query, Body, Response]
 	Route     RouteInfo
+	Runtime   RuntimeOptions
 }
 
 func newRouteExecutorFromProviders[Path, Query, Body, Response any](
 	info RouteInfo,
 	handler RouteHandler[Path, Query, Body, Response],
+	runtime RuntimeOptions,
 	providers ...Provider,
 ) *RouteExecutor[Path, Query, Body, Response] {
 	filtered := make([]Provider, 0, len(providers))
@@ -32,6 +34,8 @@ func newRouteExecutorFromProviders[Path, Query, Body, Response any](
 		case *ReqProvider[Path, Query, Body, Response]:
 			indexer.Req = typed
 		case *RspProvider[Path, Query, Body, Response]:
+			typed.Route = info
+			typed.Runtime = runtime
 			indexer.Rsp = typed
 		}
 	}
@@ -40,6 +44,7 @@ func newRouteExecutorFromProviders[Path, Query, Body, Response any](
 		Indexer:   indexer,
 		Handler:   handler,
 		Route:     info,
+		Runtime:   runtime,
 	}
 }
 
@@ -47,7 +52,9 @@ func NewRouteExecutor[Path, Query, Body, Response any](
 	info RouteInfo,
 	provSeq string,
 	handler RouteHandler[Path, Query, Body, Response],
+	options ...RuntimeOption,
 ) *RouteExecutor[Path, Query, Body, Response] {
+	runtime := NewRuntimeOptions(options...)
 	values := strings.Split(provSeq, "|")
 	providers := make([]Provider, 0, len(values))
 	for _, raw := range values {
@@ -66,6 +73,7 @@ func NewRouteExecutor[Path, Query, Body, Response any](
 			Name:    key,
 			Data:    value,
 			Route:   info,
+			Runtime: runtime,
 			Handler: handler,
 		}, handler)
 		if prov == nil {
@@ -74,7 +82,7 @@ func NewRouteExecutor[Path, Query, Body, Response any](
 
 		providers = append(providers, prov)
 	}
-	return newRouteExecutorFromProviders(info, handler, providers...)
+	return newRouteExecutorFromProviders(info, handler, runtime, providers...)
 }
 
 func (executor *RouteExecutor[Path, Query, Body, Response]) Run(ctx *Context[Path, Query, Body, Response]) error {

@@ -13,6 +13,7 @@ type ProviderSpec struct {
 	Name    string
 	Data    string
 	Route   RouteInfo
+	Runtime RuntimeOptions
 	Handler any
 }
 
@@ -65,6 +66,7 @@ func selectBuiltinProvider[Path, Query, Body, Response any](
 	case PROV_RSP:
 		typed := NewRspProvider(spec.Data, handler)
 		typed.Route = spec.Route
+		typed.Runtime = spec.Runtime
 		prov = typed
 	case PROV_AUTH:
 		typed := NewAuthProvider(spec.Data, handler)

@@ -10,8 +10,18 @@ import (
 	legacy_json "example.com/project/golang/server/views/transports/http/legacy/legacy_json"
 	room "example.com/project/golang/server/views/transports/http/legacy/room"
 
+	sharedprovider "example.com/project/golang/server/views/providers"
+	httptransport "example.com/project/golang/server/views/transports/http"
+
 	"github.com/gin-gonic/gin"
 )
+
+type MountOption = httptransport.MountOption
+type ErrorMapperFunc = sharedprovider.ErrorMapperFunc
+
+func WithErrorMapper(mapper ErrorMapperFunc) MountOption {
+	return httptransport.WithErrorMapper(mapper)
+}
 
 type Blueprint struct {
 	AccountRouter    *sharedAccount.Router
@@ -19,10 +29,10 @@ type Blueprint struct {
 	LegacyJsonRouter *sharedLegacyJson.Router
 }
 
-func NewBlueprint(router gin.IRouter) *Blueprint {
+func NewBlueprint(router gin.IRouter, options ...MountOption) *Blueprint {
 	return &Blueprint{
-		AccountRouter:    account.NewRouter(router),
-		RoomRouter:       room.NewRouter(router),
-		LegacyJsonRouter: legacy_json.NewRouter(router),
+		AccountRouter:    account.NewRouter(router, options...),
+		RoomRouter:       room.NewRouter(router, options...),
+		LegacyJsonRouter: legacy_json.NewRouter(router, options...),
 	}
 }

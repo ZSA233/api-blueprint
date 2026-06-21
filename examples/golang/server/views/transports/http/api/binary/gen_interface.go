@@ -11,9 +11,14 @@ import (
 )
 
 type MountOption = httptransport.MountOption
+type ErrorMapperFunc = sharedprovider.ErrorMapperFunc
 
 func WithRouteIDs(routeIDs ...string) MountOption {
 	return httptransport.WithRouteIDs(routeIDs...)
+}
+
+func WithErrorMapper(mapper ErrorMapperFunc) MountOption {
+	return httptransport.WithErrorMapper(mapper)
 }
 
 const (
@@ -71,6 +76,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req=query,binary|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 				impl.Packet,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)
@@ -104,6 +110,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req=query,binary|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 				impl.AuditPacket,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)
@@ -137,6 +144,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req=query,binary|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 				impl.WidePacket,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)
@@ -170,6 +178,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req|auth|request-signature|handle|rsp=binary_schema@CodeMessageDataEnvelope",
 				impl.AuditPacketResponse,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)

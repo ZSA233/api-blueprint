@@ -15,7 +15,7 @@ type ApiService struct {
 	helloChannelExecutor *sharedprovider.RouteExecutor[any, any, any, RSP_HelloChannel]
 }
 
-func newGeneratedApiService(impl RouterInterface, dispatcher wailstransport.EventDispatcher) *ApiService {
+func newGeneratedApiService(impl RouterInterface, dispatcher wailstransport.EventDispatcher, options ...sharedprovider.RuntimeOption) *ApiService {
 	return &ApiService{
 		impl:     impl,
 		sessions: wailstransport.NewSocketHub(dispatcher),
@@ -39,6 +39,7 @@ func newGeneratedApiService(impl RouterInterface, dispatcher wailstransport.Even
 			},
 			"req|auth|request-signature",
 			nil,
+			options...,
 		),
 	}
 }

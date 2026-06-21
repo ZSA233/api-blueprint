@@ -27,7 +27,7 @@ type DemoService struct {
 	errorDemoExecutor        *sharedprovider.RouteExecutor[any, REQ_ErrorDemo_QUERY, any, RSP_ErrorDemo]
 }
 
-func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.EventDispatcher) *DemoService {
+func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.EventDispatcher, options ...sharedprovider.RuntimeOption) *DemoService {
 	return &DemoService{
 		impl:     impl,
 		sessions: wailstransport.NewSocketHub(dispatcher),
@@ -46,6 +46,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 			},
 			"req=query|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.Abc,
+			options...,
 		),
 		testPostExecutor: sharedprovider.NewRouteExecutor(
 			sharedprovider.RouteInfo{
@@ -62,6 +63,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 			},
 			"req=json|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.TestPost,
+			options...,
 		),
 		formSubmitExecutor: sharedprovider.NewRouteExecutor(
 			sharedprovider.RouteInfo{
@@ -78,6 +80,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 			},
 			"req=form|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.FormSubmit,
+			options...,
 		),
 		requestOptionsExecutor: sharedprovider.NewRouteExecutor(
 			sharedprovider.RouteInfo{
@@ -94,6 +97,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 			},
 			"req=query|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.RequestOptions,
+			options...,
 		),
 		emptyResponseExecutor: sharedprovider.NewRouteExecutor(
 			sharedprovider.RouteInfo{
@@ -110,6 +114,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 			},
 			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.EmptyResponse,
+			options...,
 		),
 		putDemoExecutor: sharedprovider.NewRouteExecutor(
 			sharedprovider.RouteInfo{
@@ -126,6 +131,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 			},
 			"req=query,json|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.PutDemo,
+			options...,
 		),
 		deleteExecutor: sharedprovider.NewRouteExecutor(
 			sharedprovider.RouteInfo{
@@ -142,6 +148,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 			},
 			"req=query|auth|request-signature|handle|rsp=xml@CodeMessageDataEnvelope",
 			impl.Delete,
+			options...,
 		),
 		sweepEventsExecutor: sharedprovider.NewRouteExecutor[
 			any,
@@ -163,6 +170,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 			},
 			"req=query|auth|request-signature",
 			nil,
+			options...,
 		),
 		assistantSessionExecutor: sharedprovider.NewRouteExecutor[
 			any,
@@ -184,6 +192,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 			},
 			"req=query|auth|request-signature",
 			nil,
+			options...,
 		),
 		postDeprecatedExecutor: sharedprovider.NewRouteExecutor(
 			sharedprovider.RouteInfo{
@@ -200,6 +209,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 			},
 			"req=json|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.PostDeprecated,
+			options...,
 		),
 		rawExecutor: sharedprovider.NewRouteExecutor(
 			sharedprovider.RouteInfo{
@@ -216,6 +226,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 			},
 			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.Raw,
+			options...,
 		),
 		mapModelExecutor: sharedprovider.NewRouteExecutor(
 			sharedprovider.RouteInfo{
@@ -232,6 +243,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 			},
 			"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.MapModel,
+			options...,
 		),
 		errorDemoExecutor: sharedprovider.NewRouteExecutor(
 			sharedprovider.RouteInfo{
@@ -248,6 +260,7 @@ func newGeneratedDemoService(impl RouterInterface, dispatcher wailstransport.Eve
 			},
 			"req=query|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.ErrorDemo,
+			options...,
 		),
 	}
 }
@@ -283,7 +296,12 @@ func (svc *DemoService) Abc(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.abcExecutor.Indexer.Rsp, response, invokeErr)
+	if wrapped == nil {
+		return nil, nil
+	}
+	typed, _ := wrapped.(*sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_Abc])
+	return typed, nil
 }
 
 func (svc *DemoService) TestPost(
@@ -310,7 +328,12 @@ func (svc *DemoService) TestPost(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.testPostExecutor.Indexer.Rsp, response, invokeErr)
+	if wrapped == nil {
+		return nil, nil
+	}
+	typed, _ := wrapped.(*sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_TestPost])
+	return typed, nil
 }
 
 func (svc *DemoService) FormSubmit(
@@ -337,7 +360,12 @@ func (svc *DemoService) FormSubmit(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.formSubmitExecutor.Indexer.Rsp, response, invokeErr)
+	if wrapped == nil {
+		return nil, nil
+	}
+	typed, _ := wrapped.(*sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_FormSubmit])
+	return typed, nil
 }
 
 func (svc *DemoService) RequestOptions(
@@ -364,7 +392,12 @@ func (svc *DemoService) RequestOptions(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.requestOptionsExecutor.Indexer.Rsp, response, invokeErr)
+	if wrapped == nil {
+		return nil, nil
+	}
+	typed, _ := wrapped.(*sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_RequestOptions])
+	return typed, nil
 }
 
 func (svc *DemoService) EmptyResponse(
@@ -391,7 +424,12 @@ func (svc *DemoService) EmptyResponse(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.emptyResponseExecutor.Indexer.Rsp, response, invokeErr)
+	if wrapped == nil {
+		return nil, nil
+	}
+	typed, _ := wrapped.(*sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_EmptyResponse])
+	return typed, nil
 }
 
 func (svc *DemoService) PutDemo(
@@ -418,7 +456,12 @@ func (svc *DemoService) PutDemo(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.putDemoExecutor.Indexer.Rsp, response, invokeErr)
+	if wrapped == nil {
+		return nil, nil
+	}
+	typed, _ := wrapped.(*sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_PutDemo])
+	return typed, nil
 }
 
 func (svc *DemoService) Delete(
@@ -448,11 +491,7 @@ func (svc *DemoService) Delete(
 	if invokeErr != nil {
 		return "", invokeErr
 	}
-	xmlProvider := &sharedprovider.RspProvider[any, REQ_Delete_QUERY, any, RSP_Delete]{
-		Type:    "xml",
-		Options: "CodeMessageDataEnvelope",
-	}
-	return sharedprovider.MarshalXMLResponse(xmlProvider, response)
+	return sharedprovider.MarshalXMLResponse(svc.deleteExecutor.Indexer.Rsp, response)
 }
 
 func (svc *DemoService) SubscribeSweepEvents(
@@ -601,7 +640,12 @@ func (svc *DemoService) PostDeprecated(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.postDeprecatedExecutor.Indexer.Rsp, response, invokeErr)
+	if wrapped == nil {
+		return nil, nil
+	}
+	typed, _ := wrapped.(*sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_PostDeprecated])
+	return typed, nil
 }
 
 func (svc *DemoService) Raw(
@@ -628,7 +672,12 @@ func (svc *DemoService) Raw(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.rawExecutor.Indexer.Rsp, response, invokeErr)
+	if wrapped == nil {
+		return nil, nil
+	}
+	typed, _ := wrapped.(*sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_Raw])
+	return typed, nil
 }
 
 func (svc *DemoService) MapModel(
@@ -655,7 +704,12 @@ func (svc *DemoService) MapModel(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.mapModelExecutor.Indexer.Rsp, response, invokeErr)
+	if wrapped == nil {
+		return nil, nil
+	}
+	typed, _ := wrapped.(*sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_MapModel])
+	return typed, nil
 }
 
 func (svc *DemoService) ErrorDemo(
@@ -682,5 +736,10 @@ func (svc *DemoService) ErrorDemo(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.errorDemoExecutor.Indexer.Rsp, response, invokeErr)
+	if wrapped == nil {
+		return nil, nil
+	}
+	typed, _ := wrapped.(*sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_ErrorDemo])
+	return typed, nil
 }

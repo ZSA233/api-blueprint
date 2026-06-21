@@ -2,13 +2,20 @@
 
 package httptransport
 
-import "reflect"
+import (
+	"reflect"
+
+	sharedprovider "{{ writer.provider_imports | safe }}"
+)
 
 type MountOption func(*MountOptions)
+
+type ErrorMapperFunc = sharedprovider.ErrorMapperFunc
 
 type MountOptions struct {
 	filterByRouteIDs bool
 	routeIDs         map[string]struct{}
+	runtimeOptions   []sharedprovider.RuntimeOption
 }
 
 func NewMountOptions(options ...MountOption) MountOptions {
@@ -33,12 +40,22 @@ func WithRouteIDs(routeIDs ...string) MountOption {
 	}
 }
 
+func WithErrorMapper(mapper ErrorMapperFunc) MountOption {
+	return func(options *MountOptions) {
+		options.runtimeOptions = append(options.runtimeOptions, sharedprovider.WithErrorMapper(mapper))
+	}
+}
+
 func (options MountOptions) ShouldMountRoute(routeID string) bool {
 	if !options.filterByRouteIDs {
 		return true
 	}
 	_, ok := options.routeIDs[routeID]
 	return ok
+}
+
+func (options MountOptions) RuntimeOptions() []sharedprovider.RuntimeOption {
+	return options.runtimeOptions
 }
 
 // IsNilRouterImpl reports whether a mounted router implementation is nil,

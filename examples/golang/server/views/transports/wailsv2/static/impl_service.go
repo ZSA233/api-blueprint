@@ -1,10 +1,18 @@
 package static
 
 import (
+	sharedprovider "example.com/project/golang/server/views/providers"
 	shared "example.com/project/golang/server/views/routes/static"
 	wailstransport "example.com/project/golang/server/views/transports/wailsv2"
 )
 
-func NewService(dispatcher wailstransport.EventDispatcher) *StaticService {
-	return newGeneratedStaticService(shared.NewRouter(), dispatcher)
+type ServiceOption = sharedprovider.RuntimeOption
+type ErrorMapperFunc = sharedprovider.ErrorMapperFunc
+
+func WithErrorMapper(mapper ErrorMapperFunc) ServiceOption {
+	return sharedprovider.WithErrorMapper(mapper)
+}
+
+func NewService(dispatcher wailstransport.EventDispatcher, options ...ServiceOption) *StaticService {
+	return newGeneratedStaticService(shared.NewRouter(), dispatcher, options...)
 }

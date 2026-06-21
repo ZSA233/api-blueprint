@@ -58,7 +58,7 @@ type RSP_JSON_OkDataErrorEnvelope[T any] struct {
 }
 
 func NewRSP_JSON_CodeMessageDataEnvelope[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (codeInt int, rsp any) {
-	code, message, toast, apiErrorPayload := unwrapError(err)
+	code, message, toast, apiErrorPayload := prov.unwrapError(err)
 	_, _, _, _ = code, message, toast, apiErrorPayload
 
 	if apiErrorPayload != nil {
@@ -85,7 +85,7 @@ func WrapRSP_JSON_CodeMessageDataEnvelope[Response any](data *Response, err erro
 }
 
 func NewRSP_JSON_NoEnvelope[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (codeInt int, rsp any) {
-	code, message, toast, apiErrorPayload := unwrapError(err)
+	code, message, toast, apiErrorPayload := prov.unwrapError(err)
 	_, _, _, _ = code, message, toast, apiErrorPayload
 
 	if apiErrorPayload != nil {
@@ -104,7 +104,7 @@ func WrapRSP_JSON_NoEnvelope[Response any](data *Response, err error) *Response 
 }
 
 func NewRSP_JSON_OkDataErrorEnvelope[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (codeInt int, rsp any) {
-	code, message, toast, apiErrorPayload := unwrapError(err)
+	code, message, toast, apiErrorPayload := prov.unwrapError(err)
 	_, _, _, _ = code, message, toast, apiErrorPayload
 
 	if apiErrorPayload != nil {
@@ -183,7 +183,7 @@ func (r RSP_XML_OkDataErrorEnvelope[T]) MarshalXML(enc *xml.Encoder, start xml.S
 }
 
 func NewRSP_XML_CodeMessageDataEnvelope[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (codeInt int, rsp any) {
-	code, message, toast, apiErrorPayload := unwrapError(err)
+	code, message, toast, apiErrorPayload := prov.unwrapError(err)
 	_, _, _, _ = code, message, toast, apiErrorPayload
 
 	if apiErrorPayload != nil {
@@ -207,7 +207,7 @@ func NewRSP_XML_CodeMessageDataEnvelope[Path, Query, Body, Response any](prov *R
 }
 
 func NewRSP_XML_NoEnvelope[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (codeInt int, rsp any) {
-	code, message, toast, apiErrorPayload := unwrapError(err)
+	code, message, toast, apiErrorPayload := prov.unwrapError(err)
 	_, _, _, _ = code, message, toast, apiErrorPayload
 
 	if apiErrorPayload != nil {
@@ -221,7 +221,7 @@ func NewRSP_XML_NoEnvelope[Path, Query, Body, Response any](prov *RspProvider[Pa
 }
 
 func NewRSP_XML_OkDataErrorEnvelope[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (codeInt int, rsp any) {
-	code, message, toast, apiErrorPayload := unwrapError(err)
+	code, message, toast, apiErrorPayload := prov.unwrapError(err)
 	_, _, _, _ = code, message, toast, apiErrorPayload
 
 	if apiErrorPayload != nil {

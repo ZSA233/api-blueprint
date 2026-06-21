@@ -11,9 +11,14 @@ import (
 )
 
 type MountOption = httptransport.MountOption
+type ErrorMapperFunc = sharedprovider.ErrorMapperFunc
 
 func WithRouteIDs(routeIDs ...string) MountOption {
 	return httptransport.WithRouteIDs(routeIDs...)
+}
+
+func WithErrorMapper(mapper ErrorMapperFunc) MountOption {
+	return httptransport.WithErrorMapper(mapper)
 }
 
 const (
@@ -80,6 +85,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req=multipart|auth|request-signature|handle|rsp=bytes@CodeMessageDataEnvelope",
 				impl.MediaPreview,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)
@@ -113,6 +119,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req|auth|request-signature|handle|rsp=bytes@CodeMessageDataEnvelope",
 				impl.MediaFrame,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)
@@ -146,6 +153,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req|auth|request-signature|handle|rsp=file@CodeMessageDataEnvelope",
 				impl.MediaDownload,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)
@@ -179,6 +187,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req|auth|request-signature|handle|rsp=file@CodeMessageDataEnvelope",
 				impl.MediaDownloadDynamic,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)
@@ -212,6 +221,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req|auth|request-signature|handle|rsp=file@CodeMessageDataEnvelope",
 				impl.MediaDownloadFilenameEdge,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)
@@ -245,6 +255,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req=query|auth|request-signature|handle|rsp=bytes@CodeMessageDataEnvelope",
 				impl.MediaErrorFrame,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)
@@ -278,6 +289,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req|auth|request-signature|handle|rsp=byte_stream@CodeMessageDataEnvelope",
 				impl.MediaMjpeg,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)

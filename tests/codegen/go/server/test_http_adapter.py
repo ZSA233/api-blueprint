@@ -180,8 +180,11 @@ go 1.23.8
     route_adapter_text = route_adapter.read_text(encoding="utf-8")
     mount_runtime_text = mount_runtime.read_text(encoding="utf-8")
     assert "package api" in root_adapter_text
-    assert "func NewBlueprint(router gin.IRouter) *Blueprint" in root_adapter_text
-    assert "NewRouter(router)" in root_adapter_text
+    assert "func NewBlueprint(router gin.IRouter, options ...MountOption) *Blueprint" in root_adapter_text
+    assert "NewRouter(router, options...)" in root_adapter_text
+    assert "type MountOption = httptransport.MountOption" in root_adapter_text
+    assert "type ErrorMapperFunc = sharedprovider.ErrorMapperFunc" in root_adapter_text
+    assert "func WithErrorMapper(mapper ErrorMapperFunc) MountOption" in root_adapter_text
     assert "sharedroot" not in root_adapter_text
     assert "Router *sharedroot.Router" not in root_adapter_text
     assert "package demo" in route_adapter_text
@@ -189,11 +192,17 @@ go 1.23.8
     assert '"reflect"' not in route_adapter_text
     assert "func IsNilRouterImpl(impl any) bool" in mount_runtime_text
     assert '"reflect"' in mount_runtime_text
+    assert 'sharedprovider "example.com/generated/golang/providers"' in mount_runtime_text
     assert "type MountOption func(*MountOptions)" in mount_runtime_text
+    assert "type ErrorMapperFunc = sharedprovider.ErrorMapperFunc" in mount_runtime_text
     assert "func WithRouteIDs(routeIDs ...string) MountOption" in mount_runtime_text
+    assert "func WithErrorMapper(mapper ErrorMapperFunc) MountOption" in mount_runtime_text
     assert "func (options MountOptions) ShouldMountRoute(routeID string) bool" in mount_runtime_text
+    assert "func (options MountOptions) RuntimeOptions() []sharedprovider.RuntimeOption" in mount_runtime_text
     assert "type MountOption = httptransport.MountOption" in route_adapter_text
+    assert "type ErrorMapperFunc = sharedprovider.ErrorMapperFunc" in route_adapter_text
     assert "func WithRouteIDs(routeIDs ...string) MountOption" in route_adapter_text
+    assert "func WithErrorMapper(mapper ErrorMapperFunc) MountOption" in route_adapter_text
     core_routes_text = core_routes.read_text(encoding="utf-8")
     assert re.search(
         r'const \(\s*RouteIDPing\s*=\s*"api\.demo\.get\.ping"\s*\)\s*'
@@ -232,6 +241,7 @@ go 1.23.8
     assert "if mountOptions.ShouldMountRoute(RouteIDPing) {\n\n\t\thttptransport" not in route_adapter_text
     assert re.search(r"httptransport\.GET\(\s*HTTPRoutePathPing,", route_adapter_text)
     assert "sharedprovider.NewRouteExecutor(" in route_adapter_text
+    assert "mountOptions.RuntimeOptions()..." in route_adapter_text
     assert 'Root:      "api"' in route_adapter_text
     assert 'Group:     "demo"' in route_adapter_text
     assert 'Namespace: "demo"' in route_adapter_text
@@ -298,6 +308,33 @@ go 1.23.8
     assert "route.HTTP.Response.ManualResponse" in http_runtime
     assert "ginCtx.JSON(http.StatusOK, response)" in http_runtime
 
+
+def test_golang_http_root_adapter_reuses_root_route_mount_options(tmp_path):
+    output_dir = tmp_path / "golang"
+    output_dir.mkdir()
+    (tmp_path / "go.mod").write_text("module example.com/generated\n\ngo 1.23.8\n", encoding="utf-8")
+
+    bp = Blueprint(root="/api")
+    bp.GET("/status").RSP()
+    with bp.group("/demo") as views:
+        views.GET("/ping").RSP()
+
+    writer = GolangWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    root_adapter = (output_dir / "transports" / "http" / "api" / "gen_blueprint.go").read_text(
+        encoding="utf-8"
+    )
+    root_interface = (output_dir / "transports" / "http" / "api" / "gen_interface.go").read_text(
+        encoding="utf-8"
+    )
+    assert "func NewBlueprint(router gin.IRouter, options ...MountOption) *Blueprint" in root_adapter
+    assert "httptransport.WithErrorMapper" not in root_adapter
+    assert "type MountOption = httptransport.MountOption" in root_interface
+    assert "func WithErrorMapper(mapper ErrorMapperFunc) MountOption" in root_interface
+
+
 @pytest.mark.toolchain_smoke
 def test_golang_http_adapter_accepts_irouter_and_external_adapter(tmp_path):
     output_dir = tmp_path / "golang"
@@ -334,6 +371,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	runtimeerrors "example.com/generated/golang/runtime/errors"
+	providers "example.com/generated/golang/providers"
 	shared "example.com/generated/golang/routes/api/demo"
 	apihttp "example.com/generated/golang/transports/http/api"
 	demohttp "example.com/generated/golang/transports/http/api/demo"
@@ -349,6 +388,10 @@ func newEngine() *gin.Engine {
 }
 
 func TestHTTPAdapterAcceptsEngineGroupAndExternalInterface(t *testing.T) {
+	mapper := func(ctx providers.ErrorMappingContext, err error) (*runtimeerrors.ApiErrorPayload, bool) {
+		return &runtimeerrors.ApiErrorPayload{Code: 499, Message: ctx.Route.RouteID}, true
+	}
+
 	if router := demohttp.NewRouter(newEngine()); router == nil {
 		t.Fatal("NewRouter returned nil")
 	}
@@ -361,6 +404,9 @@ func TestHTTPAdapterAcceptsEngineGroupAndExternalInterface(t *testing.T) {
 	if bp := apihttp.NewBlueprint(newEngine()); bp == nil || bp.DemoRouter == nil {
 		t.Fatalf("NewBlueprint(engine) returned invalid blueprint: %#v", bp)
 	}
+	if bp := apihttp.NewBlueprint(newEngine(), apihttp.WithErrorMapper(mapper)); bp == nil || bp.DemoRouter == nil {
+		t.Fatalf("NewBlueprint(engine, WithErrorMapper) returned invalid blueprint: %#v", bp)
+	}
 
 	groupEngine := newEngine()
 	group := groupEngine.Group("/v1")
@@ -370,7 +416,7 @@ func TestHTTPAdapterAcceptsEngineGroupAndExternalInterface(t *testing.T) {
 	}
 
 	selectedEngine := newEngine()
-	demohttp.Mount(selectedEngine, adapter, demohttp.WithRouteIDs(demohttp.RouteIDPing))
+	demohttp.Mount(selectedEngine, adapter, demohttp.WithRouteIDs(demohttp.RouteIDPing), demohttp.WithErrorMapper(mapper))
 	if got := len(selectedEngine.Routes()); got != 1 {
 		t.Fatalf("Mount WithRouteIDs(RouteIDPing) registered %d routes, want 1", got)
 	}

@@ -16,6 +16,35 @@ const (
 
 type RspContext struct{}
 
+type ErrorMappingContext struct {
+	Route     RouteInfo
+	Transport TransportKind
+}
+
+type ErrorMapperFunc func(ErrorMappingContext, error) (*errors.ApiErrorPayload, bool)
+
+type RuntimeOption func(*RuntimeOptions)
+
+type RuntimeOptions struct {
+	ErrorMapper ErrorMapperFunc
+}
+
+func NewRuntimeOptions(options ...RuntimeOption) RuntimeOptions {
+	result := RuntimeOptions{}
+	for _, option := range options {
+		if option != nil {
+			option(&result)
+		}
+	}
+	return result
+}
+
+func WithErrorMapper(mapper ErrorMapperFunc) RuntimeOption {
+	return func(options *RuntimeOptions) {
+		options.ErrorMapper = mapper
+	}
+}
+
 type RawResponse struct {
 	Body        []byte
 	FilePath    string
@@ -31,6 +60,7 @@ type RspProvider[Path, Query, Body, Response any] struct {
 	Type    string
 	Options string
 	Route   RouteInfo
+	Runtime RuntimeOptions
 	Handler func(c *Context[Path, Query, Body, Response], req *REQ[Path, Query, Body]) (rsp *Response, err error)
 }
 
@@ -75,7 +105,30 @@ func (prov *RspProvider[Path, Query, Body, Response]) Handle(anyCtx ContextInter
 	ctx.Next()
 }
 
-func unwrapError(err error) (code int, message string, toast map[string]string, payload *errors.ApiErrorPayload) {
+func (prov *RspProvider[Path, Query, Body, Response]) unwrapError(err error) (code int, message string, toast map[string]string, payload *errors.ApiErrorPayload) {
+	var route RouteInfo
+	var runtime RuntimeOptions
+	if prov != nil {
+		route = prov.Route
+		runtime = prov.Runtime
+	}
+	return unwrapErrorWithRuntime(route, runtime, err)
+}
+
+func unwrapErrorWithRuntime(route RouteInfo, runtime RuntimeOptions, err error) (code int, message string, toast map[string]string, payload *errors.ApiErrorPayload) {
+	if err != nil && runtime.ErrorMapper != nil {
+		ctx := ErrorMappingContext{
+			Route:     route,
+			Transport: route.Transport,
+		}
+		if mapped, ok := runtime.ErrorMapper(ctx, err); ok && mapped != nil {
+			payload = mapped
+			code = mapped.Code
+			message = mapped.Message
+			toast = mapped.Toast.Map()
+			return
+		}
+	}
 	switch e := err.(type) {
 	case errors.ApiErrorCarrier:
 		apiPayload := e.ApiErrorPayload()

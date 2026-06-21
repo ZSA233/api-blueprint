@@ -265,10 +265,6 @@ class WailsRouter:
             return f"*{self.rsp_type}"
         return "string"
 
-    @property
-    def shared_json_wrap_call(self) -> str:
-        return f"sharedprovider.WrapRSP_JSON_{self.response_envelope_name}(response, invokeErr)"
-
 
 class WailsRouterGroup:
     def __init__(self, bp: "WailsBlueprint", group: RouterGroup, routers: list[Router]):

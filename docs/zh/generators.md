@@ -79,6 +79,18 @@ demohttp.Mount(engine, adapter,
 
 Route id 常量的真源生成在 core route package，HTTP adapter package 会 re-export 同名常量，方便迁移接入时只 import HTTP package。不传 `WithRouteIDs` 时挂载全部 route；显式传 `WithRouteIDs()` 空列表时不挂载任何 route。
 
+HTTP adapter 的错误扩展点通过显式 options 注入，不使用全局变量。需要把业务 error 统一映射成 generated `ApiErrorPayload` 时，可以在 root 入口配置一次并传给所有 group，也可以只在具体 route package 的 `Mount` 上配置：
+
+```go
+apihttp.NewBlueprint(engine,
+	apihttp.WithErrorMapper(mapper),
+)
+
+demohttp.Mount(engine, adapter,
+	demohttp.WithErrorMapper(mapper),
+)
+```
+
 Go route core 生成在 `<out_dir>/routes/<go-root-segment>/**`，provider runtime 生成在 `<out_dir>/providers`，transport adapter 生成在 `<out_dir>/transports/**`，typed error runtime 生成在 `<out_dir>/runtime/errors/**`。Go-safe segment 会把非 `[0-9A-Za-z_]` 转成 `_`、去首尾 `_`，数字开头补 `p_`，Go keyword 补 `_pkg`；URL、route path 和 selection/filter 语义不变，因此 Go 目录不保证逐级镜像 URL slash 层级。如果希望 import path 包含 `/views`，应显式设置 `out_dir = ".../views"`。
 
 Go server request runtime 使用语义化字段名，不再生成短字段：

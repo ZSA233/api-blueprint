@@ -227,6 +227,8 @@ class ContractGraphBuilder:
             "service_id": service_id,
             "kind": _route_kind(router),
             "operation": contract.func_name,
+            "summary": _route_summary(router, contract),
+            "description": _route_description(router),
             "method_name": contract.method_name,
             "methods": list(contract.http_methods),
             "path": router.leaf,
@@ -834,6 +836,22 @@ def _proto_route_metadata(router: Router) -> JsonObject:
                 continue
             metadata[key.removeprefix("proto_")] = value
     return metadata
+
+
+def _route_summary(router: Router, contract: RouteContract) -> str:
+    extra = dict(getattr(router, "extra", {}) or {})
+    summary = str(extra.get("summary") or "").strip()
+    if summary:
+        return summary
+    description = _route_description(router)
+    if description:
+        return description
+    return contract.method_name or contract.func_name or contract.route_id
+
+
+def _route_description(router: Router) -> str:
+    extra = dict(getattr(router, "extra", {}) or {})
+    return str(extra.get("description") or extra.get("desc") or "").strip()
 
 
 def _proto_model_metadata(model_cls: type[Model]) -> JsonObject:

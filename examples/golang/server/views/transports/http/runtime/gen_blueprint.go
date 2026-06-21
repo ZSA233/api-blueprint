@@ -6,15 +6,25 @@ import (
 	sharedStatus "example.com/project/golang/server/views/routes/runtime/status"
 	status "example.com/project/golang/server/views/transports/http/runtime/status"
 
+	sharedprovider "example.com/project/golang/server/views/providers"
+	httptransport "example.com/project/golang/server/views/transports/http"
+
 	"github.com/gin-gonic/gin"
 )
+
+type MountOption = httptransport.MountOption
+type ErrorMapperFunc = sharedprovider.ErrorMapperFunc
+
+func WithErrorMapper(mapper ErrorMapperFunc) MountOption {
+	return httptransport.WithErrorMapper(mapper)
+}
 
 type Blueprint struct {
 	StatusRouter *sharedStatus.Router
 }
 
-func NewBlueprint(router gin.IRouter) *Blueprint {
+func NewBlueprint(router gin.IRouter, options ...MountOption) *Blueprint {
 	return &Blueprint{
-		StatusRouter: status.NewRouter(router),
+		StatusRouter: status.NewRouter(router, options...),
 	}
 }

@@ -41,7 +41,7 @@ package {{ writer.provider_package }}
 {% for envelope in rsp_json_envelopes %}
 	{% set proto = envelope.proto %}
 	func NewRSP_JSON_{{ envelope.class_name }}[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (codeInt int, rsp any) {
-		code, message, toast, apiErrorPayload := unwrapError(err)
+		code, message, toast, apiErrorPayload := prov.unwrapError(err)
 		_, _, _, _ = code, message, toast, apiErrorPayload
 		{{ 
 			envelope.json_factory(
@@ -125,7 +125,7 @@ type RSP_XML[Response any] struct {
 
 {% for envelope in rsp_xml_envelopes %}
 	func NewRSP_XML_{{ envelope.class_name }}[Path, Query, Body, Response any](prov *RspProvider[Path, Query, Body, Response], data *Response, err error) (codeInt int, rsp any) {
-		code, message, toast, apiErrorPayload := unwrapError(err)
+		code, message, toast, apiErrorPayload := prov.unwrapError(err)
 		_, _, _, _ = code, message, toast, apiErrorPayload
 		{{ 
 			envelope.xml_factory(

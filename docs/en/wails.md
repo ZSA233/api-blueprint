@@ -101,6 +101,14 @@ When the same TypeScript output tree has both HTTP and Wails transports, `api/tr
 
 Go HTTP and Wails share the generated `RouteExecutor` provider pipeline. Wails services run `req/auth/handle/rsp` and connection preflight providers by default, so projects do not need a handwritten per-route adapter just to restore auth/provider behavior.
 
+Wails service constructors accept the same provider runtime options as Go HTTP. To map project-owned business errors into the generated `ApiErrorPayload`, pass `WithErrorMapper(mapper)` to the preserved `NewService` entrypoint; it applies to every route in that service. The mapper receives stable `RouteInfo` and transport kind through `ErrorMappingContext` and does not depend on Wails-private runtime objects:
+
+```go
+svc := demo.NewService(dispatcher,
+	demo.WithErrorMapper(mapper),
+)
+```
+
 Long-term ownership boundary:
 
 - `gen_*`: generator-owned and overwritten.

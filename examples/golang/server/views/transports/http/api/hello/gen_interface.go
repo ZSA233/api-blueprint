@@ -11,9 +11,14 @@ import (
 )
 
 type MountOption = httptransport.MountOption
+type ErrorMapperFunc = sharedprovider.ErrorMapperFunc
 
 func WithRouteIDs(routeIDs ...string) MountOption {
 	return httptransport.WithRouteIDs(routeIDs...)
+}
+
+func WithErrorMapper(mapper ErrorMapperFunc) MountOption {
+	return httptransport.WithErrorMapper(mapper)
 }
 
 const (
@@ -80,6 +85,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req=query|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 				impl.Abc,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)
@@ -113,6 +119,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 				impl.MapEnum,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)
@@ -146,6 +153,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 				impl.ListEnum,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)
@@ -179,6 +187,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 				impl.String,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)
@@ -212,6 +221,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 				impl.Uint64,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)
@@ -245,6 +255,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 				impl.StringEmun,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)
@@ -278,6 +289,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req=query|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 				impl.HelloWay,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)

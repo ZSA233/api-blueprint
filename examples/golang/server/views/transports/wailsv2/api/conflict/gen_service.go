@@ -13,7 +13,7 @@ type ConflictService struct {
 	defaultExecutor *sharedprovider.RouteExecutor[any, REQ_Default_QUERY, any, RSP_Default]
 }
 
-func newGeneratedConflictService(impl RouterInterface, dispatcher wailstransport.EventDispatcher) *ConflictService {
+func newGeneratedConflictService(impl RouterInterface, dispatcher wailstransport.EventDispatcher, options ...sharedprovider.RuntimeOption) *ConflictService {
 	return &ConflictService{
 		impl:     impl,
 		sessions: wailstransport.NewSocketHub(dispatcher),
@@ -32,6 +32,7 @@ func newGeneratedConflictService(impl RouterInterface, dispatcher wailstransport
 			},
 			"req=query|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.Default,
+			options...,
 		),
 	}
 }
@@ -67,5 +68,10 @@ func (svc *ConflictService) Default(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.defaultExecutor.Indexer.Rsp, response, invokeErr)
+	if wrapped == nil {
+		return nil, nil
+	}
+	typed, _ := wrapped.(*sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_Default])
+	return typed, nil
 }

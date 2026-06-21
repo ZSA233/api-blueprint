@@ -13,7 +13,7 @@ type AccountService struct {
 	accountProfileExecutor *sharedprovider.RouteExecutor[any, any, any, RSP_AccountProfile]
 }
 
-func newGeneratedAccountService(impl RouterInterface, dispatcher wailstransport.EventDispatcher) *AccountService {
+func newGeneratedAccountService(impl RouterInterface, dispatcher wailstransport.EventDispatcher, options ...sharedprovider.RuntimeOption) *AccountService {
 	return &AccountService{
 		impl:     impl,
 		sessions: wailstransport.NewSocketHub(dispatcher),
@@ -32,6 +32,7 @@ func newGeneratedAccountService(impl RouterInterface, dispatcher wailstransport.
 			},
 			"req|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 			impl.AccountProfile,
+			options...,
 		),
 	}
 }
@@ -67,5 +68,10 @@ func (svc *AccountService) AccountProfile(
 		invokeErr = execErr
 	}
 
-	return sharedprovider.WrapRSP_JSON_CodeMessageDataEnvelope(response, invokeErr), nil
+	_, wrapped := sharedprovider.NewRSP_JSON(svc.accountProfileExecutor.Indexer.Rsp, response, invokeErr)
+	if wrapped == nil {
+		return nil, nil
+	}
+	typed, _ := wrapped.(*sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_AccountProfile])
+	return typed, nil
 }

@@ -46,8 +46,9 @@ go 1.23.8
     ts_overlay_index = (shared_ts / "api" / "transports" / "wailsv3" / "api" / "gen_index.ts").read_text(encoding="utf-8")
     ts_overlay_factory = (shared_ts / "api" / "transports" / "wailsv3" / "api" / "gen_factory.ts").read_text(encoding="utf-8")
 
-    assert "WrapRSP_JSON_CodeMessageDataEnvelope" in go_overlay_service
-    assert "WrapRSP_JSON_CodeMessageDataEnvelope[" not in go_overlay_service
+    assert "WrapRSP_JSON_CodeMessageDataEnvelope" not in go_overlay_service
+    assert "sharedprovider.NewRSP_JSON(svc.pingExecutor.Indexer.Rsp, response, invokeErr)" in go_overlay_service
+    assert "typed, _ := wrapped.(*sharedprovider.RSP_JSON_CodeMessageDataEnvelope[RSP_Ping])" in go_overlay_service
     assert "func (svc *DemoService) ConnectWs" not in go_overlay_service
     assert "func (svc *DemoService) SubscribeEvents" in go_overlay_service
     assert "func (svc *DemoService) OpenChat" in go_overlay_service
@@ -61,6 +62,7 @@ go 1.23.8
         in go_overlay_service
     )
     assert "SetConnectionHub(hub wailstransport.ConnectionHub)" in go_overlay_service
+    assert "options ...sharedprovider.RuntimeOption" in go_overlay_service
     assert re.search(r"\bpingExecutor\s+\*sharedprovider.RouteExecutor\[any, REQ_Ping_QUERY, any, RSP_Ping\]", go_overlay_service)
     assert not re.search(r"\bwsExecutor\s+\*sharedprovider.RouteExecutor", go_overlay_service)
     assert "sharedprovider.NewRouteExecutor(" in go_overlay_service
@@ -92,8 +94,11 @@ go 1.23.8
     assert go_overlay_service.count("WrapConnectionSession(session, false)") == 2
     assert "response, invokeErr := svc.impl" not in go_overlay_service
     assert "type RouterInterface = sharedroutes.RouterInterface" in go_overlay_types
-    assert "func NewService(dispatcher wailstransport.EventDispatcher)" in go_impl_service
-    assert "return newGeneratedDemoService(shared.NewRouter(), dispatcher)" in go_impl_service
+    assert "type ServiceOption = sharedprovider.RuntimeOption" in go_impl_service
+    assert "type ErrorMapperFunc = sharedprovider.ErrorMapperFunc" in go_impl_service
+    assert "func WithErrorMapper(mapper ErrorMapperFunc) ServiceOption" in go_impl_service
+    assert "func NewService(dispatcher wailstransport.EventDispatcher, options ...ServiceOption)" in go_impl_service
+    assert "return newGeneratedDemoService(shared.NewRouter(), dispatcher, options...)" in go_impl_service
     assert 'package demo' in go_overlay_types
     assert 'package wailstransport' in go_runtime
     assert not (shared_go / "transports" / "wailsv3" / "api" / "demo" / "bindings").exists()

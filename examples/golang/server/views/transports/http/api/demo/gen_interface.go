@@ -11,9 +11,14 @@ import (
 )
 
 type MountOption = httptransport.MountOption
+type ErrorMapperFunc = sharedprovider.ErrorMapperFunc
 
 func WithRouteIDs(routeIDs ...string) MountOption {
 	return httptransport.WithRouteIDs(routeIDs...)
+}
+
+func WithErrorMapper(mapper ErrorMapperFunc) MountOption {
+	return httptransport.WithErrorMapper(mapper)
 }
 
 const (
@@ -101,6 +106,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req=query|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 				impl.Abc,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)
@@ -134,6 +140,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req=json|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 				impl.TestPost,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)
@@ -167,6 +174,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req=form|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 				impl.FormSubmit,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)
@@ -200,6 +208,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req=query|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 				impl.RequestOptions,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)
@@ -233,6 +242,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req=path|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 				impl.PathEcho,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)
@@ -266,6 +276,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 				impl.EmptyResponse,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)
@@ -299,6 +310,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req=query,json|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 				impl.PutDemo,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)
@@ -332,6 +344,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req=query|auth|request-signature|handle|rsp=xml@CodeMessageDataEnvelope",
 				impl.Delete,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)
@@ -360,6 +373,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req=query|auth|request-signature",
 				nil,
+				mountOptions.RuntimeOptions()...,
 			),
 			impl.SweepEvents,
 			router,
@@ -389,6 +403,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req=query|auth|request-signature",
 				nil,
+				mountOptions.RuntimeOptions()...,
 			),
 			impl.AssistantSession,
 			router,
@@ -423,6 +438,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req=json|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 				impl.PostDeprecated,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)
@@ -456,6 +472,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 				impl.Raw,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)
@@ -489,6 +506,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 				impl.MapModel,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)
@@ -522,6 +540,7 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 				},
 				"req=query|auth|request-signature|handle|rsp=json@CodeMessageDataEnvelope",
 				impl.ErrorDemo,
+				mountOptions.RuntimeOptions()...,
 			),
 			router,
 		)

@@ -41,6 +41,8 @@ func ContractRoutes() []providers.ContractRouteInfo {
 			ResponseKind: {{ route.response_kind | tojson }},
 			Envelope:     {{ route.envelope | tojson }},
 			RouteID:      {{ route.route_id | tojson }},
+			Summary:      {{ route.summary | tojson }},
+			Description:  {{ route.description | tojson }},
 			Native:       {{ route.native | tojson }},
 			Request:      {{ contract_schema(route.request) }},
 			Response:     {{ contract_schema(route.response) }},

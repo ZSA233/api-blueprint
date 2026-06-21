@@ -9,9 +9,22 @@ import (
 	{% for group in bp.get_router_groups() %}{% if group.branch %}
 	{{ group.shared_alias }} "{{ group.imports | safe }}"
 	{{ group.http_package }} "{{ group.http_imports | safe }}"{% endif %}{% endfor %}
+	{% if not bp.root_router_group %}
+	httptransport "{{ writer.http_transport_imports | safe }}"
+	sharedprovider "{{ writer.provider_imports | safe }}"
+	{% endif %}
 
 	"github.com/gin-gonic/gin"
 )
+
+{% if not bp.root_router_group %}
+type MountOption = httptransport.MountOption
+type ErrorMapperFunc = sharedprovider.ErrorMapperFunc
+
+func WithErrorMapper(mapper ErrorMapperFunc) MountOption {
+	return httptransport.WithErrorMapper(mapper)
+}
+{% endif %}
 
 type Blueprint struct {
 	{% for group in bp.get_router_groups() %}{% if group.branch %}
@@ -19,9 +32,9 @@ type Blueprint struct {
 	Router *sharedroot.Router{% endif %}{% endfor %}
 }
 
-func NewBlueprint(router gin.IRouter) *Blueprint {
+func NewBlueprint(router gin.IRouter, options ...MountOption) *Blueprint {
 	return &Blueprint{ {% for group in bp.get_router_groups() %}{% if group.branch %}
-		{{ group.export_name ~ "Router" | safe }}: {{ group.http_package }}.NewRouter(router),{% else %}
-		Router: NewRouter(router),{% endif %}{% endfor %}
+		{{ group.export_name ~ "Router" | safe }}: {{ group.http_package }}.NewRouter(router, options...),{% else %}
+		Router: NewRouter(router, options...),{% endif %}{% endfor %}
 	}
 }
