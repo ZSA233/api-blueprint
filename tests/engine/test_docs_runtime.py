@@ -1,14 +1,36 @@
 from __future__ import annotations
 
+import enum
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from api_blueprint.engine import Blueprint, reset_shared_app
-from api_blueprint.engine.model import Model, String
+from api_blueprint.engine.model import Array, Enum, Model, String
 
 
 class Message(Model):
     text = String(description="message text")
+
+
+class BusinessType(enum.IntEnum):
+    BASIC = 1
+    PREMIUM = 2
+
+
+class Color(enum.StrEnum):
+    RED = "red"
+    BLUE = "blue"
+
+
+class EnumBody(Model):
+    business_type = Enum[BusinessType](description="business type")
+    colors = Array[Enum[Color]](description="colors")
+
+
+class EnumResponse(Model):
+    business_type = Enum[BusinessType](description="business type")
+    color = Enum[Color](description="color")
 
 
 def _build_docs_blueprint() -> Blueprint:
@@ -26,6 +48,22 @@ def _build_docs_blueprint() -> Blueprint:
     with bp.group("/realtime") as realtime:
         realtime.STREAM("/events", tags=["events"]).SERVER_MESSAGE(Message)
         realtime.CHANNEL("/chat", tags=["chat"]).SERVER_MESSAGE(Message).CLIENT_MESSAGE(Message)
+
+    bp.build()
+    return bp
+
+
+def _build_enum_docs_blueprint() -> Blueprint:
+    reset_shared_app()
+    bp = Blueprint(root="/api", tags=["root"])
+
+    with bp.group("/enum") as views:
+        views.GET("/query", tags=["enum"]).ARGS(business_type=Enum[BusinessType]()).RSP(EnumResponse)
+        views.GET("/path/{business_type}", tags=["enum"]).REQ_PATH(
+            business_type=Enum[BusinessType]()
+        ).RSP(EnumResponse)
+        views.POST("/body", tags=["enum"]).REQ(EnumBody).RSP(EnumResponse)
+        views.POST("/form", tags=["enum"]).REQ_FORM(color=Enum[Color]()).RSP(EnumResponse)
 
     bp.build()
     return bp
@@ -111,6 +149,40 @@ def test_sliced_openapi_cache_is_keyed_by_filter() -> None:
     assert len(cache) == 2
 
 
+def test_openapi_enum_values_and_names_are_exposed_in_full_and_sliced_specs() -> None:
+    bp = _build_enum_docs_blueprint()
+    client = TestClient(bp.app)
+
+    full = client.get("/openapi.json").json()
+    sliced = client.get("/docs/openapi.json?group=enum").json()
+
+    for spec in (full, sliced):
+        business_type = _schema_by_title(spec, "BusinessType")
+        assert business_type["enum"] == [1, 2]
+        assert business_type["x-enumNames"] == ["BASIC", "PREMIUM"]
+        assert business_type["x-enum-varnames"] == ["BASIC", "PREMIUM"]
+
+        color = _schema_by_title(spec, "Color")
+        assert color["enum"] == ["red", "blue"]
+        assert color["x-enumNames"] == ["RED", "BLUE"]
+        assert color["x-enum-varnames"] == ["RED", "BLUE"]
+
+    assert "/api/enum/query" in sliced["paths"]
+    assert "/api/enum/path/{business_type}" in sliced["paths"]
+    assert "/api/enum/body" in sliced["paths"]
+    assert "/api/enum/form" in sliced["paths"]
+
+
+def test_docs_routes_reject_invalid_enum_values() -> None:
+    bp = _build_enum_docs_blueprint()
+    client = TestClient(bp.app)
+
+    assert client.get("/api/enum/query?business_type=99").status_code == 422
+    assert client.get("/api/enum/path/99").status_code == 422
+    assert client.post("/api/enum/body", json={"business_type": 99, "colors": ["red"]}).status_code == 422
+    assert client.post("/api/enum/form", data={"color": "green"}).status_code == 422
+
+
 def test_swagger_uses_sliced_openapi_url_and_redoc_redirects_home() -> None:
     bp = _build_docs_blueprint()
     client = TestClient(bp.app)
@@ -138,3 +210,10 @@ def test_explicit_fastapi_app_keeps_its_native_docs_route() -> None:
     paths = {route.path for route in app.routes if getattr(route, "path", None)}
     assert "/docs" in paths
     assert "/docs/index.json" not in paths
+
+
+def _schema_by_title(spec: dict, title: str) -> dict:
+    for schema in spec.get("components", {}).get("schemas", {}).values():
+        if schema.get("title") == title:
+            return schema
+    raise AssertionError(f"schema with title {title!r} not found")

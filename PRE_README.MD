@@ -56,7 +56,7 @@ README 应链接到以下用户文档：
 主线能力是：
 
 1. 用 Python DSL 定义 `Blueprint`、路由、请求模型、响应模型与错误结构。
-2. 在运行时构建 FastAPI/OpenAPI 文档服务；默认 `/` 与 `/docs` 都是 api-blueprint 文档中心，按 group/tag/kind/search 分流到 sliced Swagger，并保留完整 `/openapi.json` 兼容入口。
+2. 在运行时构建 FastAPI/OpenAPI 文档服务；默认 `/` 与 `/docs` 都是 api-blueprint 文档中心，按 group/tag/kind/search 分流到 sliced Swagger，OpenAPI 保留 DSL enum values 与 enum name 扩展，并保留完整 `/openapi.json` 兼容入口。
 3. 从 Blueprint 构建唯一协议真源 `ContractGraph`。
 4. 通过 `api-gen check`、`api-gen inspect`、`api-gen manifest`、`api-gen diff` 和 `api-gen generate` 检查、查询、归档和生成代码。
 5. 基于同一份 `ContractGraph` 输出 Go server/client、TypeScript client、Flutter client、Swift client、Kotlin client/server、Java client/server、Python client/server、Wails v2/v3 overlay、gRPC proto/service 定义，以及 protoc-backed Go/Python gRPC stub。

@@ -321,4 +321,6 @@ api-doc-server -c api-blueprint.toml
 
 完整 `/openapi.json` 继续保留给外部 OpenAPI 工具。`STREAM` 会进入 route index，并在 HTTP 文档中按 SSE route 展示；`CHANNEL` 会进入 route index 的协议详情，但不会强行塞进标准 OpenAPI。
 
+DSL `Enum[...]` 会进入 OpenAPI 标准 `enum` values，并额外输出 `x-enumNames` / `x-enum-varnames` 供 UI 或代码工具显示枚举名称；docs server 的本地 FastAPI route 会按 enum value 严格校验 query、path、form 和 body 输入。
+
 当 `[blueprint].docs_server` 使用 `host:0` 时，启动输出会打印带真实绑定端口的 docs 或 hub URL。

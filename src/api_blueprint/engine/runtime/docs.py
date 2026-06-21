@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import enum
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Mapping, Protocol
@@ -13,6 +14,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.routing import BaseRoute
 
 from api_blueprint.engine.connection import ConnectionKind, MessageContract, ModelRef
+from api_blueprint.engine.schema import iter_enum_classes
 
 if TYPE_CHECKING:
     from api_blueprint.engine.blueprint.router import Router
@@ -22,6 +24,8 @@ _DOCS_INSTALLED = "api_blueprint_docs_installed"
 _DOCS_GZIP_INSTALLED = "api_blueprint_docs_gzip_installed"
 _DOCS_ROUTES = "api_blueprint_docs_routes"
 _DOCS_CACHE = "api_blueprint_docs_openapi_cache"
+_DOCS_ENUMS = "api_blueprint_docs_enums"
+_DOCS_OPENAPI_WRAPPED = "api_blueprint_docs_openapi_wrapped"
 _DOCS_VERSION = "api_blueprint_docs_version"
 
 _TEMPLATES = Jinja2Templates(directory=str(Path(__file__).resolve().parent / "templates"))
@@ -121,12 +125,15 @@ def _docs_center_response(request: Request, app: FastAPI):
 
 
 def register_docs_route(app: FastAPI, router: Router, contract: DocsRouteContract) -> None:
+    _install_openapi_enrichment(app)
     routes = _docs_routes(app)
     entry = _route_index_entry(router, contract)
     identity = (entry["id"], tuple(entry["methods"]), entry["path"])
     if any((item["id"], tuple(item["methods"]), item["path"]) == identity for item in routes):
         return
     routes.append(entry)
+    _register_route_enums(app, router)
+    app.openapi_schema = None
     setattr(app.state, _DOCS_VERSION, getattr(app.state, _DOCS_VERSION, 0) + 1)
     _docs_cache(app).clear()
 
@@ -196,23 +203,123 @@ def sliced_openapi(app: FastAPI, docs_filter: DocsFilter) -> dict[str, Any]:
         for route in app.routes
         if _base_route_matches(route, route_keys)
     ]
-    spec = get_openapi(
-        title=app.title,
-        version=app.version,
-        openapi_version=app.openapi_version,
-        summary=app.summary,
-        description=app.description,
-        routes=selected_routes,
-        webhooks=app.webhooks.routes,
-        tags=app.openapi_tags,
-        servers=app.servers,
-        terms_of_service=app.terms_of_service,
-        contact=app.contact,
-        license_info=app.license_info,
-        separate_input_output_schemas=app.separate_input_output_schemas,
+    spec = enrich_openapi_enum_metadata(
+        app,
+        get_openapi(
+            title=app.title,
+            version=app.version,
+            openapi_version=app.openapi_version,
+            summary=app.summary,
+            description=app.description,
+            routes=selected_routes,
+            webhooks=app.webhooks.routes,
+            tags=app.openapi_tags,
+            servers=app.servers,
+            terms_of_service=app.terms_of_service,
+            contact=app.contact,
+            license_info=app.license_info,
+            separate_input_output_schemas=app.separate_input_output_schemas,
+        ),
     )
     cache[cache_key] = spec
     return spec
+
+
+def enrich_openapi_enum_metadata(app: FastAPI, spec: dict[str, Any]) -> dict[str, Any]:
+    registry = _docs_enum_registry(app)
+    if not registry:
+        return spec
+
+    values_index: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
+    name_index: dict[str, list[dict[str, Any]]] = {}
+    for enum_meta in registry.values():
+        values_index.setdefault(tuple(enum_meta["values"]), []).append(enum_meta)
+        name_index.setdefault(str(enum_meta["name"]), []).append(enum_meta)
+
+    def visit(node: object) -> None:
+        if isinstance(node, dict):
+            enum_values = node.get("enum")
+            if isinstance(enum_values, list):
+                enum_meta = _enum_meta_for_schema(node, name_index, values_index)
+                if enum_meta is not None:
+                    node["x-enumNames"] = list(enum_meta["names"])
+                    node["x-enum-varnames"] = list(enum_meta["names"])
+            for value in node.values():
+                visit(value)
+        elif isinstance(node, list):
+            for item in node:
+                visit(item)
+
+    visit(spec.get("components", {}).get("schemas", {}))
+    visit(spec.get("paths", {}))
+    return spec
+
+
+def _install_openapi_enrichment(app: FastAPI) -> None:
+    if getattr(app.state, _DOCS_OPENAPI_WRAPPED, False):
+        return
+    original_openapi = app.openapi
+
+    def api_blueprint_openapi() -> dict[str, Any]:
+        return enrich_openapi_enum_metadata(app, original_openapi())
+
+    app.openapi = api_blueprint_openapi  # type: ignore[method-assign]
+    setattr(app.state, _DOCS_OPENAPI_WRAPPED, True)
+
+
+def _enum_meta_for_schema(
+    schema: Mapping[str, Any],
+    name_index: Mapping[str, list[dict[str, Any]]],
+    values_index: Mapping[tuple[Any, ...], list[dict[str, Any]]],
+) -> dict[str, Any] | None:
+    for key in (schema.get("title"), schema.get("name")):
+        matches = name_index.get(key) if isinstance(key, str) else None
+        if matches is not None and len(matches) == 1:
+            return matches[0]
+
+    enum_values = schema.get("enum")
+    if not isinstance(enum_values, list):
+        return None
+    matches = values_index.get(tuple(enum_values), [])
+    if len(matches) == 1:
+        return matches[0]
+    return None
+
+
+def _register_route_enums(app: FastAPI, router: Router) -> None:
+    registry = _docs_enum_registry(app)
+    for source in _route_enum_sources(router):
+        for enum_cls in iter_enum_classes(source):
+            if not isinstance(enum_cls, enum.EnumMeta):
+                continue
+            values = [member.value for member in enum_cls]
+            identity = f"{enum_cls.__module__}.{enum_cls.__qualname__}:{values!r}"
+            registry.setdefault(
+                identity,
+                {
+                    "name": enum_cls.__name__,
+                    "names": [member.name for member in enum_cls],
+                    "values": values,
+                },
+            )
+
+
+def _route_enum_sources(router: Router) -> list[object]:
+    sources: list[object] = [
+        router.req_path,
+        router.req_query,
+        router.req_urlencoded,
+        router.req_multipart,
+        router.req_json,
+        router.rsp_model,
+        router.open_model,
+        router.effective_close_model,
+    ]
+    for message in (router.server_message, router.client_message):
+        if message is None:
+            continue
+        sources.extend(variant.model for variant in message.variants)
+    return sources
 
 
 def _docs_routes(app: FastAPI) -> list[dict[str, Any]]:
@@ -229,6 +336,14 @@ def _docs_cache(app: FastAPI) -> dict[object, dict[str, Any]]:
         cache = {}
         setattr(app.state, _DOCS_CACHE, cache)
     return cache
+
+
+def _docs_enum_registry(app: FastAPI) -> dict[str, dict[str, Any]]:
+    registry = getattr(app.state, _DOCS_ENUMS, None)
+    if registry is None:
+        registry = {}
+        setattr(app.state, _DOCS_ENUMS, registry)
+    return registry
 
 
 def _route_index_entry(router: Router, contract: DocsRouteContract) -> dict[str, Any]:

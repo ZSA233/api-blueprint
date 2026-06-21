@@ -132,6 +132,7 @@ def resolve_field(
     is_type = isinstance(field, type)
     ismatch: Callable[[Field | type[Field], type], bool] = isinstance if not is_type else issubclass
     description: str = getattr(field, "__extra__", {}).get("description", "")
+    enum_cls: type[enum.Enum] | None = None
 
     if ismatch(field, CoerceString):
         py_type = Any
@@ -145,8 +146,14 @@ def resolve_field(
         py_type = bool
     elif ismatch(field, enum.Enum):
         py_type = field
+        enum_cls = field
     elif ismatch(field, Enum):
-        py_type = field.enum_base_type()
+        enum_cls = field.enum_type()
+        if isinstance(enum_cls, type) and issubclass(enum_cls, enum.Enum):
+            py_type = enum_cls
+        else:
+            enum_cls = None
+            py_type = field.enum_base_type()
     elif ismatch(field, Array):
         arr: Array = field
         elem = arr.elem_type()
@@ -216,11 +223,28 @@ def resolve_field(
         info = None
     else:
         copy_extra = _normalize_field_factory_kwargs(field.__extra__, description=description)
+        if enum_cls is not None:
+            _merge_json_schema_extra(copy_extra, _enum_json_schema_extra(enum_cls))
         info = field_factory(**copy_extra)
         if copy_extra.get("default", ...) is not ... and py_type is not Any:
             py_type = Optional[py_type]
 
     return py_type, info
+
+
+def _enum_json_schema_extra(enum_cls: type[enum.Enum]) -> dict[str, list[str]]:
+    names = [member.name for member in enum_cls]
+    return {
+        "x-enumNames": names,
+        "x-enum-varnames": names,
+    }
+
+
+def _merge_json_schema_extra(copy_extra: dict[str, Any], update: dict[str, Any]) -> None:
+    json_schema_extra = copy_extra.get("json_schema_extra")
+    merged_schema_extra = dict(json_schema_extra or {})
+    merged_schema_extra.update(update)
+    copy_extra["json_schema_extra"] = merged_schema_extra
 
 
 def _normalize_field_factory_kwargs(extra: dict[str, Any], *, description: str) -> dict[str, Any]:

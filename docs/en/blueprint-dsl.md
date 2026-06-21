@@ -321,4 +321,6 @@ api-doc-server -c api-blueprint.toml
 
 The full `/openapi.json` remains available for external OpenAPI tools. `STREAM` routes appear in the route index and in HTTP docs as SSE routes; `CHANNEL` routes appear in protocol details in the route index but are not forced into standard OpenAPI.
 
+DSL `Enum[...]` is emitted as standard OpenAPI `enum` values and also includes `x-enumNames` / `x-enum-varnames` so UI or code tools can display enum member names. The docs server's local FastAPI routes strictly validate query, path, form, and body inputs by enum value.
+
 When `[blueprint].docs_server` uses `host:0`, startup output prints the actual docs or hub URL with the bound port.

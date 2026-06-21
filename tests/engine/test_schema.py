@@ -34,20 +34,88 @@ class Color(enum.StrEnum):
     BLUE = "blue"
 
 
+class BusinessType(enum.IntEnum):
+    BASIC = 1
+    PREMIUM = 2
+
+
 class Nested(Model):
     count = Int(default=1)
+    status = Enum[BusinessType](description="nested status")
 
 
 class Payload(Model):
     color = Enum[Color](description="color")
+    status = Enum[BusinessType](description="status")
     nested = Nested(description="nested")
     mapping = Map[String, Nested](description="mapping")
     array = Array[Enum[Color]](description="array")
+    status_map = Map[String, Enum[BusinessType]](description="status map")
 
 
 def test_iter_enum_classes_finds_nested_and_collection_enums():
     enums = set(iter_enum_classes(Payload))
-    assert enums == {Color}
+    assert enums == {Color, BusinessType}
+
+
+def test_model_to_pydantic_preserves_enum_schema_and_validation():
+    pydantic_model = model_to_pydantic(Payload)
+    schema = pydantic_model.model_json_schema()
+
+    color_schema = schema["$defs"]["Color"]
+    assert color_schema["enum"] == ["red", "blue"]
+
+    business_type_schema = schema["$defs"]["BusinessType"]
+    assert business_type_schema["enum"] == [1, 2]
+
+    assert schema["properties"]["color"]["x-enumNames"] == ["RED", "BLUE"]
+    assert schema["properties"]["color"]["x-enum-varnames"] == ["RED", "BLUE"]
+    assert schema["properties"]["status"]["x-enumNames"] == ["BASIC", "PREMIUM"]
+    assert schema["properties"]["status"]["x-enum-varnames"] == ["BASIC", "PREMIUM"]
+    assert schema["properties"]["array"]["items"]["$ref"] == "#/$defs/Color"
+    assert schema["properties"]["status_map"]["additionalProperties"]["$ref"] == "#/$defs/BusinessType"
+    assert schema["$defs"]["Nested"]["properties"]["status"]["$ref"] == "#/$defs/BusinessType"
+
+    valid = pydantic_model.model_validate(
+        {
+            "color": "red",
+            "status": 1,
+            "nested": {"status": 2},
+            "mapping": {"primary": {"status": 1}},
+            "array": ["blue"],
+            "status_map": {"primary": 2},
+        }
+    )
+    assert valid.color is Color.RED
+    assert valid.status is BusinessType.BASIC
+    assert valid.nested.status is BusinessType.PREMIUM
+    assert valid.array == [Color.BLUE]
+    assert valid.status_map == {"primary": BusinessType.PREMIUM}
+    assert valid.model_dump(mode="json")["status_map"] == {"primary": 2}
+
+    with pytest.raises(Exception):
+        pydantic_model.model_validate(
+            {
+                "color": "green",
+                "status": 1,
+                "nested": {"status": 2},
+                "mapping": {"primary": {"status": 1}},
+                "array": ["blue"],
+                "status_map": {"primary": 2},
+            }
+        )
+
+    with pytest.raises(Exception):
+        pydantic_model.model_validate(
+            {
+                "color": "red",
+                "status": 99,
+                "nested": {"status": 2},
+                "mapping": {"primary": {"status": 1}},
+                "array": ["blue"],
+                "status_map": {"primary": 2},
+            }
+        )
 
 
 def test_model_to_pydantic_marks_default_fields_optional():
