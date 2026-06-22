@@ -9,11 +9,13 @@
 docs_server = "0.0.0.0:2332"
 docs_domain = ""
 entrypoints = ["blueprints.app:*"]
+protocol_docs_plugins = ["project.docs.protocol:plugin"]
 ```
 
 - `docs_server`: listen address for `api-doc-server`. `host:0` is allowed; the server binds an OS-assigned free port and prints the effective docs or hub URL after startup.
 - `docs_domain`: displayed docs domain, can be empty.
 - `entrypoints`: Python objects to load, using `module.path:attribute` or `module.path:*`.
+- `protocol_docs_plugins`: optional message protocol documentation projection plugins. The built-in metadata interaction plugin reads `message_variant(..., interaction="...", role="request|response|error|push", op=..., name=..., description=..., auth=..., example=...)` and groups `CHANNEL` / `STREAM` messages into request/response interactions for Protocol UI. Projects can add plugins that map custom op/message metadata into the same interaction catalog. Plugins only control documentation relationships; upstream connection, auth, frame codec, and online try-out remain project-owned.
 
 `Blueprint(app=None)` shares the global FastAPI app by default. Pass `app` explicitly when you need separate documentation apps.
 

@@ -53,6 +53,26 @@ def test_example_config_loads_vnext_targets() -> None:
         "grpc-go",
         "grpc-python",
     ]
+    assert config.blueprint.protocol_docs_plugins == []
+
+
+def test_blueprint_protocol_docs_plugins_load_from_config(tmp_path) -> None:
+    config_path = tmp_path / "api-blueprint.toml"
+    config_path.write_text(
+        """
+[blueprint]
+docs_server = "127.0.0.1:0"
+entrypoints = ["blueprints.app:*"]
+protocol_docs_plugins = ["docs_plugins.protocol:plugin"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    config = Config.load(config_path)
+
+    assert config.blueprint is not None
+    assert config.blueprint.protocol_docs_plugins == ["docs_plugins.protocol:plugin"]
 
 def test_target_manifest_keeps_sibling_go_output_portable(tmp_path) -> None:
     service_root = tmp_path / "services" / "agent"

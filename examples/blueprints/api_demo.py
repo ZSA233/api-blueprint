@@ -1,4 +1,5 @@
 from api_blueprint.includes import *
+from api_blueprint.engine import message_variant
 from blueprints.app import apibp
 from blueprints.errors import DemoErr
 import enum
@@ -213,12 +214,44 @@ with apibp.group('/demo') as views:
         AssistantOpen
     ).CLIENT_MESSAGE(
         'AssistantClientMessage',
-        input=AssistantInput,
-        cancel=AssistantCancel,
+        input=message_variant(
+            AssistantInput,
+            interaction="assistant.input",
+            role="request",
+            op=1001,
+            name="Send assistant input",
+            description="Client sends a prompt to the assistant",
+            example={"text": "Summarize the latest notes"},
+        ),
+        cancel=message_variant(
+            AssistantCancel,
+            interaction="assistant.cancel",
+            role="request",
+            op=1011,
+            name="Cancel assistant run",
+            description="Client cancels the current assistant run",
+            example={"reason": "User stopped the run"},
+        ),
     ).SERVER_MESSAGE(
         'AssistantServerMessage',
-        delta=AssistantDelta,
-        done=AssistantDone,
+        delta=message_variant(
+            AssistantDelta,
+            interaction="assistant.input",
+            role="response",
+            op=1002,
+            name="Assistant delta",
+            description="Server streams partial assistant output for the input",
+            example={"text": "Here is the summary..."},
+        ),
+        done=message_variant(
+            AssistantDone,
+            interaction="assistant.input",
+            role="ack",
+            op=1003,
+            name="Assistant done",
+            description="Server confirms the assistant output is complete",
+            example={"message_id": "msg_001"},
+        ),
         log=SweepLog,
     ).CLOSE(
         ConnectionClose

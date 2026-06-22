@@ -1,0 +1,1567 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <title>{{ title }} - Protocol</title>
+    <script>
+        const DOCS_THEME_KEY = "api-blueprint-docs-theme";
+        const SCHEMA_DRAWER_KEY = "api-blueprint-schema-drawer";
+        const storedTheme = localStorage.getItem(DOCS_THEME_KEY);
+        const preferredTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.dataset.theme = storedTheme || preferredTheme;
+    </script>
+    <style>
+        :root {
+            color-scheme: light;
+            --accent: #2563eb;
+            --accent-soft: #eff6ff;
+            --bg: #f6f8fb;
+            --ink: #172033;
+            --line: #d9e0ea;
+            --muted: #69758a;
+            --panel: #ffffff;
+            --panel-subtle: #f8fafc;
+            --code-bg: #f8fafc;
+            --code-ink: #1e293b;
+            --shadow: 0 12px 34px rgba(23, 32, 51, 0.08);
+            --success: #047857;
+            --success-soft: #ecfdf5;
+            --neutral: #64748b;
+        }
+
+        :root[data-theme="dark"] {
+            color-scheme: dark;
+            --accent: #7aa2ff;
+            --accent-soft: #182747;
+            --bg: #10151f;
+            --ink: #e5e7eb;
+            --line: #2d3a4f;
+            --muted: #9ca3af;
+            --panel: #171f2c;
+            --panel-subtle: #1d2736;
+            --code-bg: #0f172a;
+            --code-ink: #e2e8f0;
+            --shadow: 0 12px 34px rgba(0, 0, 0, 0.32);
+            --success: #34d399;
+            --success-soft: #123329;
+            --neutral: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--ink);
+            display: grid;
+            font: 14px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            grid-template-rows: auto minmax(0, 1fr);
+            height: 100vh;
+            margin: 0;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .topbar {
+            align-items: center;
+            background: var(--panel);
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            gap: 16px;
+            justify-content: space-between;
+            padding: 14px 20px;
+            z-index: 2;
+        }
+
+        .title {
+            display: grid;
+            gap: 2px;
+        }
+
+        .title strong {
+            font-size: 18px;
+        }
+
+        .title span {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .button {
+            background: var(--panel-subtle);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            color: var(--ink);
+            padding: 7px 10px;
+        }
+
+        .button.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        .theme-toggle {
+            align-items: center;
+            display: inline-flex;
+            height: 36px;
+            justify-content: center;
+            padding: 0;
+            width: 36px;
+        }
+
+        .icon {
+            display: block;
+            fill: none;
+            height: 16px;
+            stroke: currentColor;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-width: 1.9;
+            width: 16px;
+        }
+
+        .icon-slot {
+            align-items: center;
+            display: inline-flex;
+            justify-content: center;
+        }
+
+        .layout {
+            align-items: stretch;
+            display: grid;
+            gap: 14px;
+            grid-template-columns: minmax(280px, 340px) minmax(360px, 1fr) minmax(320px, 420px);
+            height: 100%;
+            min-height: 0;
+            overflow: hidden;
+            padding: 14px;
+            transition: grid-template-columns 160ms ease;
+        }
+
+        body.schema-collapsed .layout {
+            grid-template-columns: minmax(280px, 340px) minmax(360px, 1fr) 44px;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            min-width: 0;
+        }
+
+        .sidebar,
+        .schema-panel {
+            display: grid;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            grid-template-rows: auto minmax(0, 1fr);
+        }
+
+        .controls {
+            display: grid;
+            gap: 8px;
+            padding: 12px;
+        }
+
+        .search,
+        select {
+            background: var(--panel-subtle);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            color: var(--ink);
+            min-width: 0;
+            padding: 8px 9px;
+            width: 100%;
+        }
+
+        .filter-grid {
+            display: grid;
+            gap: 8px;
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .operation-list {
+            align-content: start;
+            border-top: 1px solid var(--line);
+            display: grid;
+            grid-auto-rows: max-content;
+            min-height: 0;
+            overflow: auto;
+        }
+
+        .operation-item {
+            background: transparent;
+            border: 0;
+            border-bottom: 1px solid var(--line);
+            color: inherit;
+            cursor: pointer;
+            display: grid;
+            gap: 5px;
+            padding: 11px 12px;
+            text-align: left;
+        }
+
+        .operation-item:hover,
+        .operation-item.active {
+            background: var(--accent-soft);
+        }
+
+        .operation-item.unpaired {
+            opacity: 0.78;
+        }
+
+        .operation-top {
+            align-items: center;
+            display: flex;
+            gap: 8px;
+        }
+
+        .scope-card {
+            background: var(--panel-subtle);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            display: none;
+            gap: 6px;
+            padding: 10px;
+        }
+
+        .scope-card.visible {
+            display: grid;
+        }
+
+        .scope-card strong {
+            font-size: 13px;
+        }
+
+        .scope-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 2px;
+        }
+
+        .scope-link {
+            color: var(--accent);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .badge {
+            border-radius: 999px;
+            color: #fff;
+            font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            padding: 5px 7px;
+            text-transform: uppercase;
+        }
+
+        .badge.client,
+        .badge.open {
+            background: #2563eb;
+        }
+
+        .badge.server {
+            background: #16a34a;
+        }
+
+        .badge.flow {
+            background: var(--accent);
+        }
+
+        .badge.unpaired {
+            background: var(--neutral);
+        }
+
+        .badge.close {
+            background: #dc2626;
+        }
+
+        .path,
+        .mono,
+        .schema-name,
+        .field-name {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            overflow-wrap: anywhere;
+        }
+
+        .muted {
+            color: var(--muted);
+        }
+
+        .operation-title {
+            display: grid;
+            gap: 6px;
+        }
+
+        .operation-title h1 {
+            font-size: 22px;
+        }
+
+        .route-line {
+            color: var(--muted);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+        }
+
+        .pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .pill {
+            background: var(--panel-subtle);
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            color: var(--muted);
+            font-size: 12px;
+            padding: 3px 8px;
+        }
+
+        .pill.strong {
+            background: var(--accent-soft);
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        .detail {
+            align-content: start;
+            align-self: stretch;
+            align-items: start;
+            display: grid;
+            gap: 12px;
+            grid-auto-rows: max-content;
+            min-height: 0;
+            overflow: auto;
+            padding: 16px;
+        }
+
+        .detail h1,
+        .schema-panel h2 {
+            font-size: 20px;
+            line-height: 1.2;
+            margin: 0;
+        }
+
+        .kv {
+            display: grid;
+            gap: 7px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .kv div {
+            align-content: start;
+            background: var(--panel-subtle);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            display: grid;
+            gap: 3px;
+            padding: 8px;
+        }
+
+        .kv span:first-child {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .section {
+            display: grid;
+            gap: 8px;
+        }
+
+        .section h2 {
+            font-size: 14px;
+            margin: 0;
+        }
+
+        pre {
+            background: var(--code-bg);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            color: var(--code-ink);
+            margin: 0;
+            overflow: auto;
+            padding: 10px;
+        }
+
+        details.section {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            gap: 0;
+            overflow: hidden;
+        }
+
+        details.section > summary {
+            align-items: center;
+            background: var(--panel-subtle);
+            cursor: pointer;
+            display: flex;
+            font-weight: 800;
+            justify-content: space-between;
+            list-style: none;
+            padding: 9px 10px;
+        }
+
+        details.section > summary::-webkit-details-marker {
+            display: none;
+        }
+
+        details.section > summary::after {
+            color: var(--muted);
+            content: "Show";
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        details.section[open] > summary::after {
+            content: "Hide";
+        }
+
+        .section-body {
+            display: grid;
+            gap: 8px;
+            padding: 10px;
+        }
+
+        .notice {
+            background: var(--panel-subtle);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            color: var(--muted);
+            padding: 10px;
+        }
+
+        .schema-panel {
+            align-content: start;
+            align-items: start;
+            display: grid;
+            gap: 10px;
+            grid-template-rows: auto auto minmax(0, 1fr);
+            padding: 12px;
+        }
+
+        .schema-toolbar {
+            align-items: center;
+            display: flex;
+            gap: 8px;
+            justify-content: space-between;
+            min-width: 0;
+        }
+
+        .schema-toolbar h2 {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .schema-toggle {
+            align-items: center;
+            display: inline-flex;
+            height: 30px;
+            justify-content: center;
+            padding: 0;
+            width: 30px;
+        }
+
+        .schema-controls {
+            display: grid;
+            gap: 8px;
+        }
+
+        .schema-explorer {
+            align-content: start;
+            display: grid;
+            gap: 8px;
+            grid-auto-rows: max-content;
+            min-height: 0;
+            overflow: auto;
+        }
+
+        body.schema-collapsed .schema-panel {
+            align-items: center;
+            gap: 0;
+            justify-items: center;
+            padding: 8px 6px;
+        }
+
+        body.schema-collapsed .schema-panel h2,
+        body.schema-collapsed .schema-controls,
+        body.schema-collapsed .schema-explorer {
+            display: none;
+        }
+
+        body.schema-collapsed .schema-toolbar {
+            writing-mode: vertical-rl;
+        }
+
+        .schema-card {
+            align-self: start;
+            border: 1px solid var(--line);
+            border-radius: 7px;
+            overflow: hidden;
+        }
+
+        .schema-card.highlight {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px var(--accent-soft);
+        }
+
+        .schema-head {
+            align-items: center;
+            background: var(--panel-subtle);
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            gap: 8px;
+            justify-content: space-between;
+            padding: 7px 9px;
+        }
+
+        .field-row {
+            display: grid;
+            gap: 8px;
+            grid-template-columns: minmax(90px, 0.75fr) minmax(110px, 0.95fr) minmax(120px, 1.3fr);
+            padding: 6px 9px;
+        }
+
+        .field-row + .field-row {
+            border-top: 1px solid var(--line);
+        }
+
+        .message-detail-row {
+            display: grid;
+            gap: 8px;
+            grid-template-columns: minmax(90px, 0.5fr) minmax(160px, 1.5fr);
+            padding: 8px 10px;
+        }
+
+        .message-detail-row + .message-detail-row,
+        .message-detail-row + pre {
+            border-top: 1px solid var(--line);
+        }
+
+        .message-detail-label {
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .field-type,
+        .field-meta {
+            color: var(--muted);
+            font-size: 12px;
+            overflow-wrap: anywhere;
+        }
+
+        .schema-link {
+            background: transparent;
+            border: 0;
+            color: var(--accent);
+            cursor: pointer;
+            font: inherit;
+            padding: 0;
+            text-align: left;
+        }
+
+        .payload-tree {
+            border-top: 1px solid var(--line);
+            display: grid;
+            gap: 3px;
+            padding: 8px 10px 10px;
+        }
+
+        .payload-tree-title {
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+
+        .schema-node {
+            border-left: 1px solid var(--line);
+            margin-left: 6px;
+            padding-left: 10px;
+        }
+
+        .schema-node > summary {
+            align-items: center;
+            cursor: pointer;
+            display: flex;
+            gap: 7px;
+            list-style: none;
+            padding: 3px 0;
+        }
+
+        .schema-node > summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .schema-node > summary::before {
+            color: var(--muted);
+            content: "›";
+            font-weight: 800;
+            transform: rotate(0deg);
+            transition: transform 120ms ease;
+        }
+
+        .schema-node[open] > summary::before {
+            transform: rotate(90deg);
+        }
+
+        .schema-leaf {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+            padding: 3px 0 3px 17px;
+        }
+
+        .schema-node-name {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-weight: 700;
+        }
+
+        .schema-node-meta {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .empty {
+            color: var(--muted);
+            padding: 20px;
+            text-align: center;
+        }
+
+        @media (max-width: 1180px) {
+            .layout {
+                grid-template-columns: minmax(260px, 330px) minmax(0, 1fr);
+                height: auto;
+                overflow: visible;
+            }
+
+            .schema-panel {
+                grid-column: 1 / -1;
+                height: auto;
+                position: static;
+            }
+
+            body {
+                overflow: auto;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .layout,
+            .kv {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                height: auto;
+                position: static;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="topbar">
+        <div class="title">
+            <strong>{{ title }} Protocol UI</strong>
+            <span>Message operations, channels, payload schemas</span>
+        </div>
+        <nav class="actions">
+            <a class="button" href="/">Docs Center</a>
+            <a class="button" href="/docs/swagger">Swagger</a>
+            <a class="button" href="/docs/asyncapi">AsyncAPI UI</a>
+            <button id="theme-toggle" class="button theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme">
+                <span class="icon-slot" data-icon-slot aria-hidden="true"></span>
+            </button>
+            <a id="raw-link" class="button primary" href="/docs/protocol.json">Raw Protocol JSON</a>
+        </nav>
+    </header>
+
+    <div class="layout">
+        <aside class="panel sidebar">
+            <div class="controls">
+                <div id="route-scope" class="scope-card"></div>
+                <input id="protocol-search" class="search" type="search" placeholder="Search op, model, field, enum, path" autocomplete="off" />
+                <div class="filter-grid">
+                    <select id="group-filter"></select>
+                    <select id="kind-filter"></select>
+                    <select id="tag-filter"></select>
+                    <select id="direction-filter"></select>
+                    <select id="model-filter"></select>
+                </div>
+            </div>
+            <div id="operation-list" class="operation-list"></div>
+        </aside>
+
+        <main id="operation-detail" class="panel detail">
+            <div class="empty">Loading protocol operations...</div>
+        </main>
+
+        <aside class="panel schema-panel">
+            <div class="schema-toolbar">
+                <h2>Schema Explorer</h2>
+                <button id="schema-toggle" class="button schema-toggle" type="button" aria-label="Toggle schema explorer" title="Toggle schema explorer">
+                    <span class="icon-slot" data-schema-icon-slot aria-hidden="true"></span>
+                </button>
+            </div>
+            <div class="schema-controls">
+                <input id="schema-search" class="search" type="search" placeholder="Search schema, field, enum" autocomplete="off" />
+            </div>
+            <div id="schema-explorer" class="schema-explorer"></div>
+        </aside>
+    </div>
+
+    <script>
+        const state = {
+            doc: null,
+            operations: [],
+            filtered: [],
+            selectedId: null,
+            search: "",
+            schemaSearch: "",
+            schemaModels: [],
+            filters: { group: "", kind: "", tag: "", direction: "", model: "" },
+            routeScopeId: currentQuery().get("route_id") || "",
+        };
+
+        function currentQuery() {
+            return new URLSearchParams(window.location.search);
+        }
+
+        function protocolUrl() {
+            const query = currentQuery().toString();
+            return "/docs/protocol.json" + (query ? `?${query}` : "");
+        }
+
+        function protocolSchemas() {
+            return (((state.doc || {}).components || {}).schemas) || {};
+        }
+
+        function routeScope() {
+            if (!state.routeScopeId || !state.doc) return null;
+            return (state.doc.routes || []).find((route) => route.route_id === state.routeScopeId || route.id === state.routeScopeId) || null;
+        }
+
+        function iconSvg(name) {
+            const icons = {
+                moon: '<path d="M11.2 2.2A6.2 6.2 0 1 0 13.8 11 4.8 4.8 0 0 1 11.2 2.2Z"></path>',
+                sun: '<circle cx="8" cy="8" r="2.6"></circle><path d="M8 1.5v1.4M8 13.1v1.4M3.4 3.4l1 1M11.6 11.6l1 1M1.5 8h1.4M13.1 8h1.4M3.4 12.6l1-1M11.6 4.4l1-1"></path>',
+                collapse: '<path d="M10.5 3.5 6 8l4.5 4.5"></path><path d="M5.5 3.5v9"></path>',
+                expand: '<path d="M5.5 3.5 10 8l-4.5 4.5"></path><path d="M10.5 3.5v9"></path>',
+            };
+            return `<svg class="icon" viewBox="0 0 16 16" aria-hidden="true">${icons[name] || ""}</svg>`;
+        }
+
+        function setTheme(theme) {
+            document.documentElement.dataset.theme = theme;
+            localStorage.setItem(DOCS_THEME_KEY, theme);
+            const button = document.getElementById("theme-toggle");
+            const label = theme === "dark" ? "Switch to light theme" : "Switch to dark theme";
+            button.setAttribute("aria-label", label);
+            button.setAttribute("title", label);
+            button.querySelector("[data-icon-slot]").innerHTML = iconSvg(theme === "dark" ? "sun" : "moon");
+        }
+
+        function setSchemaCollapsed(collapsed) {
+            document.body.classList.toggle("schema-collapsed", collapsed);
+            localStorage.setItem(SCHEMA_DRAWER_KEY, collapsed ? "collapsed" : "open");
+            const button = document.getElementById("schema-toggle");
+            const label = collapsed ? "Open schema explorer" : "Collapse schema explorer";
+            button.setAttribute("aria-label", label);
+            button.setAttribute("title", label);
+            button.querySelector("[data-schema-icon-slot]").innerHTML = iconSvg(collapsed ? "expand" : "collapse");
+        }
+
+        function schemaForModel(model) {
+            const schemas = protocolSchemas();
+            if (schemas[model]) return schemas[model];
+            return Object.values(schemas).find((schema) => schema && schema.title === model) || null;
+        }
+
+        function flattenOperations(doc) {
+            const routeById = new Map((doc.routes || []).map((route) => [route.route_id, route]));
+            const operations = (doc.interactions || []).map((interaction) => {
+                const route = routeById.get(interaction.route_id) || interaction;
+                const messages = interactionMessages(interaction);
+                return {
+                    type: "interaction",
+                    id: interaction.id,
+                    route,
+                    interaction,
+                    messages,
+                    routeId: interaction.route_id,
+                    group: interaction.group_path || interaction.group,
+                    kind: interaction.kind,
+                    tags: interaction.tags || [],
+                    path: interaction.path,
+                    directions: Array.from(new Set(messages.map((message) => message.direction).filter(Boolean))),
+                    ops: Array.from(new Set(messages.map((message) => message.op).filter((op) => op !== undefined && op !== null && op !== ""))).map(String),
+                    models: Array.from(new Set(messages.map((message) => message.model).filter(Boolean))),
+                    name: interaction.name || interaction.key || interaction.id,
+                    description: interaction.description || "",
+                };
+            });
+            (doc.unpaired_messages || []).forEach((message) => {
+                operations.push({
+                    type: "message",
+                    id: ["unpaired", message.route_id, message.direction, message.variant_key, message.model, message.op || ""].join("::"),
+                    route: routeById.get(message.route_id) || message,
+                    message,
+                    messages: [message],
+                    routeId: message.route_id,
+                    group: message.group_path || message.group,
+                    kind: message.kind,
+                    tags: message.tags || [],
+                    path: message.path,
+                    directions: [message.direction].filter(Boolean),
+                    ops: message.op !== undefined && message.op !== null && message.op !== "" ? [String(message.op)] : [],
+                    models: [message.model].filter(Boolean),
+                    name: message.name || message.variant_key || message.model || message.route_id,
+                    description: message.description || "",
+                });
+            });
+            return operations.sort(operationSort);
+        }
+
+        function operationSort(left, right) {
+            const rank = (operation) => operation.type === "interaction" ? 0 : 1;
+            return (
+                rank(left) - rank(right) ||
+                String(left.path || "").localeCompare(String(right.path || "")) ||
+                String(left.name || "").localeCompare(String(right.name || ""))
+            );
+        }
+
+        function operationText(operation) {
+            return [
+                operation.type,
+                operation.routeId,
+                operation.group,
+                operation.kind,
+                operation.path,
+                ...(operation.directions || []),
+                ...(operation.ops || []),
+                ...(operation.models || []),
+                operation.name,
+                operation.description,
+                ...operation.messages.flatMap((message) => [
+                    message.direction || "",
+                    message.op || "",
+                    message.model || "",
+                    message.name || "",
+                    message.auth || "",
+                    message.description || "",
+                    message.variant_key || "",
+                    JSON.stringify(message.metadata || {}),
+                    schemaSearchText(schemaForModel(message.model), new Set()),
+                ]),
+            ].join(" ").toLowerCase();
+        }
+
+        function schemaSearchText(schema, seen) {
+            if (!schema) return "";
+            if (schema.$ref) {
+                const key = schema.$ref.split("/").pop();
+                if (!key || seen.has(key)) return key || "";
+                seen.add(key);
+                return `${key} ${schemaSearchText(protocolSchemas()[key], seen)}`;
+            }
+            const parts = [
+                schema.title || "",
+                schema.description || "",
+                schema.type || "",
+                ...(schema.enum || []),
+                ...(schema["x-enumNames"] || []),
+            ];
+            Object.entries(schema.properties || {}).forEach(([name, child]) => {
+                parts.push(name, schemaSearchText(child, seen));
+            });
+            if (schema.items) parts.push(schemaSearchText(schema.items, seen));
+            if (schema.additionalProperties && typeof schema.additionalProperties === "object") {
+                parts.push(schemaSearchText(schema.additionalProperties, seen));
+            }
+            ["anyOf", "oneOf", "allOf"].forEach((key) => {
+                (schema[key] || []).forEach((child) => parts.push(schemaSearchText(child, seen)));
+            });
+            return parts.join(" ");
+        }
+
+        function applyFilters() {
+            const term = state.search.trim().toLowerCase();
+            state.filtered = state.operations.filter((operation) => {
+                if (state.filters.group && operation.group !== state.filters.group) return false;
+                if (state.filters.kind && operation.kind !== state.filters.kind) return false;
+                if (state.filters.tag && !operation.tags.includes(state.filters.tag)) return false;
+                if (state.filters.direction && !operation.directions.includes(state.filters.direction)) return false;
+                if (state.filters.model && !operation.models.includes(state.filters.model)) return false;
+                return !term || operationText(operation).includes(term);
+            });
+            if (!state.filtered.some((operation) => operation.id === state.selectedId)) {
+                state.selectedId = state.filtered[0]?.id || null;
+            }
+        }
+
+        function fillSelect(id, label, values) {
+            const select = document.getElementById(id);
+            const current = select.value;
+            select.textContent = "";
+            const all = document.createElement("option");
+            all.value = "";
+            all.textContent = label;
+            select.appendChild(all);
+            values.forEach((value) => {
+                const option = document.createElement("option");
+                option.value = value;
+                option.textContent = value;
+                select.appendChild(option);
+            });
+            if (values.includes(current)) select.value = current;
+        }
+
+        function renderFilters() {
+            const unique = (values) => Array.from(new Set(values.filter(Boolean))).sort();
+            fillSelect("group-filter", "All groups", unique(state.operations.map((operation) => operation.group)));
+            fillSelect("kind-filter", "All kinds", unique(state.operations.map((operation) => operation.kind)));
+            fillSelect("tag-filter", "All tags", unique(state.operations.flatMap((operation) => operation.tags)));
+            fillSelect("direction-filter", "All directions", unique(state.operations.flatMap((operation) => operation.directions)));
+            fillSelect("model-filter", "All models", unique(state.operations.flatMap((operation) => operation.models)));
+        }
+
+        function renderOperationList() {
+            renderRouteScope();
+            const list = document.getElementById("operation-list");
+            list.textContent = "";
+            if (!state.filtered.length) {
+                list.innerHTML = '<div class="empty">No protocol operations match the current filters.</div>';
+                return;
+            }
+            state.filtered.forEach((operation) => {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = [
+                    "operation-item",
+                    operation.type === "message" ? "unpaired" : "",
+                    operation.id === state.selectedId ? "active" : "",
+                ].filter(Boolean).join(" ");
+                const top = document.createElement("div");
+                top.className = "operation-top";
+                const badge = document.createElement("span");
+                badge.className = `badge ${operation.type === "interaction" ? "flow" : "unpaired"}`;
+                badge.textContent = operation.type === "interaction" ? "flow" : "unpaired";
+                const scope = document.createElement("span");
+                scope.className = "path";
+                scope.textContent = state.routeScopeId ? operationSummary(operation) : operation.path;
+                top.append(badge, scope);
+                const name = document.createElement("strong");
+                name.textContent = operation.name || operation.models[0] || operation.routeId;
+                const meta = document.createElement("span");
+                meta.className = "muted mono";
+                meta.textContent = [
+                    state.routeScopeId ? "" : operation.routeId,
+                    operation.ops.length ? opFlowLabel(operation) : "",
+                    operation.models.join(", "),
+                    operation.type === "message" ? "unpaired" : "",
+                ].filter(Boolean).join(" · ");
+                button.append(top, name, meta);
+                button.addEventListener("click", () => {
+                    state.selectedId = operation.id;
+                    render();
+                });
+                list.appendChild(button);
+            });
+        }
+
+        function renderRouteScope() {
+            const card = document.getElementById("route-scope");
+            const route = routeScope();
+            if (!route) {
+                card.classList.remove("visible");
+                card.textContent = "";
+                return;
+            }
+            card.classList.add("visible");
+            card.textContent = "";
+            const title = document.createElement("strong");
+            title.className = "path";
+            title.textContent = route.path || route.url || state.routeScopeId;
+            const routeId = document.createElement("span");
+            routeId.className = "muted mono";
+            routeId.textContent = state.routeScopeId;
+            const counts = document.createElement("span");
+            counts.className = "muted";
+            const flowCount = state.operations.filter((operation) => operation.type === "interaction").length;
+            const unpairedCount = state.operations.filter((operation) => operation.type !== "interaction").length;
+            counts.textContent = `${flowCount} flows · ${unpairedCount} unpaired messages`;
+            const actions = document.createElement("div");
+            actions.className = "scope-actions";
+            const all = document.createElement("a");
+            all.className = "scope-link";
+            all.href = "/docs/protocol";
+            all.textContent = "All protocol routes";
+            actions.appendChild(all);
+            card.append(title, routeId, counts, actions);
+        }
+
+        function opFlowLabel(operation) {
+            if (operation.type !== "interaction") return `op ${operation.ops.join(", ")}`;
+            const request = operation.interaction.request;
+            const responses = operation.interaction.responses || [];
+            const requestOp = request && request.op !== undefined && request.op !== null ? String(request.op) : "";
+            const responseOps = responses
+                .map((message) => message.op)
+                .filter((op) => op !== undefined && op !== null && op !== "")
+                .map(String);
+            if (requestOp && responseOps.length) return `${requestOp} -> ${responseOps.join(", ")}`;
+            if (requestOp) return `op ${requestOp}`;
+            return `op ${operation.ops.join(", ")}`;
+        }
+
+        function operationSummary(operation) {
+            if (operation.type === "interaction") return opFlowLabel(operation);
+            return [
+                operation.directions.join(", "),
+                operation.ops.length ? `op ${operation.ops.join(", ")}` : "",
+            ].filter(Boolean).join(" · ") || "message";
+        }
+
+        function renderDetail() {
+            const operation = state.filtered.find((item) => item.id === state.selectedId);
+            const detail = document.getElementById("operation-detail");
+            if (!operation) {
+                detail.innerHTML = '<div class="empty">Select a protocol interaction or message.</div>';
+                state.schemaModels = [];
+                renderSchemas();
+                return;
+            }
+            detail.textContent = "";
+            detail.appendChild(renderOperationTitle(operation));
+
+            if (operation.description) {
+                const section = document.createElement("section");
+                section.className = "section";
+                section.innerHTML = "<h2>Description</h2>";
+                const text = document.createElement("p");
+                text.textContent = operation.description;
+                section.appendChild(text);
+                detail.appendChild(section);
+            }
+
+            if (operation.type === "interaction") {
+                renderMessageGroup(detail, "Request", operation.interaction.request ? [operation.interaction.request] : []);
+                renderMessageGroup(detail, "Responses", operation.interaction.responses || []);
+                renderMessageGroup(detail, "Errors", operation.interaction.errors || []);
+                renderMessageGroup(detail, "Pushes", operation.interaction.pushes || []);
+                renderMessageGroup(detail, "Open / Close", [
+                    ...(operation.interaction.opens || []),
+                    ...(operation.interaction.closes || []),
+                ]);
+            } else {
+                renderMessageGroup(detail, "Message", [operation.message]);
+            }
+
+            const metadata = operation.type === "interaction"
+                ? operation.interaction.metadata || {}
+                : operation.message.metadata || {};
+            if (Object.keys(metadata).length) {
+                const section = renderCollapsibleSection("Metadata", false);
+                const pre = document.createElement("pre");
+                pre.textContent = JSON.stringify(metadata, null, 2);
+                section.querySelector(".section-body").appendChild(pre);
+                detail.appendChild(section);
+            }
+
+            const notice = document.createElement("div");
+            notice.className = "notice";
+            notice.textContent = "Try-out console is planned. Real upstream, auth token, and frame codec integration must be supplied by a project-owned extension.";
+            detail.appendChild(notice);
+            state.schemaModels = operation.models;
+            renderSchemas();
+        }
+
+        function renderOperationTitle(operation) {
+            const header = document.createElement("section");
+            header.className = "operation-title";
+            const title = document.createElement("h1");
+            title.textContent = operation.name || operation.models[0] || operation.routeId;
+            const route = document.createElement("div");
+            route.className = "route-line";
+            const path = document.createElement("span");
+            path.className = "path";
+            path.textContent = operation.path || "-";
+            const routeId = document.createElement("span");
+            routeId.className = "mono";
+            routeId.textContent = operation.routeId || "-";
+            route.append(path, document.createTextNode("·"), routeId);
+            const pills = document.createElement("div");
+            pills.className = "pills";
+            [
+                [operation.type === "interaction" ? "FLOW" : "UNPAIRED", "strong"],
+                [opFlowLabel(operation), ""],
+                [operation.directions.join(", ") || "", ""],
+                [operation.models.join(", ") || "", ""],
+                [operation.route.delivery ? `delivery: ${operation.route.delivery}` : "", ""],
+                [operation.route.scope ? `scope: ${operation.route.scope}` : "", ""],
+            ].forEach(([text, tone]) => {
+                if (!text) return;
+                const pill = document.createElement("span");
+                pill.className = `pill ${tone}`.trim();
+                pill.textContent = text;
+                pills.appendChild(pill);
+            });
+            header.append(title, route, pills);
+            return header;
+        }
+
+        function interactionMessages(interaction) {
+            const result = [];
+            if (interaction.request) result.push(interaction.request);
+            ["responses", "errors", "pushes", "opens", "closes"].forEach((key) => {
+                (interaction[key] || []).forEach((message) => result.push(message));
+            });
+            (interaction.messages || []).forEach((message) => {
+                const marker = messageIdentity(message);
+                if (!result.some((item) => messageIdentity(item) === marker)) result.push(message);
+            });
+            return result;
+        }
+
+        function messageIdentity(message) {
+            return [message.route_id, message.direction, message.message, message.variant_key, message.model, message.op || ""].join("::");
+        }
+
+        function renderMessageGroup(container, title, messages) {
+            if (!messages.length) return;
+            const section = renderCollapsibleSection(`${title} (${messages.length})`, true);
+            const body = section.querySelector(".section-body");
+            messages.forEach((message) => body.appendChild(renderMessageCard(message)));
+            container.appendChild(section);
+        }
+
+        function renderCollapsibleSection(title, open) {
+            const section = document.createElement("details");
+            section.className = "section";
+            section.open = open;
+            const summary = document.createElement("summary");
+            summary.textContent = title;
+            const body = document.createElement("div");
+            body.className = "section-body";
+            section.append(summary, body);
+            return section;
+        }
+
+        function renderMessageCard(message) {
+            const card = document.createElement("article");
+            card.className = "schema-card";
+            const head = document.createElement("div");
+            head.className = "schema-head";
+            const title = document.createElement("strong");
+            title.className = "schema-name";
+            title.textContent = message.name || message.variant_key || message.model || message.direction;
+            const meta = document.createElement("span");
+            meta.className = "field-type";
+            meta.textContent = [
+                message.direction,
+                message.op !== undefined && message.op !== null && message.op !== "" ? `op ${message.op}` : "",
+                message.model,
+            ].filter(Boolean).join(" · ");
+            head.append(title, meta);
+            card.appendChild(head);
+            const rows = document.createElement("div");
+            rows.className = "schema-explorer";
+            [
+                ["Model", message.model || "-"],
+                ["Auth", message.auth || "-"],
+                ["Description", message.description || "-"],
+            ].forEach(([key, value]) => rows.appendChild(renderMessageDetailRow(key, value)));
+            if (message.example !== undefined) {
+                const pre = document.createElement("pre");
+                pre.textContent = JSON.stringify(message.example, null, 2);
+                rows.appendChild(pre);
+            }
+            card.appendChild(rows);
+            const payload = renderPayloadTree(message.model);
+            if (payload) card.appendChild(payload);
+            return card;
+        }
+
+        function renderMessageDetailRow(label, value) {
+            const row = document.createElement("div");
+            row.className = "message-detail-row";
+            const key = document.createElement("span");
+            key.className = "message-detail-label";
+            key.textContent = label;
+            const text = document.createElement("span");
+            text.className = "mono";
+            text.textContent = value;
+            row.append(key, text);
+            return row;
+        }
+
+        function renderSchemas() {
+            const explorer = document.getElementById("schema-explorer");
+            explorer.textContent = "";
+            const query = state.schemaSearch.trim().toLowerCase();
+            const allModels = query
+                ? Object.keys(protocolSchemas()).filter((key) => schemaCardText(key, protocolSchemas()[key]).includes(query))
+                : collectModelGraph(state.schemaModels);
+            if (!allModels.length) {
+                explorer.innerHTML = '<div class="empty">No payload schema.</div>';
+                return;
+            }
+            allModels.forEach((model) => {
+                const schema = schemaForModel(model);
+                if (schema) explorer.appendChild(renderSchemaCard(model, schema));
+            });
+        }
+
+        function schemaCardText(model, schema) {
+            return [
+                model,
+                displaySchemaName(model),
+                schemaSearchText(schema, new Set()),
+            ].join(" ").toLowerCase();
+        }
+
+        function collectModelGraph(models) {
+            const seen = new Set();
+            const result = [];
+            models.forEach((model) => {
+                const key = schemaKeyForModel(model);
+                if (!key || seen.has(key)) return;
+                seen.add(key);
+                result.push(key);
+                collectSchemaRefs(schemaForModel(key), seen, result);
+            });
+            return result;
+        }
+
+        function collectSchemaRefs(schema, seen, result) {
+            if (!schema) return;
+            if (schema.$ref) {
+                const key = schema.$ref.split("/").pop();
+                if (key && !seen.has(key)) {
+                    seen.add(key);
+                    result.push(key);
+                    collectSchemaRefs(protocolSchemas()[key], seen, result);
+                }
+                return;
+            }
+            Object.values(schema.properties || {}).forEach((child) => collectSchemaRefs(child, seen, result));
+            if (schema.items) collectSchemaRefs(schema.items, seen, result);
+            if (schema.additionalProperties && typeof schema.additionalProperties === "object") {
+                collectSchemaRefs(schema.additionalProperties, seen, result);
+            }
+            ["anyOf", "oneOf", "allOf"].forEach((key) => {
+                (schema[key] || []).forEach((child) => collectSchemaRefs(child, seen, result));
+            });
+        }
+
+        function renderSchemaCard(model, schema) {
+            const resolved = resolveSchema(schema) || schema;
+            const key = schemaKeyForModel(model) || model;
+            const card = document.createElement("article");
+            card.className = "schema-card";
+            card.id = domIdForSchema(key);
+            card.dataset.schemaKey = key;
+            const head = document.createElement("div");
+            head.className = "schema-head";
+            const name = document.createElement("strong");
+            name.className = "schema-name";
+            name.textContent = displaySchemaName(key);
+            const type = document.createElement("span");
+            type.className = "field-type";
+            type.textContent = schemaTypeLabel(resolved);
+            head.append(name, type);
+            card.appendChild(head);
+            const properties = Object.entries(resolved.properties || {});
+            if (!properties.length) {
+                card.appendChild(renderFieldRow("value", resolved, true));
+            } else {
+                const required = new Set(resolved.required || []);
+                properties.forEach(([field, child]) => {
+                    card.appendChild(renderFieldRow(field, child, required.has(field)));
+                });
+            }
+            return card;
+        }
+
+        function renderFieldRow(field, schema, required) {
+            const row = document.createElement("div");
+            row.className = "field-row";
+            const name = document.createElement("span");
+            name.className = "field-name";
+            name.textContent = field;
+            const type = document.createElement("span");
+            type.className = "field-type";
+            type.appendChild(renderTypeValue(schema));
+            const meta = document.createElement("span");
+            meta.className = "field-meta";
+            meta.textContent = fieldMetaLabel(schema, required);
+            row.append(name, type, meta);
+            return row;
+        }
+
+        function renderPayloadTree(model) {
+            const schema = schemaForModel(model);
+            if (!schema) return null;
+            const wrapper = document.createElement("div");
+            wrapper.className = "payload-tree";
+            const title = document.createElement("div");
+            title.className = "payload-tree-title";
+            title.textContent = "Payload schema";
+            wrapper.appendChild(title);
+            wrapper.appendChild(renderSchemaNode(displaySchemaName(schemaKeyForModel(model) || model), schema, true, new Set(), 0));
+            return wrapper;
+        }
+
+        function renderSchemaNode(name, schema, required, seen, depth) {
+            const resolved = resolveSchema(schema) || schema || {};
+            const refKey = schemaRefKey(schema);
+            const childSeen = new Set(seen);
+            if (refKey) {
+                if (childSeen.has(refKey)) return renderSchemaLeaf(name, schema, required);
+                childSeen.add(refKey);
+            }
+            const objectProperties = Object.entries(resolved.properties || {});
+            const composition = ["anyOf", "oneOf", "allOf"].find((key) => Array.isArray(resolved[key]));
+            const hasChildren = objectProperties.length || resolved.items || resolved.additionalProperties || composition;
+            if (!hasChildren) return renderSchemaLeaf(name, schema, required);
+
+            const node = document.createElement("details");
+            node.className = "schema-node";
+            node.open = depth < 2;
+            const summary = document.createElement("summary");
+            const nodeName = document.createElement("span");
+            nodeName.className = "schema-node-name";
+            nodeName.textContent = name;
+            const type = document.createElement("span");
+            type.className = "schema-node-meta";
+            type.appendChild(renderTypeValue(schema));
+            const meta = document.createElement("span");
+            meta.className = "schema-node-meta";
+            meta.textContent = fieldMetaLabel(schema, required);
+            summary.append(nodeName, type, meta);
+            node.appendChild(summary);
+
+            const requiredFields = new Set(resolved.required || []);
+            objectProperties.forEach(([field, child]) => {
+                node.appendChild(renderSchemaNode(field, child, requiredFields.has(field), childSeen, depth + 1));
+            });
+            if (resolved.items) {
+                node.appendChild(renderSchemaNode("items", resolved.items, true, childSeen, depth + 1));
+            }
+            if (resolved.additionalProperties && typeof resolved.additionalProperties === "object") {
+                node.appendChild(renderSchemaNode("values", resolved.additionalProperties, true, childSeen, depth + 1));
+            }
+            if (composition) {
+                (resolved[composition] || []).forEach((child, index) => {
+                    node.appendChild(renderSchemaNode(`${composition}[${index}]`, child, true, childSeen, depth + 1));
+                });
+            }
+            return node;
+        }
+
+        function renderSchemaLeaf(name, schema, required) {
+            const leaf = document.createElement("div");
+            leaf.className = "schema-leaf";
+            const nodeName = document.createElement("span");
+            nodeName.className = "schema-node-name";
+            nodeName.textContent = name;
+            const type = document.createElement("span");
+            type.className = "schema-node-meta";
+            type.appendChild(renderTypeValue(schema));
+            const meta = document.createElement("span");
+            meta.className = "schema-node-meta";
+            meta.textContent = fieldMetaLabel(schema, required);
+            leaf.append(nodeName, type, meta);
+            return leaf;
+        }
+
+        function resolveSchema(schema) {
+            if (!schema || !schema.$ref) return schema;
+            return protocolSchemas()[schema.$ref.split("/").pop()] || schema;
+        }
+
+        function schemaTypeLabel(schema) {
+            const refKey = schemaRefKey(schema);
+            if (refKey) return displaySchemaName(refKey);
+            const resolved = resolveSchema(schema) || {};
+            if (Array.isArray(resolved.enum)) return "enum";
+            if (resolved.type === "array") return `array<${schemaTypeLabel(resolved.items || {})}>`;
+            if (resolved.type === "object" && resolved.additionalProperties) {
+                return `map<string, ${schemaTypeLabel(resolved.additionalProperties)}>`;
+            }
+            if (Array.isArray(resolved.anyOf)) return resolved.anyOf.map(schemaTypeLabel).join(" | ");
+            if (Array.isArray(resolved.oneOf)) return resolved.oneOf.map(schemaTypeLabel).join(" | ");
+            return resolved.type || "object";
+        }
+
+        function renderTypeValue(schema) {
+            const refKey = schemaRefKey(schema);
+            if (refKey) return renderSchemaLink(refKey);
+            const resolved = resolveSchema(schema) || {};
+            const span = document.createElement("span");
+            if (Array.isArray(resolved.enum)) {
+                span.textContent = "enum";
+                return span;
+            }
+            if (resolved.type === "array") {
+                span.append("array<");
+                span.appendChild(renderTypeValue(resolved.items || {}));
+                span.append(">");
+                return span;
+            }
+            if (resolved.type === "object" && resolved.additionalProperties) {
+                span.append("map<string, ");
+                span.appendChild(renderTypeValue(resolved.additionalProperties));
+                span.append(">");
+                return span;
+            }
+            if (Array.isArray(resolved.anyOf) || Array.isArray(resolved.oneOf)) {
+                const items = resolved.anyOf || resolved.oneOf || [];
+                items.forEach((item, index) => {
+                    if (index) span.append(" | ");
+                    span.appendChild(renderTypeValue(item));
+                });
+                return span;
+            }
+            span.textContent = resolved.type || "object";
+            return span;
+        }
+
+        function renderSchemaLink(key) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "schema-link";
+            button.textContent = displaySchemaName(key);
+            button.addEventListener("click", () => jumpToSchema(key));
+            return button;
+        }
+
+        function jumpToSchema(key) {
+            setSchemaCollapsed(false);
+            const card = document.getElementById(domIdForSchema(key));
+            if (!card) {
+                state.schemaSearch = "";
+                document.getElementById("schema-search").value = "";
+                renderSchemas();
+            }
+            const target = document.getElementById(domIdForSchema(key));
+            if (!target) return;
+            document.querySelectorAll(".schema-card.highlight").forEach((item) => item.classList.remove("highlight"));
+            target.classList.add("highlight");
+            target.scrollIntoView({ block: "center", behavior: "smooth" });
+        }
+
+        function schemaRefKey(schema) {
+            return schema && schema.$ref ? schema.$ref.split("/").pop() : "";
+        }
+
+        function schemaKeyForModel(model) {
+            const schemas = protocolSchemas();
+            if (schemas[model]) return model;
+            const entry = Object.entries(schemas).find(([, schema]) => schema && schema.title === model);
+            return entry ? entry[0] : "";
+        }
+
+        function displaySchemaName(model) {
+            const key = schemaKeyForModel(model) || model;
+            const schema = protocolSchemas()[key];
+            return (schema && schema.title) || String(key || "").replace(/_[0-9a-f]{8,}$/i, "");
+        }
+
+        function domIdForSchema(key) {
+            return "schema-card-" + String(key).replace(/[^A-Za-z0-9_-]/g, "-");
+        }
+
+        function fieldMetaLabel(schema, required) {
+            const resolved = resolveSchema(schema) || {};
+            const parts = [required ? "required" : "optional"];
+            if (resolved.description) parts.push(resolved.description);
+            if (Array.isArray(resolved.enum)) parts.push(`enum: ${resolved.enum.join(", ")}`);
+            if (Array.isArray(resolved["x-enumNames"])) parts.push(`names: ${resolved["x-enumNames"].join(", ")}`);
+            return parts.join(" · ");
+        }
+
+        function render() {
+            applyFilters();
+            renderFilters();
+            renderOperationList();
+            renderDetail();
+        }
+
+        ["group", "kind", "tag", "direction", "model"].forEach((key) => {
+            document.getElementById(`${key}-filter`).addEventListener("change", (event) => {
+                state.filters[key] = event.target.value;
+                state.selectedId = null;
+                render();
+            });
+        });
+
+        document.getElementById("protocol-search").addEventListener("input", (event) => {
+            state.search = event.target.value;
+            state.selectedId = null;
+            render();
+        });
+
+        document.getElementById("schema-search").addEventListener("input", (event) => {
+            state.schemaSearch = event.target.value;
+            renderSchemas();
+        });
+
+        const rawLink = document.getElementById("raw-link");
+        rawLink.href = protocolUrl();
+        setTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light");
+        setSchemaCollapsed(localStorage.getItem(SCHEMA_DRAWER_KEY) === "collapsed");
+        document.getElementById("theme-toggle").addEventListener("click", () => {
+            const current = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+            setTheme(current === "dark" ? "light" : "dark");
+        });
+        document.getElementById("schema-toggle").addEventListener("click", () => {
+            setSchemaCollapsed(!document.body.classList.contains("schema-collapsed"));
+        });
+
+        fetch(protocolUrl())
+            .then((response) => response.json())
+            .then((doc) => {
+                state.doc = doc;
+                state.operations = flattenOperations(doc);
+                const routeId = currentQuery().get("route_id");
+                if (routeId) {
+                    const selected =
+                        state.operations.find((operation) => operation.routeId === routeId && operation.type === "interaction") ||
+                        state.operations.find((operation) => operation.routeId === routeId);
+                    state.selectedId = selected?.id || null;
+                }
+                render();
+            })
+            .catch((error) => {
+                document.getElementById("operation-detail").innerHTML = `<div class="empty">${error}</div>`;
+            });
+    </script>
+</body>
+
+</html>

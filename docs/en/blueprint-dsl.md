@@ -319,7 +319,13 @@ For complete generated examples, see `/api/demo/sweep-events` and `/api/demo/ass
 api-doc-server -c api-blueprint.toml
 ```
 
-The full `/openapi.json` remains available for external OpenAPI tools. `STREAM` routes appear in the route index and in HTTP docs as SSE routes; `CHANNEL` routes appear in protocol details in the route index but are not forced into standard OpenAPI.
+The full `/openapi.json` remains available for external OpenAPI tools. `STREAM` routes appear in the route index and in HTTP docs as SSE routes; `CHANNEL` routes appear in Protocol Catalog but are not forced into standard OpenAPI.
+
+Message protocols also have native docs:
+
+- `/docs/protocol` is the human-facing message protocol UI. It supports route, group, tag, kind, direction, op, model, and field search, and shows interactions, unpaired messages, and payload schemas. By default, a `CHANNEL` only expresses client/server message sets and does not guess request/response pairing. When message metadata provides `interaction` and `role`, the built-in metadata interaction plugin groups messages into Swagger-like request/response interactions.
+- `/docs/asyncapi` is the visual AsyncAPI reader. `/docs/protocol.json` and `/asyncapi.json` remain available for machine consumption and external tools.
+- The docs center links `STREAM` / `CHANNEL` routes into Protocol UI / AsyncAPI UI and keeps a disabled try-out placeholder. Real upstream connection, token handling, and frame codec integration are project-owned extension work, not part of the default docs UI.
 
 DSL `Enum[...]` is emitted as standard OpenAPI `enum` values and also includes `x-enumNames` / `x-enum-varnames` so UI or code tools can display enum member names. The docs server's local FastAPI routes strictly validate query, path, form, and body inputs by enum value.
 

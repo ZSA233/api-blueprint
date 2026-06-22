@@ -10,7 +10,12 @@ from fastapi import FastAPI
 from api_blueprint import hub
 from api_blueprint.config import Config
 from api_blueprint.engine import Blueprint
-from api_blueprint.engine.runtime.docs import docs_home_path, docs_route_count, ensure_docs_gzip
+from api_blueprint.engine.runtime.docs import (
+    configure_protocol_docs_plugins,
+    docs_home_path,
+    docs_route_count,
+    ensure_docs_gzip,
+)
 
 
 def _docs_upstream(conf: Config) -> str | None:
@@ -67,7 +72,9 @@ def run_docs_server(conf: Config, entrypoints: list[Blueprint]) -> None:
     host, hub_port = docs_server.split(":", 1)
     hub_port_int = int(hub_port)
     display_host = _docs_display_host(conf, host)
+    protocol_docs_plugins = tuple(conf.blueprint.protocol_docs_plugins)
     for app in apps:
+        configure_protocol_docs_plugins(app, protocol_docs_plugins)
         ensure_docs_gzip(app)
 
     if len(apps) > 1:

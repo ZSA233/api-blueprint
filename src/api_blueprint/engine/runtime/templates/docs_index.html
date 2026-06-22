@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
     <title>{{ title }} Docs</title>
     <link href="/static/bootstrap.min.css" rel="stylesheet" />
     <script>
@@ -347,7 +348,29 @@
         .toolbar h1 {
             font-size: 24px;
             line-height: 1.2;
-            margin: 0;
+            margin: 0 0 8px;
+        }
+
+        .view-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tab-button {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            color: var(--ink);
+            font-size: 14px;
+            padding: 7px 10px;
+        }
+
+        .tab-button.active,
+        .tab-button:hover {
+            background: var(--accent-soft);
+            border-color: var(--accent-line);
+            color: var(--accent);
         }
 
         .actions {
@@ -496,6 +519,15 @@
             text-align: center;
         }
 
+        .notice {
+            background: var(--panel-subtle);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            color: var(--muted);
+            font-size: 13px;
+            padding: 10px;
+        }
+
         @media (max-width: 980px) {
             .shell,
             .content {
@@ -568,9 +600,17 @@
 
         <main class="main">
             <div class="toolbar">
-                <h1 id="heading">All routes</h1>
+                <div>
+                    <h1 id="heading">All routes</h1>
+                    <div class="view-tabs" role="tablist" aria-label="Documentation view">
+                        <button id="routes-tab" class="tab-button active" type="button">Routes</button>
+                        <button id="protocol-tab" class="tab-button" type="button">Protocol Catalog</button>
+                    </div>
+                </div>
                 <div class="actions">
                     <a id="swagger-link" class="action primary" href="/docs/swagger">Swagger</a>
+                    <a class="action secondary" href="/docs/protocol">Protocol UI</a>
+                    <a class="action secondary" href="/docs/asyncapi">AsyncAPI UI</a>
                     <a class="action secondary" href="/openapi.json">Full JSON</a>
                 </div>
             </div>
@@ -584,6 +624,8 @@
     <script>
         const state = {
             index: null,
+            protocol: null,
+            view: "routes",
             filters: { group: null, kind: null, tag: null },
             search: "",
             selectedId: null,
@@ -648,7 +690,31 @@
                 ...(route.tags || []),
                 route.summary || "",
                 route.description || "",
+                connectionText(route.connection),
             ].join(" ").toLowerCase();
+        }
+
+        function connectionText(connection) {
+            if (!connection) return "";
+            return [
+                connection.scope || "",
+                connection.delivery || "",
+                messageSearchText(connection.server_message),
+                messageSearchText(connection.client_message),
+            ].join(" ");
+        }
+
+        function messageSearchText(message) {
+            if (!message) return "";
+            return (message.variants || []).map((variant) => [
+                variant.key || "",
+                variant.model || "",
+                variant.op || "",
+                variant.name || "",
+                variant.auth || "",
+                variant.description || "",
+                JSON.stringify(variant.metadata || {}),
+            ].join(" ")).join(" ");
         }
 
         function groupMatches(route, group) {
@@ -663,6 +729,7 @@
             const flags = Object.assign({ ignoreGroup: false, ignoreKind: false, ignoreTag: false }, options || {});
             const term = state.search.trim().toLowerCase();
             return state.index.routes.filter((route) => {
+                if (state.view === "protocol" && !route.connection) return false;
                 if (!flags.ignoreGroup && state.filters.group && !groupMatches(route, state.filters.group)) return false;
                 if (!flags.ignoreKind && state.filters.kind && route.kind !== state.filters.kind) return false;
                 if (!flags.ignoreTag && state.filters.tag && !(route.tags || []).includes(state.filters.tag)) return false;
@@ -683,6 +750,8 @@
         function updateLinks() {
             const query = queryForFilters();
             document.getElementById("swagger-link").href = "/docs/swagger" + (query ? "?" + query : "");
+            document.getElementById("routes-tab").classList.toggle("active", state.view === "routes");
+            document.getElementById("protocol-tab").classList.toggle("active", state.view === "protocol");
         }
 
         function filterButton(label, count, active, onClick) {
@@ -882,7 +951,9 @@
             if (!routes.length) {
                 const empty = document.createElement("div");
                 empty.className = "empty";
-                empty.textContent = "No routes match the current filters.";
+                empty.textContent = state.view === "protocol"
+                    ? "No protocol routes match the current filters."
+                    : "No routes match the current filters.";
                 list.appendChild(empty);
                 return;
             }
@@ -903,6 +974,10 @@
                 top.append(method, path);
                 item.append(top, routeId);
                 item.addEventListener("click", () => {
+                    if (state.view === "protocol" && route.connection) {
+                        window.location.href = "/docs/protocol?route_id=" + encodeURIComponent(route.id);
+                        return;
+                    }
                     state.selectedId = route.id;
                     render();
                 });
@@ -959,35 +1034,56 @@
                     <div class="kv">
                         <div><span>Scope</span><span></span></div>
                         <div><span>Delivery</span><span></span></div>
-                        <div><span>Server msg</span><span class="mono"></span></div>
-                        <div><span>Client msg</span><span class="mono"></span></div>
+                        <div><span>Server messages</span><span class="mono"></span></div>
+                        <div><span>Client messages</span><span class="mono"></span></div>
                     </div>
                 `;
                 const connectionValues = connection.querySelectorAll("span:last-child");
                 connectionValues[0].textContent = route.connection.scope;
                 connectionValues[1].textContent = route.connection.delivery;
-                connectionValues[2].textContent = messageLabel(route.connection.server_message);
-                connectionValues[3].textContent = messageLabel(route.connection.client_message);
+                connectionValues[2].textContent = `${messageVariantCount(route.connection.server_message)} variants`;
+                connectionValues[3].textContent = `${messageVariantCount(route.connection.client_message)} variants`;
             } else {
                 connection.remove();
             }
 
             const actions = detail.querySelector(".actions");
+            if (route.connection) {
+                const protocol = document.createElement("a");
+                protocol.className = "action primary";
+                protocol.href = "/docs/protocol?" + swaggerQuery.toString();
+                protocol.textContent = "Open in Protocol UI";
+                actions.appendChild(protocol);
+                const asyncapi = document.createElement("a");
+                asyncapi.className = "action secondary";
+                asyncapi.href = "/docs/asyncapi?" + swaggerQuery.toString();
+                asyncapi.textContent = "Open AsyncAPI UI";
+                actions.appendChild(asyncapi);
+            }
             if (canOpenSwagger) {
                 const swagger = document.createElement("a");
-                swagger.className = "action primary";
+                swagger.className = route.connection ? "action secondary" : "action primary";
                 swagger.href = "/docs/swagger?" + swaggerQuery.toString();
                 swagger.textContent = "Open route in Swagger";
                 actions.appendChild(swagger);
-            } else {
-                actions.textContent = "Channel routes are shown in the protocol index and are not part of standard OpenAPI.";
+            }
+            if (route.connection) {
+                const protocolNotice = document.createElement("div");
+                protocolNotice.className = "notice";
+                protocolNotice.textContent = route.kind === "channel"
+                    ? "Channel routes are documented in Protocol Catalog and AsyncAPI, not as fake OpenAPI HTTP endpoints."
+                    : "This route is also available in Protocol Catalog and AsyncAPI.";
+                actions.appendChild(protocolNotice);
+
+                const tryoutNotice = document.createElement("div");
+                tryoutNotice.className = "notice";
+                tryoutNotice.textContent = "Try-out console is planned. Real upstream, auth token, and frame codec integration should be provided by a project-owned extension.";
+                actions.appendChild(tryoutNotice);
             }
         }
 
-        function messageLabel(message) {
-            if (!message) return "-";
-            const variants = (message.variants || []).map((variant) => variant.key ? `${variant.key}:${variant.model}` : variant.model);
-            return message.name ? `${message.name} (${variants.join(", ")})` : variants.join(", ");
+        function messageVariantCount(message) {
+            return message ? (message.variants || []).length : 0;
         }
 
         function render() {
@@ -997,7 +1093,9 @@
             }
             if (!state.selectedId && routes.length) state.selectedId = routes[0].id;
             const selected = routes.find((route) => route.id === state.selectedId) || null;
-            document.getElementById("heading").textContent = `${routes.length} routes`;
+            document.getElementById("heading").textContent = state.view === "protocol"
+                ? `${routes.length} protocol routes`
+                : `${routes.length} routes`;
             document.getElementById("route-count").textContent = state.index.route_count;
             updateLinks();
             renderFilters();
@@ -1008,6 +1106,18 @@
         document.getElementById("theme-toggle").addEventListener("click", () => {
             const current = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
             setTheme(current === "dark" ? "light" : "dark");
+        });
+
+        document.getElementById("routes-tab").addEventListener("click", () => {
+            state.view = "routes";
+            state.selectedId = null;
+            render();
+        });
+
+        document.getElementById("protocol-tab").addEventListener("click", () => {
+            state.view = "protocol";
+            state.selectedId = null;
+            render();
         });
         restoreSidebarWidth();
         setTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light");
@@ -1050,10 +1160,13 @@
             render();
         });
 
-        fetch("/docs/index.json")
-            .then((response) => response.json())
-            .then((payload) => {
-                state.index = payload;
+        Promise.all([
+            fetch("/docs/index.json").then((response) => response.json()),
+            fetch("/docs/protocol.json").then((response) => response.json()),
+        ])
+            .then(([indexPayload, protocolPayload]) => {
+                state.index = indexPayload;
+                state.protocol = protocolPayload;
                 render();
             })
             .catch((error) => {

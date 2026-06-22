@@ -85,7 +85,7 @@ api-gen check -c api-blueprint.toml
 api-gen generate -c api-blueprint.toml
 ```
 
-By default, `/` and `/docs` both serve the api-blueprint docs center. The full OpenAPI document remains available at `/openapi.json`.
+By default, `/` and `/docs` both serve the api-blueprint docs center. The full OpenAPI document remains available at `/openapi.json`, and message protocols are available through interaction-aware `/docs/protocol` and `/docs/asyncapi`.
 
 ## Common Targets
 

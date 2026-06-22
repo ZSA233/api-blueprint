@@ -319,7 +319,13 @@ API 规则：
 api-doc-server -c api-blueprint.toml
 ```
 
-完整 `/openapi.json` 继续保留给外部 OpenAPI 工具。`STREAM` 会进入 route index，并在 HTTP 文档中按 SSE route 展示；`CHANNEL` 会进入 route index 的协议详情，但不会强行塞进标准 OpenAPI。
+完整 `/openapi.json` 继续保留给外部 OpenAPI 工具。`STREAM` 会进入 route index，并在 HTTP 文档中按 SSE route 展示；`CHANNEL` 会进入 Protocol Catalog，但不会强行塞进标准 OpenAPI。
+
+消息协议也有原生文档入口：
+
+- `/docs/protocol` 是面向阅读的消息协议 UI，可按 route、group、tag、kind、direction、op、model 和字段搜索，查看 interaction、孤立 message 与 payload schema。默认 `CHANNEL` 只表达 client/server message 集合，不强行猜测请求/响应配对；如果 message metadata 中写入 `interaction` 与 `role`，内置 metadata interaction 插件会把它们组织成类似 Swagger operation 的请求/响应交互。
+- `/docs/asyncapi` 是 AsyncAPI 可视化阅读页；`/docs/protocol.json` 与 `/asyncapi.json` 分别保留给机器消费和外部工具导出。
+- docs center 会为 `STREAM` / `CHANNEL` 提供进入 Protocol UI / AsyncAPI UI 的入口，并保留禁用状态的 try-out 占位。真实 upstream 连接、token 处理和 frame codec 集成属于项目自有扩展，不进入默认 docs UI。
 
 DSL `Enum[...]` 会进入 OpenAPI 标准 `enum` values，并额外输出 `x-enumNames` / `x-enum-varnames` 供 UI 或代码工具显示枚举名称；docs server 的本地 FastAPI route 会按 enum value 严格校验 query、path、form 和 body 输入。
 

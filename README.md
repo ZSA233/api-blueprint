@@ -85,7 +85,7 @@ api-gen check -c api-blueprint.toml
 api-gen generate -c api-blueprint.toml
 ```
 
-默认 `/` 与 `/docs` 都是 api-blueprint 文档中心；完整 OpenAPI 仍保留在 `/openapi.json`。
+默认 `/` 与 `/docs` 都是 api-blueprint 文档中心；完整 OpenAPI 保留在 `/openapi.json`，消息协议可通过支持 interaction 关联的 `/docs/protocol` 与 `/docs/asyncapi` 查看。
 
 ## 常用目标
 

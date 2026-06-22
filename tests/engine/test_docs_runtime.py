@@ -5,12 +5,18 @@ import enum
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from api_blueprint.engine import Blueprint, reset_shared_app
+from api_blueprint.engine import Blueprint, message_variant, reset_shared_app
 from api_blueprint.engine.model import Array, Enum, Int, Model, String
+from api_blueprint.engine.runtime.docs import set_protocol_docs_plugins
+
+
+class MessageMeta(Model):
+    trace_id = String(description="trace id")
 
 
 class Message(Model):
     text = String(description="message text")
+    meta = MessageMeta(description="message metadata")
 
 
 class BusinessType(enum.IntEnum):
@@ -46,8 +52,42 @@ def _build_docs_blueprint() -> Blueprint:
     with bp.group("/activity/b") as activity_b:
         activity_b.GET("/two", tags=["activity"], summary="Activity B").RSP(message=String(description="message"))
     with bp.group("/realtime") as realtime:
-        realtime.STREAM("/events", tags=["events"]).SERVER_MESSAGE(Message)
-        realtime.CHANNEL("/chat", tags=["chat"]).SERVER_MESSAGE(Message).CLIENT_MESSAGE(Message)
+        realtime.STREAM("/events", tags=["events"]).SERVER_MESSAGE(
+            "EventMessage",
+            event=message_variant(
+                Message,
+                op=2001,
+                name="Event pushed",
+                auth="session",
+                description="Server event payload",
+                example={"text": "event"},
+            ),
+        )
+        realtime.CHANNEL("/chat", tags=["chat"]).SERVER_MESSAGE(
+            "ServerChatMessage",
+            update=message_variant(
+                Message,
+                op=3002,
+                name="Chat update",
+                interaction="chat.send",
+                role="response",
+                auth="session",
+                description="Server chat update",
+                example={"text": "hello"},
+            ),
+        ).CLIENT_MESSAGE(
+            "ClientChatMessage",
+            send=message_variant(
+                Message,
+                op=3001,
+                name="Send chat",
+                interaction="chat.send",
+                role="request",
+                auth="session",
+                description="Client chat message",
+                example={"text": "hello"},
+            ),
+        )
 
     bp.build()
     return bp
@@ -120,6 +160,21 @@ def test_default_docs_center_routes_and_index_are_available() -> None:
     assert "api-blueprint-docs-sidebar-width" in home.text
     assert "buildGroupTree" in home.text
     assert "theme-toggle" in home.text
+    assert "Protocol Catalog" in home.text
+    assert "/docs/protocol" in home.text
+    assert "/docs/protocol.json" in home.text
+    assert "/docs/asyncapi" in home.text
+    assert "Try-out console is planned" in home.text
+    assert "Open in Protocol UI" in home.text
+    assert 'asyncapi.href = "/docs/asyncapi?" + swaggerQuery.toString();' in home.text
+    assert 'window.location.href = "/docs/protocol?route_id="' in home.text
+    assert "message-table" not in home.text
+    assert "MESSAGE_LABEL_LIMIT" not in home.text
+    assert "MESSAGE_TABLE_LIMIT" not in home.text
+    assert "renderMessageSummary" not in home.text
+    assert "message-toggle" not in home.text
+    assert "Server messages" in home.text
+    assert "Client messages" in home.text
     assert "/static/all.min.css" not in home.text
     assert "webfonts" not in home.text
     assert "fa-solid" not in home.text
@@ -144,6 +199,299 @@ def test_default_docs_center_routes_and_index_are_available() -> None:
     assert index["route_count"] == 6
     assert {route["kind"] for route in index["routes"]} == {"rpc", "stream", "channel"}
     assert "api.realtime.channel.chat" in {route["id"] for route in index["routes"]}
+    chat = next(route for route in index["routes"] if route["id"] == "api.realtime.channel.chat")
+    assert chat["connection"]["client_message"]["variants"][0]["op"] == 3001
+    assert chat["connection"]["client_message"]["variants"][0]["metadata"]["auth"] == "session"
+
+
+def test_protocol_and_asyncapi_visual_pages_are_available() -> None:
+    bp = _build_docs_blueprint()
+    client = TestClient(bp.app)
+
+    protocol = client.get("/docs/protocol?route_id=api.realtime.channel.chat")
+    assert protocol.status_code == 200
+    assert "Protocol UI" in protocol.text
+    assert "protocol-search" in protocol.text
+    assert "operation-list" in protocol.text
+    assert "Schema Explorer" in protocol.text
+    assert "schema-explorer" in protocol.text
+    assert "schema-search" in protocol.text
+    assert "schema-toggle" in protocol.text
+    assert "api-blueprint-schema-drawer" in protocol.text
+    assert "payload-tree" in protocol.text
+    assert "jumpToSchema" in protocol.text
+    assert "schema-collapsed" in protocol.text
+    assert "grid-template-rows: auto minmax(0, 1fr)" in protocol.text
+    assert "grid-auto-rows: max-content" in protocol.text
+    assert "Raw Protocol JSON" in protocol.text
+    assert "fetch(protocolUrl())" in protocol.text
+    assert "route-scope" in protocol.text
+    assert "All protocol routes" in protocol.text
+    assert "opFlowLabel" in protocol.text
+    assert "api-blueprint-docs-theme" in protocol.text
+    assert "theme-toggle" in protocol.text
+    assert "iconSvg" in protocol.text
+    assert ".badge.flow" in protocol.text
+    assert "unpaired" in protocol.text
+
+    asyncapi = client.get("/docs/asyncapi")
+    assert asyncapi.status_code == 200
+    assert "AsyncAPI UI" in asyncapi.text
+    assert "AsyncAPI export preview" in asyncapi.text
+    assert "asyncapi-search" in asyncapi.text
+    assert "asyncapi-operation-list" in asyncapi.text
+    assert "Schema Explorer" in asyncapi.text
+    assert "schema-search" in asyncapi.text
+    assert "schema-toggle" in asyncapi.text
+    assert "api-blueprint-schema-drawer" in asyncapi.text
+    assert "payload-tree" in asyncapi.text
+    assert "jumpToSchema" in asyncapi.text
+    assert "schema-collapsed" in asyncapi.text
+    assert "grid-auto-rows: max-content" in asyncapi.text
+    assert "Raw AsyncAPI JSON" in asyncapi.text
+    assert 'fetch("/asyncapi.json")' in asyncapi.text
+    assert "route-scope" in asyncapi.text
+    assert "All AsyncAPI operations" in asyncapi.text
+    assert "ASYNCAPI FLOW" in asyncapi.text
+    assert 'protocol-link").href = "/docs/protocol?route_id="' in asyncapi.text
+    assert "api-blueprint-docs-theme" in asyncapi.text
+    assert "theme-toggle" in asyncapi.text
+    assert "iconSvg" in asyncapi.text
+    assert "direction-filter" in asyncapi.text
+    assert "model-filter" in asyncapi.text
+    assert "x-api-blueprint-interactions" in asyncapi.text
+
+
+def test_protocol_catalog_exposes_connection_messages_and_metadata() -> None:
+    bp = _build_docs_blueprint()
+    client = TestClient(bp.app)
+
+    protocol = client.get("/docs/protocol.json")
+    assert protocol.status_code == 200
+    payload = protocol.json()
+    assert payload["route_count"] == 2
+    assert {route["kind"] for route in payload["routes"]} == {"stream", "channel"}
+    assert payload["plugins"] == [{"name": "metadata-interactions"}]
+    assert [interaction["id"] for interaction in payload["interactions"]] == [
+        "api.realtime.channel.chat:chat.send"
+    ]
+    assert payload["interactions"][0]["request"]["op"] == 3001
+    assert payload["interactions"][0]["responses"][0]["op"] == 3002
+    assert any(message["route_id"] == "api.realtime.stream.events" for message in payload["unpaired_messages"])
+    assert _schema_by_title(payload, "Message") is not None
+    assert _schema_by_title(payload, "MessageMeta") is not None
+
+    chat = next(route for route in payload["routes"] if route["route_id"] == "api.realtime.channel.chat")
+    assert chat["scope"] == "session"
+    assert chat["delivery"] == "ordered"
+    client_message = next(message for message in chat["messages"] if message["direction"] == "client")
+    assert client_message["name"] == "ClientChatMessage"
+    assert client_message["variants"] == [
+        {
+            "key": "send",
+            "model": "Message",
+            "metadata": {
+                "op": 3001,
+                "name": "Send chat",
+                "interaction": "chat.send",
+                "role": "request",
+                "auth": "session",
+                "description": "Client chat message",
+                "example": {"text": "hello"},
+            },
+            "op": 3001,
+            "name": "Send chat",
+            "description": "Client chat message",
+            "auth": "session",
+            "example": {"text": "hello"},
+            "interaction": "chat.send",
+            "role": "request",
+        }
+    ]
+    assert any(message["direction"] == "close" for message in chat["messages"])
+
+
+def test_protocol_catalog_filters_routes_and_message_operations() -> None:
+    bp = _build_docs_blueprint()
+    client = TestClient(bp.app)
+
+    by_route = client.get("/docs/protocol.json?route_id=api.realtime.channel.chat").json()
+    assert by_route["route_count"] == 1
+    assert by_route["routes"][0]["route_id"] == "api.realtime.channel.chat"
+
+    by_group = client.get("/docs/protocol.json?group=/api/realtime").json()
+    assert by_group["route_count"] == 2
+
+    by_direction = client.get("/docs/protocol.json?direction=client").json()
+    assert by_direction["route_count"] == 1
+    assert by_direction["routes"][0]["route_id"] == "api.realtime.channel.chat"
+    assert [message["direction"] for message in by_direction["routes"][0]["messages"]] == ["client"]
+
+    by_op = client.get("/docs/protocol.json?op=3001").json()
+    assert by_op["route_count"] == 1
+    assert by_op["routes"][0]["route_id"] == "api.realtime.channel.chat"
+    assert by_op["routes"][0]["messages"] == [
+        {
+            "direction": "client",
+            "name": "ClientChatMessage",
+            "variants": [
+                {
+                    "key": "send",
+                    "model": "Message",
+                    "metadata": {
+                        "op": 3001,
+                        "name": "Send chat",
+                        "interaction": "chat.send",
+                        "role": "request",
+                        "auth": "session",
+                        "description": "Client chat message",
+                        "example": {"text": "hello"},
+                    },
+                    "op": 3001,
+                    "name": "Send chat",
+                    "description": "Client chat message",
+                    "auth": "session",
+                    "example": {"text": "hello"},
+                    "interaction": "chat.send",
+                    "role": "request",
+                }
+            ],
+        }
+    ]
+    assert by_op["interactions"][0]["request"]["op"] == 3001
+    assert by_op["interactions"][0]["responses"][0]["op"] == 3002
+
+
+def test_protocol_docs_plugin_can_project_custom_interactions() -> None:
+    reset_shared_app()
+    bp = Blueprint(root="/socket")
+    with bp.group("/demo") as demo:
+        demo.CHANNEL("/session").SERVER_MESSAGE(
+            "ServerMessage",
+            result=message_variant(Message, op=5002, name="Result"),
+        ).CLIENT_MESSAGE(
+            "ClientMessage",
+            command=message_variant(Message, op=5001, name="Command"),
+        )
+    bp.build()
+
+    def custom_interaction_plugin(catalog):
+        route = catalog["routes"][0]
+        client = next(message for message in route["messages"] if message["direction"] == "client")
+        server = next(message for message in route["messages"] if message["direction"] == "server")
+        request_variant = client["variants"][0]
+        response_variant = server["variants"][0]
+        request = {
+            "route_id": route["route_id"],
+            "direction": "client",
+            "message": client["name"],
+            "variant_key": request_variant["key"],
+            "model": request_variant["model"],
+            "op": request_variant["op"],
+            "name": request_variant["name"],
+            "metadata": request_variant["metadata"],
+        }
+        response = {
+            "route_id": route["route_id"],
+            "direction": "server",
+            "message": server["name"],
+            "variant_key": response_variant["key"],
+            "model": response_variant["model"],
+            "op": response_variant["op"],
+            "name": response_variant["name"],
+            "metadata": response_variant["metadata"],
+        }
+        return {
+            "interactions": [
+                {
+                    "id": f"{route['route_id']}:plugin.command",
+                    "name": "Plugin command",
+                    "route_id": route["route_id"],
+                    "kind": route["kind"],
+                    "group": route["group"],
+                    "group_path": route["group_path"],
+                    "path": route["path"],
+                    "tags": route["tags"],
+                    "request": request,
+                    "responses": [response],
+                    "messages": [request, response],
+                }
+            ]
+        }
+
+    set_protocol_docs_plugins(bp.app, [custom_interaction_plugin])
+    payload = TestClient(bp.app).get("/docs/protocol.json").json()
+
+    assert payload["plugins"] == [
+        {"name": "metadata-interactions"},
+        {"name": "custom_interaction_plugin"},
+    ]
+    assert payload["interactions"][0]["id"] == "socket.demo.channel.session:plugin.command"
+    assert payload["interactions"][0]["request"]["op"] == 5001
+    assert payload["interactions"][0]["responses"][0]["op"] == 5002
+    assert all(message.get("op") not in {5001, 5002} for message in payload["unpaired_messages"])
+
+
+def test_asyncapi_exports_message_protocol_without_http_rpc_routes() -> None:
+    bp = _build_docs_blueprint()
+    client = TestClient(bp.app)
+
+    spec = client.get("/asyncapi.json")
+    assert spec.status_code == 200
+    payload = spec.json()
+    assert payload["asyncapi"] == "3.0.0"
+    assert "channels" in payload
+    assert "operations" in payload
+    assert "components" in payload
+    assert payload["x-api-blueprint-interactions"][0]["id"] == "api.realtime.channel.chat:chat.send"
+    assert payload["x-api-blueprint-interactions"][0]["request"]["op"] == 3001
+    assert payload["x-api-blueprint-interactions"][0]["responses"][0]["op"] == 3002
+    assert _schema_by_title(payload, "Message") is not None
+    assert _schema_by_title(payload, "MessageMeta") is not None
+    assert all("ping" not in channel.get("address", "") for channel in payload["channels"].values())
+
+    messages = payload["components"]["messages"]
+    send_message = next(message for message in messages.values() if message.get("x-api-blueprint-op") == 3001)
+    assert send_message["x-api-blueprint-route-id"] == "api.realtime.channel.chat"
+    assert send_message["x-api-blueprint-direction"] == "client"
+    assert send_message["x-api-blueprint-variant-key"] == "send"
+    assert send_message["x-api-blueprint-metadata"]["auth"] == "session"
+    assert send_message["payload"] == {"$ref": "#/components/schemas/Message"}
+
+
+def test_channel_routes_are_not_forced_into_openapi_paths() -> None:
+    reset_shared_app()
+    bp = Blueprint(root="/socket")
+    with bp.group("/app") as app:
+        app.CHANNEL("/session").SERVER_MESSAGE(
+            "ServerMessage",
+            update=message_variant(Message, op=4002, description="Server update"),
+        ).CLIENT_MESSAGE(
+            "ClientMessage",
+            send=message_variant(Message, op=4001, description="Client command"),
+        )
+    bp.build()
+    client = TestClient(bp.app)
+
+    assert client.get("/openapi.json").status_code == 200
+    assert client.get("/openapi.json").json()["paths"] == {}
+    assert client.get("/docs/openapi.json").json()["paths"] == {}
+    assert client.get("/docs/protocol.json").json()["route_count"] == 1
+
+
+def test_asyncapi_without_message_routes_is_valid_empty_document() -> None:
+    reset_shared_app()
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.GET("/ping").RSP(message=String(description="message"))
+    bp.build()
+    client = TestClient(bp.app)
+
+    payload = client.get("/asyncapi.json").json()
+    assert payload["asyncapi"] == "3.0.0"
+    assert payload["channels"] == {}
+    assert payload["operations"] == {}
+    assert payload["components"]["messages"] == {}
 
 
 def test_sliced_openapi_filters_by_group_tag_kind_and_route_id() -> None:

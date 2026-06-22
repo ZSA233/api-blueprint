@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 from api_blueprint.engine import Blueprint, reset_shared_app
 from api_blueprint.engine.model import String
@@ -21,8 +22,12 @@ def test_example_blueprints_build_into_shared_fastapi_app(example_entrypoints):
     assert "/" in paths
     assert "/docs" in paths
     assert "/docs/index.json" in paths
+    assert "/docs/protocol" in paths
+    assert "/docs/protocol.json" in paths
+    assert "/docs/asyncapi" in paths
     assert "/docs/openapi.json" in paths
     assert "/docs/swagger" in paths
+    assert "/asyncapi.json" in paths
     assert "/docs/redoc" not in paths
     assert "/redoc" in paths
     assert "/openapi.json" in paths
@@ -43,10 +48,21 @@ def test_example_blueprints_build_into_shared_fastapi_app(example_entrypoints):
     assert "/api/hello/hello-way" in paths
     assert "/runtime/status/current" in paths
     assert "/static/doc.json" in paths
-    assert len(paths) == 49
+    assert len(paths) == 53
 
     openapi = app.openapi()
     assert "text/event-stream" in openapi["paths"]["/api/demo/sweep-events"]["get"]["responses"]["200"]["content"]
+
+    protocol = TestClient(app).get(
+        "/docs/protocol.json?route_id=api.demo.channel.assistantsession"
+    ).json()
+    assert [interaction["key"] for interaction in protocol["interactions"]] == [
+        "assistant.input",
+        "assistant.cancel",
+    ]
+    assistant_input = protocol["interactions"][0]
+    assert assistant_input["request"]["op"] == 1001
+    assert [message["op"] for message in assistant_input["responses"]] == [1002, 1003]
 
     for bp in entrypoints:
         bp.build()

@@ -9,11 +9,13 @@
 docs_server = "0.0.0.0:2332"
 docs_domain = ""
 entrypoints = ["blueprints.app:*"]
+protocol_docs_plugins = ["project.docs.protocol:plugin"]
 ```
 
 - `docs_server`：`api-doc-server` 监听地址。允许使用 `host:0`；服务会绑定系统分配的空闲端口，并在启动后打印实际 docs 或 hub 入口 URL。
 - `docs_domain`：文档服务展示域名，可留空。
 - `entrypoints`：需要加载的 Python 对象，支持 `module.path:attribute` 和 `module.path:*`。
+- `protocol_docs_plugins`：可选消息协议文档 projection 插件列表。默认内置 metadata interaction 插件会读取 `message_variant(..., interaction="...", role="request|response|error|push", op=..., name=..., description=..., auth=..., example=...)`，把 `CHANNEL` / `STREAM` 消息组织成 Protocol UI 中的请求/响应交互；项目可以通过插件把自定义 op/message metadata 投影成同一套 interaction catalog。插件只控制文档关联关系，不负责 upstream 连接、鉴权、frame codec 或在线调试。
 
 `Blueprint(app=None)` 默认共享全局 FastAPI app。如果需要多个独立文档应用，应显式传入 `app`。
 

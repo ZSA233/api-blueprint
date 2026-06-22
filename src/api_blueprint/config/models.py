@@ -169,6 +169,7 @@ class BlueprintConfig(BaseModel):
     entrypoints: list[str] | None = None
     docs_server: str | None = None
     docs_domain: str | None = None
+    protocol_docs_plugins: list[str] = Field(default_factory=list)
 
 
 class Config(BaseModel):
