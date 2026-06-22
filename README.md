@@ -7,9 +7,9 @@
 
 ## 概述
 
-`api-blueprint` 用 Python DSL 定义 API 契约，再从同一份协议真源生成文档服务和多语言代码。它适合把 HTTP API、`STREAM` / `CHANNEL` 消息、二进制请求 / 响应体、媒体上传 / raw 响应和 gRPC proto 放在一个可检查、可生成、可回归的协议工作流里维护。
+`api-blueprint` 用 Python DSL 定义 API 契约，并从同一份协议真源生成文档服务、契约索引和多语言代码。
 
-核心链路是：
+它把 HTTP API、`STREAM` / `CHANNEL` 消息、二进制协议、媒体上传、raw 响应、Wails 和 gRPC 放进一个可检查、可生成、可回归的工作流。
 
 ```text
 Blueprint DSL -> ContractGraph -> api-gen check / inspect / generate -> generated code
@@ -17,11 +17,10 @@ Blueprint DSL -> ContractGraph -> api-gen check / inspect / generate -> generate
 
 ## 适合什么场景
 
-- 后端、Web、Flutter、iOS Swift、Kotlin、脚本客户端需要共享同一份 API 契约。
-- 希望先从协议生成 Go server，再生成 TypeScript、Flutter、Swift、Kotlin、Java、Go、Python client，或生成 Kotlin/Python server scaffold 与 Java Spring controller/delegate 入口。
-- 需要文档服务、契约检查、生成快照和端到端示例一起维护。
-- 需要把 Markdown Binary Schema、typed binary 响应、multipart 上传、raw bytes/file/stream 响应、Wails 或 gRPC 纳入同一套生成流程。
-- 需要用 `OneOf` / `LegacyStringID` 让历史接口中真实存在的多 JSON shape 或 string/int ID 漂移字段进入契约，而不是长期退化为 `JSONValue`。
+- 多端团队需要共享同一份 API 契约。
+- 希望从协议真源生成 server scaffold、client SDK、文档和测试快照。
+- 需要把历史接口的 JSON shape 漂移、typed error、binary schema、stream/channel 等能力纳入契约。
+- 想让 AI 或人工审查优先阅读契约索引，而不是直接翻生成物。
 
 ## 安装
 
@@ -56,8 +55,6 @@ with bp.group("/demo") as views:
     views.GET("/ping").RSP(PingResponse)
 ```
 
-`root` 是 URL 前缀；需要把多个顶级 URL namespace 归入同一个生成根时，使用 `Blueprint(name="app", root="")` 并在 `group("/account")`、`group("/room")` 中定义路径。`name` 是 route id、service/module 和生成目录使用的逻辑协议身份。路径参数使用 `{name}` 与 `REQ_PATH(Model)`；ContractGraph / ir-plugin 与官方 HTTP target 支持 path request，Wails/gRPC 会 fail fast。`RSP(Model)` 定义业务响应模型；成功时没有业务 data 的 JSON envelope route 使用 `RSP_EMPTY()`，它不是 HTTP 204 / no body。
-
 创建 `api-blueprint.toml`：
 
 ```toml
@@ -83,35 +80,29 @@ clients = ["typescript.client"]
 启动文档服务、检查契约并生成代码：
 
 ```sh
-api-doc-server --version
-api-gen --version
 api-doc-server -c api-blueprint.toml
 api-gen check -c api-blueprint.toml
 api-gen generate -c api-blueprint.toml
 ```
 
-默认 `/` 与 `/docs` 都是 api-blueprint 文档中心，会按 group、tag、kind 和搜索结果打开更小的 Swagger 切片；OpenAPI 保留 DSL enum values 与 enum name 扩展，完整 `/openapi.json` 仍保留给外部工具。
-
-更完整的项目目录、配置字段、DSL、生成器输出、typed error、Response Envelope、Markdown Binary Schema、Wails 和 gRPC 说明见 [快速开始](docs/zh/getting-started.md)、[配置说明](docs/zh/configuration.md) 与下面的专题文档。
+默认 `/` 与 `/docs` 都是 api-blueprint 文档中心；完整 OpenAPI 仍保留在 `/openapi.json`。
 
 ## 常用目标
 
 | 目标 | 状态 | 用途 |
 |:---|:---:|:---|
-| Contract / inspect | 可用 | 输出契约索引，并按 route、schema、error、文件归属查询协议细节 |
-| Go server | 可用 | 生成 Go 路由、provider、typed enum DTO、长连接 message helper、语义化 handler context、成功 response metadata、可挂载到 Gin engine/group 且支持逐 route 挂载与显式 error mapper option 的 HTTP adapter、Wails adapter、multipart/raw media、binary schema 请求/响应、runtime 和可选分片 contract metadata |
-| TypeScript client | 预览 | 生成 transport-neutral client、长连接 message helper、HTTP multipart/raw adapter、binary schema 响应解码和 Wails facade |
-| Flutter client | 预览 | 生成纯 Dart package、DTO、typed error、binary codec、HTTP multipart/raw/binary response client 和 SSE/WebSocket client |
-| Swift client | 预览 | 生成 iOS Swift Package 多 target SDK、短 module stem、root routes module、DTO、typed error、字段级 binary codec、带限流/校验 knobs 的共享 URLSession HTTP/SSE/WebSocket transport 和 multipart/raw/binary response client，不生成 UI、鉴权、缓存或 session engine |
-| Kotlin client/server | 预览 | 生成 OkHttp HTTP/SSE/WebSocket client、Ktor HTTP/SSE/WebSocket server scaffold、multipart/raw/binary request/response adapter、模型和长连接 message helper |
-| Java client/server | 预览 | 生成 Java 17 HttpClient client，以及强约束 Spring MVC `Gen...Controller`、`Gen...Delegate`、JavaBean request/response 类型、adapter helper 和运行时 contract assertions；Spring policy 由 DSL provider + Java mapping 落地 |
-| Go client / Python client | 预览 | 生成服务端之外的脚本或工具侧客户端；Python client 使用递归 dataclass DTO、共享 runtime codec，并提供 multipart/raw、transport-neutral 长连接 message helper、processor/channel scaffold 与 binary writer/response codec |
-| Python server | 预览 | 生成 FastAPI HTTP/SSE/WebSocket server scaffold、multipart/raw/binary request/response adapter、typed service contract 和长连接 message helper |
-| Wails v2/v3 | 预览 / 实验性 | 生成 Go + TypeScript overlay；文件/stream 等能力使用 Wails RPC descriptor 或 STREAM/CHANNEL chunk 建模 |
-| gRPC proto / stubs | 可用 | 从 ContractGraph 输出 proto，并生成 Go/Python stub；bytes/file/stream 使用 protobuf bytes 或 streaming chunk 建模 |
-| IR plugin | 预览 | 让项目插件读取 ContractGraph、route selection 和 target options，生成项目专属产物；不提供宿主运行时引擎 |
-
-生成物 ownership、单次请求选项、stream/file 路径、server adapter 安全默认和生产逃生通道详见 [生成器与目录布局](docs/zh/generators.md)。IR plugin 配置、options 和 metadata 约束见 [配置说明](docs/zh/configuration.md)。默认 adapter 是协议桥接层，不是完整生产运行时；生产项目应优先使用具体 route/client/router 的窄入口，并通过原生 client、custom transport、service implementation、middleware 或 app shell 承载鉴权、限流、cookie、TLS/proxy、重试和文件权限策略。`include` / `exclude` 是稳定的生成期裁剪边界；不 import、不引用或只链接窄 product 属于语言工具链优化，不是跨语言结构体级 dead-strip 契约。
+| Contract / inspect | 可用 | 输出和查询协议索引 |
+| Go server | 可用 | 生成 Go provider、HTTP/Wails adapter 与 server-side DTO |
+| Go client / Python client | 预览 | 生成脚本、工具或服务侧客户端 |
+| TypeScript client | 预览 | 生成 transport-neutral client 与 HTTP/Wails facade |
+| Flutter client | 预览 | 生成纯 Dart package 与 HTTP/SSE/WebSocket client |
+| Swift client | 预览 | 生成 Swift Package SDK |
+| Kotlin client/server | 预览 | 生成 OkHttp client 与 Ktor server scaffold |
+| Java client/server | 预览 | 生成 Java HttpClient client 与 Spring MVC contract entrypoints |
+| Python server | 预览 | 生成 FastAPI server scaffold |
+| Wails v2/v3 | 预览 / 实验性 | 生成 Go + TypeScript overlay |
+| gRPC proto / stubs | 可用 | 生成 proto 与 Go/Python gRPC stub |
+| IR plugin | 预览 | 让项目插件消费 ContractGraph 并生成自有产物 |
 
 ## 下一步
 
@@ -130,22 +121,13 @@ api-gen generate -c api-blueprint.toml
 
 ## 开发和发布
 
-开发期常用命令：
+常用本地命令：
 
 ```sh
-make
-make test
 make test-fast
-make example-compile-check
 make example-validation
-make example-validation-go-server
-make example-validation-typescript
 make example-conformance
-make benchmark-list
-make example-golang-suite
-make example-java-suite
-make example-java-spring-server
-make example-java-spring-server-benchmark
+make release-preflight RELEASE_TAG=vX.Y.Z
 ```
 
-`make test-fast` 是本地快速 pytest 入口；完整本地收口可用 `make test-ci` 或 `make test`。`example-validation-*` 提供按语言/协议切片的示例校验，适合模板迭代；全量发布收口仍使用 `make example-validation`。`make example-conformance` 默认从真实 Go HTTP server 开始跑协议互通；可用 `EXAMPLE_CONFORMANCE_SERVERS`、`EXAMPLE_CONFORMANCE_CLIENTS`、`EXAMPLE_CONFORMANCE_SCENARIOS` 和 `EXAMPLE_CONFORMANCE_SWIFT_RUNTIME_PROFILE` 选择矩阵，完整矩阵可设为 `EXAMPLE_CONFORMANCE_SERVERS=all EXAMPLE_CONFORMANCE_CLIENTS=all`（Swift 场景需要可用 Swift toolchain）。benchmark 是可选趋势工具，不作为默认 CI 阈值；除 binary / protocol 外，也提供 generated client SDK smoke、Swift runtime microbench 与 Java Spring controller/delegate microbench 入口，见 [Benchmark](docs/zh/benchmarks.md)。`example-golang-suite` 是保留的手动端到端增强验证；`example-java-suite` 是 Java Spring 生成物 compile/smoke；`example-java-spring-server` 是真实 Spring Boot 宿主接入示例验证。正式发布前的版本、构建、安装和 GitHub Release 流程见 [发布流程](docs/release-process.md)。
+完整开发、示例验证、benchmark 和发布流程见上面的专题文档。
