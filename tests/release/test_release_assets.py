@@ -190,6 +190,7 @@ def test_ci_and_release_bundle_share_example_toolchain_setup():
     assert "python-packaging-smoke:" in ci_text
     assert "./.github/actions/setup-example-toolchains" in python_toolchain_smoke_job
     assert "go: true" in python_toolchain_smoke_job
+    assert "go_enum: true" in python_toolchain_smoke_job
     assert "node: true" in python_toolchain_smoke_job
     assert "typescript: true" in python_toolchain_smoke_job
     assert 'uv run pytest -q -m "toolchain_smoke"' in python_toolchain_smoke_job

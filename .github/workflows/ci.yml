@@ -133,6 +133,7 @@ jobs:
       - uses: ./.github/actions/setup-example-toolchains
         with:
           go: true
+          go_enum: true
           node: true
           typescript: true
 

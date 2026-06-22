@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import enum as py_enum
+import re
 import subprocess
 
 import pytest
@@ -76,6 +77,10 @@ def _write_module(tmp_path):
     return output_dir
 
 
+def _assert_go_field_type(source: str, field_name: str, type_name: str) -> None:
+    assert re.search(rf"\b{re.escape(field_name)}\s+{re.escape(type_name)}\b", source)
+
+
 def test_golang_server_route_dtos_use_typed_enums(tmp_path):
     output_dir = _write_module(tmp_path)
 
@@ -86,11 +91,11 @@ def test_golang_server_route_dtos_use_typed_enums(tmp_path):
     enums_source = (output_dir / "routes" / "api" / "_gen_enums" / "enums.go").read_text(encoding="utf-8")
 
     assert 'enums "example.com/generated/golang/routes/api/_gen_enums"' in shared_types
-    assert "Op       enums.ResOp" in shared_types
-    assert "Status   enums.GiftStatus" in shared_types
-    assert "Format   enums.GiftFormat" in shared_types
-    assert "Statuses []enums.GiftStatus" in shared_types
-    assert "ByName   map[string]enums.GiftStatus" in shared_types
+    _assert_go_field_type(shared_types, "Op", "enums.ResOp")
+    _assert_go_field_type(shared_types, "Status", "enums.GiftStatus")
+    _assert_go_field_type(shared_types, "Format", "enums.GiftFormat")
+    _assert_go_field_type(shared_types, "Statuses", "[]enums.GiftStatus")
+    _assert_go_field_type(shared_types, "ByName", "map[string]enums.GiftStatus")
     assert 'binding:"oneof=1 2"' in shared_types
     assert 'binding:"omitempty,oneof=1 2"' in shared_types
     assert 'binding:"oneof=card coin"' in shared_types
