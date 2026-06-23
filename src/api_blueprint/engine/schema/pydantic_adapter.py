@@ -220,8 +220,9 @@ def resolve_field(
         arr: Array = field
         elem = arr.elem_type()
         if isinstance(elem, type) and issubclass(elem, Model):
+            elem_display_name = elem.__name__
             elem = model_to_pydantic(elem, name=name, router=router)
-            description = f"[{elem.__name__}] {description}"
+            description = f"[{elem_display_name}] {description}"
         if isinstance(elem, Field):
             elem, _ = resolve_field(elem, name=name, router=router)
         elif isinstance(elem, type) and issubclass(elem, Field):
@@ -236,6 +237,7 @@ def resolve_field(
     elif ismatch(field, Map):
         key = field.key_type()
         value = field.value_type()
+        key_display_name = _display_type_name(key)
         if isinstance(key, type) and issubclass(key, Model):
             key = model_to_pydantic(key, name=name, router=router)
         if isinstance(key, Field):
@@ -244,8 +246,9 @@ def resolve_field(
             key, _ = resolve_field(key, name=name, router=router)
 
         if isinstance(value, type) and issubclass(value, Model):
+            value_display_name = value.__name__
             value = model_to_pydantic(value, name=name, router=router)
-            description = f"[{key.__name__}: {value.__name__}] {description}"
+            description = f"[{key_display_name}: {value_display_name}] {description}"
         if isinstance(value, Field):
             value, _ = resolve_field(value, name=name, router=router)
         elif (isinstance(value, type) and issubclass(value, Field)) or is_parametrized(value):
@@ -285,6 +288,7 @@ def resolve_field(
         info = None
     else:
         copy_extra = _normalize_field_factory_kwargs(field.__extra__, description=description)
+        _merge_json_schema_extra(copy_extra, _field_json_schema_extra(field))
         if enum_cls is not None:
             _merge_json_schema_extra(copy_extra, _enum_json_schema_extra(enum_cls))
         info = field_factory(**copy_extra)
@@ -294,11 +298,34 @@ def resolve_field(
     return py_type, info
 
 
+def _display_type_name(value: object) -> str:
+    if isinstance(value, type):
+        return value.__name__
+    return value.__class__.__name__
+
+
 def _enum_json_schema_extra(enum_cls: type[enum.Enum]) -> dict[str, list[str]]:
     return enum_schema_extensions(enum_cls)
 
 
+def _field_json_schema_extra(field: Field) -> dict[str, Any]:
+    field_type = getattr(field, "__type__", "")
+    standard_formats = {
+        "int32": "int32",
+        "int64": "int64",
+        "float32": "float",
+        "float64": "double",
+    }
+    if field_type in standard_formats:
+        return {"format": standard_formats[field_type]}
+    if field_type in {"int8", "int16", "uint", "uint8", "uint16", "uint32", "uint64"}:
+        return {"x-api-blueprint-format": field_type}
+    return {}
+
+
 def _merge_json_schema_extra(copy_extra: dict[str, Any], update: dict[str, Any]) -> None:
+    if not update:
+        return
     json_schema_extra = copy_extra.get("json_schema_extra")
     merged_schema_extra = dict(json_schema_extra or {})
     merged_schema_extra.update(update)

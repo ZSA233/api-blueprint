@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import enum
+import json
+import re
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -124,6 +126,68 @@ def _build_repeated_model_docs_blueprint() -> Blueprint:
     return bp
 
 
+def _build_duplicate_http_schema_docs_blueprint() -> Blueprint:
+    reset_shared_app()
+    first_user_info = type(
+        "UserInfo",
+        (Model,),
+        {"name": String(description="name")},
+    )
+    second_user_info = type(
+        "UserInfo",
+        (Model,),
+        {"score": Int(description="score")},
+    )
+
+    bp = Blueprint(root="/api", tags=["root"])
+    with bp.group("/a") as first:
+        first.GET("/users").RSP(items=Array[first_user_info](description="first list"))
+    with bp.group("/b") as second:
+        second.GET("/users").RSP(items=Array[second_user_info](description="second list"))
+
+    bp.build()
+    return bp
+
+
+def _build_duplicate_protocol_schema_docs_blueprint() -> Blueprint:
+    reset_shared_app()
+    first_message = type(
+        "Message",
+        (Model,),
+        {"text": String(description="text")},
+    )
+    second_message = type(
+        "Message",
+        (Model,),
+        {"name": String(description="name")},
+    )
+    client_message = type(
+        "ClientMessage",
+        (Model,),
+        {"request_id": String(description="request id")},
+    )
+
+    bp = Blueprint(root="/api", tags=["root"])
+    with bp.group("/socket") as views:
+        views.CHANNEL("/a").SERVER_MESSAGE(
+            "ServerA",
+            item=message_variant(first_message, name="A item"),
+        ).CLIENT_MESSAGE(
+            "ClientA",
+            send=message_variant(client_message, name="Send A"),
+        )
+        views.CHANNEL("/b").SERVER_MESSAGE(
+            "ServerB",
+            item=message_variant(second_message, name="B item"),
+        ).CLIENT_MESSAGE(
+            "ClientB",
+            send=message_variant(client_message, name="Send B"),
+        )
+
+    bp.build()
+    return bp
+
+
 def _repeated_query_fields(index: int) -> dict[str, object]:
     pattern = index % 8
     if pattern == 0:
@@ -217,12 +281,34 @@ def test_protocol_and_asyncapi_visual_pages_are_available() -> None:
     assert "schema-explorer" in protocol.text
     assert "schema-search" in protocol.text
     assert "schema-toggle" in protocol.text
+    assert "schema-edge-toggle" in protocol.text
+    assert "pane-resizer" in protocol.text
+    assert "api-blueprint-protocol-sidebar-width" in protocol.text
     assert "api-blueprint-schema-drawer" in protocol.text
     assert "payload-tree" in protocol.text
     assert "jumpToSchema" in protocol.text
     assert "schema-collapsed" in protocol.text
     assert "grid-template-rows: auto minmax(0, 1fr)" in protocol.text
     assert "grid-auto-rows: max-content" in protocol.text
+    assert "schema-sticky" in protocol.text
+    assert "renderFieldMeta" in protocol.text
+    assert "requirement-badge" not in protocol.text
+    assert "optional-badge" in protocol.text
+    assert "nullable-badge" in protocol.text
+    assert "field-block" in protocol.text
+    assert "renderFieldBlock" in protocol.text
+    assert "Enum values" in protocol.text
+    assert "enumValueRows" in protocol.text
+    assert "example-block" in protocol.text
+    assert "Example JSON" in protocol.text
+    assert "appendCompactType" in protocol.text
+    assert 'schema.format || schema["x-api-blueprint-format"]' in protocol.text
+    assert 'if (format === "float") return "float32"' in protocol.text
+    assert 'if (format === "double") return "float64"' in protocol.text
+    assert "return info.nullable || optional ? `${label}?` : label" in protocol.text
+    assert "hasExampleValue" in protocol.text
+    assert "value !== undefined && value !== null" in protocol.text
+    assert "fieldMetaLabel" not in protocol.text
     assert "Raw Protocol JSON" in protocol.text
     assert "fetch(protocolUrl())" in protocol.text
     assert "route-scope" in protocol.text
@@ -243,11 +329,34 @@ def test_protocol_and_asyncapi_visual_pages_are_available() -> None:
     assert "Schema Explorer" in asyncapi.text
     assert "schema-search" in asyncapi.text
     assert "schema-toggle" in asyncapi.text
+    assert "schema-edge-toggle" in asyncapi.text
+    assert "pane-resizer" in asyncapi.text
+    assert "api-blueprint-protocol-sidebar-width" in asyncapi.text
     assert "api-blueprint-schema-drawer" in asyncapi.text
     assert "payload-tree" in asyncapi.text
     assert "jumpToSchema" in asyncapi.text
     assert "schema-collapsed" in asyncapi.text
+    assert "grid-template-rows: auto minmax(0, 1fr)" in asyncapi.text
     assert "grid-auto-rows: max-content" in asyncapi.text
+    assert "schema-sticky" in asyncapi.text
+    assert "renderFieldMeta" in asyncapi.text
+    assert "requirement-badge" not in asyncapi.text
+    assert "optional-badge" in asyncapi.text
+    assert "nullable-badge" in asyncapi.text
+    assert "field-block" in asyncapi.text
+    assert "renderFieldBlock" in asyncapi.text
+    assert "Enum values" in asyncapi.text
+    assert "enumValueRows" in asyncapi.text
+    assert "example-block" in asyncapi.text
+    assert "Example JSON" in asyncapi.text
+    assert "appendCompactType" in asyncapi.text
+    assert 'schema.format || schema["x-api-blueprint-format"]' in asyncapi.text
+    assert 'if (format === "float") return "float32"' in asyncapi.text
+    assert 'if (format === "double") return "float64"' in asyncapi.text
+    assert "return info.nullable || optional ? `${label}?` : label" in asyncapi.text
+    assert "hasExampleValue" in asyncapi.text
+    assert "value !== undefined && value !== null" in asyncapi.text
+    assert "fieldMetaLabel" not in asyncapi.text
     assert "Raw AsyncAPI JSON" in asyncapi.text
     assert 'fetch("/asyncapi.json")' in asyncapi.text
     assert "route-scope" in asyncapi.text
@@ -555,6 +664,61 @@ def test_full_openapi_handles_repeated_route_local_model_names() -> None:
     assert [(param["name"], param["in"]) for param in list_parameters] == [("page", "query"), ("size", "query")]
 
 
+def test_openapi_uses_public_schema_names_without_internal_hashes() -> None:
+    bp = _build_duplicate_http_schema_docs_blueprint()
+    client = TestClient(bp.app)
+
+    full = client.get("/openapi.json").json()
+    sliced = client.get("/docs/openapi.json").json()
+
+    for spec in (full, sliced):
+        _assert_no_internal_schema_hash(spec)
+        schema_names = set(spec["components"]["schemas"])
+        assert "UserInfoApiAUsersGetResponse" in schema_names
+        assert "UserInfoApiBUsersGetResponse" in schema_names
+        assert "RSP_Users_EnvelopeApiAUsersGetResponse" in schema_names
+        assert "RSP_Users_EnvelopeApiBUsersGetResponse" in schema_names
+
+        first_items = spec["components"]["schemas"]["RSP_UsersApiAUsersGetResponse"]["properties"]["items"]
+        second_items = spec["components"]["schemas"]["RSP_UsersApiBUsersGetResponse"]["properties"]["items"]
+        assert first_items["items"] == {"$ref": "#/components/schemas/UserInfoApiAUsersGetResponse"}
+        assert second_items["items"] == {"$ref": "#/components/schemas/UserInfoApiBUsersGetResponse"}
+        assert first_items["description"] == "[UserInfo] first list"
+        assert second_items["description"] == "[UserInfo] second list"
+
+
+def test_protocol_and_asyncapi_use_public_schema_names_without_internal_hashes() -> None:
+    bp = _build_duplicate_protocol_schema_docs_blueprint()
+    client = TestClient(bp.app)
+
+    protocol = client.get("/docs/protocol.json").json()
+    asyncapi = client.get("/asyncapi.json").json()
+
+    for payload in (protocol, asyncapi):
+        _assert_no_internal_schema_hash(payload)
+        schema_names = set(payload["components"]["schemas"])
+        assert "MessageApiSocketAChannelServerItem" in schema_names
+        assert "MessageApiSocketBChannelServerItem" in schema_names
+        assert "ClientMessage" in schema_names
+
+    protocol_models = {
+        (route["route_id"], variant["model"])
+        for route in protocol["routes"]
+        for message in route["messages"]
+        for variant in message["variants"]
+    }
+    assert ("api.socket.channel.a", "MessageApiSocketAChannelServerItem") in protocol_models
+    assert ("api.socket.channel.b", "MessageApiSocketBChannelServerItem") in protocol_models
+
+    payload_refs = {
+        message["payload"]["$ref"]
+        for message in asyncapi["components"]["messages"].values()
+        if message.get("payload")
+    }
+    assert "#/components/schemas/MessageApiSocketAChannelServerItem" in payload_refs
+    assert "#/components/schemas/MessageApiSocketBChannelServerItem" in payload_refs
+
+
 def test_openapi_enum_values_and_names_are_exposed_in_full_and_sliced_specs() -> None:
     bp = _build_enum_docs_blueprint()
     client = TestClient(bp.app)
@@ -627,3 +791,8 @@ def _schema_by_title(spec: dict, title: str) -> dict:
         if schema.get("title") == title:
             return schema
     raise AssertionError(f"schema with title {title!r} not found")
+
+
+def _assert_no_internal_schema_hash(payload: dict) -> None:
+    text = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+    assert not re.search(r"__[0-9a-f]{8,}", text)

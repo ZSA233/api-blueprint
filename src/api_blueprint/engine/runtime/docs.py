@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import copy
 import enum
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Mapping, Protocol
@@ -33,11 +35,14 @@ _DOCS_ROUTES = "api_blueprint_docs_routes"
 _DOCS_CACHE = "api_blueprint_docs_openapi_cache"
 _DOCS_ENUMS = "api_blueprint_docs_enums"
 _DOCS_SCHEMAS = "api_blueprint_docs_schemas"
+_DOCS_SCHEMA_CONTEXTS = "api_blueprint_docs_schema_contexts"
 _DOCS_PROTOCOL_PLUGINS = "api_blueprint_docs_protocol_plugins"
 _DOCS_OPENAPI_WRAPPED = "api_blueprint_docs_openapi_wrapped"
 _DOCS_VERSION = "api_blueprint_docs_version"
 
 _TEMPLATES = Jinja2Templates(directory=str(Path(__file__).resolve().parent / "templates"))
+_HASHED_SCHEMA_NAME_RE = re.compile(r"__[0-9a-f]{8,}$")
+_OPENAPI_METHODS = {"get", "put", "post", "delete", "options", "head", "patch", "trace"}
 
 
 class DocsRouteContract(Protocol):
@@ -203,7 +208,7 @@ def register_docs_route(app: FastAPI, router: Router, contract: DocsRouteContrac
         return
     routes.append(entry)
     _register_route_enums(app, router)
-    _register_route_schemas(app, router)
+    _register_route_schemas(app, router, str(entry["id"]))
     app.openapi_schema = None
     setattr(app.state, _DOCS_VERSION, getattr(app.state, _DOCS_VERSION, 0) + 1)
     _docs_cache(app).clear()
@@ -259,7 +264,10 @@ def protocol_index(app: FastAPI, protocol_filter: ProtocolFilter | None = None) 
         entry = _protocol_route_entry(route)
         if entry["messages"]:
             routes.append(entry)
-    schemas = dict(sorted(_docs_schema_registry(app).items()))
+    raw_schemas = dict(sorted(_docs_schema_registry(app).items()))
+    schema_contexts = _docs_schema_contexts(app)
+    schemas, schema_name_map = _public_schema_components(raw_schemas, schema_contexts)
+    routes = _public_protocol_route_models(routes, raw_schemas, schema_contexts, schema_name_map)
     catalog = {
         "title": app.title,
         "route_count": len(routes),
@@ -359,7 +367,7 @@ def sliced_openapi(app: FastAPI, docs_filter: DocsFilter) -> dict[str, Any]:
         for route in app.routes
         if _base_route_matches(route, route_keys)
     ]
-    spec = enrich_openapi_enum_metadata(
+    spec = public_openapi_schema(
         app,
         get_openapi(
             title=app.title,
@@ -415,13 +423,206 @@ def enrich_openapi_enum_metadata(app: FastAPI, spec: dict[str, Any]) -> dict[str
     return spec
 
 
+def public_openapi_schema(app: FastAPI, spec: dict[str, Any]) -> dict[str, Any]:
+    return remap_public_schema_names(enrich_openapi_enum_metadata(app, spec))
+
+
+def remap_public_schema_names(spec: dict[str, Any]) -> dict[str, Any]:
+    schemas = spec.get("components", {}).get("schemas")
+    if not isinstance(schemas, dict) or not schemas:
+        return spec
+    contexts = _openapi_schema_contexts(spec, schemas)
+    public_schemas, name_map = _public_schema_components(schemas, contexts)
+    _rewrite_schema_refs_and_names(spec, name_map)
+    spec.setdefault("components", {})["schemas"] = public_schemas
+    return spec
+
+
+def _public_schema_components(
+    schemas: Mapping[str, Any],
+    contexts: Mapping[str, Mapping[str, str]] | None = None,
+) -> tuple[dict[str, Any], dict[str, str]]:
+    contexts = contexts or {}
+    name_map = _public_schema_name_map(schemas, contexts)
+    public_schemas: dict[str, Any] = {}
+    for old_name, schema in schemas.items():
+        public_name = name_map.get(old_name, old_name)
+        schema = copy.deepcopy(schema)
+        if isinstance(schema, dict):
+            schema["title"] = public_name
+        public_schemas[public_name] = schema
+    _rewrite_schema_refs_and_names(public_schemas, name_map)
+    return public_schemas, name_map
+
+
+def _public_schema_name_map(
+    schemas: Mapping[str, Any],
+    contexts: Mapping[str, Mapping[str, str]],
+) -> dict[str, str]:
+    base_by_key = {
+        key: _schema_public_base_name(key, schema)
+        for key, schema in schemas.items()
+    }
+    duplicates: dict[str, int] = {}
+    for base in base_by_key.values():
+        duplicates[base] = duplicates.get(base, 0) + 1
+
+    used: set[str] = set()
+    result: dict[str, str] = {}
+    for key, base in base_by_key.items():
+        candidate = base
+        if duplicates.get(base, 0) > 1:
+            suffix = _schema_context_suffix(contexts.get(key, {}))
+            candidate = f"{base}{suffix}" if suffix else base
+        candidate = _unique_schema_name(candidate or "Schema", used)
+        used.add(candidate)
+        result[key] = candidate
+    return result
+
+
+def _schema_public_base_name(key: str, schema: object) -> str:
+    if isinstance(schema, Mapping):
+        title = schema.get("title")
+        if isinstance(title, str) and title.strip():
+            return _clean_schema_name(title.strip())
+    return _clean_schema_name(str(key))
+
+
+def _clean_schema_name(value: str) -> str:
+    return _HASHED_SCHEMA_NAME_RE.sub("", value)
+
+
+def _schema_context_suffix(context: Mapping[str, str]) -> str:
+    parts = [
+        context.get("path", ""),
+        context.get("method", ""),
+        context.get("role", ""),
+    ]
+    return _pascal_identifier(" ".join(part for part in parts if part))
+
+
+def _unique_schema_name(candidate: str, used: set[str]) -> str:
+    if candidate not in used:
+        return candidate
+    index = 2
+    while f"{candidate}{index}" in used:
+        index += 1
+    return f"{candidate}{index}"
+
+
+def _pascal_identifier(value: str) -> str:
+    parts = [
+        part
+        for part in re.split(r"[^0-9A-Za-z]+", value)
+        if part
+    ]
+    return "".join(part[:1].upper() + part[1:] for part in parts)
+
+
+def _rewrite_schema_refs_and_names(node: object, name_map: Mapping[str, str]) -> None:
+    if not name_map:
+        return
+    if isinstance(node, dict):
+        ref = node.get("$ref")
+        if isinstance(ref, str):
+            prefix = "#/components/schemas/"
+            if ref.startswith(prefix):
+                old_name = ref[len(prefix):]
+                if old_name in name_map:
+                    node["$ref"] = prefix + name_map[old_name]
+        for key, value in list(node.items()):
+            if key == "$ref":
+                continue
+            if isinstance(value, str):
+                node[key] = _replace_schema_name_text(value, name_map)
+            else:
+                _rewrite_schema_refs_and_names(value, name_map)
+    elif isinstance(node, list):
+        for item in node:
+            _rewrite_schema_refs_and_names(item, name_map)
+
+
+def _replace_schema_name_text(value: str, name_map: Mapping[str, str]) -> str:
+    result = value
+    for old_name, public_name in name_map.items():
+        if old_name != public_name and old_name in result:
+            result = result.replace(old_name, public_name)
+    return result
+
+
+def _openapi_schema_contexts(spec: Mapping[str, Any], schemas: Mapping[str, Any]) -> dict[str, dict[str, str]]:
+    dependency_graph = {
+        key: _schema_refs(schema)
+        for key, schema in schemas.items()
+    }
+    contexts: dict[str, dict[str, str]] = {}
+    paths = spec.get("paths")
+    if not isinstance(paths, Mapping):
+        return contexts
+    for path, path_item in paths.items():
+        if not isinstance(path_item, Mapping):
+            continue
+        for method, operation in path_item.items():
+            if str(method).lower() not in _OPENAPI_METHODS or not isinstance(operation, Mapping):
+                continue
+            base_context = {
+                "path": str(path),
+                "method": str(method).lower(),
+                "kind": "rpc",
+            }
+            role_nodes = [
+                ("parameter", operation.get("parameters")),
+                ("request", operation.get("requestBody")),
+                ("response", operation.get("responses")),
+            ]
+            assigned: set[str] = set()
+            for role, node in role_nodes:
+                context = dict(base_context)
+                context["role"] = role
+                for ref in sorted(_schema_refs(node)):
+                    assigned.add(ref)
+                    _assign_schema_context(ref, context, dependency_graph, contexts)
+            context = dict(base_context)
+            context["role"] = "operation"
+            for ref in sorted(_schema_refs(operation) - assigned):
+                _assign_schema_context(ref, context, dependency_graph, contexts)
+    return contexts
+
+
+def _assign_schema_context(
+    schema_name: str,
+    context: Mapping[str, str],
+    dependency_graph: Mapping[str, set[str]],
+    contexts: dict[str, dict[str, str]],
+) -> None:
+    if schema_name in contexts:
+        return
+    contexts[schema_name] = dict(context)
+    for child in sorted(dependency_graph.get(schema_name, ())):
+        _assign_schema_context(child, context, dependency_graph, contexts)
+
+
+def _schema_refs(node: object) -> set[str]:
+    refs: set[str] = set()
+    if isinstance(node, Mapping):
+        ref = node.get("$ref")
+        if isinstance(ref, str) and ref.startswith("#/components/schemas/"):
+            refs.add(ref.rsplit("/", 1)[-1])
+        for value in node.values():
+            refs.update(_schema_refs(value))
+    elif isinstance(node, list):
+        for item in node:
+            refs.update(_schema_refs(item))
+    return refs
+
+
 def _install_openapi_enrichment(app: FastAPI) -> None:
     if getattr(app.state, _DOCS_OPENAPI_WRAPPED, False):
         return
     original_openapi = app.openapi
 
     def api_blueprint_openapi() -> dict[str, Any]:
-        return enrich_openapi_enum_metadata(app, original_openapi())
+        return public_openapi_schema(app, original_openapi())
 
     app.openapi = api_blueprint_openapi  # type: ignore[method-assign]
     setattr(app.state, _DOCS_OPENAPI_WRAPPED, True)
@@ -468,32 +669,43 @@ def _register_route_enums(app: FastAPI, router: Router) -> None:
             )
 
 
-def _register_route_schemas(app: FastAPI, router: Router) -> None:
+def _register_route_schemas(app: FastAPI, router: Router, route_id: str) -> None:
     if router.connection_kind not in {ConnectionKind.STREAM, ConnectionKind.CHANNEL}:
         return
     registry = _docs_schema_registry(app)
-    for source in _route_schema_sources(router):
-        _register_schema_source(registry, source, router)
+    contexts = _docs_schema_contexts(app)
+    for source, role in _route_schema_sources(router):
+        _register_schema_source(registry, contexts, source, router, route_id, role)
 
 
-def _register_schema_source(registry: dict[str, Any], source: ModelRef | None, router: Router) -> None:
+def _register_schema_source(
+    registry: dict[str, Any],
+    contexts: dict[str, dict[str, str]],
+    source: ModelRef | None,
+    router: Router,
+    route_id: str,
+    role: str,
+) -> None:
     if source is None:
         return
     model_cls = source.__class__ if not isinstance(source, type) else source
     try:
-        schema, definitions = _model_to_schema(model_cls, router)
+        root_key, schema, definitions = _model_to_schema(model_cls, router)
     except Exception:
         return
+    context = _schema_context(router, route_id, role)
     for name, definition in definitions.items():
         if isinstance(name, str) and name and isinstance(definition, dict):
-            definition.setdefault("title", name)
+            definition.setdefault("title", _clean_schema_name(name))
             registry.setdefault(name, definition)
-    title = schema.get("title") if isinstance(schema, dict) else None
-    if isinstance(title, str) and title:
-        registry.setdefault(title, schema)
+            contexts.setdefault(name, context)
+    if root_key and isinstance(schema, dict):
+        schema.setdefault("title", _clean_schema_name(root_key))
+        registry.setdefault(root_key, schema)
+        contexts.setdefault(root_key, context)
 
 
-def _model_to_schema(model_cls: type[Any], router: Router) -> tuple[dict[str, Any], dict[str, Any]]:
+def _model_to_schema(model_cls: type[Any], router: Router) -> tuple[str, dict[str, Any], dict[str, Any]]:
     from api_blueprint.engine.schema import model_to_pydantic
 
     pydantic_model = model_to_pydantic(model_cls, router=router)
@@ -501,7 +713,20 @@ def _model_to_schema(model_cls: type[Any], router: Router) -> tuple[dict[str, An
     definitions = schema.pop("$defs", {})
     if not isinstance(definitions, dict):
         definitions = {}
-    return schema, definitions
+    return pydantic_model.__name__, schema, definitions
+
+
+def _schema_context(router: Router, route_id: str, role: str) -> dict[str, str]:
+    methods = ",".join(str(method).lower() for method in getattr(router, "methods", ()) or ())
+    if not methods:
+        methods = router.connection_kind.value
+    return {
+        "route_id": route_id,
+        "path": router.url,
+        "method": methods,
+        "kind": router.connection_kind.value,
+        "role": role,
+    }
 
 
 def _route_enum_sources(router: Router) -> list[object]:
@@ -522,21 +747,21 @@ def _route_enum_sources(router: Router) -> list[object]:
     return sources
 
 
-def _route_schema_sources(router: Router) -> list[ModelRef | None]:
-    sources: list[ModelRef | None] = [
-        router.req_path,
-        router.req_query,
-        router.req_urlencoded,
-        router.req_multipart,
-        router.req_json,
-        router.open_model,
-        router.rsp_model,
-        router.effective_close_model,
+def _route_schema_sources(router: Router) -> list[tuple[ModelRef | None, str]]:
+    sources: list[tuple[ModelRef | None, str]] = [
+        (router.req_path, "request_path"),
+        (router.req_query, "request_query"),
+        (router.req_urlencoded, "request_form"),
+        (router.req_multipart, "request_multipart"),
+        (router.req_json, "request_json"),
+        (router.open_model, "open"),
+        (router.rsp_model, "response"),
+        (router.effective_close_model, "close"),
     ]
-    for message in (router.server_message, router.client_message):
+    for direction, message in (("server", router.server_message), ("client", router.client_message)):
         if message is None:
             continue
-        sources.extend(variant.model for variant in message.variants)
+        sources.extend((variant.model, f"{direction}_{variant.key}") for variant in message.variants)
     return sources
 
 
@@ -570,6 +795,14 @@ def _docs_schema_registry(app: FastAPI) -> dict[str, Any]:
         registry = {}
         setattr(app.state, _DOCS_SCHEMAS, registry)
     return registry
+
+
+def _docs_schema_contexts(app: FastAPI) -> dict[str, dict[str, str]]:
+    contexts = getattr(app.state, _DOCS_SCHEMA_CONTEXTS, None)
+    if contexts is None:
+        contexts = {}
+        setattr(app.state, _DOCS_SCHEMA_CONTEXTS, contexts)
+    return contexts
 
 
 def _protocol_docs_plugins(app: FastAPI) -> tuple[ProtocolDocsPlugin | ProtocolDocsPluginFn, ...]:
@@ -720,6 +953,113 @@ def _protocol_route_entry(route: Mapping[str, Any], protocol_filter: ProtocolFil
         "errors": list(route.get("errors") or []),
         "messages": _protocol_messages(route, protocol_filter),
     }
+
+
+def _public_protocol_route_models(
+    routes: list[dict[str, Any]],
+    raw_schemas: Mapping[str, Any],
+    schema_contexts: Mapping[str, Mapping[str, str]],
+    schema_name_map: Mapping[str, str],
+) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
+    for route in routes:
+        item = dict(route)
+        item["messages"] = [
+            _public_protocol_message_models(
+                message,
+                route,
+                raw_schemas,
+                schema_contexts,
+                schema_name_map,
+            )
+            for message in list(route.get("messages") or [])
+            if isinstance(message, Mapping)
+        ]
+        result.append(item)
+    return result
+
+
+def _public_protocol_message_models(
+    message: Mapping[str, Any],
+    route: Mapping[str, Any],
+    raw_schemas: Mapping[str, Any],
+    schema_contexts: Mapping[str, Mapping[str, str]],
+    schema_name_map: Mapping[str, str],
+) -> dict[str, Any]:
+    item = dict(message)
+    direction = str(item.get("direction") or "")
+    item["variants"] = [
+        _public_protocol_variant_model(
+            variant,
+            route,
+            direction,
+            raw_schemas,
+            schema_contexts,
+            schema_name_map,
+        )
+        for variant in list(item.get("variants") or [])
+        if isinstance(variant, Mapping)
+    ]
+    return item
+
+
+def _public_protocol_variant_model(
+    variant: Mapping[str, Any],
+    route: Mapping[str, Any],
+    direction: str,
+    raw_schemas: Mapping[str, Any],
+    schema_contexts: Mapping[str, Mapping[str, str]],
+    schema_name_map: Mapping[str, str],
+) -> dict[str, Any]:
+    item = dict(variant)
+    model = item.get("model")
+    if isinstance(model, str) and model:
+        role = direction if direction in {"open", "close"} else f"{direction}_{item.get('key') or ''}"
+        item["model"] = _public_schema_name_for_model(
+            model,
+            str(route.get("route_id") or route.get("id") or ""),
+            role,
+            raw_schemas,
+            schema_contexts,
+            schema_name_map,
+        )
+    return item
+
+
+def _public_schema_name_for_model(
+    model_name: str,
+    route_id: str,
+    role: str,
+    raw_schemas: Mapping[str, Any],
+    schema_contexts: Mapping[str, Mapping[str, str]],
+    schema_name_map: Mapping[str, str],
+) -> str:
+    candidates = [
+        key
+        for key, schema in raw_schemas.items()
+        if _schema_public_base_name(str(key), schema) == model_name
+    ]
+    if not candidates:
+        return schema_name_map.get(model_name, model_name)
+
+    route_candidates = [
+        key
+        for key in candidates
+        if schema_contexts.get(key, {}).get("route_id") == route_id
+    ]
+    if route_candidates:
+        candidates = route_candidates
+
+    if role:
+        role_candidates = [
+            key
+            for key in candidates
+            if schema_contexts.get(key, {}).get("role") == role
+        ]
+        if role_candidates:
+            candidates = role_candidates
+
+    return schema_name_map.get(candidates[0], model_name)
 
 
 def _filter_protocol_catalog(catalog: dict[str, Any], protocol_filter: ProtocolFilter) -> dict[str, Any]:

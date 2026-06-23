@@ -9,6 +9,7 @@
     <script>
         const DOCS_THEME_KEY = "api-blueprint-docs-theme";
         const SCHEMA_DRAWER_KEY = "api-blueprint-schema-drawer";
+        const SIDEBAR_WIDTH_KEY = "api-blueprint-protocol-sidebar-width";
         const storedTheme = localStorage.getItem(DOCS_THEME_KEY);
         const preferredTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
         document.documentElement.dataset.theme = storedTheme || preferredTheme;
@@ -60,6 +61,11 @@
             margin: 0;
             min-height: 100vh;
             overflow: hidden;
+        }
+
+        body.resizing-sidebar {
+            cursor: col-resize;
+            user-select: none;
         }
 
         a {
@@ -141,8 +147,8 @@
         .layout {
             align-items: stretch;
             display: grid;
-            gap: 14px;
-            grid-template-columns: minmax(280px, 340px) minmax(360px, 1fr) minmax(320px, 420px);
+            gap: 14px 8px;
+            grid-template-columns: var(--sidebar-width, 340px) 8px minmax(360px, 1fr) minmax(320px, 420px);
             height: 100%;
             min-height: 0;
             overflow: hidden;
@@ -151,7 +157,7 @@
         }
 
         body.schema-collapsed .layout {
-            grid-template-columns: minmax(280px, 340px) minmax(360px, 1fr) 44px;
+            grid-template-columns: var(--sidebar-width, 340px) 8px minmax(360px, 1fr) 0;
         }
 
         .panel {
@@ -170,7 +176,30 @@
         }
 
         .sidebar {
+            grid-column: 1;
             grid-template-rows: auto minmax(0, 1fr);
+        }
+
+        .pane-resizer {
+            align-self: stretch;
+            cursor: col-resize;
+            display: grid;
+            grid-column: 2;
+            justify-items: center;
+            min-height: 0;
+            touch-action: none;
+        }
+
+        .pane-resizer::before {
+            background: var(--line);
+            border-radius: 999px;
+            content: "";
+            width: 2px;
+        }
+
+        .pane-resizer:hover::before,
+        body.resizing-sidebar .pane-resizer::before {
+            background: var(--accent);
         }
 
         .controls {
@@ -287,6 +316,7 @@
             align-items: start;
             display: grid;
             gap: 12px;
+            grid-column: 3;
             grid-auto-rows: max-content;
             min-height: 0;
             overflow: auto;
@@ -431,7 +461,8 @@
             padding-bottom: 8px;
         }
 
-        .message-card pre {
+        .message-card pre,
+        .example-block pre {
             background: var(--code-bg);
             border-top: 1px solid var(--line);
             color: var(--code-ink);
@@ -441,13 +472,40 @@
             padding: 10px;
         }
 
+        .message-detail-row + .example-block {
+            border-top: 1px solid var(--line);
+        }
+
+        .example-block > summary {
+            color: var(--muted);
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 800;
+            list-style: none;
+            padding: 8px 10px;
+        }
+
+        .example-block > summary::-webkit-details-marker {
+            display: none;
+        }
+
         .schema-panel {
-            align-content: start;
-            align-items: start;
             display: grid;
-            gap: 10px;
-            grid-template-rows: auto auto minmax(0, 1fr);
+            grid-column: 4;
+            grid-row: 1;
+            grid-template-rows: auto minmax(0, 1fr);
+            min-height: 0;
+            overflow: hidden;
+            padding: 0;
+        }
+
+        .schema-sticky {
+            background: var(--panel);
+            border-bottom: 1px solid var(--line);
+            display: grid;
+            gap: 8px;
             padding: 12px;
+            z-index: 1;
         }
 
         .schema-toolbar {
@@ -465,13 +523,21 @@
             white-space: nowrap;
         }
 
-        .schema-toggle {
+        .schema-edge-toggle {
             align-items: center;
+            align-self: center;
+            border-radius: 999px;
+            box-shadow: var(--shadow);
             display: inline-flex;
-            height: 30px;
+            grid-column: 4;
+            grid-row: 1;
+            height: 48px;
             justify-content: center;
             padding: 0;
-            width: 30px;
+            justify-self: start;
+            transform: translateX(-50%);
+            width: 34px;
+            z-index: 4;
         }
 
         .schema-controls {
@@ -486,23 +552,14 @@
             grid-auto-rows: max-content;
             min-height: 0;
             overflow: auto;
+            padding: 12px;
         }
 
         body.schema-collapsed .schema-panel {
-            align-items: center;
-            gap: 0;
-            justify-items: center;
-            padding: 8px 6px;
-        }
-
-        body.schema-collapsed .schema-panel h2,
-        body.schema-collapsed .schema-controls,
-        body.schema-collapsed .schema-explorer {
-            display: none;
-        }
-
-        body.schema-collapsed .schema-toolbar {
-            writing-mode: vertical-rl;
+            border: 0;
+            opacity: 0;
+            pointer-events: none;
+            visibility: hidden;
         }
 
         .schema-card {
@@ -527,15 +584,20 @@
             padding: 7px 9px;
         }
 
+        .field-block {
+            display: grid;
+        }
+
+        .field-block + .field-block {
+            border-top: 1px solid var(--line);
+        }
+
         .field-row {
+            align-items: center;
             display: grid;
             gap: 8px;
             grid-template-columns: minmax(90px, 0.75fr) minmax(110px, 0.95fr) minmax(120px, 1.3fr);
             padding: 6px 9px;
-        }
-
-        .field-row + .field-row {
-            border-top: 1px solid var(--line);
         }
 
         .field-type,
@@ -543,6 +605,39 @@
             color: var(--muted);
             font-size: 12px;
             overflow-wrap: anywhere;
+        }
+
+        .field-meta,
+        .schema-node-meta {
+            align-items: center;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .optional-badge,
+        .nullable-badge,
+        .enum-count {
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 800;
+            line-height: 1;
+            padding: 2px 6px;
+        }
+
+        .optional-badge,
+        .nullable-badge {
+            background: var(--panel-subtle);
+            color: var(--muted);
+        }
+
+        .enum-count {
+            color: var(--muted);
+        }
+
+        .description-text {
+            color: var(--muted);
         }
 
         .schema-link {
@@ -607,6 +702,17 @@
             padding: 3px 0 3px 17px;
         }
 
+        .schema-leaf-wrap {
+            display: grid;
+        }
+
+        .schema-node > .schema-node,
+        .schema-node > .schema-leaf-wrap {
+            border-top: 1px solid var(--line);
+            margin-top: 6px;
+            padding-top: 6px;
+        }
+
         .schema-node-name {
             font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
             font-weight: 700;
@@ -615,6 +721,49 @@
         .schema-node-meta {
             color: var(--muted);
             font-size: 12px;
+        }
+
+        .enum-values {
+            border-top: 1px solid var(--line);
+            display: grid;
+            gap: 6px;
+            margin: 0 9px 8px;
+            padding: 8px 0 0;
+        }
+
+        .enum-values > summary {
+            color: var(--muted);
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 800;
+            list-style: none;
+        }
+
+        .enum-values > summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .enum-row {
+            align-items: start;
+            background: var(--panel-subtle);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            display: grid;
+            gap: 8px;
+            grid-template-columns: minmax(80px, 0.8fr) minmax(56px, auto) minmax(120px, 1.2fr);
+            padding: 7px 8px;
+        }
+
+        .enum-name,
+        .enum-value {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            overflow-wrap: anywhere;
+        }
+
+        .enum-description {
+            color: var(--muted);
+            font-size: 12px;
+            overflow-wrap: anywhere;
         }
 
         .empty {
@@ -630,9 +779,19 @@
                 overflow: visible;
             }
 
+            .pane-resizer,
+            .schema-edge-toggle {
+                display: none;
+            }
+
+            .detail {
+                grid-column: 2;
+            }
+
             .schema-panel {
                 grid-column: 1 / -1;
                 height: auto;
+                overflow: visible;
                 position: static;
             }
 
@@ -685,22 +844,27 @@
             <div id="asyncapi-operation-list" class="asyncapi-operation-list"></div>
         </aside>
 
+        <div id="pane-resizer" class="pane-resizer" role="separator" aria-orientation="vertical" aria-label="Resize AsyncAPI navigation"></div>
+
         <main id="operation-detail" class="panel detail">
             <div class="empty">Loading AsyncAPI operations...</div>
         </main>
 
         <aside class="panel schema-panel">
-            <div class="schema-toolbar">
-                <h2>Schema Explorer</h2>
-                <button id="schema-toggle" class="button schema-toggle" type="button" aria-label="Toggle schema explorer" title="Toggle schema explorer">
-                    <span class="icon-slot" data-schema-icon-slot aria-hidden="true"></span>
-                </button>
-            </div>
-            <div class="schema-controls">
-                <input id="schema-search" class="search" type="search" placeholder="Search schema, field, enum" autocomplete="off" />
+            <div class="schema-sticky">
+                <div class="schema-toolbar">
+                    <h2>Schema Explorer</h2>
+                </div>
+                <div class="schema-controls">
+                    <input id="schema-search" class="search" type="search" placeholder="Search schema, field, enum" autocomplete="off" />
+                </div>
             </div>
             <div id="schema-explorer" class="schema-explorer"></div>
         </aside>
+
+        <button id="schema-toggle" class="button schema-edge-toggle" type="button" aria-label="Toggle schema explorer" title="Toggle schema explorer">
+            <span class="icon-slot" data-schema-icon-slot aria-hidden="true"></span>
+        </button>
     </div>
 
     <script>
@@ -746,8 +910,8 @@
             const icons = {
                 moon: '<path d="M11.2 2.2A6.2 6.2 0 1 0 13.8 11 4.8 4.8 0 0 1 11.2 2.2Z"></path>',
                 sun: '<circle cx="8" cy="8" r="2.6"></circle><path d="M8 1.5v1.4M8 13.1v1.4M3.4 3.4l1 1M11.6 11.6l1 1M1.5 8h1.4M13.1 8h1.4M3.4 12.6l1-1M11.6 4.4l1-1"></path>',
-                collapse: '<path d="M10.5 3.5 6 8l4.5 4.5"></path><path d="M5.5 3.5v9"></path>',
-                expand: '<path d="M5.5 3.5 10 8l-4.5 4.5"></path><path d="M10.5 3.5v9"></path>',
+                collapse: '<path d="M10 4 6 8l4 4"></path>',
+                expand: '<path d="M6 4l4 4-4 4"></path>',
             };
             return `<svg class="icon" viewBox="0 0 16 16" aria-hidden="true">${icons[name] || ""}</svg>`;
         }
@@ -770,6 +934,49 @@
             button.setAttribute("aria-label", label);
             button.setAttribute("title", label);
             button.querySelector("[data-schema-icon-slot]").innerHTML = iconSvg(collapsed ? "expand" : "collapse");
+        }
+
+        function clampSidebarWidth(value) {
+            const viewportLimit = Math.max(280, window.innerWidth - 760);
+            return Math.min(Math.max(Math.round(value), 260), Math.min(560, viewportLimit));
+        }
+
+        function setSidebarWidth(value, persist = false) {
+            const width = clampSidebarWidth(value);
+            document.documentElement.style.setProperty("--sidebar-width", `${width}px`);
+            if (persist) localStorage.setItem(SIDEBAR_WIDTH_KEY, String(width));
+        }
+
+        function setupSidebarResize() {
+            const saved = Number(localStorage.getItem(SIDEBAR_WIDTH_KEY));
+            if (Number.isFinite(saved) && saved > 0) setSidebarWidth(saved);
+            const resizer = document.getElementById("pane-resizer");
+            const sidebar = document.querySelector(".sidebar");
+            let startX = 0;
+            let startWidth = 0;
+            resizer.addEventListener("pointerdown", (event) => {
+                startX = event.clientX;
+                startWidth = sidebar.getBoundingClientRect().width;
+                document.body.classList.add("resizing-sidebar");
+                resizer.setPointerCapture(event.pointerId);
+            });
+            resizer.addEventListener("pointermove", (event) => {
+                if (!document.body.classList.contains("resizing-sidebar")) return;
+                setSidebarWidth(startWidth + event.clientX - startX);
+            });
+            const finish = (event) => {
+                if (!document.body.classList.contains("resizing-sidebar")) return;
+                document.body.classList.remove("resizing-sidebar");
+                setSidebarWidth(sidebar.getBoundingClientRect().width, true);
+                if (event.pointerId !== undefined && resizer.hasPointerCapture(event.pointerId)) {
+                    resizer.releasePointerCapture(event.pointerId);
+                }
+            };
+            resizer.addEventListener("pointerup", finish);
+            resizer.addEventListener("pointercancel", finish);
+            window.addEventListener("resize", () => {
+                setSidebarWidth(sidebar.getBoundingClientRect().width);
+            });
         }
 
         function resolveRef(ref) {
@@ -1136,14 +1343,27 @@
                 message.value["x-api-blueprint-variant-key"] || message.value.variant_key || "",
             ].filter(Boolean).join(" · ");
             card.append(name, model, metadata);
-            if (message.value.example !== undefined) {
-                const pre = document.createElement("pre");
-                pre.textContent = JSON.stringify(message.value.example, null, 2);
-                card.appendChild(pre);
+            if (hasExampleValue(message.value.example)) {
+                card.appendChild(renderExampleBlock(message.value.example));
             }
             const payload = renderPayloadTree(modelFromMessage(message.value));
             if (payload) card.appendChild(payload);
             return card;
+        }
+
+        function hasExampleValue(value) {
+            return value !== undefined && value !== null;
+        }
+
+        function renderExampleBlock(value) {
+            const details = document.createElement("details");
+            details.className = "example-block";
+            const summary = document.createElement("summary");
+            summary.textContent = "Example JSON";
+            const pre = document.createElement("pre");
+            pre.textContent = JSON.stringify(value, null, 2);
+            details.append(summary, pre);
+            return details;
         }
 
         function renderSchemas() {
@@ -1224,14 +1444,22 @@
             card.appendChild(head);
             const properties = Object.entries(resolved.properties || {});
             if (!properties.length) {
-                card.appendChild(renderFieldRow("value", resolved, true));
+                card.appendChild(renderFieldBlock("value", resolved, true));
             } else {
                 const required = new Set(resolved.required || []);
                 properties.forEach(([field, child]) => {
-                    card.appendChild(renderFieldRow(field, child, required.has(field)));
+                    card.appendChild(renderFieldBlock(field, child, required.has(field)));
                 });
             }
             return card;
+        }
+
+        function renderFieldBlock(field, schema, required) {
+            const block = document.createElement("div");
+            block.className = "field-block";
+            block.appendChild(renderFieldRow(field, schema, required));
+            appendEnumDetails(block, schema);
+            return block;
         }
 
         function renderFieldRow(field, schema, required) {
@@ -1242,10 +1470,10 @@
             name.textContent = field;
             const type = document.createElement("span");
             type.className = "field-type";
-            type.appendChild(renderTypeValue(schema));
+            type.appendChild(renderTypeValue(schema, required));
             const meta = document.createElement("span");
             meta.className = "field-meta";
-            meta.textContent = fieldMetaLabel(schema, required);
+            meta.appendChild(renderFieldMeta(schema, required));
             row.append(name, type, meta);
             return row;
         }
@@ -1264,7 +1492,8 @@
         }
 
         function renderSchemaNode(name, schema, required, seen, depth) {
-            const resolved = resolveSchema(schema) || schema || {};
+            const info = schemaDisplayInfo(schema);
+            const resolved = info.resolved || {};
             const refKey = schemaRefKey(schema);
             const childSeen = new Set(seen);
             if (refKey) {
@@ -1285,10 +1514,10 @@
             nodeName.textContent = name;
             const type = document.createElement("span");
             type.className = "schema-node-meta";
-            type.appendChild(renderTypeValue(schema));
+            type.appendChild(renderTypeValue(schema, required));
             const meta = document.createElement("span");
             meta.className = "schema-node-meta";
-            meta.textContent = fieldMetaLabel(schema, required);
+            meta.appendChild(renderFieldMeta(schema, required));
             summary.append(nodeName, type, meta);
             node.appendChild(summary);
 
@@ -1311,6 +1540,8 @@
         }
 
         function renderSchemaLeaf(name, schema, required) {
+            const wrapper = document.createElement("div");
+            wrapper.className = "schema-leaf-wrap";
             const leaf = document.createElement("div");
             leaf.className = "schema-leaf";
             const nodeName = document.createElement("span");
@@ -1318,12 +1549,14 @@
             nodeName.textContent = name;
             const type = document.createElement("span");
             type.className = "schema-node-meta";
-            type.appendChild(renderTypeValue(schema));
+            type.appendChild(renderTypeValue(schema, required));
             const meta = document.createElement("span");
             meta.className = "schema-node-meta";
-            meta.textContent = fieldMetaLabel(schema, required);
+            meta.appendChild(renderFieldMeta(schema, required));
             leaf.append(nodeName, type, meta);
-            return leaf;
+            wrapper.appendChild(leaf);
+            appendEnumDetails(wrapper, schema);
+            return wrapper;
         }
 
         function resolveSchema(schema) {
@@ -1332,50 +1565,103 @@
         }
 
         function schemaTypeLabel(schema) {
-            const refKey = schemaRefKey(schema);
-            if (refKey) return displaySchemaName(refKey);
-            const resolved = resolveSchema(schema) || {};
-            if (Array.isArray(resolved.enum)) return "enum";
-            if (resolved.type === "array") return `array<${schemaTypeLabel(resolved.items || {})}>`;
-            if (resolved.type === "object" && resolved.additionalProperties) {
-                return `map<string, ${schemaTypeLabel(resolved.additionalProperties)}>`;
-            }
-            if (Array.isArray(resolved.anyOf)) return resolved.anyOf.map(schemaTypeLabel).join(" | ");
-            if (Array.isArray(resolved.oneOf)) return resolved.oneOf.map(schemaTypeLabel).join(" | ");
-            return resolved.type || "object";
+            return compactTypeText(schema);
         }
 
-        function renderTypeValue(schema) {
-            const refKey = schemaRefKey(schema);
-            if (refKey) return renderSchemaLink(refKey);
-            const resolved = resolveSchema(schema) || {};
+        function renderTypeValue(schema, required = true) {
             const span = document.createElement("span");
-            if (Array.isArray(resolved.enum)) {
-                span.textContent = "enum";
-                return span;
-            }
-            if (resolved.type === "array") {
-                span.append("array<");
-                span.appendChild(renderTypeValue(resolved.items || {}));
-                span.append(">");
-                return span;
-            }
-            if (resolved.type === "object" && resolved.additionalProperties) {
-                span.append("map<string, ");
-                span.appendChild(renderTypeValue(resolved.additionalProperties));
-                span.append(">");
-                return span;
-            }
-            if (Array.isArray(resolved.anyOf) || Array.isArray(resolved.oneOf)) {
+            appendCompactType(span, schema, !required);
+            return span;
+        }
+
+        function appendCompactType(container, schema, optional = false) {
+            const info = schemaDisplayInfo(schema);
+            const resolved = info.resolved || {};
+            if (info.refKey) {
+                container.appendChild(renderSchemaLink(info.refKey));
+            } else if (Array.isArray(resolved.enum)) {
+                container.append(resolved.title || "enum");
+            } else if (resolved.type === "array") {
+                appendCompactType(container, resolved.items || {});
+                container.append("[]");
+            } else if (resolved.type === "object" && resolved.additionalProperties) {
+                container.append("map<string, ");
+                appendCompactType(container, resolved.additionalProperties);
+                container.append(">");
+            } else if (Array.isArray(resolved.anyOf) || Array.isArray(resolved.oneOf)) {
                 const items = resolved.anyOf || resolved.oneOf || [];
                 items.forEach((item, index) => {
-                    if (index) span.append(" | ");
-                    span.appendChild(renderTypeValue(item));
+                    if (index) container.append(" | ");
+                    appendCompactType(container, item);
                 });
-                return span;
+            } else {
+                container.append(scalarTypeLabel(resolved));
             }
-            span.textContent = resolved.type || "object";
-            return span;
+            if (info.nullable || optional) container.append("?");
+        }
+
+        function compactTypeText(schema, optional = false) {
+            const info = schemaDisplayInfo(schema);
+            const resolved = info.resolved || {};
+            let label = "";
+            if (info.refKey) {
+                label = displaySchemaName(info.refKey);
+            } else if (Array.isArray(resolved.enum)) {
+                label = resolved.title || "enum";
+            } else if (resolved.type === "array") {
+                label = `${compactTypeText(resolved.items || {})}[]`;
+            } else if (resolved.type === "object" && resolved.additionalProperties) {
+                label = `map<string, ${compactTypeText(resolved.additionalProperties)}>`;
+            } else if (Array.isArray(resolved.anyOf) || Array.isArray(resolved.oneOf)) {
+                const items = resolved.anyOf || resolved.oneOf || [];
+                label = items.map(compactTypeText).join(" | ");
+            } else {
+                label = scalarTypeLabel(resolved);
+            }
+            return info.nullable || optional ? `${label}?` : label;
+        }
+
+        function scalarTypeLabel(schema) {
+            const format = schema.format || schema["x-api-blueprint-format"];
+            if (format === "float") return "float32";
+            if (format === "double") return "float64";
+            if (format) return format;
+            if (schema.type === "integer") return "integer";
+            if (schema.type === "number") return "number";
+            if (schema.type === "boolean") return "boolean";
+            if (schema.type === "string") return "string";
+            if (schema.type === "null") return "null";
+            return schema.type || "object";
+        }
+
+        function schemaDisplayInfo(schema) {
+            const unwrapped = unwrapNullableSchema(schema);
+            const source = unwrapped.schema || {};
+            const refKey = schemaRefKey(source);
+            const resolved = resolveSchema(source) || source || {};
+            return {
+                source,
+                resolved,
+                refKey,
+                nullable: unwrapped.nullable || Boolean(resolved.nullable),
+            };
+        }
+
+        function unwrapNullableSchema(schema) {
+            const source = schema || {};
+            for (const key of ["anyOf", "oneOf"]) {
+                const variants = Array.isArray(source[key]) ? source[key] : null;
+                if (!variants) continue;
+                const nonNull = variants.filter((item) => !isNullSchema(item));
+                if (nonNull.length === variants.length) continue;
+                if (nonNull.length === 1) return { schema: nonNull[0], nullable: true };
+                return { schema: { ...source, [key]: nonNull }, nullable: true };
+            }
+            return { schema: source, nullable: false };
+        }
+
+        function isNullSchema(schema) {
+            return Boolean(schema && schema.type === "null");
         }
 
         function renderSchemaLink(key) {
@@ -1423,13 +1709,73 @@
             return "schema-card-" + String(key).replace(/[^A-Za-z0-9_-]/g, "-");
         }
 
-        function fieldMetaLabel(schema, required) {
-            const resolved = resolveSchema(schema) || {};
-            const parts = [required ? "required" : "optional"];
-            if (resolved.description) parts.push(resolved.description);
-            if (Array.isArray(resolved.enum)) parts.push(`enum: ${resolved.enum.join(", ")}`);
-            if (Array.isArray(resolved["x-enumNames"])) parts.push(`names: ${resolved["x-enumNames"].join(", ")}`);
-            return parts.join(" · ");
+        function renderFieldMeta(schema, required) {
+            const info = schemaDisplayInfo(schema);
+            const resolved = info.resolved || {};
+            const fragment = document.createDocumentFragment();
+            if (!required) fragment.appendChild(renderChip("optional", "optional-badge"));
+            if (required && info.nullable) fragment.appendChild(renderChip("nullable", "nullable-badge"));
+            const enumValues = enumValueRows(resolved);
+            if (enumValues.length) fragment.appendChild(renderChip(`enum · ${enumValues.length} values`, "enum-count"));
+            if (resolved.description) {
+                const description = document.createElement("span");
+                description.className = "description-text";
+                description.textContent = resolved.description;
+                fragment.appendChild(description);
+            }
+            return fragment;
+        }
+
+        function renderChip(text, className) {
+            const chip = document.createElement("span");
+            chip.className = className;
+            chip.textContent = text;
+            return chip;
+        }
+
+        function appendEnumDetails(container, schema) {
+            const details = renderEnumDetails(schema);
+            if (details) container.appendChild(details);
+        }
+
+        function renderEnumDetails(schema) {
+            const info = schemaDisplayInfo(schema);
+            const rows = enumValueRows(info.resolved || {});
+            if (!rows.length) return null;
+            const details = document.createElement("details");
+            details.className = "enum-values";
+            details.open = rows.length <= 8;
+            const summary = document.createElement("summary");
+            summary.textContent = `Enum values (${rows.length})`;
+            details.appendChild(summary);
+            rows.forEach((row) => {
+                const item = document.createElement("div");
+                item.className = "enum-row";
+                const name = document.createElement("span");
+                name.className = "enum-name";
+                name.textContent = row.name || String(row.value);
+                const value = document.createElement("span");
+                value.className = "enum-value";
+                value.textContent = String(row.value);
+                const description = document.createElement("span");
+                description.className = "enum-description";
+                description.textContent = row.description || "-";
+                item.append(name, value, description);
+                details.appendChild(item);
+            });
+            return details;
+        }
+
+        function enumValueRows(schema) {
+            const values = Array.isArray(schema.enum) ? schema.enum : [];
+            if (!values.length) return [];
+            const names = schema["x-enumNames"] || schema["x-enum-varnames"] || [];
+            const descriptions = schema["x-enumDescriptions"] || schema["x-enum-descriptions"] || [];
+            return values.map((value, index) => ({
+                value,
+                name: names[index] || "",
+                description: descriptions[index] || "",
+            }));
         }
 
         function render() {
@@ -1470,6 +1816,7 @@
 
         setTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light");
         setSchemaCollapsed(localStorage.getItem(SCHEMA_DRAWER_KEY) === "collapsed");
+        setupSidebarResize();
         if (state.routeScopeId) {
             document.getElementById("protocol-link").href = "/docs/protocol?route_id=" + encodeURIComponent(state.routeScopeId);
         }

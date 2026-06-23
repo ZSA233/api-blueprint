@@ -12,8 +12,11 @@ from api_blueprint.engine.model import (
     Enum,
     Field,
     Float,
+    Float32,
     Float64,
     Int,
+    Int32,
+    Int64,
     KV,
     LegacyStringID,
     Map,
@@ -22,6 +25,7 @@ from api_blueprint.engine.model import (
     String,
     StringOrIntAsString,
     Uint,
+    Uint64,
     create_model,
     iter_enum_classes,
     model_to_pydantic,
@@ -138,6 +142,24 @@ def test_model_to_pydantic_exposes_enum_member_descriptions():
     assert action_schema["x-enum-varnames"] == ["CREATE", "UPDATE"]
     assert action_schema["x-enumDescriptions"] == ["Create item", "Update item"]
     assert action_schema["x-enum-descriptions"] == ["Create item", "Update item"]
+
+
+def test_model_to_pydantic_exposes_numeric_wire_formats():
+    class NumericPayload(Model):
+        small = Int32(description="small")
+        large = Int64(description="large")
+        unsigned = Uint64(description="unsigned")
+        ratio = Float32(description="ratio")
+        precise = Float64(description="precise")
+
+    schema = model_to_pydantic(NumericPayload).model_json_schema()
+    properties = schema["properties"]
+
+    assert properties["small"]["format"] == "int32"
+    assert properties["large"]["format"] == "int64"
+    assert properties["unsigned"]["x-api-blueprint-format"] == "uint64"
+    assert properties["ratio"]["format"] == "float"
+    assert properties["precise"]["format"] == "double"
 
 
 def test_dynamic_enum_schema_extensions_do_not_require_source_comments():
