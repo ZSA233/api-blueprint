@@ -34,12 +34,20 @@ const (
 )
 
 func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOption) shared.RouterInterface {
+	return mount(router, impl, true, options...)
+}
+
+func MountHTTP(router gin.IRouter, impl shared.RouterInterface, options ...MountOption) shared.RouterInterface {
+	return mount(router, impl, false, options...)
+}
+
+func mount(router gin.IRouter, impl shared.RouterInterface, includeChannels bool, options ...MountOption) shared.RouterInterface {
 	if httptransport.IsNilRouterImpl(impl) {
 		impl = shared.NewRouter()
 	}
 	mountOptions := httptransport.NewMountOptions(options...)
 
-	if mountOptions.ShouldMountRoute(RouteIDHelloChannel) {
+	if includeChannels && mountOptions.ShouldMountRoute(RouteIDHelloChannel) {
 		httptransport.CHANNEL(
 			HTTPRoutePathHelloChannel,
 			sharedprovider.NewRouteExecutor[any, any, any, shared.RSP_HelloChannel](
@@ -77,6 +85,12 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 func NewRouter(router gin.IRouter, options ...MountOption) *shared.Router {
 	impl := shared.NewRouter()
 	Mount(router, impl, options...)
+	return impl
+}
+
+func NewHTTPRouter(router gin.IRouter, options ...MountOption) *shared.Router {
+	impl := shared.NewRouter()
+	MountHTTP(router, impl, options...)
 	return impl
 }
 

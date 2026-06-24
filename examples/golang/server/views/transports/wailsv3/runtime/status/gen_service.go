@@ -61,7 +61,7 @@ func (svc *StatusService) RuntimeCurrentStatus(
 		"RuntimeCurrentStatus",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, any, any]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, any, any](req, nil)
 	execErr := svc.runtimeCurrentStatusExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {

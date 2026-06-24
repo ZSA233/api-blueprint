@@ -64,7 +64,7 @@ func (svc *ApiService) OpenHelloChannel(
 		"OpenHelloChannel",
 		wailstransport.ConnectionOpenHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, any, any]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, any, any](req, nil)
 	if err := svc.helloChannelExecutor.Run(ctx); err != nil {
 		return nil, err
 	}

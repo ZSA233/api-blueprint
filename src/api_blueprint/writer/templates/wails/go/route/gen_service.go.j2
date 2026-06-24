@@ -76,7 +76,7 @@ func (svc *{{ route.service_name }}) {{ route.connection_connect_func }}(
 		{{ route.connection_connect_func | tojson }},
 		wailstransport.ConnectionOpenHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, {{ route.local_query_type_expr }}, any]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, {{ route.local_query_type_expr }}, any](req, nil)
 	if err := svc.{{ route.executor_field_name }}.Run(ctx); err != nil {
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func (svc *{{ route.service_name }}) {{ route.connection_connect_func }}(
 		{{ route.connection_connect_func | tojson }},
 		wailstransport.ConnectionOpenHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, {{ route.local_query_type_expr }}, any]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, {{ route.local_query_type_expr }}, any](req, nil)
 	if err := svc.{{ route.executor_field_name }}.Run(ctx); err != nil {
 		return nil, err
 	}
@@ -204,7 +204,7 @@ func (svc *{{ route.service_name }}) {{ route.func_name }}(
 		{{ route.func_name | tojson }},
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, {{ route.local_query_type_expr }}, {{ route.local_body_type_expr }}]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, {{ route.local_query_type_expr }}, {{ route.local_body_type_expr }}](req, nil)
 	execErr := svc.{{ route.executor_field_name }}.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {

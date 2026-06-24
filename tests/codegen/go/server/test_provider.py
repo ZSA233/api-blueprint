@@ -86,9 +86,13 @@ go 1.23.8
     assert "AuthContext is intentionally user-owned" in auth_impl_text
     assert "Keep generated provider interfaces and context frames in\n// gen_ files" in provider_impl_text
     req_provider_text = (output_dir / "providers" / "gen_req.go").read_text(encoding="utf-8")
-    assert "ctx.Abort(ctx.Request.Error)" in req_provider_text
-    assert "Bind  func() (*REQ[Path, Query, Body], error)" in req_provider_text
-    assert "ctx.Request.Value, ctx.Request.Error = ctx.Request.Bind()" in req_provider_text
+    assert "type RequestBinder[Path, Query, Body any]" in req_provider_text
+    assert "func NewRequestContext[Path, Query, Body any](" in req_provider_text
+    assert "func NewLazyRequestContext[Path, Query, Body any](" in req_provider_text
+    assert "func (ctx *RequestContext[Path, Query, Body]) EnsureBound()" in req_provider_text
+    assert "func (ctx *RequestContext[Path, Query, Body]) Bound()" in req_provider_text
+    assert "Bind  func() (*REQ[Path, Query, Body], error)" not in req_provider_text
+    assert "ctx.Request.Value, ctx.Request.Error = ctx.Request.Bind()" not in req_provider_text
 
 def test_golang_provider_custom_enters_route_executor_sequence(tmp_path):
     output_dir = tmp_path / "golang"
@@ -164,8 +168,8 @@ go 1.23.8
     http_runtime = (output_dir / "transports" / "http" / "gen_engine.go").read_text(
         encoding="utf-8"
     )
-    assert "Bind: func() (*provider.REQ[Path, Query, Body], error)" in http_runtime
-    assert "ctx.Request = &provider.RequestContext[Path, Query, Body]{" in http_runtime
+    assert "provider.NewLazyRequestContext(" in http_runtime
+    assert "Bind: func() (*provider.REQ[Path, Query, Body], error)" not in http_runtime
 
     (output_dir / "providers" / "pre_req_provider_test.go").write_text(
         """
@@ -190,6 +194,25 @@ func (prov precheckProvider) Handle(anyCtx ContextInterface) {
 	ctx.Abort(errPrecheck)
 }
 
+type ensureProvider struct{}
+
+func (prov ensureProvider) GetName() string {
+	return "ensure"
+}
+
+func (prov ensureProvider) Handle(anyCtx ContextInterface) {
+	ctx := AdaptContext[any, any, any, any](anyCtx)
+	if _, err := ctx.Request.EnsureBound(); err != nil {
+		ctx.Abort(err)
+		return
+	}
+	if _, err := ctx.Request.EnsureBound(); err != nil {
+		ctx.Abort(err)
+		return
+	}
+	ctx.Next()
+}
+
 func TestPreReqProviderCanAbortBeforeLazyRequestBind(t *testing.T) {
 	RegisterProviderFactory("precheck", func(spec ProviderSpec) Provider {
 		return precheckProvider{}
@@ -207,12 +230,12 @@ func TestPreReqProviderCanAbortBeforeLazyRequestBind(t *testing.T) {
 		},
 	)
 	ctx := NewHTTPContext[any, any, any, any](context.Background(), nil, nil)
-	ctx.Request = &RequestContext[any, any, any]{
-		Bind: func() (*REQ[any, any, any], error) {
+	ctx.Request = NewLazyRequestContext(
+		func() (*REQ[any, any, any], error) {
 			bindCalls++
 			return &REQ[any, any, any]{}, nil
 		},
-	}
+	)
 	err := executor.Run(ctx)
 	if !errors.Is(err, errPrecheck) {
 		t.Fatalf("expected precheck error, got %v", err)
@@ -222,6 +245,117 @@ func TestPreReqProviderCanAbortBeforeLazyRequestBind(t *testing.T) {
 	}
 	if handleCalls != 0 {
 		t.Fatalf("handler should not run after precheck abort, got %d", handleCalls)
+	}
+}
+
+func TestEnsureBoundCachesLazyRequestBind(t *testing.T) {
+	RegisterProviderFactory("ensure", func(spec ProviderSpec) Provider {
+		return ensureProvider{}
+	})
+	defer RegisterProviderFactory("ensure", nil)
+
+	bindCalls := 0
+	handleCalls := 0
+	executor := NewRouteExecutor(
+		RouteInfo{Root: "api", RouteID: "api.demo.post.echo", Transport: TransportHTTP},
+		"ensure|req=json|handle|rsp=json@CodeMessageDataEnvelope",
+		func(c *Context[any, any, any, any], req *REQ[any, any, any]) (*any, error) {
+			handleCalls++
+			if req == nil {
+				t.Fatal("handler received nil request")
+			}
+			return nil, nil
+		},
+	)
+	ctx := NewHTTPContext[any, any, any, any](context.Background(), nil, nil)
+	ctx.Request = NewLazyRequestContext(
+		func() (*REQ[any, any, any], error) {
+			bindCalls++
+			return &REQ[any, any, any]{}, nil
+		},
+	)
+	if err := executor.Run(ctx); err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+	if bindCalls != 1 {
+		t.Fatalf("request binder should run exactly once, got %d", bindCalls)
+	}
+	if handleCalls != 1 {
+		t.Fatalf("handler should run once, got %d", handleCalls)
+	}
+}
+
+func TestHandleProviderBindsWithoutReqProvider(t *testing.T) {
+	bindCalls := 0
+	handleCalls := 0
+	executor := NewRouteExecutor(
+		RouteInfo{Root: "api", RouteID: "api.demo.post.echo", Transport: TransportHTTP},
+		"handle|rsp=json@CodeMessageDataEnvelope",
+		func(c *Context[any, any, any, any], req *REQ[any, any, any]) (*any, error) {
+			handleCalls++
+			if req == nil {
+				t.Fatal("handler received nil request")
+			}
+			return nil, nil
+		},
+	)
+	ctx := NewHTTPContext[any, any, any, any](context.Background(), nil, nil)
+	ctx.Request = NewLazyRequestContext(
+		func() (*REQ[any, any, any], error) {
+			bindCalls++
+			return &REQ[any, any, any]{}, nil
+		},
+	)
+	if err := executor.Run(ctx); err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+	if bindCalls != 1 {
+		t.Fatalf("request binder should run once, got %d", bindCalls)
+	}
+	if handleCalls != 1 {
+		t.Fatalf("handler should run once, got %d", handleCalls)
+	}
+}
+
+func TestEagerRequestContextStillWorks(t *testing.T) {
+	handleCalls := 0
+	executor := NewRouteExecutor(
+		RouteInfo{Root: "api", RouteID: "api.demo.get.ping", Transport: TransportHTTP},
+		"handle|rsp=json@CodeMessageDataEnvelope",
+		func(c *Context[any, any, any, any], req *REQ[any, any, any]) (*any, error) {
+			handleCalls++
+			if req == nil {
+				t.Fatal("handler received nil request")
+			}
+			return nil, nil
+		},
+	)
+	ctx := NewHTTPContext[any, any, any, any](context.Background(), nil, nil)
+	ctx.Request = NewRequestContext(&REQ[any, any, any]{}, nil)
+	if err := executor.Run(ctx); err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+	if handleCalls != 1 {
+		t.Fatalf("handler should run once, got %d", handleCalls)
+	}
+}
+
+func TestRequestBindErrorIsCached(t *testing.T) {
+	errBind := errors.New("bind failed")
+	bindCalls := 0
+	ctx := NewLazyRequestContext(
+		func() (*REQ[any, any, any], error) {
+			bindCalls++
+			return nil, errBind
+		},
+	)
+	_, firstErr := ctx.EnsureBound()
+	_, secondErr := ctx.EnsureBound()
+	if !errors.Is(firstErr, errBind) || !errors.Is(secondErr, errBind) {
+		t.Fatalf("expected cached bind error, got %v / %v", firstErr, secondErr)
+	}
+	if bindCalls != 1 {
+		t.Fatalf("request binder should run once after error, got %d", bindCalls)
 	}
 }
         """.strip()

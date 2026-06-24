@@ -61,7 +61,7 @@ func (svc *ConflictService) Default(
 		"Default",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, REQ_Default_QUERY, any]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, REQ_Default_QUERY, any](req, nil)
 	execErr := svc.defaultExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {

@@ -2,10 +2,6 @@
 
 package {{ writer.provider_package }}
 
-import (
-	"fmt"
-)
-
 const (
 	PROV_HANDLE = "handle"
 )
@@ -39,14 +35,7 @@ func (prov *HandleProvider[Path, Query, Body, Response]) Handle(anyCtx ContextIn
 	ctx := AdaptContext[Path, Query, Body, Response](anyCtx)
 	var err error
 
-	if ctx.Request == nil {
-		err = fmt.Errorf("[HandleProvider] fail to get req")
-		ctx.Handle = &HandleContext[Response]{Error: err}
-		ctx.Next()
-		return
-	}
-
-	req, err := ctx.Request.Value, ctx.Request.Error
+	req, err := ctx.Request.EnsureBound()
 	if err != nil {
 		ctx.Handle = &HandleContext[Response]{Error: err}
 		ctx.Next()

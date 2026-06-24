@@ -10,6 +10,6 @@ import type {
 // Route Contracts
 
 export interface RoomListResponse {
-  /** [RoomSummary__01c26d3800c0] rooms */
+  /** [RoomSummary] rooms */
   rooms: Array<RoomSummary>;
 }

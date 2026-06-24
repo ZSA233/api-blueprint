@@ -110,7 +110,7 @@ func TestSuccessResponseMetaOverridesEnvelope(t *testing.T) {
 		},
 	)
 	ctx := NewHTTPContext[any, any, any, responseMetaPayload](nil, nil, nil)
-	ctx.Request = &RequestContext[any, any, any]{Value: &REQ[any, any, any]{}}
+	ctx.Request = NewRequestContext(&REQ[any, any, any]{}, nil)
 	execErr := executor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if execErr != nil || invokeErr != nil {

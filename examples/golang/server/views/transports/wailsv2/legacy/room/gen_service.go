@@ -61,7 +61,7 @@ func (svc *RoomService) RoomList(
 		"RoomList",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, any, any]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, any, any](req, nil)
 	execErr := svc.roomListExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {

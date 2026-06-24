@@ -148,7 +148,7 @@ export interface TestPostJSON {
 export interface TestPostResponse {
   /** list */
   list: Array<string>;
-  /** [str: ApiDemoMap__85c14e903dd4] map */
+  /** [String: ApiDemoMap] map */
   map: Record<string, ApiDemoMap>;
 }
 

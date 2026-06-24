@@ -16,6 +16,58 @@ const (
 type RequestContext[Path, Query, Body any] struct {
 	Value *REQ[Path, Query, Body]
 	Error error
+
+	binder RequestBinder[Path, Query, Body]
+	bound  bool
+}
+
+type RequestBinder[Path, Query, Body any] func() (*REQ[Path, Query, Body], error)
+
+func NewRequestContext[Path, Query, Body any](
+	value *REQ[Path, Query, Body],
+	err error,
+) *RequestContext[Path, Query, Body] {
+	return &RequestContext[Path, Query, Body]{
+		Value: value,
+		Error: err,
+		bound: true,
+	}
+}
+
+func NewLazyRequestContext[Path, Query, Body any](
+	binder RequestBinder[Path, Query, Body],
+) *RequestContext[Path, Query, Body] {
+	return &RequestContext[Path, Query, Body]{
+		binder: binder,
+	}
+}
+
+func (ctx *RequestContext[Path, Query, Body]) EnsureBound() (*REQ[Path, Query, Body], error) {
+	if ctx == nil {
+		return nil, fmt.Errorf("[RequestContext] request context is missing")
+	}
+	if !ctx.bound {
+		ctx.bound = true
+		if ctx.binder != nil {
+			ctx.Value, ctx.Error = ctx.binder()
+		}
+		ctx.binder = nil
+	}
+	if ctx.Error != nil {
+		return nil, ctx.Error
+	}
+	if ctx.Value == nil {
+		ctx.Error = fmt.Errorf("[RequestContext] request must be bound by transport adapter")
+		return nil, ctx.Error
+	}
+	return ctx.Value, nil
+}
+
+func (ctx *RequestContext[Path, Query, Body]) Bound() (*REQ[Path, Query, Body], bool) {
+	if ctx == nil || !ctx.bound || ctx.Error != nil || ctx.Value == nil {
+		return nil, false
+	}
+	return ctx.Value, true
 }
 
 type ReqProvider[Path, Query, Body, Response any] struct {
@@ -78,20 +130,11 @@ func (prov *ReqProvider[Path, Query, Body, Response]) GetName() string {
 
 func (prov *ReqProvider[Path, Query, Body, Response]) Handle(anyCtx ContextInterface) {
 	ctx := AdaptContext[Path, Query, Body, Response](anyCtx)
-	if ctx.Request != nil {
-		if ctx.Request.Error != nil {
-			ctx.Abort(ctx.Request.Error)
-			return
-		}
-		if ctx.Request.Value == nil {
-			ctx.Abort(fmt.Errorf("[ReqProvider] request must be pre-bound by transport adapter"))
-			return
-		}
-		ctx.Next()
+	if _, err := ctx.Request.EnsureBound(); err != nil {
+		ctx.Abort(err)
 		return
 	}
-
-	ctx.Abort(fmt.Errorf("[ReqProvider] request must be pre-bound by transport adapter"))
+	ctx.Next()
 }
 
 func hasReqToken(data string, name string) bool {

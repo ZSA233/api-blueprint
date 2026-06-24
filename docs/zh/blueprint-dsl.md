@@ -152,7 +152,7 @@ from api_blueprint.includes import provider
 
 
 class GinAuth(provider.Provider):
-    name = "halh.gin_auth"
+    name = "project.gin_auth"
 
 
 def http_pipeline(*checks: provider.Provider) -> list[provider.Provider]:
@@ -163,7 +163,7 @@ with bp.group("/game") as views:
     views.POST("/bet", providers=http_pipeline(GinAuth())).JSON(BetBody).RSP_EMPTY()
 ```
 
-Go HTTP runtime 会在执行到 `Req()` provider 时才懒绑定 path/query/body。放在 `Req()` 前面的 custom provider 可以读取 HTTP transport context，例如调用旧 Gin middleware，并在 middleware abort 后停止后续 pipeline。替换默认 pipeline 时必须显式包含 `Req()`、`Handle()`、`Rsp()`；漏掉它们就等于有意移除请求绑定、业务处理或响应写出。`...` provider 组合 helper 用于替换或续接 Blueprint 级 provider 列表，不建议用来表达安全的 `Req()` 前插入。
+Go HTTP runtime 会在执行到 `Req()` provider 时才懒绑定 path/query/body。放在 `Req()` 前面的 custom provider 可以读取 HTTP transport context，例如调用旧 Gin middleware，并在 middleware abort 后停止后续 pipeline。如果 pre-request provider 确实需要 typed request DTO，可以调用 `ctx.Request.EnsureBound()`；否则不会触发请求绑定。替换默认 pipeline 时必须显式包含 `Req()`、`Handle()`、`Rsp()`；漏掉它们就等于有意移除请求绑定、业务处理或响应写出。`...` provider 组合 helper 用于替换或续接 Blueprint 级 provider 列表，不建议用来表达安全的 `Req()` 前插入。
 
 ## Multipart 与非 JSON 响应
 

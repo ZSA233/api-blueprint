@@ -387,11 +387,11 @@ func newContext[Path, Query, Body, Response any](
 		map[string]any{GinContextMetadataKey: ginCtx},
 	)
 	ctx.HeaderFn = ginCtx.GetHeader
-	req, err := bindRequest(ginCtx, executor.Indexer.Req, executor.Route)
-	ctx.Request = &provider.RequestContext[Path, Query, Body]{
-		Value: req,
-		Error: err,
-	}
+	ctx.Request = provider.NewLazyRequestContext(
+		func() (*provider.REQ[Path, Query, Body], error) {
+			return bindRequest(ginCtx, executor.Indexer.Req, executor.Route)
+		},
+	)
 	return ctx
 }
 

@@ -79,7 +79,7 @@ func (svc *StaticService) DocJson(
 		"DocJson",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, any, any]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, any, any](req, nil)
 	execErr := svc.docJsonExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -106,7 +106,7 @@ func (svc *StaticService) Dochaha(
 		"Dochaha",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, any, any]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, any, any](req, nil)
 	execErr := svc.dochahaExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {

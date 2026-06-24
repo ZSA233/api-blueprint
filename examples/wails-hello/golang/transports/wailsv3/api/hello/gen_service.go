@@ -61,7 +61,7 @@ func (svc *HelloService) Greet(
 		"Greet",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, REQ_Greet_QUERY, any]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, REQ_Greet_QUERY, any](req, nil)
 	execErr := svc.greetExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {

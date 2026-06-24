@@ -289,7 +289,7 @@ func (svc *DemoService) Abc(
 		"Abc",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, REQ_Abc_QUERY, any]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, REQ_Abc_QUERY, any](req, nil)
 	execErr := svc.abcExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -321,7 +321,7 @@ func (svc *DemoService) TestPost(
 		"TestPost",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, any, REQ_TestPost_JSON]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, any, REQ_TestPost_JSON](req, nil)
 	execErr := svc.testPostExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -353,7 +353,7 @@ func (svc *DemoService) FormSubmit(
 		"FormSubmit",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, any, REQ_FormSubmit_FORM]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, any, REQ_FormSubmit_FORM](req, nil)
 	execErr := svc.formSubmitExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -385,7 +385,7 @@ func (svc *DemoService) RequestOptions(
 		"RequestOptions",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, REQ_RequestOptions_QUERY, any]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, REQ_RequestOptions_QUERY, any](req, nil)
 	execErr := svc.requestOptionsExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -417,7 +417,7 @@ func (svc *DemoService) EmptyResponse(
 		"EmptyResponse",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, any, any]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, any, any](req, nil)
 	execErr := svc.emptyResponseExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -449,7 +449,7 @@ func (svc *DemoService) PutDemo(
 		"PutDemo",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, REQ_PutDemo_QUERY, REQ_PutDemo_JSON]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, REQ_PutDemo_QUERY, REQ_PutDemo_JSON](req, nil)
 	execErr := svc.putDemoExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -481,7 +481,7 @@ func (svc *DemoService) Delete(
 		"Delete",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, REQ_Delete_QUERY, any]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, REQ_Delete_QUERY, any](req, nil)
 	execErr := svc.deleteExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -507,7 +507,7 @@ func (svc *DemoService) SubscribeSweepEvents(
 		"SubscribeSweepEvents",
 		wailstransport.ConnectionOpenHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, OPEN_SweepEvents, any]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, OPEN_SweepEvents, any](req, nil)
 	if err := svc.sweepEventsExecutor.Run(ctx); err != nil {
 		return nil, err
 	}
@@ -564,7 +564,7 @@ func (svc *DemoService) OpenAssistantSession(
 		"OpenAssistantSession",
 		wailstransport.ConnectionOpenHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, OPEN_AssistantSession, any]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, OPEN_AssistantSession, any](req, nil)
 	if err := svc.assistantSessionExecutor.Run(ctx); err != nil {
 		return nil, err
 	}
@@ -633,7 +633,7 @@ func (svc *DemoService) PostDeprecated(
 		"PostDeprecated",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, any, REQ_PostDeprecated_JSON]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, any, REQ_PostDeprecated_JSON](req, nil)
 	execErr := svc.postDeprecatedExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -665,7 +665,7 @@ func (svc *DemoService) Raw(
 		"Raw",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, any, any]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, any, any](req, nil)
 	execErr := svc.rawExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -697,7 +697,7 @@ func (svc *DemoService) MapModel(
 		"MapModel",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, any, any]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, any, any](req, nil)
 	execErr := svc.mapModelExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -729,7 +729,7 @@ func (svc *DemoService) ErrorDemo(
 		"ErrorDemo",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, REQ_ErrorDemo_QUERY, any]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, REQ_ErrorDemo_QUERY, any](req, nil)
 	execErr := svc.errorDemoExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {

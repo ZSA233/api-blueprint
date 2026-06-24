@@ -152,7 +152,7 @@ from api_blueprint.includes import provider
 
 
 class GinAuth(provider.Provider):
-    name = "halh.gin_auth"
+    name = "project.gin_auth"
 
 
 def http_pipeline(*checks: provider.Provider) -> list[provider.Provider]:
@@ -163,7 +163,7 @@ with bp.group("/game") as views:
     views.POST("/bet", providers=http_pipeline(GinAuth())).JSON(BetBody).RSP_EMPTY()
 ```
 
-The Go HTTP runtime binds path/query/body data lazily when the `Req()` provider runs. Custom providers before `Req()` can use the HTTP transport context, for example to call an existing Gin middleware and stop the pipeline if it aborts. Always include `Req()`, `Handle()`, and `Rsp()` when replacing the default pipeline; omitting them intentionally removes request binding, business handling, or response writing. The `...` provider composition helper is for replacing or continuing a Blueprint-level provider list, not for safe pre-insertion ahead of `Req()`.
+The Go HTTP runtime binds path/query/body data lazily when the `Req()` provider runs. Custom providers before `Req()` can use the HTTP transport context, for example to call an existing Gin middleware and stop the pipeline if it aborts. If a pre-request provider intentionally needs the typed request DTO, call `ctx.Request.EnsureBound()`; otherwise it will not trigger request binding. Always include `Req()`, `Handle()`, and `Rsp()` when replacing the default pipeline; omitting them intentionally removes request binding, business handling, or response writing. The `...` provider composition helper is for replacing or continuing a Blueprint-level provider list, not for safe pre-insertion ahead of `Req()`.
 
 ## Multipart And Non-JSON Responses
 

@@ -169,7 +169,7 @@ func (svc *HelloService) Abc(
 		"Abc",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, REQ_Abc_QUERY, any]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, REQ_Abc_QUERY, any](req, nil)
 	execErr := svc.abcExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -201,7 +201,7 @@ func (svc *HelloService) MapEnum(
 		"MapEnum",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, any, any]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, any, any](req, nil)
 	execErr := svc.mapEnumExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -233,7 +233,7 @@ func (svc *HelloService) ListEnum(
 		"ListEnum",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, any, any]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, any, any](req, nil)
 	execErr := svc.listEnumExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -265,7 +265,7 @@ func (svc *HelloService) String(
 		"String",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, any, any]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, any, any](req, nil)
 	execErr := svc.stringExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -297,7 +297,7 @@ func (svc *HelloService) Uint64(
 		"Uint64",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, any, any]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, any, any](req, nil)
 	execErr := svc.uint64Executor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -329,7 +329,7 @@ func (svc *HelloService) StringEmun(
 		"StringEmun",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, any, any]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, any, any](req, nil)
 	execErr := svc.stringEmunExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {
@@ -361,7 +361,7 @@ func (svc *HelloService) HelloWay(
 		"HelloWay",
 		wailstransport.EnvelopeHeaders(envelope),
 	)
-	ctx.Request = &sharedprovider.RequestContext[any, REQ_HelloWay_QUERY, any]{Value: req}
+	ctx.Request = sharedprovider.NewRequestContext[any, REQ_HelloWay_QUERY, any](req, nil)
 	execErr := svc.helloWayExecutor.Run(ctx)
 	response, invokeErr := ctx.HandleResult()
 	if invokeErr == nil {

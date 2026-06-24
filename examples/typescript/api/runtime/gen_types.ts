@@ -30,7 +30,7 @@ export interface ApiDemoA {
   efg: number;
   /** hijk */
   hijk: Array<number>;
-  /** [ApiDemoSubA__bfb62af097fc] lmnop */
+  /** [ApiDemoSubA] lmnop */
   lmnop?: Array<ApiDemoSubA>;
   /** color */
   enum_color?: ColorEnum;
@@ -48,7 +48,7 @@ export interface ApiDemoMap {
 export interface ApiDemoSubA {
   /** hello */
   hello: Record<string, number>;
-  /** [ApiDemoMap__85c14e903dd4] amap */
+  /** [ApiDemoMap] amap */
   amap: Array<ApiDemoMap>;
 }
 
