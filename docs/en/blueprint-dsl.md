@@ -141,6 +141,30 @@ A route can declare only one body kind. ContractGraph records path requests as `
 
 Binary HTTP request or response bodies use `.REQ_BINARY_SCHEMA("./binary/packet.md")` or `.RSP_BINARY_SCHEMA("./binary/packet.md")` to reference Markdown Binary Schema. In ContractGraph this is `binary_schema` and is separate from raw bytes/file/stream media responses. See [Markdown Binary Schema](binary-schema.md) for table format, field types, rules, and generated output.
 
+## Route Providers
+
+Routes may declare an explicit provider pipeline with `providers=[...]`. When a route declares providers, the generated Go server uses that exact order instead of the implicit default `Req() -> Handle() -> Rsp()`.
+
+Use this for transport checks that must run before request binding, such as a Gin auth middleware that should reject a request before JSON decoding:
+
+```python
+from api_blueprint.includes import provider
+
+
+class GinAuth(provider.Provider):
+    name = "halh.gin_auth"
+
+
+def http_pipeline(*checks: provider.Provider) -> list[provider.Provider]:
+    return [*checks, provider.Req(), provider.Handle(), provider.Rsp()]
+
+
+with bp.group("/game") as views:
+    views.POST("/bet", providers=http_pipeline(GinAuth())).JSON(BetBody).RSP_EMPTY()
+```
+
+The Go HTTP runtime binds path/query/body data lazily when the `Req()` provider runs. Custom providers before `Req()` can use the HTTP transport context, for example to call an existing Gin middleware and stop the pipeline if it aborts. Always include `Req()`, `Handle()`, and `Rsp()` when replacing the default pipeline; omitting them intentionally removes request binding, business handling, or response writing. The `...` provider composition helper is for replacing or continuing a Blueprint-level provider list, not for safe pre-insertion ahead of `Req()`.
+
 ## Multipart And Non-JSON Responses
 
 ```python

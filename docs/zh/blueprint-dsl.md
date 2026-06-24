@@ -141,6 +141,30 @@ with bp.group("/items") as views:
 
 二进制 HTTP 请求体或响应体使用 `.REQ_BINARY_SCHEMA("./binary/packet.md")` 或 `.RSP_BINARY_SCHEMA("./binary/packet.md")` 引用 Markdown Binary Schema。它在 ContractGraph 中归类为 `binary_schema`，不和 raw bytes/file/stream media response 概念混用。Schema 表格格式、字段类型、规则和生成输出见 [Markdown Binary Schema](binary-schema.md)。
 
+## Route Providers
+
+Route 可以通过 `providers=[...]` 显式声明 provider pipeline。只要 route 写了 providers，Go server 生成物就会使用这份顺序，不再使用隐式默认的 `Req() -> Handle() -> Rsp()`。
+
+这个能力适合声明必须在请求绑定前执行的 transport 检查，例如希望 Gin 鉴权中间件在 JSON decode 之前拦截请求：
+
+```python
+from api_blueprint.includes import provider
+
+
+class GinAuth(provider.Provider):
+    name = "halh.gin_auth"
+
+
+def http_pipeline(*checks: provider.Provider) -> list[provider.Provider]:
+    return [*checks, provider.Req(), provider.Handle(), provider.Rsp()]
+
+
+with bp.group("/game") as views:
+    views.POST("/bet", providers=http_pipeline(GinAuth())).JSON(BetBody).RSP_EMPTY()
+```
+
+Go HTTP runtime 会在执行到 `Req()` provider 时才懒绑定 path/query/body。放在 `Req()` 前面的 custom provider 可以读取 HTTP transport context，例如调用旧 Gin middleware，并在 middleware abort 后停止后续 pipeline。替换默认 pipeline 时必须显式包含 `Req()`、`Handle()`、`Rsp()`；漏掉它们就等于有意移除请求绑定、业务处理或响应写出。`...` provider 组合 helper 用于替换或续接 Blueprint 级 provider 列表，不建议用来表达安全的 `Req()` 前插入。
+
 ## Multipart 与非 JSON 响应
 
 ```python

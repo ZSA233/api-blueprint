@@ -85,9 +85,10 @@ go 1.23.8
     assert "do not re-declare\n// HandleContext" in handle_impl_text
     assert "AuthContext is intentionally user-owned" in auth_impl_text
     assert "Keep generated provider interfaces and context frames in\n// gen_ files" in provider_impl_text
-    assert "ctx.Abort(ctx.Request.Error)" in (output_dir / "providers" / "gen_req.go").read_text(
-        encoding="utf-8"
-    )
+    req_provider_text = (output_dir / "providers" / "gen_req.go").read_text(encoding="utf-8")
+    assert "ctx.Abort(ctx.Request.Error)" in req_provider_text
+    assert "Bind  func() (*REQ[Path, Query, Body], error)" in req_provider_text
+    assert "ctx.Request.Value, ctx.Request.Error = ctx.Request.Bind()" in req_provider_text
 
 def test_golang_provider_custom_enters_route_executor_sequence(tmp_path):
     output_dir = tmp_path / "golang"
@@ -101,6 +102,9 @@ go 1.23.8
         + "\n",
         encoding="utf-8",
     )
+
+    class EchoBody(Model):
+        message = String(description="message")
 
     bp = Blueprint(
         root="/static",
@@ -123,6 +127,115 @@ go 1.23.8
     assert re.search(r'Root:\s+"static"', route_adapter)
     assert re.search(r"RouteID:\s+RouteIDDoc", route_adapter)
     assert '"req|cache=ttl=60s|handle|rsp=json@CodeMessageDataEnvelope"' in route_adapter
+
+@pytest.mark.toolchain_smoke
+def test_golang_pre_req_provider_can_abort_before_lazy_request_bind(tmp_path):
+    output_dir = tmp_path / "golang"
+    output_dir.mkdir()
+    (tmp_path / "go.mod").write_text(
+        """
+module example.com/generated
+
+go 1.23.8
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    class EchoBody(Model):
+        message = String(description="message")
+
+    bp = Blueprint(
+        root="/api",
+        providers=[
+            provider.Custom("precheck"),
+            provider.Req(),
+            provider.Handle(),
+            provider.Rsp(),
+        ],
+    )
+    with bp.group("/demo") as views:
+        views.POST("/echo").REQ_JSON(EchoBody).RSP(message=String(description="message"))
+
+    writer = GolangWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    http_runtime = (output_dir / "transports" / "http" / "gen_engine.go").read_text(
+        encoding="utf-8"
+    )
+    assert "Bind: func() (*provider.REQ[Path, Query, Body], error)" in http_runtime
+    assert "ctx.Request = &provider.RequestContext[Path, Query, Body]{" in http_runtime
+
+    (output_dir / "providers" / "pre_req_provider_test.go").write_text(
+        """
+package providers
+
+import (
+	"context"
+	"errors"
+	"testing"
+)
+
+var errPrecheck = errors.New("precheck failed")
+
+type precheckProvider struct{}
+
+func (prov precheckProvider) GetName() string {
+	return "precheck"
+}
+
+func (prov precheckProvider) Handle(anyCtx ContextInterface) {
+	ctx := AdaptContext[any, any, any, any](anyCtx)
+	ctx.Abort(errPrecheck)
+}
+
+func TestPreReqProviderCanAbortBeforeLazyRequestBind(t *testing.T) {
+	RegisterProviderFactory("precheck", func(spec ProviderSpec) Provider {
+		return precheckProvider{}
+	})
+	defer RegisterProviderFactory("precheck", nil)
+
+	bindCalls := 0
+	handleCalls := 0
+	executor := NewRouteExecutor(
+		RouteInfo{Root: "api", RouteID: "api.demo.post.echo", Transport: TransportHTTP},
+		"precheck|req=json|handle|rsp=json@CodeMessageDataEnvelope",
+		func(c *Context[any, any, any, any], req *REQ[any, any, any]) (*any, error) {
+			handleCalls++
+			return nil, nil
+		},
+	)
+	ctx := NewHTTPContext[any, any, any, any](context.Background(), nil, nil)
+	ctx.Request = &RequestContext[any, any, any]{
+		Bind: func() (*REQ[any, any, any], error) {
+			bindCalls++
+			return &REQ[any, any, any]{}, nil
+		},
+	}
+	err := executor.Run(ctx)
+	if !errors.Is(err, errPrecheck) {
+		t.Fatalf("expected precheck error, got %v", err)
+	}
+	if bindCalls != 0 {
+		t.Fatalf("request binder should not run after precheck abort, got %d", bindCalls)
+	}
+	if handleCalls != 0 {
+		t.Fatalf("handler should not run after precheck abort, got %d", handleCalls)
+	}
+}
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        ["go", "test", "./providers"],
+        cwd=output_dir,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
 
 @pytest.mark.toolchain_smoke
 def test_golang_route_aware_provider_factory_runs_at_executor_creation(tmp_path):

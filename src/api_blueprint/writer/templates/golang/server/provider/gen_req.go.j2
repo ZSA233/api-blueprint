@@ -16,6 +16,7 @@ const (
 type RequestContext[Path, Query, Body any] struct {
 	Value *REQ[Path, Query, Body]
 	Error   error
+	Bind  func() (*REQ[Path, Query, Body], error)
 }
 
 type ReqProvider[Path, Query, Body, Response any] struct {
@@ -79,19 +80,22 @@ func (prov *ReqProvider[Path, Query, Body, Response]) GetName() string {
 func (prov *ReqProvider[Path, Query, Body, Response]) Handle(anyCtx ContextInterface) {
 	ctx := AdaptContext[Path, Query, Body, Response](anyCtx)
 	if ctx.Request != nil {
+		if ctx.Request.Value == nil && ctx.Request.Error == nil && ctx.Request.Bind != nil {
+			ctx.Request.Value, ctx.Request.Error = ctx.Request.Bind()
+		}
 		if ctx.Request.Error != nil {
 			ctx.Abort(ctx.Request.Error)
 			return
 		}
 		if ctx.Request.Value == nil {
-			ctx.Abort(fmt.Errorf("[ReqProvider] request must be pre-bound by transport adapter"))
+			ctx.Abort(fmt.Errorf("[ReqProvider] request must be bound by transport adapter"))
 			return
 		}
 		ctx.Next()
 		return
 	}
 
-	ctx.Abort(fmt.Errorf("[ReqProvider] request must be pre-bound by transport adapter"))
+	ctx.Abort(fmt.Errorf("[ReqProvider] request context is missing"))
 }
 
 func hasReqToken(data string, name string) bool {

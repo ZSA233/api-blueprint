@@ -379,6 +379,9 @@ go 1.23.8
     assert "httptransport.STREAM[" not in http_adapter
     assert "httptransport.CHANNEL(" in http_adapter
     assert "httptransport.CHANNEL[" not in http_adapter
+    assert "func MountHTTP(router gin.IRouter, impl shared.RouterInterface, options ...MountOption) shared.RouterInterface" in http_adapter
+    assert "return mount(router, impl, false, options...)" in http_adapter
+    assert "includeChannels && mountOptions.ShouldMountRoute(RouteIDChat)" in http_adapter
     assert "connection scope[%s] is not supported by the default HTTP runtime" in (
         output_dir / "transports" / "http" / "gen_engine.go"
     ).read_text(encoding="utf-8")

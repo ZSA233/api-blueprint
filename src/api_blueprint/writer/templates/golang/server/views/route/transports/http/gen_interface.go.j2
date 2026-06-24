@@ -40,12 +40,20 @@ const (
 )
 
 func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOption) shared.RouterInterface {
+	return mount(router, impl, true, options...)
+}
+
+func MountHTTP(router gin.IRouter, impl shared.RouterInterface, options ...MountOption) shared.RouterInterface {
+	return mount(router, impl, false, options...)
+}
+
+func mount(router gin.IRouter, impl shared.RouterInterface, includeChannels bool, options ...MountOption) shared.RouterInterface {
 	if httptransport.IsNilRouterImpl(impl) {
 		impl = shared.NewRouter()
 	}
 	mountOptions := httptransport.NewMountOptions(options...)
 {% for register in router_group.registers() %}
-	if mountOptions.ShouldMountRoute({{ register.route_id_const }}) {
+	if {% if register.is_channel %}includeChannels && {% endif %}mountOptions.ShouldMountRoute({{ register.route_id_const }}) {
 {% if register.is_stream -%}
 	httptransport.STREAM(
 		{{ register.http_route_path_const }},
@@ -149,6 +157,12 @@ func Mount(router gin.IRouter, impl shared.RouterInterface, options ...MountOpti
 func NewRouter(router gin.IRouter, options ...MountOption) *shared.Router {
 	impl := shared.NewRouter()
 	Mount(router, impl, options...)
+	return impl
+}
+
+func NewHTTPRouter(router gin.IRouter, options ...MountOption) *shared.Router {
+	impl := shared.NewRouter()
+	MountHTTP(router, impl, options...)
 	return impl
 }
 
