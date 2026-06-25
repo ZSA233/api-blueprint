@@ -620,7 +620,7 @@ public struct DemoTestPostJSON: Codable, Sendable {
 public struct DemoTestPostResponse: Codable, Sendable {
     /// list
     public var list: [String]
-    /// [str: ApiDemoMap__85c14e903dd4] map
+    /// [String: ApiDemoMap] map
     public var map: [String: ApiDemoMap]
 
     public init(

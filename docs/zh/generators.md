@@ -103,7 +103,7 @@ type REQ[Path, Query, Body any] struct {
 }
 ```
 
-RPC handler 从 `req.Path`、`req.Query`、`req.Body` 读取输入；无对应输入时该指针为 `nil`。这是破坏性清名，旧 `req.Q` / `req.B` 需要迁移为 `req.Query` / `req.Body`。handler context 也使用长名字段：`ctx.Request.Value` / `ctx.Request.Error` 表示绑定后的请求与绑定错误，`ctx.Response` 表示成功响应 metadata。响应相关泛型使用语义名 `Response`，不再使用不透明的 `P`。带 `REQ_PATH` 的 HTTP route 在 ContractGraph 与 `RouteInfo.Path` 中保留 canonical `/user/{user}`，Gin adapter 注册时转换为 `/user/:user` 并通过 `uri:"..."` tag 绑定 path 参数。
+RPC handler 从 `req.Path`、`req.Query`、`req.Body` 读取输入；无对应输入时该指针为 `nil`。这是破坏性清名，旧 `req.Q` / `req.B` 需要迁移为 `req.Query` / `req.Body`。handler context 也使用长名字段：`ctx.Request` 表示 request context，`ctx.Response` 表示成功响应 metadata。HTTP transport 会懒绑定请求；custom provider 如果需要 typed request DTO，应调用 `ctx.Request.EnsureBound()`，不要直接操作 binder。直接读取 `ctx.Request.Value` / `ctx.Request.Error` 仍可用于兼容已有 provider，但 generated provider runtime 自身通过方法保证只绑定一次并缓存错误。响应相关泛型使用语义名 `Response`，不再使用不透明的 `P`。带 `REQ_PATH` 的 HTTP route 在 ContractGraph 与 `RouteInfo.Path` 中保留 canonical `/user/{user}`，Gin adapter 注册时转换为 `/user/:user` 并通过 `uri:"..."` tag 绑定 path 参数。
 
 Go server route DTO 会使用 `_gen_enums` 中的 typed enum 字段，而不是退化成裸 `int` / `string`。例如 DSL `Enum[StatusEnum]` 会生成 `enums.StatusEnum` 字段，数组和 map 中的 enum 也会保留 typed element / value。JSON、query、form 和 path wire 仍以 enum member 的 value 为准：整数 enum 继续按数字读写，字符串 enum 继续按字符串 value 读写，不使用 enum member name 作为 wire 值。
 

@@ -10,7 +10,7 @@ public struct ApiDemoA: Codable, Sendable {
     public var efg: Double
     /// hijk
     public var hijk: [Int]
-    /// [ApiDemoSubA__bfb62af097fc] lmnop
+    /// [ApiDemoSubA] lmnop
     public var lmnop: [ApiDemoSubA]?
     /// color
     public var enumColor: ColorEnum?
@@ -104,7 +104,7 @@ public struct ApiDemoMap: Codable, Sendable {
 public struct ApiDemoSubA: Codable, Sendable {
     /// hello
     public var hello: [String: Int]
-    /// [ApiDemoMap__85c14e903dd4] amap
+    /// [ApiDemoMap] amap
     public var amap: [ApiDemoMap]
 
     public init(

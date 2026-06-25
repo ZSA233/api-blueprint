@@ -3,7 +3,7 @@ import Foundation
 import ABClientRuntime
 
 public struct RoomRoomListResponse: Codable, Sendable {
-    /// [RoomSummary__01c26d3800c0] rooms
+    /// [RoomSummary] rooms
     public var rooms: [RoomSummary]
 
     public init(
