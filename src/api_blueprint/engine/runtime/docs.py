@@ -131,8 +131,8 @@ def install_api_blueprint_docs(app: FastAPI) -> None:
         return sliced_openapi(app, _filter_from_request(request))
 
     @app.get("/asyncapi.json", include_in_schema=False)
-    async def api_blueprint_asyncapi() -> dict[str, Any]:
-        return asyncapi_document(app)
+    async def api_blueprint_asyncapi(request: Request) -> dict[str, Any]:
+        return asyncapi_document(app, _protocol_filter_from_request(request))
 
     @app.get("/docs/swagger", include_in_schema=False)
     async def api_blueprint_docs_swagger(request: Request):
@@ -284,8 +284,8 @@ def protocol_index(app: FastAPI, protocol_filter: ProtocolFilter | None = None) 
     )
 
 
-def asyncapi_document(app: FastAPI) -> dict[str, Any]:
-    protocol = protocol_index(app)
+def asyncapi_document(app: FastAPI, protocol_filter: ProtocolFilter | None = None) -> dict[str, Any]:
+    protocol = protocol_index(app, protocol_filter)
     channels: dict[str, Any] = {}
     operations: dict[str, Any] = {}
     messages: dict[str, Any] = {}

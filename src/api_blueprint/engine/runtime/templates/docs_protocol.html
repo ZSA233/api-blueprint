@@ -662,7 +662,7 @@
             border-top: 1px solid var(--line);
             display: grid;
             gap: 6px;
-            margin: 0 9px 8px;
+            margin: 2px 9px 8px;
             padding: 8px 0 0;
         }
 
@@ -734,9 +734,9 @@
 
         .schema-node > .schema-node,
         .schema-node > .schema-leaf-wrap {
-            border-top: 1px solid var(--line);
-            margin-top: 6px;
-            padding-top: 6px;
+            border-top: 0;
+            margin-top: 2px;
+            padding-top: 2px;
         }
 
         .schema-node > summary {
@@ -768,7 +768,7 @@
             display: flex;
             flex-wrap: wrap;
             gap: 7px;
-            padding: 3px 0 3px 17px;
+            padding: 4px 0 4px 17px;
         }
 
         .schema-leaf-wrap {
@@ -1613,7 +1613,7 @@
                 node.appendChild(renderSchemaNode(field, child, requiredFields.has(field), childSeen, depth + 1));
             });
             if (resolved.items) {
-                node.appendChild(renderSchemaNode("items", resolved.items, true, childSeen, depth + 1));
+                node.appendChild(renderSchemaNode(arrayItemNodeName(resolved.items), resolved.items, true, childSeen, depth + 1));
             }
             if (resolved.additionalProperties && typeof resolved.additionalProperties === "object") {
                 node.appendChild(renderSchemaNode("values", resolved.additionalProperties, true, childSeen, depth + 1));
@@ -1624,6 +1624,15 @@
                 });
             }
             return node;
+        }
+
+        function arrayItemNodeName(schema) {
+            const refKey = schemaRefKey(schema);
+            if (refKey) return displaySchemaName(refKey);
+            const info = schemaDisplayInfo(schema);
+            if (info.refKey) return displaySchemaName(info.refKey);
+            const resolved = info.resolved || {};
+            return resolved.title || "item";
         }
 
         function renderSchemaLeaf(name, schema, required) {

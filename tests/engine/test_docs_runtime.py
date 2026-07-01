@@ -302,6 +302,7 @@ def test_protocol_and_asyncapi_visual_pages_are_available() -> None:
     assert "example-block" in protocol.text
     assert "Example JSON" in protocol.text
     assert "appendCompactType" in protocol.text
+    assert "arrayItemNodeName" in protocol.text
     assert 'schema.format || schema["x-api-blueprint-format"]' in protocol.text
     assert 'if (format === "float") return "float32"' in protocol.text
     assert 'if (format === "double") return "float64"' in protocol.text
@@ -323,7 +324,7 @@ def test_protocol_and_asyncapi_visual_pages_are_available() -> None:
     asyncapi = client.get("/docs/asyncapi")
     assert asyncapi.status_code == 200
     assert "AsyncAPI UI" in asyncapi.text
-    assert "AsyncAPI export preview" in asyncapi.text
+    assert "Message protocol operations, flows, payload schemas" in asyncapi.text
     assert "asyncapi-search" in asyncapi.text
     assert "asyncapi-operation-list" in asyncapi.text
     assert "Schema Explorer" in asyncapi.text
@@ -350,6 +351,7 @@ def test_protocol_and_asyncapi_visual_pages_are_available() -> None:
     assert "example-block" in asyncapi.text
     assert "Example JSON" in asyncapi.text
     assert "appendCompactType" in asyncapi.text
+    assert "arrayItemNodeName" in asyncapi.text
     assert 'schema.format || schema["x-api-blueprint-format"]' in asyncapi.text
     assert 'if (format === "float") return "float32"' in asyncapi.text
     assert 'if (format === "double") return "float64"' in asyncapi.text
@@ -358,10 +360,14 @@ def test_protocol_and_asyncapi_visual_pages_are_available() -> None:
     assert "value !== undefined && value !== null" in asyncapi.text
     assert "fieldMetaLabel" not in asyncapi.text
     assert "Raw AsyncAPI JSON" in asyncapi.text
-    assert 'fetch("/asyncapi.json")' in asyncapi.text
+    assert "raw-asyncapi-link" in asyncapi.text
+    assert "asyncapiUrl()" in asyncapi.text
+    assert "fetch(asyncapiUrl())" in asyncapi.text
     assert "route-scope" in asyncapi.text
     assert "All AsyncAPI operations" in asyncapi.text
-    assert "ASYNCAPI FLOW" in asyncapi.text
+    assert "focused route" in asyncapi.text
+    assert "FLOW" in asyncapi.text
+    assert "Select a protocol flow or message." in asyncapi.text
     assert 'protocol-link").href = "/docs/protocol?route_id="' in asyncapi.text
     assert "api-blueprint-docs-theme" in asyncapi.text
     assert "theme-toggle" in asyncapi.text
@@ -566,6 +572,25 @@ def test_asyncapi_exports_message_protocol_without_http_rpc_routes() -> None:
     assert send_message["x-api-blueprint-variant-key"] == "send"
     assert send_message["x-api-blueprint-metadata"]["auth"] == "session"
     assert send_message["payload"] == {"$ref": "#/components/schemas/Message"}
+
+    by_route = client.get("/asyncapi.json?route_id=api.realtime.channel.chat").json()
+    assert set(by_route["channels"]) == {"apiRealtimeChat"}
+    assert by_route["x-api-blueprint-interactions"][0]["id"] == "api.realtime.channel.chat:chat.send"
+    assert all(
+        message["x-api-blueprint-route-id"] == "api.realtime.channel.chat"
+        for message in by_route["components"]["messages"].values()
+    )
+
+    by_direction = client.get("/asyncapi.json?direction=client").json()
+    assert by_direction["x-api-blueprint-interactions"][0]["request"]["op"] == 3001
+    assert all(
+        message["x-api-blueprint-direction"] == "client"
+        for message in by_direction["components"]["messages"].values()
+    )
+
+    by_op = client.get("/asyncapi.json?op=3001").json()
+    assert by_op["x-api-blueprint-interactions"][0]["request"]["op"] == 3001
+    assert list(by_op["components"]["messages"].values())[0]["x-api-blueprint-op"] == 3001
 
 
 def test_channel_routes_are_not_forced_into_openapi_paths() -> None:

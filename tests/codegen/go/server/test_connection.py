@@ -330,9 +330,21 @@ go 1.23.8
     assert "conn = newHTTPWebSocketChannelConnection(conn, envelope)" in channel_text
     assert "payload = httpWebSocketEnvelope{Type: httpWebSocketEnvelopeMessage, Data: payload}" in channel_text
     assert "RouteIDWrapped" in http_adapter
-    assert "\n\t\t\ttrue,\n\t\t\timpl.Wrapped,\n" in http_adapter
     assert "RouteIDRaw" in http_adapter
-    assert "\n\t\t\tfalse,\n\t\t\timpl.Raw,\n" in http_adapter
+    assert re.search(
+        r"httptransport\.CHANNEL\(\s*"
+        r"HTTPRoutePathWrapped,"
+        r"[\s\S]*?"
+        r"\btrue,\s*impl\.Wrapped,\s*router,\s*\)",
+        http_adapter,
+    )
+    assert re.search(
+        r"httptransport\.CHANNEL\(\s*"
+        r"HTTPRoutePathRaw,"
+        r"[\s\S]*?"
+        r"\bfalse,\s*impl\.Raw,\s*router,\s*\)",
+        http_adapter,
+    )
 
 def test_golang_writer_generates_stream_and_channel_contracts(tmp_path):
     output_dir = tmp_path / "golang"

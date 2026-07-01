@@ -92,7 +92,7 @@ By default, `/` and `/docs` both serve the api-blueprint docs center. The full O
 | Target | Status | Purpose |
 |:---|:---:|:---|
 | Contract / inspect | Available | Emit and query the protocol index |
-| Go server | Available | Generate Go providers, HTTP/Wails adapters, and server-side DTOs |
+| Go server | Available | Generate Go providers, HTTP/Wails adapters, WebSocket channel entrypoints, and server-side DTOs |
 | Go client / Python client | Preview | Generate clients for scripts, tools, or services |
 | TypeScript client | Preview | Generate transport-neutral clients and HTTP/Wails facades |
 | Flutter client | Preview | Generate a pure Dart package and HTTP/SSE/WebSocket clients |

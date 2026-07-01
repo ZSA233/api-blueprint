@@ -74,6 +74,7 @@ func mount(router gin.IRouter, impl shared.RouterInterface, includeChannels bool
 				nil,
 				mountOptions.RuntimeOptions()...,
 			),
+			true,
 			impl.HelloChannel,
 			router,
 		)

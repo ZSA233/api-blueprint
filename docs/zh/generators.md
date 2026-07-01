@@ -181,6 +181,8 @@ Chat(
 
 HTTP transport 中，`STREAM` 生成 SSE adapter，`CHANNEL` 生成 WebSocket adapter。Wails transport 中，两者默认由 session-scoped runtime events 承载。多消息 variant 会生成一个带 `type` discriminator 的共享 union schema；不要把不同 variant 拆成多个 transport event。`.CLOSE(Model)` 会进入 Go handler 泛型与 TypeScript `onClose` 类型；服务端业务写出和关闭统一显式传入 context：`Send(ctx, msg)`、`Close(ctx, close)`、`Abort(ctx, code, reason)`。
 
+Go HTTP `CHANNEL` 中，`ConnectionHooks.AcceptChannel` 返回 raw WebSocket connection。route envelope / no-envelope 行为由 generated channel codec 负责，不通过修改 transport connection 状态实现；详见 [Go WebSocket Channel Runtime](go-websocket-channel-runtime.md)。
+
 默认 HTTP/Wails runtime 只完整实现 `ConnectionScope.SESSION`。`APP` / `TOPIC` 会保留在 route contract 中，后续可通过自定义 connection hub / manager 实现广播或 topic 路由，不由生成器内置业务 fan-out 策略。
 
 具名 variant union message 会生成稳定 helper，继续使用同一个 `{ type, data }` wire shape。Go server 与 Go client 会把每个具名 message 拆成小的生成关键帧文件：`gen_<message>_message.go` 放 union struct，`gen_<message>_constructors.go` 放 `NewXxxMessageVariant(...)` 与 `DecodeVariant()`，`gen_<message>_processor.go` 放 `XxxMessageProcessor[C]`，`gen_<message>_visitor.go` 放 `VisitXxxMessage(ctx, message, processor)` 以及 `AsXxxMessageError(...)` / `IsXxxMessageErrorKind(...)` 等 typed error helper，`gen_<message>_cases.go` 放 lazy `XxxMessageVariantCase.Decode()`。超大 case 集合会稳定分片成 `gen_<message>_cases_001.go`、`gen_<message>_cases_002.go` 等文件。visitor 只处理单条消息，不接管 `Recv` loop、middleware、close/abort、写出通道或错误策略；这些运行时决策由用户在自己的 route/app 层实现。

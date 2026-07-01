@@ -699,7 +699,7 @@
             display: flex;
             flex-wrap: wrap;
             gap: 7px;
-            padding: 3px 0 3px 17px;
+            padding: 4px 0 4px 17px;
         }
 
         .schema-leaf-wrap {
@@ -708,9 +708,9 @@
 
         .schema-node > .schema-node,
         .schema-node > .schema-leaf-wrap {
-            border-top: 1px solid var(--line);
-            margin-top: 6px;
-            padding-top: 6px;
+            border-top: 0;
+            margin-top: 2px;
+            padding-top: 2px;
         }
 
         .schema-node-name {
@@ -727,7 +727,7 @@
             border-top: 1px solid var(--line);
             display: grid;
             gap: 6px;
-            margin: 0 9px 8px;
+            margin: 2px 9px 8px;
             padding: 8px 0 0;
         }
 
@@ -818,7 +818,7 @@
     <header class="topbar">
         <div class="title">
             <strong>{{ title }} AsyncAPI UI</strong>
-            <span>AsyncAPI export preview for message protocol documents</span>
+            <span>Message protocol operations, flows, payload schemas</span>
         </div>
         <nav class="actions">
             <a class="button" href="/">Docs Center</a>
@@ -826,7 +826,7 @@
             <button id="theme-toggle" class="button theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme">
                 <span class="icon-slot" data-icon-slot aria-hidden="true"></span>
             </button>
-            <a class="button primary" href="/asyncapi.json">Raw AsyncAPI JSON</a>
+            <a id="raw-asyncapi-link" class="button primary" href="/asyncapi.json">Raw AsyncAPI JSON</a>
         </nav>
     </header>
 
@@ -884,6 +884,16 @@
 
         function currentQuery() {
             return new URLSearchParams(window.location.search);
+        }
+
+        function asyncapiUrl() {
+            const input = currentQuery();
+            const output = new URLSearchParams();
+            ["route_id", "group", "tag", "kind", "direction", "op"].forEach((key) => {
+                input.getAll(key).forEach((value) => output.append(key, value));
+            });
+            const query = output.toString();
+            return query ? `/asyncapi.json?${query}` : "/asyncapi.json";
         }
 
         function schemas() {
@@ -1177,7 +1187,7 @@
                 top.className = "operation-top";
                 const badge = document.createElement("span");
                 badge.className = "badge" + (item.action === "unpaired" ? " unpaired" : "");
-                badge.textContent = item.action === "interaction" ? "exported flow" : item.action || item.type || "op";
+                badge.textContent = item.action === "interaction" ? "flow" : item.action || item.type || "op";
                 const address = document.createElement("span");
                 address.className = "mono";
                 address.textContent = state.routeScopeId ? operationSummary(item) : (item.address || item.channelKey);
@@ -1220,7 +1230,7 @@
             counts.className = "muted";
             const flowCount = state.operations.filter((item) => item.routeId === state.routeScopeId && item.action === "interaction").length;
             const unpairedCount = state.operations.filter((item) => item.routeId === state.routeScopeId && item.action !== "interaction").length;
-            counts.textContent = `${flowCount} exported flows · ${unpairedCount} unpaired messages`;
+            counts.textContent = `focused route · ${flowCount} flows · ${unpairedCount} unpaired messages`;
             const actions = document.createElement("div");
             actions.className = "scope-actions";
             const all = document.createElement("a");
@@ -1256,7 +1266,7 @@
             const item = state.filtered.find((operation) => operation.id === state.selectedId);
             const detail = document.getElementById("operation-detail");
             if (!item) {
-                detail.innerHTML = '<div class="empty">Select an interaction or AsyncAPI operation.</div>';
+                detail.innerHTML = '<div class="empty">Select a protocol flow or message.</div>';
                 state.schemaModels = [];
                 renderSchemas();
                 return;
@@ -1297,7 +1307,7 @@
             const pills = document.createElement("div");
             pills.className = "pills";
             [
-                [item.action === "interaction" ? "ASYNCAPI FLOW" : "UNPAIRED EXPORT", "strong"],
+                [item.action === "interaction" ? "FLOW" : "UNPAIRED", "strong"],
                 [opFlowLabel(item), ""],
                 [(item.directions || []).join(", "), ""],
                 [(item.models || []).join(", "), ""],
@@ -1526,7 +1536,7 @@
                 node.appendChild(renderSchemaNode(field, child, requiredFields.has(field), childSeen, depth + 1));
             });
             if (resolved.items) {
-                node.appendChild(renderSchemaNode("items", resolved.items, true, childSeen, depth + 1));
+                node.appendChild(renderSchemaNode(arrayItemNodeName(resolved.items), resolved.items, true, childSeen, depth + 1));
             }
             if (resolved.additionalProperties && typeof resolved.additionalProperties === "object") {
                 node.appendChild(renderSchemaNode("values", resolved.additionalProperties, true, childSeen, depth + 1));
@@ -1537,6 +1547,15 @@
                 });
             }
             return node;
+        }
+
+        function arrayItemNodeName(schema) {
+            const refKey = schemaRefKey(schema);
+            if (refKey) return displaySchemaName(refKey);
+            const info = schemaDisplayInfo(schema);
+            if (info.refKey) return displaySchemaName(info.refKey);
+            const resolved = info.resolved || {};
+            return resolved.title || "item";
         }
 
         function renderSchemaLeaf(name, schema, required) {
@@ -1817,6 +1836,7 @@
         setTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light");
         setSchemaCollapsed(localStorage.getItem(SCHEMA_DRAWER_KEY) === "collapsed");
         setupSidebarResize();
+        document.getElementById("raw-asyncapi-link").href = asyncapiUrl();
         if (state.routeScopeId) {
             document.getElementById("protocol-link").href = "/docs/protocol?route_id=" + encodeURIComponent(state.routeScopeId);
         }
@@ -1828,7 +1848,7 @@
             setSchemaCollapsed(!document.body.classList.contains("schema-collapsed"));
         });
 
-        fetch("/asyncapi.json")
+        fetch(asyncapiUrl())
             .then((response) => response.json())
             .then((doc) => {
                 state.doc = doc;

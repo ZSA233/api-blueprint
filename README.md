@@ -92,7 +92,7 @@ api-gen generate -c api-blueprint.toml
 | 目标 | 状态 | 用途 |
 |:---|:---:|:---|
 | Contract / inspect | 可用 | 输出和查询协议索引 |
-| Go server | 可用 | 生成 Go provider、HTTP/Wails adapter 与 server-side DTO |
+| Go server | 可用 | 生成 Go provider、HTTP/Wails adapter、WebSocket channel 入口与 server-side DTO |
 | Go client / Python client | 预览 | 生成脚本、工具或服务侧客户端 |
 | TypeScript client | 预览 | 生成 transport-neutral client 与 HTTP/Wails facade |
 | Flutter client | 预览 | 生成纯 Dart package 与 HTTP/SSE/WebSocket client |
