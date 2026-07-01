@@ -136,6 +136,8 @@ class GolangPackageLayout:
             "provider_imports": self.provider_imports,
             "errors_package": self.errors_package,
             "errors_imports": self.errors_imports,
+            "json_package": "json",
+            "json_imports": "encoding/json",
         }
         formatters.update({key + "$": value + "." for key, value in formatters.items() if key.endswith("_package")})
         if update:

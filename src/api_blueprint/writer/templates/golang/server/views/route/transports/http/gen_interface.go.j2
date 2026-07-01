@@ -111,6 +111,7 @@ func mount(router gin.IRouter, impl shared.RouterInterface, includeChannels bool
 			nil,
 			mountOptions.RuntimeOptions()...,
 		),
+		{{ register.channel_envelope | tojson }},
 		impl.{{ register.func }},
 		router,
 	)

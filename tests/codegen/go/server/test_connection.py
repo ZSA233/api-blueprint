@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import re
 
+from api_blueprint.engine import NoEnvelope
+
 from .helpers import *
 
 
@@ -289,6 +291,48 @@ go 1.23.8
     assert "return acceptDefaultHTTPChannel(ginCtx)" in generated_hook_text
     assert "func acceptDefaultHTTPChannel(" in channel_text
     assert "func init()" not in channel_text
+
+def test_golang_http_channel_no_envelope_generates_raw_ws_runtime_switch(tmp_path):
+    output_dir = tmp_path / "golang"
+    output_dir.mkdir()
+    (tmp_path / "go.mod").write_text(
+        """
+module example.com/generated
+
+go 1.23.8
+        """.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    class ServerMessage(Model):
+        value = String(description="value")
+
+    class ClientMessage(Model):
+        value = String(description="value")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.CHANNEL("/wrapped").SERVER_MESSAGE(ServerMessage).CLIENT_MESSAGE(ClientMessage)
+        views.CHANNEL("/raw", response_envelope=NoEnvelope).SERVER_MESSAGE(ServerMessage).CLIENT_MESSAGE(ClientMessage)
+
+    writer = GolangWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    http_dir = output_dir / "transports" / "http"
+    channel_text = (http_dir / "gen_channel.go").read_text(encoding="utf-8")
+    http_adapter = (http_dir / "api" / "demo" / "gen_interface.go").read_text(encoding="utf-8")
+
+    assert "SetEnvelope(envelope bool)" not in channel_text
+    assert "envelopeSetter.SetEnvelope(envelope)" not in channel_text
+    assert "type httpWebSocketChannelConnection struct" in channel_text
+    assert "conn = newHTTPWebSocketChannelConnection(conn, envelope)" in channel_text
+    assert "payload = httpWebSocketEnvelope{Type: httpWebSocketEnvelopeMessage, Data: payload}" in channel_text
+    assert "RouteIDWrapped" in http_adapter
+    assert "\n\t\t\ttrue,\n\t\t\timpl.Wrapped,\n" in http_adapter
+    assert "RouteIDRaw" in http_adapter
+    assert "\n\t\t\tfalse,\n\t\t\timpl.Raw,\n" in http_adapter
 
 def test_golang_writer_generates_stream_and_channel_contracts(tmp_path):
     output_dir = tmp_path / "golang"

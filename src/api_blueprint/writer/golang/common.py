@@ -82,6 +82,7 @@ class GolangTypeResolver:
         "coerce_string": "string",
         "file": GolangType.package_ref("provider", "MultipartFile"),
         "error": "error",
+        "json_value": GolangType.package_ref("json", "RawMessage"),
         "null": "nil",
         "one_of": "any",
     }

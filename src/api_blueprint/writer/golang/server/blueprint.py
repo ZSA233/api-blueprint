@@ -243,6 +243,7 @@ class GolangRouterGroup:
                     "is_stream": view.is_stream,
                     "is_channel": view.is_channel,
                     "is_connection": view.is_connection,
+                    "channel_envelope": view.has_wrapped_json_response,
                     "raw_response": view.http_raw_response,
                     "bind_path": view.bind_path,
                     "bind_query": view.bind_query,

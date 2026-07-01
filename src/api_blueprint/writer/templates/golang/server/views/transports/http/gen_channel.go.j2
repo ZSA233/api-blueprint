@@ -40,17 +40,16 @@ func acceptDefaultHTTPChannel(ginCtx *gin.Context) (provider.Connection, func(),
 	cleanup := func() {
 		_ = conn.CloseNow()
 	}
-	return NewHTTPWebSocketConnection(ginCtx.Request.Context(), conn, true), cleanup, nil
+	return NewHTTPWebSocketConnection(ginCtx.Request.Context(), conn), cleanup, nil
 }
 
 type HTTPWebSocketConnection struct {
-	ctx      context.Context
-	conn     *websocket.Conn
-	envelope bool
+	ctx  context.Context
+	conn *websocket.Conn
 }
 
-func NewHTTPWebSocketConnection(ctx context.Context, conn *websocket.Conn, envelope bool) *HTTPWebSocketConnection {
-	return &HTTPWebSocketConnection{ctx: ctx, conn: conn, envelope: envelope}
+func NewHTTPWebSocketConnection(ctx context.Context, conn *websocket.Conn) *HTTPWebSocketConnection {
+	return &HTTPWebSocketConnection{ctx: ctx, conn: conn}
 }
 
 func (conn *HTTPWebSocketConnection) Transport() provider.TransportKind {
@@ -86,9 +85,6 @@ func (conn *HTTPWebSocketConnection) WriteJSON(ctx context.Context, payload any)
 	if conn == nil || conn.conn == nil {
 		return nil
 	}
-	if conn.envelope {
-		payload = httpWebSocketEnvelope{Type: httpWebSocketEnvelopeMessage, Data: payload}
-	}
 	return wsjson.Write(ctx, conn.conn, payload)
 }
 
@@ -98,12 +94,6 @@ func (conn *HTTPWebSocketConnection) CloseJSON(ctx context.Context, payload any)
 	}
 	if ctx == nil {
 		ctx = context.Background()
-	}
-	if conn.envelope {
-		if err := wsjson.Write(ctx, conn.conn, httpWebSocketEnvelope{Type: httpWebSocketEnvelopeClose, Data: payload}); err != nil {
-			_ = conn.Abort(context.Background(), 1000, "")
-			return err
-		}
 	}
 	return conn.Abort(ctx, 1000, "")
 }
@@ -126,9 +116,73 @@ func (conn *HTTPWebSocketConnection) Done() <-chan struct{} {
 	return conn.ctx.Done()
 }
 
+type httpWebSocketChannelConnection struct {
+	inner    provider.Connection
+	envelope bool
+}
+
+// httpWebSocketChannelConnection applies the route-level channel codec.
+// AcceptChannel returns a raw WebSocket connection; CHANNEL decides whether this
+// route writes generated {type,data} frames or raw NoEnvelope JSON frames.
+func newHTTPWebSocketChannelConnection(inner provider.Connection, envelope bool) provider.Connection {
+	if inner == nil {
+		return nil
+	}
+	return &httpWebSocketChannelConnection{inner: inner, envelope: envelope}
+}
+
+func (conn *httpWebSocketChannelConnection) Transport() provider.TransportKind {
+	return conn.inner.Transport()
+}
+
+func (conn *httpWebSocketChannelConnection) SessionID() string {
+	return conn.inner.SessionID()
+}
+
+func (conn *httpWebSocketChannelConnection) Underlying() any {
+	return conn.inner.Underlying()
+}
+
+func (conn *httpWebSocketChannelConnection) ReadJSON(ctx context.Context, target any) error {
+	return conn.inner.ReadJSON(ctx, target)
+}
+
+func (conn *httpWebSocketChannelConnection) WriteJSON(ctx context.Context, payload any) error {
+	if conn.envelope {
+		payload = httpWebSocketEnvelope{Type: httpWebSocketEnvelopeMessage, Data: payload}
+	}
+	return conn.inner.WriteJSON(ctx, payload)
+}
+
+func (conn *httpWebSocketChannelConnection) CloseJSON(ctx context.Context, payload any) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if conn.envelope {
+		if err := conn.inner.WriteJSON(ctx, httpWebSocketEnvelope{Type: httpWebSocketEnvelopeClose, Data: payload}); err != nil {
+			_ = conn.inner.Abort(context.Background(), 1000, "")
+			return err
+		}
+	}
+	return conn.inner.Abort(ctx, 1000, "")
+}
+
+func (conn *httpWebSocketChannelConnection) Abort(ctx context.Context, code int, reason string) error {
+	return conn.inner.Abort(ctx, code, reason)
+}
+
+func (conn *httpWebSocketChannelConnection) Close(ctx context.Context, code int, reason string) error {
+	return conn.inner.Close(ctx, code, reason)
+}
+
+func (conn *httpWebSocketChannelConnection) Done() <-chan struct{} {
+	return conn.inner.Done()
+}
+
 func CHANNEL[Path, Query, Body, Response, Server, Client, Close any](
 	relativePath string,
 	executor *provider.RouteExecutor[Path, Query, Body, Response],
+	envelope bool,
 	handler func(*provider.Context[Path, Query, Body, Response], provider.Channel[Query, Server, Client, Close]) error,
 	router gin.IRouter,
 ) {
@@ -156,6 +210,7 @@ func CHANNEL[Path, Query, Body, Response, Server, Client, Close any](
 			_ = ginCtx.AbortWithError(http.StatusInternalServerError, fmt.Errorf("[httptransport] channel connection hook returned nil"))
 			return
 		}
+		conn = newHTTPWebSocketChannelConnection(conn, envelope)
 		if cleanup != nil {
 			defer cleanup()
 		}
