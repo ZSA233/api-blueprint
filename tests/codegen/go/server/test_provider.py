@@ -132,6 +132,33 @@ go 1.23.8
     assert re.search(r"RouteID:\s+RouteIDDoc", route_adapter)
     assert '"req|cache=ttl=60s|handle|rsp=json@CodeMessageDataEnvelope"' in route_adapter
 
+
+def test_golang_provider_binds_json_body_containing_only_nested_model(tmp_path):
+    output_dir = tmp_path / "golang"
+    output_dir.mkdir()
+    (tmp_path / "go.mod").write_text("module example.com/generated\n\ngo 1.23.8\n", encoding="utf-8")
+
+    class Mutation(Model):
+        operation_key = String(description="idempotent operation key")
+
+    class MutationRequest(Model):
+        value = Mutation(description="nested mutation input")
+
+    bp = Blueprint(
+        root="/api",
+        providers=[provider.Req(), provider.Handle(), provider.Rsp()],
+    )
+    bp.POST("/mutate").REQ_JSON(MutationRequest).RSP(result=String(description="result"))
+
+    writer = GolangWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    route_adapter = (output_dir / "transports" / "http" / "api" / "gen_interface.go").read_text(
+        encoding="utf-8"
+    )
+    assert '"req=json|handle|rsp=json@CodeMessageDataEnvelope"' in route_adapter
+
 @pytest.mark.toolchain_smoke
 def test_golang_pre_req_provider_can_abort_before_lazy_request_bind(tmp_path):
     output_dir = tmp_path / "golang"

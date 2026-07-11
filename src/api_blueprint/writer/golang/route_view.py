@@ -181,7 +181,9 @@ class GoRouteProtocolView:
             ("json", self.protocol.request.json.model),
             ("binary", self.protocol.request.binary_schema),
         ]
-        return ",".join(value for value, ok in options if ok)
+        # ModelMeta 会按字段形状实现 truthiness；仅含嵌套模型的合法请求可能为 False。
+        # 请求绑定只关心契约是否存在，不能用 bool(model) 判断。
+        return ",".join(value for value, model in options if model is not None)
 
     @property
     def rsp_provider(self) -> str:
