@@ -7,6 +7,7 @@ import {{ bp.root_package }}.runtime.binary.ApiBinaryBody
 
 public open class {{ writer.service_base_name(group) }}ServiceStub : Gen{{ writer.service_base_name(group) }}Service {
 {% for route in group.routes %}
+{{ route.service_impl_kdoc | safe }}
     public override suspend fun {{ route.method_name }}(
 {%- for type_name, name in writer.server_route_params(route) %}
         {{ name }}: {{ type_name }}{% if not loop.last %},{% endif %}

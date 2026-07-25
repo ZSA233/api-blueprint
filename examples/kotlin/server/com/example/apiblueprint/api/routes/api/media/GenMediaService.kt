@@ -5,26 +5,54 @@ import com.example.apiblueprint.api.runtime.*
 
 public interface GenMediaService {
 
+    /**
+     * Multipart media preview
+     * POST /api/media/preview
+     */
     public suspend fun mediaPreview(
         multipart: MediaPreviewRequest
     ): ApiRawResponse
 
+    /**
+     * Latest media frame
+     * GET /api/media/frame
+     */
     public suspend fun mediaFrame(
     ): ApiRawResponse
 
+    /**
+     * Media workbook download
+     * GET /api/media/download
+     */
     public suspend fun mediaDownload(
     ): ApiRawResponse
 
+    /**
+     * Media workbook download with service filename override
+     * GET /api/media/download-dynamic
+     */
     public suspend fun mediaDownloadDynamic(
     ): ApiRawResponse
 
+    /**
+     * Media download with RFC 5987 filename
+     * GET /api/media/download-filename-edge
+     */
     public suspend fun mediaDownloadFilenameEdge(
     ): ApiRawResponse
 
+    /**
+     * Raw media typed error
+     * GET /api/media/error-frame
+     */
     public suspend fun mediaErrorFrame(
         query: MediaMediaErrorFrameQuery
     ): ApiRawResponse
 
+    /**
+     * MJPEG byte stream
+     * GET /api/media/mjpeg
+     */
     public suspend fun mediaMjpeg(
     ): ApiStreamResponse
 

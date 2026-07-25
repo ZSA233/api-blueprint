@@ -3,8 +3,19 @@
 package binary
 
 type RouterInterface interface {
+	// Packet: Binary packet example
+	// POST /api/binary/packet
 	Packet(ctx *CTX_Packet, req *REQ_Packet) (rsp *RSP_Packet, err error)
+
+	// AuditPacket: Binary audit packet example
+	// POST /api/binary/audit-packet
 	AuditPacket(ctx *CTX_AuditPacket, req *REQ_AuditPacket) (rsp *RSP_AuditPacket, err error)
+
+	// WidePacket: Wide integer binary packet example
+	// POST /api/binary/wide-packet
 	WidePacket(ctx *CTX_WidePacket, req *REQ_WidePacket) (rsp *RSP_WidePacket, err error)
+
+	// AuditPacketResponse: Binary audit packet response example
+	// GET /api/binary/audit-packet-response
 	AuditPacketResponse(ctx *CTX_AuditPacketResponse, req *REQ_AuditPacketResponse) (rsp *RSP_AuditPacketResponse, err error)
 }

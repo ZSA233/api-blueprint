@@ -5,25 +5,53 @@ import com.example.apiblueprint.api.runtime.*
 
 public interface GenHelloService {
 
+    /**
+     * 这是abc的summary
+     * GET /api/hello/abc
+     */
     public suspend fun abc(
         query: HelloAbcQuery
     ): HelloAbcResponse
 
+    /**
+     * map-enum
+     * GET /api/hello/map-enum
+     */
     public suspend fun mapEnum(
     ): HelloMapEnumResponse
 
+    /**
+     * list-enum
+     * GET /api/hello/list-enum
+     */
     public suspend fun listEnum(
     ): HelloListEnumResponse
 
+    /**
+     * string
+     * GET /api/hello/string
+     */
     public suspend fun string(
     ): HelloStringResponse
 
+    /**
+     * uint64
+     * GET /api/hello/uint64
+     */
     public suspend fun uint64(
     ): HelloUint64Response
 
+    /**
+     * string-enum
+     * GET /api/hello/string-emun
+     */
     public suspend fun stringEmun(
     ): HelloStringEmunResponse
 
+    /**
+     * hello-way
+     * GET /api/hello/hello-way
+     */
     public suspend fun helloWay(
         query: HelloHelloWayQuery
     ): Unit

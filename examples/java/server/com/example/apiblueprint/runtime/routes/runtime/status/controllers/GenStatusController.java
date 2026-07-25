@@ -29,6 +29,10 @@ public class GenStatusController {
         this.delegate = delegate;
     }
 
+    /**
+     * Runtime root naming example
+     * GET /runtime/status/current
+     */
     @RequestMapping(path = "/runtime/status/current", method = {RequestMethod.GET})
     @SignatureRequired
     @ApiBlueprintOperation("runtime.status.get.current")

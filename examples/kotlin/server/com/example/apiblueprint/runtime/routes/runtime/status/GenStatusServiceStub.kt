@@ -5,6 +5,10 @@ import com.example.apiblueprint.runtime.runtime.*
 
 public open class StatusServiceStub : GenStatusService {
 
+    /**
+     * Runtime root naming example
+     * GET /runtime/status/current
+     */
     public override suspend fun runtimeCurrentStatus(
     ): RuntimeStatus {
         throw NotImplementedError("runtime.status.get.current is not implemented")

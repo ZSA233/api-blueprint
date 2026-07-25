@@ -9,31 +9,59 @@ import com.example.apiblueprint.api.spring.GenSpringRequestContext;
 
 public interface GenHelloDelegate {
 
+    /**
+     * 这是abc的summary
+     * GET /api/hello/abc
+     */
     GenHelloTypes.AbcResponse abc(
         GenHelloTypes.AbcQuery query,
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * map-enum
+     * GET /api/hello/map-enum
+     */
     GenHelloTypes.MapEnumResponse mapEnum(
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * list-enum
+     * GET /api/hello/list-enum
+     */
     GenHelloTypes.ListEnumResponse listEnum(
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * string
+     * GET /api/hello/string
+     */
     GenHelloTypes.StringResponse string(
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * uint64
+     * GET /api/hello/uint64
+     */
     GenHelloTypes.Uint64Response uint64(
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * string-enum
+     * GET /api/hello/string-emun
+     */
     GenHelloTypes.StringEmunResponse stringEmun(
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * hello-way
+     * GET /api/hello/hello-way
+     */
     Object helloWay(
         GenHelloTypes.HelloWayQuery query,
         GenSpringRequestContext context

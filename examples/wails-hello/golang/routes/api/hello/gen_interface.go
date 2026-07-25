@@ -3,5 +3,7 @@
 package hello
 
 type RouterInterface interface {
+	// Greet a user
+	// GET /api/hello/greet
 	Greet(ctx *CTX_Greet, req *REQ_Greet) (rsp *RSP_Greet, err error)
 }

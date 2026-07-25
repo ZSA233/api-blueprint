@@ -5,6 +5,10 @@ import com.example.apiblueprint.runtime.runtime.*
 
 public interface GenStatusService {
 
+    /**
+     * Runtime root naming example
+     * GET /runtime/status/current
+     */
     public suspend fun runtimeCurrentStatus(
     ): RuntimeStatus
 

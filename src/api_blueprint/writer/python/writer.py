@@ -325,7 +325,7 @@ class PythonBaseWriter(BaseWriter[PythonBlueprint]):
                 {"channel_scaffolds": self._channel_scaffolds(group)},
                 "routes",
             )
-        return _render_python("service.py", {}, "routes")
+        return _render_python("service.py", {"group": group}, "routes")
 
     def _channel_scaffolds(self, group: "PythonRouteGroup | None") -> tuple[dict[str, str], ...]:
         if group is None:

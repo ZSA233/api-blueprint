@@ -3,5 +3,7 @@
 package conflict
 
 type RouterInterface interface {
+	// Default: Naming conflict example
+	// GET /api/conflict/default
 	Default(ctx *CTX_Default, req *REQ_Default) (rsp *RSP_Default, err error)
 }

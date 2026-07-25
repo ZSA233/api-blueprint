@@ -29,6 +29,10 @@ public class GenConflictController {
         this.delegate = delegate;
     }
 
+    /**
+     * Naming conflict example
+     * GET /api/conflict/default
+     */
     @RequestMapping(path = "/api/conflict/default", method = {RequestMethod.GET})
     @SignatureRequired
     @ApiBlueprintOperation("api.conflict.get.default")

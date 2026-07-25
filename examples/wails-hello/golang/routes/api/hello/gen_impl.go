@@ -8,6 +8,8 @@ import (
 
 type _GenRouter struct{}
 
+// Greet a user
+// GET /api/hello/greet
 func (impl *_GenRouter) Greet(ctx *CTX_Greet, req *REQ_Greet) (rsp *RSP_Greet, err error) {
 	return nil, fmt.Errorf("not implemented")
 }

@@ -8,6 +8,8 @@ import (
 
 type _GenRouter struct{}
 
+// AccountProfile: Rootless account profile example
+// GET /account/profile
 func (impl *_GenRouter) AccountProfile(ctx *CTX_AccountProfile, req *REQ_AccountProfile) (rsp *RSP_AccountProfile, err error) {
 	return nil, fmt.Errorf("not implemented")
 }

@@ -128,6 +128,7 @@ README 应链接到以下用户文档：
 ## 生成器事实
 
 - 生成物 ownership 必须在 docs 中按长期规则描述：生成器会覆盖的源码文件必须命名为 `gen_*` / `Gen*`，或位于 `_gen_*` 目录，并保留 `Code generated ... DO NOT EDIT` header；Swift `Package.swift` 这类由 target/module 列表决定的 manifest 可作为 generated manifest 管理。非 `gen_` / 非 `Gen` 的 facade、impl、service、client 扩展点只在缺失时创建，不能带 generated header。
+- Go / Python / Kotlin / Java server target 会在 handler contract、stub、controller 或首次创建的 preserved service/impl 附近生成短注释：优先使用 route `summary`，缺失时用 `description` 首行兜底，并附带 method/path。这些注释只服务代码阅读和 IDE 提示，不改变 handler 签名、wire shape 或运行时行为。
 - 生成器输出必须保持可读且低噪音：generated source 不应带尾随空白、EOF 空白行、连续 3 个以上空行，TypeScript route request block 不应因可选字段分支留下空洞。
 - HTTP / Wails client 的普通 RPC route 必须暴露 per-call request options：调用方可以按单次请求传入 header 和 timeout；全局 default header / timeout 放在对应 HTTP transport config。Go timeout 继续使用 `context.Context`，并通过 variadic request option 补充 per-call header；gRPC timeout/header 使用各语言 gRPC 原生 deadline、metadata 和 call options，不由 `grpc-proto` 生成额外 client wrapper。
 - 默认 client/server adapter 是协议落地和开发验证入口，不是完整生产运行时。生产项目应优先使用窄入口导入具体 route client、具体 HTTP/Wails factory、具体 server group router，并通过 preserved facade、custom transport、原生 HTTP/gRPC client、service implementation、middleware/plugin/filter 或 Wails app shell 承载鉴权、限流、cookie、TLS/proxy、重试、连接编排、权限和文件系统策略。Go HTTP / Wails 的业务 error 到 generated `ApiErrorPayload` 映射通过显式 runtime option 注入，不依赖全局变量。`include` / `exclude` 是跨端稳定的生成期裁剪边界；不 import、不引用或只链接窄 product 属于各语言工具链优化，不作为结构体级 dead-strip 的统一协议承诺。

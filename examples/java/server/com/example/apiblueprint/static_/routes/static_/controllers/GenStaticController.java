@@ -28,6 +28,10 @@ public class GenStaticController {
         this.delegate = delegate;
     }
 
+    /**
+     * docJson
+     * GET /static/doc.json
+     */
     @RequestMapping(path = "/static/doc.json", method = {RequestMethod.GET})
     @ApiBlueprintOperation("static.static.get.docjson")
     public ResponseEntity<?> docJson(
@@ -39,6 +43,10 @@ public class GenStaticController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("NoEnvelope", "none", "none", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/json", "json");
     }
 
+    /**
+     * dochaha
+     * GET /static/dochaha
+     */
     @RequestMapping(path = "/static/dochaha", method = {RequestMethod.GET})
     @ApiBlueprintOperation("static.static.get.dochaha")
     public ResponseEntity<?> dochaha(

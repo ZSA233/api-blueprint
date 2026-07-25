@@ -8,6 +8,8 @@ import (
 
 type _GenRouter struct{}
 
+// RoomList: Rootless room list example
+// GET /room/list
 func (impl *_GenRouter) RoomList(ctx *CTX_RoomList, req *REQ_RoomList) (rsp *RSP_RoomList, err error) {
 	return nil, fmt.Errorf("not implemented")
 }

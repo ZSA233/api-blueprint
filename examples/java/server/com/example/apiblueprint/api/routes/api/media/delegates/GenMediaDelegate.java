@@ -9,32 +9,60 @@ import com.example.apiblueprint.api.spring.GenSpringRequestContext;
 
 public interface GenMediaDelegate {
 
+    /**
+     * Multipart media preview
+     * POST /api/media/preview
+     */
     GenApiRawResponse mediaPreview(
         GenApiTypes.MediaPreviewRequest multipart,
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * Latest media frame
+     * GET /api/media/frame
+     */
     GenApiRawResponse mediaFrame(
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * Media workbook download
+     * GET /api/media/download
+     */
     GenApiRawResponse mediaDownload(
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * Media workbook download with service filename override
+     * GET /api/media/download-dynamic
+     */
     GenApiRawResponse mediaDownloadDynamic(
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * Media download with RFC 5987 filename
+     * GET /api/media/download-filename-edge
+     */
     GenApiRawResponse mediaDownloadFilenameEdge(
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * Raw media typed error
+     * GET /api/media/error-frame
+     */
     GenApiRawResponse mediaErrorFrame(
         GenMediaTypes.MediaErrorFrameQuery query,
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * MJPEG byte stream
+     * GET /api/media/mjpeg
+     */
     GenApiStreamResponse mediaMjpeg(
         GenSpringRequestContext context
     ) throws Exception;

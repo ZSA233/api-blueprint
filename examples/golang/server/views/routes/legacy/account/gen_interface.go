@@ -3,5 +3,7 @@
 package account
 
 type RouterInterface interface {
+	// AccountProfile: Rootless account profile example
+	// GET /account/profile
 	AccountProfile(ctx *CTX_AccountProfile, req *REQ_AccountProfile) (rsp *RSP_AccountProfile, err error)
 }

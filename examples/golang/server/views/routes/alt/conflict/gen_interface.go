@@ -3,5 +3,7 @@
 package conflict
 
 type RouterInterface interface {
+	// Default: Alt naming conflict example
+	// GET /alt/conflict/default
 	Default(ctx *CTX_Default, req *REQ_Default) (rsp *RSP_Default, err error)
 }

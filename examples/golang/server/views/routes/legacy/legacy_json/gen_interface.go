@@ -3,5 +3,7 @@
 package legacy_json
 
 type RouterInterface interface {
+	// LegacyJsonCompat: Legacy JSON compatibility example
+	// GET /legacy-json/compat
 	LegacyJsonCompat(ctx *CTX_LegacyJsonCompat, req *REQ_LegacyJsonCompat) (rsp *RSP_LegacyJsonCompat, err error)
 }

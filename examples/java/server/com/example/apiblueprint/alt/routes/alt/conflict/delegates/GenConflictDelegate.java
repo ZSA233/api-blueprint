@@ -9,6 +9,10 @@ import com.example.apiblueprint.alt.spring.GenSpringRequestContext;
 
 public interface GenConflictDelegate {
 
+    /**
+     * Alt naming conflict example
+     * GET /alt/conflict/default
+     */
     GenApiTypes.BlueprintsAltConflictConflictModel defaultValue(
         GenConflictTypes.DefaultQuery query,
         GenSpringRequestContext context

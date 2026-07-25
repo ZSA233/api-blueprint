@@ -29,6 +29,10 @@ public class GenAccountController {
         this.delegate = delegate;
     }
 
+    /**
+     * Rootless account profile example
+     * GET /account/profile
+     */
     @RequestMapping(path = "/account/profile", method = {RequestMethod.GET})
     @SignatureRequired
     @ApiBlueprintOperation("legacy.account.get.profile")

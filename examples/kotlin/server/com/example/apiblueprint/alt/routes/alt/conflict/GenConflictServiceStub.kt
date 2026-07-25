@@ -5,6 +5,10 @@ import com.example.apiblueprint.alt.runtime.*
 
 public open class ConflictServiceStub : GenConflictService {
 
+    /**
+     * Alt naming conflict example
+     * GET /alt/conflict/default
+     */
     public override suspend fun default(
         query: ConflictDefaultQuery
     ): ConflictModel {

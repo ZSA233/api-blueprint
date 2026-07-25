@@ -5,41 +5,69 @@ import com.example.apiblueprint.api.runtime.*
 
 public open class DemoServiceStub : GenDemoService {
 
+    /**
+     * 这是abc的summary
+     * GET /api/demo/abc
+     */
     public override suspend fun abc(
         query: DemoAbcQuery
     ): ApiDemoA {
         throw NotImplementedError("api.demo.get.abc is not implemented")
     }
 
+    /**
+     * 这是post的summary
+     * POST /api/demo/test_post
+     */
     public override suspend fun testPost(
         json: DemoTestPostJson
     ): DemoTestPostResponse {
         throw NotImplementedError("api.demo.post.testpost is not implemented")
     }
 
+    /**
+     * Form body example
+     * POST /api/demo/form-submit
+     */
     public override suspend fun formSubmit(
         form: DemoFormSubmitForm
     ): DemoFormSubmitResponse {
         throw NotImplementedError("api.demo.post.formsubmit is not implemented")
     }
 
+    /**
+     * Request options conformance endpoint
+     * GET /api/demo/request-options
+     */
     public override suspend fun requestOptions(
         query: DemoRequestOptionsQuery
     ): RequestOptionsResponse {
         throw NotImplementedError("api.demo.get.requestoptions is not implemented")
     }
 
+    /**
+     * Path parameter example
+     * GET /api/demo/path-echo/{item}/{badge}
+     */
     public override suspend fun pathEcho(
         path: PathEchoPath
     ): PathEchoResponse {
         throw NotImplementedError("api.demo.get.pathecho_item_badge is not implemented")
     }
 
+    /**
+     * Empty response example
+     * POST /api/demo/empty-response
+     */
     public override suspend fun emptyResponse(
     ): DemoEmptyResponseResponse {
         throw NotImplementedError("api.demo.post.emptyresponse is not implemented")
     }
 
+    /**
+     * 这是put的summary
+     * PUT /api/demo/1put
+     */
     public override suspend fun putDemo(
         query: DemoPutDemoQuery,
         json: DemoPutDemoJson
@@ -47,12 +75,20 @@ public open class DemoServiceStub : GenDemoService {
         throw NotImplementedError("api.demo.put.z1put is not implemented")
     }
 
+    /**
+     * 这是delete的summary
+     * DELETE /api/demo/delete$
+     */
     public override suspend fun delete(
         query: DemoDeleteQuery
     ): String {
         throw NotImplementedError("api.demo.delete.delete is not implemented")
     }
 
+    /**
+     * Sweep event stream
+     * STREAM /api/demo/sweep-events
+     */
     public override suspend fun sweepEvents(
         openData: SweepOpen,
         stream: ApiServerStream<SweepStreamMessage, ConnectionClose>
@@ -60,6 +96,10 @@ public open class DemoServiceStub : GenDemoService {
         throw NotImplementedError("api.demo.stream.sweepevents is not implemented")
     }
 
+    /**
+     * Assistant channel
+     * CHANNEL /api/demo/assistant-session
+     */
     public override suspend fun assistantSession(
         openData: AssistantOpen,
         channel: ApiServerChannel<AssistantClientMessage, AssistantServerMessage, ConnectionClose>
@@ -67,22 +107,38 @@ public open class DemoServiceStub : GenDemoService {
         throw NotImplementedError("api.demo.channel.assistantsession is not implemented")
     }
 
+    /**
+     * 这是一个summary
+     * POST /api/demo/post_deprecated
+     */
     public override suspend fun postDeprecated(
         json: DemoPostDeprecatedJson
     ): DemoPostDeprecatedResponse {
         throw NotImplementedError("api.demo.post.postdeprecated is not implemented")
     }
 
+    /**
+     * 这是一个raw
+     * POST /api/demo/raw
+     */
     public override suspend fun raw(
     ): DemoRawResponse {
         throw NotImplementedError("api.demo.post.raw is not implemented")
     }
 
+    /**
+     * 这是一个raw
+     * POST /api/demo/map_model
+     */
     public override suspend fun mapModel(
     ): DemoMapModelResponse {
         throw NotImplementedError("api.demo.post.mapmodel is not implemented")
     }
 
+    /**
+     * Typed error example
+     * GET /api/demo/error-demo
+     */
     public override suspend fun errorDemo(
         query: DemoErrorDemoQuery
     ): DemoErrorDemoResponse {

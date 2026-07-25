@@ -16,6 +16,7 @@ func NewRouter() *Router {
 }
 
 {% for impl in user_implements %}
+{{ impl.doc_comment | safe }}
 func (impl *Router) {{ impl.signature | safe }} {
 	{{ impl.default_body | safe }}
 }

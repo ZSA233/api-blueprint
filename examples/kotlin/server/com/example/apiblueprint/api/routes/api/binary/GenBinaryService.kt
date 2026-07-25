@@ -7,21 +7,37 @@ import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody
 
 public interface GenBinaryService {
 
+    /**
+     * Binary packet example
+     * POST /api/binary/packet
+     */
     public suspend fun packet(
         query: BinaryPacketQuery,
         binary: DemoPacket
     ): BinaryPacketResponse
 
+    /**
+     * Binary audit packet example
+     * POST /api/binary/audit-packet
+     */
     public suspend fun auditPacket(
         query: BinaryAuditPacketQuery,
         binary: AuditPacket
     ): BinaryAuditPacketResponse
 
+    /**
+     * Wide integer binary packet example
+     * POST /api/binary/wide-packet
+     */
     public suspend fun widePacket(
         query: BinaryWidePacketQuery,
         binary: WidePacket
     ): BinaryWidePacketResponse
 
+    /**
+     * Binary audit packet response example
+     * GET /api/binary/audit-packet-response
+     */
     public suspend fun auditPacketResponse(
     ): AuditPacket
 

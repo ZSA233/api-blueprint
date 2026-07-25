@@ -14,15 +14,27 @@ from .gen_types import (
 
 class StaticService(Protocol):
     async def doc_json(self) -> DocJsonResponse:
+        """doc_json
+        GET /static/doc.json
+        """
         ...
 
     async def dochaha(self) -> DochahaResponse:
+        """dochaha
+        GET /static/dochaha
+        """
         ...
 
 
 class StaticServiceStub:
     async def doc_json(self) -> DocJsonResponse:
+        """doc_json
+        GET /static/doc.json
+        """
         raise NotImplementedError("doc_json")
 
     async def dochaha(self) -> DochahaResponse:
+        """dochaha
+        GET /static/dochaha
+        """
         raise NotImplementedError("dochaha")

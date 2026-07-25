@@ -29,6 +29,10 @@ public class GenLegacyJsonController {
         this.delegate = delegate;
     }
 
+    /**
+     * Legacy JSON compatibility example
+     * GET /legacy-json/compat
+     */
     @RequestMapping(path = "/legacy-json/compat", method = {RequestMethod.GET})
     @SignatureRequired
     @ApiBlueprintOperation("legacy.legacy_json.get.compat")

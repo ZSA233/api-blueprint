@@ -9,6 +9,10 @@ import com.example.apiblueprint.legacy.spring.GenSpringRequestContext;
 
 public interface GenAccountDelegate {
 
+    /**
+     * Rootless account profile example
+     * GET /account/profile
+     */
     GenApiTypes.AccountProfile accountProfile(
         GenSpringRequestContext context
     ) throws Exception;

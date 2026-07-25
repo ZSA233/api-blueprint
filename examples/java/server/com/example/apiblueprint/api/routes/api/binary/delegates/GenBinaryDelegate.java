@@ -9,24 +9,40 @@ import com.example.apiblueprint.api.spring.GenSpringRequestContext;
 
 public interface GenBinaryDelegate {
 
+    /**
+     * Binary packet example
+     * POST /api/binary/packet
+     */
     GenBinaryTypes.PacketResponse packet(
         GenBinaryTypes.PacketQuery query,
         GenBinaryTypes.DemoPacket binary,
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * Binary audit packet example
+     * POST /api/binary/audit-packet
+     */
     GenBinaryTypes.AuditPacketResponse auditPacket(
         GenBinaryTypes.AuditPacketQuery query,
         GenBinaryTypes.AuditPacket binary,
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * Wide integer binary packet example
+     * POST /api/binary/wide-packet
+     */
     GenBinaryTypes.WidePacketResponse widePacket(
         GenBinaryTypes.WidePacketQuery query,
         GenBinaryTypes.WidePacket binary,
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * Binary audit packet response example
+     * GET /api/binary/audit-packet-response
+     */
     GenBinaryTypes.AuditPacket auditPacketResponse(
         GenSpringRequestContext context
     ) throws Exception;

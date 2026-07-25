@@ -8,18 +8,26 @@ import (
 
 type _GenRouter struct{}
 
+// Packet: Binary packet example
+// POST /api/binary/packet
 func (impl *_GenRouter) Packet(ctx *CTX_Packet, req *REQ_Packet) (rsp *RSP_Packet, err error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
+// AuditPacket: Binary audit packet example
+// POST /api/binary/audit-packet
 func (impl *_GenRouter) AuditPacket(ctx *CTX_AuditPacket, req *REQ_AuditPacket) (rsp *RSP_AuditPacket, err error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
+// WidePacket: Wide integer binary packet example
+// POST /api/binary/wide-packet
 func (impl *_GenRouter) WidePacket(ctx *CTX_WidePacket, req *REQ_WidePacket) (rsp *RSP_WidePacket, err error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
+// AuditPacketResponse: Binary audit packet response example
+// GET /api/binary/audit-packet-response
 func (impl *_GenRouter) AuditPacketResponse(ctx *CTX_AuditPacketResponse, req *REQ_AuditPacketResponse) (rsp *RSP_AuditPacketResponse, err error) {
 	return nil, fmt.Errorf("not implemented")
 }

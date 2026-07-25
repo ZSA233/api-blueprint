@@ -5,6 +5,10 @@ import com.example.apiblueprint.legacy.runtime.*
 
 public open class LegacyJsonServiceStub : GenLegacyJsonService {
 
+    /**
+     * Legacy JSON compatibility example
+     * GET /legacy-json/compat
+     */
     public override suspend fun legacyJsonCompat(
     ): LegacyJsonCompatPayload {
         throw NotImplementedError("legacy.legacy_json.get.compat is not implemented")

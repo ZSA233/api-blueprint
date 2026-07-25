@@ -93,6 +93,8 @@ demohttp.Mount(engine, adapter,
 
 Go route core is generated under `<out_dir>/routes/<go-root-segment>/**`, provider runtime under `<out_dir>/providers`, transport adapters under `<out_dir>/transports/**`, and typed error runtime under `<out_dir>/runtime/errors/**`. Go-safe segments replace non-`[0-9A-Za-z_]` characters with `_`, trim leading/trailing `_`, prefix digit-leading names with `p_`, and suffix Go keywords with `_pkg`; URLs, route paths, and selection/filter semantics stay unchanged, so Go directories do not guarantee one directory per URL slash segment. If you want the import path to include `/views`, set `out_dir = ".../views"` explicitly.
 
+Go / Python / Kotlin / Java server output writes short comments near handler contracts, stubs, controllers, or first-created preserved service/impl scaffolds. Comments prefer the route `summary`, fall back to the first `description` line, and include method/path; full descriptions, route ids, and other metadata remain in docs, ContractGraph, RouteInfo, or the relevant annotations. These comments are for code reading and IDE hints only; they do not participate in request/response decoding and do not change handler signatures. Existing preserved user files are not rewritten; only missing scaffolds created for the first time include the comments.
+
 The Go server request runtime now uses semantic field names instead of short aliases:
 
 ```go

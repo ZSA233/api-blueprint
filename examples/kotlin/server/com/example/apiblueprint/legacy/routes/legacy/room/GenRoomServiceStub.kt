@@ -5,6 +5,10 @@ import com.example.apiblueprint.legacy.runtime.*
 
 public open class RoomServiceStub : GenRoomService {
 
+    /**
+     * Rootless room list example
+     * GET /room/list
+     */
     public override suspend fun roomList(
     ): RoomRoomListResponse {
         throw NotImplementedError("legacy.room.get.list is not implemented")

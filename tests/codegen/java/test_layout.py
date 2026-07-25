@@ -122,7 +122,11 @@ content-encoding: identity,gzip,br
         ],
     )
     views = bp.group("/demo")
-    views.GET("/ping").ARGS(q=String(description="q")).RSP(Result)
+    views.GET(
+        "/ping",
+        summary="Read demo ping",
+        description="Check Javadoc */ escaping.",
+    ).ARGS(q=String(description="q")).RSP(Result)
     views.POST("/submit").REQ(SubmitJson).RSP(Result)
     views.POST("/form").REQ_FORM(FormPayload).RSP(Result)
     views.STREAM("/events").OPEN(OpenPayload).SERVER_MESSAGE(Event)
@@ -319,6 +323,10 @@ content-encoding: identity,gzip,br
 
     assert "@RestController" in server_controller_text
     assert "private final GenDemoDelegate delegate;" in server_controller_text
+    assert " * Read demo ping" in server_controller_text
+    assert " * GET /api/demo/ping" in server_controller_text
+    assert " * Check Javadoc * / escaping." not in server_controller_text
+    assert " * Route ID: api.demo.get.ping" not in server_controller_text
     assert "@RequestMapping(path = \"/api/demo/ping\", method = {RequestMethod.GET})" in server_controller_text
     assert "import com.example.generated.security.SignatureRequired;" in server_controller_text
     assert "\n\nimport org.springframework.web.bind.annotation.RequestMethod;" not in server_controller_text
@@ -328,6 +336,9 @@ content-encoding: identity,gzip,br
     assert "public ResponseEntity<?> ping(" in server_controller_text
     assert "GenApiTypes.Result result = delegate.ping(" in server_controller_text
     assert "public interface GenDemoDelegate" in server_delegate_text
+    assert " * Read demo ping" in server_delegate_text
+    assert " * Check Javadoc * / escaping." not in server_delegate_text
+    assert " * Route ID: api.demo.get.ping" not in server_delegate_text
     assert "GenApiTypes.Result ping(" in server_delegate_text
     assert "public static GenDemoTypes.PingQuery pingRequest(GenDemoTypes.PingQuery value)" in server_adapters_text
     assert "public static GenApiTypes.Result pingResponse(GenApiTypes.Result value)" in server_adapters_text

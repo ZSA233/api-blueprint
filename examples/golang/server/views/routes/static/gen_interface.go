@@ -3,6 +3,11 @@
 package static
 
 type RouterInterface interface {
+	// DocJson
+	// GET /static/doc.json
 	DocJson(ctx *CTX_DocJson, req *REQ_DocJson) (rsp *RSP_DocJson, err error)
+
+	// Dochaha
+	// GET /static/dochaha
 	Dochaha(ctx *CTX_Dochaha, req *REQ_Dochaha) (rsp *RSP_Dochaha, err error)
 }

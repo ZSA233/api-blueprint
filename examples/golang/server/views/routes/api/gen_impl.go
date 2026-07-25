@@ -8,6 +8,8 @@ import (
 
 type _GenRouter struct{}
 
+// HelloChannel
+// CHANNEL /api/ws
 func (impl *_GenRouter) HelloChannel(
 	ctx *CTX_HelloChannel,
 	channel CHANNEL_HelloChannel,

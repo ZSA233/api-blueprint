@@ -8,38 +8,56 @@ import (
 
 type _GenRouter struct{}
 
+// Abc: 这是abc的summary
+// GET /api/demo/abc
 func (impl *_GenRouter) Abc(ctx *CTX_Abc, req *REQ_Abc) (rsp *RSP_Abc, err error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
+// TestPost: 这是post的summary
+// POST /api/demo/test_post
 func (impl *_GenRouter) TestPost(ctx *CTX_TestPost, req *REQ_TestPost) (rsp *RSP_TestPost, err error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
+// FormSubmit: Form body example
+// POST /api/demo/form-submit
 func (impl *_GenRouter) FormSubmit(ctx *CTX_FormSubmit, req *REQ_FormSubmit) (rsp *RSP_FormSubmit, err error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
+// RequestOptions: Request options conformance endpoint
+// GET /api/demo/request-options
 func (impl *_GenRouter) RequestOptions(ctx *CTX_RequestOptions, req *REQ_RequestOptions) (rsp *RSP_RequestOptions, err error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
+// PathEcho: Path parameter example
+// GET /api/demo/path-echo/{item}/{badge}
 func (impl *_GenRouter) PathEcho(ctx *CTX_PathEcho, req *REQ_PathEcho) (rsp *RSP_PathEcho, err error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
+// EmptyResponse: Empty response example
+// POST /api/demo/empty-response
 func (impl *_GenRouter) EmptyResponse(ctx *CTX_EmptyResponse, req *REQ_EmptyResponse) (rsp *RSP_EmptyResponse, err error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
+// PutDemo: 这是put的summary
+// PUT /api/demo/1put
 func (impl *_GenRouter) PutDemo(ctx *CTX_PutDemo, req *REQ_PutDemo) (rsp *RSP_PutDemo, err error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
+// Delete: 这是delete的summary
+// DELETE /api/demo/delete$
 func (impl *_GenRouter) Delete(ctx *CTX_Delete, req *REQ_Delete) (rsp *RSP_Delete, err error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
+// SweepEvents: Sweep event stream
+// STREAM /api/demo/sweep-events
 func (impl *_GenRouter) SweepEvents(
 	ctx *CTX_SweepEvents,
 	stream STREAM_SweepEvents,
@@ -47,6 +65,8 @@ func (impl *_GenRouter) SweepEvents(
 	return fmt.Errorf("not implemented")
 }
 
+// AssistantSession: Assistant channel
+// CHANNEL /api/demo/assistant-session
 func (impl *_GenRouter) AssistantSession(
 	ctx *CTX_AssistantSession,
 	channel CHANNEL_AssistantSession,
@@ -54,18 +74,26 @@ func (impl *_GenRouter) AssistantSession(
 	return fmt.Errorf("not implemented")
 }
 
+// PostDeprecated: 这是一个summary
+// POST /api/demo/post_deprecated
 func (impl *_GenRouter) PostDeprecated(ctx *CTX_PostDeprecated, req *REQ_PostDeprecated) (rsp *RSP_PostDeprecated, err error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
+// Raw: 这是一个raw
+// POST /api/demo/raw
 func (impl *_GenRouter) Raw(ctx *CTX_Raw, req *REQ_Raw) (rsp *RSP_Raw, err error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
+// MapModel: 这是一个raw
+// POST /api/demo/map_model
 func (impl *_GenRouter) MapModel(ctx *CTX_MapModel, req *REQ_MapModel) (rsp *RSP_MapModel, err error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
+// ErrorDemo: Typed error example
+// GET /api/demo/error-demo
 func (impl *_GenRouter) ErrorDemo(ctx *CTX_ErrorDemo, req *REQ_ErrorDemo) (rsp *RSP_ErrorDemo, err error) {
 	return nil, fmt.Errorf("not implemented")
 }

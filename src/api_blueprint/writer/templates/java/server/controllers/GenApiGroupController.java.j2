@@ -11,6 +11,7 @@ public class {{ group.controller_class }} {
     }
 {% for route in group.routes %}
 
+{{ route.controller_javadoc | safe }}
     {{ writer.spring_mapping_annotation(route) }}
 {% for annotation_expr in writer.policy_annotation_exprs_for_route(route, group) %}    {{ annotation_expr }}
 {% endfor %}    @ApiBlueprintOperation({{ route.route_id | code_literal }})

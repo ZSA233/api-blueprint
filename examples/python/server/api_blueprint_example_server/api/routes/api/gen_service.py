@@ -15,9 +15,15 @@ from .gen_types import (
 
 class ApiService(Protocol):
     async def hello_channel(self) -> Any:
+        """hello_channel
+        CHANNEL /api/ws
+        """
         ...
 
 
 class ApiServiceStub:
     async def hello_channel(self) -> Any:
+        """hello_channel
+        CHANNEL /api/ws
+        """
         raise NotImplementedError("hello_channel")

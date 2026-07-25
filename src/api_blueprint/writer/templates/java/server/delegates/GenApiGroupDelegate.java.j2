@@ -5,6 +5,7 @@
 public interface {{ group.delegate_class }} {
 {% for route in group.routes %}
 
+{{ route.javadoc | safe }}
     {{ writer.route_response_type(route, group) }} {{ route.method_name }}(
 {%- for parameter in writer.delegate_method_parameters(route, group) %}
         {{ parameter }}{% if not loop.last %},{% endif %}

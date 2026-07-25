@@ -31,6 +31,10 @@ public class GenDemoController {
         this.delegate = delegate;
     }
 
+    /**
+     * 这是abc的summary
+     * GET /api/demo/abc
+     */
     @RequestMapping(path = "/api/demo/abc", method = {RequestMethod.GET})
     @SignatureRequired
     @ApiBlueprintOperation("api.demo.get.abc")
@@ -45,6 +49,10 @@ public class GenDemoController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/json", "json");
     }
 
+    /**
+     * 这是post的summary
+     * POST /api/demo/test_post
+     */
     @RequestMapping(path = "/api/demo/test_post", method = {RequestMethod.POST})
     @SignatureRequired
     @ApiBlueprintOperation("api.demo.post.testpost")
@@ -59,6 +67,10 @@ public class GenDemoController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/json", "json");
     }
 
+    /**
+     * Form body example
+     * POST /api/demo/form-submit
+     */
     @RequestMapping(path = "/api/demo/form-submit", method = {RequestMethod.POST})
     @SignatureRequired
     @ApiBlueprintOperation("api.demo.post.formsubmit")
@@ -73,6 +85,10 @@ public class GenDemoController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/json", "json");
     }
 
+    /**
+     * Request options conformance endpoint
+     * GET /api/demo/request-options
+     */
     @RequestMapping(path = "/api/demo/request-options", method = {RequestMethod.GET})
     @SignatureRequired
     @ApiBlueprintOperation("api.demo.get.requestoptions")
@@ -87,6 +103,10 @@ public class GenDemoController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/json", "json");
     }
 
+    /**
+     * Path parameter example
+     * GET /api/demo/path-echo/{item}/{badge}
+     */
     @RequestMapping(path = "/api/demo/path-echo/{item}/{badge}", method = {RequestMethod.GET})
     @SignatureRequired
     @ApiBlueprintOperation("api.demo.get.pathecho_item_badge")
@@ -107,6 +127,10 @@ public class GenDemoController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/json", "json");
     }
 
+    /**
+     * Empty response example
+     * POST /api/demo/empty-response
+     */
     @RequestMapping(path = "/api/demo/empty-response", method = {RequestMethod.POST})
     @SignatureRequired
     @ApiBlueprintOperation("api.demo.post.emptyresponse")
@@ -119,6 +143,10 @@ public class GenDemoController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/json", "json");
     }
 
+    /**
+     * 这是put的summary
+     * PUT /api/demo/1put
+     */
     @RequestMapping(path = "/api/demo/1put", method = {RequestMethod.PUT})
     @SignatureRequired
     @ApiBlueprintOperation("api.demo.put.z1put")
@@ -135,6 +163,10 @@ public class GenDemoController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/json", "json");
     }
 
+    /**
+     * 这是delete的summary
+     * DELETE /api/demo/delete$
+     */
     @RequestMapping(path = "/api/demo/delete$", method = {RequestMethod.DELETE})
     @SignatureRequired
     @ApiBlueprintOperation("api.demo.delete.delete")
@@ -149,6 +181,10 @@ public class GenDemoController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/xml", "xml");
     }
 
+    /**
+     * 这是一个summary
+     * POST /api/demo/post_deprecated
+     */
     @RequestMapping(path = "/api/demo/post_deprecated", method = {RequestMethod.POST})
     @SignatureRequired
     @ApiBlueprintOperation("api.demo.post.postdeprecated")
@@ -163,6 +199,10 @@ public class GenDemoController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/json", "json");
     }
 
+    /**
+     * 这是一个raw
+     * POST /api/demo/raw
+     */
     @RequestMapping(path = "/api/demo/raw", method = {RequestMethod.POST})
     @SignatureRequired
     @ApiBlueprintOperation("api.demo.post.raw")
@@ -175,6 +215,10 @@ public class GenDemoController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/json", "json");
     }
 
+    /**
+     * 这是一个raw
+     * POST /api/demo/map_model
+     */
     @RequestMapping(path = "/api/demo/map_model", method = {RequestMethod.POST})
     @SignatureRequired
     @ApiBlueprintOperation("api.demo.post.mapmodel")
@@ -187,6 +231,10 @@ public class GenDemoController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/json", "json");
     }
 
+    /**
+     * Typed error example
+     * GET /api/demo/error-demo
+     */
     @RequestMapping(path = "/api/demo/error-demo", method = {RequestMethod.GET})
     @SignatureRequired
     @ApiBlueprintOperation("api.demo.get.errordemo")

@@ -13,9 +13,15 @@ from .gen_types import (
 
 class LegacyJsonService(Protocol):
     async def legacy_json_compat(self) -> LegacyJsonCompatResponse:
+        """Legacy JSON compatibility example
+        GET /legacy-json/compat
+        """
         ...
 
 
 class LegacyJsonServiceStub:
     async def legacy_json_compat(self) -> LegacyJsonCompatResponse:
+        """Legacy JSON compatibility example
+        GET /legacy-json/compat
+        """
         raise NotImplementedError("legacy_json_compat")

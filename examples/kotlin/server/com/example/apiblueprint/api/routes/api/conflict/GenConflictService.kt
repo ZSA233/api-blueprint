@@ -5,6 +5,10 @@ import com.example.apiblueprint.api.runtime.*
 
 public interface GenConflictService {
 
+    /**
+     * Naming conflict example
+     * GET /api/conflict/default
+     */
     public suspend fun default(
         query: ConflictDefaultQuery
     ): ConflictModel

@@ -29,6 +29,10 @@ public class GenBinaryController {
         this.delegate = delegate;
     }
 
+    /**
+     * Binary packet example
+     * POST /api/binary/packet
+     */
     @RequestMapping(path = "/api/binary/packet", method = {RequestMethod.POST})
     @SignatureRequired
     @ApiBlueprintOperation("api.binary.post.packet")
@@ -46,6 +50,10 @@ public class GenBinaryController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/json", "json");
     }
 
+    /**
+     * Binary audit packet example
+     * POST /api/binary/audit-packet
+     */
     @RequestMapping(path = "/api/binary/audit-packet", method = {RequestMethod.POST})
     @SignatureRequired
     @ApiBlueprintOperation("api.binary.post.auditpacket")
@@ -63,6 +71,10 @@ public class GenBinaryController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/json", "json");
     }
 
+    /**
+     * Wide integer binary packet example
+     * POST /api/binary/wide-packet
+     */
     @RequestMapping(path = "/api/binary/wide-packet", method = {RequestMethod.POST})
     @SignatureRequired
     @ApiBlueprintOperation("api.binary.post.widepacket")
@@ -80,6 +92,10 @@ public class GenBinaryController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/json", "json");
     }
 
+    /**
+     * Binary audit packet response example
+     * GET /api/binary/audit-packet-response
+     */
     @RequestMapping(path = "/api/binary/audit-packet-response", method = {RequestMethod.GET})
     @SignatureRequired
     @ApiBlueprintOperation("api.binary.get.auditpacketresponse")

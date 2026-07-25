@@ -8,6 +8,8 @@ import (
 
 type _GenRouter struct{}
 
+// Default: Alt naming conflict example
+// GET /alt/conflict/default
 func (impl *_GenRouter) Default(ctx *CTX_Default, req *REQ_Default) (rsp *RSP_Default, err error) {
 	return nil, fmt.Errorf("not implemented")
 }

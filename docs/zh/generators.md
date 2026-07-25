@@ -69,6 +69,8 @@ Go 生成器输出：
 
 生成器会覆盖的源码文件必须命名为 `gen_*` / `Gen*`，或位于 `_gen_*` 目录，并保留 `Code generated ... DO NOT EDIT` header；Swift `Package.swift` 这类由 target/module 列表决定的 manifest 可作为 generated manifest 管理。`impl_*` 与非 `gen_` / 非 `Gen` 文件是用户拥有扩展点，只在缺失时创建，重生成时保留且不带 generated header。Flutter 使用 Dart 风格的 `gen_*.dart`；Swift 使用 `Gen*.swift`；Kotlin 生成器拥有文件命名为 `Gen*.kt`，但 public declaration 名称保持 Kotlin 惯用形态；Java 生成器拥有文件与 public 类型都使用 `Gen*`。
 
+Go / Python / Kotlin / Java server 生成物会在 handler contract、stub、controller 或首次创建的 preserved service/impl 附近输出短注释。注释优先使用 route `summary`，缺失时用 `description` 首行兜底，并附带 method/path；完整 description、route id 和其他 metadata 保留在 docs、ContractGraph、RouteInfo 或对应注解中。注释用于代码阅读和 IDE 提示，不参与 request/response 编解码，也不会改变 handler 签名。已有 preserved 用户文件不会被重写；只有缺失时首次创建的 scaffold 会带上这些注释。
+
 `go-server` 只负责 Go 服务端 core。`out_dir` 就是生成包根；如果项目希望 import path 包含 `views`，应把 `views` 写进 `out_dir`。HTTP / Wails 输出由 `http-transport` / `wails-transport` target 通过 `server = "go.server"` 显式挂接。HTTP 入口生成在 `<out_dir>/transports/http/<go-root-segment>` 中，例如 `transports/http/api.NewBlueprint(router)`；这里的 `router` 可以是 `*gin.Engine`，也可以是带业务前缀或中间件的 `gin.RouterGroup`。需要在迁移、灰度或测试中只挂载某些接口时，可以在具体 route package 上使用 generated route id 常量筛选：
 
 ```go

@@ -24,6 +24,7 @@ class {{ group.service_class }}(Protocol):
 {% else %}
     async def {{ route.method_name }}(self) -> {{ route.service_response_annotation if route.is_rpc else 'Any' }}:
 {% endif %}
+{{ route.service_contract_docstring | safe }}
         ...
 {% endfor %}{% else %}
     pass
@@ -42,6 +43,7 @@ class {{ group.service_class }}Stub:
 {% else %}
     async def {{ route.method_name }}(self) -> {{ route.service_response_annotation if route.is_rpc else 'Any' }}:
 {% endif %}
+{{ route.service_impl_docstring | safe }}
         raise NotImplementedError({{ route.method_name_literal | safe }})
 {% endfor %}{% else %}
     pass

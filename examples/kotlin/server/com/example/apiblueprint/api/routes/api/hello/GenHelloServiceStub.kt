@@ -5,37 +5,65 @@ import com.example.apiblueprint.api.runtime.*
 
 public open class HelloServiceStub : GenHelloService {
 
+    /**
+     * 这是abc的summary
+     * GET /api/hello/abc
+     */
     public override suspend fun abc(
         query: HelloAbcQuery
     ): HelloAbcResponse {
         throw NotImplementedError("api.hello.get.abc is not implemented")
     }
 
+    /**
+     * map-enum
+     * GET /api/hello/map-enum
+     */
     public override suspend fun mapEnum(
     ): HelloMapEnumResponse {
         throw NotImplementedError("api.hello.get.mapenum is not implemented")
     }
 
+    /**
+     * list-enum
+     * GET /api/hello/list-enum
+     */
     public override suspend fun listEnum(
     ): HelloListEnumResponse {
         throw NotImplementedError("api.hello.get.listenum is not implemented")
     }
 
+    /**
+     * string
+     * GET /api/hello/string
+     */
     public override suspend fun string(
     ): HelloStringResponse {
         throw NotImplementedError("api.hello.get.string is not implemented")
     }
 
+    /**
+     * uint64
+     * GET /api/hello/uint64
+     */
     public override suspend fun uint64(
     ): HelloUint64Response {
         throw NotImplementedError("api.hello.get.uint64 is not implemented")
     }
 
+    /**
+     * string-enum
+     * GET /api/hello/string-emun
+     */
     public override suspend fun stringEmun(
     ): HelloStringEmunResponse {
         throw NotImplementedError("api.hello.get.stringemun is not implemented")
     }
 
+    /**
+     * hello-way
+     * GET /api/hello/hello-way
+     */
     public override suspend fun helloWay(
         query: HelloHelloWayQuery
     ): Unit {

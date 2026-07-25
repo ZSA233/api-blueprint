@@ -157,6 +157,46 @@ def test_golang_server_preserves_existing_route_impl_go(tmp_path):
     assert "func (impl *_GenRouter) Ping" in (route_dir / "gen_impl.go").read_text(encoding="utf-8")
 
 
+def test_golang_server_emits_route_docs_on_handler_surfaces(tmp_path):
+    output_dir = tmp_path / "golang"
+    output_dir.mkdir()
+    (tmp_path / "go.mod").write_text("module example.com/generated\n\ngo 1.23.8\n", encoding="utf-8")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.GET(
+            "/ping",
+            summary="Fetch demo ping",
+            description="Used by generated handler docs.\nKeep */ markers safe.",
+        ).RSP()
+        views.GET(
+            "/pong",
+            summary="Fetch demo pong",
+        ).RSP()
+
+    writer = GolangWriter(output_dir)
+    writer.register(bp)
+    writer.gen()
+
+    route_dir = output_dir / "routes" / "api" / "demo"
+    interface_text = (route_dir / "gen_interface.go").read_text(encoding="utf-8")
+    generated_impl = (route_dir / "gen_impl.go").read_text(encoding="utf-8")
+    user_impl = (route_dir / "impl.go").read_text(encoding="utf-8")
+
+    expected = (
+        "// Ping: Fetch demo ping\n"
+        "// GET /api/demo/ping"
+    )
+    assert "\n".join(f"\t{line}" for line in expected.splitlines()) in interface_text
+    assert "\n\n\t// Pong: Fetch demo pong\n\t// GET /api/demo/pong" in interface_text
+    assert expected in generated_impl
+    assert expected in user_impl
+    for text in (interface_text, generated_impl, user_impl):
+        assert "Used by generated handler docs." not in text
+        assert "Route ID: api.demo.get.ping" not in text
+    assert "func (impl *Router) Ping" in user_impl
+
+
 def test_golang_server_wrapper_uses_envelope_wire_field_names(tmp_path):
     output_dir = tmp_path / "golang"
     output_dir.mkdir()

@@ -3,24 +3,65 @@
 package demo
 
 type RouterInterface interface {
+	// Abc: 这是abc的summary
+	// GET /api/demo/abc
 	Abc(ctx *CTX_Abc, req *REQ_Abc) (rsp *RSP_Abc, err error)
+
+	// TestPost: 这是post的summary
+	// POST /api/demo/test_post
 	TestPost(ctx *CTX_TestPost, req *REQ_TestPost) (rsp *RSP_TestPost, err error)
+
+	// FormSubmit: Form body example
+	// POST /api/demo/form-submit
 	FormSubmit(ctx *CTX_FormSubmit, req *REQ_FormSubmit) (rsp *RSP_FormSubmit, err error)
+
+	// RequestOptions: Request options conformance endpoint
+	// GET /api/demo/request-options
 	RequestOptions(ctx *CTX_RequestOptions, req *REQ_RequestOptions) (rsp *RSP_RequestOptions, err error)
+
+	// PathEcho: Path parameter example
+	// GET /api/demo/path-echo/{item}/{badge}
 	PathEcho(ctx *CTX_PathEcho, req *REQ_PathEcho) (rsp *RSP_PathEcho, err error)
+
+	// EmptyResponse: Empty response example
+	// POST /api/demo/empty-response
 	EmptyResponse(ctx *CTX_EmptyResponse, req *REQ_EmptyResponse) (rsp *RSP_EmptyResponse, err error)
+
+	// PutDemo: 这是put的summary
+	// PUT /api/demo/1put
 	PutDemo(ctx *CTX_PutDemo, req *REQ_PutDemo) (rsp *RSP_PutDemo, err error)
+
+	// Delete: 这是delete的summary
+	// DELETE /api/demo/delete$
 	Delete(ctx *CTX_Delete, req *REQ_Delete) (rsp *RSP_Delete, err error)
+
+	// SweepEvents: Sweep event stream
+	// STREAM /api/demo/sweep-events
 	SweepEvents(
 		ctx *CTX_SweepEvents,
 		stream STREAM_SweepEvents,
 	) error
+
+	// AssistantSession: Assistant channel
+	// CHANNEL /api/demo/assistant-session
 	AssistantSession(
 		ctx *CTX_AssistantSession,
 		channel CHANNEL_AssistantSession,
 	) error
+
+	// PostDeprecated: 这是一个summary
+	// POST /api/demo/post_deprecated
 	PostDeprecated(ctx *CTX_PostDeprecated, req *REQ_PostDeprecated) (rsp *RSP_PostDeprecated, err error)
+
+	// Raw: 这是一个raw
+	// POST /api/demo/raw
 	Raw(ctx *CTX_Raw, req *REQ_Raw) (rsp *RSP_Raw, err error)
+
+	// MapModel: 这是一个raw
+	// POST /api/demo/map_model
 	MapModel(ctx *CTX_MapModel, req *REQ_MapModel) (rsp *RSP_MapModel, err error)
+
+	// ErrorDemo: Typed error example
+	// GET /api/demo/error-demo
 	ErrorDemo(ctx *CTX_ErrorDemo, req *REQ_ErrorDemo) (rsp *RSP_ErrorDemo, err error)
 }

@@ -12,6 +12,7 @@ from api_blueprint.engine.utils import join_path_imports
 from api_blueprint.writer.core.base import BaseBlueprint
 from api_blueprint.writer.core.contract_adapters import RouteProtocolContract
 from api_blueprint.writer.core.contracts import RouteContract
+from api_blueprint.writer.core.route_docs import RouteDoc
 from api_blueprint.writer.core.templates import iter_render, render
 
 from api_blueprint.writer.golang.message_files import cleanup_stale_go_message_files, plan_go_message_files
@@ -176,6 +177,7 @@ class GolangRouterGroup:
     def interfaces(self) -> Generator[dict[str, Any], None, None]:
         for router in self.group:
             view = self._router_view(router)
+            doc = RouteDoc.from_router(router, view.contract, fallback=view.func_name)
             yield {
                 "func": view.func_name,
                 "ctx_type": view.ctx_type,
@@ -184,6 +186,7 @@ class GolangRouterGroup:
                 "signature": view.interface_signature,
                 "default_body": view.default_body,
                 "is_connection": view.is_connection,
+                "doc_comment": doc.go_comment(subject=view.func_name, indent="\t"),
             }
 
     def route_constants(self) -> Generator[dict[str, str], None, None]:
@@ -295,6 +298,7 @@ class GolangRouterGroup:
     def implements(self) -> Generator[dict[str, Any], None, None]:
         for router in self.group:
             view = self._router_view(router)
+            doc = RouteDoc.from_router(router, view.contract, fallback=view.func_name)
             yield {
                 "func": view.func_name,
                 "ctx_type": view.ctx_type,
@@ -304,6 +308,7 @@ class GolangRouterGroup:
                 "default_body": view.default_body,
                 "is_connection": view.is_connection,
                 "connection_scaffold": view.connection_scaffold() is not None,
+                "doc_comment": doc.go_comment(subject=view.func_name, include_route_id=False),
             }
 
     def user_implements(self) -> Generator[dict[str, Any], None, None]:

@@ -7,6 +7,7 @@ from typing import Any, Mapping
 
 from api_blueprint.writer.core.base import BaseBlueprint
 from api_blueprint.writer.core.message_helpers import unique_named_message_helpers
+from api_blueprint.writer.core.route_docs import RouteDoc
 from api_blueprint.writer.core.sdk_names import RoutePublicNames
 
 from .binary_schema import JavaBinarySchema, unique_java_binary_schemas
@@ -57,6 +58,7 @@ class JavaRoute:
         self.binary_schema = _mapping(self.request.get("binary_schema")) or None
         self.response_binary_schema = _mapping(self.response.get("binary_schema")) or None
         self.public_names = RoutePublicNames.from_operation(self.operation, fallback="Call")
+        self.doc = RouteDoc.from_manifest(self.route, fallback=self.method_name)
 
     @property
     def operation_type_name(self) -> str:
@@ -192,6 +194,14 @@ class JavaRoute:
     @property
     def server_message_name(self) -> str | None:
         return _message_name(self.connection.get("server_message"))
+
+    @property
+    def javadoc(self) -> str:
+        return self.doc.javadoc(indent="    ")
+
+    @property
+    def controller_javadoc(self) -> str:
+        return self.doc.javadoc(indent="    ", include_route_id=False)
 
     @property
     def client_message_name(self) -> str | None:

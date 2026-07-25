@@ -25,6 +25,9 @@ class BinaryService(Protocol):
         query: PacketQuery,
         binary: DemoPacket,
     ) -> PacketResponse:
+        """Binary packet example
+        POST /api/binary/packet
+        """
         ...
 
     async def audit_packet(
@@ -32,6 +35,9 @@ class BinaryService(Protocol):
         query: AuditPacketQuery,
         binary: AuditPacket,
     ) -> AuditPacketResponse:
+        """Binary audit packet example
+        POST /api/binary/audit-packet
+        """
         ...
 
     async def wide_packet(
@@ -39,9 +45,15 @@ class BinaryService(Protocol):
         query: WidePacketQuery,
         binary: WidePacket,
     ) -> WidePacketResponse:
+        """Wide integer binary packet example
+        POST /api/binary/wide-packet
+        """
         ...
 
     async def audit_packet_response(self) -> AuditPacket:
+        """Binary audit packet response example
+        GET /api/binary/audit-packet-response
+        """
         ...
 
 
@@ -51,6 +63,9 @@ class BinaryServiceStub:
         query: PacketQuery,
         binary: DemoPacket,
     ) -> PacketResponse:
+        """Binary packet example
+        POST /api/binary/packet
+        """
         raise NotImplementedError("packet")
 
     async def audit_packet(
@@ -58,6 +73,9 @@ class BinaryServiceStub:
         query: AuditPacketQuery,
         binary: AuditPacket,
     ) -> AuditPacketResponse:
+        """Binary audit packet example
+        POST /api/binary/audit-packet
+        """
         raise NotImplementedError("audit_packet")
 
     async def wide_packet(
@@ -65,7 +83,13 @@ class BinaryServiceStub:
         query: WidePacketQuery,
         binary: WidePacket,
     ) -> WidePacketResponse:
+        """Wide integer binary packet example
+        POST /api/binary/wide-packet
+        """
         raise NotImplementedError("wide_packet")
 
     async def audit_packet_response(self) -> AuditPacket:
+        """Binary audit packet response example
+        GET /api/binary/audit-packet-response
+        """
         raise NotImplementedError("audit_packet_response")

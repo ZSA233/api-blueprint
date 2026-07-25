@@ -14,9 +14,15 @@ from .gen_types import (
 
 class RoomService(Protocol):
     async def room_list(self) -> RoomListResponse:
+        """Rootless room list example
+        GET /room/list
+        """
         ...
 
 
 class RoomServiceStub:
     async def room_list(self) -> RoomListResponse:
+        """Rootless room list example
+        GET /room/list
+        """
         raise NotImplementedError("room_list")

@@ -9,10 +9,18 @@ import com.example.apiblueprint.static_.spring.GenSpringRequestContext;
 
 public interface GenStaticDelegate {
 
+    /**
+     * docJson
+     * GET /static/doc.json
+     */
     GenStaticTypes.DocJsonResponse docJson(
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * dochaha
+     * GET /static/dochaha
+     */
     GenStaticTypes.DochahaResponse dochaha(
         GenSpringRequestContext context
     ) throws Exception;

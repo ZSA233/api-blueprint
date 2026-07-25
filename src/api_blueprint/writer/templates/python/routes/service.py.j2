@@ -1,2 +1,34 @@
+{% if group %}from __future__ import annotations
+
 from .gen_service import *
 from .gen_types import *
+
+{% if group.routes %}
+
+class {{ group.service_class }}Impl({{ group.service_class }}Stub):
+{% for route in group.routes %}
+{% if route.params %}
+    async def {{ route.method_name }}(
+        self{% for param in route.params %},
+        {{ param.name }}: {{ param.service_annotation }}{% if param.default is not none %} = {{ param.default }}{% endif %}{% endfor %}{% if route.supports_stream %},
+        stream: ApiServerStream[{{ route.server_message_type.annotation if route.server_message_type else 'Any' }}, {{ route.close_type.annotation if route.close_type else 'Any' }}] | None = None{% endif %}{% if route.supports_channel %},
+        channel: ApiServerChannel[{{ route.client_message_type.annotation if route.client_message_type else 'Any' }}, {{ route.server_message_type.annotation if route.server_message_type else 'Any' }}, {{ route.close_type.annotation if route.close_type else 'Any' }}] | None = None{% endif %},
+    ) -> {{ route.service_response_annotation if route.is_rpc else 'Any' }}:
+{% else %}
+    async def {{ route.method_name }}(self) -> {{ route.service_response_annotation if route.is_rpc else 'Any' }}:
+{% endif %}
+{{ route.service_impl_docstring | safe }}
+{% if route.params or route.supports_stream or route.supports_channel %}
+        return await super().{{ route.method_name }}(
+{% for param in route.params %}            {{ param.name }}={{ param.name }},
+{% endfor %}{% if route.supports_stream %}            stream=stream,
+{% endif %}{% if route.supports_channel %}            channel=channel,
+{% endif %}        )
+{% else %}
+        return await super().{{ route.method_name }}()
+{% endif %}
+{% endfor %}
+{% endif %}
+{% else %}from .gen_service import *
+from .gen_types import *
+{% endif %}

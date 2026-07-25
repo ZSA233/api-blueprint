@@ -11,6 +11,7 @@ from api_blueprint.engine.router import Router
 from api_blueprint.writer.core.base import BaseBlueprint
 from api_blueprint.writer.core.contract_adapters import RouteProtocolContract
 from api_blueprint.writer.core.message_helpers import MessageHelperDescriptor
+from api_blueprint.writer.core.route_docs import RouteDoc
 from api_blueprint.writer.core.sdk_names import RoutePublicNames
 
 from .naming import to_path_segments, to_py_class_name, to_py_identifier
@@ -103,6 +104,7 @@ class PythonRoute:
         self.client_message_type = self._ensure_message_contract(protocol.client_message)
         self.close_type = self._ensure_model_ref(protocol.close_model, self.public_names.close)
         self.params = self._request_params()
+        self.doc = RouteDoc.from_router(router, self.contract, fallback=self.method_name)
 
     @property
     def is_rpc(self) -> bool:
@@ -183,6 +185,14 @@ class PythonRoute:
         if self.response_type is None:
             return "None"
         return repr(self.response_type)
+
+    @property
+    def service_contract_docstring(self) -> str:
+        return self.doc.python_docstring(indent="        ")
+
+    @property
+    def service_impl_docstring(self) -> str:
+        return self.doc.python_docstring(indent="        ", include_route_id=False)
 
     @property
     def response_class_name(self) -> str | None:

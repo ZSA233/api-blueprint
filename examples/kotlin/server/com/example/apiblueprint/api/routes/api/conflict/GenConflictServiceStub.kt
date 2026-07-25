@@ -5,6 +5,10 @@ import com.example.apiblueprint.api.runtime.*
 
 public open class ConflictServiceStub : GenConflictService {
 
+    /**
+     * Naming conflict example
+     * GET /api/conflict/default
+     */
     public override suspend fun default(
         query: ConflictDefaultQuery
     ): ConflictModel {

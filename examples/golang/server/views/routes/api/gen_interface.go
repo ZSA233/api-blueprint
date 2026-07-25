@@ -3,6 +3,8 @@
 package api
 
 type RouterInterface interface {
+	// HelloChannel
+	// CHANNEL /api/ws
 	HelloChannel(
 		ctx *CTX_HelloChannel,
 		channel CHANNEL_HelloChannel,

@@ -5,6 +5,10 @@ import com.example.apiblueprint.legacy.runtime.*
 
 public open class AccountServiceStub : GenAccountService {
 
+    /**
+     * Rootless account profile example
+     * GET /account/profile
+     */
     public override suspend fun accountProfile(
     ): AccountProfile {
         throw NotImplementedError("legacy.account.get.profile is not implemented")

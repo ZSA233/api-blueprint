@@ -29,6 +29,10 @@ public class GenMediaController {
         this.delegate = delegate;
     }
 
+    /**
+     * Multipart media preview
+     * POST /api/media/preview
+     */
     @RequestMapping(path = "/api/media/preview", method = {RequestMethod.POST})
     @SignatureRequired
     @ApiBlueprintOperation("api.media.post.preview")
@@ -44,6 +48,10 @@ public class GenMediaController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "image/jpeg", "bytes");
     }
 
+    /**
+     * Latest media frame
+     * GET /api/media/frame
+     */
     @RequestMapping(path = "/api/media/frame", method = {RequestMethod.GET})
     @SignatureRequired
     @ApiBlueprintOperation("api.media.get.frame")
@@ -56,6 +64,10 @@ public class GenMediaController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "image/jpeg", "bytes");
     }
 
+    /**
+     * Media workbook download
+     * GET /api/media/download
+     */
     @RequestMapping(path = "/api/media/download", method = {RequestMethod.GET})
     @SignatureRequired
     @ApiBlueprintOperation("api.media.get.download")
@@ -68,6 +80,10 @@ public class GenMediaController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "file");
     }
 
+    /**
+     * Media workbook download with service filename override
+     * GET /api/media/download-dynamic
+     */
     @RequestMapping(path = "/api/media/download-dynamic", method = {RequestMethod.GET})
     @SignatureRequired
     @ApiBlueprintOperation("api.media.get.downloaddynamic")
@@ -80,6 +96,10 @@ public class GenMediaController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "file");
     }
 
+    /**
+     * Media download with RFC 5987 filename
+     * GET /api/media/download-filename-edge
+     */
     @RequestMapping(path = "/api/media/download-filename-edge", method = {RequestMethod.GET})
     @SignatureRequired
     @ApiBlueprintOperation("api.media.get.downloadfilenameedge")
@@ -92,6 +112,10 @@ public class GenMediaController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "file");
     }
 
+    /**
+     * Raw media typed error
+     * GET /api/media/error-frame
+     */
     @RequestMapping(path = "/api/media/error-frame", method = {RequestMethod.GET})
     @SignatureRequired
     @ApiBlueprintOperation("api.media.get.errorframe")
@@ -106,6 +130,10 @@ public class GenMediaController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "image/jpeg", "bytes");
     }
 
+    /**
+     * MJPEG byte stream
+     * GET /api/media/mjpeg
+     */
     @RequestMapping(path = "/api/media/mjpeg", method = {RequestMethod.GET})
     @SignatureRequired
     @ApiBlueprintOperation("api.media.get.mjpeg")

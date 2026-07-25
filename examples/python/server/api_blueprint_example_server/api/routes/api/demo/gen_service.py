@@ -57,33 +57,51 @@ class DemoService(Protocol):
         self,
         query: AbcQuery,
     ) -> AbcResponse:
+        """这是abc的summary
+        GET /api/demo/abc
+        """
         ...
 
     async def test_post(
         self,
         json: TestPostJSON,
     ) -> TestPostResponse:
+        """这是post的summary
+        POST /api/demo/test_post
+        """
         ...
 
     async def form_submit(
         self,
         form: FormSubmitForm,
     ) -> FormSubmitResponse:
+        """Form body example
+        POST /api/demo/form-submit
+        """
         ...
 
     async def request_options(
         self,
         query: RequestOptionsQuery,
     ) -> RequestOptionsResponse:
+        """Request options conformance endpoint
+        GET /api/demo/request-options
+        """
         ...
 
     async def path_echo(
         self,
         path: PathEchoPath,
     ) -> PathEchoResponse:
+        """Path parameter example
+        GET /api/demo/path-echo/{item}/{badge}
+        """
         ...
 
     async def empty_response(self) -> EmptyResponseResponse:
+        """Empty response example
+        POST /api/demo/empty-response
+        """
         ...
 
     async def put_demo(
@@ -91,12 +109,18 @@ class DemoService(Protocol):
         query: PutDemoQuery,
         json: PutDemoJSON,
     ) -> PutDemoResponse:
+        """这是put的summary
+        PUT /api/demo/1put
+        """
         ...
 
     async def delete(
         self,
         query: DeleteQuery,
     ) -> DeleteResponse:
+        """这是delete的summary
+        DELETE /api/demo/delete$
+        """
         ...
 
     async def sweep_events(
@@ -104,6 +128,9 @@ class DemoService(Protocol):
         open_data: SweepEventsOpen,
         stream: ApiServerStream[SweepStreamMessage, SweepEventsClose] | None = None,
     ) -> Any:
+        """Sweep event stream
+        STREAM /api/demo/sweep-events
+        """
         ...
 
     async def assistant_session(
@@ -111,24 +138,39 @@ class DemoService(Protocol):
         open_data: AssistantSessionOpen,
         channel: ApiServerChannel[AssistantClientMessage, AssistantServerMessage, AssistantSessionClose] | None = None,
     ) -> Any:
+        """Assistant channel
+        CHANNEL /api/demo/assistant-session
+        """
         ...
 
     async def post_deprecated(
         self,
         json: PostDeprecatedJSON,
     ) -> PostDeprecatedResponse:
+        """这是一个summary
+        POST /api/demo/post_deprecated
+        """
         ...
 
     async def raw(self) -> RawResponse:
+        """这是一个raw
+        POST /api/demo/raw
+        """
         ...
 
     async def map_model(self) -> dict[int, ApiDemoMap]:
+        """这是一个raw
+        POST /api/demo/map_model
+        """
         ...
 
     async def error_demo(
         self,
         query: ErrorDemoQuery,
     ) -> ErrorDemoResponse:
+        """Typed error example
+        GET /api/demo/error-demo
+        """
         ...
 
 
@@ -137,33 +179,51 @@ class DemoServiceStub:
         self,
         query: AbcQuery,
     ) -> AbcResponse:
+        """这是abc的summary
+        GET /api/demo/abc
+        """
         raise NotImplementedError("abc")
 
     async def test_post(
         self,
         json: TestPostJSON,
     ) -> TestPostResponse:
+        """这是post的summary
+        POST /api/demo/test_post
+        """
         raise NotImplementedError("test_post")
 
     async def form_submit(
         self,
         form: FormSubmitForm,
     ) -> FormSubmitResponse:
+        """Form body example
+        POST /api/demo/form-submit
+        """
         raise NotImplementedError("form_submit")
 
     async def request_options(
         self,
         query: RequestOptionsQuery,
     ) -> RequestOptionsResponse:
+        """Request options conformance endpoint
+        GET /api/demo/request-options
+        """
         raise NotImplementedError("request_options")
 
     async def path_echo(
         self,
         path: PathEchoPath,
     ) -> PathEchoResponse:
+        """Path parameter example
+        GET /api/demo/path-echo/{item}/{badge}
+        """
         raise NotImplementedError("path_echo")
 
     async def empty_response(self) -> EmptyResponseResponse:
+        """Empty response example
+        POST /api/demo/empty-response
+        """
         raise NotImplementedError("empty_response")
 
     async def put_demo(
@@ -171,12 +231,18 @@ class DemoServiceStub:
         query: PutDemoQuery,
         json: PutDemoJSON,
     ) -> PutDemoResponse:
+        """这是put的summary
+        PUT /api/demo/1put
+        """
         raise NotImplementedError("put_demo")
 
     async def delete(
         self,
         query: DeleteQuery,
     ) -> DeleteResponse:
+        """这是delete的summary
+        DELETE /api/demo/delete$
+        """
         raise NotImplementedError("delete")
 
     async def sweep_events(
@@ -184,6 +250,9 @@ class DemoServiceStub:
         open_data: SweepEventsOpen,
         stream: ApiServerStream[SweepStreamMessage, SweepEventsClose] | None = None,
     ) -> Any:
+        """Sweep event stream
+        STREAM /api/demo/sweep-events
+        """
         raise NotImplementedError("sweep_events")
 
     async def assistant_session(
@@ -191,22 +260,37 @@ class DemoServiceStub:
         open_data: AssistantSessionOpen,
         channel: ApiServerChannel[AssistantClientMessage, AssistantServerMessage, AssistantSessionClose] | None = None,
     ) -> Any:
+        """Assistant channel
+        CHANNEL /api/demo/assistant-session
+        """
         raise NotImplementedError("assistant_session")
 
     async def post_deprecated(
         self,
         json: PostDeprecatedJSON,
     ) -> PostDeprecatedResponse:
+        """这是一个summary
+        POST /api/demo/post_deprecated
+        """
         raise NotImplementedError("post_deprecated")
 
     async def raw(self) -> RawResponse:
+        """这是一个raw
+        POST /api/demo/raw
+        """
         raise NotImplementedError("raw")
 
     async def map_model(self) -> dict[int, ApiDemoMap]:
+        """这是一个raw
+        POST /api/demo/map_model
+        """
         raise NotImplementedError("map_model")
 
     async def error_demo(
         self,
         query: ErrorDemoQuery,
     ) -> ErrorDemoResponse:
+        """Typed error example
+        GET /api/demo/error-demo
+        """
         raise NotImplementedError("error_demo")

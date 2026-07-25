@@ -9,6 +9,10 @@ import com.example.apiblueprint.legacy.spring.GenSpringRequestContext;
 
 public interface GenLegacyJsonDelegate {
 
+    /**
+     * Legacy JSON compatibility example
+     * GET /legacy-json/compat
+     */
     GenApiTypes.LegacyJsonCompatPayload legacyJsonCompat(
         GenSpringRequestContext context
     ) throws Exception;

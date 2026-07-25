@@ -8,6 +8,8 @@ import (
 
 type _GenRouter struct{}
 
+// RuntimeCurrentStatus: Runtime root naming example
+// GET /runtime/status/current
 func (impl *_GenRouter) RuntimeCurrentStatus(ctx *CTX_RuntimeCurrentStatus, req *REQ_RuntimeCurrentStatus) (rsp *RSP_RuntimeCurrentStatus, err error) {
 	return nil, fmt.Errorf("not implemented")
 }

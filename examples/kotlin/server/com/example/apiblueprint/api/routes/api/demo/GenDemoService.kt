@@ -5,58 +5,114 @@ import com.example.apiblueprint.api.runtime.*
 
 public interface GenDemoService {
 
+    /**
+     * 这是abc的summary
+     * GET /api/demo/abc
+     */
     public suspend fun abc(
         query: DemoAbcQuery
     ): ApiDemoA
 
+    /**
+     * 这是post的summary
+     * POST /api/demo/test_post
+     */
     public suspend fun testPost(
         json: DemoTestPostJson
     ): DemoTestPostResponse
 
+    /**
+     * Form body example
+     * POST /api/demo/form-submit
+     */
     public suspend fun formSubmit(
         form: DemoFormSubmitForm
     ): DemoFormSubmitResponse
 
+    /**
+     * Request options conformance endpoint
+     * GET /api/demo/request-options
+     */
     public suspend fun requestOptions(
         query: DemoRequestOptionsQuery
     ): RequestOptionsResponse
 
+    /**
+     * Path parameter example
+     * GET /api/demo/path-echo/{item}/{badge}
+     */
     public suspend fun pathEcho(
         path: PathEchoPath
     ): PathEchoResponse
 
+    /**
+     * Empty response example
+     * POST /api/demo/empty-response
+     */
     public suspend fun emptyResponse(
     ): DemoEmptyResponseResponse
 
+    /**
+     * 这是put的summary
+     * PUT /api/demo/1put
+     */
     public suspend fun putDemo(
         query: DemoPutDemoQuery,
         json: DemoPutDemoJson
     ): DemoPutDemoResponse
 
+    /**
+     * 这是delete的summary
+     * DELETE /api/demo/delete$
+     */
     public suspend fun delete(
         query: DemoDeleteQuery
     ): String
 
+    /**
+     * Sweep event stream
+     * STREAM /api/demo/sweep-events
+     */
     public suspend fun sweepEvents(
         openData: SweepOpen,
         stream: ApiServerStream<SweepStreamMessage, ConnectionClose>
     ): Unit
 
+    /**
+     * Assistant channel
+     * CHANNEL /api/demo/assistant-session
+     */
     public suspend fun assistantSession(
         openData: AssistantOpen,
         channel: ApiServerChannel<AssistantClientMessage, AssistantServerMessage, ConnectionClose>
     ): Unit
 
+    /**
+     * 这是一个summary
+     * POST /api/demo/post_deprecated
+     */
     public suspend fun postDeprecated(
         json: DemoPostDeprecatedJson
     ): DemoPostDeprecatedResponse
 
+    /**
+     * 这是一个raw
+     * POST /api/demo/raw
+     */
     public suspend fun raw(
     ): DemoRawResponse
 
+    /**
+     * 这是一个raw
+     * POST /api/demo/map_model
+     */
     public suspend fun mapModel(
     ): DemoMapModelResponse
 
+    /**
+     * Typed error example
+     * GET /api/demo/error-demo
+     */
     public suspend fun errorDemo(
         query: DemoErrorDemoQuery
     ): DemoErrorDemoResponse

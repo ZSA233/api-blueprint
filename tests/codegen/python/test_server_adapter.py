@@ -37,7 +37,11 @@ def test_python_server_json_encoder_handles_enum_map_keys_and_nested_dtos(tmp_pa
 def test_python_server_generates_service_core_and_fastapi_adapter(tmp_path: Path):
     bp = Blueprint(root="/api")
     with bp.group("/demo") as views:
-        views.POST("/submit").REQ(Payload).RSP(Result)
+        views.POST(
+            "/submit",
+            summary="Submit demo payload",
+            description='Create """payload""" safely.',
+        ).REQ(Payload).RSP(Result)
 
     output_dir = tmp_path / "python"
     writer = PythonServerWriter(output_dir, python_package_root="example.generated")
@@ -47,17 +51,27 @@ def test_python_server_generates_service_core_and_fastapi_adapter(tmp_path: Path
     package_root = output_dir / "example" / "generated" / "api"
     runtime_text = (package_root / "runtime" / "gen_server.py").read_text(encoding="utf-8")
     service_text = (package_root / "routes" / "api" / "demo" / "gen_service.py").read_text(encoding="utf-8")
+    public_service_text = (package_root / "routes" / "api" / "demo" / "service.py").read_text(encoding="utf-8")
     adapter_text = (package_root / "transports" / "http" / "gen_server.py").read_text(encoding="utf-8")
 
     assert "class ApiServerContext:" in runtime_text
     assert "class ApiServerConfig:" in runtime_text
     assert "class DemoService(Protocol):" in service_text
     assert "async def submit(" in service_text
+    assert service_text.count('"""Submit demo payload') == 2
+    assert service_text.count("POST /api/demo/submit") == 2
+    assert "Create '''payload''' safely." not in service_text
+    assert "Route ID: api.demo.post.submit" not in service_text
     assert "from .gen_types import (\n    SubmitJSON,\n    SubmitResponse,\n)" in service_text
     assert "json: SubmitJSON" in service_text
     assert "json: SubmitJSON | None" not in service_text
     assert ") -> SubmitResponse:" in service_text
     assert "class DemoServiceStub:" in service_text
+    assert "class DemoServiceImpl(DemoServiceStub):" in public_service_text
+    assert public_service_text.count('"""Submit demo payload') == 1
+    assert "Create '''payload''' safely." not in public_service_text
+    assert "Route ID: api.demo.post.submit" not in public_service_text
+    assert "return await super().submit(" in public_service_text
     assert "from fastapi import APIRouter, WebSocket, Request, HTTPException, WebSocketDisconnect" in adapter_text
     assert "def create_router(" in adapter_text
     assert "def create_demo_router(" in adapter_text

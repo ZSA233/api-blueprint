@@ -8,30 +8,44 @@ import (
 
 type _GenRouter struct{}
 
+// MediaPreview: Multipart media preview
+// POST /api/media/preview
 func (impl *_GenRouter) MediaPreview(ctx *CTX_MediaPreview, req *REQ_MediaPreview) (rsp *RSP_MediaPreview, err error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
+// MediaFrame: Latest media frame
+// GET /api/media/frame
 func (impl *_GenRouter) MediaFrame(ctx *CTX_MediaFrame, req *REQ_MediaFrame) (rsp *RSP_MediaFrame, err error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
+// MediaDownload: Media workbook download
+// GET /api/media/download
 func (impl *_GenRouter) MediaDownload(ctx *CTX_MediaDownload, req *REQ_MediaDownload) (rsp *RSP_MediaDownload, err error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
+// MediaDownloadDynamic: Media workbook download with service filename override
+// GET /api/media/download-dynamic
 func (impl *_GenRouter) MediaDownloadDynamic(ctx *CTX_MediaDownloadDynamic, req *REQ_MediaDownloadDynamic) (rsp *RSP_MediaDownloadDynamic, err error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
+// MediaDownloadFilenameEdge: Media download with RFC 5987 filename
+// GET /api/media/download-filename-edge
 func (impl *_GenRouter) MediaDownloadFilenameEdge(ctx *CTX_MediaDownloadFilenameEdge, req *REQ_MediaDownloadFilenameEdge) (rsp *RSP_MediaDownloadFilenameEdge, err error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
+// MediaErrorFrame: Raw media typed error
+// GET /api/media/error-frame
 func (impl *_GenRouter) MediaErrorFrame(ctx *CTX_MediaErrorFrame, req *REQ_MediaErrorFrame) (rsp *RSP_MediaErrorFrame, err error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
+// MediaMjpeg: MJPEG byte stream
+// GET /api/media/mjpeg
 func (impl *_GenRouter) MediaMjpeg(ctx *CTX_MediaMjpeg, req *REQ_MediaMjpeg) (rsp *RSP_MediaMjpeg, err error) {
 	return nil, fmt.Errorf("not implemented")
 }

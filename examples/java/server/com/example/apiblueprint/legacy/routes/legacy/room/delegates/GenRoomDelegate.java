@@ -9,6 +9,10 @@ import com.example.apiblueprint.legacy.spring.GenSpringRequestContext;
 
 public interface GenRoomDelegate {
 
+    /**
+     * Rootless room list example
+     * GET /room/list
+     */
     GenRoomTypes.RoomListResponse roomList(
         GenSpringRequestContext context
     ) throws Exception;

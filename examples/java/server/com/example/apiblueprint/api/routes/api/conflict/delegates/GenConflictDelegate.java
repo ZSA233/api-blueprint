@@ -9,6 +9,10 @@ import com.example.apiblueprint.api.spring.GenSpringRequestContext;
 
 public interface GenConflictDelegate {
 
+    /**
+     * Naming conflict example
+     * GET /api/conflict/default
+     */
     GenApiTypes.BlueprintsApiConflictConflictModel defaultValue(
         GenConflictTypes.DefaultQuery query,
         GenSpringRequestContext context

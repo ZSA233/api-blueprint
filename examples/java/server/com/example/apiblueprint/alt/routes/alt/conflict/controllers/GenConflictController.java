@@ -29,6 +29,10 @@ public class GenConflictController {
         this.delegate = delegate;
     }
 
+    /**
+     * Alt naming conflict example
+     * GET /alt/conflict/default
+     */
     @RequestMapping(path = "/alt/conflict/default", method = {RequestMethod.GET})
     @SignatureRequired
     @ApiBlueprintOperation("alt.conflict.get.default")

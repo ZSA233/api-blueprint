@@ -97,7 +97,11 @@ def test_kotlin_server_writer_generates_service_ktor_adapter_and_message_keyfram
 
     bp = Blueprint(root="/api", errors=[CommonErr])
     views = bp.group("/demo")
-    views.GET("/ping").ARGS(q=String(description="q")).RSP(SubmitResponse)
+    views.GET(
+        "/ping",
+        summary="Read demo ping",
+        description="Check KDoc */ escaping.",
+    ).ARGS(q=String(description="q")).RSP(SubmitResponse)
     views.POST("/submit").REQ(SubmitJson).RSP(SubmitResponse)
     views.CHANNEL("/assistant").OPEN(OpenPayload).CLIENT_MESSAGE(
         "AssistantClientMessage",
@@ -131,6 +135,10 @@ def test_kotlin_server_writer_generates_service_ktor_adapter_and_message_keyfram
     assert user_service_text == "// USER SERVICE\n"
 
     assert "public interface GenDemoService" in service_text
+    assert " * Read demo ping" in service_text
+    assert " * GET /api/demo/ping" in service_text
+    assert " * Check KDoc * / escaping." not in service_text
+    assert " * Route ID: api.demo.get.ping" not in service_text
     assert "public suspend fun ping(" in service_text
     assert "query: DemoPingQuery" in service_text
     assert "): SubmitResponse" in service_text
@@ -139,6 +147,8 @@ def test_kotlin_server_writer_generates_service_ktor_adapter_and_message_keyfram
     assert "channel: ApiServerChannel<AssistantClientMessage, AssistantServerMessage, CloseInfo>" in service_text
     assert "): Unit" in service_text
     assert "public open class DemoServiceStub : GenDemoService" in stub_text
+    assert " * Read demo ping" in stub_text
+    assert " * Route ID: api.demo.get.ping" not in stub_text
     assert 'throw NotImplementedError("api.demo.get.ping is not implemented")' in stub_text
 
     assert "@Serializable\npublic data class AssistantClientMessage(" in types_text
@@ -173,3 +183,28 @@ def test_kotlin_server_writer_generates_service_ktor_adapter_and_message_keyfram
     assert 'abort(code = 1003, reason = "invalid WebSocket message")' in transport_text
     assert "} catch (_: IllegalArgumentException) {" in transport_text
     assert "HttpStatusCode.NotImplemented" not in transport_text
+
+
+def test_kotlin_server_initial_service_scaffold_includes_route_docs(tmp_path):
+    class SubmitResponse(Model):
+        status = String(description="status")
+
+    bp = Blueprint(root="/api")
+    with bp.group("/demo") as views:
+        views.GET("/ping", summary="Read demo ping").RSP(SubmitResponse)
+    bp.is_built = True
+
+    writer = KotlinServerWriter(tmp_path / "kotlin", package="com.example.generated")
+    writer.register(bp)
+    writer.gen()
+
+    user_service_text = (
+        tmp_path / "kotlin" / "com" / "example" / "generated" / "api" / "routes" / "api" / "demo" / "DemoService.kt"
+    ).read_text(encoding="utf-8")
+
+    assert "public class DemoService : DemoServiceStub() {" in user_service_text
+    assert " * Read demo ping" in user_service_text
+    assert " * GET /api/demo/ping" in user_service_text
+    assert " * Route ID: api.demo.get.ping" not in user_service_text
+    assert "public override suspend fun ping(" in user_service_text
+    assert "return super.ping(" in user_service_text

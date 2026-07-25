@@ -3,11 +3,31 @@
 package hello
 
 type RouterInterface interface {
+	// Abc: 这是abc的summary
+	// GET /api/hello/abc
 	Abc(ctx *CTX_Abc, req *REQ_Abc) (rsp *RSP_Abc, err error)
+
+	// MapEnum: map-enum
+	// GET /api/hello/map-enum
 	MapEnum(ctx *CTX_MapEnum, req *REQ_MapEnum) (rsp *RSP_MapEnum, err error)
+
+	// ListEnum: list-enum
+	// GET /api/hello/list-enum
 	ListEnum(ctx *CTX_ListEnum, req *REQ_ListEnum) (rsp *RSP_ListEnum, err error)
+
+	// String: string
+	// GET /api/hello/string
 	String(ctx *CTX_String, req *REQ_String) (rsp *RSP_String, err error)
+
+	// Uint64: uint64
+	// GET /api/hello/uint64
 	Uint64(ctx *CTX_Uint64, req *REQ_Uint64) (rsp *RSP_Uint64, err error)
+
+	// StringEmun: string-enum
+	// GET /api/hello/string-emun
 	StringEmun(ctx *CTX_StringEmun, req *REQ_StringEmun) (rsp *RSP_StringEmun, err error)
+
+	// HelloWay: hello-way
+	// GET /api/hello/hello-way
 	HelloWay(ctx *CTX_HelloWay, req *REQ_HelloWay) (rsp *RSP_HelloWay, err error)
 }

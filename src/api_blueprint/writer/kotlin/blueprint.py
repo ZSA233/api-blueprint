@@ -10,6 +10,7 @@ from api_blueprint.engine.router import Router
 from api_blueprint.writer.core.base import BaseBlueprint
 from api_blueprint.engine.connection import MessageContract
 from api_blueprint.writer.core.contract_adapters import RouteProtocolContract, route_protocol_from_router
+from api_blueprint.writer.core.route_docs import RouteDoc
 
 from .binary_schema import KotlinBinarySchema, unique_kotlin_binary_schemas
 from .naming import (
@@ -89,6 +90,7 @@ class KotlinRoute:
         self.client_message_proto = self._ensure_message_contract(self.protocol.client_message, "ClientMessage")
         self.close_proto = self._ensure_model(self.protocol.close_model, "Close")
         self._message_helpers = self._build_message_helpers()
+        self.doc = RouteDoc.from_router(router, self.protocol.route, fallback=self.method_name)
 
     @property
     def is_rpc(self) -> bool:
@@ -195,6 +197,14 @@ class KotlinRoute:
         if self.response_kind == "binary_schema" and self.response_binary_wire_type is not None:
             return f"{{ response -> {self.response_binary_wire_type}.parse(response.body) }}"
         return "null"
+
+    @property
+    def service_contract_kdoc(self) -> str:
+        return self.doc.kdoc(indent="    ")
+
+    @property
+    def service_impl_kdoc(self) -> str:
+        return self.doc.kdoc(indent="    ", include_route_id=False)
 
     @property
     def server_message_type(self) -> str:

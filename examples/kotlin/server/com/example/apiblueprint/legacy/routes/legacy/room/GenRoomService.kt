@@ -5,6 +5,10 @@ import com.example.apiblueprint.legacy.runtime.*
 
 public interface GenRoomService {
 
+    /**
+     * Rootless room list example
+     * GET /room/list
+     */
     public suspend fun roomList(
     ): RoomRoomListResponse
 

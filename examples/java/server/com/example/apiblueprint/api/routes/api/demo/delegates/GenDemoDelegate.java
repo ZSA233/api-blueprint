@@ -9,59 +9,107 @@ import com.example.apiblueprint.api.spring.GenSpringRequestContext;
 
 public interface GenDemoDelegate {
 
+    /**
+     * 这是abc的summary
+     * GET /api/demo/abc
+     */
     GenApiTypes.ApiDemoA abc(
         GenDemoTypes.AbcQuery query,
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * 这是post的summary
+     * POST /api/demo/test_post
+     */
     GenDemoTypes.TestPostResponse testPost(
         GenDemoTypes.TestPostJSON json,
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * Form body example
+     * POST /api/demo/form-submit
+     */
     GenDemoTypes.FormSubmitResponse formSubmit(
         GenDemoTypes.FormSubmitForm form,
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * Request options conformance endpoint
+     * GET /api/demo/request-options
+     */
     GenApiTypes.RequestOptionsResponse requestOptions(
         GenDemoTypes.RequestOptionsQuery query,
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * Path parameter example
+     * GET /api/demo/path-echo/{item}/{badge}
+     */
     GenApiTypes.PathEchoResponse pathEcho(
         GenApiTypes.PathEchoPath path,
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * Empty response example
+     * POST /api/demo/empty-response
+     */
     GenDemoTypes.EmptyResponseResponse emptyResponse(
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * 这是put的summary
+     * PUT /api/demo/1put
+     */
     GenDemoTypes.PutDemoResponse putDemo(
         GenDemoTypes.PutDemoQuery query,
         GenDemoTypes.PutDemoJSON json,
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * 这是delete的summary
+     * DELETE /api/demo/delete$
+     */
     GenDemoTypes.DeleteResponse delete(
         GenDemoTypes.DeleteQuery query,
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * 这是一个summary
+     * POST /api/demo/post_deprecated
+     */
     GenDemoTypes.PostDeprecatedResponse postDeprecated(
         GenDemoTypes.PostDeprecatedJSON json,
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * 这是一个raw
+     * POST /api/demo/raw
+     */
     GenDemoTypes.RawResponse raw(
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * 这是一个raw
+     * POST /api/demo/map_model
+     */
     GenDemoTypes.MapModelResponse mapModel(
         GenSpringRequestContext context
     ) throws Exception;
 
+    /**
+     * Typed error example
+     * GET /api/demo/error-demo
+     */
     GenDemoTypes.ErrorDemoResponse errorDemo(
         GenDemoTypes.ErrorDemoQuery query,
         GenSpringRequestContext context

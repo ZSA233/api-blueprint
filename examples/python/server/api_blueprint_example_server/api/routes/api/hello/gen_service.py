@@ -21,27 +21,48 @@ class HelloService(Protocol):
         self,
         query: AbcQuery,
     ) -> dict[str, ApiHelloMap]:
+        """这是abc的summary
+        GET /api/hello/abc
+        """
         ...
 
     async def map_enum(self) -> dict[MapEnum, ApiHelloMap]:
+        """map-enum
+        GET /api/hello/map-enum
+        """
         ...
 
     async def list_enum(self) -> list[MapEnum]:
+        """list-enum
+        GET /api/hello/list-enum
+        """
         ...
 
     async def string(self) -> str:
+        """string
+        GET /api/hello/string
+        """
         ...
 
     async def uint64(self) -> int:
+        """uint64
+        GET /api/hello/uint64
+        """
         ...
 
     async def string_emun(self) -> MapEnum:
+        """string-enum
+        GET /api/hello/string-emun
+        """
         ...
 
     async def hello_way(
         self,
         query: HelloWayQuery,
     ) -> Any:
+        """hello-way
+        GET /api/hello/hello-way
+        """
         ...
 
 
@@ -50,25 +71,46 @@ class HelloServiceStub:
         self,
         query: AbcQuery,
     ) -> dict[str, ApiHelloMap]:
+        """这是abc的summary
+        GET /api/hello/abc
+        """
         raise NotImplementedError("abc")
 
     async def map_enum(self) -> dict[MapEnum, ApiHelloMap]:
+        """map-enum
+        GET /api/hello/map-enum
+        """
         raise NotImplementedError("map_enum")
 
     async def list_enum(self) -> list[MapEnum]:
+        """list-enum
+        GET /api/hello/list-enum
+        """
         raise NotImplementedError("list_enum")
 
     async def string(self) -> str:
+        """string
+        GET /api/hello/string
+        """
         raise NotImplementedError("string")
 
     async def uint64(self) -> int:
+        """uint64
+        GET /api/hello/uint64
+        """
         raise NotImplementedError("uint64")
 
     async def string_emun(self) -> MapEnum:
+        """string-enum
+        GET /api/hello/string-emun
+        """
         raise NotImplementedError("string_emun")
 
     async def hello_way(
         self,
         query: HelloWayQuery,
     ) -> Any:
+        """hello-way
+        GET /api/hello/hello-way
+        """
         raise NotImplementedError("hello_way")

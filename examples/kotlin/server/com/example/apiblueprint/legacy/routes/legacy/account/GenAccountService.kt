@@ -5,6 +5,10 @@ import com.example.apiblueprint.legacy.runtime.*
 
 public interface GenAccountService {
 
+    /**
+     * Rootless account profile example
+     * GET /account/profile
+     */
     public suspend fun accountProfile(
     ): AccountProfile
 

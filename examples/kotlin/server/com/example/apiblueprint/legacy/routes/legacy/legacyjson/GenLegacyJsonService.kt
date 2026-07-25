@@ -5,6 +5,10 @@ import com.example.apiblueprint.legacy.runtime.*
 
 public interface GenLegacyJsonService {
 
+    /**
+     * Legacy JSON compatibility example
+     * GET /legacy-json/compat
+     */
     public suspend fun legacyJsonCompat(
     ): LegacyJsonCompatPayload
 

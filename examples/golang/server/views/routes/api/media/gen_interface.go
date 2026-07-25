@@ -3,11 +3,31 @@
 package media
 
 type RouterInterface interface {
+	// MediaPreview: Multipart media preview
+	// POST /api/media/preview
 	MediaPreview(ctx *CTX_MediaPreview, req *REQ_MediaPreview) (rsp *RSP_MediaPreview, err error)
+
+	// MediaFrame: Latest media frame
+	// GET /api/media/frame
 	MediaFrame(ctx *CTX_MediaFrame, req *REQ_MediaFrame) (rsp *RSP_MediaFrame, err error)
+
+	// MediaDownload: Media workbook download
+	// GET /api/media/download
 	MediaDownload(ctx *CTX_MediaDownload, req *REQ_MediaDownload) (rsp *RSP_MediaDownload, err error)
+
+	// MediaDownloadDynamic: Media workbook download with service filename override
+	// GET /api/media/download-dynamic
 	MediaDownloadDynamic(ctx *CTX_MediaDownloadDynamic, req *REQ_MediaDownloadDynamic) (rsp *RSP_MediaDownloadDynamic, err error)
+
+	// MediaDownloadFilenameEdge: Media download with RFC 5987 filename
+	// GET /api/media/download-filename-edge
 	MediaDownloadFilenameEdge(ctx *CTX_MediaDownloadFilenameEdge, req *REQ_MediaDownloadFilenameEdge) (rsp *RSP_MediaDownloadFilenameEdge, err error)
+
+	// MediaErrorFrame: Raw media typed error
+	// GET /api/media/error-frame
 	MediaErrorFrame(ctx *CTX_MediaErrorFrame, req *REQ_MediaErrorFrame) (rsp *RSP_MediaErrorFrame, err error)
+
+	// MediaMjpeg: MJPEG byte stream
+	// GET /api/media/mjpeg
 	MediaMjpeg(ctx *CTX_MediaMjpeg, req *REQ_MediaMjpeg) (rsp *RSP_MediaMjpeg, err error)
 }

@@ -8,10 +8,14 @@ import (
 
 type _GenRouter struct{}
 
+// DocJson
+// GET /static/doc.json
 func (impl *_GenRouter) DocJson(ctx *CTX_DocJson, req *REQ_DocJson) (rsp *RSP_DocJson, err error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
+// Dochaha
+// GET /static/dochaha
 func (impl *_GenRouter) Dochaha(ctx *CTX_Dochaha, req *REQ_Dochaha) (rsp *RSP_Dochaha, err error) {
 	return nil, fmt.Errorf("not implemented")
 }

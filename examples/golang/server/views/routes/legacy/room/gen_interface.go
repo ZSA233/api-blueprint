@@ -3,5 +3,7 @@
 package room
 
 type RouterInterface interface {
+	// RoomList: Rootless room list example
+	// GET /room/list
 	RoomList(ctx *CTX_RoomList, req *REQ_RoomList) (rsp *RSP_RoomList, err error)
 }

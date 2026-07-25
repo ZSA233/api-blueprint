@@ -13,9 +13,15 @@ from .gen_types import (
 
 class StatusService(Protocol):
     async def runtime_current_status(self) -> RuntimeCurrentStatusResponse:
+        """Runtime root naming example
+        GET /runtime/status/current
+        """
         ...
 
 
 class StatusServiceStub:
     async def runtime_current_status(self) -> RuntimeCurrentStatusResponse:
+        """Runtime root naming example
+        GET /runtime/status/current
+        """
         raise NotImplementedError("runtime_current_status")

@@ -29,6 +29,10 @@ public class GenRoomController {
         this.delegate = delegate;
     }
 
+    /**
+     * Rootless room list example
+     * GET /room/list
+     */
     @RequestMapping(path = "/room/list", method = {RequestMethod.GET})
     @SignatureRequired
     @ApiBlueprintOperation("legacy.room.get.list")

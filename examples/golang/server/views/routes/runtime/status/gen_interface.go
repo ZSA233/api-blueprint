@@ -3,5 +3,7 @@
 package status
 
 type RouterInterface interface {
+	// RuntimeCurrentStatus: Runtime root naming example
+	// GET /runtime/status/current
 	RuntimeCurrentStatus(ctx *CTX_RuntimeCurrentStatus, req *REQ_RuntimeCurrentStatus) (rsp *RSP_RuntimeCurrentStatus, err error)
 }

@@ -8,6 +8,8 @@ import (
 
 type _GenRouter struct{}
 
+// LegacyJsonCompat: Legacy JSON compatibility example
+// GET /legacy-json/compat
 func (impl *_GenRouter) LegacyJsonCompat(ctx *CTX_LegacyJsonCompat, req *REQ_LegacyJsonCompat) (rsp *RSP_LegacyJsonCompat, err error) {
 	return nil, fmt.Errorf("not implemented")
 }

@@ -7,6 +7,10 @@ import com.example.apiblueprint.api.runtime.binary.ApiBinaryBody
 
 public open class BinaryServiceStub : GenBinaryService {
 
+    /**
+     * Binary packet example
+     * POST /api/binary/packet
+     */
     public override suspend fun packet(
         query: BinaryPacketQuery,
         binary: DemoPacket
@@ -14,6 +18,10 @@ public open class BinaryServiceStub : GenBinaryService {
         throw NotImplementedError("api.binary.post.packet is not implemented")
     }
 
+    /**
+     * Binary audit packet example
+     * POST /api/binary/audit-packet
+     */
     public override suspend fun auditPacket(
         query: BinaryAuditPacketQuery,
         binary: AuditPacket
@@ -21,6 +29,10 @@ public open class BinaryServiceStub : GenBinaryService {
         throw NotImplementedError("api.binary.post.auditpacket is not implemented")
     }
 
+    /**
+     * Wide integer binary packet example
+     * POST /api/binary/wide-packet
+     */
     public override suspend fun widePacket(
         query: BinaryWidePacketQuery,
         binary: WidePacket
@@ -28,6 +40,10 @@ public open class BinaryServiceStub : GenBinaryService {
         throw NotImplementedError("api.binary.post.widepacket is not implemented")
     }
 
+    /**
+     * Binary audit packet response example
+     * GET /api/binary/audit-packet-response
+     */
     public override suspend fun auditPacketResponse(
     ): AuditPacket {
         throw NotImplementedError("api.binary.get.auditpacketresponse is not implemented")

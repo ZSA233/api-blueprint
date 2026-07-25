@@ -9,6 +9,10 @@ import com.example.apiblueprint.runtime.spring.GenSpringRequestContext;
 
 public interface GenStatusDelegate {
 
+    /**
+     * Runtime root naming example
+     * GET /runtime/status/current
+     */
     GenApiTypes.RuntimeStatus runtimeCurrentStatus(
         GenSpringRequestContext context
     ) throws Exception;

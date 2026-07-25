@@ -13,9 +13,15 @@ from .gen_types import (
 
 class AccountService(Protocol):
     async def account_profile(self) -> AccountProfileResponse:
+        """Rootless account profile example
+        GET /account/profile
+        """
         ...
 
 
 class AccountServiceStub:
     async def account_profile(self) -> AccountProfileResponse:
+        """Rootless account profile example
+        GET /account/profile
+        """
         raise NotImplementedError("account_profile")

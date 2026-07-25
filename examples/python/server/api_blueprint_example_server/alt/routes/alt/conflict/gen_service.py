@@ -18,6 +18,9 @@ class ConflictService(Protocol):
         self,
         query: DefaultQuery,
     ) -> DefaultResponse:
+        """Alt naming conflict example
+        GET /alt/conflict/default
+        """
         ...
 
 
@@ -26,4 +29,7 @@ class ConflictServiceStub:
         self,
         query: DefaultQuery,
     ) -> DefaultResponse:
+        """Alt naming conflict example
+        GET /alt/conflict/default
+        """
         raise NotImplementedError("default")

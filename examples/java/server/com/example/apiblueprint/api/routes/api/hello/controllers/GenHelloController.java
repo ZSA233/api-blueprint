@@ -29,6 +29,10 @@ public class GenHelloController {
         this.delegate = delegate;
     }
 
+    /**
+     * 这是abc的summary
+     * GET /api/hello/abc
+     */
     @RequestMapping(path = "/api/hello/abc", method = {RequestMethod.GET})
     @SignatureRequired
     @ApiBlueprintOperation("api.hello.get.abc")
@@ -43,6 +47,10 @@ public class GenHelloController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/json", "json");
     }
 
+    /**
+     * map-enum
+     * GET /api/hello/map-enum
+     */
     @RequestMapping(path = "/api/hello/map-enum", method = {RequestMethod.GET})
     @SignatureRequired
     @ApiBlueprintOperation("api.hello.get.mapenum")
@@ -55,6 +63,10 @@ public class GenHelloController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/json", "json");
     }
 
+    /**
+     * list-enum
+     * GET /api/hello/list-enum
+     */
     @RequestMapping(path = "/api/hello/list-enum", method = {RequestMethod.GET})
     @SignatureRequired
     @ApiBlueprintOperation("api.hello.get.listenum")
@@ -67,6 +79,10 @@ public class GenHelloController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/json", "json");
     }
 
+    /**
+     * string
+     * GET /api/hello/string
+     */
     @RequestMapping(path = "/api/hello/string", method = {RequestMethod.GET})
     @SignatureRequired
     @ApiBlueprintOperation("api.hello.get.string")
@@ -79,6 +95,10 @@ public class GenHelloController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/json", "json");
     }
 
+    /**
+     * uint64
+     * GET /api/hello/uint64
+     */
     @RequestMapping(path = "/api/hello/uint64", method = {RequestMethod.GET})
     @SignatureRequired
     @ApiBlueprintOperation("api.hello.get.uint64")
@@ -91,6 +111,10 @@ public class GenHelloController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/json", "json");
     }
 
+    /**
+     * string-enum
+     * GET /api/hello/string-emun
+     */
     @RequestMapping(path = "/api/hello/string-emun", method = {RequestMethod.GET})
     @SignatureRequired
     @ApiBlueprintOperation("api.hello.get.stringemun")
@@ -103,6 +127,10 @@ public class GenHelloController {
         return GenSpringResponseWriter.response(result, GenApiResponseEnvelope.of("CodeMessageDataEnvelope", "code_message_data", "nested", 0, "ok", new GenApiResponseEnvelope.Fields("code", "message", "data", "error", "ok")), "application/json", "json");
     }
 
+    /**
+     * hello-way
+     * GET /api/hello/hello-way
+     */
     @RequestMapping(path = "/api/hello/hello-way", method = {RequestMethod.GET})
     @SignatureRequired
     @ApiBlueprintOperation("api.hello.get.helloway")

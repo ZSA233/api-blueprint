@@ -5,38 +5,66 @@ import com.example.apiblueprint.api.runtime.*
 
 public open class MediaServiceStub : GenMediaService {
 
+    /**
+     * Multipart media preview
+     * POST /api/media/preview
+     */
     public override suspend fun mediaPreview(
         multipart: MediaPreviewRequest
     ): ApiRawResponse {
         throw NotImplementedError("api.media.post.preview is not implemented")
     }
 
+    /**
+     * Latest media frame
+     * GET /api/media/frame
+     */
     public override suspend fun mediaFrame(
     ): ApiRawResponse {
         throw NotImplementedError("api.media.get.frame is not implemented")
     }
 
+    /**
+     * Media workbook download
+     * GET /api/media/download
+     */
     public override suspend fun mediaDownload(
     ): ApiRawResponse {
         throw NotImplementedError("api.media.get.download is not implemented")
     }
 
+    /**
+     * Media workbook download with service filename override
+     * GET /api/media/download-dynamic
+     */
     public override suspend fun mediaDownloadDynamic(
     ): ApiRawResponse {
         throw NotImplementedError("api.media.get.downloaddynamic is not implemented")
     }
 
+    /**
+     * Media download with RFC 5987 filename
+     * GET /api/media/download-filename-edge
+     */
     public override suspend fun mediaDownloadFilenameEdge(
     ): ApiRawResponse {
         throw NotImplementedError("api.media.get.downloadfilenameedge is not implemented")
     }
 
+    /**
+     * Raw media typed error
+     * GET /api/media/error-frame
+     */
     public override suspend fun mediaErrorFrame(
         query: MediaMediaErrorFrameQuery
     ): ApiRawResponse {
         throw NotImplementedError("api.media.get.errorframe is not implemented")
     }
 
+    /**
+     * MJPEG byte stream
+     * GET /api/media/mjpeg
+     */
     public override suspend fun mediaMjpeg(
     ): ApiStreamResponse {
         throw NotImplementedError("api.media.get.mjpeg is not implemented")
